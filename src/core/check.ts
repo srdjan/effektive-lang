@@ -1525,10 +1525,8 @@ class ModuleChecker {
         : literal !== undefined
         ? this.lowerer.recordOf(literal)
         : this.lowerer.lower(body);
-      const identity = body !== undefined && this.hasIdentity(lowered.ref);
-      if (identity) this.table.defineIdentity(id, lowered.ref, entry.sealed);
-      else this.table.defineAlias(id, lowered.ref);
-      if (identity) {
+      if (body !== undefined && this.hasIdentity(lowered.ref)) {
+        this.table.defineIdentity(id, lowered.ref, entry.sealed);
         record = lowered.ir.kind === "record";
         definition = {
           kind: "nominal",
@@ -1536,6 +1534,7 @@ class ModuleChecker {
           ...(entry.sealed ? { sealed: true } : {}),
         };
       } else {
+        this.table.defineAlias(id, lowered.ref);
         if (
           entry.sealed && body !== undefined &&
           this.table.node(lowered.ref).kind !== "error"
