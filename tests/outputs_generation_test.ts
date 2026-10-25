@@ -98,7 +98,7 @@ Deno.test("generationSource retains query order and classifies emit, map and abs
     };
     assertEquals(
       generationSource(lower.value, queries).generated("m").kind,
-      broken === "emitted" ? "emit" : broken === "absent" ? "skip" : "map",
+      broken === "sourceMap" ? "map" : broken === "absent" ? "skip" : "emit",
     );
     assertEquals(calls, ["emit", "table", "map"]);
   }
@@ -110,8 +110,23 @@ Deno.test("writeGenerated skips absent or diagnosed modules and reports each gen
     [{
       kind: "emit",
       error: { tag: "internal", module: "m", message: "broken" },
-    }, "error: cannot emit m: internal"],
-    [{ kind: "map" }, "error: cannot build the source map of m"],
+    }, "error: cannot emit m: broken"],
+    [{
+      kind: "emit",
+      error: { tag: "unsupported", module: "m", message: "no such form" },
+    }, "error: cannot emit m: no such form"],
+    [{
+      kind: "emit",
+      error: {
+        tag: "lowering",
+        module: "m",
+        error: { tag: "no-interface", module: "m", imported: "dep" },
+      },
+    }, "error: cannot emit m: m imports dep, which has no interface"],
+    [
+      { kind: "map", error: { tag: "missing-source", source: "m.eff" } },
+      "error: cannot build the source map of m: source m.eff is missing",
+    ],
   ];
   for (const [result, note] of failures) {
     const io = memoryIo({});
@@ -165,7 +180,10 @@ Deno.test("writeGenerated reports every non-diagnostic lowering failure", () => 
 Deno.test("writeGenerated continues after failure, preserves names and writes only changed files", () => {
   const io = memoryIo({});
   const input: GeneratedSource = {
-    generated: (name) => name === "bad" ? { kind: "map" } : ready,
+    generated: (name) =>
+      name === "bad"
+        ? { kind: "map", error: { tag: "missing-source", source: "bad.eff" } }
+        : ready,
   };
   const first = writeGenerated(io.io.fs, "/project", input, ["bad", "m"], true);
   assertEquals(first.generated, ["m.ts"]);

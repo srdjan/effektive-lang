@@ -7,6 +7,7 @@ import type {
   EmittedModule,
   LowerError,
   Revision,
+  SourceMapError,
   SourceMapV3,
   SpanTable,
 } from "../core/mod.ts";
@@ -18,7 +19,7 @@ export type Generation =
     readonly error: Exclude<LowerError, { readonly tag: "diagnostics" }>;
   }
   | { readonly kind: "emit"; readonly error: EmitProjectError }
-  | { readonly kind: "map" }
+  | { readonly kind: "map"; readonly error: SourceMapError }
   | {
     readonly kind: "ready";
     readonly emitted: EmittedModule;
@@ -51,7 +52,13 @@ export function generationSource(
         return { kind: "skip" };
       }
       if (!emitted.ok) return { kind: "emit", error: emitted.error };
-      if (!map.ok || !table.ok) return { kind: "map" };
+      // The span table and the map only forward an emit error, which returned above.
+      if (!table.ok) return { kind: "emit", error: table.error };
+      if (!map.ok) {
+        return map.error.tag === "missing-source"
+          ? { kind: "map", error: map.error }
+          : { kind: "emit", error: map.error };
+      }
       return {
         kind: "ready",
         emitted: emitted.value,

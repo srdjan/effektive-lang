@@ -4,6 +4,7 @@
 
 import {
   type Diagnostic,
+  type EmitProjectError,
   generatedPathOf,
   generatedSourceOf,
   joinPath,
@@ -39,6 +40,16 @@ function describeLowerError(error: LowerError): string {
     case "unsupported":
     case "internal":
       return `${error.module}: ${error.message}`;
+  }
+}
+
+function describeEmitError(error: EmitProjectError): string {
+  switch (error.tag) {
+    case "lowering":
+      return describeLowerError(error.error);
+    case "unsupported":
+    case "internal":
+      return error.message;
   }
 }
 
@@ -107,11 +118,15 @@ export function writeGenerated(
         failed = true;
         continue;
       case "emit":
-        notes.push(`error: cannot emit ${name}: ${output.error.tag}`);
+        notes.push(
+          `error: cannot emit ${name}: ${describeEmitError(output.error)}`,
+        );
         failed = true;
         continue;
       case "map":
-        notes.push(`error: cannot build the source map of ${name}`);
+        notes.push(
+          `error: cannot build the source map of ${name}: source ${output.error.source} is missing`,
+        );
         failed = true;
         continue;
       case "ready":
