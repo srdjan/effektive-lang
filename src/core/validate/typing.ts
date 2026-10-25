@@ -72,23 +72,19 @@ export function identityBody(env: TypeEnv, id: string): Type | undefined {
 
 /** Follows transparent aliases and stops at an alias with identity. */
 export function unfoldTransparent(env: TypeEnv, type: Type): Type {
-  let current = type;
-  for (let i = 0; i < MAX_DEPTH; i++) {
-    if (current.kind !== "named" || env.identities.has(current.id)) {
-      return current;
-    }
-    const alias = env.aliases.get(current.id);
-    if (alias === undefined) return current;
-    current = alias;
-  }
-  return current;
+  return follow(env, type, true);
 }
 
 /** Follows aliases until the type is not an alias. A brand or an error stays named. */
 export function unfold(env: TypeEnv, type: Type): Type {
+  return follow(env, type, false);
+}
+
+function follow(env: TypeEnv, type: Type, stopAtIdentity: boolean): Type {
   let current = type;
   for (let i = 0; i < MAX_DEPTH; i++) {
     if (current.kind !== "named") return current;
+    if (stopAtIdentity && env.identities.has(current.id)) return current;
     const alias = env.aliases.get(current.id);
     if (alias === undefined) return current;
     current = alias;
@@ -181,24 +177,25 @@ export function dataOnly(
 
 /** The members of a type after aliases unfold and unions flatten. */
 export function members(env: TypeEnv, type: Type, depth = 0): Type[] {
-  const unfolded = unfold(env, type);
-  if (unfolded.kind === "union" && depth < MAX_DEPTH) {
-    const out: Type[] = [];
-    for (const member of unfolded.members) {
-      out.push(...members(env, member, depth + 1));
-    }
-    return out;
-  }
-  return [unfolded];
+  return flatten(env, type, depth, unfold);
 }
 
 /** As `members`, but an alias with identity stops the unfold. */
 export function identityMembers(env: TypeEnv, type: Type, depth = 0): Type[] {
-  const unfolded = unfoldTransparent(env, type);
+  return flatten(env, type, depth, unfoldTransparent);
+}
+
+function flatten(
+  env: TypeEnv,
+  type: Type,
+  depth: number,
+  step: (env: TypeEnv, type: Type) => Type,
+): Type[] {
+  const unfolded = step(env, type);
   if (unfolded.kind === "union" && depth < MAX_DEPTH) {
     const out: Type[] = [];
     for (const member of unfolded.members) {
-      out.push(...identityMembers(env, member, depth + 1));
+      out.push(...flatten(env, member, depth + 1, step));
     }
     return out;
   }

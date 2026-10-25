@@ -1001,24 +1001,20 @@ export class TypeTable {
 
   /** Follows alias definitions until the type is not a defined alias. */
   unfold(ref: TypeRef): TypeRef {
-    let current = ref;
-    for (let steps = 0; steps <= this.aliases.size; steps++) {
-      const node = this.node(current);
-      if (node.kind !== "named" || isErrorId(node.id)) return current;
-      const target = this.aliases.get(node.id);
-      if (target === undefined) return current;
-      current = target;
-    }
-    return this.error;
+    return this.follow(ref, false);
   }
 
   /** Follows transparent aliases and stops at an alias that has identity. */
   unfoldTransparent(ref: TypeRef): TypeRef {
+    return this.follow(ref, true);
+  }
+
+  private follow(ref: TypeRef, stopAtIdentity: boolean): TypeRef {
     let current = ref;
     for (let steps = 0; steps <= this.aliases.size; steps++) {
       const node = this.node(current);
       if (node.kind !== "named" || isErrorId(node.id)) return current;
-      if (this.identities.has(node.id)) return current;
+      if (stopAtIdentity && this.identities.has(node.id)) return current;
       const target = this.aliases.get(node.id);
       if (target === undefined) return current;
       current = target;
