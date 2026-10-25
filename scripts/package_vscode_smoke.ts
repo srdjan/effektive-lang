@@ -45,7 +45,23 @@ export async function installedEditorSmoke(
     for (const directory of [project, extensions, userData, harness]) {
       Deno.mkdirSync(directory);
     }
-    Deno.writeTextFileSync(join(project, "effektive.json"), "{}\n");
+    Deno.writeTextFileSync(
+      join(project, "effektive.json"),
+      '{ "host": { "h": { "interface": "./h.effi", "module": "./adapter.ts" } } }\n',
+    );
+    Deno.writeTextFileSync(
+      join(project, "h.effi"),
+      "export type Count = int\nexport service Clock { now(): Count }\nexport provider ClockLive provides Clock\n",
+    );
+    // A host interface joins the project only through an import.
+    Deno.writeTextFileSync(
+      join(project, "clock.eff"),
+      'import { Count } from "host:h"\n\nexport const seven: Count = 7\n',
+    );
+    Deno.writeTextFileSync(
+      join(project, "adapter.ts"),
+      'import { Effect, Layer } from "effect";\nimport { Clock } from "./h.effi.ts";\n\nexport const ClockLive = Layer.succeed(Clock)({\n  now: () => Effect.succeed(7),\n});\n',
+    );
     Deno.writeTextFileSync(
       join(project, "main.eff"),
       "type Count = int\nexport const twice = (value: Count): Count => value + value\nexport const result = (): Count => twice(21)\n",

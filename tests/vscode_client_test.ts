@@ -225,7 +225,13 @@ function activateClient(
   denoVersion: string | Error,
 ) {
   const errors: string[] = [];
+  const infos: string[] = [];
   const launches: { command: string; args: string[] }[] = [];
+  const commands = new Map<string, () => Promise<void>>();
+  const notifications = new Map<string, (params: unknown) => void>();
+  const opened: FakeUri[] = [];
+  const fired: FakeUri[] = [];
+  const editor: { document?: { languageId: string; uri: FakeUri } } = {};
   class Client {
     constructor(
       _id: string,
@@ -234,7 +240,9 @@ function activateClient(
     ) {
       launches.push(options);
     }
-    onNotification() {}
+    onNotification(method: string, handler: (params: unknown) => void) {
+      notifications.set(method, handler);
+    }
     start() {
       return Promise.resolve();
     }
@@ -247,10 +255,29 @@ function activateClient(
       }),
       createFileSystemWatcher: () => ({}),
       registerTextDocumentContentProvider: () => ({}),
+      openTextDocument: (uri: FakeUri) => {
+        opened.push(uri);
+        return Promise.resolve({ languageId: "typescript" });
+      },
       onDidChangeConfiguration: () => ({}),
     },
+    Uri: {
+      from: (parts: Omit<FakeUri, "toString">) => fakeUri(parts),
+      parse: (text: string) =>
+        fakeUri({ scheme: "file", path: text, query: "" }),
+    },
+    ViewColumn: { Beside: -2 },
+    languages: { setTextDocumentLanguage: () => Promise.resolve() },
     window: {
+      get activeTextEditor() {
+        return editor.document === undefined ? undefined : editor;
+      },
       showErrorMessage: (message: string) => errors.push(message),
+      showInformationMessage: (message: string) => {
+        infos.push(message);
+        return Promise.resolve();
+      },
+      showTextDocument: () => Promise.resolve(),
       createOutputChannel: (_name: string, options: { log?: boolean }) => {
         assertEquals(
           options.log,
@@ -260,9 +287,17 @@ function activateClient(
         return {};
       },
     },
-    commands: { registerCommand: () => ({}) },
+    commands: {
+      registerCommand: (name: string, run: () => Promise<void>) => {
+        commands.set(name, run);
+        return {};
+      },
+    },
     EventEmitter: class {
       event = () => {};
+      fire(uri: FakeUri) {
+        fired.push(uri);
+      }
     },
   };
   runInNewContext(Deno.readTextFileSync(new URL("extension.js", CLIENT)), {
@@ -287,7 +322,31 @@ function activateClient(
     },
   });
   module.exports.activate!({ subscriptions: [] });
-  return { errors, launches };
+  return {
+    errors,
+    infos,
+    launches,
+    commands,
+    notifications,
+    opened,
+    fired,
+    editor,
+  };
+}
+
+interface FakeUri {
+  readonly scheme: string;
+  readonly path: string;
+  readonly query: string;
+  toString(): string;
+}
+
+function fakeUri(parts: Omit<FakeUri, "toString">): FakeUri {
+  return {
+    ...parts,
+    toString: () =>
+      `${parts.scheme}:${parts.path}${parts.query ? `?${parts.query}` : ""}`,
+  };
 }
 
 Deno.test("the installed client starts its bundled server without checkout configuration", () => {
@@ -332,4 +391,40 @@ Deno.test("missing or incompatible Deno prevents startup with an actionable erro
     assert(errors[0].includes("effektive.server.deno"));
     if (version instanceof Error) assert(errors[0].includes("ENOENT"));
   }
+});
+
+Deno.test("the generated view maps .eff to .ts and .effi to .effi.ts", async () => {
+  const client = activateClient({}, "2.9.8");
+  const show = client.commands.get("effektive.showGeneratedTypeScript");
+  assert(show !== undefined, "the command must be registered");
+  for (
+    const [source, generated] of [
+      ["/work/app/users.eff", "/work/app/users.ts"],
+      ["/work/app/host.effi", "/work/app/host.effi.ts"],
+    ]
+  ) {
+    const uri = fakeUri({ scheme: "file", path: source, query: "" });
+    client.editor.document = { languageId: "effektive", uri };
+    await show();
+    const virtual = client.opened.at(-1);
+    assertEquals(virtual?.scheme, GENERATED_SCHEME);
+    assertEquals(virtual?.path, generated);
+    assertEquals(virtual?.query, encodeURIComponent(uri.toString()));
+  }
+  assertEquals(client.infos, []);
+  client.editor.document = {
+    languageId: "effektive",
+    uri: fakeUri({ scheme: "file", path: "/work/app/notes.txt", query: "" }),
+  };
+  await show();
+  assertEquals(client.opened.length, 2);
+  assertEquals(client.infos.length, 1);
+});
+
+Deno.test("a generatedChanged notification refreshes the .effi.ts view", () => {
+  const client = activateClient({}, "2.9.8");
+  const changed = client.notifications.get(GENERATED_CHANGED_METHOD);
+  assert(changed !== undefined, "the notification must have a handler");
+  changed({ uri: "/work/app/host.effi" });
+  assertEquals(client.fired.map((uri) => uri.path), ["/work/app/host.effi.ts"]);
 });

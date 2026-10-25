@@ -161,6 +161,20 @@ async function run() {
     () => !generated.getText().includes("// stale:"),
     "generated output recovers after correction",
   );
+  const host = await vscode.workspace.openTextDocument(
+    vscode.Uri.file(path.join(root, "h.effi")),
+  );
+  await vscode.window.showTextDocument(host);
+  await vscode.commands.executeCommand("effektive.showGeneratedTypeScript");
+  await until(
+    () =>
+      vscode.workspace.textDocuments.find((doc) =>
+        doc.uri.scheme === "effektive-generated" &&
+        doc.uri.path.endsWith("/h.effi.ts") &&
+        doc.getText().includes("// Generated from h.effi by")
+      ),
+    "generated companion module of the host interface",
+  );
 }
 
 module.exports.run = async () => {
