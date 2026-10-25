@@ -17,7 +17,7 @@ function isError(table: TypeTable, ref: TypeRef): boolean {
  * The identity id when the type, after transparent aliases, is an identity
  * over `int` or `number`. An identity over a literal union is not numeric.
  */
-export function numericBrand(
+function numericBrand(
   table: TypeTable,
   ref: TypeRef,
 ): TypeId | undefined {

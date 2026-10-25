@@ -236,7 +236,7 @@ export function validateAllCall(
   );
 }
 
-export function allResultsCall(
+function allResultsCall(
   c: CollectionContext,
   node: NodeId,
   args: readonly Arg[],

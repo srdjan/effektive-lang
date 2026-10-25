@@ -307,7 +307,7 @@ export function parseConfig(
 }
 
 /** Reads and parses `effektive.json` in the project root. */
-export function readConfig(
+function readConfig(
   host: SourceHost,
   root: string,
 ): Result<ConfigResult, ConfigError> {

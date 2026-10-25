@@ -207,6 +207,29 @@ export function hoverAt(
 
 export { emitModule } from "./emit/emit.ts";
 export type { EmitContext, EmitError, EmittedModule } from "./emit/emit.ts";
-export * from "./emit/spans.ts";
-export * from "./emit/sourcemap.ts";
-export * from "./emit/tsc.ts";
+export {
+  buildSpanTable,
+  hostImportSpans,
+  mapGenerated,
+  mapOffset,
+  offsetOfGenerated,
+  recordAtOffset,
+  type SpanTable,
+} from "./emit/spans.ts";
+export {
+  buildSourceMap,
+  decodeMappings,
+  decodeVlqList,
+  encodeVlq,
+  lookupMapping,
+  serializeSourceMap,
+  type SourceMapError,
+  type SourceMapV3,
+} from "./emit/sourcemap.ts";
+export {
+  hostModulePaths,
+  mapTscDiagnostic,
+  parseDenoCheck,
+  type TscDiagnostic,
+  type TscMapping,
+} from "./emit/tsc.ts";

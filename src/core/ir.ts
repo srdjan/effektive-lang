@@ -331,6 +331,3 @@ export interface Diagnostic {
 export type Result<A, E> =
   | { readonly ok: true; readonly value: A }
   | { readonly ok: false; readonly error: E };
-
-/** A future compiler can expose this boundary. No compiler is supplied here. */
-export type Compile = (source: string, sourceId: string) => Result<ModuleIR, readonly Diagnostic[]>;
