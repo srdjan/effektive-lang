@@ -262,47 +262,28 @@ function assignable(
       return assignable(env, s, alias, lift, depth + 1, adopt);
     }
   }
-  // An identity widens to its body. A sealed identity needs its own module.
-  if (s.kind === "named" && env.identities.has(s.id) && ownsSealed(env, s.id)) {
-    const body = env.aliases.get(s.id);
+  // A union is not one value: each member keeps its name.
+  if (s.kind === "union") {
+    return s.members.every((member) =>
+      assignable(env, member, t, false, depth + 1, adopt)
+    );
+  }
+  // An identity widens to its body, and a tagged record to its record. It takes
+  // no other name there. A sealed one needs its own module.
+  if (s.kind === "named" && ownsSealed(env, s.id)) {
+    const body = env.identities.has(s.id)
+      ? env.aliases.get(s.id)
+      : env.data.get(s.id);
     if (
       body !== undefined && assignable(env, body, t, lift, depth + 1, false)
     ) return true;
   }
-  // Two different identities never mix.
-  if (
-    s.kind === "named" && t.kind === "named" && s.id !== t.id &&
-    isIdentity(env, s.id) && isIdentity(env, t.id)
-  ) return false;
-  // A value that widened to a body adopts no name at that level.
-  if (!adopt && t.kind === "named" && isIdentity(env, t.id)) return false;
-  // A tagged record fits its record.
-  if (
-    s.kind === "named" && !env.opaque.has(s.id) &&
-    ownsSealed(env, s.id)
-  ) {
-    const base = env.data.get(s.id);
-    if (
-      base !== undefined && assignable(env, base, t, lift, depth + 1, false)
-    ) {
-      return true;
-    }
-  }
-  // An unnamed value fits an identity whose body it fits. A union splits below.
-  if (
-    adopt && t.kind === "named" && s.kind !== "named" && s.kind !== "union" &&
-    env.identities.has(t.id) && !env.opaque.has(t.id) && ownsSealed(env, t.id)
-  ) {
-    const body = env.aliases.get(t.id);
-    if (body !== undefined && assignable(env, s, body, lift, depth + 1)) {
-      return true;
-    }
-  }
-  if (s.kind === "union") {
-    for (const member of s.members) {
-      if (!assignable(env, member, t, false, depth + 1, adopt)) return false;
-    }
-    return true;
+  // A named target takes only its own name, or an unnamed value through the
+  // body of an untagged identity.
+  if (t.kind === "named") {
+    const body = env.identities.has(t.id) ? env.aliases.get(t.id) : undefined;
+    return adopt && s.kind !== "named" && body !== undefined &&
+      ownsSealed(env, t.id) && assignable(env, s, body, lift, depth + 1);
   }
   if (t.kind === "union") {
     for (const member of t.members) {
@@ -321,9 +302,6 @@ function assignable(
       return false;
     case "literal":
       return s.kind === "literal" && s.value === t.value;
-    case "named":
-      // Brands and errors are nominal. Equal identities matched above.
-      return false;
     case "record": {
       if (s.kind !== "record") return false;
       if (s.fields.length !== t.fields.length) return false;
@@ -483,11 +461,6 @@ function guardedAlias(env: TypeEnv, id: string): boolean {
 /** A value of type `source` fits a value position of type `target`. The lift applies at the top. */
 export function fits(env: TypeEnv, source: Type, target: Type): boolean {
   return assignable(env, source, target, true, 0);
-}
-
-/** True for a brand, a data type, or an alias with identity. */
-function isIdentity(env: TypeEnv, id: string): boolean {
-  return env.identities.has(id) || env.brands.has(id) || env.data.has(id);
 }
 
 /** The sorted names that a type holds, not looking into the body of an identity. */
