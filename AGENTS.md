@@ -26,6 +26,8 @@ TCM in `docs/plans/2026-10-24-typescript-content-mappers.md` tracks the deferred
 
 RV in `docs/architecture-review-2026-10-25.md` tracks the architecture review.
 
+RF in `docs/plans/2026-10-25-review-follow-up.md` tracks the follow-up work of that review.
+
 ## Feature Selection & Completion
 
 Follow the accepted [application acceptance rule](docs/plans/2026-10-19-application-acceptance-rule.md) when selecting gap work. The stopping rule, the application dispositions, and the open items are in [docs/status.md](docs/status.md). Keep application orchestration in `.eff`. Add features only for demonstrated application blockers after checking existing source compositions. Exception, accepted 2026-10-24: a compiler or syntax change that makes source more terse and elegant is welcome without an application blocker. It must keep the source easy to read, keep closed contracts, and keep explicit exported contracts.
