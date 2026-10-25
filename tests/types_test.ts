@@ -436,20 +436,18 @@ Deno.test("an alias cycle that is left in the table ends with the error type", (
   assertEquals(t.unfold(t.named(a)), t.error);
 });
 
-Deno.test("brands are nominal: a brand fits itself and its base, never another brand or the base to it", () => {
+Deno.test("identities are nominal: an identity fits itself and its body, never another identity", () => {
   const t = fresh();
-  t.defineBrand(ID_A, t.string);
-  t.defineBrand(ID_B, t.string);
+  t.defineIdentity(ID_A, t.string, false);
+  t.defineIdentity(ID_B, t.string, false);
   const a = t.named(ID_A);
   const b = t.named(ID_B);
   assert(t.isAssignable(a, a));
   assert(!t.isAssignable(a, b));
   assert(t.isAssignable(a, t.string));
-  assert(!t.isAssignable(t.string, a));
   assert(t.isAssignable(t.array(a), t.array(a)));
   assert(!t.isAssignable(t.array(a), t.array(b)));
   assert(t.isAssignable(t.array(a), t.array(t.string)));
-  assert(!t.isAssignable(t.array(t.string), t.array(a)));
   assert(t.isAssignable(t.option(a), t.option(t.string)));
   assert(t.isAssignable(a, t.union([a, t.int])));
   assert(t.isAssignable(a, t.union([t.string, t.int])));
@@ -544,25 +542,29 @@ Deno.test("a data type widens to its record, and the record does not fit back", 
 
 Deno.test("widening leaves invariant positions and parameters as they are", () => {
   const t = fresh();
-  t.defineBrand(ID_A, t.string);
+  const record = t.record([field("id", t.string)]);
+  t.defineIdentity(ID_A, record, false);
+  t.markTagged(ID_A);
   const a = t.named(ID_A);
-  assert(!t.isAssignable(t.ref(a), t.ref(t.string)));
-  assert(!t.isAssignable(t.ref(t.string), t.ref(a)));
-  assert(!t.isAssignable(t.codec(a, t.string), t.codec(t.string, t.string)));
+  assert(!t.isAssignable(t.ref(a), t.ref(record)));
+  assert(!t.isAssignable(t.ref(record), t.ref(a)));
+  assert(!t.isAssignable(t.codec(a, record), t.codec(record, record)));
   const fn = (parameter: TypeRef, result: TypeRef) =>
     pureFn(t, [parameter], result);
-  assert(t.isAssignable(fn(t.string, t.string), fn(a, t.string)));
-  assert(!t.isAssignable(fn(a, t.string), fn(t.string, t.string)));
-  assert(t.isAssignable(fn(t.string, a), fn(t.string, t.string)));
+  assert(t.isAssignable(fn(record, record), fn(a, record)));
+  assert(!t.isAssignable(fn(a, record), fn(record, record)));
+  assert(t.isAssignable(fn(record, a), fn(record, record)));
 });
 
 Deno.test("an opaque type and an error do not widen", () => {
   const t = fresh();
   t.defineBrand(ID_A, t.unknown);
   t.markOpaque(ID_A);
-  t.defineBrand(ID_B, t.unknown);
+  t.defineIdentity(ID_B, t.unknown, false);
   assert(!t.isAssignable(t.named(ID_A), t.unknown));
   assert(t.isAssignable(t.named(ID_B), t.unknown));
+  t.defineError(MISSING, t.record([field("id", t.string)]));
+  assert(!t.isAssignable(t.named(MISSING), t.unknown));
 });
 
 Deno.test("errors are nominal: two errors with equal fields are different", () => {

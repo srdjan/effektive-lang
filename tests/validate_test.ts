@@ -2872,6 +2872,7 @@ const ENV: TypeEnv = {
   module: "m",
   aliases: new Map<string, Type>([
     ["type:m#Alias", { kind: "primitive", name: "string" }],
+    ["type:m#Id", STRING],
     ["type:m#Status", {
       kind: "union",
       members: [
@@ -2880,8 +2881,8 @@ const ENV: TypeEnv = {
       ],
     }],
   ]),
-  identities: new Set<string>(),
-  brands: new Map<string, Type>([["type:m#Id", STRING]]),
+  identities: new Set<string>(["type:m#Id"]),
+  brands: new Map<string, Type>(),
   data: new Map(),
   errors: new Map<string, readonly Field[]>(),
   opaque: new Set<string>(),
@@ -2928,7 +2929,7 @@ Deno.test("compatibility: primitives, literals, aliases, and brands", () => {
   assert(!fits(ENV, lit("late"), { kind: "named", id: "type:m#Status" }));
   const id: Type = { kind: "named", id: "type:m#Id" };
   assert(fits(ENV, id, id));
-  assert(!fits(ENV, STRING, id));
+  assert(fits(ENV, STRING, id));
   assert(fits(ENV, id, STRING));
 });
 

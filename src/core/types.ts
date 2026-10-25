@@ -1477,17 +1477,6 @@ export class TypeTable {
       !adopt && tn.kind === "named" && !isErrorId(tn.id) &&
       this.isIdentity(tn.id)
     ) return false;
-    // A nominal value fits its base. A direct match, or a union that holds the
-    // nominal type, still goes on to the steps below.
-    if (
-      sn.kind === "named" && !isErrorId(sn.id) && !this.opaque.has(sn.id) &&
-      (module === undefined || this.ownsSealed(module, sn.id))
-    ) {
-      const base = this.brands.get(sn.id);
-      if (base !== undefined && nested(base, t, lift, false)) {
-        return true;
-      }
-    }
     // An unnamed value fits an untagged identity whose body it fits. A union is
     // not one value: its members split below, so a named member keeps its name.
     // A tagged record takes a record literal only through implicit

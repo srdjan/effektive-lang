@@ -276,12 +276,12 @@ function assignable(
   ) return false;
   // A value that widened to a body adopts no name at that level.
   if (!adopt && t.kind === "named" && isIdentity(env, t.id)) return false;
-  // A nominal value fits its base, as `TypeTable.assignable` does.
+  // A tagged record fits its record.
   if (
     s.kind === "named" && !env.opaque.has(s.id) &&
     ownsSealed(env, s.id)
   ) {
-    const base = env.data.get(s.id) ?? env.brands.get(s.id);
+    const base = env.data.get(s.id);
     if (
       base !== undefined && assignable(env, base, t, lift, depth + 1, false)
     ) {

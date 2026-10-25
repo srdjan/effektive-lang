@@ -537,7 +537,7 @@ Deno.test("null and unit do not fit each other in either direction", () => {
 
 // ------------------------------------------------------------------ nominal
 
-Deno.test("a nominal value fits its base, an opaque type does not, and a base value does not fit a nominal type", () => {
+Deno.test("a tagged record fits its record, an opaque type does not widen, and an identity takes an unnamed value", () => {
   const id: Type = { kind: "named", id: "type:m#Id" };
   const handle: Type = { kind: "named", id: "type:m#Handle" };
   const account: Type = { kind: "named", id: "type:m#Account" };
@@ -547,15 +547,14 @@ Deno.test("a nominal value fits its base, an opaque type does not, and a base va
   };
   const env: TypeEnv = {
     ...ENV,
-    brands: new Map<string, Type>([
-      ["type:m#Id", STRING],
-      ["type:m#Handle", UNKNOWN],
-    ]),
+    aliases: new Map<string, Type>([["type:m#Id", STRING]]),
+    identities: new Set(["type:m#Id"]),
+    brands: new Map<string, Type>([["type:m#Handle", UNKNOWN]]),
     data: new Map([["type:m#Account", record]]),
     opaque: new Set(["type:m#Handle"]),
   };
   assertEquals(fits(env, id, STRING), true);
-  assertEquals(fits(env, STRING, id), false);
+  assertEquals(fits(env, STRING, id), true);
   assertEquals(fits(env, account, record), true);
   assertEquals(fits(env, record, account), false);
   assertEquals(fits(env, id, { kind: "union", members: [STRING, INT] }), true);
@@ -565,10 +564,6 @@ Deno.test("a nominal value fits its base, an opaque type does not, and a base va
       element: STRING,
     }),
     true,
-  );
-  assertEquals(
-    fits(env, { kind: "ref", element: id }, { kind: "ref", element: STRING }),
-    false,
   );
   assertEquals(fits(env, handle, UNKNOWN), false);
 });
