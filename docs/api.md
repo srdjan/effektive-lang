@@ -55,12 +55,13 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   editor_rename.ts References, prepare-rename and re-resolved rename edits.
   diagnostic_delta.ts Diagnostics that an edit adds and removes, by code, source, and moved span.
   editor_completion.ts Visible names, record fields and service-method completion.
+  editor_hints.ts Inlay hints for the inferred fails and uses sets of non-exported functions.
   editor_tokens.ts Semantic classifications with lexical recovery.
   editor_actions.ts Validated missing fails/uses actions from checked body effects.
   ids.ts         Parts of a declaration identity: module, name, and method.
   util.ts        Small pure helpers of the front end and the edges: compareText, errorMessage, and isRecord.
   frontend.ts    Checking, IR, and source editor queries, with no backend dependency.
-  typescript.ts  TypeScript output caches, emission, backend hover, maps, diagnostic mapping.
+  typescript.ts  TypeScript output caches, emitProject, backend hover, maps, diagnostic mapping.
   mod.ts         Aggregate public API.
   sha256.ts      Synchronous SHA-256 over the UTF-8 bytes of a string.
   lower.ts       Checked modules to typed IR: pipelines, builtin specialization, imports.
@@ -70,6 +71,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     world.ts       Identities in scope, imports, declaration headers, recursive types.
     expr.ts        Bottom-up recomputation of types, sets, and modes of each body.
     expr_walk.ts   The child expressions of a node, and a walk over them.
+    builtins.ts    Builtin metadata and collection shapes used only by the validator.
     families/      The builtin families of the validator, behind the validator-owned ValidatorCore in context.ts.
     typing.ts      Type compatibility, including the lift rule.
     type_children.ts The child types of a type with their IR path suffixes: one descent for the type walkers.
@@ -78,7 +80,9 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     report.ts      The eight area codes and the diagnostic collector.
   validate_project.ts validateProject: validates the output of lowerProject.
   emit/          The Effect-TS emitter.
-    emit.ts        emitModule and emitProject: the public entries.
+    emit.ts        emitModule: the emitter of one module. emitProject is in typescript.ts.
+    emitted.ts     The printed-expression values that expr.ts and the builtin families share: precedence levels, Emitted, and its helpers.
+    families/      The emitter of each builtin family, behind the emitter-owned context in context.ts.
     spans.ts       The span table: generated position to source span, and host import spans.
     sourcemap.ts   Version 3 source maps and the base64 VLQ coding.
     tsc.ts         Parser for deno check output and the mapping of its errors.
@@ -136,7 +140,7 @@ fixtures/      Input files for the tests.
   emit/forms/    Extra programs for the emitter tests. They are not golden examples.
   host-boundary/ A wrong host module, captured deno check output, and manifest.json.
   ir/example/    The log example and its IR fixture.
-  applications/  The four application witnesses: service-workflow, scheduled-worker, stream-processor, and order-lifecycle. The first three are the gate applications. order-lifecycle is a witness for types with identity.
+  applications/  The five application witnesses: service-workflow, scheduled-worker, stream-processor, order-lifecycle, and portable-publisher. The first three are the gate applications. order-lifecycle is a witness for types with identity. portable-publisher is an exploratory portability witness.
   host-adapter-files/ A project with a typed host adapter for effect/FileSystem.
   lex/           snapshot.json: hashes of the lexer output for a fixed corpus.
   validate/      Mutated copies of lowered IR and manifest.json, which names the expected code of each.
@@ -156,6 +160,7 @@ bench/         The measurement harnesses of parts A8 and L5. They are not part o
   m5_target.ts   The inputs of M5: the emitted examples and synthetic projects.
   m5_variants.ts The optional M5 variants: tsc, ts.LanguageService, and tsgo.
   m6.ts          M6: the noise floor report.
+  m7.ts          M7: the time of a save round through the real language server.
   stats.ts       Quantiles, the noise floor, the checksum, and plain text tables.
 docs/          Design, plans, and rejected.md, the ledger of rejected ideas.
 ```

@@ -681,9 +681,10 @@ explicit types avoid the TypeScript errors TS7022 and TS2456 that
 `typeof L.Type` causes inside a cycle. The group is a strongly connected
 component of the type-level references.
 
-A match over tagged records and errors tests `_tag` against the tag of each arm. It
-does not test the last arm. A host value with a wrong tag therefore takes the
-last arm.
+A match over tagged records and errors tests `_tag` against the tag of each arm.
+A last arm other than `_` has a test too, and the else branch throws. A host
+value with a wrong tag therefore takes no arm. A last arm `_` takes every value
+that the earlier arms do not take.
 
 History, 2026-10-23: the type table had three nominal kinds. A `nominal`
 declaration with a non-record body lowered to a brand, and one with a record body
