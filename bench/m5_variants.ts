@@ -21,6 +21,7 @@
 // `noUncheckedIndexedAccess`, with `skipLibCheck` on as `deno check` has it.
 
 import { type M5Error, type Target, writeTarget } from "./m5_target.ts";
+import { EFFECT_VERSION, TARGET_COMPILER_OPTIONS } from "../src/cli/tsc.ts";
 import { errorMessage } from "../src/core/mod.ts";
 import type { Result } from "../src/core/source.ts";
 import type { Pair } from "./stats.ts";
@@ -28,7 +29,6 @@ import type { Pair } from "./stats.ts";
 /** The pinned tool versions. The first run needs network access to fetch them. */
 export const TYPESCRIPT_VERSION = "5.9.3";
 export const TSGO_VERSION = "7.0.0-dev.20260707.2";
-export const EFFECT_VERSION = "4.0.5";
 
 export interface VariantConfig {
   readonly pairs: number;
@@ -71,9 +71,7 @@ function firstLines(text: string, count: number): string {
 const TSCONFIG = JSON.stringify(
   {
     compilerOptions: {
-      strict: true,
-      exactOptionalPropertyTypes: true,
-      noUncheckedIndexedAccess: true,
+      ...TARGET_COMPILER_OPTIONS,
       noEmit: true,
       skipLibCheck: true,
       target: "ES2022",

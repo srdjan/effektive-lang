@@ -38,3 +38,42 @@ Deno.test("src/core/emit/families imports only ir.ts, ids.ts, and emit files oth
   assert(files.length >= 1, "no family file found");
   assert(checked >= 1, "no import found");
 });
+
+Deno.test("the value imports of src/core/emit reach no checker-phase module", () => {
+  const core = new URL("../src/core/", import.meta.url);
+  const emit = new URL("emit/", core);
+  const roots: URL[] = [];
+  const collect = (dir: URL): void => {
+    for (const entry of Deno.readDirSync(dir)) {
+      if (entry.isDirectory) collect(new URL(`${entry.name}/`, dir));
+      else roots.push(new URL(entry.name, dir));
+    }
+  };
+  collect(emit);
+  // Group 1 marks a type-only clause. Groups 2, 3, and 4 hold the specifier of a
+  // clause, a bare import, and a dynamic import.
+  const pattern =
+    /(?:^|[\s;])(?:import|export)\s+(type\s)?[^;]*?from\s*["']([^"']+)["']|(?:^|[\s;])import\s*["']([^"']+)["']|\bimport\(\s*["']([^"']+)["']\s*\)/g;
+  const closure = new Set(roots.map((file) => file.href));
+  const queue = [...roots];
+  for (let file = queue.pop(); file !== undefined; file = queue.pop()) {
+    for (const match of Deno.readTextFileSync(file).matchAll(pattern)) {
+      if (match[1] !== undefined) continue;
+      const specifier = match[2] ?? match[3] ?? match[4];
+      if (!specifier.startsWith(".")) continue;
+      const target = new URL(specifier, file);
+      if (closure.has(target.href)) continue;
+      closure.add(target.href);
+      queue.push(target);
+    }
+  }
+  const outside = [...closure]
+    .filter((href) => !href.startsWith(emit.href))
+    .map((href) => href.slice(core.href.length))
+    .sort();
+  const forbidden = outside.filter((name) =>
+    /^(types|modes|project|parse|index|lower|resolve|check.*)\.ts$/.test(name)
+  );
+  assert(forbidden.length === 0, `emit reaches ${forbidden.join(", ")}`);
+  assert(outside.length > 0, "no import outside emit found");
+});

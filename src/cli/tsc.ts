@@ -12,21 +12,27 @@ import type { CliIo } from "../host/io.ts";
 import { formatTscMappings, type TextOf } from "./format.ts";
 
 /** The version of Effect that the generated code targets. */
-const EFFECT_SPECIFIER = "npm:effect@4.0.5";
+export const EFFECT_VERSION = "4.0.5";
+
+/** The compiler options of the generated check. */
+export const TARGET_COMPILER_OPTIONS = {
+  strict: true,
+  exactOptionalPropertyTypes: true,
+  noUncheckedIndexedAccess: true,
+} as const;
+
+/** The pinned host imports of the generated check. */
+export const TARGET_IMPORTS = {
+  effect: `npm:effect@${EFFECT_VERSION}`,
+  "@effect/platform-node": `npm:@effect/platform-node@${EFFECT_VERSION}`,
+} as const;
 
 /** The configuration of the generated check: strict, with pinned host imports. */
 export function tscConfig(): string {
   return JSON.stringify(
     {
-      compilerOptions: {
-        strict: true,
-        exactOptionalPropertyTypes: true,
-        noUncheckedIndexedAccess: true,
-      },
-      imports: {
-        effect: EFFECT_SPECIFIER,
-        "@effect/platform-node": "npm:@effect/platform-node@4.0.5",
-      },
+      compilerOptions: TARGET_COMPILER_OPTIONS,
+      imports: TARGET_IMPORTS,
     },
     null,
     2,

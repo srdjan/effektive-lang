@@ -1,4 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
+import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
 import {
   buildSpanTable,
   checkProject,
@@ -122,12 +123,8 @@ Deno.test("extreme identifiers preserve formatting, execution and source mapping
       Deno.writeTextFileSync(
         `${dir}/deno.json`,
         JSON.stringify({
-          imports: { effect: "npm:effect@4.0.5" },
-          compilerOptions: {
-            strict: true,
-            exactOptionalPropertyTypes: true,
-            noUncheckedIndexedAccess: true,
-          },
+          imports: TARGET_IMPORTS,
+          compilerOptions: TARGET_COMPILER_OPTIONS,
         }),
       );
       for (const [i, c] of cases.entries()) {

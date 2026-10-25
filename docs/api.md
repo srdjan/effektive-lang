@@ -44,7 +44,8 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   check_project.ts Project driver: paired declaration entries and body results, modes, interfaces, the shared per-module step, and effectText.
   tables.ts      Side tables of a body: node info and lowering facts.
   patterns.ts    Pattern domains of match subjects.
-  modes.ts       Strongly connected components and the mode fixed point.
+  modes.ts       The mode fixed point of recursive groups.
+  graph.ts       Strongly connected components of an integer graph.
   initialization.ts Eager dependency graph of module constants.
   interface.ts   Module interfaces, their hashes, and the reachable modules.
   analyze.ts     Public entry: load a project, resolve it, collect diagnostics.

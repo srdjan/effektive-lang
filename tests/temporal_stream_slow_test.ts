@@ -3,6 +3,7 @@
 // Deferred handshakes. No wall-clock time passes.
 
 import { assertEquals } from "@std/assert";
+import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
 import {
   checkProject,
   emitProject,
@@ -13,12 +14,8 @@ import { runScript } from "./process_helpers.ts";
 
 const DENO_CONFIG = JSON.stringify(
   {
-    compilerOptions: {
-      strict: true,
-      exactOptionalPropertyTypes: true,
-      noUncheckedIndexedAccess: true,
-    },
-    imports: { effect: "npm:effect@4.0.5" },
+    compilerOptions: TARGET_COMPILER_OPTIONS,
+    imports: TARGET_IMPORTS,
   },
   null,
   2,

@@ -36,6 +36,7 @@ import {
   makeDiagnostic,
   normalizeDiagnostics,
 } from "./diagnostics.ts";
+import { stronglyConnectedComponents } from "./graph.ts";
 import { serviceOfCapability, shortName } from "./ids.ts";
 import { arrowBody, initOf } from "./syntax_queries.ts";
 import {
@@ -50,11 +51,7 @@ import {
   reachableModules,
 } from "./interface.ts";
 import type { CapabilityId, Execution, ValueId } from "./ir.ts";
-import {
-  type Solved,
-  solveModeGroup,
-  stronglyConnectedComponents,
-} from "./modes.ts";
+import { type Solved, solveModeGroup } from "./modes.ts";
 import type { ConfigError, ModuleInfo } from "./project.ts";
 import type { Result, SourceHost } from "./source.ts";
 import {

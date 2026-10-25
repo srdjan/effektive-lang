@@ -4,8 +4,8 @@
 // body references, transitively. A cycle that holds a constant cannot be
 // initialized. Part A6a orders the emitted constants by `order`.
 
+import { stronglyConnectedComponents } from "./graph.ts";
 import type { ValueId } from "./ir.ts";
-import { stronglyConnectedComponents } from "./modes.ts";
 
 export interface InitializationGraph {
   /** Module constants in source order. */

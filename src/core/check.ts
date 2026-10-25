@@ -44,7 +44,8 @@ import type {
   WrittenParts,
 } from "./ir.ts";
 import { TokenKind } from "./lex.ts";
-import { type Solved, stronglyConnectedComponents } from "./modes.ts";
+import { stronglyConnectedComponents } from "./graph.ts";
+import type { Solved } from "./modes.ts";
 import { flattenIdentityMembers } from "./patterns.ts";
 import type { ModuleInfo } from "./project.ts";
 import type { Target } from "./resolve.ts";

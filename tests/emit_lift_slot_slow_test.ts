@@ -4,6 +4,7 @@
 // of a block runs once, and the returned function gives the right value.
 
 import { assert, assertEquals } from "@std/assert";
+import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
 import { LIFT_PROGRAMS } from "./lift_slot_programs.ts";
 import { deno, runScript } from "./process_helpers.ts";
 
@@ -51,8 +52,8 @@ function runLiftScript(dir: string, script: string): Promise<unknown> {
   Deno.writeTextFileSync(
     `${dir}/deno.json`,
     JSON.stringify({
-      compilerOptions: { strict: true, exactOptionalPropertyTypes: true },
-      imports: { effect: "npm:effect@4.0.5" },
+      compilerOptions: TARGET_COMPILER_OPTIONS,
+      imports: TARGET_IMPORTS,
     }),
   );
   return runScript(dir, script);

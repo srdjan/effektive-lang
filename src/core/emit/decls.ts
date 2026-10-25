@@ -22,7 +22,7 @@ import type {
   ValueId,
 } from "../ir.ts";
 import { SCOPE_CAPABILITY } from "../ir.ts";
-import { stronglyConnectedComponents } from "../modes.ts";
+import { stronglyConnectedComponents } from "../graph.ts";
 import {
   assignment,
   braces,
