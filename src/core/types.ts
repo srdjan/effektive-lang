@@ -1469,6 +1469,46 @@ export function dataOnly(
   }
 }
 
+/** Unknown predicate inputs need entry validation instead of a static proof. */
+export function containsUnknownPredicateInput(
+  table: TypeTable,
+  source: TypeRef,
+  predicate: Predicate,
+): boolean {
+  const unknownAt = (
+    ref: TypeRef,
+    path: readonly string[],
+    depth = 0,
+  ): boolean => {
+    if (depth > MAX_DEPTH) return false;
+    const node = table.node(table.unfold(ref));
+    if (node.kind === "primitive" && node.name === "unknown") return true;
+    if (node.kind === "union") {
+      return node.members.some((member) => unknownAt(member, path, depth + 1));
+    }
+    if (path.length === 0 || node.kind !== "record") return false;
+    const field = node.fields.find((field) => field.name === path[0]);
+    return field !== undefined &&
+      unknownAt(field.type, path.slice(1), depth + 1);
+  };
+  switch (predicate.kind) {
+    case "constant":
+      return false;
+    case "not":
+      return containsUnknownPredicateInput(table, source, predicate.operand);
+    case "and":
+    case "or":
+      return predicate.operands.some((operand) =>
+        containsUnknownPredicateInput(table, source, operand)
+      );
+    case "difference":
+      return [predicate.left, predicate.right].some((term) =>
+        term.kind !== "zero" &&
+        unknownAt(source, term.kind === "input" ? [] : term.path)
+      );
+  }
+}
+
 /**
  * Whether the type contains a function or deferred type at any depth: a value
  * without an encoded form, such as an Effect, a Stream, or a Ref. An alias

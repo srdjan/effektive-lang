@@ -81,6 +81,7 @@ import {
 } from "./tables.ts";
 import {
   containsOpaqueType,
+  containsUnknownPredicateInput,
   dataOnly,
   MAX_DEPTH,
   sortedUnique,
@@ -318,7 +319,7 @@ class BodyChecker
   ): boolean {
     if (
       expected === undefined || this.assignable(found, expected) ||
-      (found === this.table.unknown && this.checkedSlots.has(node))
+      (this.checkedSlots.has(node) && this.checkedTypeFits(found, expected))
     ) {
       return true;
     }
@@ -839,12 +840,14 @@ class BodyChecker
     }
     if (t.kind === "named" && t.id.startsWith("type:") && s.kind !== "named") {
       const id = t.id as TypeId;
+      const base = this.table.brandBaseOf(id);
+      const predicate = this.table.predicateOf(id);
       if (
         !this.table.ownsSealed(this.module, id) ||
-        this.table.predicateOf(id) !== undefined ||
+        (predicate !== undefined &&
+          !containsUnknownPredicateInput(this.table, source, predicate)) ||
         this.table.dataRecordOf(id) !== undefined
       ) return false;
-      const base = this.table.brandBaseOf(id);
       return base !== undefined &&
         this.checkedTypeFits(source, base, depth + 1);
     }
@@ -1881,6 +1884,7 @@ class BodyChecker
     const seen = new Set<string>();
     const infos: NodeInfo[] = [];
     const inferred: { name: string; type: TypeRef; optional: boolean }[] = [];
+    let raw = false;
     for (const { node: fieldNode, parts } of parsed) {
       if (parts === undefined) {
         if (kindOf(this.tree, fieldNode) === SyntaxKind.SpreadField) {
@@ -1914,6 +1918,11 @@ class BodyChecker
       const info = this.fieldValue(fieldNode, parts, declared?.type);
       infos.push(info);
       if (declared !== undefined && !duplicate) {
+        if (
+          target?.kind === "record" && this.checkedSlots.has(node) &&
+          !this.assignable(info.type, declared.type) &&
+          this.checkedTypeFits(info.type, declared.type)
+        ) raw = true;
         this.fits(
           parts.value ?? fieldNode,
           info.type,
@@ -1939,7 +1948,20 @@ class BodyChecker
           node,
         );
       }
-      type = target.ref;
+      if (raw) {
+        const rawType = this.table.record(target.fields.map((field) => ({
+          ...field,
+          type: inferred.find((value) => value.name === field.name)?.type ??
+            field.type,
+        })));
+        const refinement = this.refinementBase(target.ref);
+        const predicate = refinement === undefined
+          ? undefined
+          : this.table.predicateOf(refinement.id);
+        raw = predicate === undefined ||
+          containsUnknownPredicateInput(this.table, rawType, predicate);
+        type = raw ? rawType : target.ref;
+      } else type = target.ref;
       if (target.kind === "construct") {
         this.fact(node, { kind: "data-construction", data: target.id });
         this.preserveRefinement(node, target.id, "the record");
@@ -1953,7 +1975,17 @@ class BodyChecker
       expected !== undefined && this.refinementBase(expected) !== undefined &&
       target?.kind !== "construct"
     ) {
-      this.requireRefinement(node, expected, "the record");
+      const decision = this.refinements.prove(node, expected);
+      if (
+        !raw || decision.status === "failed" && decision.reason === "disproved"
+      ) {
+        this.recordRefinement(
+          node,
+          decision,
+          "the record",
+          this.refinementBase(expected)?.id,
+        );
+      }
     }
     return this.finish(node, type, combine(infos));
   }

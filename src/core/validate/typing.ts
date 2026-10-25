@@ -22,6 +22,7 @@ import type { Execution, Field, FunctionType, Type } from "../ir.ts";
 import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "../ir.ts";
 import { effectsFit, isSubset, sameSet } from "./sets.ts";
 import { typeChildren } from "./type_children.ts";
+import type { Predicate } from "../predicates.ts";
 
 export interface TypeEnv {
   readonly module: string;
@@ -41,6 +42,7 @@ export interface TypeEnv {
   readonly sealed: ReadonlySet<string>;
   /** Identities whose values must satisfy a declared predicate. */
   readonly refined?: ReadonlySet<string>;
+  readonly predicates?: ReadonlyMap<string, Predicate>;
 }
 
 export const INT: Type = { kind: "primitive", name: "int" };
@@ -495,11 +497,15 @@ export function fitsCheckedInput(
     );
   }
   if (t.kind === "named" && s.kind !== "named") {
+    const base = identityBody(env, t.id);
+    const predicate = env.predicates?.get(t.id);
     if (
-      !ownsSealed(env, t.id) || env.refined?.has(t.id) === true ||
+      !ownsSealed(env, t.id) ||
+      (env.refined?.has(t.id) === true &&
+        (predicate === undefined ||
+          !unknownPredicateInput(env, s, predicate))) ||
       env.data.has(t.id)
     ) return false;
-    const base = identityBody(env, t.id);
     return base !== undefined &&
       fitsCheckedInput(env, s, base, depth + 1);
   }
@@ -536,6 +542,49 @@ export function fitsCheckedInput(
       s.elements.every((element, index) =>
         fitsCheckedInput(env, element, t.elements[index], depth + 1)
       );
+  }
+  return false;
+}
+
+function unknownPredicateInput(
+  env: TypeEnv,
+  source: Type,
+  predicate: Predicate,
+): boolean {
+  const pending = [predicate];
+  const seen = new Set<Predicate>();
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    if (seen.has(current)) continue;
+    seen.add(current);
+    if (current.kind === "not") pending.push(current.operand);
+    else if (current.kind === "and" || current.kind === "or") {
+      pending.push(...current.operands);
+    } else if (current.kind === "difference") {
+      for (const term of [current.left, current.right]) {
+        if (term.kind === "zero") continue;
+        const path = term.kind === "input" ? [] : term.path;
+        let candidates = [source];
+        for (let index = 0; index <= path.length; index++) {
+          const next: Type[] = [];
+          for (
+            const candidate of candidates.flatMap((type) => members(env, type))
+          ) {
+            const value = unfold(env, candidate);
+            if (value.kind === "primitive" && value.name === "unknown") {
+              return true;
+            }
+            if (index < path.length) {
+              const field = fieldsOf(env, candidate)?.find((field) =>
+                field.name === path[index]
+              );
+              if (field !== undefined) next.push(field.type);
+            }
+          }
+          candidates = next;
+        }
+      }
+    }
   }
   return false;
 }

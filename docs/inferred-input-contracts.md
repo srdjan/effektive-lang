@@ -32,6 +32,9 @@ Opaque types, deferred types, and foreign sealed types need concrete annotations
 Unknown components can enter checked parameters. Known components must remain statically compatible.
 Known invalid literals and incompatible identities remain compile errors.
 Fully typed values must prove required predicates.
+Within checked records, unknown predicate inputs defer their record predicate to entry validation.
+Concrete predicate inputs retain static obligations despite unrelated unknown fields.
+Raw field types survive lowering. Contextual optional fields retain their existing omission rules.
 Checked-entry capability survives aliases, function values, interfaces, and imports.
 A conversion can discard the capability but cannot create it.
 Calls to checked entries do not narrow the input contracts of forwarding functions.

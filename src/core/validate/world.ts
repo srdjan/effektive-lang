@@ -14,6 +14,7 @@ import type {
   TypeDecl,
 } from "../ir.ts";
 import { SCHEMA_ERROR_ID, SCOPE_CAPABILITY } from "../ir.ts";
+import type { Predicate } from "../predicates.ts";
 import { AREA, type Report } from "./report.ts";
 import {
   containsRefinement,
@@ -127,9 +128,13 @@ export function buildWorld(ir: ModuleIR): World {
   const opaque = new Set<string>();
   const sealed = new Set<string>();
   const refined = new Set<string>();
+  const predicates = new Map<string, Predicate>();
   for (const t of types.values()) {
     if (t.opaque === true) opaque.add(t.id);
-    if (t.predicate !== undefined) refined.add(t.id);
+    if (t.predicate !== undefined) {
+      refined.add(t.id);
+      predicates.set(t.id, t.predicate);
+    }
     if (t.definition.kind === "nominal" && t.definition.sealed === true) {
       sealed.add(t.id);
     }
@@ -166,6 +171,7 @@ export function buildWorld(ir: ModuleIR): World {
       opaque,
       sealed,
       refined,
+      predicates,
     },
     types,
     errors,
