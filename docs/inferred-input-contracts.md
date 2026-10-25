@@ -49,6 +49,7 @@ Predicates support `&&`, `||`, integer comparisons, required field paths, and `l
 String lengths count UTF-16 code units.
 Integer addition and subtraction must normalize to difference constraints, such as `x - y <= k`.
 Predicate arithmetic uses exact mathematical integers. Ordinary arithmetic retains safe-integer checks.
+Integer proof facts use only integer types and integer lengths. A `number` value cannot establish an integer fact.
 Floating-point predicates and arbitrary calls remain unsupported.
 
 Constructors, implicit adoption, arithmetic, and record updates must prove each required predicate.

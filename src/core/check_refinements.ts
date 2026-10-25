@@ -1,6 +1,7 @@
 import { compareText } from "./util.ts";
 import type { LocalId, RefinementProof, TypeId } from "./ir.ts";
 import { and, entails, not, type Predicate, type Term } from "./predicates.ts";
+import { flattenMembers } from "./patterns.ts";
 import type { Target } from "./resolve.ts";
 import {
   kindOf,
@@ -262,9 +263,11 @@ export class RefinementChecker {
       const spread = this.recordSpread(inner);
       if (spread !== undefined) return this.linearAt(spread, path, length);
       const base = this.pathOf(inner);
-      return base === undefined
+      if (base === undefined) return undefined;
+      const target = [...base, ...path];
+      return !length && !this.integerPath(target)
         ? undefined
-        : linearForPath([...base, ...path], length);
+        : linearForPath(target, length);
     }
     if (length) {
       const literal = literalOf(this.tree, inner);
@@ -295,7 +298,9 @@ export class RefinementChecker {
       return { terms: new Map(), offset: BigInt(text) };
     }
     const path = this.pathOf(inner);
-    if (path !== undefined) return linearForPath(path, false);
+    if (path !== undefined && this.integerPath(path)) {
+      return linearForPath(path, false);
+    }
     if (kindOf(this.tree, inner) !== SyntaxKind.BinaryExpr) return undefined;
     const operator = operatorOf(this.tree, inner);
     const [leftNode, rightNode] = kidsOf(this.tree, inner);
@@ -325,6 +330,39 @@ export class RefinementChecker {
     return path === undefined || name === undefined
       ? undefined
       : [...path, name];
+  }
+
+  private integerPath(path: readonly string[]): boolean {
+    const [id, ...fields] = path;
+    if (id === undefined) return false;
+    const root = this.locals.get(id as LocalId);
+    if (root === undefined) return false;
+    let types: readonly TypeRef[] = [root];
+    for (const name of fields) {
+      const next: TypeRef[] = [];
+      for (const type of types) {
+        for (const member of flattenMembers(this.table, type)) {
+          const node = this.table.node(member);
+          if (node.kind !== "record") return false;
+          const field = node.fields.find((candidate) =>
+            candidate.name === name
+          );
+          if (field === undefined || field.optional) return false;
+          next.push(field.type);
+        }
+      }
+      types = next;
+    }
+    return types.length > 0 &&
+      types.every((type) =>
+        flattenMembers(this.table, type).every((member) => {
+          const node = this.table.node(member);
+          return node.kind === "primitive"
+            ? node.name === "int"
+            : node.kind === "literal" && typeof node.value === "number" &&
+              Number.isSafeInteger(node.value);
+        })
+      );
   }
 
   private recordField(node: NodeId, name: string): NodeId | undefined {

@@ -15,6 +15,7 @@ import {
   fits,
   identityBody,
   MAX_DEPTH,
+  members,
   ownsSealed,
   unfold,
 } from "./typing.ts";
@@ -350,9 +351,11 @@ export class RefinementValidator {
         return this.linearAt(expression.record, path, length);
       }
       const base = this.pathOf(expression);
-      return base === undefined
+      if (base === undefined) return undefined;
+      const target = [...base, ...path];
+      return !length && !this.integerPath(target)
         ? undefined
-        : linearForPath([...base, ...path], length);
+        : linearForPath(target, length);
     }
     if (length) {
       if (
@@ -375,7 +378,9 @@ export class RefinementValidator {
       return { terms: new Map(), offset: BigInt(expression.value) };
     }
     const path = this.pathOf(expression);
-    if (path !== undefined) return linearForPath(path, false);
+    if (path !== undefined && this.integerPath(path)) {
+      return linearForPath(path, false);
+    }
     if (
       expression.kind !== "binary" ||
       (expression.operator !== "+" && expression.operator !== "-")
@@ -397,6 +402,29 @@ export class RefinementValidator {
     if (expression.kind !== "get") return undefined;
     const path = this.pathOf(expression.record);
     return path === undefined ? undefined : [...path, expression.field];
+  }
+
+  private integerPath(path: readonly string[]): boolean {
+    const [id, ...names] = path;
+    if (id === undefined) return false;
+    const root = this.locals.get(id as LocalId);
+    if (root === undefined) return false;
+    let types: readonly Type[] = [root];
+    for (const name of names) {
+      const next: Type[] = [];
+      for (const type of types) {
+        for (const member of members(this.ctx.world.env, type)) {
+          const field = fieldsOf(this.ctx.world.env, member)?.find(
+            (candidate) => candidate.name === name,
+          );
+          if (field === undefined || field.optional) return false;
+          next.push(field.type);
+        }
+      }
+      types = next;
+    }
+    return types.length > 0 &&
+      types.every((type) => integerType(this.ctx, type));
   }
 
   private recordField(expression: Expr, name: string): Expr | undefined {
