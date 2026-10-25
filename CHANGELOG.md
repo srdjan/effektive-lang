@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.9.0 - 2026-10-25
+
+A plain `type` declaration now has identity by name. The `nominal` keyword is gone.
+
+- `type UserId = string`, `type Cents = int`, and `type Status = "pending" | "paid"`
+  have identity. Two different types with identity never mix, also when their
+  bodies are equal. A literal or an operator result fits the type with no call.
+- A union with a non-literal member, such as `type Article = Draft | Published`,
+  and a bare name, such as `type Alias = User`, stay transparent aliases.
+- A record type that a union of its own module lists is a tagged record. A
+  record literal at exactly that type constructs it with no call.
+- The emitted TypeScript of an untagged type is the schema and the type of its body.
+
+Breaking changes:
+
+- `nominal` is an ordinary name. Replace `nominal Name = T` with `type Name = T`.
+- The IR moves to version 5. It adds the flag `tagged` on a `nominal` definition.
+- `declaration/014` is deleted. `declaration/017` reports `sealed` on a transparent alias.
+
+The [language rules](docs/language-rules.md) and the language specification
+describe type identity. Requires Deno 2.9.8 and targets Effect 4.0.5.
+
 ## 0.8.0 - 2026-10-24
 
 Write less source while keeping explicit exported contracts:
