@@ -5,6 +5,7 @@ import {
   assertEquals,
   assertNotEquals,
   assertStrictEquals,
+  assertThrows,
 } from "@std/assert";
 import type { ErrorId, Type, TypeId } from "../src/core/ir.ts";
 import { canonicalJson, type TypeRef, TypeTable } from "../src/core/types.ts";
@@ -19,30 +20,51 @@ function fresh(): TypeTable {
   return new TypeTable();
 }
 
-Deno.test("redefining a type replaces alias, brand, opaque and recursive metadata", () => {
+Deno.test("each writer replaces the whole earlier definition of a type", () => {
   const t = fresh();
   const named = t.named(USER);
+  // A sealed tagged identity redefined as an alias keeps no identity metadata.
+  t.defineIdentity(USER, t.record([field("id", t.string)]), true);
+  t.markTagged(USER);
+  assert(t.isIdentity(USER) && t.isSealed(USER));
+  assert(t.dataRecordOf(USER) !== undefined);
   t.defineAlias(USER, t.int);
+  assert(!t.isIdentity(USER));
+  assert(!t.isSealed(USER));
+  assertEquals(t.dataRecordOf(USER), undefined);
+  assertEquals(t.brandBaseOf(USER), undefined);
   assert(t.isAssignable(t.int, named));
-  t.defineBrand(USER, t.int);
+  // An opaque type redefined as an identity is no longer opaque.
+  t.defineOpaque(USER);
+  assert(t.isOpaque(USER));
   assert(!t.isAssignable(t.int, named));
+  assertEquals(t.aliasOf(USER), undefined);
   assertEquals(t.unfold(named), named);
-  t.markOpaque(USER);
-  t.defineBrand(USER, t.string);
+  t.defineIdentity(USER, t.string, false);
   assert(!t.isOpaque(USER));
   assertEquals(t.brandBaseOf(USER), t.string);
+  assertEquals(t.aliasOf(USER), t.string);
+  // An identity redefined as an alias loses its base.
   t.defineAlias(USER, t.int);
   assertEquals(t.brandBaseOf(USER), undefined);
   assert(t.isAssignable(t.int, named));
-
+  // A guarded alias redefined is no longer guarded.
+  t.defineAlias(USER, t.array(named));
   t.markGuardedAlias(USER);
+  assert(!t.exceedsDepth(named, 2, new Map()));
   t.defineAlias(USER, t.array(t.int));
   assert(t.exceedsDepth(named, 2, new Map()));
+  // An opaque redefinition drops the guarded mark and the body.
   t.markGuardedAlias(USER);
-  t.markOpaque(USER);
-  t.defineBrand(USER, t.int);
-  assert(!t.isOpaque(USER));
+  t.defineOpaque(USER);
+  assert(t.isOpaque(USER));
   assertEquals(t.aliasOf(USER), undefined);
+  // Tagging needs an identity.
+  t.defineAlias(USER, t.record([]));
+  assertThrows(() => t.markTagged(USER), Error, "markTagged");
+  t.defineOpaque(USER);
+  assertThrows(() => t.markTagged(USER), Error, "markTagged");
+  assertThrows(() => t.markTagged(ID_A), Error, "markTagged");
 });
 
 Deno.test("CloseableScope is an abstract leaf through aliases and IR conversion", () => {
@@ -455,8 +477,7 @@ Deno.test("identities are nominal: an identity fits itself and its body, never a
 });
 
 function identity(t: TypeTable, id: TypeId, body: TypeRef): TypeRef {
-  t.defineAlias(id, body);
-  t.markIdentity(id);
+  t.defineIdentity(id, body, false);
   return t.named(id);
 }
 
@@ -504,16 +525,16 @@ Deno.test("a body that is a name chains widening, and a sealed identity keeps it
   const id = identity(t, ID_A, text);
   assert(t.isAssignable(id, text));
   assert(!t.isAssignable(text, id));
-  t.markSealed(ID_A);
+  assert(!t.isSealed(ID_A));
+  t.defineIdentity(ID_A, text, true);
   assert(t.isSealed(ID_A));
   // A foreign module cannot widen the identity or give it an unnamed value.
   assert(!t.isAssignableIn("other", id, text));
   assert(!t.isAssignableIn("other", t.literal("x"), id));
   assert(t.isAssignableIn("m", id, text));
   assert(t.isAssignableIn("m", t.literal("x"), id));
-  // `defineAlias` clears the flag, and `markSealed` needs an identity.
+  // `defineAlias` replaces the sealed identity, so nothing stays sealed.
   t.defineAlias(ID_A, t.string);
-  t.markSealed(ID_A);
   assert(!t.isSealed(ID_A));
 });
 
@@ -558,8 +579,7 @@ Deno.test("widening leaves invariant positions and parameters as they are", () =
 
 Deno.test("an opaque type and an error do not widen", () => {
   const t = fresh();
-  t.defineBrand(ID_A, t.unknown);
-  t.markOpaque(ID_A);
+  t.defineOpaque(ID_A);
   t.defineIdentity(ID_B, t.unknown, false);
   assert(!t.isAssignable(t.named(ID_A), t.unknown));
   assert(t.isAssignable(t.named(ID_B), t.unknown));

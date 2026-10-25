@@ -1507,8 +1507,7 @@ class ModuleChecker {
     let literal: LoweredField[] | undefined;
     let record = false;
     if (opaque) {
-      this.table.defineBrand(id, this.table.unknown);
-      this.table.markOpaque(id);
+      this.table.defineOpaque(id);
       definition = {
         kind: "nominal",
         base: { kind: "primitive", name: "unknown" },

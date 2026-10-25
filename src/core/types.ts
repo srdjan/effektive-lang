@@ -328,6 +328,31 @@ interface DefinitionSource {
 // about 1280 frames. 1536 leaves room above that.
 const MAX_DEPTH = 1536;
 
+/**
+ * The definition of a type id. `transparent` unfolds. `identity` has identity by
+ * name and widens to its body. `tagged` is an identity record that carries a
+ * tag. `opaque` has no body. `guarded` marks a recursive record that needs an
+ * array, an optional key, or a tagged terminal choice.
+ */
+type AliasDef =
+  | {
+    readonly kind: "transparent";
+    readonly body: TypeRef;
+    readonly guarded: boolean;
+  }
+  | {
+    readonly kind: "identity";
+    readonly body: TypeRef;
+    readonly sealed: boolean;
+    readonly guarded: boolean;
+  }
+  | {
+    readonly kind: "tagged";
+    readonly body: TypeRef;
+    readonly sealed: boolean;
+  }
+  | { readonly kind: "opaque" };
+
 /** The read side of a `TypeTable`: queries only, no writers. */
 export type TypeReader = Pick<
   TypeTable,
@@ -347,15 +372,8 @@ export class TypeTable {
   private readonly byKey = new Map<string, TypeRef>();
   /** The canonical IR text of a type, for the member order of unions. A node never changes, so the text is stable. */
   private readonly irKeys = new Map<TypeRef, string>();
-  private readonly aliases = new Map<TypeId, TypeRef>();
-  private readonly guardedAliases = new Set<TypeId>();
-  /** Alias ids with identity by name: no other identity mixes with them. */
-  private readonly identities = new Set<TypeId>();
-  /** Identity records that carry a tag. The checker marks them in `inferTags`. */
-  private readonly tagged = new Set<TypeId>();
-  private readonly brands = new Map<TypeId, TypeRef>();
-  private readonly opaque = new Set<TypeId>();
-  private readonly sealed = new Set<TypeId>();
+  /** The one definition of each type id. A writer replaces the whole definition. */
+  private readonly defs = new Map<TypeId, AliasDef>();
   private readonly errorRecords = new Map<ErrorId, TypeRef>();
 
   /** The recovery type. */
@@ -749,74 +767,68 @@ export class TypeTable {
 
   /** Registers the definition of an alias. The last definition wins. */
   defineAlias(id: TypeId, target: TypeRef): void {
-    this.brands.delete(id);
-    this.opaque.delete(id);
-    this.guardedAliases.delete(id);
-    this.sealed.delete(id);
-    this.identities.delete(id);
-    this.tagged.delete(id);
-    this.aliases.set(id, target);
+    this.defs.set(id, { kind: "transparent", body: target, guarded: false });
   }
 
-  /** The alias has identity by name. Call it after `defineAlias`. */
-  markIdentity(id: TypeId): void {
-    this.identities.add(id);
-  }
-
-  /** The identity record carries a tag. Call it after `markIdentity`. */
-  markTagged(id: TypeId): void {
-    this.tagged.add(id);
-  }
-
-  /** Seals an alias that has identity. `defineAlias` clears the flag, so call this after it. */
-  markSealed(id: TypeId): void {
-    if (this.identities.has(id)) this.sealed.add(id);
-  }
-
-  /** True for a brand or an alias with identity. */
-  isIdentity(id: TypeId): boolean {
-    return this.identities.has(id) || this.brands.has(id);
-  }
-
-  markGuardedAlias(id: TypeId): void {
-    this.guardedAliases.add(id);
-  }
-
-  defineBrand(id: TypeId, base: TypeRef, sealed = false): void {
-    this.aliases.delete(id);
-    this.guardedAliases.delete(id);
-    this.identities.delete(id);
-    this.tagged.delete(id);
-    this.opaque.delete(id);
-    if (sealed) this.sealed.add(id);
-    else this.sealed.delete(id);
-    this.brands.set(id, base);
-  }
-
-  /**
-   * Defines an alias with identity. The order matters: `defineAlias` clears the
-   * identity and sealed flags, so they are set after it.
-   */
+  /** Defines an alias with identity by name. A sealed identity needs the authority of its module. */
   defineIdentity(id: TypeId, body: TypeRef, sealed: boolean): void {
-    this.defineAlias(id, body);
-    this.markIdentity(id);
-    if (sealed) this.markSealed(id);
+    this.defs.set(id, { kind: "identity", body, sealed, guarded: false });
   }
 
-  markOpaque(id: TypeId): void {
-    this.opaque.add(id);
+  /** Defines an opaque type. It has no body and is never sealed. */
+  defineOpaque(id: TypeId): void {
+    this.defs.set(id, { kind: "opaque" });
+  }
+
+  /** The identity record carries a tag. Only an identity can become tagged. */
+  markTagged(id: TypeId): void {
+    const def = this.defs.get(id);
+    if (def?.kind !== "identity") {
+      throw new Error(
+        `markTagged needs an identity, but ${id} is ${
+          def?.kind ?? "undefined"
+        }`,
+      );
+    }
+    this.defs.set(id, { kind: "tagged", body: def.body, sealed: def.sealed });
+  }
+
+  /** Marks a recursive record alias or untagged identity as guarded. */
+  markGuardedAlias(id: TypeId): void {
+    const def = this.defs.get(id);
+    if (def?.kind !== "transparent" && def?.kind !== "identity") {
+      throw new Error(
+        `markGuardedAlias needs an alias or an identity, but ${id} is ${
+          def?.kind ?? "undefined"
+        }`,
+      );
+    }
+    this.defs.set(id, { ...def, guarded: true });
+  }
+
+  private isGuarded(id: TypeId): boolean {
+    const def = this.defs.get(id);
+    return (def?.kind === "transparent" || def?.kind === "identity") &&
+      def.guarded;
+  }
+
+  /** True for an opaque type, an alias with identity, or a tagged record. */
+  isIdentity(id: TypeId): boolean {
+    const kind = this.defs.get(id)?.kind;
+    return kind === "identity" || kind === "tagged" || kind === "opaque";
   }
 
   isOpaque(id: TypeId): boolean {
-    return this.opaque.has(id);
+    return this.defs.get(id)?.kind === "opaque";
   }
 
   isSealed(id: TypeId): boolean {
-    return this.sealed.has(id);
+    const def = this.defs.get(id);
+    return (def?.kind === "identity" || def?.kind === "tagged") && def.sealed;
   }
 
   ownsSealed(module: string, id: TypeId): boolean {
-    return !this.sealed.has(id) || moduleOfId(id) === module;
+    return !this.isSealed(id) || moduleOfId(id) === module;
   }
 
   /** The sealed nominal identity below aliases, if this type is one. */
@@ -827,8 +839,8 @@ export class TypeTable {
       seen.add(current);
       const node = this.node(current);
       if (node.kind !== "named" || isErrorId(node.id)) return undefined;
-      if (this.sealed.has(node.id)) return node.id;
-      const alias = this.aliases.get(node.id);
+      if (this.isSealed(node.id)) return node.id;
+      const alias = this.aliasOf(node.id);
       if (alias === undefined) return undefined;
       current = alias;
     }
@@ -856,7 +868,7 @@ export class TypeTable {
           }
           const target = isErrorId(node.id)
             ? this.errorRecords.get(node.id)
-            : this.aliases.get(node.id) ?? this.brands.get(node.id);
+            : this.aliasOf(node.id);
           return target === undefined ? undefined : visit(target);
         }
         case "record":
@@ -916,20 +928,21 @@ export class TypeTable {
   }
 
   aliasOf(id: TypeId): TypeRef | undefined {
-    return this.aliases.get(id);
+    const def = this.defs.get(id);
+    return def === undefined || def.kind === "opaque" ? undefined : def.body;
   }
 
-  /** The base of a brand, or the body of an untagged identity. */
+  /** The base of an opaque type, or the body of an untagged identity. */
   brandBaseOf(id: TypeId): TypeRef | undefined {
-    return this.brands.get(id) ??
-      (this.identities.has(id) && !this.tagged.has(id)
-        ? this.aliases.get(id)
-        : undefined);
+    const def = this.defs.get(id);
+    if (def?.kind === "opaque") return this.unknown;
+    return def?.kind === "identity" ? def.body : undefined;
   }
 
   /** The body of a tagged record. */
   dataRecordOf(id: TypeId): TypeRef | undefined {
-    return this.tagged.has(id) ? this.aliases.get(id) : undefined;
+    const def = this.defs.get(id);
+    return def?.kind === "tagged" ? def.body : undefined;
   }
 
   /** The id of the type when it is a named tagged record, otherwise undefined. */
@@ -947,9 +960,7 @@ export class TypeTable {
 
   /** True when a definition for the id exists. */
   isDefined(id: TypeId | ErrorId): boolean {
-    return isErrorId(id)
-      ? this.errorRecords.has(id)
-      : this.aliases.has(id) || this.brands.has(id);
+    return isErrorId(id) ? this.errorRecords.has(id) : this.defs.has(id);
   }
 
   /**
@@ -988,12 +999,7 @@ export class TypeTable {
           this.markGuardedAlias(decl.id);
         }
       } else if (decl.opaque === true) {
-        this.defineBrand(
-          decl.id,
-          this.fromIr(decl.definition.base),
-          decl.definition.sealed === true,
-        );
-        this.markOpaque(decl.id);
+        this.defineOpaque(decl.id);
       } else {
         // A nominal type is an alias with identity. A tagged one is a tagged record.
         this.defineIdentity(
@@ -1032,13 +1038,13 @@ export class TypeTable {
 
   private follow(ref: TypeRef, stopAtIdentity: boolean): TypeRef {
     let current = ref;
-    for (let steps = 0; steps <= this.aliases.size; steps++) {
+    for (let steps = 0; steps <= this.defs.size; steps++) {
       const node = this.node(current);
       if (node.kind !== "named" || isErrorId(node.id)) return current;
-      if (stopAtIdentity && this.identities.has(node.id)) return current;
-      const target = this.aliases.get(node.id);
-      if (target === undefined) return current;
-      current = target;
+      const def = this.defs.get(node.id);
+      if (def === undefined || def.kind === "opaque") return current;
+      if (stopAtIdentity && def.kind !== "transparent") return current;
+      current = def.body;
     }
     return this.error;
   }
@@ -1087,12 +1093,13 @@ export class TypeTable {
   private childRefs(node: TypeNode): readonly TypeRef[] {
     switch (node.kind) {
       case "named": {
+        if (isErrorId(node.id)) return [];
+        const def = this.defs.get(node.id);
         if (
-          isErrorId(node.id) || this.guardedAliases.has(node.id) ||
-          this.tagged.has(node.id)
+          def === undefined || def.kind === "opaque" || def.kind === "tagged" ||
+          def.guarded
         ) return [];
-        const alias = this.aliases.get(node.id);
-        return alias === undefined ? [] : [alias];
+        return [def.body];
       }
       case "record":
         return node.fields.map((field) => field.type);
@@ -1435,35 +1442,26 @@ export class TypeTable {
     if (
       sn.kind === "named" && tn.kind === "named" && sn.id !== tn.id &&
       !isErrorId(sn.id) && !isErrorId(tn.id) &&
-      this.guardedAliases.has(sn.id) &&
-      this.guardedAliases.has(tn.id)
+      this.isGuarded(sn.id) && this.isGuarded(tn.id)
     ) return false;
     if (sn.kind === "error" || tn.kind === "error") return true;
     if (sn.kind === "primitive" && sn.name === "never") return true;
     // A transparent alias unfolds. An alias with identity stays a name.
-    if (
-      sn.kind === "named" && !isErrorId(sn.id) && !this.identities.has(sn.id)
-    ) {
-      const alias = this.aliases.get(sn.id);
-      if (alias !== undefined) {
-        return nested(alias, t, lift, adopt);
-      }
+    if (sn.kind === "named" && !isErrorId(sn.id)) {
+      const def = this.defs.get(sn.id);
+      if (def?.kind === "transparent") return nested(def.body, t, lift, adopt);
     }
-    if (
-      tn.kind === "named" && !isErrorId(tn.id) && !this.identities.has(tn.id)
-    ) {
-      const alias = this.aliases.get(tn.id);
-      if (alias !== undefined) {
-        return nested(s, alias, lift, adopt);
-      }
+    if (tn.kind === "named" && !isErrorId(tn.id)) {
+      const def = this.defs.get(tn.id);
+      if (def?.kind === "transparent") return nested(s, def.body, lift, adopt);
     }
     // An identity widens to its body, and a body that is itself an identity
     // widens one step further. A sealed identity needs the authority of its module.
     if (
-      sn.kind === "named" && !isErrorId(sn.id) && this.identities.has(sn.id) &&
+      sn.kind === "named" && !isErrorId(sn.id) && this.isIdentity(sn.id) &&
       (module === undefined || this.ownsSealed(module, sn.id))
     ) {
-      const body = this.aliases.get(sn.id);
+      const body = this.aliasOf(sn.id);
       if (body !== undefined && nested(body, t, lift, false)) return true;
     }
     // Two different identities never mix.
@@ -1484,11 +1482,10 @@ export class TypeTable {
     if (
       adopt && tn.kind === "named" && !isErrorId(tn.id) &&
       sn.kind !== "named" && sn.kind !== "union" &&
-      this.identities.has(tn.id) &&
-      !this.tagged.has(tn.id) && !this.opaque.has(tn.id) &&
+      this.defs.get(tn.id)?.kind === "identity" &&
       (module === undefined || this.ownsSealed(module, tn.id))
     ) {
-      const body = this.aliases.get(tn.id);
+      const body = this.aliasOf(tn.id);
       if (body !== undefined && nested(s, body, lift)) return true;
     }
     if (sn.kind === "union") {
