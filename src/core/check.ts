@@ -1830,15 +1830,7 @@ class ModuleChecker {
       const declaration = this.types.find((d) => d.id === m.id);
       const definition = declaration?.definition;
       // The record keeps the optional flag of each field.
-      if (
-        definition?.kind === "nominal" && definition.tagged === true &&
-        definition.base.kind === "record"
-      ) {
-        return [definition.base];
-      }
-      if (definition?.kind === "nominal" && definition.tagged !== true) {
-        return [definition.base];
-      }
+      if (definition?.kind === "nominal") return [definition.base];
       return definition?.kind === "alias" ? [definition.type] : [];
     });
     return recursionIsGuarded(
