@@ -73,31 +73,41 @@ function recordFields(
   return [];
 }
 
-/** Visible names, filtered by context and prefix. No automatic import edits. */
-export function completionsAt(
-  revision: Revision,
-  path: string,
-  offset: number,
-): readonly Completion[] {
-  const info = revision.moduleInfoAt(path);
-  if (info === undefined || offset < 0 || offset > info.tree.text.length) {
-    return [];
-  }
-  const { tree } = info;
-  // A comment/string is never a code-completion context.
+/** What each position kind needs: the word under the cursor and its builders. */
+interface Site {
+  readonly revision: Revision;
+  readonly path: string;
+  readonly offset: number;
+  readonly module: string;
+  readonly tree: SyntaxTree;
+  /** The start of the word under the cursor. */
+  readonly start: number;
+  readonly make: (label: string, kind: Completion["kind"]) => Completion;
+  /** Keeps the labels that start with the typed prefix, sorted. */
+  readonly filter: (values: readonly Completion[]) => Completion[];
+}
+
+/** A comment/string is never a code-completion context. */
+function insideCommentOrString(tree: SyntaxTree, offset: number): boolean {
   const { lexed } = tree;
-  if (
-    [...lexed.trivia.starts].some((start, i) =>
-      start <= offset && offset < lexed.trivia.ends[i] &&
-      lexed.trivia.kinds[i] !== 0
-    )
-  ) return [];
-  if (
+  return [...lexed.trivia.starts].some((start, i) =>
+    start <= offset && offset < lexed.trivia.ends[i] &&
+    lexed.trivia.kinds[i] !== 0
+  ) ||
     [...lexed.starts].some((start, i) =>
       start < offset && offset <= lexed.ends[i] &&
       lexed.kinds[i] === TokenKind.String
-    )
-  ) return [];
+    );
+}
+
+/** The word under the cursor, with the span that a completion replaces. */
+function siteAt(
+  revision: Revision,
+  path: string,
+  offset: number,
+  module: string,
+  tree: SyntaxTree,
+): Site {
   const text = tree.text;
   let start = offset;
   while (start > 0 && /[A-Za-z0-9_$]/.test(text[start - 1])) start--;
@@ -105,45 +115,65 @@ export function completionsAt(
   let end = offset;
   while (end < text.length && /[A-Za-z0-9_$]/.test(text[end])) end++;
   const span = { source: path, start, end };
-  const make = (label: string, kind: Completion["kind"]): Completion => ({
-    label,
-    kind,
-    span,
-  });
-  const filter = (values: readonly Completion[]) =>
-    values.filter((v) => v.label.startsWith(prefix)).sort((a, b) =>
-      a.label.localeCompare(b.label)
-    );
+  return {
+    revision,
+    path,
+    offset,
+    module,
+    tree,
+    start,
+    make: (label, kind) => ({ label, kind, span }),
+    filter: (values) =>
+      values.filter((v) => v.label.startsWith(prefix)).sort((a, b) =>
+        a.label.localeCompare(b.label)
+      ),
+  };
+}
+
+/** The record binding that holds the offset, or -1. */
+function recordBindingAt(tree: SyntaxTree, offset: number): NodeId {
   let bindingNode = containingNode(tree, offset);
   while (
     bindingNode >= 0 && kindOf(tree, bindingNode) !== SyntaxKind.RecordBinding
   ) bindingNode = tree.parents[bindingNode];
-  if (bindingNode >= 0) {
-    const declaration = tree.parents[bindingNode];
-    const selected = new Set(
-      kidsOf(tree, bindingNode).flatMap((field) => {
-        const label = kidsOf(tree, field)[0];
-        return label === undefined || tree.starts[label] === start
-          ? []
-          : [nameTextOf(tree, label)];
-      }),
+  return bindingNode;
+}
+
+/** The fields of the bound record that the pattern does not name yet. */
+function recordBindingCompletions(
+  site: Site,
+  bindingNode: NodeId,
+): readonly Completion[] {
+  const { revision, tree, start, make, filter } = site;
+  const declaration = tree.parents[bindingNode];
+  const selected = new Set(
+    kidsOf(tree, bindingNode).flatMap((field) => {
+      const label = kidsOf(tree, field)[0];
+      return label === undefined || tree.starts[label] === start
+        ? []
+        : [nameTextOf(tree, label)];
+    }),
+  );
+  const checked = revision.checkedModule(site.module);
+  const tables = [
+    ...(checked?.functions.values() ?? []),
+    ...(checked?.constants.values() ?? []),
+  ].map((value) => value.table);
+  for (const table of tables) {
+    const fact = table.facts.get(declaration);
+    if (fact?.kind !== "record-binding") continue;
+    return filter(
+      recordFields(revision, fact.captured.type).filter((name) =>
+        !selected.has(name)
+      ).map((name) => make(name, "property")),
     );
-    const checked = revision.checkedModule(info.name);
-    const tables = [
-      ...(checked?.functions.values() ?? []),
-      ...(checked?.constants.values() ?? []),
-    ].map((value) => value.table);
-    for (const table of tables) {
-      const fact = table.facts.get(declaration);
-      if (fact?.kind !== "record-binding") continue;
-      return filter(
-        recordFields(revision, fact.captured.type).filter((name) =>
-          !selected.has(name)
-        ).map((name) => make(name, "property")),
-      );
-    }
-    return [];
   }
+  return [];
+}
+
+/** The last token that ends at or before the word, skipping newlines. */
+function previousTokenOf(tree: SyntaxTree, start: number): number {
+  const { lexed } = tree;
   let previousToken = -1;
   for (let i = 0; i < lexed.count; i++) {
     if (
@@ -151,6 +181,54 @@ export function completionsAt(
       lexed.kinds[i] !== TokenKind.Eof
     ) previousToken = i;
   }
+  return previousToken;
+}
+
+/** The methods of a service, or the fields of the value before the dot. */
+function memberCompletions(
+  site: Site,
+  previousToken: number,
+): readonly Completion[] {
+  const { revision, path, tree, make, filter } = site;
+  const { lexed, text } = tree;
+  let baseToken = previousToken - 1;
+  while (baseToken >= 0 && lexed.kinds[baseToken] === TokenKind.Newline) {
+    baseToken--;
+  }
+  const baseEnd = baseToken >= 0
+    ? lexed.ends[baseToken]
+    : lexed.starts[previousToken];
+  const baseOccurrence = occurrenceAt(revision, path, baseEnd);
+  if (baseOccurrence?.target.kind === "service") {
+    // The resolver's namespace contains imported service declarations too.
+    const binding = revision.resolution(site.module)?.namespace.get(
+      text.slice(baseOccurrence.span.start, baseOccurrence.span.end),
+    );
+    const methods = binding?.service?.entry.methodList ?? [];
+    return filter(methods.map((m) => make(m.name, "method")));
+  }
+  const checked = revision.checkedModule(site.module);
+  const fields = new Set<string>();
+  const tables = [
+    ...[...(checked?.functions.values() ?? [])].map((f) => f.table),
+    ...[...(checked?.constants.values() ?? [])].map((c) => c.table),
+  ];
+  for (const table of tables) {
+    for (const [node, nodeInfo] of table.info) {
+      if (
+        tree.ends[node] !== baseEnd || kindOf(tree, node) === SyntaxKind.Token
+      ) continue;
+      for (const name of recordFields(revision, nodeInfo.type)) {
+        fields.add(name);
+      }
+    }
+  }
+  return filter([...fields].map((name) => make(name, "property")));
+}
+
+/** True when the word is the first on its line, or follows only `export`. */
+function startsDeclaration(tree: SyntaxTree, start: number): boolean {
+  const { lexed, text } = tree;
   const lineStart = text.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
   const beforeOnLine: number[] = [];
   for (let i = 0; i < lexed.count; i++) {
@@ -160,46 +238,21 @@ export function completionsAt(
       lexed.kinds[i] !== TokenKind.Eof
     ) beforeOnLine.push(i);
   }
-  let declarationStart = beforeOnLine.length === 0 ||
+  return beforeOnLine.length === 0 ||
     (beforeOnLine.length === 1 &&
       lexed.kinds[beforeOnLine[0]] === TokenKind.KwExport);
-  if (previousToken >= 0 && lexed.kinds[previousToken] === TokenKind.Dot) {
-    let baseToken = previousToken - 1;
-    while (baseToken >= 0 && lexed.kinds[baseToken] === TokenKind.Newline) {
-      baseToken--;
-    }
-    const baseEnd = baseToken >= 0
-      ? lexed.ends[baseToken]
-      : lexed.starts[previousToken];
-    const baseOccurrence = occurrenceAt(revision, path, baseEnd);
-    if (baseOccurrence?.target.kind === "service") {
-      // The resolver's namespace contains imported service declarations too.
-      const binding = revision.resolution(info.name)?.namespace.get(
-        text.slice(baseOccurrence.span.start, baseOccurrence.span.end),
-      );
-      const methods = binding?.service?.entry.methodList ?? [];
-      return filter(methods.map((m) => make(m.name, "method")));
-    }
-    const checked = revision.checkedModule(info.name);
-    const fields = new Set<string>();
-    const tables = [
-      ...[...(checked?.functions.values() ?? [])].map((f) => f.table),
-      ...[...(checked?.constants.values() ?? [])].map((c) => c.table),
-    ];
-    for (const table of tables) {
-      for (const [node, nodeInfo] of table.info) {
-        if (
-          tree.ends[node] !== baseEnd || kindOf(tree, node) === SyntaxKind.Token
-        ) continue;
-        for (const name of recordFields(revision, nodeInfo.type)) {
-          fields.add(name);
-        }
-      }
-    }
-    return filter([...fields].map((name) => make(name, "property")));
-  }
+}
+
+type NameContext = "value" | "type" | "fails" | "uses";
+
+/** The syntax context of the word, and whether a declaration word can start here. */
+function nameContextAt(
+  tree: SyntaxTree,
+  start: number,
+  declarationStart: boolean,
+): { readonly context: NameContext; readonly declarationStart: boolean } {
   let node = containingNode(tree, start);
-  let context: "value" | "type" | "fails" | "uses" = "value";
+  let context: NameContext = "value";
   while (node >= 0) {
     const kind = kindOf(tree, node);
     if (
@@ -221,15 +274,24 @@ export function completionsAt(
     }
     node = tree.parents[node];
   }
+  return { context, declarationStart };
+}
+
+/** The names in scope that fit the context. */
+function namespaceCompletions(
+  site: Site,
+  context: NameContext,
+): Map<string, Completion> {
+  const { revision, make } = site;
   const values = new Map<string, Completion>();
-  const namespace = revision.resolution(info.name)?.namespace;
+  const namespace = revision.resolution(site.module)?.namespace;
   for (const [name, binding] of namespace ?? []) {
     const kind = binding.target.kind;
     if (context === "type" && kind !== "type" && kind !== "error") continue;
     if (context === "fails" && kind !== "error") continue;
     if (context === "uses" && kind !== "service") continue;
     if (context === "value" && kind === "service") continue;
-    const origin = declarationOf(revision, info.name, binding.target);
+    const origin = declarationOf(revision, site.module, binding.target);
     const declaration = origin === undefined
       ? undefined
       : revision.moduleInfoAt(origin.source)?.index.decls.find((d) =>
@@ -251,6 +313,17 @@ export function completionsAt(
       ),
     );
   }
+  return values;
+}
+
+/** Adds the locals, the prelude, the type names, or the effect errors that the context allows. */
+function addContextNames(
+  site: Site,
+  values: Map<string, Completion>,
+  context: NameContext,
+  declarationStart: boolean,
+): void {
+  const { revision, path, offset, start, make } = site;
   if (context === "value") {
     const locals = (symbolIndex(revision).locals.get(path) ?? []).filter((l) =>
       l.scope.start <= offset && offset <= l.scope.end &&
@@ -281,5 +354,38 @@ export function completionsAt(
       values.set(name, make(name, "class"));
     }
   }
-  return filter([...values.values()]);
+}
+
+/** The names that fit the syntax context of the word. */
+function nameCompletions(site: Site): readonly Completion[] {
+  const { context, declarationStart } = nameContextAt(
+    site.tree,
+    site.start,
+    startsDeclaration(site.tree, site.start),
+  );
+  const values = namespaceCompletions(site, context);
+  addContextNames(site, values, context, declarationStart);
+  return site.filter([...values.values()]);
+}
+
+/** Visible names, filtered by context and prefix. No automatic import edits. */
+export function completionsAt(
+  revision: Revision,
+  path: string,
+  offset: number,
+): readonly Completion[] {
+  const info = revision.moduleInfoAt(path);
+  if (info === undefined || offset < 0 || offset > info.tree.text.length) {
+    return [];
+  }
+  const { tree } = info;
+  if (insideCommentOrString(tree, offset)) return [];
+  const site = siteAt(revision, path, offset, info.name, tree);
+  const bindingNode = recordBindingAt(tree, offset);
+  if (bindingNode >= 0) return recordBindingCompletions(site, bindingNode);
+  const previousToken = previousTokenOf(tree, site.start);
+  if (previousToken >= 0 && tree.lexed.kinds[previousToken] === TokenKind.Dot) {
+    return memberCompletions(site, previousToken);
+  }
+  return nameCompletions(site);
 }
