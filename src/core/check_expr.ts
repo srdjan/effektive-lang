@@ -163,6 +163,20 @@ interface ArrowContext {
   readonly result: TypeRef | undefined;
 }
 
+interface TargetFields {
+  readonly ref: TypeRef;
+  readonly fields: readonly {
+    readonly name: string;
+    readonly type: TypeRef;
+    readonly optional: boolean;
+  }[];
+}
+
+type RecordTarget =
+  | ({ readonly kind: "record" } & TargetFields)
+  | ({ readonly kind: "construct"; readonly id: TypeId } & TargetFields)
+  | { readonly kind: "variants"; readonly ids: readonly TypeId[] };
+
 function names(ids: readonly string[]): string {
   return ids.map(shortName).join(", ");
 }
@@ -1495,37 +1509,26 @@ class BodyChecker
   }
 
   /**
-   * Picks the record type that a construction targets. `construct` is set when
-   * the expected type is exactly a tagged record, so the literal is an implicit
-   * construction. `variants` is set when a record literal at a union picks a
-   * tagged record: the author must write the constructor.
+   * Picks the record type that a construction targets. `construct` means the
+   * expected type is exactly a tagged record, so the literal is an implicit
+   * construction. `variants` means a record literal at a union picks a tagged
+   * record: the author must write the constructor, and the result has no record.
    */
   private recordTarget(
     expected: TypeRef | undefined,
     labels: readonly string[],
     literals: ReadonlyMap<string, LiteralValue>,
     known: ReadonlyMap<string, TypeRef>,
-  ): {
-    readonly ref: TypeRef;
-    readonly fields: readonly {
-      readonly name: string;
-      readonly type: TypeRef;
-      readonly optional: boolean;
-    }[];
-    readonly construct?: TypeId;
-    readonly variants?: readonly TypeId[];
-  } | undefined {
+  ): RecordTarget | undefined {
     if (expected === undefined) return undefined;
     const table = this.table;
     const unfolded = table.unfold(expected);
     const node = table.node(unfolded);
     if (node.kind === "record") {
       const tagged = table.taggedIdOf(table.unfoldTransparent(expected));
-      return {
-        ref: expected,
-        fields: node.fields,
-        ...(tagged === undefined ? {} : { construct: tagged }),
-      };
+      return tagged === undefined
+        ? { kind: "record", ref: expected, fields: node.fields }
+        : { kind: "construct", ref: expected, fields: node.fields, id: tagged };
     }
     if (node.kind !== "union") return undefined;
     const members = flattenIdentityMembers(table, expected);
@@ -1561,14 +1564,13 @@ class BodyChecker
     if (chosen === undefined) return undefined;
     if (chosen.tagged !== undefined) {
       return {
-        ref: chosen.ref,
-        fields: chosen.fields,
-        variants: candidates.flatMap((c) =>
+        kind: "variants",
+        ids: candidates.flatMap((c) =>
           c.tagged === undefined ? [] : [c.tagged]
         ),
       };
     }
-    return { ref: chosen.ref, fields: chosen.fields };
+    return { kind: "record", ref: chosen.ref, fields: chosen.fields };
   }
 
   /**
@@ -1624,16 +1626,24 @@ class BodyChecker
     }
     const picked = this.recordTarget(expected, labels, literals, known);
     // A record literal does not pick a tagged variant, so it has no target.
-    const target = picked?.variants === undefined ? picked : undefined;
-    if (picked?.variants !== undefined) {
-      this.report(
-        "type-mismatch/003",
-        `a record literal does not pick a variant; write ${
-          picked.variants.map((v) => `\`${shortName(v)}({ ... })\``).sort()
-            .join(" or ")
-        }`,
-        node,
-      );
+    let target: Exclude<RecordTarget, { kind: "variants" }> | undefined;
+    switch (picked?.kind) {
+      case "record":
+      case "construct":
+        target = picked;
+        break;
+      case "variants":
+        this.report(
+          "type-mismatch/003",
+          `a record literal does not pick a variant; write ${
+            picked.ids.map((v) => `\`${shortName(v)}({ ... })\``).sort()
+              .join(" or ")
+          }`,
+          node,
+        );
+        break;
+      case undefined:
+        break;
     }
     const seen = new Set<string>();
     const infos: NodeInfo[] = [];
@@ -1697,11 +1707,11 @@ class BodyChecker
         );
       }
       type = target.ref;
-      if (target.construct !== undefined) {
-        this.fact(node, { kind: "data-construction", data: target.construct });
+      if (target.kind === "construct") {
+        this.fact(node, { kind: "data-construction", data: target.id });
       }
     } else {
-      type = picked?.variants === undefined
+      type = picked?.kind !== "variants"
         ? this.table.record(inferred)
         : this.table.error;
     }
