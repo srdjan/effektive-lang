@@ -4,7 +4,7 @@ The Effektive extension includes its language server and all client runtime depe
 
 Install the local VSIX with **Extensions: Install from VSIX...**, then open an `.eff` or `.effi` file. The extension checks Deno before starting and reports a missing executable or incompatible version. Set `effektive.server.deno` if VS Code cannot find Deno on `PATH`.
 
-The language client supports diagnostics, hover, definitions, document symbols, and the editor capabilities advertised by the bundled server. **Effektive: Show Generated TypeScript** opens generated output beside the source and refreshes it after edits. Errors retain the last good output with a stale marker.
+The language client supports diagnostics, hover, definitions, document symbols, and the editor capabilities advertised by the bundled server. **Effektive: Show Generated TypeScript** opens generated output beside the source and refreshes it after edits. For a host interface file `host.effi`, it shows the companion module `host.effi.ts`. Errors retain the last good output with a stale marker.
 
 ## Settings
 

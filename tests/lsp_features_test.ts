@@ -419,8 +419,29 @@ Deno.test("only subscribed modules send generatedChanged, and a configuration er
   h.files.set(`${ROOT}/effektive.json`, "{");
   h.deliver(watched({ uri: uriOf(`${ROOT}/effektive.json`), type: 2 }));
   assertEquals(h.notifications("effektive/generatedChanged"), []);
-  // The module of a file that is not `.eff` is never subscribed.
-  assertEquals(generated(h, 2, PROVIDERS), null);
+  // A file that is neither `.eff` nor `.effi` is never subscribed.
+  assertEquals(generated(h, 2, exampleUri("notes.txt")), null);
+});
+
+Deno.test("generated TypeScript of a host interface file is its companion module", () => {
+  const h = started();
+  h.deliver(didOpen(PROVIDERS, 1, PROVIDERS_TEXT));
+  const fresh = generated(h, 1, PROVIDERS);
+  assert(fresh !== null);
+  assertEquals(fresh.stale, false);
+  assertStringIncludes(fresh.text, "export");
+  const found = h.server.projects.lookup(PROVIDERS);
+  assert(found !== undefined && found.project.lastGood !== undefined);
+  const emitted = found.project.outputs.emitted(
+    found.project.lastGood,
+    found.project.lastGood.moduleInfoAt("host/providers.effi")?.name ?? "",
+  );
+  assert(emitted !== undefined && emitted.ok);
+  assertEquals(fresh.text, emitted.value.text);
+  // A host file that never produced output gives null, like an `.eff` file.
+  const broken = exampleUri("host/broken.effi");
+  h.deliver(didOpen(broken, 1, "export provider {"));
+  assertEquals(generated(h, 2, broken), null);
 });
 
 // ---- Save -------------------------------------------------------------------

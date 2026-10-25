@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The generated-code view of the editor and the playground shows the
+  companion module `h.effi.ts` for a host interface file `h.effi`.
 - The build no longer overwrites a `.ts` file that it did not generate. It
   reports an error and leaves the file and its map unwritten. Files from
   versions before the rename to Effektive carry another header and are now

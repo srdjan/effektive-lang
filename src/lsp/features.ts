@@ -42,10 +42,9 @@ function answer(value: unknown): Answer {
   return { ok: true, value };
 }
 
-/** The module name of the `.eff` file `path` in the revision, or undefined. */
-function effModuleOf(revision: Revision, path: string): string | undefined {
-  const info = revision.moduleInfoAt(path);
-  return info?.mode === "eff" ? info.name : undefined;
+/** The module name of the `.eff` or `.effi` file `path` in the revision, or undefined. */
+function sourceModuleOf(revision: Revision, path: string): string | undefined {
+  return revision.moduleInfoAt(path)?.name;
 }
 
 /** The range of a span, against the text that the revision used for the span's file. */
@@ -218,7 +217,7 @@ export class GeneratedTexts {
     entry: GeneratedEntry,
     outputs: TypeScriptOutputs,
   ): GeneratedTypeScriptResult | null {
-    const name = effModuleOf(revision, path);
+    const name = sourceModuleOf(revision, path);
     const emitted = name === undefined
       ? undefined
       : outputs.emitted(revision, name);
@@ -237,7 +236,7 @@ export class GeneratedTexts {
     path: string,
     uri: string,
   ): GeneratedTypeScriptResult | null {
-    if (!path.endsWith(".eff")) return null;
+    if (!path.endsWith(".eff") && !path.endsWith(".effi")) return null;
     const entries = this.#entriesOf(project);
     let entry = entries.get(path);
     if (entry === undefined) {

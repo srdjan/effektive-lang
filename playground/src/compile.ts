@@ -1,6 +1,7 @@
 // The compile facade of the playground (plan 5.1). It keeps one `Program`
 // across edits and turns a revision into plain data for the page: diagnostics
-// per file, generated TypeScript per `.eff` file, and the time of the update.
+// per file, generated TypeScript per `.eff` or `.effi` file, and the time of
+// the update.
 //
 // This file has no DOM code and no Deno API. The clock and the program come in
 // through `PlaygroundPorts`, so that a test can supply a fake clock and a
@@ -49,7 +50,7 @@ export interface PlaygroundDiagnostic {
   readonly message: string;
 }
 
-/** The generated TypeScript of one `.eff` file. */
+/** The generated TypeScript of one `.eff` or `.effi` file. */
 interface PlaygroundOutput {
   readonly text: string;
   /** True when the text comes from an earlier revision, because this one has errors. */
@@ -61,7 +62,7 @@ export interface PlaygroundResult {
   readonly diagnostics: Readonly<
     Record<string, readonly PlaygroundDiagnostic[]>
   >;
-  /** Every `.eff` file, keyed by its source path. `null` means no output ever existed. */
+  /** Every `.eff` and `.effi` file, keyed by its source path. `null` means no output ever existed. */
   readonly outputs: Readonly<Record<string, PlaygroundOutput | null>>;
   /** The time of the update and the emits, from `ports.now`. */
   readonly elapsedMs: number;
@@ -96,12 +97,10 @@ export interface Playground {
   hover(path: string, offset: number): PlaygroundHover | undefined;
 }
 
-/** The module name of the `.eff` file `path`, as `effModuleOf` in the LSP. */
-function effModulesOf(revision: Revision): ReadonlyMap<string, string> {
+/** The module name of each `.eff` and `.effi` file, as `sourceModuleOf` in the LSP. */
+function sourceModulesOf(revision: Revision): ReadonlyMap<string, string> {
   const paths = new Map<string, string>();
-  for (const info of revision.moduleInfos()) {
-    if (info.mode === "eff") paths.set(info.path, info.name);
-  }
+  for (const info of revision.moduleInfos()) paths.set(info.path, info.name);
   return paths;
 }
 
@@ -154,7 +153,7 @@ export function createPlayground(
       }
       const revision = updated.value;
       const outputs: Record<string, PlaygroundOutput | null> = {};
-      for (const [path, name] of effModulesOf(revision)) {
+      for (const [path, name] of sourceModulesOf(revision)) {
         const emitted = outputCache.emitted(revision, name);
         if (emitted !== undefined && emitted.ok) {
           lastGoodText.set(path, emitted.value.text);

@@ -94,20 +94,17 @@ export function tabCounts(result: PlaygroundResult): Record<string, number> {
 /**
  * What the TypeScript pane shows for a file.
  * `text`: the current output. `stale`: the last good output, while the module
- * has errors. `none`: the module never produced output. `interface`: the file
- * is a host interface file (`.effi`) and has no generated code.
+ * has errors. `none`: the module never produced output.
  */
 type OutputState =
   | { readonly tag: "text"; readonly text: string }
   | { readonly tag: "stale"; readonly text: string }
-  | { readonly tag: "none" }
-  | { readonly tag: "interface" };
+  | { readonly tag: "none" };
 
 export function outputState(
   result: PlaygroundResult,
   path: string,
 ): OutputState {
-  if (path.endsWith(".effi")) return { tag: "interface" };
   const output = result.outputs[path];
   if (output === undefined || output === null) return { tag: "none" };
   return output.stale

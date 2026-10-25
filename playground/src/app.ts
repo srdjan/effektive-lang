@@ -400,9 +400,6 @@ async function main(): Promise<void> {
       case "none":
         showOutputMessage("This module has no output yet.");
         break;
-      case "interface":
-        showOutputMessage("A host interface file has no generated code.");
-        break;
     }
   }
 

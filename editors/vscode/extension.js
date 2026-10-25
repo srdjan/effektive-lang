@@ -33,11 +33,17 @@ let client;
 /** @type {Promise<void> | undefined} */
 let started;
 
-/** The virtual URI of a source `foo/users.eff` is `effektive-generated:foo/users.ts?<source URI>`. */
+/**
+ * The virtual URI of a source `foo/users.eff` is `effektive-generated:foo/users.ts?<source URI>`.
+ * The virtual URI of a host interface `foo/host.effi` is `effektive-generated:foo/host.effi.ts?<source URI>`.
+ */
 function virtualUriOf(sourceUri) {
   return vscode.Uri.from({
     scheme: GENERATED_SCHEME,
-    path: sourceUri.path.replace(/\.eff$/, ".ts"),
+    path: sourceUri.path.replace(/\.eff$/, ".ts").replace(
+      /\.effi$/,
+      ".effi.ts",
+    ),
     query: encodeURIComponent(sourceUri.toString()),
   });
 }
@@ -147,10 +153,10 @@ async function showGeneratedTypeScript() {
   const document = editor && editor.document;
   if (
     !document || document.languageId !== LANGUAGE_ID ||
-    !document.uri.path.endsWith(".eff")
+    !/\.effi?$/.test(document.uri.path)
   ) {
     await vscode.window.showInformationMessage(
-      "Open an Effektive .eff file to show its generated TypeScript.",
+      "Open an Effektive .eff or .effi file to show its generated TypeScript.",
     );
     return;
   }

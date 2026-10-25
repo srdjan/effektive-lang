@@ -822,8 +822,9 @@ separate.
 
 The playground is a static page in `playground/`. It runs the core in the
 browser. The examples are editable tabs. The page shows the problems, the
-generated TypeScript, and a hover with the contract and the backend type. It
-does not run the generated code. A reload discards the edits.
+generated TypeScript of each `.eff` and `.effi` file, and a hover with the
+contract and the backend type. It does not run the generated code. A reload
+discards the edits.
 
 Run `deno task playground:serve` and open `http://127.0.0.1:8790/`. The task
 builds the page first. `deno task playground:build [outDir]` only writes the

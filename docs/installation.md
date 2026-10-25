@@ -44,7 +44,7 @@ code --install-extension dist/effektive-vscode.vsix --force
 
 Open an `.eff` or `.effi` file. The extension uses its own bundled server. If Deno is outside VS Code's `PATH`, set `effektive.server.deno` to its executable. `effektive.server.repository` is an explicit development override for a checkout; leave it empty for normal installation.
 
-The **Effektive: Show Generated TypeScript** command opens a read-only output document. `effektive.writeOnSave` controls generated `.ts` and `.ts.map` writes on save, and defaults to true. The first save of a session writes every module whose generated files are missing or stale. `effektive.debounceMs` defaults to zero. Reload the window after changing a server setting.
+The **Effektive: Show Generated TypeScript** command opens a read-only output document. For a host interface file `host.effi`, the document shows the companion module `host.effi.ts`. `effektive.writeOnSave` controls generated `.ts` and `.ts.map` writes on save, and defaults to true. The first save of a session writes every module whose generated files are missing or stale. `effektive.debounceMs` defaults to zero. Reload the window after changing a server setting.
 
 ## Verification
 

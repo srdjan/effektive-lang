@@ -43,6 +43,7 @@ const RESULT: PlaygroundResult = {
     "main.eff": { text: "fresh", stale: false },
     "users.eff": { text: "old", stale: true },
     "pay.eff": null,
+    "host/providers.effi": { text: "companion", stale: false },
   },
   elapsedMs: 1,
 };
@@ -102,13 +103,14 @@ Deno.test("tabCounts counts errors for each path, warnings excluded", () => {
   });
 });
 
-Deno.test("outputState covers text, stale, none, and interface", () => {
+Deno.test("outputState covers text, stale, and none", () => {
   assertEquals(outputState(RESULT, "main.eff"), { tag: "text", text: "fresh" });
   assertEquals(outputState(RESULT, "users.eff"), { tag: "stale", text: "old" });
   assertEquals(outputState(RESULT, "pay.eff"), { tag: "none" });
   assertEquals(outputState(RESULT, "unknown.eff"), { tag: "none" });
   assertEquals(outputState(RESULT, "host/providers.effi"), {
-    tag: "interface",
+    tag: "text",
+    text: "companion",
   });
 });
 

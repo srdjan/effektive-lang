@@ -15,8 +15,9 @@ import {
 import { exampleFiles } from "./helpers.ts";
 
 const FILES = exampleFiles();
-const EFF_PATHS = [
+const SOURCE_PATHS = [
   "collections.eff",
+  "host/providers.effi",
   "log.eff",
   "main.eff",
   "pay.eff",
@@ -45,13 +46,13 @@ function offsetOf(text: string, needle: string, delta = 0): number {
   return at + delta;
 }
 
-Deno.test("the examples compile with no diagnostics and five outputs", () => {
+Deno.test("the examples compile with no diagnostics and six outputs, one for the host file", () => {
   const { first } = start();
   for (const diagnostics of Object.values(first.diagnostics)) {
     assertEquals(diagnostics, []);
   }
-  assertEquals(Object.keys(first.outputs).sort(), EFF_PATHS);
-  for (const path of EFF_PATHS) {
+  assertEquals(Object.keys(first.outputs).sort(), SOURCE_PATHS);
+  for (const path of SOURCE_PATHS) {
     const output = first.outputs[path];
     assert(output !== null);
     assertEquals(output.stale, false);
@@ -63,7 +64,7 @@ Deno.test("the examples compile with no diagnostics and five outputs", () => {
 Deno.test("an update before start sends every file", () => {
   const pg = createPlayground(FILES, { now: () => 0 });
   const result = okOf(pg.update("users.eff", FILES["users.eff"]));
-  assertEquals(Object.keys(result.outputs).sort(), EFF_PATHS);
+  assertEquals(Object.keys(result.outputs).sort(), SOURCE_PATHS);
 });
 
 Deno.test("the first call sends every file and later calls send one file", () => {
@@ -273,7 +274,7 @@ Deno.test("an internal error on start resends all files on the next edit", () =>
   const failed = pg.start();
   assert(!failed.ok && failed.error.tag === "internal");
   const recovered = okOf(pg.update("users.eff", BAD_USERS));
-  assertEquals(Object.keys(recovered.outputs).sort(), EFF_PATHS);
+  assertEquals(Object.keys(recovered.outputs).sort(), SOURCE_PATHS);
   assertEquals(recovered.diagnostics["users.eff"].length, 1);
 });
 
