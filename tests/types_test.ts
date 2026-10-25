@@ -627,3 +627,121 @@ Deno.test("a pure function lifts to an effect function only at the top of a valu
   // Equal execution still works when nested.
   assert(t.isAssignable(t.array(effect), t.array(effect)));
 });
+
+const TAG_A = "type:m#TagA" as TypeId;
+const TAG_B = "type:m#TagB" as TypeId;
+const SEALED = "type:m#Sealed" as TypeId;
+const TREE = "type:m#Tree" as TypeId;
+const OPAQUE = "type:m#Opaque" as TypeId;
+
+Deno.test("load defines opaque, tagged, guarded, and sealed types", () => {
+  const t = fresh();
+  const named = (id: TypeId): Type => ({ kind: "named", id });
+  const tree = (id: TypeId): Type => ({
+    kind: "record",
+    fields: [{
+      name: "children",
+      type: { kind: "array", element: named(id) },
+      optional: false,
+    }],
+  });
+  t.load({
+    types: [
+      {
+        id: OPAQUE,
+        opaque: true,
+        definition: {
+          kind: "nominal",
+          base: { kind: "primitive", name: "unknown" },
+        },
+      },
+      {
+        id: TAG_A,
+        definition: {
+          kind: "nominal",
+          base: {
+            kind: "record",
+            fields: [{
+              name: "id",
+              type: { kind: "primitive", name: "string" },
+              optional: false,
+            }],
+          },
+          tagged: true,
+        },
+      },
+      {
+        id: TAG_B,
+        definition: {
+          kind: "nominal",
+          base: { kind: "primitive", name: "int" },
+        },
+      },
+      {
+        id: SEALED,
+        definition: {
+          kind: "nominal",
+          base: { kind: "primitive", name: "int" },
+          sealed: true,
+        },
+      },
+      { id: USER, definition: { kind: "alias", type: tree(USER) } },
+      { id: ID_A, definition: { kind: "alias", type: tree(ID_A) } },
+      { id: TREE, definition: { kind: "nominal", base: tree(TREE) } },
+    ],
+    errors: [],
+  });
+
+  assert(t.isOpaque(OPAQUE));
+  assert(t.isIdentity(OPAQUE));
+  assertEquals(t.aliasOf(OPAQUE), undefined);
+  assertEquals(t.brandBaseOf(OPAQUE), t.unknown);
+  assert(!t.isSealed(OPAQUE));
+
+  assert(t.isIdentity(TAG_A));
+  assert(!t.isOpaque(TAG_A));
+  assertEquals(t.dataRecordOf(TAG_A), t.aliasOf(TAG_A));
+  assertEquals(t.taggedIdOf(t.named(TAG_A)), TAG_A);
+  assertEquals(t.brandBaseOf(TAG_A), undefined);
+
+  assert(t.isIdentity(TAG_B));
+  assertEquals(t.brandBaseOf(TAG_B), t.int);
+  assertEquals(t.aliasOf(TAG_B), t.int);
+  assertEquals(t.dataRecordOf(TAG_B), undefined);
+  assert(!t.isSealed(TAG_B));
+
+  assert(t.isIdentity(SEALED));
+  assert(t.isSealed(SEALED));
+  assert(!t.ownsSealed("other", SEALED));
+  assert(t.ownsSealed("m", SEALED));
+
+  // A guarded alias and a guarded untagged identity are one unit of
+  // recursion: they never fit each other, and their height stops at the name.
+  assert(!t.isIdentity(USER));
+  assert(t.isIdentity(TREE));
+  assert(!t.isAssignable(t.named(USER), t.named(ID_A)));
+  assert(!t.isAssignable(t.named(USER), t.named(TREE)));
+  assert(!t.isAssignable(t.named(TREE), t.named(USER)));
+  assert(t.isAssignable(t.named(USER), t.named(USER)));
+  assert(!t.exceedsDepth(t.named(USER), 1, new Map()));
+  assert(!t.exceedsDepth(t.named(TREE), 1, new Map()));
+});
+
+Deno.test("a sealed identity is found through transparent aliases", () => {
+  const t = fresh();
+  const middle = "type:m#Middle" as TypeId;
+  const top = "type:m#Top" as TypeId;
+  t.defineIdentity(SEALED, t.int, true);
+  t.defineAlias(middle, t.named(SEALED));
+  t.defineAlias(top, t.named(middle));
+  assertEquals(t.sealedRootOf(t.named(top)), SEALED);
+  assertEquals(t.sealedRootOf(t.named(SEALED)), SEALED);
+  assertEquals(t.sealedRootOf(t.int), undefined);
+  t.defineIdentity(ID_A, t.int, false);
+  t.defineAlias(middle, t.named(ID_A));
+  assertEquals(t.sealedRootOf(t.named(top)), undefined);
+  assertEquals(t.foreignSealedOf("other", t.named(top)), undefined);
+  t.defineAlias(middle, t.named(SEALED));
+  assertEquals(t.foreignSealedOf("other", t.named(top)), SEALED);
+  assertEquals(t.foreignSealedOf("m", t.named(top)), undefined);
+});

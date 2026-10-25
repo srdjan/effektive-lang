@@ -364,3 +364,28 @@ export const keep = (value: Positive): Positive => value
     "sealed type Positive",
   );
 });
+
+Deno.test("a sealed record that a union tags and that declares _tag reports declaration/009 and stays sealed", () => {
+  const library = `
+export sealed type Broken = { _tag: string, name: string }
+export type Other = { name: string }
+export type Both = Broken | Other
+`;
+  const owner = checked({ "lib.eff": library }, ["lib.eff"]);
+  assertEquals(owner.diagnostics.map((diagnostic) => diagnostic.code), [
+    "declaration/009",
+  ]);
+  const foreign = checked({
+    "lib.eff": library,
+    "main.eff": `
+import { Broken } from "./lib.eff"
+export const bad = (): Broken => Broken({ name: "x" })
+`,
+  }, ["main.eff"]);
+  assertEquals(
+    foreign.diagnostics.map((diagnostic) => diagnostic.code).filter((code) =>
+      code !== "declaration/009"
+    ),
+    ["sealed/001"],
+  );
+});
