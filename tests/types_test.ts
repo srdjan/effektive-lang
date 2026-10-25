@@ -5,7 +5,6 @@ import {
   assertEquals,
   assertNotEquals,
   assertStrictEquals,
-  assertThrows,
 } from "@std/assert";
 import type { ErrorId, Type, TypeId } from "../src/core/ir.ts";
 import { canonicalJson, type TypeRef, TypeTable } from "../src/core/types.ts";
@@ -24,8 +23,7 @@ Deno.test("each writer replaces the whole earlier definition of a type", () => {
   const t = fresh();
   const named = t.named(USER);
   // A sealed tagged identity redefined as an alias keeps no identity metadata.
-  t.defineIdentity(USER, t.record([field("id", t.string)]), true);
-  t.markTagged(USER);
+  t.defineTagged(USER, t.record([field("id", t.string)]), true);
   assert(t.isIdentity(USER) && t.isSealed(USER));
   assert(t.dataRecordOf(USER) !== undefined);
   t.defineAlias(USER, t.int);
@@ -49,22 +47,15 @@ Deno.test("each writer replaces the whole earlier definition of a type", () => {
   assertEquals(t.brandBaseOf(USER), undefined);
   assert(t.isAssignable(t.int, named));
   // A guarded alias redefined is no longer guarded.
-  t.defineAlias(USER, t.array(named));
-  t.markGuardedAlias(USER);
+  t.defineAlias(USER, t.array(named), true);
   assert(!t.exceedsDepth(named, 2, new Map()));
   t.defineAlias(USER, t.array(t.int));
   assert(t.exceedsDepth(named, 2, new Map()));
   // An opaque redefinition drops the guarded mark and the body.
-  t.markGuardedAlias(USER);
+  t.defineAlias(USER, t.array(named), true);
   t.defineOpaque(USER);
   assert(t.isOpaque(USER));
   assertEquals(t.aliasOf(USER), undefined);
-  // Tagging needs an identity.
-  t.defineAlias(USER, t.record([]));
-  assertThrows(() => t.markTagged(USER), Error, "markTagged");
-  t.defineOpaque(USER);
-  assertThrows(() => t.markTagged(USER), Error, "markTagged");
-  assertThrows(() => t.markTagged(ID_A), Error, "markTagged");
 });
 
 Deno.test("CloseableScope is an abstract leaf through aliases and IR conversion", () => {
@@ -548,10 +539,9 @@ Deno.test("two ids with one short name show as module#Name", () => {
 Deno.test("a data type widens to its record, and the record does not fit back", () => {
   const t = fresh();
   const record = t.record([field("id", t.string)]);
-  const a = identity(t, ID_A, record);
-  identity(t, ID_B, record);
-  t.markTagged(ID_A);
-  t.markTagged(ID_B);
+  t.defineTagged(ID_A, record, false);
+  t.defineTagged(ID_B, record, false);
+  const a = t.named(ID_A);
   assert(t.isAssignable(a, record));
   assert(!t.isAssignable(record, a));
   assert(!t.isAssignable(a, t.named(ID_B)));
@@ -561,8 +551,7 @@ Deno.test("a data type widens to its record, and the record does not fit back", 
 Deno.test("widening leaves invariant positions and parameters as they are", () => {
   const t = fresh();
   const record = t.record([field("id", t.string)]);
-  t.defineIdentity(ID_A, record, false);
-  t.markTagged(ID_A);
+  t.defineTagged(ID_A, record, false);
   const a = t.named(ID_A);
   assert(!t.isAssignable(t.ref(a), t.ref(record)));
   assert(!t.isAssignable(t.ref(record), t.ref(a)));

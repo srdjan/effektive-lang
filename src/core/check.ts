@@ -1645,20 +1645,18 @@ class ModuleChecker {
     const definition = declaration.definition;
     if (definition.kind !== "nominal") return;
     const aliased = this.table.aliasOf(id);
-    const node = aliased === undefined ? undefined : this.table.node(aliased);
+    if (aliased === undefined) return;
+    const node = this.table.node(aliased);
+    let body = aliased;
     let base = definition.base;
-    if (node?.kind === "record" && node.fields.some((f) => f.name === "_tag")) {
+    if (node.kind === "record" && node.fields.some((f) => f.name === "_tag")) {
       this.lowerer.report(
         "declaration/009",
         "the field name `_tag` is reserved for generated tags",
         literal?.find((f) => f.name === "_tag")?.span ?? span,
       );
       // The record loses the reserved field, so its uses report nothing more.
-      this.table.defineIdentity(
-        id,
-        this.table.record(node.fields.filter((f) => f.name !== "_tag")),
-        entry.sealed,
-      );
+      body = this.table.record(node.fields.filter((f) => f.name !== "_tag"));
       if (base.kind === "record") {
         base = {
           kind: "record",
@@ -1666,7 +1664,7 @@ class ModuleChecker {
         };
       }
     }
-    this.table.markTagged(id);
+    this.table.defineTagged(id, body, entry.sealed);
     if (literal !== undefined) {
       for (const field of literal) {
         if (field.name === "_tag") continue;
@@ -1787,7 +1785,14 @@ class ModuleChecker {
           dataOnly(this.table, aliased, "schema")
         ) {
           guardedAliases.add(first.id);
-          this.table.markGuardedAlias(first.id);
+          if (definition?.kind === "nominal") {
+            this.table.defineIdentity(
+              first.id,
+              aliased,
+              definition.sealed === true,
+              true,
+            );
+          } else this.table.defineAlias(first.id, aliased, true);
           continue;
         }
       }

@@ -771,45 +771,33 @@ export class TypeTable {
 
   // -------------------------------------------------------------- definitions
 
-  /** Registers the definition of an alias. The last definition wins. */
-  defineAlias(id: TypeId, target: TypeRef): void {
-    this.defs.set(id, { kind: "transparent", body: target, guarded: false });
+  /**
+   * Registers the definition of an alias. The last definition wins. A guarded
+   * alias is a recursive record that needs an array, an optional key, or a
+   * tagged terminal choice.
+   */
+  defineAlias(id: TypeId, target: TypeRef, guarded = false): void {
+    this.defs.set(id, { kind: "transparent", body: target, guarded });
   }
 
   /** Defines an alias with identity by name. A sealed identity needs the authority of its module. */
-  defineIdentity(id: TypeId, body: TypeRef, sealed: boolean): void {
-    this.defs.set(id, { kind: "identity", body, sealed, guarded: false });
+  defineIdentity(
+    id: TypeId,
+    body: TypeRef,
+    sealed: boolean,
+    guarded = false,
+  ): void {
+    this.defs.set(id, { kind: "identity", body, sealed, guarded });
+  }
+
+  /** Defines an identity record that carries a tag. */
+  defineTagged(id: TypeId, body: TypeRef, sealed: boolean): void {
+    this.defs.set(id, { kind: "tagged", body, sealed });
   }
 
   /** Defines an opaque type. It has no body and is never sealed. */
   defineOpaque(id: TypeId): void {
     this.defs.set(id, { kind: "opaque" });
-  }
-
-  /** The identity record carries a tag. Only an identity can become tagged. */
-  markTagged(id: TypeId): void {
-    const def = this.defs.get(id);
-    if (def?.kind !== "identity") {
-      throw new Error(
-        `markTagged needs an identity, but ${id} is ${
-          def?.kind ?? "undefined"
-        }`,
-      );
-    }
-    this.defs.set(id, { kind: "tagged", body: def.body, sealed: def.sealed });
-  }
-
-  /** Marks a recursive record alias or untagged identity as guarded. */
-  markGuardedAlias(id: TypeId): void {
-    const def = this.defs.get(id);
-    if (def?.kind !== "transparent" && def?.kind !== "identity") {
-      throw new Error(
-        `markGuardedAlias needs an alias or an identity, but ${id} is ${
-          def?.kind ?? "undefined"
-        }`,
-      );
-    }
-    this.defs.set(id, { ...def, guarded: true });
   }
 
   /** The definition behind a named type, or undefined for an error or another node. */
@@ -1001,22 +989,26 @@ export class TypeTable {
     for (const decl of source.types) {
       if (this.isDefined(decl.id)) continue;
       if (decl.definition.kind === "alias") {
-        this.defineAlias(decl.id, this.fromIr(decl.definition.type));
-        if (guardedRecord(decl.definition.type, decl.id, tagOf)) {
-          this.markGuardedAlias(decl.id);
-        }
+        this.defineAlias(
+          decl.id,
+          this.fromIr(decl.definition.type),
+          guardedRecord(decl.definition.type, decl.id, tagOf),
+        );
       } else if (decl.opaque === true) {
         this.defineOpaque(decl.id);
       } else {
         // A nominal type is an alias with identity. A tagged one is a tagged record.
-        this.defineIdentity(
-          decl.id,
-          this.fromIr(decl.definition.base),
-          decl.definition.sealed === true,
-        );
-        if (decl.definition.tagged === true) this.markTagged(decl.id);
-        else if (guardedRecord(decl.definition.base, decl.id, tagOf)) {
-          this.markGuardedAlias(decl.id);
+        const body = this.fromIr(decl.definition.base);
+        const sealed = decl.definition.sealed === true;
+        if (decl.definition.tagged === true) {
+          this.defineTagged(decl.id, body, sealed);
+        } else {
+          this.defineIdentity(
+            decl.id,
+            body,
+            sealed,
+            guardedRecord(decl.definition.base, decl.id, tagOf),
+          );
         }
       }
     }
