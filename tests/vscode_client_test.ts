@@ -1,6 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { runInNewContext } from "node:vm";
 import * as path from "node:path";
+import { releaseManifest, releaseVersion } from "../scripts/package.ts";
 import { KEYWORDS } from "../src/core/lex.ts";
 import { BUILTIN_TYPE_NAMES, PRELUDE_NAMES } from "../src/core/resolve.ts";
 import {
@@ -43,12 +44,20 @@ function collectMatches(value: unknown): string[] {
   return own.concat(Object.values(value).flatMap(collectMatches));
 }
 
-Deno.test("the extension and its lock file carry the compiler version", () => {
-  const version = field(readJson("../../deno.json"), "version");
-  assertEquals(field(readJson("package.json"), "version"), version);
+Deno.test("the release version comes only from deno.json", () => {
+  const denoJson = Deno.readTextFileSync(
+    new URL("../deno.json", import.meta.url),
+  );
+  const version = releaseVersion(denoJson);
+  const source = Deno.readTextFileSync(new URL("package.json", CLIENT));
+  const released: unknown = JSON.parse(releaseManifest(source, version));
+  assertEquals(field(released, "version"), version);
+  // The source manifest and its lock file hold a fixed placeholder, so no
+  // second copy of the release version can drift.
+  assertEquals(field(readJson("package.json"), "version"), "0.0.0");
   const lock = readJson("package-lock.json");
-  assertEquals(field(lock, "version"), version);
-  assertEquals(field(field(field(lock, "packages"), ""), "version"), version);
+  assertEquals(field(lock, "version"), "0.0.0");
+  assertEquals(field(field(field(lock, "packages"), ""), "version"), "0.0.0");
 });
 
 Deno.test("package.json contributes the effektive language and grammar", () => {

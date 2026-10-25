@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `deno.json` is the only source of the release version. `deno task package`
+  writes it into the packaged extension manifest. The VSIX file is now
+  `dist/effektive-vscode.vsix`, with no version in its name.
+
 ## 0.9.0 - 2026-10-25
 
 A plain `type` declaration now has identity by name. The `nominal` keyword is gone.

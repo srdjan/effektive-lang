@@ -6,6 +6,22 @@ export const REQUIRED_DENO_VERSION = "2.9.8";
 const ROOT = resolve(dirname(fromFileUrl(import.meta.url)), "..");
 const encoder = new TextEncoder();
 
+/** The release version. `deno.json` is its only source. */
+export function releaseVersion(denoJson: string): string {
+  const version: unknown = JSON.parse(denoJson).version;
+  if (typeof version !== "string") {
+    throw new Error("deno.json has no string version");
+  }
+  return version;
+}
+
+/** The extension manifest with the release version written into it. */
+export function releaseManifest(packageJson: string, version: string): string {
+  return `${
+    JSON.stringify({ ...JSON.parse(packageJson), version }, null, 2)
+  }\n`;
+}
+
 async function command(
   name: string,
   args: string[],
@@ -156,13 +172,20 @@ export async function packageRelease(
       `if (Deno.version.deno !== "${REQUIRED_DENO_VERSION}") {\n  console.error("Effektive requires Deno ${REQUIRED_DENO_VERSION}; found " + Deno.version.deno + ".");\n  Deno.exit(2);\n}\n`;
     Deno.writeTextFileSync(target, guard + bundled);
   }
-  const pkg = JSON.parse(
-    Deno.readTextFileSync(join(extension, "package.json")),
+  const version = releaseVersion(
+    Deno.readTextFileSync(join(ROOT, "deno.json")),
   );
-  const entries: Entry[] = [];
+  const packageJson = releaseManifest(
+    Deno.readTextFileSync(join(extension, "package.json")),
+    version,
+  );
+  const pkg = JSON.parse(packageJson);
+  const entries: Entry[] = [{
+    name: "extension/package.json",
+    bytes: encoder.encode(packageJson),
+  }];
   for (
     const name of [
-      "package.json",
       "extension.js",
       "language-configuration.json",
       "README.md",
@@ -210,7 +233,7 @@ export async function packageRelease(
       '<?xml version="1.0" encoding="utf-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="json" ContentType="application/json"/><Default Extension="js" ContentType="application/javascript"/><Default Extension="md" ContentType="text/markdown"/><Default Extension="vsixmanifest" ContentType="text/xml"/><Default Extension="xml" ContentType="text/xml"/><Default Extension="txt" ContentType="text/plain"/></Types>',
     ),
   });
-  const vsix = join(out, `effektive-vscode-${pkg.version}.vsix`);
+  const vsix = join(out, "effektive-vscode.vsix");
   Deno.writeFileSync(vsix, archive(entries));
   return [cli, server, vsix];
 }

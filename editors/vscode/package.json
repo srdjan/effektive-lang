@@ -2,7 +2,7 @@
   "name": "effektive-vscode",
   "displayName": "Effektive",
   "description": "Language support for Effektive, including diagnostics, navigation, refactoring, completion, and generated TypeScript.",
-  "version": "0.9.0",
+  "version": "0.0.0",
   "publisher": "local",
   "private": true,
   "license": "MIT",
