@@ -50,7 +50,7 @@ RV11 (low, both). Unused exports. 17 exported types have no reference outside `s
 
 RV12 (low, confirmed for the first item, Fable and astra). Docs drift. `docs/transpiler-design.md:684-686` says that a match does not test the last arm. The code (`emit/expr.ts:1352-1356`) and `docs/language-rules.md` say that a last arm other than `_` has a test and the else branch throws. `docs/api.md:79` places `emitProject` in `emit/emit.ts`, but it is in `typescript.ts:35`. `docs/api.md:137` names four application witnesses, and there are five. The `docs/api.md` file map lacks `editor_hints.ts`, `emit/emitted.ts`, `emit/families/`, `validate/builtins.ts`, and `bench/m7.ts`. Fixed in commit `9628dd8` (RW5).
 
-RV13 (low, Fable). The slow suite gets a fresh `DENO_DIR` for each run (`scripts/test_slow.ts:6,17`), so each `deno task check` downloads Effect again and needs the network. Its share of the check time needs measurement. `tests/emit_slow_test.ts` is 5,444 lines with 88 tests, and a split by builtin family would help navigation.
+RV13 (low, Fable). The slow suite gets a fresh `DENO_DIR` for each run (`scripts/test_slow.ts:6,17`), so each `deno task check` downloads Effect again and needs the network. Its share of the check time needs measurement. `tests/emit_slow_test.ts` is 5,444 lines with 88 tests, and a split by builtin family would help navigation. Measured on 2026-10-25 (RW7): `deno task test:slow` with a fresh `DENO_DIR` took 113.8 s. Three runs with one shared `DENO_DIR` took 113.9 s (the run that fills the cache), 108.2 s, and 107.3 s. A warm cache saves about 6 s, or 5 percent, in one sample of each kind. The fresh `DENO_DIR` stays, because it stops the cache from growing, and the suite still needs network access. The split of `tests/emit_slow_test.ts` is declined: the tests share no expensive setup, the files run one after another, and a split would only help navigation.
 
 ## Accepted as they are
 
@@ -62,7 +62,7 @@ The checker and the validator duplicate their rules on purpose. Each builtin tou
 2. RV1 and RV9: done.
 3. RV3: done.
 4. RV7 and RV5: done. The plan is `docs/archive/plans/2026-10-25-review-follow-up.md` (RF).
-5. RV4, RV6, and RV10 to RV13, when the files change.
+5. RV4, RV6, RV8, and RV10 to RV13: done or declined. The plan is `docs/archive/plans/2026-10-25-review-remaining.md` (RW).
 
 ## Not checked
 
