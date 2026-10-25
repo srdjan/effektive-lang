@@ -3,7 +3,12 @@ const outputs = new TypeScriptOutputs();
 // Tests for the program of part A7: the memo, the module cutoff, and the
 // differential check against a run from scratch.
 
-import { assert, assertEquals, assertNotEquals } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertNotEquals,
+  assertThrows,
+} from "@std/assert";
 import { checkProject } from "../src/core/check_project.ts";
 import { Program, type Revision, revisionDelta } from "../src/core/db.ts";
 import { emitProject } from "../src/core/typescript.ts";
@@ -14,6 +19,7 @@ import {
 import { buildSpanTable, hostImportSpans } from "../src/core/emit/spans.ts";
 import { serializeModule } from "../src/core/serialize.ts";
 import { memoryHost } from "../src/core/source.ts";
+import { TypeTable } from "../src/core/types.ts";
 import { lowerProject } from "../src/core/lower.ts";
 import { exampleFiles } from "./helpers.ts";
 
@@ -127,6 +133,42 @@ Deno.test("incremental alias and brand edits equal fresh checks across dependent
   const restored = session.apply({ "a.eff": brand });
   assert(restored.diagnostics.some((d) => d.code === "type-mismatch/003"));
   assertEquals(session.apply({ "a.eff": alias }).diagnostics, []);
+});
+
+Deno.test("an update after an internal failure in check equals a run from scratch", () => {
+  const alias = "export type N = int\nexport const n: N = 1\n";
+  const files = {
+    "effektive.json": "{}",
+    "a.eff": alias,
+    "b.eff": 'import { N, n } from "./a.eff"\nexport const copy: N = n\n',
+  };
+  const session = new Session(files);
+  session.apply(files);
+  // A body edit makes `check` run again, and `check` then reaches `isAssignableIn`.
+  const broken = {
+    "b.eff":
+      'import { N, n } from "./a.eff"\nexport const copy: N = n\nexport const twin: N = n\n',
+  };
+  const original = TypeTable.prototype.isAssignableIn;
+  TypeTable.prototype.isAssignableIn = () => {
+    throw new Error("internal: injected");
+  };
+  try {
+    assertThrows(
+      () => session.program.update({ set: broken }),
+      Error,
+      "injected",
+    );
+  } finally {
+    TypeTable.prototype.isAssignableIn = original;
+  }
+  // The files stay changed by design, so the session follows them.
+  Object.assign(session.files, broken);
+  const fixed = session.apply({
+    "b.eff":
+      'import { N, n } from "./a.eff"\nexport const copy: N = n\nexport const again: N = copy\n',
+  });
+  assertEquals(fixed.diagnostics, []);
 });
 
 // ------------------------------------------------------------------ the memo
