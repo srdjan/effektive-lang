@@ -572,3 +572,24 @@ Deno.test("a nominal value fits its base, an opaque type does not, and a base va
   );
   assertEquals(fits(env, handle, UNKNOWN), false);
 });
+
+Deno.test("a union of identities takes no other name, and a literal union still fits one", () => {
+  const cents: Type = { kind: "named", id: "type:m#Cents" };
+  const meters: Type = { kind: "named", id: "type:m#Meters" };
+  const score: Type = { kind: "named", id: "type:m#Score" };
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([
+      ["type:m#Cents", INT],
+      ["type:m#Meters", INT],
+      ["type:m#Score", INT],
+    ]),
+    identities: new Set(["type:m#Cents", "type:m#Meters", "type:m#Score"]),
+  };
+  const one: Type = { kind: "literal", value: 1 };
+  const two: Type = { kind: "literal", value: 2 };
+  assert(!fits(env, { kind: "union", members: [cents, meters] }, score));
+  assert(!fits(env, { kind: "union", members: [cents, one] }, score));
+  assert(fits(env, { kind: "union", members: [one, two] }, cents));
+  assert(fits(env, { kind: "union", members: [cents, meters] }, INT));
+});

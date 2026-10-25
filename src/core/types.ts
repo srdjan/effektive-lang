@@ -1488,12 +1488,14 @@ export class TypeTable {
         return true;
       }
     }
-    // An unnamed value fits an untagged identity whose body it fits. A tagged
-    // record takes a record literal only through implicit construction. A
-    // sealed identity needs the authority of its module.
+    // An unnamed value fits an untagged identity whose body it fits. A union is
+    // not one value: its members split below, so a named member keeps its name.
+    // A tagged record takes a record literal only through implicit
+    // construction. A sealed identity needs the authority of its module.
     if (
       adopt && tn.kind === "named" && !isErrorId(tn.id) &&
-      sn.kind !== "named" && this.identities.has(tn.id) &&
+      sn.kind !== "named" && sn.kind !== "union" &&
+      this.identities.has(tn.id) &&
       !this.tagged.has(tn.id) && !this.opaque.has(tn.id) &&
       (module === undefined || this.ownsSealed(module, tn.id))
     ) {

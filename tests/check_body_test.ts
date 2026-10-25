@@ -6556,3 +6556,19 @@ const pick = (flag: Bool): Circle => if (flag) { Circle({ radius: "r" }) } else 
 `;
   assertEquals(codes(checkText(misses)), ["type-mismatch/003"]);
 });
+
+Deno.test("a union of two identities does not fit a third identity", () => {
+  const prefix = `type Cents = int\ntype Meters = int\ntype Score = int\n`;
+  for (
+    const body of [
+      `export const f = (v: Cents | Meters): Score => v`,
+      `export const f = (v: Option<Cents | Meters>): Option<Score> => v`,
+    ]
+  ) {
+    const result = checkText(prefix + body);
+    assert(
+      codes(result).includes("type-mismatch/003"),
+      messages(result).join("\n"),
+    );
+  }
+});

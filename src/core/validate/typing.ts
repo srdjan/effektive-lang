@@ -288,9 +288,9 @@ function assignable(
       return true;
     }
   }
-  // An unnamed value fits an identity whose body it fits.
+  // An unnamed value fits an identity whose body it fits. A union splits below.
   if (
-    adopt && t.kind === "named" && s.kind !== "named" &&
+    adopt && t.kind === "named" && s.kind !== "named" && s.kind !== "union" &&
     env.identities.has(t.id) && !env.opaque.has(t.id) && ownsSealed(env, t.id)
   ) {
     const body = env.aliases.get(t.id);

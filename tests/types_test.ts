@@ -488,6 +488,18 @@ Deno.test("an alias with identity fits its body, takes unnamed values, and never
   assert(!t.isAssignable(t.ref(a), t.ref(b)));
 });
 
+Deno.test("a union of identities takes no other name, and a literal union still fits one", () => {
+  const t = fresh();
+  const a = identity(t, ID_A, t.int);
+  const b = identity(t, ID_B, t.int);
+  const score = identity(t, USER, t.int);
+  assert(!t.isAssignable(t.union([a, b]), score));
+  assert(!t.isAssignable(t.union([a, t.literal(1)]), score));
+  assert(!t.isAssignable(t.array(t.union([a, b])), t.array(score)));
+  assert(t.isAssignable(t.union([t.literal(1), t.literal(2)]), a));
+  assert(t.isAssignable(t.union([a, b]), t.int));
+});
+
 Deno.test("a body that is a name chains widening, and a sealed identity keeps its module", () => {
   const t = fresh();
   const text = identity(t, ID_B, t.string);
