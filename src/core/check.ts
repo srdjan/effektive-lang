@@ -1525,10 +1525,10 @@ class ModuleChecker {
         : literal !== undefined
         ? this.lowerer.recordOf(literal)
         : this.lowerer.lower(body);
-      this.table.defineAlias(id, lowered.ref);
-      if (body !== undefined && this.hasIdentity(lowered.ref)) {
-        this.table.markIdentity(id);
-        if (entry.sealed) this.table.markSealed(id);
+      const identity = body !== undefined && this.hasIdentity(lowered.ref);
+      if (identity) this.table.defineIdentity(id, lowered.ref, entry.sealed);
+      else this.table.defineAlias(id, lowered.ref);
+      if (identity) {
         record = lowered.ir.kind === "record";
         definition = {
           kind: "nominal",
@@ -1656,12 +1656,11 @@ class ModuleChecker {
         literal?.find((f) => f.name === "_tag")?.span ?? span,
       );
       // The record loses the reserved field, so its uses report nothing more.
-      this.table.defineAlias(
+      this.table.defineIdentity(
         id,
         this.table.record(node.fields.filter((f) => f.name !== "_tag")),
+        entry.sealed,
       );
-      this.table.markIdentity(id);
-      if (entry.sealed) this.table.markSealed(id);
       if (base.kind === "record") {
         base = {
           kind: "record",

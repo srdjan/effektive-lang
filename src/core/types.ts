@@ -17,7 +17,7 @@ import type {
   TypeId,
 } from "./ir.ts";
 import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "./ir.ts";
-import { isErrorId, moduleOfId } from "./ids.ts";
+import { isErrorId, isTypeId, moduleOfId } from "./ids.ts";
 import { compareText } from "./util.ts";
 
 declare const typeRefBrand: unique symbol;
@@ -793,6 +793,16 @@ export class TypeTable {
     this.brands.set(id, base);
   }
 
+  /**
+   * Defines an alias with identity. The order matters: `defineAlias` clears the
+   * identity and sealed flags, so they are set after it.
+   */
+  defineIdentity(id: TypeId, body: TypeRef, sealed: boolean): void {
+    this.defineAlias(id, body);
+    this.markIdentity(id);
+    if (sealed) this.markSealed(id);
+  }
+
   markOpaque(id: TypeId): void {
     this.opaque.add(id);
   }
@@ -922,6 +932,15 @@ export class TypeTable {
     return this.tagged.has(id) ? this.aliases.get(id) : undefined;
   }
 
+  /** The id of the type when it is a named tagged record, otherwise undefined. */
+  taggedIdOf(ref: TypeRef): TypeId | undefined {
+    const node = this.node(ref);
+    return node.kind === "named" && isTypeId(node.id) &&
+        this.dataRecordOf(node.id) !== undefined
+      ? node.id
+      : undefined;
+  }
+
   errorRecordOf(id: ErrorId): TypeRef | undefined {
     return this.errorRecords.get(id);
   }
@@ -977,13 +996,15 @@ export class TypeTable {
         this.markOpaque(decl.id);
       } else {
         // A nominal type is an alias with identity. A tagged one is a tagged record.
-        this.defineAlias(decl.id, this.fromIr(decl.definition.base));
-        this.markIdentity(decl.id);
+        this.defineIdentity(
+          decl.id,
+          this.fromIr(decl.definition.base),
+          decl.definition.sealed === true,
+        );
         if (decl.definition.tagged === true) this.markTagged(decl.id);
         else if (guardedRecord(decl.definition.base, decl.id, tagOf)) {
           this.markGuardedAlias(decl.id);
         }
-        if (decl.definition.sealed === true) this.markSealed(decl.id);
       }
     }
     for (const decl of source.errors) {

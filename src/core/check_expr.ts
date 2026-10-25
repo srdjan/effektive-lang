@@ -79,7 +79,7 @@ import {
   without,
 } from "./tables.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
-import { isErrorId, isTypeId, shortName } from "./ids.ts";
+import { isErrorId, shortName } from "./ids.ts";
 import {
   type Arg,
   type BuiltinContext,
@@ -1520,11 +1520,7 @@ class BodyChecker
     const unfolded = table.unfold(expected);
     const node = table.node(unfolded);
     if (node.kind === "record") {
-      const direct = table.node(table.unfoldTransparent(expected));
-      const tagged = direct.kind === "named" && isTypeId(direct.id) &&
-          table.dataRecordOf(direct.id) !== undefined
-        ? direct.id
-        : undefined;
+      const tagged = table.taggedIdOf(table.unfoldTransparent(expected));
       return {
         ref: expected,
         fields: node.fields,
@@ -1534,11 +1530,7 @@ class BodyChecker
     if (node.kind !== "union") return undefined;
     const members = flattenIdentityMembers(table, expected);
     const candidates = members.flatMap((m) => {
-      const mNode = table.node(m);
-      const id = mNode.kind === "named" && isTypeId(mNode.id) &&
-          table.dataRecordOf(mNode.id) !== undefined
-        ? mNode.id
-        : undefined;
+      const id = table.taggedIdOf(m);
       const body = table.node(table.unfold(m));
       return body.kind === "record"
         ? [{ ref: m, fields: body.fields, tagged: id }]
