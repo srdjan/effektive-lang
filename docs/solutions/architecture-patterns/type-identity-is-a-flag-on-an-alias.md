@@ -19,7 +19,7 @@ tags: [type-identity, transparent-alias, tagged-record, assignability, widening,
 
 ## Context
 
-The TI plan (`docs/archive/plans/2026-10-24-type-identity.md`, commits ea9dce2 to b5c7b48) removed the `nominal` keyword. A plain `type` declaration now has identity by name, unless its body is a union with a non-literal member or a bare name. CONCEPTS.md defines the terms: type identity, transparent alias, tagged record, and sealed type. The TD plan (`docs/plans/2026-10-25-type-identity-rederive.md`) then fixed a union leak and rederived the storage and the assignability steps.
+The TI plan (`docs/archive/plans/2026-10-24-type-identity.md`, commits ea9dce2 to b5c7b48) removed the `nominal` keyword. A plain `type` declaration now has identity by name, unless its body is a union with a non-literal member or a bare name. CONCEPTS.md defines the terms: type identity, transparent alias, tagged record, and sealed type. The TD plan (`docs/archive/plans/2026-10-25-type-identity-rederive.md`) then fixed a union leak and rederived the storage and the assignability steps.
 
 Before the TI change, the checker kept a nominal type in separate tables (`brands` for primitives, `dataRecords` for records). Each structural query had to know about those kinds. The work found four rules that the final code does not explain by itself. If a later change breaks one of them, the checker accepts wrong programs or rejects correct ones. No test failure points to the cause.
 
@@ -80,4 +80,4 @@ Cents  -> Score           rejected: step 3 widens with adopt=false, then step 4
 - `docs/solutions/logic-errors/union-member-order-must-not-depend-on-intern-order.md`: the same table and `recordTarget`. Its "record brand" wording now means a tagged record.
 - `docs/solutions/logic-errors/emitted-fields-must-use-own-presence.md`: emitter construction of tagged records. Its "nominal record" wording is older than this change.
 - `docs/solutions/logic-errors/checker-result-type-from-expected-hint.md`: another case where the checker and the validator must agree on typing.
-- `docs/archive/plans/2026-10-24-implicit-nominal-ideation.md` (NI), `docs/archive/plans/2026-10-24-type-identity.md` (TI), and `docs/plans/2026-10-25-type-identity-rederive.md` (TD).
+- `docs/archive/plans/2026-10-24-implicit-nominal-ideation.md` (NI), `docs/archive/plans/2026-10-24-type-identity.md` (TI), and `docs/archive/plans/2026-10-25-type-identity-rederive.md` (TD).
