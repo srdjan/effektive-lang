@@ -353,6 +353,12 @@ type AliasDef =
   }
   | { readonly kind: "opaque" };
 
+/** True for a guarded alias or a guarded untagged identity. */
+function guarded(def: AliasDef | undefined): boolean {
+  return (def?.kind === "transparent" || def?.kind === "identity") &&
+    def.guarded;
+}
+
 /** The read side of a `TypeTable`: queries only, no writers. */
 export type TypeReader = Pick<
   TypeTable,
@@ -806,10 +812,11 @@ export class TypeTable {
     this.defs.set(id, { ...def, guarded: true });
   }
 
-  private isGuarded(id: TypeId): boolean {
-    const def = this.defs.get(id);
-    return (def?.kind === "transparent" || def?.kind === "identity") &&
-      def.guarded;
+  /** The definition behind a named type, or undefined for an error or another node. */
+  private defOf(node: TypeNode): AliasDef | undefined {
+    return node.kind === "named" && !isErrorId(node.id)
+      ? this.defs.get(node.id)
+      : undefined;
   }
 
   /** True for an opaque type, an alias with identity, or a tagged record. */
@@ -1439,60 +1446,34 @@ export class TypeTable {
         module,
         nestedAdopt,
       );
-    if (
-      sn.kind === "named" && tn.kind === "named" && sn.id !== tn.id &&
-      !isErrorId(sn.id) && !isErrorId(tn.id) &&
-      this.isGuarded(sn.id) && this.isGuarded(tn.id)
-    ) return false;
+    const sd = this.defOf(sn);
+    const td = this.defOf(tn);
+    // Two different guarded records never fit each other. Equal ids have equal refs.
+    if (guarded(sd) && guarded(td)) return false;
     if (sn.kind === "error" || tn.kind === "error") return true;
     if (sn.kind === "primitive" && sn.name === "never") return true;
+    const owns = (id: TypeId | ErrorId) =>
+      module === undefined || isErrorId(id) || this.ownsSealed(module, id);
     // A transparent alias unfolds. An alias with identity stays a name.
-    if (sn.kind === "named" && !isErrorId(sn.id)) {
-      const def = this.defs.get(sn.id);
-      if (def?.kind === "transparent") return nested(def.body, t, lift, adopt);
-    }
-    if (tn.kind === "named" && !isErrorId(tn.id)) {
-      const def = this.defs.get(tn.id);
-      if (def?.kind === "transparent") return nested(s, def.body, lift, adopt);
-    }
-    // An identity widens to its body, and a body that is itself an identity
-    // widens one step further. A sealed identity needs the authority of its module.
-    if (
-      sn.kind === "named" && !isErrorId(sn.id) && this.isIdentity(sn.id) &&
-      (module === undefined || this.ownsSealed(module, sn.id))
-    ) {
-      const body = this.aliasOf(sn.id);
-      if (body !== undefined && nested(body, t, lift, false)) return true;
-    }
-    // Two different identities never mix.
-    if (
-      sn.kind === "named" && tn.kind === "named" && sn.id !== tn.id &&
-      !isErrorId(sn.id) && !isErrorId(tn.id) &&
-      this.isIdentity(sn.id) && this.isIdentity(tn.id)
-    ) return false;
-    // A value that widened to a body adopts no name at that level.
-    if (
-      !adopt && tn.kind === "named" && !isErrorId(tn.id) &&
-      this.isIdentity(tn.id)
-    ) return false;
-    // An unnamed value fits an untagged identity whose body it fits. A union is
-    // not one value: its members split below, so a named member keeps its name.
-    // A tagged record takes a record literal only through implicit
-    // construction. A sealed identity needs the authority of its module.
-    if (
-      adopt && tn.kind === "named" && !isErrorId(tn.id) &&
-      sn.kind !== "named" && sn.kind !== "union" &&
-      this.defs.get(tn.id)?.kind === "identity" &&
-      (module === undefined || this.ownsSealed(module, tn.id))
-    ) {
-      const body = this.aliasOf(tn.id);
-      if (body !== undefined && nested(s, body, lift)) return true;
-    }
+    if (sd?.kind === "transparent") return nested(sd.body, t, lift, adopt);
+    if (td?.kind === "transparent") return nested(s, td.body, lift, adopt);
+    // A union is not one value: each member keeps its name.
     if (sn.kind === "union") {
-      for (const member of sn.members) {
-        if (!nested(member, t, false, adopt)) return false;
-      }
-      return true;
+      return sn.members.every((member) => nested(member, t, false, adopt));
+    }
+    // An identity or a tagged record widens to its body, and takes no other name
+    // there. A sealed one needs the authority of its module.
+    if (
+      sn.kind === "named" &&
+      (sd?.kind === "identity" || sd?.kind === "tagged") &&
+      owns(sn.id) && nested(sd.body, t, lift, false)
+    ) return true;
+    // A named target takes only its own name, or an unnamed value through the
+    // body of an untagged identity. A tagged record takes a record literal only
+    // through implicit construction.
+    if (tn.kind === "named") {
+      return adopt && sn.kind !== "named" && td?.kind === "identity" &&
+        owns(tn.id) && nested(s, td.body, lift);
     }
     if (tn.kind === "union") {
       for (const member of tn.members) {
@@ -1514,9 +1495,6 @@ export class TypeTable {
         return false;
       case "literal":
         return sn.kind === "literal" && sn.value === tn.value;
-      case "named":
-        // Brands and errors are nominal. Equal ids have equal refs.
-        return false;
       case "record":
         if (sn.kind !== "record") return false;
         if (sn.fields.length !== tn.fields.length) return false;
