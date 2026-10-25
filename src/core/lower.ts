@@ -14,6 +14,7 @@ import {
   arrowBody,
   type BinaryOperator,
   initOf,
+  isPatternKind,
   isTypeKind,
   kidsOf,
   literalOf,
@@ -178,14 +179,6 @@ function setOf(expr: Expr): EffectSet {
     mode: expr.execution,
   };
 }
-
-const PATTERN_KINDS: ReadonlySet<SyntaxKind> = new Set([
-  SyntaxKind.WildcardPattern,
-  SyntaxKind.LiteralPattern,
-  SyntaxKind.NamePattern,
-  SyntaxKind.CtorPattern,
-  SyntaxKind.RecordPattern,
-]);
 
 // ------------------------------------------------------------------ call facts
 
@@ -1468,7 +1461,7 @@ class BodyLowerer {
       .map((arm) => {
         const parts = this.kids(arm);
         const patternNode = this.required(
-          parts.find((k) => PATTERN_KINDS.has(kindOf(this.ctx.tree, k))),
+          parts.find((k) => isPatternKind(kindOf(this.ctx.tree, k))),
           "the pattern",
           arm,
         );

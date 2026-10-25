@@ -7,6 +7,7 @@
 // error value and no text.
 
 import type { ModuleIR, Result } from "./ir.ts";
+import { compareText } from "./util.ts";
 
 type SerializeError =
   /** A failure, requirement, or provides set that is not sorted, or that repeats an entry. */
@@ -25,10 +26,6 @@ const SET_KEYS: ReadonlySet<string> = new Set([
   "encodeRequirements",
   "provides",
 ]);
-
-function compareText(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
 
 /** True when the list holds strings in strictly increasing order. */
 function isSortedUnique(list: readonly unknown[]): boolean {

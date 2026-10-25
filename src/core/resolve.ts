@@ -16,7 +16,7 @@ import {
   normalizeDiagnostics,
 } from "./diagnostics.ts";
 import type { DeclEntry, MethodEntry } from "./index.ts";
-import { isTypeKind, nameTextOf } from "./syntax_queries.ts";
+import { isPatternKind, isTypeKind, nameTextOf } from "./syntax_queries.ts";
 import { declarationId, type DeclarationPrefix } from "./ids.ts";
 import type {
   CapabilityId,
@@ -300,14 +300,6 @@ type Found =
   | { readonly tag: "builtin"; readonly name: PreludeName };
 
 type Position = "value" | "callee";
-
-const PATTERN_KINDS: ReadonlySet<SyntaxKind> = new Set([
-  SyntaxKind.WildcardPattern,
-  SyntaxKind.LiteralPattern,
-  SyntaxKind.NamePattern,
-  SyntaxKind.CtorPattern,
-  SyntaxKind.RecordPattern,
-]);
 
 function describeKind(target: Target): string {
   switch (target.kind) {
@@ -1330,7 +1322,7 @@ class Resolver {
     this.scope = scope;
     for (const kid of this.kids(node)) {
       const kind = kindOf(this.tree, kid);
-      if (PATTERN_KINDS.has(kind)) this.pattern(kid);
+      if (isPatternKind(kind)) this.pattern(kid);
       else if (kind === SyntaxKind.Block) this.block(kid, scope);
       else this.expr(kid, "value");
     }

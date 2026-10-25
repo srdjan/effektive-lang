@@ -464,12 +464,6 @@ function initializationDiagnostics(entries: readonly Entry[]): {
 
 /** Checks every body of one module and solves its execution modes. */
 function checkModuleBodies(args: CheckArguments): ModuleBodies {
-  const { analysis, module } = args;
-  const resolution = analysis.resolutions.get(module);
-  if (resolution === undefined) {
-    throw new Error(`module ${module} is not part of the analysis`);
-  }
-
   const entries = collectEntries(args);
   const position = new Map<ValueId, number>();
   entries.forEach((entry, i) => position.set(entry.signature.id, i));

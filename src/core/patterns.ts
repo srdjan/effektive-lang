@@ -4,7 +4,7 @@
 // arms and reports the diagnostics.
 
 import type { ErrorId, TypeId } from "./ir.ts";
-import type { TypeRef, TypeTable } from "./types.ts";
+import { MAX_DEPTH, type TypeRef, type TypeTable } from "./types.ts";
 import { isErrorId } from "./ids.ts";
 
 export type LiteralValue = string | number | boolean | null;
@@ -31,12 +31,6 @@ export type Domain =
   /** The subject has the error type. The checker reports nothing about it. */
   | { readonly kind: "error" }
   | { readonly kind: "unsupported" };
-
-// The bound on the recursion of one comparison. The parser limits written
-// nesting to 512 levels and `declaration/012` limits an alias to 128 levels.
-// So one type is at most about 640 levels deep, and two types give at most
-// about 1280 frames. 1536 leaves room above that.
-const MAX_DEPTH = 1536;
 
 /**
  * The members of a type after aliases unfold and unions flatten. A type that is
