@@ -26,23 +26,23 @@ Longest source functions (`deno task measure:functions`; lines and cyclomatic co
 
 ## Findings
 
-RV1 (high, confirmed, astra). The output writer overwrites any file at the output path. `writeGenerated` (`src/host/outputs.ts:129-133`) writes when the old text differs, and it does not check the generated header. The cleanup code does check the header (`generatedHeader`, `outputs.ts:148`). So a new `m.eff` beside a handwritten `m.ts` destroys `m.ts` with no diagnostic. The command-line build and the language server save both use this writer. An unreadable existing file also reaches the write. Change: refuse to write over a file whose first line is not the generated header of that source, and report it as an error. Blast radius: `src/host/outputs.ts` and its tests.
+RV1 (high, confirmed, astra). The output writer overwrites any file at the output path. `writeGenerated` (`src/host/outputs.ts:129-133`) writes when the old text differs, and it does not check the generated header. The cleanup code does check the header (`generatedHeader`, `outputs.ts:148`). So a new `m.eff` beside a handwritten `m.ts` destroys `m.ts` with no diagnostic. The command-line build and the language server save both use this writer. An unreadable existing file also reaches the write. Change: refuse to write over a file whose first line is not the generated header of that source, and report it as an error. Blast radius: `src/host/outputs.ts` and its tests. Fixed in commit `73c5ed3` (RF1).
 
 RV2 (high, confirmed, both). The gate is red on main. `deno.json:3` says 0.10.0, and `editors/vscode/package.json:5` and `package-lock.json:3,9` say 0.9.0. The test "the extension and its lock file carry the compiler version" (`tests/vscode_client_test.ts`) fails, as designed. The version has three hand-kept copies, plus the VSIX name in `docs/installation.md` and `editors/vscode/README.md`. Fixed in commit `c7d7402`: `deno.json` is now the only source of the version. The packager writes it into the packaged manifest, and the VSIX name has no version.
 
-RV3 (medium, confirmed, astra). Generated-code previews omit the companion modules of host interfaces. The core emits `.effi.ts` files, but the playground (`playground/src/compile.ts:103`, `playground/src/model.ts:110`) and the language server preview (`src/lsp/features.ts:240`) accept only `.eff` paths. The playground also says that a host interface has no generated code, and `tests/playground_model_test.ts:110` keeps that old assumption. Blast radius: playground compile and model code, the language server preview, and their tests.
+RV3 (medium, confirmed, astra). Generated-code previews omit the companion modules of host interfaces. The core emits `.effi.ts` files, but the playground (`playground/src/compile.ts:103`, `playground/src/model.ts:110`) and the language server preview (`src/lsp/features.ts:240`) accept only `.eff` paths. The playground also says that a host interface has no generated code, and `tests/playground_model_test.ts:110` keeps that old assumption. Blast radius: playground compile and model code, the language server preview, and their tests. Fixed in commit `5edce50` (RF2).
 
 RV4 (medium, Fable and astra). `TypeTable` (`types.ts:376`) has 54 methods. It covers interning, definitions, IR conversion (`fromIr` and `toIr`), assignability, and printing. `BodyChecker` (`check_expr.ts:187`) has about 2,150 lines, and `check.ts` holds `TypeLowerer` (747 lines) and `ModuleChecker` (925 lines). Change: move IR conversion and printing out of `types.ts` into their own files, and split `completionsAt` by position kind. A rewrite of the large classes has no demonstrated benefit. Review them when they change.
 
-RV5 (medium, Fable). The strict target options (`strict`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`) are written in 8 files, and the literal `npm:effect@4.0.5` occurs in 14 files. An Effect upgrade or a target change has no single source. Change: one target constant, imported by `src/cli/tsc.ts`, `tests/target_helpers.ts`, and `bench`. The fixture `deno.json` files are user projects and stay. Blast radius: 8 files.
+RV5 (medium, Fable). The strict target options (`strict`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`) are written in 8 files, and the literal `npm:effect@4.0.5` occurs in 14 files. An Effect upgrade or a target change has no single source. Change: one target constant, imported by `src/cli/tsc.ts`, `tests/target_helpers.ts`, and `bench`. The fixture `deno.json` files are user projects and stay. Blast radius: 8 files. Fixed in commit `5d1cabe` (RF3).
 
 RV6 (medium, Fable). 21 bare `throw new Error("internal: ...")` sites have no Result boundary, for example `types.ts:420`, `check_project.ts:177`, and `parse.ts:240`. The command-line tool catches them (`src/cli/main.ts:122`, exit 3), and the language server answers `internalError` and stays alive (`src/lsp/server.ts:382-386`). `Program.update` (`db.ts:317-345`) updates its memo state before `check` runs, and no test shows a correct update after such a throw. This is an inference, not a tested fact. Change: one test that forces an internal failure in `check` and then runs a good update.
 
-RV7 (low, confirmed, both). The emitter reaches checker-phase modules through two imports. `emit/decls.ts:25` imports `stronglyConnectedComponents` from `modes.ts`, which imports `types.ts`. `emit/scope.ts:30` imports path helpers from `project.ts`, which imports the index and the parser. Change: move the graph helper to `util.ts` or a new `graph.ts`, and the path helpers to a small module with no dependencies. Add a transitive import test for the emitter and the validator.
+RV7 (low, confirmed, both). The emitter reaches checker-phase modules through two imports. `emit/decls.ts:25` imports `stronglyConnectedComponents` from `modes.ts`, which imports `types.ts`. `emit/scope.ts:30` imports path helpers from `project.ts`, which imports the index and the parser. Change: move the graph helper to `util.ts` or a new `graph.ts`, and the path helpers to a small module with no dependencies. Add a transitive import test for the emitter and the validator. Fixed for the emitter in commits `73c5ed3` and `5d1cabe` (RF1, RF3). The validator already had a direct import test.
 
 RV8 (low, astra). The writer reduces emit errors to their tag and source-map errors to one fixed sentence (`src/host/outputs.ts:109`, `:113`). An injected error printed only `error: cannot emit m: internal`. Change: include the message.
 
-RV9 (low, Fable and astra). The text of the generated header occurs three times: `emit/emit.ts:169`, `src/host/outputs.ts:149`, and `src/host/workspace.ts:110`. A change to the header in one place breaks cleanup or the workspace filter. Change: one shared helper, together with RV1.
+RV9 (low, Fable and astra). The text of the generated header occurs three times: `emit/emit.ts:169`, `src/host/outputs.ts:149`, and `src/host/workspace.ts:110`. A change to the header in one place breaks cleanup or the workspace filter. Change: one shared helper, together with RV1. Fixed in commit `73c5ed3` (RF1).
 
 RV10 (low, Fable). Small copies: `compareText` (`util.ts:4`, `serialize.ts:29`), `MAX_DEPTH = 1536` with the same comment (`types.ts:327`, `patterns.ts:37`), the `PATTERN_KINDS` set (`syntax_queries.ts:153`, `lower.ts:182`, `resolve.ts:304`), and the guard text "is not part of the analysis" (`check.ts:2288`, `check_project.ts:177`, `:473`). `scripts/golden_update.ts` and `scripts/validate_fixtures.ts` import `tests/helpers.ts`, so tooling depends on the test tree. Change: delete the copies.
 
@@ -59,9 +59,9 @@ The checker and the validator duplicate their rules on purpose. Each builtin tou
 ## Recommended order
 
 1. RV2: done.
-2. RV1 and RV9: protect handwritten files, with one header helper.
-3. RV3: companion modules in the previews.
-4. RV7 and RV5: emitter imports and one target constant.
+2. RV1 and RV9: done.
+3. RV3: done.
+4. RV7 and RV5: done. The plan is `docs/archive/plans/2026-10-25-review-follow-up.md` (RF).
 5. RV4, RV6, and RV10 to RV13, when the files change.
 
 ## Not checked

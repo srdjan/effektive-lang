@@ -26,7 +26,7 @@ TCM in `docs/plans/2026-10-24-typescript-content-mappers.md` tracks the deferred
 
 RV in `docs/architecture-review-2026-10-25.md` tracks the architecture review.
 
-RF in `docs/plans/2026-10-25-review-follow-up.md` tracks the follow-up work of that review.
+RF in `docs/archive/plans/2026-10-25-review-follow-up.md` tracks the follow-up work of that review.
 
 ## Feature Selection & Completion
 
