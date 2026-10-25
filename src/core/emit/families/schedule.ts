@@ -13,7 +13,7 @@ import type { ExprOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
-export type ScheduleStructuralKind =
+type ScheduleStructuralKind =
   | "schedule-spaced"
   | "schedule-map"
   | "schedule-max"

@@ -7,7 +7,7 @@ import { dataOnly } from "../types.ts";
 import type { Arg, BuiltinContext } from "./context.ts";
 import { direct, type PreludeCallName, type Rows } from "./rows.ts";
 
-export function codecCall(
+function codecCall(
   c: BuiltinContext,
   node: NodeId,
   args: readonly Arg[],
@@ -76,7 +76,7 @@ export function codecCall(
   );
 }
 
-export function codecOperation(
+function codecOperation(
   c: BuiltinContext,
   node: NodeId,
   name: "decode" | "encode",

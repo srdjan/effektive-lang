@@ -15,7 +15,7 @@ import type { ExprOf } from "../shape.ts";
 import { channelTypeArguments, typeArguments, typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
-export type StreamStructuralKind =
+type StreamStructuralKind =
   | "unfold"
   | "map-effect"
   | "map-groups"
@@ -30,7 +30,7 @@ export type StreamStructuralKind =
   | "aggregate-within-stream"
   | "buffer-stream";
 
-export type StreamLeafKind = "fold-stream" | "fold-effect-stream";
+type StreamLeafKind = "fold-stream" | "fold-effect-stream";
 
 export function streamStructural(
   c: ExprCore,

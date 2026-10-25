@@ -89,7 +89,7 @@ type RecursionRole =
   | "reject";
 
 /** How `schemaCall` treats one Schema builtin. */
-export interface SchemaBuiltin {
+interface SchemaBuiltin {
   readonly op: SchemaOp;
   /** The number of arguments. */
   readonly arity: number;
@@ -103,7 +103,7 @@ export interface SchemaBuiltin {
   readonly recursion: RecursionRole;
 }
 
-export const SCHEMA_BUILTINS = {
+const SCHEMA_BUILTINS = {
   schema: {
     op: "identity",
     arity: 0,
@@ -249,7 +249,7 @@ const DEFAULT_KEY_OPS = {
   encoded: "default-encoded-key",
 } as const;
 
-export type SchemaBuiltinName = keyof typeof SCHEMA_BUILTINS;
+type SchemaBuiltinName = keyof typeof SCHEMA_BUILTINS;
 
 /** The recursion role of a builtin name; a name that is not a Schema builtin rejects `self`. */
 function recursionRoleOf(name: string | undefined): RecursionRole {
@@ -339,7 +339,7 @@ function optionsField(c: SchemaContext, record: NodeId, label: string): {
  * An absent `on` means "missing". An `on` that is not one of the three
  * literals is reported here and selects the default operation.
  */
-export function defaultKeyOp(
+function defaultKeyOp(
   c: SchemaContext,
   name: SchemaBuiltinName,
   options: Arg,
@@ -399,7 +399,7 @@ function defaultKeyOptionsShape(c: SchemaContext, record: NodeId): boolean {
   return true;
 }
 
-export function schemaCall(
+function schemaCall(
   c: SchemaContext,
   node: NodeId,
   name: SchemaBuiltinName,

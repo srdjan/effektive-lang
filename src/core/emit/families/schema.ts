@@ -16,9 +16,9 @@ import type { ExprOf } from "../shape.ts";
 import { hasSchemaMetadata, schemaDoc, typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
-export type SchemaStructuralKind = "schema";
+type SchemaStructuralKind = "schema";
 
-export type SchemaLeafKind = "schema-make" | "schema-decode" | "schema-encode";
+type SchemaLeafKind = "schema-make" | "schema-decode" | "schema-encode";
 
 /** Emit a Schema operation. The switch is exhaustive: a new operation needs a case. */
 export function schemaStructural(

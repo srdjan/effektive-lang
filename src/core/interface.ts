@@ -76,7 +76,7 @@ export function stripSpans(value: unknown): unknown {
 }
 
 /** The hash of an interface payload. */
-export function interfaceHash(payload: InterfacePayload): string {
+function interfaceHash(payload: InterfacePayload): string {
   return fnv1a64(canonicalJson(stripSpans(payload)));
 }
 

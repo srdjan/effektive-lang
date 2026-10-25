@@ -90,7 +90,7 @@ import { compareText } from "./util.ts";
 // ------------------------------------------------------------------ shapes
 
 /** An interned type together with its IR tree in source order. */
-export interface Lowered {
+interface Lowered {
   readonly ref: TypeRef;
   readonly ir: Type;
 }

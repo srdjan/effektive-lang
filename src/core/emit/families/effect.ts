@@ -14,9 +14,9 @@ import type { ExprOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
-export type EffectStructuralKind = "defer" | "retry-schedule";
+type EffectStructuralKind = "defer" | "retry-schedule";
 
-export type EffectLeafKind = "retry" | "retry-with-schedule" | "run";
+type EffectLeafKind = "retry" | "retry-with-schedule" | "run";
 
 export function effectStructural(
   c: ExprCore,

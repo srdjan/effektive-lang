@@ -4,7 +4,7 @@ import { callArguments, type Emitted, emitted } from "../emitted.ts";
 import type { ExprOf } from "../shape.ts";
 import type { ExprCore } from "./context.ts";
 
-export type FiberLeafKind = "with-fiber" | "join-fiber" | "interrupt-fiber";
+type FiberLeafKind = "with-fiber" | "join-fiber" | "interrupt-fiber";
 
 export function fiberLeaf(
   c: ExprCore,

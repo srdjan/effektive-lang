@@ -40,7 +40,7 @@ export interface ScopeContext extends
   valueType(id: ValueId): TypeRef;
 }
 
-export function scopedCall(
+function scopedCall(
   c: ScopeContext,
   node: NodeId,
   args: readonly Arg[],
@@ -66,7 +66,7 @@ export function scopedCall(
   );
 }
 
-export function forkScopedCall(
+function forkScopedCall(
   c: ScopeContext,
   node: NodeId,
   args: readonly Arg[],
@@ -99,7 +99,7 @@ export function forkScopedCall(
   );
 }
 
-export function scopeCall(
+function scopeCall(
   c: ScopeContext,
   node: NodeId,
   name: "makeScope" | "provideScope" | "addScopeFinalizer" | "closeScope",

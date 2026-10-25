@@ -7,7 +7,7 @@ import type { Diagnostic } from "./diagnostics.ts";
 import type { SourceEdit } from "./source.ts";
 
 /** The diagnostics that an edit adds and removes, by code, source, and moved span. */
-export interface DiagnosticDelta {
+interface DiagnosticDelta {
   readonly added: readonly Diagnostic[];
   readonly removed: readonly Diagnostic[];
 }

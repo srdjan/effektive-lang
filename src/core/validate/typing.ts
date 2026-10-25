@@ -71,7 +71,7 @@ export function identityBody(env: TypeEnv, id: string): Type | undefined {
 }
 
 /** Follows transparent aliases and stops at an alias with identity. */
-export function unfoldTransparent(env: TypeEnv, type: Type): Type {
+function unfoldTransparent(env: TypeEnv, type: Type): Type {
   return follow(env, type, true);
 }
 
@@ -102,7 +102,7 @@ function follow(env: TypeEnv, type: Type, stopAtIdentity: boolean): Type {
  * - "schema": a `Schema<...>` type. Rejects `unit` and the reserved Schema
  *   errors.
  */
-export type DataRule = "value" | "codec" | "schema";
+type DataRule = "value" | "codec" | "schema";
 
 /**
  * What each rule rejects. A `Record` over the closed union makes a new rule a

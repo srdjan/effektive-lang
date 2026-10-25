@@ -8,7 +8,7 @@ import type { TypeRef } from "../types.ts";
 import type { Arg, BuiltinContext } from "./context.ts";
 import { direct, type PreludeCallName, type Rows } from "./rows.ts";
 
-export function simpleScheduleCall(
+function simpleScheduleCall(
   c: BuiltinContext,
   node: NodeId,
   args: readonly Arg[],
@@ -28,7 +28,7 @@ export function simpleScheduleCall(
   );
 }
 
-export function scheduleFromStepCall(
+function scheduleFromStepCall(
   c: BuiltinContext,
   node: NodeId,
   args: readonly Arg[],
@@ -102,7 +102,7 @@ export function scheduleFromStepCall(
   );
 }
 
-export function scheduleMapCall(
+function scheduleMapCall(
   c: BuiltinContext,
   node: NodeId,
   args: readonly Arg[],
@@ -144,7 +144,7 @@ export function scheduleMapCall(
   );
 }
 
-export function scheduleComposeCall(
+function scheduleComposeCall(
   c: BuiltinContext,
   node: NodeId,
   args: readonly Arg[],

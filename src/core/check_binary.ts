@@ -34,7 +34,7 @@ function numericBrand(
 }
 
 /** The brand id when both operands have one numeric brand. */
-export function sharedNumericBrand(
+function sharedNumericBrand(
   table: TypeTable,
   left: TypeRef,
   right: TypeRef,
@@ -77,7 +77,7 @@ export function isBoolean(
 }
 
 /** The comparison class of a type: a primitive name or an identity. */
-export function comparisonClass(
+function comparisonClass(
   table: TypeTable,
   ref: TypeRef,
 ): string | undefined {
@@ -145,7 +145,7 @@ function isStringClass(table: TypeTable, cls: string): boolean {
 }
 
 /** The result type of a binary operator, and whether the operands do not fit it. */
-export interface OperatorResult {
+interface OperatorResult {
   readonly type: TypeRef;
   readonly mismatch: boolean;
   readonly sealed?: TypeId;

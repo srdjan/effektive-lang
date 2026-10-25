@@ -152,7 +152,7 @@ export function resolvedAs<K extends Type["kind"]>(
 // ------------------------------------------------------------------ identities
 
 /** The module part of an identity such as `type:users#User`. */
-export function moduleOfId(id: string): string {
+function moduleOfId(id: string): string {
   const module = coreModuleOfId(id);
   if (module === undefined) throw internal(`malformed identity ${id}`);
   return module;
@@ -270,7 +270,7 @@ export interface EmitNames {
   fieldHelper(key: string): string;
 }
 
-export interface Temporaries {
+interface Temporaries {
   fresh(base: string): string;
   temp(): string;
 }
@@ -284,7 +284,7 @@ export interface TypeLookup {
 }
 
 /** What `emit.ts` reads after all printing. */
-export interface ImportLedger {
+interface ImportLedger {
   moduleImports(): ImportGroup[];
   effectImports(): { readonly exported: string; readonly local: string }[];
   hostImports(): ImportGroup[];

@@ -56,7 +56,7 @@ export function lineStarts(text: string): Uint32Array {
   return Uint32Array.from(starts);
 }
 
-export interface Position {
+interface Position {
   /** One-based. */
   readonly line: number;
   /** One-based, in UTF-16 code units. */

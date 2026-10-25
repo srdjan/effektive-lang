@@ -93,7 +93,7 @@ export type SourceMapError = {
   readonly source: string;
 };
 
-export interface SourceMapOptions {
+interface SourceMapOptions {
   /** Add the source texts as `sourcesContent`. Default: false. */
   readonly includeContent?: boolean;
 }

@@ -123,14 +123,14 @@ export interface BodyEnv {
  * The contract of a function body. An absent part is open: the body infers it.
  * A present part is closed, and the body must stay within it.
  */
-export interface Contract {
+interface Contract {
   readonly result: TypeRef | undefined;
   readonly failures: readonly ErrorId[] | undefined;
   readonly requirements: readonly CapabilityId[] | undefined;
 }
 
 /** What checking the body expression of a function produces. */
-export interface BodyOutcome {
+interface BodyOutcome {
   /** The info of the body expression. Absent when the body is missing. */
   readonly body: NodeInfo | undefined;
   /** The declared or inferred result type. */

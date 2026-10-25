@@ -49,7 +49,7 @@ export interface StreamContext
 }
 
 /** Pure and effect specializations, also used by dispatch during recovery. */
-export const STREAM_PREDICATE_FACTS = {
+const STREAM_PREDICATE_FACTS = {
   filterEffectStream: { pure: "filter-stream", effect: "filter-effect-stream" },
   takeWhileEffectStream: {
     pure: "take-while-stream",
@@ -71,7 +71,7 @@ function isPureInfo(info: NodeInfo): boolean {
     info.requirements.length === 0;
 }
 
-export function unfoldCall(
+function unfoldCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -106,7 +106,7 @@ export function unfoldCall(
   return c.finish(node, type, combine([seed, next.info]));
 }
 
-export function mapEffectCall(
+function mapEffectCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -151,7 +151,7 @@ export function mapEffectCall(
   );
 }
 
-export function mapGroupsCall(
+function mapGroupsCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -222,7 +222,7 @@ export function mapGroupsCall(
   );
 }
 
-export function scanStreamCall(
+function scanStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -249,7 +249,7 @@ export function scanStreamCall(
   return c.finish(node, type, combine([stream, seed, update.info]));
 }
 
-export function mapAccumStreamCall(
+function mapAccumStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -301,7 +301,7 @@ export function mapAccumStreamCall(
   return c.finish(node, type, combine([stream, seed, update.info]));
 }
 
-export function foldStreamCall(
+function foldStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -331,7 +331,7 @@ export function foldStreamCall(
   );
 }
 
-export function foldEffectStreamCall(
+function foldEffectStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -373,7 +373,7 @@ export function foldEffectStreamCall(
   );
 }
 
-export function flatMapStreamsCall(
+function flatMapStreamsCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -395,7 +395,7 @@ export function flatMapStreamsCall(
   );
 }
 
-export function switchMapStreamsCall(
+function switchMapStreamsCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -405,7 +405,7 @@ export function switchMapStreamsCall(
   return c.finish(node, type, combine([stream, transform]));
 }
 
-export function catchStreamCall(
+function catchStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -439,7 +439,7 @@ export function catchStreamCall(
   return c.finish(node, type, combine([stream, recover.info]));
 }
 
-export function retryStreamCall(
+function retryStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -480,7 +480,7 @@ export function retryStreamCall(
   return c.finish(node, type, combine([stream, policy]));
 }
 
-export function debounceStreamCall(
+function debounceStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -508,7 +508,7 @@ export function debounceStreamCall(
   return c.finish(node, stream.type, stream);
 }
 
-export function throttleStreamCall(
+function throttleStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -525,7 +525,7 @@ export function throttleStreamCall(
 }
 
 /** A terminal over a Stream: it runs the Stream and gives `result(element)`. */
-export function terminalStreamCall(
+function terminalStreamCall(
   c: StreamContext,
   node: NodeId,
   name: "collectStream" | "headStream" | "lastStream" | "drainStream",
@@ -549,7 +549,7 @@ export function terminalStreamCall(
 }
 
 /** `takeStream` and `dropStream`: a Stream and a pure Int count. `label` names the count. */
-export function countStreamCall(
+function countStreamCall(
   c: StreamContext,
   node: NodeId,
   name: "takeStream" | "dropStream",
@@ -570,7 +570,7 @@ export function countStreamCall(
   return c.finish(node, stream.type, combine([stream, count]));
 }
 
-export function effectStreamPredicateCall(
+function effectStreamPredicateCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -615,7 +615,7 @@ export function effectStreamPredicateCall(
   return c.finish(node, type, combine([stream, predicate.info]));
 }
 
-export function sinkForEachCall(
+function sinkForEachCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -660,7 +660,7 @@ export function sinkForEachCall(
   return c.finish(node, type, consume);
 }
 
-export function takeSinkCall(
+function takeSinkCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -703,7 +703,7 @@ export function takeSinkCall(
   );
 }
 
-export function aggregateWithinStreamCall(
+function aggregateWithinStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -755,7 +755,7 @@ export function aggregateWithinStreamCall(
   );
 }
 
-export function sinkTransformStreamCall(
+function sinkTransformStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -790,7 +790,7 @@ export function sinkTransformStreamCall(
   );
 }
 
-export function runStreamCall(
+function runStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -828,7 +828,7 @@ export function runStreamCall(
   );
 }
 
-export function bufferStreamCall(
+function bufferStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
@@ -840,7 +840,7 @@ export function bufferStreamCall(
 }
 
 /** `mergeStreams`, `zipStreams`, and `concatStreams`: two Streams give one. */
-export function streamPairCall(
+function streamPairCall(
   c: StreamContext,
   node: NodeId,
   name: "mergeStreams" | "zipStreams" | "concatStreams",

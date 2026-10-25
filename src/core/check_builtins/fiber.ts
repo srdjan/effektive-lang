@@ -35,7 +35,7 @@ export interface FiberContext extends
   FactView,
   LocalUseView {}
 
-export function withFiberCall(
+function withFiberCall(
   c: FiberContext,
   node: NodeId,
   args: readonly Arg[],
@@ -96,7 +96,7 @@ export function withFiberCall(
   );
 }
 
-export function fiberOperation(
+function fiberOperation(
   c: FiberContext,
   node: NodeId,
   name: "joinFiber" | "interruptFiber",

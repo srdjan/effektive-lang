@@ -31,7 +31,7 @@ export type SchemaPresence =
   | "encoded-optional"
   | "decoded-optional";
 
-export interface SchemaOptions {
+interface SchemaOptions {
   readonly presence?: SchemaPresence;
   readonly makeInput?: TypeRef;
   /** Constructor defaults are independent of field presence. */
@@ -47,7 +47,7 @@ type PrimitiveName =
   | "never"
   | "unknown";
 
-export interface RecordField {
+interface RecordField {
   readonly name: string;
   readonly type: TypeRef;
   readonly optional: boolean;
@@ -1750,7 +1750,7 @@ export class TypeTable {
  * - "schema": a `Schema<...>` type. Rejects `unit` and the reserved Schema
  *   errors.
  */
-export type DataRule = "value" | "codec" | "schema";
+type DataRule = "value" | "codec" | "schema";
 
 /**
  * What each rule rejects. A `Record` over the closed union makes a new rule a

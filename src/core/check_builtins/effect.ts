@@ -50,7 +50,7 @@ export interface EffectContext extends
   jobFunction(name: string, arg: Arg, info: NodeInfo): FunctionNode | undefined;
 }
 
-export function failCall(
+function failCall(
   c: EffectContext,
   node: NodeId,
   args: readonly Arg[],
@@ -81,7 +81,7 @@ export function failCall(
   return c.finish(node, c.table.never, combine([...infos, own]));
 }
 
-export function retryCall(
+function retryCall(
   c: EffectContext,
   node: NodeId,
   args: readonly Arg[],
@@ -129,7 +129,7 @@ export function retryCall(
   );
 }
 
-export function retryScheduleCall(
+function retryScheduleCall(
   c: EffectContext,
   node: NodeId,
   args: readonly Arg[],
@@ -202,7 +202,7 @@ export function retryScheduleCall(
   return c.finish(node, type, combine([info]));
 }
 
-export function deferCall(
+function deferCall(
   c: EffectContext,
   node: NodeId,
   args: readonly Arg[],
@@ -218,7 +218,7 @@ export function deferCall(
   );
 }
 
-export function runCall(
+function runCall(
   c: EffectContext,
   node: NodeId,
   args: readonly Arg[],
@@ -251,7 +251,7 @@ export function runCall(
   );
 }
 
-export function raceCall(
+function raceCall(
   c: EffectContext,
   node: NodeId,
   args: readonly Arg[],

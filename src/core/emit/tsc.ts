@@ -41,7 +41,7 @@ export interface TscDiagnostic {
   readonly detail: string;
 }
 
-export interface DenoCheckOutput {
+interface DenoCheckOutput {
   readonly diagnostics: readonly TscDiagnostic[];
   /**
    * Lines that belong to no diagnostic and that are not progress lines: an

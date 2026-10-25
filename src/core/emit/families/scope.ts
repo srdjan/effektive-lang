@@ -5,7 +5,7 @@ import { internal } from "../scope.ts";
 import type { ExprOf } from "../shape.ts";
 import type { ExprCore } from "./context.ts";
 
-export type ScopeLeafKind = "fork-scoped" | "with-resource";
+type ScopeLeafKind = "fork-scoped" | "with-resource";
 
 export function scopeLeaf(
   c: ExprCore,

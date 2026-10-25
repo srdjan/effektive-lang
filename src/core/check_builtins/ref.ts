@@ -6,7 +6,7 @@ import { combine, EFFECT_ONLY, type NodeInfo } from "../tables.ts";
 import type { Arg, BuiltinContext } from "./context.ts";
 import { direct, type PreludeCallName, type Rows } from "./rows.ts";
 
-export function refCall(
+function refCall(
   c: BuiltinContext,
   node: NodeId,
   name: "makeRef" | "getRef" | "setRef" | "updateRef",

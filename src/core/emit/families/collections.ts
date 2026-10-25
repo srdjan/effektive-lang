@@ -10,7 +10,7 @@ import {
 import type { ExprOf } from "../shape.ts";
 import type { ExprCore } from "./context.ts";
 
-export type CollectionsLeafKind =
+type CollectionsLeafKind =
   | "partition-all"
   | "validate-all"
   | "all-results";

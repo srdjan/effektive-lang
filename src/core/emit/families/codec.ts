@@ -14,7 +14,7 @@ import type { ExprOf } from "../shape.ts";
 import { schemaDoc, typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
-export type CodecStructuralKind = "codec" | "decode" | "encode";
+type CodecStructuralKind = "codec" | "decode" | "encode";
 
 export function codecStructural(
   c: ExprCore,

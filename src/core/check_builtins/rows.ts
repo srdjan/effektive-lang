@@ -14,7 +14,7 @@ import type { Arg } from "./context.ts";
 export type PreludeCallName = Exclude<PreludeName, "None">;
 
 /** Camel case to kebab case at the type level: `retrySchedule` gives `retry-schedule`. */
-export type Kebab<S extends string> = S extends `${infer Head}${infer Tail}`
+type Kebab<S extends string> = S extends `${infer Head}${infer Tail}`
   ? `${Head extends Lowercase<Head> ? Head : `-${Lowercase<Head>}`}${Kebab<
     Tail
   >}`
@@ -25,7 +25,7 @@ export type Kebab<S extends string> = S extends `${infer Head}${infer Tail}`
  * tested, so a call with a wrong count keeps it. `bailFact` is recorded only
  * after a wrong count, for a handler that records another fact after its checks.
  */
-export interface PrologueFacts<K extends PreludeCallName, C> {
+interface PrologueFacts<K extends PreludeCallName, C> {
   readonly fact?:
     | NodeFact & { readonly kind: Kebab<K> }
     | ((checker: C, name: K, args: readonly Arg[]) => NodeFact);

@@ -57,7 +57,7 @@ export function walkExpr(expr: Expr, visit: (e: Expr) => void): void {
 }
 
 /** The body expression of a function or the value of a constant. */
-export function rootOf(declaration: Declaration): Expr | undefined {
+function rootOf(declaration: Declaration): Expr | undefined {
   switch (declaration.kind) {
     case "function":
       return declaration.body;

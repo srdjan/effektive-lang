@@ -32,7 +32,7 @@ export interface LayerContext extends
   jobFunction(name: string, arg: Arg, info: NodeInfo): FunctionNode | undefined;
 }
 
-export function provideCall(
+function provideCall(
   c: LayerContext,
   node: NodeId,
   args: readonly Arg[],
@@ -83,7 +83,7 @@ export function provideCall(
   );
 }
 
-export function layerCall(
+function layerCall(
   c: LayerContext,
   node: NodeId,
   args: readonly Arg[],
@@ -176,7 +176,7 @@ export function layerCall(
   return c.finish(node, type, acquire);
 }
 
-export function mergeLayersCall(
+function mergeLayersCall(
   c: LayerContext,
   node: NodeId,
   args: readonly Arg[],

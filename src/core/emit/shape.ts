@@ -28,7 +28,7 @@ export type ExprOf<K extends ExprKind> = Expr extends infer E
  */
 type LeafRule = "leaf" | "call" | "structural";
 
-export interface Shape<E extends Expr> {
+interface Shape<E extends Expr> {
   /**
    * The sub-expressions that the node evaluates when it runs, in order. A leaf
    * evaluates them before it runs.

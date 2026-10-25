@@ -22,7 +22,7 @@ export type CoreRowName = "Some";
 export const CORE_ROW_NAMES: readonly CoreRowName[] = ["Some"];
 
 /** Every operation that a family handler or prologue reads from the checker. */
-export type FamilyContext =
+type FamilyContext =
   & BuiltinContext
   & CollectionContext
   & EffectContext

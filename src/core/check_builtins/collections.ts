@@ -40,7 +40,7 @@ export interface CollectionContext extends
   ): number | "unbounded" | undefined;
 }
 
-export function allCall(
+function allCall(
   c: CollectionContext,
   node: NodeId,
   args: readonly Arg[],
@@ -134,7 +134,7 @@ export function allCall(
   );
 }
 
-export function partitionAllCall(
+function partitionAllCall(
   c: CollectionContext,
   node: NodeId,
   args: readonly Arg[],
@@ -180,7 +180,7 @@ export function partitionAllCall(
   );
 }
 
-export function validateAllCall(
+function validateAllCall(
   c: CollectionContext,
   node: NodeId,
   args: readonly Arg[],
@@ -323,7 +323,7 @@ function allResultsCall(
   );
 }
 
-export function collectionCall(
+function collectionCall(
   c: CollectionContext,
   node: NodeId,
   name: "map" | "filter" | "fold" | "traverse",
