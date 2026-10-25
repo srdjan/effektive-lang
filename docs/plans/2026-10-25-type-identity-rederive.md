@@ -1,6 +1,18 @@
 # Type identity rederive plan
 
-Status: proposed 2026-10-25. Not approved. Base commit: `b988088`.
+Status: approved and done 2026-10-25, except TD6. Base commit: `b988088`. The Fable validation of this plan was stopped before it finished, so each phase was reviewed and probed by hand instead.
+
+Results, measured with the same script as the baseline:
+
+| Phase | Items | Commit | Result |
+| --- | --- | --- | --- |
+| 1 | TD8, TD1 | `09755da` | The union probe gives 2 `type-mismatch/003`. |
+| 2 | TD9, TD3 | `017c505` | Both brand steps deleted. Five tests now build reachable states. |
+| 3 | TD12, TD2, TD11 | `1ccf897`, `85da1c4` | 7 structures became 1 map of 4 kinds. The small identity methods rose from 13 to 33 branches, because each query narrows the kind. |
+| 4 | TD4 | `a9aae4e` | Checker `assignable`: 199 to 169 branches, CC 151 to 125. |
+| 5 | TD5 | `a29b9fc` | `recordTarget` returns a closed union. |
+| 6 | TD7, TD10 | `6fc7cdf` and this commit | TD6 was not done: it was optional and adds branches. |
+| 7 | validator ladder | `7a03cbd` | Validator `assignable`: 186 to 162 branches, CC 138 to 119. No fixture diff. |
 
 This plan uses the prefix TD. It comes from a rederive review of the type identity subsystem. The review measured each function and sketched rederivations from the contract. The scratch scripts and sketches are in `/tmp/rederive-ti/` and are not part of the repository. Only the branch deltas of the sketches are firm, because the sketches were parsed but not type-checked or run.
 

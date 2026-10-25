@@ -6572,3 +6572,12 @@ Deno.test("a union of two identities does not fit a third identity", () => {
     );
   }
 });
+
+Deno.test("a type with a bare-name body is a transparent alias", () => {
+  const result = checkText(`type Text = string
+type UserId = Text
+export const f = (t: Text): UserId => t
+export const g = (u: UserId): Text => u
+`);
+  assertEquals(codes(result), [], messages(result).join("\n"));
+});

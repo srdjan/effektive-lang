@@ -519,19 +519,16 @@ Deno.test("a union of identities takes no other name, and a literal union still 
   assert(t.isAssignable(t.union([a, b]), t.int));
 });
 
-Deno.test("a body that is a name chains widening, and a sealed identity keeps its module", () => {
+Deno.test("a sealed identity widens and takes unnamed values only in its own module", () => {
   const t = fresh();
-  const text = identity(t, ID_B, t.string);
-  const id = identity(t, ID_A, text);
-  assert(t.isAssignable(id, text));
-  assert(!t.isAssignable(text, id));
+  const id = identity(t, ID_A, t.string);
   assert(!t.isSealed(ID_A));
-  t.defineIdentity(ID_A, text, true);
+  t.defineIdentity(ID_A, t.string, true);
   assert(t.isSealed(ID_A));
   // A foreign module cannot widen the identity or give it an unnamed value.
-  assert(!t.isAssignableIn("other", id, text));
+  assert(!t.isAssignableIn("other", id, t.string));
   assert(!t.isAssignableIn("other", t.literal("x"), id));
-  assert(t.isAssignableIn("m", id, text));
+  assert(t.isAssignableIn("m", id, t.string));
   assert(t.isAssignableIn("m", t.literal("x"), id));
   // `defineAlias` replaces the sealed identity, so nothing stays sealed.
   t.defineAlias(ID_A, t.string);
