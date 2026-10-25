@@ -71,6 +71,8 @@ import {
   type TypeRef,
   type TypeTable,
 } from "./types.ts";
+import { typeToIr } from "./type_ir.ts";
+import { showType } from "./type_show.ts";
 import {
   declarationId,
   type DeclarationPrefix,
@@ -599,7 +601,7 @@ export class TypeLowerer {
       arity: 1,
       build: (lowerer, [input]) => {
         const ref = lowerer.env.table.scheduleInput(input.ref);
-        return { ref, ir: lowerer.env.table.toIr(ref) };
+        return { ref, ir: typeToIr(lowerer.env.table, ref) };
       },
     },
     ScheduleMetadata: {
@@ -607,7 +609,7 @@ export class TypeLowerer {
       arity: 2,
       build: (lowerer, [input, output]) => {
         const ref = lowerer.env.table.scheduleMetadata(input.ref, output.ref);
-        return { ref, ir: lowerer.env.table.toIr(ref) };
+        return { ref, ir: typeToIr(lowerer.env.table, ref) };
       },
     },
     ScheduleDecision: {
@@ -615,7 +617,7 @@ export class TypeLowerer {
       arity: 2,
       build: (lowerer, [state, input]) => {
         const ref = lowerer.env.table.scheduleDecision(state.ref, input.ref);
-        return { ref, ir: lowerer.env.table.toIr(ref) };
+        return { ref, ir: typeToIr(lowerer.env.table, ref) };
       },
     },
     Codec: {
@@ -1109,7 +1111,7 @@ export class TypeLowerer {
         "failure-contract/004",
         `\`${
           nodeText(this.tree, nameNode)
-        }\` has a member that is not an error: \`${table.show(ref)}\``,
+        }\` has a member that is not an error: \`${showType(table, ref)}\``,
         this.span(nameNode),
       );
     }
@@ -2214,7 +2216,7 @@ class ModuleChecker {
     if (node.kind !== "function") return undefined;
     const ir = binding.ir.kind === "function"
       ? binding.ir
-      : this.table.toIr(ref);
+      : typeToIr(this.table, ref);
     return ir.kind === "function" ? { node, ir } : undefined;
   }
 
@@ -2232,7 +2234,7 @@ class ModuleChecker {
       requirements: readonly CapabilityId[];
     },
   ): void {
-    const expected = this.table.show(binding.ref);
+    const expected = showType(this.table, binding.ref);
     const fn = this.functionOfBinding(binding);
     if (fn === undefined) {
       this.lowerer.report(
@@ -2264,7 +2266,7 @@ class ModuleChecker {
       this.lowerer.report(
         "type-mismatch/003",
         `the function has type ${
-          this.table.show(found)
+          showType(this.table, found)
         }, but ${expected} is expected`,
         this.lowerer.span(arrow),
       );

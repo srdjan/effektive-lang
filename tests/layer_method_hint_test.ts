@@ -5,6 +5,7 @@ import { assert, assertEquals } from "@std/assert";
 import type { CheckedProject } from "../src/core/mod.ts";
 import type { ValueId } from "../src/core/ir.ts";
 import { checkModule } from "./helpers.ts";
+import { showType } from "../src/core/type_show.ts";
 
 const SERVICE = `type Int = int
 type Text = string
@@ -25,7 +26,7 @@ function arrowParameters(project: CheckedProject, name: string): string[][] {
   assert(body !== undefined, name);
   return [...body.table.facts.values()].flatMap((fact) =>
     fact.kind === "arrow"
-      ? [fact.parameters.map((p) => project.table.show(p.type))]
+      ? [fact.parameters.map((p) => showType(project.table, p.type))]
       : []
   );
 }

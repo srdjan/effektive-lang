@@ -12,13 +12,13 @@ import type {
   ErrorId,
   Execution,
   Field,
-  FunctionType,
   Type,
   TypeId,
 } from "./ir.ts";
 import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "./ir.ts";
 import { isErrorId, isTypeId, moduleOfId } from "./ids.ts";
-import { compareText } from "./util.ts";
+import { typeFromIr, typeToIr } from "./type_ir.ts";
+import { canonicalJson, compareText } from "./util.ts";
 
 declare const typeRefBrand: unique symbol;
 
@@ -276,30 +276,6 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((item, i) => item === b[i]);
 }
 
-// ------------------------------------------------------------------ canonical JSON
-
-/**
- * JSON text with object keys in sorted order. Arrays keep their order. A key
- * with an `undefined` value is left out. Use it to hash a value.
- */
-export function canonicalJson(value: unknown): string {
-  if (value === undefined) return "null";
-  if (value === null || typeof value !== "object") {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => canonicalJson(item)).join(",")}]`;
-  }
-  const record = value as Readonly<Record<string, unknown>>;
-  const parts: string[] = [];
-  for (const key of Object.keys(record).sort(compareText)) {
-    const item = record[key];
-    if (item === undefined) continue;
-    parts.push(`${JSON.stringify(key)}:${canonicalJson(item)}`);
-  }
-  return `{${parts.join(",")}}`;
-}
-
 // ------------------------------------------------------------------ the table
 
 /** What a graph of imported declarations supplies to the table. */
@@ -362,7 +338,7 @@ function guarded(def: AliasDef | undefined): boolean {
 /** The read side of a `TypeTable`: queries only, no writers. */
 export type TypeReader = Pick<
   TypeTable,
-  | "show"
+  | "never"
   | "node"
   | "aliasOf"
   | "brandBaseOf"
@@ -713,8 +689,8 @@ export class TypeTable {
 
   /**
    * Flattens nested unions, removes duplicates, and sorts the members by the
-   * canonical JSON of their IR, the order that `toIr` emits. The order does not
-   * depend on the order in which the table interned the types. A union of one
+   * canonical JSON of their IR, the order that `typeToIr` emits. The order does
+   * not depend on the order in which the table interned the types. A union of one
    * member is that member. An empty union is `never`. A union with the error type
    * is the error type.
    */
@@ -740,7 +716,7 @@ export class TypeTable {
   private irKey(ref: TypeRef): string {
     let key = this.irKeys.get(ref);
     if (key === undefined) {
-      key = canonicalJson(this.toIr(ref));
+      key = canonicalJson(typeToIr(this, ref));
       this.irKeys.set(ref, key);
     }
     return key;
@@ -991,14 +967,14 @@ export class TypeTable {
       if (decl.definition.kind === "alias") {
         this.defineAlias(
           decl.id,
-          this.fromIr(decl.definition.type),
+          typeFromIr(this, decl.definition.type),
           guardedRecord(decl.definition.type, decl.id, tagOf),
         );
       } else if (decl.opaque === true) {
         this.defineOpaque(decl.id);
       } else {
         // A nominal type is an alias with identity. A tagged one is a tagged record.
-        const body = this.fromIr(decl.definition.base);
+        const body = typeFromIr(this, decl.definition.base);
         const sealed = decl.definition.sealed === true;
         if (decl.definition.tagged === true) {
           this.defineTagged(decl.id, body, sealed);
@@ -1018,7 +994,7 @@ export class TypeTable {
         decl.id,
         this.record(decl.fields.map((f) => ({
           name: f.name,
-          type: this.fromIr(f.type),
+          type: typeFromIr(this, f.type),
           optional: f.optional,
         }))),
       );
@@ -1139,257 +1115,6 @@ export class TypeTable {
         return unreachable;
       }
     }
-  }
-
-  // -------------------------------------------------------------- IR conversion
-
-  /** Interns an IR type tree. Unions flatten and sort, records sort. */
-  fromIr(type: Type): TypeRef {
-    switch (type.kind) {
-      case "closeable-scope":
-        return this.closeableScope;
-      case "primitive":
-        return this.primitive(type.name);
-      case "literal":
-        return this.literal(type.value);
-      case "named":
-        return this.named(type.id);
-      case "record":
-        return this.record(type.fields.map((f) => ({
-          name: f.name,
-          type: this.fromIr(f.type),
-          optional: f.optional,
-        })));
-      case "array":
-        return this.array(this.fromIr(type.element));
-      case "tuple":
-        return this.tuple(type.elements.map((e) => this.fromIr(e)));
-      case "union":
-        return this.union(type.members.map((m) => this.fromIr(m)));
-      case "option":
-        return this.option(this.fromIr(type.element));
-      case "ref":
-        return this.ref(this.fromIr(type.element));
-      case "retry-schedule":
-        return this.retrySchedule(this.fromIr(type.error));
-      case "codec":
-        return this.codec(this.fromIr(type.decoded), this.fromIr(type.encoded));
-      case "schema":
-        return this.schema(
-          this.fromIr(type.decoded),
-          this.fromIr(type.encoded),
-          type.decodeRequirements,
-          type.encodeRequirements,
-          {
-            presence: type.optionalKey === true
-              ? "optional"
-              : type.encodedOptionalKey === true
-              ? "encoded-optional"
-              : type.decodedOptionalKey === true
-              ? "decoded-optional"
-              : "required",
-            makeInput: this.fromIr(type.makeInput ?? type.decoded),
-            constructorDefault: type.constructorDefault === true,
-          },
-        );
-      case "fiber":
-        return this.fiber(this.fromIr(type.result), type.failures);
-      case "effect":
-        return this.effect(
-          this.fromIr(type.result),
-          type.effects.failures,
-          type.effects.requirements,
-        );
-      case "stream":
-        return this.stream(
-          this.fromIr(type.element),
-          type.effects.failures,
-          type.effects.requirements,
-        );
-      case "schedule":
-        return this.schedule(
-          this.fromIr(type.output),
-          this.fromIr(type.input),
-          type.effects.failures,
-          type.effects.requirements,
-        );
-      case "sink":
-        return this.sink(
-          this.fromIr(type.input),
-          this.fromIr(type.result),
-          type.effects.failures,
-          type.effects.requirements,
-          type.leftover === undefined ? this.never : this.fromIr(type.leftover),
-        );
-      case "function":
-        return this.fromIrFunction(type);
-      case "provider":
-        return this.provider({
-          provides: type.provides,
-          execution: type.acquisition.execution,
-          failures: type.acquisition.effects.failures,
-          requirements: type.acquisition.effects.requirements,
-        });
-    }
-  }
-
-  fromIrFunction(type: FunctionType): TypeRef {
-    return this.function({
-      execution: type.execution,
-      parameters: type.parameters.map((p) => this.fromIr(p)),
-      ...(type.borrows === undefined ? {} : { borrows: type.borrows }),
-      result: this.fromIr(type.result),
-      failures: type.effects.failures,
-      requirements: type.effects.requirements,
-    });
-  }
-
-  /**
-   * The IR tree of an interned type. Records list fields by name. Union members
-   * sort by their canonical text, so the result does not depend on ref numbers.
-   * The error type becomes `unknown`.
-   */
-  toIr(ref: TypeRef): Type {
-    const node = this.node(ref);
-    switch (node.kind) {
-      case "closeable-scope":
-        return { kind: "closeable-scope" };
-      case "primitive":
-        return { kind: "primitive", name: node.name };
-      case "literal":
-        return { kind: "literal", value: node.value };
-      case "named":
-        return { kind: "named", id: node.id };
-      case "record":
-        return {
-          kind: "record",
-          fields: node.fields.map((f) => ({
-            name: f.name,
-            type: this.toIr(f.type),
-            optional: f.optional,
-          })),
-        };
-      case "array":
-        return { kind: "array", element: this.toIr(node.element) };
-      case "tuple":
-        return {
-          kind: "tuple",
-          elements: node.elements.map((e) => this.toIr(e)),
-        };
-      case "union": {
-        const members = node.members.map((m) => {
-          const ir = this.toIr(m);
-          return { ir, text: canonicalJson(ir) };
-        });
-        members.sort((a, b) => compareText(a.text, b.text));
-        return { kind: "union", members: members.map((m) => m.ir) };
-      }
-      case "option":
-        return { kind: "option", element: this.toIr(node.element) };
-      case "ref":
-        return { kind: "ref", element: this.toIr(node.element) };
-      case "retry-schedule":
-        return { kind: "retry-schedule", error: this.toIr(node.error) };
-      case "codec":
-        return {
-          kind: "codec",
-          decoded: this.toIr(node.decoded),
-          encoded: this.toIr(node.encoded),
-        };
-      case "schema":
-        return {
-          kind: "schema",
-          decoded: this.toIr(node.decoded),
-          encoded: this.toIr(node.encoded),
-          decodeRequirements: node.decodeRequirements,
-          encodeRequirements: node.encodeRequirements,
-          ...(node.presence === "optional"
-            ? { optionalKey: true as const }
-            : {}),
-          ...(node.presence === "encoded-optional"
-            ? { encodedOptionalKey: true as const }
-            : {}),
-          ...(node.presence === "decoded-optional"
-            ? { decodedOptionalKey: true as const }
-            : {}),
-          ...(node.makeInput === undefined
-            ? {}
-            : { makeInput: this.toIr(node.makeInput) }),
-          ...(node.constructorDefault === true
-            ? { constructorDefault: true as const }
-            : {}),
-        };
-      case "fiber":
-        return {
-          kind: "fiber",
-          result: this.toIr(node.result),
-          failures: node.failures,
-        };
-      case "effect":
-        return {
-          kind: "effect",
-          result: this.toIr(node.result),
-          effects: {
-            failures: node.failures,
-            requirements: node.requirements,
-          },
-        };
-      case "stream":
-        return {
-          kind: "stream",
-          element: this.toIr(node.element),
-          effects: { failures: node.failures, requirements: node.requirements },
-        };
-      case "schedule":
-        return {
-          kind: "schedule",
-          output: this.toIr(node.output),
-          input: this.toIr(node.input),
-          effects: { failures: node.failures, requirements: node.requirements },
-        };
-      case "sink":
-        return {
-          kind: "sink",
-          input: this.toIr(node.input),
-          result: this.toIr(node.result),
-          ...(node.leftover === this.never
-            ? {}
-            : { leftover: this.toIr(node.leftover) }),
-          effects: { failures: node.failures, requirements: node.requirements },
-        };
-      case "function":
-        return this.toIrFunction(ref);
-      case "provider":
-        return {
-          kind: "provider",
-          provides: node.provides,
-          acquisition: {
-            execution: node.execution,
-            effects: {
-              failures: node.failures,
-              requirements: node.requirements,
-            },
-          },
-        };
-      case "error":
-        return { kind: "primitive", name: "unknown" };
-    }
-  }
-
-  /** The IR function type of a ref that must be a function type. */
-  toIrFunction(ref: TypeRef): FunctionType {
-    const node = this.node(ref);
-    if (node.kind !== "function") {
-      throw new Error(`type ref ${ref} is not a function type`);
-    }
-    return {
-      kind: "function",
-      execution: node.execution,
-      parameters: node.parameters.map((p) => this.toIr(p)),
-      ...(node.borrows === undefined ? {} : { borrows: node.borrows }),
-      result: this.toIr(node.result),
-      effects: { failures: node.failures, requirements: node.requirements },
-    };
   }
 
   // -------------------------------------------------------------- compatibility
@@ -1604,140 +1329,6 @@ export class TypeTable {
           isSubset(sn.requirements, tn.requirements);
     }
   }
-
-  // -------------------------------------------------------------- printing
-
-  /** Named ids that `show` meets, and the ids that it prints as `module#Name`. */
-  private shown: Set<string> | undefined;
-  private qualified: ReadonlySet<string> = new Set();
-
-  /**
-   * The readable forms of several types for one message. When two different
-   * ids share a short name, each prints as `module#Name`, so the message can
-   * tell them apart.
-   */
-  showAll(...refs: TypeRef[]): string[] {
-    const shown = new Set<string>();
-    this.shown = shown;
-    for (const ref of refs) this.show(ref);
-    this.shown = undefined;
-    const byName = new Map<string, string[]>();
-    for (const id of shown) {
-      const name = idName(id);
-      byName.set(name, [...(byName.get(name) ?? []), id]);
-    }
-    this.qualified = new Set(
-      [...byName.values()].filter((ids) => ids.length > 1).flat(),
-    );
-    try {
-      return refs.map((ref) => this.show(ref));
-    } finally {
-      this.qualified = new Set();
-    }
-  }
-
-  /** A readable form for messages. It is not a serialization format. */
-  show(ref: TypeRef): string {
-    const node = this.node(ref);
-    switch (node.kind) {
-      case "closeable-scope":
-        return "CloseableScope";
-      case "primitive":
-        return node.name === "unit" ? "void" : node.name;
-      case "literal":
-        return JSON.stringify(node.value);
-      case "named": {
-        this.shown?.add(node.id);
-        const hash = node.id.indexOf("#");
-        if (hash < 0) return node.id;
-        return this.qualified.has(node.id)
-          ? `${moduleOfId(node.id) ?? ""}#${node.id.slice(hash + 1)}`
-          : node.id.slice(hash + 1);
-      }
-      case "record":
-        return node.fields.length === 0
-          ? "{}"
-          : `{ ${
-            node.fields.map((f) =>
-              `${f.name}${f.optional ? "?" : ""}: ${this.show(f.type)}`
-            ).join(", ")
-          } }`;
-      case "array": {
-        const inner = this.node(node.element).kind;
-        const text = this.show(node.element);
-        return inner === "union" || inner === "function"
-          ? `(${text})[]`
-          : `${text}[]`;
-      }
-      case "tuple":
-        return `[${node.elements.map((e) => this.show(e)).join(", ")}]`;
-      case "union":
-        return node.members.map((m) => this.show(m)).join(" | ");
-      case "option":
-        return `Option<${this.show(node.element)}>`;
-      case "ref":
-        return `Ref<${this.show(node.element)}>`;
-      case "retry-schedule":
-        return `RetrySchedule<${this.show(node.error)}>`;
-      case "codec":
-        return `Codec<${this.show(node.decoded)}, ${this.show(node.encoded)}>`;
-      case "schema":
-        return `${
-          node.presence === "optional"
-            ? "SchemaOptional"
-            : node.presence === "encoded-optional"
-            ? "SchemaEncodedOptional"
-            : node.presence === "decoded-optional"
-            ? "SchemaDecodedOptional"
-            : "Schema"
-        }${node.constructorDefault === true ? "ConstructorDefault" : ""}<${
-          this.show(node.decoded)
-        }, ${this.show(node.encoded)}, ${
-          node.decodeRequirements.map(idName).join(" | ") || "never"
-        }, ${node.encodeRequirements.map(idName).join(" | ") || "never"}${
-          node.makeInput === undefined ? "" : `, ${this.show(node.makeInput)}`
-        }>`;
-      case "fiber":
-        return `Fiber<${this.show(node.result)}, ${
-          node.failures.map(idName).join(" | ") || "never"
-        }>`;
-      case "effect":
-        return `Effect<${this.show(node.result)}, ${
-          node.failures.map(idName).join(" | ") || "never"
-        }, ${node.requirements.map(idName).join(" | ") || "never"}>`;
-      case "stream":
-        return `Stream<${this.show(node.element)}, ${
-          node.failures.map(idName).join(" | ") || "never"
-        }, ${node.requirements.map(idName).join(" | ") || "never"}>`;
-      case "schedule":
-        return `Schedule<${this.show(node.output)}, ${this.show(node.input)}, ${
-          node.failures.map(idName).join(" | ") || "never"
-        }, ${node.requirements.map(idName).join(" | ") || "never"}>`;
-      case "sink":
-        return `Sink<${this.show(node.input)}, ${this.show(node.result)}, ${
-          node.failures.map(idName).join(" | ") || "never"
-        }, ${node.requirements.map(idName).join(" | ") || "never"}${
-          node.leftover === this.never ? "" : `, ${this.show(node.leftover)}`
-        }>`;
-      case "function": {
-        const parameters = node.parameters.map((p) => this.show(p)).join(", ");
-        const fails = node.failures.length === 0
-          ? ""
-          : ` fails ${node.failures.map(idName).join(" | ")}`;
-        const uses = node.requirements.length === 0
-          ? ""
-          : ` uses ${node.requirements.map(idName).join(" | ")}`;
-        const execution = node.execution === "pure" ? "pure " : "";
-        return `${execution}(${parameters}) => ${
-          this.show(node.result)
-        }${fails}${uses}`;
-      }
-      case "provider":
-        return `provider provides ${node.provides.map(idName).join(" | ")}`;
-      case "error":
-        return "<error>";
-    }
-  }
 }
 
 /**
@@ -1923,11 +1514,6 @@ export function containsOpaqueType(
     default:
       return false;
   }
-}
-
-function idName(id: string): string {
-  const hash = id.indexOf("#");
-  return hash < 0 ? id : id.slice(hash + 1);
 }
 
 function literalFitsPrimitive(

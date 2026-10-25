@@ -16,6 +16,7 @@ import type { Target } from "./resolve.ts";
 import type { Span } from "./source.ts";
 import { type NodeId, nodeSpan, type SyntaxTree } from "./syntax.ts";
 import type { BodyTable } from "./tables.ts";
+import { showType } from "./type_show.ts";
 
 // ------------------------------------------------------------------ positions
 
@@ -58,10 +59,10 @@ function functionContract(
   const table = revision.types;
   const { signature } = fn;
   const parameters = signature.parameters.map((p) =>
-    `${p.name}: ${table.show(p.type.ref)}`
+    `${p.name}: ${showType(table, p.type.ref)}`
   ).join(", ");
   return cleanErrors(
-    `${signature.name}(${parameters}): ${table.show(fn.result)}${
+    `${signature.name}(${parameters}): ${showType(table, fn.result)}${
       effectText(fn.failures, fn.requirements)
     }`,
   );
@@ -129,7 +130,7 @@ function hoverPass(
     return {
       span,
       contract: cleanErrors(
-        `${constant.signature.name}: ${table.show(constant.type)}`,
+        `${constant.signature.name}: ${showType(table, constant.type)}`,
       ),
       declaration: constant.signature.id,
     };
@@ -165,7 +166,9 @@ function hoverPass(
   return {
     span: nodeSpan(module.tree, found.node),
     contract: cleanErrors(
-      `${table.show(info.type)}${effectText(info.failures, info.requirements)}`,
+      `${showType(table, info.type)}${
+        effectText(info.failures, info.requirements)
+      }`,
     ),
     declaration: undefined,
   };

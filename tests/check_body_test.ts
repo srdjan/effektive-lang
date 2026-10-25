@@ -28,6 +28,7 @@ import {
   EXAMPLE_MODES,
   exampleFiles,
 } from "./helpers.ts";
+import { showType } from "../src/core/type_show.ts";
 
 function checkFiles(
   files: Record<string, string>,
@@ -1992,13 +1993,13 @@ Deno.test("markPaid is pure and keeps the Order type", () => {
   const markPaid = fn(project, "pay", "markPaid");
   assertEquals(markPaid.mode, "pure");
   assertEquals(markPaid.body!.mode, "pure");
-  assertEquals(project.table.show(markPaid.result), "Order");
+  assertEquals(showType(project.table, markPaid.result), "Order");
 });
 
 Deno.test("total returns Amount, an alias of int, and is pure", () => {
   const project = examples();
   const total = fn(project, "collections", "total");
-  assertEquals(project.table.show(total.result), "Amount");
+  assertEquals(showType(project.table, total.result), "Amount");
   assert(project.table.isAssignable(total.result, project.table.int));
   assertEquals(total.mode, "pure");
 });
@@ -2016,7 +2017,7 @@ Deno.test("a pipeline stage records the closed builtin specialization", () => {
   const filter = builtins[0];
   assert(filter.kind === "builtin");
   assertEquals(
-    project.table.show(filter.specialized),
+    showType(project.table, filter.specialized),
     "pure (User[], pure (User) => boolean) => User[]",
   );
   assertEquals(filter.ir.execution, "pure");
@@ -2025,7 +2026,7 @@ Deno.test("a pipeline stage records the closed builtin specialization", () => {
   const map = builtins[1];
   assert(map.kind === "builtin");
   assertEquals(
-    project.table.show(map.specialized),
+    showType(project.table, map.specialized),
     "pure (User[], pure (User) => string) => string[]",
   );
   const fold = factsOf(project, "collections", "total").find((f) =>
@@ -2033,7 +2034,7 @@ Deno.test("a pipeline stage records the closed builtin specialization", () => {
   );
   assert(fold !== undefined && fold.kind === "builtin");
   assertEquals(
-    project.table.show(fold.specialized),
+    showType(project.table, fold.specialized),
     "pure (Amount[], Amount, pure (Amount, Amount) => Amount) => Amount",
   );
 });

@@ -7,7 +7,10 @@ import {
   assertStrictEquals,
 } from "@std/assert";
 import type { ErrorId, Type, TypeId } from "../src/core/ir.ts";
-import { canonicalJson, type TypeRef, TypeTable } from "../src/core/types.ts";
+import { type TypeRef, TypeTable } from "../src/core/types.ts";
+import { canonicalJson } from "../src/core/util.ts";
+import { typeFromIr, typeToIr } from "../src/core/type_ir.ts";
+import { showType, showTypes } from "../src/core/type_show.ts";
 
 const USER = "type:m#User" as TypeId;
 const ID_A = "type:m#IdA" as TypeId;
@@ -60,10 +63,10 @@ Deno.test("each writer replaces the whole earlier definition of a type", () => {
 
 Deno.test("CloseableScope is an abstract leaf through aliases and IR conversion", () => {
   const t = fresh();
-  const owner = t.fromIr({ kind: "closeable-scope" });
+  const owner = typeFromIr(t, { kind: "closeable-scope" });
   assertEquals(owner, t.closeableScope);
-  assertEquals(t.show(owner), "CloseableScope");
-  assertEquals(t.toIr(owner), { kind: "closeable-scope" });
+  assertEquals(showType(t, owner), "CloseableScope");
+  assertEquals(typeToIr(t, owner), { kind: "closeable-scope" });
   t.defineAlias(USER, owner);
   assert(t.isAssignable(t.named(USER), owner));
   assert(t.isAssignable(owner, t.named(USER)));
@@ -114,21 +117,21 @@ Deno.test("Sink leftovers are covariant and preserve legacy IR defaults", () => 
     result: { kind: "primitive", name: "unit" },
     effects: { failures: [], requirements: [] },
   };
-  const omitted = t.fromIr(legacy);
-  const explicit = t.fromIr({
+  const omitted = typeFromIr(t, legacy);
+  const explicit = typeFromIr(t, {
     ...legacy,
     leftover: { kind: "primitive", name: "never" },
   });
   assertEquals(omitted, explicit);
-  assertEquals(t.toIr(explicit), legacy);
+  assertEquals(typeToIr(t, explicit), legacy);
   const narrow = t.sink(t.number, t.unit, [], [], t.int);
   const broad = t.sink(t.int, t.unit, [], [], t.number);
   assert(t.isAssignable(narrow, broad));
   assert(!t.isAssignable(broad, narrow));
   assert(t.isAssignable(omitted, broad));
   assert(!t.isAssignable(broad, omitted));
-  assertEquals(t.fromIr(t.toIr(narrow)), narrow);
-  assertEquals(t.show(narrow), "Sink<number, void, never, never, int>");
+  assertEquals(typeFromIr(t, typeToIr(t, narrow)), narrow);
+  assertEquals(showType(t, narrow), "Sink<number, void, never, never, int>");
   const nested = t.sink(t.int, t.unit, [], [], t.array(t.array(t.int)));
   assert(t.exceedsDepth(nested, 3, new Map()));
 });
@@ -251,9 +254,9 @@ Deno.test("fromIr and toIr round trip, and equal IR gives an equal ref", () => {
     },
     effects: { failures: [MISSING], requirements: ["cap:m#S.find"] },
   };
-  const ref = t.fromIr(ir);
-  assertEquals(canonicalJson(t.toIr(ref)), canonicalJson(ir));
-  assertEquals(t.fromIr(t.toIr(ref)), ref);
+  const ref = typeFromIr(t, ir);
+  assertEquals(canonicalJson(typeToIr(t, ref)), canonicalJson(ir));
+  assertEquals(typeFromIr(t, typeToIr(t, ref)), ref);
 });
 
 Deno.test("toIr sorts union members by text, not by ref number", () => {
@@ -264,14 +267,14 @@ Deno.test("toIr sorts union members by text, not by ref number", () => {
   second.literal("a");
   const b = second.union([second.literal("b"), second.literal("a")]);
   assertEquals(
-    canonicalJson(first.toIr(a)),
-    canonicalJson(second.toIr(b)),
+    canonicalJson(typeToIr(first, a)),
+    canonicalJson(typeToIr(second, b)),
   );
 });
 
 Deno.test("the error type becomes unknown in IR", () => {
   const t = fresh();
-  assertEquals(t.toIr(t.error), { kind: "primitive", name: "unknown" });
+  assertEquals(typeToIr(t, t.error), { kind: "primitive", name: "unknown" });
 });
 
 Deno.test("canonicalJson sorts object keys and keeps array order", () => {
@@ -530,10 +533,10 @@ Deno.test("two ids with one short name show as module#Name", () => {
   const t = fresh();
   const a = identity(t, "type:a#Text" as TypeId, t.string);
   const b = identity(t, "type:b#Text" as TypeId, t.string);
-  assertEquals(t.showAll(a, b), ["a#Text", "b#Text"]);
-  assertEquals(t.showAll(a, a), ["Text", "Text"]);
-  assertEquals(t.showAll(t.array(a), t.int), ["Text[]", "int"]);
-  assertEquals(t.show(a), "Text");
+  assertEquals(showTypes(t, a, b), ["a#Text", "b#Text"]);
+  assertEquals(showTypes(t, a, a), ["Text", "Text"]);
+  assertEquals(showTypes(t, t.array(a), t.int), ["Text[]", "int"]);
+  assertEquals(showType(t, a), "Text");
 });
 
 Deno.test("a data type widens to its record, and the record does not fit back", () => {
@@ -600,14 +603,14 @@ Deno.test("providers fit a provider with the same provision and no larger acquis
 
 Deno.test("show prints readable names", () => {
   const t = fresh();
-  assertEquals(t.show(t.unit), "void");
+  assertEquals(showType(t, t.unit), "void");
   assertEquals(
-    t.show(t.array(t.union([t.int, t.string]))).includes("[]"),
+    showType(t, t.array(t.union([t.int, t.string]))).includes("[]"),
     true,
   );
-  assertEquals(t.show(t.option(t.named(USER))), "Option<User>");
+  assertEquals(showType(t, t.option(t.named(USER))), "Option<User>");
   assertEquals(
-    t.show(effectFn(t, [t.int], t.string, [MISSING])),
+    showType(t, effectFn(t, [t.int], t.string, [MISSING])),
     "(int) => string fails Missing",
   );
 });

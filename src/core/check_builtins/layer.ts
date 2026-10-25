@@ -20,6 +20,7 @@ import type {
   SyntaxView,
 } from "./context.ts";
 import { direct, piped, type PreludeCallName, type Rows } from "./rows.ts";
+import { typeFromIr } from "../type_ir.ts";
 export interface LayerContext extends
   Pick<
     BuiltinContext,
@@ -120,7 +121,7 @@ function layerCall(
       parameters: [],
       result: c.table.record(declaration.methods.map((m) => ({
         name: m.name,
-        type: c.table.fromIr(m.type),
+        type: typeFromIr(c.table, m.type),
         optional: false,
       }))),
       failures: [],
@@ -143,7 +144,7 @@ function layerCall(
       const field = implementation.fields.find((f) => f.name === method.name);
       if (
         field === undefined || field.optional ||
-        !c.assignable(field.type, c.table.fromIr(method.type))
+        !c.assignable(field.type, typeFromIr(c.table, method.type))
       ) {
         c.report(
           "type-mismatch/010",

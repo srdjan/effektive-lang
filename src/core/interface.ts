@@ -36,8 +36,7 @@ import type {
   ValueId,
 } from "./ir.ts";
 import type { Result } from "./source.ts";
-import { canonicalJson } from "./types.ts";
-import { compareText } from "./util.ts";
+import { canonicalJson, compareText } from "./util.ts";
 
 /** The `Import` payload without `module` and `bindings`. */
 type InterfacePayload = Pick<

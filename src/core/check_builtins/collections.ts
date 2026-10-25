@@ -3,6 +3,8 @@ import type { NodeId } from "../syntax.ts";
 import { isErrorId } from "../ids.ts";
 import { combine, type NodeInfo } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
+import { functionTypeToIr } from "../type_ir.ts";
+import { showType } from "../type_show.ts";
 import type {
   Arg,
   BuiltinContext,
@@ -125,7 +127,7 @@ function allCall(
     kind: "builtin",
     name: "all",
     specialized,
-    ir: table.toIrFunction(specialized),
+    ir: functionTypeToIr(table, specialized),
   });
   return c.finish(
     node,
@@ -409,7 +411,7 @@ function collectionCall(
     kind: "builtin",
     name,
     specialized,
-    ir: table.toIrFunction(specialized),
+    ir: functionTypeToIr(table, specialized),
   });
   const invocation = name === "traverse"
     ? c.table.node(specialized)
@@ -441,7 +443,7 @@ function arrayElement(
     c.report(
       "type-mismatch/010",
       `\`${name}\` needs an array as its first argument, but the value has type ${
-        c.table.show(info.type)
+        showType(c.table, info.type)
       }`,
       arg.node,
     );

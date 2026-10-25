@@ -22,7 +22,9 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   paths.ts       Path helpers and the generated-file header: joinPath, normalizeRelative, moduleNameOf, generatedPathOf, generatedHeader, generatedSourceOf.
   project.ts     effektive.json, module graph, cycles, order.
   resolve.ts     Names to identities, scopes, prelude, side table of targets.
-  types.ts       Interned types, compatibility, IR conversion, canonical JSON.
+  types.ts       Interned types and compatibility.
+  type_ir.ts     Conversion between IR type trees and interned types.
+  type_show.ts   Readable forms of types for messages.
   check.ts       Declaration checker: type lowering, signatures, providers.
   check_expr.ts  Body checker: expressions, calls, contracts, and the prelude dispatch.
   check_patterns.ts Match patterns, bindings, and coverage through PatternContext.
@@ -59,7 +61,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   editor_tokens.ts Semantic classifications with lexical recovery.
   editor_actions.ts Validated missing fails/uses actions from checked body effects.
   ids.ts         Parts of a declaration identity: module, name, and method.
-  util.ts        Small pure helpers of the front end and the edges: compareText, errorMessage, and isRecord.
+  util.ts        Small pure helpers of the front end and the edges: compareText, errorMessage, isRecord, and canonicalJson.
   frontend.ts    Checking, IR, and source editor queries, with no backend dependency.
   typescript.ts  TypeScript output caches, emitProject, backend hover, maps, diagnostic mapping.
   mod.ts         Aggregate public API.

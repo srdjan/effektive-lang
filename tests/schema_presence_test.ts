@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertNotEquals } from "@std/assert";
 import { TypeTable } from "../src/core/types.ts";
 import type { SchemaPresence } from "../src/core/types.ts";
+import { typeFromIr, typeToIr } from "../src/core/type_ir.ts";
 
 Deno.test("schema presence roundtrips every legal IR state independently of constructor defaults", () => {
   const table = new TypeTable();
@@ -29,7 +30,7 @@ Deno.test("schema presence roundtrips every legal IR state independently of cons
       assert(node.kind === "schema");
       assertEquals(node.presence, presence);
       assertEquals(node.makeInput, makeInput);
-      const ir = table.toIr(ref);
+      const ir = typeToIr(table, ref);
       assert(ir.kind === "schema");
       assertEquals([
         ir.optionalKey,
@@ -40,10 +41,10 @@ Deno.test("schema presence roundtrips every legal IR state independently of cons
         ir.constructorDefault,
         constructorDefault ? true : undefined,
       );
-      assertEquals(ir.decoded, table.toIr(decoded));
+      assertEquals(ir.decoded, typeToIr(table, decoded));
       assertEquals(ir.encoded, { kind: "primitive", name: "string" });
       assertEquals(ir.makeInput, { kind: "record", fields: [] });
-      assertEquals(table.fromIr(ir), ref);
+      assertEquals(typeFromIr(table, ir), ref);
     }
   }
   assertEquals(refs.size, 8);

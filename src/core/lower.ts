@@ -55,7 +55,7 @@ import { TokenKind } from "./lex.ts";
 import type { ModuleInfo } from "./project.ts";
 import type { ModuleResolution, Target } from "./resolve.ts";
 import { sha256Hex } from "./sha256.ts";
-import { compareText } from "./util.ts";
+import { canonicalJson, compareText } from "./util.ts";
 import {
   kindOf,
   type NodeId,
@@ -72,12 +72,12 @@ import {
   type NodeInfo,
 } from "./tables.ts";
 import {
-  canonicalJson,
   sortedUnique,
   type TypeNode,
   type TypeRef,
   type TypeTable,
 } from "./types.ts";
+import { functionTypeToIr, typeToIr } from "./type_ir.ts";
 import { builtinInstanceId } from "./ids.ts";
 
 type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
@@ -540,7 +540,7 @@ class BodyLowerer {
   }
 
   private ir(ref: TypeRef): Type {
-    return this.ctx.types.toIr(ref);
+    return typeToIr(this.ctx.types, ref);
   }
 
   private annotationWith(
@@ -1718,7 +1718,7 @@ function lowerFunction(
     }
     type = computed.value.ir;
   } else {
-    type = checked.table.toIrFunction(fn.type);
+    type = functionTypeToIr(checked.table, fn.type);
   }
   const parameters: Parameter[] = signature.parameters.map((p) => {
     if (p.id === undefined) {
@@ -1757,7 +1757,7 @@ function lowerConstant(
     kind: "constant",
     id: signature.id,
     name: signature.name,
-    type: signature.type?.ir ?? ctx.types.toIr(constant.type),
+    type: signature.type?.ir ?? typeToIr(ctx.types, constant.type),
     value: lowerer.expr(constant.initNode),
     span: signature.span,
   };

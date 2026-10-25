@@ -9,6 +9,7 @@ import { Program } from "../src/core/db.ts";
 import { completionsAt } from "../src/core/editor_completion.ts";
 import { semanticClassifications } from "../src/core/editor_tokens.ts";
 import type { FunctionDecl } from "../src/core/ir.ts";
+import { showType } from "../src/core/type_show.ts";
 
 const CONFIG = { "effektive.json": "{}" };
 
@@ -169,7 +170,7 @@ export const apply = (callback: pure (value: Int) => Int): pure (value: Int) => 
   const apply = project.modules.get("main")?.functions.get("value:main#apply");
   assert(apply !== undefined);
   const callback = apply.signature.parameters[0].type.ref;
-  assertEquals(project.table.show(callback), "pure (Int) => Int");
+  assertEquals(showType(project.table, callback), "pure (Int) => Int");
 });
 
 Deno.test("editor tooling completes and highlights pure", () => {

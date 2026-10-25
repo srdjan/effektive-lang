@@ -267,7 +267,7 @@ Deno.test("lowerModule rethrows an error that is not a lowering failure", () => 
     ...checked,
     table: new Proxy(checked.table, {
       get(target, key, receiver) {
-        if (key === "toIr" || key === "toIrFunction") {
+        if (key === "node") {
           return () => {
             throw new RangeError("foreign");
           };

@@ -63,6 +63,7 @@ import {
 } from "./syntax.ts";
 import type { BodyTable, NodeInfo } from "./tables.ts";
 import { type TypeRef, TypeTable } from "./types.ts";
+import { functionTypeFromIr, typeFromIr } from "./type_ir.ts";
 
 // ------------------------------------------------------------------ results
 
@@ -245,7 +246,7 @@ function moduleValues(
   const importedValues = new Map<ValueId, TypeRef>();
   for (const iface of args.interfaces.values()) {
     for (const value of iface.payload.values) {
-      importedValues.set(value.id, table.fromIr(value.type));
+      importedValues.set(value.id, typeFromIr(table, value.type));
     }
   }
   const methodTypes = new Map<CapabilityId, TypeRef>();
@@ -262,7 +263,7 @@ function moduleValues(
         );
       ref = method === undefined
         ? table.error
-        : table.fromIrFunction(method.type);
+        : functionTypeFromIr(table, method.type);
     }
     methodTypes.set(capability, ref);
     return ref;

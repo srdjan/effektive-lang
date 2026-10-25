@@ -63,8 +63,8 @@ import {
 import { joinPath } from "./paths.ts";
 import type { ModuleResolution } from "./resolve.ts";
 import { memoryHost, type Result } from "./source.ts";
-import { canonicalJson, type TypeReader, TypeTable } from "./types.ts";
-import { compareText } from "./util.ts";
+import { type TypeReader, TypeTable } from "./types.ts";
+import { canonicalJson, compareText } from "./util.ts";
 import { validateProject } from "./validate_project.ts";
 
 // ------------------------------------------------------------------ changes

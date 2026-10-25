@@ -17,6 +17,7 @@ import { kindOf, type NodeId, SyntaxKind, type SyntaxTree } from "./syntax.ts";
 import { literalOf, nameTextOf } from "./syntax_queries.ts";
 import type { BodyTable, NodeFact, PatternFact } from "./tables.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
+import { showTypes } from "./type_show.ts";
 
 /** What the pattern checker needs from the body checker. */
 export interface PatternContext {
@@ -402,7 +403,7 @@ function namesOf(
   table: TypeTable,
   ids: readonly (TypeId | ErrorId)[],
 ): string[] {
-  return table.showAll(...ids.map((id) => table.named(id)));
+  return showTypes(table, ...ids.map((id) => table.named(id)));
 }
 
 /** Why a name that is not a tagged record or an error cannot be a constructor pattern. */

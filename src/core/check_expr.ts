@@ -79,6 +79,7 @@ import {
   without,
 } from "./tables.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
+import { showType, showTypes } from "./type_show.ts";
 import { isErrorId, shortName } from "./ids.ts";
 import {
   type Arg,
@@ -251,7 +252,7 @@ class BodyChecker
   }
 
   private show(ref: TypeRef): string {
-    return this.table.show(ref);
+    return showType(this.table, ref);
   }
 
   isError(ref: TypeRef): boolean {
@@ -293,7 +294,7 @@ class BodyChecker
     if (expected === undefined || this.assignable(found, expected)) {
       return true;
     }
-    const [foundText, expectedText] = this.table.showAll(found, expected);
+    const [foundText, expectedText] = showTypes(this.table, found, expected);
     this.report(
       "type-mismatch/003",
       `${what} has type ${foundText}, but ${expectedText} is expected`,
@@ -1454,7 +1455,7 @@ class BodyChecker
       } else if (this.assignable(element, next)) {
         element = next;
       } else {
-        const [nextText, elementText] = table.showAll(next, element);
+        const [nextText, elementText] = showTypes(table, next, element);
         this.report(
           "type-mismatch/012",
           `list element ${
@@ -1820,7 +1821,11 @@ class BodyChecker
         node,
       );
     } else if (result.mismatch) {
-      const [leftText, rightText] = this.table.showAll(left.type, right.type);
+      const [leftText, rightText] = showTypes(
+        this.table,
+        left.type,
+        right.type,
+      );
       this.report(
         "type-mismatch/007",
         `the operator \`${operator}\` does not accept operands of type ${leftText} and ${rightText}`,
@@ -2105,7 +2110,7 @@ class BodyChecker
       } else if (this.isNominalJoin(joined, type)) {
         joined = this.table.union([joined, type]);
       } else {
-        const [typeText, joinedText] = this.table.showAll(type, joined);
+        const [typeText, joinedText] = showTypes(this.table, type, joined);
         this.report(
           "type-mismatch/009",
           `this branch has type ${typeText}, which has no common type with ${joinedText} from the earlier branches`,

@@ -11,6 +11,7 @@ import {
 import type { ValueId } from "../src/core/ir.ts";
 import { assertDiagnostics } from "./schema_diagnostics.ts";
 import { checkModule } from "./helpers.ts";
+import { showType } from "../src/core/type_show.ts";
 
 const checked = (source: string): CheckedProject =>
   checkModule(source, "main.eff");
@@ -35,7 +36,7 @@ function channels(project: CheckedProject, name: string) {
   );
   assert(body?.body !== undefined, name);
   return {
-    result: project.table.show(body.body.type),
+    result: showType(project.table, body.body.type),
     failures: shortIds(body.body.failures),
     requirements: shortIds(body.body.requirements),
   };
@@ -193,7 +194,7 @@ function arrowParameters(project: CheckedProject, name: string): string[][] {
   assert(body !== undefined, name);
   return [...body.table.facts.values()].flatMap((fact) =>
     fact.kind === "arrow"
-      ? [fact.parameters.map((p) => project.table.show(p.type))]
+      ? [fact.parameters.map((p) => showType(project.table, p.type))]
       : []
   );
 }

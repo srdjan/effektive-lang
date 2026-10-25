@@ -11,6 +11,7 @@ import {
   PURE_EFFECTS,
 } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
+import { showType } from "../type_show.ts";
 import {
   type Arg,
   type BuiltinContext,
@@ -67,7 +68,7 @@ function failCall(
       c.report(
         "type-mismatch/010",
         `\`fail\` needs a value of a named error type, but the value has type ${
-          c.table.show(infos[0].type)
+          showType(c.table, infos[0].type)
         }`,
         args[0].node,
       );
@@ -230,7 +231,7 @@ function runCall(
       c.report(
         "type-mismatch/010",
         `\`run\` needs an Effect value, but the argument has type ${
-          c.table.show(value.type)
+          showType(c.table, value.type)
         }`,
         args[0].node,
       );

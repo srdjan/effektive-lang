@@ -9,6 +9,7 @@ import { Program, type Revision } from "../src/core/db.ts";
 import { definitionAt, documentSymbols, hoverAt } from "../src/core/mod.ts";
 import type { Span } from "../src/core/source.ts";
 import { exampleFiles, FIXTURES } from "./helpers.ts";
+import { showType } from "../src/core/type_show.ts";
 
 type Files = Record<string, string>;
 
@@ -121,7 +122,7 @@ Deno.test("hover prints unknown (error) where the checker prints <error>", () =>
   assertEquals(hover.backend, undefined);
   // The checker text itself has the marker, so the replacement is what matters.
   const table = revision.types;
-  assertEquals(table.show(table.error), "<error>");
+  assertEquals(showType(table, table.error), "<error>");
 });
 
 Deno.test("the cursor just after a name selects that name", () => {

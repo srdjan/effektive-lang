@@ -28,6 +28,7 @@ import { checkAnalysis, checkProject } from "../src/core/check_project.ts";
 import { memoryHost, type Result } from "../src/core/source.ts";
 import { stripSpans } from "../src/core/interface.ts";
 import { TypeTable } from "../src/core/types.ts";
+import { functionTypeToIr } from "../src/core/type_ir.ts";
 import {
   diskHost,
   EXAMPLE_ENTRIES,
@@ -207,7 +208,7 @@ Deno.test("the type of log equals the type in log.ir.json", () => {
   const fixture = fixtureDeclaration("value:example/log#log");
   assertEquals(type.value.ir, fixture.type);
   // The same type through the intern table and its conversion back to IR.
-  assertEquals(project.table.toIrFunction(type.value.ref), fixture.type);
+  assertEquals(functionTypeToIr(project.table, type.value.ref), fixture.type);
   assertEquals(signature.written, { result: true, fails: true, uses: true });
   assertEquals(fixture.written, { result: true, fails: true, uses: true });
   const ref =
