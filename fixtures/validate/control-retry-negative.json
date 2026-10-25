@@ -1036,6 +1036,7 @@
                 "kind": "named"
               }
             },
+            "generated": true,
             "kind": "bind",
             "value": {
               "effects": {
@@ -1070,6 +1071,7 @@
                 "kind": "named"
               }
             },
+            "generated": true,
             "kind": "bind",
             "value": {
               "arguments": [
@@ -1163,6 +1165,7 @@
                 "kind": "named"
               }
             },
+            "generated": true,
             "kind": "bind",
             "value": {
               "arguments": [
@@ -1256,6 +1259,7 @@
                 "kind": "named"
               }
             },
+            "generated": true,
             "kind": "bind",
             "value": {
               "arguments": [
@@ -1397,5 +1401,5 @@
   "sources": [
     "pay.eff"
   ],
-  "version": 5
+  "version": 6
 }

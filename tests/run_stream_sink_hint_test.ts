@@ -238,7 +238,7 @@ export const bound = (s: Stream<Int>): void => {
   );
 });
 
-Deno.test("a sinkForEach bound to a name still needs an annotated input", () => {
+Deno.test("a sinkForEach bound to a name retains its unknown input", () => {
   const source = `${PRELUDE}export const bound = (s: Stream<Int>): void => {
   const sink = sinkForEach((item) => {})
   runStream(s, sink)
@@ -248,21 +248,21 @@ Deno.test("a sinkForEach bound to a name still needs an annotated input", () => 
     source,
     checked(source).diagnostics,
     [[
-      "type-mismatch/011",
-      "the parameter `item` needs a type annotation, because the context gives no function type",
-      "item",
+      "type-mismatch/003",
+      "the sink input has type Int, but unknown is expected",
+      "sink",
     ]],
     "bound sinkForEach without annotation",
   );
 });
 
-Deno.test("a sinkForEach in a branch keeps its callback input annotated", () => {
+Deno.test("a sinkForEach in a branch retains its unknown callback input", () => {
   const source =
     `${PRELUDE}export const branched = (s: Stream<Int>, flag: Flag): void =>
   runStream(s, if (flag) { sinkForEach((item) => {}) } else { sinkForEach((item) => {}) })
 `;
   assertEquals(
     checked(source).diagnostics.map((d) => d.code),
-    ["type-mismatch/011", "type-mismatch/011"],
+    ["type-mismatch/003"],
   );
 });

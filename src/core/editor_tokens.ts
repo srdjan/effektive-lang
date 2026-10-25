@@ -27,6 +27,7 @@ export interface SemanticClassification {
 }
 
 const contextualKeywords = new Set([
+  "where",
   "type",
   "error",
   "sealed",

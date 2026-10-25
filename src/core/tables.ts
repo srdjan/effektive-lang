@@ -13,6 +13,7 @@ import type {
   Execution,
   FunctionType,
   LocalId,
+  RefinementProof,
   ServiceId,
   TypeId,
   ValueId,
@@ -288,6 +289,7 @@ export interface BodyTable {
   readonly declaration: ValueId;
   /** Syntax node id to type, sets, and mode. */
   readonly info: Map<NodeId, NodeInfo>;
+  readonly proofs: Map<NodeId, readonly RefinementProof[]>;
   /** Syntax node id to what lowering needs. */
   readonly facts: Map<NodeId, NodeFact>;
   /** The type of each parameter, block binding, and pattern binding. */
@@ -304,6 +306,7 @@ export function newBodyTable(declaration: ValueId): BodyTable {
   return {
     declaration,
     info: new Map(),
+    proofs: new Map(),
     facts: new Map(),
     locals: new Map(),
     stageSets: new Map(),

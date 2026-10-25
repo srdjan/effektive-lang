@@ -14,6 +14,7 @@ import {
   SEMANTIC_TOKEN_MODIFIERS,
   SEMANTIC_TOKEN_TYPES,
   semanticClassifications,
+  signatureHelpAt,
   type SourceEdit,
   type Span,
 } from "../core/mod.ts";
@@ -225,6 +226,29 @@ export function completionRequest(
       }),
     ),
   });
+}
+
+export function signatureHelpRequest(
+  params: EditorPositionParams,
+  ctx: ServerContext,
+): Answer {
+  const context = contextOf(params, ctx);
+  if (context === undefined) return answer(null);
+  const found = signatureHelpAt(
+    context.revision,
+    context.path,
+    context.offset,
+  );
+  return answer(
+    found === undefined ? null : {
+      signatures: [{
+        label: found.label,
+        parameters: found.parameters,
+      }],
+      activeSignature: 0,
+      activeParameter: found.activeParameter,
+    },
+  );
 }
 
 export function semanticTokensRequest(

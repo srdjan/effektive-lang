@@ -17,6 +17,7 @@ import type {
 } from "./ir.ts";
 import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "./ir.ts";
 import { isErrorId, isTypeId, moduleOfId } from "./ids.ts";
+import type { Predicate } from "./predicates.ts";
 import { typeFromIr, typeToIr } from "./type_ir.ts";
 import { canonicalJson, compareText } from "./util.ts";
 
@@ -226,6 +227,7 @@ export type TypeNode =
     readonly execution: Execution;
     readonly parameters: readonly TypeRef[];
     readonly borrows?: readonly boolean[];
+    readonly checked?: readonly boolean[];
     readonly result: TypeRef;
     /** Sorted and unique. */
     readonly failures: readonly ErrorId[];
@@ -247,6 +249,7 @@ interface FunctionSpec {
   readonly execution: Execution;
   readonly parameters: readonly TypeRef[];
   readonly borrows?: readonly boolean[];
+  readonly checked?: readonly boolean[];
   readonly result: TypeRef;
   readonly failures: readonly ErrorId[];
   readonly requirements: readonly CapabilityId[];
@@ -283,6 +286,7 @@ interface DefinitionSource {
   readonly types: readonly {
     readonly id: TypeId;
     readonly opaque?: boolean;
+    readonly predicate?: Predicate;
     readonly definition:
       | { readonly kind: "alias"; readonly type: Type }
       | {
@@ -321,11 +325,13 @@ type AliasDef =
     readonly body: TypeRef;
     readonly sealed: boolean;
     readonly guarded: boolean;
+    readonly predicate?: Predicate;
   }
   | {
     readonly kind: "tagged";
     readonly body: TypeRef;
     readonly sealed: boolean;
+    readonly predicate?: Predicate;
   }
   | { readonly kind: "opaque" };
 
@@ -340,9 +346,11 @@ export type TypeReader = Pick<
   TypeTable,
   | "never"
   | "node"
+  | "unfold"
   | "aliasOf"
   | "brandBaseOf"
   | "dataRecordOf"
+  | "predicateOf"
   | "errorRecordOf"
   | "isSealed"
   | "error"
@@ -477,6 +485,7 @@ export class TypeTable {
             node.execution,
             node.parameters,
             node.borrows ?? [],
+            node.checked ?? [],
             node.result,
             node.failures,
             node.requirements,
@@ -729,6 +738,7 @@ export class TypeTable {
       execution: spec.execution,
       parameters: [...spec.parameters],
       ...(spec.borrows?.some(Boolean) ? { borrows: [...spec.borrows] } : {}),
+      ...(spec.checked?.some(Boolean) ? { checked: [...spec.checked] } : {}),
       result: spec.result,
       failures: sortedUnique(spec.failures),
       requirements: sortedUnique(spec.requirements),
@@ -762,13 +772,30 @@ export class TypeTable {
     body: TypeRef,
     sealed: boolean,
     guarded = false,
+    predicate?: Predicate,
   ): void {
-    this.defs.set(id, { kind: "identity", body, sealed, guarded });
+    this.defs.set(id, {
+      kind: "identity",
+      body,
+      sealed,
+      guarded,
+      ...(predicate === undefined ? {} : { predicate }),
+    });
   }
 
   /** Defines an identity record that carries a tag. */
-  defineTagged(id: TypeId, body: TypeRef, sealed: boolean): void {
-    this.defs.set(id, { kind: "tagged", body, sealed });
+  defineTagged(
+    id: TypeId,
+    body: TypeRef,
+    sealed: boolean,
+    predicate?: Predicate,
+  ): void {
+    this.defs.set(id, {
+      kind: "tagged",
+      body,
+      sealed,
+      ...(predicate === undefined ? {} : { predicate }),
+    });
   }
 
   /** Defines an opaque type. It has no body and is never sealed. */
@@ -916,6 +943,14 @@ export class TypeTable {
     return def?.kind === "tagged" ? def.body : undefined;
   }
 
+  /** The predicate of an identity or tagged record. */
+  predicateOf(id: TypeId): Predicate | undefined {
+    const def = this.defs.get(id);
+    return def?.kind === "identity" || def?.kind === "tagged"
+      ? def.predicate
+      : undefined;
+  }
+
   /** The id of the type when it is a named tagged record, otherwise undefined. */
   taggedIdOf(ref: TypeRef): TypeId | undefined {
     const node = this.node(ref);
@@ -977,13 +1012,14 @@ export class TypeTable {
         const body = typeFromIr(this, decl.definition.base);
         const sealed = decl.definition.sealed === true;
         if (decl.definition.tagged === true) {
-          this.defineTagged(decl.id, body, sealed);
+          this.defineTagged(decl.id, body, sealed, decl.predicate);
         } else {
           this.defineIdentity(
             decl.id,
             body,
             sealed,
             guardedRecord(decl.definition.base, decl.id, tagOf),
+            decl.predicate,
           );
         }
       }
@@ -1190,7 +1226,8 @@ export class TypeTable {
     // through implicit construction.
     if (tn.kind === "named") {
       return adopt && sn.kind !== "named" && td?.kind === "identity" &&
-        owns(tn.id) && nested(s, td.body, lift);
+        td.predicate === undefined && owns(tn.id) &&
+        nested(s, td.body, lift);
     }
     if (tn.kind === "union") {
       for (const member of tn.members) {
@@ -1307,6 +1344,9 @@ export class TypeTable {
           tn.borrows?.some((borrow, i) => borrow && sn.borrows?.[i] !== true)
         ) return false;
         if (
+          tn.checked?.some((checked, i) => checked && sn.checked?.[i] !== true)
+        ) return false;
+        if (
           sn.execution !== tn.execution &&
           !(lift && executionFits(sn.execution, tn.execution))
         ) {
@@ -1341,18 +1381,26 @@ export class TypeTable {
  * - "schema": a `Schema<...>` type. Rejects `unit` and the reserved Schema
  *   errors.
  */
-type DataRule = "value" | "codec" | "schema";
+type DataRule = "value" | "codec" | "schema" | "entry";
 
 /**
  * What each rule rejects. A `Record` over the closed union makes a new rule a
  * compile error until this table names its two decisions.
  */
 const DATA_RULES: Readonly<
-  Record<DataRule, { readonly unit: boolean; readonly reserved: boolean }>
+  Record<
+    DataRule,
+    {
+      readonly unit: boolean;
+      readonly reserved: boolean;
+      readonly unknown: boolean;
+    }
+  >
 > = {
-  value: { unit: false, reserved: false },
-  codec: { unit: false, reserved: true },
-  schema: { unit: true, reserved: true },
+  value: { unit: false, reserved: false, unknown: true },
+  codec: { unit: false, reserved: true, unknown: true },
+  schema: { unit: true, reserved: true, unknown: true },
+  entry: { unit: false, reserved: true, unknown: false },
 };
 
 /**
@@ -1376,7 +1424,8 @@ export function dataOnly(
     dataOnly(table, child, rule, acceptPoisoned, seen);
   switch (type.kind) {
     case "primitive":
-      return type.name !== "unknown" && !(rejects.unit && type.name === "unit");
+      return !(rejects.unknown && type.name === "unknown") &&
+        !(rejects.unit && type.name === "unit");
     case "literal":
       return true;
     case "record":

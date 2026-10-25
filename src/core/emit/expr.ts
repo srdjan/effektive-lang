@@ -1161,6 +1161,13 @@ export class ExprEmitter implements ExprCore {
 
   // -------------------------------------------------------------- calls
 
+  private callParameterTypes(type: Type): readonly Type[] {
+    const fn = this.functionTypeOf(type);
+    return fn?.parameters.map((parameter, index) =>
+      fn.checked?.[index] ? { kind: "primitive", name: "unknown" } : parameter
+    ) ?? [];
+  }
+
   private nonLeafCall(
     e: Extract<Expr, { kind: "call" }>,
     kid: Kid,
@@ -1172,7 +1179,7 @@ export class ExprEmitter implements ExprCore {
     if (this.isEffectfulFunction(e.callee.type)) {
       throw internal("a leaf call reached the structural emitter");
     }
-    const parameters = this.functionTypeOf(e.callee.type)?.parameters ?? [];
+    const parameters = this.callParameterTypes(e.callee.type);
     const callee = kid(e.callee);
     return emitted(
       [
@@ -1524,7 +1531,7 @@ export class ExprEmitter implements ExprCore {
           ? [...(this.functionTypeOf(e.callee.type)?.parameters ?? [])]
           : [
             undefined,
-            ...(this.functionTypeOf(e.callee.type)?.parameters ?? []),
+            ...this.callParameterTypes(e.callee.type),
           ];
       case "perform": {
         const service = this.scope.typeLevelDeclaration(

@@ -33,6 +33,8 @@ export {
 export type { SemanticClassification } from "./editor_tokens.ts";
 export { definitionAt, documentSymbols, sourceHoverAt } from "./editor.ts";
 export type { EditorSymbol, EditorSymbolKind, SourceHover } from "./editor.ts";
+export { signatureHelpAt } from "./editor_signature.ts";
+export type { SignatureHelp, SignatureParameter } from "./editor_signature.ts";
 
 // The pipeline functions.
 export { checkProject } from "./check_project.ts";

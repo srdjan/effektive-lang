@@ -166,12 +166,22 @@ export const DIAGNOSTIC_CODES = {
   "type-mismatch/011": {
     category: "type-mismatch",
     description:
-      "A parameter of a local function has no type annotation, and the context gives no function type for it.",
+      "A callback parameter has no concrete type and its element type cannot be inferred.",
   },
   "type-mismatch/012": {
     category: "type-mismatch",
     description:
       "A bracket literal lacks an expected type for an empty list or has incompatible element types or tuple length.",
+  },
+  "type-mismatch/013": {
+    category: "type-mismatch",
+    description:
+      "A value does not prove the required refinement, or the bounded solver cannot decide its obligation.",
+  },
+  "type-mismatch/014": {
+    category: "type-mismatch",
+    description:
+      "Uses of one inferred input require conflicting types or identities.",
   },
   "failure-contract/001": {
     category: "failure-contract",
@@ -264,7 +274,7 @@ export const DIAGNOSTIC_CODES = {
   "declaration/005": {
     category: "declaration",
     description:
-      "An exported function lacks a parameter annotation or a result annotation, and no binding type annotation supplies them.",
+      "An exported function lacks a result annotation, and no binding type annotation supplies it.",
   },
   "declaration/006": {
     category: "declaration",
@@ -284,11 +294,6 @@ export const DIAGNOSTIC_CODES = {
   "declaration/010": {
     category: "declaration",
     description: "A record type has two fields with the same name.",
-  },
-  "declaration/011": {
-    category: "declaration",
-    description:
-      "A parameter of a module-level function, a service method, or a function type has no type annotation.",
   },
   "declaration/012": {
     category: "declaration",
@@ -314,6 +319,11 @@ export const DIAGNOSTIC_CODES = {
     category: "declaration",
     description:
       "A sealed declaration has a body without identity: a union with a non-literal member, or a bare name. Only a type with identity can be sealed.",
+  },
+  "declaration/018": {
+    category: "declaration",
+    description:
+      "A refinement uses an unsupported predicate, applies to a type without identity, or enters a host interface contract.",
   },
   "module/001": {
     category: "module",

@@ -102,6 +102,9 @@ interface ServerCapabilities {
   readonly completionProvider: {
     readonly triggerCharacters: readonly string[];
   };
+  readonly signatureHelpProvider: {
+    readonly triggerCharacters: readonly string[];
+  };
   readonly semanticTokensProvider: {
     readonly legend: {
       readonly tokenTypes: readonly string[];
@@ -126,6 +129,7 @@ export const SERVER_CAPABILITIES: ServerCapabilities = {
   referencesProvider: true,
   renameProvider: { prepareProvider: true },
   completionProvider: { triggerCharacters: ["."] },
+  signatureHelpProvider: { triggerCharacters: ["(", ","] },
   semanticTokensProvider: {
     legend: {
       tokenTypes: SEMANTIC_TOKEN_TYPES,

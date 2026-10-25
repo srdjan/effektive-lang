@@ -47,6 +47,7 @@ import { TokenKind } from "./lex.ts";
 import { stronglyConnectedComponents } from "./graph.ts";
 import type { Solved } from "./modes.ts";
 import { flattenIdentityMembers } from "./patterns.ts";
+import { predicateFromSource } from "./predicate_source.ts";
 import type { ModuleInfo } from "./project.ts";
 import type { Target } from "./resolve.ts";
 import type { Result, Span } from "./source.ts";
@@ -116,7 +117,7 @@ export interface TypeEnv {
 
 type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
 
-interface ParameterSignature {
+export interface ParameterSignature {
   readonly name: string;
   readonly borrow: boolean;
   /** The local identity from the resolver. Absent in a function type, where names are labels. */
@@ -124,6 +125,8 @@ interface ParameterSignature {
   readonly type: Lowered;
   /** True when the source gives the parameter a type annotation. */
   readonly annotated: boolean;
+  /** True when the source omits the annotation or explicitly writes `unknown`. */
+  readonly inferred: boolean;
   /** Covers the name and its annotation. */
   readonly span: Span;
 }
@@ -293,6 +296,16 @@ interface SignatureType {
   readonly ir: FunctionType;
 }
 
+export function checkedInputFlags(
+  signature: Pick<FunctionSignature, "exported" | "parameters">,
+  table: TypeTable,
+): readonly boolean[] {
+  return signature.parameters.map((parameter) =>
+    signature.exported && parameter.inferred &&
+    parameter.type.ref !== table.unknown
+  );
+}
+
 /** The function type of a signature with a written result, with the state from `solved`. */
 export function signatureType(
   table: TypeTable,
@@ -315,6 +328,7 @@ export function signatureType(
       contract.value.failures,
       contract.value.requirements,
       signature.parameters.map((p) => p.borrow),
+      checkedInputFlags(signature, table),
     ),
   };
 }
@@ -328,15 +342,18 @@ function loweredFunction(
   failures: readonly ErrorId[],
   requirements: readonly CapabilityId[],
   borrows?: readonly boolean[],
+  checked?: readonly boolean[],
 ): SignatureType {
   const failureSet = sortedUnique(failures);
   const requirementSet = sortedUnique(requirements);
   const borrowed = borrows?.some(Boolean) ? { borrows } : {};
+  const validated = checked?.some(Boolean) ? { checked } : {};
   return {
     ref: table.function({
       execution,
       parameters: parameters.map((p) => p.ref),
       ...borrowed,
+      ...validated,
       result: result.ref,
       failures: failureSet,
       requirements: requirementSet,
@@ -346,6 +363,7 @@ function loweredFunction(
       execution,
       parameters: parameters.map((p) => p.ir),
       ...borrowed,
+      ...validated,
       result: result.ir,
       effects: { failures: failureSet, requirements: requirementSet },
     },
@@ -805,7 +823,7 @@ export class TypeLowerer {
     );
     const parameters = paramList === undefined
       ? []
-      : this.parameters(paramList, "report");
+      : this.parameters(paramList);
     const resultNode = kids.find((k) => {
       const kind = kindOf(this.tree, k);
       return k !== paramList && kind !== SyntaxKind.FailsClause &&
@@ -1030,14 +1048,8 @@ export class TypeLowerer {
     );
   }
 
-  /**
-   * The parameters of a parameter list. With `report`, a parameter without a type
-   * annotation gets a diagnostic. Either way its type is the error type.
-   */
-  parameters(
-    paramList: NodeId,
-    missing: "report" | "silent",
-  ): ParameterSignature[] {
+  /** The parameters of a parameter list. An omitted annotation starts as unknown. */
+  parameters(paramList: NodeId): ParameterSignature[] {
     const result: ParameterSignature[] = [];
     for (const param of this.kidsOfKind(paramList, SyntaxKind.Param)) {
       const parts = this.kids(param);
@@ -1051,23 +1063,19 @@ export class TypeLowerer {
       const target = nameNode === undefined
         ? undefined
         : this.env.targets.get(nameNode);
-      if (
-        typeNode === undefined && missing === "report" && nameNode !== undefined
-      ) {
-        this.report(
-          "declaration/011",
-          `the parameter \`${name}\` needs a type annotation`,
-          this.span(param),
-        );
-      }
+      const type = typeNode === undefined
+        ? {
+          ref: this.env.table.unknown,
+          ir: { kind: "primitive" as const, name: "unknown" as const },
+        }
+        : this.lower(typeNode);
       result.push({
         name,
         borrow: /^borrow\s+/.test(nodeText(this.tree, param)),
         id: target?.kind === "local" ? target.id : undefined,
-        type: typeNode === undefined
-          ? this.errorLowered()
-          : this.lower(typeNode),
+        type,
         annotated: typeNode !== undefined,
+        inferred: typeNode === undefined || type.ref === this.env.table.unknown,
         span: this.span(param),
       });
     }
@@ -1411,6 +1419,7 @@ class ModuleChecker {
       if (entry.kind === "provider") this.checkProvider(entry);
       else if (entry.kind === "const") this.checkConst(entry);
     }
+    this.checkHostContracts();
     for (const entry of entries) {
       if (!entry.exported) continue;
       const prefix = entry.kind === "const" || entry.kind === "provider"
@@ -1430,6 +1439,50 @@ class ModuleChecker {
       exports: this.exports,
       diagnostics: normalizeDiagnostics(this.sink),
     };
+  }
+
+  private checkHostContracts(): void {
+    if (this.tree.mode !== "effi") return;
+    const check = (type: Type, span: Span): void => {
+      const ids = new Set<string>();
+      referencedIds(type, ids);
+      for (const id of ids) {
+        if (isTypeId(id) && this.table.predicateOf(id) !== undefined) {
+          this.lowerer.report(
+            "declaration/018",
+            "host interfaces must expose unrefined data; use a checked source entry",
+            span,
+          );
+          return;
+        }
+        if (id.startsWith("service:")) {
+          for (
+            const method of this.env.services.get(id as ServiceId)?.methods ??
+              []
+          ) referencedIds(method.type, ids);
+        }
+        const body = isTypeId(id)
+          ? this.table.aliasOf(id) ?? this.table.dataRecordOf(id)
+          : isErrorId(id)
+          ? this.table.errorRecordOf(id)
+          : undefined;
+        if (body !== undefined) referencedIds(typeToIr(this.table, body), ids);
+      }
+    };
+    for (const declaration of this.types) {
+      check({ kind: "named", id: declaration.id }, declaration.span);
+    }
+    for (const declaration of this.errors) {
+      check({ kind: "record", fields: declaration.fields }, declaration.span);
+    }
+    for (const service of this.services) {
+      for (const method of service.methods) check(method.type, method.span);
+    }
+    for (const signature of this.values.values()) {
+      if (signature.kind === "provider") {
+        check(signature.type.ir, signature.span);
+      }
+    }
   }
 
   /**
@@ -1509,6 +1562,11 @@ class ModuleChecker {
     let kind: "alias" | "brand" = "alias";
     let literal: LoweredField[] | undefined;
     let record = false;
+    let predicate: TypeDecl["predicate"];
+    const refinement = this.lowerer.kidsOfKind(
+      entry.node,
+      SyntaxKind.RefinementClause,
+    )[0];
     if (opaque) {
       this.table.defineOpaque(id);
       definition = {
@@ -1528,7 +1586,29 @@ class ModuleChecker {
         ? this.lowerer.recordOf(literal)
         : this.lowerer.lower(body);
       if (body !== undefined && this.hasIdentity(lowered.ref)) {
-        this.table.defineIdentity(id, lowered.ref, entry.sealed);
+        if (refinement !== undefined) {
+          const compiled = predicateFromSource(
+            this.tree,
+            refinement,
+            this.table,
+            lowered.ref,
+          );
+          if (compiled.ok) predicate = compiled.value;
+          else {
+            this.lowerer.report(
+              "declaration/018",
+              compiled.error.message,
+              compiled.error.span,
+            );
+          }
+        }
+        this.table.defineIdentity(
+          id,
+          lowered.ref,
+          entry.sealed,
+          false,
+          predicate,
+        );
         record = lowered.ir.kind === "record";
         definition = {
           kind: "nominal",
@@ -1537,6 +1617,13 @@ class ModuleChecker {
         };
       } else {
         this.table.defineAlias(id, lowered.ref);
+        if (refinement !== undefined) {
+          this.lowerer.report(
+            "declaration/018",
+            `the transparent alias \`${entry.name}\` cannot have a refinement`,
+            nodeSpan(this.tree, refinement),
+          );
+        }
         if (
           entry.sealed && body !== undefined &&
           this.table.node(lowered.ref).kind !== "error"
@@ -1555,6 +1642,7 @@ class ModuleChecker {
       id,
       name: entry.name,
       definition,
+      ...(predicate === undefined ? {} : { predicate }),
       ...(opaque ? { opaque: true } : {}),
       span: entry.span,
     });
@@ -1667,7 +1755,12 @@ class ModuleChecker {
         };
       }
     }
-    this.table.defineTagged(id, body, entry.sealed);
+    this.table.defineTagged(
+      id,
+      body,
+      entry.sealed,
+      this.table.predicateOf(id),
+    );
     if (literal !== undefined) {
       for (const field of literal) {
         if (field.name === "_tag") continue;
@@ -1794,6 +1887,7 @@ class ModuleChecker {
               aliased,
               definition.sealed === true,
               true,
+              this.table.predicateOf(first.id),
             );
           } else this.table.defineAlias(first.id, aliased, true);
           continue;
@@ -1932,7 +2026,7 @@ class ModuleChecker {
       );
       const parameters = paramList === undefined
         ? []
-        : this.lowerer.parameters(paramList, "report");
+        : this.lowerer.parameters(paramList);
       for (const parameter of parameters) {
         if (parameter.borrow) {
           if (this.tree.mode !== "effi") {
@@ -2093,7 +2187,7 @@ class ModuleChecker {
     );
     const written = paramList === undefined
       ? []
-      : lowerer.parameters(paramList, "silent");
+      : lowerer.parameters(paramList);
 
     // A binding type annotation that is a function type of the same arity supplies
     // the types that the arrow does not write.
@@ -2125,9 +2219,6 @@ class ModuleChecker {
         },
       };
     });
-    const missing = written.filter((p) =>
-      !p.annotated && bindingFn === undefined
-    );
     const explicit = resultNode !== undefined || bindingFn !== undefined;
     let result: Lowered | undefined;
     let failures: ErrorId[] = [];
@@ -2166,23 +2257,15 @@ class ModuleChecker {
       this.checkBindingFits(arrow, binding, parameters, result, {
         failures,
         requirements,
-      });
+      }, entry.exported);
     }
     if (!entry.broken) {
       if (entry.exported) {
-        if (missing.length > 0 || !explicit) {
+        if (!explicit) {
           lowerer.report(
             "declaration/005",
-            `the exported function \`${entry.name}\` needs an annotation on every parameter and on its result`,
+            `the exported function \`${entry.name}\` needs a result annotation`,
             entry.nameSpan,
-          );
-        }
-      } else {
-        for (const param of missing) {
-          lowerer.report(
-            "declaration/011",
-            `the parameter \`${param.name}\` needs a type annotation`,
-            param.span,
           );
         }
       }
@@ -2233,6 +2316,7 @@ class ModuleChecker {
       failures: readonly ErrorId[];
       requirements: readonly CapabilityId[];
     },
+    exported: boolean,
   ): void {
     const expected = showType(this.table, binding.ref);
     const fn = this.functionOfBinding(binding);
@@ -2258,6 +2342,7 @@ class ModuleChecker {
     const found = this.table.function({
       execution: fn.ir.execution,
       parameters: parameters.map((p) => p.type.ref),
+      checked: checkedInputFlags({ exported, parameters }, this.table),
       result: result.ref,
       failures: effects.failures,
       requirements: effects.requirements,

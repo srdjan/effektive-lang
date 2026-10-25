@@ -1,3 +1,8 @@
+import {
+  type ProofBudget,
+  REFINEMENT_AGGREGATE_STEPS,
+} from "./check_refinements.ts";
+import { PREDICATE_RULES_VERSION } from "./predicates.ts";
 // The program of part A7: the state of one project across revisions, with
 // memoized queries and an early cutoff at module level (design D4, section 4.4).
 //
@@ -358,6 +363,7 @@ export class Program {
     const diagnostics: Diagnostic[] = [...analysis.diagnostics];
     const texts = new Map<string, string>();
 
+    const proofBudget: ProofBudget = { remaining: REFINEMENT_AGGREGATE_STEPS };
     for (const name of project.order) {
       const info = project.modules.get(name);
       if (info === undefined) continue;
@@ -365,6 +371,7 @@ export class Program {
       const seen = reachedModules(analysis, name, graphs, interfaces);
       const { reached } = seen;
       const rest = JSON.stringify([
+        PREDICATE_RULES_VERSION,
         info.path,
         config,
         analysis.diagnostics.filter((d) => d.span.source === info.path),
@@ -385,6 +392,7 @@ export class Program {
           name,
           this.table,
           seen,
+          proofBudget,
         );
         const iface = checked.interface.ok
           ? checked.interface.value

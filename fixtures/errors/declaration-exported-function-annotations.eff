@@ -1,15 +1,14 @@
 // error: declaration/005
 export const noResult = (x: Int) => x
 
-// error: declaration/005
-export const noParameter = (x): Int => 1
+export const noParameter = (x): Int fails SchemaError => 1
 
 // error: declaration/005
 export const neither = (x) => x
 
 export const complete = (x: Int): Int => x
 
-export const viaBinding: (x: Int) => Int = (x) => x
+export const viaBinding: (x: Int) => Int = (x: Int) => x
 
 const privateInferred = (x: Int) => x
 

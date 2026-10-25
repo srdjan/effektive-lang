@@ -144,6 +144,12 @@ export function highlightTokens(text: string): HighlightRange[] {
         word === "sealed" && startsDeclaration &&
         text.slice(lexed.starts[i + 1], lexed.ends[i + 1]) === "type"
       ) result = "keyword";
+      else if (
+        word === "where" &&
+        text.slice(lexed.ends[i]).match(
+          /^\s+(?:[A-Za-z_$][A-Za-z0-9_$]*|\(\s*[A-Za-z_$][A-Za-z0-9_$]*\s*\))\s*=>/,
+        )
+      ) result = "keyword";
       else if (word === "pure") {
         let open = i + 1;
         while (lexed.kinds[open] === TokenKind.Newline) open++;

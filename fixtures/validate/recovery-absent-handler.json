@@ -1282,6 +1282,7 @@
                 "kind": "array"
               }
             },
+            "generated": true,
             "kind": "bind",
             "value": {
               "arguments": [],
@@ -1327,6 +1328,7 @@
                 "kind": "array"
               }
             },
+            "generated": true,
             "kind": "bind",
             "value": {
               "arguments": [
@@ -1679,5 +1681,5 @@
   "sources": [
     "users.eff"
   ],
-  "version": 5
+  "version": 6
 }

@@ -108,6 +108,7 @@ export function functionTypeFromIr(
     execution: type.execution,
     parameters: type.parameters.map((p) => typeFromIr(table, p)),
     ...(type.borrows === undefined ? {} : { borrows: type.borrows }),
+    ...(type.checked === undefined ? {} : { checked: type.checked }),
     result: typeFromIr(table, type.result),
     failures: type.effects.failures,
     requirements: type.effects.requirements,
@@ -258,6 +259,7 @@ export function functionTypeToIr(
     execution: node.execution,
     parameters: node.parameters.map((p) => typeToIr(table, p)),
     ...(node.borrows === undefined ? {} : { borrows: node.borrows }),
+    ...(node.checked === undefined ? {} : { checked: node.checked }),
     result: typeToIr(table, node.result),
     effects: { failures: node.failures, requirements: node.requirements },
   };

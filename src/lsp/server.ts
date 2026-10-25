@@ -6,6 +6,7 @@ import {
   referencesRequest,
   renameRequest,
   semanticTokensRequest,
+  signatureHelpRequest,
 } from "./editor_features.ts";
 // The language server: lifecycle, message dispatch, and flush scheduling
 // (plan 5.1, 5.4, and 5.10). The server has no I/O of its own. It reaches the
@@ -157,6 +158,10 @@ const REQUEST_HANDLERS: ReadonlyMap<string, RequestHandler> = new Map<
   [
     "textDocument/completion",
     withParams(narrowEditorPositionParams, completionRequest),
+  ],
+  [
+    "textDocument/signatureHelp",
+    withParams(narrowEditorPositionParams, signatureHelpRequest),
   ],
   [
     "textDocument/semanticTokens/full",

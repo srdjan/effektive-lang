@@ -1,0 +1,7 @@
+type Positive = int where n => n > 0
+
+const take = (value: Positive): Positive => value
+
+const bad = (): Positive =>
+  // error: type-mismatch/013
+  take(0)

@@ -1,0 +1,13 @@
+type Left = string
+type Right = string
+
+const left = (value: Left): Left => value
+const right = (value: Right): Right => value
+
+const conflict = (input): Left => {
+  // error: type-mismatch/014
+  right(input)
+  // error: type-mismatch/003
+  // error: type-mismatch/014
+  left(input)
+}

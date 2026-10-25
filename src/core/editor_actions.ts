@@ -65,7 +65,9 @@ export function contractActionsAt(
     ) continue;
     // An open set has no clause to extend, so it never misses an entry.
     const missingFailures = signature.written.fails
-      ? body.failures.filter((id) => !signature.failures.includes(id))
+      ? [...new Set([...body.failures, ...fn.failures])].filter((id) =>
+        !signature.failures.includes(id)
+      )
       : [];
     const missingUses = signature.written.uses
       ? body.requirements.filter((id) => !signature.requirements.includes(id))
@@ -136,9 +138,9 @@ export function contractActionsAt(
     if (
       changedFunction === undefined || changedFunction.body === undefined ||
       (changedFunction.signature.written.fails &&
-        changedFunction.body.failures.some((id) =>
-          !changedFunction.signature.failures.includes(id)
-        )) ||
+        [...changedFunction.body.failures, ...changedFunction.failures].some((
+          id,
+        ) => !changedFunction.signature.failures.includes(id))) ||
       (changedFunction.signature.written.uses &&
         changedFunction.body.requirements.some((id) =>
           !changedFunction.signature.requirements.includes(id)

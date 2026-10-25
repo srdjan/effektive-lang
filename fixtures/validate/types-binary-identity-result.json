@@ -280,6 +280,7 @@
                 "kind": "array"
               }
             },
+            "generated": true,
             "kind": "bind",
             "value": {
               "effects": {
@@ -320,6 +321,7 @@
                 "kind": "array"
               }
             },
+            "generated": true,
             "kind": "bind",
             "value": {
               "arguments": [
@@ -835,6 +837,7 @@
                 "kind": "array"
               }
             },
+            "generated": true,
             "kind": "bind",
             "value": {
               "effects": {
@@ -1086,5 +1089,5 @@
   "sources": [
     "collections.eff"
   ],
-  "version": 5
+  "version": 6
 }

@@ -18,7 +18,7 @@ Deno.test("a module constant accepts an arrow through a function type alias", ()
   assertEquals(
     messages(`type G = (x: Count) => Count
 export const g: G = (x: Count): Count => x
-export const h: G = (x) => x
+export const h: G = (x: Count) => x
 `),
     [],
   );
@@ -51,14 +51,16 @@ export const g: G = (x: Count): Count => x
   );
 });
 
-Deno.test("a written function type keeps its source order for inferred parameters", () => {
+Deno.test("a binding keeps its written union order inside a checked entry", () => {
   const module = emitFiles({
     "effektive.json": "{}",
     "m.eff": `type B = string
 type A = int
-export const g: (x: B | A) => A = (x) => 2
+export const g: (x: B | A) => A fails SchemaError = (x) => 2
 `,
   }, ["m.eff"]).get("m");
   assert(module !== undefined, "module m was not emitted");
-  assertStringIncludes(module.text, "export const g = (x: B | A): A => 2;");
+  assertStringIncludes(module.text, "(x: unknown)");
+  assertStringIncludes(module.text, "(x: B | A)");
+  assertStringIncludes(module.text, "decodeUnknownEffect");
 });

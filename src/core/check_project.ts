@@ -31,6 +31,11 @@ import {
   type ConstantRun,
   type FunctionRun,
 } from "./check_expr.ts";
+import { inferFunctionInputs, withInferredInputs } from "./infer_inputs.ts";
+import {
+  type ProofBudget,
+  REFINEMENT_AGGREGATE_STEPS,
+} from "./check_refinements.ts";
 import {
   type Diagnostic,
   makeDiagnostic,
@@ -150,7 +155,10 @@ type Entry = FunctionEntry | ConstantEntry;
 interface CheckArguments {
   readonly analysis: Analysis;
   readonly module: string;
-  readonly declarations: ModuleDeclarations;
+  readonly declarations: ModuleDeclarations & {
+    readonly values: Map<ValueId, ValueSignature>;
+  };
+  readonly proofBudget: ProofBudget;
   /** The interfaces of the modules that this module reaches. */
   readonly interfaces: ReadonlyMap<string, ModuleInterface>;
 }
@@ -296,6 +304,7 @@ function moduleValues(
       env: declarations.env,
       values: values(view),
       methodType,
+      proofBudget: args.proofBudget,
     }),
     publish(run, recursive) {
       if (!run.entry.broken) diagnostics.push(...run.run.diagnostics);
@@ -343,9 +352,10 @@ function moduleValues(
  * diagnostics go to `diagnostics` in the order of the components.
  */
 function scheduleRuns(
-  entries: readonly Entry[],
+  entries: Entry[],
   edges: readonly (readonly number[])[],
   values: ModuleValues,
+  signatures: Map<ValueId, ValueSignature>,
   diagnostics: Diagnostic[],
 ): void {
   const runEntry = (entry: Entry, benv: BodyEnv): Run =>
@@ -363,10 +373,32 @@ function scheduleRuns(
 
   const solved = values.settled();
   for (const component of stronglyConnectedComponents(entries.length, edges)) {
-    const members = component.map((i) => entries[i]);
+    let members = component.map((i) => entries[i]);
     const recursive = members.length > 1 ||
       edges[component[0]].includes(component[0]);
     if (!recursive) {
+      const entry = members[0];
+      if (
+        entry.kind === "function" &&
+        entry.signature.parameters.some((parameter) => parameter.inferred)
+      ) {
+        const benv = values.environment(solved);
+        const inference = inferFunctionInputs(
+          benv,
+          entry.signature,
+          entry.bodyNode,
+        );
+        const signature = withInferredInputs(
+          entry.signature,
+          inference,
+          benv.env.table,
+        );
+        const finalized: FunctionEntry = { ...entry, signature };
+        entries[component[0]] = finalized;
+        members = [finalized];
+        signatures.set(signature.id, signature);
+        if (!entry.broken) diagnostics.push(...inference.diagnostics);
+      }
       values.publish(
         runEntry(members[0], values.environment(solved)),
         false,
@@ -375,7 +407,11 @@ function scheduleRuns(
     }
     for (const member of members) {
       const signature = member.signature;
-      if (signature.kind === "function" && !signature.written.result) {
+      if (
+        signature.kind === "function" &&
+        (!signature.written.result ||
+          signature.parameters.some((parameter) => parameter.inferred))
+      ) {
         diagnostics.push(makeDiagnostic(
           "execution-mode/003",
           `\`${signature.name}\` is recursive, so it needs explicit parameter and result annotations`,
@@ -478,7 +514,13 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
   // because `normalizeDiagnostics` resolves exact duplicates in push order.
   const diagnostics: Diagnostic[] = [];
   const values = moduleValues(args, diagnostics);
-  scheduleRuns(entries, edges, values, diagnostics);
+  scheduleRuns(
+    entries,
+    edges,
+    values,
+    args.declarations.values,
+    diagnostics,
+  );
   const initialization = initializationDiagnostics(entries);
   diagnostics.push(...initialization.diagnostics);
 
@@ -551,20 +593,28 @@ export function checkModuleStep(
   name: string,
   table: TypeTable,
   seen: ReachedModules,
+  proofBudget: ProofBudget = { remaining: REFINEMENT_AGGREGATE_STEPS },
 ): ModuleStep {
-  const declarations = checkModuleDeclarations(
+  const checkedDeclarations = checkModuleDeclarations(
     analysis,
     name,
     table,
     seen.graphs,
   );
-  const graph = buildTypeGraph(declarations);
+  // A revision owns its finalized signatures. Never mutate a reused revision.
+  const signatures = new Map(checkedDeclarations.values);
+  const declarations: CheckArguments["declarations"] = {
+    ...checkedDeclarations,
+    values: signatures,
+  };
   const bodies = checkModuleBodies({
     analysis,
     module: name,
     declarations,
+    proofBudget,
     interfaces: seen.interfaces,
   });
+  const graph = buildTypeGraph(declarations);
   const built = buildInterface(declarations, bodies.modes, seen.graphs);
   return {
     graph,
@@ -597,6 +647,7 @@ export function checkAnalysis(analysis: Analysis): CheckedProject {
   const interfaces = new Map<string, ModuleInterface>();
   const modules = new Map<string, CheckedModule>();
   const diagnostics: Diagnostic[] = [...analysis.diagnostics];
+  const proofBudget: ProofBudget = { remaining: REFINEMENT_AGGREGATE_STEPS };
   for (const name of analysis.project.order) {
     const info = analysis.project.modules.get(name);
     if (info === undefined) continue;
@@ -606,6 +657,7 @@ export function checkAnalysis(analysis: Analysis): CheckedProject {
       name,
       table,
       reachedModules(analysis, name, graphs, interfaces),
+      proofBudget,
     );
     graphs.set(name, step.graph);
     if (step.checked.interface.ok) {

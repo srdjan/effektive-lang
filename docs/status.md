@@ -162,7 +162,7 @@ record or an error field gives `declaration/015` or `declaration/016`.
 transparent alias.
 
 A `match` selects tagged records and errors by name. A tagged record can be
-recursive when every cycle has a base case. The IR has the version 5, with one
+recursive when every cycle has a base case. The IR has the version 6, with one
 definition kind and one construction node `nominal`. The editor, the TextMate
 grammar, and the playground highlighter no longer know the word `nominal`. The
 website and the canonical specification describe type identity from draft 0.64.
@@ -257,3 +257,15 @@ The rules that they chose are in [language-rules.md](language-rules.md).
 | A8       | The measurement harnesses in `bench/`: a synthetic module generator and the measurements M2, M5, and M6.                                                                                                                     |
 | L1 to L6 | The language server in `src/lsp/`, the VS Code client in `editors/vscode/`, and the measurements M1, M3, and M4.                                                                                                             |
 | G1 to G4 | The playground in `playground/`.                                                                                                                                                                                             |
+
+
+### Inferred input contracts and refinements
+
+The compiler infers closed input requirements from omitted parameter types and explicit `unknown`.
+Exported inferred contracts validate raw input and require `fails SchemaError`.
+Local functions use static inference. Exported results and effect contracts retain their existing requirements.
+Types with identity support concrete integer and length predicates through contextual `where` clauses.
+IR version 6 transports contracts and independently checked proof certificates.
+[Input contracts](inferred-input-contracts.md) describe the behavior and limits.
+[Measurements](refinement-measurements.md) record bounded solver and compiler-update checks.
+Generics and abstract predicates remain deferred. Host mutation through retained aliases remains an evidence limit.

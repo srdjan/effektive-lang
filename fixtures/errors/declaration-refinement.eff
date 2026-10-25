@@ -1,0 +1,4 @@
+type Int = int
+
+// error: declaration/018
+type Alias = Int where n => n > 0

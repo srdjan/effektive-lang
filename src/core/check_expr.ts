@@ -54,6 +54,7 @@ import {
   type SyntaxTree,
 } from "./syntax.ts";
 import {
+  checkedInputFlags,
   type ConstantSignature,
   type FunctionSignature,
   type TypeEnv,
@@ -78,7 +79,14 @@ import {
   PURE_EFFECTS,
   without,
 } from "./tables.ts";
-import type { TypeRef, TypeTable } from "./types.ts";
+import {
+  containsOpaqueType,
+  dataOnly,
+  MAX_DEPTH,
+  sortedUnique,
+  type TypeRef,
+  type TypeTable,
+} from "./types.ts";
 import { showType, showTypes } from "./type_show.ts";
 import { isErrorId, shortName } from "./ids.ts";
 import {
@@ -108,6 +116,13 @@ import {
   withResourceCall,
 } from "./check_builtins/scope.ts";
 import type { StreamContext } from "./check_builtins/stream.ts";
+import { inferArrowInputs } from "./infer_inputs.ts";
+import {
+  type ProofBudget,
+  RefinementChecker,
+  type RefinementDecision,
+} from "./check_refinements.ts";
+import { not } from "./predicates.ts";
 
 // ------------------------------------------------------------------ environment
 
@@ -118,6 +133,7 @@ export interface BodyEnv {
   readonly values: (id: ValueId) => TypeRef;
   /** The function type of a service method. The error type when unknown. */
   readonly methodType: (capability: CapabilityId) => TypeRef;
+  readonly proofBudget?: ProofBudget;
 }
 
 /**
@@ -199,6 +215,7 @@ class BodyChecker
   readonly sink: Diagnostic[] = [];
   readonly body: BodyTable;
   private readonly lowerer: TypeLowerer;
+  readonly refinements: RefinementChecker;
   readonly tree: SyntaxTree;
   readonly table: TypeTable;
   readonly module: string;
@@ -207,6 +224,7 @@ class BodyChecker
   private readonly pendingLocals = new Set<LocalId>();
   /** Counts the error nodes made so far. Recovery uses it to hold back cascades. */
   private errorCount = 0;
+  private checkedSlots = new Set<NodeId>();
 
   constructor(private readonly benv: BodyEnv, declaration: ValueId) {
     this.tree = benv.env.tree;
@@ -215,6 +233,13 @@ class BodyChecker
     this.targets = benv.env.targets;
     this.lowerer = new TypeLowerer(benv.env, this.sink);
     this.body = newBodyTable(declaration);
+    this.refinements = new RefinementChecker(
+      this.tree,
+      this.table,
+      this.module,
+      this.targets,
+      benv.proofBudget,
+    );
   }
 
   get services(): Pick<TypeEnv["services"], "get"> {
@@ -291,13 +316,94 @@ class BodyChecker
     expected: TypeRef | undefined,
     what: string,
   ): boolean {
-    if (expected === undefined || this.assignable(found, expected)) {
+    if (
+      expected === undefined || this.assignable(found, expected) ||
+      (found === this.table.unknown && this.checkedSlots.has(node))
+    ) {
       return true;
+    }
+    if (this.body.info.get(node)?.mode === "effect") {
+      this.refinements.clearDerivedFacts();
+    }
+    const refinement = this.refinementBase(expected);
+    if (
+      refinement !== undefined &&
+      this.table.node(this.table.unfoldTransparent(found)).kind !== "named" &&
+      this.assignable(found, refinement.base)
+    ) {
+      return this.requireRefinement(node, expected, what);
     }
     const [foundText, expectedText] = showTypes(this.table, found, expected);
     this.report(
       "type-mismatch/003",
       `${what} has type ${foundText}, but ${expectedText} is expected`,
+      node,
+    );
+    return false;
+  }
+
+  private refinementBase(
+    ref: TypeRef,
+  ): { readonly id: TypeId; readonly base: TypeRef } | undefined {
+    const node = this.table.node(this.table.unfoldTransparent(ref));
+    if (node.kind !== "named" || !node.id.startsWith("type:")) return undefined;
+    const id = node.id as TypeId;
+    if (this.table.predicateOf(id) === undefined) return undefined;
+    const base = this.table.brandBaseOf(id);
+    return base === undefined ? undefined : { id, base };
+  }
+
+  private requireRefinement(
+    node: NodeId,
+    expected: TypeRef,
+    what: string,
+  ): boolean {
+    return this.recordRefinement(
+      node,
+      this.refinements.prove(node, expected),
+      what,
+      this.refinementBase(expected)?.id,
+    );
+  }
+
+  private preserveRefinement(node: NodeId, id: TypeId, what: string): boolean {
+    return this.recordRefinement(
+      node,
+      this.refinements.proveIdentity(node, id),
+      what,
+      id,
+    );
+  }
+
+  private recordRefinement(
+    node: NodeId,
+    decision: RefinementDecision,
+    what: string,
+    target: TypeId | undefined,
+  ): boolean {
+    if (decision.status === "not-required") return true;
+    if (decision.status === "proved") {
+      while (kindOf(this.tree, node) === SyntaxKind.ParenExpr) {
+        const inner = this.kids(node)[0];
+        if (inner === undefined) break;
+        node = inner;
+      }
+      const current = this.body.proofs.get(node) ?? [];
+      if (!current.some((proof) => proof.target === decision.proof.target)) {
+        this.body.proofs.set(node, [...current, decision.proof]);
+      }
+      return true;
+    }
+    const detail = decision.reason === "disproved"
+      ? "does not satisfy"
+      : decision.reason === "exhausted"
+      ? "exceeds the proof limit for"
+      : "does not prove";
+    this.report(
+      "type-mismatch/013",
+      `${what} ${detail} the required refinement${
+        target === undefined ? "" : ` ${shortName(target)}`
+      }`,
       node,
     );
     return false;
@@ -681,6 +787,94 @@ class BodyChecker
     return this.applyFunction(node, fn, callee, args, PURE_EFFECTS);
   }
 
+  private markCheckedSlots(node: NodeId): void {
+    this.checkedSlots.add(node);
+    const kind = kindOf(this.tree, node);
+    const kids = this.kids(node);
+    if (kind === SyntaxKind.RecordExpr) {
+      for (const field of kids) {
+        const parts = this.fieldParts(field);
+        if (parts !== undefined) this.markCheckedSlots(parts.value ?? field);
+      }
+    } else if (kind === SyntaxKind.ParenExpr || kind === SyntaxKind.ListExpr) {
+      for (const child of kids) this.markCheckedSlots(child);
+    } else if (kind === SyntaxKind.Block) {
+      const last = kids.at(-1);
+      if (
+        last !== undefined && kindOf(this.tree, last) !== SyntaxKind.ConstDecl
+      ) this.markCheckedSlots(last);
+    } else if (kind === SyntaxKind.IfExpr) {
+      for (const branch of kids.slice(1)) this.markCheckedSlots(branch);
+    } else if (kind === SyntaxKind.MatchExpr) {
+      for (
+        const arm of kids.filter((child) =>
+          kindOf(this.tree, child) === SyntaxKind.MatchArm
+        )
+      ) {
+        const body = this.kids(arm).at(-1);
+        if (body !== undefined) this.markCheckedSlots(body);
+      }
+    }
+  }
+
+  private checkedTypeFits(
+    source: TypeRef,
+    target: TypeRef,
+    depth = 0,
+  ): boolean {
+    if (depth > MAX_DEPTH) return false;
+    if (this.assignable(source, target)) return true;
+    const s = this.table.node(this.table.unfoldTransparent(source));
+    const t = this.table.node(this.table.unfoldTransparent(target));
+    if (s.kind === "primitive" && s.name === "unknown") return true;
+    if (s.kind === "union") {
+      return s.members.every((member) =>
+        this.checkedTypeFits(member, target, depth + 1)
+      );
+    }
+    if (t.kind === "union") {
+      return t.members.some((member) =>
+        this.checkedTypeFits(source, member, depth + 1)
+      );
+    }
+    if (t.kind === "named" && t.id.startsWith("type:") && s.kind !== "named") {
+      const id = t.id as TypeId;
+      if (
+        !this.table.ownsSealed(this.module, id) ||
+        this.table.predicateOf(id) !== undefined ||
+        this.table.dataRecordOf(id) !== undefined
+      ) return false;
+      const base = this.table.brandBaseOf(id);
+      return base !== undefined &&
+        this.checkedTypeFits(source, base, depth + 1);
+    }
+    if (s.kind === "named" && s.id.startsWith("type:") && t.kind !== "named") {
+      const id = s.id as TypeId;
+      if (!this.table.ownsSealed(this.module, id)) return false;
+      const base = this.table.brandBaseOf(id) ?? this.table.dataRecordOf(id);
+      return base !== undefined &&
+        this.checkedTypeFits(base, target, depth + 1);
+    }
+    if (s.kind === "record" && t.kind === "record") {
+      return s.fields.length === t.fields.length && t.fields.every((field) => {
+        const found = s.fields.find((item) => item.name === field.name);
+        return found !== undefined && found.optional === field.optional &&
+          this.checkedTypeFits(found.type, field.type, depth + 1);
+      });
+    }
+    if (
+      (s.kind === "array" && t.kind === "array") ||
+      (s.kind === "option" && t.kind === "option")
+    ) return this.checkedTypeFits(s.element, t.element, depth + 1);
+    if (s.kind === "tuple" && t.kind === "tuple") {
+      return s.elements.length === t.elements.length &&
+        s.elements.every((element, i) =>
+          this.checkedTypeFits(element, t.elements[i], depth + 1)
+        );
+    }
+    return false;
+  }
+
   private applyFunction(
     node: NodeId,
     fn: FunctionNode,
@@ -699,10 +893,19 @@ class BodyChecker
     }
     const infos = args.map((arg, i) => {
       const expected = fn.parameters[i];
+      const before = this.checkedSlots;
+      if (fn.checked?.[i] === true) {
+        this.checkedSlots = new Set(before);
+        this.markCheckedSlots(arg.node);
+      }
       const info = this.argInfo(arg, expected);
-      if (expected !== undefined) {
+      if (
+        expected !== undefined &&
+        !(fn.checked?.[i] === true && this.checkedTypeFits(info.type, expected))
+      ) {
         this.fits(arg.node, info.type, expected, `argument ${i + 1}`);
       }
+      this.checkedSlots = before;
       return info;
     });
     return this.finish(
@@ -880,6 +1083,16 @@ class BodyChecker
       const info = this.argInfo(arg, i === 0 ? base : undefined);
       if (i === 0) {
         this.fits(arg.node, info.type, base, `the value of ${shortName(id)}`);
+        if (
+          this.table.predicateOf(id) !== undefined &&
+          this.table.unfoldTransparent(info.type) !== this.table.named(id)
+        ) {
+          this.preserveRefinement(
+            arg.node,
+            id,
+            `the value of ${shortName(id)}`,
+          );
+        }
       }
       return info;
     });
@@ -999,11 +1212,23 @@ class BodyChecker
     this.fact(node, { kind: "some" });
     const rightCount = this.arity(node, "Some", 1, args);
     const hint = this.optionElement(expected);
-    const infos = args.map((a, i) =>
-      this.argInfo(a, i === 0 ? hint : undefined)
-    );
+    let element = hint;
+    if (this.checkedSlots.has(node)) {
+      for (const arg of args) this.markCheckedSlots(arg.node);
+    }
+    const infos = args.map((a, i) => {
+      const info = this.argInfo(a, i === 0 ? hint : undefined);
+      if (i === 0 && hint !== undefined) {
+        if (
+          this.checkedSlots.has(node) && !this.assignable(info.type, hint) &&
+          this.checkedTypeFits(info.type, hint)
+        ) element = info.type;
+        else this.fits(a.node, info.type, hint, "the value of Some");
+      }
+      return info;
+    });
     const type = rightCount
-      ? this.table.option(infos[0].type)
+      ? this.table.option(element ?? infos[0].type)
       : this.table.error;
     return this.finish(node, type, combine(infos));
   }
@@ -1270,6 +1495,7 @@ class BodyChecker
         ? []
         : this.kids(argList).map((n) => ({ node: n }))),
     ];
+    if (this.checkedSlots.has(node)) this.checkedSlots.add(stage);
     const q = this.invoke(
       stage,
       qualified,
@@ -1422,6 +1648,9 @@ class BodyChecker
         this.fits(element, info.type, hint, `tuple element ${i + 1}`);
         return info;
       });
+      if (this.refinementBase(expected) !== undefined) {
+        this.requireRefinement(node, expected, "the list");
+      }
       return this.finish(node, expected, combine(infos));
     }
 
@@ -1435,6 +1664,9 @@ class BodyChecker
       return info;
     });
     if (hint !== undefined && expected !== undefined) {
+      if (this.refinementBase(expected) !== undefined) {
+        this.requireRefinement(node, expected, "the list");
+      }
       return this.finish(node, expected, combine(infos));
     }
     if (infos.length === 0) {
@@ -1710,11 +1942,18 @@ class BodyChecker
       type = target.ref;
       if (target.kind === "construct") {
         this.fact(node, { kind: "data-construction", data: target.id });
+        this.preserveRefinement(node, target.id, "the record");
       }
     } else {
       type = picked?.kind !== "variants"
         ? this.table.record(inferred)
         : this.table.error;
+    }
+    if (
+      expected !== undefined && this.refinementBase(expected) !== undefined &&
+      target?.kind !== "construct"
+    ) {
+      this.requireRefinement(node, expected, "the record");
     }
     return this.finish(node, type, combine(infos));
   }
@@ -1792,7 +2031,19 @@ class BodyChecker
         );
       }
     }
-    return this.finish(node, base.type, combine(infos));
+    const result = this.finish(node, base.type, combine(infos));
+    const identity = this.table.node(this.table.unfoldTransparent(base.type));
+    if (
+      identity.kind === "named" && identity.id.startsWith("type:") &&
+      this.table.predicateOf(identity.id as TypeId) !== undefined
+    ) {
+      this.preserveRefinement(
+        node,
+        identity.id as TypeId,
+        "the record update",
+      );
+    }
+    return result;
   }
 
   // -------------------------------------------------------------- operators
@@ -1803,7 +2054,17 @@ class BodyChecker
     if (operator === undefined || kids.length < 2) return this.errorInfo(node);
     const left = this.expr(kids[0]);
     const equality = operator === "===" || operator === "!==";
+    const branch = this.refinements.snapshot();
+    if (operator === "&&" || operator === "||") {
+      const condition = this.refinements.condition(kids[0]);
+      this.refinements.addBranch(
+        operator === "||" && condition !== undefined
+          ? not(condition)
+          : condition,
+      );
+    }
     const right = this.expr(kids[1], equality ? left.type : undefined);
+    this.refinements.restore(branch);
     const eff = combine([left, right]);
     const result = operatorResult(
       this.table,
@@ -1832,7 +2093,22 @@ class BodyChecker
         node,
       );
     }
-    return this.finish(node, result.type, eff);
+    const info = this.finish(node, result.type, eff);
+    const identity = this.table.node(this.table.unfoldTransparent(result.type));
+    if (
+      (operator === "+" || operator === "-" || operator === "*" ||
+        operator === "/") &&
+      identity.kind === "named" &&
+      identity.id.startsWith("type:") &&
+      this.table.predicateOf(identity.id as TypeId) !== undefined
+    ) {
+      this.preserveRefinement(
+        node,
+        identity.id as TypeId,
+        "the arithmetic result",
+      );
+    }
+    return info;
   }
 
   // -------------------------------------------------------------- arrows
@@ -1842,6 +2118,7 @@ class BodyChecker
    * function type carries the invocation mode and sets.
    */
   private arrow(node: NodeId, context: ArrowContext | undefined): NodeInfo {
+    const refinementScope = this.refinements.snapshot();
     const parts = this.kids(node);
     const paramList = parts.find((k) =>
       kindOf(this.tree, k) === SyntaxKind.ParamList
@@ -1849,7 +2126,12 @@ class BodyChecker
     const params = paramList === undefined
       ? []
       : this.kidsOfKind(paramList, SyntaxKind.Param);
-    const parameterFacts: ArrowParameterFact[] = [];
+    const inferredParameters: {
+      readonly id: LocalId | undefined;
+      readonly name: string;
+      readonly type: TypeRef;
+      readonly inferred: boolean;
+    }[] = [];
     params.forEach((param, i) => {
       const piece = this.kids(param);
       const nameNode = piece.find((k) =>
@@ -1868,16 +2150,16 @@ class BodyChecker
       } else if (context !== undefined && i < context.parameters.length) {
         type = context.parameters[i];
       } else {
-        this.report(
-          "type-mismatch/011",
-          `the parameter \`${name}\` needs a type annotation, because the context gives no function type`,
-          param,
-        );
-        type = this.table.error;
+        type = this.table.unknown;
       }
       const id = target?.kind === "local" ? target.id : undefined;
       if (id !== undefined) this.body.locals.set(id, type);
-      parameterFacts.push({ id, name, type });
+      inferredParameters.push({
+        id,
+        name,
+        type,
+        inferred: type === this.table.unknown,
+      });
     });
     const resultNode = parts.find((k) => isTypeKind(kindOf(this.tree, k)));
     const failsNode = parts.find((k) =>
@@ -1898,7 +2180,31 @@ class BodyChecker
         ? undefined
         : this.lowerer.requirements(usesNode),
     };
-    return this.callbackBody(
+    const inference = inferredParameters.some((parameter) => parameter.inferred)
+      ? inferArrowInputs(
+        this.benv,
+        inferredParameters,
+        bodyNode,
+        contract.result ?? context?.result,
+        this.body.locals,
+      )
+      : { types: [], diagnostics: [] };
+    this.sink.push(...inference.diagnostics);
+    const parameterFacts: ArrowParameterFact[] = inferredParameters.map(
+      (parameter, index) => {
+        const type = inference.types[index] ?? parameter.type;
+        if (parameter.id !== undefined) {
+          this.body.locals.set(parameter.id, type);
+        }
+        return { id: parameter.id, name: parameter.name, type };
+      },
+    );
+    for (const parameter of parameterFacts) {
+      if (parameter.id !== undefined) {
+        this.refinements.addLocal(parameter.id, parameter.type);
+      }
+    }
+    const result = this.callbackBody(
       node,
       parameterFacts,
       bodyNode,
@@ -1910,6 +2216,8 @@ class BodyChecker
         uses: usesNode !== undefined,
       },
     );
+    this.refinements.restore(refinementScope);
+    return result;
   }
 
   private implicitArrow(
@@ -1917,6 +2225,7 @@ class BodyChecker
     parameters: readonly TypeRef[],
     hint: TypeRef | undefined,
   ): NodeInfo {
+    const refinementScope = this.refinements.snapshot();
     const parent = this.tree.parents[node];
     const nameNode = this.kids(parent).find((k) =>
       kindOf(this.tree, k) === SyntaxKind.Name
@@ -1927,10 +2236,11 @@ class BodyChecker
       const id = target?.kind === "local" ? target.id : undefined;
       const type = parameters[0];
       if (id !== undefined) this.body.locals.set(id, type);
+      if (id !== undefined) this.refinements.addLocal(id, type);
       this.finish(nameNode, type, PURE_EFFECTS);
       facts.push({ id, name: nameTextOf(this.tree, nameNode) ?? "", type });
     }
-    return this.callbackBody(
+    const result = this.callbackBody(
       node,
       facts,
       this.kids(node)[0],
@@ -1938,6 +2248,8 @@ class BodyChecker
       hint,
       { result: false, fails: false, uses: false },
     );
+    this.refinements.restore(refinementScope);
+    return result;
   }
 
   private callbackBody(
@@ -1967,9 +2279,11 @@ class BodyChecker
   // -------------------------------------------------------------- blocks and control
 
   private block(node: NodeId, expected: TypeRef | undefined): NodeInfo {
+    const refinementScope = this.refinements.snapshot();
     const items = this.kids(node);
     const infos: NodeInfo[] = [];
     let type = this.table.unit;
+    let adoptedResult = false;
     items.forEach((item, i) => {
       const last = i === items.length - 1;
       if (kindOf(this.tree, item) === SyntaxKind.ConstDecl) {
@@ -1979,9 +2293,27 @@ class BodyChecker
         const info = this.expr(item, last ? expected : undefined);
         infos.push(info);
         type = info.type;
+        if (last && expected !== undefined && this.refinementBase(expected)) {
+          this.fits(item, info.type, expected, "the block result");
+          adoptedResult = true;
+        }
+      }
+      if (
+        infos.at(-1)?.mode === "effect" &&
+        ![SyntaxKind.IfExpr, SyntaxKind.MatchExpr].includes(
+          kindOf(this.tree, item),
+        )
+      ) {
+        this.refinements.clearDerivedFacts();
       }
     });
-    return this.finish(node, type, combine(infos));
+    const result = this.finish(
+      node,
+      adoptedResult && expected !== undefined ? expected : type,
+      combine(infos),
+    );
+    this.refinements.leaveScope(refinementScope);
+    return result;
   }
 
   private blockConst(node: NodeId): NodeInfo {
@@ -2022,6 +2354,13 @@ class BodyChecker
       type = info === undefined ? this.table.error : this.widen(info.type);
     }
     if (id !== undefined) this.body.locals.set(id, type);
+    if (id !== undefined) {
+      this.refinements.addLocal(
+        id,
+        type,
+        info?.mode === "pure" ? init : undefined,
+      );
+    }
     this.fact(node, { kind: "binding", id, type });
     return this.finish(node, type, info ?? PURE_EFFECTS);
   }
@@ -2046,6 +2385,11 @@ class BodyChecker
       name,
       type,
     };
+    this.refinements.addLocal(
+      captured.id,
+      captured.type,
+      subject.mode === "pure" ? init : undefined,
+    );
     const seen = new Set<string>();
     const fields = [];
     for (const field of this.kids(record)) {
@@ -2067,6 +2411,9 @@ class BodyChecker
       const target = this.targets.get(local);
       const id = target?.kind === "local" ? target.id : undefined;
       if (id !== undefined) this.body.locals.set(id, read.type);
+      if (id !== undefined) {
+        this.refinements.addFieldLocal(id, read.type, captured.id, name);
+      }
       this.finish(label, read.type, PURE_EFFECTS);
       this.finish(local, read.type, PURE_EFFECTS);
       fields.push({
@@ -2149,14 +2496,36 @@ class BodyChecker
         condition,
       );
     }
+    if (cond.mode === "effect") this.refinements.clearDerivedFacts();
+    const successful: ReturnType<RefinementChecker["snapshot"]>[] = [];
     const infos: NodeInfo[] = [cond];
     const branches: { node: NodeId; type: TypeRef }[] = [];
-    for (const branch of kids.slice(1, 3)) {
+    const conditionFact = this.refinements.condition(condition);
+    for (const [index, branch] of kids.slice(1, 3).entries()) {
+      const refinementScope = this.refinements.snapshot();
+      this.refinements.addBranch(
+        index === 1 && conditionFact !== undefined
+          ? not(conditionFact)
+          : conditionFact,
+      );
       const info = this.expr(branch, expected);
+      if (
+        kindOf(this.tree, branch) !== SyntaxKind.Block &&
+        expected !== undefined && this.refinementBase(expected) !== undefined
+      ) {
+        this.fits(branch, info.type, expected, "the branch");
+      }
       infos.push(info);
       branches.push({ node: branch, type: info.type });
+      if (this.table.unfold(info.type) !== this.table.never) {
+        successful.push(this.refinements.snapshot());
+      }
+      this.refinements.restore(refinementScope);
     }
-    const type = this.joinResults(branches, expected);
+    this.refinements.join(successful);
+    const type = expected !== undefined && this.refinementBase(expected)
+      ? expected
+      : this.joinResults(branches, expected);
     return this.finish(node, type, combine(infos));
   }
 
@@ -2318,9 +2687,14 @@ class BodyChecker
       covered: new Set(),
       tagField: undefined,
     };
+    if (subject.mode === "effect") this.refinements.clearDerivedFacts();
+    const successful: ReturnType<RefinementChecker["snapshot"]>[] = [];
+    const excluded: ReturnType<RefinementChecker["condition"]>[] = [];
     const infos: NodeInfo[] = [subject];
     const branches: { node: NodeId; type: TypeRef }[] = [];
     for (const arm of arms) {
+      const refinementScope = this.refinements.snapshot();
+      for (const fact of excluded) this.refinements.addBranch(fact);
       const parts = this.kids(arm);
       const patternNode = parts.find((k) =>
         isPatternKind(kindOf(this.tree, k))
@@ -2328,15 +2702,52 @@ class BodyChecker
       const bodyNode = parts.filter((k) => k !== patternNode).pop();
       if (patternNode !== undefined) {
         pattern(this, patternNode, domain, state);
+        const fact = this.body.facts.get(patternNode);
+        if (fact?.kind === "pattern") {
+          if (fact.pattern.kind === "literal") {
+            const matched = this.refinements.matchLiteral(
+              subjectNode,
+              fact.pattern.value,
+            );
+            this.refinements.addBranch(matched);
+            if (matched !== undefined) excluded.push(not(matched));
+          }
+          const binding = fact.pattern.kind === "some" ||
+              fact.pattern.kind === "error" || fact.pattern.kind === "data"
+            ? fact.pattern.binding
+            : fact.pattern.kind === "tag"
+            ? fact.pattern.binding ?? undefined
+            : undefined;
+          if (binding !== undefined) {
+            const type = this.body.locals.get(binding);
+            if (type !== undefined) this.refinements.addLocal(binding, type);
+          }
+        }
       }
-      if (bodyNode === undefined) continue;
+      if (bodyNode === undefined) {
+        this.refinements.restore(refinementScope);
+        continue;
+      }
       const info = this.expr(bodyNode, expected);
+      if (
+        kindOf(this.tree, bodyNode) !== SyntaxKind.Block &&
+        expected !== undefined && this.refinementBase(expected) !== undefined
+      ) {
+        this.fits(bodyNode, info.type, expected, "the branch");
+      }
       infos.push(info);
       branches.push({ node: bodyNode, type: info.type });
       this.finish(arm, info.type, info);
+      if (this.table.unfold(info.type) !== this.table.never) {
+        successful.push(this.refinements.snapshot());
+      }
+      this.refinements.restore(refinementScope);
     }
+    this.refinements.join(successful);
     if (!state.wildcard) checkCoverage(this, node, domain, state, arms.length);
-    const type = this.joinResults(branches, expected);
+    const type = expected !== undefined && this.refinementBase(expected)
+      ? expected
+      : this.joinResults(branches, expected);
     return this.finish(node, type, combine(infos));
   }
 }
@@ -2353,6 +2764,7 @@ export function checkFunctionBody(
   for (const parameter of signature.parameters) {
     if (parameter.id !== undefined) {
       checker.body.locals.set(parameter.id, parameter.type.ref);
+      checker.refinements.addLocal(parameter.id, parameter.type.ref);
     }
   }
   const { written } = signature;
@@ -2362,8 +2774,39 @@ export function checkFunctionBody(
     requirements: written.uses ? signature.requirements : undefined,
   };
   const run = checker.checkBody(bodyNode, contract, undefined);
+  const checked = checkedInputFlags(signature, benv.env.table);
+  const checkedInput = checked.some(Boolean);
+  if (checkedInput) {
+    for (const parameter of signature.parameters) {
+      if (
+        !parameter.inferred || parameter.type.ref === benv.env.table.unknown
+      ) continue;
+      const table = benv.env.table;
+      if (
+        !dataOnly(table, parameter.type.ref, "entry", true) ||
+        containsOpaqueType(table, parameter.type.ref) ||
+        table.foreignSealedOf(benv.env.module, parameter.type.ref) !== undefined
+      ) {
+        checker.sink.push(
+          makeDiagnostic(
+            "type-mismatch/010",
+            `the inferred input \`${parameter.name}\` has no compiler-derived schema; use a concrete annotation or a source-owned decoder`,
+            parameter.span,
+          ),
+        );
+      }
+    }
+  }
+  if (checkedInput && !signature.failures.includes(SCHEMA_ERROR_ID)) {
+    checker.sink.push(makeDiagnostic(
+      "failure-contract/001",
+      "an exported function with an inferred input contract must list SchemaError in its `fails` clause",
+      signature.span,
+    ));
+  }
   if (
-    signature.expectedExecution === "pure" && run.mode !== "pure" &&
+    signature.expectedExecution === "pure" &&
+    (checkedInput || run.mode !== "pure") &&
     bodyNode !== undefined
   ) {
     checker.report(
@@ -2378,21 +2821,26 @@ export function checkFunctionBody(
     }
   }
   const table = benv.env.table;
+  const failures = checkedInput && !run.failures.includes(SCHEMA_ERROR_ID)
+    ? sortedUnique([...run.failures, SCHEMA_ERROR_ID])
+    : run.failures;
+  const mode = checkedInput ? "effect" : run.mode;
   const type = table.function({
-    execution: run.mode,
+    execution: mode,
     parameters: signature.parameters.map((p) => p.type.ref),
     borrows: signature.parameters.map((p) => p.borrow),
+    checked,
     result: run.result,
-    failures: run.failures,
+    failures,
     requirements: run.requirements,
   });
   return {
     table: checker.body,
     body: run.body,
     result: run.result,
-    failures: run.failures,
+    failures,
     requirements: run.requirements,
-    mode: run.mode,
+    mode,
     type,
     diagnostics: checker.sink,
   };

@@ -23,7 +23,7 @@ function withoutNominal(files: Record<string, string>): Record<string, string> {
   );
 }
 
-/** The accepted v3 wire changes, with the v5 version and identity on a `type`. Keep spans, annotations and identities intact. */
+/** The accepted v3 wire changes, with the v6 version and identity on a `type`. Keep spans, annotations and identities intact. */
 function v4(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(v4);
   if (value === null || typeof value !== "object") return value;
@@ -42,13 +42,13 @@ function v4(value: unknown): unknown {
       ) => [
         key,
         key === "version" && record.format === "light-functional-ir"
-          ? 5
+          ? 6
           : v4(item),
       ]),
   );
 }
 
-Deno.test("IR v4 changes only the wire version and duplicate scoped identities", () => {
+Deno.test("IR retains the v3 corpus behavior across accepted wire changes", () => {
   const corpus = JSON.parse(
     Deno.readTextFileSync(
       new URL("../fixtures/ir/v3-baseline.json", import.meta.url),
@@ -67,7 +67,11 @@ Deno.test("IR v4 changes only the wire version and duplicate scoped identities",
       assert(ir?.ok && emitted?.ok && map?.ok);
       const text = serializeModule(ir.value);
       assert(text.ok);
-      assertEquals(JSON.parse(text.value), v4(expected.ir));
+      const withoutCaptures = JSON.parse(
+        text.value,
+        (key, value: unknown) => key === "generated" ? undefined : value,
+      );
+      assertEquals(withoutCaptures, v4(expected.ir));
       assertEquals(emitted.value, expected.emitted);
       assertEquals(serializeSourceMap(map.value), expected.map);
       assertEquals(updated.value.interfaceHash(expected.name), expected.hash);

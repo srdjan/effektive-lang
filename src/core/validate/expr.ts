@@ -47,14 +47,18 @@ import {
   BOOLEAN,
   comparisonClass,
   compatibleClasses,
+  containsUnknown,
   dataOnly,
+  entrySchemaDerivable,
   fieldsOf,
   fits,
+  fitsCheckedInput,
   foreignSealedOf,
   identityBody,
   identityMembers,
   INT,
   isBooleanLike,
+  isNever,
   isNumericClass,
   isStringClass,
   MAX_DEPTH,
@@ -138,6 +142,7 @@ import {
 } from "./families/stream.ts";
 import { schema, schemaOperation } from "./families/schema.ts";
 import { refOperation } from "./families/ref.ts";
+import { negateRefinement, RefinementValidator } from "./refinements.ts";
 
 // The test of the expression children imports this walk from here.
 export { exprChildren };
@@ -156,7 +161,7 @@ function validConcurrency(value: number | "unbounded" | undefined): boolean {
 function tagMayEqual(
   env: TypeEnv,
   type: Type,
-  value: string,
+  value: string | number | boolean | null,
   seen = new Set<Type>(),
 ): boolean {
   if (seen.has(type) || seen.size >= MAX_DEPTH) return true;
@@ -197,8 +202,12 @@ function adoptedNumericBrand(
 export class BodyValidator implements ValidatorCore {
   private readonly scope = new Map<string, Type>();
   private readonly declared = new Set<string>();
+  private checkedRaw = new Set<Expr>();
+  private readonly refinements: RefinementValidator;
 
-  constructor(readonly ctx: Ctx) {}
+  constructor(readonly ctx: Ctx) {
+    this.refinements = new RefinementValidator(ctx);
+  }
 
   get env(): TypeEnv {
     return this.ctx.world.env;
@@ -215,7 +224,12 @@ export class BodyValidator implements ValidatorCore {
 
   // -------------------------------------------------------------- locals
 
-  private declareLocal(p: Parameter, path: string): void {
+  private declareLocal(
+    p: Parameter,
+    path: string,
+    init?: Expr,
+    generated = false,
+  ): void {
     if (!p.id.startsWith("local:")) {
       this.add(
         AREA.identity,
@@ -234,11 +248,13 @@ export class BodyValidator implements ValidatorCore {
     }
     this.declared.add(p.id);
     this.scope.set(p.id, p.type);
+    if (!generated) this.refinements.addLocal(p, init);
     checkTypeIds(this.ctx, p.type, `${path}.type`, p.span);
   }
 
   private release(ids: readonly string[]): void {
     for (const id of ids) this.scope.delete(id);
+    this.refinements.release(ids);
   }
 
   /**
@@ -246,12 +262,19 @@ export class BodyValidator implements ValidatorCore {
    * when `run` ends. A local cannot stay in scope after its region.
    */
   private withLocals<T>(
-    run: (declare: (p: Parameter, path: string) => void) => T,
+    run: (
+      declare: (
+        p: Parameter,
+        path: string,
+        init?: Expr,
+        generated?: boolean,
+      ) => void,
+    ) => T,
   ): T {
     const added: string[] = [];
     try {
-      return run((p, path) => {
-        this.declareLocal(p, path);
+      return run((p, path, init, generated) => {
+        this.declareLocal(p, path, init, generated);
         added.push(p.id);
       });
     } finally {
@@ -283,6 +306,61 @@ export class BodyValidator implements ValidatorCore {
     });
   }
 
+  /** Checks ordinary compatibility or one independently verified refinement. */
+  private accepts(
+    expression: Expr,
+    source: Type,
+    target: Type,
+    path: string,
+    checked = false,
+  ): boolean {
+    if (fits(this.env, source, target)) return true;
+    const raw = checked || this.checkedRaw.has(expression);
+    if (
+      raw && containsUnknown(this.env, source) &&
+      fitsCheckedInput(this.env, source, target)
+    ) return true;
+    if (expression.execution === "effect") {
+      this.refinements.clearDerivedFacts();
+    }
+    if (
+      this.refinements.adoption(expression, source, target, path) === "handled"
+    ) return true;
+    return raw && fitsCheckedInput(this.env, source, target);
+  }
+
+  /** Marks only direct aggregate values that execute inside a checked call. */
+  private markCheckedRaw(expression: Expr): void {
+    this.checkedRaw.add(expression);
+    switch (expression.kind) {
+      case "some":
+        this.markCheckedRaw(expression.value);
+        return;
+      case "record":
+        expression.fields.forEach((field) => this.markCheckedRaw(field.value));
+        return;
+      case "update":
+        expression.fields.forEach((field) => this.markCheckedRaw(field.value));
+        return;
+      case "array":
+      case "tuple":
+        expression.elements.forEach((element) => this.markCheckedRaw(element));
+        return;
+      case "block":
+        this.markCheckedRaw(expression.result);
+        return;
+      case "if":
+        this.markCheckedRaw(expression.then);
+        this.markCheckedRaw(expression.else);
+        return;
+      case "match":
+        expression.arms.forEach((arm) => this.markCheckedRaw(arm.body));
+        return;
+      default:
+        return;
+    }
+  }
+
   /** The recorded execution mode must follow the body mode and the effect sets. */
   private checkExecution(
     recorded: { readonly execution: Execution; readonly effects: Effects },
@@ -310,6 +388,44 @@ export class BodyValidator implements ValidatorCore {
 
   checkFunction(d: FunctionDecl, path: string): void {
     const env = this.env;
+    const checkedIds = d.parameters.filter((_, index) =>
+      d.type.checked?.[index] === true
+    ).map((parameter) => parameter.id);
+    const recordedChecks = d.entryValidation ?? [];
+    if (
+      recordedChecks.length !== checkedIds.length ||
+      recordedChecks.some((id, index) => id !== checkedIds[index]) ||
+      (checkedIds.length === 0 && d.entryValidation !== undefined)
+    ) {
+      this.add(
+        AREA.contracts,
+        `${path}.entryValidation`,
+        "entry validation must list exactly the checked parameters in declaration order",
+        d.span,
+      );
+    }
+    if (checkedIds.length > 0 && !this.ctx.world.exports.has(d.id)) {
+      this.add(
+        AREA.contracts,
+        `${path}.entryValidation`,
+        "only an exported function can have checked entry parameters",
+        d.span,
+      );
+    }
+    d.parameters.forEach((parameter, index) => {
+      if (
+        d.type.checked?.[index] === true &&
+        (!entrySchemaDerivable(env, parameter.type) ||
+          foreignSealedOf(env, parameter.type) !== undefined)
+      ) {
+        this.add(
+          AREA.types,
+          `${path}.parameters[${index}].type`,
+          "a checked entry parameter needs a schema-derivable closed data type",
+          parameter.span,
+        );
+      }
+    });
     const body = this.withLocals((declare) => {
       d.parameters.forEach((p, j) => declare(p, `${path}.parameters[${j}]`));
       this.checkParameterTypes(
@@ -373,7 +489,13 @@ export class BodyValidator implements ValidatorCore {
       });
       return checked;
     });
-    if (!fits(env, body.type, d.type.result)) {
+    const activeBody = checkedIds.length === 0 ? body : {
+      failures: sortedUnique([...body.failures, SCHEMA_ERROR_ID]),
+      requirements: body.requirements,
+      execution: "effect" as const,
+      type: body.type,
+    };
+    if (!this.accepts(d.body, body.type, d.type.result, `${path}.body`)) {
       this.add(
         AREA.types,
         `${path}.body`,
@@ -386,7 +508,7 @@ export class BodyValidator implements ValidatorCore {
     const declared = d.type.effects;
     // A written set bounds the body from above. An inferred set equals the body.
     if (d.written.fails) {
-      const extraF = minus(body.failures, declared.failures);
+      const extraF = minus(activeBody.failures, declared.failures);
       if (extraF.length > 0) {
         this.add(
           AREA.contracts,
@@ -399,12 +521,12 @@ export class BodyValidator implements ValidatorCore {
           d.body.span,
         );
       }
-    } else if (!sameSet(declared.failures, body.failures)) {
+    } else if (!sameSet(declared.failures, activeBody.failures)) {
       this.add(
         AREA.contracts,
         `${path}.type.effects.failures`,
         `an inferred contract equals the body: expected ${
-          list(body.failures)
+          list(activeBody.failures)
         }, recorded ${list(declared.failures)}`,
         d.span,
       );
@@ -431,12 +553,13 @@ export class BodyValidator implements ValidatorCore {
         d.span,
       );
     }
-    this.checkExecution(d.type, body, path, d.span);
+    this.checkExecution(d.type, activeBody, path, d.span);
+    this.refinements.audit(d.body, `${path}.body`, exprChildren);
   }
 
   checkConstant(d: ConstantDecl, path: string): void {
     const out = this.check(d.value, `${path}.value`);
-    if (!fits(this.env, out.type, d.type)) {
+    if (!this.accepts(d.value, out.type, d.type, `${path}.value`)) {
       this.add(
         AREA.types,
         `${path}.value`,
@@ -457,6 +580,7 @@ export class BodyValidator implements ValidatorCore {
         v.span,
       );
     }
+    this.refinements.audit(d.value, `${path}.value`, exprChildren);
   }
 
   // -------------------------------------------------------------- expressions
@@ -472,7 +596,7 @@ export class BodyValidator implements ValidatorCore {
     if (comp.kind === "derived" && typeOk) {
       const good = comp.match === "exact"
         ? same(env, comp.type, e.type)
-        : fits(env, comp.type, e.type);
+        : this.accepts(e, comp.type, e.type, path);
       if (!good) {
         this.add(
           AREA.types,
@@ -573,8 +697,22 @@ export class BodyValidator implements ValidatorCore {
         return this.nominal(e, path);
       case "some": {
         const v = this.check(e.value, `${path}.value`);
+        const target = e.type.kind === "option" ? e.type : undefined;
+        if (
+          target !== undefined &&
+          !this.accepts(e.value, v.type, target.element, `${path}.value`)
+        ) {
+          this.add(
+            AREA.types,
+            `${path}.value`,
+            `the Some value has type ${show(v.type)}, which does not fit ${
+              show(target.element)
+            }`,
+            e.value.span,
+          );
+        }
         return derivedResult(
-          { kind: "option", element: v.type },
+          { kind: "option", element: target?.element ?? v.type },
           combine([v]),
           "fit",
         );
@@ -799,7 +937,14 @@ export class BodyValidator implements ValidatorCore {
         );
         return;
       }
-      if (!fits(this.env, outs[i].type, field.type)) {
+      if (
+        !this.accepts(
+          f.value,
+          outs[i].type,
+          field.type,
+          `${at}.value`,
+        )
+      ) {
         this.add(
           AREA.types,
           `${at}.value`,
@@ -850,6 +995,7 @@ export class BodyValidator implements ValidatorCore {
         `the record type ${show(e.type)}`,
       );
     }
+    this.refinements.retain(e, e.type, path);
     return checkedResult(combine(outs));
   }
 
@@ -870,7 +1016,14 @@ export class BodyValidator implements ValidatorCore {
       );
     } else {
       outs.forEach((o, i) => {
-        if (!fits(this.env, o.type, target.element)) {
+        if (
+          !this.accepts(
+            e.elements[i],
+            o.type,
+            target.element,
+            `${path}.elements[${i}]`,
+          )
+        ) {
           this.add(
             AREA.types,
             `${path}.elements[${i}]`,
@@ -882,6 +1035,7 @@ export class BodyValidator implements ValidatorCore {
         }
       });
     }
+    this.refinements.retain(e, e.type, path);
     return checkedResult(combine(outs));
   }
 
@@ -904,7 +1058,14 @@ export class BodyValidator implements ValidatorCore {
       );
     } else {
       outs.forEach((o, i) => {
-        if (!fits(this.env, o.type, target.elements[i])) {
+        if (
+          !this.accepts(
+            e.elements[i],
+            o.type,
+            target.elements[i],
+            `${path}.elements[${i}]`,
+          )
+        ) {
           this.add(
             AREA.types,
             `${path}.elements[${i}]`,
@@ -916,6 +1077,7 @@ export class BodyValidator implements ValidatorCore {
         }
       });
     }
+    this.refinements.retain(e, e.type, path);
     return checkedResult(combine(outs));
   }
 
@@ -986,6 +1148,7 @@ export class BodyValidator implements ValidatorCore {
       false,
       `the record type ${show(base.type)}`,
     );
+    this.refinements.retain(e, base.type, path);
     return derivedResult(base.type, active);
   }
 
@@ -1025,7 +1188,14 @@ export class BodyValidator implements ValidatorCore {
         `the module cannot construct the foreign sealed type ${e.nominal}`,
         e.span,
       );
-    } else if (!fits(this.env, v.type, decl.definition.base)) {
+    } else if (
+      !this.accepts(
+        e.value,
+        v.type,
+        decl.definition.base,
+        `${path}.value`,
+      )
+    ) {
       this.add(
         AREA.types,
         `${path}.value`,
@@ -1033,6 +1203,16 @@ export class BodyValidator implements ValidatorCore {
           show(decl.definition.base)
         }`,
         e.value.span,
+      );
+    }
+    if (
+      decl.predicate !== undefined &&
+      !same(this.env, v.type, { kind: "named", id: e.nominal })
+    ) {
+      this.refinements.retain(
+        e.value,
+        { kind: "named", id: e.nominal },
+        `${path}.value`,
       );
     }
     return derivedResult({ kind: "named", id: e.nominal }, combine([v]));
@@ -1081,10 +1261,12 @@ export class BodyValidator implements ValidatorCore {
 
   private closure(e: Extract<Expr, { kind: "closure" }>, path: string): Comp {
     const env = this.env;
+    const refinementScope = this.refinements.snapshot();
     const body = this.withLocals((declare) => {
       e.parameters.forEach((p, j) => declare(p, `${path}.parameters[${j}]`));
       return this.check(e.body, `${path}.body`);
     });
+    this.refinements.restore(refinementScope);
     const fn = asFunction(env, e.type);
     if (fn === undefined) {
       this.add(
@@ -1095,6 +1277,14 @@ export class BodyValidator implements ValidatorCore {
       );
       return checkedResult(QUIET);
     }
+    if (fn.checked?.some(Boolean)) {
+      this.add(
+        AREA.contracts,
+        `${path}.type.checked`,
+        "a closure cannot claim checked entry validation",
+        e.span,
+      );
+    }
     this.checkParameterTypes(
       e.parameters,
       fn.parameters,
@@ -1102,7 +1292,7 @@ export class BodyValidator implements ValidatorCore {
       `the closure declares ${e.parameters.length} parameters, its type has ${fn.parameters.length}`,
       e.span,
     );
-    if (!fits(env, body.type, fn.result)) {
+    if (!this.accepts(e.body, body.type, fn.result, `${path}.body`)) {
       this.add(
         AREA.types,
         `${path}.body`,
@@ -1141,6 +1331,7 @@ export class BodyValidator implements ValidatorCore {
     args: readonly Expr[],
     outs: readonly Out[],
     parameters: readonly Type[],
+    checked: readonly boolean[] | undefined,
     path: string,
     span: Span,
     builtin: BuiltinCallName | undefined,
@@ -1170,7 +1361,14 @@ export class BodyValidator implements ValidatorCore {
           return;
         }
       }
-      if (!fits(this.env, o.type, parameters[i])) {
+      const compatible = this.accepts(
+        args[i],
+        o.type,
+        parameters[i],
+        `${path}.arguments[${i}]`,
+        checked?.[i] === true,
+      );
+      if (!compatible) {
         this.add(
           AREA.types,
           `${path}.arguments[${i}]`,
@@ -1185,10 +1383,17 @@ export class BodyValidator implements ValidatorCore {
 
   private call(e: Extract<Expr, { kind: "call" }>, path: string): Comp {
     const callee = this.check(e.callee, `${path}.callee`, true);
-    const outs = e.arguments.map((a, i) =>
-      this.check(a, `${path}.arguments[${i}]`)
-    );
     const fn = asFunction(this.env, callee.type);
+    const outs = e.arguments.map((argument, index) => {
+      const previous = this.checkedRaw;
+      if (fn?.checked?.[index] === true) {
+        this.checkedRaw = new Set(previous);
+        this.markCheckedRaw(argument);
+      }
+      const out = this.check(argument, `${path}.arguments[${index}]`);
+      this.checkedRaw = previous;
+      return out;
+    });
     if (fn === undefined) {
       this.add(
         AREA.types,
@@ -1213,6 +1418,7 @@ export class BodyValidator implements ValidatorCore {
       e.arguments,
       outs,
       fn.parameters,
+      fn.checked,
       path,
       e.span,
       builtin,
@@ -1279,6 +1485,7 @@ export class BodyValidator implements ValidatorCore {
       e.arguments,
       outs,
       fn.parameters,
+      fn.checked,
       path,
       e.span,
       undefined,
@@ -1296,6 +1503,7 @@ export class BodyValidator implements ValidatorCore {
   // -------------------------------------------------------------- control flow
 
   private block(e: Extract<Expr, { kind: "block" }>, path: string): Comp {
+    const refinementScope = this.refinements.snapshot();
     const parts: Out[] = [];
     const result = this.withLocals((declare) => {
       e.steps.forEach((step, i) => {
@@ -1303,8 +1511,14 @@ export class BodyValidator implements ValidatorCore {
         const value = this.check(step.value, `${at}.value`);
         parts.push(value);
         if (step.kind === "bind") {
-          declare(step.binding, `${at}.binding`);
-          if (!fits(this.env, value.type, step.binding.type)) {
+          if (
+            !this.accepts(
+              step.value,
+              value.type,
+              step.binding.type,
+              `${at}.binding.type`,
+            )
+          ) {
             this.add(
               AREA.types,
               `${at}.binding.type`,
@@ -1316,28 +1530,58 @@ export class BodyValidator implements ValidatorCore {
               step.binding.span,
             );
           }
+          if (step.generated !== undefined && step.generated !== true) {
+            this.add(
+              AREA.types,
+              `${at}.generated`,
+              "a generated capture marker must be true",
+              step.binding.span,
+            );
+          }
+          declare(
+            step.binding,
+            `${at}.binding`,
+            step.value,
+            step.generated === true,
+          );
+        }
+        if (
+          value.execution === "effect" && step.value.kind !== "if" &&
+          step.value.kind !== "match"
+        ) {
+          this.refinements.clearDerivedFacts();
         }
       });
       return this.check(e.result, `${path}.result`);
     });
-    return derivedResult(result.type, combine([...parts, result]));
+    const type = this.accepts(
+        e.result,
+        result.type,
+        e.type,
+        `${path}.result`,
+      )
+      ? e.type
+      : result.type;
+    const combined = derivedResult(type, combine([...parts, result]));
+    this.refinements.leaveScope(refinementScope);
+    return combined;
   }
 
   private branchFits(
     branch: Out,
     recorded: Type,
     path: string,
-    span: Span,
+    expression: Expr,
     area: typeof AREA.types | typeof AREA.recovery,
   ): void {
-    if (!fits(this.env, branch.type, recorded)) {
+    if (!this.accepts(expression, branch.type, recorded, path)) {
       this.add(
         area,
         path,
         `the branch has type ${
           show(branch.type)
         }, which does not fit the recorded type ${show(recorded)}`,
-        span,
+        expression.span,
       );
     }
   }
@@ -1352,24 +1596,58 @@ export class BodyValidator implements ValidatorCore {
         e.condition.span,
       );
     }
-    const thenOut = this.check(e.then, `${path}.then`);
-    const elseOut = this.check(e.else, `${path}.else`);
-    this.branchFits(thenOut, e.type, `${path}.then`, e.then.span, AREA.types);
-    this.branchFits(elseOut, e.type, `${path}.else`, e.else.span, AREA.types);
-    return checkedResult(combine([cond, thenOut, elseOut]));
+    if (cond.execution === "effect") this.refinements.clearDerivedFacts();
+    const condition = this.refinements.condition(e.condition);
+    const base = this.refinements.snapshot();
+    const successful: ReturnType<RefinementValidator["snapshot"]>[] = [];
+    const outs: Out[] = [];
+    for (const [index, expression] of [e.then, e.else].entries()) {
+      this.refinements.restore(base);
+      this.refinements.addBranch(
+        index === 0 ? condition : negateRefinement(condition),
+      );
+      const at = `${path}.${index === 0 ? "then" : "else"}`;
+      const out = this.check(expression, at);
+      this.branchFits(out, e.type, at, expression, AREA.types);
+      outs.push(out);
+      if (!isNever(unfold(this.env, out.type))) {
+        successful.push(this.refinements.snapshot());
+      }
+    }
+    this.refinements.restore(base);
+    this.refinements.join(successful);
+    return checkedResult(combine([cond, ...outs]));
   }
 
   private matchExpr(e: Extract<Expr, { kind: "match" }>, path: string): Comp {
     const subject = this.check(e.subject, `${path}.subject`);
+    if (subject.execution === "effect") this.refinements.clearDerivedFacts();
     const parts: Out[] = [subject];
+    const successful: ReturnType<RefinementValidator["snapshot"]>[] = [];
+    const excluded: ReturnType<RefinementValidator["condition"]>[] = [];
     e.arms.forEach((arm, i) => {
       const at = `${path}.arms[${i}]`;
+      const branch = this.refinements.snapshot();
+      for (const fact of excluded) this.refinements.addBranch(fact);
       const added = this.pattern(arm.pattern, subject.type, `${at}.pattern`);
+      if (arm.pattern.kind === "literal") {
+        const matched = this.refinements.literalMatch(
+          e.subject,
+          arm.pattern.value,
+        );
+        this.refinements.addBranch(matched);
+        excluded.push(negateRefinement(matched));
+      }
       const body = this.check(arm.body, `${at}.body`);
+      this.branchFits(body, e.type, `${at}.body`, arm.body, AREA.types);
       this.release(added);
+      if (!isNever(unfold(this.env, body.type))) {
+        successful.push(this.refinements.snapshot());
+      }
+      this.refinements.restore(branch);
       parts.push(body);
-      this.branchFits(body, e.type, `${at}.body`, arm.body.span, AREA.types);
     });
+    this.refinements.join(successful);
     return checkedResult(combine(parts));
   }
 
@@ -1401,7 +1679,7 @@ export class BodyValidator implements ValidatorCore {
       case "wildcard":
         return added;
       case "literal":
-        if (!fits(env, { kind: "literal", value: p.value }, subject)) {
+        if (!tagMayEqual(env, subject, p.value)) {
           foreign(`the literal ${JSON.stringify(p.value)}`);
         }
         return added;
@@ -1492,7 +1770,7 @@ export class BodyValidator implements ValidatorCore {
   private catchExpr(e: Extract<Expr, { kind: "catch" }>, path: string): Comp {
     const env = this.env;
     const body = this.check(e.body, `${path}.body`);
-    this.branchFits(body, e.type, `${path}.body`, e.body.span, AREA.recovery);
+    this.branchFits(body, e.type, `${path}.body`, e.body, AREA.recovery);
     const handled = new Set<string>();
     const seen = new Set<string>();
     const outs: Out[] = [];
@@ -1542,7 +1820,7 @@ export class BodyValidator implements ValidatorCore {
         return this.check(h.body, `${at}.body`);
       });
       outs.push(out);
-      this.branchFits(out, e.type, `${at}.body`, h.body.span, AREA.recovery);
+      this.branchFits(out, e.type, `${at}.body`, h.body, AREA.recovery);
     });
     const remaining: Active = {
       failures: minus(body.failures, [...handled]),
@@ -1591,7 +1869,15 @@ export class BodyValidator implements ValidatorCore {
   private binary(e: Extract<Expr, { kind: "binary" }>, path: string): Comp {
     const env = this.env;
     const left = this.check(e.left, `${path}.left`);
+    const branch = this.refinements.snapshot();
+    if (e.operator === "&&" || e.operator === "||") {
+      const condition = this.refinements.condition(e.left);
+      this.refinements.addBranch(
+        e.operator === "||" ? negateRefinement(condition) : condition,
+      );
+    }
     const right = this.check(e.right, `${path}.right`);
+    this.refinements.restore(branch);
     const active = combine([left, right]);
     const mismatch = (): Comp => {
       this.add(
@@ -1662,13 +1948,17 @@ export class BodyValidator implements ValidatorCore {
           l === undefined || r === undefined || !compatibleClasses(env, l, r)
         ) return mismatch();
         if (brand !== undefined && (e.operator === "+" || e.operator === "-")) {
+          this.refinements.retain(e, brand, path);
           return derivedResult(brand, active);
         }
         // One named operand and one unnamed operand that fits its body keep the name.
         const adopted = e.operator !== "/"
           ? adoptedNumericBrand(env, left.type, right.type)
           : undefined;
-        if (adopted !== undefined) return derivedResult(adopted, active);
+        if (adopted !== undefined) {
+          this.refinements.retain(e, adopted, path);
+          return derivedResult(adopted, active);
+        }
         if (isNumericClass(env, l) && isNumericClass(env, r)) {
           const integral = e.operator !== "/" && fits(env, left.type, INT) &&
             fits(env, right.type, INT);

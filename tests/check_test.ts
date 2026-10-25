@@ -408,6 +408,7 @@ Deno.test("a binding annotation that is a function type supplies the signature",
   assertEquals(value.type, {
     kind: "function",
     execution: "pure",
+    checked: [true, true],
     parameters: [
       { kind: "named", id: "type:m#Int" },
       { kind: "named", id: "type:m#Int" },

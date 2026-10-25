@@ -130,7 +130,10 @@ function layerTypeDoc(
 
 function functionTypeDoc(scope: EmitNames, type: FunctionType): Doc {
   const parameters = type.parameters.map((p, i) =>
-    property(parameterName(i), typeDoc(scope, p))
+    property(
+      parameterName(i),
+      type.checked?.[i] ? "unknown" : typeDoc(scope, p),
+    )
   );
   const result = typeDoc(scope, type.result);
   const returns = type.execution === "effect"

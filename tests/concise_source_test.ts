@@ -60,17 +60,18 @@ export const run = (): Int[] => values |> filter(value => value > 1) |> map(valu
   equivalent(text, text.replaceAll(/\b(x|y|value) =>/g, "($1) =>"));
 });
 
-Deno.test("bare lambdas keep missing-context, recursive, and exported contract requirements", () => {
+Deno.test("bare lambdas match parenthesized inferred and recursive contracts", () => {
+  const cases: readonly [string, readonly string[]][] = [
+    ["const id = value => value", []],
+    ["export const id = value => value", ["declaration/005"]],
+    ["const recur = value => recur(value)", ["execution-mode/003"]],
+  ];
   for (
-    const text of [
-      "const id = value => value",
-      "export const id = value => value",
-      "const recur = value => recur(value)",
-    ]
+    const [text, codes] of cases
   ) {
     const bare = checked(text, false),
       explicit = checked(text.replace("value =>", "(value) =>"), false);
-    assert(bare.diagnostics.length > 0);
+    assertEquals(bare.diagnostics.map((d) => d.code), codes);
     assertEquals(
       bare.diagnostics.map((d) => [d.code, d.message]),
       explicit.diagnostics.map((d) => [d.code, d.message]),

@@ -13,10 +13,12 @@ import type {
   Type,
   TypeDecl,
 } from "../ir.ts";
-import { SCOPE_CAPABILITY } from "../ir.ts";
+import { SCHEMA_ERROR_ID, SCOPE_CAPABILITY } from "../ir.ts";
 import { AREA, type Report } from "./report.ts";
 import {
+  containsRefinement,
   dataOnly,
+  entrySchemaDerivable,
   isNever,
   MAX_DEPTH,
   same,
@@ -33,12 +35,14 @@ import {
   isConcurrencyType,
   rebuildContainer,
 } from "./builtins.ts";
+import { checkRefinementDeclaration } from "./refinements.ts";
 
 const PRELUDE_MODULE = "effektive:prelude";
 
 interface World {
   readonly module: string;
   readonly env: TypeEnv;
+  readonly exports: ReadonlySet<string>;
   readonly types: ReadonlyMap<string, TypeDecl>;
   readonly errors: ReadonlyMap<string, ErrorDecl>;
   readonly services: ReadonlyMap<string, ServiceDecl>;
@@ -122,8 +126,10 @@ export function buildWorld(ir: ModuleIR): World {
   const data = new Map<string, Extract<Type, { kind: "record" }>>();
   const opaque = new Set<string>();
   const sealed = new Set<string>();
+  const refined = new Set<string>();
   for (const t of types.values()) {
     if (t.opaque === true) opaque.add(t.id);
+    if (t.predicate !== undefined) refined.add(t.id);
     if (t.definition.kind === "nominal" && t.definition.sealed === true) {
       sealed.add(t.id);
     }
@@ -149,6 +155,7 @@ export function buildWorld(ir: ModuleIR): World {
   for (const e of errors.values()) errorFields.set(e.id, e.fields);
   return {
     module: ir.module,
+    exports: new Set(ir.exports),
     env: {
       module: ir.module,
       aliases,
@@ -158,6 +165,7 @@ export function buildWorld(ir: ModuleIR): World {
       errors: errorFields,
       opaque,
       sealed,
+      refined,
     },
     types,
     errors,
@@ -227,6 +235,32 @@ export function checkTypeIds(
       t.borrows.length !== t.parameters.length
     ) {
       fail(at, "borrow flags must match function parameters");
+    }
+    if (
+      t.kind === "function" && t.checked !== undefined &&
+      (t.checked.length !== t.parameters.length ||
+        t.checked.some((checked) => typeof checked !== "boolean"))
+    ) {
+      fail(at, "checked flags must be booleans and match function parameters");
+    }
+    if (t.kind === "function" && t.checked?.some(Boolean)) {
+      const invalid = (message: string): void => {
+        ok = false;
+        report.add(AREA.contracts, `${at}.checked`, message, span);
+      };
+      if (t.execution !== "effect") {
+        invalid("a checked function must have effect execution");
+      }
+      if (!t.effects.failures.includes(SCHEMA_ERROR_ID)) {
+        invalid("a checked function must declare SchemaError");
+      }
+      t.parameters.forEach((parameter, index) => {
+        if (t.checked?.[index] && !entrySchemaDerivable(world.env, parameter)) {
+          invalid(
+            "a checked function parameter needs a schema-derivable contract",
+          );
+        }
+      });
     }
     for (const c of typeChildren(t)) {
       walk(c.type, `${at}${c.suffix}`, depth + 1);
@@ -457,6 +491,16 @@ function checkDeclaredType(
   path: string,
   span: Span,
 ): void {
+  if (
+    span.source.endsWith(".effi") && containsRefinement(ctx.world.env, type)
+  ) {
+    ctx.report.add(
+      AREA.types,
+      path,
+      "host interfaces must expose unrefined data",
+      span,
+    );
+  }
   checkTypeIds(ctx, type, path, span);
   checkRecordFields(ctx, type, path, span);
 }
@@ -500,6 +544,14 @@ function checkServiceDecl(
     }
     seenMethods.add(m.id);
     checkDeclaredType(ctx, m.type, `${at}.type`, m.span);
+    if (m.type.checked?.some(Boolean)) {
+      ctx.report.add(
+        AREA.contracts,
+        `${at}.type.checked`,
+        "a service method cannot claim checked entry validation",
+        m.span,
+      );
+    }
     if (m.borrows !== undefined) {
       if (m.borrows.length !== m.type.parameters.length) {
         ctx.report.add(
@@ -537,6 +589,7 @@ function checkServiceDecl(
 }
 
 function checkTypeDecl(ctx: Ctx, d: TypeDecl, path: string): void {
+  checkRefinementDeclaration(ctx, d, path);
   const sealed = "sealed" in d.definition ? d.definition.sealed : undefined;
   if (
     sealed !== undefined &&

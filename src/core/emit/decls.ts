@@ -61,6 +61,7 @@ import {
   typeDoc,
 } from "./types.ts";
 import { valueReferences } from "./walk.ts";
+import { predicateDoc } from "./predicates.ts";
 
 const LINE_WIDTH = 80;
 
@@ -333,7 +334,9 @@ export function functionHeaderDoc(
   const parameters = bracketed(
     "(",
     ")",
-    d.parameters.map((p) => property(p.name, typeDoc(scope, p.type))),
+    d.parameters.map((p, i) =>
+      property(p.name, d.type.checked?.[i] ? "unknown" : typeDoc(scope, p.type))
+    ),
     false,
   );
   if (result === "contract" && !d.written.result) return parameters;
@@ -443,7 +446,7 @@ export class DeclarationEmitter {
       throw internal(`the nominal type ${d.name} has no emitted form`);
     }
     return [
-      assignment([keyword, "const ", d.name], value),
+      assignment([keyword, "const ", d.name], this.refinedSchema(d, value)),
       ";",
       hard,
       group([
@@ -454,6 +457,18 @@ export class DeclarationEmitter {
         indent([line, `typeof ${d.name}.Type`]),
       ]),
       ";",
+    ];
+  }
+
+  private refinedSchema(d: TypeDecl, value: Doc): Doc {
+    if (d.predicate === undefined) return value;
+    const schema = this.scope.effect("Schema");
+    const input = this.scope.temp();
+    return [
+      value,
+      `.check(${schema}.makeFilter((${input}) => `,
+      predicateDoc(d.predicate, input),
+      ` || ${JSON.stringify(`expected ${d.name}`)}))`,
     ];
   }
 
@@ -514,7 +529,10 @@ export class DeclarationEmitter {
       hard,
       assignment(
         [keyword, "const ", d.name],
-        [`${schema}.TaggedStruct`, this.tagArguments(d.id, fields, recursive)],
+        this.refinedSchema(d, [
+          `${schema}.TaggedStruct`,
+          this.tagArguments(d.id, fields, recursive),
+        ]),
       ),
       ";",
     ];
@@ -664,6 +682,49 @@ export class DeclarationEmitter {
     const body = d.type.execution === "effect"
       ? this.expr.asEffect(d.body, d.type.result)
       : this.expr.fit(d.body, d.type.result, "pure");
+    if (d.type.checked?.some(Boolean)) {
+      const effect = this.scope.effect("Effect");
+      const schema = this.scope.effect("Schema");
+      const argumentsDoc: Doc[] = [];
+      const statements: Doc[] = [];
+      for (const [index, parameter] of d.parameters.entries()) {
+        if (d.type.checked[index]) {
+          const decoded = this.scope.temp();
+          statements.push([
+            "const ",
+            decoded,
+            " = yield* ",
+            `${schema}.decodeUnknownEffect(`,
+            `${schema}.toType(`,
+            schemaDoc(this.scope, parameter.type),
+            '), { onExcessProperty: "error" })(',
+            parameter.name,
+            ");",
+          ]);
+          argumentsDoc.push(decoded);
+        } else argumentsDoc.push(parameter.name);
+      }
+      const typedHeader = functionHeaderDoc(this.scope, {
+        ...d,
+        type: { ...d.type, checked: d.parameters.map(() => false) },
+      }, "always");
+      statements.push([
+        "return yield* ((",
+        typedHeader,
+        " => ",
+        at(body, 0),
+        ")(",
+        join(", ", argumentsDoc),
+        "));",
+      ]);
+      const checkedBody = [
+        `${effect}.gen(function* () {`,
+        indent([hard, join(hard, statements)]),
+        hard,
+        "})",
+      ];
+      return [assignment(prefix, [header, " => ", checkedBody]), ";"];
+    }
     return [this.expr.arrowDeclaration(prefix, header, body), ";"];
   }
 

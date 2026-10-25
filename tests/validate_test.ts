@@ -1547,7 +1547,7 @@ for (const version of [1, 2, 3, 4]) {
     assert(
       diagnostics.some((diagnostic) =>
         diagnostic.code === "validation/008" &&
-        diagnostic.message.includes("light-functional-ir version 5") &&
+        diagnostic.message.includes("light-functional-ir version 6") &&
         diagnostic.message.includes(`version ${version}`)
       ),
     );
@@ -1630,6 +1630,9 @@ Deno.test("src/core/validate imports only ir.ts, source.ts, diagnostics.ts, and 
       new URL(`../${name}`, directory).href
     ),
   );
+  const typeOnlyAllowed = new Set(
+    ["predicates.ts"].map((name) => new URL(`../${name}`, directory).href),
+  );
   const pattern =
     /(?:^|[\s;])(?:import|export)\s[^;]*?from\s*["']([^"']+)["']|(?:^|[\s;])import\s*["']([^"']+)["']|\bimport\(\s*["']([^"']+)["']\s*\)/g;
   let checked = 0;
@@ -1641,7 +1644,8 @@ Deno.test("src/core/validate imports only ir.ts, source.ts, diagnostics.ts, and 
         ? new URL(specifier, file).href
         : specifier;
       assert(
-        own.has(target) || allowed.has(target),
+        own.has(target) || allowed.has(target) ||
+          (typeOnlyAllowed.has(target) && /\bimport\s+type\b/.test(match[0])),
         `${file.pathname} imports ${specifier}`,
       );
       checked++;

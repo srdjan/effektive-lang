@@ -11,7 +11,8 @@ type F = (x: Count) => Count fails Boom uses Svc.m
 type G = (x: Count) => Count
 export const f: F = (x: Count): Count fails Boom uses Svc.m => Svc.m(x)
 export const g: G = (x: Count): Count => x
-export const h: G = (x) => x
+type CheckedG = (x: Count) => Count fails SchemaError
+export const h: CheckedG = (x) => x
 `;
   const stdout = await compileStrictTarget(
     { "main.eff": source },
@@ -21,7 +22,7 @@ import { f, g, h, Svc } from "./main.ts";
 const viaService = await Effect.runPromise(
   f(2).pipe(Effect.provideService(Svc, { m: (x) => Effect.succeed(x + 1) })),
 );
-console.log(JSON.stringify({ viaService, g: g(3), h: h(4) }));`,
+console.log(JSON.stringify({ viaService, g: g(3), h: await Effect.runPromise(h(4)) }));`,
     "effektive-function-alias-",
   );
   assertEquals(JSON.parse(stdout), { viaService: 3, g: 3, h: 4 });

@@ -1,5 +1,6 @@
-// Copied from /Users/srdjans/Code/effektive/public/typed-ir.ts (Phase A, part A1). Otherwise unchanged.
-/** Proposed IR for the syntax port. */
+import type { Predicate, ProofCertificate } from "./predicates.ts";
+
+// Typed compiler contract. The sibling website publishes a standalone copy.
 export type TypeId = `type:${string}`;
 export type ErrorId = `error:${string}`;
 export type ServiceId = `service:${string}`;
@@ -38,6 +39,8 @@ export interface FunctionType {
   readonly execution: Execution;
   readonly parameters: readonly Type[];
   readonly borrows?: readonly boolean[];
+  /** Checked inputs accept raw unknown values and validate before body execution. */
+  readonly checked?: readonly boolean[];
   readonly result: Type;
   readonly effects: Effects;
 }
@@ -80,7 +83,13 @@ export interface Parameter {
   readonly span: Span;
 }
 
+export interface RefinementProof {
+  readonly target: TypeId;
+  readonly certificate: ProofCertificate;
+}
+
 export interface Annotation {
+  readonly proofs?: readonly RefinementProof[];
   readonly type: Type;
   /** Execution mode remains independent of unhandled failures and requirements. */
   readonly execution: Execution;
@@ -113,7 +122,7 @@ export interface Handler {
 }
 
 export type Step =
-  | { readonly kind: "bind"; readonly binding: Parameter; readonly value: Expr }
+  | { readonly kind: "bind"; readonly binding: Parameter; readonly value: Expr; readonly generated?: true }
   | { readonly kind: "evaluate"; readonly value: Expr };
 
 export type ClosureExpr = Node<{ kind: "closure"; parameters: readonly Parameter[]; body: Expr }>;
@@ -239,6 +248,7 @@ export interface TypeDecl {
       readonly tagged?: true;
       readonly sealed?: true;
     };
+  readonly predicate?: Predicate;
   readonly opaque?: boolean;
   readonly span: Span;
 }
@@ -282,6 +292,8 @@ export interface FunctionDecl {
   /** The callable interface. Its effects can exceed the inferred body effects. */
   readonly type: FunctionType;
   readonly written: WrittenParts;
+  /** Parameter identities validated in declaration order before the body. */
+  readonly entryValidation?: readonly LocalId[];
   readonly body: Expr;
   readonly span: Span;
 }
@@ -312,7 +324,7 @@ export interface Import {
 
 export interface ModuleIR {
   readonly format: "light-functional-ir";
-  readonly version: 5;
+  readonly version: 6;
   readonly module: string;
   /** A validator also receives immutable source texts keyed by these identifiers. */
   readonly sources: readonly string[];

@@ -39,6 +39,8 @@ export interface TypeEnv {
   readonly opaque: ReadonlySet<string>;
   /** Identities of sealed types. */
   readonly sealed: ReadonlySet<string>;
+  /** Identities whose values must satisfy a declared predicate. */
+  readonly refined?: ReadonlySet<string>;
 }
 
 export const INT: Type = { kind: "primitive", name: "int" };
@@ -282,7 +284,8 @@ function assignable(
   // body of an untagged identity.
   if (t.kind === "named") {
     const body = env.identities.has(t.id) ? env.aliases.get(t.id) : undefined;
-    return adopt && s.kind !== "named" && body !== undefined &&
+    return adopt && env.refined?.has(t.id) !== true && s.kind !== "named" &&
+      body !== undefined &&
       ownsSealed(env, t.id) && assignable(env, s, body, lift, depth + 1);
   }
   if (t.kind === "union") {
@@ -393,6 +396,9 @@ function assignable(
         return false;
       }
       if (
+        t.checked?.some((checked, i) => checked && s.checked?.[i] !== true)
+      ) return false;
+      if (
         s.execution !== t.execution &&
         !(lift && executionFits(s.execution, t.execution))
       ) return false;
@@ -461,6 +467,127 @@ function guardedAlias(env: TypeEnv, id: string): boolean {
 /** A value of type `source` fits a value position of type `target`. The lift applies at the top. */
 export function fits(env: TypeEnv, source: Type, target: Type): boolean {
   return assignable(env, source, target, true, 0);
+}
+
+/**
+ * A checked entry accepts unknown values recursively. Every known shape and
+ * identity still follows ordinary assignment rules.
+ */
+export function fitsCheckedInput(
+  env: TypeEnv,
+  source: Type,
+  target: Type,
+  depth = 0,
+): boolean {
+  if (depth > MAX_DEPTH) return false;
+  if (fits(env, source, target)) return true;
+  const s = unfoldTransparent(env, source);
+  const t = unfoldTransparent(env, target);
+  if (s.kind === "primitive" && s.name === "unknown") return true;
+  if (s.kind === "union") {
+    return s.members.every((member) =>
+      fitsCheckedInput(env, member, t, depth + 1)
+    );
+  }
+  if (t.kind === "union") {
+    return t.members.some((member) =>
+      fitsCheckedInput(env, s, member, depth + 1)
+    );
+  }
+  if (t.kind === "named" && s.kind !== "named") {
+    if (
+      !ownsSealed(env, t.id) || env.refined?.has(t.id) === true ||
+      env.data.has(t.id)
+    ) return false;
+    const base = identityBody(env, t.id);
+    return base !== undefined &&
+      fitsCheckedInput(env, s, base, depth + 1);
+  }
+  if (s.kind === "named" && t.kind !== "named") {
+    if (!ownsSealed(env, s.id)) return false;
+    const base = identityBody(env, s.id) ?? env.data.get(s.id);
+    return base !== undefined &&
+      fitsCheckedInput(env, base, t, depth + 1);
+  }
+  if (s.kind === "record" && t.kind === "record") {
+    if (s.fields.length !== t.fields.length) return false;
+    return t.fields.every((targetField) => {
+      const sourceField = s.fields.find((field) =>
+        field.name === targetField.name
+      );
+      return sourceField !== undefined &&
+        sourceField.optional === targetField.optional &&
+        fitsCheckedInput(
+          env,
+          sourceField.type,
+          targetField.type,
+          depth + 1,
+        );
+    });
+  }
+  if (s.kind === "array" && t.kind === "array") {
+    return fitsCheckedInput(env, s.element, t.element, depth + 1);
+  }
+  if (s.kind === "option" && t.kind === "option") {
+    return fitsCheckedInput(env, s.element, t.element, depth + 1);
+  }
+  if (s.kind === "tuple" && t.kind === "tuple") {
+    return s.elements.length === t.elements.length &&
+      s.elements.every((element, index) =>
+        fitsCheckedInput(env, element, t.elements[index], depth + 1)
+      );
+  }
+  return false;
+}
+
+/** True when the generated entry validator can derive a closed schema. */
+export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
+  const seen = new Set<string>();
+  const visit = (current: Type): boolean => {
+    if (current.kind === "named") {
+      if (
+        current.id === SCHEMA_ERROR_ID || current.id === SCHEMA_ISSUE_ID ||
+        env.opaque.has(current.id)
+      ) return false;
+      if (seen.has(current.id)) return true;
+      seen.add(current.id);
+      const fields = env.errors.get(current.id);
+      const body = env.aliases.get(current.id) ?? env.data.get(current.id) ??
+        env.brands.get(current.id) ??
+        (fields === undefined
+          ? undefined
+          : { kind: "record" as const, fields });
+      return body !== undefined && visit(body);
+    }
+    switch (current.kind) {
+      case "primitive":
+      case "literal":
+        return true;
+      case "record":
+        return current.fields.every((field) => visit(field.type));
+      case "array":
+      case "option":
+        return visit(current.element);
+      case "tuple":
+        return current.elements.every(visit);
+      case "union":
+        return current.members.every(visit);
+      case "ref":
+      case "closeable-scope":
+      case "retry-schedule":
+      case "codec":
+      case "schema":
+      case "fiber":
+      case "effect":
+      case "stream":
+      case "schedule":
+      case "sink":
+      case "function":
+      case "provider":
+        return false;
+    }
+  };
+  return visit(type);
 }
 
 /** The sorted names that a type holds, not looking into the body of an identity. */
@@ -570,6 +697,47 @@ export function asFunction(env: TypeEnv, type: Type): FunctionType | undefined {
 export function isUnknown(env: TypeEnv, type: Type): boolean {
   const unfolded = unfold(env, type);
   return unfolded.kind === "primitive" && unfolded.name === "unknown";
+}
+
+/** True when a structural input contains an unknown component. */
+export function containsRefinement(
+  env: TypeEnv,
+  type: Type,
+  seen = new Set<Type>(),
+): boolean {
+  if (seen.has(type)) return false;
+  seen.add(type);
+  if (type.kind === "named") {
+    if (env.refined?.has(type.id)) return true;
+    const fields = env.errors.get(type.id);
+    const body = env.aliases.get(type.id) ?? env.brands.get(type.id) ??
+      env.data.get(type.id);
+    return body !== undefined
+      ? containsRefinement(env, body, seen)
+      : fields?.some((field) => containsRefinement(env, field.type, seen)) ===
+        true;
+  }
+  return typeChildren(type).some((child) =>
+    containsRefinement(env, child.type, seen)
+  );
+}
+
+export function containsUnknown(
+  env: TypeEnv,
+  type: Type,
+  seen = new Set<Type>(),
+): boolean {
+  const current = unfoldTransparent(env, type);
+  if (seen.has(current)) return false;
+  seen.add(current);
+  if (current.kind === "primitive") return current.name === "unknown";
+  if (current.kind === "named" && ownsSealed(env, current.id)) {
+    const body = identityBody(env, current.id) ?? env.data.get(current.id);
+    return body !== undefined && containsUnknown(env, body, seen);
+  }
+  return typeChildren(current).some((child) =>
+    containsUnknown(env, child.type, seen)
+  );
 }
 
 export function isBooleanLike(env: TypeEnv, type: Type): boolean {

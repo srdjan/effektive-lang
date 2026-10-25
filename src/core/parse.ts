@@ -818,6 +818,12 @@ class Parser {
       this.missing("`=`");
     }
     this.parseType();
+    if (this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "where")) {
+      this.begin();
+      this.tok();
+      this.parseExpr();
+      this.end(SyntaxKind.RefinementClause);
+    }
   }
 
   private parseSealedTypeBody(): void {

@@ -924,3 +924,17 @@ subject capture; lowering expands into existing block binds and `get` nodes.
 body checker and resource rules. Editor references and rename use one identity
 across use/finalization; completion exposes it only in those regions. Lowering
 remaps references to separate closure parameters and emits `with-resource` IR.
+
+
+## Input contracts in IR version 6
+
+IR version 6 adds `TypeDecl.predicate` and `FunctionType.checked`.
+Function parameter types carry finalized body contracts.
+A true checked flag permits raw unknown input and requires generated entry validation.
+`FunctionDecl.entryValidation` lists checked parameter identities in declaration order.
+`Annotation.proofs` carries target identities and independently checked certificates.
+Older wire versions receive `validation/008` without conversion.
+
+The synchronous `signatureHelpAt(revision, path, offset)` query returns the innermost ordinary call contract and its active parameter.
+Checked parameters show raw input and the validated contract.
+The language server exposes the query as `textDocument/signatureHelp`.

@@ -292,8 +292,8 @@
       "b0d89ff5d2a245bb"
     ],
     "fixtures/errors/declaration-exported-function-annotations.eff": [
-      "e109eacd18a1e547",
-      "6e8906bfb55db459"
+      "6aae747afd9a1a6c",
+      "cd506ee298d60a0c"
     ],
     "fixtures/errors/declaration-function-field.eff": [
       "7f1ce15ff39f824d",
@@ -306,10 +306,6 @@
     "fixtures/errors/declaration-opaque-field/main.eff": [
       "2cf1c003963f35d5",
       "a2c31da2cb07fb4c"
-    ],
-    "fixtures/errors/declaration-parameter-annotation.eff": [
-      "e8d3a7449d4f2172",
-      "ec634e3b1bb77b65"
     ],
     "fixtures/errors/declaration-primitive-position-host/host.effi": [
       "9eba8f18e4663fb6",
@@ -342,6 +338,10 @@
     "fixtures/errors/declaration-recursive-type.eff": [
       "231e61d68cfdfb7c",
       "6030bebf871ecfb5"
+    ],
+    "fixtures/errors/declaration-refinement.eff": [
+      "77184fb8be5632ae",
+      "1a95682cda28de52"
     ],
     "fixtures/errors/declaration-reserved-name.eff": [
       "cd4fbdde44b18a00",
@@ -543,6 +543,10 @@
       "f7d269895541fc7f",
       "e81cbbfc4b2aab2a"
     ],
+    "fixtures/errors/type-mismatch-inferred-input.eff": [
+      "9cfeb76e9cb21c1c",
+      "35a9aac4c1af7a5e"
+    ],
     "fixtures/errors/type-mismatch-layer-method-shape.eff": [
       "27a44ae9431fccfb",
       "f06ba5e52c4594f3"
@@ -552,8 +556,8 @@
       "bf538671a2eaa633"
     ],
     "fixtures/errors/type-mismatch-local-parameter.eff": [
-      "41d6da54b4ddaf4e",
-      "7721fd50abb3aa7e"
+      "fb0726fb067ff5fd",
+      "988d7f53f6ac2df9"
     ],
     "fixtures/errors/type-mismatch-nominal-identity.eff": [
       "b8d2920d10dbf8d3",
@@ -578,6 +582,10 @@
     "fixtures/errors/type-mismatch-record-field.eff": [
       "3a8350ce50b64e1c",
       "3cff10bd7020356b"
+    ],
+    "fixtures/errors/type-mismatch-refinement.eff": [
+      "95fa8be1906ea3d3",
+      "fe3d614bff627ea9"
     ],
     "fixtures/errors/type-mismatch-type-arguments.eff": [
       "69a4b8cec053da84",

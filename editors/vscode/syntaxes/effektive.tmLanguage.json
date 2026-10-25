@@ -100,6 +100,10 @@
         {
           "name": "storage.modifier.effektive",
           "match": "\\bpure\\b(?=\\s*\\([^\\n]*\\)\\s*=>)"
+        },
+        {
+          "name": "keyword.control.effektive",
+          "match": "\\bwhere\\b(?=\\s+(?:[A-Za-z_$][A-Za-z0-9_$]*|\\(\\s*[A-Za-z_$][A-Za-z0-9_$]*\\s*\\))\\s*=>)"
         }
       ]
     },

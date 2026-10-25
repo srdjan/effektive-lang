@@ -22,6 +22,7 @@ export enum SyntaxKind {
   // Declarations
   ImportDecl,
   TypeDecl,
+  RefinementClause,
   ErrorDecl,
   ServiceDecl,
   ServiceMethod,

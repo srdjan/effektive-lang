@@ -124,3 +124,25 @@ The refactor oracle that records a hash of each checker, program, lowering, emis
 
 A base record that is missing from the head means a behavior change, and a new head record usually comes from an added test. The checker, program, and validation records also hash their input, so a change that moves or rewrites tests changes the record set without any change in behavior. To judge such a change, compare revisions that run the same tests. Two runs of one revision can differ by one clean program record, so one such record alone is not a behavior change. The capture records only results of the core library, so it does not cover command-line or language server output.
 _Avoid: snapshot, golden run_
+
+## Inferred inputs
+
+### Input contract
+
+The finalized type that a function body requires from a parameter.
+Omitted parameter types and explicit `unknown` infer the same contract.
+
+### Checked entry
+
+An exported function that accepts raw input and validates its inferred contract when its Effect executes.
+Its function type carries checked flags. Its body uses finalized parameter types.
+
+### Concrete refinement
+
+A contextual `where` predicate on a type with identity.
+Construction, adoption, arithmetic, and updates require proof of the predicate.
+
+### Proof certificate
+
+A serializable record of Boolean splits and contradiction witnesses for a refinement obligation.
+The independent validator reconstructs the obligation and checks the certificate with separate code.

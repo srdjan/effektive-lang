@@ -562,7 +562,11 @@ class BodyLowerer {
   /** The annotation that the checker recorded for a node. */
   private annotation(node: NodeId, spanNode: NodeId = node): Annotation {
     const info = this.info(node);
-    return this.annotationWith(info.type, info, this.span(spanNode));
+    const proofs = this.body.proofs.get(node);
+    return {
+      ...this.annotationWith(info.type, info, this.span(spanNode)),
+      ...(proofs === undefined ? {} : { proofs }),
+    };
   }
 
   private nameText(nameNode: NodeId | undefined): string {
@@ -1124,9 +1128,17 @@ class BodyLowerer {
       const link = chain[i];
       const leftInfo = this.info(left);
       const leftSpan = this.span(left);
-      const type = this.ir(leftInfo.type);
+      const proofs = this.body.proofs.get(left);
+      if (proofs !== undefined) value = { ...value, proofs };
+      const adoption = value.proofs?.find((proof) =>
+        this.ctx.types.brandBaseOf(proof.target) !== undefined
+      );
+      const type: Type = adoption === undefined
+        ? this.ir(leftInfo.type)
+        : { kind: "named", id: adoption.target };
       steps.push({
         kind: "bind",
+        generated: true,
         binding: {
           id: ids[i],
           name: ids[i].slice(ids[i].lastIndexOf("/") + 1),
@@ -1154,11 +1166,13 @@ class BodyLowerer {
     const last = this.required(result, "the pipeline result", node);
     const outer = this.info(node);
     const set = combine([...steps.map((s) => setOf(s.value)), setOf(last)]);
+    const proofs = this.body.proofs.get(node);
     return {
       kind: "block",
       steps,
       result: last,
       ...this.annotationWith(outer.type, set, this.span(node)),
+      ...(proofs === undefined ? {} : { proofs }),
     };
   }
 
@@ -1303,7 +1317,11 @@ class BodyLowerer {
       kind: "nominal",
       nominal: fact.data,
       value: body === undefined ? record : { ...record, type: this.ir(body) },
-      ...this.annotation(node),
+      ...this.annotationWith(
+        this.info(node).type,
+        this.info(node),
+        this.span(node),
+      ),
     };
   }
 
@@ -1739,6 +1757,13 @@ function lowerFunction(
     parameters,
     type,
     written: signature.written,
+    ...(type.checked?.some(Boolean)
+      ? {
+        entryValidation: parameters.filter((_, i) => type.checked?.[i]).map((
+          p,
+        ) => p.id),
+      }
+      : {}),
     body: lowerer.expr(fn.bodyNode),
     span: signature.span,
   };
@@ -1812,7 +1837,7 @@ export function lowerModule(
       ok: true,
       value: {
         format: "light-functional-ir",
-        version: 5,
+        version: 6,
         module,
         sources: [checkedModule.path],
         imports: prelude === undefined

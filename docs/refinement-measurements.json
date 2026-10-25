@@ -1,0 +1,251 @@
+{
+  "iterations": 30,
+  "workload": "ten contradictory Boolean splits",
+  "rows": [
+    {
+      "maxSteps": 128,
+      "stepsUsed": 128,
+      "p90Ms": 0.041458000000002215,
+      "maxMs": 0.3312500000000007
+    },
+    {
+      "maxSteps": 512,
+      "stepsUsed": 512,
+      "p90Ms": 0.05766700000000213,
+      "maxMs": 0.1999999999999993
+    },
+    {
+      "maxSteps": 2048,
+      "stepsUsed": 2048,
+      "p90Ms": 0.087333000000001,
+      "maxMs": 0.1287079999999996
+    },
+    {
+      "maxSteps": 8192,
+      "stepsUsed": 8192,
+      "p90Ms": 0.31537499999999596,
+      "maxMs": 0.3596250000000012
+    },
+    {
+      "maxSteps": 32768,
+      "stepsUsed": 32768,
+      "p90Ms": 0.8370000000000033,
+      "maxMs": 0.8887080000000012
+    },
+    {
+      "maxSteps": 100000,
+      "stepsUsed": 100000,
+      "p90Ms": 2.5084169999999943,
+      "maxMs": 2.6342910000000046
+    }
+  ],
+  "compiler": {
+    "functions": 200,
+    "updates": 30,
+    "p90Ms": 5.839915999999988,
+    "maxMs": 15.316834
+  },
+  "editor": {
+    "labels": {
+      "typed-arrow-program-update": "Program.update for n typed local arrows in one entry block",
+      "signature-help-local-alias-query": "signatureHelpAt at last(1) after n chained local aliases"
+    },
+    "baselines2000P90Ms": {
+      "typed-arrow-program-update": 210.41,
+      "signature-help-local-alias-query": 127.21
+    },
+    "sampleCount": 7,
+    "p90Method": "maximum of seven sorted samples",
+    "smallCheck": {
+      "typedDiagnostics": 0,
+      "aliasDiagnostics": 0,
+      "aliasResults": 7
+    },
+    "measurements": [
+      {
+        "label": "typed-arrow-program-update",
+        "count": 100,
+        "sortedSamplesMs": [
+          1.792624999999994,
+          2.1861670000000046,
+          2.214708999999999,
+          2.4294999999999973,
+          2.5751670000000004,
+          2.616583999999996,
+          4.593042000000004
+        ],
+        "p90Ms": 4.593042000000004,
+        "diagnosticCounts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "label": "signature-help-local-alias-query",
+        "count": 100,
+        "sortedSamplesMs": [
+          0.06650000000000489,
+          0.06704200000000071,
+          0.07087500000000091,
+          0.0794169999999994,
+          0.07995799999999775,
+          0.08666599999999391,
+          0.11237499999999301
+        ],
+        "p90Ms": 0.11237499999999301,
+        "diagnosticCounts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "label": "typed-arrow-program-update",
+        "count": 500,
+        "sortedSamplesMs": [
+          11.312541999999993,
+          11.441208000000003,
+          11.845459000000005,
+          12.101624999999999,
+          13.214917,
+          13.423999999999992,
+          14.052875000000007
+        ],
+        "p90Ms": 14.052875000000007,
+        "diagnosticCounts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "label": "signature-help-local-alias-query",
+        "count": 500,
+        "sortedSamplesMs": [
+          0.1262919999999781,
+          0.12699999999998113,
+          0.12945799999999963,
+          0.13008300000001327,
+          0.135832999999991,
+          0.13595800000001645,
+          0.1529999999999916
+        ],
+        "p90Ms": 0.1529999999999916,
+        "diagnosticCounts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "label": "typed-arrow-program-update",
+        "count": 1000,
+        "sortedSamplesMs": [
+          37.971833000000004,
+          38.60149999999999,
+          39.02016699999999,
+          39.2535,
+          39.38104199999998,
+          40.357583999999974,
+          42.38941699999998
+        ],
+        "p90Ms": 42.38941699999998,
+        "diagnosticCounts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "label": "signature-help-local-alias-query",
+        "count": 1000,
+        "sortedSamplesMs": [
+          0.2795419999999922,
+          0.29154199999999264,
+          0.30812499999996135,
+          0.3902919999999881,
+          0.40445899999997437,
+          0.4438339999999812,
+          0.4963329999999928
+        ],
+        "p90Ms": 0.4963329999999928,
+        "diagnosticCounts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "label": "typed-arrow-program-update",
+        "count": 2000,
+        "sortedSamplesMs": [
+          130.9889169999999,
+          131.87866599999995,
+          132.75241699999992,
+          132.81608300000005,
+          132.874958,
+          135.37958400000002,
+          143.547416
+        ],
+        "p90Ms": 143.547416,
+        "diagnosticCounts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "label": "signature-help-local-alias-query",
+        "count": 2000,
+        "sortedSamplesMs": [
+          0.4957919999999376,
+          0.5039999999999054,
+          0.5097919999998339,
+          0.5269169999999122,
+          0.534541999999874,
+          0.5612499999999727,
+          0.5836249999999836
+        ],
+        "p90Ms": 0.5836249999999836,
+        "diagnosticCounts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    ]
+  }
+}
