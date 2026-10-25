@@ -15,7 +15,8 @@ import { memoryIo } from "./cli_helpers.ts";
 const emitted: EmittedModule = {
   module: "m",
   path: "m.ts",
-  text: "export {};\n",
+  text:
+    "// Generated from m.eff by the Effektive compiler. Do not edit.\nexport {};\n",
   spans: [],
   hostAssertions: [],
 };
@@ -233,4 +234,88 @@ Deno.test("generationSource stops after a lowering failure and keeps diagnostics
       error.tag === "diagnostics" ? { kind: "skip" } : { kind: "lower", error },
     );
   }
+});
+
+const OLD_HEADER =
+  "// Generated from m.eff by the Effektive compiler. Do not edit.";
+
+function writeOver(files: Record<string, string>) {
+  const io = memoryIo(files);
+  const output = writeGenerated(
+    io.io.fs,
+    "/project",
+    source(ready),
+    ["m"],
+    true,
+  );
+  return { io, output };
+}
+
+Deno.test("writeGenerated keeps a handwritten .ts file, writes no map, and fails", () => {
+  const { io, output } = writeOver({
+    "/project/m.ts": "export const mine = 1;\n",
+  });
+  assertEquals(io.files.get("/project/m.ts"), "export const mine = 1;\n");
+  assertEquals(io.files.has("/project/m.ts.map"), false);
+  assertEquals(output.notes, [
+    "error: cannot write m.ts: the file exists and is not generated from m.eff. Move or delete it.",
+  ]);
+  assert(output.failed);
+  assertEquals(output.written, []);
+  assertEquals(output.generated, []);
+  assertEquals(output.tables.size, 0);
+});
+
+Deno.test("writeGenerated replaces a file that has the header of the same source", () => {
+  const { io, output } = writeOver({
+    "/project/m.ts": `${OLD_HEADER}\nexport const old = 1;\n`,
+  });
+  assertEquals(io.files.get("/project/m.ts"), emitted.text);
+  assert(io.files.has("/project/m.ts.map"));
+  assertEquals(output.written, ["m.ts", "m.ts.map"]);
+  assertEquals(output.generated, ["m.ts"]);
+  assert(!output.failed);
+});
+
+Deno.test("writeGenerated keeps a file that has the header of another source", () => {
+  const other =
+    "// Generated from n.eff by the Effektive compiler. Do not edit.\n";
+  const { io, output } = writeOver({ "/project/m.ts": other });
+  assertEquals(io.files.get("/project/m.ts"), other);
+  assertEquals(io.files.has("/project/m.ts.map"), false);
+  assert(output.failed);
+});
+
+Deno.test("writeGenerated replaces a generated file with CRLF line ends", () => {
+  const { io, output } = writeOver({
+    "/project/m.ts": `${OLD_HEADER}\r\nexport const old = 1;\r\n`,
+  });
+  assertEquals(io.files.get("/project/m.ts"), emitted.text);
+  assert(!output.failed);
+});
+
+Deno.test("writeGenerated writes a missing file and its map", () => {
+  const { io, output } = writeOver({});
+  assertEquals(io.files.get("/project/m.ts"), emitted.text);
+  assertEquals(output.written, ["m.ts", "m.ts.map"]);
+  assert(!output.failed);
+});
+
+Deno.test("writeGenerated writes nothing when the .ts file cannot be read", () => {
+  const io = memoryIo({});
+  const fs = {
+    ...io.io.fs,
+    readText: (path: string) =>
+      path === "/project/m.ts"
+        ? {
+          ok: false as const,
+          error: { tag: "unreadable" as const, path, message: "io error" },
+        }
+        : io.io.fs.readText(path),
+  };
+  const output = writeGenerated(fs, "/project", source(ready), ["m"], true);
+  assertEquals(output.notes, ["error: cannot read m.ts: io error"]);
+  assert(output.failed);
+  assertEquals(io.files.size, 0);
+  assertEquals(output.generated, []);
 });

@@ -5,6 +5,7 @@
 import {
   compareText,
   CONFIG_FILE,
+  generatedSourceOf,
   joinPath,
   type Result,
 } from "../core/mod.ts";
@@ -107,8 +108,7 @@ export function readTargetInputs(
     ok: true,
     value: new Map(
       [...read.value].filter(([, text]) =>
-        !/^\/\/ Generated from .+\.effi? by the Effektive compiler\. Do not edit\./
-          .test(text)
+        generatedSourceOf(text) === undefined
       ),
     ),
   };

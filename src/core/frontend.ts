@@ -42,12 +42,13 @@ export type { LowerError } from "./lower.ts";
 export { serializeModule } from "./serialize.ts";
 export { validateProject } from "./validate_project.ts";
 // The project file and the source host.
+export { CONFIG_FILE, describeConfigError } from "./project.ts";
 export {
-  CONFIG_FILE,
-  describeConfigError,
+  generatedHeader,
   generatedPathOf,
+  generatedSourceOf,
   joinPath,
-} from "./project.ts";
+} from "./paths.ts";
 export type { ConfigError, Project, ProjectConfig } from "./project.ts";
 export { lineIndexOf, lineStarts, memoryHost, positionOf } from "./source.ts";
 export type { ReadError, Result, SourceEdit, SourceHost } from "./source.ts";

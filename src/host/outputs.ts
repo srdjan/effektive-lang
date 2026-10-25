@@ -5,6 +5,7 @@
 import {
   type Diagnostic,
   generatedPathOf,
+  generatedSourceOf,
   joinPath,
   type LowerError,
   type Revision,
@@ -122,13 +123,36 @@ export function writeGenerated(
     }
     const { emitted, table, map } = output;
     if (write) {
+      // The `.ts` file decides for the pair. A file that this source did not
+      // generate stays, with its map unwritten and the module left out.
+      const owner = generatedSourceOf(emitted.text);
+      const existing = fs.readText(joinPath(root, emitted.path));
+      if (!existing.ok && existing.error.tag === "unreadable") {
+        notes.push(
+          `error: cannot read ${emitted.path}: ${existing.error.message}`,
+        );
+        failed = true;
+        continue;
+      }
+      if (
+        existing.ok && existing.value !== emitted.text &&
+        (owner === undefined || generatedSourceOf(existing.value) !== owner)
+      ) {
+        notes.push(
+          `error: cannot write ${emitted.path}: the file exists and is not generated from ${
+            owner ?? name
+          }. Move or delete it.`,
+        );
+        failed = true;
+        continue;
+      }
       const outputs: [string, string][] = [
         [emitted.path, emitted.text],
         [`${emitted.path}.map`, serializeSourceMap(map)],
       ];
       for (const [path, text] of outputs) {
         const full = joinPath(root, path);
-        const old = fs.readText(full);
+        const old = path === emitted.path ? existing : fs.readText(full);
         if (old.ok && old.value === text) continue;
         const result = fs.writeText(full, text);
         if (result.ok) {
@@ -143,11 +167,6 @@ export function writeGenerated(
     tables.set(emitted.path, table);
   }
   return { written, generated, tables, notes, failed };
-}
-
-/** The first line that the emitter writes for a source file. Keep it equal to `emit.ts`. */
-function generatedHeader(source: string): string {
-  return `// Generated from ${source} by the Effektive compiler. Do not edit.`;
 }
 
 /**
@@ -176,7 +195,7 @@ export function removeStaleOutputs(
         }
         continue;
       }
-      if (read.value.split("\n", 1)[0] !== generatedHeader(source)) continue;
+      if (generatedSourceOf(read.value) !== source) continue;
       // The map goes first. When it fails, the `.ts` file keeps the header that
       // proves ownership, so a later call can retry. A missing file counts as removed.
       for (const target of [`${path}.map`, path]) {

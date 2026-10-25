@@ -36,11 +36,11 @@ import { lowerProject } from "../src/core/lower.ts";
 import { parse } from "../src/core/parse.ts";
 import {
   type FileParser,
-  joinPath,
   loadProject,
   type ParsedFile,
   parseFileFresh,
 } from "../src/core/project.ts";
+import { joinPath } from "../src/core/paths.ts";
 import { resolveProject } from "../src/core/resolve.ts";
 import { memoryHost, type Result } from "../src/core/source.ts";
 import { validateProject } from "../src/core/validate_project.ts";

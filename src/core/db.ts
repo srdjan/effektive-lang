@@ -54,13 +54,13 @@ import { type LowerError, lowerModule } from "./lower.ts";
 import {
   type ConfigError,
   type FileParser,
-  joinPath,
   type ModuleInfo,
   type ParsedFile,
   parseFileFresh,
   type Project,
   type ProjectConfig,
 } from "./project.ts";
+import { joinPath } from "./paths.ts";
 import type { ModuleResolution } from "./resolve.ts";
 import { memoryHost, type Result } from "./source.ts";
 import { canonicalJson, type TypeReader, TypeTable } from "./types.ts";

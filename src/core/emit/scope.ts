@@ -22,12 +22,8 @@ import {
   nameOfId as coreNameOfId,
   serviceOfCapability as coreServiceOfCapability,
 } from "../ids.ts";
-import {
-  generatedPathOf,
-  moduleNameOf,
-  normalizeRelative,
-  type ProjectConfig,
-} from "../project.ts";
+import { generatedPathOf, moduleNameOf, normalizeRelative } from "../paths.ts";
+import type { ProjectConfig } from "../project.ts";
 import { compareText } from "../util.ts";
 import { collectBinderNames } from "./walk.ts";
 

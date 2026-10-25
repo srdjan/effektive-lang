@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The build no longer overwrites a `.ts` file that it did not generate. It
+  reports an error and leaves the file and its map unwritten. Files from
+  versions before the rename to Effektive carry another header and are now
+  refused. Delete them once.
 - `deno.json` is the only source of the release version. `deno task package`
   writes it into the packaged extension manifest. The VSIX file is now
   `dist/effektive-vscode.vsix`, with no version in its name.

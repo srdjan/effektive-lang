@@ -4,6 +4,7 @@ import { fieldHelperDeclarations } from "./fields.ts";
 // the project configuration. It is synchronous and pure: the caller writes files.
 
 import type { Declaration, ModuleIR, Result, TypeDecl } from "../ir.ts";
+import { generatedHeader } from "../paths.ts";
 import type { ProjectConfig } from "../project.ts";
 import type { Span } from "../ir.ts";
 import {
@@ -166,8 +167,7 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
   for (const group of scope.moduleImports()) imports.push(importLine(group));
   for (const group of scope.hostImports()) imports.push(importLine(group));
 
-  const header: Doc =
-    `// Generated from ${scope.source} by the Effektive compiler. Do not edit.`;
+  const header: Doc = generatedHeader(scope.source);
   const declarationDocs = [...typeDocs, ...functionDocs, ...constantDocs];
   // A companion module without a declaration would not be a module without this line.
   const moduleMarker: Doc[] =

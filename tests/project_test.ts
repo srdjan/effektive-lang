@@ -4,13 +4,15 @@ import { assert, assertEquals } from "@std/assert";
 import { memoryHost } from "../src/core/source.ts";
 import {
   describeConfigError,
-  joinPath,
   loadProject,
-  moduleNameOf,
-  normalizeRelative,
   parseConfig,
   type Project,
 } from "../src/core/project.ts";
+import {
+  joinPath,
+  moduleNameOf,
+  normalizeRelative,
+} from "../src/core/paths.ts";
 import { diskHost, listEffFiles } from "./helpers.ts";
 
 function load(

@@ -9,6 +9,7 @@ import {
 } from "./diagnostics.ts";
 import { buildIndex, type FileIndex, type ImportEntry } from "./index.ts";
 import { stronglyConnectedComponents } from "./modes.ts";
+import { joinPath, moduleNameOf, normalizeRelative } from "./paths.ts";
 import { parse, type ParseResult } from "./parse.ts";
 import type { ReadError, Result, SourceHost, Span } from "./source.ts";
 import type { FileMode, SyntaxTree } from "./syntax.ts";
@@ -18,47 +19,9 @@ export const CONFIG_FILE = "effektive.json";
 
 // ------------------------------------------------------------------ paths
 
-/** Joins a root and a root-relative path. An empty root or "." gives the path itself. */
-export function joinPath(root: string, relative: string): string {
-  if (root === "" || root === ".") return relative;
-  return `${root.replace(/\/+$/, "")}/${relative}`;
-}
-
-/**
- * Normalizes a relative path with POSIX separators. Removes `.` segments and
- * resolves `..` segments. Returns undefined when the path is absolute, empty, or
- * leaves the root.
- */
-export function normalizeRelative(path: string): string | undefined {
-  if (path.startsWith("/") || path.includes("\\")) return undefined;
-  const parts: string[] = [];
-  for (const part of path.split("/")) {
-    if (part === "" || part === ".") continue;
-    if (part === "..") {
-      if (parts.length === 0) return undefined;
-      parts.pop();
-    } else {
-      parts.push(part);
-    }
-  }
-  return parts.length === 0 ? undefined : parts.join("/");
-}
-
 function dirName(path: string): string {
   const slash = path.lastIndexOf("/");
   return slash < 0 ? "" : path.slice(0, slash);
-}
-
-/** The module name of a file: its root-relative path without `.eff` or `.effi`. */
-export function moduleNameOf(path: string): string {
-  if (path.endsWith(".effi")) return path.slice(0, -5);
-  if (path.endsWith(".eff")) return path.slice(0, -4);
-  return path;
-}
-
-/** The generated file of a source path: `x.eff` gives `x.ts`, `x.effi` gives `x.effi.ts`. */
-export function generatedPathOf(path: string): string {
-  return path.endsWith(".effi") ? `${path}.ts` : `${moduleNameOf(path)}.ts`;
 }
 
 // ------------------------------------------------------------------ configuration
