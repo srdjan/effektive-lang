@@ -437,17 +437,10 @@ export class DeclarationEmitter {
     let value: Doc;
     if (fields !== undefined) {
       value = [`${schema}.TaggedStruct`, this.tagArguments(d.id, fields)];
-    } else if (d.definition.kind === "nominal") {
-      value = member(
-        schemaDoc(this.scope, d.definition.base),
-        "pipe",
-        callWith(
-          "",
-          callWith(`${schema}.brand`, JSON.stringify(tokenOfId(d.id))),
-        ),
-      );
-    } else {
+    } else if (d.definition.kind === "alias") {
       value = schemaDoc(this.scope, d.definition.type);
+    } else {
+      throw internal(`the nominal type ${d.name} has no emitted form`);
     }
     return [
       assignment([keyword, "const ", d.name], value),

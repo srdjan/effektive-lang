@@ -12,7 +12,6 @@ import {
 
 import type {
   Arm,
-  DeclarationId,
   ErrorId,
   Expr,
   Field,
@@ -1064,18 +1063,6 @@ export class ExprEmitter implements ExprCore {
         inner: [],
         top: undefined,
       };
-    const brand = e.operator === "+" || e.operator === "-"
-      ? this.numericBrand(e.type)
-      : undefined;
-    if (brand !== undefined) {
-      // The sum of two brand values is a plain number until `make` brands it.
-      const body = emitted(runDoc(run, 1), prec);
-      return emitted(member(
-        this.scope.nameOf(brand.id),
-        "make",
-        callArguments([brand.integral ? this.intCall(body) : body]),
-      ));
-    }
     const arithmetic = e.operator === "+" || e.operator === "-" ||
       e.operator === "*";
     if (arithmetic && isIntType(this.scope.resolve(e.type))) {
@@ -1085,25 +1072,6 @@ export class ExprEmitter implements ExprCore {
       brace: leadingBrace(left, prec),
       run,
     });
-  }
-
-  /** The brand id and base kind when the type is a brand of `int` or `number`. */
-  private numericBrand(
-    type: Type,
-  ): { readonly id: DeclarationId; readonly integral: boolean } | undefined {
-    const resolved = this.scope.resolve(type);
-    if (resolved.kind !== "named") return undefined;
-    const declaration = this.scope.typeLevelDeclaration(resolved.id);
-    if (
-      declaration?.kind !== "type" ||
-      declaration.definition.kind !== "nominal" ||
-      declaration.definition.tagged === true
-    ) return undefined;
-    const base = this.scope.resolve(declaration.definition.base);
-    if (isIntType(base)) return { id: resolved.id, integral: true };
-    return base.kind === "primitive" && base.name === "number"
-      ? { id: resolved.id, integral: false }
-      : undefined;
   }
 
   private intCall(body: Emitted): Emitted {
