@@ -43,6 +43,14 @@ function collectMatches(value: unknown): string[] {
   return own.concat(Object.values(value).flatMap(collectMatches));
 }
 
+Deno.test("the extension and its lock file carry the compiler version", () => {
+  const version = field(readJson("../../deno.json"), "version");
+  assertEquals(field(readJson("package.json"), "version"), version);
+  const lock = readJson("package-lock.json");
+  assertEquals(field(lock, "version"), version);
+  assertEquals(field(field(field(lock, "packages"), ""), "version"), version);
+});
+
 Deno.test("package.json contributes the effektive language and grammar", () => {
   const pkg = readJson("package.json");
   assertEquals(pkg.name, "effektive-vscode");
