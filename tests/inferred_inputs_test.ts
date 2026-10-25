@@ -2,9 +2,11 @@ import { assert, assertEquals } from "@std/assert";
 import {
   type CheckedProject,
   checkProject,
-} from "../src/core/check_project.ts";
+  lowerProject,
+  memoryHost,
+  validateProject,
+} from "../src/core/frontend.ts";
 import type { ValueId } from "../src/core/ir.ts";
-import { memoryHost } from "../src/core/source.ts";
 import { showType } from "../src/core/type_show.ts";
 
 function checkFiles(
@@ -34,8 +36,27 @@ function parameterTypes(project: CheckedProject, module: string, name: string) {
   );
 }
 
+function functionType(project: CheckedProject, module: string, name: string) {
+  const body = project.modules.get(module)?.functions.get(
+    `value:${module}#${name}` as ValueId,
+  );
+  assert(body !== undefined, name);
+  return showType(project.table, body.type);
+}
+
 function codes(project: CheckedProject): string[] {
   return project.diagnostics.map((diagnostic) => diagnostic.code);
+}
+
+function assertLoweredValid(project: CheckedProject): void {
+  const lowered = lowerProject(project);
+  for (const result of lowered.values()) {
+    assert(result.ok, JSON.stringify(result));
+  }
+  for (
+    const diagnostics of validateProject(project.analysis.project, lowered)
+      .values()
+  ) assertEquals(diagnostics, []);
 }
 
 Deno.test("infers nested closed input records through simple aliases", () => {
@@ -84,6 +105,71 @@ const annotated = (input): Int => { const value: Int = input; value }
   assertEquals(codes(project), []);
   assertEquals(parameterTypes(project, "m", "arithmetic"), ["Int"]);
   assertEquals(parameterTypes(project, "m", "annotated"), ["Int"]);
+});
+
+Deno.test("retains local function annotations for later calls and aliases", () => {
+  const project = checkText(`
+type Int = int
+const omitted = (input): Int => {
+  const fn: (n: Int) => Int = input
+  const alias = fn
+  alias(1)
+}
+const explicit = (input: unknown): Int => {
+  const fn: (n: Int) => Int = input
+  fn(1)
+}
+`);
+  assertEquals(codes(project), []);
+  const omitted = parameterTypes(project, "m", "omitted");
+  assertEquals(omitted, ["(Int) => Int"]);
+  assertEquals(
+    omitted,
+    parameterTypes(project, "m", "explicit"),
+  );
+  assertLoweredValid(project);
+});
+
+Deno.test("retains local record annotations for later field uses", () => {
+  const project = checkText(`
+type Int = int
+type Input = { value: Int }
+const read = (input) => {
+  const record: Input = input
+  record.value
+}
+`);
+  assertEquals(codes(project), []);
+  assertEquals(parameterTypes(project, "m", "read"), ["Input"]);
+  assertEquals(functionType(project, "m", "read"), "pure (Input) => Int");
+  assertLoweredValid(project);
+});
+
+Deno.test("checks an incompatible annotated initializer after collecting its input demand", () => {
+  const project = checkText(`
+type Int = int
+const consume = (value: Int): Int => value
+const bad = (input): Int => {
+  const fn: (n: Int) => Int = consume(input)
+  1
+}
+`);
+  assertEquals(codes(project), ["type-mismatch/003"]);
+  assertEquals(parameterTypes(project, "m", "bad"), ["Int"]);
+});
+
+Deno.test("keeps local annotation inference independent of callers", () => {
+  const project = checkText(`
+type Int = int
+type Text = string
+const inferred = (input): Int => {
+  const fn: (n: Int) => Int = input
+  fn(1)
+}
+const caller = (callback: (text: Text) => Int): Int => inferred(callback)
+`);
+  assertEquals(codes(project), ["type-mismatch/003"]);
+  assertEquals(parameterTypes(project, "m", "inferred"), ["(Int) => Int"]);
 });
 
 Deno.test("infers through forward calls and function aliases", () => {

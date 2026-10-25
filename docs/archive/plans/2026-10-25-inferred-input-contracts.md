@@ -128,3 +128,28 @@ Large expression visitors and duplicated proof limits remain maintenance risks.
 The solver step allowance does not bound allocation during Boolean splits.
 The independent validator uses a fresh allowance for each declaration. It has no module-wide proof allowance.
 The acceptance gate establishes only the tested behavior.
+
+## Review correction worklog
+
+The user requested fixes for three reproduced review findings.
+The working tree was clean before this correction batch.
+Integer proof facts must exclude Float values in both implementations.
+Checked records must retain raw components until entry validation.
+Local annotations must remain authoritative while their initializers collect input demands.
+The focused raw-record test reproduced diagnostic `type-mismatch/013` before its fix.
+The delegated annotation fix and integer-proof fix passed their focused tests.
+The main agent owns integration, complete gates, separate local commits, and the website evidence update.
+
+The integer fix excludes non-integer paths in both proof implementations.
+Tests cover Float parameters, aliases, nested fields, unions, arithmetic, and mutated IR certificates.
+The raw-record fix defers predicates only when a predicate input has unknown type.
+An unrelated unknown field cannot remove a static predicate obligation.
+The independent validator rejects both changed values and erased proof annotations.
+Conditional checked records and nested runtime exactness now have dedicated coverage.
+Written local annotations remain authoritative after inference visits their initializers.
+Tests also retain incompatible-initializer diagnostics and caller-independent requirements.
+
+The full gate passed 2,239 fast tests and 212 subprocess tests after these corrections.
+The website passed 57 strict target units and 11 serving tests.
+The main agent reviewed each worker diff and reran the focused compiler and runtime checks.
+No push or browser rendering check ran during this correction batch.

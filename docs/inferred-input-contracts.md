@@ -15,6 +15,7 @@ Application code needs no schema value or decoding call.
 
 Known call parameters, constructors, local annotations, expected function types, and explicit results supply requirements.
 Required paths form nested closed records. Simple constant aliases retain their input paths.
+Local inference keeps each written binding annotation while its initializer collects input requirements.
 Requirements from separate branches combine into one closed record.
 Conflicting requirements report both uses. Operators alone do not select numeric types or identities.
 Unconstrained parameters remain `unknown`.

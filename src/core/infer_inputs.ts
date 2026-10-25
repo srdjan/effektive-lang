@@ -612,9 +612,10 @@ class InputEngine {
     const annotation = typeNode === undefined
       ? undefined
       : this.lowerer.lower(typeNode).ref;
-    const type = init === undefined
-      ? annotation
-      : this.visit(init, annotation) ?? annotation;
+    const inferred = init === undefined
+      ? undefined
+      : this.visit(init, annotation);
+    const type = annotation ?? inferred;
     if (id === undefined) return;
     if (type !== undefined) this.localTypes.set(id, type);
     if (init !== undefined) {
