@@ -103,9 +103,10 @@ layout, the error fixture convention, and the format and lint scope.
 ## Status
 
 All parts of the Phase A plan, the language server plan, and the playground plan
-exist. The three application gates pass with existing language forms. A fourth
-application, order-lifecycle, is a witness for types with identity and is not a
-gate. [docs/status.md](docs/status.md) gives the project status, the application
+exist. The three application gates pass with existing language forms. Two more
+applications are witnesses and not gates: order-lifecycle for types with
+identity, and portable-publisher for portability.
+[docs/status.md](docs/status.md) gives the project status, the application
 stopping rule, the open items, and the deferred gaps.
 
 ## Contributing
