@@ -24,13 +24,14 @@ import { typeToIr } from "./type_ir.ts";
 import { showType } from "./type_show.ts";
 import { isErrorId } from "./ids.ts";
 import { isTypeKind, kidsOf, literalOf, nameTextOf } from "./syntax_queries.ts";
-import type {
-  Lowered,
-  ParameterSignature,
-  SignatureType,
-  TypeEnv,
+import {
+  type Lowered,
+  loweredFunction,
+  type ParameterSignature,
+  referencedIds,
+  type SignatureType,
+  type TypeEnv,
 } from "./signatures.ts";
-import { loweredFunction, referencedIds } from "./signatures.ts";
 
 // ------------------------------------------------------------------ type lowering
 

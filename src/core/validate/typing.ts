@@ -77,6 +77,14 @@ export function identityBody(env: TypeEnv, id: string): Type | undefined {
     (env.identities.has(id) ? env.aliases.get(id) : undefined);
 }
 
+/** The body of a named type: an alias, a tagged record, an opaque base, or error fields. */
+function namedBody(env: TypeEnv, id: string): Type | undefined {
+  const fields = env.errors.get(id);
+  return env.aliases.get(id) ?? env.taggedRecords.get(id) ??
+    env.opaqueBases.get(id) ??
+    (fields === undefined ? undefined : { kind: "record", fields });
+}
+
 /** Follows transparent aliases and stops at an alias with identity. */
 function unfoldTransparent(env: TypeEnv, type: Type): Type {
   return follow(env, type, true);
@@ -604,13 +612,7 @@ export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
       ) return false;
       if (seen.has(current.id)) return true;
       seen.add(current.id);
-      const fields = env.errors.get(current.id);
-      const body = env.aliases.get(current.id) ??
-        env.taggedRecords.get(current.id) ??
-        env.opaqueBases.get(current.id) ??
-        (fields === undefined
-          ? undefined
-          : { kind: "record" as const, fields });
+      const body = namedBody(env, current.id);
       return body !== undefined && visit(body);
     }
     switch (current.kind) {
@@ -726,13 +728,7 @@ export function foreignSealedOf(
     seen.add(current);
     if (current.kind === "named") {
       if (!ownsSealed(env, current.id)) return current.id;
-      const fields = env.errors.get(current.id);
-      const target = env.aliases.get(current.id) ??
-        env.taggedRecords.get(current.id) ??
-        env.opaqueBases.get(current.id) ??
-        (fields === undefined
-          ? undefined
-          : { kind: "record" as const, fields });
+      const target = namedBody(env, current.id);
       return target === undefined ? undefined : visit(target);
     }
     for (const child of typeChildren(current)) {

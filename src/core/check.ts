@@ -1,9 +1,9 @@
-// The declaration level of the checker (plan part A3a). It builds the
-// declarations of a module: types, errors, services, providers, and the
-// signatures of module-level consts. It reports the declaration diagnostics and
-// does not look at expression bodies. The signature model is in signatures.ts,
-// and the type lowering is in type_lower.ts. Part A3b checks the bodies in
-// check_expr.ts and drives the whole project in check_project.ts.
+// The declaration level of the checker. It builds the declarations of a module:
+// types, errors, services, providers, and the signatures of module-level consts.
+// It reports the declaration diagnostics and does not look at expression bodies.
+// The signature model is in signatures.ts, and the type lowering is in
+// type_lower.ts. check_expr.ts checks the bodies, and check_project.ts drives the
+// whole project.
 
 import type { Analysis } from "./analyze.ts";
 import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";

@@ -1,4 +1,4 @@
-// The request handlers of the language features (plan 5.6 to 5.9 and 5.11):
+// The request handlers of the language features:
 // hover, definition, document symbols, generated TypeScript, save, and stats,
 // and the editor queries: references, rename, completion, signature help,
 // semantic tokens, code actions, and inlay hints. Rename, code actions, and
