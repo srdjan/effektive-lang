@@ -1,22 +1,9 @@
-// The declaration level of the checker (plan part A3a). It lowers every type
-// syntax node to an interned type and builds the declarations of a module:
-// types, errors, services, providers, and the signatures of module-level consts.
-// It reports the declaration diagnostics. It does not look at expression
-// bodies. Part A3b checks the bodies in check_expr.ts and drives the whole
-// project in check_project.ts.
-//
-// Seams that A3b uses.
-// - `TypeLowerer` (type_lower.ts) lowers any type syntax node of a module. The
-//   body checker uses it for the annotations inside bodies.
-// - `ModuleDeclarations.values` holds one signature for each module-level const
-//   and provider. The body checker checks each body against its signature.
-// - A function signature without a written result has no result and empty
-//   sets. A set whose clause is not written (`written.fails` or `written.uses`
-//   is false) is open: the body checker infers it, and the signature holds an
-//   empty set for it.
-// - The execution mode and the open sets of a function come from a `Solved`
-//   lookup that the body checker supplies. `executionOf` and `signatureType`
-//   take the lookup and return a Result error when an entry is missing.
+// The declaration level of the checker (plan part A3a). It builds the
+// declarations of a module: types, errors, services, providers, and the
+// signatures of module-level consts. It reports the declaration diagnostics and
+// does not look at expression bodies. The signature model is in signatures.ts,
+// and the type lowering is in type_lower.ts. Part A3b checks the bodies in
+// check_expr.ts and drives the whole project in check_project.ts.
 
 import type { Analysis } from "./analyze.ts";
 import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";

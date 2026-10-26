@@ -3,6 +3,8 @@
 // and the lowering of a signature to a function type. TypeLowerer
 // and the module checker (check.ts) both build on it.
 //
+// - `ModuleDeclarations.values` holds one signature for each module-level const
+//   and provider. The body checker checks each body against its signature.
 // - A function signature without a written result has no result and empty
 //   sets. A set whose clause is not written (`written.fails` or `written.uses`
 //   is false) is open: the body checker infers it, and the signature holds an
