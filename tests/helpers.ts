@@ -1,6 +1,6 @@
 // Shared helpers for the tests. Tests may use Deno APIs; the core may not.
 
-import { assert } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 
 import {
   type Diagnostic,
@@ -20,7 +20,13 @@ import {
   type CheckedProject,
   checkProject,
 } from "../src/core/check_project.ts";
-import { emitProject, type EmittedModule } from "../src/core/typescript.ts";
+import {
+  emitProject,
+  type EmittedModule,
+  serializeSourceMap,
+  TypeScriptOutputs,
+} from "../src/core/typescript.ts";
+import { Program, serializeModule } from "../src/core/frontend.ts";
 import { lowerProject } from "../src/core/lower.ts";
 import type { Project } from "../src/core/project.ts";
 import type { ModeMap } from "../src/core/signatures.ts";
@@ -477,6 +483,35 @@ export function exampleFiles(): Record<string, string> {
     files[path] = Deno.readTextFileSync(new URL(`examples/${path}`, FIXTURES));
   }
   return files;
+}
+
+/**
+ * The entry of one corpus in fixtures/ir/examples-baseline.json: for each
+ * module in name order, the IR, emitted text, source map, and interface hash.
+ * The revision lets a test validate the IR.
+ */
+export function irSnapshot(files: Record<string, string>) {
+  const outputs = new TypeScriptOutputs();
+  const updated = new Program().update({ set: files });
+  assert(updated.ok);
+  assertEquals(updated.value.diagnostics, []);
+  const revision = updated.value;
+  const modules = [...revision.moduleNames()].sort().map((name) => {
+    const ir = revision.lowered(name);
+    const emitted = outputs.emitted(revision, name);
+    const map = outputs.sourceMap(revision, name);
+    assert(ir?.ok && emitted?.ok && map?.ok, `module ${name} fails`);
+    const text = serializeModule(ir.value);
+    assert(text.ok, `module ${name} does not serialize`);
+    return {
+      name,
+      ir: JSON.parse(text.value),
+      emitted: emitted.value,
+      map: serializeSourceMap(map.value),
+      hash: revision.interfaceHash(name),
+    };
+  });
+  return { revision, modules };
 }
 
 /** Entry files of the examples: every `.eff` file. */
