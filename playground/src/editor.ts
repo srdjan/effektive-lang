@@ -166,7 +166,7 @@ const theme: Extension = EditorView.theme({
     height: "100%",
     color: "var(--code-ink)",
     backgroundColor: "var(--code-bg)",
-    fontSize: "16px",
+    fontSize: "var(--code-size)",
   },
   "&.cm-focused": {
     outline: "3px solid var(--accent)",

@@ -14,11 +14,10 @@
   <body>
     <noscript>The Effektive playground needs JavaScript.</noscript>
     <header class="topbar">
-      <h1>Effektive playground</h1>
+      <h1>Effektive <span>playground</span></h1>
       <a class="book-link" href="https://effektive.timok.deno.net/">
         Read the book
       </a>
-      <p id="status"></p>
     </header>
     <p id="loading">Loading the playground.</p>
     <div id="error-region" class="error-region" role="alert" hidden>
@@ -28,12 +27,12 @@
     <nav id="files" aria-label="Files" hidden>
       <div id="file-tabs" role="tablist" aria-label="Files"></div>
     </nav>
-    <nav id="views" aria-label="Views" hidden></nav>
     <main id="app" hidden>
       <section id="source-region" class="region" aria-labelledby="source-title">
-        <h2 id="source-title">Source</h2>
+        <h2 id="source-title">
+          <span class="sr-only">Source </span><span id="source-file"></span>
+        </h2>
         <div id="source-pane" class="pane"></div>
-        <p id="cursor-line" class="cursor-line" aria-live="polite"></p>
       </section>
       <section
         id="problems-region"
@@ -49,7 +48,9 @@
         class="region"
         aria-labelledby="output-title"
       >
-        <h2 id="output-title">TypeScript</h2>
+        <h2 id="output-title">
+          <span class="sr-only">TypeScript </span><span id="output-file"></span>
+        </h2>
         <p id="stale-banner" class="stale-banner" hidden>
           This module has errors. This is the last good output.
         </p>
@@ -57,6 +58,12 @@
         <div id="output-pane" class="pane"></div>
       </section>
     </main>
+    <footer class="statusbar">
+      <p id="cursor-position"></p>
+      <p id="cursor-line" class="cursor-line" aria-live="polite"></p>
+      <p id="status"></p>
+    </footer>
+    <nav id="views" aria-label="Views" hidden></nav>
     <script type="module" src="app.js"></script>
   </body>
 </html>

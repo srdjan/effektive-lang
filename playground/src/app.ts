@@ -7,7 +7,11 @@
 
 import { EditorState } from "@codemirror/state";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
-import { CONFIG_FILE, errorMessage } from "../../src/core/mod.ts";
+import {
+  CONFIG_FILE,
+  errorMessage,
+  generatedPathOf,
+} from "../../src/core/mod.ts";
 import {
   createPlayground,
   type PlaygroundError,
@@ -33,6 +37,9 @@ const CURSOR_PAUSE_MS = 300;
 
 /** The width at which the wide layout starts. `app.css` uses the same value. */
 const WIDE_QUERY = "(min-width: 720px)";
+
+/** The width at which the file tabs become a vertical explorer. */
+const EXPLORER_QUERY = "(min-width: 1024px)";
 
 type ViewName = "source" | "problems" | "output";
 
@@ -146,9 +153,11 @@ function wireTablist(
     const last = tabs.length - 1;
     let next: number;
     switch (event.key) {
+      case "ArrowDown":
       case "ArrowRight":
         next = index === last ? 0 : index + 1;
         break;
+      case "ArrowUp":
       case "ArrowLeft":
         next = index === 0 ? last : index - 1;
         break;
@@ -193,7 +202,10 @@ async function main(): Promise<void> {
   const viewsNav = element("views");
   const app = element("app");
   const sourcePane = element("source-pane");
+  const cursorPosition = element("cursor-position");
   const cursorLine = element("cursor-line");
+  const sourceFile = element("source-file");
+  const outputFile = element("output-file");
   const problemsTitle = element("problems-title");
   const problemsList = element("problems");
   const noProblems = element("no-problems");
@@ -268,6 +280,7 @@ async function main(): Promise<void> {
       } else if (update.selectionSet) {
         scheduleCursorLine();
       }
+      if (update.docChanged || update.selectionSet) renderCursorPosition();
     },
   });
   for (const path of paths) {
@@ -281,7 +294,20 @@ async function main(): Promise<void> {
     parent: outputPane,
   });
 
-  // The cursor line shows the contract at the cursor, after a pause.
+  // The status bar shows the position at once and the contract after a pause.
+
+  function renderCursorPosition(): void {
+    const head = sourceView.state.selection.main.head;
+    const line = sourceView.state.doc.lineAt(head);
+    cursorPosition.textContent = `Ln ${line.number}, Col ${
+      head - line.from + 1
+    }`;
+  }
+
+  function renderFileNames(): void {
+    sourceFile.textContent = active;
+    outputFile.textContent = generatedPathOf(active);
+  }
 
   function refreshCursorLine(): void {
     const text = active.endsWith(".effi") ? "" : hoverLines(
@@ -452,6 +478,8 @@ async function main(): Promise<void> {
     if (state === undefined) throw new Error(`no state for ${path}`);
     sourceView.setState(state);
     renderFileTabs();
+    renderFileNames();
+    renderCursorPosition();
     revealActiveTab();
     renderOutput();
     showDiagnostics(sourceView, latest.diagnostics[path] ?? []);
@@ -532,7 +560,8 @@ async function main(): Promise<void> {
       const region = regions[view];
       region.hidden = false;
       region.removeAttribute("role");
-      region.removeAttribute("aria-labelledby");
+      // The heading names the region again: "Source users.eff", and so on.
+      region.setAttribute("aria-labelledby", `${view}-title`);
     }
     sourceView.requestMeasure();
     outputView.requestMeasure();
@@ -545,11 +574,23 @@ async function main(): Promise<void> {
   }
   wideQuery.addEventListener("change", applyMode);
 
+  const explorerQuery = globalThis.matchMedia(EXPLORER_QUERY);
+  function applyOrientation(): void {
+    fileTabs.setAttribute(
+      "aria-orientation",
+      explorerQuery.matches ? "vertical" : "horizontal",
+    );
+  }
+  explorerQuery.addEventListener("change", applyOrientation);
+
   // Start.
 
   status.textContent = `compiled in ${latest.elapsedMs.toFixed(1)} ms`;
   applyMode();
+  applyOrientation();
   renderFileTabs();
+  renderFileNames();
+  renderCursorPosition();
   filesNav.hidden = false;
   revealActiveTab();
   renderProblems();
