@@ -11,6 +11,7 @@ try {
       "test",
       "--allow-all",
       "--permit-no-files",
+      "--parallel",
       "tests/**/*_slow_test.ts",
       ...Deno.args,
     ],
