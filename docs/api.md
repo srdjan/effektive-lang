@@ -28,6 +28,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   check.ts       Declaration checker: type lowering, signatures, providers.
   check_expr.ts  Body checker: expressions, calls, contracts, and the prelude dispatch.
   check_patterns.ts Match patterns, bindings, and coverage through PatternContext.
+  check_refinements.ts RefinementChecker: the refinement facts of a body, the proof budget, and the proved, not-required, or failed decision of each obligation.
   check_binary.ts Pure operand rules and result types of the binary operators.
   check_builtins/ Source-checker builtin families; shared dispatch and body-table writes stay in check_expr.ts.
     context.ts     Shared argument, function, literal-field and local-use shapes, invocation effects, the shared views, and the checker operations.
@@ -46,6 +47,9 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   check_project.ts Project driver: paired declaration entries and body results, modes, interfaces, the shared per-module step, and effectText.
   tables.ts      Side tables of a body: node info and lowering facts.
   patterns.ts    Pattern domains of match subjects.
+  predicates.ts  The predicate model of refinements: terms, builders, normalization, solver limits, and proof certificates.
+  predicate_source.ts predicateFromSource: the predicate of a refinement written in source.
+  infer_inputs.ts inferFunctionInputs, inferArrowInputs, withInferredInputs: input contracts that the checker infers for non-exported functions.
   modes.ts       The mode fixed point of recursive groups.
   graph.ts       Strongly connected components of an integer graph.
   initialization.ts Eager dependency graph of module constants.
@@ -60,6 +64,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   editor_hints.ts Inlay hints for the inferred fails and uses sets of non-exported functions.
   editor_tokens.ts Semantic classifications with lexical recovery.
   editor_actions.ts Validated missing fails/uses actions from checked body effects.
+  editor_signature.ts signatureHelpAt: signature help for ordinary calls from checked callee types.
   ids.ts         Parts of a declaration identity: module, name, and method.
   util.ts        Small pure helpers of the front end and the edges: compareText, errorMessage, isRecord, and canonicalJson.
   frontend.ts    Checking, IR, and source editor queries, with no backend dependency.
@@ -80,6 +85,8 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     sets.ts        Sorted effect sets and the combine rule.
     serialization.ts Sorted sets, finite numbers, and spans against the source texts.
     report.ts      The eight area codes and the diagnostic collector.
+    predicates.ts  verifyCertificate: the independent check of a proof certificate.
+    refinements.ts RefinementValidator: the refinement obligations of a body, reconstructed from the IR. checkRefinementDeclaration checks one declared predicate.
   validate_project.ts validateProject: validates the output of lowerProject.
   emit/          The Effect-TS emitter.
     emit.ts        emitModule: the emitter of one module. emitProject is in typescript.ts.
@@ -97,6 +104,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     types.ts       The type printer and the schema printer.
     expr.ts        The expression scheme: pure, inGen, asEffect.
     decls.ts       Declarations, their order, and the export rule.
+    predicates.ts  predicateDoc: exact integer comparisons that print a refinement predicate.
     walk.ts        Traversals of the IR.
 src/cli/       The command-line tool. Deno APIs stay here, in src/host/, src/lsp/main.ts, bench/, playground/build.ts, playground/serve.ts, scripts/, and tests/.
   main.ts        main(args, io) returns the exit code, and the watch loop over an injected event source. The last lines wire the real io.
@@ -126,7 +134,17 @@ src/lsp/       The language server. See "Language server".
   methods.ts     The names of the custom methods, shared with the client.
 editors/vscode/ The VS Code client. See "VS Code client". Plain JavaScript client; release packaging bundles the server.
 playground/    The browser playground. See "Playground". The page is in src/, the build in build.ts.
-scripts/       Scripts that the tasks run. golden_update.ts writes the golden files.
+  build.ts       build(outDir): bundles the page, copies the static files, and writes examples.json.
+  serve.ts       Builds the playground and serves the output on 127.0.0.1:8790.
+  src/           The page script and its parts.
+    app.ts         The page: file tabs, regions, Problems list, TypeScript pane, and URL hash.
+    compile.ts     The compile facade: one Program across edits, turned into plain data for the page.
+    editor.ts      The CodeMirror extensions of the source editor and of the TypeScript pane.
+    highlight.ts   Syntax highlighting ranges from the core lexer.
+    model.ts       The page logic without a DOM: tabs, Problems, error counts, and hover texts.
+scripts/       Scripts that the tasks run.
+               golden_update.ts writes the golden files.
+               test_slow.ts runs the slow tests with a fresh DENO_DIR.
                validate_fixtures.ts writes the mutation fixtures.
                behavior_capture.ts records the hashed compiler behavior of a git revision.
                lex_snapshot.ts writes the lexer snapshot of the tracked .eff and .effi files in fixtures/lex.
@@ -139,7 +157,7 @@ tests/         Deno tests and test helpers.
 fixtures/      Input files for the tests.
   examples/      The five example programs, the host interface file, and users-live.ts.
   golden/        The expected emitted TypeScript of each example.
-  emit/forms/    Extra programs for the emitter tests. They are not golden examples.
+  emit/          Inputs of the emitter tests: schema-*.eff and contextual-options.eff files, and the project directories forms/, groups/, host-checks/, host-companion/, nominal-operators/, schedules/, scopes/, sinks/, traverse/, and unmatched/. Only traverse/ has a golden file.
   host-boundary/ A wrong host module, captured deno check output, and manifest.json.
   ir/example/    The log example and its IR fixture.
   applications/  The five application witnesses: service-workflow, scheduled-worker, stream-processor, order-lifecycle, and portable-publisher. The first three are the gate applications. order-lifecycle is a witness for types with identity. portable-publisher is an exploratory portability witness.
@@ -163,6 +181,7 @@ bench/         The measurement harnesses of parts A8 and L5. They are not part o
   m5_variants.ts The optional M5 variants: tsc, ts.LanguageService, and tsgo.
   m6.ts          M6: the noise floor report.
   m7.ts          M7: the time of a save round through the real language server.
+  refinement_limits.ts The cost of a refinement entailment query at each solver step limit.
   stats.ts       Quantiles, the noise floor, the checksum, and plain text tables.
 docs/          Design, plans, and rejected.md, the ledger of rejected ideas.
 ```
