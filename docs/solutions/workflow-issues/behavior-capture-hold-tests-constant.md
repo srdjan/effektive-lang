@@ -13,7 +13,7 @@ applies_when:
   - "A capture shows one new or one missing program record and nothing else"
   - "A refactor changes the CLI or the language server output, which the capture does not record"
 tags: [behavior-capture, oracle, refactor, git-commit-tree, byte-identity, rederive, run-variance, characterization-test]
-last_updated: 2026-10-22
+last_updated: 2026-10-26
 ---
 
 # Hold the test set constant to read behavior:capture when a change also moves tests
@@ -132,32 +132,17 @@ explain defeats that purpose.
 
 ## Read-only subprocesses in an instrumented tree
 
-The cold-chain test starts its child with `--allow-read` only. The ordinary
-suite passes, but an instrumented baseline fails when the child cannot append
-to `capture.records`. This is a capture permission failure, not evidence that
-the candidate changed compiler behavior. A focused baseline probe reproduced
-the failure and passed after granting write access to that one record file.
+The cold-chain test starts its child with `--allow-read` only. In an
+instrumented tree, the child must also append to `capture.records`, or the
+capture fails although the compiler behavior did not change. Since RB3 of the
+reset plan, `captureRevision` in `scripts/behavior_capture.ts` grants that
+child write access to the record file of the instrumented tree. It fails
+visibly when the permission anchor in `tests/parse_chain_slow_test.ts`
+changes. The repository test keeps its read-only permission.
 
-For that comparison, apply the following verification-only overlay to both
-exported test trees after instrumentation. Here `tree` and `records` are the
-paths already created by `captureRevision`:
-
-```ts
-const path = `${tree}/tests/parse_chain_slow_test.ts`;
-const text = Deno.readTextFileSync(path);
-const anchor = '"--allow-read",';
-if (text.split(anchor).length !== 2) throw new Error("permission anchor changed");
-Deno.writeTextFileSync(
-  path,
-  text.replace(anchor, anchor + "\n      " + JSON.stringify(`--allow-write=${records}`) + ","),
-);
-```
-
-Use the exact record path from the hook. Keep the repository test permissions,
-test inputs and assertions unchanged. Do not skip the cold test or suppress a
-failed record write. Record the overlay with the comparison results so a later
-reviewer can distinguish the standard capture command from this instrumented
-verification run.
+The capture runs also leave out `tests/docs_test.ts`. That test checks the
+documents, not compiler behavior, and it rejects the hook files that the
+instrumentation adds under `src/`.
 
 ## When to Apply
 

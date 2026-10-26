@@ -204,13 +204,14 @@ const ROOT = new URL("..", import.meta.url).pathname;
 /**
  * The test runs of a capture. The runs leave out the capture tests: they read
  * the hook anchors, which the instrumented tree no longer has, and they would
- * run the capture again.
+ * run the capture again. They also leave out the documentation test, which
+ * checks no compiler behavior and rejects the added hook files.
  */
 const CAPTURE_TESTS: readonly (readonly string[])[] = [
   [
     "test",
     "--allow-all",
-    "--ignore=**/*_slow_test.ts,tests/behavior_capture*_test.ts",
+    "--ignore=**/*_slow_test.ts,tests/behavior_capture*_test.ts,tests/docs_test.ts",
     "tests/",
   ],
   [
@@ -273,6 +274,21 @@ async function captureRevision(
     for (const [path, text] of files.value) {
       Deno.writeTextFileSync(`${tree}/${path}`, text);
     }
+    // The cold-chain test starts a child with read permission only. In the
+    // instrumented tree that child must also append to the record file.
+    const chain = `${tree}/tests/parse_chain_slow_test.ts`;
+    const chainText = Deno.readTextFileSync(chain);
+    const anchor = '"--allow-read",';
+    if (chainText.split(anchor).length !== 2) {
+      return { ok: false, error: `permission anchor not found in ${chain}` };
+    }
+    Deno.writeTextFileSync(
+      chain,
+      chainText.replace(
+        anchor,
+        `${anchor} ${JSON.stringify(`--allow-write=${records}`)},`,
+      ),
+    );
     const deno = Deno.execPath();
     for (const args of CAPTURE_TESTS) {
       if (!await run(deno, args, tree, { DENO_DIR: denoDir })) {
