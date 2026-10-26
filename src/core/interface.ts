@@ -24,7 +24,7 @@ import {
   referencedIds,
   signatureType,
   type TypeGraph,
-} from "./check.ts";
+} from "./signatures.ts";
 import { fnv1a64 } from "./hash.ts";
 import type {
   DeclarationId,

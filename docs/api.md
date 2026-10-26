@@ -25,7 +25,8 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   types.ts       Interned types and compatibility.
   type_ir.ts     Conversion between IR type trees and interned types.
   type_show.ts   Readable forms of types for messages.
-  check.ts       Declaration checker: type lowering, signatures, providers.
+  signatures.ts  Signature model: function and constant signatures, module declarations, execution modes, and referenced identities.
+  check.ts       Declaration checker: type lowering, providers.
   check_expr.ts  Body checker: expressions, calls, contracts, and the prelude dispatch.
   check_patterns.ts Match patterns, bindings, and coverage through PatternContext.
   check_refinements.ts RefinementChecker: the refinement facts of a body, the proof budget, and the proved, not-required, or failed decision of each obligation.

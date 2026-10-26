@@ -1,5 +1,5 @@
 // Layer construction, composition and provision checking.
-import type { TypeEnv } from "../check.ts";
+import type { TypeEnv } from "../signatures.ts";
 import { serviceOfCapability } from "../ids.ts";
 import type { ServiceId, ValueId } from "../ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";

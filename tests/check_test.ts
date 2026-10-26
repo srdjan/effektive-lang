@@ -3,7 +3,6 @@
 import { assert, assertEquals, assertNotEquals } from "@std/assert";
 import { type Analysis, analyzeProject } from "../src/core/analyze.ts";
 import {
-  checkModuleDeclarations,
   executionOf,
   type FunctionSignature,
   type ModeMap,
@@ -11,7 +10,8 @@ import {
   type ModuleDeclarations,
   signatureType,
   type TypeGraph,
-} from "../src/core/check.ts";
+} from "../src/core/signatures.ts";
+import { checkModuleDeclarations } from "../src/core/check.ts";
 import {
   type Diagnostic,
   normalizeDiagnostics,

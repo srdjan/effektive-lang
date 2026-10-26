@@ -13,7 +13,6 @@
 import type { Analysis } from "./analyze.ts";
 import { analyzeProject } from "./analyze.ts";
 import {
-  checkModuleDeclarations,
   type ConstantSignature,
   type FunctionSignature,
   isPendingMode,
@@ -23,7 +22,8 @@ import {
   type SolvedLookup,
   type TypeGraph,
   type ValueSignature,
-} from "./check.ts";
+} from "./signatures.ts";
+import { checkModuleDeclarations } from "./check.ts";
 import {
   type BodyEnv,
   checkConstantBody,

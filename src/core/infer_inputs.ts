@@ -1,9 +1,9 @@
-import {
-  type FunctionSignature,
-  type ParameterSignature,
-  type TypeEnv,
-  TypeLowerer,
-} from "./check.ts";
+import type {
+  FunctionSignature,
+  ParameterSignature,
+  TypeEnv,
+} from "./signatures.ts";
+import { TypeLowerer } from "./check.ts";
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import type { BodyEnv } from "./check_expr.ts";
 import { isErrorId } from "./ids.ts";

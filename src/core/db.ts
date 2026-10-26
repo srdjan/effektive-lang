@@ -42,7 +42,7 @@ import { PREDICATE_RULES_VERSION } from "./predicates.ts";
 // then carries the new spans.
 
 import { type Analysis, analyzeProject } from "./analyze.ts";
-import type { ModeMap, TypeGraph } from "./check.ts";
+import type { ModeMap, TypeGraph } from "./signatures.ts";
 import {
   type CheckedModule,
   type CheckedProject,

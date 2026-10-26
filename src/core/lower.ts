@@ -21,7 +21,7 @@ import {
   nameTextOf,
   operatorOf,
 } from "./syntax_queries.ts";
-import { signatureType } from "./check.ts";
+import { signatureType } from "./signatures.ts";
 import type {
   CheckedModule,
   CheckedProject,

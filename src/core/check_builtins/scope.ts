@@ -1,5 +1,5 @@
 // Scope operations, resource lifetimes and opaque borrowed parameters.
-import type { TypeEnv } from "../check.ts";
+import type { TypeEnv } from "../signatures.ts";
 import { isTypeId, serviceOfCapability } from "../ids.ts";
 import {
   type LocalId,

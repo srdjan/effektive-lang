@@ -58,8 +58,8 @@ import {
   type ConstantSignature,
   type FunctionSignature,
   type TypeEnv,
-  TypeLowerer,
-} from "./check.ts";
+} from "./signatures.ts";
+import { TypeLowerer } from "./check.ts";
 import {
   domainOf,
   flattenIdentityMembers,

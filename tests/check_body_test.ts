@@ -16,7 +16,7 @@ import {
   buildTypeGraph,
   reachableModules,
 } from "../src/core/interface.ts";
-import type { TypeGraph } from "../src/core/check.ts";
+import type { TypeGraph } from "../src/core/signatures.ts";
 import { type Solved, solveModeGroup } from "../src/core/modes.ts";
 import type { Execution, ValueId } from "../src/core/ir.ts";
 import { memoryHost, spanText } from "../src/core/source.ts";

@@ -23,7 +23,7 @@ import {
 import { emitProject, type EmittedModule } from "../src/core/typescript.ts";
 import { lowerProject } from "../src/core/lower.ts";
 import type { Project } from "../src/core/project.ts";
-import type { ModeMap } from "../src/core/check.ts";
+import type { ModeMap } from "../src/core/signatures.ts";
 import type { Execution, ValueId } from "../src/core/ir.ts";
 import {
   childrenOf,
