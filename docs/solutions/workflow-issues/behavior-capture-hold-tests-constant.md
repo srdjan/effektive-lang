@@ -60,7 +60,7 @@ deno task behavior:capture "$C" HEAD
 Read the result as follows. "new 0, missing 0" shows that the source change
 keeps every recorded result for the programs that the head tests run. It does
 not cover what the capture does not record (see "Run variance and blind
-spots" below). One new or one missing clean `program` record can be run
+spots" below). Up to two new or missing clean `program` records can be run
 variance. Any other difference is a real source behavior change.
 
 Two refinements:
@@ -89,7 +89,17 @@ a temporary commit captured against itself gave 9123 and 9124 records: 1 new
 section 9). Earlier captures in the same plan also gained or lost clean
 `program` records that reruns of one revision did not repeat. The cause is
 probably a test whose number of speculative programs depends on timing. It is
-not confirmed. So accept one extra or one missing `program` record only when:
+not confirmed.
+
+The reset plan captures of 2026-10-26 narrowed it. The variance records had
+the input hashes `83f02953ec49d241` and `f1634df78e1d6629` in RB3 and in RB5,
+up to two records in one capture. A probe capture of one revision that wrote
+out the inputs of these two hashes found neither of them. So these inputs are
+transient file sets that only some runs reach, probably an intermediate state
+in a timing-dependent watch or save test. A probe run in which the variance
+occurs can name the test.
+
+So accept up to two extra or missing `program` records only when:
 
 - the record is clean. A record line is `kind input-hash result-hash size`
   (`scripts/behavior_capture.ts:56-57`), and a clean result `[]` has size 2.
