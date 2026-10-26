@@ -13,7 +13,7 @@ const ENV: TypeEnv = {
     ["type:m#Alias", { kind: "primitive", name: "string" }],
   ]),
   identities: new Set<string>(),
-  brands: new Map<string, Type>(),
+  opaqueBases: new Map<string, Type>(),
   data: new Map(),
   errors: new Map<string, readonly Field[]>(),
   opaque: new Set<string>(),
@@ -549,7 +549,7 @@ Deno.test("a tagged record fits its record, an opaque type does not widen, and a
     ...ENV,
     aliases: new Map<string, Type>([["type:m#Id", STRING]]),
     identities: new Set(["type:m#Id"]),
-    brands: new Map<string, Type>([["type:m#Handle", UNKNOWN]]),
+    opaqueBases: new Map<string, Type>([["type:m#Handle", UNKNOWN]]),
     data: new Map([["type:m#Account", record]]),
     opaque: new Set(["type:m#Handle"]),
   };

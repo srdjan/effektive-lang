@@ -2886,7 +2886,7 @@ const ENV: TypeEnv = {
     }],
   ]),
   identities: new Set<string>(["type:m#Id"]),
-  brands: new Map<string, Type>(),
+  opaqueBases: new Map<string, Type>(),
   data: new Map(),
   errors: new Map<string, readonly Field[]>(),
   opaque: new Set<string>(),

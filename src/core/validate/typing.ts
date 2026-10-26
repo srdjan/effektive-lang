@@ -2,8 +2,8 @@
 // and types", "Execution order and mode", "Retry and providers") and from the
 // lift rule in docs/language-rules.md. This file does not use the checker.
 //
-//   - A transparent alias unfolds structurally. An alias with identity, a brand,
-//     and an error are nominal. Two different identities never mix. An
+//   - A transparent alias unfolds structurally. An alias with identity, an opaque
+//     type, and an error are nominal. Two different identities never mix. An
 //     identity widens to its body, and an unnamed value fits an identity whose
 //     body it fits. A sealed identity keeps both steps in its own module.
 //   - int fits number. A literal fits its primitive. never fits every type.
@@ -30,8 +30,8 @@ export interface TypeEnv {
   readonly aliases: ReadonlyMap<string, Type>;
   /** Identities of the aliases that have identity by name. */
   readonly identities: ReadonlySet<string>;
-  /** Brand identity to the base type. */
-  readonly brands: ReadonlyMap<string, Type>;
+  /** Opaque type identity to the base type. */
+  readonly opaqueBases: ReadonlyMap<string, Type>;
   /** Data type identity to the base record type. */
   readonly data: ReadonlyMap<string, Extract<Type, { kind: "record" }>>;
   /** Error identity to its fields. */
@@ -68,9 +68,9 @@ export function ownsSealed(env: TypeEnv, id: string): boolean {
   return !env.sealed.has(id) || id.startsWith(`type:${env.module}#`);
 }
 
-/** The base of a brand, or the body of an alias with identity. */
+/** The base of an opaque type, or the body of an alias with identity. */
 export function identityBody(env: TypeEnv, id: string): Type | undefined {
-  return env.brands.get(id) ??
+  return env.opaqueBases.get(id) ??
     (env.identities.has(id) ? env.aliases.get(id) : undefined);
 }
 
@@ -79,7 +79,7 @@ function unfoldTransparent(env: TypeEnv, type: Type): Type {
   return follow(env, type, true);
 }
 
-/** Follows aliases until the type is not an alias. A brand or an error stays named. */
+/** Follows aliases until the type is not an alias. A type with identity or an error stays named. */
 export function unfold(env: TypeEnv, type: Type): Type {
   return follow(env, type, false);
 }
@@ -153,7 +153,7 @@ export function dataOnly(
         (value.id === SCHEMA_ERROR_ID || value.id === SCHEMA_ISSUE_ID)
       ) return false;
       const errorFields = env.errors.get(value.id);
-      const base = env.data.get(value.id) ?? env.brands.get(value.id) ??
+      const base = env.data.get(value.id) ?? env.opaqueBases.get(value.id) ??
         (errorFields !== undefined
           ? { kind: "record" as const, fields: errorFields }
           : undefined);
@@ -602,7 +602,7 @@ export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
       seen.add(current.id);
       const fields = env.errors.get(current.id);
       const body = env.aliases.get(current.id) ?? env.data.get(current.id) ??
-        env.brands.get(current.id) ??
+        env.opaqueBases.get(current.id) ??
         (fields === undefined
           ? undefined
           : { kind: "record" as const, fields });
@@ -723,7 +723,7 @@ export function foreignSealedOf(
       if (!ownsSealed(env, current.id)) return current.id;
       const fields = env.errors.get(current.id);
       const target = env.aliases.get(current.id) ?? env.data.get(current.id) ??
-        env.brands.get(current.id) ??
+        env.opaqueBases.get(current.id) ??
         (fields === undefined
           ? undefined
           : { kind: "record" as const, fields });
@@ -759,7 +759,7 @@ export function containsRefinement(
   if (type.kind === "named") {
     if (env.refined?.has(type.id)) return true;
     const fields = env.errors.get(type.id);
-    const body = env.aliases.get(type.id) ?? env.brands.get(type.id) ??
+    const body = env.aliases.get(type.id) ?? env.opaqueBases.get(type.id) ??
       env.data.get(type.id);
     return body !== undefined
       ? containsRefinement(env, body, seen)
@@ -797,7 +797,7 @@ export function isBooleanLike(env: TypeEnv, type: Type): boolean {
  * The identity type when the type, after transparent aliases, is an identity
  * over `int` or `number`. An identity over a literal union is not numeric.
  */
-export function numericBrandOf(env: TypeEnv, type: Type): Type | undefined {
+export function numericIdentityOf(env: TypeEnv, type: Type): Type | undefined {
   const unfolded = unfoldTransparent(env, type);
   if (unfolded.kind !== "named") return undefined;
   const base = identityBody(env, unfolded.id);
@@ -811,7 +811,7 @@ export function numericBrandOf(env: TypeEnv, type: Type): Type | undefined {
 
 /**
  * The comparison class of a type for `===` and `!==`: a primitive class, or a
- * primitive brand identity. Every member of a union must have the same class.
+ * primitive identity. Every member of a union must have the same class.
  */
 export function comparisonClass(
   env: TypeEnv,
@@ -835,7 +835,7 @@ export function comparisonClass(
         base !== undefined &&
         comparisonClass(env, base, depth + 1) !== undefined
       ) {
-        current = `brand:${member.id}`;
+        current = `identity:${member.id}`;
       }
     }
     if (current === undefined) return undefined;
@@ -845,12 +845,12 @@ export function comparisonClass(
   return found;
 }
 
-const BRAND_CLASS = "brand:";
+const IDENTITY_CLASS = "identity:";
 
 /** The class of the body of an identity class, or undefined for another class. */
 function baseClass(env: TypeEnv, cls: string): string | undefined {
-  if (!cls.startsWith(BRAND_CLASS)) return undefined;
-  const base = identityBody(env, cls.slice(BRAND_CLASS.length));
+  if (!cls.startsWith(IDENTITY_CLASS)) return undefined;
+  const base = identityBody(env, cls.slice(IDENTITY_CLASS.length));
   return base === undefined ? undefined : comparisonClass(env, base);
 }
 

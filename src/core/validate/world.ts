@@ -123,7 +123,7 @@ export function buildWorld(ir: ModuleIR): World {
   }
   const aliases = new Map<string, Type>();
   const identities = new Set<string>();
-  const brands = new Map<string, Type>();
+  const opaqueBases = new Map<string, Type>();
   const data = new Map<string, Extract<Type, { kind: "record" }>>();
   const opaque = new Set<string>();
   const sealed = new Set<string>();
@@ -147,7 +147,7 @@ export function buildWorld(ir: ModuleIR): World {
           t.definition.tagged === true && t.definition.base.kind === "record"
         ) {
           data.set(t.id, t.definition.base);
-        } else if (t.opaque === true) brands.set(t.id, t.definition.base);
+        } else if (t.opaque === true) opaqueBases.set(t.id, t.definition.base);
         else {
           // An untagged nominal type is an alias with identity.
           aliases.set(t.id, t.definition.base);
@@ -165,7 +165,7 @@ export function buildWorld(ir: ModuleIR): World {
       module: ir.module,
       aliases,
       identities,
-      brands,
+      opaqueBases,
       data,
       errors: errorFields,
       opaque,
@@ -429,7 +429,7 @@ const DEFERRED_KINDS: ReadonlySet<Type["kind"]> = new Set([
 /**
  * True when the type contains a function or deferred type, directly or
  * through an alias. A repeated alias stops a cycle. Data types, errors, and
- * brands stop the walk, because their own declarations are checked on their own.
+ * opaque types stop the walk, because their own declarations are checked on their own.
  */
 function containsDeferred(
   env: TypeEnv,
@@ -909,9 +909,9 @@ function guardedDataGroups(
     const targets: string[] = [];
     const roots: Type[] = [];
     const alias = env.aliases.get(id);
-    const brand = env.brands.get(id);
+    const opaqueBase = env.opaqueBases.get(id);
     if (alias !== undefined) roots.push(alias);
-    if (brand !== undefined) roots.push(brand);
+    if (opaqueBase !== undefined) roots.push(opaqueBase);
     for (const f of env.data.get(id)?.fields ?? env.errors.get(id) ?? []) {
       roots.push(f.type);
     }
@@ -1066,10 +1066,10 @@ export function checkRecursion(ctx: Ctx, ir: ModuleIR): void {
     }
     state.set(id, 1);
     const alias = world.env.aliases.get(id);
-    const brand = world.env.brands.get(id);
+    const opaqueBase = world.env.opaqueBases.get(id);
     const fields = world.env.data.get(id)?.fields ?? world.env.errors.get(id);
     if (alias !== undefined) reaches(alias, id, 0);
-    if (brand !== undefined) reaches(brand, id, 0);
+    if (opaqueBase !== undefined) reaches(opaqueBase, id, 0);
     if (fields !== undefined) fields.forEach((f) => reaches(f.type, id, 0));
     state.set(id, 2);
   };

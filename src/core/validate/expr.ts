@@ -65,7 +65,7 @@ import {
   members,
   NEVER,
   NUMBER,
-  numericBrandOf,
+  numericIdentityOf,
   ownsSealed,
   same,
   sealedRootOf,
@@ -157,7 +157,7 @@ function validConcurrency(value: number | "unbounded" | undefined): boolean {
     (Number.isSafeInteger(value) && value > 0);
 }
 
-/** Equality can match unknown values and the runtime base of nominal brands. */
+/** Equality can match unknown values and the runtime base of types with identity. */
 function tagMayEqual(
   env: TypeEnv,
   type: Type,
@@ -167,7 +167,7 @@ function tagMayEqual(
   if (seen.has(type) || seen.size >= MAX_DEPTH) return true;
   const next = new Set(seen).add(type);
   if (type.kind === "named") {
-    const base = env.aliases.get(type.id) ?? env.brands.get(type.id);
+    const base = env.aliases.get(type.id) ?? env.opaqueBases.get(type.id);
     return base !== undefined && tagMayEqual(env, base, value, next);
   }
   if (type.kind === "union") {
@@ -181,13 +181,13 @@ function tagMayEqual(
  * The identity type when exactly one operand is a numeric identity and the
  * other operand is unnamed and fits the body of that identity.
  */
-function adoptedNumericBrand(
+function adoptedNumericIdentity(
   env: TypeEnv,
   left: Type,
   right: Type,
 ): Type | undefined {
-  const l = numericBrandOf(env, left);
-  const r = numericBrandOf(env, right);
+  const l = numericIdentityOf(env, left);
+  const r = numericIdentityOf(env, right);
   if ((l === undefined) === (r === undefined)) return undefined;
   const named = l ?? r;
   const unnamed = l === undefined ? left : right;
@@ -1905,11 +1905,12 @@ export class BodyValidator implements ValidatorCore {
         e.span,
       );
     }
-    // Two values of one numeric brand add and subtract (D32).
-    const leftBrand = numericBrandOf(env, left.type);
-    const brand = leftBrand !== undefined && same(env, leftBrand, right.type)
-      ? leftBrand
-      : undefined;
+    // Two values of one numeric identity add and subtract (D32).
+    const leftIdentity = numericIdentityOf(env, left.type);
+    const shared =
+      leftIdentity !== undefined && same(env, leftIdentity, right.type)
+        ? leftIdentity
+        : undefined;
     switch (e.operator) {
       case "&&":
       case "||":
@@ -1920,7 +1921,7 @@ export class BodyValidator implements ValidatorCore {
       case "<=":
       case ">":
       case ">=":
-        // `isNumeric` widens a brand to its base, so the classes decide.
+        // `isNumeric` widens an identity to its base, so the classes decide.
         return l !== undefined && r !== undefined &&
             compatibleClasses(env, l, r) &&
             isNumericClass(env, l) && isNumericClass(env, r)
@@ -1947,13 +1948,15 @@ export class BodyValidator implements ValidatorCore {
         if (
           l === undefined || r === undefined || !compatibleClasses(env, l, r)
         ) return mismatch();
-        if (brand !== undefined && (e.operator === "+" || e.operator === "-")) {
-          this.refinements.retain(e, brand, path);
-          return derivedResult(brand, active);
+        if (
+          shared !== undefined && (e.operator === "+" || e.operator === "-")
+        ) {
+          this.refinements.retain(e, shared, path);
+          return derivedResult(shared, active);
         }
         // One named operand and one unnamed operand that fits its body keep the name.
         const adopted = e.operator !== "/"
-          ? adoptedNumericBrand(env, left.type, right.type)
+          ? adoptedNumericIdentity(env, left.type, right.type)
           : undefined;
         if (adopted !== undefined) {
           this.refinements.retain(e, adopted, path);
