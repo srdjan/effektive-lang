@@ -358,9 +358,9 @@ Deno.test("independent validation rejects refined host declarations", () => {
   );
 });
 
-// RBF12: the checker keeps a raw `or` fact and compares join facts by JSON text,
-// so it drops a commuted `or` fact at a join. The validator accepts the same proof.
-Deno.test("RBF12: the checker drops a commuted or-fact at a join and the validator keeps it", () => {
+// RBF12: the checker and the validator both keep an `or` fact in canonical
+// form, so a fact with commuted operands survives a branch join.
+Deno.test("a commuted or-fact survives a join in the checker and the validator", () => {
   const program = (first: string, second: string) => `
 type Int = int
 type Bool = boolean
@@ -371,46 +371,23 @@ const make = (a: Int, b: Int, p: Bool): Either => {
   ({ a: a, b: b })
 }
 `;
-  const same = program("a > 0 || b > 0", "a > 0 || b > 0");
-  const control = lower(same);
-  assertEquals(validateModule(control.ir, control.sources), []);
+  for (const second of ["a > 0 || b > 0", "b > 0 || a > 0"]) {
+    const lowered = lower(program("a > 0 || b > 0", second));
+    assertEquals(messages(lowered.ir, lowered.sources), [], second);
+  }
 
-  const reversed = checkProject(
-    memoryHost({
-      "effektive.json": "{}",
-      "m.eff": program("a > 0 || b > 0", "b > 0 || a > 0"),
-    }),
-    "",
-    ["m.eff"],
+  // A different second condition must fail, so the validator proof is not vacuous.
+  const weaker = structuredClone(
+    lower(program("a > 0 || b > 0", "a > 0 || b > 0")),
   );
-  assert(reversed.ok);
-  assertEquals(reversed.value.diagnostics.map((d) => d.code), [
-    "type-mismatch/013",
-  ]);
-
-  // The checker rejected the reversed source, so lowering fails. The validator
-  // runs on the control IR with the second condition commuted by hand.
-  const commuted = structuredClone(control.ir);
-  const make = commuted.declarations.find((d) => d.kind === "function");
+  const make = weaker.ir.declarations.find((d) => d.kind === "function");
   assert(make?.kind === "function");
-  const [, second] = expressions(make.body).filter((e) =>
-    e.kind === "binary" && e.operator === "||"
-  );
-  assert(second?.kind === "binary");
-  const swap = { left: second.right, right: second.left };
-  Object.assign(second, swap);
-  assertEquals(messages(commuted, control.sources), []);
-
-  // A different second condition must still fail, so the validator proof is not vacuous.
-  const weaker = structuredClone(control.ir);
-  const weakerMake = weaker.declarations.find((d) => d.kind === "function");
-  assert(weakerMake?.kind === "function");
-  const [, other] = expressions(weakerMake.body).filter((e) =>
+  const [, other] = expressions(make.body).filter((e) =>
     e.kind === "binary" && e.operator === "||"
   );
   assert(other?.kind === "binary" && other.right.kind === "binary");
   Object.assign(other.right, { operator: "<" });
-  assert(messages(weaker, control.sources).length > 0);
+  assert(messages(weaker.ir, weaker.sources).length > 0);
 });
 
 // RBF20: a record literal that adopts a refined member of an expected union

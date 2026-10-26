@@ -140,7 +140,7 @@ export class RefinementChecker {
       if (l === undefined || r === undefined) return undefined;
       return operator === "&&"
         ? canonicalAnd([l, r])
-        : { kind: "or", operands: [l, r] };
+        : canonicalPredicate({ kind: "or", operands: [l, r] });
     }
     if (
       operator !== "<" && operator !== "<=" && operator !== "===" &&
@@ -547,7 +547,7 @@ function substitute(
       }
       return predicate.kind === "and"
         ? canonicalAnd(operands)
-        : { kind: "or", operands };
+        : canonicalPredicate({ kind: "or", operands });
     }
     case "difference": {
       const left = predicate.left.kind === "zero"
@@ -617,7 +617,7 @@ function compare(
       const b = difference(reverse, -1n);
       return a === undefined || b === undefined
         ? undefined
-        : { kind: "or", operands: [a, b] };
+        : canonicalPredicate({ kind: "or", operands: [a, b] });
     }
   }
 }
