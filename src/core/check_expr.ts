@@ -1793,8 +1793,13 @@ class BodyChecker
               this.assignable(type, field.type);
           }),
       );
-    const chosen = narrowed[0] ?? discriminated[0] ?? fitting[0] ??
-      candidates[0];
+    const pool =
+      [narrowed, discriminated, fitting, candidates].find((list) =>
+        list.length > 0
+      ) ?? [];
+    // A member with no refinement needs no proof, so it wins over a refined one.
+    const chosen = pool.find((c) => this.refinementBase(c.ref) === undefined) ??
+      pool[0];
     if (chosen === undefined) return undefined;
     if (chosen.tagged !== undefined) {
       return {
