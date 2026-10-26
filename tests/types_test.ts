@@ -28,12 +28,12 @@ Deno.test("each writer replaces the whole earlier definition of a type", () => {
   // A sealed tagged identity redefined as an alias keeps no identity metadata.
   t.defineTagged(USER, t.record([field("id", t.string)]), true);
   assert(t.isIdentity(USER) && t.isSealed(USER));
-  assert(t.dataRecordOf(USER) !== undefined);
+  assert(t.taggedRecordOf(USER) !== undefined);
   t.defineAlias(USER, t.int);
   assert(!t.isIdentity(USER));
   assert(!t.isSealed(USER));
-  assertEquals(t.dataRecordOf(USER), undefined);
-  assertEquals(t.brandBaseOf(USER), undefined);
+  assertEquals(t.taggedRecordOf(USER), undefined);
+  assertEquals(t.identityBaseOf(USER), undefined);
   assert(t.isAssignable(t.int, named));
   // An opaque type redefined as an identity is no longer opaque.
   t.defineOpaque(USER);
@@ -43,11 +43,11 @@ Deno.test("each writer replaces the whole earlier definition of a type", () => {
   assertEquals(t.unfold(named), named);
   t.defineIdentity(USER, t.string, false);
   assert(!t.isOpaque(USER));
-  assertEquals(t.brandBaseOf(USER), t.string);
+  assertEquals(t.identityBaseOf(USER), t.string);
   assertEquals(t.aliasOf(USER), t.string);
   // An identity redefined as an alias loses its base.
   t.defineAlias(USER, t.int);
-  assertEquals(t.brandBaseOf(USER), undefined);
+  assertEquals(t.identityBaseOf(USER), undefined);
   assert(t.isAssignable(t.int, named));
   // A guarded alias redefined is no longer guarded.
   t.defineAlias(USER, t.array(named), true);
@@ -481,7 +481,7 @@ Deno.test("an alias with identity fits its body, takes unnamed values, and never
   const b = identity(t, ID_B, t.int);
   const number = identity(t, USER, t.number);
   assert(t.isIdentity(ID_A));
-  assertEquals(t.brandBaseOf(ID_A), t.int);
+  assertEquals(t.identityBaseOf(ID_A), t.int);
   assertEquals(t.unfoldTransparent(a), a);
   assertEquals(t.unfold(a), t.int);
   assert(t.isAssignable(a, t.int));
@@ -704,19 +704,19 @@ Deno.test("load defines opaque, tagged, guarded, and sealed types", () => {
   assert(t.isOpaque(OPAQUE));
   assert(t.isIdentity(OPAQUE));
   assertEquals(t.aliasOf(OPAQUE), undefined);
-  assertEquals(t.brandBaseOf(OPAQUE), t.unknown);
+  assertEquals(t.identityBaseOf(OPAQUE), t.unknown);
   assert(!t.isSealed(OPAQUE));
 
   assert(t.isIdentity(TAG_A));
   assert(!t.isOpaque(TAG_A));
-  assertEquals(t.dataRecordOf(TAG_A), t.aliasOf(TAG_A));
+  assertEquals(t.taggedRecordOf(TAG_A), t.aliasOf(TAG_A));
   assertEquals(t.taggedIdOf(t.named(TAG_A)), TAG_A);
-  assertEquals(t.brandBaseOf(TAG_A), undefined);
+  assertEquals(t.identityBaseOf(TAG_A), undefined);
 
   assert(t.isIdentity(TAG_B));
-  assertEquals(t.brandBaseOf(TAG_B), t.int);
+  assertEquals(t.identityBaseOf(TAG_B), t.int);
   assertEquals(t.aliasOf(TAG_B), t.int);
-  assertEquals(t.dataRecordOf(TAG_B), undefined);
+  assertEquals(t.taggedRecordOf(TAG_B), undefined);
   assert(!t.isSealed(TAG_B));
 
   assert(t.isIdentity(SEALED));

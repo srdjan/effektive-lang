@@ -350,7 +350,7 @@ class BodyChecker
     if (node.kind !== "named" || !node.id.startsWith("type:")) return undefined;
     const id = node.id as TypeId;
     if (this.table.predicateOf(id) === undefined) return undefined;
-    const base = this.table.brandBaseOf(id);
+    const base = this.table.identityBaseOf(id);
     return base === undefined ? undefined : { id, base };
   }
 
@@ -728,7 +728,7 @@ class BodyChecker
       case "error":
         return this.errorConstruction(node, target.id, args);
       case "type": {
-        const record = this.table.dataRecordOf(target.id);
+        const record = this.table.taggedRecordOf(target.id);
         return record === undefined
           ? this.identityConstruction(node, target.id, args)
           : this.taggedConstruction(node, target.id, record, args);
@@ -840,13 +840,13 @@ class BodyChecker
     }
     if (t.kind === "named" && t.id.startsWith("type:") && s.kind !== "named") {
       const id = t.id as TypeId;
-      const base = this.table.brandBaseOf(id);
+      const base = this.table.identityBaseOf(id);
       const predicate = this.table.predicateOf(id);
       if (
         !this.table.ownsSealed(this.module, id) ||
         (predicate !== undefined &&
           !containsUnknownPredicateInput(this.table, source, predicate)) ||
-        this.table.dataRecordOf(id) !== undefined
+        this.table.taggedRecordOf(id) !== undefined
       ) return false;
       return base !== undefined &&
         this.checkedTypeFits(source, base, depth + 1);
@@ -854,7 +854,8 @@ class BodyChecker
     if (s.kind === "named" && s.id.startsWith("type:") && t.kind !== "named") {
       const id = s.id as TypeId;
       if (!this.table.ownsSealed(this.module, id)) return false;
-      const base = this.table.brandBaseOf(id) ?? this.table.dataRecordOf(id);
+      const base = this.table.identityBaseOf(id) ??
+        this.table.taggedRecordOf(id);
       return base !== undefined &&
         this.checkedTypeFits(base, target, depth + 1);
     }
@@ -1018,7 +1019,7 @@ class BodyChecker
       );
       return this.finish(node, this.table.error, combine(infos));
     }
-    const base = this.table.brandBaseOf(id);
+    const base = this.table.identityBaseOf(id);
     if (base === undefined) {
       const infos = args.map((a) => this.argInfo(a));
       // A body that did not parse has the error type, so its uses report nothing more.
@@ -1555,7 +1556,7 @@ class BodyChecker
     if (node.kind !== "named") return false;
     const record = isErrorId(node.id)
       ? this.table.errorRecordOf(node.id)
-      : this.table.dataRecordOf(node.id);
+      : this.table.taggedRecordOf(node.id);
     return record !== undefined && this.isError(record);
   }
 
@@ -1579,7 +1580,7 @@ class BodyChecker
         return recordNode?.kind === "record" ? recordNode.fields : undefined;
       }
       // A tagged record has the fields of its base record.
-      const base = this.table.dataRecordOf(node.id);
+      const base = this.table.taggedRecordOf(node.id);
       if (base !== undefined) return this.recordFields(base);
     }
     return undefined;
@@ -2505,7 +2506,7 @@ class BodyChecker
         const node = this.table.node(member);
         return node.kind === "named" &&
           (isErrorId(node.id) ||
-            this.table.dataRecordOf(node.id) !== undefined);
+            this.table.taggedRecordOf(node.id) !== undefined);
       })
     );
   }

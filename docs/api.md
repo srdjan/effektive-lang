@@ -949,8 +949,9 @@ remaps references to separate closure parameters and emits `with-resource` IR.
 
 The type `NodeFact` merges the members `brand-construction` and `data-construction`
 into `identity-construction`, which holds the field `identity`. The pattern fact
-kind `data` is now `tagged`, and its field `data` is now `tagged`. The IR is
-unchanged.
+kind `data` is now `tagged`, and its field `data` is now `tagged`. The type
+`TypeReader` renames the methods `brandBaseOf` and `dataRecordOf` to
+`identityBaseOf` and `taggedRecordOf`. The IR is unchanged.
 
 ## Input contracts in IR version 6
 

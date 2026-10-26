@@ -1118,7 +1118,7 @@ class BodyLowerer {
       const proofs = this.body.proofs.get(left);
       if (proofs !== undefined) value = { ...value, proofs };
       const adoption = value.proofs?.find((proof) =>
-        this.ctx.types.brandBaseOf(proof.target) !== undefined
+        this.ctx.types.identityBaseOf(proof.target) !== undefined
       );
       const type: Type = adoption === undefined
         ? this.ir(leftInfo.type)
@@ -1299,7 +1299,7 @@ class BodyLowerer {
     if (fact?.kind !== "identity-construction") return record;
     // A record literal at a tagged record is an implicit `Name({ ... })`: the
     // literal itself has the unnamed record type.
-    const body = this.ctx.types.dataRecordOf(fact.identity);
+    const body = this.ctx.types.taggedRecordOf(fact.identity);
     return {
       kind: "nominal",
       nominal: fact.identity,

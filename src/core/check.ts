@@ -210,7 +210,7 @@ class ModuleChecker {
           ) referencedIds(method.type, ids);
         }
         const body = isTypeId(id)
-          ? this.table.aliasOf(id) ?? this.table.dataRecordOf(id)
+          ? this.table.aliasOf(id) ?? this.table.taggedRecordOf(id)
           : isErrorId(id)
           ? this.table.errorRecordOf(id)
           : undefined;
@@ -459,7 +459,7 @@ class ModuleChecker {
         n.kind === "named" &&
         (isErrorId(n.id) ||
           (isTypeId(n.id) &&
-            (local.has(n.id) || this.table.dataRecordOf(n.id) !== undefined)))
+            (local.has(n.id) || this.table.taggedRecordOf(n.id) !== undefined)))
       );
       if (!ok) continue;
       for (const n of members) {

@@ -649,8 +649,8 @@ with identity is a tagged record when a union alias of its own module lists it
 `_tag` and is a plain object. An error carries a `_tag` and is a class.
 
 A type with identity has the id `type:<module>#<Name>`, the same prefix as an
-alias. The type table tells the kinds apart: `dataRecordOf(id)` gives the base
-record of a tagged record, `brandBaseOf(id)` gives the base of an untagged type
+alias. The type table tells the kinds apart: `taggedRecordOf(id)` gives the base
+record of a tagged record, `identityBaseOf(id)` gives the base of an untagged type
 with identity, and `unfoldTransparent` stops at an identity. The `nominal`
 declaration word was deleted on 2026-10-24.
 

@@ -1,7 +1,7 @@
 // Interned types and type compatibility. Equal structural types share one
 // integer id (a `TypeRef`), so type equality is id equality. Aliases keep their
 // name: a `named` type points at the alias `TypeId`, and compatibility unfolds
-// the alias on demand. Brands, data types, and errors are nominal by identity.
+// the alias on demand. Types with identity, tagged records, and errors are nominal by identity.
 //
 // The table is mutable and deterministic. A project owns one table. The ids
 // depend on the order of interning, so no output may depend on a raw id. The
@@ -343,8 +343,8 @@ export type TypeReader = Pick<
   | "node"
   | "unfold"
   | "aliasOf"
-  | "brandBaseOf"
-  | "dataRecordOf"
+  | "identityBaseOf"
+  | "taggedRecordOf"
   | "predicateOf"
   | "errorRecordOf"
   | "isSealed"
@@ -926,14 +926,14 @@ export class TypeTable {
   }
 
   /** The base of an opaque type, or the body of an untagged identity. */
-  brandBaseOf(id: TypeId): TypeRef | undefined {
+  identityBaseOf(id: TypeId): TypeRef | undefined {
     const def = this.defs.get(id);
     if (def?.kind === "opaque") return this.unknown;
     return def?.kind === "identity" ? def.body : undefined;
   }
 
   /** The body of a tagged record. */
-  dataRecordOf(id: TypeId): TypeRef | undefined {
+  taggedRecordOf(id: TypeId): TypeRef | undefined {
     const def = this.defs.get(id);
     return def?.kind === "tagged" ? def.body : undefined;
   }
@@ -950,7 +950,7 @@ export class TypeTable {
   taggedIdOf(ref: TypeRef): TypeId | undefined {
     const node = this.node(ref);
     return node.kind === "named" && isTypeId(node.id) &&
-        this.dataRecordOf(node.id) !== undefined
+        this.taggedRecordOf(node.id) !== undefined
       ? node.id
       : undefined;
   }
@@ -1439,7 +1439,7 @@ export function dataOnly(
       ) return false;
       const record = isErrorId(type.id)
         ? table.errorRecordOf(type.id)
-        : table.dataRecordOf(type.id) ?? table.brandBaseOf(type.id);
+        : table.taggedRecordOf(type.id) ?? table.identityBaseOf(type.id);
       return record !== undefined && nested(record);
     }
     case "error":
@@ -1508,7 +1508,7 @@ export function containsUnknownPredicateInput(
  * Whether the type contains a function or deferred type at any depth: a value
  * without an encoded form, such as an Effect, a Stream, or a Ref. An alias
  * unfolds, and a repeated alias stops a cycle. A tagged record, an error, and a
- * brand stop the walk, because their own declarations are checked on their own.
+ * type with identity stop the walk, because their own declarations are checked on their own.
  */
 export function containsDeferredType(
   table: TypeTable,
@@ -1537,7 +1537,7 @@ export function containsDeferredType(
     case "named": {
       // A tagged record stops the walk: its own declaration is checked on its own.
       const alias =
-        isErrorId(type.id) || table.dataRecordOf(type.id) !== undefined
+        isErrorId(type.id) || table.taggedRecordOf(type.id) !== undefined
           ? undefined
           : table.aliasOf(type.id);
       return alias !== undefined && any([alias]);
@@ -1565,7 +1565,7 @@ export function containsDeferredType(
 /**
  * Whether the type names an opaque type at any depth, which has no schema. An
  * alias unfolds, and a repeated alias stops a cycle. A tagged record, an error,
- * and a brand stop the walk, as in `containsDeferredType`. A function or
+ * and a type with identity stop the walk, as in `containsDeferredType`. A function or
  * deferred type is `containsDeferredType`'s case, so it reports nothing here.
  */
 export function containsOpaqueType(
@@ -1582,7 +1582,7 @@ export function containsOpaqueType(
     case "named": {
       if (isErrorId(type.id)) return false;
       if (table.isOpaque(type.id)) return true;
-      if (table.dataRecordOf(type.id) !== undefined) return false;
+      if (table.taggedRecordOf(type.id) !== undefined) return false;
       const alias = table.aliasOf(type.id);
       return alias !== undefined && any([alias]);
     }

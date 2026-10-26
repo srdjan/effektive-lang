@@ -48,7 +48,7 @@ function resolvedKind(
 ): SemanticClassification["type"] {
   switch (occurrence.target.kind) {
     case "type":
-      return revision.types.dataRecordOf(occurrence.target.id) === undefined
+      return revision.types.taggedRecordOf(occurrence.target.id) === undefined
         ? "type"
         : "class";
     case "builtin-type":

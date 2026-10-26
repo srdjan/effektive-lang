@@ -247,7 +247,7 @@ export function pattern(
       } else if (
         target?.kind === "error" ||
         (target?.kind === "type" &&
-          c.table.dataRecordOf(target.id) !== undefined)
+          c.table.taggedRecordOf(target.id) !== undefined)
       ) {
         let type = c.table.error;
         if (domain.kind === "nominal" && domain.ids.includes(target.id)) {
@@ -415,7 +415,7 @@ function ctorMessage(c: PatternContext, target: Target): string {
   if (c.table.isOpaque(target.id)) {
     return `\`${name}\` is an opaque type, not a tagged record; a constructor pattern names a tagged record or an error`;
   }
-  const base = c.table.brandBaseOf(target.id);
+  const base = c.table.identityBaseOf(target.id);
   if (base === undefined) {
     return `\`${name}\` is a type alias, not a tagged record; a constructor pattern names a tagged record or an error`;
   }

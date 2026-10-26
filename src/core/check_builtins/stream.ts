@@ -961,7 +961,7 @@ function groupKeyClass(
         current = type.name;
       }
     } else if (type.kind === "named" && !isErrorId(type.id)) {
-      const base = c.table.brandBaseOf(type.id);
+      const base = c.table.identityBaseOf(type.id);
       if (
         base !== undefined &&
         groupKeyClass(c, base, depth + 1) !== undefined

@@ -114,7 +114,7 @@ export function domainOf(table: TypeTable, subject: TypeRef): Domain {
   for (const n of named) {
     if (
       n.kind === "named" &&
-      (isErrorId(n.id) || table.dataRecordOf(n.id) !== undefined)
+      (isErrorId(n.id) || table.taggedRecordOf(n.id) !== undefined)
     ) nominal.push(n.id);
   }
   if (nominal.length > 0) {
@@ -201,7 +201,7 @@ function literalMayEqual(
   const node = table.node(type);
   if (node.kind === "named") {
     if (isErrorId(node.id)) return false;
-    const base = table.aliasOf(node.id) ?? table.brandBaseOf(node.id);
+    const base = table.aliasOf(node.id) ?? table.identityBaseOf(node.id);
     return base !== undefined && literalMayEqual(table, base, value, next);
   }
   if (node.kind === "union") {

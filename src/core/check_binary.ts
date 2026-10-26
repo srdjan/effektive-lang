@@ -24,7 +24,7 @@ function numericIdentity(
   const node = table.node(table.unfoldTransparent(ref));
   if (node.kind !== "named" || isErrorId(node.id)) return undefined;
   const id = node.id;
-  const base = table.brandBaseOf(id);
+  const base = table.identityBaseOf(id);
   if (base === undefined) return undefined;
   const baseNode = table.node(table.unfold(base));
   return baseNode.kind === "primitive" &&
@@ -60,7 +60,7 @@ function adoptedNumericIdentity(
   if ((l === undefined) === (r === undefined)) return undefined;
   const named = l ?? r;
   const unnamed = l === undefined ? left : right;
-  const body = named === undefined ? undefined : table.brandBaseOf(named);
+  const body = named === undefined ? undefined : table.identityBaseOf(named);
   return named !== undefined && body !== undefined &&
       table.isAssignableIn(module, unnamed, body)
     ? named
@@ -94,7 +94,7 @@ function comparisonClass(
         current = node.name;
       }
     } else if (node.kind === "named" && !isErrorId(node.id)) {
-      const base = table.brandBaseOf(node.id);
+      const base = table.identityBaseOf(node.id);
       if (base !== undefined && comparisonClass(table, base) !== undefined) {
         current = `identity:${node.id}`;
       }
@@ -111,7 +111,7 @@ const IDENTITY_CLASS = "identity:";
 /** The class of the base of an identity class, or undefined for another class. */
 function baseClass(table: TypeTable, cls: string): string | undefined {
   if (!cls.startsWith(IDENTITY_CLASS)) return undefined;
-  const base = table.brandBaseOf(cls.slice(IDENTITY_CLASS.length) as TypeId);
+  const base = table.identityBaseOf(cls.slice(IDENTITY_CLASS.length) as TypeId);
   return base === undefined ? undefined : comparisonClass(table, base);
 }
 

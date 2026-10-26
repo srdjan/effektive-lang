@@ -141,7 +141,7 @@ type Domain = PositiveRow | Stop
 `);
   assertEquals(checked.declarations.diagnostics, []);
   const id = "type:m#PositiveRow" as TypeId;
-  assert(checked.table.dataRecordOf(id) !== undefined);
+  assert(checked.table.taggedRecordOf(id) !== undefined);
   const expected = {
     kind: "difference",
     left: { kind: "zero" },

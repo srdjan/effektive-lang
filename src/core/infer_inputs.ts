@@ -298,7 +298,8 @@ class InputEngine {
     if (node.kind === "named") {
       const record = isErrorId(node.id)
         ? this.table.errorRecordOf(node.id)
-        : this.table.dataRecordOf(node.id) ?? this.table.brandBaseOf(node.id);
+        : this.table.taggedRecordOf(node.id) ??
+          this.table.identityBaseOf(node.id);
       if (record === undefined) return undefined;
       node = this.table.node(this.table.unfold(record));
     }
@@ -462,8 +463,8 @@ class InputEngine {
     const target = this.targets.get(callee);
     let type: TypeRef | undefined;
     if (target?.kind === "type") {
-      const record = this.table.dataRecordOf(target.id);
-      type = record ?? this.table.brandBaseOf(target.id);
+      const record = this.table.taggedRecordOf(target.id);
+      type = record ?? this.table.identityBaseOf(target.id);
       if (args[0] !== undefined) {
         const input = record === undefined &&
             this.table.predicateOf(target.id) !== undefined &&
@@ -532,12 +533,12 @@ class InputEngine {
     const args = argList === undefined ? [] : kidsOf(this.tree, argList);
     const target = callee === undefined ? undefined : this.targets.get(callee);
     if (target?.kind === "type") {
-      const record = this.table.dataRecordOf(target.id);
+      const record = this.table.taggedRecordOf(target.id);
       const input = record === undefined &&
           this.table.predicateOf(target.id) !== undefined &&
           this.originOf(left) !== undefined
         ? this.table.named(target.id)
-        : record ?? this.table.brandBaseOf(target.id);
+        : record ?? this.table.identityBaseOf(target.id);
       this.visit(left, input);
       args.forEach((argument) => this.visit(argument));
       return this.table.named(target.id);

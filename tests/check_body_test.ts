@@ -3791,7 +3791,7 @@ type Inline = { pair: E | A }
 `);
   assertEquals(messages(project), []);
   const tagged = (name: string) =>
-    project.table.dataRecordOf(`type:m#${name}`) !== undefined;
+    project.table.taggedRecordOf(`type:m#${name}`) !== undefined;
   assertEquals(
     ["A", "B", "C", "D", "E"].map(tagged),
     [true, true, false, true, false],
@@ -3945,7 +3945,7 @@ export const describe = (shape: Shape): Text =>
       "pattern/004 `Circle` has no runtime tag; no union alias of its module lists it",
     ],
   );
-  assertEquals(project.table.dataRecordOf("type:records#Circle"), undefined);
+  assertEquals(project.table.taggedRecordOf("type:records#Circle"), undefined);
 });
 
 Deno.test("a tagged record of another module counts as a tagged member of a union", () => {
@@ -3967,7 +3967,7 @@ export const describe = (figure: Figure): Text =>
 `,
   }, ["main.eff"]);
   assertEquals(project.diagnostics, []);
-  assert(project.table.dataRecordOf("type:main#Dot") !== undefined);
+  assert(project.table.taggedRecordOf("type:main#Dot") !== undefined);
 });
 
 Deno.test("sealed needs a type with identity", () => {
