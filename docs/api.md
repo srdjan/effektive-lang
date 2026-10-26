@@ -637,6 +637,7 @@ self-ignoring `.effektive/.gitignore`. The log holds one JSON object per line,
 and the source texts in `blobs/`. The tool deletes entries older than seven days.
 The log changes no output, no exit code, and no file outside `.effektive/`.
 `--no-log` turns it off. The log is local and the tool never sends it.
+[docs/logging.md](logging.md) describes the logs, the report, and the replay.
 
 The `fixtures/host-adapter-files/` project shows a typed `host:` adapter for
 `effect/FileSystem`. `files.eff` declares the `Files.read` operation and the

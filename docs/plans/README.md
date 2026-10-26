@@ -32,4 +32,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | IN | [`docs/archive/plans/2026-10-25-inferred-input-contracts.md`](../archive/plans/2026-10-25-inferred-input-contracts.md) | Inferred input contracts and automatic validation |
 | RB (phases), RBF (findings) | [`docs/archive/plans/2026-10-25-reset.md`](../archive/plans/2026-10-25-reset.md) | Reset work |
 | PW | [`docs/archive/plans/2026-10-26-playground-workbench.md`](../archive/plans/2026-10-26-playground-workbench.md) | Playground workbench layout |
-| LG (phases), FR (findings) | [`docs/plans/2026-10-26-self-improvement-loop.md`](2026-10-26-self-improvement-loop.md) | Logging, report, replay, and the self-improvement loop |
+| LG (phases), FR (findings) | [`docs/archive/plans/2026-10-26-self-improvement-loop.md`](../archive/plans/2026-10-26-self-improvement-loop.md) | Logging, report, replay, and the self-improvement loop |

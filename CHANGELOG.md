@@ -6,6 +6,10 @@
   Problems panel, and a status bar with the cursor position and the contract.
 - The playground status bar shows how many fewer code characters the source
   has than its generated Effect-TS.
+- The command-line tool, the language server, and the playground write a
+  local session log. `deno task logs:report` summarizes the logs, and
+  `deno task logs:replay` runs a session again as a regression check. See
+  [docs/logging.md](docs/logging.md).
 
 ## 0.10.3 - 2026-10-26
 

@@ -5,6 +5,7 @@ playground. The logs let a person or an agent replay what a user saw, follow
 the meaningful internal operations, and read the visible outcomes. A report
 and a replay tool turn the logs into ranked findings and regression checks.
 The user asked for this on 2026-10-26. This document is the plan authority.
+The plan is complete. [docs/logging.md](../../logging.md) describes the result.
 
 The plan is tooling that the user asked for. It adds no language feature, so
 the application acceptance rule does not apply to it.
@@ -422,5 +423,5 @@ volume with M4.
 | LG3 | Done | `f382bd5` |
 | LG4 | Done | `dc706b5` |
 | LG5 | Done | `6863322` |
-| LG6 | Planned | |
-| LG7 | Planned | |
+| LG6 | Done | `879f50e` |
+| LG7 | Done | the closing commit |

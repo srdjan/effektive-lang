@@ -92,6 +92,7 @@ layout, the error fixture convention, and the format and lint scope.
 | Local installation and artifacts                               | [docs/installation.md](docs/installation.md)                                                 |
 | HTTP/SQLite integration acceptance                             | [docs/integration.md](docs/integration.md)                                                   |
 | Measurement harnesses and protocol                             | [docs/measurements.md](docs/measurements.md)                                                 |
+| Session logs, report, and replay                               | [docs/logging.md](docs/logging.md)                                                           |
 | Release benchmark results                                      | [docs/release-measurements.md](docs/release-measurements.md)                                 |
 | Playground browser acceptance                                  | [docs/archive/playground-review-2026-10-21.md](docs/archive/playground-review-2026-10-21.md) |
 | Rejected ideas                                                 | [docs/rejected.md](docs/rejected.md)                                                         |
