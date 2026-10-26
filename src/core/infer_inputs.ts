@@ -3,7 +3,7 @@ import type {
   ParameterSignature,
   TypeEnv,
 } from "./signatures.ts";
-import { TypeLowerer } from "./check.ts";
+import { TypeLowerer } from "./type_lower.ts";
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import type { BodyEnv } from "./check_expr.ts";
 import { isErrorId } from "./ids.ts";

@@ -59,7 +59,7 @@ import {
   type FunctionSignature,
   type TypeEnv,
 } from "./signatures.ts";
-import { TypeLowerer } from "./check.ts";
+import { TypeLowerer } from "./type_lower.ts";
 import {
   domainOf,
   flattenIdentityMembers,
