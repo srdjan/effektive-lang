@@ -40,7 +40,8 @@ failure fails the capture visibly.
 ## Layout
 
 The core reads files only through `SourceHost`. It calls no Deno API. Tests may
-use Deno APIs. The file-level map of `src/` is in
+use Deno APIs. [architecture.md](architecture.md) describes the pipeline and the
+layering rules. The file-level map of `src/` is in
 [api.md](api.md#source-file-map).
 
 | Directory         | Content                                                                                                                                                                                                                                                                |
@@ -55,7 +56,7 @@ use Deno APIs. The file-level map of `src/` is in
 | `tests/`          | Deno tests and test helpers.                                                                                                                                                                                                                                           |
 | `bench/`          | The measurement harnesses of parts A8 and L5. They are not part of the core.                                                                                                                                                                                           |
 | `fixtures/`       | Input files for the tests.                                                                                                                                                                                                                                             |
-| `docs/`           | Design, rules, status, API, measurements, and the archive of finished plans.                                                                                                                                                                                           |
+| `docs/`           | [Architecture](architecture.md), rules, status, API, measurements, and the archive of finished plans.                                                                                                                                                                 |
 
 The directories of `fixtures/` are these.
 

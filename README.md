@@ -84,7 +84,7 @@ layout, the error fixture convention, and the format and lint scope.
 | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | Release notes                                                  | [CHANGELOG.md](CHANGELOG.md)                                                                 |
 | Tasks, layout, fixture conventions, format and lint scope      | [docs/development.md](docs/development.md)                                                   |
-| Design of the transpiler                                       | [docs/transpiler-design.md](docs/transpiler-design.md)                                       |
+| Pipeline, layering rules, and decision record                  | [docs/architecture.md](docs/architecture.md)                                                 |
 | Language rules that the implementation chose                   | [docs/language-rules.md](docs/language-rules.md)                                             |
 | Project status and open items                                  | [docs/status.md](docs/status.md)                                                             |
 | API, command line, language server, VS Code client, playground | [docs/api.md](docs/api.md)                                                                   |
