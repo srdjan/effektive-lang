@@ -6,6 +6,7 @@ import {
   memoryLog,
   noLog,
   openFileLog,
+  prepareLogFolder,
 } from "../src/host/log.ts";
 import { sha256Hex } from "../src/core/mod.ts";
 
@@ -182,4 +183,20 @@ Deno.test("noLog does nothing and memoryLog records", () => {
     data: null,
   });
   assert(BUILD.length > 0);
+});
+
+Deno.test("prepareLogFolder gives the logs folder and passes on a mkdir failure", () => {
+  const fs = memoryFs();
+  const prepared = prepareLogFolder(fs, "/p", new Date(NOW));
+  assertEquals(prepared, { ok: true, value: "/p/.effektive/logs" });
+  assertEquals(fs.files.get("/p/.effektive/.gitignore")?.text, "*\n");
+  const failure = { message: "denied" };
+  const failing = {
+    ...fs,
+    mkdir: () => ({ ok: false as const, error: failure }),
+  };
+  assertEquals(prepareLogFolder(failing, "/p", new Date(NOW)), {
+    ok: false,
+    error: failure,
+  });
 });

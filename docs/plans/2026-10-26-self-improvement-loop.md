@@ -350,6 +350,15 @@ Log volume: the bench removes its temporary folders, so a separate script ran
 The session file has 1,527 lines and 462,973 bytes, about 926 bytes per edit,
 plus 7 blobs. The `publishDiagnostics` messages are most of it.
 
+LG4 browser check, 2026-10-26, at 1280x800 against `deno task
+playground:serve`: a session that typed 18 characters, clicked a problem,
+undid the edit, and clicked a file tab wrote `pg.start`, `pg.select` (`start`),
+`pg.compile`, `pg.edit` and `pg.compile` per key, `pg.problem`, `pg.select`
+(`click`), and `pg.end`, in that order. The logged edits rebuild the editor
+text exactly. One earlier run, typed right after a forced reload, logged one
+insert one offset early. The probable cause is a caret move in the editor
+itself. LG6 replay reports such a mismatch.
+
 ## Validation
 
 A Fable review on 2026-10-26 found thirteen points, seven of them blocking.
@@ -387,7 +396,7 @@ volume with M4.
 | --- | --- | --- |
 | LG1 | Done | `906395a` |
 | LG2 | Done | `4e9fe92` |
-| LG3 | Planned | |
+| LG3 | Done | `f382bd5` |
 | LG4 | Planned | |
 | LG5 | Planned | |
 | LG6 | Planned | |

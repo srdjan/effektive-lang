@@ -12,6 +12,7 @@ import {
   errorMessage,
   generatedPathOf,
 } from "../../src/core/mod.ts";
+import { BUILD } from "../../src/host/log.ts";
 import {
   createPlayground,
   type PlaygroundError,
@@ -22,6 +23,22 @@ import {
   showDiagnostics,
   sourceExtensions,
 } from "./editor.ts";
+import {
+  compileData,
+  type EditChange,
+  editData,
+  endData,
+  errorData,
+  hoverData,
+  type Layout,
+  layoutData,
+  layoutOf,
+  problemData,
+  selectData,
+  startData,
+  viewData,
+} from "./events.ts";
+import { createPageLog } from "./log_client.ts";
 import {
   DEFAULT_TAB,
   hoverLines,
@@ -127,7 +144,7 @@ function markSelected(list: HTMLElement, selected: HTMLElement): void {
  */
 function wireTablist(
   list: HTMLElement,
-  activate: (tab: HTMLButtonElement) => void,
+  activate: (tab: HTMLButtonElement, by: "click" | "key") => void,
 ): void {
   const tabFrom = (
     target: EventTarget | null,
@@ -138,7 +155,7 @@ function wireTablist(
   };
   list.addEventListener("click", (event) => {
     const tab = tabFrom(event.target);
-    if (tab !== undefined) activate(tab);
+    if (tab !== undefined) activate(tab, "click");
   });
   list.addEventListener("focusin", (event) => {
     tabFrom(event.target)?.scrollIntoView({
@@ -174,7 +191,7 @@ function wireTablist(
     event.preventDefault();
     const target = tabs[next];
     target.focus();
-    activate(target);
+    activate(target, "key");
   });
 }
 
@@ -234,6 +251,7 @@ async function main(): Promise<void> {
     return;
   }
   const files = examples.files;
+  const log = createPageLog({ fetch: (url, init) => fetch(url, init) });
   const paths = Object.keys(files).filter((path) => path !== CONFIG_FILE);
   const session = createPlayground(files, { now: () => performance.now() });
   const first = session.start();
@@ -257,7 +275,8 @@ async function main(): Promise<void> {
   const viewTabs = new Map<ViewName, HTMLButtonElement>();
   let problemCount = 0;
 
-  function showError(message: string): void {
+  function showError(tag: string, message: string): void {
+    log.event("pg.error", errorData(tag, message));
     errorMessage.textContent = message;
     reload.hidden = true;
     errorRegion.hidden = false;
@@ -272,12 +291,21 @@ async function main(): Promise<void> {
   // the undo history and the cursor stay with the file.
 
   const extensions = sourceExtensions({
-    hover: (offset) => session.hover(active, offset),
+    hover: (offset) => {
+      const hit = session.hover(active, offset);
+      log.event("pg.hover", hoverData(offset, hit, "pointer"));
+      return hit;
+    },
     onUpdate: (update: ViewUpdate) => {
       if (update.docChanged) {
         clearTimeout(cursorTimer);
         const text = update.state.doc.toString();
         texts[active] = text;
+        const changes: EditChange[] = [];
+        update.changes.iterChanges((from, to, _fromB, _toB, inserted) => {
+          changes.push({ from, to, insert: inserted.toString() });
+        });
+        log.event("pg.edit", editData(active, changes, text.length));
         applyResult(session.update(active, text));
       } else if (update.selectionSet) {
         scheduleCursorLine();
@@ -312,9 +340,13 @@ async function main(): Promise<void> {
   }
 
   function refreshCursorLine(): void {
-    const text = active.endsWith(".effi") ? "" : hoverLines(
-      session.hover(active, sourceView.state.selection.main.head),
-    ).cursor;
+    let text = "";
+    if (!active.endsWith(".effi")) {
+      const offset = sourceView.state.selection.main.head;
+      const hit = session.hover(active, offset);
+      log.event("pg.hover", hoverData(offset, hit, "cursor"));
+      text = hoverLines(hit).cursor;
+    }
     if (text !== cursorLine.textContent) cursorLine.textContent = text;
   }
 
@@ -336,9 +368,9 @@ async function main(): Promise<void> {
     fileButtons.set(path, tab);
     badges.set(path, badge);
   }
-  wireTablist(fileTabs, (tab) => {
+  wireTablist(fileTabs, (tab, by) => {
     const path = tab.dataset.path;
-    if (path !== undefined) goTo(path);
+    if (path !== undefined) goTo(path, by);
   });
 
   function renderFileTabs(): void {
@@ -401,7 +433,8 @@ async function main(): Promise<void> {
   }
 
   function openProblem(item: ProblemItem): void {
-    goTo(item.path);
+    log.event("pg.problem", problemData(item));
+    goTo(item.path, "click");
     if (narrow) setView("source");
     const length = sourceView.state.doc.length;
     sourceView.dispatch({
@@ -462,7 +495,7 @@ async function main(): Promise<void> {
 
   function applyResult(result: CompileResult): void {
     if (!result.ok) {
-      showError(errorText(result.error));
+      showError(result.error.tag, errorText(result.error));
       showDiagnostics(sourceView, []);
       return;
     }
@@ -473,12 +506,21 @@ async function main(): Promise<void> {
     renderProblems();
     renderOutput();
     showDiagnostics(sourceView, latest.diagnostics[active] ?? []);
+    logCompile();
+  }
+
+  function logCompile(): void {
+    log.event(
+      "pg.compile",
+      compileData(active, latest, saving.textContent ?? ""),
+    );
   }
 
   // The active file and the URL hash.
 
-  function selectFile(path: string): void {
+  function selectFile(path: string, by: "click" | "key" | "hash"): void {
     if (path === active) return;
+    log.event("pg.select", selectData(path, by));
     clearTimeout(cursorTimer);
     states.set(active, sourceView.state);
     active = path;
@@ -495,13 +537,13 @@ async function main(): Promise<void> {
   }
 
   /** Opens `path` through the hash, so the Back button moves between tabs. */
-  function goTo(path: string): void {
+  function goTo(path: string, by: "click" | "key"): void {
     if (location.hash !== `#${path}`) location.hash = path;
-    selectFile(path);
+    selectFile(path, by);
   }
 
   globalThis.addEventListener("hashchange", () => {
-    selectFile(tabFromHash(location.hash, paths));
+    selectFile(tabFromHash(location.hash, paths), "hash");
   });
 
   // The narrow layout: a switch between the three regions.
@@ -552,7 +594,9 @@ async function main(): Promise<void> {
     }
     wireTablist(list, (tab) => {
       const name = VIEW_NAMES.find((view) => `view-tab-${view}` === tab.id);
-      if (name !== undefined) setView(name);
+      if (name === undefined) return;
+      log.event("pg.view", viewData(name));
+      setView(name);
     });
     viewsNav.replaceChildren(list);
     viewsNav.hidden = false;
@@ -580,7 +624,17 @@ async function main(): Promise<void> {
     if (wideQuery.matches) enterWide();
     else enterNarrow();
   }
-  wideQuery.addEventListener("change", applyMode);
+  let layout: Layout = layoutOf(globalThis.innerWidth);
+  function noteLayout(): void {
+    const mode = layoutOf(globalThis.innerWidth);
+    if (mode === layout) return;
+    layout = mode;
+    log.event("pg.layout", layoutData(mode));
+  }
+  wideQuery.addEventListener("change", () => {
+    applyMode();
+    noteLayout();
+  });
 
   const explorerQuery = globalThis.matchMedia(EXPLORER_QUERY);
   function applyOrientation(): void {
@@ -589,7 +643,14 @@ async function main(): Promise<void> {
       explorerQuery.matches ? "vertical" : "horizontal",
     );
   }
-  explorerQuery.addEventListener("change", applyOrientation);
+  explorerQuery.addEventListener("change", () => {
+    applyOrientation();
+    noteLayout();
+  });
+  globalThis.addEventListener("pagehide", () => {
+    log.event("pg.end", endData());
+    log.flush();
+  });
 
   // Start.
 
@@ -609,6 +670,18 @@ async function main(): Promise<void> {
   sourceView.requestMeasure();
   outputView.requestMeasure();
   scheduleCursorLine();
+  log.event(
+    "pg.start",
+    startData({
+      build: BUILD,
+      width: globalThis.innerWidth,
+      height: globalThis.innerHeight,
+      files,
+      loadMs: performance.now(),
+    }),
+  );
+  log.event("pg.select", selectData(active, "start"));
+  logCompile();
 }
 
 await main();

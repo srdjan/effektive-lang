@@ -128,13 +128,16 @@ export interface FileLogOptions extends LogClock {
 const ROTATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Opens the log of one session in `<projectDir>/.effektive/logs/`. It fails
- * only when the folders cannot be created.
+ * Prepares `<projectDir>/.effektive/logs/`: creates the folders, writes the
+ * self-ignoring `.gitignore`, and deletes session files and blobs older than
+ * seven days. The result is the logs folder. It fails only when the folders
+ * or the `.gitignore` cannot be written.
  */
-export function openFileLog(
-  options: FileLogOptions,
-): Result<EventLog, FileFailure> {
-  const { fs, projectDir, surface } = options;
+export function prepareLogFolder(
+  fs: LogFs,
+  projectDir: string,
+  now: Date,
+): Result<string, FileFailure> {
   const root = `${projectDir}/.effektive`;
   const logs = `${root}/logs`;
   const blobs = `${logs}/blobs`;
@@ -145,8 +148,7 @@ export function openFileLog(
     const written = fs.writeText(ignore, "*\n");
     if (!written.ok) return written;
   }
-  const now = options.now ?? (() => new Date());
-  const cutoff = now().getTime() - ROTATION_MS;
+  const cutoff = now.getTime() - ROTATION_MS;
   for (const [dir, suffix] of [[logs, ".jsonl"], [blobs, ".txt"]] as const) {
     const listed = fs.list(dir);
     if (!listed.ok) continue;
@@ -156,6 +158,22 @@ export function openFileLog(
       }
     }
   }
+  return { ok: true, value: logs };
+}
+
+/**
+ * Opens the log of one session in `<projectDir>/.effektive/logs/`. It fails
+ * only when the folders cannot be created.
+ */
+export function openFileLog(
+  options: FileLogOptions,
+): Result<EventLog, FileFailure> {
+  const { fs, projectDir, surface } = options;
+  const now = options.now ?? (() => new Date());
+  const prepared = prepareLogFolder(fs, projectDir, now());
+  if (!prepared.ok) return prepared;
+  const logs = prepared.value;
+  const blobs = `${logs}/blobs`;
   const factory = envelopes(surface, { ...options, now });
   const day = now().toISOString().slice(0, 10).replaceAll("-", "");
   const file = `${logs}/${surface}-${day}-${factory.session}.jsonl`;

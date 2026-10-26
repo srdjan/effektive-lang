@@ -138,11 +138,14 @@ src/lsp/       The language server. See "Language server".
 editors/vscode/ The VS Code client. See "VS Code client". Plain JavaScript client; release packaging bundles the server.
 playground/    The browser playground. See "Playground". The page is in src/, the build in build.ts.
   build.ts       build(outDir): bundles the page, copies the static files, and writes examples.json.
-  serve.ts       Builds the playground and serves the output on 127.0.0.1:8790.
+  serve.ts       Builds the playground, serves the output on 127.0.0.1:8790, and writes the session log of POST /log.
+  log_endpoint.ts checkLogRequest: the pure check of a POST /log request.
   src/           The page script and its parts.
     app.ts         The page: file tabs, regions, Problems list, TypeScript pane, and URL hash.
     compile.ts     The compile facade: one Program across edits, turned into plain data for the page.
     editor.ts      The CodeMirror extensions of the source editor and of the TypeScript pane.
+    events.ts      The data of each pg.* log event, and layoutOf.
+    log_client.ts  createPageLog: batches the events and posts them to /log.
     highlight.ts   Syntax highlighting ranges from the core lexer.
     model.ts       The page logic without a DOM: tabs, Problems, error counts, and hover texts.
 scripts/       Scripts that the tasks run.
@@ -889,6 +892,10 @@ them. From 720 pixels, the source and the TypeScript sit side by side above
 the problems. From 1024 pixels, the file tabs become an explorer in a left
 sidebar. The URL hash holds the active file, for example
 `#host/providers.effi`.
+
+The page sends a session log to `serve.ts`, which writes it into
+`playground/.effektive/logs/`. `deno task playground:serve --no-log` turns the
+log off. The log is a self-ignoring folder, so git ignores it.
 
 Fast tests cover the compile facade, the highlighter, and the page model without
 a browser. The slow test `tests/playground_build_slow_test.ts` runs the build.
