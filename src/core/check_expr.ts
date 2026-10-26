@@ -1969,11 +1969,13 @@ class BodyChecker
         ? this.table.record(inferred)
         : this.table.error;
     }
+    // A literal adopts one member of an expected union, so it needs that member's proof.
+    const adopted = target?.kind === "record" ? target.ref : expected;
     if (
-      expected !== undefined && this.refinementBase(expected) !== undefined &&
+      adopted !== undefined && this.refinementBase(adopted) !== undefined &&
       target?.kind !== "construct"
     ) {
-      const decision = this.refinements.prove(node, expected);
+      const decision = this.refinements.prove(node, adopted);
       if (
         !raw || decision.status === "failed" && decision.reason === "disproved"
       ) {
@@ -1981,7 +1983,7 @@ class BodyChecker
           node,
           decision,
           "the record",
-          this.refinementBase(expected)?.id,
+          this.refinementBase(adopted)?.id,
         );
       }
     }

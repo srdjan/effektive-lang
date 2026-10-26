@@ -412,3 +412,39 @@ const make = (a: Int, b: Int, p: Bool): Either => {
   Object.assign(other.right, { operator: "<" });
   assert(messages(weaker, control.sources).length > 0);
 });
+
+// RBF20: a record literal that adopts a refined member of an expected union
+// needs the proof of that member, as it does without the union.
+Deno.test("a record literal that adopts a refined union member needs its proof", () => {
+  const prelude = `
+type Int = int
+type Bool = boolean
+type Either = { a: Int, b: Int } where r => r.a > 0 || r.b > 0
+error Stop = {}
+type Box = { e: Either | Stop }
+`;
+  const unproved = [
+    "export const direct = (a: Int): Either | Stop => ({ a: a, b: a })",
+    "export const opt = (a: Int): Option<Either | Stop> => Some({ a: a, b: a })",
+    "export const field = (a: Int): Box => ({ e: { a: a, b: a } })",
+    "export const branch = (a: Int, p: Bool): Either | Stop => if (p) { { a: a, b: a } } else { Stop({}) }",
+  ];
+  for (const line of unproved) {
+    const checked = checkProject(
+      memoryHost({ "effektive.json": "{}", "m.eff": prelude + line + "\n" }),
+      "",
+      ["m.eff"],
+    );
+    assert(checked.ok);
+    assertEquals(
+      checked.value.diagnostics.map((d) => d.code),
+      ["type-mismatch/013"],
+      line,
+    );
+  }
+  const proved = lower(
+    prelude +
+      "export const direct = (a: Int): Either | Stop => if (a > 0) { { a: a, b: a } } else { Stop({}) }\n",
+  );
+  assertEquals(messages(proved.ir, proved.sources), []);
+});
