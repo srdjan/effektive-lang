@@ -4,6 +4,7 @@
 // tests run them with in-memory doubles.
 
 import type { ReadError, Result } from "../core/mod.ts";
+import type { EventLog } from "./log.ts";
 
 export interface DirectoryEntry {
   readonly name: string;
@@ -55,4 +56,9 @@ export interface HostIo {
    * sequence ends when the watcher stops.
    */
   watch(root: string): AsyncIterable<readonly string[]>;
+  /**
+   * Opens the session log of the project folder. Returns a log that records
+   * nothing when it cannot open.
+   */
+  openLog(root: string): EventLog;
 }

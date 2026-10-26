@@ -124,3 +124,30 @@ export function formatTscMappings(
   });
   return located.sort(compareLocated).map(line);
 }
+
+/** One diagnostic as the session log records it. Positions are one-based. */
+export interface LoggedDiagnostic {
+  readonly source: "effektive" | "validate" | "tsc";
+  readonly code?: string;
+  readonly path?: string;
+  readonly start?: { readonly line: number; readonly column: number };
+  readonly end?: { readonly line: number; readonly column: number };
+  readonly message: string;
+}
+
+/** The log items of Effektive or validation diagnostics, in the order given. */
+export function loggedDiagnostics(
+  diagnostics: readonly Diagnostic[],
+  textOf: TextOf,
+  source: "effektive" | "validate",
+): LoggedDiagnostic[] {
+  const positions = new Positions(textOf);
+  return diagnostics.map((d) => ({
+    source,
+    code: d.code,
+    path: d.span.source,
+    start: positions.of(d.span.source, d.span.start),
+    end: positions.of(d.span.source, d.span.end),
+    message: d.message,
+  }));
+}

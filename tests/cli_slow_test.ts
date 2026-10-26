@@ -17,7 +17,8 @@ const REPOSITORY = new URL("../", import.meta.url).pathname;
 
 async function effektive(args: readonly string[]): Promise<Run> {
   const output = await new Deno.Command(Deno.execPath(), {
-    args: ["task", "effektive", ...args],
+    // Runs on a folder of this repository, so it writes no session log there.
+    args: ["task", "effektive", ...args, "--no-log"],
     cwd: REPOSITORY,
     env: { NO_COLOR: "1" },
     stdout: "piped",

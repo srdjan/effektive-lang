@@ -10,8 +10,14 @@ import type {
   Revision,
   SpanTable,
 } from "../core/mod.ts";
-import { formatDiagnostics, type TextOf } from "./format.ts";
+import {
+  formatDiagnostics,
+  type LoggedDiagnostic,
+  loggedDiagnostics,
+  type TextOf,
+} from "./format.ts";
 import type { HostIo } from "../host/io.ts";
+import type { EventLog } from "../host/log.ts";
 import {
   type ModuleRemoval,
   ownedByRoot,
@@ -43,6 +49,8 @@ export interface BuildOutcome {
   readonly modules: readonly string[];
   /** The removed outputs of each module that left, for the caller to print. They are not in `notes`. */
   readonly removals: readonly ModuleRemoval[];
+  /** The diagnostics in structured form, for the session log. */
+  readonly items: readonly LoggedDiagnostic[];
 }
 
 /**
@@ -59,6 +67,7 @@ export async function buildRevision(
   options: BuildOptions,
   previous: readonly string[],
   outputCache: TypeScriptOutputs,
+  log: EventLog,
 ): Promise<BuildOutcome> {
   const notes: string[] = [];
   const diagnostics: Diagnostic[] = [...revision.diagnostics];
@@ -72,6 +81,11 @@ export async function buildRevision(
 
   // Validation reads the lowered IR of each module that lowered.
   const validation = new Map<string, readonly Diagnostic[]>();
+  const items: LoggedDiagnostic[] = loggedDiagnostics(
+    revision.diagnostics,
+    textOf,
+    "effektive",
+  );
   if (options.validate) {
     const lowered = new Map<string, Result<ModuleIR, LowerError>>();
     for (const name of names) {
@@ -81,6 +95,7 @@ export async function buildRevision(
     for (const [name, found] of revision.validate(lowered)) {
       validation.set(name, found);
       diagnostics.push(...found);
+      items.push(...loggedDiagnostics(found, textOf, "validate"));
     }
   }
 
@@ -122,8 +137,12 @@ export async function buildRevision(
         generated,
         tables,
         textOf,
+        log,
       );
       lines.push(...outcome.lines);
+      for (const message of outcome.lines) {
+        items.push({ source: "tsc", message });
+      }
       notes.push(...outcome.notes);
       count += outcome.lines.length;
       if (outcome.failed) failed = true;
@@ -137,5 +156,6 @@ export async function buildRevision(
     written,
     modules: names,
     removals,
+    items,
   };
 }

@@ -9,6 +9,7 @@ import {
   type SpanTable,
 } from "../core/mod.ts";
 import type { HostIo } from "../host/io.ts";
+import type { EventLog } from "../host/log.ts";
 import { formatTscMappings, type TextOf } from "./format.ts";
 
 /** The version of Effect that the generated code targets. */
@@ -59,18 +60,27 @@ export async function runTsc(
   generated: readonly string[],
   tables: ReadonlyMap<string, SpanTable>,
   textOf: TextOf,
+  log: EventLog,
 ): Promise<TscOutcome> {
   const hosts = hostModulePaths(config);
   const files = [...new Set([...generated, ...hosts.keys()])];
   const absolute = io.fs.absolute(root);
+  const started = performance.now();
   const run = await io.denoCheck({ cwd: absolute, config: tscConfig(), files });
   if (!run.ok) {
+    log.append("cli.error", {
+      message: `cannot run deno check: ${run.error.message}`,
+    });
     return {
       lines: [],
       notes: [`error: cannot run deno check: ${run.error.message}`],
       failed: true,
     };
   }
+  log.append("cli.tsc", {
+    code: run.value.code,
+    ms: performance.now() - started,
+  });
   const output = parseDenoCheck(run.value.stderr, absolute);
   const mappings = output.diagnostics.map((d) =>
     mapTscDiagnostic(d, tables, hosts)

@@ -255,9 +255,12 @@ its temporary project copy (`bench/lsp_client.ts`, `bench/lsp_script.ts`).
 Verification: a fast test drives the server through the wire log with memory
 ports and the memory log. It checks one `lsp.in` per frame, one `lsp.batch`
 per batch, one `lsp.out` per response, and `lsp.fs` for each disk call. Run
-`deno task bench` M4 before and after the change, and record both p90 values
-and the log bytes of the M4 run in this plan. Accept the change when p90 stays
-inside the 100 ms budget. `deno task check` exits 0.
+`deno task bench --full m1 m3` before and after the change, and record the
+diagnostics p90 values of both runs in this plan. M1 and M3 measure the
+diagnostics latency; M4 measures memory. Accept the change when each p90 stays
+inside the 100 ms budget. Run `deno task bench m4` after the change, and
+record the bytes of its log folder as the log volume. `deno task check` exits
+0.
 
 ### LG4: playground events
 
@@ -348,11 +351,16 @@ Fable could not confirm the esbuild text of FR3 from the code. The saved
 failure output of this session confirms it, and FR3 now names a probable cause
 and the check that confirms it.
 
+Correction during LG2: the first LG3 verification named M4 for the p90 check.
+M4 measures memory, and M1 and M3 measure the diagnostics latency
+(`docs/measurements.md`). LG3 now measures p90 with M1 and M3, and the log
+volume with M4.
+
 ## Progress
 
 | Unit | State | Commit |
 | --- | --- | --- |
-| LG1 | Planned | |
+| LG1 | Done | `906395a` |
 | LG2 | Planned | |
 | LG3 | Planned | |
 | LG4 | Planned | |

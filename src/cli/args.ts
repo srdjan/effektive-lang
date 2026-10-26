@@ -4,14 +4,20 @@ import type { Result } from "../core/mod.ts";
 
 /** A command that works on a project directory. */
 export type ProjectCommand =
-  | { readonly kind: "check"; readonly root: string }
+  | { readonly kind: "check"; readonly root: string; readonly log: boolean }
   | {
     readonly kind: "build";
     readonly root: string;
     readonly tsc: boolean;
     readonly validate: boolean;
+    readonly log: boolean;
   }
-  | { readonly kind: "watch"; readonly root: string; readonly tsc: boolean };
+  | {
+    readonly kind: "watch";
+    readonly root: string;
+    readonly tsc: boolean;
+    readonly log: boolean;
+  };
 
 export type Command = { readonly kind: "help" } | ProjectCommand;
 
@@ -23,15 +29,18 @@ export const USAGE = [
   "  build [root] [--tsc] [--validate]     also write <module>.ts and <module>.ts.map",
   "  watch [root] [--tsc]                  build, then rebuild when a source changes",
   "",
+  "flags:",
+  "  --no-log                              write no session log to <root>/.effektive/logs/",
+  "",
   "root is the project directory with effektive.json. The default is the current directory.",
   "exit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error",
   "",
 ].join("\n");
 
 const FLAGS: Readonly<Record<string, readonly string[]>> = {
-  check: [],
-  build: ["--tsc", "--validate"],
-  watch: ["--tsc"],
+  check: ["--no-log"],
+  build: ["--tsc", "--validate", "--no-log"],
+  watch: ["--tsc", "--no-log"],
 };
 
 /** Parses the arguments. An error value holds the message for the user. */
@@ -65,9 +74,10 @@ export function parseArgs(args: readonly string[]): Result<Command, string> {
     return fail(`too many arguments: \`${positional.join(" ")}\``);
   }
   const root = positional[0] ?? ".";
+  const log = !flags.has("--no-log");
   switch (name) {
     case "check":
-      return { ok: true, value: { kind: "check", root } };
+      return { ok: true, value: { kind: "check", root, log } };
     case "build":
       return {
         ok: true,
@@ -76,12 +86,13 @@ export function parseArgs(args: readonly string[]): Result<Command, string> {
           root,
           tsc: flags.has("--tsc"),
           validate: flags.has("--validate"),
+          log,
         },
       };
     case "watch":
       return {
         ok: true,
-        value: { kind: "watch", root, tsc: flags.has("--tsc") },
+        value: { kind: "watch", root, tsc: flags.has("--tsc"), log },
       };
   }
 }

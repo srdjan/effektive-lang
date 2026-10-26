@@ -9,6 +9,7 @@ import type {
   HostIo,
 } from "../src/host/io.ts";
 import type { ReadError, Result } from "../src/core/source.ts";
+import { memoryLog } from "../src/host/log.ts";
 
 export interface MemoryIo {
   readonly io: HostIo;
@@ -18,6 +19,8 @@ export interface MemoryIo {
   readonly out: string[];
   readonly err: string[];
   readonly checks: DenoCheckRequest[];
+  /** The logs that `io.openLog` opened, in order. */
+  readonly logs: ReturnType<typeof memoryLog>[];
   /** Paths whose write fails. */
   readonly unwritable: Set<string>;
   /** Batches that `io.watch` yields. A batch may be a function that changes `files` first. */
@@ -43,6 +46,7 @@ export function memoryIo(
     out: [],
     err: [],
     checks: [],
+    logs: [],
     unwritable: new Set(),
     script: [],
     denoCheckStderr: options.stderr ?? "",
@@ -122,6 +126,11 @@ export function memoryIo(
           yield batch ?? [];
         }
       })();
+    },
+    openLog() {
+      const log = memoryLog("cli");
+      state.logs.push(log);
+      return log;
     },
   };
   return Object.assign(state, { io });

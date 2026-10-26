@@ -15,6 +15,7 @@ import { parseArgs, type ProjectCommand, USAGE } from "./args.ts";
 import type { BuildOptions, BuildOutcome } from "./build.ts";
 import { denoIo } from "../host/deno_io.ts";
 import type { HostIo } from "../host/io.ts";
+import { type EventLog, noLog } from "../host/log.ts";
 import { printOutcome, rechecked } from "./report.ts";
 import { Session, type SyncResult } from "./session.ts";
 
@@ -47,6 +48,7 @@ async function watchLoop(
   first: SyncResult,
   events: AsyncIterable<readonly string[]>,
   options: BuildOptions,
+  log: EventLog,
 ): Promise<void> {
   // The modules of the last revision that loaded. A round with a configuration
   // error keeps it, so that the next revision still finds the modules that left.
@@ -57,6 +59,7 @@ async function watchLoop(
         return;
       case "read-error":
       case "config-error":
+        log.append("cli.error", { message: synced.message });
         io.stderr(`error: ${synced.message}\n`);
         return;
       case "host-change": {
@@ -94,6 +97,9 @@ async function watchLoop(
     while (true) {
       const event = await next;
       if (event.done) break;
+      if (event.value.length > 0) {
+        log.append("cli.change", { paths: event.value });
+      }
       await round(session.sync());
       next = iterator.next();
     }
@@ -116,10 +122,13 @@ export async function main(
   args: readonly string[],
   io: HostIo,
 ): Promise<number> {
+  const opened: { log?: EventLog } = {};
   try {
-    return await execute(args, io);
+    return await execute(args, io, opened);
   } catch (error) {
-    io.stderr(`effektive: internal error: ${errorMessage(error)}\n`);
+    const message = errorMessage(error);
+    io.stderr(`effektive: internal error: ${message}\n`);
+    opened.log?.append("cli.error", { message });
     return EXIT_INTERNAL;
   }
 }
@@ -127,6 +136,7 @@ export async function main(
 async function execute(
   args: readonly string[],
   io: HostIo,
+  opened: { log?: EventLog },
 ): Promise<number> {
   const parsed = parseArgs(args);
   if (!parsed.ok) {
@@ -143,21 +153,41 @@ async function execute(
     io.stderr(`effektive: the root directory ${root} does not exist\n`);
     return EXIT_USAGE;
   }
+  const started = performance.now();
+  const log = command.log ? io.openLog(root) : noLog;
+  opened.log = log;
+  log.append("cli.start", {
+    args,
+    command: command.kind,
+    root: io.fs.absolute(root),
+  });
+  const code = await runProject(io, command, log);
+  log.append("cli.end", { code, ms: performance.now() - started });
+  return code;
+}
 
+async function runProject(
+  io: HostIo,
+  command: ProjectCommand,
+  log: EventLog,
+): Promise<number> {
+  const root = command.root;
   const session = new Session(
     io,
     root,
     command.kind === "watch" && command.tsc,
+    log,
   );
   const options = optionsOf(command);
   // A project that cannot start is a configuration error. A later break in watch mode only prints.
   const synced = session.sync();
   if (isSyncFailure(synced)) {
+    log.append("cli.error", { message: synced.message });
     io.stderr(`effektive: ${synced.message}\n`);
     return EXIT_USAGE;
   }
   if (command.kind === "watch") {
-    await watchLoop(io, session, synced, io.watch(root), options);
+    await watchLoop(io, session, synced, io.watch(root), options, log);
     return EXIT_OK;
   }
   if (synced.tag === "unchanged") return EXIT_OK;

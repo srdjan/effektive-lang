@@ -34,20 +34,33 @@ function errorFixture(name: string): string {
 Deno.test("parseArgs reads the commands, the root, and the flags", () => {
   assertEquals(parseArgs(["check"]), {
     ok: true,
-    value: { kind: "check", root: "." },
+    value: { kind: "check", root: ".", log: true },
   });
   assertEquals(parseArgs(["check", "p"]), {
     ok: true,
-    value: { kind: "check", root: "p" },
+    value: { kind: "check", root: "p", log: true },
   });
   assertEquals(parseArgs(["build", "--tsc", "p", "--validate"]), {
     ok: true,
-    value: { kind: "build", root: "p", tsc: true, validate: true },
+    value: {
+      kind: "build",
+      root: "p",
+      tsc: true,
+      validate: true,
+      log: true,
+    },
   });
   assertEquals(parseArgs(["watch", "--tsc"]), {
     ok: true,
-    value: { kind: "watch", root: ".", tsc: true },
+    value: { kind: "watch", root: ".", tsc: true, log: true },
   });
+});
+
+Deno.test("parseArgs accepts --no-log for every project command", () => {
+  for (const name of ["check", "build", "watch"]) {
+    const parsed = parseArgs([name, "--no-log", "p"]);
+    assert(parsed.ok && parsed.value.kind !== "help" && !parsed.value.log);
+  }
 });
 
 Deno.test("parseArgs rejects an unknown command, an unknown flag, and extra arguments", () => {

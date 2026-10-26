@@ -569,6 +569,7 @@ task runs in the repository directory, so pass an explicit root, for example
 | `deno task effektive build [root] --validate` | Also runs the IR validator and prints its diagnostics.                                                    |
 | `deno task effektive build [root] --tsc`      | Also runs `deno check` over the written files and the host modules, and maps each error to the source.    |
 | `deno task effektive watch [root] [--tsc]`    | Builds once, then builds again after each change of a source file. It prints the modules that it checked. |
+| `deno task effektive <command> [root] --no-log` | Writes no session log. Every project command accepts it.                                                |
 
 The root is the project directory with `effektive.json`. The modules are the
 `.eff` files under the root, found by a recursive walk. The walk skips
@@ -623,6 +624,12 @@ strict mode, `exactOptionalPropertyTypes`, and `noUncheckedIndexedAccess`. It
 maps `effect` and `@effect/platform-node` to their pinned 4.0.5 packages. The
 tool writes the configuration to a temporary directory and removes it after the
 run. It passes `--no-lock`, so the project directory gets no new file.
+
+Each project command writes a session log to `<root>/.effektive/logs/`, and a
+self-ignoring `.effektive/.gitignore`. The log holds one JSON object per line,
+and the source texts in `blobs/`. The tool deletes entries older than seven days.
+The log changes no output, no exit code, and no file outside `.effektive/`.
+`--no-log` turns it off. The log is local and the tool never sends it.
 
 The `fixtures/host-adapter-files/` project shows a typed `host:` adapter for
 `effect/FileSystem`. `files.eff` declares the `Files.read` operation and the

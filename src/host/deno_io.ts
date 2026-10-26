@@ -12,7 +12,7 @@ import type {
   HostFs,
   HostIo,
 } from "./io.ts";
-import type { LogFs } from "./log.ts";
+import { type LogFs, noLog, openFileLog } from "./log.ts";
 import { isSourcePath, isTargetPath } from "./workspace.ts";
 
 const encoder = new TextEncoder();
@@ -203,5 +203,13 @@ export function denoIo(): HostIo {
     fs: denoFs,
     denoCheck,
     watch: (root) => debounceBatches(sourceEvents(root), WATCH_DEBOUNCE_MS),
+    openLog: (root) => {
+      const opened = openFileLog({
+        fs: denoLogFs,
+        projectDir: root,
+        surface: "cli",
+      });
+      return opened.ok ? opened.value : noLog;
+    },
   };
 }
