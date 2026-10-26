@@ -1,10 +1,10 @@
 import {
-  dataFields,
   fieldAdapter,
   fieldKey,
   needsFieldAdapter,
   prototypeField,
   sensitiveField,
+  taggedFields,
 } from "./fields.ts";
 // The expression scheme (plan sections 6.1 to 6.4): `pure`, `inGen`, and
 // `asEffect`, the leaf and hoist rules, the control forms, and the parentheses
@@ -721,7 +721,7 @@ export class ExprEmitter implements ExprCore {
           declaration.definition.kind === "alias"
         ) return kid(e.value);
         const fields = declaration?.kind === "type"
-          ? dataFields(declaration)
+          ? taggedFields(declaration)
           : undefined;
         const record: Type | undefined = fields === undefined
           ? undefined
@@ -931,7 +931,7 @@ export class ExprEmitter implements ExprCore {
     if (resolved.kind === "record") return resolved.fields;
     if (resolved.kind !== "named") return undefined;
     const declaration = this.scope.typeLevelDeclaration(resolved.id);
-    return declaration?.kind === "type" ? dataFields(declaration) : undefined;
+    return declaration?.kind === "type" ? taggedFields(declaration) : undefined;
   }
 
   private errorFieldType(error: ErrorId, name: string): Type | undefined {

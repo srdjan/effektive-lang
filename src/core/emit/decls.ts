@@ -1,9 +1,9 @@
 import {
-  dataFields,
   fieldAdapter,
   fieldKey,
   needsFieldAdapter,
   sensitiveField,
+  taggedFields,
 } from "./fields.ts";
 // Declarations and their order (plan section 6.5), and the export rule (I8).
 
@@ -230,7 +230,7 @@ export function recursiveGroups(
     const declarations = members.map((n) => group[n]);
     const cycle = members.length > 1 || edges[members[0]].includes(members[0]);
     const hasData = declarations.some((d) =>
-      d.kind === "type" && dataFields(d) !== undefined
+      d.kind === "type" && taggedFields(d) !== undefined
     );
     if (!cycle || !hasData) continue;
     const ids = new Set(declarations.map((d) => d.id));
@@ -389,7 +389,7 @@ export class DeclarationEmitter {
   private typeDeclaration(d: TypeDecl): Doc {
     const keyword = this.exportKeyword(d.id);
     const grouped = this.groups.get(d.id);
-    const fields = dataFields(d);
+    const fields = taggedFields(d);
     if (fields !== undefined && grouped !== undefined) {
       return this.recursiveData(d, fields, grouped);
     }
@@ -857,14 +857,14 @@ export class DeclarationEmitter {
   private checkKind(
     type: Type,
     seen: Set<DeclarationId>,
-  ): "data" | "plain" | "none" {
+  ): "tagged" | "plain" | "none" {
     if (isDeferredType(type)) return "none";
     const all = (types: readonly Type[]) => {
-      let kind: "data" | "plain" | "none" = "plain";
+      let kind: "tagged" | "plain" | "none" = "plain";
       for (const t of types) {
         const found = this.checkKind(t, seen);
         if (found === "none") return "none";
-        if (found === "data") kind = "data";
+        if (found === "tagged") kind = "tagged";
       }
       return kind;
     };
@@ -881,7 +881,7 @@ export class DeclarationEmitter {
         }
         if (declaration.kind === "error") return "plain";
         if (declaration.opaque === true) return "none";
-        if (dataFields(declaration) !== undefined) return "data";
+        if (taggedFields(declaration) !== undefined) return "tagged";
         return declaration.definition.kind === "alias"
           ? this.checkKind(declaration.definition.type, seen)
           : "plain";
@@ -906,7 +906,7 @@ export class DeclarationEmitter {
     const resolved = this.scope.resolve(result);
     const stream = resolved.kind === "stream";
     const type = resolved.kind === "stream" ? resolved.element : result;
-    return this.checkKind(type, new Set()) === "data"
+    return this.checkKind(type, new Set()) === "tagged"
       ? { type, stream }
       : undefined;
   }

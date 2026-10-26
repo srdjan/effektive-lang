@@ -165,7 +165,7 @@ export function nameOfId(id: string): string {
   return name;
 }
 
-/** The text after the colon: the tag, service key, or brand token of the emitted code. */
+/** The text after the colon: the tag, service key, or identity token of the emitted code. */
 export function tokenOfId(id: string): string {
   return id.slice(id.indexOf(":") + 1);
 }
@@ -636,7 +636,7 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
     return result;
   }
 
-  /** Follows type aliases until a type that is not a name. A brand and an unknown name stay. */
+  /** Follows type aliases until a type that is not a name. A type with identity and an unknown name stay. */
   resolve(type: Type): Type {
     let current = type;
     const seen = new Set<DeclarationId>();

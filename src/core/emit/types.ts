@@ -336,8 +336,8 @@ function schemaOfLiterals(
 }
 
 /**
- * The TypeScript type that a type has after `schemaDoc` encodes it: a brand
- * becomes its base, an error becomes its Schema encoding, and each name of the
+ * The TypeScript type that a type has after `schemaDoc` encodes it: a type with
+ * identity becomes its base, an error becomes its Schema encoding, and each name of the
  * recursive group becomes its generated mirror type. The type has no function in it.
  */
 export function encodedTypeDoc(
