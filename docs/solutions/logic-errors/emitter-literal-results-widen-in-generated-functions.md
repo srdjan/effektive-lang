@@ -49,7 +49,7 @@ case "literal":
     : emitted(this.literal(e.value));
 ```
 
-`admitsLiteral` (`src/core/emit/expr.ts:873`) resolves aliases and returns true for a literal type or a union with a literal member. The emitted forms become `((x) => "a" as const)($t0)`, `Effect.succeed("a" as const)`, `return "a" as const;`, and `Effect.succeed({ kind: "a" as const })`. A literal without a literal slot, such as the operand in `k === "a"`, stays plain.
+`admitsLiteral` (`src/core/emit/expr.ts:881`) resolves aliases and returns true for a literal type or a union with a literal member. The emitted forms become `((x) => "a" as const)($t0)`, `Effect.succeed("a" as const)`, `return "a" as const;`, and `Effect.succeed({ kind: "a" as const })`. A literal without a literal slot, such as the operand in `k === "a"`, stays plain.
 
 ## Why This Works
 
@@ -57,7 +57,7 @@ case "literal":
 
 These positions did not fail before the fix: a literal match without a binding, where the arm is a plain conditional branch, and `Option.match` handlers. The probable reason for `Option.match` is that the declared result type of the function gives the generic call a contextual return type; this was observed, not traced in the TypeScript checker. The fix adds `as const` there too, which is harmless.
 
-An earlier fix used a different tool for the same widening. The `some` case emits an explicit type argument, `Option.some<T>(...)` (`src/core/emit/expr.ts:733-740`), because inferring `some` can widen tuple payloads and record discriminants. A type argument fits a single generic call. It does not fit an arm wrapper, a block wrapper, or an `Effect.gen` body, which have no single type-argument slot, so EX3 puts the fix on the literal itself.
+An earlier fix used a different tool for the same widening. The `some` case emits an explicit type argument, `Option.some<T>(...)` (`src/core/emit/expr.ts:751-760`), because inferring `some` can widen tuple payloads and record discriminants. A type argument fits a single generic call. It does not fit an arm wrapper, a block wrapper, or an `Effect.gen` body, which have no single type-argument slot, so EX3 puts the fix on the literal itself.
 
 ## Prevention
 

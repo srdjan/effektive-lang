@@ -19,7 +19,7 @@ tags: [union, type-table, typeref, intern-order, determinism, incremental, recor
 
 ## Problem
 
-`TypeTable.union()` in `src/core/types.ts` sorted union members by `TypeRef`, the intern index. `Program` in `src/core/db.ts` keeps one `TypeTable` across revisions (`src/core/db.ts:287`). So the member order of a union depended on which types earlier edits had interned. `recordTarget` in `src/core/check_expr.ts` took the first fitting member. The same source could pass or fail depending on edit history.
+`TypeTable.union()` in `src/core/types.ts` sorted union members by `TypeRef`, the intern index. `Program` in `src/core/db.ts` keeps one `TypeTable` across revisions (`src/core/db.ts:292`). So the member order of a union depended on which types earlier edits had interned. `recordTarget` in `src/core/check_expr.ts` took the first fitting member. The same source could pass or fail depending on edit history.
 
 ## Symptoms
 
@@ -59,7 +59,7 @@ const sorted = [...flat].sort((a, b) =>
 );
 ```
 
-Second, `recordTarget` narrows the fitting members by the known types of the name-reference field values (`recordTarget` in `src/core/check_expr.ts`). `knownNameType` reads settled locals, values, and providers. It records no fact and reports nothing. The old choice stays as the fallback when no member fits.
+Second, `recordTarget` narrows the fitting members by the known types of the name-reference field values (`recordTarget` in `src/core/check_expr.ts`). `knownNameType` reads settled locals, values, and providers. It records no fact and reports nothing. The old choice stays as the fallback when no member fits. Since commit `1e09d9e`, `recordTarget` takes a member with no refinement when one fits, so a rename cannot add a proof obligation.
 
 Six test messages changed, and only in the order of union members.
 
@@ -76,7 +76,7 @@ A fixed order is not enough. With a fixed order, `recordTarget` still picks the 
 - Prefer a canonical structural key for any order or choice that a user can see. Here the key is `canonicalJson(toIr(ref))`.
 - Do not swap `Lowered.ir` for `toIr`. See the second lesson below.
 - When a checker takes "the first fitting" candidate, narrow the candidates by every fact that the source gives. A stable order only hides the choice.
-- Keep tagged records out of assignability in `recordTarget`. A plain record literal never fits a tagged record by assignability. It becomes one only by implicit construction at exactly the expected tagged type, through the `construct` result of `recordTarget` (`src/core/check_expr.ts:1523-1531`). A new narrowing rule must not let a literal take a tagged type without that construction. This bullet once said "record brand": the type identity change renamed the concept (see `docs/solutions/architecture-patterns/type-identity-is-a-flag-on-an-alias.md`).
+- Keep tagged records out of assignability in `recordTarget`. A plain record literal never fits a tagged record by assignability. It becomes one only by implicit construction at exactly the expected tagged type, through the `construct` result of `recordTarget` (`src/core/check_expr.ts:1761-1766`). A new narrowing rule must not let a literal take a tagged type without that construction. This bullet once said "record brand": the type identity change renamed the concept (see `docs/solutions/architecture-patterns/type-identity-is-a-flag-on-an-alias.md`).
 - Compare incremental and fresh builds on diagnostic text, not only on emitted code and hashes. The fuzz found all 27 differences this way.
 
 ### Second lesson: `Lowered.ir` is not `toIr(ref)`

@@ -22,7 +22,7 @@ last_updated: 2026-10-26
 
 `deno task behavior:capture <base> <head>` is the refactor oracle of this
 project. It runs the fast and slow suites on both revisions and compares the
-record sets as multisets (`scripts/behavior_capture.ts:306`, `:345-346`).
+record sets as multisets (`scripts/behavior_capture.ts:331`, `:369-370`).
 Each `check`, `program`, and `validate` record holds a hash of its input
 (`scripts/behavior_capture.ts:13-17`, `:56`). That hash makes a clean program
 visible, but it also ties every record to the test that produced it.
@@ -103,7 +103,7 @@ So accept up to two extra or missing `program` records only when:
 
 - the record is clean. A record line is `kind input-hash result-hash size`
   (`scripts/behavior_capture.ts:56-57`), and a clean result `[]` has size 2.
-  The capture prints the new records (`scripts/behavior_capture.ts:348`) and
+  The capture prints the new records (`scripts/behavior_capture.ts:372`) and
   the missing records, so read the size.
 - no other record differs.
 
@@ -128,7 +128,7 @@ results.
 Each capture exports a revision to a new temporary path and runs the tests
 there. Deno keeps compile cache entries for each path, so the capture uses its
 own DENO_DIR and removes it after (`scripts/behavior_capture.ts:253-254`,
-`:292`). Do not run two captures at once, or a capture with the gate, because
+`:316`). Do not run two captures at once, or a capture with the gate, because
 some slow tests check the temporary directories of the system.
 
 ## Why This Matters
