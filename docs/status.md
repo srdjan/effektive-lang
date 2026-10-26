@@ -1,9 +1,10 @@
 # Project status
 
 This file is the one place for the current project status. It holds the
-application stopping rule, the application dispositions (three gate applications
-and witnesses for types with identity and portability), the remaining and deferred gaps, and
-the open items. Other documents link here and do not restate these facts.
+application stopping rule, the application dispositions, the language and
+compiler state, the remaining and deferred gaps, and the open items. Other
+documents link here and do not restate these facts. History is in
+[archive/](archive/README.md).
 
 ## Stopping rule
 
@@ -13,43 +14,25 @@ bounds gap work. Gap features stop when three complete applications compile with
 precise contracts and pass failure, cancellation, and cleanup checks. The three
 applications are a service workflow, a scheduled worker, and a stream processor.
 Application orchestration stays in `.eff`. Typed host adapters may supply
-drivers and the runtime entry point. The order lifecycle application is a
-witness for types with identity and tagged records. It is not one of the three gate applications.
+drivers and the runtime entry point.
 
 All three application gates pass with existing language forms. The order
-lifecycle witness also passes. The portable publisher is an additional
-exploratory witness, not a gate application.
+lifecycle application is a witness for types with identity and tagged records.
+The portable publisher is an exploratory witness. Neither witness is a gate
+application, and both pass.
 
-The stopping rule is satisfied, so automatic API parity additions stop. Select a new language feature only for a demonstrated
-application blocker or an explicit change to the accepted target. First try
-existing source compositions. Gap item 9 (broader package interoperability)
-remains deferred by user instruction. Release acceptance (editor behavior,
-packaging, performance, external integration) is separate work. The full rule is
-in the linked plan.
-
-## Compiler boundaries and concise source
-
-Completed 2026-10-24: the frontend and TypeScript backend have separate package
-entry points. `TypeScriptOutputs` owns lazy generated output; source hover does
-not lower or emit. IR v4 makes scoped closure parameters own their identities
-and rejects earlier wire versions without conversion. The
-[migration guide](api.md#migrating-the-frontend-and-typescript-apis) gives the API
-and IR replacements.
-
-Bare single-parameter arrows, lazy Option `??`, flat block-local record bindings,
-and explicit `using`/`finally` expressions lower to existing IR operations.
-Exported contracts remain explicit and closed. All five application witnesses
-pass independent validation, strict target checks, and their runtime checks.
-The 20-file source corpus is 21,089 non-whitespace characters, down from 21,278
-(0.9%). The website specification was then draft 0.63. The
-[completed plan](archive/plans/2026-10-24-compiler-boundaries-source-forms.md)
-records parity, performance, and editor evidence.
+The stopping rule is satisfied, so automatic API parity additions stop. Select a
+new language feature only for a demonstrated application blocker or an explicit
+change to the accepted target. First try existing source compositions. Gap item 9
+(broader package interoperability) remains deferred by user instruction. Release
+acceptance (editor behavior, packaging, performance, external integration) is
+separate work. The full rule is in the linked plan.
 
 ## Application dispositions
 
 Each application uses existing Effektive forms. No compiler, IR, builtin, or
 syntax change was selected for any of them. The original deterministic drivers
-record calls in memory. A separate service-workflow acceptance driver now uses
+record calls in memory. A separate service-workflow acceptance driver uses
 loopback HTTP and file-backed SQLite; [integration evidence](integration.md)
 records its narrower guarantees. The fixture README of each application gives
 the build and run commands.
@@ -62,15 +45,125 @@ the build and run commands.
 | [Order lifecycle](../fixtures/applications/order-lifecycle/README.md)   | A witness for types with identity and tagged records, not a gate application. Passes with nine compiled runtime cases. Four tagged record states cross a module boundary. A `match` by name covers each state. A recursive pricing rule tree uses a tagged record. Decoding keeps the module-qualified `_tag`. | The application has no service, no driver, and no concurrency. Percent pricing is not possible, because `/` gives `number`. Plan: [nominal examples](archive/plans/2026-10-23-nominal-examples.md), written before the type identity plan.                                                                                                                                                                                                                                                                                                              |
 | [Portable publisher](../fixtures/applications/portable-publisher/README.md) | An exploratory portability witness, not a gate application. Source owns publication, conflict policy, grants, and serial batching. Memory and SQLite pass one shared KV suite. | The checks cover local storage in one process, finite batch completion, interruption, and cleanup. A committed write with a simulated lost acknowledgement returns uncertainty without retry. No crash recovery, exactly-once delivery, or HTTP admission protocol is promised. [Plan](archive/plans/2026-10-23-portable-applications.md); [gap assessment](archive/plans/portable-applications-gaps.md). |
 
+## Language and compiler state
+
+### Compiler structure
+
+The package has three entry points: the whole API, the frontend, and the
+TypeScript backend. `TypeScriptOutputs` owns lazy generated output, so source
+hover does not lower or emit. The IR has version 6, and the validator rejects
+other wire versions without conversion. The
+[migration guide](api.md#migrating-the-frontend-and-typescript-apis) gives the
+API and IR replacements. The
+[completed plan](archive/plans/2026-10-24-compiler-boundaries-source-forms.md)
+records the parity, performance, and editor evidence.
+
+### Concise source forms
+
+Bare single-parameter arrows, lazy Option `??`, flat block-local record
+bindings, and explicit `using` and `finally` expressions lower to existing IR
+operations. Exported contracts remain explicit and closed. All five application
+witnesses pass independent validation, strict target checks, and their runtime
+checks.
+
+### Type identity
+
+A `type` declaration has identity by name
+([plan](archive/plans/2026-10-24-type-identity.md)). The `nominal` declaration
+word, the `data` declaration, and `Brand<T>` are deleted. They are in the
+[nominal keyword plan](archive/plans/2026-10-23-nominal-keyword.md) and the
+[nominal data types plan](archive/plans/2026-10-23-nominal-data-types.md). A
+body that is a union with a non-literal member, or a bare name, gives a
+transparent alias that has no identity. Every other body gives identity. A record
+identity is a tagged record, with a runtime `_tag`, when a union alias of its
+own module lists it. `nominal` is an ordinary name, `data` is an ordinary name,
+and `Brand` and `unbrand` are unknown names.
+
+A value of a type with identity fits its body. Sealed types restrict that
+conversion to their declaring module. A value of another type with identity needs
+the constructor. An unnamed value fits an untagged type with identity whose body
+it fits. Operators compare and combine values by class: `id === "u1"` and
+`total > 0` are legal, `total * 2` gives the type of `total`, and `cents + meters`
+is an error.
+
+A function, deferred, or opaque type in a tagged record or an error field gives
+`declaration/015` or `declaration/016`. The code `declaration/014` is deleted.
+The code `declaration/017` rejects `sealed` on a transparent alias. A `match`
+selects tagged records and errors by name. A tagged record can be recursive when
+every cycle has a base case. The IR node `nominal` constructs a value of a type
+with identity. The editor, the TextMate grammar, and the playground highlighter
+do not know the word `nominal`. The website and the canonical specification
+describe type identity from draft 0.64.
+
+### Host interfaces
+
+Each `.effi` file has a generated companion module, such as `host.effi.ts`
+([plan](archive/plans/2026-10-23-host-interface-companion.md)). It holds the
+types with identity, errors, and services of the interface. Source modules and
+host modules import them from it, so the compiler owns every tag string. So
+`.eff` code can construct an `.effi` type with identity, and the run time checks
+a provider result that is a tagged record.
+
+Tagged record values from unsound host code fail loudly at run time
+([plan](archive/plans/2026-10-23-host-boundary-checks.md)). A `match` whose last
+arm is not `_` tests that arm and throws for a value outside its type. A host
+provider whose methods return tagged record values is wrapped, and each such
+result or stream element goes through `Schema.is`. The language rules list the
+positions that stay trusted, under "Host provider checks".
+
+The table gives the measured cost on emitted code, with an in-memory host. The
+machine was an Apple M4 Pro with Deno 2.9.8 and Effect 4.0.5. The cost in an
+application with real I/O is not measured.
+
+| Case                                   | Plain alias | Wrapped provider | Added cost                     |
+| -------------------------------------- | ----------- | ---------------- | ------------------------------ |
+| One `provide`, one data result         | 3.7 us      | 9.0 us           | 5.3 us                         |
+| One `provide`, 100 calls               | 12.0 us     | 31.6 us          | about 0.14 us for each call    |
+| One `provide`, one array of 100 values | 3.6 us      | 19.4 us          | 15.8 us                        |
+| One `provide`, a stream of 1000 values | 6.6 us      | 133.4 us         | about 0.13 us for each element |
+| The extra arm test of one `match`      | -           | -                | about 0.27 ns                  |
+
+### Portable extensions
+
+The user approved the
+[portable extensions](archive/plans/2026-10-23-portable-extensions.md) after the
+publishing witness established its existing composition. Sealed types restrict
+construction, updates, arithmetic, widening, and schema derivation to the
+declaring module. Pure function types require pure execution and empty effect
+sets. Optional import rules restrict direct dependency edges. Existing open types
+with identity, unmarked function types, and projects without import rules keep
+their behavior.
+
+The [extension worklog](archive/plans/portable-extensions-worklog.md) records the
+compiler, validator, editor, and example checks. The sibling website includes
+paired source and TypeScript panels and a runnable project for all three
+controls. These changes do not expand the three-application stopping rule. Named
+platforms continue to use existing services and Layers.
+
+### Inferred input contracts and refinements
+
+The compiler infers closed input requirements from omitted parameter types and
+explicit `unknown`. Exported inferred contracts validate raw input and require
+`fails SchemaError`. Local functions use static inference. Exported results and
+effect contracts keep their existing requirements. Types with identity support
+concrete integer and length predicates through contextual `where` clauses. IR
+version 6 transports contracts and independently checked proof certificates.
+
+[Input contracts](inferred-input-contracts.md) describe the behavior and limits.
+[Measurements](refinement-measurements.md) record bounded solver and
+compiler-update checks. Generics and abstract predicates remain deferred. Host
+mutation through retained aliases remains an evidence limit.
+
+The [reset plan](plans/2026-10-25-reset.md) fixed two refinement defects. A
+union result no longer skips the refinement proof of a record literal (RBF20).
+The checker now keeps `or` facts in the canonical form of the validator, so
+commuted `or` facts at a branch join agree (RBF12).
+
 ## Remaining and deferred gaps
 
-Current disposition: 2026-10-19, design draft 0.57, `effect@4.0.5`. The
-specification is now at draft 0.58. That draft removes seven builtins in favor
-of existing forms and adds no gap to the tables below. This section consolidates
-the remaining boundaries after all three
+The tables below record the boundaries that remain after all three
 [application gates](plans/2026-10-19-application-acceptance-rule.md) passed.
-Earlier update entries and probe diagnostics describe their original snapshots.
-The tables below are a record of gaps, not an implementation queue.
+They are a record of gaps, not an implementation queue.
 
 ### Open API and language gaps outside the accepted target
 
@@ -85,14 +178,16 @@ The tables below are a record of gaps, not an implementation queue.
 | General language extensions         | User-defined generics, effect-row polymorphism, source purity assertions, macros and early returns remain deferred language extensions.                                                                                                                         | Builtin generic types and concrete source compositions cover the accepted applications. The [specification](../../effektive/public/effektive-spec.html#examples) retains the broader language boundary.                                                                |
 
 Reopen an item only for a demonstrated application blocker or an explicit change
-to the accepted target. On 2026-10-24 the user accepted one such change: a compiler or syntax
-change that makes source more terse and elegant needs no application blocker. The
-[terse source plan](archive/plans/2026-10-24-terse-source.md) records the first such
-changes: open contracts on local functions, named error sets, union joins of
-tagged records, expected types in builtin callbacks, and inlay hints. First check equivalent existing source compositions.
-Record a minimal witness, intended contract, observed diagnostic or behavior,
-and the required failure, cancellation and cleanup semantics. No item has an
-automatic priority or implementation commitment.
+to the accepted target. On 2026-10-24 the user accepted one such change: a
+compiler or syntax change that makes source more terse and elegant needs no
+application blocker. The
+[terse source plan](archive/plans/2026-10-24-terse-source.md) records the first
+such changes: open contracts on local functions, named error sets, union joins of
+tagged records, expected types in builtin callbacks, and inlay hints. First check
+equivalent existing source compositions. Record a minimal witness, intended
+contract, observed diagnostic or behavior, and the required failure,
+cancellation, and cleanup semantics. No item has an automatic priority or
+implementation commitment.
 
 ### Explicit user deferral: item 9
 
@@ -110,18 +205,18 @@ user must change that instruction before broader interoperability work starts.
 
 ### Deferred TypeScript content mapper integration
 
-Deferred by user on 2026-10-24. The
+Deferred by the user on 2026-10-24. The
 [integration plan](plans/2026-10-24-typescript-content-mappers.md) preserves the
 TypeScript 7.1 content mapper analysis, a bounded experiment, acceptance checks,
 and unresolved mapping, import-identity and unsaved-project-state risks. The
 scope is integration with the existing compiler and language server. No
-experiment or adoption is authorized; resume only when the user explicitly
+experiment or adoption is authorized. Resume only when the user explicitly
 reopens the work. Broader package interoperability remains deferred separately.
 
 ### Runtime behavior and evidence limits
 
 These are limits of the selected witnesses, not automatically selected features.
-The three application gates, and the order lifecycle witness, establish neither
+The three application gates and the order lifecycle witness establish neither
 complete Effect API parity nor external integration coverage.
 
 | Boundary                        | Recorded behavior or evidence limit                                                                                                                                                             |
@@ -138,135 +233,27 @@ and
 [stream processor](archive/plans/2026-10-19-stream-processor-application.md#disposition-and-limits)
 record these boundaries with compiled checks.
 
-### Type identity
-
-A `type` declaration has identity by name as of 2026-10-24
-([plan](archive/plans/2026-10-24-type-identity.md)). The `nominal` declaration word is
-deleted. It had been in place since 2026-10-23
-([plan](archive/plans/2026-10-23-nominal-keyword.md)), and it had replaced the
-`data` declaration ([earlier plan](archive/plans/2026-10-23-nominal-data-types.md))
-and `Brand<T>`. A body that is a union with a non-literal member, or a bare name,
-gives a transparent alias that has no identity. Every other body gives identity.
-A record identity is a tagged record, with a runtime `_tag`, when a union alias of
-its own module lists it. `nominal` is an ordinary name, `data` is an ordinary
-name, and `Brand` and `unbrand` are unknown names.
-
-A value of a type with identity fits its body, so `unbrand` is removed. Sealed
-types restrict that conversion to their declaring module. A value of another type
-with identity needs the constructor. An unnamed value fits an untagged type with
-identity whose body it fits. Operators compare and combine values by class:
-`id === "u1"` and `total > 0` are legal, `total * 2` gives the type of `total`,
-and `cents + meters` is an error. A function, deferred, or opaque type in a tagged
-record or an error field gives `declaration/015` or `declaration/016`.
-`declaration/014` is deleted, and `declaration/017` rejects `sealed` on a
-transparent alias.
-
-A `match` selects tagged records and errors by name. A tagged record can be
-recursive when every cycle has a base case. The IR has the version 6, with one
-definition kind and one construction node `nominal`. The editor, the TextMate
-grammar, and the playground highlighter no longer know the word `nominal`. The
-website and the canonical specification describe type identity from draft 0.64.
-
-Each `.effi` file has a generated companion module, such as `host.effi.ts`
-([plan](archive/plans/2026-10-23-host-interface-companion.md)). It holds the
-types with identity, errors, and services of the interface. Source modules and
-host modules import them from it, so the compiler owns every tag string. So
-`.eff` code can construct an `.effi` type with identity, and a provider result of a
-tagged record is checked at run time.
-
-Tagged record values from unsound host code fail loudly at run time
-([plan](archive/plans/2026-10-23-host-boundary-checks.md)). A `match` whose last arm is
-not `_` tests that arm and throws for a value outside its type. A host provider
-whose methods return tagged record values is wrapped, and each such result or stream
-element goes through `Schema.is`. The language rules list the positions that
-stay trusted, under "Host provider checks".
-
-The table gives the measured cost on emitted code, with an in-memory host. The
-machine was an Apple M4 Pro with Deno 2.9.8 and Effect 4.0.5. The cost in an
-application with real I/O is not measured.
-
-| Case                                   | Plain alias | Wrapped provider | Added cost                     |
-| -------------------------------------- | ----------- | ---------------- | ------------------------------ |
-| One `provide`, one data result         | 3.7 us      | 9.0 us           | 5.3 us                         |
-| One `provide`, 100 calls               | 12.0 us     | 31.6 us          | about 0.14 us for each call    |
-| One `provide`, one array of 100 values | 3.6 us      | 19.4 us          | 15.8 us                        |
-| One `provide`, a stream of 1000 values | 6.6 us      | 133.4 us         | about 0.13 us for each element |
-| The extra arm test of one `match`      | -           | -                | about 0.27 ns                  |
-
-### Portable extensions
-
-The user approved the [portable extensions](archive/plans/2026-10-23-portable-extensions.md)
-after the publishing witness established its existing composition.
-Sealed types restrict construction, updates, arithmetic, widening, and schema derivation to the declaring module.
-Pure function types require pure execution and empty effect sets. Optional import rules restrict direct dependency edges.
-Existing open types with identity, unmarked function types, and projects without import rules retain their behavior.
-
-The [extension worklog](archive/plans/portable-extensions-worklog.md) records the compiler, validator, editor, and example checks.
-The sibling website includes paired source and TypeScript panels and a runnable project for all three controls.
-These changes do not expand the three-application stopping rule. Named platforms continue to use existing services and Layers.
-
-### Separate release acceptance
+### Release acceptance
 
 Editor behavior, packaging, performance and external integration acceptance are
 tracked separately from the application gates. The selected automated release
-checks now pass; user manual editor and playground acceptance remains pending.
-The accepted [editor and release plan](archive/plans/2026-10-21-editor-release.md)
-selects editor capabilities, local installation, HTTP/SQLite integration and
-automated release checks. It selects no new language forms. The
-[correctness plan](archive/plans/2026-10-21-correctness-fixes.md) records the
-prerequisite fixes.
-
-The [audit fix batch](archive/plans/2026-10-21-audit-fixes.md) and all its
-follow-ups are complete. The
-[save-transpilation plan](archive/plans/2026-10-21-save-transpilation.md) is
-also complete; the
-[save-round measurements](release-measurements.md#save-rounds) record its M7 and
-M4 results. Both plans are archived.
+checks pass. The manual editor and playground acceptance by the user remains
+pending (see the open items). The
+[editor and release plan](archive/plans/2026-10-21-editor-release.md) selects the
+editor capabilities, local installation, HTTP/SQLite integration, and automated
+release checks. It selects no new language forms. The
+[save-round measurements](release-measurements.md#save-rounds) record the M7 and
+M4 results of the
+[save-transpilation plan](archive/plans/2026-10-21-save-transpilation.md).
 
 ## Open items
 
-The hardening plan [section 9](archive/plans/2026-10-20-hardening-pruning.md) tracks the
-work items. This list gives the items that still need a person.
+The list gives the items that still need a person.
 
-| Item                            | State                                                                                                                                                                                                                                                                                                                                                                                                                    | Owner |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| Item | State | Owner |
+| --- | --- | --- |
 | Hand test of the VS Code client | The installed VSIX passed automated references, rename, completion, semantic tokens, contract quick fixes, generated output, save, error recovery and restart on 2026-10-21; [installation evidence](installation.md). User acceptance check 5 of the [language server plan](archive/plans/2026-10-16-lsp.md) remains pending.                                                                                           | User  |
 | Playground acceptance           | The user has not accepted the page (acceptance check 5 of the [playground plan](archive/plans/2026-10-16-playground.md)). An [automated browser review on 2026-10-21](archive/playground-review-2026-10-21.md) passed at 375, 720 and 1280 pixels, including keyboard navigation, type/syntax error recovery and screenshot inspection. It does not replace the user’s manual acceptance.                                        | User  |
-| Rederive review                 | VAL-8 of the [rederive review](archive/plans/2026-10-20-rederive-review.md) is complete. ARC-5 is declined after its name-only mapping prerequisite failed; the [assessment](archive/plans/rederive-review-evidence/arc-5-builtin-facts.md) records six names with context-dependent lowering kinds. R12 FE-2, CHK-11, CHK-12, R13, R15a, R15b, C10 and A6 are complete. The refactor plan defers C7, F3, and F9b. No item has an owner. | User  |
-| Reset                           | The accepted [reset plan](plans/2026-10-25-reset.md) is the authority for reset work. It closes the open items of older plans and tracks phases RB0 to RB8. | Main session |
+| Rederive review | VAL-8 of the [rederive review](archive/plans/2026-10-20-rederive-review.md) is complete. ARC-5 is declined after its name-only mapping prerequisite failed; the [assessment](archive/plans/rederive-review-evidence/arc-5-builtin-facts.md) records six names with context-dependent lowering kinds. R12 FE-2, CHK-11, CHK-12, R13, R15a, R15b, C10 and A6 are complete. The reset plan closes C7, F3, and F9b as declined. No item has an owner. | User |
+| Reset | The accepted [reset plan](plans/2026-10-25-reset.md) is the authority for reset work. It closes the open items of older plans and tracks phases RB0 to RB8. | Main session |
 | Measured numbers                | Earlier evidence remains in `rejected.md` (the lexer split) and the audit fix plan (AU1). The [full release measurements](release-measurements.md) meet the unchanged 100 ms large-input p90 diagnostics budget and include three open documents with 10,000 distinct edits. Raw RSS, heap and type-table samples record growth; they establish no memory bound.                                                         | User  |
-
-## Implementation parts
-
-The implementation followed parts A1 to A8 of the
-[Phase A plan](archive/plans/2026-10-16-phase-a.md), parts L1 to L6 of the
-[language server plan](archive/plans/2026-10-16-lsp.md), and parts G1 to G4 of
-the [playground plan](archive/plans/2026-10-16-playground.md). All parts exist.
-The rules that they chose are in [language-rules.md](language-rules.md).
-
-| Part     | What it added                                                                                                                                                                                                                |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A1       | The project skeleton, the lexer, a lossless parser with error recovery, and the `syntax` diagnostics.                                                                                                                        |
-| A2       | The declaration index, the project loader, the module graph, and the name resolver.                                                                                                                                          |
-| A3a      | The declaration level of the checker: type intern table, compatibility rules, signatures, and module interfaces with hashes.                                                                                                 |
-| A3b      | Body checking, effect and execution-mode inference, contracts, patterns, the module initialization graph, and the hover query.                                                                                               |
-| A4       | Lowering of a checked module to typed IR, its serialization, and a synchronous SHA-256 for builtin identities.                                                                                                               |
-| A5       | The independent IR validator and the mutation fixtures in `fixtures/validate/`.                                                                                                                                              |
-| A6a      | The Effect-TS emitter, the five golden files, the host module `users-live.ts`, and the slow tests that check and run the emitted code.                                                                                       |
-| A6b      | The span table, version 3 source maps, and the mapping of `deno check` errors to Effektive spans. The printer is a fixed point of `deno fmt` for the golden files and for `fixtures/emit/forms/`.                            |
-| A7       | The program with module cutoff (`src/core/db.ts`), the public API (`src/core/mod.ts`), and the command-line tool (`src/cli/main.ts`) with the commands `check`, `build`, and `watch` and the flags `--tsc` and `--validate`. |
-| A8       | The measurement harnesses in `bench/`: a synthetic module generator and the measurements M2, M5, and M6.                                                                                                                     |
-| L1 to L6 | The language server in `src/lsp/`, the VS Code client in `editors/vscode/`, and the measurements M1, M3, and M4.                                                                                                             |
-| G1 to G4 | The playground in `playground/`.                                                                                                                                                                                             |
-
-
-### Inferred input contracts and refinements
-
-The compiler infers closed input requirements from omitted parameter types and explicit `unknown`.
-Exported inferred contracts validate raw input and require `fails SchemaError`.
-Local functions use static inference. Exported results and effect contracts retain their existing requirements.
-Types with identity support concrete integer and length predicates through contextual `where` clauses.
-IR version 6 transports contracts and independently checked proof certificates.
-[Input contracts](inferred-input-contracts.md) describe the behavior and limits.
-[Measurements](refinement-measurements.md) record bounded solver and compiler-update checks.
-Generics and abstract predicates remain deferred. Host mutation through retained aliases remains an evidence limit.
