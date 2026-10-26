@@ -1,6 +1,6 @@
 // A client over a spawned language server process, for the measurements M1, M3,
-// and M4 (plan section 8). It spawns PATH’s `deno` with the arguments of
-// the VS Code client. The client reads stdout from the start into a
+// and M4 (plan section 8). It spawns PATH’s `deno`, or the `executable` option,
+// with the arguments of the VS Code client. The client reads stdout from the start into a
 // `FrameDecoder` and keeps reading while it sends. Otherwise a large response
 // could fill the pipe and block the synchronous server. It drains stderr too.
 //
@@ -64,6 +64,8 @@ interface DiagnosticsWaiter {
 }
 
 export interface LspClientOptions {
+  /** The executable to start. The default is `deno` from `PATH`. */
+  readonly executable?: string;
   /** The working directory of the server process. */
   readonly cwd?: string;
   /** The limit of each request, wait, and exit, in milliseconds. */
@@ -88,7 +90,7 @@ export class LspClient {
 
   constructor(options: LspClientOptions = {}) {
     this.#timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    this.#process = new Deno.Command("deno", {
+    this.#process = new Deno.Command(options.executable ?? "deno", {
       args: [
         "run",
         "--allow-read",
@@ -326,6 +328,21 @@ export class LspClient {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /**
+   * Closes stdin and waits for the process. Returns the exit status. It does not
+   * send `shutdown`, so a server that gets the end of stdin exits with 1.
+   */
+  async finish(): Promise<number> {
+    try {
+      await this.#writer.close();
+    } catch {
+      // The server already exited and closed the pipe.
+    }
+    const status = await this.#process.status;
+    await this.#settle();
+    return status.code;
   }
 
   /** Waits for the readers and closes stdin. The process has exited. */
