@@ -1033,6 +1033,13 @@ class BodyChecker
       }
       return this.finish(node, this.table.error, combine(infos));
     }
+    this.requireSealedOwner(node, id);
+    this.fact(node, { kind: "brand-construction", brand: id });
+    return this.constructFrom(node, id, base, "type with identity", args);
+  }
+
+  /** Reports `sealed/001` when another module constructs a sealed type. */
+  private requireSealedOwner(node: NodeId, id: TypeId): void {
     if (!this.table.ownsSealed(this.module, id)) {
       this.report(
         "sealed/001",
@@ -1042,8 +1049,6 @@ class BodyChecker
         node,
       );
     }
-    this.fact(node, { kind: "brand-construction", brand: id });
-    return this.constructFrom(node, id, base, "type with identity", args);
   }
 
   private dataConstruction(
@@ -1052,15 +1057,7 @@ class BodyChecker
     record: TypeRef,
     args: readonly Arg[],
   ): NodeInfo {
-    if (!this.table.ownsSealed(this.module, id)) {
-      this.report(
-        "sealed/001",
-        `only the declaring module can construct the sealed type \`${
-          shortName(id)
-        }\``,
-        node,
-      );
-    }
+    this.requireSealedOwner(node, id);
     this.fact(node, { kind: "data-construction", data: id });
     return this.constructFrom(node, id, record, "tagged record", args);
   }
