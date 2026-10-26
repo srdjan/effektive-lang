@@ -59,6 +59,8 @@ Floating-point predicates and arbitrary calls remain unsupported.
 Constructors, implicit adoption, arithmetic, and record updates must prove each required predicate.
 The compiler retains identity distinctions and sealed ownership.
 The checker uses scoped facts from `if`, `match`, `&&`, and `||`.
+A record literal that a union result adopts as a member with a predicate needs the proof of that member, as for a direct result.
+Two branches that establish the same `||` fact in different operand order agree at the join.
 The solver returns `proved`, `disproved`, or `unknown`. Exhaustion returns `unknown` and rejects the affected obligation.
 The [measurement report](refinement-measurements.md) records query and compiler-update limits.
 

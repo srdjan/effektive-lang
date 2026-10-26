@@ -217,7 +217,7 @@ The rules for collection literals, `traverse`, and the pure callbacks of `map`, 
 
 | Rule | Choice | Evidence |
 | --- | --- | --- |
-| Stream type | `Stream<A, E, R>` holds a deferred producer. Omitted `E` and `R` default to `never`. | [2026-10-17-stream-design.md](archive/plans/2026-10-17-stream-design.md), [check.ts](../src/core/check.ts) |
+| Stream type | `Stream<A, E, R>` holds a deferred producer. Omitted `E` and `R` default to `never`. | [2026-10-17-stream-design.md](archive/plans/2026-10-17-stream-design.md), [type_lower.ts](../src/core/type_lower.ts) |
 | Deferred production | Construction of a Stream does not run production. Production starts at consumption. | [2026-10-17-stream-design.md](archive/plans/2026-10-17-stream-design.md) |
 | unfold | `unfold(seed, callback)` creates a pull stream. The inline callback returns an Option of a pair of element and next state. | [2026-10-17-stream-design.md](archive/plans/2026-10-17-stream-design.md) |
 | mapEffect without options | A pure callback with empty failure and requirement sets, and no options record, compiles to the pure `Stream.map`. The result element type may differ from the source element type. `mapEffect` combines the source and callback deferred channels. | [effect-4-gap-audit.md, 2026-10-20 update](archive/effect-4-gap-audit.md) |

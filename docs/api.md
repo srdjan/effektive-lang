@@ -68,7 +68,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   editor_actions.ts Validated missing fails/uses actions from checked body effects.
   editor_signature.ts signatureHelpAt: signature help for ordinary calls from checked callee types.
   ids.ts         Parts of a declaration identity: module, name, and method.
-  util.ts        Small pure helpers of the front end and the edges: compareText, errorMessage, isRecord, and canonicalJson.
+  util.ts        Small pure helpers of the front end and the edges: compareText, errorMessage, isRecord, canonicalJson, and sortedUnique.
   frontend.ts    Checking, IR, and source editor queries, with no backend dependency.
   typescript.ts  TypeScript output caches, emitProject, backend hover, maps, diagnostic mapping.
   mod.ts         Aggregate public API.
@@ -317,7 +317,7 @@ declarations, and its IR exports each of them. Its providers are not lowered.
 `lowerProject(checked)` does this for every `.eff` and `.effi` module. Pass the
 result to `emitProject` to get each generated module and each companion module.
 
-The IR has the `version` 5. A type declaration has the definition kind `alias`
+The IR has the `version` 6. A type declaration has the definition kind `alias`
 or `nominal`. A `nominal` definition has a `base` type. The flag `tagged` marks
 a tagged record, and its base is a record. An expression has the node
 `nominal` for a construction of a type with identity, and a match arm has the
@@ -547,7 +547,7 @@ the importer again and lowers the importer again.
 
 One `TypeTable` lives as long as the program, so reused modules keep valid type
 references. Its interned nodes only grow; redefining a type replaces its
-previous alias, brand, opaque, and recursion metadata. Its memory growth in a
+previous alias, identity, tagged, opaque, and recursion metadata. Its memory growth in a
 long watch session is measurement M4.
 
 `src/core/mod.ts` re-exports the program and the pipeline functions. It also
