@@ -55,6 +55,7 @@ export type { ConfigError, Project, ProjectConfig } from "./project.ts";
 export { lineIndexOf, lineStarts, memoryHost, positionOf } from "./source.ts";
 export type { ReadError, Result, SourceEdit, SourceHost } from "./source.ts";
 export { compareText, errorMessage, isRecord } from "./util.ts";
+export { sha256Hex } from "./sha256.ts";
 
 // Diagnostics.
 export {

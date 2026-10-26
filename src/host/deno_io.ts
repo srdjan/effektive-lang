@@ -12,6 +12,7 @@ import type {
   HostFs,
   HostIo,
 } from "./io.ts";
+import type { LogFs } from "./log.ts";
 import { isSourcePath, isTargetPath } from "./workspace.ts";
 
 const encoder = new TextEncoder();
@@ -79,6 +80,39 @@ export const denoFs: HostFs = {
     return Deno.realPathSync(path);
   },
 };
+
+/** The real file system of the event log. */
+export const denoLogFs: LogFs = {
+  mkdir: (path) => attempt(() => Deno.mkdirSync(path, { recursive: true })),
+  writeText: (path, text) => attempt(() => Deno.writeTextFileSync(path, text)),
+  appendText: (path, text) =>
+    attempt(() => Deno.writeTextFileSync(path, text, { append: true })),
+  exists: (path) => denoFs.kind(path) !== "missing",
+  list: (path) =>
+    attempt(() => {
+      const entries: { name: string; mtimeMs: number }[] = [];
+      for (const entry of Deno.readDirSync(path)) {
+        if (!entry.isFile) continue;
+        const mtime = Deno.statSync(`${path}/${entry.name}`).mtime;
+        entries.push({ name: entry.name, mtimeMs: mtime?.getTime() ?? 0 });
+      }
+      return entries;
+    }),
+  touch: (path) =>
+    attempt(() => {
+      const now = new Date();
+      Deno.utimeSync(path, now, now);
+    }),
+  remove: (path) => denoFs.remove(path),
+};
+
+function attempt<T>(run: () => T): Result<T, FileFailure> {
+  try {
+    return { ok: true, value: run() };
+  } catch (e) {
+    return { ok: false, error: { message: errorMessage(e) } };
+  }
+}
 
 /**
  * Runs `deno check` in the project directory. The generated configuration goes

@@ -119,11 +119,12 @@ src/cli/       The command-line tool. Deno APIs stay here, in src/host/, src/lsp
 src/host/      The host adapters that the command-line tool and the language server share.
   generation.ts  A tagged generation result over the revision's four lazy queries; the narrow source port of file writing.
   io.ts          The ports: file system, deno check runner, and watch source.
-  deno_io.ts     The real ports: Deno file system, subprocess, and Deno.watchFs.
+  deno_io.ts     The real ports: Deno file system, log file system, subprocess, and Deno.watchFs.
   workspace.ts   Source/configuration walks and separate local target-check inputs.
   events.ts      Debouncing of file system events.
   outputs.ts     writeGenerated: the write of the .ts and .ts.map files, shared by build and the language server.
   save_round.ts  runSaveRound: the removal of stale outputs and the write, with the removal rule of each caller.
+  log.ts         The event log: envelope, EventLog port, LogFs port, file adapter with SHA-256 blobs and seven-day rotation, memory adapter.
 src/lsp/       The language server. See "Language server".
   main.ts        The stdio entry: reads frames, writes frames, and ends the process.
   server.ts      LanguageServer: lifecycle, dispatch, and the flush schedule.
