@@ -32,6 +32,8 @@ RW in `docs/archive/plans/2026-10-25-review-remaining.md` tracks the remaining w
 
 IN in `docs/archive/plans/2026-10-25-inferred-input-contracts.md` tracks inferred input contracts and automatic validation.
 
+RB (phases) and RBF (findings) in `docs/plans/2026-10-25-reset.md` track the reset work.
+
 ## Feature Selection & Completion
 
 Follow the accepted [application acceptance rule](docs/plans/2026-10-19-application-acceptance-rule.md) when selecting gap work. The stopping rule, the application dispositions, and the open items are in [docs/status.md](docs/status.md). Keep application orchestration in `.eff`. Add features only for demonstrated application blockers after checking existing source compositions. Exception, accepted 2026-10-24: a compiler or syntax change that makes source more terse and elegant is welcome without an application blocker. It must keep the source easy to read, keep closed contracts, and keep explicit exported contracts.
