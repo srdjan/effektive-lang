@@ -1,8 +1,3 @@
-import {
-  type ProofBudget,
-  REFINEMENT_AGGREGATE_STEPS,
-} from "./check_refinements.ts";
-import { PREDICATE_RULES_VERSION } from "./predicates.ts";
 // The program of part A7: the state of one project across revisions, with
 // memoized queries and an early cutoff at module level (design D4, section 4.4).
 //
@@ -42,6 +37,11 @@ import { PREDICATE_RULES_VERSION } from "./predicates.ts";
 // then carries the new spans.
 
 import { type Analysis, analyzeProject } from "./analyze.ts";
+import {
+  type ProofBudget,
+  REFINEMENT_AGGREGATE_STEPS,
+} from "./check_refinements.ts";
+import { PREDICATE_RULES_VERSION } from "./predicates.ts";
 import type { ModeMap, TypeGraph } from "./signatures.ts";
 import {
   type CheckedModule,

@@ -1,6 +1,6 @@
 // A small synchronous content hash. FNV-1a with 64 bits, over UTF-16 code units.
 // The incremental model uses it to compare header text and body text. It is not
-// a cryptographic hash. A later part adds SHA-256 for builtin specialization (Q1).
+// a cryptographic hash. Builtin specialization uses SHA-256 (sha256.ts).
 
 const OFFSET_BASIS = 0xcbf29ce484222325n;
 const PRIME = 0x100000001b3n;
