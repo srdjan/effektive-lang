@@ -625,10 +625,12 @@ function compare(
 function canonicalPredicate(predicate: Predicate): Predicate {
   if (predicate.kind === "and") return canonicalAnd(predicate.operands);
   if (predicate.kind === "or") {
-    return {
-      kind: "or",
-      operands: predicate.operands.map(canonicalPredicate).sort(compareJson),
-    };
+    // Nested ors flatten, so `a || (b || c)` and `c || b || a` compare equal.
+    const operands = predicate.operands.flatMap((operand) => {
+      const canonical = canonicalPredicate(operand);
+      return canonical.kind === "or" ? canonical.operands : [canonical];
+    });
+    return { kind: "or", operands: operands.sort(compareJson) };
   }
   if (predicate.kind === "not") {
     return { kind: "not", operand: canonicalPredicate(predicate.operand) };

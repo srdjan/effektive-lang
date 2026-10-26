@@ -390,6 +390,25 @@ const make = (a: Int, b: Int, p: Bool): Either => {
   assert(messages(weaker.ir, weaker.sources).length > 0);
 });
 
+Deno.test("a nested or-fact with three operands survives a join", () => {
+  const program = (second: string) => `
+type Int = int
+type Bool = boolean
+type Any3 = { a: Int, b: Int, c: Int } where r => r.a > 0 || r.b > 0 || r.c > 0
+error Stop = {}
+const make = (a: Int, b: Int, c: Int, p: Bool): Any3 => {
+  if (p) { if (a > 0 || b > 0 || c > 0) { 1 } else { fail(Stop({})) } } else { if (${second}) { 1 } else { fail(Stop({})) } }
+  ({ a: a, b: b, c: c })
+}
+`;
+  for (
+    const second of ["c > 0 || b > 0 || a > 0", "a > 0 || (b > 0 || c > 0)"]
+  ) {
+    const lowered = lower(program(second));
+    assertEquals(messages(lowered.ir, lowered.sources), [], second);
+  }
+});
+
 // RBF20: a record literal that adopts a refined member of an expected union
 // needs the proof of that member, as it does without the union.
 Deno.test("a record literal that adopts a refined union member needs its proof", () => {
@@ -424,4 +443,14 @@ type Box = { e: Either | Stop }
       "export const direct = (a: Int): Either | Stop => if (a > 0) { { a: a, b: a } } else { Stop({}) }\n",
   );
   assertEquals(messages(proved.ir, proved.sources), []);
+
+  // A plain member that also fits needs no proof, whatever the member names are.
+  for (const name of ["Plain", "APlain"]) {
+    const plain = lower(
+      prelude +
+        `type ${name} = { a: Int, b: Int, c?: Int }\n` +
+        `export const either = (a: Int): Either | ${name} => ({ a: a, b: a })\n`,
+    );
+    assertEquals(messages(plain.ir, plain.sources), [], name);
+  }
 });
