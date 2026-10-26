@@ -64,7 +64,7 @@ admission protocol, distributed transaction, crash recovery, or exactly-once
 delivery. Synchronous SQLite calls finish before interruption can take effect.
 The acknowledgement-loss case is a simulation, not a real storage outage.
 
-The [gap assessment](../../../docs/plans/portable-applications-gaps.md) records
+The [gap assessment](../../../docs/archive/plans/portable-applications-gaps.md) records
 the original extension proposals. The user approved their separate
-[implementation plan](../../../docs/plans/2026-10-23-portable-extensions.md).
+[implementation plan](../../../docs/archive/plans/2026-10-23-portable-extensions.md).
 This witness continues to use its existing language forms.

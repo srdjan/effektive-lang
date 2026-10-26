@@ -87,4 +87,4 @@ The method has one precondition: no stage handler may read the effect sets or th
 
 - [The checker must not take a builtin result type from the expected hint](checker-result-type-from-expected-hint.md): the checker and the validator also disagreed there about a valid program.
 - [Hold the test set constant to read behavior:capture](../workflow-issues/behavior-capture-hold-tests-constant.md): the comparison method used here.
-- The plan and its evidence: `docs/plans/2026-10-22-decoupling-review.md`, items IC1a and IC1b.
+- The plan and its evidence: `docs/archive/plans/2026-10-22-decoupling-review.md`, items IC1a and IC1b.

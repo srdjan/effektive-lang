@@ -60,7 +60,7 @@ the build and run commands.
 | [Scheduled worker](../fixtures/applications/scheduled-worker/README.md) | Passes with ten compiled runtime cases. A source-authored concrete policy owns repetition, transient retry, and resource release. The runtime entry point owns whole-worker interruption.                                                                                  | General opaque Schedule consumers remain an API gap. The native reference comparison covers the selected fixed policy, timing, and results only. A future application that needs opaque policies, richer scheduling, or an in-source shutdown protocol must supply its own blocker witness. Plan: [scheduled worker](archive/plans/2026-10-19-scheduled-worker-application.md#disposition-and-limits).                                                                                                   |
 | [Stream processor](../fixtures/applications/stream-processor/README.md) | Passes with ordered concurrent mapping, backpressure, selective fallback, and thirteen compiled runtime cases. Source owns the whole pipeline and the session lifetime.                                                                                                    | The application promises no rollback, no exactly-once delivery, no recovery of arbitrary mixed causes, and no global memory bound from one queue capacity. Native `catchTags` can hide an accompanying defect. Plan: [stream processor](archive/plans/2026-10-19-stream-processor-application.md#disposition-and-limits).                                                                                                                                                                                |
 | [Order lifecycle](../fixtures/applications/order-lifecycle/README.md)   | A witness for types with identity and tagged records, not a gate application. Passes with nine compiled runtime cases. Four tagged record states cross a module boundary. A `match` by name covers each state. A recursive pricing rule tree uses a tagged record. Decoding keeps the module-qualified `_tag`. | The application has no service, no driver, and no concurrency. Percent pricing is not possible, because `/` gives `number`. Plan: [nominal examples](archive/plans/2026-10-23-nominal-examples.md), written before the type identity plan.                                                                                                                                                                                                                                                                                                              |
-| [Portable publisher](../fixtures/applications/portable-publisher/README.md) | An exploratory portability witness, not a gate application. Source owns publication, conflict policy, grants, and serial batching. Memory and SQLite pass one shared KV suite. | The checks cover local storage in one process, finite batch completion, interruption, and cleanup. A committed write with a simulated lost acknowledgement returns uncertainty without retry. No crash recovery, exactly-once delivery, or HTTP admission protocol is promised. [Plan](plans/2026-10-23-portable-applications.md); [gap assessment](plans/portable-applications-gaps.md). |
+| [Portable publisher](../fixtures/applications/portable-publisher/README.md) | An exploratory portability witness, not a gate application. Source owns publication, conflict policy, grants, and serial batching. Memory and SQLite pass one shared KV suite. | The checks cover local storage in one process, finite batch completion, interruption, and cleanup. A committed write with a simulated lost acknowledgement returns uncertainty without retry. No crash recovery, exactly-once delivery, or HTTP admission protocol is promised. [Plan](archive/plans/2026-10-23-portable-applications.md); [gap assessment](archive/plans/portable-applications-gaps.md). |
 
 ## Remaining and deferred gaps
 
@@ -87,7 +87,7 @@ The tables below are a record of gaps, not an implementation queue.
 Reopen an item only for a demonstrated application blocker or an explicit change
 to the accepted target. On 2026-10-24 the user accepted one such change: a compiler or syntax
 change that makes source more terse and elegant needs no application blocker. The
-[terse source plan](plans/2026-10-24-terse-source.md) records the first such
+[terse source plan](archive/plans/2026-10-24-terse-source.md) records the first such
 changes: open contracts on local functions, named error sets, union joins of
 tagged records, expected types in builtin callbacks, and inlay hints. First check equivalent existing source compositions.
 Record a minimal witness, intended contract, observed diagnostic or behavior,
@@ -195,13 +195,13 @@ application with real I/O is not measured.
 
 ### Portable extensions
 
-The user approved the [portable extensions](plans/2026-10-23-portable-extensions.md)
+The user approved the [portable extensions](archive/plans/2026-10-23-portable-extensions.md)
 after the publishing witness established its existing composition.
 Sealed types restrict construction, updates, arithmetic, widening, and schema derivation to the declaring module.
 Pure function types require pure execution and empty effect sets. Optional import rules restrict direct dependency edges.
 Existing open types with identity, unmarked function types, and projects without import rules retain their behavior.
 
-The [extension worklog](plans/portable-extensions-worklog.md) records the compiler, validator, editor, and example checks.
+The [extension worklog](archive/plans/portable-extensions-worklog.md) records the compiler, validator, editor, and example checks.
 The sibling website includes paired source and TypeScript panels and a runnable project for all three controls.
 These changes do not expand the three-application stopping rule. Named platforms continue to use existing services and Layers.
 
@@ -210,7 +210,7 @@ These changes do not expand the three-application stopping rule. Named platforms
 Editor behavior, packaging, performance and external integration acceptance are
 tracked separately from the application gates. The selected automated release
 checks now pass; user manual editor and playground acceptance remains pending.
-The accepted [editor and release plan](plans/2026-10-21-editor-release.md)
+The accepted [editor and release plan](archive/plans/2026-10-21-editor-release.md)
 selects editor capabilities, local installation, HTTP/SQLite integration and
 automated release checks. It selects no new language forms. The
 [correctness plan](archive/plans/2026-10-21-correctness-fixes.md) records the
@@ -225,14 +225,14 @@ M4 results. Both plans are archived.
 
 ## Open items
 
-The hardening plan [section 9](plans/2026-10-20-hardening-pruning.md) tracks the
+The hardening plan [section 9](archive/plans/2026-10-20-hardening-pruning.md) tracks the
 work items. This list gives the items that still need a person.
 
 | Item                            | State                                                                                                                                                                                                                                                                                                                                                                                                                    | Owner |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
 | Hand test of the VS Code client | The installed VSIX passed automated references, rename, completion, semantic tokens, contract quick fixes, generated output, save, error recovery and restart on 2026-10-21; [installation evidence](installation.md). User acceptance check 5 of the [language server plan](archive/plans/2026-10-16-lsp.md) remains pending.                                                                                           | User  |
-| Playground acceptance           | The user has not accepted the page (acceptance check 5 of the [playground plan](archive/plans/2026-10-16-playground.md)). An [automated browser review on 2026-10-21](playground-review-2026-10-21.md) passed at 375, 720 and 1280 pixels, including keyboard navigation, type/syntax error recovery and screenshot inspection. It does not replace the user’s manual acceptance.                                        | User  |
-| Rederive review                 | VAL-8 of the [rederive review](plans/2026-10-20-rederive-review.md) is complete. ARC-5 is declined after its name-only mapping prerequisite failed; the [assessment](plans/rederive-review-evidence/arc-5-builtin-facts.md) records six names with context-dependent lowering kinds. R12 FE-2, CHK-11, CHK-12, R13, R15a, R15b, C10 and A6 are complete. The refactor plan defers C7, F3, and F9b. No item has an owner. | User  |
+| Playground acceptance           | The user has not accepted the page (acceptance check 5 of the [playground plan](archive/plans/2026-10-16-playground.md)). An [automated browser review on 2026-10-21](archive/playground-review-2026-10-21.md) passed at 375, 720 and 1280 pixels, including keyboard navigation, type/syntax error recovery and screenshot inspection. It does not replace the user’s manual acceptance.                                        | User  |
+| Rederive review                 | VAL-8 of the [rederive review](archive/plans/2026-10-20-rederive-review.md) is complete. ARC-5 is declined after its name-only mapping prerequisite failed; the [assessment](archive/plans/rederive-review-evidence/arc-5-builtin-facts.md) records six names with context-dependent lowering kinds. R12 FE-2, CHK-11, CHK-12, R13, R15a, R15b, C10 and A6 are complete. The refactor plan defers C7, F3, and F9b. No item has an owner. | User  |
 | Reset                           | The accepted [reset plan](plans/2026-10-25-reset.md) is the authority for reset work. It closes the open items of older plans and tracks phases RB0 to RB8. | Main session |
 | Measured numbers                | Earlier evidence remains in `rejected.md` (the lexer split) and the audit fix plan (AU1). The [full release measurements](release-measurements.md) meet the unchanged 100 ms large-input p90 diagnostics budget and include three open documents with 10,000 distinct edits. Raw RSS, heap and type-table samples record growth; they establish no memory bound.                                                         | User  |
 

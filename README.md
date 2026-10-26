@@ -80,25 +80,25 @@ layout, the error fixture convention, and the format and lint scope.
 
 ## Documentation
 
-| Topic                                                          | Document                                                                     |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Release notes                                                  | [CHANGELOG.md](CHANGELOG.md)                                                 |
-| Tasks, layout, fixture conventions, format and lint scope      | [docs/development.md](docs/development.md)                                   |
-| Design of the transpiler                                       | [docs/transpiler-design.md](docs/transpiler-design.md)                       |
-| Language rules that the implementation chose                   | [docs/language-rules.md](docs/language-rules.md)                             |
-| Project status and open items                                  | [docs/status.md](docs/status.md)                                             |
-| API, command line, language server, VS Code client, playground | [docs/api.md](docs/api.md)                                                   |
-| Editor queries and rename boundaries                           | [docs/editor.md](docs/editor.md)                                             |
-| Local installation and artifacts                               | [docs/installation.md](docs/installation.md)                                 |
-| HTTP/SQLite integration acceptance                             | [docs/integration.md](docs/integration.md)                                   |
-| Measurement harnesses and protocol                             | [docs/measurements.md](docs/measurements.md)                                 |
-| Release benchmark results                                      | [docs/release-measurements.md](docs/release-measurements.md)                 |
-| Playground browser acceptance                                  | [docs/playground-review-2026-10-21.md](docs/playground-review-2026-10-21.md) |
-| Rejected ideas                                                 | [docs/rejected.md](docs/rejected.md)                                         |
-| Solved problems                                                | `docs/solutions/`                                                            |
-| Live plans                                                     | `docs/plans/`                                                                |
-| Finished plans and ledgers                                     | `docs/archive/`                                                              |
-| Shared terms                                                   | [CONCEPTS.md](CONCEPTS.md)                                                   |
+| Topic                                                          | Document                                                                                     |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Release notes                                                  | [CHANGELOG.md](CHANGELOG.md)                                                                 |
+| Tasks, layout, fixture conventions, format and lint scope      | [docs/development.md](docs/development.md)                                                   |
+| Design of the transpiler                                       | [docs/transpiler-design.md](docs/transpiler-design.md)                                       |
+| Language rules that the implementation chose                   | [docs/language-rules.md](docs/language-rules.md)                                             |
+| Project status and open items                                  | [docs/status.md](docs/status.md)                                                             |
+| API, command line, language server, VS Code client, playground | [docs/api.md](docs/api.md)                                                                   |
+| Editor queries and rename boundaries                           | [docs/editor.md](docs/editor.md)                                                             |
+| Local installation and artifacts                               | [docs/installation.md](docs/installation.md)                                                 |
+| HTTP/SQLite integration acceptance                             | [docs/integration.md](docs/integration.md)                                                   |
+| Measurement harnesses and protocol                             | [docs/measurements.md](docs/measurements.md)                                                 |
+| Release benchmark results                                      | [docs/release-measurements.md](docs/release-measurements.md)                                 |
+| Playground browser acceptance                                  | [docs/archive/playground-review-2026-10-21.md](docs/archive/playground-review-2026-10-21.md) |
+| Rejected ideas                                                 | [docs/rejected.md](docs/rejected.md)                                                         |
+| Solved problems                                                | `docs/solutions/`                                                                            |
+| Live plans                                                     | `docs/plans/`                                                                                |
+| Finished plans and ledgers                                     | `docs/archive/`                                                                              |
+| Shared terms                                                   | [CONCEPTS.md](CONCEPTS.md)                                                                   |
 
 ## Status
 

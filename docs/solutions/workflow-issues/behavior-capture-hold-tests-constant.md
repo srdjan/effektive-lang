@@ -37,7 +37,7 @@ without more evidence.
 
 The same procedure was needed earlier, by the rederive Phase 2 coordinator,
 which captured the Phase 2 source with the Phase 1 test set (session history;
-see `docs/plans/2026-10-20-rederive-review.md` section 12).
+see `docs/archive/plans/2026-10-20-rederive-review.md` section 12).
 
 ## Guidance
 
@@ -85,7 +85,7 @@ S2, and S4 builtin removals were verified this way.
 
 A capture of one revision against itself is not always equal. On 2026-10-22,
 a temporary commit captured against itself gave 9123 and 9124 records: 1 new
-`program` record and 0 missing (`docs/plans/2026-10-22-decoupling-review.md`,
+`program` record and 0 missing (`docs/archive/plans/2026-10-22-decoupling-review.md`,
 section 9). Earlier captures in the same plan also gained or lost clean
 `program` records that reruns of one revision did not repeat. The cause is
 probably a test whose number of speculative programs depends on timing. It is

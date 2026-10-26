@@ -852,7 +852,7 @@ review at 375 and 1280 pixels passed the checks in
 `docs/archive/plans/2026-10-16-playground.md`, section 7. Three later commits
 changed the page: the 720 pixel threshold, the hover feedback, and the wrap
 indent. An automated browser review on 2026-10-21 passed at 375, 720, and 1280
-pixels after them (`docs/playground-review-2026-10-21.md`). It does not replace
+pixels after them (`docs/archive/playground-review-2026-10-21.md`). It does not replace
 a manual review.
 
 The [builtin-change checklist](builtin-changes.md) traces recognition, source

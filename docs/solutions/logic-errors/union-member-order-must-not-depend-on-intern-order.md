@@ -91,7 +91,7 @@ The emitted TypeScript said `x: A | B` and not the written `x: B | A`. Both form
 
 Commit ac9db59 fixed it. `functionOfBinding` uses `binding.ir` when it is a function type. It calls `toIr(ref)` only after it unfolds an alias. The fast test `tests/function_alias_binding_test.ts` pins the source order.
 
-The rederive review, section 9 (`docs/plans/2026-10-20-rederive-review.md:426`), records that `Lowered.ir` differs from `toIr(ref)` in 70 of 3620 lowerings. 65 differ in source order. 5 keep a schema `makeInput`. The two forms are not redundant.
+The rederive review, section 9 (`docs/archive/plans/2026-10-20-rederive-review.md:426`), records that `Lowered.ir` differs from `toIr(ref)` in 70 of 3620 lowerings. 65 differ in source order. 5 keep a schema `makeInput`. The two forms are not redundant.
 
 ## Related Issues
 

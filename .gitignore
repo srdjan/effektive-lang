@@ -15,7 +15,7 @@ editors/vscode/node_modules/
 playground/dist/
 .playwright-mcp/
 docs/plans/*-probes/
-docs/plans/**/repro/
-docs/plans/rederive-review-evidence/*.ts
+docs/archive/plans/**/repro/
+docs/archive/plans/rederive-review-evidence/*.ts
 dist/
 editors/vscode/server/
