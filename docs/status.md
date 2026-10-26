@@ -155,7 +155,7 @@ version 6 transports contracts and independently checked proof certificates.
 compiler-update checks. Generics and abstract predicates remain deferred. Host
 mutation through retained aliases remains an evidence limit.
 
-The [reset plan](plans/2026-10-25-reset.md) fixed two refinement defects. A
+The [reset plan](archive/plans/2026-10-25-reset.md) fixed two refinement defects. A
 union result no longer skips the refinement proof of a record literal (RBF20).
 The checker now keeps `or` facts in the canonical form of the validator, so
 commuted `or` facts at a branch join agree (RBF12).
@@ -255,6 +255,5 @@ The list gives the items that still need a person.
 | --- | --- | --- |
 | Hand test of the VS Code client | The installed VSIX passed automated references, rename, completion, semantic tokens, contract quick fixes, generated output, save, error recovery and restart on 2026-10-21; [installation evidence](installation.md). User acceptance check 5 of the [language server plan](archive/plans/2026-10-16-lsp.md) remains pending.                                                                                           | User  |
 | Playground acceptance           | The user has not accepted the page (acceptance check 5 of the [playground plan](archive/plans/2026-10-16-playground.md)). An [automated browser review on 2026-10-21](archive/playground-review-2026-10-21.md) passed at 375, 720 and 1280 pixels, including keyboard navigation, type/syntax error recovery and screenshot inspection. It does not replace the user’s manual acceptance.                                        | User  |
-| Rederive review | VAL-8 of the [rederive review](archive/plans/2026-10-20-rederive-review.md) is complete. ARC-5 is declined after its name-only mapping prerequisite failed; the [assessment](archive/plans/rederive-review-evidence/arc-5-builtin-facts.md) records six names with context-dependent lowering kinds. R12 FE-2, CHK-11, CHK-12, R13, R15a, R15b, C10 and A6 are complete. The reset plan closes C7, F3, and F9b as declined. No item has an owner. | User |
-| Reset | The accepted [reset plan](plans/2026-10-25-reset.md) is the authority for reset work. It closes the open items of older plans and tracks phases RB0 to RB8. | Main session |
+| Rederive review | VAL-8 of the [rederive review](archive/plans/2026-10-20-rederive-review.md) is complete. ARC-5 is declined after its name-only mapping prerequisite failed; the [assessment](archive/plans/rederive-review-evidence/arc-5-builtin-facts.md) records six names with context-dependent lowering kinds. R12 FE-2, CHK-11, CHK-12, R13, R15a, R15b, C10 and A6 are complete. The reset plan closed C7, F3, and F9b as declined. No item has an owner. | User |
 | Measured numbers                | Earlier evidence remains in `rejected.md` (the lexer split) and the audit fix plan (AU1). The [full release measurements](release-measurements.md) meet the unchanged 100 ms large-input p90 diagnostics budget and include three open documents with 10,000 distinct edits. Raw RSS, heap and type-table samples record growth; they establish no memory bound.                                                         | User  |
