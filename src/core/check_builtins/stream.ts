@@ -170,7 +170,7 @@ function mapGroupsCall(
   if (groupKeyClass(c, key.result) === undefined && !c.isError(key.result)) {
     c.report(
       "type-mismatch/010",
-      "`mapGroups` keys must share one string, boolean, int, or primitive brand class",
+      "`mapGroups` keys must share one class: string, boolean, int, or one primitive type with identity",
       args[1].node,
     );
   }
