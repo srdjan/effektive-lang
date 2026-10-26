@@ -966,7 +966,7 @@ function groupKeyClass(
         base !== undefined &&
         groupKeyClass(c, base, depth + 1) !== undefined
       ) {
-        current = `brand:${type.id}`;
+        current = `identity:${type.id}`;
       }
     }
     if (current === undefined || (found !== undefined && found !== current)) {

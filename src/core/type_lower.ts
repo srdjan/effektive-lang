@@ -828,14 +828,14 @@ export function toIrField(field: LoweredField): Field {
 // ------------------------------------------------------------------ type graph walk
 
 /**
- * Rule 11 for one group of data types and aliases that refer to each other.
- * `roots[n]` lists the IR types of member `n`: the record of a data type, or
+ * Rule 11 for one group of tagged records and aliases that refer to each other.
+ * `roots[n]` lists the IR types of member `n`: the record of a tagged record, or
  * the target of an alias. The group is guarded when no cycle is made of aliases
  * alone, and no cycle is made of references that avoid an `Option`, an array,
  * an optional field, and a union with a member outside the group.
  */
 export function recursionIsGuarded(
-  members: readonly { readonly id: string; readonly data: boolean }[],
+  members: readonly { readonly id: string; readonly tagged: boolean }[],
   roots: readonly (readonly Type[])[],
 ): boolean {
   const index = new Map(members.map((m, n) => [m.id, n]));
@@ -898,6 +898,6 @@ export function recursionIsGuarded(
       c.length > 1 || graph[c[0]].includes(c[0])
     );
   };
-  return !cyclic((from, to) => !members[from].data && !members[to].data) &&
+  return !cyclic((from, to) => !members[from].tagged && !members[to].tagged) &&
     !cyclic((_from, _to, bare) => bare);
 }

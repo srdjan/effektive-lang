@@ -188,7 +188,7 @@ export function narrowTagged(
   });
 }
 
-/** Runtime equality sees a brand's erased base and may inspect unknown data. */
+/** Runtime equality sees the erased base of a type with identity and may inspect unknown data. */
 function literalMayEqual(
   table: TypeTable,
   type: TypeRef,

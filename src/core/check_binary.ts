@@ -17,7 +17,7 @@ function isError(table: TypeTable, ref: TypeRef): boolean {
  * The identity id when the type, after transparent aliases, is an identity
  * over `int` or `number`. An identity over a literal union is not numeric.
  */
-function numericBrand(
+function numericIdentity(
   table: TypeTable,
   ref: TypeRef,
 ): TypeId | undefined {
@@ -33,15 +33,15 @@ function numericBrand(
     : undefined;
 }
 
-/** The brand id when both operands have one numeric brand. */
-function sharedNumericBrand(
+/** The identity id when both operands have one numeric identity. */
+function sharedNumericIdentity(
   table: TypeTable,
   left: TypeRef,
   right: TypeRef,
 ): TypeId | undefined {
-  const brand = numericBrand(table, left);
-  return brand !== undefined && brand === numericBrand(table, right)
-    ? brand
+  const shared = numericIdentity(table, left);
+  return shared !== undefined && shared === numericIdentity(table, right)
+    ? shared
     : undefined;
 }
 
@@ -49,14 +49,14 @@ function sharedNumericBrand(
  * The identity id when exactly one operand is a numeric identity and the other
  * operand is unnamed and fits the body of that identity (NI25).
  */
-function adoptedNumericBrand(
+function adoptedNumericIdentity(
   table: TypeTable,
   module: string,
   left: TypeRef,
   right: TypeRef,
 ): TypeId | undefined {
-  const l = numericBrand(table, left);
-  const r = numericBrand(table, right);
+  const l = numericIdentity(table, left);
+  const r = numericIdentity(table, right);
   if ((l === undefined) === (r === undefined)) return undefined;
   const named = l ?? r;
   const unnamed = l === undefined ? left : right;
@@ -96,7 +96,7 @@ function comparisonClass(
     } else if (node.kind === "named" && !isErrorId(node.id)) {
       const base = table.brandBaseOf(node.id);
       if (base !== undefined && comparisonClass(table, base) !== undefined) {
-        current = `brand:${node.id}`;
+        current = `identity:${node.id}`;
       }
     }
     if (current === undefined) return undefined;
@@ -106,12 +106,12 @@ function comparisonClass(
   return found;
 }
 
-const BRAND_CLASS = "brand:";
+const IDENTITY_CLASS = "identity:";
 
-/** The class of the base of a brand class, or undefined for another class. */
+/** The class of the base of an identity class, or undefined for another class. */
 function baseClass(table: TypeTable, cls: string): string | undefined {
-  if (!cls.startsWith(BRAND_CLASS)) return undefined;
-  const base = table.brandBaseOf(cls.slice(BRAND_CLASS.length) as TypeId);
+  if (!cls.startsWith(IDENTITY_CLASS)) return undefined;
+  const base = table.brandBaseOf(cls.slice(IDENTITY_CLASS.length) as TypeId);
   return base === undefined ? undefined : comparisonClass(table, base);
 }
 
@@ -170,7 +170,7 @@ export function operatorResult(
     case "<=":
     case ">":
     case ">=": {
-      // `isNumeric` widens a brand to its base, so the classes decide.
+      // `isNumeric` widens an identity to its base, so the classes decide.
       const l = comparisonClass(table, left);
       const r = comparisonClass(table, right);
       const mismatch = !either &&
@@ -220,15 +220,15 @@ export function operatorResult(
         return { type: table.error, mismatch: true };
       }
       if (operator === "+" || operator === "-") {
-        const brand = sharedNumericBrand(table, left, right);
-        if (brand !== undefined) {
-          return { type: table.named(brand), mismatch: false };
+        const shared = sharedNumericIdentity(table, left, right);
+        if (shared !== undefined) {
+          return { type: table.named(shared), mismatch: false };
         }
       }
       // One named operand and one unnamed operand that fits its body: the
       // result keeps the name, in either operand order.
       if (operator !== "/") {
-        const named = adoptedNumericBrand(table, module, left, right);
+        const named = adoptedNumericIdentity(table, module, left, right);
         if (named !== undefined) {
           return { type: table.named(named), mismatch: false };
         }

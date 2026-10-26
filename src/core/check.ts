@@ -88,7 +88,7 @@ type TypeNodeInfo =
     readonly refs: ReadonlySet<string>;
   }
   & (
-    | { readonly kind: "alias" | "brand" | "data"; readonly id: TypeId }
+    | { readonly kind: "alias" | "identity" | "tagged"; readonly id: TypeId }
     | { readonly kind: "error"; readonly id: ErrorId }
   );
 
@@ -307,7 +307,7 @@ class ModuleChecker {
       nodeText(this.tree, entry.node),
     );
     let definition: TypeDecl["definition"];
-    let kind: "alias" | "brand" = "alias";
+    let kind: "alias" | "identity" = "alias";
     let literal: LoweredField[] | undefined;
     let record = false;
     let predicate: TypeDecl["predicate"];
@@ -321,7 +321,7 @@ class ModuleChecker {
         kind: "nominal",
         base: { kind: "primitive", name: "unknown" },
       };
-      kind = "brand";
+      kind = "identity";
     } else {
       // A literal record keeps its field spans, for the tag checks.
       literal = body !== undefined &&
@@ -472,7 +472,14 @@ class ModuleChecker {
       if (!tagged.has(record.id)) continue;
       const at = infos.findIndex((info) => info.id === record.id);
       const { name, nameSpan, start, refs } = infos[at];
-      infos[at] = { name, nameSpan, start, refs, kind: "data", id: record.id };
+      infos[at] = {
+        name,
+        nameSpan,
+        start,
+        refs,
+        kind: "tagged",
+        id: record.id,
+      };
       this.tagRecord(record);
     }
   }
@@ -578,7 +585,7 @@ class ModuleChecker {
   /**
    * Version 0 rejects recursive type definitions. Finds the strongly connected
    * components of the reference graph, reports one diagnostic for each cycle, and
-   * redefines its aliases and brands as the error type so that compatibility ends.
+   * redefines its aliases and types with identity as the error type so that compatibility ends.
    * Returns the aliases that stay as guarded records.
    */
   private checkCycles(typeInfos: readonly TypeNodeInfo[]): Set<TypeId> {
@@ -654,7 +661,7 @@ class ModuleChecker {
         })),
       );
       for (const member of component) {
-        if (member.kind === "alias" || member.kind === "brand") {
+        if (member.kind === "alias" || member.kind === "identity") {
           this.table.defineAlias(member.id, this.table.error);
         }
       }
@@ -669,8 +676,8 @@ class ModuleChecker {
    * outside the group.
    */
   private guardedDataGroup(component: readonly TypeNodeInfo[]): boolean {
-    if (!component.some((m) => m.kind === "data")) return false;
-    if (component.some((m) => m.kind !== "data" && m.kind !== "alias")) {
+    if (!component.some((m) => m.kind === "tagged")) return false;
+    if (component.some((m) => m.kind !== "tagged" && m.kind !== "alias")) {
       return false;
     }
     const roots = component.map((m): Type[] => {
@@ -681,7 +688,7 @@ class ModuleChecker {
       return definition?.kind === "alias" ? [definition.type] : [];
     });
     return recursionIsGuarded(
-      component.map((m) => ({ id: m.id, data: m.kind === "data" })),
+      component.map((m) => ({ id: m.id, tagged: m.kind === "tagged" })),
       roots,
     );
   }
