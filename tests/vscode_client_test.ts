@@ -1,7 +1,11 @@
 import { assert, assertEquals } from "@std/assert";
 import { runInNewContext } from "node:vm";
 import * as path from "node:path";
-import { releaseManifest, releaseVersion } from "../scripts/package.ts";
+import {
+  releaseManifest,
+  releaseVersion,
+  REQUIRED_DENO_VERSION,
+} from "../scripts/package.ts";
 import { KEYWORDS } from "../src/core/lex.ts";
 import { BUILTIN_TYPE_NAMES, PRELUDE_NAMES } from "../src/core/resolve.ts";
 import {
@@ -220,6 +224,16 @@ Deno.test("extension.js uses the method names and scheme of the server", () => {
   }
 });
 
+Deno.test("extension.js requires the Deno version of the packager", () => {
+  const source = Deno.readTextFileSync(new URL("extension.js", CLIENT));
+  assert(
+    source.includes(
+      `const REQUIRED_DENO_VERSION = "${REQUIRED_DENO_VERSION}";`,
+    ),
+    "extension.js must require the Deno version of scripts/package.ts",
+  );
+});
+
 function activateClient(
   settings: Record<string, unknown>,
   denoVersion: string | Error,
@@ -350,7 +364,7 @@ function fakeUri(parts: Omit<FakeUri, "toString">): FakeUri {
 }
 
 Deno.test("the installed client starts its bundled server without checkout configuration", () => {
-  const { errors, launches } = activateClient({}, "2.9.8");
+  const { errors, launches } = activateClient({}, REQUIRED_DENO_VERSION);
   assertEquals(errors, []);
   assertEquals(launches.length, 1);
   assertEquals(launches[0].command, "deno");
@@ -369,7 +383,7 @@ Deno.test("the client keeps an explicit checkout development override", () => {
   const { errors, launches } = activateClient({
     "server.repository": "/work/effektive",
     "server.deno": "/tools/deno",
-  }, "2.9.8");
+  }, REQUIRED_DENO_VERSION);
   assertEquals(errors, []);
   assertEquals(launches[0].command, "/tools/deno");
   assertEquals(Array.from(launches[0].args), [
@@ -387,14 +401,14 @@ Deno.test("missing or incompatible Deno prevents startup with an actionable erro
     const { errors, launches } = activateClient({}, version);
     assertEquals(launches, []);
     assertEquals(errors.length, 1);
-    assert(errors[0].includes("2.9.8"));
+    assert(errors[0].includes(REQUIRED_DENO_VERSION));
     assert(errors[0].includes("effektive.server.deno"));
     if (version instanceof Error) assert(errors[0].includes("ENOENT"));
   }
 });
 
 Deno.test("the generated view maps .eff to .ts and .effi to .effi.ts", async () => {
-  const client = activateClient({}, "2.9.8");
+  const client = activateClient({}, REQUIRED_DENO_VERSION);
   const show = client.commands.get("effektive.showGeneratedTypeScript");
   assert(show !== undefined, "the command must be registered");
   for (
@@ -422,7 +436,7 @@ Deno.test("the generated view maps .eff to .ts and .effi to .effi.ts", async () 
 });
 
 Deno.test("a generatedChanged notification refreshes the .effi.ts view", () => {
-  const client = activateClient({}, "2.9.8");
+  const client = activateClient({}, REQUIRED_DENO_VERSION);
   const changed = client.notifications.get(GENERATED_CHANGED_METHOD);
   assert(changed !== undefined, "the notification must have a handler");
   changed({ uri: "/work/app/host.effi" });
