@@ -4,7 +4,15 @@
 import { assert } from "@std/assert";
 
 const ROOT = new URL("../", import.meta.url);
-const SKIP_DIRS = new Set([".git", "node_modules", "dist", ".claude"]);
+// `demos` and `.playwright-mcp` hold local, gitignored artifacts.
+const SKIP_DIRS = new Set([
+  ".git",
+  "node_modules",
+  "dist",
+  ".claude",
+  ".playwright-mcp",
+  "demos",
+]);
 
 /** Repository-relative paths of the files under `dir` that pass `keep`. */
 async function walk(
