@@ -2887,7 +2887,7 @@ const ENV: TypeEnv = {
   ]),
   identities: new Set<string>(["type:m#Id"]),
   opaqueBases: new Map<string, Type>(),
-  data: new Map(),
+  taggedRecords: new Map(),
   errors: new Map<string, readonly Field[]>(),
   opaque: new Set<string>(),
   sealed: new Set<string>(),

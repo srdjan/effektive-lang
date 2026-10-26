@@ -1701,10 +1701,11 @@ export class BodyValidator implements ValidatorCore {
         const ms = identityMembers(env, subject);
         const ok = ms.length > 0 &&
           ms.every((m) =>
-            m.kind === "named" && (env.errors.has(m.id) || env.data.has(m.id))
+            m.kind === "named" &&
+            (env.errors.has(m.id) || env.taggedRecords.has(m.id))
           ) &&
           ms.some((m) => m.kind === "named" && m.id === id) &&
-          (p.kind === "error" ? env.errors.has(id) : env.data.has(id));
+          (p.kind === "error" ? env.errors.has(id) : env.taggedRecords.has(id));
         if (!ok) {
           foreign(
             `the ${p.kind === "error" ? "error" : "tagged record"} ${id}`,

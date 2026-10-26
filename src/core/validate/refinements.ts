@@ -576,7 +576,8 @@ function typeAssumptionsAt(
       );
       if (compiled !== undefined) assumptions.push(compiled);
     }
-    const base = identityBody(ctx.world.env, id) ?? ctx.world.env.data.get(id);
+    const base = identityBody(ctx.world.env, id) ??
+      ctx.world.env.taggedRecords.get(id);
     return base === undefined
       ? assumptions
       : [...assumptions, ...typeAssumptionsAt(ctx, base, path, nextSeen)];

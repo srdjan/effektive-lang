@@ -124,7 +124,7 @@ export function buildWorld(ir: ModuleIR): World {
   const aliases = new Map<string, Type>();
   const identities = new Set<string>();
   const opaqueBases = new Map<string, Type>();
-  const data = new Map<string, Extract<Type, { kind: "record" }>>();
+  const taggedRecords = new Map<string, Extract<Type, { kind: "record" }>>();
   const opaque = new Set<string>();
   const sealed = new Set<string>();
   const refined = new Set<string>();
@@ -146,7 +146,7 @@ export function buildWorld(ir: ModuleIR): World {
         if (
           t.definition.tagged === true && t.definition.base.kind === "record"
         ) {
-          data.set(t.id, t.definition.base);
+          taggedRecords.set(t.id, t.definition.base);
         } else if (t.opaque === true) opaqueBases.set(t.id, t.definition.base);
         else {
           // An untagged nominal type is an alias with identity.
@@ -166,7 +166,7 @@ export function buildWorld(ir: ModuleIR): World {
       aliases,
       identities,
       opaqueBases,
-      data,
+      taggedRecords,
       errors: errorFields,
       opaque,
       sealed,
@@ -893,10 +893,10 @@ function guardedDataGroups(
       }
       for (const c of typeChildren(type)) visit(c.type, guarded, depth + 1);
     };
-    const data = env.data.get(id);
+    const tagged = env.taggedRecords.get(id);
     const alias = env.aliases.get(id);
-    const roots: readonly Type[] = data !== undefined
-      ? [data]
+    const roots: readonly Type[] = tagged !== undefined
+      ? [tagged]
       : alias !== undefined
       ? [alias]
       : [];
@@ -912,7 +912,9 @@ function guardedDataGroups(
     const opaqueBase = env.opaqueBases.get(id);
     if (alias !== undefined) roots.push(alias);
     if (opaqueBase !== undefined) roots.push(opaqueBase);
-    for (const f of env.data.get(id)?.fields ?? env.errors.get(id) ?? []) {
+    for (
+      const f of env.taggedRecords.get(id)?.fields ?? env.errors.get(id) ?? []
+    ) {
       roots.push(f.type);
     }
     const walk = (type: Type, depth: number): void => {
@@ -954,8 +956,10 @@ function guardedDataGroups(
       if (m === id) break;
     }
     const cycle = members.length > 1 || (graph.get(id) ?? []).includes(id);
-    if (!cycle || !members.some((m) => env.data.has(m))) return;
-    if (!members.every((m) => env.data.has(m) || env.aliases.has(m))) return;
+    if (!cycle || !members.some((m) => env.taggedRecords.has(m))) return;
+    if (!members.every((m) => env.taggedRecords.has(m) || env.aliases.has(m))) {
+      return;
+    }
     const within = new Set(members);
     const edges = new Map(members.map((m) => [m, edgesOf(m, within)]));
     const cyclic = (
@@ -980,7 +984,7 @@ function guardedDataGroups(
       return members.some((m) => reaches(m, m, new Set()));
     };
     const aliasOnly = (from: string, to: string) =>
-      !env.data.has(from) && !env.data.has(to);
+      !env.taggedRecords.has(from) && !env.taggedRecords.has(to);
     if (cyclic(aliasOnly) || cyclic((_f, _t, bare) => bare)) return;
     groupCount += 1;
     for (const m of members) groups.set(m, groupCount);
@@ -1067,7 +1071,8 @@ export function checkRecursion(ctx: Ctx, ir: ModuleIR): void {
     state.set(id, 1);
     const alias = world.env.aliases.get(id);
     const opaqueBase = world.env.opaqueBases.get(id);
-    const fields = world.env.data.get(id)?.fields ?? world.env.errors.get(id);
+    const fields = world.env.taggedRecords.get(id)?.fields ??
+      world.env.errors.get(id);
     if (alias !== undefined) reaches(alias, id, 0);
     if (opaqueBase !== undefined) reaches(opaqueBase, id, 0);
     if (fields !== undefined) fields.forEach((f) => reaches(f.type, id, 0));

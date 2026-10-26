@@ -14,7 +14,7 @@ const ENV: TypeEnv = {
   ]),
   identities: new Set<string>(),
   opaqueBases: new Map<string, Type>(),
-  data: new Map(),
+  taggedRecords: new Map(),
   errors: new Map<string, readonly Field[]>(),
   opaque: new Set<string>(),
   sealed: new Set<string>(),
@@ -550,7 +550,7 @@ Deno.test("a tagged record fits its record, an opaque type does not widen, and a
     aliases: new Map<string, Type>([["type:m#Id", STRING]]),
     identities: new Set(["type:m#Id"]),
     opaqueBases: new Map<string, Type>([["type:m#Handle", UNKNOWN]]),
-    data: new Map([["type:m#Account", record]]),
+    taggedRecords: new Map([["type:m#Account", record]]),
     opaque: new Set(["type:m#Handle"]),
   };
   assertEquals(fits(env, id, STRING), true);

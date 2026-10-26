@@ -32,8 +32,11 @@ export interface TypeEnv {
   readonly identities: ReadonlySet<string>;
   /** Opaque type identity to the base type. */
   readonly opaqueBases: ReadonlyMap<string, Type>;
-  /** Data type identity to the base record type. */
-  readonly data: ReadonlyMap<string, Extract<Type, { kind: "record" }>>;
+  /** Tagged record identity to its base record type. */
+  readonly taggedRecords: ReadonlyMap<
+    string,
+    Extract<Type, { kind: "record" }>
+  >;
   /** Error identity to its fields. */
   readonly errors: ReadonlyMap<string, readonly Field[]>;
   /** Identities of opaque types. An opaque type does not widen to its base. */
@@ -153,7 +156,8 @@ export function dataOnly(
         (value.id === SCHEMA_ERROR_ID || value.id === SCHEMA_ISSUE_ID)
       ) return false;
       const errorFields = env.errors.get(value.id);
-      const base = env.data.get(value.id) ?? env.opaqueBases.get(value.id) ??
+      const base = env.taggedRecords.get(value.id) ??
+        env.opaqueBases.get(value.id) ??
         (errorFields !== undefined
           ? { kind: "record" as const, fields: errorFields }
           : undefined);
@@ -277,7 +281,7 @@ function assignable(
   if (s.kind === "named" && ownsSealed(env, s.id)) {
     const body = env.identities.has(s.id)
       ? env.aliases.get(s.id)
-      : env.data.get(s.id);
+      : env.taggedRecords.get(s.id);
     if (
       body !== undefined && assignable(env, body, t, lift, depth + 1, false)
     ) return true;
@@ -504,14 +508,14 @@ export function fitsCheckedInput(
       (env.refined?.has(t.id) === true &&
         (predicate === undefined ||
           !unknownPredicateInput(env, s, predicate))) ||
-      env.data.has(t.id)
+      env.taggedRecords.has(t.id)
     ) return false;
     return base !== undefined &&
       fitsCheckedInput(env, s, base, depth + 1);
   }
   if (s.kind === "named" && t.kind !== "named") {
     if (!ownsSealed(env, s.id)) return false;
-    const base = identityBody(env, s.id) ?? env.data.get(s.id);
+    const base = identityBody(env, s.id) ?? env.taggedRecords.get(s.id);
     return base !== undefined &&
       fitsCheckedInput(env, base, t, depth + 1);
   }
@@ -601,7 +605,8 @@ export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
       if (seen.has(current.id)) return true;
       seen.add(current.id);
       const fields = env.errors.get(current.id);
-      const body = env.aliases.get(current.id) ?? env.data.get(current.id) ??
+      const body = env.aliases.get(current.id) ??
+        env.taggedRecords.get(current.id) ??
         env.opaqueBases.get(current.id) ??
         (fields === undefined
           ? undefined
@@ -690,7 +695,7 @@ export function fieldsOf(
   if (unfolded.kind === "named") {
     const error = env.errors.get(unfolded.id);
     if (error !== undefined) return error;
-    return env.data.get(unfolded.id)?.fields;
+    return env.taggedRecords.get(unfolded.id)?.fields;
   }
   return undefined;
 }
@@ -722,7 +727,8 @@ export function foreignSealedOf(
     if (current.kind === "named") {
       if (!ownsSealed(env, current.id)) return current.id;
       const fields = env.errors.get(current.id);
-      const target = env.aliases.get(current.id) ?? env.data.get(current.id) ??
+      const target = env.aliases.get(current.id) ??
+        env.taggedRecords.get(current.id) ??
         env.opaqueBases.get(current.id) ??
         (fields === undefined
           ? undefined
@@ -760,7 +766,7 @@ export function containsRefinement(
     if (env.refined?.has(type.id)) return true;
     const fields = env.errors.get(type.id);
     const body = env.aliases.get(type.id) ?? env.opaqueBases.get(type.id) ??
-      env.data.get(type.id);
+      env.taggedRecords.get(type.id);
     return body !== undefined
       ? containsRefinement(env, body, seen)
       : fields?.some((field) => containsRefinement(env, field.type, seen)) ===
@@ -781,7 +787,8 @@ export function containsUnknown(
   seen.add(current);
   if (current.kind === "primitive") return current.name === "unknown";
   if (current.kind === "named" && ownsSealed(env, current.id)) {
-    const body = identityBody(env, current.id) ?? env.data.get(current.id);
+    const body = identityBody(env, current.id) ??
+      env.taggedRecords.get(current.id);
     return body !== undefined && containsUnknown(env, body, seen);
   }
   return typeChildren(current).some((child) =>
