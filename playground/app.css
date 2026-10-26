@@ -493,7 +493,8 @@ main[hidden] + .statusbar {
   main {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) clamp(8rem, 28%, 16rem);
+    /* The problems take only their content, so the code fills the rest. */
+    grid-template-rows: minmax(0, 1fr) auto;
   }
 
   #source-region {
@@ -508,6 +509,14 @@ main[hidden] + .statusbar {
   #problems-region {
     grid-column: 1 / -1;
     grid-row: 2;
+  }
+
+  .problems {
+    max-block-size: 11rem;
+  }
+
+  #problems-region .empty {
+    padding-block: 0.5rem;
   }
 
   /* The header row is one editor tab: a code surface under an orange line. */
