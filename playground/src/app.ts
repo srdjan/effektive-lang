@@ -38,7 +38,7 @@ import {
   startData,
   viewData,
 } from "./events.ts";
-import { createPageLog } from "./log_client.ts";
+import { createPageLog, type PageLog } from "./log_client.ts";
 import {
   DEFAULT_TAB,
   hoverLines,
@@ -49,6 +49,7 @@ import {
   tabCounts,
   tabFromHash,
 } from "./model.ts";
+import { play, stepsOf } from "./replay.ts";
 
 /** The pause before the cursor line changes, in milliseconds. */
 const CURSOR_PAUSE_MS = 300;
@@ -251,7 +252,11 @@ async function main(): Promise<void> {
     return;
   }
   const files = examples.files;
-  const log = createPageLog({ fetch: (url, init) => fetch(url, init) });
+  // A replay page writes no new session.
+  const replayName = new URLSearchParams(location.search).get("replay");
+  const log: PageLog = replayName !== null
+    ? { event: () => {}, flush: () => {} }
+    : createPageLog({ fetch: (url, init) => fetch(url, init) });
   const paths = Object.keys(files).filter((path) => path !== CONFIG_FILE);
   const session = createPlayground(files, { now: () => performance.now() });
   const first = session.start();
@@ -682,6 +687,26 @@ async function main(): Promise<void> {
   );
   log.event("pg.select", selectData(active, "start"));
   logCompile();
+  if (replayName !== null) await playReplay(replayName);
+
+  /** Plays a logged session in the editor, at the recorded times. */
+  async function playReplay(name: string): Promise<void> {
+    const failReplay = (message: string) =>
+      showError("replay", `Replay ${name}: ${message}`);
+    try {
+      const response = await fetch(`replay/${encodeURIComponent(name)}`);
+      if (!response.ok) {
+        failReplay(`${response.status} ${response.statusText}`);
+        return;
+      }
+      await play(stepsOf(await response.text()), (step) => {
+        selectFile(step.path, "click");
+        if (step.tag === "edit") sourceView.dispatch({ changes: step.changes });
+      });
+    } catch (error) {
+      failReplay(error instanceof Error ? error.message : String(error));
+    }
+  }
 }
 
 await main();

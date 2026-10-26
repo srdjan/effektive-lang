@@ -8,7 +8,11 @@ import { join } from "@std/path";
 import { denoLogFs } from "../src/host/deno_io.ts";
 import { prepareLogFolder } from "../src/host/log.ts";
 import { build, describeBuildError, REPOSITORY_ROOT } from "./build.ts";
-import { checkLogRequest, MAX_BODY_BYTES } from "./log_endpoint.ts";
+import {
+  checkLogRequest,
+  isReplayName,
+  MAX_BODY_BYTES,
+} from "./log_endpoint.ts";
 
 const OUT_DIR = join(REPOSITORY_ROOT, "playground", "dist");
 const HOSTNAME = "127.0.0.1";
@@ -64,6 +68,30 @@ async function handleLog(request: Request, logs: string): Promise<Response> {
   return respond(204);
 }
 
+/** `GET /replay/<file>`: a session file of the logs folder, for `?replay=`. */
+function handleReplay(request: Request, logs: string | undefined): Response {
+  // A DNS-rebinding page is same-origin under another host name.
+  if (request.headers.get("host") !== `${HOSTNAME}:${PORT}`) {
+    return respond(403, "wrong host");
+  }
+  const { pathname } = new URL(request.url);
+  let name: string;
+  try {
+    name = decodeURIComponent(pathname.slice("/replay/".length));
+  } catch {
+    return respond(400, "bad name");
+  }
+  if (!isReplayName(name)) return respond(400, "bad name");
+  if (logs === undefined) return respond(404);
+  try {
+    return new Response(Deno.readTextFileSync(`${logs}/${name}`), {
+      headers: { "Content-Type": "application/x-ndjson" },
+    });
+  } catch {
+    return respond(404);
+  }
+}
+
 if (import.meta.main) {
   const result = await build(OUT_DIR);
   if (!result.ok) {
@@ -83,6 +111,10 @@ if (import.meta.main) {
         // With --no-log the answer is 404, so the page stops after its first post.
         return logs === undefined ? respond(404) : handleLog(request, logs);
       }
+      if (
+        request.method === "GET" &&
+        new URL(request.url).pathname.startsWith("/replay/")
+      ) return handleReplay(request, logs);
       return serveDir(request, { fsRoot: OUT_DIR, quiet: true });
     },
   );

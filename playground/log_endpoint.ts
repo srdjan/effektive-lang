@@ -28,6 +28,13 @@ export interface Refusal {
 const SESSION =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
+const REPLAY_NAME = /^playground-\d{8}-[0-9a-f-]{36}\.jsonl$/;
+
+/** True for a playground session file name. A path separator or `..` never matches. */
+export function isReplayName(name: string): boolean {
+  return REPLAY_NAME.test(name) && SESSION.test(name.slice(20, 56));
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

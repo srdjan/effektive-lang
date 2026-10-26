@@ -367,6 +367,21 @@ stayed 5.1 s until the undo. The report definitions are in the comments of
 `scripts/logs_report.ts`: an edit burst has gaps below 1000 ms, and a
 transient code counts once per burst.
 
+LG6 replay tests: each test records a session in process on the current
+build with a memory log, then replays its events. The repository holds no
+recorded replay logs, because a committed recording breaks each time a
+diagnostic message or an emitted output changes. The tests still prove that
+replay detects a changed outcome, because they change one logged value.
+
+LG6 real-session check, 2026-10-26: a browser session of 66 lines replayed
+as `same: playground, 28 events compared`. Two language server sessions from
+a spawned `src/lsp/main.ts` replayed as same: 20 events with `debounceMs` 0,
+and 23 events with `debounceMs` 50, including 3 `lsp.flush` events. In the
+browser, `?replay=` played the session to its last edit and wrote no new
+session file. `..%2Fdeno.json` gave 400 and showed the error. The review
+added a `Host` check to `GET /replay/`, because a DNS-rebinding page is
+same-origin under another host name: a foreign `Host` gives 403.
+
 ## Validation
 
 A Fable review on 2026-10-26 found thirteen points, seven of them blocking.
@@ -406,6 +421,6 @@ volume with M4.
 | LG2 | Done | `4e9fe92` |
 | LG3 | Done | `f382bd5` |
 | LG4 | Done | `dc706b5` |
-| LG5 | Planned | |
+| LG5 | Done | `6863322` |
 | LG6 | Planned | |
 | LG7 | Planned | |

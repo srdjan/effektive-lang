@@ -23,6 +23,7 @@
     "lex:update": "deno run --allow-read --allow-write --allow-run=git scripts/lex_snapshot.ts",
     "behavior:capture": "deno run --allow-all scripts/behavior_capture.ts",
     "logs:report": "deno run --allow-read scripts/logs_report.ts",
+    "logs:replay": "deno run --allow-read scripts/logs_replay.ts",
     "measure": "deno run --allow-read --allow-env scripts/measure.ts",
     "measure:functions": "deno run --allow-read --allow-env scripts/measure_functions.ts",
     "playground:build": "deno run --allow-read --allow-write --allow-run=deno playground/build.ts",

@@ -138,8 +138,8 @@ src/lsp/       The language server. See "Language server".
 editors/vscode/ The VS Code client. See "VS Code client". Plain JavaScript client; release packaging bundles the server.
 playground/    The browser playground. See "Playground". The page is in src/, the build in build.ts.
   build.ts       build(outDir): bundles the page, copies the static files, and writes examples.json.
-  serve.ts       Builds the playground, serves the output on 127.0.0.1:8790, and writes the session log of POST /log.
-  log_endpoint.ts checkLogRequest: the pure check of a POST /log request.
+  serve.ts       Builds the playground, serves the output on 127.0.0.1:8790, writes the session log of POST /log, and serves GET /replay/<file>.
+  log_endpoint.ts checkLogRequest: the pure check of a POST /log request. isReplayName: the check of a replay file name.
   src/           The page script and its parts.
     app.ts         The page: file tabs, regions, Problems list, TypeScript pane, and URL hash.
     compile.ts     The compile facade: one Program across edits, turned into plain data for the page.
@@ -148,6 +148,7 @@ playground/    The browser playground. See "Playground". The page is in src/, th
     log_client.ts  createPageLog: batches the events and posts them to /log.
     highlight.ts   Syntax highlighting ranges from the core lexer.
     model.ts       The page logic without a DOM: tabs, Problems, error counts, and hover texts.
+    replay.ts      The pure parts of ?replay=: the steps of a session file, edit application, and the timed player.
 scripts/       Scripts that the tasks run.
                golden_update.ts writes the golden files.
                test_slow.ts runs the slow tests with a fresh DENO_DIR.
@@ -155,6 +156,7 @@ scripts/       Scripts that the tasks run.
                behavior_capture.ts records the hashed compiler behavior of a git revision.
                lex_snapshot.ts writes the lexer snapshot of the tracked .eff and .effi files in fixtures/lex.
                logs_report.ts prints a Markdown report of the session logs: sessions, broken behavior, latency, friction, and outcomes.
+               logs_replay.ts runs a logged session again on the current build and prints the first difference.
                measure.ts counts branches and cyclomatic complexity of the files given.
                measure_functions.ts counts the same for each function.
                measure_kernel.ts holds the counting rules that both measure scripts share.
