@@ -20,7 +20,8 @@ import type {
   WrittenParts,
 } from "./ir.ts";
 import type { NodeId } from "./syntax.ts";
-import { sortedUnique, type TypeRef } from "./types.ts";
+import type { TypeRef } from "./types.ts";
+import { sortedUnique } from "./util.ts";
 
 /** The effects of one evaluation: failures, requirements, and the mode. */
 export interface EffectSet {

@@ -55,7 +55,6 @@ import {
   containsOpaqueType,
   dataOnly,
   guardedRecord,
-  sortedUnique,
   type TypeNode,
   type TypeRef,
   type TypeTable,
@@ -69,7 +68,7 @@ import {
   isTypeId,
 } from "./ids.ts";
 import { initOf, isTypeKind } from "./syntax_queries.ts";
-import { compareText } from "./util.ts";
+import { compareText, sortedUnique } from "./util.ts";
 import {
   checkedInputFlags,
   type FunctionSignature,

@@ -7,7 +7,7 @@
 // loop all the same.
 
 import type { CapabilityId, ErrorId, Execution, ValueId } from "./ir.ts";
-import { sortedUnique } from "./types.ts";
+import { sortedUnique } from "./util.ts";
 
 /** The most rounds that one group may take (design 4.6, resource caps). */
 const ROUND_CAP = 32;

@@ -1,6 +1,5 @@
 // Signature help for ordinary calls. The query reads checked callee types from
 // body tables and keeps LSP wire types outside the core.
-import { effectText } from "./check_project.ts";
 import type { Revision } from "./db.ts";
 import { moduleOfId } from "./ids.ts";
 import type { LocalId } from "./ir.ts";
@@ -15,7 +14,7 @@ import {
 } from "./syntax.ts";
 import { initOf, kidsOf, tokenKindOf } from "./syntax_queries.ts";
 import type { BodyTable } from "./tables.ts";
-import { showType } from "./type_show.ts";
+import { effectText, showType } from "./type_show.ts";
 import type { TypeNode, TypeReader, TypeRef } from "./types.ts";
 
 type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;

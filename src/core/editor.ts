@@ -6,7 +6,6 @@
 // use as their `source`.
 
 import type { CheckedModule, FunctionBody } from "./check_project.ts";
-import { effectText } from "./check_project.ts";
 import type { Revision } from "./db.ts";
 import { methodOfCapability, serviceOfCapability, shortName } from "./ids.ts";
 import type { DeclEntry, FileIndex } from "./index.ts";
@@ -16,7 +15,7 @@ import type { Target } from "./resolve.ts";
 import type { Span } from "./source.ts";
 import { type NodeId, nodeSpan, type SyntaxTree } from "./syntax.ts";
 import type { BodyTable } from "./tables.ts";
-import { showType } from "./type_show.ts";
+import { effectText, showType } from "./type_show.ts";
 
 // ------------------------------------------------------------------ positions
 

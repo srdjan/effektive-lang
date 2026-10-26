@@ -55,7 +55,7 @@ import { TokenKind } from "./lex.ts";
 import type { ModuleInfo } from "./project.ts";
 import type { ModuleResolution, Target } from "./resolve.ts";
 import { sha256Hex } from "./sha256.ts";
-import { canonicalJson, compareText } from "./util.ts";
+import { canonicalJson, compareText, sortedUnique } from "./util.ts";
 import {
   kindOf,
   type NodeId,
@@ -71,12 +71,7 @@ import {
   type NodeFact,
   type NodeInfo,
 } from "./tables.ts";
-import {
-  sortedUnique,
-  type TypeNode,
-  type TypeRef,
-  type TypeTable,
-} from "./types.ts";
+import type { TypeNode, TypeRef, TypeTable } from "./types.ts";
 import { functionTypeToIr, typeToIr } from "./type_ir.ts";
 import { builtinInstanceId } from "./ids.ts";
 

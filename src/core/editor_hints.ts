@@ -1,10 +1,9 @@
 // Inlay hints for inferred parameter and effect contracts. Inline arrows get
 // no hint: shortcut, callback hints would add noise at every call site.
-import { effectText } from "./check_project.ts";
 import type { Revision } from "./db.ts";
 import { childrenOf, kindOf, SyntaxKind } from "./syntax.ts";
 import { isTypeKind } from "./syntax_queries.ts";
-import { showType } from "./type_show.ts";
+import { effectText, showType } from "./type_show.ts";
 
 export interface InlayHint {
   /** The insertion offset for the displayed label. */

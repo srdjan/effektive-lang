@@ -688,19 +688,3 @@ export function checkProject(
   if (!analysis.ok) return analysis;
   return { ok: true, value: checkAnalysis(analysis.value) };
 }
-
-// ------------------------------------------------------------------ effect text
-
-/** The ` fails ...` and ` uses ...` text of two sets, as the hover contract prints it. */
-export function effectText(
-  failures: readonly string[],
-  requirements: readonly string[],
-): string {
-  const fails = failures.length === 0
-    ? ""
-    : ` fails ${failures.map(shortName).join(" | ")}`;
-  const uses = requirements.length === 0
-    ? ""
-    : ` uses ${requirements.map(shortName).join(" | ")}`;
-  return fails + uses;
-}

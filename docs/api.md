@@ -24,7 +24,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   resolve.ts     Names to identities, scopes, prelude, side table of targets.
   types.ts       Interned types and compatibility.
   type_ir.ts     Conversion between IR type trees and interned types.
-  type_show.ts   Readable forms of types for messages.
+  type_show.ts   Readable forms of types for messages, and effectText.
   signatures.ts  Signature model: function and constant signatures, module declarations, execution modes, and referenced identities.
   type_lower.ts  Type lowering: the builtin type rows, TypeLowerer, and the recursion check of type groups.
   check.ts       Declaration checker: types, errors, services, providers, and module constants.
@@ -46,7 +46,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     schema.ts      Schema metadata, exhaustive handlers, defaults, directional effects and recursion through SchemaContext.
     scope.ts       Scope operations, resource lifetimes and borrowed parameters through ScopeContext.
     stream.ts      Stream/Sink callbacks, grouping lifetimes, aggregation hints and execution through StreamContext.
-  check_project.ts Project driver: paired declaration entries and body results, modes, interfaces, the shared per-module step, and effectText.
+  check_project.ts Project driver: paired declaration entries and body results, modes, interfaces, and the shared per-module step.
   tables.ts      Side tables of a body: node info and lowering facts.
   patterns.ts    Pattern domains of match subjects.
   predicates.ts  The predicate model of refinements: terms, builders, normalization, solver limits, and proof certificates.

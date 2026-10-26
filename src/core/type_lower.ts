@@ -18,7 +18,8 @@ import {
   type SyntaxTree,
   TYPE_WORDS,
 } from "./syntax.ts";
-import { dataOnly, sortedUnique, type TypeRef } from "./types.ts";
+import { dataOnly, type TypeRef } from "./types.ts";
+import { sortedUnique } from "./util.ts";
 import { typeToIr } from "./type_ir.ts";
 import { showType } from "./type_show.ts";
 import { isErrorId } from "./ids.ts";

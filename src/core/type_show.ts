@@ -1,6 +1,6 @@
 // Readable forms of types for messages. They are not a serialization format.
 
-import { moduleOfId } from "./ids.ts";
+import { moduleOfId, shortName } from "./ids.ts";
 import type { TypeReader, TypeRef } from "./types.ts";
 
 /** Named ids that `print` meets, and the ids that it prints as `module#Name`. */
@@ -151,4 +151,18 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
     case "error":
       return "<error>";
   }
+}
+
+/** The ` fails ...` and ` uses ...` text of two sets, as the hover contract prints it. */
+export function effectText(
+  failures: readonly string[],
+  requirements: readonly string[],
+): string {
+  const fails = failures.length === 0
+    ? ""
+    : ` fails ${failures.map(shortName).join(" | ")}`;
+  const uses = requirements.length === 0
+    ? ""
+    : ` uses ${requirements.map(shortName).join(" | ")}`;
+  return fails + uses;
 }

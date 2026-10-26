@@ -31,7 +31,8 @@ import type { Solved } from "./modes.ts";
 import type { Target } from "./resolve.ts";
 import type { Result, Span } from "./source.ts";
 import type { NodeId, SyntaxTree } from "./syntax.ts";
-import { sortedUnique, type TypeRef, type TypeTable } from "./types.ts";
+import type { TypeRef, TypeTable } from "./types.ts";
+import { sortedUnique } from "./util.ts";
 import { serviceOfCapability } from "./ids.ts";
 
 // ------------------------------------------------------------------ shapes

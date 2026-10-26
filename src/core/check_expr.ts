@@ -84,10 +84,10 @@ import {
   containsUnknownPredicateInput,
   dataOnly,
   MAX_DEPTH,
-  sortedUnique,
   type TypeRef,
   type TypeTable,
 } from "./types.ts";
+import { sortedUnique } from "./util.ts";
 import { showType, showTypes } from "./type_show.ts";
 import { isErrorId, shortName } from "./ids.ts";
 import {

@@ -19,7 +19,7 @@ import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "./ir.ts";
 import { isErrorId, isTypeId, moduleOfId } from "./ids.ts";
 import type { Predicate } from "./predicates.ts";
 import { typeFromIr, typeToIr } from "./type_ir.ts";
-import { canonicalJson, compareText } from "./util.ts";
+import { canonicalJson, compareText, sortedUnique } from "./util.ts";
 
 declare const typeRefBrand: unique symbol;
 
@@ -260,11 +260,6 @@ interface ProviderSpec {
   readonly execution: Execution;
   readonly failures: readonly ErrorId[];
   readonly requirements: readonly CapabilityId[];
-}
-
-/** Sorted copy without duplicates. */
-export function sortedUnique<T extends string>(items: readonly T[]): T[] {
-  return [...new Set(items)].sort(compareText);
 }
 
 function isSubset(
