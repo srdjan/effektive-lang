@@ -154,6 +154,7 @@ scripts/       Scripts that the tasks run.
                validate_fixtures.ts writes the mutation fixtures.
                behavior_capture.ts records the hashed compiler behavior of a git revision.
                lex_snapshot.ts writes the lexer snapshot of the tracked .eff and .effi files in fixtures/lex.
+               logs_report.ts prints a Markdown report of the session logs: sessions, broken behavior, latency, friction, and outcomes.
                measure.ts counts branches and cyclomatic complexity of the files given.
                measure_functions.ts counts the same for each function.
                measure_kernel.ts holds the counting rules that both measure scripts share.

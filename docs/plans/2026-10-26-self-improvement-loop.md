@@ -359,6 +359,14 @@ text exactly. One earlier run, typed right after a forced reload, logged one
 insert one offset early. The probable cause is a caret move in the editor
 itself. LG6 replay reports such a mismatch.
 
+LG5 report check, 2026-10-26: the LG4 logs were deleted, so a new CLI run on
+a copy of `fixtures/examples` and a new playground session gave the input.
+`deno task logs:report --since 24h` exited 0. It showed 20 playground
+compiles at p90 1.6 ms, one problem click on `syntax/007`, and one error that
+stayed 5.1 s until the undo. The report definitions are in the comments of
+`scripts/logs_report.ts`: an edit burst has gaps below 1000 ms, and a
+transient code counts once per burst.
+
 ## Validation
 
 A Fable review on 2026-10-26 found thirteen points, seven of them blocking.
@@ -397,7 +405,7 @@ volume with M4.
 | LG1 | Done | `906395a` |
 | LG2 | Done | `4e9fe92` |
 | LG3 | Done | `f382bd5` |
-| LG4 | Planned | |
+| LG4 | Done | `dc706b5` |
 | LG5 | Planned | |
 | LG6 | Planned | |
 | LG7 | Planned | |

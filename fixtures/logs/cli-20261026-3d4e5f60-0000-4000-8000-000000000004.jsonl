@@ -1,0 +1,4 @@
+{"v":1,"t":"2026-10-26T08:30:00.000Z","ms":0,"surface":"cli","session":"3d4e5f60-0000-4000-8000-000000000004","seq":0,"build":"0.10.3","kind":"cli.start","data":{"args":["check","broken"],"command":"check","root":"/broken"}}
+{"v":1,"t":"2026-10-26T08:30:00.0
+{"v":1,"t":"2026-10-26T08:30:00.005Z","ms":5,"surface":"cli","session":"3d4e5f60-0000-4000-8000-000000000004","seq":1,"build":"0.10.3","kind":"cli.error","data":{"message":"effektive.json: expected a JSON object"}}
+{"v":1,"t":"2026-10-26T08:30:00.006Z","ms":6,"surface":"cli","session":"3d4e5f60-0000-4000-8000-000000000004","seq":2,"build":"0.10.3","kind":"cli.end","data":{"code":2,"ms":5.8}}
