@@ -99,8 +99,8 @@ export type PatternFact =
     readonly binding: LocalId | undefined;
   }
   | {
-    readonly kind: "data";
-    readonly data: TypeId;
+    readonly kind: "tagged";
+    readonly tagged: TypeId;
     readonly binding: LocalId | undefined;
   }
   | {
@@ -136,8 +136,8 @@ export type NodeFact =
   /** A service operation: `S.m(args)` or a stage `x |> S.m`. */
   | { readonly kind: "perform"; readonly capability: CapabilityId }
   | { readonly kind: "error-construction"; readonly error: ErrorId }
-  | { readonly kind: "brand-construction"; readonly brand: TypeId }
-  | { readonly kind: "data-construction"; readonly data: TypeId }
+  /** A constructor call or a record literal at a type with identity. */
+  | { readonly kind: "identity-construction"; readonly identity: TypeId }
   | { readonly kind: "some" }
   | { readonly kind: "none" }
   | { readonly kind: "fail" }

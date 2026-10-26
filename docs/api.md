@@ -274,8 +274,8 @@ Each function and constant has a body table. The table maps a syntax node id to
 sorted. The table maps each local identity to its type.
 
 The table also maps a node id to a fact that lowering needs. A call node has a
-fact such as `call`, `perform`, `error-construction`, `brand-construction`,
-`data-construction`, `some`, `fail`, `retry`, `provide`, or
+fact such as `call`, `perform`, `error-construction`, `identity-construction`,
+`some`, `fail`, `retry`, `provide`, or
 `builtin`. The type `NodeFact` in `src/core/tables.ts` lists every kind. A
 `builtin` fact carries the closed function type of a collection operation. A
 bracket literal has a fact that selects array or tuple IR. A field read, an
@@ -287,9 +287,10 @@ is a tagged record. A field read and a record update see through a record
 identity, and an update keeps the identity. `sealed` on a transparent alias gives
 `declaration/017`.
 
-The facts `brand-construction` and `data-construction` name the two lowering
-forms. Lowering gives both the one IR node `nominal`. A constructor pattern for a
-tagged record has a `data` pattern fact, and a match over tagged records and
+The fact `identity-construction` holds the type id of a type with identity.
+A constructor call and a record literal at a tagged record both set it.
+Lowering gives the IR node `nominal`. A constructor pattern for a
+tagged record has a `tagged` pattern fact, and a match over tagged records and
 errors uses a tagged domain.
 
 A module constant needs a pure initializer with empty sets. The `initialization`
@@ -946,6 +947,10 @@ body checker and resource rules. Editor references and rename use one identity
 across use/finalization; completion exposes it only in those regions. Lowering
 remaps references to separate closure parameters and emits `with-resource` IR.
 
+The type `NodeFact` merges the members `brand-construction` and `data-construction`
+into `identity-construction`, which holds the field `identity`. The pattern fact
+kind `data` is now `tagged`, and its field `data` is now `tagged`. The IR is
+unchanged.
 
 ## Input contracts in IR version 6
 

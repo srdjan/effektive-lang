@@ -2801,7 +2801,7 @@ type Text = string
     "unknown-name/001",
   ]);
   const kinds = factsOf(project, "m", "a").map((f) => f.kind);
-  assertEquals(kinds, ["brand-construction"]);
+  assertEquals(kinds, ["identity-construction"]);
 });
 
 const WIDENING = `
@@ -3590,7 +3590,7 @@ type Text = string
 `);
   assertEquals(messages(project), []);
   assertEquals(factsOf(project, "m", "g").map((x) => x.kind), [
-    "brand-construction",
+    "identity-construction",
   ]);
 });
 
@@ -3691,7 +3691,7 @@ const marker = (): Marker => Marker({})
 `);
   assertEquals(messages(project), []);
   const facts = [...fn(project, "m", "twin").table.facts.values()];
-  assert(facts.some((f) => f.kind === "data-construction"));
+  assert(facts.some((f) => f.kind === "identity-construction"));
   const result = fn(project, "m", "rename").type;
   const type = project.table.node(result);
   assert(type.kind === "function");
@@ -3711,13 +3711,20 @@ const update = (u: User): User => ({ ...u, name: "Bo" })
   for (const name of ["result", "wrapped", "many"]) {
     const facts = [...fn(project, "m", name).table.facts.values()];
     assertEquals(
-      facts.filter((f) => f.kind === "data-construction").length,
+      facts.filter((f) =>
+        f.kind === "identity-construction" && f.identity === "type:m#User"
+      ).length,
       1,
       name,
     );
   }
   const facts = [...fn(project, "m", "update").table.facts.values()];
-  assertEquals(facts.some((f) => f.kind === "data-construction"), false);
+  assertEquals(
+    facts.some((f) =>
+      f.kind === "identity-construction" && f.identity === "type:m#User"
+    ),
+    false,
+  );
 });
 
 Deno.test("an unnamed record value does not fit a tagged record", () => {
@@ -3912,7 +3919,7 @@ const either = (value: Circle | Broken | Dot): Text =>
   ) => f.kind === "pattern");
   assertEquals(
     facts.map((f) => f.kind === "pattern" ? f.pattern.kind : ""),
-    ["data", "data"],
+    ["tagged", "tagged"],
   );
 });
 

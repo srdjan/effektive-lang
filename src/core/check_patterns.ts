@@ -262,7 +262,7 @@ export function pattern(
           node,
           target.kind === "error"
             ? { kind: "error", error: target.id, binding }
-            : { kind: "data", data: target.id, binding },
+            : { kind: "tagged", tagged: target.id, binding },
         );
       } else {
         // The resolver already reported a missing or wrong-kind name.

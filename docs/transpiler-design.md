@@ -656,8 +656,8 @@ declaration word was deleted on 2026-10-24.
 
 The IR has a declaration with the definition kind `nominal`, a base type, and the
 flag `tagged` for a tagged record. It has an expression node `nominal` for a
-construction and a pattern kind `nominal` for a match arm. The checker facts for
-a construction are `brand-construction` and `data-construction`. The IR is at
+construction and a pattern kind `nominal` for a match arm. The checker fact for
+a construction is `identity-construction`. The IR is at
 version 5.
 
 The emitter prints `Schema.TaggedStruct("<module>#<Name>", { fields })` and

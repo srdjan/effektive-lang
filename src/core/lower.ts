@@ -191,8 +191,7 @@ type SpecialKind =
   | "perform"
   | "builtin"
   | "error-construction"
-  | "brand-construction"
-  | "data-construction"
+  | "identity-construction"
   | "retry"
   | "schema"
   | "with-fiber"
@@ -881,17 +880,10 @@ class BodyLowerer {
           ...annotation,
         };
       }
-      case "brand-construction":
+      case "identity-construction":
         return {
           kind: "nominal",
-          nominal: fact.brand,
-          value: arg(0),
-          ...annotation,
-        };
-      case "data-construction":
-        return {
-          kind: "nominal",
-          nominal: fact.data,
+          nominal: fact.identity,
           value: arg(0),
           ...annotation,
         };
@@ -1304,13 +1296,13 @@ class BodyLowerer {
       ...this.annotation(node),
     };
     const fact = this.fact(node);
-    if (fact?.kind !== "data-construction") return record;
+    if (fact?.kind !== "identity-construction") return record;
     // A record literal at a tagged record is an implicit `Name({ ... })`: the
     // literal itself has the unnamed record type.
-    const body = this.ctx.types.dataRecordOf(fact.data);
+    const body = this.ctx.types.dataRecordOf(fact.identity);
     return {
       kind: "nominal",
-      nominal: fact.data,
+      nominal: fact.identity,
       value: body === undefined ? record : { ...record, type: this.ir(body) },
       ...this.annotationWith(
         this.info(node).type,
@@ -1515,10 +1507,10 @@ class BodyLowerer {
           binding: this.bindingOf(pattern.binding, names[1]),
           span,
         };
-      case "data":
+      case "tagged":
         return {
           kind: "nominal",
-          nominal: pattern.data,
+          nominal: pattern.tagged,
           binding: this.bindingOf(pattern.binding, names[1]),
           span,
         };

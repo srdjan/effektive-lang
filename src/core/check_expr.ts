@@ -730,8 +730,8 @@ class BodyChecker
       case "type": {
         const record = this.table.dataRecordOf(target.id);
         return record === undefined
-          ? this.brandConstruction(node, target.id, args)
-          : this.dataConstruction(node, target.id, record, args);
+          ? this.identityConstruction(node, target.id, args)
+          : this.taggedConstruction(node, target.id, record, args);
       }
       case "cap":
         return this.perform(node, target.id, args);
@@ -1004,7 +1004,7 @@ class BodyChecker
     return this.finish(node, this.table.named(id), combine(infos));
   }
 
-  private brandConstruction(
+  private identityConstruction(
     node: NodeId,
     id: TypeId,
     args: readonly Arg[],
@@ -1034,7 +1034,7 @@ class BodyChecker
       return this.finish(node, this.table.error, combine(infos));
     }
     this.requireSealedOwner(node, id);
-    this.fact(node, { kind: "brand-construction", brand: id });
+    this.fact(node, { kind: "identity-construction", identity: id });
     return this.constructFrom(node, id, base, "type with identity", args);
   }
 
@@ -1051,14 +1051,14 @@ class BodyChecker
     }
   }
 
-  private dataConstruction(
+  private taggedConstruction(
     node: NodeId,
     id: TypeId,
     record: TypeRef,
     args: readonly Arg[],
   ): NodeInfo {
     this.requireSealedOwner(node, id);
-    this.fact(node, { kind: "data-construction", data: id });
+    this.fact(node, { kind: "identity-construction", identity: id });
     return this.constructFrom(node, id, record, "tagged record", args);
   }
 
@@ -1960,7 +1960,7 @@ class BodyChecker
         type = raw ? rawType : target.ref;
       } else type = target.ref;
       if (target.kind === "construct") {
-        this.fact(node, { kind: "data-construction", data: target.id });
+        this.fact(node, { kind: "identity-construction", identity: target.id });
         this.preserveRefinement(node, target.id, "the record");
       }
     } else {
@@ -2742,7 +2742,7 @@ class BodyChecker
             if (matched !== undefined) excluded.push(not(matched));
           }
           const binding = fact.pattern.kind === "some" ||
-              fact.pattern.kind === "error" || fact.pattern.kind === "data"
+              fact.pattern.kind === "error" || fact.pattern.kind === "tagged"
             ? fact.pattern.binding
             : fact.pattern.kind === "tag"
             ? fact.pattern.binding ?? undefined
