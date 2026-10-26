@@ -863,8 +863,13 @@ the repository except `playground/dist/`.
 
 The build uses `deno bundle` with the CodeMirror 6 packages that `deno.json`
 pins. The highlighter uses the core lexer, so the page and the compiler agree on
-each token. Below 720 pixels, the page shows one region at a time. The URL hash
-holds the active file, for example `#host/providers.effi`.
+each token. The page is a dark workbench with a status bar that shows the
+cursor position, the contract at the cursor, and the compile time. Below 720
+pixels, the page shows one region at a time, and a bottom bar switches between
+them. From 720 pixels, the source and the TypeScript sit side by side above
+the problems. From 1024 pixels, the file tabs become an explorer in a left
+sidebar. The URL hash holds the active file, for example
+`#host/providers.effi`.
 
 Fast tests cover the compile facade, the highlighter, and the page model without
 a browser. The slow test `tests/playground_build_slow_test.ts` runs the build.
@@ -873,8 +878,10 @@ review at 375 and 1280 pixels passed the checks in
 `docs/archive/plans/2026-10-16-playground.md`, section 7. Three later commits
 changed the page: the 720 pixel threshold, the hover feedback, and the wrap
 indent. An automated browser review on 2026-10-21 passed at 375, 720, and 1280
-pixels after them (`docs/archive/playground-review-2026-10-21.md`). It does not replace
-a manual review.
+pixels after them (`docs/archive/playground-review-2026-10-21.md`). The
+workbench layout passed an automated browser review at 375, 800, and 1280
+pixels on 2026-10-26 (`docs/archive/plans/2026-10-26-playground-workbench.md`).
+These reviews do not replace a manual review.
 
 The [builtin-change checklist](builtin-changes.md) traces recognition, source
 checking, facts, lowering, independent validation, emission and verification for

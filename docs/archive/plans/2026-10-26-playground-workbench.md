@@ -220,5 +220,5 @@ A Fable review on 2026-10-26 found eleven points. The plan now uses the core `ge
 
 | Unit | State | Commit |
 | --- | --- | --- |
-| PW1 | Planned | |
-| PW2 | Planned | |
+| PW1 | Done | `4031957` |
+| PW2 | Done | this commit |

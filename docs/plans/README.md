@@ -31,4 +31,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | RW | [`docs/archive/plans/2026-10-25-review-remaining.md`](../archive/plans/2026-10-25-review-remaining.md) | Remaining work of the architecture review |
 | IN | [`docs/archive/plans/2026-10-25-inferred-input-contracts.md`](../archive/plans/2026-10-25-inferred-input-contracts.md) | Inferred input contracts and automatic validation |
 | RB (phases), RBF (findings) | [`docs/archive/plans/2026-10-25-reset.md`](../archive/plans/2026-10-25-reset.md) | Reset work |
-| PW | [`docs/plans/2026-10-26-playground-workbench.md`](2026-10-26-playground-workbench.md) | Playground workbench layout |
+| PW | [`docs/archive/plans/2026-10-26-playground-workbench.md`](../archive/plans/2026-10-26-playground-workbench.md) | Playground workbench layout |

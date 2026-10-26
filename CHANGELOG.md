@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The playground looks and works like an IDE: a file explorer, editor tabs, a
+  Problems panel, and a status bar with the cursor position and the contract.
+
 ## 0.10.3 - 2026-10-26
 
 Refinement proofs are stricter and do not depend on names or operand order.
