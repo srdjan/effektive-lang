@@ -357,3 +357,58 @@ Deno.test("independent validation rejects refined host declarations", () => {
     ),
   );
 });
+
+// RBF12: the checker keeps a raw `or` fact and compares join facts by JSON text,
+// so it drops a commuted `or` fact at a join. The validator accepts the same proof.
+Deno.test("RBF12: the checker drops a commuted or-fact at a join and the validator keeps it", () => {
+  const program = (first: string, second: string) => `
+type Int = int
+type Bool = boolean
+type Either = { a: Int, b: Int } where r => r.a > 0 || r.b > 0
+error Stop = {}
+const make = (a: Int, b: Int, p: Bool): Either => {
+  if (p) { if (${first}) { 1 } else { fail(Stop({})) } } else { if (${second}) { 1 } else { fail(Stop({})) } }
+  ({ a: a, b: b })
+}
+`;
+  const same = program("a > 0 || b > 0", "a > 0 || b > 0");
+  const control = lower(same);
+  assertEquals(validateModule(control.ir, control.sources), []);
+
+  const reversed = checkProject(
+    memoryHost({
+      "effektive.json": "{}",
+      "m.eff": program("a > 0 || b > 0", "b > 0 || a > 0"),
+    }),
+    "",
+    ["m.eff"],
+  );
+  assert(reversed.ok);
+  assertEquals(reversed.value.diagnostics.map((d) => d.code), [
+    "type-mismatch/013",
+  ]);
+
+  // The checker rejected the reversed source, so lowering fails. The validator
+  // runs on the control IR with the second condition commuted by hand.
+  const commuted = structuredClone(control.ir);
+  const make = commuted.declarations.find((d) => d.kind === "function");
+  assert(make?.kind === "function");
+  const [, second] = expressions(make.body).filter((e) =>
+    e.kind === "binary" && e.operator === "||"
+  );
+  assert(second?.kind === "binary");
+  const swap = { left: second.right, right: second.left };
+  Object.assign(second, swap);
+  assertEquals(messages(commuted, control.sources), []);
+
+  // A different second condition must still fail, so the validator proof is not vacuous.
+  const weaker = structuredClone(control.ir);
+  const weakerMake = weaker.declarations.find((d) => d.kind === "function");
+  assert(weakerMake?.kind === "function");
+  const [, other] = expressions(weakerMake.body).filter((e) =>
+    e.kind === "binary" && e.operator === "||"
+  );
+  assert(other?.kind === "binary" && other.right.kind === "binary");
+  Object.assign(other.right, { operator: "<" });
+  assert(messages(weaker, control.sources).length > 0);
+});
