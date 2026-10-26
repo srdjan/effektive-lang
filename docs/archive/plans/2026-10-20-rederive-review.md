@@ -504,7 +504,7 @@ literal, operator, arrow-body, initializer and type-kind queries. That module
 depends only on the lexer and lossless syntax tree. Lowering no longer imports
 the expression checker. `shortName` and `decodeString` keep the shared owners
 established by P5. No public core export, IR shape, checker policy or validator
-code changes. A6 is the [builtin-change checklist](../builtin-changes.md).
+code changes. A6 is the [builtin-change checklist](../../builtin-changes.md).
 
 Verification is recorded in the rederive evidence ledger. That batch left
 R15b open; its old family/context size estimates required fresh measurement.

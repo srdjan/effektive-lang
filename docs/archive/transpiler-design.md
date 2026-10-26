@@ -43,7 +43,7 @@ Decided by the user on 2026-10-16 and 2026-10-17. Each entry took the recommende
 | D30 R1 code (2026-10-17) | (a) `declaration/013`. |
 | D31 Other type forms (2026-10-17) | (a) R1 checks only primitive leaves. `Effect<A>`, inline records, and inline unions with named parts stay legal. |
 | D32 Brand operators (2026-10-17) | (c2) `<`, `<=`, `>`, `>=`, `+`, and `-` accept two values of one numeric brand (base `int` or `number`). `+` and `-` give that brand. `*`, `/`, and string brands keep needing `unbrand`. Update, 2026-10-23: the nominal keyword plan replaced this rule with comparison classes and widening (see `docs/language-rules.md`, "Identity operators"). `unbrand` is removed. |
-| TI Type identity (2026-10-24) | A `type` declaration has identity by name, with no new syntax (NI4). The `nominal` keyword is gone. A union with a non-literal member and a bare name give a transparent alias. A record identity is tagged when a union alias of its module lists it. An unnamed operand adopts the class of a named operand in `+`, `-`, and `*` (NI25 a). Primitive names are types with identity (NI22 a). A string `+` gives the unnamed `string` (TI0). See [the plan](archive/plans/2026-10-24-type-identity.md). |
+| TI Type identity (2026-10-24) | A `type` declaration has identity by name, with no new syntax (NI4). The `nominal` keyword is gone. A union with a non-literal member and a bare name give a transparent alias. A record identity is tagged when a union alias of its module lists it. An unnamed operand adopts the class of a named operand in `+`, `-`, and `*` (NI25 a). Primitive names are types with identity (NI22 a). A string `+` gives the unnamed `string` (TI0). See [the plan](plans/2026-10-24-type-identity.md). |
 
 Open: none.
 
@@ -138,7 +138,7 @@ the TypeScript server. The generated TypeScript stays visible per change through
 an in-memory virtual document. The disk copy updates on save.
 
 Correction, 2026-10-21: a save first wrote only the saved module, from the
-open-document texts. The [completed save plan](archive/plans/2026-10-21-save-transpilation.md)
+open-document texts. The [completed save plan](plans/2026-10-21-save-transpilation.md)
 made each save write every changed output from the disk texts, with the
 `build` write rule.
 
@@ -572,7 +572,7 @@ previously also appeared in `useBinding`, `releaseBinding`, and `groupBinding`.
 The frontend owns lazy IR. `TypeScriptOutputs` separately owns emitted text,
 span tables, maps, and emission counts, keyed weakly by lowering results.
 Bare arrows, Option fallback, record bindings, and `using`/`finally` lower to
-existing operations. See the [migration guide](api.md#migrating-the-frontend-and-typescript-apis).
+existing operations. See the [migration guide](../api.md#migrating-the-frontend-and-typescript-apis).
 
 Update, 2026-10-23: the compiler now emits `light-functional-ir` version 3.
 Version 1 and version 2 payloads fail independent validation with
