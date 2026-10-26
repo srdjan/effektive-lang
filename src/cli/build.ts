@@ -11,7 +11,7 @@ import type {
   SpanTable,
 } from "../core/mod.ts";
 import { formatDiagnostics, type TextOf } from "./format.ts";
-import type { CliIo } from "../host/io.ts";
+import type { HostIo } from "../host/io.ts";
 import {
   type ModuleRemoval,
   ownedByRoot,
@@ -52,7 +52,7 @@ export interface BuildOutcome {
  * that left are removed first, and a failed removal is not tried again.
  */
 export async function buildRevision(
-  io: CliIo,
+  io: HostIo,
   root: string,
   revision: Revision,
   textOf: TextOf,

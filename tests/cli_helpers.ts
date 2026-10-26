@@ -2,16 +2,16 @@
 // recorded `deno check` runner, and a scripted watch source.
 
 import type {
-  CliIo,
   DenoCheckRequest,
   DenoCheckRun,
   DirectoryEntry,
   FileFailure,
+  HostIo,
 } from "../src/host/io.ts";
 import type { ReadError, Result } from "../src/core/source.ts";
 
 export interface MemoryIo {
-  readonly io: CliIo;
+  readonly io: HostIo;
   /** Every file, by the path that the CLI uses: the root joined with the relative path. */
   readonly files: Map<string, string>;
   /** Everything written to stdout and stderr, in order. */
@@ -50,7 +50,7 @@ export function memoryIo(
   };
   const prefixOf = (dir: string): string =>
     dir === "." || dir === "" ? "" : dir.replace(/\/+$/, "") + "/";
-  const io: CliIo = {
+  const io: HostIo = {
     stdout: (text) => {
       state.out.push(text);
     },

@@ -8,7 +8,7 @@ import {
   type ProjectConfig,
   type SpanTable,
 } from "../core/mod.ts";
-import type { CliIo } from "../host/io.ts";
+import type { HostIo } from "../host/io.ts";
 import { formatTscMappings, type TextOf } from "./format.ts";
 
 /** The version of Effect that the generated code targets. */
@@ -53,7 +53,7 @@ interface TscOutcome {
  * modules of the configuration. `tables` maps each generated path to its span table.
  */
 export async function runTsc(
-  io: CliIo,
+  io: HostIo,
   root: string,
   config: ProjectConfig,
   generated: readonly string[],

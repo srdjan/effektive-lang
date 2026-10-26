@@ -16,7 +16,7 @@ import {
   type BuildOutcome,
   buildRevision,
 } from "./build.ts";
-import type { CliIo } from "../host/io.ts";
+import type { HostIo } from "../host/io.ts";
 import { readTargetInputs, readWorkspace } from "../host/workspace.ts";
 
 export type SyncResult =
@@ -38,7 +38,7 @@ export class Session {
   private latest: Revision | undefined;
 
   constructor(
-    private readonly io: CliIo,
+    private readonly io: HostIo,
     readonly root: string,
     private readonly trackTargets = false,
   ) {

@@ -19,7 +19,7 @@ import {
 // The feature handlers are in `features.ts`. This file wires them to the method
 // names and sends `effektive/generatedChanged` after a flush.
 
-import type { CliFs } from "../host/io.ts";
+import type { HostFs } from "../host/io.ts";
 import { errorMessage, type Result, type Revision } from "../core/mod.ts";
 import {
   definitionRequest,
@@ -66,7 +66,7 @@ import { type LogType, ProjectSet, type ProjectState } from "./projects.ts";
 export interface ServerPorts {
   /** Sends one message to the client. */
   send(message: OutgoingMessage): void;
-  readonly fs: CliFs;
+  readonly fs: HostFs;
   /** Runs `callback` after `ms` milliseconds. Returns a function that cancels it. */
   schedule(callback: () => void, ms: number): () => void;
   /** Ends the process. */
@@ -80,7 +80,7 @@ export interface ServerPorts {
 /** What a handler can read and do. */
 export interface ServerContext {
   readonly projects: ProjectSet;
-  readonly fs: CliFs;
+  readonly fs: HostFs;
   /** The generated TypeScript of the subscribed modules. */
   readonly generated: GeneratedTexts;
   /** The memory use of the process, in bytes. */

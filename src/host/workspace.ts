@@ -9,7 +9,7 @@ import {
   joinPath,
   type Result,
 } from "../core/mod.ts";
-import type { CliFs } from "./io.ts";
+import type { HostFs } from "./io.ts";
 
 function skippedDirectory(name: string): boolean {
   return name.startsWith(".") || name === "node_modules";
@@ -26,7 +26,7 @@ export function isSourcePath(path: string): boolean {
 }
 
 /** The real path of a directory, or undefined when it cannot be resolved. */
-function realPath(fs: CliFs, path: string): string | undefined {
+function realPath(fs: HostFs, path: string): string | undefined {
   try {
     return fs.absolute(path);
   } catch {
@@ -40,7 +40,7 @@ function realPath(fs: CliFs, path: string): string | undefined {
  * A file that cannot be read gives an error value.
  */
 export function readWorkspace(
-  fs: CliFs,
+  fs: HostFs,
   root: string,
   accepts: (path: string) => boolean = isSourcePath,
 ): Result<ReadonlyMap<string, string>, string> {
@@ -99,7 +99,7 @@ export function isTargetPath(path: string): boolean {
 }
 
 export function readTargetInputs(
-  fs: CliFs,
+  fs: HostFs,
   root: string,
 ): Result<ReadonlyMap<string, string>, string> {
   const read = readWorkspace(fs, root, isTargetPath);

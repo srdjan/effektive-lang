@@ -1,7 +1,7 @@
 // Printing of a build outcome: diagnostics on stdout, everything else on stderr.
 
 import type { BuildOutcome } from "./build.ts";
-import type { CliIo } from "../host/io.ts";
+import type { HostIo } from "../host/io.ts";
 
 /** The modules a revision checked, as one line of text. */
 export function rechecked(names: readonly string[]): string {
@@ -14,7 +14,7 @@ function plural(count: number, word: string): string {
 
 /** Writes the diagnostics to stdout, then the notes and a summary line to stderr. */
 export function printOutcome(
-  io: CliIo,
+  io: HostIo,
   outcome: BuildOutcome,
   moduleCount: number,
 ): void {

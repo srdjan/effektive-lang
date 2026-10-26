@@ -1,6 +1,7 @@
-// The ports of the command-line tool. The core never touches the file system.
-// The CLI reaches the file system, the subprocess runner, and the file watcher
-// only through `CliIo`, so that tests run `main` with in-memory doubles.
+// The ports of the host: the command-line tool and the language server share
+// them. The core never touches the file system. Both reach the file system,
+// the subprocess runner, and the file watcher only through `HostIo`, so that
+// tests run them with in-memory doubles.
 
 import type { ReadError, Result } from "../core/mod.ts";
 
@@ -13,7 +14,7 @@ export interface FileFailure {
   readonly message: string;
 }
 
-export interface CliFs {
+export interface HostFs {
   readText(path: string): Result<string, ReadError>;
   /** Writes the file and creates its directories. */
   writeText(path: string, text: string): Result<void, FileFailure>;
@@ -41,11 +42,11 @@ export interface DenoCheckRun {
   readonly stderr: string;
 }
 
-export interface CliIo {
+export interface HostIo {
   /** Writes text as given. The caller adds the line ends. */
   stdout(text: string): void;
   stderr(text: string): void;
-  readonly fs: CliFs;
+  readonly fs: HostFs;
   denoCheck(
     request: DenoCheckRequest,
   ): Promise<Result<DenoCheckRun, FileFailure>>;

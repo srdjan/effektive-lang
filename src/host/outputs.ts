@@ -13,7 +13,7 @@ import {
   serializeSourceMap,
   type SpanTable,
 } from "../core/mod.ts";
-import type { CliFs } from "./io.ts";
+import type { HostFs } from "./io.ts";
 import type { GeneratedSource } from "./generation.ts";
 
 export interface GeneratedOutputs {
@@ -95,7 +95,7 @@ export function writableModules(
  * diagnostics is skipped without a note: the caller reports it. The caller also leaves out the modules that failed validation.
  */
 export function writeGenerated(
-  fs: CliFs,
+  fs: HostFs,
   root: string,
   source: GeneratedSource,
   names: readonly string[],
@@ -194,7 +194,7 @@ export function writeGenerated(
  * and messages for stderr.
  */
 export function removeStaleOutputs(
-  fs: CliFs,
+  fs: HostFs,
   root: string,
   modules: readonly string[],
 ): { readonly removed: string[]; readonly notes: string[] } {

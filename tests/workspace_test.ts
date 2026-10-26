@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 import type { ReadError, Result } from "../src/core/source.ts";
-import type { CliFs, DirectoryEntry, FileFailure } from "../src/host/io.ts";
+import type { DirectoryEntry, FileFailure, HostFs } from "../src/host/io.ts";
 import { readTargetInputs, readWorkspace } from "../src/host/workspace.ts";
 import { memoryIo } from "./cli_helpers.ts";
 
@@ -12,7 +12,7 @@ import { memoryIo } from "./cli_helpers.ts";
 function linkedFs(
   files: Readonly<Record<string, string>>,
   links: Readonly<Record<string, string>>,
-): CliFs {
+): HostFs {
   const resolve = (path: string): string => {
     let current = path;
     for (let hop = 0; hop < 64; hop++) {

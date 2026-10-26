@@ -8,7 +8,7 @@
 // wrapper is the only exception boundary.
 
 import { TypeScriptOutputs } from "../core/typescript.ts";
-import type { CliFs } from "../host/io.ts";
+import type { HostFs } from "../host/io.ts";
 import { ownedByRoot, runSaveRound } from "../host/save_round.ts";
 import { isSourcePath, readWorkspace } from "../host/workspace.ts";
 import {
@@ -152,7 +152,7 @@ interface DocumentRef {
 
 /** The ports of the set. */
 interface ProjectSetPorts {
-  readonly fs: CliFs;
+  readonly fs: HostFs;
   /** Sends `textDocument/publishDiagnostics`. */
   publish(params: PublishDiagnosticsParams): void;
   /** Sends `window/logMessage`. */

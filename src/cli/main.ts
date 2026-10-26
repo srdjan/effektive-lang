@@ -14,7 +14,7 @@ import { errorMessage } from "../core/mod.ts";
 import { parseArgs, type ProjectCommand, USAGE } from "./args.ts";
 import type { BuildOptions, BuildOutcome } from "./build.ts";
 import { denoIo } from "../host/deno_io.ts";
-import type { CliIo } from "../host/io.ts";
+import type { HostIo } from "../host/io.ts";
 import { printOutcome, rechecked } from "./report.ts";
 import { Session, type SyncResult } from "./session.ts";
 
@@ -42,7 +42,7 @@ function optionsOf(command: ProjectCommand): BuildOptions {
  * and the loop goes on.
  */
 async function watchLoop(
-  io: CliIo,
+  io: HostIo,
   session: Session,
   first: SyncResult,
   events: AsyncIterable<readonly string[]>,
@@ -114,7 +114,7 @@ function isSyncFailure(synced: SyncResult): synced is SyncFailure {
 
 export async function main(
   args: readonly string[],
-  io: CliIo,
+  io: HostIo,
 ): Promise<number> {
   try {
     return await execute(args, io);
@@ -126,7 +126,7 @@ export async function main(
 
 async function execute(
   args: readonly string[],
-  io: CliIo,
+  io: HostIo,
 ): Promise<number> {
   const parsed = parseArgs(args);
   if (!parsed.ok) {

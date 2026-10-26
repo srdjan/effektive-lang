@@ -12,7 +12,7 @@ import {
   joinPath,
   type Revision,
 } from "../core/mod.ts";
-import type { CliFs } from "./io.ts";
+import type { HostFs } from "./io.ts";
 import { generationSource } from "./generation.ts";
 import {
   type GeneratedOutputs,
@@ -29,7 +29,7 @@ export type RemovalRule =
   | "forget";
 
 export interface SaveRoundInput {
-  readonly fs: CliFs;
+  readonly fs: HostFs;
   readonly root: string;
   readonly revision: Revision;
   readonly outputs: TypeScriptOutputs;
@@ -64,7 +64,7 @@ export interface SaveRound {
  * the root and the module holds its own `effektive.json`. A nested project
  * writes and removes the outputs of its own modules.
  */
-export function ownedByRoot(fs: CliFs, root: string, name: string): boolean {
+export function ownedByRoot(fs: HostFs, root: string, name: string): boolean {
   const parts = name.split("/").slice(0, -1);
   for (let n = 1; n <= parts.length; n++) {
     const dir = joinPath(root, parts.slice(0, n).join("/"));

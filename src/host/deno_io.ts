@@ -5,12 +5,12 @@
 import { errorMessage, type ReadError, type Result } from "../core/mod.ts";
 import { debounceBatches } from "./events.ts";
 import type {
-  CliFs,
-  CliIo,
   DenoCheckRequest,
   DenoCheckRun,
   DirectoryEntry,
   FileFailure,
+  HostFs,
+  HostIo,
 } from "./io.ts";
 import { isSourcePath, isTargetPath } from "./workspace.ts";
 
@@ -18,7 +18,7 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 /** The real file system. The language server uses the same object. */
-export const denoFs: CliFs = {
+export const denoFs: HostFs = {
   readText(path: string): Result<string, ReadError> {
     try {
       return { ok: true, value: Deno.readTextFileSync(path) };
@@ -158,7 +158,7 @@ async function* sourceEvents(root: string): AsyncGenerator<readonly string[]> {
   }
 }
 
-export function denoIo(): CliIo {
+export function denoIo(): HostIo {
   return {
     stdout: (text) => {
       Deno.stdout.writeSync(encoder.encode(text));

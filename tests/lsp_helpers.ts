@@ -3,7 +3,7 @@
 // exit codes, and stderr. `deliver` frames each message, decodes it, and calls
 // the server as the stdio loop does.
 
-import type { CliFs } from "../src/host/io.ts";
+import type { HostFs } from "../src/host/io.ts";
 import type { ReadError, Result } from "../src/core/source.ts";
 import {
   FrameDecoder,
@@ -133,7 +133,7 @@ export function makeHarness(options: HarnessOptions = {}): Harness {
   const throwOnRead = new Set<string>();
   const unreadable = new Set<string>();
   const baseFs = memory.io.fs;
-  const fs: CliFs = {
+  const fs: HostFs = {
     ...baseFs,
     readText(path: string): Result<string, ReadError> {
       if (throwOnRead.has(path)) throw new Error(`disk failure at ${path}`);
