@@ -1,7 +1,7 @@
 # Refinement measurements
 
 The measurements used Deno 2.9.8 on the local Apple silicon host on 2026-10-25.
-The solver summaries and editor samples are in [the result file](refinement-measurements.json).
+The solver summaries and editor samples are in [the result file](evidence/refinement-measurements.json).
 
 The first run used one iteration. The next run changed only the iteration count to 30.
 Both runs finished in less than one minute.

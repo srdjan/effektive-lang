@@ -7,13 +7,13 @@ The full M1/M3/M4 run completed successfully. All four large-input diagnostics p
 Frozen application source: `bf8e570493285d0322fbddccfebfdf398d75614b`, with the unchanged measurement infrastructure committed alongside this evidence. The supervisor held CPU-heavy checks and browser/installed-extension runs until outside this measurement window.
 
 ```sh
-deno task bench --full m1 m3 m4 --json docs/release-measurements-2026-10-21.json > docs/release-measurements-2026-10-21.txt
+deno task bench --full m1 m3 m4 --json docs/evidence/release-measurements-2026-10-21.json > docs/evidence/release-measurements-2026-10-21.txt
 ```
 
 Exit status: **0**. M1/M3/M4 wall times were **47.7 / 20.5 / 72.5 seconds**. Environment: Deno **2.9.7**, V8 **15.0.245.2-rusty**, TypeScript **6.0.3**, `aarch64-apple-darwin`, **14 logical cores**. Timing uses `performance.now()`; execution is not pinned to a core. Memory units below are MiB (1,048,576 bytes).
 
-- [Raw samples](release-measurements-2026-10-21.json): all latency pairs, count deltas, memory baselines and step-end samples.
-- [Complete text report](release-measurements-2026-10-21.txt): latency distributions and row noise floors, work counts and session summaries.
+- [Raw samples](evidence/release-measurements-2026-10-21.json): all latency pairs, count deltas, memory baselines and step-end samples.
+- [Complete text report](evidence/release-measurements-2026-10-21.txt): latency distributions and row noise floors, work counts and session summaries.
 - [General measurement methodology](measurements.md).
 
 ## Diagnostics latency and work
@@ -72,7 +72,7 @@ The [completed save plan](archive/plans/2026-10-21-save-transpilation.md), unit 
 deno task bench --full m1 m4 m7
 ```
 
-The [complete text report](release-measurements-2026-10-21-save.txt) holds every row of that run, including a new M1 run. No JSON file was written for it. [Measurements](measurements.md) describes the M7 completion signal and its scenarios.
+The [complete text report](evidence/release-measurements-2026-10-21-save.txt) holds every row of that run, including a new M1 run. No JSON file was written for it. [Measurements](measurements.md) describes the M7 completion signal and its scenarios.
 
 M7 times one save from the write of `didSave` to the reply of a following `effektive/stats` request. Two server processes, A and B, run each warm row, so `n` counts both sides. The cold rows use a fresh server for each sample. The budget SV-D3 applies to the `body` row on the large preset.
 
