@@ -3691,7 +3691,11 @@ const marker = (): Marker => Marker({})
 `);
   assertEquals(messages(project), []);
   const facts = [...fn(project, "m", "twin").table.facts.values()];
-  assert(facts.some((f) => f.kind === "identity-construction"));
+  assert(
+    facts.some((f) =>
+      f.kind === "identity-construction" && f.identity === "type:m#Twin"
+    ),
+  );
   const result = fn(project, "m", "rename").type;
   const type = project.table.node(result);
   assert(type.kind === "function");
