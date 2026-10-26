@@ -4858,7 +4858,7 @@ const SCHEMA_DEFAULT_KEY_CASES: readonly SchemaCase[] = [
   },
 ];
 
-Deno.test("schemaDefaultKey diagnostics keep their lists and order", () => {
+Deno.test("schemaDefaultKey diagnostics for a missing key keep their lists and order", () => {
   assertSchemaCases(SCHEMA_DEFAULT_KEY_CASES);
 });
 
@@ -5074,7 +5074,7 @@ const SCHEMA_DEFAULT_NULL_KEY_CASES: readonly SchemaCase[] = [
   },
 ];
 
-Deno.test("schemaDefaultKey diagnostics keep their lists and order", () => {
+Deno.test("schemaDefaultKey diagnostics for the null option keep their lists and order", () => {
   assertSchemaCases(SCHEMA_DEFAULT_NULL_KEY_CASES);
 });
 
@@ -5273,7 +5273,7 @@ const SCHEMA_DEFAULT_ENCODED_KEY_CASES: readonly SchemaCase[] = [
   },
 ];
 
-Deno.test("schemaDefaultKey diagnostics keep their lists and order", () => {
+Deno.test("schemaDefaultKey diagnostics for the encoded option keep their lists and order", () => {
   assertSchemaCases(SCHEMA_DEFAULT_ENCODED_KEY_CASES);
 });
 
