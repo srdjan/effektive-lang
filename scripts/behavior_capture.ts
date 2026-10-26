@@ -276,19 +276,27 @@ async function captureRevision(
     }
     // The cold-chain test starts a child with read permission only. In the
     // instrumented tree that child must also append to the record file.
+    // Revisions before 30b175b have no cold-chain test.
     const chain = `${tree}/tests/parse_chain_slow_test.ts`;
-    const chainText = Deno.readTextFileSync(chain);
-    const anchor = '"--allow-read",';
-    if (chainText.split(anchor).length !== 2) {
-      return { ok: false, error: `permission anchor not found in ${chain}` };
+    let chainText: string | undefined;
+    try {
+      chainText = Deno.readTextFileSync(chain);
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) throw error;
     }
-    Deno.writeTextFileSync(
-      chain,
-      chainText.replace(
-        anchor,
-        `${anchor} ${JSON.stringify(`--allow-write=${records}`)},`,
-      ),
-    );
+    if (chainText !== undefined) {
+      const anchor = '"--allow-read",';
+      if (chainText.split(anchor).length !== 2) {
+        return { ok: false, error: `permission anchor not found in ${chain}` };
+      }
+      Deno.writeTextFileSync(
+        chain,
+        chainText.replace(
+          anchor,
+          `${anchor} ${JSON.stringify(`--allow-write=${records}`)},`,
+        ),
+      );
+    }
     const deno = Deno.execPath();
     for (const args of CAPTURE_TESTS) {
       if (!await run(deno, args, tree, { DENO_DIR: denoDir })) {

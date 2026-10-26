@@ -310,6 +310,25 @@ export class LspClient {
   async shutdown(): Promise<number> {
     await this.request("shutdown");
     await this.notify("exit");
+    return await this.#exitCode();
+  }
+
+  /**
+   * Closes stdin and waits for the process. Returns the exit status. It does not
+   * send `shutdown`, so a server that gets the end of stdin exits with 1. A wait
+   * over the timeout rejects.
+   */
+  async finish(): Promise<number> {
+    try {
+      await this.#writer.close();
+    } catch {
+      // The server already exited and closed the pipe.
+    }
+    return await this.#exitCode();
+  }
+
+  /** Waits for the process and its readers, or rejects after the timeout. */
+  async #exitCode(): Promise<number> {
     let timer: Timer | undefined;
     const limit = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(() => {
@@ -328,21 +347,6 @@ export class LspClient {
     } finally {
       clearTimeout(timer);
     }
-  }
-
-  /**
-   * Closes stdin and waits for the process. Returns the exit status. It does not
-   * send `shutdown`, so a server that gets the end of stdin exits with 1.
-   */
-  async finish(): Promise<number> {
-    try {
-      await this.#writer.close();
-    } catch {
-      // The server already exited and closed the pipe.
-    }
-    const status = await this.#process.status;
-    await this.#settle();
-    return status.code;
   }
 
   /** Waits for the readers and closes stdin. The process has exited. */
