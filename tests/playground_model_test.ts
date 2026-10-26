@@ -1,5 +1,6 @@
 // Tests for the playground page model: the tab from the hash, the Problems
-// list, the error counts, the output states, and the hover texts.
+// list, the error counts, the output states, the hover texts, and the saving
+// label.
 
 import { assertEquals } from "@std/assert";
 import {
@@ -12,6 +13,7 @@ import {
   hoverLines,
   outputState,
   problemItems,
+  savingLabel,
   tabCounts,
   tabFromHash,
   WRAP_HANG,
@@ -155,4 +157,22 @@ Deno.test("wrapIndent hangs a wrapped part past the indent of its line", () => {
   assertEquals(wrapIndent("\tx", 4), 4 + WRAP_HANG);
   assertEquals(wrapIndent(" \tx", 4), 4 + WRAP_HANG);
   assertEquals(wrapIndent("    ", 4), 4 + WRAP_HANG);
+});
+
+Deno.test("savingLabel compares code characters and skips whitespace and comments", () => {
+  const generated = [
+    "// Generated from a.eff by the Effektive compiler. Do not edit.",
+    "export const abcdefghijkl = 1;",
+    "//# sourceMappingURL=a.ts.map",
+  ].join("\n");
+  // 26 code characters against 13: half of them saved.
+  assertEquals(
+    savingLabel("// note\nabcdefghij =  1;", generated),
+    "50% fewer characters than Effect-TS",
+  );
+  assertEquals(
+    savingLabel("x".repeat(39), generated),
+    "50% more characters than Effect-TS",
+  );
+  assertEquals(savingLabel("x", "// only a comment\n"), "");
 });

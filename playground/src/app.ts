@@ -28,6 +28,7 @@ import {
   outputState,
   type ProblemItem,
   problemItems,
+  savingLabel,
   tabCounts,
   tabFromHash,
 } from "./model.ts";
@@ -193,6 +194,7 @@ function makeTab(id: string, label: string): HTMLButtonElement {
 
 async function main(): Promise<void> {
   const status = element("status");
+  const saving = element("saving");
   const loading = element("loading");
   const errorRegion = element("error-region");
   const errorMessage = element("error-message");
@@ -416,6 +418,12 @@ async function main(): Promise<void> {
   function renderOutput(): void {
     const state = outputState(latest, active);
     staleBanner.hidden = state.tag !== "stale";
+    // Stale output belongs to older source, and an interface's companion
+    // module is a check module, not its translation, so neither compares.
+    saving.textContent = state.tag === "text" && !active.endsWith(".effi")
+      ? savingLabel(texts[active] ?? "", state.text)
+      : "";
+    saving.hidden = saving.textContent === "";
     switch (state.tag) {
       case "text":
       case "stale":

@@ -864,7 +864,10 @@ the repository except `playground/dist/`.
 The build uses `deno bundle` with the CodeMirror 6 packages that `deno.json`
 pins. The highlighter uses the core lexer, so the page and the compiler agree on
 each token. The page is a dark workbench with a status bar that shows the
-cursor position, the contract at the cursor, and the compile time. Below 720
+cursor position, the contract at the cursor, and the compile time. For a
+`.eff` file with current output, the status bar also compares the code
+characters of the source with the generated TypeScript. Whitespace and
+whole-line comments do not count. Below 720
 pixels, the page shows one region at a time, and a bottom bar switches between
 them. From 720 pixels, the source and the TypeScript sit side by side above
 the problems. From 1024 pixels, the file tabs become an explorer in a left

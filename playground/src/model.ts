@@ -112,6 +112,28 @@ export function outputState(
     : { tag: "text", text: output.text };
 }
 
+/** The characters that are not whitespace, outside whole-line `//` comments. */
+function codeLength(text: string): number {
+  return text.split("\n")
+    .filter((line) => !line.trimStart().startsWith("//"))
+    .join("")
+    .replace(/\s/g, "").length;
+}
+
+/**
+ * The status bar text that compares the source with its generated TypeScript.
+ * Whitespace and whole-line comments, such as the generated header and the
+ * source map line, do not count. Empty when the output has no code.
+ */
+export function savingLabel(source: string, generated: string): string {
+  const target = codeLength(generated);
+  if (target === 0) return "";
+  const saved = Math.round((1 - codeLength(source) / target) * 100);
+  return saved >= 0
+    ? `${saved}% fewer characters than Effect-TS`
+    : `${-saved}% more characters than Effect-TS`;
+}
+
 /** One labelled block of the hover tooltip. `code` is false for a plain message. */
 export interface HoverBlock {
   readonly label: string;

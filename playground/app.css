@@ -461,6 +461,7 @@ main[hidden] + .statusbar {
 }
 
 #cursor-position,
+#saving,
 #status {
   white-space: nowrap;
 }
