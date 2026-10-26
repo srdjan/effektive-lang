@@ -13,7 +13,7 @@ Run every command from the repository root.
 | `deno task check`             | Runs the format check, the lint, the type check, the fast tests, and the slow tests.                                                                    |
 | `deno task test`              | Runs the fast tests in parallel. It skips files named `*_slow_test.ts`.                                                                                 |
 | `deno task test:slow`         | Runs only files named `*_slow_test.ts`, in parallel. They run `deno check`, `deno fmt`, and `deno run` with a fresh `DENO_DIR` that the task removes after.          |
-| `deno task golden:update`     | Writes `fixtures/golden/<module>.ts` again from `fixtures/examples` and `fixtures/emit/traverse`, and the companion module `golden/host/providers.effi.ts`. |
+| `deno task golden:update`     | Writes `fixtures/golden/<module>.ts` again from `fixtures/examples` and `fixtures/emit/traverse`, and the companion module `golden/host/providers.effi.ts`. Also writes `fixtures/ir/examples-baseline.json`, the IR snapshot of the examples. |
 | `deno task validate:update`   | Writes the mutation fixtures in `fixtures/validate/` again from the current lowering.                                                                   |
 | `deno task lex:update`        | Writes `fixtures/lex/snapshot.json` again from the current lexer. Run it only after a deliberate change of the lexer output.                            |
 | `deno task behavior:capture`  | Compares two revisions using instrumented compiler entry points during tests, including subprocesses. See the capture note below. Use it for refactors. |
