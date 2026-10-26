@@ -1,13 +1,3 @@
-import {
-  codeActionRequest,
-  completionRequest,
-  inlayHintRequest,
-  prepareRenameRequest,
-  referencesRequest,
-  renameRequest,
-  semanticTokensRequest,
-  signatureHelpRequest,
-} from "./editor_features.ts";
 // The language server: lifecycle, message dispatch, and flush scheduling
 // (plan 5.1, 5.4, and 5.10). The server has no I/O of its own. It reaches the
 // outside through the ports of `ServerPorts`, so that tests drive it in process.
@@ -22,12 +12,20 @@ import {
 import type { HostFs } from "../host/io.ts";
 import { errorMessage, type Result, type Revision } from "../core/mod.ts";
 import {
+  codeActionRequest,
+  completionRequest,
   definitionRequest,
   didSave,
   documentSymbolRequest,
   GeneratedTexts,
   generatedTypeScriptRequest,
   hoverRequest,
+  inlayHintRequest,
+  prepareRenameRequest,
+  referencesRequest,
+  renameRequest,
+  semanticTokensRequest,
+  signatureHelpRequest,
   statsRequest,
 } from "./features.ts";
 import {

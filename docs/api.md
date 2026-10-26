@@ -128,8 +128,7 @@ src/lsp/       The language server. See "Language server".
   main.ts        The stdio entry: reads frames, writes frames, and ends the process.
   server.ts      LanguageServer: lifecycle, dispatch, and the flush schedule.
   projects.ts    Project discovery, the overlay's tagged update state, diagnostic flushes and disk-only save rounds.
-  features.ts    The handlers: hover, definition, symbols, generated text, save, and stats.
-  editor_features.ts References, validated versioned rename/actions, completion and full semantic tokens.
+  features.ts    The handlers: hover, definition, symbols, generated text, save, stats, references, validated versioned rename and actions, completion, and semantic tokens.
   jsonrpc.ts     Content-Length frames and the message shapes.
   protocol.ts    The subset of the protocol: types and the narrowing of incoming params.
   positions.ts   Positions, ranges, and the conversion between URIs and paths.

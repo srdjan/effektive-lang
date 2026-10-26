@@ -1,5 +1,8 @@
 // The request handlers of the language features (plan 5.6 to 5.9 and 5.11):
-// hover, definition, document symbols, generated TypeScript, save, and stats.
+// hover, definition, document symbols, generated TypeScript, save, and stats,
+// and the editor queries: references, rename, completion, signature help,
+// semantic tokens, code actions, and inlay hints. Rename, code actions, and
+// the other editor queries check that the revision matches the current text.
 // Each handler calls `ctx.projects.forRequest`, which flushes a dirty project
 // first, so that no answer comes from an old revision.
 //
@@ -8,26 +11,48 @@
 
 import type { TypeScriptOutputs } from "../core/typescript.ts";
 import {
+  completionsAt,
+  CONFIG_FILE,
+  contractActionsAt,
   definitionAt,
   documentSymbols,
   type EditorSymbol,
   type EditorSymbolKind,
   hoverAt,
+  inlayHintsAt,
   joinPath,
   lineStarts,
+  prepareRenameAt,
+  referencesAt,
+  renameAt,
   type Result,
   type Revision,
+  SEMANTIC_TOKEN_MODIFIERS,
+  SEMANTIC_TOKEN_TYPES,
+  semanticClassifications,
+  signatureHelpAt,
+  type SourceEdit,
   type Span,
 } from "../core/mod.ts";
-import { pathToUri, positionToOffset, spanToRange } from "./positions.ts";
+import {
+  offsetToPosition,
+  pathToUri,
+  positionToOffset,
+  spanToRange,
+} from "./positions.ts";
 import type {
+  CodeActionParams,
   DocumentSymbol,
+  EditorPositionParams,
   GeneratedChangedParams,
   GeneratedTypeScriptResult,
   Hover,
+  InlayHintParams,
   Location,
   PositionParams,
   Range,
+  ReferencesParams,
+  RenameParams,
   StatsResult,
   TextDocumentParams,
 } from "./protocol.ts";
@@ -41,6 +66,15 @@ type Answer = Result<unknown, RequestFailure>;
 function answer(value: unknown): Answer {
   return { ok: true, value };
 }
+
+const stale = (): Answer => ({
+  ok: false,
+  error: {
+    code: -32801,
+    message:
+      "The document changed; request this edit again using the current text.",
+  },
+});
 
 /** The module name of the `.eff` or `.effi` file `path` in the revision, or undefined. */
 function sourceModuleOf(revision: Revision, path: string): string | undefined {
@@ -60,20 +94,44 @@ interface Cursor {
   readonly revision: Revision;
   readonly path: string;
   readonly offset: number;
+  readonly text: string;
 }
 
-/** The cursor of a position request, or undefined when there is no good revision or text. */
+/**
+ * The cursor of a position request, or undefined when there is no good revision
+ * or text. With `current`, the project must have no configuration error, and the
+ * revision text must equal the open or disk text and the requested document
+ * version. Hover and definition do not ask for this check.
+ */
 function cursorOf(
-  params: PositionParams,
+  params: EditorPositionParams,
   ctx: ServerContext,
+  current = false,
 ): Cursor | undefined {
   const found = ctx.projects.forRequest(params.textDocument.uri);
+  if (current && found?.project.configError !== undefined) return undefined;
   const revision = found?.project.lastGood;
   if (found === undefined || revision === undefined) return undefined;
-  const text = revision.sourceTexts().get(found.path);
+  const { project, path } = found;
+  const text = revision.sourceTexts().get(path);
   if (text === undefined) return undefined;
+  if (current) {
+    const open = project.open.get(path);
+    if (
+      (open?.text ?? project.disk.get(path)) !== text ||
+      params.documentVersion !== undefined &&
+        open?.version !== params.documentVersion
+    ) return undefined;
+  }
   const offset = positionToOffset(text, lineStarts(text), params.position);
-  return { project: found.project, revision, path: found.path, offset };
+  return { project, revision, path, offset, text };
+}
+
+/** The location of a span, or undefined when the text or the URI is not known. */
+function locationOf(cursor: Cursor, span: Span): Location | undefined {
+  const range = rangeOfSpan(cursor.revision, span);
+  const uri = pathToUri(joinPath(cursor.project.root, span.source));
+  return range === undefined || uri === undefined ? undefined : { uri, range };
 }
 
 // ---- Hover ------------------------------------------------------------------
@@ -121,11 +179,7 @@ export function definitionRequest(
   const { revision } = cursor;
   const span = definitionAt(revision, cursor.path, cursor.offset);
   if (span === undefined) return answer(null);
-  const range = rangeOfSpan(revision, span);
-  const uri = pathToUri(joinPath(cursor.project.root, span.source));
-  if (range === undefined || uri === undefined) return answer(null);
-  const location: Location = { uri, range };
-  return answer(location);
+  return answer(locationOf(cursor, span) ?? null);
 }
 
 // ---- Document symbols -------------------------------------------------------
@@ -325,4 +379,269 @@ export function statsRequest(
     memory: ctx.memory(),
   };
   return answer(result);
+}
+
+// ---- Editor queries ---------------------------------------------------------
+
+function freshProject(cursor: Cursor, ctx: ServerContext): boolean {
+  const { project, revision } = cursor;
+  if (project.configError !== undefined) return false;
+  const config = project.open.get(CONFIG_FILE)?.text;
+  const diskConfig = config === undefined
+    ? ctx.fs.readText(joinPath(project.root, CONFIG_FILE))
+    : undefined;
+  const currentConfig = config ??
+    (diskConfig?.ok ? diskConfig.value : undefined);
+  if (
+    currentConfig === undefined ||
+    currentConfig !== project.current.get(CONFIG_FILE)
+  ) return false;
+  for (const [path, text] of revision.sourceTexts()) {
+    const open = project.open.get(path);
+    if (open !== undefined) { if (open.text !== text) return false; }
+    else {
+      const disk = ctx.fs.readText(joinPath(project.root, path));
+      if (!disk.ok || disk.value !== text) return false;
+    }
+  }
+  return true;
+}
+
+function workspaceEdit(
+  cursor: Cursor,
+  edits: readonly SourceEdit[],
+): unknown {
+  const grouped = new Map<string, SourceEdit[]>();
+  for (const edit of edits) {
+    const group = grouped.get(edit.span.source) ?? [];
+    group.push(edit);
+    grouped.set(edit.span.source, group);
+  }
+  return {
+    documentChanges: [...grouped].map(([path, changes]) => {
+      const text = cursor.revision.sourceTexts().get(path) ?? "";
+      const starts = lineStarts(text);
+      return {
+        textDocument: {
+          uri: pathToUri(joinPath(cursor.project.root, path)),
+          version: cursor.project.open.get(path)?.version ?? null,
+        },
+        edits: changes.map((change) => ({
+          range: spanToRange(text, starts, change.span),
+          newText: change.text,
+        })),
+      };
+    }),
+  };
+}
+
+export function referencesRequest(
+  params: ReferencesParams,
+  ctx: ServerContext,
+): Answer {
+  const cursor = cursorOf(params, ctx, true);
+  return answer(
+    cursor === undefined ? [] : referencesAt(
+      cursor.revision,
+      cursor.path,
+      cursor.offset,
+      params.includeDeclaration,
+    ).map((span) => locationOf(cursor, span)).filter((loc) =>
+      loc !== undefined
+    ),
+  );
+}
+
+export function prepareRenameRequest(
+  params: EditorPositionParams,
+  ctx: ServerContext,
+): Answer {
+  const cursor = cursorOf(params, ctx, true);
+  if (cursor === undefined || !freshProject(cursor, ctx)) return stale();
+  const prepared = prepareRenameAt(
+    cursor.revision,
+    cursor.path,
+    cursor.offset,
+  );
+  return answer(
+    prepared === undefined ? null : {
+      range: spanToRange(
+        cursor.text,
+        lineStarts(cursor.text),
+        prepared.span,
+      ),
+      placeholder: prepared.name,
+    },
+  );
+}
+
+export function renameRequest(
+  params: RenameParams,
+  ctx: ServerContext,
+): Answer {
+  const cursor = cursorOf(params, ctx, true);
+  if (cursor === undefined || !freshProject(cursor, ctx)) return stale();
+  const result = renameAt(
+    cursor.revision,
+    cursor.path,
+    cursor.offset,
+    params.newName,
+  );
+  return result.ok
+    ? answer(workspaceEdit(cursor, result.value))
+    : { ok: false, error: { code: -32602, message: result.error } };
+}
+
+const completionKinds = {
+  variable: 6,
+  function: 3,
+  type: 7,
+  class: 7,
+  interface: 8,
+  method: 2,
+  property: 10,
+  keyword: 14,
+} as const;
+export function completionRequest(
+  params: EditorPositionParams,
+  ctx: ServerContext,
+): Answer {
+  const cursor = cursorOf(params, ctx, true);
+  if (cursor === undefined) return answer({ isIncomplete: false, items: [] });
+  const starts = lineStarts(cursor.text);
+  return answer({
+    isIncomplete: false,
+    items: completionsAt(cursor.revision, cursor.path, cursor.offset).map(
+      (item) => ({
+        label: item.label,
+        kind: completionKinds[item.kind],
+        textEdit: {
+          range: spanToRange(cursor.text, starts, item.span),
+          newText: item.label,
+        },
+      }),
+    ),
+  });
+}
+
+export function signatureHelpRequest(
+  params: EditorPositionParams,
+  ctx: ServerContext,
+): Answer {
+  const cursor = cursorOf(params, ctx, true);
+  if (cursor === undefined) return answer(null);
+  const found = signatureHelpAt(
+    cursor.revision,
+    cursor.path,
+    cursor.offset,
+  );
+  return answer(
+    found === undefined ? null : {
+      signatures: [{
+        label: found.label,
+        parameters: found.parameters,
+      }],
+      activeSignature: 0,
+      activeParameter: found.activeParameter,
+    },
+  );
+}
+
+export function semanticTokensRequest(
+  params: TextDocumentParams,
+  ctx: ServerContext,
+): Answer {
+  const found = ctx.projects.forRequest(params.textDocument.uri);
+  if (found === undefined) return answer({ data: [] });
+  const { project, path } = found;
+  const text = project.open.get(path)?.text ?? project.disk.get(path);
+  if (text === undefined) return answer({ data: [] });
+  const starts = lineStarts(text);
+  const tokens = semanticClassifications(
+    project.configError === undefined ? project.lastGood : undefined,
+    path,
+    text,
+  );
+  const data: number[] = [];
+  let previousLine = 0, previousCharacter = 0;
+  for (const token of tokens) {
+    let at = token.span.start;
+    while (at < token.span.end) {
+      const newline = text.indexOf("\n", at);
+      const end = Math.min(token.span.end, newline < 0 ? text.length : newline);
+      const contentEnd = end > at && text[end - 1] === "\r" ? end - 1 : end;
+      if (contentEnd > at) {
+        const position = offsetToPosition(text, starts, at);
+        data.push(
+          position.line - previousLine,
+          position.line === previousLine
+            ? position.character - previousCharacter
+            : position.character,
+          contentEnd - at,
+          SEMANTIC_TOKEN_TYPES.indexOf(token.type),
+          token.modifiers.reduce(
+            (bits, modifier) =>
+              bits | 1 << SEMANTIC_TOKEN_MODIFIERS.indexOf(modifier),
+            0,
+          ),
+        );
+        previousLine = position.line;
+        previousCharacter = position.character;
+      }
+      at = end + 1;
+    }
+  }
+  return answer({ data });
+}
+
+export function codeActionRequest(
+  params: CodeActionParams,
+  ctx: ServerContext,
+): Answer {
+  const cursor = cursorOf(
+    { ...params, position: params.range.start },
+    ctx,
+    true,
+  );
+  if (cursor === undefined || !freshProject(cursor, ctx)) return answer([]);
+  const end = positionToOffset(
+    cursor.text,
+    lineStarts(cursor.text),
+    params.range.end,
+  );
+  return answer(
+    contractActionsAt(cursor.revision, cursor.path, cursor.offset, end).map(
+      (action) => ({
+        title: action.title,
+        kind: "quickfix",
+        edit: workspaceEdit(cursor, action.edits),
+      }),
+    ),
+  );
+}
+
+/** Kind 1 (Type): the label states an inferred contract. */
+export function inlayHintRequest(
+  params: InlayHintParams,
+  ctx: ServerContext,
+): Answer {
+  const cursor = cursorOf(
+    { ...params, position: params.range.start },
+    ctx,
+    true,
+  );
+  if (cursor === undefined) return answer([]);
+  const { text } = cursor;
+  const starts = lineStarts(text);
+  return answer(
+    inlayHintsAt(cursor.revision, cursor.path, {
+      start: cursor.offset,
+      end: positionToOffset(text, starts, params.range.end),
+    }).map((hint) => ({
+      position: offsetToPosition(text, starts, hint.position),
+      label: hint.label,
+      kind: 1,
+      paddingLeft: false,
+    })),
+  );
 }
