@@ -133,6 +133,7 @@ src/lsp/       The language server. See "Language server".
   jsonrpc.ts     Content-Length frames and the message shapes.
   protocol.ts    The subset of the protocol: types and the narrowing of incoming params.
   positions.ts   Positions, ranges, and the conversion between URIs and paths.
+  wire_log.ts    WireLog: the session log of messages, disk calls, and timings, wrapped around the ports.
   methods.ts     The names of the custom methods, shared with the client.
 editors/vscode/ The VS Code client. See "VS Code client". Plain JavaScript client; release packaging bundles the server.
 playground/    The browser playground. See "Playground". The page is in src/, the build in build.ts.
@@ -758,10 +759,17 @@ options are optional.
 | ------------- | ------- | -------------------------------------------------------------------------------------------------- |
 | `debounceMs`  | `0`     | A finite number of at least 0. The delay in milliseconds before the server compiles after an edit. |
 | `writeOnSave` | `true`  | A boolean. When true, a save writes the `.ts` and `.ts.map` files that `build` would write.        |
+| `log`         | `true`  | A boolean. When false, the server writes no session log.                                           |
 
 A missing or invalid value takes the default. The server logs an invalid value.
 A request on a project with unsaved changes compiles first, so an answer never
 comes from an old revision.
+
+Unless `log` is false, the server writes a wire log to
+`<workspace>/.effektive/logs/`: each incoming and outgoing message, each disk
+call, each flush, and the time of each response. The workspace is the first
+workspace folder, or else `rootUri`, of `initialize`. With neither, the server
+writes no log. The log changes no message and no file outside `.effektive/`.
 
 ### Projects, save, and configuration errors
 

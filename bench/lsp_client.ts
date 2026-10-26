@@ -15,6 +15,7 @@ import {
   type OutgoingMessage,
   type RequestId,
 } from "../src/lsp/jsonrpc.ts";
+import { pathToUri } from "../src/lsp/positions.ts";
 
 type Timer = ReturnType<typeof setTimeout>;
 
@@ -66,7 +67,10 @@ interface DiagnosticsWaiter {
 export interface LspClientOptions {
   /** The executable to start. The default is `deno` from `PATH`. */
   readonly executable?: string;
-  /** The working directory of the server process. */
+  /**
+   * The working directory of the server process. It is also the `rootUri` of
+   * `initialize`, so the server logs into this folder.
+   */
   readonly cwd?: string;
   /** The limit of each request, wait, and exit, in milliseconds. */
   readonly timeoutMs?: number;
@@ -79,6 +83,7 @@ export class LspClient {
   readonly #process: Deno.ChildProcess;
   readonly #writer: WritableStreamDefaultWriter<Uint8Array>;
   readonly #timeoutMs: number;
+  readonly #rootUri: string | null;
   readonly #pending = new Map<RequestId, Pending>();
   readonly #waiters = new Set<DiagnosticsWaiter>();
   readonly #reading: Promise<void>;
@@ -90,6 +95,9 @@ export class LspClient {
 
   constructor(options: LspClientOptions = {}) {
     this.#timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.#rootUri = options.cwd === undefined
+      ? null
+      : pathToUri(options.cwd) ?? null;
     this.#process = new Deno.Command(options.executable ?? "deno", {
       args: [
         "run",
@@ -295,7 +303,7 @@ export class LspClient {
   async initialize(initializationOptions: unknown): Promise<unknown> {
     const result = await this.request("initialize", {
       processId: null,
-      rootUri: null,
+      rootUri: this.#rootUri,
       capabilities: {},
       initializationOptions,
     });

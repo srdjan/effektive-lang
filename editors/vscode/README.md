@@ -12,6 +12,7 @@ The language client supports diagnostics, hover, definitions, document symbols, 
 - `effektive.server.repository` (default empty): an explicit development override pointing to an effektive-lang checkout. Empty uses the bundled server.
 - `effektive.writeOnSave` (default `true`): on save, write every generated `.ts` and `.ts.map` file that changed, from the saved files on disk.
 - `effektive.debounceMs` (default `0`): compilation delay after an edit, in milliseconds.
+- `effektive.log` (default `true`): write a local session log to the workspace `.effektive/logs/` folder.
 
 Reload the window after changing a server setting.
 

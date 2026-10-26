@@ -80,11 +80,14 @@ export interface InitializationOptions {
   readonly debounceMs: number;
   /** Write each generated file and its map on save. */
   readonly writeOnSave: boolean;
+  /** Write the session log to `.effektive/logs/` of the workspace. */
+  readonly log: boolean;
 }
 
 export const DEFAULT_INITIALIZATION_OPTIONS: InitializationOptions = {
   debounceMs: 0,
   writeOnSave: true,
+  log: true,
 };
 
 interface ServerCapabilities {
@@ -386,7 +389,16 @@ function narrowOptions(value: unknown): {
       );
     }
   }
-  return { options: { debounceMs, writeOnSave }, warnings };
+  let log = defaults.log;
+  if (value.log !== undefined) {
+    if (typeof value.log === "boolean") log = value.log;
+    else {
+      warnings.push(
+        `initializationOptions.log must be a boolean; using ${defaults.log}`,
+      );
+    }
+  }
+  return { options: { debounceMs, writeOnSave, log }, warnings };
 }
 
 interface InitializeParams {

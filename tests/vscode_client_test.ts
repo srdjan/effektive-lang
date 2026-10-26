@@ -115,6 +115,7 @@ Deno.test("package.json contributes the command and the four settings", () => {
   assert(isRecord(properties));
   assertEquals(Object.keys(properties).sort(), [
     "effektive.debounceMs",
+    "effektive.log",
     "effektive.server.deno",
     "effektive.server.repository",
     "effektive.writeOnSave",
@@ -127,6 +128,7 @@ Deno.test("package.json contributes the command and the four settings", () => {
   assertEquals(field(properties["effektive.writeOnSave"], "default"), true);
   assertEquals(field(properties["effektive.debounceMs"], "default"), 0);
   assertEquals(field(properties["effektive.debounceMs"], "minimum"), 0);
+  assertEquals(field(properties["effektive.log"], "default"), true);
 });
 
 Deno.test("package.json activates on the language and the command", () => {

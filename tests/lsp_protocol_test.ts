@@ -57,11 +57,14 @@ Deno.test("initialize: valid options", () => {
     }),
     {
       ok: true,
-      value: { options: { debounceMs: 50, writeOnSave: false }, warnings: [] },
+      value: {
+        options: { debounceMs: 50, writeOnSave: false, log: true },
+        warnings: [],
+      },
     },
   );
   const zero = narrowInitializeParams({
-    initializationOptions: { debounceMs: 0, writeOnSave: true },
+    initializationOptions: { debounceMs: 0, writeOnSave: true, log: true },
   });
   assertEquals(zero.ok && zero.value.options, DEFAULT_INITIALIZATION_OPTIONS);
 });
@@ -70,7 +73,10 @@ Deno.test("initialize: missing options give the defaults and no warning", () => 
   for (const params of [{}, { initializationOptions: null }]) {
     assertEquals(narrowInitializeParams(params), {
       ok: true,
-      value: { options: { debounceMs: 0, writeOnSave: true }, warnings: [] },
+      value: {
+        options: { debounceMs: 0, writeOnSave: true, log: true },
+        warnings: [],
+      },
     });
   }
 });
@@ -80,7 +86,11 @@ Deno.test("initialize: invalid option values give defaults and one warning each"
     initializationOptions: { debounceMs: -1, writeOnSave: "yes" },
   });
   assert(result.ok);
-  assertEquals(result.value.options, { debounceMs: 0, writeOnSave: true });
+  assertEquals(result.value.options, {
+    debounceMs: 0,
+    writeOnSave: true,
+    log: true,
+  });
   assertEquals(result.value.warnings.length, 2);
   assert(result.value.warnings[0].includes("debounceMs"));
   assert(result.value.warnings[1].includes("writeOnSave"));
@@ -98,8 +108,23 @@ Deno.test("initialize: invalid option values give defaults and one warning each"
     initializationOptions: { debounceMs: 25, writeOnSave: 1 },
   });
   assert(keeps.ok);
-  assertEquals(keeps.value.options, { debounceMs: 25, writeOnSave: true });
+  assertEquals(keeps.value.options, {
+    debounceMs: 25,
+    writeOnSave: true,
+    log: true,
+  });
   assertEquals(keeps.value.warnings.length, 1);
+
+  const log = narrowInitializeParams({ initializationOptions: { log: false } });
+  assert(log.ok);
+  assertEquals(log.value.options.log, false);
+  assertEquals(log.value.warnings, []);
+  const badLog = narrowInitializeParams({ initializationOptions: { log: 0 } });
+  assert(badLog.ok);
+  assertEquals(badLog.value.options.log, true);
+  assertEquals(badLog.value.warnings, [
+    "initializationOptions.log must be a boolean; using true",
+  ]);
 });
 
 Deno.test("initialize: options that are not an object give defaults and a warning", () => {

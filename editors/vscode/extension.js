@@ -21,6 +21,7 @@ const SERVER_SETTINGS = [
   "effektive.server.repository",
   "effektive.writeOnSave",
   "effektive.debounceMs",
+  "effektive.log",
 ];
 
 const NO_RESULT_TEXT =
@@ -208,6 +209,7 @@ function activate(context) {
       initializationOptions: {
         writeOnSave: config.get("writeOnSave", true),
         debounceMs: config.get("debounceMs", 0),
+        log: config.get("log", true),
       },
       outputChannel,
     },

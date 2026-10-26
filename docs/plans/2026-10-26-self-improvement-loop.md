@@ -325,6 +325,31 @@ estimate. The first report on real logs replaces this ranking.
 Test time showed no inefficiency in the last check run: no fast test took more
 than 1 second, and the slow suite took about 55 seconds.
 
+## Measurements
+
+LG3, 2026-10-26, `deno task bench --full m1 m3`, before the wire log (server
+without a root, so no log) and after it (the bench client sends its project
+root, so every server logs). Another project's tests used the CPU for part of
+the time between the runs, but not during either run.
+
+| Diagnostics p90, ms | Before | After |
+| --- | --- | --- |
+| Highest row (large flip change before, large header change after) | 68.760 | 62.644 |
+| examples body change | 1.027 | 1.212 |
+| small body change | 2.152 | 2.321 |
+| medium body change | 3.985 | 4.463 |
+| large body change | 12.305 | 12.906 |
+
+Every p90 stays inside the 100 ms budget. The log adds about 0.1 to 0.3 ms per
+operation on the small inputs. On the large inputs the difference is inside
+the run-to-run noise. The full tables are in `/tmp/lg3-before.txt` and
+`/tmp/lg3-after.txt`, which are not kept.
+
+Log volume: the bench removes its temporary folders, so a separate script ran
+500 single-line edits on a copy of `fixtures/examples` with `debounceMs` 0.
+The session file has 1,527 lines and 462,973 bytes, about 926 bytes per edit,
+plus 7 blobs. The `publishDiagnostics` messages are most of it.
+
 ## Validation
 
 A Fable review on 2026-10-26 found thirteen points, seven of them blocking.
@@ -361,7 +386,7 @@ volume with M4.
 | Unit | State | Commit |
 | --- | --- | --- |
 | LG1 | Done | `906395a` |
-| LG2 | Planned | |
+| LG2 | Done | `4e9fe92` |
 | LG3 | Planned | |
 | LG4 | Planned | |
 | LG5 | Planned | |

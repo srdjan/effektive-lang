@@ -82,6 +82,11 @@
           "default": 0,
           "minimum": 0,
           "description": "Delay in milliseconds before the server compiles after an edit."
+        },
+        "effektive.log": {
+          "type": "boolean",
+          "default": true,
+          "description": "Write a local session log to the workspace .effektive/logs/ folder."
         }
       }
     }
