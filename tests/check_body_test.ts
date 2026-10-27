@@ -2250,6 +2250,42 @@ type Int = int
   ]);
 });
 
+Deno.test("updateRef with a pure callback keeps its type and mode", () => {
+  const project = checkText(`
+const f = (r: Ref<Int>): void => updateRef(r, (n) => n + 1)
+type Int = int
+`);
+  assertEquals(messages(project), []);
+  assertEquals(shortIds(fn(project, "m", "f").body!.failures), []);
+  assertEquals(shortIds(fn(project, "m", "f").body!.requirements), []);
+});
+
+Deno.test("updateRef carries the failures and requirements of an effectful callback", () => {
+  const project = checkText(`
+error Stop = { at: int }
+service S { step(n: Int): Int fails Stop }
+const f = (r: Ref<Int>): void fails Stop uses S.step => updateRef(r, (n) => S.step(n))
+type Int = int
+`);
+  assertEquals(messages(project), []);
+  assertEquals(fn(project, "m", "f").body!.mode, "effect");
+  assertEquals(shortIds(fn(project, "m", "f").body!.failures), ["Stop"]);
+  assertEquals(shortIds(fn(project, "m", "f").body!.requirements), ["S.step"]);
+});
+
+Deno.test("an exported function that uses an effectful updateRef needs its contract", () => {
+  const project = checkText(`
+error Stop = { at: int }
+service S { step(n: Int): Int fails Stop }
+export const bad = (r: Ref<Int>): void => updateRef(r, (n) => S.step(n))
+type Int = int
+`);
+  assertEquals(codes(project), [
+    "failure-contract/001",
+    "requirement-contract/001",
+  ]);
+});
+
 Deno.test("traverse carries callback failures and requirements", () => {
   const project = checkText(`
 error Stop = { at: int }

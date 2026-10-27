@@ -3108,6 +3108,67 @@ console.log(JSON.stringify({ value: await Effect.runPromise(main()) }));
     assertEquals(result, { value: 4 });
   });
 });
+Deno.test("effectful reference updates are atomic under bounded traversal", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export service Clock { pause(n: Int): Int }",
+        "export const main = (): Int uses Clock.pause => {",
+        "  const ref = makeRef(0)",
+        "  traverse([1, 2, 3, 4, 5, 6, 7, 8], (n) => updateRef(ref, (current) => current + Clock.pause(1)), { concurrency: 4 })",
+        "  getRef(ref)",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer } from "effect";
+import { Clock, main } from "./main.ts";
+const live = Layer.succeed(Clock)({ pause: (n: number) => Effect.sleep(1).pipe(Effect.as(n)) });
+console.log(JSON.stringify({ value: await Effect.runPromise(main().pipe(Effect.provide(live))) }));
+`,
+    );
+    assertEquals(result, { value: 8 });
+  });
+});
+
+Deno.test("a failing effectful reference update leaves the value unchanged", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = { at: int }",
+        "export service Gate { check(n: Int): Int fails Stop }",
+        "export const bump = (ref: Ref<Int>): void fails Stop uses Gate.check => updateRef(ref, (n) => Gate.check(n))",
+        "export const make = (): Ref<Int> => makeRef(5)",
+        "export const read = (ref: Ref<Int>): Int => getRef(ref)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Exit, Layer } from "effect";
+import { Gate, bump, make, read } from "./main.ts";
+const live = Layer.succeed(Gate)({ check: (n: number) => Effect.fail({ _tag: "Stop", at: n } as never) });
+const ref = await Effect.runPromise(make());
+const exit = await Effect.runPromiseExit(bump(ref).pipe(Effect.provide(live)));
+console.log(JSON.stringify({ failed: Exit.isFailure(exit), value: await Effect.runPromise(read(ref)) }));
+`,
+    );
+    assertEquals(result, { failed: true, value: 5 });
+  });
+});
+
 Deno.test("custom retry schedule sees one-based attempts and stops on None", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");

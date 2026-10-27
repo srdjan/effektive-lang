@@ -322,3 +322,82 @@ const g = (xs: Int[]): Int fails Stop uses S.a => fold(xs, 0, (t, n) => t + S.a(
 `;
   lower(source);
 });
+
+const UPDATE_REF_SOURCE = `type Int = int
+error Stop = { at: int }
+service S { step(n: Int): Int fails Stop }
+const probe = (r: Ref<Int>): void fails Stop uses S.step => updateRef(r, (n) => S.step(n))
+`;
+
+function forgedUpdateRef(
+  source: string,
+  forge: (body: ModuleIR["declarations"][number]) => unknown,
+): readonly [string, string][] {
+  const ir = lower(source);
+  const index = ir.declarations.findIndex((d) =>
+    d.kind === "function" && d.name === "probe"
+  );
+  const forged = {
+    ...ir,
+    declarations: ir.declarations.map((d, i) => i === index ? forge(d) : d),
+  } as ModuleIR;
+  return validateModule(forged, new Map([["m.eff", source]])).map((d) => [
+    d.code,
+    d.message,
+  ]);
+}
+
+Deno.test("a genuine pure and effectful updateRef validate with no diagnostic", () => {
+  lower(UPDATE_REF_SOURCE);
+  lower(
+    "type Int = int\nconst probe = (r: Ref<Int>): void => updateRef(r, (n) => n + 1)\n",
+  );
+});
+
+Deno.test("an updateRef call that omits the callback failures is rejected", () => {
+  const diagnostics = forgedUpdateRef(UPDATE_REF_SOURCE, (d) => {
+    assert(d.kind === "function" && d.body.kind === "update-ref");
+    return {
+      ...d,
+      body: { ...d.body, effects: { failures: [], requirements: [] } },
+    };
+  });
+  assertEquals(diagnostics, [
+    [
+      "validation/003",
+      "declarations[3].body.effects.failures: expected [error:m#Stop], recorded []",
+    ],
+    [
+      "validation/003",
+      "declarations[3].body.effects.requirements: expected [cap:m#S.step], recorded []",
+    ],
+  ]);
+});
+
+Deno.test("an updateRef call recorded pure with an effectful callback is rejected", () => {
+  const diagnostics = forgedUpdateRef(UPDATE_REF_SOURCE, (d) => {
+    assert(d.kind === "function" && d.body.kind === "update-ref");
+    return {
+      ...d,
+      body: {
+        ...d.body,
+        execution: "pure",
+        effects: { failures: [], requirements: [] },
+      },
+    };
+  });
+  assertEquals(diagnostics, [
+    [
+      "validation/003",
+      "declarations[3].body.effects.failures: expected [error:m#Stop], recorded []",
+    ],
+    [
+      "validation/003",
+      "declarations[3].body.effects.requirements: expected [cap:m#S.step], recorded []",
+    ],
+    [
+      "validation/004",
+      "declarations[3].body.execution: expected effect, recorded pure",
+    ],
+  ]);
+});

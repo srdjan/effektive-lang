@@ -194,7 +194,11 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
       return [`${option}.Option<`, typeDoc(scope, type.element), ">"];
     }
     case "ref":
-      return [`${scope.effect("Ref")}.Ref<`, typeDoc(scope, type.element), ">"];
+      return [
+        `${scope.effect("SynchronizedRef")}.SynchronizedRef<`,
+        typeDoc(scope, type.element),
+        ">",
+      ];
     case "retry-schedule":
       return [
         `${scope.effect("Schedule")}.Schedule<number, `,

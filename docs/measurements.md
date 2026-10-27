@@ -70,6 +70,22 @@ On the synthetic sizes, there are four kinds of edit.
 
 For the five examples, the script has only the body edit. It changes the string literal in `displayName` of `users.eff` from `"Guest"` to `"Guest<n>"`, where `<n>` is a number that is new in each step. The hover of M1 names `displayName` on the examples and `bump` on the synthetic sizes.
 
+## Ref update cost (ES-D3)
+
+`bench/ref_update.ts` times 1,000 updates inside one `Effect.gen` for three cases: `Ref.update`, `SynchronizedRef.update`, and `SynchronizedRef.updateEffect`. It decided ES-D3 (a): every source `Ref` compiles to a `SynchronizedRef`.
+
+Recorded on 2026-10-27 with Deno 2.9.8 and effect 4.0.5, in two runs on one Mac. Each value is the time for 1,000 updates.
+
+| Case                           | Run 1    | Run 2    |
+| ------------------------------ | -------- | -------- |
+| `Ref.update`                   | 36.2 µs  | 36.9 µs  |
+| `SynchronizedRef.update`       | 184.3 µs | 182.2 µs |
+| `SynchronizedRef.updateEffect` | 241.7 µs | 237.7 µs |
+
+A pure update costs about 150 ns more with `SynchronizedRef`. The effect on an application is not measured.
+
+Run it again with `deno bench --no-lock --allow-read --allow-env bench/ref_update.ts`.
+
 ## Protocol
 
 Each M2 run ends with a checksum of the emitted text. Every run must give the same checksum, or the run stops with an error and prints no time. The first runs of each size are warm-ups, and the report drops them. Each row is a distribution: `n`, `min`, `p10`, `median`, `p90`, and `max`. The harness never reports a best of N. The rows of M2 pool the runs of both sides.

@@ -1,4 +1,4 @@
-// Mutable reference construction, reads, writes and pure update callbacks.
+// Mutable reference construction, reads, writes and update callbacks.
 // Prelude dispatch checks arity and records facts before this handler runs.
 
 import type { NodeId } from "../syntax.ts";
@@ -41,12 +41,19 @@ function refCall(
       combine([first, value, EFFECT_ONLY]),
     );
   }
-  const transform = c.callback(name, args[1], [element], element);
+  const transform = c.callback(name, args[1], [element], element, true);
   c.fits(args[1].node, transform.result, element, "the updated Ref value");
+  // An effectful callback runs inside the update, so the call takes its
+  // failures and requirements.
+  const fn = c.functionOf(transform.info.type);
   return c.finish(
     node,
     c.table.unit,
-    combine([first, transform.info, EFFECT_ONLY]),
+    combine([first, transform.info, EFFECT_ONLY, {
+      mode: "pure",
+      failures: fn?.failures ?? [],
+      requirements: fn?.requirements ?? [],
+    }]),
   );
 }
 

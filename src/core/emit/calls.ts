@@ -188,6 +188,12 @@ type LeafCallKind =
   | "add-scope-finalizer"
   | "close-scope";
 
+/** `updateRef` with an effectful callback. */
+export const UPDATE_REF_EFFECT: Callee = method(
+  "SynchronizedRef",
+  "updateEffect",
+);
+
 export const LEAF_CALLS: { readonly [K in LeafCallKind]: Callee } = {
   fail: method("Effect", "fail"),
   scoped: method("Effect", "scoped"),
@@ -196,10 +202,10 @@ export const LEAF_CALLS: { readonly [K in LeafCallKind]: Callee } = {
   "head-stream": method("Stream", "runHead"),
   "last-stream": method("Stream", "runLast"),
   "drain-stream": method("Stream", "runDrain"),
-  "make-ref": method("Ref", "make"),
-  "get-ref": method("Ref", "get"),
-  "set-ref": method("Ref", "set"),
-  "update-ref": method("Ref", "update"),
+  "make-ref": method("SynchronizedRef", "make"),
+  "get-ref": method("SynchronizedRef", "get"),
+  "set-ref": method("SynchronizedRef", "set"),
+  "update-ref": method("SynchronizedRef", "update"),
   "make-scope": scopeOperation("make"),
   "provide-scope": scopeOperation("provide"),
   "add-scope-finalizer": scopeOperation("register"),

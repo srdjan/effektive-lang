@@ -533,7 +533,7 @@ export const choose = (): Int =>
   assertStringIncludes(output, "Effect.suspend(");
 });
 
-Deno.test("reference operations emit Effect 4 Ref methods", () => {
+Deno.test("reference operations emit Effect 4 SynchronizedRef methods", () => {
   const output = oneModule(`
 type Int = int
 export const count = (): Int => {
@@ -543,10 +543,25 @@ export const count = (): Int => {
   getRef(ref)
 }
 `);
-  assertStringIncludes(output, "Ref.make(0)");
-  assertStringIncludes(output, "Ref.update(ref, (n: number) => $int(n + 1))");
-  assertStringIncludes(output, "Ref.set(ref, 3)");
-  assertStringIncludes(output, "Ref.get(ref)");
+  assertStringIncludes(output, "SynchronizedRef.make(0)");
+  assertStringIncludes(
+    output,
+    "SynchronizedRef.update(ref, (n: number) => $int(n + 1))",
+  );
+  assertStringIncludes(output, "SynchronizedRef.set(ref, 3)");
+  assertStringIncludes(output, "SynchronizedRef.get(ref)");
+});
+
+Deno.test("an effectful updateRef emits SynchronizedRef.updateEffect and the Ref type", () => {
+  const output = oneModule(`
+type Int = int
+error Stop = { at: int }
+service S { step(n: Int): Int fails Stop }
+export const bump = (ref: Ref<Int>): void fails Stop uses S.step =>
+  updateRef(ref, (n) => S.step(n))
+`);
+  assertStringIncludes(output, "SynchronizedRef.updateEffect(ref, ");
+  assertStringIncludes(output, "SynchronizedRef.SynchronizedRef<Int>");
 });
 
 Deno.test("source Layers emit service acquisition and merge", () => {

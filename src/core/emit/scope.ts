@@ -39,7 +39,7 @@ export type EffectModule =
   | "SchemaTransformation"
   | "Stream"
   | "Sink"
-  | "Ref"
+  | "SynchronizedRef"
   | "Schedule"
   | "Duration"
   | "Cause"

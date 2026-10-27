@@ -2,7 +2,7 @@
 
 import type { Expr } from "../../ir.ts";
 import { AREA } from "../report.ts";
-import { combine, invocationOf, isQuiet } from "../sets.ts";
+import { combine, invocationOf } from "../sets.ts";
 import { asFunction, fits, unfold, UNIT } from "../typing.ts";
 import {
   type Comp,
@@ -52,16 +52,25 @@ export function refOperation(
   const fn = asFunction(c.env, transform.type);
   if (
     fn === undefined || fn.parameters.length !== 1 ||
-    !isQuiet(invocationOf(fn)) ||
     !fits(c.env, type.element, fn.parameters[0]) ||
     !fits(c.env, fn.result, type.element)
   ) {
     c.add(
       AREA.execution,
       `${path}.transform`,
-      "updateRef needs a pure element-to-element callback",
+      "updateRef needs an element-to-element callback",
       e.transform.span,
     );
   }
-  return derivedResult(UNIT, combine([ref, transform, EFFECT_ONLY]));
+  // An effectful callback runs inside the update, so the call takes its
+  // failures and requirements.
+  return derivedResult(
+    UNIT,
+    combine([
+      ref,
+      transform,
+      EFFECT_ONLY,
+      ...(fn === undefined ? [] : [invocationOf(fn)]),
+    ]),
+  );
 }
