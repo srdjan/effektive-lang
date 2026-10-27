@@ -103,6 +103,56 @@ Verification: each unit, the fraction, exponent and overflow diagnostics, a
 literal passed to `scheduleSpaced`, hover text, and an unchanged lexer snapshot
 for the existing fixtures.
 
+## ES1b: the `Duration` type (ES-D1 b, ES-D6 a, ES-D7 a)
+
+The user changed ES-D1 to (b) after ES1 to ES10 landed, and chose (a) for
+ES-D6 and ES-D7. Effektive has no users yet, so the breaking changes below need
+no migration path; the fixtures, examples and tests migrate in this unit.
+
+Type. `Duration` is a builtin type word. It is a builtin nominal type over
+`int`, with the identity `type:effect/Duration`, defined like the builtin error
+identities (`types.ts`, `resolve.ts`, `validate/world.ts`). It follows the
+existing nominal rules: a `Duration` fits `int`; an `int` does not fit
+`Duration`; `+` and `-` on two `Duration` values give a `Duration`; comparisons
+work. A new rule adds scaling: `Duration * int`, `int * Duration` and
+`Duration / int` give a `Duration`. Division rounds toward zero, as `int`
+division does. Every other operator widens to the base type, as for any nominal.
+
+Literals. A duration literal (`5s`) has the type `Duration`. Lowering wraps the
+millisecond value in the existing `nominal` IR node, so the IR gains no kind and
+the validator checks it like any nominal construction. A bare `int` literal
+never becomes a `Duration`. Source code has no `Duration(...)` constructor
+call; `n * 1ms` converts a runtime `int`.
+
+Emission. A `Duration` is a plain number of milliseconds at run time. The
+emitted type is a branded number, as other numeric nominals emit, so Effect
+APIs that take a millisecond number accept it. Effect's `Duration` module stays
+hidden.
+
+Builtins that change from `int` to `Duration`:
+
+- `timeout` and `sleep` take a `Duration`.
+- `scheduleSpaced(delay)` and `scheduleExponential(base, factor?)` take a
+  `Duration`. Their output type becomes `Duration`.
+- `debounceStream(stream, delay)` takes a `Duration` literal. `throttleStream`
+  options rename `durationMs` to `duration`, a `Duration` literal.
+- `retrySchedule` callbacks return `Option<Duration>`. The builtin alias
+  `DelayMs` is removed.
+- `scheduleFromStep` decisions rename `delayMillis` to `delay: Duration`.
+  `ScheduleInput` fields `elapsed` and `elapsedSincePrevious` become `Duration`.
+  `start` and `now` are clock instants, not durations, and stay `int`.
+  `ScheduleMetadata` renames `durationMillis` to `duration: Duration`.
+
+The implementer lists every other millisecond site found before changing it.
+Fixtures, examples, tests and `docs/language-rules.md` migrate in the same unit.
+The golden outputs change only where the source changed.
+
+Verification: `timeout(job, 5)` and `scheduleSpaced(retries)` give a type
+diagnostic; `n * 1s` and `1s + 500ms` type as `Duration`; `5s * 2.5` widens and
+does not fit `Duration`; a `Duration` passes where an `int` is expected; each
+renamed field; forged IR for a `Duration` literal and a scaling operation; all
+application gates and runtime tests pass after migration.
+
 ## ES2: `timeout` and `sleep` (items 1 and 2), and IR version 7
 
 `timeout(job, durationMs)` takes a zero-argument function and an `int`. It runs
@@ -356,6 +406,9 @@ table (mark the done items). Move this plan to `docs/archive/plans/` and update
 the registry.
 
 ## Order and gates
+
+ES1b runs after ES10 and before ES11, because the user changed ES-D1 after the
+other units landed.
 
 ES1 comes first. ES2 comes next, because it bumps the IR version. ES3 comes
 before ES4, because ES4 reuses the ES3 option checks. ES5 comes before ES6,
