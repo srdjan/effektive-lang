@@ -814,6 +814,7 @@ export class ExprEmitter implements ExprCore {
       case "buffer-stream":
         return streamStructural(this, e, kid);
       case "schedule-spaced":
+      case "schedule-exponential":
       case "schedule-map":
       case "schedule-max":
       case "schedule-min":

@@ -62,6 +62,7 @@ export type OperandCallKind =
   | "take-until-stream"
   | "sink-for-each"
   | "schedule-recurs"
+  | "schedule-jittered"
   | "schedule-concat"
   | "merge-streams"
   | "zip-streams"
@@ -135,6 +136,10 @@ export const OPERAND_CALLS: {
   "schedule-recurs": {
     callee: method("Schedule", "recurs"),
     operands: (e) => [[e.times, "value"]],
+  },
+  "schedule-jittered": {
+    callee: method("Schedule", "jittered"),
+    operands: (e) => [[e.schedule, "value"]],
   },
   "schedule-concat": {
     callee: method("Schedule", "concat"),

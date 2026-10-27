@@ -15,6 +15,7 @@ import type { ExprCore } from "./context.ts";
 
 type ScheduleStructuralKind =
   | "schedule-spaced"
+  | "schedule-exponential"
   | "schedule-map"
   | "schedule-max"
   | "schedule-min"
@@ -34,6 +35,21 @@ export function scheduleStructural(
           callArguments([kid(e.delayMillis)]),
         ])]),
       ]);
+    case "schedule-exponential": {
+      const schedule = c.scope.effect("Schedule");
+      const effect = c.scope.effect("Effect");
+      const duration = c.scope.effect("Duration");
+      const ms = c.scope.temp();
+      const delay = c.scope.temp();
+      // A negative base is a defect when the schedule first steps.
+      return emitted([
+        `((${ms}: number) => ${schedule}.map(${schedule}.exponential(${ms}`,
+        ...(e.factor === null ? [] : [", ", at(kid(e.factor), PREC.yield)]),
+        `), (${delay}) => ${ms} < 0 ? ${effect}.die(new RangeError("negative duration")) : ${effect}.succeed(${duration}.toMillis(${delay}.output))))(`,
+        at(kid(e.baseMs), PREC.yield),
+        ")",
+      ]);
+    }
     case "schedule-map": {
       const schedule = c.scope.effect("Schedule");
       const duration = c.scope.effect("Duration");

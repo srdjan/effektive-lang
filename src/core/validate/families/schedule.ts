@@ -1,5 +1,5 @@
 // Validation of the Schedule builtins: scheduleRecurs, scheduleSpaced, scheduleFromStep,
-// scheduleMap, scheduleMax, scheduleMin, and scheduleConcat.
+// scheduleExponential, scheduleJittered, scheduleMap, scheduleMax, scheduleMin, and scheduleConcat.
 
 import type { Expr, Type } from "../../ir.ts";
 import { AREA } from "../report.ts";
@@ -12,6 +12,7 @@ import {
   isUnknown,
   members,
   NUMBER,
+  show,
   unfold,
   unionOf,
 } from "../typing.ts";
@@ -85,6 +86,58 @@ export function simpleSchedule(
     input: { kind: "primitive", name: "unknown" },
     effects: { failures: [], requirements: [] },
   }, combine([value]));
+}
+
+export function scheduleExponential(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "schedule-exponential" }>,
+  path: string,
+): Comp {
+  const base = c.check(e.baseMs, `${path}.baseMs`);
+  const factor = e.factor === null
+    ? undefined
+    : c.check(e.factor, `${path}.factor`);
+  if (!fits(c.env, base.type, INT)) {
+    c.add(
+      AREA.types,
+      `${path}.baseMs`,
+      `scheduleExponential needs an int base, found ${show(base.type)}`,
+      e.baseMs.span,
+    );
+  }
+  if (factor !== undefined && !fits(c.env, factor.type, NUMBER)) {
+    c.add(
+      AREA.types,
+      `${path}.factor`,
+      `scheduleExponential needs a number factor, found ${show(factor.type)}`,
+      e.span,
+    );
+  }
+  return derivedResult({
+    kind: "schedule",
+    output: INT,
+    input: { kind: "primitive", name: "unknown" },
+    effects: { failures: [], requirements: [] },
+  }, combine(factor === undefined ? [base] : [base, factor]));
+}
+
+export function scheduleJittered(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "schedule-jittered" }>,
+  path: string,
+): Comp {
+  const schedule = c.check(e.schedule, `${path}.schedule`);
+  const policy = unfold(c.env, schedule.type);
+  if (policy.kind !== "schedule") {
+    c.add(
+      AREA.types,
+      `${path}.schedule`,
+      `scheduleJittered needs a Schedule, found ${show(schedule.type)}`,
+      e.schedule.span,
+    );
+    return c.poison();
+  }
+  return derivedResult(policy, combine([schedule]));
 }
 
 export function scheduleFromStep(

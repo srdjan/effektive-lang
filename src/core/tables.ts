@@ -214,6 +214,8 @@ export type NodeFact =
   | { readonly kind: "schedule-from-step" }
   | { readonly kind: "schedule-recurs" }
   | { readonly kind: "schedule-spaced" }
+  | { readonly kind: "schedule-exponential"; readonly factor: boolean }
+  | { readonly kind: "schedule-jittered" }
   | { readonly kind: "schedule-map" }
   | { readonly kind: "schedule-max" | "schedule-min" | "schedule-concat" }
   | { readonly kind: "map-groups"; readonly bufferSize: number | undefined }

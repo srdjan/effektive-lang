@@ -81,6 +81,8 @@ const PRELUDE = {
   scheduleFromStep: { shadowable: true },
   scheduleRecurs: { shadowable: true },
   scheduleSpaced: { shadowable: true },
+  scheduleExponential: { shadowable: true },
+  scheduleJittered: { shadowable: true },
   scheduleMap: { shadowable: true },
   scheduleMax: { shadowable: true },
   scheduleMin: { shadowable: true },

@@ -1,9 +1,23 @@
 // Validation of the effect builtins: retry, timeout, sleep, retrySchedule, defer, run, and race.
 
-import { type Expr, TIMEOUT_ERROR_ID } from "../../ir.ts";
+import { type Expr, TIMEOUT_ERROR_ID, type Type } from "../../ir.ts";
 import { AREA } from "../report.ts";
-import { combine, invocationOf, isQuiet, unionEffects } from "../sets.ts";
-import { asFunction, fits, INT, show, unfold, UNIT } from "../typing.ts";
+import {
+  type Active,
+  combine,
+  invocationOf,
+  isQuiet,
+  unionEffects,
+} from "../sets.ts";
+import {
+  asFunction,
+  BOOLEAN,
+  fits,
+  INT,
+  show,
+  unfold,
+  UNIT,
+} from "../typing.ts";
 import {
   type Comp,
   derivedResult,
@@ -127,6 +141,13 @@ export function retrySchedule(
   );
 }
 
+const RETRY_KEYS: ReadonlySet<string> = new Set([
+  "times",
+  "schedule",
+  "while",
+  "until",
+]);
+
 export function retryWithSchedule(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "retry-with-schedule" }>,
@@ -135,35 +156,88 @@ export function retryWithSchedule(
   const job = c.check(e.job, `${path}.job`);
   const options = c.check(e.options, `${path}.options`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "retry");
-  const shape = unfold(c.env, options.type);
-  const fields = shape.kind === "record" ? shape.fields : [];
-  const policy = fields.length === 1 && fields[0].name === "schedule" &&
-      !fields[0].optional
-    ? unfold(c.env, fields[0].type)
-    : undefined;
-  if (policy?.kind !== "retry-schedule") {
-    c.add(
-      AREA.control,
-      `${path}.options`,
-      "retry needs a schedule option",
-      e.options.span,
-    );
-  } else if (fn !== undefined) {
-    for (const failure of fn.effects.failures) {
-      if (!fits(c.env, { kind: "named", id: failure }, policy.error)) {
-        c.add(
-          AREA.types,
-          `${path}.options`,
-          `retry schedule does not accept ${failure}`,
-          e.options.span,
-        );
-      }
+  const failures = fn?.effects.failures ?? [];
+  const extras: Active[] = [];
+  const bad = (field: string, what: string): void =>
+    c.add(AREA.control, field, what, e.options.span);
+  if (e.options.kind !== "record") {
+    bad(`${path}.options`, "retry needs an options record");
+  } else {
+    const shape = unfold(c.env, options.type);
+    const typeOf = (name: string): Type | undefined =>
+      shape.kind === "record"
+        ? shape.fields.find((f) => f.name === name)?.type
+        : undefined;
+    if (e.options.fields.length === 0) {
+      bad(`${path}.options`, "retry needs at least one option");
     }
+    const seen = new Set<string>();
+    e.options.fields.forEach((field, i) => {
+      const at = `${path}.options.fields[${i}]`;
+      if (!RETRY_KEYS.has(field.name)) {
+        bad(at, `retry has no option ${field.name}`);
+        return;
+      }
+      if (seen.has(field.name)) {
+        bad(at, `retry option ${field.name} appears twice`);
+        return;
+      }
+      seen.add(field.name);
+      const type = typeOf(field.name);
+      if (field.name === "times") {
+        const v = field.value;
+        if (
+          v.kind !== "literal" || typeof v.value !== "number" ||
+          !Number.isSafeInteger(v.value) || v.value < 0
+        ) {
+          bad(
+            `${at}.value`,
+            "retry needs a finite nonnegative safe integer literal for times",
+          );
+        }
+      } else if (field.name === "schedule") {
+        const policy = type === undefined ? undefined : unfold(c.env, type);
+        if (policy?.kind === "retry-schedule") {
+          for (const failure of failures) {
+            if (!fits(c.env, { kind: "named", id: failure }, policy.error)) {
+              bad(at, `retry schedule does not accept ${failure}`);
+            }
+          }
+        } else if (policy?.kind === "schedule") {
+          const open = unfold(c.env, policy.input);
+          if (open.kind !== "primitive" || open.name !== "unknown") {
+            for (const failure of failures) {
+              if (!fits(c.env, { kind: "named", id: failure }, policy.input)) {
+                bad(at, `retry schedule does not accept ${failure}`);
+              }
+            }
+          }
+          extras.push({ ...policy.effects, execution: "effect" });
+        } else {
+          bad(at, "retry needs a retry schedule or a schedule in schedule");
+        }
+      } else {
+        const cb = type === undefined ? undefined : asFunction(c.env, type);
+        if (cb === undefined || cb.parameters.length !== 1) {
+          bad(at, `retry ${field.name} needs a one-parameter function`);
+          return;
+        }
+        for (const failure of failures) {
+          if (!fits(c.env, { kind: "named", id: failure }, cb.parameters[0])) {
+            bad(at, `retry ${field.name} does not accept ${failure}`);
+          }
+        }
+        if (!fits(c.env, cb.result, BOOLEAN)) {
+          bad(at, `retry ${field.name} needs a boolean result`);
+        }
+        extras.push(invocationOf(cb));
+      }
+    });
   }
   if (fn === undefined) return c.poison();
   return derivedResult(
     fn.result,
-    combine([job, options, invocationOf(fn), EFFECT_ONLY]),
+    combine([job, options, invocationOf(fn), EFFECT_ONLY, ...extras]),
   );
 }
 

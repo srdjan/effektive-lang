@@ -104,6 +104,10 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return [e.times];
     case "schedule-spaced":
       return [e.delayMillis];
+    case "schedule-exponential":
+      return e.factor === null ? [e.baseMs] : [e.baseMs, e.factor];
+    case "schedule-jittered":
+      return [e.schedule];
     case "schedule-map":
       return [e.schedule, e.transform];
     case "schedule-max":

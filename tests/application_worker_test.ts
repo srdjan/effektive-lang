@@ -86,12 +86,15 @@ Deno.test("scheduled worker contracts reject lost channels and preserve the gene
   }
   const probe = checked(
     files["worker.eff"] + `
-const opaque: Schedule<Int, JobFailure> = scheduleRecurs(2)
+error Other = {}
+const opaque: Schedule<Int, Other> = scheduleRecurs(2)
 const unsupported = (): Int fails JobFailure uses Jobs.open | Jobs.execute | Jobs.close =>
   retry(() => attempt(), { schedule: opaque })`,
   );
   assert(
-    probe.diagnostics.some((d) => d.message.includes("RetrySchedule")),
+    probe.diagnostics.some((d) =>
+      d.message.includes("the retry schedule does not accept")
+    ),
     JSON.stringify(probe.diagnostics),
   );
 });

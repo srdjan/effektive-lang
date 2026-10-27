@@ -2,7 +2,7 @@
 import { isErrorId } from "../ids.ts";
 import { type ErrorId, type Result, TIMEOUT_ERROR_ID } from "../ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
-import { nameTextOf } from "../syntax_queries.ts";
+import { literalOf, nameTextOf } from "../syntax_queries.ts";
 import {
   combine,
   EFFECT_ONLY,
@@ -89,35 +89,13 @@ function retryCall(
 ): NodeInfo {
   const job = c.argInfo(args[0]);
   const fn = c.jobFunction("retry", args[0], job);
-  if (retryScheduleOption(c, args[1])) {
-    const options = c.argInfo(args[1]);
-    const shape = c.table.node(c.table.unfold(options.type));
-    const policy = shape.kind === "record"
-      ? c.table.node(c.table.unfold(shape.fields[0].type))
-      : undefined;
-    if (policy?.kind !== "retry-schedule") {
-      c.report(
-        "type-mismatch/010",
-        "`retry` needs a RetrySchedule in `schedule`",
-        args[1].node,
-      );
-    } else if (fn !== undefined) {
-      for (const failure of fn.failures) {
-        if (!c.assignable(c.table.named(failure), policy.error)) {
-          c.report(
-            "type-mismatch/003",
-            `the retry schedule does not accept ${failure}`,
-            args[1].node,
-          );
-        }
-      }
-    }
+  if (!timesOnlyOption(c, args[1])) {
+    const { info, own } = retryOptions(c, args[1], fn);
     c.fact(node, { kind: "retry-with-schedule" });
-    const invocation: EffectSet = invocationOf(fn);
     return c.finish(
       node,
       fn?.result ?? c.table.error,
-      combine([job, options, invocation, EFFECT_ONLY]),
+      combine([job, info, ...own, invocationOf(fn), EFFECT_ONLY]),
     );
   }
   const times = retryTimes(c, args[1]);
@@ -128,6 +106,196 @@ function retryCall(
     fn?.result ?? c.table.error,
     combine([job, invocation, EFFECT_ONLY]),
   );
+}
+
+const RETRY_KEYS: ReadonlySet<string> = new Set([
+  "times",
+  "schedule",
+  "while",
+  "until",
+]);
+
+/** True for a literal record of the one field `times`: the form that lowers to `retry`. */
+function timesOnlyOption(c: EffectContext, arg: Arg): boolean {
+  if (
+    arg.pre !== undefined ||
+    kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
+  ) return false;
+  const fields = c.kids(arg.node);
+  if (
+    fields.length !== 1 || kindOf(c.tree, fields[0]) !== SyntaxKind.RecordField
+  ) {
+    return false;
+  }
+  const label = c.kids(fields[0]).find((k) =>
+    kindOf(c.tree, k) === SyntaxKind.Name
+  );
+  return label !== undefined && nameTextOf(c.tree, label) === "times";
+}
+
+/**
+ * Checks a general retry options record: each key is `times`, `schedule`,
+ * `while`, or `until`, at most once. The result carries the effects that the
+ * callbacks and the schedule add to the retry.
+ */
+function retryOptions(
+  c: EffectContext,
+  arg: Arg,
+  fn: FunctionNode | undefined,
+): { readonly info: NodeInfo; readonly own: readonly EffectSet[] } {
+  if (
+    arg.pre !== undefined ||
+    kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
+  ) {
+    c.report(
+      "type-mismatch/010",
+      "`retry` needs an options record with `times`, `schedule`, `while`, or `until`",
+      arg.node,
+    );
+    return { info: c.argInfo(arg), own: [] };
+  }
+  const fields = c.kids(arg.node);
+  if (fields.length === 0) {
+    c.report(
+      "type-mismatch/010",
+      "`retry` needs at least one of `times`, `schedule`, `while`, or `until`",
+      arg.node,
+    );
+  }
+  const failures = fn?.failures ?? [];
+  const failureUnion = c.table.union(failures.map((f) => c.table.named(f)));
+  const infos: NodeInfo[] = [];
+  const own: EffectSet[] = [];
+  const types: { name: string; type: TypeRef; optional: boolean }[] = [];
+  const seen = new Set<string>();
+  for (const field of fields) {
+    const parts = c.kids(field);
+    const label = parts.find((k) => kindOf(c.tree, k) === SyntaxKind.Name);
+    const value = parts.find((k) => k !== label);
+    const name = label === undefined ? undefined : nameTextOf(c.tree, label);
+    if (
+      kindOf(c.tree, field) !== SyntaxKind.RecordField || name === undefined ||
+      value === undefined
+    ) {
+      c.report(
+        "type-mismatch/010",
+        "`retry` options need the form `name: value`",
+        field,
+      );
+      continue;
+    }
+    const valueArg: Arg = { node: value };
+    let info: NodeInfo;
+    if (name === "while" || name === "until") {
+      info = c.callback(
+        "retry",
+        valueArg,
+        [failureUnion],
+        c.table.boolean,
+        true,
+      ).info;
+      const cb = c.functionOf(info.type);
+      if (cb !== undefined) {
+        c.fits(
+          value,
+          cb.result,
+          c.table.boolean,
+          `the retry \`${name}\` result`,
+        );
+        own.push(invocationOf(cb));
+      }
+    } else if (name === "schedule") {
+      info = c.argInfo(valueArg);
+      own.push(retryPolicy(c, value, info, failures));
+    } else {
+      info = c.argInfo(valueArg);
+      if (name === "times") retryTimesValue(c, value);
+    }
+    if (!RETRY_KEYS.has(name)) {
+      c.report(
+        "type-mismatch/010",
+        `\`retry\` has no option \`${name}\`; the options are times, schedule, while, until`,
+        label!,
+      );
+    } else if (seen.has(name)) {
+      c.report(
+        "type-mismatch/010",
+        `\`retry\` option \`${name}\` appears twice`,
+        label!,
+      );
+    } else {
+      types.push({ name, type: info.type, optional: false });
+    }
+    seen.add(name);
+    infos.push(info);
+  }
+  return {
+    info: c.finish(arg.node, c.table.record(types), combine(infos)),
+    own,
+  };
+}
+
+function retryTimesValue(c: EffectContext, value: NodeId): void {
+  const literal = kindOf(c.tree, value) === SyntaxKind.LiteralExpr
+    ? literalOf(c.tree, value)
+    : undefined;
+  if (
+    typeof literal !== "number" || !Number.isSafeInteger(literal) || literal < 0
+  ) {
+    c.report(
+      "type-mismatch/010",
+      "`retry` needs `times` to be a finite nonnegative safe integer literal",
+      value,
+    );
+  }
+}
+
+/** The effects that a `schedule` option adds, after checking that it accepts every job failure. */
+function retryPolicy(
+  c: EffectContext,
+  value: NodeId,
+  info: NodeInfo,
+  failures: readonly ErrorId[],
+): EffectSet {
+  const policy = c.table.node(c.table.unfold(info.type));
+  if (policy.kind === "retry-schedule") {
+    for (const failure of failures) {
+      if (!c.assignable(c.table.named(failure), policy.error)) {
+        c.report(
+          "type-mismatch/003",
+          `the retry schedule does not accept ${failure}`,
+          value,
+        );
+      }
+    }
+    return PURE_EFFECTS;
+  }
+  if (policy.kind !== "schedule") {
+    if (!c.isError(info.type)) {
+      c.report(
+        "type-mismatch/010",
+        "`retry` needs a RetrySchedule or a Schedule in `schedule`",
+        value,
+      );
+    }
+    return PURE_EFFECTS;
+  }
+  if (c.table.unfold(policy.input) !== c.table.unknown) {
+    for (const failure of failures) {
+      if (!c.assignable(c.table.named(failure), policy.input)) {
+        c.report(
+          "type-mismatch/003",
+          `the retry schedule does not accept ${failure}`,
+          value,
+        );
+      }
+    }
+  }
+  return {
+    failures: policy.failures,
+    requirements: policy.requirements,
+    mode: "effect",
+  };
 }
 
 function retryScheduleCall(
@@ -342,26 +510,6 @@ function retryTimes(c: EffectContext, arg: Arg): number | undefined {
     PURE_EFFECTS,
   );
   return value;
-}
-
-function retryScheduleOption(c: EffectContext, arg: Arg): boolean {
-  if (
-    arg.pre !== undefined ||
-    kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
-  ) {
-    return false;
-  }
-  const fields = c.kids(arg.node);
-  if (
-    fields.length !== 1 ||
-    kindOf(c.tree, fields[0]) !== SyntaxKind.RecordField
-  ) {
-    return false;
-  }
-  const name = c.kids(fields[0]).find((k) =>
-    kindOf(c.tree, k) === SyntaxKind.Name
-  );
-  return name !== undefined && nameTextOf(c.tree, name) === "schedule";
 }
 
 /** The rows of the Effect builtins. */

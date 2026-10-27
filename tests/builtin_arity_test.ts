@@ -106,6 +106,12 @@ const ARITY_ROWS: readonly ArityRow[] = [
   ...fixed("scheduleFromStep", 2),
   ...fixed("scheduleRecurs", 1),
   ...fixed("scheduleSpaced", 1),
+  ...bounded(
+    "scheduleExponential",
+    1,
+    "`scheduleExponential` takes a base and an optional factor",
+  ),
+  ...fixed("scheduleJittered", 1),
   ...fixed("scheduleMap", 2),
   ...fixed("scheduleMax", 2),
   ...fixed("scheduleMin", 2),

@@ -114,7 +114,7 @@ Deno.test("hard keywords are tokens; contextual keywords stay identifiers", () =
   ]);
 });
 
-Deno.test("reserved words are reported, except void which the parser checks", () => {
+Deno.test("reserved words are reported, except void and while which the parser checks", () => {
   assertEquals(codes("class"), ["syntax/007"]);
   assertEquals(codes("a this b"), ["syntax/007"]);
   assertEquals(
@@ -122,6 +122,7 @@ Deno.test("reserved words are reported, except void which the parser checks", ()
     Array(5).fill("syntax/007"),
   );
   assertEquals(codes("void"), []);
+  assertEquals(codes("while"), []);
   assertEquals(codes("classy thisx"), []);
 });
 

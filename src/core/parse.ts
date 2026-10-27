@@ -387,6 +387,15 @@ class Parser {
     return isWord(this.lexed, p, word);
   }
 
+  /** `void` or `while` at `p`: the reserved words that the lexer leaves to the parser. */
+  private parserCheckedWordAt(p: number): "void" | "while" | undefined {
+    return this.isWordAt(p, "void")
+      ? "void"
+      : this.isWordAt(p, "while")
+      ? "while"
+      : undefined;
+  }
+
   /** True when `fails` or `uses` starts a clause here, possibly after newlines. */
   private clauseAhead(word: string): boolean {
     const p = this.laPos();
@@ -972,10 +981,11 @@ class Parser {
     this.begin();
     const k = this.kind();
     if (k === TokenKind.Ident) {
-      if (role === "binding" && this.isWordAt(this.pos, "void")) {
+      const word = this.parserCheckedWordAt(this.pos);
+      if (role === "binding" && word !== undefined) {
         this.report(
           "syntax/007",
-          "`void` is a reserved word and cannot be a name",
+          `\`${word}\` is a reserved word and cannot be a name`,
           this.starts[this.pos],
           this.ends[this.pos],
         );
@@ -1363,10 +1373,11 @@ class Parser {
           return;
         }
         this.begin();
-        if (this.isWordAt(this.pos, "void")) {
+        const word = this.parserCheckedWordAt(this.pos);
+        if (word !== undefined) {
           this.report(
             "syntax/007",
-            "`void` is a reserved word and cannot be a name",
+            `\`${word}\` is a reserved word and cannot be a name`,
             this.starts[this.pos],
             this.ends[this.pos],
           );

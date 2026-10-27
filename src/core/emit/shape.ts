@@ -191,6 +191,11 @@ const ROWS = {
   },
   "schedule-recurs": { children: (e) => [e.times], leaf: "structural" },
   "schedule-spaced": { children: (e) => [e.delayMillis], leaf: "structural" },
+  "schedule-exponential": {
+    children: (e) => e.factor === null ? [e.baseMs] : [e.baseMs, e.factor],
+    leaf: "structural",
+  },
+  "schedule-jittered": { children: (e) => [e.schedule], leaf: "structural" },
   "schedule-map": {
     children: (e) => [e.schedule, e.transform],
     leaf: "structural",

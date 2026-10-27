@@ -427,6 +427,15 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
     kind: "schedule-spaced",
     delayMillis: arg(0),
   }),
+  "schedule-exponential": (arg, fact) => ({
+    kind: "schedule-exponential",
+    baseMs: arg(0),
+    factor: fact.factor ? arg(1) : null,
+  }),
+  "schedule-jittered": (arg) => ({
+    kind: "schedule-jittered",
+    schedule: arg(0),
+  }),
   "schedule-map": (arg) => ({
     kind: "schedule-map",
     schedule: arg(0),

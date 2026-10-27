@@ -106,7 +106,9 @@ import { fiberOperation, withFiber } from "./families/fiber.ts";
 import { layer, mergeLayers, provide } from "./families/layer.ts";
 import {
   scheduleCompose,
+  scheduleExponential,
   scheduleFromStep,
+  scheduleJittered,
   scheduleMap,
   simpleSchedule,
 } from "./families/schedule.ts";
@@ -805,6 +807,10 @@ export class BodyValidator implements ValidatorCore {
       case "schedule-recurs":
       case "schedule-spaced":
         return simpleSchedule(this, e, path);
+      case "schedule-exponential":
+        return scheduleExponential(this, e, path);
+      case "schedule-jittered":
+        return scheduleJittered(this, e, path);
       case "schedule-map":
         return scheduleMap(this, e, path);
       case "schedule-max":

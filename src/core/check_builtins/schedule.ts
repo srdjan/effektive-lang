@@ -28,6 +28,45 @@ function simpleScheduleCall(
   );
 }
 
+function scheduleExponentialCall(
+  c: BuiltinContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const base = c.argInfo(args[0], c.table.int);
+  c.fits(args[0].node, base.type, c.table.int, "the exponential base");
+  const infos = [base];
+  if (args[1] !== undefined) {
+    const factor = c.argInfo(args[1], c.table.number);
+    c.fits(args[1].node, factor.type, c.table.number, "the exponential factor");
+    infos.push(factor);
+  }
+  return c.finish(
+    node,
+    c.table.schedule(c.table.int, c.table.unknown, [], []),
+    combine(infos),
+  );
+}
+
+function scheduleJitteredCall(
+  c: BuiltinContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const schedule = c.argInfo(args[0]);
+  if (c.table.node(c.table.unfold(schedule.type)).kind !== "schedule") {
+    if (!c.isError(schedule.type)) {
+      c.report(
+        "type-mismatch/010",
+        "`scheduleJittered` needs a Schedule",
+        args[0].node,
+      );
+    }
+    return c.finish(node, c.table.error, combine([schedule]));
+  }
+  return c.finish(node, schedule.type, combine([schedule]));
+}
+
 function scheduleFromStepCall(
   c: BuiltinContext,
   node: NodeId,
@@ -204,6 +243,23 @@ export const SCHEDULE_ROWS = {
   scheduleSpaced: {
     prologue: direct(1, "pure", { fact: { kind: "schedule-spaced" } }),
     handle: (c, node, name, args) => simpleScheduleCall(c, node, args, name),
+  },
+  scheduleExponential: {
+    prologue: {
+      arity: (_name, args) => args.length === 2 ? 2 : 1,
+      bail: "pure",
+      pipeline: "direct",
+      usage: "`scheduleExponential` takes a base and an optional factor",
+      fact: (_c, _name, args) => ({
+        kind: "schedule-exponential",
+        factor: args.length === 2,
+      }),
+    },
+    handle: (c, node, _name, args) => scheduleExponentialCall(c, node, args),
+  },
+  scheduleJittered: {
+    prologue: direct(1, "pure", { fact: { kind: "schedule-jittered" } }),
+    handle: (c, node, _name, args) => scheduleJitteredCall(c, node, args),
   },
   scheduleMap: {
     prologue: direct(2, "pure", { fact: { kind: "schedule-map" } }),

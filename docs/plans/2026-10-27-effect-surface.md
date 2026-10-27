@@ -44,7 +44,9 @@ checked these facts in its `dist/*.d.ts` files:
   also when the record holds a `schedule`.
 - `Schedule.exponential` returns `Schedule<Duration>`. `Schedule.jittered` is a
   combinator that keeps `<O,I,E,R>`. `Schedule` has no `while` or `until`.
-- `Schedule.min` recurs while all schedules recur and uses the shorter delay.
+- `Schedule.max` recurs while all schedules recur. `Schedule.min` recurs while
+  any schedule recurs and uses the shorter delay. The first version of this plan
+  stated the `min` rule incorrectly; the ES3 runtime test found the error.
 - `SynchronizedRef<A>` does not extend `Ref<A>`. It holds a backing `Ref` and a
   `Semaphore`. `updateEffect` keeps the old value when the callback fails.
 - `Effect.timeout` fails with `Cause.TimeoutError`, after the interrupted job
@@ -177,7 +179,8 @@ New Schedule operations:
 
 Only `scheduleMax` limits an exponential schedule by count, for example
 `scheduleMax(scheduleExponential(100ms), scheduleRecurs(5))`. `scheduleMin`
-would take the zero delay of `scheduleRecurs` and remove the backoff.
+does not stop by count, and it takes the zero delay of `scheduleRecurs` while
+both recur.
 
 IR: new kinds `schedule-exponential` and `schedule-jittered`.
 Verification: each key alone and in combination, unknown and duplicate keys, a

@@ -104,9 +104,12 @@ export const KEYWORDS: ReadonlyMap<string, TokenKind> = new Map([
 /**
  * Words that a strict ES module reserves. An identifier with one of these
  * spellings is a `syntax` diagnostic, so the emitter never renames a source
- * identifier. `void` is also on the list but stays valid as a type name: the
- * lexer skips it and the parser checks it in the other positions.
+ * identifier. `void` is also on the list but stays valid as a type name, and
+ * `while` stays valid as a record label (the `retry` option): the lexer skips
+ * both and the parser checks them in the other positions.
  */
+const PARSER_CHECKED_WORDS: ReadonlySet<string> = new Set(["void", "while"]);
+
 const RESERVED_WORDS: ReadonlySet<string> = new Set([
   "break",
   "case",
@@ -516,7 +519,7 @@ export function lex(source: string, text: string): Lexed {
       if (keyword !== undefined) {
         push(keyword, i, j);
       } else {
-        if (word !== "void" && RESERVED_WORDS.has(word)) {
+        if (!PARSER_CHECKED_WORDS.has(word) && RESERVED_WORDS.has(word)) {
           report(
             "syntax/007",
             `\`${word}\` is a reserved word and cannot be a name`,
