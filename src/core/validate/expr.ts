@@ -106,6 +106,7 @@ import {
   defer,
   race,
   raceAll,
+  randomInt,
   repeat,
   retry,
   retrySchedule,
@@ -907,6 +908,10 @@ export class BodyValidator implements ValidatorCore {
         return repeat(this, e, path);
       case "sleep":
         return sleep(this, e, path);
+      case "random":
+        return derivedResult(NUMBER, EFFECT_ONLY);
+      case "random-int":
+        return randomInt(this, e, path);
       case "now":
         return derivedResult({ kind: "named", id: INSTANT_ID }, EFFECT_ONLY);
       case "race-all":

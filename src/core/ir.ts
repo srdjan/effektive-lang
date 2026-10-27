@@ -267,6 +267,8 @@ export type Expr =
   | Node<{ kind: "repeat"; job: Expr; options: Expr | null }>
   | Node<{ kind: "sleep"; durationMs: Expr }>
   | Node<{ kind: "now" }>
+  | Node<{ kind: "random" }>
+  | Node<{ kind: "random-int"; min: Expr; max: Expr }>
   | Node<{ kind: "uninterruptible"; job: Expr }>
   | Node<{ kind: "provide"; provider: Expr; job: Expr }>
   | Node<{

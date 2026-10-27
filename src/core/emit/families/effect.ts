@@ -25,6 +25,8 @@ type EffectLeafKind =
   | "repeat"
   | "sleep"
   | "now"
+  | "random"
+  | "random-int"
   | "uninterruptible";
 
 export function effectStructural(
@@ -116,8 +118,25 @@ export function effectLeaf(
   if (e.kind === "now") {
     return emitted(`${c.scope.effect("Clock")}.currentTimeMillis`);
   }
+  // `random` reads the `Random` value and needs no `Effect` import.
+  if (e.kind === "random") {
+    return emitted(`${c.scope.effect("Random")}.next`);
+  }
   const effect = c.scope.effect("Effect");
   switch (e.kind) {
+    case "random-int": {
+      // The bound check is a defect, like the negative duration.
+      const random = c.scope.effect("Random");
+      const min = c.scope.temp();
+      const max = c.scope.temp();
+      return emitted([
+        `${effect}.suspend(() => { const ${min}: number = `,
+        free(children[0]),
+        `; const ${max}: number = `,
+        free(children[1]),
+        `; if (!(${max} > ${min})) throw new RangeError("randomInt needs max greater than min"); return ${random}.nextIntBetween(${min}, ${max}, { halfOpen: true }); })`,
+      ]);
+    }
     case "run":
       return children[0];
     case "retry": {

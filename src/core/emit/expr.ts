@@ -1744,6 +1744,8 @@ export class ExprEmitter implements ExprCore {
       case "repeat":
       case "sleep":
       case "now":
+      case "random":
+      case "random-int":
       case "uninterruptible":
       case "run":
         return effectLeaf(this, e, children);

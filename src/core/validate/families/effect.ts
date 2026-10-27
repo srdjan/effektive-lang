@@ -114,6 +114,32 @@ export function sleep(
   return derivedResult(UNIT, combine([duration, EFFECT_ONLY]));
 }
 
+export function randomInt(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "random-int" }>,
+  path: string,
+): Comp {
+  const min = c.check(e.min, `${path}.min`);
+  const max = c.check(e.max, `${path}.max`);
+  for (
+    const [name, operand, child] of [["min", min, e.min], [
+      "max",
+      max,
+      e.max,
+    ]] as const
+  ) {
+    if (!fits(c.env, operand.type, INT)) {
+      c.add(
+        AREA.types,
+        `${path}.${name}`,
+        `randomInt needs an int ${name}, found ${show(operand.type)}`,
+        child.span,
+      );
+    }
+  }
+  return derivedResult(INT, combine([min, max, EFFECT_ONLY]));
+}
+
 export function retrySchedule(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "retry-schedule" }>,

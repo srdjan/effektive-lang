@@ -12,6 +12,7 @@ export function exprChildren(e: Expr): readonly Expr[] {
     case "take-sink":
     case "make-scope":
     case "now":
+    case "random":
     case "null":
     case "literal":
     case "reference":
@@ -135,6 +136,8 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return [e.jobs];
     case "sleep":
       return [e.durationMs];
+    case "random-int":
+      return [e.min, e.max];
     case "timeout":
       return [e.job, e.durationMs];
     case "get-ref":

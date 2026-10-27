@@ -284,6 +284,8 @@ const ROWS = {
   },
   sleep: { children: (e) => [e.durationMs], leaf: "leaf" },
   now: { children: () => [], leaf: "leaf" },
+  random: { children: () => [], leaf: "leaf" },
+  "random-int": { children: (e) => [e.min, e.max], leaf: "leaf" },
   uninterruptible: {
     children: () => [],
     deferred: (e) => [e.job],

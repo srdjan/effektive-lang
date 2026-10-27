@@ -153,6 +153,8 @@ export type NodeFact =
   | { readonly kind: "repeat"; readonly options: boolean }
   | { readonly kind: "sleep" }
   | { readonly kind: "now" }
+  | { readonly kind: "random" }
+  | { readonly kind: "random-int" }
   | { readonly kind: "uninterruptible" }
   | { readonly kind: "run" }
   | { readonly kind: "scoped" | "fork-scoped" }

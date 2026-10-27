@@ -488,6 +488,24 @@ function sleepCall(
   return c.finish(node, c.table.unit, combine([duration, EFFECT_ONLY]));
 }
 
+function randomIntCall(
+  c: EffectContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const infos = args.map((arg, index) => {
+    const info = c.argInfo(arg, c.table.int);
+    c.fits(
+      arg.node,
+      info.type,
+      c.table.int,
+      index === 0 ? "the randomInt minimum" : "the randomInt maximum",
+    );
+    return info;
+  });
+  return c.finish(node, c.table.int, combine([...infos, EFFECT_ONLY]));
+}
+
 function durationInfo(c: EffectContext, arg: Arg, name: string): NodeInfo {
   const duration = c.table.named(DURATION_ID);
   const info = c.argInfo(arg, duration);
@@ -632,6 +650,14 @@ export const EFFECT_ROWS = {
   now: {
     prologue: direct(0, "effect", { fact: { kind: "now" } }),
     handle: (c, node) => c.finish(node, c.table.named(INSTANT_ID), EFFECT_ONLY),
+  },
+  random: {
+    prologue: direct(0, "effect", { fact: { kind: "random" } }),
+    handle: (c, node) => c.finish(node, c.table.number, EFFECT_ONLY),
+  },
+  randomInt: {
+    prologue: direct(2, "effect", { fact: { kind: "random-int" } }),
+    handle: (c, node, _name, args) => randomIntCall(c, node, args),
   },
   sleep: {
     prologue: direct(1, "effect", { fact: { kind: "sleep" } }),

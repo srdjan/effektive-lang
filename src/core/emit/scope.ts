@@ -46,6 +46,7 @@ export type EffectModule =
   | "Duration"
   | "Cause"
   | "Clock"
+  | "Random"
   | "Cron"
   | "Fiber"
   | "Deferred"

@@ -255,10 +255,12 @@ Deno.test("the table marks the 34 leaf kinds", () => {
     repeat: true,
     sleep: true,
     now: true,
+    random: true,
+    "random-int": true,
     uninterruptible: true,
   } satisfies Record<LeafKind, true>;
 
   assert(kinds.size > 5, `${kinds.size} leaf kinds reached`);
-  assertEquals(Object.keys(LEAVES).length, 40);
+  assertEquals(Object.keys(LEAVES).length, 42);
   for (const kind of kinds) assert(Object.hasOwn(LEAVES, kind), kind);
 });
