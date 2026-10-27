@@ -16,11 +16,14 @@ duration literals (ES1), which items 1 to 4 need.
 - A control operation takes a zero-argument function, as `retry` and `provide`
   do. The spec rule "These control functions require a zero-argument function"
   applies unchanged.
-- A duration is an `int` count of milliseconds. The existing `DelayMs` alias,
-  `scheduleSpaced`, `debounceStream` and `throttleStream` use the same unit.
+- A duration has the source type `Duration` (ES1b). At run time it is a number
+  of milliseconds. ES1 to ES10 first used a plain `int`; ES1b replaces it.
 - A negative duration is a runtime defect, as for `retrySchedule`.
-- No Effect module name becomes a source name or a source type word. `Exit`,
-  `Cause`, `Duration` and `SynchronizedRef` stay in the emitted TypeScript.
+- No Effect module name becomes a source name, except the type word
+  `Duration` that the user chose in ES-D1 (b). Effektive's `Duration` is a
+  number of milliseconds, not Effect's `Duration` object. `Exit`, `Cause`,
+  Effect's `Duration` module and `SynchronizedRef` stay in the emitted
+  TypeScript.
 - Each new IR kind and each new rule gets an independent validator rule, as
   [builtin-changes.md](../builtin-changes.md) requires.
 - Every new prelude name is `shadowable: true`: `timeout`, `sleep`, `repeat`,
@@ -107,51 +110,121 @@ for the existing fixtures.
 
 The user changed ES-D1 to (b) after ES1 to ES10 landed, and chose (a) for
 ES-D6 and ES-D7. Effektive has no users yet, so the breaking changes below need
-no migration path; the fixtures, examples and tests migrate in this unit.
+no migration path; the fixtures, examples and tests migrate in this unit. A
+Fable validation of the first draft found that the existing nominal rules let a
+bare `int` fit a non-sealed identity (`types.ts:1217-1221`, `ownsSealed` at
+`types.ts:828`), and that NI25 adoption already types `Duration + int` as
+`Duration` (`check_binary.ts:52-68`). This section is the corrected design.
 
-Type. `Duration` is a builtin type word. It is a builtin nominal type over
-`int`, with the identity `type:effect/Duration`, defined like the builtin error
-identities (`types.ts`, `resolve.ts`, `validate/world.ts`). It follows the
-existing nominal rules: a `Duration` fits `int`; an `int` does not fit
-`Duration`; `+` and `-` on two `Duration` values give a `Duration`; comparisons
-work. A new rule adds scaling: `Duration * int`, `int * Duration` and
-`Duration / int` give a `Duration`. Division rounds toward zero, as `int`
-division does. Every other operator widens to the base type, as for any nominal.
+### Type
 
-Literals. A duration literal (`5s`) has the type `Duration`. Lowering wraps the
-millisecond value in the existing `nominal` IR node, so the IR gains no kind and
-the validator checks it like any nominal construction. A bare `int` literal
-never becomes a `Duration`. Source code has no `Duration(...)` constructor
-call; `n * 1ms` converts a runtime `int`.
+`Duration` is a builtin type word with the identity `type:effect/Duration`, an
+untagged identity over `int`. It is defined like the builtin error identities:
+`types.ts`, `resolve.ts` (`BUILTIN_TYPES`, a `plain` row in `type_lower.ts`),
+`validate/world.ts` (`aliases` and `identities`), editor completion and the
+tmLanguage type-word pattern. A user declaration named `Duration` becomes
+`declaration/002`.
 
-Emission. A `Duration` is a plain number of milliseconds at run time. The
-emitted type is a branded number, as other numeric nominals emit, so Effect
-APIs that take a millisecond number accept it. Effect's `Duration` module stays
-hidden.
+`Duration` is a closed identity. A value without a name never fits it: the
+implicit fit at `types.ts:1217-1221` and its validator mirror at
+`validate/typing.ts:270-280` exclude `type:effect/Duration`. Only a duration
+literal or a `Duration` operation produces a `Duration`. A `Duration` still
+widens to `int` where an `int` is expected (`types.ts:1211-1214`; the id is not
+sealed, so `ownsSealed` holds).
 
-Builtins that change from `int` to `Duration`:
+### Operators
+
+The checker (`check_binary.ts`) and the validator (`validate/expr.ts`, the
+`binary` rule near line 1958-2024 and the adoption at line 192) apply these
+rules to `Duration` instead of the general NI25 adoption:
+
+- `Duration + Duration` and `Duration - Duration` give `Duration`.
+  `Duration + int` and `Duration - int` are type diagnostics, because a bare
+  number has no unit.
+- `Duration * int` and `int * Duration` give `Duration`.
+- `Duration / int` gives `Duration` and truncates toward zero. Plain `int / int`
+  stays `number`.
+- `Duration / Duration` gives `number`, a ratio.
+- Comparisons between two `Duration` values give `boolean`.
+- Any other operand mix widens to the base type, as for any nominal. For
+  example `5s * 2.5` is a `number` and does not fit `Duration`.
+
+### Literals
+
+The checker must see the unit. `lex.ts` exports a predicate that tells whether a
+`Number` token text has a duration suffix. The literal typing in `check_expr.ts`
+(near lines 604-634) gives such a literal the type `Duration`. Lowering
+(`lower.ts` near 647-657) wraps its millisecond value in the existing `nominal`
+IR node, so the IR gains no kind. `debounceStream` and `throttleStream` read
+`literalOf` directly (`check_builtins/stream.ts` near 490-498 and 1065), so they
+use the same predicate and reject a bare `int` literal. A literal pattern `5s`
+in `match` (`check_expr.ts` near 1278 and 1871, `lower.ts` near 1527) is
+unverified; the implementer tests it and either supports it as `Duration` or
+reports a clear diagnostic.
+
+### Emission
+
+A `Duration` is a plain number of milliseconds at run time, and its emitted
+type is `number`, as untagged numeric identities already erase to their base
+(`emit/emit.ts:105-113`). Effect APIs accept it, because `Duration.Input`
+includes `number` (`Duration.d.ts:118`). The builtin id has no declaration, so
+these emitter sites need a case, as ES2 added for `TimeoutError`:
+
+- `emit/scope.ts` `nameOf` (near 698-700): `Duration` prints `number` in type
+  positions; `typeDoc` (`emit/types.ts:182`), the encoded doc (359-364) and
+  `schemaDoc` (441-449) use it. The schema position uses the int schema.
+- `emit/expr.ts` near 723-731: the `nominal` expression for `Duration` erases to
+  its value, instead of falling through to `Duration.make(...)`.
+- `emit/scope.ts` `resolve` (near 660-675) reaches `int` for `Duration`, so the
+  `$int` overflow guard (`emit/expr.ts:1077`, `emit/decls.ts:753`) stays on
+  `Duration` arithmetic.
+- `Duration / int` emits `Math.trunc(a / b)` inside the int guard.
+
+### Builtins that change from `int` to `Duration`
 
 - `timeout` and `sleep` take a `Duration`.
-- `scheduleSpaced(delay)` and `scheduleExponential(base, factor?)` take a
-  `Duration`. Their output type becomes `Duration`.
-- `debounceStream(stream, delay)` takes a `Duration` literal. `throttleStream`
-  options rename `durationMs` to `duration`, a `Duration` literal.
-- `retrySchedule` callbacks return `Option<Duration>`. The builtin alias
-  `DelayMs` is removed.
+- `scheduleSpaced(delay)` takes a `Duration`. Its output stays the zero-based
+  attempt count (`Schedule<int>`), as `Schedule.spaced` defines it.
+- `scheduleExponential(base, factor?)` takes a `Duration` and outputs a
+  `Duration` (the delay).
+- `debounceStream(stream, delay)` takes a `Duration` literal. The
+  `throttleStream` option `durationMs` becomes `duration`, a `Duration` literal.
+- `retrySchedule` callbacks return `Option<Duration>`. The spec wording and its
+  example alias `DelayMs` go away in ES11; `DelayMs` is not a builtin.
 - `scheduleFromStep` decisions rename `delayMillis` to `delay: Duration`.
-  `ScheduleInput` fields `elapsed` and `elapsedSincePrevious` become `Duration`.
-  `start` and `now` are clock instants, not durations, and stay `int`.
-  `ScheduleMetadata` renames `durationMillis` to `duration: Duration`.
+- `ScheduleInput` keeps `start` and `now` as `number` (clock instants).
+  `elapsed` and `elapsedSincePrevious` become `Duration`; the emitter passes
+  Effect's millisecond numbers through (`emit/families/schedule.ts:118-124`).
+- `ScheduleMetadata` renames `durationMillis` to `duration: Duration`. Effect's
+  metadata also has a `duration` field that holds a `Duration` object
+  (`Schedule.d.ts:71`); the `scheduleMap` emitter (`emit/families/schedule.ts`
+  near 59) must set `duration` to `Duration.toMillis(meta.duration)` after the
+  spread, so it overrides the object.
 
-The implementer lists every other millisecond site found before changing it.
-Fixtures, examples, tests and `docs/language-rules.md` migrate in the same unit.
-The golden outputs change only where the source changed.
+IR field names stay as they are (`durationMs`, `delayMillis`, `baseMs` in
+`ir.ts`). The IR version stays 7. Only source names change.
 
-Verification: `timeout(job, 5)` and `scheduleSpaced(retries)` give a type
-diagnostic; `n * 1s` and `1s + 500ms` type as `Duration`; `5s * 2.5` widens and
-does not fit `Duration`; a `Duration` passes where an `int` is expected; each
-renamed field; forged IR for a `Duration` literal and a scaling operation; all
-application gates and runtime tests pass after migration.
+Before changing a site, the implementer lists every other millisecond site
+found. `docs/language-rules.md` rows 18, 90, 287, 297-298, 456, 460-461, 469 and
+471 change. Fixtures, examples and tests migrate in the same unit. The golden
+outputs change only where the source changed.
+
+### Entry validation
+
+An exported function with a `Duration` parameter gets a checked entry schema
+through the int base (`validate/typing.ts:605-620`, `infer_inputs.ts:298-302`).
+The schema does not reject a negative value. A negative `Duration` reaches the
+existing runtime defect in `timeout`, `sleep` and the schedule constructors.
+
+### Verification
+
+`timeout(job, 5)`, `scheduleSpaced(retries)` and `5s + 3` give type
+diagnostics; `n * 1s`, `1s + 500ms` and `10s / 3` type as `Duration`;
+`10s / 3` runs as 3333; `5s * 2.5` does not fit `Duration`; a `Duration` passes
+where an `int` is expected; `type Duration = int` in a module is
+`declaration/002`; each renamed field; `scheduleMap` sees `duration` as
+milliseconds; forged IR for a `Duration` literal, a closed-identity fit and each
+operator rule; all application gates and runtime tests pass after migration.
 
 ## ES2: `timeout` and `sleep` (items 1 and 2), and IR version 7
 
