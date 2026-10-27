@@ -66,6 +66,12 @@ export interface LiteralField {
   readonly value: unknown;
 }
 
+/** True when a function runs as an effect or has a failure or requirement. */
+export function isEffectfulFunction(fn: FunctionNode): boolean {
+  return fn.execution !== "pure" || fn.failures.length > 0 ||
+    fn.requirements.length > 0;
+}
+
 /** Invocation effects; an unknown function contributes none during recovery. */
 export function invocationOf(fn: FunctionNode | undefined): EffectSet {
   return fn === undefined ? PURE_EFFECTS : {

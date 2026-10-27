@@ -102,6 +102,7 @@ import {
   type ConcurrencyOperation,
   type FunctionNode,
   invocationOf,
+  isEffectfulFunction,
   type LiteralField,
   type LocalUse,
 } from "./check_builtins/context.ts";
@@ -1444,11 +1445,7 @@ class BodyChecker
         }
       });
     }
-    if (
-      !allowEffects &&
-      (fn.execution !== "pure" || fn.failures.length > 0 ||
-        fn.requirements.length > 0)
-    ) {
+    if (!allowEffects && isEffectfulFunction(fn)) {
       this.report(
         "execution-mode/001",
         `the callback of \`${name}\` must be pure with empty failure and requirement sets`,

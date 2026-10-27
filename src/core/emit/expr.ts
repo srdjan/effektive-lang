@@ -1764,14 +1764,11 @@ export class ExprEmitter implements ExprCore {
       case "ensure":
         return this.ensureEffect(e);
       case "update-ref": {
-        const callback = this.functionTypeOf(e.transform.type);
-        const effectful = callback !== undefined &&
-          (callback.execution !== "pure" ||
-            callback.effects.failures.length > 0 ||
-            callback.effects.requirements.length > 0);
         return emitted([
           this.calleeText(
-            effectful ? UPDATE_REF_EFFECT : LEAF_CALLS["update-ref"],
+            this.isEffectfulFunction(e.transform.type)
+              ? UPDATE_REF_EFFECT
+              : LEAF_CALLS["update-ref"],
           ),
           callArguments(children),
         ]);

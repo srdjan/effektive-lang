@@ -23,6 +23,7 @@ import {
   type FactWriter,
   type FunctionNode,
   invocationOf,
+  isEffectfulFunction,
   type LiteralField,
   type SyntaxView,
 } from "./context.ts";
@@ -414,10 +415,7 @@ function retryScheduleCall(
     c.table.option(c.table.named(DURATION_ID)),
     "the retry delay",
   );
-  if (
-    fn.execution !== "pure" || fn.failures.length > 0 ||
-    fn.requirements.length > 0
-  ) {
+  if (isEffectfulFunction(fn)) {
     c.report(
       "execution-mode/001",
       "the retry schedule callback must be pure",

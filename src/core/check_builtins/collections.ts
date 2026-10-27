@@ -5,11 +5,12 @@ import { combine, type NodeInfo } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
 import { functionTypeToIr } from "../type_ir.ts";
 import { showType } from "../type_show.ts";
-import type {
-  Arg,
-  BuiltinContext,
-  ConcurrencyOperation,
-  FactWriter,
+import {
+  type Arg,
+  type BuiltinContext,
+  type ConcurrencyOperation,
+  type FactWriter,
+  isEffectfulFunction,
 } from "./context.ts";
 import {
   optionalLast,
@@ -501,8 +502,7 @@ function callbackFunction(
   const fn = c.functionOf(callback.type);
   const failures = fn?.failures ?? [];
   const requirements = fn?.requirements ?? [];
-  const effectful = fn !== undefined &&
-    (fn.execution !== "pure" || failures.length > 0 || requirements.length > 0);
+  const effectful = fn !== undefined && isEffectfulFunction(fn);
   const execution = effectful ? "effect" : "pure";
   return c.table.function({
     execution,
