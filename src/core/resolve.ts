@@ -53,6 +53,7 @@ const PRELUDE = {
   timeout: { shadowable: true },
   sleep: { shadowable: true },
   now: { shadowable: true },
+  log: { shadowable: true },
   random: { shadowable: true },
   randomInt: { shadowable: true },
   uninterruptible: { shadowable: true },

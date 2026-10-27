@@ -27,6 +27,16 @@ export const CLOSED_UNIT_IDS: ReadonlySet<string> = new Set([
   DURATION_ID,
   INSTANT_ID,
 ]);
+/** The levels of `log`, in the order of increasing severity. The default is "info". */
+export const LOG_LEVELS = [
+  "trace",
+  "debug",
+  "info",
+  "warn",
+  "error",
+  "fatal",
+] as const;
+export type LogLevel = typeof LOG_LEVELS[number];
 export type ValueId = `value:${string}`;
 export type LocalId = `local:${string}`;
 export type Execution = "pure" | "effect";
@@ -267,6 +277,7 @@ export type Expr =
   | Node<{ kind: "repeat"; job: Expr; options: Expr | null }>
   | Node<{ kind: "sleep"; durationMs: Expr }>
   | Node<{ kind: "now" }>
+  | Node<{ kind: "log"; message: Expr; level: LogLevel; fields: Expr | null }>
   | Node<{ kind: "random" }>
   | Node<{ kind: "random-int"; min: Expr; max: Expr }>
   | Node<{ kind: "uninterruptible"; job: Expr }>

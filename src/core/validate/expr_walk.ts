@@ -136,6 +136,8 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return [e.jobs];
     case "sleep":
       return [e.durationMs];
+    case "log":
+      return e.fields === null ? [e.message] : [e.message, e.fields];
     case "random-int":
       return [e.min, e.max];
     case "timeout":

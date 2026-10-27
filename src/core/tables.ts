@@ -13,6 +13,7 @@ import type {
   Execution,
   FunctionType,
   LocalId,
+  LogLevel,
   RefinementProof,
   ServiceId,
   TypeId,
@@ -153,6 +154,7 @@ export type NodeFact =
   | { readonly kind: "repeat"; readonly options: boolean }
   | { readonly kind: "sleep" }
   | { readonly kind: "now" }
+  | { readonly kind: "log"; readonly level: LogLevel | undefined }
   | { readonly kind: "random" }
   | { readonly kind: "random-int" }
   | { readonly kind: "uninterruptible" }

@@ -196,6 +196,7 @@ type SpecialKind =
   | "error-construction"
   | "identity-construction"
   | "retry"
+  | "log"
   | "schema"
   | "with-fiber"
   | "with-resource"
@@ -1024,6 +1025,25 @@ class BodyLowerer {
             "the group capacity",
             node,
           ),
+          ...annotation,
+        };
+      }
+      case "log": {
+        // The checker proved a literal options record; `fields` is one of its values.
+        const options = args[1];
+        const fields = options === undefined
+          ? undefined
+          : options.kind === "record"
+          ? options.fields.find((f) => f.name === "fields")?.value
+          : undefined;
+        if (options !== undefined && options.kind !== "record") {
+          throw internal("log needs a literal options record");
+        }
+        return {
+          kind: "log",
+          message: arg(0),
+          level: this.required(fact.level, "the log level", node),
+          fields: fields ?? null,
           ...annotation,
         };
       }

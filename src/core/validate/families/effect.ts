@@ -3,6 +3,7 @@
 import {
   DURATION_ID,
   type Expr,
+  LOG_LEVELS,
   TIMEOUT_ERROR_ID,
   type Type,
 } from "../../ir.ts";
@@ -19,10 +20,12 @@ import {
 import {
   asFunction,
   BOOLEAN,
+  dataOnly,
   fits,
   INT,
   NEVER,
   show,
+  STRING,
   unfold,
   UNIT,
 } from "../typing.ts";
@@ -112,6 +115,59 @@ export function sleep(
     );
   }
   return derivedResult(UNIT, combine([duration, EFFECT_ONLY]));
+}
+
+export function log(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "log" }>,
+  path: string,
+): Comp {
+  const message = c.check(e.message, `${path}.message`);
+  if (!fits(c.env, message.type, STRING)) {
+    c.add(
+      AREA.types,
+      `${path}.message`,
+      `log needs a string message, found ${show(message.type)}`,
+      e.message.span,
+    );
+  }
+  if (!LOG_LEVELS.some((level) => level === e.level)) {
+    c.add(
+      AREA.control,
+      `${path}.level`,
+      `log needs a level of ${LOG_LEVELS.join(", ")}, recorded ${e.level}`,
+      e.span,
+    );
+  }
+  const fields = e.fields === null
+    ? undefined
+    : c.check(e.fields, `${path}.fields`);
+  if (fields !== undefined && e.fields !== null) {
+    const record = unfold(c.env, fields.type);
+    if (record.kind !== "record") {
+      c.add(
+        AREA.types,
+        `${path}.fields`,
+        `log needs a record of fields, found ${show(fields.type)}`,
+        e.fields.span,
+      );
+    } else {
+      for (const field of record.fields) {
+        if (!dataOnly(c.env, field.type, "value")) {
+          c.add(
+            AREA.types,
+            `${path}.fields`,
+            `log field ${field.name} must be data, found ${show(field.type)}`,
+            e.fields.span,
+          );
+        }
+      }
+    }
+  }
+  return derivedResult(
+    UNIT,
+    combine([message, ...(fields === undefined ? [] : [fields]), EFFECT_ONLY]),
+  );
 }
 
 export function randomInt(

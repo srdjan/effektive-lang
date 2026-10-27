@@ -284,6 +284,10 @@ const ROWS = {
   },
   sleep: { children: (e) => [e.durationMs], leaf: "leaf" },
   now: { children: () => [], leaf: "leaf" },
+  log: {
+    children: (e) => e.fields === null ? [e.message] : [e.message, e.fields],
+    leaf: "leaf",
+  },
   random: { children: () => [], leaf: "leaf" },
   "random-int": { children: (e) => [e.min, e.max], leaf: "leaf" },
   uninterruptible: {

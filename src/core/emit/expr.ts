@@ -1744,6 +1744,7 @@ export class ExprEmitter implements ExprCore {
       case "repeat":
       case "sleep":
       case "now":
+      case "log":
       case "random":
       case "random-int":
       case "uninterruptible":

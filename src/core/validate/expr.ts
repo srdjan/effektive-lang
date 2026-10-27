@@ -104,6 +104,7 @@ import {
 } from "./families/collections.ts";
 import {
   defer,
+  log,
   race,
   raceAll,
   randomInt,
@@ -908,6 +909,8 @@ export class BodyValidator implements ValidatorCore {
         return repeat(this, e, path);
       case "sleep":
         return sleep(this, e, path);
+      case "log":
+        return log(this, e, path);
       case "random":
         return derivedResult(NUMBER, EFFECT_ONLY);
       case "random-int":

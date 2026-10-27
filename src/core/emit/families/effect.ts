@@ -1,5 +1,6 @@
 // Emission of the Effect builtins: defer, the retry forms, and run.
 
+import type { LogLevel } from "../../ir.ts";
 import {
   at,
   callArguments,
@@ -25,6 +26,7 @@ type EffectLeafKind =
   | "repeat"
   | "sleep"
   | "now"
+  | "log"
   | "random"
   | "random-int"
   | "uninterruptible";
@@ -109,6 +111,16 @@ function guardedDuration(
   ]);
 }
 
+/** The Effect `Severity` spelling of each source level. */
+const LOG_SEVERITY: Readonly<Record<LogLevel, string>> = {
+  trace: "Trace",
+  debug: "Debug",
+  info: "Info",
+  warn: "Warn",
+  error: "Error",
+  fatal: "Fatal",
+};
+
 export function effectLeaf(
   c: ExprCore,
   e: ExprOf<EffectLeafKind>,
@@ -124,6 +136,17 @@ export function effectLeaf(
   }
   const effect = c.scope.effect("Effect");
   switch (e.kind) {
+    case "log": {
+      // `annotateLogs(effect, record)` evaluates the message, then the fields, once.
+      const entry = emitted([
+        `${effect}.logWithLevel("${LOG_SEVERITY[e.level]}")`,
+        callArguments([children[0]]),
+      ]);
+      return children[1] === undefined ? entry : emitted([
+        `${effect}.annotateLogs`,
+        callArguments([entry, children[1]]),
+      ]);
+    }
     case "random-int": {
       // The bound check is a defect, like the negative duration.
       const random = c.scope.effect("Random");

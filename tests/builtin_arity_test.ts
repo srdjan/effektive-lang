@@ -74,6 +74,7 @@ const ARITY_ROWS: readonly ArityRow[] = [
   ...fixed("timeout", 2),
   ...fixed("sleep", 1),
   ...fixed("now", 0),
+  ...bounded("log", 1, "`log` takes a message and optional options"),
   ...fixed("random", 0),
   ...fixed("randomInt", 2),
   ...fixed("uninterruptible", 1),

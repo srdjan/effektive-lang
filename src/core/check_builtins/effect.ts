@@ -4,6 +4,8 @@ import {
   DURATION_ID,
   type ErrorId,
   INSTANT_ID,
+  LOG_LEVELS,
+  type LogLevel,
   type Result,
   TIMEOUT_ERROR_ID,
 } from "../ir.ts";
@@ -16,7 +18,7 @@ import {
   type NodeInfo,
   PURE_EFFECTS,
 } from "../tables.ts";
-import type { TypeRef } from "../types.ts";
+import { dataOnly, type TypeRef } from "../types.ts";
 import { showType } from "../type_show.ts";
 import {
   type Arg,
@@ -506,6 +508,141 @@ function randomIntCall(
   return c.finish(node, c.table.int, combine([...infos, EFFECT_ONLY]));
 }
 
+const LOG_KEYS: ReadonlySet<string> = new Set(["level", "fields"]);
+
+/** `log(message)` and `log(message, { level?, fields? })`: one log entry, with no failure. */
+function logCall(
+  c: EffectContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const message = c.argInfo(args[0], c.table.string);
+  c.fits(args[0].node, message.type, c.table.string, "the log message");
+  const infos: NodeInfo[] = [message];
+  let level: LogLevel = "info";
+  if (args[1] !== undefined) {
+    const options = logOptions(c, args[1]);
+    infos.push(options.info);
+    level = options.level;
+  }
+  c.fact(node, { kind: "log", level });
+  return c.finish(node, c.table.unit, combine([...infos, EFFECT_ONLY]));
+}
+
+/** Checks the literal options record of `log`: `level` and `fields`, each at most once. */
+function logOptions(
+  c: EffectContext,
+  arg: Arg,
+): { readonly info: NodeInfo; readonly level: LogLevel } {
+  let level: LogLevel = "info";
+  if (
+    arg.pre !== undefined ||
+    kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
+  ) {
+    c.report(
+      "type-mismatch/010",
+      "`log` needs an options record with `level` or `fields`",
+      arg.node,
+    );
+    return { info: c.argInfo(arg), level };
+  }
+  const fields = c.kids(arg.node);
+  if (fields.length === 0) {
+    c.report(
+      "type-mismatch/010",
+      "`log` needs at least one of `level` or `fields`",
+      arg.node,
+    );
+  }
+  const infos: NodeInfo[] = [];
+  const types: { name: string; type: TypeRef; optional: boolean }[] = [];
+  const seen = new Set<string>();
+  for (const field of fields) {
+    const parts = c.kids(field);
+    const label = parts.find((k) => kindOf(c.tree, k) === SyntaxKind.Name);
+    const value = parts.find((k) => k !== label);
+    const name = label === undefined ? undefined : nameTextOf(c.tree, label);
+    if (
+      kindOf(c.tree, field) !== SyntaxKind.RecordField || name === undefined ||
+      value === undefined
+    ) {
+      c.report(
+        "type-mismatch/010",
+        "`log` options need the form `name: value`",
+        field,
+      );
+      continue;
+    }
+    const info = c.argInfo({ node: value });
+    if (name === "level") level = logLevel(c, value) ?? level;
+    else if (name === "fields") logFields(c, value, info);
+    if (!LOG_KEYS.has(name)) {
+      c.report(
+        "type-mismatch/010",
+        `\`log\` has no option \`${name}\`; the options are level, fields`,
+        label!,
+      );
+    } else if (seen.has(name)) {
+      c.report(
+        "type-mismatch/010",
+        `\`log\` option \`${name}\` appears twice`,
+        label!,
+      );
+    } else {
+      types.push({ name, type: info.type, optional: false });
+    }
+    seen.add(name);
+    infos.push(info);
+  }
+  return {
+    info: c.finish(arg.node, c.table.record(types), combine(infos)),
+    level,
+  };
+}
+
+/** The level of a literal `level` option, or undefined after a diagnostic. */
+function logLevel(c: EffectContext, value: NodeId): LogLevel | undefined {
+  const literal = kindOf(c.tree, value) === SyntaxKind.LiteralExpr
+    ? literalOf(c.tree, value)
+    : undefined;
+  const level = LOG_LEVELS.find((candidate) => candidate === literal);
+  if (level === undefined) {
+    c.report(
+      "type-mismatch/010",
+      `\`log\` needs \`level\` to be one of the string literals ${
+        LOG_LEVELS.map((l) => `"${l}"`).join(", ")
+      }`,
+      value,
+    );
+  }
+  return level;
+}
+
+/** A `fields` option is a record literal whose field values are data. */
+function logFields(c: EffectContext, value: NodeId, info: NodeInfo): void {
+  if (kindOf(c.tree, value) !== SyntaxKind.RecordExpr) {
+    c.report(
+      "type-mismatch/010",
+      "`log` needs `fields` to be a record literal",
+      value,
+    );
+    return;
+  }
+  const record = c.table.node(c.table.unfold(info.type));
+  if (record.kind !== "record") return;
+  for (const field of record.fields) {
+    if (!dataOnly(c.table, field.type, "value", true)) {
+      c.report(
+        "type-mismatch/010",
+        `\`log\` field \`${field.name}\` must be data, but has type ${
+          showType(c.table, field.type)
+        }`,
+        value,
+      );
+    }
+  }
+}
+
 function durationInfo(c: EffectContext, arg: Arg, name: string): NodeInfo {
   const duration = c.table.named(DURATION_ID);
   const info = c.argInfo(arg, duration);
@@ -650,6 +787,16 @@ export const EFFECT_ROWS = {
   now: {
     prologue: direct(0, "effect", { fact: { kind: "now" } }),
     handle: (c, node) => c.finish(node, c.table.named(INSTANT_ID), EFFECT_ONLY),
+  },
+  log: {
+    prologue: {
+      arity: (_name, args) => args.length === 2 ? 2 : 1,
+      bail: "effect",
+      pipeline: "direct",
+      usage: "`log` takes a message and optional options",
+      bailFact: { kind: "log", level: undefined },
+    },
+    handle: (c, node, _name, args) => logCall(c, node, args),
   },
   random: {
     prologue: direct(0, "effect", { fact: { kind: "random" } }),
