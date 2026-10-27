@@ -47,7 +47,8 @@ export const DIAGNOSTIC_CODES = {
   },
   "syntax/005": {
     category: "syntax",
-    description: "A number literal is not a finite value.",
+    description:
+      "A number literal is not a finite value, or a duration literal exceeds the largest safe integer in milliseconds.",
   },
   "syntax/006": {
     category: "syntax",

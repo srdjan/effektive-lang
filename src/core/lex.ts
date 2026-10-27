@@ -262,6 +262,23 @@ for (
   ] as const
 ) SINGLE[ch.charCodeAt(0)] = kind + 1;
 
+const DURATION_UNIT_MS: Record<string, number> = {
+  ms: 1,
+  s: 1000,
+  m: 60000,
+  h: 3600000,
+};
+const DURATION = /^([0-9]+)(ms|s|m|h)$/;
+const DURATION_UNIT = /(?:ms|s|m|h)(?![A-Za-z0-9_$])/y;
+
+/** The value of a Number token's text. A duration literal such as `5s` becomes milliseconds. */
+export function numberValue(text: string): number {
+  const duration = DURATION.exec(text);
+  return duration === null
+    ? Number(text)
+    : Number(duration[1]) * DURATION_UNIT_MS[duration[2]];
+}
+
 /** Scans a number that starts at `i`. Returns its end. */
 function scanNumber(text: string, i: number, report: Report): number {
   const n = text.length;
@@ -293,14 +310,32 @@ function scanNumber(text: string, i: number, report: Report): number {
       j = k;
     }
   }
+  let duration = false;
+  if (j === intEnd) {
+    DURATION_UNIT.lastIndex = j;
+    const unit = DURATION_UNIT.exec(text);
+    if (unit !== null) {
+      j += unit[0].length;
+      duration = true;
+    }
+  }
   if (j < n && isIdentPart(text.charCodeAt(j))) {
     malformed = malformed ?? "a number cannot be followed by letters";
     while (j < n && isIdentPart(text.charCodeAt(j))) j++;
   }
   if (malformed !== undefined) {
     report("syntax/006", `malformed number: ${malformed}`, i, j);
-  } else if (!Number.isFinite(Number(text.slice(i, j)))) {
+  } else if (!Number.isFinite(numberValue(text.slice(i, j)))) {
     report("syntax/005", "number literal is not a finite value", i, j);
+  } else if (
+    duration && numberValue(text.slice(i, j)) > Number.MAX_SAFE_INTEGER
+  ) {
+    report(
+      "syntax/005",
+      "duration literal exceeds the largest safe integer in milliseconds",
+      i,
+      j,
+    );
   }
   return j;
 }

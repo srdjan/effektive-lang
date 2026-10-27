@@ -1,7 +1,7 @@
 // Syntax queries shared by indexing, checking and lowering. They depend only
 // on the lossless tree and lexer, never on checker state or inferred types.
 
-import { TokenKind } from "./lex.ts";
+import { numberValue, TokenKind } from "./lex.ts";
 import {
   childrenOf,
   decodeString,
@@ -107,7 +107,7 @@ export function literalOf(
     const text = nodeText(tree, child);
     if (kind === TokenKind.String) return decodeString(text);
     if (kind === TokenKind.Number) {
-      const value = Number(text);
+      const value = numberValue(text);
       return Number.isFinite(value) ? value : undefined;
     }
     if (kind === TokenKind.KwTrue) return true;

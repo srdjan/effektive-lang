@@ -15,6 +15,7 @@ The sections follow the language topics: core forms, modules and exports, effect
 | --- | --- | --- |
 | Raw control characters in strings | Rejected (`syntax/003`), because JSON rejects them | [lex.ts](../src/core/lex.ts) |
 | Leading zeros in numbers | `01` is rejected (`syntax/006`) | [lex.ts](../src/core/lex.ts) |
+| Duration literals | An integer followed directly by `ms`, `s`, `m`, or `h` is one number token with type `int`. Its value is in milliseconds: `5s` is `5000`. Other suffixes, and a suffix after a fraction or exponent, are `syntax/006`. A value over the largest safe integer is `syntax/005`. The emitted TypeScript holds the millisecond number | [lex.ts](../src/core/lex.ts) |
 | Union continuation | A newline before `\|` does not continue a type; a newline after `\|` does. Inside parentheses a newline is not significant, so `(int` newline `\| string)` continues | [parse.ts](../src/core/parse.ts) |
 | `fails` and `uses` on a new line | Continue a clause only when an identifier follows | [parse.ts](../src/core/parse.ts) |
 | `Some(_)` | Accepted; `_` is the binding name | [parse.ts](../src/core/parse.ts) |
