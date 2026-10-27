@@ -90,7 +90,13 @@ function retryCall(
   const job = c.argInfo(args[0]);
   const fn = c.jobFunction("retry", args[0], job);
   if (!timesOnlyOption(c, args[1])) {
-    const { info, own } = retryOptions(c, args[1], fn);
+    const failures = fn?.failures ?? [];
+    const { info, own } = callOptions(c, args[1], {
+      name: "retry",
+      inputs: failures.map((f) => ({ label: f, type: c.table.named(f) })),
+      element: c.table.union(failures.map((f) => c.table.named(f))),
+      retrySchedule: true,
+    });
     c.fact(node, { kind: "retry-with-schedule" });
     return c.finish(
       node,
@@ -133,23 +139,39 @@ function timesOnlyOption(c: EffectContext, arg: Arg): boolean {
   return label !== undefined && nameTextOf(c.tree, label) === "times";
 }
 
+/** What `callOptions` needs to know about a retry or a repeat call. */
+interface OptionsSpec {
+  /** The builtin name, used in messages. */
+  readonly name: "retry" | "repeat";
+  /** The values that a `schedule` input must accept, each with its display label. */
+  readonly inputs: readonly {
+    readonly label: string;
+    readonly type: TypeRef;
+  }[];
+  /** The one type that `while` and `until` receive. */
+  readonly element: TypeRef;
+  /** True when a RetrySchedule is allowed in `schedule`; it takes failures as input. */
+  readonly retrySchedule: boolean;
+}
+
 /**
- * Checks a general retry options record: each key is `times`, `schedule`,
- * `while`, or `until`, at most once. The result carries the effects that the
- * callbacks and the schedule add to the retry.
+ * Checks a general options record of `retry` or `repeat`: each key is `times`,
+ * `schedule`, `while`, or `until`, at most once. The result carries the effects
+ * that the callbacks and the schedule add to the call.
  */
-function retryOptions(
+function callOptions(
   c: EffectContext,
   arg: Arg,
-  fn: FunctionNode | undefined,
+  spec: OptionsSpec,
 ): { readonly info: NodeInfo; readonly own: readonly EffectSet[] } {
+  const { name: call } = spec;
   if (
     arg.pre !== undefined ||
     kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
   ) {
     c.report(
       "type-mismatch/010",
-      "`retry` needs an options record with `times`, `schedule`, `while`, or `until`",
+      `\`${call}\` needs an options record with \`times\`, \`schedule\`, \`while\`, or \`until\``,
       arg.node,
     );
     return { info: c.argInfo(arg), own: [] };
@@ -158,12 +180,10 @@ function retryOptions(
   if (fields.length === 0) {
     c.report(
       "type-mismatch/010",
-      "`retry` needs at least one of `times`, `schedule`, `while`, or `until`",
+      `\`${call}\` needs at least one of \`times\`, \`schedule\`, \`while\`, or \`until\``,
       arg.node,
     );
   }
-  const failures = fn?.failures ?? [];
-  const failureUnion = c.table.union(failures.map((f) => c.table.named(f)));
   const infos: NodeInfo[] = [];
   const own: EffectSet[] = [];
   const types: { name: string; type: TypeRef; optional: boolean }[] = [];
@@ -179,7 +199,7 @@ function retryOptions(
     ) {
       c.report(
         "type-mismatch/010",
-        "`retry` options need the form `name: value`",
+        `\`${call}\` options need the form \`name: value\``,
         field,
       );
       continue;
@@ -188,9 +208,9 @@ function retryOptions(
     let info: NodeInfo;
     if (name === "while" || name === "until") {
       info = c.callback(
-        "retry",
+        call,
         valueArg,
-        [failureUnion],
+        [spec.element],
         c.table.boolean,
         true,
       ).info;
@@ -200,27 +220,27 @@ function retryOptions(
           value,
           cb.result,
           c.table.boolean,
-          `the retry \`${name}\` result`,
+          `the ${call} \`${name}\` result`,
         );
         own.push(invocationOf(cb));
       }
     } else if (name === "schedule") {
       info = c.argInfo(valueArg);
-      own.push(retryPolicy(c, value, info, failures));
+      own.push(schedulePolicy(c, value, info, spec));
     } else {
       info = c.argInfo(valueArg);
-      if (name === "times") retryTimesValue(c, value);
+      if (name === "times") timesValue(c, value, call);
     }
     if (!RETRY_KEYS.has(name)) {
       c.report(
         "type-mismatch/010",
-        `\`retry\` has no option \`${name}\`; the options are times, schedule, while, until`,
+        `\`${call}\` has no option \`${name}\`; the options are times, schedule, while, until`,
         label!,
       );
     } else if (seen.has(name)) {
       c.report(
         "type-mismatch/010",
-        `\`retry\` option \`${name}\` appears twice`,
+        `\`${call}\` option \`${name}\` appears twice`,
         label!,
       );
     } else {
@@ -235,7 +255,7 @@ function retryOptions(
   };
 }
 
-function retryTimesValue(c: EffectContext, value: NodeId): void {
+function timesValue(c: EffectContext, value: NodeId, call: string): void {
   const literal = kindOf(c.tree, value) === SyntaxKind.LiteralExpr
     ? literalOf(c.tree, value)
     : undefined;
@@ -244,58 +264,91 @@ function retryTimesValue(c: EffectContext, value: NodeId): void {
   ) {
     c.report(
       "type-mismatch/010",
-      "`retry` needs `times` to be a finite nonnegative safe integer literal",
+      `\`${call}\` needs \`times\` to be a finite nonnegative safe integer literal`,
       value,
     );
   }
 }
 
-/** The effects that a `schedule` option adds, after checking that it accepts every job failure. */
-function retryPolicy(
+/** The effects that a `schedule` option adds, after checking that it accepts every input of the call. */
+function schedulePolicy(
   c: EffectContext,
   value: NodeId,
   info: NodeInfo,
-  failures: readonly ErrorId[],
+  spec: OptionsSpec,
 ): EffectSet {
   const policy = c.table.node(c.table.unfold(info.type));
-  if (policy.kind === "retry-schedule") {
-    for (const failure of failures) {
-      if (!c.assignable(c.table.named(failure), policy.error)) {
+  const accepts = (input: TypeRef): void => {
+    for (const { label, type } of spec.inputs) {
+      if (!c.assignable(type, input)) {
         c.report(
           "type-mismatch/003",
-          `the retry schedule does not accept ${failure}`,
+          `the ${spec.name} schedule does not accept ${label}`,
           value,
         );
       }
     }
+  };
+  if (policy.kind === "retry-schedule" && spec.retrySchedule) {
+    accepts(policy.error);
+    return PURE_EFFECTS;
+  }
+  if (policy.kind === "retry-schedule") {
+    c.report(
+      "type-mismatch/010",
+      `\`${spec.name}\` needs a Schedule in \`schedule\`; a RetrySchedule takes failures as input`,
+      value,
+    );
     return PURE_EFFECTS;
   }
   if (policy.kind !== "schedule") {
     if (!c.isError(info.type)) {
       c.report(
         "type-mismatch/010",
-        "`retry` needs a RetrySchedule or a Schedule in `schedule`",
+        spec.retrySchedule
+          ? `\`${spec.name}\` needs a RetrySchedule or a Schedule in \`schedule\``
+          : `\`${spec.name}\` needs a Schedule in \`schedule\``,
         value,
       );
     }
     return PURE_EFFECTS;
   }
-  if (c.table.unfold(policy.input) !== c.table.unknown) {
-    for (const failure of failures) {
-      if (!c.assignable(c.table.named(failure), policy.input)) {
-        c.report(
-          "type-mismatch/003",
-          `the retry schedule does not accept ${failure}`,
-          value,
-        );
-      }
-    }
-  }
+  if (c.table.unfold(policy.input) !== c.table.unknown) accepts(policy.input);
   return {
     failures: policy.failures,
     requirements: policy.requirements,
     mode: "effect",
   };
+}
+
+/** `repeat(job)` runs without end; `repeat(job, options)` returns the last success. */
+function repeatCall(
+  c: EffectContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const job = c.argInfo(args[0]);
+  const fn = c.jobFunction("repeat", args[0], job);
+  c.fact(node, { kind: "repeat", options: args.length === 2 });
+  const success = fn?.result ?? c.table.error;
+  if (args[1] === undefined) {
+    return c.finish(
+      node,
+      c.table.never,
+      combine([job, invocationOf(fn), EFFECT_ONLY]),
+    );
+  }
+  const { info, own } = callOptions(c, args[1], {
+    name: "repeat",
+    inputs: [{ label: showType(c.table, success), type: success }],
+    element: success,
+    retrySchedule: false,
+  });
+  return c.finish(
+    node,
+    success,
+    combine([job, info, ...own, invocationOf(fn), EFFECT_ONLY]),
+  );
 }
 
 function retryScheduleCall(
@@ -523,6 +576,15 @@ export const EFFECT_ROWS = {
       bailFact: { kind: "retry", times: undefined },
     }),
     handle: (c, node, _name, args) => retryCall(c, node, args),
+  },
+  repeat: {
+    prologue: {
+      arity: (_name, args) => args.length === 2 ? 2 : 1,
+      bail: "effect",
+      pipeline: "any",
+      usage: "`repeat` takes a job and optional options",
+    },
+    handle: (c, node, _name, args) => repeatCall(c, node, args),
   },
   retrySchedule: {
     prologue: piped(1, "pure", { fact: { kind: "retry-schedule" } }),

@@ -233,6 +233,7 @@ export type Expr =
   | Node<{ kind: "catch"; body: Expr; handlers: readonly Handler[] }>
   | Node<{ kind: "retry"; job: Expr; times: number }>
   | Node<{ kind: "timeout"; job: Expr; durationMs: Expr }>
+  | Node<{ kind: "repeat"; job: Expr; options: Expr | null }>
   | Node<{ kind: "sleep"; durationMs: Expr }>
   | Node<{ kind: "provide"; provider: Expr; job: Expr }>
   | Node<{

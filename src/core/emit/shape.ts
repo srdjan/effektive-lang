@@ -266,6 +266,11 @@ const ROWS = {
     deferred: (e) => [e.job],
     leaf: "leaf",
   },
+  repeat: {
+    children: () => [],
+    deferred: (e) => e.options === null ? [e.job] : [e.job, e.options],
+    leaf: "leaf",
+  },
   sleep: { children: (e) => [e.durationMs], leaf: "leaf" },
   provide: {
     children: () => [],

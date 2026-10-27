@@ -99,15 +99,16 @@ const unsupported = (): Int fails JobFailure uses Jobs.open | Jobs.execute | Job
   );
 });
 
-Deno.test("scheduled worker does not claim an opaque Schedule repetition consumer", () => {
+Deno.test("scheduled worker repeats with an opaque Schedule in the options record", () => {
   const project = checked(
     files["worker.eff"] + `
 const opaque: Schedule<Int> = scheduleRecurs(2)
-const unsupported = () => repeat(() => attempt(), opaque)`,
+const repeated = () => repeat(() => attempt(), { schedule: opaque })
+const positional = () => repeat(() => attempt(), opaque)`,
   );
-  assert(
-    project.diagnostics.some((d) =>
-      d.code === "unknown-name/001" && d.message.includes("repeat")
-    ),
+  const repeatErrors = project.diagnostics.filter((d) =>
+    d.message.includes("`repeat`")
   );
+  assertEquals(repeatErrors.length, 1, JSON.stringify(project.diagnostics));
+  assertEquals(repeatErrors[0].code, "type-mismatch/010");
 });

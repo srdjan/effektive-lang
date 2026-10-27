@@ -22,6 +22,7 @@ type EffectLeafKind =
   | "retry-with-schedule"
   | "run"
   | "timeout"
+  | "repeat"
   | "sleep";
 
 export function effectStructural(
@@ -115,6 +116,15 @@ export function effectLeaf(
         `${effect}.retry`,
         callArguments([c.suspended(e.job), c.pure(e.options)]),
       ]);
+    case "repeat": {
+      const job = c.suspended(e.job);
+      return e.options === null
+        ? emitted([`${effect}.forever`, callArguments([job])])
+        : emitted([
+          `${effect}.repeat`,
+          callArguments([job, c.pure(e.options)]),
+        ]);
+    }
     case "timeout":
       return guardedDuration(c, children[0], (ms) =>
         emitted([

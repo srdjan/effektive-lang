@@ -146,6 +146,8 @@ Deno.test("evaluatedChildren omits the deferred children of a leaf", () => {
     [{ ...A, kind: "retry", job: a, times: 1 }, [], [a]],
     [{ ...A, kind: "provide", provider: a, job: b }, [], [a, b]],
     [{ ...A, kind: "retry-with-schedule", job: a, options: b }, [], [a, b]],
+    [{ ...A, kind: "repeat", job: a, options: null }, [], [a]],
+    [{ ...A, kind: "repeat", job: a, options: b }, [], [a, b]],
     [
       {
         ...A,
@@ -249,10 +251,11 @@ Deno.test("the table marks the 34 leaf kinds", () => {
     "set-ref": true,
     "update-ref": true,
     timeout: true,
+    repeat: true,
     sleep: true,
   } satisfies Record<LeafKind, true>;
 
   assert(kinds.size > 5, `${kinds.size} leaf kinds reached`);
-  assertEquals(Object.keys(LEAVES).length, 36);
+  assertEquals(Object.keys(LEAVES).length, 37);
   for (const kind of kinds) assert(Object.hasOwn(LEAVES, kind), kind);
 });

@@ -145,6 +145,7 @@ export type NodeFact =
   | { readonly kind: "provide"; readonly provider: ValueId | undefined }
   | { readonly kind: "defer" }
   | { readonly kind: "timeout" }
+  | { readonly kind: "repeat"; readonly options: boolean }
   | { readonly kind: "sleep" }
   | { readonly kind: "run" }
   | { readonly kind: "scoped" | "fork-scoped" }

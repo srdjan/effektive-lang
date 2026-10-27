@@ -1678,6 +1678,7 @@ export class ExprEmitter implements ExprCore {
       case "retry":
       case "retry-with-schedule":
       case "timeout":
+      case "repeat":
       case "sleep":
       case "run":
         return effectLeaf(this, e, children);

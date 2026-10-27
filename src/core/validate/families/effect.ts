@@ -1,4 +1,4 @@
-// Validation of the effect builtins: retry, timeout, sleep, retrySchedule, defer, run, and race.
+// Validation of the effect builtins: retry, repeat, timeout, sleep, retrySchedule, defer, run, and race.
 
 import { type Expr, TIMEOUT_ERROR_ID, type Type } from "../../ir.ts";
 import { AREA } from "../report.ts";
@@ -14,6 +14,7 @@ import {
   BOOLEAN,
   fits,
   INT,
+  NEVER,
   show,
   unfold,
   UNIT,
@@ -22,6 +23,7 @@ import {
   type Comp,
   derivedResult,
   EFFECT_ONLY,
+  type Out,
   type ValidatorCore,
 } from "./context.ts";
 
@@ -141,12 +143,118 @@ export function retrySchedule(
   );
 }
 
-const RETRY_KEYS: ReadonlySet<string> = new Set([
+const OPTION_KEYS: ReadonlySet<string> = new Set([
   "times",
   "schedule",
   "while",
   "until",
 ]);
+
+/** What `optionExtras` needs to know about a retry or a repeat call. */
+interface OptionsSpec {
+  readonly name: "retry" | "repeat";
+  /** The values that a schedule and a predicate must accept, with display labels. */
+  readonly inputs: readonly { readonly label: string; readonly type: Type }[];
+  /** True when a RetrySchedule is allowed in `schedule`. */
+  readonly retrySchedule: boolean;
+}
+
+/**
+ * Checks the options record of `retry` or `repeat` and returns the effects that
+ * its schedule and predicates add.
+ */
+function optionExtras(
+  c: ValidatorCore,
+  options: Out,
+  expr: Expr,
+  path: string,
+  spec: OptionsSpec,
+): readonly Active[] {
+  const call = spec.name;
+  const extras: Active[] = [];
+  const bad = (field: string, what: string): void =>
+    c.add(AREA.control, field, what, expr.span);
+  const accepts = (input: Type, at: string, what: string): void => {
+    for (const { label, type } of spec.inputs) {
+      if (!fits(c.env, type, input)) {
+        bad(at, `${what} does not accept ${label}`);
+      }
+    }
+  };
+  if (expr.kind !== "record") {
+    bad(`${path}.options`, `${call} needs an options record`);
+    return extras;
+  }
+  const shape = unfold(c.env, options.type);
+  const typeOf = (name: string): Type | undefined =>
+    shape.kind === "record"
+      ? shape.fields.find((f) => f.name === name)?.type
+      : undefined;
+  if (expr.fields.length === 0) {
+    bad(`${path}.options`, `${call} needs at least one option`);
+  }
+  const seen = new Set<string>();
+  expr.fields.forEach((field, i) => {
+    const at = `${path}.options.fields[${i}]`;
+    if (!OPTION_KEYS.has(field.name)) {
+      bad(at, `${call} has no option ${field.name}`);
+      return;
+    }
+    if (seen.has(field.name)) {
+      bad(at, `${call} option ${field.name} appears twice`);
+      return;
+    }
+    seen.add(field.name);
+    const type = typeOf(field.name);
+    if (field.name === "times") {
+      const v = field.value;
+      if (
+        v.kind !== "literal" || typeof v.value !== "number" ||
+        !Number.isSafeInteger(v.value) || v.value < 0
+      ) {
+        bad(
+          `${at}.value`,
+          `${call} needs a finite nonnegative safe integer literal for times`,
+        );
+      }
+    } else if (field.name === "schedule") {
+      const policy = type === undefined ? undefined : unfold(c.env, type);
+      if (policy?.kind === "retry-schedule" && spec.retrySchedule) {
+        accepts(policy.error, at, `${call} schedule`);
+      } else if (policy?.kind === "retry-schedule") {
+        bad(
+          at,
+          `${call} needs a schedule in schedule; a retry schedule takes failures as input`,
+        );
+      } else if (policy?.kind === "schedule") {
+        const open = unfold(c.env, policy.input);
+        if (open.kind !== "primitive" || open.name !== "unknown") {
+          accepts(policy.input, at, `${call} schedule`);
+        }
+        extras.push({ ...policy.effects, execution: "effect" });
+      } else {
+        bad(
+          at,
+          spec.retrySchedule
+            ? `${call} needs a retry schedule or a schedule in schedule`
+            : `${call} needs a schedule in schedule`,
+        );
+      }
+    } else {
+      const cb = type === undefined ? undefined : asFunction(c.env, type);
+      if (cb === undefined || cb.parameters.length !== 1) {
+        bad(at, `${call} ${field.name} needs a one-parameter function`);
+        return;
+      }
+      accepts(cb.parameters[0], at, `${call} ${field.name}`);
+      if (!fits(c.env, cb.result, BOOLEAN)) {
+        bad(at, `${call} ${field.name} needs a boolean result`);
+      }
+      extras.push(invocationOf(cb));
+    }
+  });
+  return extras;
+}
 
 export function retryWithSchedule(
   c: ValidatorCore,
@@ -156,88 +264,48 @@ export function retryWithSchedule(
   const job = c.check(e.job, `${path}.job`);
   const options = c.check(e.options, `${path}.options`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "retry");
-  const failures = fn?.effects.failures ?? [];
-  const extras: Active[] = [];
-  const bad = (field: string, what: string): void =>
-    c.add(AREA.control, field, what, e.options.span);
-  if (e.options.kind !== "record") {
-    bad(`${path}.options`, "retry needs an options record");
-  } else {
-    const shape = unfold(c.env, options.type);
-    const typeOf = (name: string): Type | undefined =>
-      shape.kind === "record"
-        ? shape.fields.find((f) => f.name === name)?.type
-        : undefined;
-    if (e.options.fields.length === 0) {
-      bad(`${path}.options`, "retry needs at least one option");
-    }
-    const seen = new Set<string>();
-    e.options.fields.forEach((field, i) => {
-      const at = `${path}.options.fields[${i}]`;
-      if (!RETRY_KEYS.has(field.name)) {
-        bad(at, `retry has no option ${field.name}`);
-        return;
-      }
-      if (seen.has(field.name)) {
-        bad(at, `retry option ${field.name} appears twice`);
-        return;
-      }
-      seen.add(field.name);
-      const type = typeOf(field.name);
-      if (field.name === "times") {
-        const v = field.value;
-        if (
-          v.kind !== "literal" || typeof v.value !== "number" ||
-          !Number.isSafeInteger(v.value) || v.value < 0
-        ) {
-          bad(
-            `${at}.value`,
-            "retry needs a finite nonnegative safe integer literal for times",
-          );
-        }
-      } else if (field.name === "schedule") {
-        const policy = type === undefined ? undefined : unfold(c.env, type);
-        if (policy?.kind === "retry-schedule") {
-          for (const failure of failures) {
-            if (!fits(c.env, { kind: "named", id: failure }, policy.error)) {
-              bad(at, `retry schedule does not accept ${failure}`);
-            }
-          }
-        } else if (policy?.kind === "schedule") {
-          const open = unfold(c.env, policy.input);
-          if (open.kind !== "primitive" || open.name !== "unknown") {
-            for (const failure of failures) {
-              if (!fits(c.env, { kind: "named", id: failure }, policy.input)) {
-                bad(at, `retry schedule does not accept ${failure}`);
-              }
-            }
-          }
-          extras.push({ ...policy.effects, execution: "effect" });
-        } else {
-          bad(at, "retry needs a retry schedule or a schedule in schedule");
-        }
-      } else {
-        const cb = type === undefined ? undefined : asFunction(c.env, type);
-        if (cb === undefined || cb.parameters.length !== 1) {
-          bad(at, `retry ${field.name} needs a one-parameter function`);
-          return;
-        }
-        for (const failure of failures) {
-          if (!fits(c.env, { kind: "named", id: failure }, cb.parameters[0])) {
-            bad(at, `retry ${field.name} does not accept ${failure}`);
-          }
-        }
-        if (!fits(c.env, cb.result, BOOLEAN)) {
-          bad(at, `retry ${field.name} needs a boolean result`);
-        }
-        extras.push(invocationOf(cb));
-      }
-    });
-  }
+  const extras = optionExtras(c, options, e.options, path, {
+    name: "retry",
+    inputs: (fn?.effects.failures ?? []).map((id) => ({
+      label: id,
+      type: { kind: "named", id },
+    })),
+    retrySchedule: true,
+  });
   if (fn === undefined) return c.poison();
   return derivedResult(
     fn.result,
     combine([job, options, invocationOf(fn), EFFECT_ONLY, ...extras]),
+  );
+}
+
+export function repeat(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "repeat" }>,
+  path: string,
+): Comp {
+  const job = c.check(e.job, `${path}.job`);
+  const options = e.options === null
+    ? undefined
+    : c.check(e.options, `${path}.options`);
+  const fn = c.jobFunction(job, `${path}.job`, e.job.span, "repeat");
+  const extras = options === undefined || e.options === null || fn === undefined
+    ? []
+    : optionExtras(c, options, e.options, path, {
+      name: "repeat",
+      inputs: [{ label: show(fn.result), type: fn.result }],
+      retrySchedule: false,
+    });
+  if (fn === undefined) return c.poison();
+  return derivedResult(
+    options === undefined ? NEVER : fn.result,
+    combine([
+      job,
+      ...(options === undefined ? [] : [options]),
+      invocationOf(fn),
+      EFFECT_ONLY,
+      ...extras,
+    ]),
   );
 }
 

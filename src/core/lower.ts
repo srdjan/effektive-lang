@@ -257,6 +257,11 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
   "provide": (arg) => ({ kind: "provide", provider: arg(0), job: arg(1) }),
   "defer": (arg) => ({ kind: "defer", job: arg(0) }),
   "timeout": (arg) => ({ kind: "timeout", job: arg(0), durationMs: arg(1) }),
+  "repeat": (arg, fact) => ({
+    kind: "repeat",
+    job: arg(0),
+    options: fact.options ? arg(1) : null,
+  }),
   "sleep": (arg) => ({ kind: "sleep", durationMs: arg(0) }),
   "run": (arg) => ({ kind: "run", value: arg(0) }),
   "scoped": (arg) => ({ kind: "scoped", value: arg(0) }),

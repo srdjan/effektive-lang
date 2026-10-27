@@ -95,6 +95,7 @@ import {
 import {
   defer,
   race,
+  repeat,
   retry,
   retrySchedule,
   retryWithSchedule,
@@ -874,6 +875,8 @@ export class BodyValidator implements ValidatorCore {
         return retry(this, e, path);
       case "timeout":
         return timeout(this, e, path);
+      case "repeat":
+        return repeat(this, e, path);
       case "sleep":
         return sleep(this, e, path);
       case "provide":
