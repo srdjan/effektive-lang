@@ -59,6 +59,8 @@ checked these facts in its `dist/*.d.ts` files:
 
 These decisions change the source that users write. On 2026-10-27 the user
 chose (a) for ES-D1 to ES-D5. ES-D3 (a) still depends on the ES9 measurement.
+After ES1 to ES5 landed, the user changed ES-D1 to (b): a `Duration` type. A
+rework unit, ES1b, replaces the `int` durations of ES1 to ES3.
 
 - **ES-D1 (duration syntax).** (a) Literals `200ms`, `5s`, `2m` and `1h` that
   mean an `int` count of milliseconds (recommended). (b) A `Duration` type.
