@@ -294,6 +294,8 @@ export type NodeFact =
   | {
     readonly kind: "handler";
     readonly error: ErrorId | undefined;
+    /** True for the `Defect` arm, which names no error. */
+    readonly defect?: true;
     readonly binding: LocalId | undefined;
   };
 

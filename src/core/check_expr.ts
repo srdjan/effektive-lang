@@ -2619,6 +2619,7 @@ class BodyChecker
     const named = new Set<ErrorId>();
     const handlerInfos: NodeInfo[] = [];
     const branches = [{ node: bodyNode, type: body.type }];
+    let defectSeen = false;
     for (const handler of handlers) {
       const parts = this.kids(handler);
       const nameNodes = parts.filter((k) =>
@@ -2629,7 +2630,9 @@ class BodyChecker
       const handlerBody = parts.filter((k) =>
         kindOf(this.tree, k) !== SyntaxKind.Name
       ).pop();
-      const errorTarget = errorNode === undefined
+      const isDefect = errorNode !== undefined &&
+        nameTextOf(this.tree, errorNode) === "Defect";
+      const errorTarget = errorNode === undefined || isDefect
         ? undefined
         : this.targets.get(errorNode);
       const error = errorTarget?.kind === "error" ? errorTarget.id : undefined;
@@ -2639,6 +2642,16 @@ class BodyChecker
       const binding = bindingTarget?.kind === "local"
         ? bindingTarget.id
         : undefined;
+      if (isDefect && errorNode !== undefined) {
+        if (defectSeen) {
+          this.report(
+            "failure-contract/003",
+            "the `Defect` arm already has a handler",
+            errorNode,
+          );
+        }
+        defectSeen = true;
+      }
       if (error !== undefined && errorNode !== undefined) {
         const repeated = named.has(error);
         named.add(error);
@@ -2660,13 +2673,25 @@ class BodyChecker
           handled.add(error);
         }
       }
-      if (binding !== undefined) {
+      if (isDefect && bindingNode !== undefined) {
+        this.outcomeParameter(
+          bindingNode,
+          this.table.record([
+            { name: "message", type: this.table.string, optional: false },
+          ]),
+        );
+      } else if (binding !== undefined) {
         this.body.locals.set(
           binding,
           error === undefined ? this.table.error : this.table.named(error),
         );
       }
-      this.fact(handler, { kind: "handler", error, binding });
+      this.fact(
+        handler,
+        isDefect
+          ? { kind: "handler", error, binding, defect: true }
+          : { kind: "handler", error, binding },
+      );
       if (handlerBody === undefined) {
         handlerInfos.push(this.errorInfo(handler));
         continue;

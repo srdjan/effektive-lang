@@ -3,6 +3,11 @@
 import { type Doc, hard, join } from "./doc.ts";
 import type { Scope } from "./scope.ts";
 
+/** The message of a defect value. The Defect arm of `catch` uses the same rule. */
+export function defectMessage(value: string): string {
+  return `${value} instanceof Error ? ${value}.message : String(${value})`;
+}
+
 export function outcomeDeclaration(scope: Scope): Doc {
   const names = scope.outcome();
   const exit = scope.effect("Exit");
@@ -26,7 +31,7 @@ export function outcomeDeclaration(scope: Scope): Doc {
     "  const value = defect.value;",
     "  return {",
     '    _tag: "Defect",',
-    "    message: value instanceof Error ? value.message : String(value),",
+    `    message: ${defectMessage("value")},`,
     "  };",
     "}",
   ]);

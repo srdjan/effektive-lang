@@ -199,6 +199,7 @@ const TARGET_NAMES: ReadonlySet<string> = new Set([
   "SchemaError",
   "SchemaIssue",
   "TimeoutError",
+  "Defect",
   "ReadonlyArray",
   "any",
   "bigint",
@@ -1358,8 +1359,10 @@ class Resolver {
     for (const kid of this.kids(node)) {
       const kind = kindOf(this.tree, kid);
       if (kind === SyntaxKind.Name) {
-        if (names === 0) this.errorRef(kid);
-        else this.declareLocal(kid, false);
+        // `Defect` is a handler keyword, not an error identity.
+        if (names === 0) {
+          if (nameTextOf(this.tree, kid) !== "Defect") this.errorRef(kid);
+        } else this.declareLocal(kid, false);
         names++;
       } else if (kind === SyntaxKind.Block) {
         this.block(kid, scope);

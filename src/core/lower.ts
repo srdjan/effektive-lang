@@ -34,6 +34,7 @@ import type {
   ClosureExpr,
   Declaration,
   DeclarationId,
+  DefectHandler,
   Effects,
   Expr,
   FunctionType,
@@ -1578,21 +1579,31 @@ class BodyLowerer {
       kindOf(this.ctx.tree, k) === SyntaxKind.FinallyClause
     );
     const body = this.expr(bodyNode);
-    const handlers: Handler[] = catchNode === undefined
+    const arms = catchNode === undefined
       ? []
-      : this.kidsOfKind(catchNode, SyntaxKind.Handler).map((h) =>
-        this.handler(h)
-      );
+      : this.kidsOfKind(catchNode, SyntaxKind.Handler);
+    const isDefect = (h: NodeId) => {
+      const fact = this.fact(h);
+      return fact?.kind === "handler" && fact.defect === true;
+    };
+    const handlers: Handler[] = arms.filter((h) => !isDefect(h)).map((h) =>
+      this.handler(h)
+    );
+    const defectArm = arms.find(isDefect);
+    const defect = defectArm === undefined
+      ? {}
+      : { defect: this.defectHandler(defectArm) };
     const whole = this.annotation(node);
     const fact = finallyNode === undefined ? undefined : this.fact(finallyNode);
     if (finallyNode === undefined || fact?.kind !== "finalizer") {
-      return { kind: "catch", body, handlers, ...whole };
+      return { kind: "catch", body, handlers, ...defect, ...whole };
     }
     // The catch node carries the effects of the protected part only.
     const protectedPart: Expr = catchNode === undefined ? body : {
       kind: "catch",
       body,
       handlers,
+      ...defect,
       ...this.annotationWith(
         this.info(node).type,
         fact.protectedSet,
@@ -1643,6 +1654,25 @@ class BodyLowerer {
         PURE_EFFECTS,
         this.span(node),
       ),
+    };
+  }
+
+  private defectHandler(node: NodeId): DefectHandler {
+    const fact = this.fact(node);
+    if (fact?.kind !== "handler") {
+      throw internal(`no handler fact at ${this.describe(node)}`);
+    }
+    const parts = this.kids(node);
+    const bodyNode = parts.filter((k) =>
+      kindOf(this.ctx.tree, k) !== SyntaxKind.Name
+    ).pop();
+    return {
+      binding: this.bindingOf(
+        fact.binding,
+        parts.filter((k) => kindOf(this.ctx.tree, k) === SyntaxKind.Name)[1],
+      ),
+      body: this.expr(this.required(bodyNode, "the handler body", node)),
+      span: this.span(node),
     };
   }
 

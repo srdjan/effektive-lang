@@ -123,6 +123,13 @@ export interface Handler {
   readonly span: Span;
 }
 
+/** The `Defect(name) => expression` arm of a catch. The binding is `{ message: string }`. */
+export interface DefectHandler {
+  readonly binding: Parameter;
+  readonly body: Expr;
+  readonly span: Span;
+}
+
 export type Step =
   | { readonly kind: "bind"; readonly binding: Parameter; readonly value: Expr; readonly generated?: true }
   | { readonly kind: "evaluate"; readonly value: Expr };
@@ -230,7 +237,12 @@ export type Expr =
   | Node<{ kind: "if"; condition: Expr; then: Expr; else: Expr }>
   | Node<{ kind: "match"; subject: Expr; arms: readonly Arm[] }>
   | Node<{ kind: "fail"; error: Expr }>
-  | Node<{ kind: "catch"; body: Expr; handlers: readonly Handler[] }>
+  | Node<{
+    kind: "catch";
+    body: Expr;
+    handlers: readonly Handler[];
+    defect?: DefectHandler;
+  }>
   | Node<{ kind: "ensure"; body: Expr; finalizer: ClosureExpr }>
   | Node<{ kind: "retry"; job: Expr; times: number }>
   | Node<{ kind: "timeout"; job: Expr; durationMs: Expr }>

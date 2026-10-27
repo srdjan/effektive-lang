@@ -44,7 +44,10 @@ function bindersOf(expr: Expr): Parameter[] {
         return binding === null ? [] : [binding];
       });
     case "catch":
-      return expr.handlers.map((h) => h.binding);
+      return [
+        ...expr.handlers.map((h) => h.binding),
+        ...(expr.defect === undefined ? [] : [expr.defect.binding]),
+      ];
     default:
       return [];
   }

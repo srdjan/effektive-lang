@@ -257,7 +257,11 @@ const ROWS = {
   fail: { children: (e) => [e.error], leaf: "leaf" },
   catch: {
     children: () => [],
-    deferred: (e) => [e.body, ...e.handlers.map((h) => h.body)],
+    deferred: (e) => [
+      e.body,
+      ...e.handlers.map((h) => h.body),
+      ...(e.defect === undefined ? [] : [e.defect.body]),
+    ],
     leaf: "leaf",
   },
   ensure: {

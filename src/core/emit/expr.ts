@@ -12,6 +12,7 @@ import {
 
 import type {
   Arm,
+  DefectHandler,
   ErrorId,
   Expr,
   Field,
@@ -23,6 +24,7 @@ import type {
   Type,
   ValueId,
 } from "../ir.ts";
+import { defectMessage } from "./outcome.ts";
 import {
   alt,
   assignment,
@@ -1770,6 +1772,16 @@ export class ExprEmitter implements ExprCore {
 
   private catchEffect(e: Extract<Expr, { kind: "catch" }>): Emitted {
     const effect = this.scope.effect("Effect");
+    const defect = e.defect === undefined
+      ? []
+      : [this.defectRecovery(e.defect)];
+    if (e.handlers.length === 0 && e.defect !== undefined) {
+      return emitted([
+        at(this.asEffect(e.body), PREC.member),
+        ".pipe",
+        callArguments(defect),
+      ]);
+    }
     const issueHandler = e.handlers.find((h) =>
       h.error === "error:effect/SchemaIssue"
     );
@@ -1820,7 +1832,24 @@ export class ExprEmitter implements ExprCore {
     return emitted([
       at(this.asEffect(e.body), PREC.member),
       ".pipe",
-      callArguments([recovery]),
+      callArguments([recovery, ...defect]),
+    ]);
+  }
+
+  /** `Effect.catchDefect` wraps outside the typed handlers, so it also sees a defect in a handler body. */
+  private defectRecovery(h: DefectHandler): Emitted {
+    const d = this.scope.temp();
+    return emitted([
+      `${this.scope.effect("Effect")}.catchDefect`,
+      callArguments([
+        this.arrowEmitted(`(${d})`, {
+          kind: "block",
+          statements: [
+            `const ${h.binding.name} = { message: ${defectMessage(d)} };`,
+            ["return ", flush(this.asEffect(h.body)), ";"],
+          ],
+        }),
+      ]),
     ]);
   }
 }

@@ -175,7 +175,11 @@ export function exprChildren(e: Expr): readonly Expr[] {
     case "fail":
       return [e.error];
     case "catch":
-      return [e.body, ...e.handlers.map((h) => h.body)];
+      return [
+        e.body,
+        ...e.handlers.map((h) => h.body),
+        ...(e.defect === undefined ? [] : [e.defect.body]),
+      ];
     case "ensure":
       return [e.body, e.finalizer];
     case "provide":

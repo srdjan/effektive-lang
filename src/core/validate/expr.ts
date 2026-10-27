@@ -205,6 +205,12 @@ function adoptedNumericIdentity(
     : undefined;
 }
 
+/** The type of the binding of a `Defect` arm. */
+const DEFECT_RECORD: Type = {
+  kind: "record",
+  fields: [{ name: "message", type: STRING, optional: false }],
+};
+
 export class BodyValidator implements ValidatorCore {
   private readonly scope = new Map<string, Type>();
   private readonly declared = new Set<string>();
@@ -1844,6 +1850,24 @@ export class BodyValidator implements ValidatorCore {
       outs.push(out);
       this.branchFits(out, e.type, `${at}.body`, h.body, AREA.recovery);
     });
+    const d = e.defect;
+    if (d !== undefined) {
+      const at = `${path}.defect`;
+      const out = this.withLocals((declare) => {
+        declare(d.binding, `${at}.binding`);
+        if (!same(env, d.binding.type, DEFECT_RECORD)) {
+          this.add(
+            AREA.types,
+            `${at}.binding.type`,
+            `expected { message: string }, recorded ${show(d.binding.type)}`,
+            d.binding.span,
+          );
+        }
+        return this.check(d.body, `${at}.body`);
+      });
+      outs.push(out);
+      this.branchFits(out, e.type, `${at}.body`, d.body, AREA.recovery);
+    }
     const remaining: Active = {
       failures: minus(body.failures, [...handled]),
       requirements: body.requirements,
