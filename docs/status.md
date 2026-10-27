@@ -204,7 +204,9 @@ unit EL3, as `scheduleCron`. That plan also typed duration literal patterns
 (EL2). On 2026-10-27 the user chose items 22, 18 and 16 as the second
 selection. Items 18 and 22, and the logging half of item 16, are done in the
 [second selection plan](archive/plans/2026-10-27-second-effect-selection.md),
-units SL1 to SL6. Metrics stay open. The other items have no
+units SL1 to SL6. Metrics stay open. On 2026-10-27 the user asked for a sort builtin (item 24) in a
+later selection; until then, an application that needs ordered output sorts in
+host code. The other items have no
 implementation commitment. The forms of the open items are candidates, not
 accepted syntax.
 
@@ -239,6 +241,7 @@ The IR is at version 7.
 | 21 `race` over an array (done, ES10) | First of many | Accept an array | `Effect.raceAll` |
 | 22 `Map` and `Set` types (done, SL4 and SL5) | Keyed and unique data | `Map<K,V>`, `Set<T>`, `mapOf`, `getMap`, `putMap`, `removeMap`, `hasMap`, `entriesMap`, `setOf`, `addSet`, `removeSet`, `hasSet`, `itemsSet` | `HashMap`, `HashSet`, `Equal`, `Hash` |
 | 23 Recursive types | Recursive Option data, mutual alias recursion | Ordinary type declarations | Schema recursion |
+| 24 Sorting | Ordered output of arrays, and of `entriesMap` and `itemsSet`, which return hash order | A sort builtin over an array, with a key or an order | `Array.sort`, `Order` |
 
 The transpiler may use these modules without a source form: `Chunk`,
 `Channel`, `Pull`, `Take`, `Cause` internals, `Scheduler`, `Runtime`,

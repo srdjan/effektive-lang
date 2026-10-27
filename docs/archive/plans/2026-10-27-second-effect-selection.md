@@ -420,6 +420,11 @@ These points stay open:
 - (c) JSON input does not decode into a `Map` or `Set`, as for `Option`.
 - (d) The checked-input fit has no `map` or `set` case, so a refined value in a
   `Map` or `Set` position fits only an identical type.
+- (f) The language has no sort, so source cannot reorder the hash-order
+  results of `entriesMap` and `itemsSet`. The user chose a sort builtin for a
+  later selection (status item 24), and host-code sorting until then. The SL5
+  runtime tests assert exact hash-order arrays, so an Effect upgrade can change
+  them without a defect in Effektive.
 - (e) The SL2 random test and the EL3 cron differential test use loops, which
   the user's testing rules of 2026-10-27 forbid. They wait for the user's
   answer.
