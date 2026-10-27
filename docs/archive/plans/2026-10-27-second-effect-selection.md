@@ -423,8 +423,8 @@ These points stay open:
 - (f) The language has no sort, so source cannot reorder the hash-order
   results of `entriesMap` and `itemsSet`. The user chose a sort builtin for a
   later selection (status item 24), and host-code sorting until then. The SL5
-  runtime tests assert exact hash-order arrays, so an Effect upgrade can change
-  them without a defect in Effektive.
-- (e) The SL2 random test and the EL3 cron differential test use loops, which
-  the user's testing rules of 2026-10-27 forbid. They wait for the user's
-  answer.
+  runtime tests now compare contents without order, so they do not depend on
+  hash order.
+- (e) Closed on 2026-10-27: the SL2 random test, the EL3 cron differential
+  test and the SL5 hash-order tests now assert literal expected values. The
+  literal random sequences depend on Effect's generator, as hash order did.

@@ -42,17 +42,17 @@ import { del, entries, fromList, get, has, inferred, put, replaced, typed } from
 const base = typed();
 const found = (o: Option.Option<number>): number => Option.getOrElse(o, () => -1);
 console.log(JSON.stringify({
-  inferred: inferred(),
-  typed: entries(base),
-  replaced: entries(replaced()),
-  fromList: entries(fromList([["x", 7], ["y", 8]])),
+  inferred: Object.fromEntries(inferred()),
+  typed: Object.fromEntries(entries(base)),
+  replaced: Object.fromEntries(entries(replaced())),
+  fromList: Object.fromEntries(entries(fromList([["x", 7], ["y", 8]]))),
   getA: found(get(base, "a")),
   getMissing: found(get(base, "z")),
-  put: entries(put(base, "c", 3)),
-  putReplace: entries(put(base, "a", 9)),
+  put: Object.fromEntries(entries(put(base, "c", 3))),
+  putReplace: Object.fromEntries(entries(put(base, "a", 9))),
   putLeavesBase: HashMap.size(base),
-  del: entries(del(base, "a")),
-  delMissing: entries(del(base, "z")),
+  del: Object.fromEntries(entries(del(base, "a"))),
+  delMissing: Object.fromEntries(entries(del(base, "z"))),
   delLeavesBase: HashMap.size(base),
   hasA: has(base, "a"),
   hasZ: has(base, "z"),
@@ -60,17 +60,17 @@ console.log(JSON.stringify({
 `,
   );
   assertEquals(result, {
-    inferred: [["a", 1], ["b", 2]],
-    typed: [["a", 1], ["b", 2]],
-    replaced: [["a", 3], ["b", 2]],
-    fromList: [["y", 8], ["x", 7]],
+    inferred: { a: 1, b: 2 },
+    typed: { a: 1, b: 2 },
+    replaced: { a: 3, b: 2 },
+    fromList: { x: 7, y: 8 },
     getA: 1,
     getMissing: -1,
-    put: [["a", 1], ["c", 3], ["b", 2]],
-    putReplace: [["a", 9], ["b", 2]],
+    put: { a: 1, b: 2, c: 3 },
+    putReplace: { a: 9, b: 2 },
     putLeavesBase: 2,
-    del: [["b", 2]],
-    delMissing: [["a", 1], ["b", 2]],
+    del: { b: 2 },
+    delMissing: { a: 1, b: 2 },
     delLeavesBase: 2,
     hasA: true,
     hasZ: false,
@@ -97,14 +97,14 @@ import { HashSet } from "effect";
 import { add, built, del, has, inferred, items, typed } from "./main.ts";
 const base = typed();
 console.log(JSON.stringify({
-  inferred: inferred(),
-  typed: items(base),
-  built: items(built([5, 5, 6])),
-  add: items(add(base, 4)),
-  addExisting: items(add(base, 1)),
+  inferred: [...inferred()].sort(),
+  typed: [...items(base)].sort(),
+  built: [...items(built([5, 5, 6]))].sort(),
+  add: [...items(add(base, 4))].sort(),
+  addExisting: [...items(add(base, 1))].sort(),
   addLeavesBase: HashSet.size(base),
-  del: items(del(base, 1)),
-  delMissing: items(del(base, 9)),
+  del: [...items(del(base, 1))].sort(),
+  delMissing: [...items(del(base, 9))].sort(),
   delLeavesBase: HashSet.size(base),
   hasOne: has(base, 1),
   hasNine: has(base, 9),
@@ -196,7 +196,7 @@ export const setBackward = (): Set<Text> => setOf(["d", "c", "b", "a"])
 export const items = (s: Set<Text>): Text[] => itemsSet(s)
 `;
 
-Deno.test("entriesMap and itemsSet give the same array for equal contents built in another order", async () => {
+Deno.test("entriesMap and itemsSet give equal lists for equal contents built in another order", async () => {
   const result = await compileAndRun(
     ORDER,
     `
@@ -210,14 +210,23 @@ console.log(JSON.stringify({
   setBackward: items(setBackward()),
 }));
 `,
+  ) as {
+    forward: [string, number][];
+    backward: [string, number][];
+    grown: [string, number][];
+    setForward: string[];
+    setBackward: string[];
+  };
+  // The hash order depends on Effect, so the test compares the lists with
+  // each other and the contents without order.
+  assertEquals(result.backward, result.forward);
+  assertEquals(result.grown, result.forward);
+  assertEquals(result.setBackward, result.setForward);
+  assertEquals(Object.fromEntries(result.forward), { a: 1, b: 2, c: 3, d: 4 });
+  assertEquals(
+    new Set(result.setForward),
+    new Set(["a", "b", "c", "d"]),
   );
-  assertEquals(result, {
-    forward: [["d", 4], ["a", 1], ["c", 3], ["b", 2]],
-    backward: [["d", 4], ["a", 1], ["c", 3], ["b", 2]],
-    grown: [["d", 4], ["a", 1], ["c", 3], ["b", 2]],
-    setForward: ["d", "a", "c", "b"],
-    setBackward: ["d", "a", "c", "b"],
-  });
 });
 
 const WIDE = `type Text = string

@@ -11,13 +11,21 @@ import { EXPRESSIONS, ZONES } from "./cron_cases.ts";
 
 // -------------------------------------------------------------- grammar
 
-Deno.test("the differential lists hold both valid and invalid inputs", () => {
-  const valid = EXPRESSIONS.filter((e) =>
-    cronExpressionProblem(e) === undefined
-  );
-  assert(valid.length > 30 && valid.length < EXPRESSIONS.length - 30);
-  const zones = ZONES.filter((z) => cronZoneProblem(z) === undefined);
-  assert(zones.length > 5 && zones.length < ZONES.length - 5);
+Deno.test("cron.ts gives the literal verdict of each expression and zone", () => {
+  for (const { input, valid } of EXPRESSIONS) {
+    assertEquals(
+      cronExpressionProblem(input) === undefined,
+      valid,
+      JSON.stringify(input),
+    );
+  }
+  for (const { input, valid } of ZONES) {
+    assertEquals(
+      cronZoneProblem(input) === undefined,
+      valid,
+      JSON.stringify(input),
+    );
+  }
 });
 
 Deno.test("cron.ts gives a reason for each invalid input", () => {

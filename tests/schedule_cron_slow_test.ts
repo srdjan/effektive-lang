@@ -4,7 +4,6 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
-import { cronExpressionProblem, cronZoneProblem } from "../src/core/cron.ts";
 import {
   checkProject,
   emitProject,
@@ -16,11 +15,13 @@ import { EXPRESSIONS, ZONES } from "./cron_cases.ts";
 import { runScript, withTemporaryDirectory } from "./process_helpers.ts";
 import { runStrictTarget } from "./target_helpers.ts";
 
-Deno.test("cron.ts agrees with Cron.parse on the validity of each expression and zone", async () => {
+Deno.test("Cron.parse gives the literal verdict of each expression and zone", async () => {
   const script = `
 import { Cron, Result } from "effect";
-const expressions: string[] = ${JSON.stringify(EXPRESSIONS)};
-const zones: string[] = ${JSON.stringify(ZONES)};
+const expressions: string[] = ${
+    JSON.stringify(EXPRESSIONS.map((c) => c.input))
+  };
+const zones: string[] = ${JSON.stringify(ZONES.map((c) => c.input))};
 console.log(JSON.stringify({
   expressions: expressions.map((e) => Result.isSuccess(Cron.parse(e, "UTC"))),
   zones: zones.map((z) => Result.isSuccess(Cron.parse("* * * * *", z))),
@@ -36,19 +37,11 @@ console.log(JSON.stringify({
     );
     return runScript(dir, script);
   }) as { expressions: boolean[]; zones: boolean[] };
-  EXPRESSIONS.forEach((expression, index) =>
-    assertEquals(
-      cronExpressionProblem(expression) === undefined,
-      effect.expressions[index],
-      JSON.stringify(expression),
-    )
+  EXPRESSIONS.forEach(({ input, valid }, index) =>
+    assertEquals(effect.expressions[index], valid, JSON.stringify(input))
   );
-  ZONES.forEach((zone, index) =>
-    assertEquals(
-      cronZoneProblem(zone) === undefined,
-      effect.zones[index],
-      JSON.stringify(zone),
-    )
+  ZONES.forEach(({ input, valid }, index) =>
+    assertEquals(effect.zones[index], valid, JSON.stringify(input))
   );
 });
 
