@@ -55,7 +55,7 @@ files through `SourceHost`. Five tests enforce the rules.
    `exprChildren` in `validate/expr_walk.ts` also stay separate.
 3. The typed IR is the contract between the checker and every later stage.
    `ir.ts` stays a copy of the sibling `typed-ir.ts`. The IR node `nominal` is
-   part of IR version 6.
+   part of IR version 7 (and of version 6).
 4. Emitted text is byte-identical across refactors. The golden files in
    `fixtures/golden/` and the mutation fixtures in `fixtures/validate/` change
    only when the emitted text or the validator rules change on purpose. Run

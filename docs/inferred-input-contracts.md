@@ -67,7 +67,7 @@ The [measurement report](refinement-measurements.md) records query and compiler-
 
 ## Compiler and editor contracts
 
-IR version 6 carries predicates, finalized parameter types, checked flags, entry validation, and proof certificates.
+IR version 7 (as version 6 before it) carries predicates, finalized parameter types, checked flags, entry validation, and proof certificates.
 Generated pipeline bindings carry `generated: true`. These captures add no source assumptions to certificates.
 The validator still checks each capture initializer against its binding contract.
 The validator independently reconstructs obligations and checks Boolean splits and contradiction witnesses.

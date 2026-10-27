@@ -148,7 +148,7 @@ explicit `unknown`. Exported inferred contracts validate raw input and require
 `fails SchemaError`. Local functions use static inference. Exported results and
 effect contracts keep their existing requirements. Types with identity support
 concrete integer and length predicates through contextual `where` clauses. IR
-version 6 transports contracts and independently checked proof certificates.
+version 7 (as version 6 before it) transports contracts and independently checked proof certificates.
 
 [Input contracts](inferred-input-contracts.md) describe the behavior and limits.
 [Measurements](refinement-measurements.md) record bounded solver and
@@ -170,10 +170,10 @@ They are a record of gaps, not an implementation queue.
 
 | Area                                | Remaining boundary                                                                                                                                                                                                                                              | Existing support and evidence                                                                                                                                                                                                                                          |
 | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| General Effect and concurrency APIs | Other first-class combinators, coordination primitives and cause-level recovery APIs lack general source forms.                                                                                                                                                 | Effect values, collections, racing, supervised fibers and scope-bound children cover the selected subset. See the [coverage map](archive/effect-4-gap-audit.md#coverage-map).                                                                                          |
-| Full Scope parity                   | Supplied close Exits, exit-aware callbacks, parallel finalization strategies, mandatory closure and static dependency-cycle detection remain outside the selected contract.                                                                                     | Shared CloseableScope authority closes once with Exit.void and caches cleanup completion. See the [ownership contract](archive/plans/2026-10-18-scope-ownership-contract.md).                                                                                          |
+| General Effect and concurrency APIs | Other first-class combinators and coordination primitives lack general source forms.                                                                                                                                                 | Effect values, collections, racing, timeout, repetition, defect recovery, outcome-aware cleanup, supervised fibers and scope-bound children cover the selected subset. See the [coverage map](archive/effect-4-gap-audit.md#coverage-map).                                                                                          |
+| Full Scope parity                   | Supplied close Exits, exit-aware scope finalizers, parallel finalization strategies, mandatory closure and static dependency-cycle detection remain outside the selected contract.                                                                                     | Shared CloseableScope authority closes once with Exit.void and caches cleanup completion. See the [ownership contract](archive/plans/2026-10-18-scope-ownership-contract.md).                                                                                          |
 | General Stream and Sink APIs        | Other operators, arbitrary source Sink constructors, chunk-cost throttling and unrestricted nested group streams need additional source and lifetime rules.                                                                                                     | Leftovers, transduction, aggregation and callback-owned keyed groups are implemented. Selected external interruption has a source composition. See the [investigation](archive/plans/2026-10-18-general-stream-schedule-design.md).                                    |
-| General Schedule APIs               | Opaque Schedule consumers for retry and repetition, composition with incomparable input types, other combinators and cron policies remain uncovered.                                                                                                            | RetrySchedule and a concrete source repetition policy meet the worker gate. General schedules support aggregation and selected comparable-input composition. See the [worker limits](archive/plans/2026-10-19-scheduled-worker-application.md#disposition-and-limits). |
+| General Schedule APIs               | Composition with incomparable input types, other combinators and cron policies remain uncovered.                                                                                                            | `retry` and `repeat` consume general Schedules, and `scheduleExponential` and `scheduleJittered` exist. RetrySchedule and a concrete source repetition policy meet the worker gate. General schedules support aggregation and selected comparable-input composition. See the [worker limits](archive/plans/2026-10-19-scheduled-worker-application.md#disposition-and-limits). |
 | Time control                        | A general source clock and time-control API remains a candidate without a demonstrated application blocker.                                                                                                                                                     | Primitive clock services and native virtual-time checks cover the selected applications. See the [accepted rule](plans/2026-10-19-application-acceptance-rule.md#feature-selection).                                                                                   |
 | Schema and recursion                | Recursive Option data in an alias, mutual recursion of aliases, arbitrary self-bearing transformations and general Schema AST construction remain unsupported. Tagged records support guarded and mutual recursion (see [type identity](#type-identity)). | Guarded recursion preserves separate decoded, encoded and make-input types through selected adapters. See the [recursive field contract](archive/plans/2026-10-19-schema-recursive-adapters-contract.md).                                                              |
 | General language extensions         | User-defined generics, effect-row polymorphism, source purity assertions, macros and early returns remain deferred language extensions.                                                                                                                         | Builtin generic types and concrete source compositions cover the accepted applications. The [specification](../../effektive/public/effektive-spec.html#examples) retains the broader language boundary.                                                                |
@@ -196,19 +196,27 @@ On 2026-10-27 the user accepted a second change to the target. Effektive hides
 the verbosity of Effect. A source form exposes an Effect 4 feature only when the
 feature carries user intent that the compiler cannot infer. The transpiler uses
 the other features in the emitted TypeScript only. The user selected items 1 to
-8 and 19 to 21 first. The other items have no implementation commitment. The
-proposed forms are candidates, not accepted syntax.
+8 and 19 to 21 first. Items 1 to 4, 6 to 8 and 19 to 21 are done in the
+[effect surface plan](archive/plans/2026-10-27-effect-surface.md), units ES1 to
+ES11. Item 5 (Cron) stays open. The other items have no implementation
+commitment. The forms of the open items are candidates, not accepted syntax.
+
+The unit ES1b added the closed type `Duration` (type word, literals such as
+`200ms`, `5s`, `2m` and `1h`). A bare `int` never fits a `Duration`. The
+builtins that take a time (`timeout`, `sleep`, `scheduleSpaced`,
+`scheduleExponential`, `debounceStream`, `throttleStream`) take a `Duration`.
+The IR is at version 7.
 
 | Item | User intent | Candidate form | Hidden Effect modules |
 | --- | --- | --- | --- |
-| 1 Timeout (selected) | Time limit | `timeout(job, 5s)` with a typed timeout error | `Duration` |
-| 2 Delay (selected) | Wait time | `sleep(200ms)` | `Duration`, `Clock` |
-| 3 Repetition (selected) | Repeat or loop | `repeat(job, policy)` | `Schedule` consumers |
-| 4 General policies (selected) | Backoff, jitter, limits, stop conditions | `retry` accepts any `Schedule`, with exponential, jitter and `while`/`until` constructors | `Schedule` |
+| 1 Timeout (done, ES2) | Time limit | `timeout(job, 5s)` with a typed timeout error | `Duration` |
+| 2 Delay (done, ES2) | Wait time | `sleep(200ms)` | `Duration`, `Clock` |
+| 3 Repetition (done, ES4) | Repeat or loop | `repeat(job)` and `repeat(job, options)` | `Schedule` consumers |
+| 4 General policies (done, ES3) | Backoff, jitter, limits, stop conditions | `retry` accepts any `Schedule` and the options `times`, `schedule`, `while` and `until`, with `scheduleExponential` and `scheduleJittered` | `Schedule` |
 | 5 Cron | Calendar policy | A cron schedule constructor | `Cron` |
-| 6 Outcome-aware cleanup (selected) | Action on success, failure or interruption | `finally (outcome) { ... }` | `Exit` |
-| 7 Defect recovery (selected) | Where unexpected failures stop | A defect arm in `catch` | `Cause` |
-| 8 Interruption masks (selected) | Region that must not be interrupted | `uninterruptible { ... }` | Interruption masks |
+| 6 Outcome-aware cleanup (done, ES5) | Action on success, failure or interruption | `finally (outcome) { ... }` | `Exit` |
+| 7 Defect recovery (done, ES6) | Where unexpected failures stop | A defect arm in `catch` | `Cause` |
+| 8 Interruption masks (done, ES7) | Region that must not be interrupted | `uninterruptible(job)` | Interruption masks |
 | 9 Detached work | Lifetime beyond the caller | A daemon variant of `forkScoped` | `Fiber` status APIs |
 | 10 Keyed background jobs | Replace by key, or a set | One keyed form | `FiberMap`, `FiberSet` |
 | 11 Coordination | Producer-consumer and fan-out design | `Queue`, `PubSub`, `Deferred`, `Semaphore` types | `Latch`, `Take` |
@@ -219,9 +227,9 @@ proposed forms are candidates, not accepted syntax.
 | 16 Logging and metrics | Messages, levels, metric names | `log(level, message, fields?)`, counters, histograms | `Logger`, `LogLevel`, `Metric` |
 | 17 Configuration | Keys and secret status | A `config` declaration and `Secret<T>` | `Config`, `ConfigProvider`, `Redacted` |
 | 18 Time and randomness | Current time, random values | `now()`, `random()` | `Clock`, `Random` |
-| 19 Effectful collection callbacks (selected) | Effects inside `map`, `filter`, `fold` | Relax the pure-callback rule | `Effect.forEach`, `Effect.filter`, `Effect.reduce` |
-| 20 Effectful `updateRef` (selected) | Effects inside an atomic update | Relax the pure-callback rule | `SynchronizedRef` |
-| 21 `race` over an array (selected) | First of many | Accept an array | `Effect.raceAll` |
+| 19 Effectful collection callbacks (done, ES8) | Effects inside `map`, `filter`, `fold` | Relax the pure-callback rule | `Effect.forEach`, `Effect.filter`, `Effect.reduce` |
+| 20 Effectful `updateRef` (done, ES9) | Effects inside an atomic update | Relax the pure-callback rule | `SynchronizedRef` |
+| 21 `race` over an array (done, ES10) | First of many | Accept an array | `Effect.raceAll` |
 | 22 `Map` and `Set` types | Keyed and unique data | `Map<K,V>`, `Set<T>` with derived equality | `HashMap`, `HashSet`, `Equal`, `Hash` |
 | 23 Recursive types | Recursive Option data, mutual alias recursion | Ordinary type declarations | Schema recursion |
 
@@ -265,7 +273,7 @@ complete Effect API parity nor external integration coverage.
 
 | Boundary                        | Recorded behavior or evidence limit                                                                                                                                                             |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Typed recovery and mixed causes | Native catchTags can select a typed reason and discard an accompanying defect. The stream witness records this limit. Its session finalizers run outside item recovery.                         |
+| Typed recovery and mixed causes | Native catchTags can select a typed reason and discard an accompanying defect. The stream witness records this limit. A `Defect` arm in `catch` (ES6) now recovers a defect in source, but the limit still applies to typed handlers. Its session finalizers run outside item recovery.                         |
 | Transaction cancellation        | Body interruption awaits rollback and release. Interruption after COMMIT starts can preserve a committed row. The simulated COMMIT error proves no retry, not actual ambiguous-commit behavior. |
 | Stream failure and buffering    | Native transduction can emit a partial batch before upstream failure. The pinned backpressure trace establishes no global memory bound.                                                         |
 | Delivery guarantees             | The applications promise neither exactly-once delivery nor rollback of earlier successful batches.                                                                                              |

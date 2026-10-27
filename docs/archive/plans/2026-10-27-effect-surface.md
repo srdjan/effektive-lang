@@ -6,7 +6,7 @@ On 2026-10-27 the user accepted a change to the target. Effektive exposes an
 Effect 4 feature only when the feature carries user intent that the compiler
 cannot infer. The transpiler uses every other feature in the emitted TypeScript.
 The candidate list is in
-[status.md](../status.md#effect-4-features-to-surface-in-source). The user
+[status.md](../../status.md#effect-4-features-to-surface-in-source). The user
 selected items 1 to 8 and 19 to 21 first. This plan covers those items, plus
 duration literals (ES1), which items 1 to 4 need.
 
@@ -25,7 +25,7 @@ duration literals (ES1), which items 1 to 4 need.
   Effect's `Duration` module and `SynchronizedRef` stay in the emitted
   TypeScript.
 - Each new IR kind and each new rule gets an independent validator rule, as
-  [builtin-changes.md](../builtin-changes.md) requires.
+  [builtin-changes.md](../../builtin-changes.md) requires.
 - Every new prelude name is `shadowable: true`: `timeout`, `sleep`, `repeat`,
   `uninterruptible`, `scheduleExponential` and `scheduleJittered`. No fixture or
   website example uses these words as identifiers. Each unit adds its names to
@@ -488,3 +488,35 @@ before ES4, because ES4 reuses the ES3 option checks. ES5 comes before ES6,
 because both change `catch`. ES7, ES8 and ES10 are independent. ES9 waits for
 the measurement and the user's choice on ES-D3. ES11 comes last, after ES2 and
 ES5 change the IR. Each unit ends with `deno task check` and its own commit.
+
+## Disposition
+
+Units ES1 to ES11 are done. The commit that archives this plan completes ES11.
+The unit commits are:
+
+- ES1 duration literals: `f8fdb1a`.
+- ES2 `timeout`, `sleep` and IR version 7: `9561ec7`.
+- ES3 general retry options and exponential schedules: `fa045a7`.
+- ES4 `repeat`: `13f29a8`.
+- ES5 `finally` with an outcome binding: `253219c`.
+- ES6 the `Defect` arm of `catch`: `a7b5919`.
+- ES7 `uninterruptible`: `26124e2`.
+- ES8 effectful callbacks in `map`, `filter` and `fold`: `b8a6f07`.
+- ES9 `Ref` as `SynchronizedRef` and effectful `updateRef`: `2aa560a`.
+- ES10 `race` over an array: `2ff752c`.
+- ES1b the `Duration` type: `9a355b9` (plan), `ca82377` (validation
+  findings) and `d3c5cc4` (implementation).
+
+The decision record for the change of ES-D1 to a `Duration` type is `70ffab2`.
+
+These points stay open:
+
+- (a) A `Duration` does not fit a user identity such as `type Int = int`, and
+  source has no way to get an `Int` millisecond count from a `Duration`.
+- (b) A `match` on a `5s` pattern compares as a plain number. The pattern does
+  not carry the type `Duration`.
+- (c) The test for an effectful or pure callback is repeated in
+  `emit/expr.ts` for ES8 and ES9.
+- (d) Cron (item 5) and the other items of the status table stay open. The
+  [status table](../../status.md#effect-4-features-to-surface-in-source) lists
+  them.

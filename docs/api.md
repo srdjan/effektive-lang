@@ -327,7 +327,7 @@ declarations, and its IR exports each of them. Its providers are not lowered.
 `lowerProject(checked)` does this for every `.eff` and `.effi` module. Pass the
 result to `emitProject` to get each generated module and each companion module.
 
-The IR has the `version` 6. A type declaration has the definition kind `alias`
+The IR has the `version` 7. A type declaration has the definition kind `alias`
 or `nominal`. A `nominal` definition has a `base` type. The flag `tagged` marks
 a tagged record, and its base is a record. An expression has the node
 `nominal` for a construction of a type with identity, and a match arm has the
@@ -999,6 +999,17 @@ A true checked flag permits raw unknown input and requires generated entry valid
 `FunctionDecl.entryValidation` lists checked parameter identities in declaration order.
 `Annotation.proofs` carries target identities and independently checked certificates.
 Older wire versions receive `validation/008` without conversion.
+
+## IR version 7
+
+IR version 7 adds the expression kinds `timeout`, `sleep`, `repeat`, `uninterruptible`,
+`ensure`, `race-all`, `schedule-exponential` and `schedule-jittered`.
+The `catch` node has an optional `defect` handler of the type `DefectHandler`.
+A `with-resource` release closure has one or two parameters.
+The constants `TIMEOUT_ERROR_ID` and `DURATION_ID` name the builtin error `TimeoutError`
+and the builtin type `Duration`. A duration is a `nominal` node over a millisecond number.
+IR field names such as `durationMs` and `delayMillis` keep their names. Only source names changed.
+The [effect surface plan](archive/plans/2026-10-27-effect-surface.md) gives the reasons.
 
 The synchronous `signatureHelpAt(revision, path, offset)` query returns the innermost ordinary call contract and its active parameter.
 Checked parameters show raw input and the validated contract.
