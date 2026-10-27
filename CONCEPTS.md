@@ -27,7 +27,7 @@ _Avoid: hint, when the type is also enforced_
 
 The second checker that recomputes every annotation of the typed IR without shared code with the source checker, and reports each disagreement.
 
-It acts as a differential oracle: a program that the checker accepts and the validator rejects shows a defect in one of the two. A disagreement is repaired so that both derive the same annotation, not by weakening the validator.
+It acts as a differential oracle: a program that the checker accepts and the validator rejects shows a defect in one of the two. A disagreement is repaired so that both derive the same annotation, not by weakening the validator. The one shared code is a mirror of a parser of the target, which imports nothing. The validator cannot detect a defect in such a mirror, so a differential test against the target checks it.
 _Avoid: IR checker, second pass_
 
 ### TypeScript outputs
