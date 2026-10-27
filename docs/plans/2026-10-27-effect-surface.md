@@ -308,6 +308,15 @@ against `SynchronizedRef.update` with the bench harness, and record the result i
 `docs/measurements.md`. Report the result to the user before choosing (a) or
 (b). Check that no host interface accepts or returns a `Ref`.
 
+Measured on 2026-10-27 with `Deno.bench`, `effect@4.0.5`, Deno 2.9.8, one Mac,
+two runs. Each case ran 1,000 updates inside one `Effect.gen`.
+`Ref.update` took 36.2 and 36.9 µs. `SynchronizedRef.update` took 184.3 and
+182.2 µs. `SynchronizedRef.updateEffect` took 241.7 and 237.7 µs. A pure
+update costs about 150 ns more, about five times as much. The effect on an
+application is not measured. The user confirmed ES-D3 (a) after this result.
+The ES9 commit adds the benchmark script and this result to
+`docs/measurements.md`.
+
 Emission under (a): `makeRef`, `getRef`, `setRef` and `updateRef` use
 `SynchronizedRef`, and an effectful callback uses `SynchronizedRef.updateEffect`.
 `emit/types.ts` emits `SynchronizedRef.SynchronizedRef<A>` for every Ref type.
