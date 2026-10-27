@@ -3731,6 +3731,95 @@ console.log(JSON.stringify({ empty, success, stoppedAt, calls, pure: Effect.runS
   });
 });
 
+Deno.test("effectful map, filter and fold run in order, stop at the first failure, and accumulate", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "error Stop = { at: int }",
+        "service Probe {",
+        "  step(n: Int): Int fails Stop",
+        "  keep(n: Int): Flag fails Stop",
+        "}",
+        "export const m = (xs: Int[]): Int[] fails Stop uses Probe.step => map(xs, (n) => Probe.step(n))",
+        "export const mp = (xs: Int[]): Int[] fails Stop uses Probe.step => xs |> map((n) => Probe.step(n))",
+        "export const f = (xs: Int[]): Int[] fails Stop uses Probe.keep => filter(xs, (n) => Probe.keep(n))",
+        "export const g = (xs: Int[]): Int fails Stop uses Probe.step => fold(xs, 100, (a, n) => a + Probe.step(n))",
+        "export const pure = (xs: Int[]): Int[] => map(xs, (n) => n + 1)",
+        "type Int = int",
+        "type Flag = boolean",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Cause, Effect, Exit, Layer, Result } from "effect";
+import { Probe, Stop, m, mp, f, g, pure } from "./main.ts";
+
+const calls: string[] = [];
+const Live = Layer.succeed(Probe)({
+  step: (n) => Effect.gen(function* () {
+    calls.push("step" + n);
+    if (n === 3) return yield* Effect.fail(new Stop({ at: n }));
+    return n * 2;
+  }),
+  keep: (n) => Effect.gen(function* () {
+    calls.push("keep" + n);
+    if (n === 9) return yield* Effect.fail(new Stop({ at: n }));
+    return n % 2 === 0;
+  }),
+});
+const run = <A>(job: Effect.Effect<A, Stop, Probe>) =>
+  Effect.runSyncExit(job.pipe(Effect.provide(Live)));
+const value = <A>(exit: Exit.Exit<A, Stop>) => Exit.isSuccess(exit) ? exit.value : null;
+const stoppedAt = (exit: Exit.Exit<unknown, Stop>) => {
+  const found = Exit.isFailure(exit) ? Cause.findError(exit.cause) : undefined;
+  return found !== undefined && Result.isSuccess(found) ? found.success.at : null;
+};
+const out: Record<string, unknown> = {};
+out.map = value(run(m([1, 2])));
+out.mapCalls = calls.splice(0);
+out.piped = value(run(mp([4, 5])));
+out.pipedCalls = calls.splice(0);
+out.mapStop = stoppedAt(run(m([1, 2, 3, 4])));
+out.mapStopCalls = calls.splice(0);
+out.filter = value(run(f([1, 2, 3, 4])));
+out.filterCalls = calls.splice(0);
+out.filterStop = stoppedAt(run(f([2, 9, 4])));
+out.filterStopCalls = calls.splice(0);
+out.fold = value(run(g([1, 2, 4])));
+out.foldCalls = calls.splice(0);
+out.foldEmpty = value(run(g([])));
+out.foldStop = stoppedAt(run(g([1, 3, 5])));
+out.foldStopCalls = calls.splice(0);
+out.pure = pure([1, 2]);
+console.log(JSON.stringify(out));
+`,
+    );
+    assertEquals(result, {
+      map: [2, 4],
+      mapCalls: ["step1", "step2"],
+      piped: [8, 10],
+      pipedCalls: ["step4", "step5"],
+      mapStop: 3,
+      mapStopCalls: ["step1", "step2", "step3"],
+      filter: [2, 4],
+      filterCalls: ["keep1", "keep2", "keep3", "keep4"],
+      filterStop: 9,
+      filterStopCalls: ["keep2", "keep9"],
+      fold: 114,
+      foldCalls: ["step1", "step2", "step4"],
+      foldEmpty: 100,
+      foldStop: 3,
+      foldStopCalls: ["step1", "step3"],
+      pure: [2, 3],
+    });
+  });
+});
+
 Deno.test("the emitted examples run: main, a provided fallback, collections, and pay", async () => {
   await withTemporary(async (dir) => {
     buildExamples(dir);

@@ -8,12 +8,12 @@
       "dbf72cdeecfa6710"
     ],
     "fixtures/applications/order-lifecycle/orders.eff": [
-      "f9464e469ed01294",
-      "07027ff31fc12b09"
+      "9691a44ea671471c",
+      "650c34d918fc053b"
     ],
     "fixtures/applications/portable-publisher/domain.eff": [
-      "eb7aafbd8c88da0f",
-      "d6002b5df6750d1b"
+      "9e3666b88869851e",
+      "affb3c0c73ec8872"
     ],
     "fixtures/applications/portable-publisher/feature.eff": [
       "77f7786495d77de2",
@@ -36,8 +36,8 @@
       "29534bb7ff3a2c7d"
     ],
     "fixtures/applications/portable-publisher/storage.eff": [
-      "2ca20329b6989c2b",
-      "9c0ab2003cc63c1e"
+      "682f1d183e1c21ae",
+      "c0d9cba0db8334b2"
     ],
     "fixtures/applications/scheduled-worker/contracts.eff": [
       "a2c7c606af49fa94",
@@ -364,8 +364,8 @@
       "a96f8f917b7ad55f"
     ],
     "fixtures/errors/execution-mode-impure-callback.eff": [
-      "6a045339247ae0cb",
-      "080790f667e93d44"
+      "4e3eda1ee8797a78",
+      "11293a690459dcc7"
     ],
     "fixtures/errors/execution-mode-pure-type-rows.eff": [
       "5acca453fbbfd53d",
@@ -450,6 +450,14 @@
     "fixtures/errors/pattern-unsupported-subject.eff": [
       "817285fdc1796023",
       "d904eeb4bec4b63e"
+    ],
+    "fixtures/errors/pattern-untagged-record/main.eff": [
+      "0549590f052d4fc5",
+      "6e213ee82f18f93e"
+    ],
+    "fixtures/errors/pattern-untagged-record/records.eff": [
+      "c42387ea47987d84",
+      "aa6bc18b0dcc5ca5"
     ],
     "fixtures/errors/requirement-contract-extra-requirement.eff": [
       "a4b77322a41fb370",
@@ -583,6 +591,10 @@
       "3a8350ce50b64e1c",
       "3cff10bd7020356b"
     ],
+    "fixtures/errors/type-mismatch-record-literal.eff": [
+      "258568bf5a0de1c5",
+      "0b2de3be27bd0758"
+    ],
     "fixtures/errors/type-mismatch-refinement.eff": [
       "95fa8be1906ea3d3",
       "fe3d614bff627ea9"
@@ -662,6 +674,10 @@
     "fixtures/ir/example/log.eff": [
       "0cefd7807b503262",
       "31acdba459dcf9d2"
+    ],
+    "fixtures/ir/tagged.eff": [
+      "1d0b6954b12b888e",
+      "de58e5ad9f1cfdab"
     ],
     "fixtures/parse/ok-forms.eff": [
       "5fa273684c6aba3a",

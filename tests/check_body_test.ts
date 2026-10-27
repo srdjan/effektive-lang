@@ -2195,13 +2195,59 @@ type Num = number
 
 // ------------------------------------------------------------------ callbacks and modes
 
-Deno.test("an effectful callback passed to map is an execution-mode error", () => {
+Deno.test("map, filter and fold with a pure callback keep pure mode", () => {
   const project = checkText(`
-service S { a(): Int }
-const f = (xs: Int[]): Int[] uses S.a => map(xs, (x) => S.a())
+const m = (xs: Int[]): Int[] => map(xs, (x) => x + 1)
+const f = (xs: Int[]): Int[] => filter(xs, (x) => x > 1)
+const g = (xs: Int[]): Int => fold(xs, 0, (a, x) => a + x)
+const p = (xs: Int[]): Int => xs |> map((x) => x + 1) |> filter((x) => x > 1) |> fold(0, (a, x) => a + x)
 type Int = int
 `);
-  assertEquals(codes(project), ["execution-mode/001"]);
+  assertEquals(messages(project), []);
+  for (const name of ["m", "f", "g", "p"]) {
+    assertEquals(fn(project, "m", name).mode, "pure", name);
+  }
+});
+
+Deno.test("map, filter and fold carry the failures and requirements of an effectful callback", () => {
+  const project = checkText(`
+error Stop = { at: int }
+service S {
+  step(n: Int): Int fails Stop
+  keep(n: Int): Flag
+}
+const m = (xs: Int[]): Int[] fails Stop uses S.step => map(xs, (x) => S.step(x))
+const f = (xs: Int[]): Int[] uses S.keep => filter(xs, (x) => S.keep(x))
+const g = (xs: Int[]): Int fails Stop uses S.step => fold(xs, 0, (a, x) => a + S.step(x))
+const pm = (xs: Int[]): Int[] fails Stop uses S.step => xs |> map((x) => S.step(x))
+const pf = (xs: Int[]): Int[] uses S.keep => xs |> filter((x) => S.keep(x))
+const pg = (xs: Int[]): Int fails Stop uses S.step => xs |> fold(0, (a, x) => a + S.step(x))
+type Int = int
+type Flag = boolean
+`);
+  assertEquals(messages(project), []);
+  for (const name of ["m", "f", "g", "pm", "pf", "pg"]) {
+    assertEquals(fn(project, "m", name).body!.mode, "effect", name);
+  }
+  assertEquals(shortIds(fn(project, "m", "m").body!.failures), ["Stop"]);
+  assertEquals(shortIds(fn(project, "m", "pg").body!.requirements), [
+    "S.step",
+  ]);
+  assertEquals(shortIds(fn(project, "m", "f").body!.failures), []);
+  assertEquals(shortIds(fn(project, "m", "f").body!.requirements), ["S.keep"]);
+});
+
+Deno.test("an exported function that uses an effectful map needs its contract", () => {
+  const project = checkText(`
+error Stop = { at: int }
+service S { step(n: Int): Int fails Stop }
+export const bad = (xs: Int[]): Int[] => map(xs, (x) => S.step(x))
+type Int = int
+`);
+  assertEquals(codes(project), [
+    "failure-contract/001",
+    "requirement-contract/001",
+  ]);
 });
 
 Deno.test("traverse carries callback failures and requirements", () => {
@@ -2224,12 +2270,13 @@ type Int = int
   ]);
 });
 
-Deno.test("a parameter of function type is effectful and cannot be a pure callback", () => {
+Deno.test("a parameter of function type is effectful and makes map an effect", () => {
   const project = checkText(`
 const f = (xs: Int[], g: (x: Int) => Int): Int[] => map(xs, g)
 type Int = int
 `);
-  assertEquals(codes(project), ["execution-mode/001"]);
+  assertEquals(codes(project), []);
+  assertEquals(fn(project, "m", "f").body!.mode, "effect");
 });
 
 Deno.test("a pure module function may be a callback by reference", () => {
@@ -2242,14 +2289,15 @@ type Int = int
   assertEquals(fn(project, "m", "double").mode, "pure");
 });
 
-Deno.test("an effectful module function cannot be a callback by reference", () => {
+Deno.test("an effectful module function may be a callback by reference", () => {
   const project = checkText(`
 service S { a(): Int }
 const bump = (n: Int): Int uses S.a => n + S.a()
 const f = (xs: Int[]): Int[] uses S.a => xs |> map(bump)
 type Int = int
 `);
-  assertEquals(codes(project), ["execution-mode/001"]);
+  assertEquals(messages(project), []);
+  assertEquals(shortIds(fn(project, "m", "f").body!.requirements), ["S.a"]);
 });
 
 Deno.test("an effectful module constant initializer is an execution-mode error", () => {
@@ -2293,9 +2341,7 @@ const b = (xs: Int[]): Int[] => xs |> map(loud)
     project.modules.get("lib")!.modes.get("value:lib#loud" as ValueId),
     "effect",
   );
-  assertEquals(messages(project).length, 1);
-  assertEquals(project.diagnostics[0].code, "execution-mode/001");
-  assert(project.diagnostics[0].span.source === "main.eff");
+  assertEquals(messages(project), []);
 });
 
 Deno.test("two mutually recursive functions where one performs an effect both end up effect", () => {

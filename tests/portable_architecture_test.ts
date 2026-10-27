@@ -207,7 +207,7 @@ export const closed = (): Int => provide(supplied, () => Clock.now())
   assertEquals(closed.type.effects, { failures: [], requirements: [] });
 });
 
-Deno.test("unmarked function parameters retain effect execution", () => {
+Deno.test("unmarked function parameters retain effect execution and map accepts them", () => {
   assertEquals(
     codes({
       ...CONFIG,
@@ -217,7 +217,7 @@ export const apply = (values: Int[], callback: (value: Int) => Int): Int[] =>
   map(values, callback)
 `,
     }, ["main.eff"]),
-    ["execution-mode/001"],
+    [],
   );
 });
 

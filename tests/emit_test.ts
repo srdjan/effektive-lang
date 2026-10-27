@@ -53,6 +53,30 @@ type Text = string
   assertStringIncludes(output, "file.close()");
 });
 
+Deno.test("effectful map, filter and fold emit forEach, curried filter and reduce", () => {
+  const output = oneModule(`
+error Stop = { at: int }
+service Probe {
+  step(n: Int): Int fails Stop
+  keep(n: Int): Flag
+}
+export const m = (xs: Int[]): Int[] fails Stop uses Probe.step => map(xs, (n) => Probe.step(n))
+export const f = (xs: Int[]): Int[] uses Probe.keep => filter(xs, (n) => Probe.keep(n))
+export const g = (xs: Int[]): Int fails Stop uses Probe.step => fold(xs, 0, (a, n) => a + Probe.step(n))
+export const h = (xs: Int[]): Int[] => map(xs, (n) => n + 1)
+type Int = int
+type Flag = boolean
+`);
+  assertStringIncludes(output, "Effect.forEach(xs, (n: Int) =>");
+  assertStringIncludes(output, "Effect.filter<Int, never, Probe>((n: Int) =>");
+  assertStringIncludes(output, ")(xs)");
+  assertStringIncludes(
+    output,
+    "Effect.reduce(xs, () => 0, (a: Int, n: Int) =>",
+  );
+  assertStringIncludes(output, "xs.map((n) => $int(n + 1))");
+});
+
 Deno.test("bounded traverse passes the concurrency literal to Effect.forEach", () => {
   const output = oneModule(
     `const f = (): Int[] => traverse([1, 2], (n) => n + 1, { concurrency: 2 })\ntype Int = int`,

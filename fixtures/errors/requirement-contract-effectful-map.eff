@@ -1,0 +1,9 @@
+service Counter {
+  next(): Int
+}
+
+export const bad = (xs: Int[]): Int[] =>
+  // error: requirement-contract/001
+  map(xs, (x) => Counter.next())
+
+type Int = int

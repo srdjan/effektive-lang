@@ -83,7 +83,7 @@ import {
   tokenOfId,
   unsupported,
 } from "./scope.ts";
-import { typeArguments, typeDoc } from "./types.ts";
+import { channelTypeArguments, typeArguments, typeDoc } from "./types.ts";
 import {
   type Callee,
   LEAF_CALLS,
@@ -394,9 +394,12 @@ function isIntType(type: Type): boolean {
 
 function effectCollectionBuiltin(
   target: string,
-): "all" | "traverse" | undefined {
+): "all" | "traverse" | "map" | "filter" | "fold" | undefined {
   const name = builtinInstanceName(target);
-  return name === "all" || name === "traverse" ? name : undefined;
+  return name === "all" || name === "traverse" || name === "map" ||
+      name === "filter" || name === "fold"
+    ? name
+    : undefined;
 }
 
 export class ExprEmitter implements ExprCore {
@@ -1635,21 +1638,65 @@ export class ExprEmitter implements ExprCore {
         if (e.callee.kind === "reference") {
           const builtin = effectCollectionBuiltin(e.callee.target);
           if (builtin !== undefined) {
-            if (
-              children.length !== (builtin === "all" ? 1 : 2) &&
-              children.length !== (builtin === "all" ? 2 : 3)
-            ) {
+            const counts: Record<string, readonly number[]> = {
+              all: [1, 2],
+              traverse: [2, 3],
+              map: [2],
+              filter: [2],
+              fold: [3],
+            };
+            if (!counts[builtin].includes(children.length)) {
               throw internal(`${builtin} has an invalid argument count`);
             }
-            return emitted([
-              `${effect}.${builtin === "all" ? "all" : "forEach"}(`,
-              free(children[0]),
-              ...(builtin === "traverse" ? [", ", free(children[1])] : []),
-              ...(children[builtin === "all" ? 1 : 2] === undefined
-                ? []
-                : [", ", free(children[builtin === "all" ? 1 : 2])]),
-              ")",
-            ]);
+            const [first, second, third] = children;
+            switch (builtin) {
+              case "filter": {
+                // Effect 4 has only the curried form for an effectful
+                // predicate. Its element type is not inferable, so name it.
+                const fn = this.functionTypeOf(e.callee.type);
+                const items = fn && this.scope.resolve(fn.parameters[0]);
+                if (fn === undefined || items?.kind !== "array") {
+                  throw internal("filter has no array parameter");
+                }
+                return emitted([
+                  `${effect}.filter`,
+                  typeArguments([
+                    typeDoc(this.scope, items.element),
+                    ...channelTypeArguments(this.scope, fn.effects),
+                  ]),
+                  "(",
+                  free(second),
+                  ")(",
+                  free(first),
+                  ")",
+                ]);
+              }
+              case "fold":
+                // The source evaluates the initial value at the call, which
+                // runs at once. Effectful children are already bound to
+                // temporaries, so the thunk only wraps a pure expression.
+                return emitted([
+                  `${effect}.reduce(`,
+                  free(first),
+                  ", ",
+                  this.arrow("()", second),
+                  ", ",
+                  free(third),
+                  ")",
+                ]);
+              default:
+                return emitted([
+                  `${effect}.${builtin === "all" ? "all" : "forEach"}(`,
+                  free(first),
+                  ...(builtin === "all" ? [] : [", ", free(second)]),
+                  ...(builtin === "all"
+                    ? second === undefined ? [] : [", ", free(second)]
+                    : third === undefined
+                    ? []
+                    : [", ", free(third)]),
+                  ")",
+                ]);
+            }
           }
         }
         return emitted([

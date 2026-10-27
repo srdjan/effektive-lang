@@ -376,36 +376,56 @@ function collectionCall(
       requirements,
     });
   } else if (name === "map") {
-    const cb = c.callback(name, args[1], [element], undefined);
+    const cb = c.callback(name, args[1], [element], undefined, true);
     infos.push(cb.info);
     result = table.array(cb.result);
-    specialized = pureFunction(c, [
-      table.array(element),
-      pureFunction(c, [element], cb.result),
-    ], result);
+    specialized = callbackFunction(
+      c,
+      cb.info,
+      [element],
+      cb.result,
+      (cbType) => [
+        table.array(element),
+        cbType,
+      ],
+      result,
+    );
   } else if (name === "filter") {
-    const cb = c.callback(name, args[1], [element], table.boolean);
+    const cb = c.callback(name, args[1], [element], table.boolean, true);
     infos.push(cb.info);
     c.fits(args[1].node, cb.result, table.boolean, "the predicate result");
     result = table.array(element);
-    specialized = pureFunction(c, [
+    specialized = callbackFunction(
+      c,
+      cb.info,
+      [element],
+      table.boolean,
+      (cbType) => [result, cbType],
       result,
-      pureFunction(c, [element], table.boolean),
-    ], result);
+    );
   } else {
     const initial = c.argInfo(args[1], expected);
     infos.push(initial);
     const accumulator = expected ?? c.widen(initial.type);
     c.fits(args[1].node, initial.type, accumulator, "the initial value");
-    const cb = c.callback(name, args[2], [accumulator, element], accumulator);
+    const cb = c.callback(
+      name,
+      args[2],
+      [accumulator, element],
+      accumulator,
+      true,
+    );
     infos.push(cb.info);
     c.fits(args[2].node, cb.result, accumulator, "the callback result");
     result = accumulator;
-    specialized = pureFunction(c, [
-      table.array(element),
+    specialized = callbackFunction(
+      c,
+      cb.info,
+      [accumulator, element],
       accumulator,
-      pureFunction(c, [accumulator, element], accumulator),
-    ], result);
+      (cbType) => [table.array(element), accumulator, cbType],
+      result,
+    );
   }
   c.fact(node, {
     kind: "builtin",
@@ -413,13 +433,11 @@ function collectionCall(
     specialized,
     ir: functionTypeToIr(table, specialized),
   });
-  const invocation = name === "traverse"
-    ? c.table.node(specialized)
-    : undefined;
+  const invocation = c.table.node(specialized);
   return c.finish(
     node,
     result,
-    invocation?.kind === "function"
+    invocation.kind === "function" && invocation.execution === "effect"
       ? combine([...infos, {
         failures: invocation.failures,
         requirements: invocation.requirements,
@@ -451,17 +469,37 @@ function arrayElement(
   return c.table.error;
 }
 
-function pureFunction(
+/**
+ * The specialized type of map, filter or fold. A pure callback gives a pure
+ * type. An effectful callback makes the call run as an effect with the
+ * callback failures and requirements.
+ */
+function callbackFunction(
   c: CollectionContext,
+  callback: NodeInfo,
   parameters: readonly TypeRef[],
+  callbackResult: TypeRef,
+  outer: (callback: TypeRef) => readonly TypeRef[],
   result: TypeRef,
 ): TypeRef {
+  const fn = c.functionOf(callback.type);
+  const failures = fn?.failures ?? [];
+  const requirements = fn?.requirements ?? [];
+  const effectful = fn !== undefined &&
+    (fn.execution !== "pure" || failures.length > 0 || requirements.length > 0);
+  const execution = effectful ? "effect" : "pure";
   return c.table.function({
-    execution: "pure",
-    parameters,
+    execution,
+    parameters: outer(c.table.function({
+      execution,
+      parameters,
+      result: callbackResult,
+      failures,
+      requirements,
+    })),
     result,
-    failures: [],
-    requirements: [],
+    failures,
+    requirements,
   });
 }
 

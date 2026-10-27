@@ -117,7 +117,7 @@ The sections follow the language topics: core forms, modules and exports, effect
 | Collection literals | Brackets write a list. `[1, 2]` infers an array. An expected tuple type checks each position and the length. `[]` needs an expected array or tuple type. A heterogeneous list without context gives `type-mismatch/012`. The parser accepts trailing commas | [2026-10-17-spec-amendment-collections.md](archive/plans/2026-10-17-spec-amendment-collections.md) |
 | `traverse` | `traverse(items, callback)` maps an array with a pure or effectful callback. The operation is effectful even when the callback is pure. Without options, it runs the callbacks one after another and returns the results in input order. Callback failures and service requirements enter the enclosing contract | [2026-10-17-bounded-traversal-design.md](archive/plans/2026-10-17-bounded-traversal-design.md), [2026-10-17-spec-amendment-collections.md](archive/plans/2026-10-17-spec-amendment-collections.md) |
 | `traverse` concurrency | A literal `{ concurrency: N }` runs at most N callbacks at the same time. N is a positive safe integer. `{ concurrency: "unbounded" }` starts the callbacks without a limit. Both forms keep input order. After a typed failure, the runtime interrupts the active siblings. Both forms wait for scoped finalizers after a failure or an interruption | [2026-10-17-bounded-traversal-design.md](archive/plans/2026-10-17-bounded-traversal-design.md), [effect-4-gap-audit.md, draft 0.4](archive/effect-4-gap-audit.md) |
-| Pure callbacks | `map`, `filter`, and `fold` require a pure callback with empty failure and requirement sets (`execution-mode/001`). The same code reports an impure callback of `updateRef`, `retrySchedule`, `codec`, and the pure stream accumulators and predicates | [2026-10-17-spec-amendment-collections.md](archive/plans/2026-10-17-spec-amendment-collections.md), [check_expr.ts](../src/core/check_expr.ts) |
+| Effectful callbacks | `map`, `filter`, and `fold` accept a pure or an effectful callback, in direct and pipeline form. With a pure callback, the call is pure and compiles to the array method. With an effectful callback, the call has effect mode and takes the failures and requirements of the callback. The callbacks run one after another, left to right, and the first typed failure stops the call. The results are `B[]` for `map`, `A[]` for `filter`, and the accumulator type for `fold`. These three builtins take no concurrency options; `traverse` keeps them. An exported function must declare the failures and requirements of an effectful callback. The checker reports `execution-mode/001` for an impure callback of `updateRef`, `retrySchedule`, `codec`, and the pure stream accumulators and predicates | [2026-10-17-spec-amendment-collections.md](archive/plans/2026-10-17-spec-amendment-collections.md), [check_expr.ts](../src/core/check_expr.ts) |
 
 ### Effect values
 
@@ -134,7 +134,7 @@ The sections follow the language topics: core forms, modules and exports, effect
 
 ## Collections
 
-The rules for collection literals, `traverse`, and the pure callbacks of `map`, `filter`, and `fold` are in the section on effects and contracts, under "Collections and traversal".
+The rules for collection literals, `traverse`, and the callbacks of `map`, `filter`, and `fold` are in the section on effects and contracts, under "Collections and traversal".
 
 ## Scopes and resources
 

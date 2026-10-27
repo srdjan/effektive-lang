@@ -71,7 +71,7 @@ Deno.test("malformed builtin ids retain callback rules from the recorded name", 
     "declarations[1].body.arguments[1]: a builtin callback is pure with empty failure and requirement sets";
   const fit =
     "declarations[1].body.arguments[1]: the argument has type (int) => int [effect], which does not fit the parameter (int) => int [pure]";
-  for (const name of ["$builtin/map/abc", "$builtin/mystery/abc", "x//y"]) {
+  for (const name of ["$builtin/mystery/abc", "x//y"]) {
     const diagnostics = validateModule(
       forgedName("value:m#bad", name),
       SOURCES,
@@ -82,25 +82,26 @@ Deno.test("malformed builtin ids retain callback rules from the recorded name", 
       ["validation/004", purity],
     ], name);
   }
+  for (const name of ["map", "filter", "traverse"]) {
+    assertEquals(
+      validateModule(forgedName("value:m#bad", `$builtin/${name}/abc`), SOURCES)
+        .map((d) => [d.code, d.message]).slice(0, 2),
+      [
+        ["validation/001", identity],
+        [
+          "validation/003",
+          `declarations[1].body: ${name} must invoke the callback with its declared failures and requirements`,
+        ],
+      ],
+      name,
+    );
+  }
   assertEquals(
     validateModule(forgedName("value:m#bad", "map"), SOURCES).map((
       d,
     ) => [d.code, d.message]),
     [
       ["validation/001", identity],
-      ["validation/002", fit],
-      ["validation/004", mode],
-    ],
-  );
-  assertEquals(
-    validateModule(forgedName("value:m#bad", "$builtin/traverse/abc"), SOURCES)
-      .map((d) => [d.code, d.message]),
-    [
-      ["validation/001", identity],
-      [
-        "validation/003",
-        "declarations[1].body: traverse must invoke the callback with its declared failures and requirements",
-      ],
       ["validation/002", fit],
       ["validation/004", mode],
     ],
@@ -224,4 +225,100 @@ Deno.test("builtin import payloads pin shape errors for every builtin name", () 
       JSON.stringify(diagnostics),
     );
   }
+});
+
+function forgedSpecialization(
+  source: string,
+  rewrite: (type: FunctionType) => FunctionType,
+): readonly [string, string][] {
+  const ir = lower(source);
+  const imp = ir.imports[0];
+  const type = imp.values[0].type;
+  assert(type.kind === "function");
+  const forged = {
+    ...ir,
+    imports: [{ ...imp, values: [{ ...imp.values[0], type: rewrite(type) }] }],
+  };
+  return validateModule(forged, new Map([["m.eff", source]])).map((
+    d,
+  ) => [d.code, d.message]);
+}
+
+Deno.test("an effectful callback specialization recorded pure is rejected for map, filter and fold", () => {
+  const head =
+    "type Int = int\ntype Flag = boolean\nservice S {\n  a(n: Int): Int\n  b(n: Int): Flag\n}\n";
+  const pure = (fn: FunctionType): FunctionType => ({
+    ...fn,
+    execution: "pure",
+    effects: { failures: [], requirements: [] },
+    parameters: fn.parameters.map((p) =>
+      p.kind === "function"
+        ? {
+          ...p,
+          execution: "pure",
+          effects: { failures: [], requirements: [] },
+        }
+        : p
+    ),
+  });
+  for (
+    const [name, result, expression] of [
+      ["map", "Int[]", "map(xs, (n) => S.a(n))"],
+      ["filter", "Int[]", "filter(xs, (n) => S.b(n))"],
+      ["fold", "Int", "fold(xs, 0, (t, n) => t + S.a(n))"],
+    ]
+  ) {
+    const source =
+      `${head}const probe = (xs: Int[]): ${result} uses S.a | S.b => ${expression}\n`;
+    const diagnostics = forgedSpecialization(source, pure);
+    assert(
+      diagnostics.some(([code, message]) =>
+        code === "validation/003" &&
+        message ===
+          `declarations[3].body: ${name} must invoke the callback with its declared failures and requirements`
+      ),
+      `${name}: ${JSON.stringify(diagnostics)}`,
+    );
+  }
+});
+
+Deno.test("a pure callback specialization recorded effectful is rejected for map, filter and fold", () => {
+  const effect = (fn: FunctionType): FunctionType => ({
+    ...fn,
+    execution: "effect",
+  });
+  for (
+    const [name, expression] of [
+      ["map", "map(xs, (n) => n + 1)"],
+      ["filter", "filter(xs, (n) => n > 0)"],
+      ["fold", "fold(xs, 0, (t, n) => t + n)"],
+    ]
+  ) {
+    const source =
+      `type Int = int\nconst probe = (xs: Int[]) => ${expression}\n`;
+    const diagnostics = forgedSpecialization(source, effect);
+    assert(
+      diagnostics.some(([code, message]) =>
+        code === "validation/003" &&
+        message ===
+          `imports[0].values[0].type: ${name} invokes its callback and carries its failures and requirements`
+      ),
+      `${name}: ${JSON.stringify(diagnostics)}`,
+    );
+  }
+});
+
+Deno.test("a genuine effectful map, filter and fold validate with no diagnostic", () => {
+  const source = `type Int = int
+type Flag = boolean
+error Stop = { at: int }
+service S {
+  a(n: Int): Int fails Stop
+  b(n: Int): Flag
+}
+const m = (xs: Int[]): Int[] fails Stop uses S.a => map(xs, (n) => S.a(n))
+const f = (xs: Int[]): Int[] uses S.b => xs |> filter((n) => S.b(n))
+const g = (xs: Int[]): Int fails Stop uses S.a => fold(xs, 0, (t, n) => t + S.a(n))
+`;
+  lower(source);
 });

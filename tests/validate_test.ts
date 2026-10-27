@@ -2734,7 +2734,7 @@ Deno.test("execution: a prelude callback with an effect mode is rejected", () =>
     (ir) =>
       setAt(ir, "imports[0].values[0].type.parameters[1].execution", "effect"),
   );
-  assert(codes.includes("validation/004"), codes.join());
+  assert(codes.includes("validation/003"), codes.join());
 });
 
 Deno.test("execution: constructing a closure is pure", () => {

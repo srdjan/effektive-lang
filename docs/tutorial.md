@@ -98,7 +98,7 @@ export const inStock = (books: Book[]): Title[] =>
     |> map(book => book.title)
 ```
 
-The `|>` operator gives the value on its left to the stage on its right. `filter` and `map` need pure callbacks. A pure callback has no failures, calls no services, and performs no effectful operations. Empty `fails` and `uses` sets alone do not make a callback pure.
+The `|>` operator gives the value on its left to the stage on its right. `filter`, `map`, and `fold` accept a pure callback or an effectful callback. An effectful callback runs once for each element, in order. The first typed failure stops the call, and the enclosing function must declare the failures and services of the callback.
 
 The callback `book => book.copies > 0` has one parameter without parentheses. This form is correct for one parameter without a type annotation. The compiler gets the type of `book` from `filter`. A parameter with an annotation, or two or more parameters, needs parentheses, as in `(sum, amount) => sum + amount`.
 

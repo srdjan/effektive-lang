@@ -1112,19 +1112,6 @@ function checkBuiltinShape(
     );
     return;
   }
-  const quiet = (fn: Type, at: string): void => {
-    if (
-      fn.kind === "function" && !isQuiet(invocationOf(fn))
-    ) {
-      report.add(
-        AREA.execution,
-        at,
-        "a builtin callback is pure with empty failure and requirement sets",
-        span,
-      );
-    }
-  };
-  if (name !== "traverse" && name !== "all") quiet(type, path);
   const wrong = (what: string): void =>
     report.add(AREA.types, path, `the builtin ${name} ${what}`, span);
   const count = type.parameters.length;
@@ -1197,17 +1184,20 @@ function checkBuiltinShape(
     wrong("takes a function as its last parameter");
     return;
   }
-  if (name !== "traverse") {
-    quiet(callback, `${path}.parameters[${callbackIndex}]`);
-  } else if (
-    type.execution !== "effect" || callback.execution !== "effect" ||
+  const effectful = name === "traverse" ||
+    !isQuiet(invocationOf(callback));
+  if (
+    type.execution !== (effectful ? "effect" : "pure") ||
+    (name === "traverse" && callback.execution !== "effect") ||
     !sameSet(type.effects.failures, callback.effects.failures) ||
     !sameSet(type.effects.requirements, callback.effects.requirements)
   ) {
     report.add(
       AREA.contracts,
       path,
-      "traverse invokes an effect callback and carries its failures and requirements",
+      name === "traverse"
+        ? "traverse invokes an effect callback and carries its failures and requirements"
+        : `${name} invokes its callback and carries its failures and requirements`,
       span,
     );
   }

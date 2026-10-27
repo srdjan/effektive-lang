@@ -1376,7 +1376,7 @@ export class BodyValidator implements ValidatorCore {
       return;
     }
     outs.forEach((o, i) => {
-      if (builtin !== undefined && builtin !== "traverse") {
+      if (builtin === "other") {
         const fn = asFunction(this.env, o.type);
         if (
           fn !== undefined &&
@@ -1453,21 +1453,30 @@ export class BodyValidator implements ValidatorCore {
       e.span,
       builtin,
     );
-    if (builtin === "traverse" && (outs.length === 2 || outs.length === 3)) {
-      const callback = asFunction(this.env, outs[1].type);
+    const callbackIndex = builtin === "fold" ? 2 : 1;
+    const callbackCount = builtin === "traverse"
+      ? outs.length === 2 || outs.length === 3
+      : builtin === "map" || builtin === "filter"
+      ? outs.length === 2
+      : builtin === "fold" && outs.length === 3;
+    if (builtin !== undefined && callbackCount) {
+      const callback = asFunction(this.env, outs[callbackIndex].type);
+      const effectful = builtin === "traverse" ||
+        (callback !== undefined && !isQuiet(invocationOf(callback)));
       if (
-        fn.execution !== "effect" || callback === undefined ||
+        fn.execution !== (effectful ? "effect" : "pure") ||
+        callback === undefined ||
         !sameSet(fn.effects.failures, callback.effects.failures) ||
         !sameSet(fn.effects.requirements, callback.effects.requirements)
       ) {
         this.add(
           AREA.contracts,
           path,
-          "traverse must invoke the callback with its declared failures and requirements",
+          `${builtin} must invoke the callback with its declared failures and requirements`,
           e.span,
         );
       }
-      if (outs.length === 3) {
+      if (builtin === "traverse" && outs.length === 3) {
         const options = e.arguments[2];
         if (!isConcurrencyOption(options)) {
           this.add(

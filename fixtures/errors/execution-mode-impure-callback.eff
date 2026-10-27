@@ -1,10 +1,10 @@
-service Counter {
-  next(): Int
+type Int = int
+
+error Stop = {}
+
+service Probe {
+  n(): Int
 }
 
-const bad = (xs: Int[]): Int[]
-  uses Counter.next =>
-  // error: execution-mode/001
-  map(xs, (x) => Counter.next())
-
-type Int = int
+// error: execution-mode/001
+const bad = retrySchedule((e: Stop, attempt: Int): Option<Int> uses Probe.n => Some(Probe.n()))
