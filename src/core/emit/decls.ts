@@ -82,8 +82,13 @@ function namedIn(type: Type, out: Set<DeclarationId>): void {
       return;
     case "array":
     case "option":
+    case "set":
     case "ref":
       namedIn(type.element, out);
+      return;
+    case "map":
+      namedIn(type.key, out);
+      namedIn(type.value, out);
       return;
     case "retry-schedule":
       namedIn(type.error, out);
@@ -478,7 +483,11 @@ export class DeclarationEmitter {
         return type.id === id;
       case "array":
       case "option":
+      case "set":
         return this.containsNamed(type.element, id);
+      case "map":
+        return this.containsNamed(type.key, id) ||
+          this.containsNamed(type.value, id);
       case "record":
         return type.fields.some((field) => this.containsNamed(field.type, id));
       case "union":
@@ -890,7 +899,10 @@ export class DeclarationEmitter {
         return all(type.fields.map((f) => f.type));
       case "array":
       case "option":
+      case "set":
         return all([type.element]);
+      case "map":
+        return all([type.key, type.value]);
       case "tuple":
         return all(type.elements);
       case "union":

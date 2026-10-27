@@ -82,6 +82,12 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
       return node.members.map((m) => print(table, names, m)).join(" | ");
     case "option":
       return `Option<${print(table, names, node.element)}>`;
+    case "map":
+      return `Map<${print(table, names, node.key)}, ${
+        print(table, names, node.value)
+      }>`;
+    case "set":
+      return `Set<${print(table, names, node.element)}>`;
     case "ref":
       return `Ref<${print(table, names, node.element)}>`;
     case "retry-schedule":

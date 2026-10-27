@@ -18,6 +18,8 @@ const SAMPLES: { readonly [K in Type["kind"]]: Extract<Type, { kind: K }> } = {
   "tuple": { kind: "tuple", elements: [] },
   "union": { kind: "union", members: [] },
   "option": { kind: "option", element: STRING },
+  "map": { kind: "map", key: STRING, value: STRING },
+  "set": { kind: "set", element: STRING },
   "ref": { kind: "ref", element: STRING },
   "closeable-scope": { kind: "closeable-scope" },
   "retry-schedule": { kind: "retry-schedule", error: STRING },

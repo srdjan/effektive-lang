@@ -72,6 +72,9 @@ const SLOTS: readonly Slot[] = [
   },
   { suffix: ".element", build: (p) => ({ kind: "array", element: p }) },
   { suffix: ".element", build: (p) => ({ kind: "option", element: p }) },
+  { suffix: ".element", build: (p) => ({ kind: "set", element: p }) },
+  { suffix: ".key", build: (p) => ({ kind: "map", key: p, value: INT }) },
+  { suffix: ".value", build: (p) => ({ kind: "map", key: INT, value: p }) },
   { suffix: ".element", build: (p) => ({ kind: "ref", element: p }) },
   {
     suffix: ".error",

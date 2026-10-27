@@ -23,6 +23,7 @@ export function compileStrictTarget(
   entries: readonly string[],
   run: string,
   prefix: string,
+  extraFiles: Readonly<Record<string, string>> = {},
 ): Promise<string> {
   const project = checkProject(
     memoryHost({ "effektive.json": "{}", ...files }),
@@ -45,13 +46,15 @@ export function compileStrictTarget(
     emitProject(lowered, { config: project.value.analysis.project.config }),
     run,
     prefix,
+    extraFiles,
   );
 }
 
 /**
  * Writes the emitted modules and `run` as `run.ts` into a temporary directory
  * with the strict target configuration, then runs `deno check` and `deno run`
- * on `run.ts`. Both commands must exit with code 0. Returns the standard
+ * on `run.ts`. `extraFiles` are written beside them, such as a host module.
+ * Both commands must exit with code 0. Returns the standard
  * output of the last command. Callers parse it. The directory is removed on
  * return and on failure.
  */
@@ -59,6 +62,7 @@ export async function runStrictTarget(
   emitted: ReadonlyMap<string, Result<EmittedModule, EmitProjectError>>,
   run: string,
   prefix: string,
+  extraFiles: Readonly<Record<string, string>> = {},
 ): Promise<string> {
   const dir = Deno.makeTempDirSync({ prefix });
   try {
@@ -72,6 +76,9 @@ export async function runStrictTarget(
     for (const result of emitted.values()) {
       assert(result.ok, JSON.stringify(result));
       Deno.writeTextFileSync(`${dir}/${result.value.path}`, result.value.text);
+    }
+    for (const [path, text] of Object.entries(extraFiles)) {
+      Deno.writeTextFileSync(`${dir}/${path}`, text);
     }
     Deno.writeTextFileSync(`${dir}/run.ts`, run);
     const decoder = new TextDecoder();

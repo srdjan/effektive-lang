@@ -171,6 +171,8 @@ const BUILTIN_TYPES = [
   "never",
   "unknown",
   "Option",
+  "Map",
+  "Set",
   "Ref",
   "RetrySchedule",
   "ScheduleInput",

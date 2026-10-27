@@ -160,7 +160,10 @@ export function dataOnly(
       return value.fields.every((field) => nested(field.type));
     case "array":
     case "option":
+    case "set":
       return nested(value.element);
+    case "map":
+      return nested(value.key) && nested(value.value);
     case "tuple":
       return value.elements.every(nested);
     case "union":
@@ -346,6 +349,13 @@ function assignable(
     case "option":
       return s.kind === "option" &&
         assignable(env, s.element, t.element, false, depth + 1);
+    case "set":
+      return s.kind === "set" &&
+        assignable(env, s.element, t.element, false, depth + 1);
+    case "map":
+      return s.kind === "map" &&
+        invariant(env, s.key, t.key, depth) &&
+        assignable(env, s.value, t.value, false, depth + 1);
     case "ref":
       return s.kind === "ref" &&
         invariant(env, s.element, t.element, depth);
@@ -464,6 +474,8 @@ function guardedAlias(env: TypeEnv, id: string): boolean {
       case "primitive":
       case "literal":
       case "option":
+      case "map":
+      case "set":
       case "ref":
       case "tuple":
       case "closeable-scope":
@@ -633,7 +645,10 @@ export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
         return current.fields.every((field) => visit(field.type));
       case "array":
       case "option":
+      case "set":
         return visit(current.element);
+      case "map":
+        return visit(current.key) && visit(current.value);
       case "tuple":
         return current.elements.every(visit);
       case "union":
@@ -956,6 +971,10 @@ export function show(type: Type): string {
       return type.members.map(show).join(" | ");
     case "option":
       return `Option<${show(type.element)}>`;
+    case "map":
+      return `Map<${show(type.key)}, ${show(type.value)}>`;
+    case "set":
+      return `Set<${show(type.element)}>`;
     case "ref":
       return `Ref<${show(type.element)}>`;
     case "retry-schedule":

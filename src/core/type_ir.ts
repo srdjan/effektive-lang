@@ -30,6 +30,13 @@ export function typeFromIr(table: TypeTable, type: Type): TypeRef {
       return table.union(type.members.map((m) => typeFromIr(table, m)));
     case "option":
       return table.option(typeFromIr(table, type.element));
+    case "map":
+      return table.map(
+        typeFromIr(table, type.key),
+        typeFromIr(table, type.value),
+      );
+    case "set":
+      return table.set(typeFromIr(table, type.element));
     case "ref":
       return table.ref(typeFromIr(table, type.element));
     case "retry-schedule":
@@ -157,6 +164,14 @@ export function typeToIr(table: TypeTable, ref: TypeRef): Type {
     }
     case "option":
       return { kind: "option", element: typeToIr(table, node.element) };
+    case "map":
+      return {
+        kind: "map",
+        key: typeToIr(table, node.key),
+        value: typeToIr(table, node.value),
+      };
+    case "set":
+      return { kind: "set", element: typeToIr(table, node.element) };
     case "ref":
       return { kind: "ref", element: typeToIr(table, node.element) };
     case "retry-schedule":

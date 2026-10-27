@@ -82,6 +82,8 @@ export type Type =
   | { readonly kind: "union"; readonly members: readonly Type[] }
   | { readonly kind: "option"; readonly element: Type }
   | { readonly kind: "ref"; readonly element: Type }
+  | { readonly kind: "map"; readonly key: Type; readonly value: Type }
+  | { readonly kind: "set"; readonly element: Type }
   | { readonly kind: "closeable-scope" }
   | { readonly kind: "retry-schedule"; readonly error: Type }
   | { readonly kind: "codec"; readonly decoded: Type; readonly encoded: Type }

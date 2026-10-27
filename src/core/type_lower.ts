@@ -267,6 +267,28 @@ export class TypeLowerer {
         ir: { kind: "option", element: element.ir },
       }),
     },
+    Map: {
+      kind: "generic",
+      arity: 2,
+      build: (lowerer, [key, value], nodes) => {
+        lowerer.requireKeyData("Map key", key, nodes[0]);
+        return {
+          ref: lowerer.env.table.map(key.ref, value.ref),
+          ir: { kind: "map", key: key.ir, value: value.ir },
+        };
+      },
+    },
+    Set: {
+      kind: "generic",
+      arity: 1,
+      build: (lowerer, [element], nodes) => {
+        lowerer.requireKeyData("Set element", element, nodes[0]);
+        return {
+          ref: lowerer.env.table.set(element.ref),
+          ir: { kind: "set", element: element.ir },
+        };
+      },
+    },
     Ref: {
       kind: "generic",
       arity: 1,
@@ -352,6 +374,29 @@ export class TypeLowerer {
       },
     },
   };
+
+  /**
+   * The key checks that wait until every declaration of the module is defined,
+   * because a key may name a type that a later declaration defines. The module
+   * checker sets this list, runs the checks, and then clears it.
+   */
+  pendingKeyChecks: (() => void)[] | undefined;
+
+  /** Reports `declaration/019` when a Map key or a Set element is not data. */
+  requireKeyData(role: string, lowered: Lowered, node: NodeId): void {
+    const check = (): void => {
+      if (dataOnly(this.env.table, lowered.ref, "value", true)) return;
+      this.report(
+        "declaration/019",
+        `A ${role} must be data, found \`${
+          showType(this.env.table, lowered.ref)
+        }\``,
+        this.span(node),
+      );
+    };
+    if (this.pendingKeyChecks === undefined) check();
+    else this.pendingKeyChecks.push(check);
+  }
 
   private noArguments(
     name: string,
@@ -876,7 +921,12 @@ export function recursionIsGuarded(
           return;
         case "option":
         case "array":
+        case "set":
           visit(type.element, true);
+          return;
+        case "map":
+          visit(type.key, true);
+          visit(type.value, true);
           return;
         case "union": {
           const outside = type.members.some((m) => !inGroup(m));

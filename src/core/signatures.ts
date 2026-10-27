@@ -330,8 +330,13 @@ export function referencedIds(type: Type, ids: Set<string>): void {
       return;
     case "array":
     case "option":
+    case "set":
     case "ref":
       referencedIds(type.element, ids);
+      return;
+    case "map":
+      referencedIds(type.key, ids);
+      referencedIds(type.value, ids);
       return;
     case "retry-schedule":
       referencedIds(type.error, ids);

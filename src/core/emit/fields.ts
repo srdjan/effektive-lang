@@ -50,7 +50,11 @@ export function needsFieldAdapter(
       );
     case "option":
     case "array":
+    case "set":
       return needsFieldAdapter(scope, type.element, seen);
+    case "map":
+      return needsFieldAdapter(scope, type.key, seen) ||
+        needsFieldAdapter(scope, type.value, seen);
     case "tuple":
       return type.elements.some((t) => needsFieldAdapter(scope, t, seen));
     case "union":
@@ -98,6 +102,16 @@ function adapterBody(
     return `return ${option}.isOption(value) ? ${option}.map(value, item => ${
       apply(type.element, "item")
     }) : value;`;
+  } else if (type.kind === "map") {
+    const map = scope.effect("HashMap");
+    return `return ${map}.isHashMap(value) ? ${map}.fromIterable(${map}.toEntries(value).map(([entryKey, item]): readonly [unknown, unknown] => [${
+      apply(type.key, "entryKey")
+    }, ${apply(type.value, "item")}])) : value;`;
+  } else if (type.kind === "set") {
+    const set = scope.effect("HashSet");
+    return `return ${set}.isHashSet(value) ? ${set}.fromIterable(globalThis.Array.from(value, item => ${
+      apply(type.element, "item")
+    })) : value;`;
   } else if (type.kind === "array") {
     return `return globalThis.Array.isArray(value) ? value.map(item => ${
       apply(type.element, "item")

@@ -28,8 +28,11 @@ export function typeChildren(t: Type): readonly TypeChild[] {
       return t.fields.map((f, i) => child(f.type, `.fields[${i}].type`));
     case "array":
     case "option":
+    case "set":
     case "ref":
       return [child(t.element, ".element")];
+    case "map":
+      return [child(t.key, ".key"), child(t.value, ".value")];
     case "retry-schedule":
       return [child(t.error, ".error")];
     case "codec":
