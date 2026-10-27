@@ -1,7 +1,7 @@
 # Effect surface leftovers
 
 Date: 2026-10-27. Baseline: `9e0227e`. EL identifies this plan's units.
-Status: validated by Fable; waiting for the user to choose EL-D1 and EL-D2 and to approve the plan.
+Status: validated by Fable, approved by the user on 2026-10-27.
 
 The [effect surface plan](../archive/plans/2026-10-27-effect-surface.md) closed
 with four open points, (a) to (d). On 2026-10-27 the user chose to close them
@@ -51,7 +51,8 @@ project was a scratch directory with an empty `effektive.json`.
 
 ## Decisions
 
-These decisions change the source that users write.
+These decisions change the source that users write. On 2026-10-27 the user
+chose (a) for EL-D1 and EL-D2.
 
 - **EL-D1 (cron expression).** (a) The expression must be a string literal.
   The compiler checks its grammar and reports an invalid expression as a
@@ -150,8 +151,7 @@ Verification:
 
 ## EL3: `scheduleCron` (point d)
 
-This unit assumes EL-D1 (a) and EL-D2 (a). If the user chooses otherwise, the
-plan author revises this section before the unit starts.
+This unit follows the user's choice of EL-D1 (a) and EL-D2 (a).
 
 **Form.** `scheduleCron(expression)` and `scheduleCron(expression, zone)`.
 Both arguments are string literals. The call is pure, like the other schedule
@@ -274,7 +274,7 @@ Verification:
 EL1 comes first, because it is a refactor and EL2 and EL3 touch the same files.
 EL2 comes before EL3, because both add IR shapes and EL4 updates the website
 IR once.
-EL3 waits for the user's answers to EL-D1 and EL-D2. EL4 comes last. Each unit
+EL4 comes last. Each unit
 ends with `deno task check` and its own commit.
 
 ## Validation
