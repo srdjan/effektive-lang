@@ -30,6 +30,8 @@ The self-improvement loop is in [docs/logging.md](docs/logging.md): run `deno ta
 
 Follow the accepted [application acceptance rule](docs/plans/2026-10-19-application-acceptance-rule.md) when selecting gap work. The stopping rule, the application dispositions, and the open items are in [docs/status.md](docs/status.md). Keep application orchestration in `.eff`. Add features only for demonstrated application blockers after checking existing source compositions. Exception, accepted 2026-10-24: a compiler or syntax change that makes source more terse and elegant is welcome without an application blocker. It must keep the source easy to read, keep closed contracts, and keep explicit exported contracts.
 
+Exception, accepted 2026-10-27: Effektive hides the verbosity of Effect. Expose an Effect feature in source only when it carries user intent that the compiler cannot infer. Use every other Effect feature inside the transpiler only. Prefer to extend an existing source form over adding a builtin name. The candidate list is in [docs/status.md](docs/status.md#effect-4-features-to-surface-in-source).
+
 The website and canonical spec are in the sibling repository `../effektive/public/`.
 When a change affects source forms or project status, keep the website specification and its examples current.
 Verify changed Effektive examples with the compiler. Run the site's strict checks for TypeScript panels.

@@ -190,6 +190,49 @@ contract, observed diagnostic or behavior, and the required failure,
 cancellation, and cleanup semantics. No item has an automatic priority or
 implementation commitment.
 
+### Effect 4 features to surface in source
+
+On 2026-10-27 the user accepted a second change to the target. Effektive hides
+the verbosity of Effect. A source form exposes an Effect 4 feature only when the
+feature carries user intent that the compiler cannot infer. The transpiler uses
+the other features in the emitted TypeScript only. The user selected items 1 to
+8 and 19 to 21 first. The other items have no implementation commitment. The
+proposed forms are candidates, not accepted syntax.
+
+| Item | User intent | Candidate form | Hidden Effect modules |
+| --- | --- | --- | --- |
+| 1 Timeout (selected) | Time limit | `timeout(job, 5s)` with a typed timeout error | `Duration` |
+| 2 Delay (selected) | Wait time | `sleep(200ms)` | `Duration`, `Clock` |
+| 3 Repetition (selected) | Repeat or loop | `repeat(job, policy)` | `Schedule` consumers |
+| 4 General policies (selected) | Backoff, jitter, limits, stop conditions | `retry` accepts any `Schedule`, with exponential, jitter and `while`/`until` constructors | `Schedule` |
+| 5 Cron | Calendar policy | A cron schedule constructor | `Cron` |
+| 6 Outcome-aware cleanup (selected) | Action on success, failure or interruption | `finally (outcome) { ... }` | `Exit` |
+| 7 Defect recovery (selected) | Where unexpected failures stop | A defect arm in `catch` | `Cause` |
+| 8 Interruption masks (selected) | Region that must not be interrupted | `uninterruptible { ... }` | Interruption masks |
+| 9 Detached work | Lifetime beyond the caller | A daemon variant of `forkScoped` | `Fiber` status APIs |
+| 10 Keyed background jobs | Replace by key, or a set | One keyed form | `FiberMap`, `FiberSet` |
+| 11 Coordination | Producer-consumer and fan-out design | `Queue`, `PubSub`, `Deferred`, `Semaphore` types | `Latch`, `Take` |
+| 12 Observable state | Watch changes | A `Ref` change Stream | `SubscriptionRef` |
+| 13 Atomic updates | Transaction boundary | `atomic { ... }` over `Ref` values | `Tx*` modules |
+| 14 Caching and pools | TTL, capacity, size | `cached(job, options)`, `pool(acquire, options)` | `Cache`, `ScopedCache`, `Pool`, `RcRef`, `RcMap` |
+| 15 Request batching | A batched service method | A `batched` marker | `Request`, `RequestResolver` |
+| 16 Logging and metrics | Messages, levels, metric names | `log(level, message, fields?)`, counters, histograms | `Logger`, `LogLevel`, `Metric` |
+| 17 Configuration | Keys and secret status | A `config` declaration and `Secret<T>` | `Config`, `ConfigProvider`, `Redacted` |
+| 18 Time and randomness | Current time, random values | `now()`, `random()` | `Clock`, `Random` |
+| 19 Effectful collection callbacks (selected) | Effects inside `map`, `filter`, `fold` | Relax the pure-callback rule | `Effect.forEach`, `Effect.filter`, `Effect.reduce` |
+| 20 Effectful `updateRef` (selected) | Effects inside an atomic update | Relax the pure-callback rule | `SynchronizedRef` |
+| 21 `race` over an array (selected) | First of many | Accept an array | `Effect.raceAll` |
+| 22 `Map` and `Set` types | Keyed and unique data | `Map<K,V>`, `Set<T>` with derived equality | `HashMap`, `HashSet`, `Equal`, `Hash` |
+| 23 Recursive types | Recursive Option data, mutual alias recursion | Ordinary type declarations | Schema recursion |
+
+The transpiler may use these modules without a source form: `Chunk`,
+`Channel`, `Pull`, `Take`, `Cause` internals, `Scheduler`, `Runtime`,
+`ManagedRuntime`, `MutableRef`, `ScopedRef`, tracing spans, `JsonSchema`,
+`Arbitrary`, `StandardSchema`, `SchemaAST`, derived `Equal`, `Hash` and `Order`
+instances, and `TestClock`. Blocks, `if`, `??` and `try`/`catch` replace `tap`,
+`zipWith`, `orElse`, `when`, `filterOrFail` and the `Option` and `Result`
+combinators. Platform modules stay under the item 9 deferral.
+
 ### Explicit user deferral: item 9
 
 Broader package interoperability remains deferred until the user revisits it.
