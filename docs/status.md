@@ -174,7 +174,7 @@ They are a record of gaps, not an implementation queue.
 | Full Scope parity                   | Supplied close Exits, exit-aware scope finalizers, parallel finalization strategies, mandatory closure and static dependency-cycle detection remain outside the selected contract.                                                                                     | Shared CloseableScope authority closes once with Exit.void and caches cleanup completion. See the [ownership contract](archive/plans/2026-10-18-scope-ownership-contract.md).                                                                                          |
 | General Stream and Sink APIs        | Other operators, arbitrary source Sink constructors, chunk-cost throttling and unrestricted nested group streams need additional source and lifetime rules.                                                                                                     | Leftovers, transduction, aggregation and callback-owned keyed groups are implemented. Selected external interruption has a source composition. See the [investigation](archive/plans/2026-10-18-general-stream-schedule-design.md).                                    |
 | General Schedule APIs               | Composition with incomparable input types, other combinators and cron policies remain uncovered.                                                                                                            | `retry` and `repeat` consume general Schedules, and `scheduleExponential` and `scheduleJittered` exist. RetrySchedule and a concrete source repetition policy meet the worker gate. General schedules support aggregation and selected comparable-input composition. See the [worker limits](archive/plans/2026-10-19-scheduled-worker-application.md#disposition-and-limits). |
-| Time control                        | A general source clock and time-control API remains a candidate without a demonstrated application blocker.                                                                                                                                                     | Primitive clock services and native virtual-time checks cover the selected applications. See the [accepted rule](plans/2026-10-19-application-acceptance-rule.md#feature-selection).                                                                                   |
+| Time control                        | `now()` reads the runtime clock (SL1). A source API that controls time, such as a test clock, remains a candidate without a demonstrated application blocker.                                                                                                                                                     | Primitive clock services and native virtual-time checks cover the selected applications. See the [accepted rule](plans/2026-10-19-application-acceptance-rule.md#feature-selection).                                                                                   |
 | Schema and recursion                | Recursive Option data in an alias, mutual recursion of aliases, arbitrary self-bearing transformations and general Schema AST construction remain unsupported. Tagged records support guarded and mutual recursion (see [type identity](#type-identity)). | Guarded recursion preserves separate decoded, encoded and make-input types through selected adapters. See the [recursive field contract](archive/plans/2026-10-19-schema-recursive-adapters-contract.md).                                                              |
 | General language extensions         | User-defined generics, effect-row polymorphism, source purity assertions, macros and early returns remain deferred language extensions.                                                                                                                         | Builtin generic types and concrete source compositions cover the accepted applications. The [specification](../../effektive/public/effektive-spec.html#examples) retains the broader language boundary.                                                                |
 
@@ -202,7 +202,9 @@ ES11. Item 5 (Cron) is done in the
 [effect surface leftovers plan](archive/plans/2026-10-27-effect-surface-leftovers.md),
 unit EL3, as `scheduleCron`. That plan also typed duration literal patterns
 (EL2). On 2026-10-27 the user chose items 22, 18 and 16 as the second
-selection; that selection has no plan yet. The other items have no
+selection. Items 18 and 22, and the logging half of item 16, are done in the
+[second selection plan](archive/plans/2026-10-27-second-effect-selection.md),
+units SL1 to SL6. Metrics stay open. The other items have no
 implementation commitment. The forms of the open items are candidates, not
 accepted syntax.
 
@@ -229,13 +231,13 @@ The IR is at version 7.
 | 13 Atomic updates | Transaction boundary | `atomic { ... }` over `Ref` values | `Tx*` modules |
 | 14 Caching and pools | TTL, capacity, size | `cached(job, options)`, `pool(acquire, options)` | `Cache`, `ScopedCache`, `Pool`, `RcRef`, `RcMap` |
 | 15 Request batching | A batched service method | A `batched` marker | `Request`, `RequestResolver` |
-| 16 Logging and metrics | Messages, levels, metric names | `log(level, message, fields?)`, counters, histograms | `Logger`, `LogLevel`, `Metric` |
+| 16 Logging and metrics (logging done, SL3; metrics open) | Messages, levels, metric names | `log(message, { level, fields })`; counters and histograms open | `Logger`, `LogLevel`, `Metric` |
 | 17 Configuration | Keys and secret status | A `config` declaration and `Secret<T>` | `Config`, `ConfigProvider`, `Redacted` |
-| 18 Time and randomness | Current time, random values | `now()`, `random()` | `Clock`, `Random` |
+| 18 Time and randomness (done, SL1 and SL2) | Current time, random values | `now()` with the closed type `Instant`, `random()`, `randomInt(min, max)` | `Clock`, `Random` |
 | 19 Effectful collection callbacks (done, ES8) | Effects inside `map`, `filter`, `fold` | Relax the pure-callback rule | `Effect.forEach`, `Effect.filter`, `Effect.reduce` |
 | 20 Effectful `updateRef` (done, ES9) | Effects inside an atomic update | Relax the pure-callback rule | `SynchronizedRef` |
 | 21 `race` over an array (done, ES10) | First of many | Accept an array | `Effect.raceAll` |
-| 22 `Map` and `Set` types | Keyed and unique data | `Map<K,V>`, `Set<T>` with derived equality | `HashMap`, `HashSet`, `Equal`, `Hash` |
+| 22 `Map` and `Set` types (done, SL4 and SL5) | Keyed and unique data | `Map<K,V>`, `Set<T>`, `mapOf`, `getMap`, `putMap`, `removeMap`, `hasMap`, `entriesMap`, `setOf`, `addSet`, `removeSet`, `hasSet`, `itemsSet` | `HashMap`, `HashSet`, `Equal`, `Hash` |
 | 23 Recursive types | Recursive Option data, mutual alias recursion | Ordinary type declarations | Schema recursion |
 
 The transpiler may use these modules without a source form: `Chunk`,

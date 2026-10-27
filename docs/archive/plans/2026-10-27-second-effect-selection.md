@@ -1,13 +1,13 @@
 # Second selection of Effect features
 
 Date: 2026-10-27. Baseline: `c8999c5`. SL identifies this plan's units.
-Status: validated by Fable, approved by the user on 2026-10-27.
+Status: validated by Fable, approved by the user on 2026-10-27, complete.
 
 On 2026-10-27 the user chose the second selection from the
-[status table](../status.md#effect-4-features-to-surface-in-source): item 18
+[status table](../../status.md#effect-4-features-to-surface-in-source): item 18
 (`now()` and `random()`), item 16 (logging) and item 22 (`Map` and `Set`).
 Metrics, the other half of item 16, are not in this selection. The design rules
-of the [effect surface plan](../archive/plans/2026-10-27-effect-surface.md#design-rules)
+of the [effect surface plan](2026-10-27-effect-surface.md#design-rules)
 apply: extend an existing form before adding a name, make each new prelude name
 shadowable, give each new IR shape an independent validator rule, and expose no
 Effect module name as a source name.
@@ -389,3 +389,37 @@ SL1 comes first, because SL2 reuses its leaf-kind pattern and the time
 builtins share `EffectModule` edits. SL3 is independent. SL4 comes before SL5.
 SL6 comes last. Each unit ends with `deno task check` and its own commit. A
 change to an application fixture also runs that application's gate.
+
+## Disposition
+
+Units SL1 to SL6 are done. The commit that archives this plan completes SL6.
+
+- Plan: `7ed75a1`; approval and SL-D1 to SL-D6 (a): `2851931`.
+- SL1 `now()` and `Instant`: `0578a14`.
+- SL2 `random()` and `randomInt`: `2cf3cd2`.
+- SL3 `log`: `5008fc0`.
+- SL4 the `Map` and `Set` types: `1ef9f9b`.
+- SL5 the `Map` and `Set` operations: `0488ce7`.
+- SL6 website spec draft 0.68: `289e6c1` in `../effektive`.
+
+Choices made during implementation:
+
+- SL1 closed comparisons for both closed unit types. The scheduled worker now
+  compares its delays with `0ms`. The publisher types its host time port as
+  `Instant`, so `clockLive` needs no constructor.
+- SL4 checks a Map key and a Set element after every declaration of the module
+  is defined, so a key may name a later type. A `Map` or `Set` that contains its
+  own type gives `declaration/007`, as `Option` does.
+- SL5 gives `mapOf([])` and `setOf([])` without an expected type
+  `type-mismatch/012`.
+
+These points stay open:
+
+- (a) Metrics, the other half of item 16.
+- (b) `sizeMap`, `sizeSet`, and set union, intersection and difference.
+- (c) JSON input does not decode into a `Map` or `Set`, as for `Option`.
+- (d) The checked-input fit has no `map` or `set` case, so a refined value in a
+  `Map` or `Set` position fits only an identical type.
+- (e) The SL2 random test and the EL3 cron differential test use loops, which
+  the user's testing rules of 2026-10-27 forbid. They wait for the user's
+  answer.
