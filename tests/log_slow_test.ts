@@ -13,7 +13,14 @@ Deno.test("the file log works on the real disk", () => {
       Deno.writeTextFileSync(path, "x");
       Deno.utimeSync(path, old, old);
     }
-    Deno.writeTextFileSync(`${logs}/cli-recent.jsonl`, "x");
+    const retainedHash = sha256Hex("retained source");
+    const retainedBlob = `${logs}/blobs/${retainedHash}.txt`;
+    Deno.writeTextFileSync(retainedBlob, "retained source");
+    Deno.utimeSync(retainedBlob, old, old);
+    Deno.writeTextFileSync(
+      `${logs}/cli-recent.jsonl`,
+      JSON.stringify({ data: { hash: retainedHash } }) + "\n",
+    );
 
     const opened = openFileLog({
       fs: denoLogFs,
@@ -39,9 +46,10 @@ Deno.test("the file log works on the real disk", () => {
     assert(names.includes("cli-recent.jsonl"));
     assert(!Deno.statSync(`${logs}/blobs`).isFile);
     assertEquals(
-      [...Deno.readDirSync(`${logs}/blobs`)].map((e) => e.name),
-      [`${hash}.txt`],
+      [...Deno.readDirSync(`${logs}/blobs`)].map((e) => e.name).sort(),
+      [`${hash}.txt`, `${retainedHash}.txt`].sort(),
     );
+    assertEquals(Deno.readTextFileSync(retainedBlob), "retained source");
     const session = names.find((n) => n.endsWith("-abc.jsonl"));
     assert(session !== undefined);
     const lines = Deno.readTextFileSync(`${logs}/${session}`).trimEnd().split(

@@ -9,12 +9,16 @@ import {
   prepareLogFolder,
 } from "../src/host/log.ts";
 import { sha256Hex } from "../src/core/mod.ts";
+import { main } from "../src/cli/main.ts";
+import { parseSession } from "../scripts/logs_report.ts";
+import { replaySession } from "../scripts/logs_replay.ts";
+import { memoryIo } from "./cli_helpers.ts";
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 9, 26, 12, 0, 0);
 
 /** A memory LogFs. `failWrites` turns every write into a failure. */
-function memoryFs(): LogFs & {
+function memoryFs(now: () => number = () => NOW): LogFs & {
   files: Map<string, { text: string; mtimeMs: number }>;
   touched: string[];
   failWrites: boolean;
@@ -27,15 +31,21 @@ function memoryFs(): LogFs & {
     touched,
     failWrites: false,
     mkdir: () => ({ ok: true as const, value: undefined }),
+    readText(path: string) {
+      const file = files.get(path);
+      return file === undefined
+        ? { ok: false as const, error: { message: "not found" } }
+        : { ok: true as const, value: file.text };
+    },
     writeText(path: string, text: string) {
       if (fs.failWrites) return { ok: false as const, error: fail };
-      files.set(path, { text, mtimeMs: NOW });
+      files.set(path, { text, mtimeMs: now() });
       return { ok: true as const, value: undefined };
     },
     appendText(path: string, text: string) {
       if (fs.failWrites) return { ok: false as const, error: fail };
       const old = files.get(path);
-      files.set(path, { text: (old?.text ?? "") + text, mtimeMs: NOW });
+      files.set(path, { text: (old?.text ?? "") + text, mtimeMs: now() });
       return { ok: true as const, value: undefined };
     },
     exists: (path: string) => files.has(path),
@@ -54,7 +64,7 @@ function memoryFs(): LogFs & {
     touch(path: string) {
       touched.push(path);
       const file = files.get(path);
-      if (file) file.mtimeMs = NOW;
+      if (file) file.mtimeMs = now();
       return { ok: true as const, value: undefined };
     },
     remove(path: string) {
@@ -134,6 +144,70 @@ Deno.test("rotation removes old session files and blobs, and keeps recent ones",
       "/p/.effektive/logs/notes.md",
     ],
   );
+});
+
+Deno.test("rotation preserves replay sources until the referencing session expires", async () => {
+  let now = NOW;
+  const fs = memoryFs(() => now);
+  const log = open(fs);
+  const project = memoryIo({
+    "/p/effektive.json": "{}",
+    "/p/m.eff": "type Cents = int\n",
+  });
+  assertEquals(
+    await main(["check", "/p"], { ...project.io, openLog: () => log }),
+    0,
+  );
+  const orphan = "/p/.effektive/logs/blobs/orphan.txt";
+  fs.files.set(orphan, { text: "unused", mtimeMs: now });
+  now += 8 * DAY;
+  log.append("cli.phase", { name: "idle", ms: 0 });
+  assert(prepareLogFolder(fs, "/p", new Date(now)).ok);
+  assert(fs.files.has(SESSION_FILE));
+  assertEquals(fs.files.has(orphan), false);
+  const recorded = fs.files.get(SESSION_FILE);
+  assert(recorded !== undefined);
+  const { events } = parseSession(recorded.text, SESSION_FILE);
+  const replayed = await replaySession(
+    events,
+    (hash) => fs.files.get(`/p/.effektive/logs/blobs/${hash}.txt`)?.text,
+  );
+  assertEquals(replayed.tag, "same");
+  now += 8 * DAY;
+  assert(prepareLogFolder(fs, "/p", new Date(now)).ok);
+  assertEquals([...fs.files.keys()], ["/p/.effektive/.gitignore"]);
+});
+
+Deno.test("rotation keeps blobs when retained session evidence is unavailable", () => {
+  for (const failure of ["read", "parse", "list", "remove"] as const) {
+    const fs = memoryFs();
+    const log = open(fs);
+    const hash = log.blob("source");
+    log.append("cli.input", { path: "m.eff", hash });
+    const blob = `/p/.effektive/logs/blobs/${hash}.txt`;
+    const source = fs.files.get(blob);
+    const session = fs.files.get(SESSION_FILE);
+    assert(source !== undefined && session !== undefined);
+    source.mtimeMs = NOW - 8 * DAY;
+    if (failure === "parse") session.text += "{";
+    if (failure === "remove") session.mtimeMs = NOW - 8 * DAY;
+    const failed = { ok: false as const, error: { message: "denied" } };
+    const broken: LogFs = {
+      ...fs,
+      readText: (path) => failure === "read" ? failed : fs.readText(path),
+      list: (path) =>
+        failure === "list" && path === "/p/.effektive/logs"
+          ? failed
+          : fs.list(path),
+      remove: (path) =>
+        failure === "remove" && path === SESSION_FILE
+          ? failed
+          : fs.remove(path),
+    };
+    assert(prepareLogFolder(broken, "/p", new Date(NOW)).ok);
+    assert(fs.files.has(blob), failure);
+    assert(fs.files.has(SESSION_FILE), failure);
+  }
 });
 
 Deno.test("a write failure turns the log off without throwing", () => {

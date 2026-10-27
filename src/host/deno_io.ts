@@ -84,6 +84,7 @@ export const denoFs: HostFs = {
 /** The real file system of the event log. */
 export const denoLogFs: LogFs = {
   mkdir: (path) => attempt(() => Deno.mkdirSync(path, { recursive: true })),
+  readText: (path) => attempt(() => Deno.readTextFileSync(path)),
   writeText: (path, text) => attempt(() => Deno.writeTextFileSync(path, text)),
   appendText: (path, text) =>
     attempt(() => Deno.writeTextFileSync(path, text, { append: true })),

@@ -2,7 +2,7 @@
 // Logging never breaks the program: after a write failure the file log turns
 // itself off. The core never imports this file.
 
-import { type Result, sha256Hex } from "../core/mod.ts";
+import { isRecord, type Result, sha256Hex } from "../core/mod.ts";
 import config from "../../deno.json" with { type: "json" };
 import type { FileFailure } from "./io.ts";
 
@@ -107,6 +107,7 @@ export interface LogEntry {
 export interface LogFs {
   /** Creates the directory and its parents. */
   mkdir(path: string): Result<void, FileFailure>;
+  readText(path: string): Result<string, FileFailure>;
   /** Writes the whole file. */
   writeText(path: string, text: string): Result<void, FileFailure>;
   /** Appends to the file, and creates it when missing. */
@@ -129,9 +130,10 @@ const ROTATION_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Prepares `<projectDir>/.effektive/logs/`: creates the folders, writes the
- * self-ignoring `.gitignore`, and deletes session files and blobs older than
- * seven days. The result is the logs folder. It fails only when the folders
- * or the `.gitignore` cannot be written.
+ * self-ignoring `.gitignore`, and deletes session files older than seven days.
+ * Old blobs stay while a retained session references them. Unreadable or
+ * damaged sessions prevent blob cleanup. The result is the logs folder.
+ * It fails only when the folders or the `.gitignore` cannot be written.
  */
 export function prepareLogFolder(
   fs: LogFs,
@@ -149,13 +151,41 @@ export function prepareLogFolder(
     if (!written.ok) return written;
   }
   const cutoff = now.getTime() - ROTATION_MS;
-  for (const [dir, suffix] of [[logs, ".jsonl"], [blobs, ".txt"]] as const) {
-    const listed = fs.list(dir);
-    if (!listed.ok) continue;
-    for (const entry of listed.value) {
-      if (entry.name.endsWith(suffix) && entry.mtimeMs < cutoff) {
-        fs.remove(`${dir}/${entry.name}`);
+  const sessions = fs.list(logs);
+  if (!sessions.ok) return { ok: true, value: logs };
+  const retained: string[] = [];
+  for (const entry of sessions.value) {
+    if (!entry.name.endsWith(".jsonl")) continue;
+    const path = `${logs}/${entry.name}`;
+    if (entry.mtimeMs < cutoff && fs.remove(path).ok) continue;
+    retained.push(path);
+  }
+  const listed = fs.list(blobs);
+  if (!listed.ok) return { ok: true, value: logs };
+  const old = listed.value.filter((entry) =>
+    entry.name.endsWith(".txt") && entry.mtimeMs < cutoff
+  );
+  if (old.length === 0) return { ok: true, value: logs };
+  const hashes = new Set<string>();
+  for (const path of retained) {
+    const read = fs.readText(path);
+    if (!read.ok) return { ok: true, value: logs };
+    for (const line of read.value.split("\n")) {
+      if (line.trim() === "") continue;
+      let event: unknown;
+      try {
+        event = JSON.parse(line);
+      } catch {
+        return { ok: true, value: logs };
       }
+      if (isRecord(event) && isRecord(event.data)) {
+        if (typeof event.data.hash === "string") hashes.add(event.data.hash);
+      }
+    }
+  }
+  for (const entry of old) {
+    if (!hashes.has(entry.name.slice(0, -4))) {
+      fs.remove(`${blobs}/${entry.name}`);
     }
   }
   return { ok: true, value: logs };

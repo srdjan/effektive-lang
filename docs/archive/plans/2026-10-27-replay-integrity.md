@@ -50,5 +50,13 @@ Completed: the review reproduced both failures through public APIs and in-memory
 LR1 regressions failed before the repair: concurrent requests started before the previous response.
 LR1 now serializes requests and stops queued batches after a failure.
 LR1 verification: all 24 focused tests and `deno task check` passed, including all 213 slow tests.
-Current: LR2, preserve referenced source blobs.
-Remaining: retention regression tests, the repository gate, and the final plan archive.
+LR1 commit: `e032669`.
+LR2 regressions failed before the repair: replay returned `unsupported`, and cleanup deleted sources when session evidence was unavailable.
+LR2 now marks references from retained sessions before deleting old blobs.
+Cleanup keeps blobs when session evidence is unavailable or an expired session cannot be removed.
+LR2 verification: all 40 focused tests and the real-disk test passed.
+The retention regression replayed a recorded CLI session with result `same` after cleanup.
+The regression also confirmed later reclamation after the retained session expired.
+LR2 verification: `deno task check` passed, including all 213 slow tests.
+Completed: both repairs, regression checks, documentation, and the plan archive.
+Remaining: the user owns review and push of the local commits.

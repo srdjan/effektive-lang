@@ -63,8 +63,10 @@ surface sends it anywhere. Read the blobs before you share a log folder.
 
 ## Rotation and off flags
 
-At session start the writer deletes session files and blobs older than seven
-days. A blob that a session uses again gets a new modification time.
+At session start the writer deletes session files whose last modification is older than seven days.
+The writer deletes old blobs only when no retained session references them.
+A blob that a session uses again gets a new modification time.
+An unreadable or damaged session prevents blob cleanup until a later cleanup can read or remove the session.
 
 | Surface         | Off flag                                                                    |
 | --------------- | --------------------------------------------------------------------------- |
