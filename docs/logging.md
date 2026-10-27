@@ -50,6 +50,8 @@ The command-line events come from `src/cli/`. The language server log is a wire
 log: `src/lsp/wire_log.ts` records each message in and out, each end of a
 stdin read, each timer flush, and each disk call. The playground builds its
 event data in `playground/src/events.ts` and posts batches to `POST /log`.
+The playground waits for each response before posting the next batch, including batches from later flushes.
+A failed request stops queued batches and later events.
 `playground/log_endpoint.ts` checks each request: same origin, the JSON content
 type, the size limits, and the envelope shape.
 

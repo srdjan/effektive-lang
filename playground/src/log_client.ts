@@ -31,7 +31,7 @@ export interface PageLogOptions extends LogClock {
 
 export interface PageLog {
   event(kind: string, data: unknown): void;
-  /** Posts every pending event now. Use it on `pagehide`. */
+  /** Queues pending events for ordered posting. Use it on `pagehide`. */
   flush(): void;
 }
 
@@ -73,10 +73,23 @@ export function createPageLog(options: PageLogOptions): PageLog {
   const setTimer = options.setTimer ?? defaultTimer;
   let stopped = false;
   let cancel: (() => void) | undefined;
+  let pending: Promise<void> | undefined;
 
   const stop = () => {
     stopped = true;
     log.events.length = 0;
+  };
+
+  const post = async (body: string, previous: Promise<void> | undefined) => {
+    if (previous !== undefined) await previous;
+    if (stopped) return;
+    const response = await options.fetch("/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body,
+    });
+    if (!response.ok) stop();
   };
 
   const flush = () => {
@@ -86,14 +99,7 @@ export function createPageLog(options: PageLogOptions): PageLog {
     try {
       const items = log.events.splice(0).map((e) => JSON.stringify(e));
       for (const body of batches(items)) {
-        options.fetch("/log", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          keepalive: true,
-          body,
-        }).then((response) => {
-          if (!response.ok) stop();
-        }, stop);
+        pending = post(body, pending).catch(stop);
       }
     } catch {
       stop();
