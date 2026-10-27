@@ -55,7 +55,8 @@ checked these facts in its `dist/*.d.ts` files:
 
 ## Decisions
 
-These decisions change the source that users write. Each has a recommendation.
+These decisions change the source that users write. On 2026-10-27 the user
+chose (a) for ES-D1 to ES-D5. ES-D3 (a) still depends on the ES9 measurement.
 
 - **ES-D1 (duration syntax).** (a) Literals `200ms`, `5s`, `2m` and `1h` that
   mean an `int` count of milliseconds (recommended). (b) A `Duration` type.
