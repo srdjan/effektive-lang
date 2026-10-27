@@ -7,7 +7,7 @@ export service Policy {
 }
 
 export const simple: Schedule<Int> = scheduleRecurs(0)
-export const timer: Schedule<Int, unknown> = scheduleSpaced(1000)
+export const timer: Schedule<Int, unknown> = scheduleSpaced(1s)
 
 export const custom: Schedule<Int, Option<Int[]>, Stop, Policy.choose> =
   scheduleFromStep(
@@ -20,7 +20,7 @@ export const custom: Schedule<Int, Option<Int[]>, Stop, Policy.choose> =
           kind: "Continue",
           state: state + 1,
           output: Policy.choose(meta.input, meta.attempt),
-          delayMillis: 0
+          delay: 0ms
         }
       }
   )

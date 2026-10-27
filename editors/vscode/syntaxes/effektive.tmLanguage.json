@@ -113,7 +113,7 @@
     },
     "builtin-types": {
       "name": "support.type.builtin.effektive",
-      "match": "\\b(?:string|boolean|int|number|void|never|unknown|Option|Effect|Stream|Sink|Schedule|ScheduleInput|ScheduleMetadata|ScheduleDecision|Schema|SchemaOptional|SchemaEncodedOptional|SchemaDecodedOptional|SchemaConstructorDefault|SchemaOptionalConstructorDefault|SchemaEncodedOptionalConstructorDefault|SchemaDecodedOptionalConstructorDefault|SchemaIssue|SchemaError|CloseableScope|Ref|RetrySchedule|Codec|Fiber)\\b"
+      "match": "\\b(?:string|boolean|int|number|void|never|unknown|Option|Effect|Stream|Sink|Schedule|ScheduleInput|ScheduleMetadata|ScheduleDecision|Schema|SchemaOptional|SchemaEncodedOptional|SchemaDecodedOptional|SchemaConstructorDefault|SchemaOptionalConstructorDefault|SchemaEncodedOptionalConstructorDefault|SchemaDecodedOptionalConstructorDefault|SchemaIssue|SchemaError|CloseableScope|Duration|Ref|RetrySchedule|Codec|Fiber)\\b"
     },
     "builtin-functions": {
       "patterns": [

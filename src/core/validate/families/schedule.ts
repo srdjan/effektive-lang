@@ -1,7 +1,9 @@
 // Validation of the Schedule builtins: scheduleRecurs, scheduleSpaced, scheduleFromStep,
 // scheduleExponential, scheduleJittered, scheduleMap, scheduleMax, scheduleMin, and scheduleConcat.
 
-import type { Expr, Type } from "../../ir.ts";
+import { DURATION_ID, type Expr, type Type } from "../../ir.ts";
+
+const DURATION: Type = { kind: "named", id: DURATION_ID };
 import { AREA } from "../report.ts";
 import { combine, unionEffects } from "../sets.ts";
 import {
@@ -28,7 +30,7 @@ function scheduleInput(
       { name: "attempt", type: INT, optional: false },
       ...["start", "now", "elapsed", "elapsedSincePrevious"].map((name) => ({
         name,
-        type: NUMBER,
+        type: name === "start" || name === "now" ? NUMBER : DURATION,
         optional: false,
       })),
     ],
@@ -49,7 +51,7 @@ function scheduleDecision(state: Type, output: Type): Type {
           },
           { name: "state", type: state, optional: false },
           { name: "output", type: output, optional: false },
-          { name: "delayMillis", type: NUMBER, optional: false },
+          { name: "delay", type: DURATION, optional: false },
         ],
       },
       {
@@ -76,7 +78,7 @@ export function simpleSchedule(
   const field = e.kind === "schedule-recurs" ? "times" : "delayMillis";
   const value = c.check(argument, `${path}.${field}`);
   if (
-    !fits(c.env, value.type, e.kind === "schedule-recurs" ? INT : NUMBER)
+    !fits(c.env, value.type, e.kind === "schedule-recurs" ? INT : DURATION)
   ) {
     c.add(AREA.types, path, "invalid schedule argument", argument.span);
   }
@@ -97,11 +99,11 @@ export function scheduleExponential(
   const factor = e.factor === null
     ? undefined
     : c.check(e.factor, `${path}.factor`);
-  if (!fits(c.env, base.type, INT)) {
+  if (!fits(c.env, base.type, DURATION)) {
     c.add(
       AREA.types,
       `${path}.baseMs`,
-      `scheduleExponential needs an int base, found ${show(base.type)}`,
+      `scheduleExponential needs a Duration base, found ${show(base.type)}`,
       e.baseMs.span,
     );
   }
@@ -115,7 +117,7 @@ export function scheduleExponential(
   }
   return derivedResult({
     kind: "schedule",
-    output: INT,
+    output: DURATION,
     input: { kind: "primitive", name: "unknown" },
     effects: { failures: [], requirements: [] },
   }, combine(factor === undefined ? [base] : [base, factor]));
@@ -224,7 +226,7 @@ export function scheduleMap(
     fields: [
       ...base.fields,
       { name: "output", type: policy.output, optional: false },
-      { name: "durationMillis", type: NUMBER, optional: false },
+      { name: "duration", type: DURATION, optional: false },
     ],
   };
   if (!fits(c.env, metadata, fn.parameters[0])) {

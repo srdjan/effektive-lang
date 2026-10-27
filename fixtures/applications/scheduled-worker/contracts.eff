@@ -1,5 +1,5 @@
 export type Int = int
-export type Policy = { runs: Int, delayMillis: Int, retries: Int, retryMillis: Int }
+export type Policy = { runs: Int, delayMillis: Duration, retries: Int, retryMillis: Duration }
 export type Report = { completed: Int, last: Option<Int> }
 export error JobFailure = { kind: "Transient" | "Fatal", id: Int }
 export error InvalidPolicy = {}
@@ -8,4 +8,4 @@ export service Jobs {
   execute(id: Int): Int fails JobFailure
   close(id: Int): void
 }
-export service Clock { wait(millis: Int): void }
+export service Clock { wait(delay: Duration): void }

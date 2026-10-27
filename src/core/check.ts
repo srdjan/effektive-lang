@@ -284,6 +284,7 @@ class ModuleChecker {
       case "Codec":
       case "Fiber":
       case "CloseableScope":
+      case "Duration":
         return false;
       default: {
         const unreachable: never = name;

@@ -1,7 +1,7 @@
 // Syntax queries shared by indexing, checking and lowering. They depend only
 // on the lossless tree and lexer, never on checker state or inferred types.
 
-import { numberValue, TokenKind } from "./lex.ts";
+import { isDurationText, numberValue, TokenKind } from "./lex.ts";
 import {
   childrenOf,
   decodeString,
@@ -95,6 +95,16 @@ export function kidsOf(tree: SyntaxTree, node: NodeId): NodeId[] {
     }
   }
   return result;
+}
+
+/** True when the literal node is a Number token with a duration suffix. */
+export function isDurationLiteral(tree: SyntaxTree, node: NodeId): boolean {
+  for (const child of childrenOf(tree, node)) {
+    if (kindOf(tree, child) !== SyntaxKind.Token) continue;
+    if (tree.lexed.kinds[tree.tokens[child]] !== TokenKind.Number) continue;
+    return isDurationText(nodeText(tree, child));
+  }
+  return false;
 }
 
 export function literalOf(

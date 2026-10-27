@@ -28,7 +28,12 @@ import type {
   Span,
   Type,
 } from "../ir.ts";
-import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID, TIMEOUT_ERROR_ID } from "../ir.ts";
+import {
+  DURATION_ID,
+  SCHEMA_ERROR_ID,
+  SCHEMA_ISSUE_ID,
+  TIMEOUT_ERROR_ID,
+} from "../ir.ts";
 import { AREA } from "./report.ts";
 import {
   type Active,
@@ -58,6 +63,7 @@ import {
   identityMembers,
   INT,
   isBooleanLike,
+  isDurationType,
   isNever,
   isNumericClass,
   isStringClass,
@@ -198,6 +204,8 @@ function adoptedNumericIdentity(
   const r = numericIdentityOf(env, right);
   if ((l === undefined) === (r === undefined)) return undefined;
   const named = l ?? r;
+  // `Duration` has its own operator rules.
+  if (named?.kind === "named" && named.id === DURATION_ID) return undefined;
   const unnamed = l === undefined ? left : right;
   const body = named?.kind === "named"
     ? identityBody(env, named.id)
@@ -2006,6 +2014,13 @@ export class BodyValidator implements ValidatorCore {
       case "-":
       case "*":
       case "/": {
+        const duration = this.durationArithmetic(
+          e.operator,
+          left.type,
+          right.type,
+        );
+        if (duration === "mismatch") return mismatch();
+        if (duration !== undefined) return derivedResult(duration, active);
         if (
           l === undefined || r === undefined || !compatibleClasses(env, l, r)
         ) return mismatch();
@@ -2035,6 +2050,38 @@ export class BodyValidator implements ValidatorCore {
         }
         return mismatch();
       }
+    }
+  }
+
+  /**
+   * The arithmetic of `Duration`: undefined when the general rules decide, and
+   * "mismatch" when a bare number meets a `Duration` in `+` or `-`.
+   */
+  private durationArithmetic(
+    operator: "+" | "-" | "*" | "/",
+    left: Type,
+    right: Type,
+  ): Type | "mismatch" | undefined {
+    const env = this.env;
+    const l = isDurationType(env, left);
+    const r = isDurationType(env, right);
+    if (!l && !r) return undefined;
+    const duration: Type = { kind: "named", id: DURATION_ID };
+    if (l && r) {
+      if (operator === "/") return NUMBER;
+      return operator === "*" ? undefined : duration;
+    }
+    const integral = fits(env, l ? right : left, INT);
+    switch (operator) {
+      case "+":
+      case "-":
+        return integral || fits(env, l ? right : left, NUMBER)
+          ? "mismatch"
+          : undefined;
+      case "*":
+        return integral ? duration : undefined;
+      case "/":
+        return l && integral ? duration : undefined;
     }
   }
 }

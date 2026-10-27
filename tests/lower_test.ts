@@ -827,7 +827,7 @@ Deno.test("retry lowers counted and scheduled policies from the same resolved bu
   const text = `type Int = int
 error Stop = {}
 service Jobs { next(): Int fails Stop }
-const policy: RetrySchedule<Stop> = retrySchedule((e: Stop, attempt: Int): Option<Int> => None)
+const policy: RetrySchedule<Stop> = retrySchedule((e: Stop, attempt: Int): Option<Duration> => None)
 const counted = () => retry(() => Jobs.next(), { times: 2 })
 const scheduled = () => retry(() => Jobs.next(), { schedule: policy })
 `;

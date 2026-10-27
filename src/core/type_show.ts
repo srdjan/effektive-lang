@@ -1,6 +1,7 @@
 // Readable forms of types for messages. They are not a serialization format.
 
 import { moduleOfId, shortName } from "./ids.ts";
+import { DURATION_ID } from "./ir.ts";
 import type { TypeReader, TypeRef } from "./types.ts";
 
 /** Named ids that `print` meets, and the ids that it prints as `module#Name`. */
@@ -52,6 +53,7 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
     case "named": {
       names.shown?.add(node.id);
       const hash = node.id.indexOf("#");
+      if (node.id === DURATION_ID) return "Duration";
       if (hash < 0) return node.id;
       return names.qualified.has(node.id)
         ? `${moduleOfId(node.id) ?? ""}#${node.id.slice(hash + 1)}`

@@ -20,6 +20,7 @@ import {
 import {
   arrowBody,
   initOf,
+  isDurationLiteral,
   isPatternKind,
   isTypeKind,
   kidsOf,
@@ -34,7 +35,12 @@ import {
   pattern,
   type PatternContext,
 } from "./check_patterns.ts";
-import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID, TIMEOUT_ERROR_ID } from "./ir.ts";
+import {
+  DURATION_ID,
+  SCHEMA_ERROR_ID,
+  SCHEMA_ISSUE_ID,
+  TIMEOUT_ERROR_ID,
+} from "./ir.ts";
 import type {
   CapabilityId,
   ErrorId,
@@ -604,6 +610,9 @@ class BodyChecker
   private literal(node: NodeId, expected: TypeRef | undefined): NodeInfo {
     const value = literalOf(this.tree, node);
     if (value === undefined) return this.errorInfo(node);
+    if (isDurationLiteral(this.tree, node)) {
+      return this.finish(node, this.table.named(DURATION_ID), PURE_EFFECTS);
+    }
     return this.finish(node, this.literalType(value, expected), PURE_EFFECTS);
   }
 

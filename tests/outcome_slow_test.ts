@@ -69,11 +69,11 @@ export const failure = (): Int fails Stop uses Log.next | Log.seen | Log.defect 
 export const defect = (which: Int): Int uses Log.boom | Log.seen | Log.defect =>
   try { Log.boom(which) } finally (o) { settle(o) }
 export const interrupted = (): Int fails TimeoutError uses Log.seen | Log.defect =>
-  timeout(() => try { sleep(5000)
- 1 } finally (o) { settle(o) }, 20)
+  timeout(() => try { sleep(5s)
+ 1 } finally (o) { settle(o) }, 20ms)
 export const raced = (): Int uses Log.seen | Log.defect =>
-  run(race(defer(() => try { sleep(5000)
- 1 } finally (o) { settle(o) }), defer(() => { sleep(30)
+  run(race(defer(() => try { sleep(5s)
+ 1 } finally (o) { settle(o) }), defer(() => { sleep(30ms)
  2 })))
 export const onlyFinally = (): Int uses Log.seen =>
   try { 5 } finally { Log.seen("plain", 1) }
@@ -88,13 +88,13 @@ export const resourceOk = (): Int uses Files.open | Log.seen | Log.defect =>
 export const callForm = (): Int uses Files.open | Log.seen | Log.defect =>
   withResource(() => Files.open(), (f) => f.read(), (f, o) => settle(o))
 export const maskedBound = (): Int fails TimeoutError uses Log.seen =>
-  timeout(() => try { sleep(5000)
- 1 } finally (o) { sleep(30)
- Log.seen("finalized", 1) }, 10)
+  timeout(() => try { sleep(5s)
+ 1 } finally (o) { sleep(30ms)
+ Log.seen("finalized", 1) }, 10ms)
 export const maskedPlain = (): Int fails TimeoutError uses Log.seen =>
-  timeout(() => try { sleep(5000)
- 1 } finally { sleep(30)
- Log.seen("finalized", 2) }, 10)
+  timeout(() => try { sleep(5s)
+ 1 } finally { sleep(30ms)
+ Log.seen("finalized", 2) }, 10ms)
 `;
 
 const PRELUDE = `import { Effect, Layer } from "effect";

@@ -98,7 +98,7 @@ Deno.test("an effectful while callback adds its failures and requirements", () =
 Deno.test("a RetrySchedule in schedule is a diagnostic", () => {
   assertEquals(
     diagnosticsOf(
-      `const r: RetrySchedule<Stop> = retrySchedule((e: Stop, n: Int): Option<Int> => None)
+      `const r: RetrySchedule<Stop> = retrySchedule((e: Stop, n: Int): Option<Duration> => None)
 export const a = ${SIG} => ${REPEAT}{ schedule: r })\n`,
     ),
     [
@@ -174,7 +174,7 @@ Deno.test("repeat checks its job and its argument count", () => {
 const SOURCE =
   `${HEAD}export const forever = (): never fails Stop uses Jobs.next => repeat(() => Jobs.next())
 export const limited = ${SIG} => ${REPEAT}{ times: 2, until: (n) => n > 2 })
-export const policy: RetrySchedule<Stop> = retrySchedule((e: Stop, n: Int): Option<Int> => None)
+export const policy: RetrySchedule<Stop> = retrySchedule((e: Stop, n: Int): Option<Duration> => None)
 `;
 
 function lowered(): ModuleIR {

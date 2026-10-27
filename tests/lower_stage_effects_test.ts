@@ -56,7 +56,7 @@ Deno.test("a retrySchedule stage keeps only its own sets", () => {
   const { stage } = lowerProbe(`type Int = int
 error Stop = {}
 service Cfg { limit(): Int }
-const makeStep = () => { Cfg.limit(); ((e: Stop, attempt: Int): Option<Int> => None) }
+const makeStep = () => { Cfg.limit(); ((e: Stop, attempt: Int): Option<Duration> => None) }
 const probe = () => makeStep() |> retrySchedule
 `);
   assertEquals(stage.kind, "retry-schedule");
@@ -69,7 +69,7 @@ Deno.test("a retry stage with a schedule adds the job invocation and excludes th
 error Stop = {}
 service Cfg { limit(): Int }
 service Jobs { next(): Int fails Stop }
-const policy: RetrySchedule<Stop> = retrySchedule((e: Stop, attempt: Int): Option<Int> => None)
+const policy: RetrySchedule<Stop> = retrySchedule((e: Stop, attempt: Int): Option<Duration> => None)
 const makeJob = () => { Cfg.limit(); (() => Jobs.next()) }
 const probe = () => makeJob() |> retry({ schedule: policy })
 `);

@@ -24,6 +24,7 @@ import type {
   Type,
   ValueId,
 } from "../ir.ts";
+import { DURATION_ID } from "../ir.ts";
 import { defectMessage } from "./outcome.ts";
 import {
   alt,
@@ -721,6 +722,8 @@ export class ExprEmitter implements ExprCore {
         );
       }
       case "nominal": {
+        // A `Duration` erases to its millisecond value.
+        if (e.nominal === DURATION_ID) return kid(e.value);
         const declaration = this.scope.typeLevelDeclaration(e.nominal);
         // An untagged non-record nominal type is erased: its value is the base value.
         if (
@@ -1076,6 +1079,12 @@ export class ExprEmitter implements ExprCore {
       e.operator === "*";
     if (arithmetic && isIntType(this.scope.resolve(e.type))) {
       return this.intCall(emitted(runDoc(run, 1), prec));
+    }
+    // Only `Duration / int` divides to an `int`: it truncates toward zero.
+    if (e.operator === "/" && isIntType(this.scope.resolve(e.type))) {
+      return this.intCall(
+        emitted(["Math.trunc", callArguments([emitted(runDoc(run, 1), prec)])]),
+      );
     }
     return emitted(runDoc(run, 1), prec, {
       brace: leadingBrace(left, prec),

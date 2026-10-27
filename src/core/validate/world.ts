@@ -13,7 +13,12 @@ import type {
   Type,
   TypeDecl,
 } from "../ir.ts";
-import { SCHEMA_ERROR_ID, SCOPE_CAPABILITY, TIMEOUT_ERROR_ID } from "../ir.ts";
+import {
+  DURATION_ID,
+  SCHEMA_ERROR_ID,
+  SCOPE_CAPABILITY,
+  TIMEOUT_ERROR_ID,
+} from "../ir.ts";
 import type { Predicate } from "../predicates.ts";
 import { AREA, type Report } from "./report.ts";
 import {
@@ -126,6 +131,14 @@ export function buildWorld(ir: ModuleIR): World {
     id: "error:effect/SchemaIssue",
     name: "SchemaIssue",
     fields: [],
+    span: { source: ir.module, start: 0, end: 0 },
+  });
+  // `Duration` is the builtin untagged identity over `int`.
+  types.set(DURATION_ID, {
+    kind: "type",
+    id: DURATION_ID,
+    name: "Duration",
+    definition: { kind: "nominal", base: { kind: "primitive", name: "int" } },
     span: { source: ir.module, start: 0, end: 0 },
   });
   const methods = new Map<string, MethodDecl>();

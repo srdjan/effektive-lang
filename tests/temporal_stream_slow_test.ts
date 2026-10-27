@@ -26,7 +26,7 @@ const SOURCE = [
   "export service Source { next(n: Int): Option<[Int, Int]> }",
   "export service Sink { push(n: Int): Int }",
   "const source = unfold(0, (n) => Source.next(n))",
-  'const shaped = throttleStream(source, { units: 1, durationMs: 1000, strategy: "shape" })',
+  'const shaped = throttleStream(source, { units: 1, duration: 1000ms, strategy: "shape" })',
   "const delivered = mapEffect(shaped, (n) => Sink.push(n), { concurrency: 1 })",
   "export const shapeRun = (): void uses Source.next | Sink.push => drainStream(delivered)",
   "",

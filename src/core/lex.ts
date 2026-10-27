@@ -274,6 +274,11 @@ const DURATION_UNIT_MS: Record<string, number> = {
 const DURATION = /^([0-9]+)(ms|s|m|h)$/;
 const DURATION_UNIT = /(?:ms|s|m|h)(?![A-Za-z0-9_$])/y;
 
+/** True when the text of a Number token has a duration suffix, such as `5s`. */
+export function isDurationText(text: string): boolean {
+  return DURATION.test(text);
+}
+
 /** The value of a Number token's text. A duration literal such as `5s` becomes milliseconds. */
 export function numberValue(text: string): number {
   const duration = DURATION.exec(text);

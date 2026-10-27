@@ -275,8 +275,8 @@ Deno.test("build --validate --tsc accepts a custom retry schedule", async () => 
       [
         "error Stop = {}",
         "service Jobs { next(): Int fails Stop }",
-        "export const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Int> =>",
-        "  if (attempt < 2) { Some(0) } else { None })",
+        "export const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Duration> =>",
+        "  if (attempt < 2) { Some(0ms) } else { None })",
         "export const run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })",
         "type Int = int",
       ].join("\n"),

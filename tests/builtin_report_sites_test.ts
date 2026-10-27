@@ -79,7 +79,7 @@ service Jobs { next(): Int fails Stop }
 
 const RETRY_POLICY = `${INT}error Stop = {}
 service Source { next(n: Int): Option<[Int, Int]> fails Stop }
-const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Int> => None)
+const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Duration> => None)
 `;
 
 const LAYER_SERVICE = `${INT}service First { one(): Int }
@@ -117,9 +117,9 @@ const ROWS: readonly SiteRow[] = [
     builtin: "retry",
     change: "give the schedule an error type that the job does not fail with",
     valid:
-      `${STOP_JOBS}const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Int> => None)\nconst run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })\n`,
+      `${STOP_JOBS}const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Duration> => None)\nconst run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })\n`,
     invalid:
-      `${STOP_JOBS}error Other = {}\nconst policy: RetrySchedule<Other> = retrySchedule((error: Other, attempt: Int): Option<Int> => None)\nconst run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })\n`,
+      `${STOP_JOBS}error Other = {}\nconst policy: RetrySchedule<Other> = retrySchedule((error: Other, attempt: Int): Option<Duration> => None)\nconst run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })\n`,
     code: "type-mismatch/003",
     fragment: "the retry schedule does not accept",
   },
@@ -127,7 +127,7 @@ const ROWS: readonly SiteRow[] = [
     builtin: "retrySchedule",
     change: "replace the callback with an int",
     valid:
-      `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Int> => None)\n`,
+      `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Duration> => None)\n`,
     invalid: `${INT}const a = retrySchedule(1)\n`,
     code: "type-mismatch/010",
     fragment: "`retrySchedule` needs a function",
@@ -136,9 +136,9 @@ const ROWS: readonly SiteRow[] = [
     builtin: "retrySchedule",
     change: "drop the attempt parameter",
     valid:
-      `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Int> => None)\n`,
+      `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Duration> => None)\n`,
     invalid:
-      `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop): Option<Int> => None)\n`,
+      `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop): Option<Duration> => None)\n`,
     code: "type-mismatch/004",
     fragment:
       "the retry schedule callback takes an error and an attempt number",
@@ -147,9 +147,9 @@ const ROWS: readonly SiteRow[] = [
     builtin: "retrySchedule",
     change: "type the error parameter as an int",
     valid:
-      `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Int> => None)\n`,
+      `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Duration> => None)\n`,
     invalid:
-      `${INT}const a = retrySchedule((e: Int, attempt: Int): Option<Int> => None)\n`,
+      `${INT}const a = retrySchedule((e: Int, attempt: Int): Option<Duration> => None)\n`,
     code: "type-mismatch/010",
     fragment: "the retry schedule callback needs a declared error parameter",
   },
@@ -157,9 +157,9 @@ const ROWS: readonly SiteRow[] = [
     builtin: "retrySchedule",
     change: "call a service method in the callback",
     valid:
-      `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Int> => Some(attempt))\n`,
+      `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Duration> => Some(attempt * 1ms))\n`,
     invalid:
-      `${INT}error Stop = {}\nservice Probe { n(): Int }\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Int> uses Probe.n => Some(Probe.n()))\n`,
+      `${INT}error Stop = {}\nservice Probe { n(): Int }\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Duration> uses Probe.n => Some(Probe.n() * 1ms))\n`,
     code: "execution-mode/001",
     fragment: "the retry schedule callback must be pure",
   },

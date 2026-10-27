@@ -71,7 +71,7 @@ Deno.test("the pipeline form of timeout passes the job as the left side", () => 
   );
 });
 
-Deno.test("timeout rejects a wrong count, a non-function job and a non-int duration", () => {
+Deno.test("timeout rejects a wrong count, a non-function job and a non-Duration duration", () => {
   assertEquals(
     diagnosticsOf(
       `${TYPES}export const a = (): Int fails TimeoutError => timeout(() => 1)\n`,
@@ -90,12 +90,12 @@ Deno.test("timeout rejects a wrong count, a non-function job and a non-int durat
     diagnosticsOf(
       `${TYPES}export const a = (): Int fails TimeoutError => timeout(() => 1, "x")\n`,
     ),
-    ["type-mismatch/003 the timeout duration has type string, but int is expected"],
+    ["type-mismatch/003 the timeout duration has type string, but Duration is expected"],
   );
 });
 
-Deno.test("sleep takes one int and returns void without failures", () => {
-  assertEquals(diagnosticsOf("export const a = (): void => sleep(10)\n"), []);
+Deno.test("sleep takes one Duration and returns void without failures", () => {
+  assertEquals(diagnosticsOf("export const a = (): void => sleep(10ms)\n"), []);
   assertEquals(diagnosticsOf("export const a = (): void => sleep(2s)\n"), []);
   assertEquals(
     diagnosticsOf("export const a = (): void => sleep(1, 2)\n"),
@@ -103,7 +103,7 @@ Deno.test("sleep takes one int and returns void without failures", () => {
   );
   assertEquals(
     diagnosticsOf('export const a = (): void => sleep("x")\n'),
-    ["type-mismatch/003 the sleep duration has type string, but int is expected"],
+    ["type-mismatch/003 the sleep duration has type string, but Duration is expected"],
   );
 });
 
@@ -120,7 +120,7 @@ Deno.test("timeout and sleep are shadowable, so a local may reuse the names", ()
 
 const SOURCE =
   `${TYPES}export const slow = (): Int fails TimeoutError => timeout(() => 1, 5s)
-export const nap = (): void => sleep(10)
+export const nap = (): void => sleep(10ms)
 `;
 
 function lowered(): ModuleIR {
@@ -171,16 +171,18 @@ const FORGES: readonly (readonly [
   expected: readonly string[],
 ])[] = [
   ["a string duration in timeout", (ir) => {
-    (find(ir, "timeout").durationMs as { value: unknown }).value = "x";
+    const duration = find(ir, "timeout").durationMs;
+    assert(duration.kind === "nominal");
+    (duration.value as { value: unknown }).value = "x";
   }, [
-    'validation/002 declarations[1].body.durationMs.type: the recomputed type "x" does not fit the recorded type int',
-    'validation/002 declarations[1].body.durationMs: timeout needs an int duration, found "x"',
+    'validation/002 declarations[1].body.durationMs.value.type: the recomputed type "x" does not fit the recorded type int',
+    'validation/002 declarations[1].body.durationMs.value: the value has type "x", which does not fit the base int',
   ]],
   ["a timeout job that is not a function", (ir) => {
     const e = find(ir, "timeout");
     (e as { job: Expr }).job = e.durationMs;
   }, [
-    "validation/006 declarations[1].body.job: timeout needs a function that takes no arguments, but the job has type int",
+    "validation/006 declarations[1].body.job: timeout needs a function that takes no arguments, but the job has type Duration",
   ]],
   ["a timeout without TimeoutError in its failures", (ir) => {
     (find(ir, "timeout") as { effects: unknown }).effects = {
@@ -204,10 +206,12 @@ const FORGES: readonly (readonly [
     "validation/002 declarations[1].body.type: expected int, recorded string",
   ]],
   ["a string duration in sleep", (ir) => {
-    (find(ir, "sleep").durationMs as { value: unknown }).value = "x";
+    const duration = find(ir, "sleep").durationMs;
+    assert(duration.kind === "nominal");
+    (duration.value as { value: unknown }).value = "x";
   }, [
-    'validation/002 declarations[2].body.durationMs.type: the recomputed type "x" does not fit the recorded type int',
-    'validation/002 declarations[2].body.durationMs: sleep needs an int duration, found "x"',
+    'validation/002 declarations[2].body.durationMs.value.type: the recomputed type "x" does not fit the recorded type int',
+    'validation/002 declarations[2].body.durationMs.value: the value has type "x", which does not fit the base int',
   ]],
   ["a pure sleep", (ir) => {
     (find(ir, "sleep") as { execution: unknown }).execution = "pure";

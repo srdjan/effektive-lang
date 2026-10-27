@@ -14,6 +14,7 @@ import {
   arrowBody,
   type BinaryOperator,
   initOf,
+  isDurationLiteral,
   isPatternKind,
   isTypeKind,
   kidsOf,
@@ -52,6 +53,7 @@ import type {
   Type,
   ValueId,
 } from "./ir.ts";
+import { DURATION_ID } from "./ir.ts";
 import { TokenKind } from "./lex.ts";
 import type { ModuleInfo } from "./project.ts";
 import type { ModuleResolution, Target } from "./resolve.ts";
@@ -652,9 +654,27 @@ class BodyLowerer {
         if (value === undefined) {
           throw internal(`a literal has no value at ${this.describe(node)}`);
         }
-        return value === null
-          ? { kind: "null", ...this.annotation(node) }
-          : { kind: "literal", value, ...this.annotation(node) };
+        if (value === null) return { kind: "null", ...this.annotation(node) };
+        const literal: Expr = {
+          kind: "literal",
+          value,
+          ...this.annotation(node),
+        };
+        if (!isDurationLiteral(tree, node)) return literal;
+        // A duration literal is the `Duration` of its millisecond value.
+        return {
+          kind: "nominal",
+          nominal: DURATION_ID,
+          value: {
+            ...literal,
+            ...this.annotationWith(
+              this.ctx.types.int,
+              this.info(node),
+              this.span(node),
+            ),
+          },
+          ...this.annotation(node),
+        };
       }
       case SyntaxKind.NameExpr:
         return this.name(node);

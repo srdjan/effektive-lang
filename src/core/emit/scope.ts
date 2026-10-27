@@ -15,7 +15,7 @@ import type {
   Type,
   TypeDecl,
 } from "../ir.ts";
-import { SCOPE_CAPABILITY } from "../ir.ts";
+import { DURATION_ID, SCOPE_CAPABILITY } from "../ir.ts";
 import {
   methodOfCapability as coreMethodOfCapability,
   moduleOfId as coreModuleOfId,
@@ -26,6 +26,8 @@ import { generatedPathOf, moduleNameOf, normalizeRelative } from "../paths.ts";
 import type { ProjectConfig } from "../project.ts";
 import { compareText } from "../util.ts";
 import { collectBinderNames } from "./walk.ts";
+
+const INT_TYPE: Type = { kind: "primitive", name: "int" };
 
 /** The imports from the `effect` package. */
 export type EffectModule =
@@ -662,6 +664,8 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
     let current = type;
     const seen = new Set<DeclarationId>();
     while (current.kind === "named" && !seen.has(current.id)) {
+      // `Duration` is an identity over `int`: it keeps the `int` guard.
+      if (current.id === DURATION_ID) return INT_TYPE;
       seen.add(current.id);
       const declaration = this.typeLevelDeclaration(current.id);
       if (
@@ -696,6 +700,8 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
 
   /** The name that this module uses for a declaration. A foreign declaration is imported on first use. */
   nameOf(id: DeclarationId): string {
+    // `Duration` is a number of milliseconds at run time.
+    if (id === DURATION_ID) return "number";
     if (id === "error:effect/SchemaError") {
       return `${this.effect("Schema")}.SchemaError`;
     }

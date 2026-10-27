@@ -54,7 +54,7 @@ Deno.test("each retry option is accepted alone", () => {
 Deno.test("retry options combine", () => {
   assertEquals(
     retryWith(
-      "{ times: 2, schedule: scheduleExponential(100, 2), until: (e) => false, while: (e) => true }",
+      "{ times: 2, schedule: scheduleExponential(100ms, 2), until: (e) => false, while: (e) => true }",
     ),
     [],
   );
@@ -147,15 +147,15 @@ Deno.test("schedule needs a RetrySchedule or a Schedule", () => {
 Deno.test("scheduleExponential and scheduleJittered check their arguments", () => {
   assertEquals(
     diagnosticsOf(
-      `export const a = (): Schedule<Int> => scheduleExponential("x")\n`,
+      `export const a = (): Schedule<Duration> => scheduleExponential("x")\n`,
     ),
     [
-      "type-mismatch/003 the exponential base has type string, but int is expected",
+      "type-mismatch/003 the exponential base has type string, but Duration is expected",
     ],
   );
   assertEquals(
     diagnosticsOf(
-      `export const a = (): Schedule<Int> => scheduleExponential(1, "x")\n`,
+      `export const a = (): Schedule<Duration> => scheduleExponential(1ms, "x")\n`,
     ),
     [
       "type-mismatch/003 the exponential factor has type string, but number is expected",
@@ -179,7 +179,7 @@ Deno.test("scheduleExponential and scheduleJittered check their arguments", () =
   );
   assertEquals(
     diagnosticsOf(
-      `export const a = (): Schedule<Int> => scheduleJittered(scheduleExponential(5))\n`,
+      `export const a = (): Schedule<Duration> => scheduleJittered(scheduleExponential(5ms))\n`,
     ),
     [],
   );
@@ -195,8 +195,8 @@ Deno.test("while is a record label but not a name", () => {
 
 const SOURCE = `${HEAD}export const times = ${SIG} => ${RETRY}{ times: 3 })
 export const both = ${SIG} => ${RETRY}{ times: 3, until: (e) => false })
-export const sched = ${SIG} => ${RETRY}{ schedule: scheduleJittered(scheduleExponential(100, 2)) })
-export const plain = (): Schedule<Int> => scheduleExponential(100)
+export const sched = ${SIG} => ${RETRY}{ schedule: scheduleJittered(scheduleExponential(100ms, 2)) })
+export const plain = (): Schedule<Duration> => scheduleExponential(100ms)
 const stopOnly: Schedule<Int, Stop> = scheduleRecurs(1)
 export const gated = ${SIG} => ${RETRY}{ schedule: stopOnly })
 `;
@@ -321,11 +321,12 @@ const FORGES: readonly (readonly [
     `validation/006 ${OPTS}: retry needs an options record`,
   ]],
   ["a string base in scheduleExponential", (ir) => {
-    (all(ir, "schedule-exponential")[0].baseMs as { value: unknown }).value =
-      "x";
+    const base = all(ir, "schedule-exponential")[0].baseMs;
+    assert(base.kind === "nominal");
+    (base.value as { value: unknown }).value = "x";
   }, [
-    `validation/002 ${EXP}.baseMs.type: the recomputed type "x" does not fit the recorded type int`,
-    `validation/002 ${EXP}.baseMs: scheduleExponential needs an int base, found "x"`,
+    `validation/002 ${EXP}.baseMs.value.type: the recomputed type "x" does not fit the recorded type int`,
+    `validation/002 ${EXP}.baseMs.value: the value has type "x", which does not fit the base int`,
   ]],
   ["a string factor in scheduleExponential", (ir) => {
     (all(ir, "schedule-exponential")[0].factor as { value: unknown }).value =
@@ -348,7 +349,7 @@ const FORGES: readonly (readonly [
       effects: { failures: [], requirements: [] },
     };
   }, [
-    "validation/002 declarations[10].body.type: expected Schedule<int, unknown, never, never>, recorded Schedule<string, unknown, never, never>",
+    "validation/002 declarations[10].body.type: expected Schedule<Duration, unknown, never, never>, recorded Schedule<string, unknown, never, never>",
   ]],
 ];
 

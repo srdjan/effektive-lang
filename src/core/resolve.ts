@@ -174,6 +174,7 @@ const BUILTIN_TYPES = [
   "Codec",
   "Fiber",
   "CloseableScope",
+  "Duration",
 ] as const;
 
 type BuiltinTypeName = typeof BUILTIN_TYPES[number];

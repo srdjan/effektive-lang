@@ -12,6 +12,11 @@ export const SCHEMA_ERROR_ID: ErrorId = "error:effect/SchemaError";
 export const SCHEMA_ISSUE_ID: ErrorId = "error:effect/SchemaIssue";
 /** The target timeout failure of `timeout`; source code may handle but not construct it. */
 export const TIMEOUT_ERROR_ID: ErrorId = "error:effect/TimeoutError";
+/**
+ * The builtin untagged identity over `int` that types a duration. At run time it
+ * is a number of milliseconds. It is closed: an unnamed value never fits it.
+ */
+export const DURATION_ID: TypeId = "type:effect/Duration";
 export type ValueId = `value:${string}`;
 export type LocalId = `local:${string}`;
 export type Execution = "pure" | "effect";

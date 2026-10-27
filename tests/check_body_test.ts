@@ -1486,7 +1486,7 @@ Deno.test("retryStream accepts compatible schedules and keeps source channels", 
 type Int = int
 error Stop = {}
 service Source { next(n: Int): Option<[Int, Int]> fails Stop }
-const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Int> => if (attempt < 2) { Some(0) } else { None })
+const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Duration> => if (attempt < 2) { Some(0ms) } else { None })
 const source = unfold(0, (n) => Source.next(n))
 const retried = retryStream(source, policy)
 const main = (): Int[] fails Stop uses Source.next => collectStream(retried)
@@ -1497,7 +1497,7 @@ type Int = int
 error Stop = {}
 error Other = {}
 service Source { next(n: Int): Option<[Int, Int]> fails Stop }
-const policy: RetrySchedule<Other> = retrySchedule((_: Other, attempt: Int): Option<Int> => None)
+const policy: RetrySchedule<Other> = retrySchedule((_: Other, attempt: Int): Option<Duration> => None)
 const retried = retryStream(unfold(0, (n) => Source.next(n)), policy)
 `);
   assert(codes(bad).includes("type-mismatch/003"));
@@ -1515,9 +1515,9 @@ type Int = int
 error Stop = {}
 service Source { next(n: Int): Option<[Int, Int]> fails Stop }
 const source = unfold(0, (n) => Source.next(n))
-const debounced = debounceStream(source, 0)
-const shaped = throttleStream(debounced, { units: 2, durationMs: 100, strategy: "shape" })
-const enforced = throttleStream(source, { strategy: "enforce", durationMs: 100, units: 1 })
+const debounced = debounceStream(source, 0ms)
+const shaped = throttleStream(debounced, { units: 2, duration: 100ms, strategy: "shape" })
+const enforced = throttleStream(source, { strategy: "enforce", duration: 100ms, units: 1 })
 const main = (): Int[] fails Stop uses Source.next => collectStream(shaped)
 `);
   assertEquals(codes(valid), [], messages(valid).join("\n"));
@@ -1525,15 +1525,15 @@ const main = (): Int[] fails Stop uses Source.next => collectStream(shaped)
     const [expression, expected] of [
       ["debounceStream(source, -1)", "syntax/010"],
       [
-        'throttleStream(source, { units: 0, durationMs: 100, strategy: "shape" })',
+        'throttleStream(source, { units: 0, duration: 100ms, strategy: "shape" })',
         "type-mismatch/010",
       ],
       [
-        'throttleStream(source, { units: 1, durationMs: 0, strategy: "shape" })',
+        'throttleStream(source, { units: 1, duration: 0ms, strategy: "shape" })',
         "type-mismatch/010",
       ],
       [
-        'throttleStream(source, { units: 1, durationMs: 100, strategy: "drop" })',
+        'throttleStream(source, { units: 1, duration: 100ms, strategy: "drop" })',
         "type-mismatch/010",
       ],
     ] as const
@@ -3120,8 +3120,8 @@ Deno.test("custom retry schedules keep nominal failure contracts", () => {
   const project = checkText(`
 error Stop = {}
 service Jobs { next(): Int fails Stop }
-const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Int> =>
-  if (attempt < 2) { Some(0) } else { None })
+const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Duration> =>
+  if (attempt < 2) { Some(0ms) } else { None })
 const run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })
 type Int = int
 `);

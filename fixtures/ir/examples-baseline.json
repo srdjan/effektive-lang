@@ -6774,7 +6774,7 @@
   {
     "files": {
       "effektive.json": "{}",
-      "m.eff": "type Int = int\nservice Jobs { open(): { read: () => Int, close: () => void }; next(): Int }\nexport const resource = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => job.read(), (job) => job.close())\nexport const fiber = (): Int uses Jobs.next => withFiber(defer(() => Jobs.next()), (fiber) => joinFiber(fiber))\nconst groups = (source: Stream<Int>) => mapGroups(source, (n) => n, (key, group) => collectStream(group), { bufferSize: 1 })\nconst policy = scheduleConcat(scheduleMax(scheduleRecurs(1), scheduleSpaced(2)), scheduleMin(scheduleRecurs(2), scheduleSpaced(1)))\nconst numberSchema: Schema<Int> = schema()\nexport const decoded = (input: unknown): Int fails SchemaError => schemaDecode(numberSchema, input)\nexport const encoded = (input: Int): Int fails SchemaError => schemaEncode(numberSchema, input)\nexport const made = (input: Int): Int fails SchemaIssue => schemaMake(numberSchema, input)\n"
+      "m.eff": "type Int = int\nservice Jobs { open(): { read: () => Int, close: () => void }; next(): Int }\nexport const resource = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => job.read(), (job) => job.close())\nexport const fiber = (): Int uses Jobs.next => withFiber(defer(() => Jobs.next()), (fiber) => joinFiber(fiber))\nconst groups = (source: Stream<Int>) => mapGroups(source, (n) => n, (key, group) => collectStream(group), { bufferSize: 1 })\nconst policy = scheduleConcat(scheduleMax(scheduleRecurs(1), scheduleSpaced(2ms)), scheduleMin(scheduleRecurs(2), scheduleSpaced(1ms)))\nconst numberSchema: Schema<Int> = schema()\nexport const decoded = (input: unknown): Int fails SchemaError => schemaDecode(numberSchema, input)\nexport const encoded = (input: Int): Int fails SchemaError => schemaEncode(numberSchema, input)\nexport const made = (input: Int): Int fails SchemaIssue => schemaMake(numberSchema, input)\n"
     },
     "modules": [
       {
@@ -8025,7 +8025,7 @@
               "kind": "constant",
               "name": "policy",
               "span": {
-                "end": 585,
+                "end": 589,
                 "source": "m.eff",
                 "start": 454
               },
@@ -8111,17 +8111,35 @@
                         "requirements": []
                       },
                       "execution": "pure",
-                      "kind": "literal",
+                      "kind": "nominal",
+                      "nominal": "type:effect/Duration",
                       "span": {
-                        "end": 531,
+                        "end": 533,
                         "source": "m.eff",
                         "start": 530
                       },
                       "type": {
-                        "kind": "primitive",
-                        "name": "int"
+                        "id": "type:effect/Duration",
+                        "kind": "named"
                       },
-                      "value": 2
+                      "value": {
+                        "effects": {
+                          "failures": [],
+                          "requirements": []
+                        },
+                        "execution": "pure",
+                        "kind": "literal",
+                        "span": {
+                          "end": 533,
+                          "source": "m.eff",
+                          "start": 530
+                        },
+                        "type": {
+                          "kind": "primitive",
+                          "name": "int"
+                        },
+                        "value": 2
+                      }
                     },
                     "effects": {
                       "failures": [],
@@ -8130,7 +8148,7 @@
                     "execution": "pure",
                     "kind": "schedule-spaced",
                     "span": {
-                      "end": 532,
+                      "end": 534,
                       "source": "m.eff",
                       "start": 515
                     },
@@ -8151,7 +8169,7 @@
                     }
                   },
                   "span": {
-                    "end": 533,
+                    "end": 535,
                     "source": "m.eff",
                     "start": 484
                   },
@@ -8186,9 +8204,9 @@
                     "execution": "pure",
                     "kind": "schedule-recurs",
                     "span": {
-                      "end": 564,
+                      "end": 566,
                       "source": "m.eff",
-                      "start": 547
+                      "start": 549
                     },
                     "times": {
                       "effects": {
@@ -8198,9 +8216,9 @@
                       "execution": "pure",
                       "kind": "literal",
                       "span": {
-                        "end": 563,
+                        "end": 565,
                         "source": "m.eff",
-                        "start": 562
+                        "start": 564
                       },
                       "type": {
                         "kind": "primitive",
@@ -8231,17 +8249,35 @@
                         "requirements": []
                       },
                       "execution": "pure",
-                      "kind": "literal",
+                      "kind": "nominal",
+                      "nominal": "type:effect/Duration",
                       "span": {
-                        "end": 582,
+                        "end": 586,
                         "source": "m.eff",
-                        "start": 581
+                        "start": 583
                       },
                       "type": {
-                        "kind": "primitive",
-                        "name": "int"
+                        "id": "type:effect/Duration",
+                        "kind": "named"
                       },
-                      "value": 1
+                      "value": {
+                        "effects": {
+                          "failures": [],
+                          "requirements": []
+                        },
+                        "execution": "pure",
+                        "kind": "literal",
+                        "span": {
+                          "end": 586,
+                          "source": "m.eff",
+                          "start": 583
+                        },
+                        "type": {
+                          "kind": "primitive",
+                          "name": "int"
+                        },
+                        "value": 1
+                      }
                     },
                     "effects": {
                       "failures": [],
@@ -8250,9 +8286,9 @@
                     "execution": "pure",
                     "kind": "schedule-spaced",
                     "span": {
-                      "end": 583,
+                      "end": 587,
                       "source": "m.eff",
-                      "start": 566
+                      "start": 568
                     },
                     "type": {
                       "effects": {
@@ -8271,9 +8307,9 @@
                     }
                   },
                   "span": {
-                    "end": 584,
+                    "end": 588,
                     "source": "m.eff",
-                    "start": 535
+                    "start": 537
                   },
                   "type": {
                     "effects": {
@@ -8292,7 +8328,7 @@
                   }
                 },
                 "span": {
-                  "end": 585,
+                  "end": 589,
                   "source": "m.eff",
                   "start": 469
                 },
@@ -8318,9 +8354,9 @@
               "kind": "constant",
               "name": "numberSchema",
               "span": {
-                "end": 628,
+                "end": 632,
                 "source": "m.eff",
-                "start": 586
+                "start": 590
               },
               "type": {
                 "decodeRequirements": [],
@@ -8345,9 +8381,9 @@
                 "kind": "schema",
                 "op": "identity",
                 "span": {
-                  "end": 628,
+                  "end": 632,
                   "source": "m.eff",
-                  "start": 620
+                  "start": 624
                 },
                 "type": {
                   "decodeRequirements": [],
@@ -8381,9 +8417,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 727,
+                    "end": 731,
                     "source": "m.eff",
-                    "start": 722
+                    "start": 726
                   },
                   "target": "local:m#decoded/input",
                   "type": {
@@ -8400,9 +8436,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 720,
+                    "end": 724,
                     "source": "m.eff",
-                    "start": 708
+                    "start": 712
                   },
                   "target": "value:m#numberSchema",
                   "type": {
@@ -8420,9 +8456,9 @@
                   }
                 },
                 "span": {
-                  "end": 728,
+                  "end": 732,
                   "source": "m.eff",
-                  "start": 695
+                  "start": 699
                 },
                 "type": {
                   "id": "type:m#Int",
@@ -8437,9 +8473,9 @@
                   "id": "local:m#decoded/input",
                   "name": "input",
                   "span": {
-                    "end": 667,
+                    "end": 671,
                     "source": "m.eff",
-                    "start": 653
+                    "start": 657
                   },
                   "type": {
                     "kind": "primitive",
@@ -8448,9 +8484,9 @@
                 }
               ],
               "span": {
-                "end": 728,
+                "end": 732,
                 "source": "m.eff",
-                "start": 629
+                "start": 633
               },
               "type": {
                 "effects": {
@@ -8495,9 +8531,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 823,
+                    "end": 827,
                     "source": "m.eff",
-                    "start": 818
+                    "start": 822
                   },
                   "target": "local:m#encoded/input",
                   "type": {
@@ -8514,9 +8550,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 816,
+                    "end": 820,
                     "source": "m.eff",
-                    "start": 804
+                    "start": 808
                   },
                   "target": "value:m#numberSchema",
                   "type": {
@@ -8534,9 +8570,9 @@
                   }
                 },
                 "span": {
-                  "end": 824,
+                  "end": 828,
                   "source": "m.eff",
-                  "start": 791
+                  "start": 795
                 },
                 "type": {
                   "id": "type:m#Int",
@@ -8551,9 +8587,9 @@
                   "id": "local:m#encoded/input",
                   "name": "input",
                   "span": {
-                    "end": 763,
+                    "end": 767,
                     "source": "m.eff",
-                    "start": 753
+                    "start": 757
                   },
                   "type": {
                     "id": "type:m#Int",
@@ -8562,9 +8598,9 @@
                 }
               ],
               "span": {
-                "end": 824,
+                "end": 828,
                 "source": "m.eff",
-                "start": 729
+                "start": 733
               },
               "type": {
                 "effects": {
@@ -8609,9 +8645,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 914,
+                    "end": 918,
                     "source": "m.eff",
-                    "start": 909
+                    "start": 913
                   },
                   "target": "local:m#made/input",
                   "type": {
@@ -8628,9 +8664,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 907,
+                    "end": 911,
                     "source": "m.eff",
-                    "start": 895
+                    "start": 899
                   },
                   "target": "value:m#numberSchema",
                   "type": {
@@ -8648,9 +8684,9 @@
                   }
                 },
                 "span": {
-                  "end": 915,
+                  "end": 919,
                   "source": "m.eff",
-                  "start": 884
+                  "start": 888
                 },
                 "type": {
                   "id": "type:m#Int",
@@ -8665,9 +8701,9 @@
                   "id": "local:m#made/input",
                   "name": "input",
                   "span": {
-                    "end": 856,
+                    "end": 860,
                     "source": "m.eff",
-                    "start": 846
+                    "start": 850
                   },
                   "type": {
                     "id": "type:m#Int",
@@ -8676,9 +8712,9 @@
                 }
               ],
               "span": {
-                "end": 915,
+                "end": 919,
                 "source": "m.eff",
-                "start": 825
+                "start": 829
               },
               "type": {
                 "effects": {
@@ -8975,8 +9011,8 @@
               "end": 1724,
               "span": {
                 "source": "m.eff",
-                "start": 708,
-                "end": 720
+                "start": 712,
+                "end": 724
               }
             },
             {
@@ -8984,8 +9020,8 @@
               "end": 1731,
               "span": {
                 "source": "m.eff",
-                "start": 722,
-                "end": 727
+                "start": 726,
+                "end": 731
               }
             },
             {
@@ -8993,8 +9029,8 @@
               "end": 1732,
               "span": {
                 "source": "m.eff",
-                "start": 695,
-                "end": 728
+                "start": 699,
+                "end": 732
               }
             },
             {
@@ -9002,8 +9038,8 @@
               "end": 1733,
               "span": {
                 "source": "m.eff",
-                "start": 629,
-                "end": 728
+                "start": 633,
+                "end": 732
               }
             },
             {
@@ -9011,8 +9047,8 @@
               "end": 1848,
               "span": {
                 "source": "m.eff",
-                "start": 804,
-                "end": 816
+                "start": 808,
+                "end": 820
               }
             },
             {
@@ -9020,8 +9056,8 @@
               "end": 1855,
               "span": {
                 "source": "m.eff",
-                "start": 818,
-                "end": 823
+                "start": 822,
+                "end": 827
               }
             },
             {
@@ -9029,8 +9065,8 @@
               "end": 1856,
               "span": {
                 "source": "m.eff",
-                "start": 791,
-                "end": 824
+                "start": 795,
+                "end": 828
               }
             },
             {
@@ -9038,8 +9074,8 @@
               "end": 1857,
               "span": {
                 "source": "m.eff",
-                "start": 729,
-                "end": 824
+                "start": 733,
+                "end": 828
               }
             },
             {
@@ -9047,8 +9083,8 @@
               "end": 1948,
               "span": {
                 "source": "m.eff",
-                "start": 895,
-                "end": 907
+                "start": 899,
+                "end": 911
               }
             },
             {
@@ -9056,8 +9092,8 @@
               "end": 1965,
               "span": {
                 "source": "m.eff",
-                "start": 909,
-                "end": 914
+                "start": 913,
+                "end": 918
               }
             },
             {
@@ -9065,8 +9101,8 @@
               "end": 1966,
               "span": {
                 "source": "m.eff",
-                "start": 884,
-                "end": 915
+                "start": 888,
+                "end": 919
               }
             },
             {
@@ -9074,8 +9110,8 @@
               "end": 1967,
               "span": {
                 "source": "m.eff",
-                "start": 825,
-                "end": 915
+                "start": 829,
+                "end": 919
               }
             },
             {
@@ -9102,7 +9138,16 @@
               "span": {
                 "source": "m.eff",
                 "start": 530,
-                "end": 531
+                "end": 533
+              }
+            },
+            {
+              "start": 2147,
+              "end": 2148,
+              "span": {
+                "source": "m.eff",
+                "start": 530,
+                "end": 533
               }
             },
             {
@@ -9111,7 +9156,7 @@
               "span": {
                 "source": "m.eff",
                 "start": 515,
-                "end": 532
+                "end": 534
               }
             },
             {
@@ -9120,7 +9165,7 @@
               "span": {
                 "source": "m.eff",
                 "start": 484,
-                "end": 533
+                "end": 535
               }
             },
             {
@@ -9128,8 +9173,8 @@
               "end": 2261,
               "span": {
                 "source": "m.eff",
-                "start": 562,
-                "end": 563
+                "start": 564,
+                "end": 565
               }
             },
             {
@@ -9137,8 +9182,8 @@
               "end": 2262,
               "span": {
                 "source": "m.eff",
-                "start": 547,
-                "end": 564
+                "start": 549,
+                "end": 566
               }
             },
             {
@@ -9146,8 +9191,17 @@
               "end": 2302,
               "span": {
                 "source": "m.eff",
-                "start": 581,
-                "end": 582
+                "start": 583,
+                "end": 586
+              }
+            },
+            {
+              "start": 2301,
+              "end": 2302,
+              "span": {
+                "source": "m.eff",
+                "start": 583,
+                "end": 586
               }
             },
             {
@@ -9155,8 +9209,8 @@
               "end": 2308,
               "span": {
                 "source": "m.eff",
-                "start": 566,
-                "end": 583
+                "start": 568,
+                "end": 587
               }
             },
             {
@@ -9164,8 +9218,8 @@
               "end": 2367,
               "span": {
                 "source": "m.eff",
-                "start": 535,
-                "end": 584
+                "start": 537,
+                "end": 588
               }
             },
             {
@@ -9174,7 +9228,7 @@
               "span": {
                 "source": "m.eff",
                 "start": 469,
-                "end": 585
+                "end": 589
               }
             },
             {
@@ -9183,7 +9237,7 @@
               "span": {
                 "source": "m.eff",
                 "start": 454,
-                "end": 585
+                "end": 589
               }
             },
             {
@@ -9191,8 +9245,8 @@
               "end": 2450,
               "span": {
                 "source": "m.eff",
-                "start": 620,
-                "end": 628
+                "start": 624,
+                "end": 632
               }
             },
             {
@@ -9200,14 +9254,14 @@
               "end": 2451,
               "span": {
                 "source": "m.eff",
-                "start": 586,
-                "end": 628
+                "start": 590,
+                "end": 632
               }
             }
           ],
           "hostAssertions": []
         },
-        "map": "{\n  \"version\": 3,\n  \"file\": \"m.ts\",\n  \"sources\": [\n    \"m.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;;;;;;;;;;;;;;;;AAAA;AAAA,kC;;AACA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,iB;;AACA;AAAA,EAAkD;AAAA,yBAAmB,2BAAnB;AAAA,aAAyC,UAAzC;AAAA,aAA8D,WAA9D;AAAA,GAAlD,C;;AACA;AAAA,EAA+C;AAAA,qBAAU,eAAM,MAAM,2BAAZ,CAAV;AAAA,IAAoC,oCAAW,WAAU,KAAV,CAA/C;AAAA;AAAA,GAA/C,C;;AACA;AAAA,EAAwC;AAAA,sBAAU,MAAV,EAAkB,OAAO,CAAzB;AAAA;AAAA;AAAA;AAAA,uBAA4B;AAAA,UAAgB;AAAA,YAAc,KAAd;AAAA,WAA5C;AAAA;AAAA;AAAA,GAAxC,C;;AAGA;AAAA;AAAA;AAAA,KAAkE,2BAAa,YAAb,EAA2B,KAA3B,CAAlE,C;;AACA;AAAA,EAA8D,oBAAa,YAAb,EAA2B,KAA3B,CAA9D,C;;AACA;AAAA,EAAsE,YAAX,YAAyB,KAAzB,CAA3D,C;;AAJA;AAAA;AAAA;AAAA;AAAA;AAAA,IAAe;AAAA,EAAe,2BAAY,gBAAe,CAAf,CAAZ,EAA+B;AAAA,oBAAe,CAAf;AAAA,GAA/B,2DAAf;AAAA,EAAkE,2BAAY,gBAAe,CAAf,CAAZ,EAA+B;AAAA,oBAAe,CAAf;AAAA,GAA/B,2DAAlE;AAAA,CAAf,C;;AACA,2DAAkC,kBAAlC,C;;\"\n}\n",
+        "map": "{\n  \"version\": 3,\n  \"file\": \"m.ts\",\n  \"sources\": [\n    \"m.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;;;;;;;;;;;;;;;;AAAA;AAAA,kC;;AACA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,iB;;AACA;AAAA,EAAkD;AAAA,yBAAmB,2BAAnB;AAAA,aAAyC,UAAzC;AAAA,aAA8D,WAA9D;AAAA,GAAlD,C;;AACA;AAAA,EAA+C;AAAA,qBAAU,eAAM,MAAM,2BAAZ,CAAV;AAAA,IAAoC,oCAAW,WAAU,KAAV,CAA/C;AAAA;AAAA,GAA/C,C;;AACA;AAAA,EAAwC;AAAA,sBAAU,MAAV,EAAkB,OAAO,CAAzB;AAAA;AAAA;AAAA;AAAA,uBAA4B;AAAA,UAAgB;AAAA,YAAc,KAAd;AAAA,WAA5C;AAAA;AAAA;AAAA,GAAxC,C;;AAGA;AAAA;AAAA;AAAA,KAAkE,2BAAa,YAAb,EAA2B,KAA3B,CAAlE,C;;AACA;AAAA,EAA8D,oBAAa,YAAb,EAA2B,KAA3B,CAA9D,C;;AACA;AAAA,EAAsE,YAAX,YAAyB,KAAzB,CAA3D,C;;AAJA;AAAA;AAAA;AAAA;AAAA;AAAA,IAAe;AAAA,EAAe,2BAAY,gBAAe,CAAf,CAAZ,EAA+B;AAAA,oBAAe,CAAf;AAAA,GAA/B,2DAAf;AAAA,EAAoE,2BAAY,gBAAe,CAAf,CAAZ,EAA+B;AAAA,oBAAe,CAAf;AAAA,GAA/B,2DAApE;AAAA,CAAf,C;;AACA,2DAAkC,kBAAlC,C;;\"\n}\n",
         "hash": "db5b5de483bb20b5"
       }
     ]

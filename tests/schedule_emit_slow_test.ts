@@ -74,7 +74,7 @@ type Counter = { count: Int }
 export const records: Schedule<Counter> = scheduleFromStep(
   (): Counter => ({ count: 0 }),
   (state: Counter, meta: ScheduleInput<unknown>): ScheduleDecision<Counter, Counter> =>
-    ({ kind: "Continue", state: state, output: state, delayMillis: 0 })
+    ({ kind: "Continue", state: state, output: state, delay: 0ms })
 )
 `,
     `import { Effect, Schedule } from "effect";

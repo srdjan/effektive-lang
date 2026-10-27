@@ -19,7 +19,12 @@
 //   - unknown is not a top type.
 
 import type { Execution, Field, FunctionType, Type } from "../ir.ts";
-import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID, TIMEOUT_ERROR_ID } from "../ir.ts";
+import {
+  DURATION_ID,
+  SCHEMA_ERROR_ID,
+  SCHEMA_ISSUE_ID,
+  TIMEOUT_ERROR_ID,
+} from "../ir.ts";
 import { effectsFit, isSubset, sameSet } from "./sets.ts";
 import { typeChildren } from "./type_children.ts";
 import type { Predicate } from "../predicates.ts";
@@ -299,8 +304,9 @@ function assignable(
   // body of an untagged identity.
   if (t.kind === "named") {
     const body = env.identities.has(t.id) ? env.aliases.get(t.id) : undefined;
+    // `Duration` is closed: an unnamed value never fits it.
     return adopt && env.refined?.has(t.id) !== true && s.kind !== "named" &&
-      body !== undefined &&
+      t.id !== DURATION_ID && body !== undefined &&
       ownsSealed(env, t.id) && assignable(env, s, body, lift, depth + 1);
   }
   if (t.kind === "union") {
@@ -802,6 +808,12 @@ export function isBooleanLike(env: TypeEnv, type: Type): boolean {
  * The identity type when the type, after transparent aliases, is an identity
  * over `int` or `number`. An identity over a literal union is not numeric.
  */
+/** True when the type, after transparent aliases, is `Duration`. */
+export function isDurationType(env: TypeEnv, type: Type): boolean {
+  const unfolded = unfoldTransparent(env, type);
+  return unfolded.kind === "named" && unfolded.id === DURATION_ID;
+}
+
 export function numericIdentityOf(env: TypeEnv, type: Type): Type | undefined {
   const unfolded = unfoldTransparent(env, type);
   if (unfolded.kind !== "named") return undefined;
@@ -903,7 +915,7 @@ export function show(type: Type): string {
     case "literal":
       return JSON.stringify(type.value);
     case "named":
-      return type.id;
+      return type.id === DURATION_ID ? "Duration" : type.id;
     case "record":
       return type.fields.length === 0
         ? "{}"

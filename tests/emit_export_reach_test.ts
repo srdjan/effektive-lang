@@ -49,7 +49,7 @@ Deno.test("a private error reached only through a Fiber failure is exported", ()
 
 Deno.test("a private error reached only through a RetrySchedule error is exported", () => {
   const text = emitted(
-    "type Int = int\nerror E = {}\nexport const p: RetrySchedule<E> = retrySchedule((e: E, attempt: Int): Option<Int> => None)\n",
+    "type Int = int\nerror E = {}\nexport const p: RetrySchedule<E> = retrySchedule((e: E, attempt: Int): Option<Duration> => None)\n",
   );
   assertExported(text, "E");
 });

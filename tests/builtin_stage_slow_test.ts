@@ -58,7 +58,7 @@ Deno.test("retrySchedule runs as a pipeline stage and stops on None", async () =
     `type Int = int
 export error Stop = {}
 export service Jobs { next(): Int fails Stop }
-const step = (error: Stop, attempt: Int): Option<Int> => if (attempt < 3) { Some(0) } else { None }
+const step = (error: Stop, attempt: Int): Option<Duration> => if (attempt < 3) { Some(0ms) } else { None }
 const policy: RetrySchedule<Stop> = step |> retrySchedule
 export const main = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })
 `,

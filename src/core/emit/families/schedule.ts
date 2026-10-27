@@ -56,7 +56,7 @@ export function scheduleStructural(
       const meta = c.scope.temp();
       const callback = c.effectCallback(e.transform);
       const enriched = emitted(
-        `{ ...${meta}, durationMillis: ${duration}.toMillis(${meta}.duration) }`,
+        `{ ...${meta}, duration: ${duration}.toMillis(${meta}.duration) }`,
       );
       return emitted([
         `${schedule}.map`,
@@ -129,7 +129,7 @@ export function scheduleStructural(
         `${effect}.flatMap(${decide}(${state}, ${meta}), (${decision}) => { `,
         `if (${decision}.kind === "Done") return ${cause}.done(${decision}.output); `,
         `${state} = ${decision}.state; `,
-        `return ${effect}.succeed([${decision}.output, ${duration}.millis(${decision}.delayMillis)] as [`,
+        `return ${effect}.succeed([${decision}.output, ${duration}.millis(${decision}.delay)] as [`,
         typeDoc(c.scope, policy.output),
         `, ${duration}.Duration]); }); })))`,
       ]);

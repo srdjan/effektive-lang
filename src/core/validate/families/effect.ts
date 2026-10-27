@@ -1,6 +1,13 @@
 // Validation of the effect builtins: retry, repeat, timeout, sleep, retrySchedule, defer, run, and race.
 
-import { type Expr, TIMEOUT_ERROR_ID, type Type } from "../../ir.ts";
+import {
+  DURATION_ID,
+  type Expr,
+  TIMEOUT_ERROR_ID,
+  type Type,
+} from "../../ir.ts";
+
+const DURATION: Type = { kind: "named", id: DURATION_ID };
 import { AREA } from "../report.ts";
 import {
   type Active,
@@ -57,11 +64,11 @@ export function timeout(
   const job = c.check(e.job, `${path}.job`);
   const duration = c.check(e.durationMs, `${path}.durationMs`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "timeout");
-  if (!fits(c.env, duration.type, INT)) {
+  if (!fits(c.env, duration.type, DURATION)) {
     c.add(
       AREA.types,
       `${path}.durationMs`,
-      `timeout needs an int duration, found ${show(duration.type)}`,
+      `timeout needs a Duration, found ${show(duration.type)}`,
       e.durationMs.span,
     );
   }
@@ -96,11 +103,11 @@ export function sleep(
   path: string,
 ): Comp {
   const duration = c.check(e.durationMs, `${path}.durationMs`);
-  if (!fits(c.env, duration.type, INT)) {
+  if (!fits(c.env, duration.type, DURATION)) {
     c.add(
       AREA.types,
       `${path}.durationMs`,
-      `sleep needs an int duration, found ${show(duration.type)}`,
+      `sleep needs a Duration, found ${show(duration.type)}`,
       e.durationMs.span,
     );
   }
@@ -134,12 +141,12 @@ export function retrySchedule(
   }
   if (
     !fits(c.env, INT, fn.parameters[1]) ||
-    !fits(c.env, fn.result, { kind: "option", element: INT })
+    !fits(c.env, fn.result, { kind: "option", element: DURATION })
   ) {
     c.add(
       AREA.types,
       `${path}.step`,
-      "retry schedule needs an Int attempt and Option<Int> result",
+      "retry schedule needs an Int attempt and Option<Duration> result",
       e.step.span,
     );
   }

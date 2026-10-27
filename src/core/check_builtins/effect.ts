@@ -1,6 +1,11 @@
 // Effect construction, execution, failure and retry checking.
 import { isErrorId } from "../ids.ts";
-import { type ErrorId, type Result, TIMEOUT_ERROR_ID } from "../ir.ts";
+import {
+  DURATION_ID,
+  type ErrorId,
+  type Result,
+  TIMEOUT_ERROR_ID,
+} from "../ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
 import { literalOf, nameTextOf } from "../syntax_queries.ts";
 import {
@@ -368,7 +373,7 @@ function retryScheduleCall(
     "retrySchedule",
     args[0],
     [errorHint, c.table.int],
-    c.table.option(c.table.int),
+    c.table.option(c.table.named(DURATION_ID)),
   ).info;
   const fn = c.functionOf(info.type);
   if (fn === undefined) {
@@ -406,7 +411,7 @@ function retryScheduleCall(
   c.fits(
     args[0].node,
     fn.result,
-    c.table.option(c.table.int),
+    c.table.option(c.table.named(DURATION_ID)),
     "the retry delay",
   );
   if (
@@ -485,8 +490,9 @@ function sleepCall(
 }
 
 function durationInfo(c: EffectContext, arg: Arg, name: string): NodeInfo {
-  const info = c.argInfo(arg, c.table.int);
-  c.fits(arg.node, info.type, c.table.int, `the ${name} duration`);
+  const duration = c.table.named(DURATION_ID);
+  const info = c.argInfo(arg, duration);
+  c.fits(arg.node, info.type, duration, `the ${name} duration`);
   return info;
 }
 

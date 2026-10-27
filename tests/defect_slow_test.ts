@@ -58,7 +58,7 @@ export const hostDefect = (which: Int): Text uses Log.boom =>
   try { Log.boom(which)
  "fine" } catch { Defect(d) => d.message }
 export const arithmetic = (): Text =>
-  try { sleep(0 - 1)
+  try { sleep(0ms - 1ms)
  "fine" } catch { Defect(d) => d.message }
 export const inHandler = (): Text uses Log.next | Log.boom =>
   try { Log.next()
@@ -69,8 +69,8 @@ export const typedFailure = (): Int fails Stop uses Log.next =>
 export const typedAndDefect = (): Int uses Log.next | Log.boom =>
   try { Log.next() } catch { Stop(e) => e.n, Defect(d) => 0 }
 export const interrupted = (): Int fails TimeoutError =>
-  timeout(() => try { sleep(5000)
- 1 } catch { Defect(d) => 2 }, 20)
+  timeout(() => try { sleep(5s)
+ 1 } catch { Defect(d) => 2 }, 20ms)
 export const withFinally = (which: Int): Int uses Log.boom | Log.seen | Log.defect =>
   try { Log.boom(which) } catch { Defect(d) => 5 } finally (o) { settle(o) }
 `;

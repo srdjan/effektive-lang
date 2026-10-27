@@ -4,7 +4,7 @@ import { StoreLive, Runtime } from "host:store"
 const requestSchema: Schema<Request> = schema()
 const storageRetry: RetrySchedule<StoreFailure> =
   retrySchedule((error, attempt) =>
-    if (error.kind === "Transient" && attempt <= 2) { Some(attempt * 5) } else { None })
+    if (error.kind === "Transient" && attempt <= 2) { Some(attempt * 5ms) } else { None })
 
 export const submit = (input: unknown): Receipt
   fails SchemaError | InvalidOrder | CatalogFailure | StoreFailure

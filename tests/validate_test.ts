@@ -1411,7 +1411,7 @@ Deno.test("retryStream validates deferred channels and policy type", () => {
 type Int = int
 error Stop = {}
 service Source { next(n: Int): Option<[Int, Int]> fails Stop }
-const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Int> => None)
+const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Duration> => None)
 const source = unfold(0, (n) => Source.next(n))
 const retried = retryStream(source, policy)
 `);
@@ -1434,8 +1434,8 @@ type Int = int
 error Stop = {}
 service Source { next(n: Int): Option<[Int, Int]> fails Stop }
 const source = unfold(0, (n) => Source.next(n))
-const debounced = debounceStream(source, 0)
-const throttled = throttleStream(source, { units: 1, durationMs: 100, strategy: "enforce" })
+const debounced = debounceStream(source, 0ms)
+const throttled = throttleStream(source, { units: 1, duration: 100ms, strategy: "enforce" })
 `);
   assertEquals(codesOf(lowered.ir, lowered.sources), []);
   for (
@@ -1858,8 +1858,8 @@ Deno.test("retry schedule validates its deferred failure channel", () => {
   const { ir, sources } = lowerText(`
 error Stop = {}
 service Jobs { next(): Int fails Stop }
-const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Int> =>
-  if (attempt < 2) { Some(0) } else { None })
+const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Duration> =>
+  if (attempt < 2) { Some(0ms) } else { None })
 export const run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })
 type Int = int
 `);

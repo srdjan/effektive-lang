@@ -29,7 +29,7 @@ const resourceCase = [
   "export const resource = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => job.read(), (job) => job.close())",
   "export const fiber = (): Int uses Jobs.next => withFiber(defer(() => Jobs.next()), (fiber) => joinFiber(fiber))",
   "const groups = (source: Stream<Int>) => mapGroups(source, (n) => n, (key, group) => collectStream(group), { bufferSize: 1 })",
-  "const policy = scheduleConcat(scheduleMax(scheduleRecurs(1), scheduleSpaced(2)), scheduleMin(scheduleRecurs(2), scheduleSpaced(1)))",
+  "const policy = scheduleConcat(scheduleMax(scheduleRecurs(1), scheduleSpaced(2ms)), scheduleMin(scheduleRecurs(2), scheduleSpaced(1ms)))",
   "const numberSchema: Schema<Int> = schema()",
   "export const decoded = (input: unknown): Int fails SchemaError => schemaDecode(numberSchema, input)",
   "export const encoded = (input: Int): Int fails SchemaError => schemaEncode(numberSchema, input)",

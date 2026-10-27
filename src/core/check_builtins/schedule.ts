@@ -2,6 +2,7 @@
 // the body checker's prelude prologue has checked arity and recorded facts.
 
 import { flattenMembers } from "../patterns.ts";
+import { DURATION_ID } from "../ir.ts";
 import type { NodeId } from "../syntax.ts";
 import { combine, type NodeInfo } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
@@ -18,7 +19,7 @@ function simpleScheduleCall(
   c.fits(
     args[0].node,
     value.type,
-    name === "scheduleRecurs" ? c.table.int : c.table.number,
+    name === "scheduleRecurs" ? c.table.int : c.table.named(DURATION_ID),
     "the schedule argument",
   );
   return c.finish(
@@ -33,8 +34,9 @@ function scheduleExponentialCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const base = c.argInfo(args[0], c.table.int);
-  c.fits(args[0].node, base.type, c.table.int, "the exponential base");
+  const duration = c.table.named(DURATION_ID);
+  const base = c.argInfo(args[0], duration);
+  c.fits(args[0].node, base.type, duration, "the exponential base");
   const infos = [base];
   if (args[1] !== undefined) {
     const factor = c.argInfo(args[1], c.table.number);
@@ -43,7 +45,7 @@ function scheduleExponentialCall(
   }
   return c.finish(
     node,
-    c.table.schedule(c.table.int, c.table.unknown, [], []),
+    c.table.schedule(duration, c.table.unknown, [], []),
     combine(infos),
   );
 }

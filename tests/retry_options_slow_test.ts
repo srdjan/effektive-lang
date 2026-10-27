@@ -57,17 +57,17 @@ export const recurring = (): Int fails Stop uses Jobs.next =>
 export const timesOnly = (): Int fails Stop uses Jobs.next =>
   retry(() => Jobs.next(), { times: 2 })
 export const exponential = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleMax(scheduleExponential(30), scheduleRecurs(3)) })
+  retry(() => Jobs.next(), { schedule: scheduleMax(scheduleExponential(30ms), scheduleRecurs(3)) })
 export const factored = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleMax(scheduleExponential(10, 3), scheduleRecurs(3)) })
+  retry(() => Jobs.next(), { schedule: scheduleMax(scheduleExponential(10ms, 3), scheduleRecurs(3)) })
 export const minimum = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleMin(scheduleExponential(10), scheduleRecurs(2)) })
+  retry(() => Jobs.next(), { schedule: scheduleMin(scheduleExponential(10ms), scheduleRecurs(2)) })
 export const maximum = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleMax(scheduleExponential(100), scheduleRecurs(2)) })
+  retry(() => Jobs.next(), { schedule: scheduleMax(scheduleExponential(100ms), scheduleRecurs(2)) })
 export const jittered = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleJittered(scheduleMax(scheduleExponential(20), scheduleRecurs(2))) })
+  retry(() => Jobs.next(), { schedule: scheduleJittered(scheduleMax(scheduleExponential(20ms), scheduleRecurs(2))) })
 export const backoff = (ms: Int): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleExponential(ms) })
+  retry(() => Jobs.next(), { schedule: scheduleExponential(ms * 1ms) })
 `;
 
 // The host runs a program with a job that fails \`failures\` times, then succeeds.

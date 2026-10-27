@@ -34,7 +34,7 @@ service Consumer { accept(n: Int): void fails Stop }
 
 const source = unfold(0, (n) => Source.next(n))
 const other = unfold(0, (n) => Source.next(n))
-const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Int> => None)
+const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Duration> => None)
 
 const pull = (n: Int): Option<[Int, Int]> fails Stop uses Source.next => Source.next(n)
 const isSmall = (n: Int): Bool => n < 3
@@ -74,8 +74,8 @@ const droppedEffect: Stream<Int, Stop, Source.next | Gate.allow> =
 const taken = (count: Int): Stream<Int, Stop, Source.next> => takeStream(source, count)
 const skipped = (count: Int): Stream<Int, Stop, Source.next> => dropStream(source, count)
 const retried = retryStream(source, policy)
-const debounced = debounceStream(source, 0)
-const throttled = throttleStream(source, { units: 1, durationMs: 100, strategy: "enforce" })
+const debounced = debounceStream(source, 0ms)
+const throttled = throttleStream(source, { units: 1, duration: 100ms, strategy: "enforce" })
 const buffered = bufferStream(source, { capacity: 2 })
 const merged = mergeStreams(source, other)
 const zipped = zipStreams(source, other)
@@ -1225,7 +1225,7 @@ Deno.test("a Schema callback that fails with another error is rejected", () => {
 const SCHEDULES = `type Int = int
 
 const simple: Schedule<Int> = scheduleRecurs(3)
-const timer: Schedule<Int, unknown> = scheduleSpaced(1000)
+const timer: Schedule<Int, unknown> = scheduleSpaced(1s)
 `;
 
 const SCHEDULE_PROGRAM = lowerProgram(SCHEDULES);

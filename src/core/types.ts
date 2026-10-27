@@ -15,7 +15,12 @@ import type {
   Type,
   TypeId,
 } from "./ir.ts";
-import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID, TIMEOUT_ERROR_ID } from "./ir.ts";
+import {
+  DURATION_ID,
+  SCHEMA_ERROR_ID,
+  SCHEMA_ISSUE_ID,
+  TIMEOUT_ERROR_ID,
+} from "./ir.ts";
 import { isErrorId, isTypeId, moduleOfId } from "./ids.ts";
 import type { Predicate } from "./predicates.ts";
 import { typeFromIr, typeToIr } from "./type_ir.ts";
@@ -387,6 +392,7 @@ export class TypeTable {
       this.record([{ name: "message", type: this.string, optional: false }]),
     );
     this.defineError("error:effect/SchemaIssue", this.record([]));
+    this.defineIdentity(DURATION_ID, this.int, false);
     this.defineError(
       TIMEOUT_ERROR_ID,
       this.record([{ name: "message", type: this.string, optional: false }]),
@@ -647,7 +653,9 @@ export class TypeTable {
       { name: "attempt", type: this.int, optional: false },
       ...["start", "now", "elapsed", "elapsedSincePrevious"].map((name) => ({
         name,
-        type: this.number,
+        type: name === "start" || name === "now"
+          ? this.number
+          : this.named(DURATION_ID),
         optional: false,
       })),
     ]);
@@ -659,7 +667,7 @@ export class TypeTable {
     return this.record([
       ...base.fields,
       { name: "output", type: output, optional: false },
-      { name: "durationMillis", type: this.number, optional: false },
+      { name: "duration", type: this.named(DURATION_ID), optional: false },
     ]);
   }
 
@@ -669,7 +677,7 @@ export class TypeTable {
         { name: "kind", type: this.literal("Continue"), optional: false },
         { name: "state", type: state, optional: false },
         { name: "output", type: output, optional: false },
-        { name: "delayMillis", type: this.number, optional: false },
+        { name: "delay", type: this.named(DURATION_ID), optional: false },
       ]),
       this.record([
         { name: "kind", type: this.literal("Done"), optional: false },
@@ -1224,7 +1232,10 @@ export class TypeTable {
     // body of an untagged identity. A tagged record takes a record literal only
     // through implicit construction.
     if (tn.kind === "named") {
-      return adopt && sn.kind !== "named" && td?.kind === "identity" &&
+      // `Duration` is closed: only a duration literal or a `Duration` operation
+      // makes one.
+      return adopt && sn.kind !== "named" && tn.id !== DURATION_ID &&
+        td?.kind === "identity" &&
         td.predicate === undefined && owns(tn.id) &&
         nested(s, td.body, lift);
     }

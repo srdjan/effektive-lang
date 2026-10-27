@@ -4,7 +4,7 @@
 // and records the node.
 
 import { isErrorId } from "./ids.ts";
-import type { TypeId } from "./ir.ts";
+import { DURATION_ID, type TypeId } from "./ir.ts";
 import { flattenIdentityMembers } from "./patterns.ts";
 import type { BinaryOperator } from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
@@ -59,6 +59,8 @@ function adoptedNumericIdentity(
   const r = numericIdentity(table, right);
   if ((l === undefined) === (r === undefined)) return undefined;
   const named = l ?? r;
+  // `Duration` has its own operator rules.
+  if (named === DURATION_ID) return undefined;
   const unnamed = l === undefined ? left : right;
   const body = named === undefined ? undefined : table.identityBaseOf(named);
   return named !== undefined && body !== undefined &&
@@ -144,6 +146,46 @@ function isStringClass(table: TypeTable, cls: string): boolean {
   return classChain(table, cls).includes("string");
 }
 
+function isDuration(table: TypeTable, ref: TypeRef): boolean {
+  const node = table.node(table.unfoldTransparent(ref));
+  return node.kind === "named" && node.id === DURATION_ID;
+}
+
+/**
+ * The arithmetic of `Duration`, or undefined when the general rules decide. A
+ * bare number has no unit, so `Duration + int` and `Duration - int` do not fit.
+ */
+function durationArithmetic(
+  table: TypeTable,
+  module: string,
+  operator: "+" | "-" | "*" | "/",
+  left: TypeRef,
+  right: TypeRef,
+): OperatorResult | undefined {
+  const l = isDuration(table, left);
+  const r = isDuration(table, right);
+  if (!l && !r) return undefined;
+  const duration = { type: table.named(DURATION_ID), mismatch: false };
+  if (l && r) {
+    if (operator === "/") return { type: table.number, mismatch: false };
+    return operator === "*" ? undefined : duration;
+  }
+  const other = l ? right : left;
+  const integral = table.isAssignableIn(module, other, table.int);
+  switch (operator) {
+    case "+":
+    case "-":
+      // A bare number has no unit, so it never adds to a Duration.
+      return integral || table.isAssignableIn(module, other, table.number)
+        ? { type: table.error, mismatch: true }
+        : undefined;
+    case "*":
+      return integral ? duration : undefined;
+    case "/":
+      return l && integral ? duration : undefined;
+  }
+}
+
 /** The result type of a binary operator, and whether the operands do not fit it. */
 interface OperatorResult {
   readonly type: TypeRef;
@@ -212,6 +254,9 @@ export function operatorResult(
       if (sealed !== undefined) {
         return { type: table.error, mismatch: false, sealed };
       }
+      // A bare number has no unit, and a widened operand needs no shared class.
+      const duration = durationArithmetic(table, module, operator, left, right);
+      if (duration !== undefined) return duration;
       const l = comparisonClass(table, left);
       const r = comparisonClass(table, right);
       if (

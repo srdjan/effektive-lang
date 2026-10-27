@@ -50,16 +50,16 @@ export const slow = (): Int uses Files.open | Files.mark =>
   try {
     timeout(
       () => withResource(() => Files.open(), (file) => file.wait(), (file) => file.close()),
-      20
+      20ms
     )
   } catch {
     TimeoutError(e) => Files.mark()
   }
-export const limit = (ms: Int): Int fails TimeoutError => timeout(() => 1, ms)
+export const limit = (ms: Int): Int fails TimeoutError => timeout(() => 1, ms * 1ms)
 export const hang = (): Int fails TimeoutError =>
-  timeout(() => { sleep(5000)
- 1 }, 10)
-export const nap = (ms: Int): void => sleep(ms)
+  timeout(() => { sleep(5s)
+ 1 }, 10ms)
+export const nap = (ms: Int): void => sleep(ms * 1ms)
 `;
 
 Deno.test("timeout returns the job value, raises TimeoutError, and finalizes before the handler", async () => {

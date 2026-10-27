@@ -13,7 +13,7 @@ export const short: Schedule<Int> = scheduleFromStep(
   (): Int => 0,
   (state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Int> =>
     if (state < 1) {
-      { kind: "Continue", state: state + 1, output: state, delayMillis: 10 }
+      { kind: "Continue", state: state + 1, output: state, delay: 10ms }
     } else {
       { kind: "Done", output: state }
     }
@@ -23,7 +23,7 @@ export const long: Schedule<Int> = scheduleFromStep(
   (): Int => 0,
   (state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Int> =>
     if (state < 3) {
-      { kind: "Continue", state: state + 1, output: state, delayMillis: 20 }
+      { kind: "Continue", state: state + 1, output: state, delay: 20ms }
     } else {
       { kind: "Done", output: state }
     }
@@ -39,7 +39,7 @@ export const left: Schedule<Int, Option<Int[]>, LeftStop, LeftPolicy.next> =
   scheduleFromStep(
     (): Int => 0,
     (state: Int, meta: ScheduleInput<Option<Int[]>>): ScheduleDecision<Int, Int> fails LeftStop uses LeftPolicy.next =>
-      ({ kind: "Continue", state: state + 1, output: LeftPolicy.next(), delayMillis: 1 })
+      ({ kind: "Continue", state: state + 1, output: LeftPolicy.next(), delay: 1ms })
   )
 
 export const right: Schedule<Text, unknown, RightStop, RightPolicy.next> =
@@ -47,7 +47,7 @@ export const right: Schedule<Text, unknown, RightStop, RightPolicy.next> =
     (): Int => 0,
     (state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Text> fails RightStop uses RightPolicy.next =>
       if (state < 1) {
-        { kind: "Continue", state: state + 1, output: "right", delayMillis: RightPolicy.next() }
+        { kind: "Continue", state: state + 1, output: "right", delay: RightPolicy.next() * 1ms }
       } else {
         { kind: "Done", output: "done" }
       }

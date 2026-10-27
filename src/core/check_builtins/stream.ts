@@ -3,7 +3,13 @@ import { type LocalId, type Result, SCOPE_CAPABILITY } from "../ir.ts";
 import { isErrorId } from "../ids.ts";
 import { flattenIdentityMembers } from "../patterns.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
-import { isPatternKind, isTypeKind, literalOf } from "../syntax_queries.ts";
+import {
+  isDurationLiteral,
+  isPatternKind,
+  isTypeKind,
+  literalOf,
+} from "../syntax_queries.ts";
+import { DURATION_ID } from "../ir.ts";
 import {
   combine,
   EFFECT_ONLY,
@@ -492,17 +498,18 @@ function debounceStreamCall(
     ? literalOf(c.tree, delayNode)
     : undefined;
   const delayMs = typeof delay === "number" &&
-      Number.isSafeInteger(delay) && delay >= 0
+      Number.isSafeInteger(delay) && delay >= 0 &&
+      isDurationLiteral(c.tree, delayNode)
     ? delay
     : undefined;
   if (delayMs === undefined) {
     c.report(
       "type-mismatch/010",
-      "`debounceStream` needs a nonnegative safe integer millisecond literal",
+      "`debounceStream` needs a nonnegative Duration literal such as `200ms`",
       delayNode,
     );
   } else {
-    c.finish(delayNode, c.table.int, PURE_EFFECTS);
+    c.finish(delayNode, c.table.named(DURATION_ID), PURE_EFFECTS);
   }
   c.fact(node, { kind: "debounce-stream", delayMs });
   return c.finish(node, stream.type, stream);
@@ -1062,7 +1069,7 @@ function streamThrottleOptions(c: StreamContext, arg: Arg): {
   const record = c.literalRecord(arg, 3);
   const values = record.ok ? record.value : undefined;
   const units = values?.get("units");
-  const duration = values?.get("durationMs");
+  const duration = values?.get("duration");
   const strategy = values?.get("strategy");
   if (
     units === undefined || duration === undefined || strategy === undefined ||
@@ -1070,23 +1077,28 @@ function streamThrottleOptions(c: StreamContext, arg: Arg): {
     !Number.isSafeInteger(units.value) || units.value <= 0 ||
     typeof duration.value !== "number" ||
     !Number.isSafeInteger(duration.value) || duration.value <= 0 ||
+    !isDurationLiteral(c.tree, duration.node) ||
     (strategy.value !== "shape" && strategy.value !== "enforce")
   ) {
     c.report(
       "type-mismatch/010",
-      '`throttleStream` needs { units: U, durationMs: M, strategy: "shape" | "enforce" } with positive safe integer literals',
+      '`throttleStream` needs { units: U, duration: D, strategy: "shape" | "enforce" } with a positive integer literal U and a positive Duration literal D',
       arg.node,
     );
     return undefined;
   }
   c.finish(units.node, c.table.int, PURE_EFFECTS);
-  c.finish(duration.node, c.table.int, PURE_EFFECTS);
+  c.finish(duration.node, c.table.named(DURATION_ID), PURE_EFFECTS);
   c.finish(strategy.node, c.table.literal(strategy.value), PURE_EFFECTS);
   c.finish(
     arg.node,
     c.table.record([
       { name: "units", type: c.table.int, optional: false },
-      { name: "durationMs", type: c.table.int, optional: false },
+      {
+        name: "duration",
+        type: c.table.named(DURATION_ID),
+        optional: false,
+      },
       {
         name: "strategy",
         type: c.table.literal(strategy.value),

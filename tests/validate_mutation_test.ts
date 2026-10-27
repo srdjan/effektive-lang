@@ -194,7 +194,7 @@ service LeftPolicy { next(): Int fails LeftStop }
 service RightPolicy { next(): Int fails RightStop }
 
 const simple: Schedule<Int> = scheduleRecurs(3)
-const timer: Schedule<Int, unknown> = scheduleSpaced(1000)
+const timer: Schedule<Int, unknown> = scheduleSpaced(1s)
 
 const custom: Schedule<Int, Option<Int[]>, Stop, Policy.choose> =
   scheduleFromStep(
@@ -207,7 +207,7 @@ const custom: Schedule<Int, Option<Int[]>, Stop, Policy.choose> =
           kind: "Continue",
           state: state + 1,
           output: Policy.choose(meta.input, meta.attempt),
-          delayMillis: 0
+          delay: 0ms
         }
       }
   )
@@ -220,7 +220,7 @@ const left: Schedule<Int, Option<Int[]>, LeftStop, LeftPolicy.next> =
   scheduleFromStep(
     (): Int => 0,
     (state: Int, meta: ScheduleInput<Option<Int[]>>): ScheduleDecision<Int, Int> fails LeftStop uses LeftPolicy.next =>
-      ({ kind: "Continue", state: state + 1, output: LeftPolicy.next(), delayMillis: 1 })
+      ({ kind: "Continue", state: state + 1, output: LeftPolicy.next(), delay: 1ms })
   )
 
 const right: Schedule<Text, unknown, RightStop, RightPolicy.next> =
@@ -228,7 +228,7 @@ const right: Schedule<Text, unknown, RightStop, RightPolicy.next> =
     (): Int => 0,
     (state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Text> fails RightStop uses RightPolicy.next =>
       if (state < 1) {
-        { kind: "Continue", state: state + 1, output: "right", delayMillis: RightPolicy.next() }
+        { kind: "Continue", state: state + 1, output: "right", delay: RightPolicy.next() * 1ms }
       } else {
         { kind: "Done", output: "done" }
       }
