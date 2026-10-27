@@ -1,9 +1,9 @@
-// Validation of the effect builtins: retry, retrySchedule, defer, run, and race.
+// Validation of the effect builtins: retry, timeout, sleep, retrySchedule, defer, run, and race.
 
-import type { Expr } from "../../ir.ts";
+import { type Expr, TIMEOUT_ERROR_ID } from "../../ir.ts";
 import { AREA } from "../report.ts";
 import { combine, invocationOf, isQuiet, unionEffects } from "../sets.ts";
-import { asFunction, fits, INT, show, unfold } from "../typing.ts";
+import { asFunction, fits, INT, show, unfold, UNIT } from "../typing.ts";
 import {
   type Comp,
   derivedResult,
@@ -31,6 +31,50 @@ export function retry(
     fn.result,
     combine([job, invocationOf(fn), EFFECT_ONLY]),
   );
+}
+
+export function timeout(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "timeout" }>,
+  path: string,
+): Comp {
+  const job = c.check(e.job, `${path}.job`);
+  const duration = c.check(e.durationMs, `${path}.durationMs`);
+  const fn = c.jobFunction(job, `${path}.job`, e.job.span, "timeout");
+  if (!fits(c.env, duration.type, INT)) {
+    c.add(
+      AREA.types,
+      `${path}.durationMs`,
+      `timeout needs an int duration, found ${show(duration.type)}`,
+      e.durationMs.span,
+    );
+  }
+  if (fn === undefined) return c.poison();
+  return derivedResult(
+    fn.result,
+    combine([job, duration, invocationOf(fn), {
+      failures: [TIMEOUT_ERROR_ID],
+      requirements: [],
+      execution: "effect",
+    }]),
+  );
+}
+
+export function sleep(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "sleep" }>,
+  path: string,
+): Comp {
+  const duration = c.check(e.durationMs, `${path}.durationMs`);
+  if (!fits(c.env, duration.type, INT)) {
+    c.add(
+      AREA.types,
+      `${path}.durationMs`,
+      `sleep needs an int duration, found ${show(duration.type)}`,
+      e.durationMs.span,
+    );
+  }
+  return derivedResult(UNIT, combine([duration, EFFECT_ONLY]));
 }
 
 export function retrySchedule(

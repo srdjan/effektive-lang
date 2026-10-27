@@ -16,7 +16,11 @@
 import { assert, assertEquals } from "@std/assert";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { ModuleIR, Type } from "../src/core/ir.ts";
-import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "../src/core/ir.ts";
+import {
+  SCHEMA_ERROR_ID,
+  SCHEMA_ISSUE_ID,
+  TIMEOUT_ERROR_ID,
+} from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import { checkModule } from "./helpers.ts";
 
@@ -26,6 +30,7 @@ const NOT_DATA: readonly (readonly [string, Type])[] = [
   ["void", { kind: "primitive", name: "unit" }],
   ["SchemaIssue", { kind: "named", id: SCHEMA_ISSUE_ID }],
   ["SchemaError", { kind: "named", id: SCHEMA_ERROR_ID }],
+  ["TimeoutError", { kind: "named", id: TIMEOUT_ERROR_ID }],
 ];
 
 // ------------------------------------------------------------------ checker

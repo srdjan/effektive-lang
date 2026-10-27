@@ -1103,7 +1103,7 @@
           "sources": [
             "collections.eff"
           ],
-          "version": 6
+          "version": 7
         },
         "emitted": {
           "module": "collections",
@@ -1698,7 +1698,7 @@
           "sources": [
             "host/providers.effi"
           ],
-          "version": 6
+          "version": 7
         },
         "emitted": {
           "module": "host/providers",
@@ -1896,7 +1896,7 @@
           "sources": [
             "log.eff"
           ],
-          "version": 6
+          "version": 7
         },
         "emitted": {
           "module": "log",
@@ -2745,7 +2745,7 @@
           "sources": [
             "main.eff"
           ],
-          "version": 6
+          "version": 7
         },
         "emitted": {
           "module": "main",
@@ -4235,7 +4235,7 @@
           "sources": [
             "pay.eff"
           ],
-          "version": 6
+          "version": 7
         },
         "emitted": {
           "module": "pay",
@@ -6324,7 +6324,7 @@
           "sources": [
             "users.eff"
           ],
-          "version": 6
+          "version": 7
         },
         "emitted": {
           "module": "users",
@@ -8720,7 +8720,7 @@
           "sources": [
             "m.eff"
           ],
-          "version": 6
+          "version": 7
         },
         "emitted": {
           "module": "m",

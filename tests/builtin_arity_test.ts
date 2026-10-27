@@ -71,6 +71,8 @@ function schemaWithOptions(builtin: string): ArityRow[] {
 const ARITY_ROWS: readonly ArityRow[] = [
   ...fixed("fail", 1),
   ...fixed("retry", 2),
+  ...fixed("timeout", 2),
+  ...fixed("sleep", 1),
   ...fixed("provide", 2),
   ...fixed("defer", 1),
   ...fixed("run", 1),

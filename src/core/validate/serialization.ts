@@ -45,11 +45,11 @@ export function checkSerialization(
     end: 0,
   };
   const own = new Set<string>(ir.sources);
-  if (ir.format !== "light-functional-ir" || ir.version !== 6) {
+  if (ir.format !== "light-functional-ir" || ir.version !== 7) {
     report.add(
       AREA.serialization,
       "format",
-      `expected the format light-functional-ir version 6, recorded ${
+      `expected the format light-functional-ir version 7, recorded ${
         String(ir.format)
       } version ${String(ir.version)}`,
       fallback,

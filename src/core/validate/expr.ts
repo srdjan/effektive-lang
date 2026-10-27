@@ -28,7 +28,7 @@ import type {
   Span,
   Type,
 } from "../ir.ts";
-import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "../ir.ts";
+import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID, TIMEOUT_ERROR_ID } from "../ir.ts";
 import { AREA } from "./report.ts";
 import {
   type Active,
@@ -99,6 +99,8 @@ import {
   retrySchedule,
   retryWithSchedule,
   run,
+  sleep,
+  timeout,
 } from "./families/effect.ts";
 import { fiberOperation, withFiber } from "./families/fiber.ts";
 import { layer, mergeLayers, provide } from "./families/layer.ts";
@@ -864,6 +866,10 @@ export class BodyValidator implements ValidatorCore {
         return this.catchExpr(e, path);
       case "retry":
         return retry(this, e, path);
+      case "timeout":
+        return timeout(this, e, path);
+      case "sleep":
+        return sleep(this, e, path);
       case "provide":
         return provide(this, e, path);
       case "binary":
@@ -1226,11 +1232,14 @@ export class BodyValidator implements ValidatorCore {
       this.check(f.value, `${path}.fields[${i}].value`)
     );
     const active = combine(outs);
-    if (e.error === SCHEMA_ERROR_ID || e.error === SCHEMA_ISSUE_ID) {
+    if (
+      e.error === SCHEMA_ERROR_ID || e.error === SCHEMA_ISSUE_ID ||
+      e.error === TIMEOUT_ERROR_ID
+    ) {
       this.add(
         AREA.types,
         path,
-        "reserved Schema errors cannot be constructed as source errors",
+        "reserved target errors cannot be constructed as source errors",
         e.span,
       );
       return checkedResult(active);

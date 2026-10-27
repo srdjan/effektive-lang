@@ -678,6 +678,9 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
     if (id === "error:effect/SchemaError") {
       return `${this.effect("Schema")}.SchemaError`;
     }
+    if (id === "error:effect/TimeoutError") {
+      return `${this.effect("Cause")}.TimeoutError`;
+    }
     if (id === "error:effect/SchemaIssue") {
       return `${this.effect("SchemaIssue")}.Issue`;
     }

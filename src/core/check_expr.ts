@@ -34,7 +34,7 @@ import {
   pattern,
   type PatternContext,
 } from "./check_patterns.ts";
-import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "./ir.ts";
+import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID, TIMEOUT_ERROR_ID } from "./ir.ts";
 import type {
   CapabilityId,
   ErrorId,
@@ -951,12 +951,19 @@ class BodyChecker
     id: ErrorId,
     args: readonly Arg[],
   ): NodeInfo {
-    if (id === SCHEMA_ERROR_ID || id === SCHEMA_ISSUE_ID) {
+    if (
+      id === SCHEMA_ERROR_ID || id === SCHEMA_ISSUE_ID ||
+      id === TIMEOUT_ERROR_ID
+    ) {
       const infos = args.map((arg) => this.argInfo(arg));
       this.report(
         "type-mismatch/010",
         `${
-          id === SCHEMA_ERROR_ID ? "SchemaError" : "SchemaIssue"
+          id === SCHEMA_ERROR_ID
+            ? "SchemaError"
+            : id === TIMEOUT_ERROR_ID
+            ? "TimeoutError"
+            : "SchemaIssue"
         } cannot be constructed directly`,
         node,
       );

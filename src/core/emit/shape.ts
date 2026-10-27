@@ -256,6 +256,12 @@ const ROWS = {
     leaf: "leaf",
   },
   retry: { children: () => [], deferred: (e) => [e.job], leaf: "leaf" },
+  timeout: {
+    children: (e) => [e.durationMs],
+    deferred: (e) => [e.job],
+    leaf: "leaf",
+  },
+  sleep: { children: (e) => [e.durationMs], leaf: "leaf" },
   provide: {
     children: () => [],
     deferred: (e) => [e.provider, e.job],

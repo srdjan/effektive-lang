@@ -26,7 +26,7 @@ import type {
   TypeId,
   ValueId,
 } from "./ir.ts";
-import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "./ir.ts";
+import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID, TIMEOUT_ERROR_ID } from "./ir.ts";
 import type { ModuleInfo, Project } from "./project.ts";
 import type { Span } from "./source.ts";
 import {
@@ -50,6 +50,8 @@ import {
 const PRELUDE = {
   fail: { shadowable: false },
   retry: { shadowable: false },
+  timeout: { shadowable: true },
+  sleep: { shadowable: true },
   provide: { shadowable: false },
   defer: { shadowable: false },
   run: { shadowable: true },
@@ -178,6 +180,7 @@ export const BUILTIN_TYPE_NAMES: ReadonlySet<string> = new Set(BUILTIN_TYPES);
 export const EFFECT_ERROR_IDS: ReadonlyMap<string, ErrorId> = new Map([
   ["SchemaError", SCHEMA_ERROR_ID],
   ["SchemaIssue", SCHEMA_ISSUE_ID],
+  ["TimeoutError", TIMEOUT_ERROR_ID],
 ]);
 
 /**
@@ -192,6 +195,7 @@ const TARGET_NAMES: ReadonlySet<string> = new Set([
   "RangeError",
   "SchemaError",
   "SchemaIssue",
+  "TimeoutError",
   "ReadonlyArray",
   "any",
   "bigint",

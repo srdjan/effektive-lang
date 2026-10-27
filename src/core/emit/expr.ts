@@ -382,7 +382,8 @@ function armEquality(left: string, right: Doc): ArmTest {
 
 /** The `_tag` value of an error: the Effect SchemaError class has a fixed tag. */
 function errorTag(id: string): string {
-  return id === "error:effect/SchemaError" ? "SchemaError" : tokenOfId(id);
+  if (id === "error:effect/SchemaError") return "SchemaError";
+  return id === "error:effect/TimeoutError" ? "TimeoutError" : tokenOfId(id);
 }
 
 function isIntType(type: Type): boolean {
@@ -1675,6 +1676,8 @@ export class ExprEmitter implements ExprCore {
         return schemaLeaf(this, e, children);
       case "retry":
       case "retry-with-schedule":
+      case "timeout":
+      case "sleep":
       case "run":
         return effectLeaf(this, e, children);
       case "partition-all":

@@ -723,10 +723,10 @@ Deno.test("None is a value, not a function: a call of None reports type-mismatch
   );
 });
 
-Deno.test("SchemaError and SchemaIssue are type names only, so no source program constructs them", () => {
+Deno.test("SchemaError, SchemaIssue and TimeoutError are type names only, so no source program constructs them", () => {
   // The errorConstruction site for these two ids has no source entry: the
   // resolver gives them as error targets only in type and `fails` positions.
-  for (const name of ["SchemaError", "SchemaIssue"]) {
+  for (const name of ["SchemaError", "SchemaIssue", "TimeoutError"]) {
     const found = diagnosticsOf(
       `type Int = int\nconst probe = () => ${name}({})\n`,
       false,

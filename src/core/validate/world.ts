@@ -13,7 +13,7 @@ import type {
   Type,
   TypeDecl,
 } from "../ir.ts";
-import { SCHEMA_ERROR_ID, SCOPE_CAPABILITY } from "../ir.ts";
+import { SCHEMA_ERROR_ID, SCOPE_CAPABILITY, TIMEOUT_ERROR_ID } from "../ir.ts";
 import type { Predicate } from "../predicates.ts";
 import { AREA, type Report } from "./report.ts";
 import {
@@ -103,6 +103,17 @@ export function buildWorld(ir: ModuleIR): World {
     kind: "error",
     id: "error:effect/SchemaError",
     name: "SchemaError",
+    fields: [{
+      name: "message",
+      type: { kind: "primitive", name: "string" },
+      optional: false,
+    }],
+    span: { source: ir.module, start: 0, end: 0 },
+  });
+  errors.set(TIMEOUT_ERROR_ID, {
+    kind: "error",
+    id: TIMEOUT_ERROR_ID,
+    name: "TimeoutError",
     fields: [{
       name: "message",
       type: { kind: "primitive", name: "string" },

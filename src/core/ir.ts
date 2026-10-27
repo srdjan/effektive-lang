@@ -10,6 +10,8 @@ export const SCOPE_CAPABILITY: CapabilityId = "cap:effect/Scope";
 /** The target Schema parser failure; source code may handle but not construct it. */
 export const SCHEMA_ERROR_ID: ErrorId = "error:effect/SchemaError";
 export const SCHEMA_ISSUE_ID: ErrorId = "error:effect/SchemaIssue";
+/** The target timeout failure of `timeout`; source code may handle but not construct it. */
+export const TIMEOUT_ERROR_ID: ErrorId = "error:effect/TimeoutError";
 export type ValueId = `value:${string}`;
 export type LocalId = `local:${string}`;
 export type Execution = "pure" | "effect";
@@ -228,6 +230,8 @@ export type Expr =
   | Node<{ kind: "fail"; error: Expr }>
   | Node<{ kind: "catch"; body: Expr; handlers: readonly Handler[] }>
   | Node<{ kind: "retry"; job: Expr; times: number }>
+  | Node<{ kind: "timeout"; job: Expr; durationMs: Expr }>
+  | Node<{ kind: "sleep"; durationMs: Expr }>
   | Node<{ kind: "provide"; provider: Expr; job: Expr }>
   | Node<{
       kind: "binary";
@@ -324,7 +328,7 @@ export interface Import {
 
 export interface ModuleIR {
   readonly format: "light-functional-ir";
-  readonly version: 6;
+  readonly version: 7;
   readonly module: string;
   /** A validator also receives immutable source texts keyed by these identifiers. */
   readonly sources: readonly string[];

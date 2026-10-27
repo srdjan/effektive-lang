@@ -120,6 +120,10 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return [e.left, e.right];
     case "make-ref":
       return [e.value];
+    case "sleep":
+      return [e.durationMs];
+    case "timeout":
+      return [e.job, e.durationMs];
     case "get-ref":
       return [e.ref];
     case "set-ref":

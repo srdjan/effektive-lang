@@ -5,6 +5,7 @@ import {
   callArguments,
   type Emitted,
   emitted,
+  free,
   type Kid,
   type Mode,
   PREC,
@@ -16,7 +17,12 @@ import type { ExprCore } from "./context.ts";
 
 type EffectStructuralKind = "defer" | "retry-schedule";
 
-type EffectLeafKind = "retry" | "retry-with-schedule" | "run";
+type EffectLeafKind =
+  | "retry"
+  | "retry-with-schedule"
+  | "run"
+  | "timeout"
+  | "sleep";
 
 export function effectStructural(
   c: ExprCore,
@@ -68,6 +74,26 @@ export function effectStructural(
   }
 }
 
+/**
+ * Runs `build` on a duration that has passed the negative check. The check is a
+ * defect (a thrown RangeError inside `Effect.suspend`), like the retry delay.
+ */
+function guardedDuration(
+  c: ExprCore,
+  duration: Emitted,
+  build: (ms: Emitted) => Emitted,
+): Emitted {
+  const effect = c.scope.effect("Effect");
+  const ms = c.scope.temp();
+  return emitted([
+    `${effect}.suspend(() => { const ${ms}: number = `,
+    free(duration),
+    `; if (${ms} < 0) throw new RangeError("negative duration"); return `,
+    free(build(emitted(ms))),
+    `; })`,
+  ]);
+}
+
 export function effectLeaf(
   c: ExprCore,
   e: ExprOf<EffectLeafKind>,
@@ -89,6 +115,18 @@ export function effectLeaf(
         `${effect}.retry`,
         callArguments([c.suspended(e.job), c.pure(e.options)]),
       ]);
+    case "timeout":
+      return guardedDuration(c, children[0], (ms) =>
+        emitted([
+          `${effect}.timeout`,
+          callArguments([c.suspended(e.job), ms]),
+        ]));
+    case "sleep":
+      return guardedDuration(
+        c,
+        children[0],
+        (ms) => emitted([`${effect}.sleep`, callArguments([ms])]),
+      );
     default: {
       const unreachable: never = e;
       return unreachable;

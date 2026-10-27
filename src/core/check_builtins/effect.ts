@@ -1,6 +1,6 @@
 // Effect construction, execution, failure and retry checking.
 import { isErrorId } from "../ids.ts";
-import type { ErrorId, Result } from "../ir.ts";
+import { type ErrorId, type Result, TIMEOUT_ERROR_ID } from "../ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
 import { nameTextOf } from "../syntax_queries.ts";
 import {
@@ -219,6 +219,41 @@ function deferCall(
   );
 }
 
+function timeoutCall(
+  c: EffectContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const job = c.argInfo(args[0]);
+  const fn = c.jobFunction("timeout", args[0], job);
+  const duration = durationInfo(c, args[1], "timeout");
+  const own: EffectSet = {
+    failures: [TIMEOUT_ERROR_ID],
+    requirements: [],
+    mode: "effect",
+  };
+  return c.finish(
+    node,
+    fn?.result ?? c.table.error,
+    combine([job, duration, invocationOf(fn), own]),
+  );
+}
+
+function sleepCall(
+  c: EffectContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const duration = durationInfo(c, args[0], "sleep");
+  return c.finish(node, c.table.unit, combine([duration, EFFECT_ONLY]));
+}
+
+function durationInfo(c: EffectContext, arg: Arg, name: string): NodeInfo {
+  const info = c.argInfo(arg, c.table.int);
+  c.fits(arg.node, info.type, c.table.int, `the ${name} duration`);
+  return info;
+}
+
 function runCall(
   c: EffectContext,
   node: NodeId,
@@ -345,6 +380,14 @@ export const EFFECT_ROWS = {
     prologue: piped(1, "pure", { fact: { kind: "retry-schedule" } }),
     handle: (c, node, _name, args, expected) =>
       retryScheduleCall(c, node, args, expected),
+  },
+  timeout: {
+    prologue: piped(2, "effect", { fact: { kind: "timeout" } }),
+    handle: (c, node, _name, args) => timeoutCall(c, node, args),
+  },
+  sleep: {
+    prologue: direct(1, "effect", { fact: { kind: "sleep" } }),
+    handle: (c, node, _name, args) => sleepCall(c, node, args),
   },
   defer: {
     prologue: piped(1, "pure", { fact: { kind: "defer" } }),
