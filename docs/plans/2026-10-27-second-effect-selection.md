@@ -1,7 +1,7 @@
 # Second selection of Effect features
 
 Date: 2026-10-27. Baseline: `c8999c5`. SL identifies this plan's units.
-Status: validated by Fable; waiting for the user to choose SL-D1 to SL-D6 and to approve the plan.
+Status: validated by Fable, approved by the user on 2026-10-27.
 
 On 2026-10-27 the user chose the second selection from the
 [status table](../status.md#effect-4-features-to-surface-in-source): item 18
@@ -67,7 +67,8 @@ The plan author checked these facts at `c8999c5` and in `effect@4.0.5`
 
 ## Decisions
 
-These decisions change the source that users write.
+These decisions change the source that users write. On 2026-10-27 the user
+chose (a) for SL-D1 to SL-D6.
 
 - **SL-D1 (the type of `now()`).** (a) A closed builtin type `Instant`, a
   number of milliseconds since the Unix epoch, with its own operator table:
