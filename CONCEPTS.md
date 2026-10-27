@@ -69,7 +69,7 @@ A `type` declaration has identity by name. It has none when its body is a union 
 
 Examples are `type UserId = string`, `type Cents = int`, `type Status = "pending" | "paid"`, and `type User = { id: UserId, name: Name }`. A literal-only union gives identity. The bodies `void`, `never`, `unknown`, and `null` give identity too.
 
-Two different types with identity never mix. This holds when their bodies are equal and when they come from different modules. A value of a type with identity fits its own body. An unnamed value fits a type with identity when the value fits its body. An unnamed value is a literal, an operator result, or an inline record, array, or tuple literal. A value of another type with identity needs the constructor, as in `Text(key)`.
+Two different types with identity never mix. This holds when their bodies are equal and when they come from different modules. A value of a type with identity fits its own body. An unnamed value fits a type with identity when the value fits its body. An unnamed value is a literal, an operator result, or an inline record, array, or tuple literal. A value of another type with identity needs the constructor, as in `Text(key)`. The builtin `Duration` is the one closed exception: an unnamed value never fits it, so only a duration literal or `Duration` arithmetic makes one.
 
 The identity exists in the checker. The emitted TypeScript of an untagged type is the schema and the type of its body.
 _Avoid: nominal type, brand type, data type_
