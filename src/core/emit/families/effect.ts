@@ -15,7 +15,7 @@ import type { ExprOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
-type EffectStructuralKind = "defer" | "retry-schedule";
+type EffectStructuralKind = "defer" | "retry-schedule" | "race-all";
 
 type EffectLeafKind =
   | "retry"
@@ -67,6 +67,16 @@ export function effectStructural(
         `(${metadata}.input, ${metadata}.attempt); if (${option}.isNone(${decision})) return ${cause}.done(${metadata}.attempt); `,
         `if (${decision}.value < 0) throw new RangeError("negative retry delay"); `,
         `return ${effect}.succeed([${metadata}.attempt, ${duration}.millis(${decision}.value)] as [number, ${duration}.Duration]); }))`,
+      ]);
+    }
+    case "race-all": {
+      const effect = c.scope.effect("Effect");
+      const jobs = c.scope.temp();
+      // The array is evaluated at the call, like the operands of `race(left, right)`.
+      return emitted([
+        `((${jobs}) => ${jobs}.length === 0 ? ${effect}.die(new RangeError("race of no jobs")) : ${effect}.raceAll(${jobs}))(`,
+        free(kid(e.jobs)),
+        ")",
       ]);
     }
     default: {

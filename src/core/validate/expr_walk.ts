@@ -128,6 +128,8 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return e.options === null ? [e.job] : [e.job, e.options];
     case "uninterruptible":
       return [e.job];
+    case "race-all":
+      return [e.jobs];
     case "sleep":
       return [e.durationMs];
     case "timeout":

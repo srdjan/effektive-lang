@@ -214,6 +214,7 @@ export type Expr =
   | Node<{ kind: "zip-streams"; left: Expr; right: Expr }>
   | Node<{ kind: "concat-streams"; left: Expr; right: Expr }>
   | Node<{ kind: "race"; left: Expr; right: Expr }>
+  | Node<{ kind: "race-all"; jobs: Expr }>
   | Node<{ kind: "make-ref"; value: Expr }>
   | Node<{ kind: "get-ref"; ref: Expr }>
   | Node<{ kind: "set-ref"; ref: Expr; value: Expr }>

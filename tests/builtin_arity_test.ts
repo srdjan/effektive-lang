@@ -143,7 +143,11 @@ const ARITY_ROWS: readonly ArityRow[] = [
   ...fixed("takeWhileEffectStream", 2),
   ...fixed("takeUntilEffectStream", 2),
   ...fixed("dropWhileEffectStream", 2),
-  ...fixed("race", 2),
+  ...[0, 3].map((count) => ({
+    builtin: "race",
+    call: `race(${args(count)})`,
+    message: "`race` takes an Effect array or two Effect values",
+  })),
   ...fixed("makeRef", 1),
   ...fixed("getRef", 1),
   ...fixed("setRef", 2),

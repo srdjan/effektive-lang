@@ -395,3 +395,21 @@ export function race(
     },
   }, combine([left, right]));
 }
+
+export function raceAll(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "race-all" }>,
+  path: string,
+): Comp {
+  const jobs = c.check(e.jobs, `${path}.jobs`);
+  const array = unfold(c.env, jobs.type);
+  const job = array.kind === "array" ? unfold(c.env, array.element) : undefined;
+  if (job?.kind !== "effect") {
+    c.add(AREA.types, path, "race needs an array of Effect values", e.span);
+    return c.poison();
+  }
+  return derivedResult(
+    { kind: "effect", result: job.result, effects: job.effects },
+    combine([jobs]),
+  );
+}

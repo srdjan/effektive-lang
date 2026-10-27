@@ -21,6 +21,7 @@ import {
   type LiteralField,
   type SyntaxView,
 } from "./context.ts";
+import { effectArrayMember } from "./collections.ts";
 import { direct, piped, type PreludeCallName, type Rows } from "./rows.ts";
 export interface EffectContext extends
   Pick<
@@ -528,6 +529,16 @@ function raceCall(
   args: readonly Arg[],
 ): NodeInfo {
   const left = c.argInfo(args[0]);
+  if (args.length === 1) {
+    const member = effectArrayMember(c, "race", left, args[0].node);
+    return c.finish(
+      node,
+      member === undefined
+        ? c.table.error
+        : c.table.effect(member.result, member.failures, member.requirements),
+      combine([left]),
+    );
+  }
   const right = c.argInfo(args[1]);
   const a = c.table.node(c.table.unfold(left.type));
   const b = c.table.node(c.table.unfold(right.type));
@@ -626,7 +637,14 @@ export const EFFECT_ROWS = {
     handle: (c, node, _name, args) => runCall(c, node, args),
   },
   race: {
-    prologue: direct(2, "pure", { fact: { kind: "race" } }),
+    prologue: {
+      arity: (_name, args) => args.length === 1 ? 1 : 2,
+      bail: "pure",
+      pipeline: "direct",
+      usage: "`race` takes an Effect array or two Effect values",
+      fact: (_c, _name, args) =>
+        args.length === 1 ? { kind: "race-all" } : { kind: "race" },
+    },
     handle: (c, node, _name, args) => raceCall(c, node, args),
   },
 } satisfies Partial<Rows<PreludeCallName, EffectContext>>;

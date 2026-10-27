@@ -480,6 +480,7 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
     left: arg(0),
     right: arg(1),
   }),
+  "race-all": (arg) => ({ kind: "race-all", jobs: arg(0) }),
   "race": (arg) => ({ kind: "race", left: arg(0), right: arg(1) }),
   "make-ref": (arg) => ({ kind: "make-ref", value: arg(0) }),
   "get-ref": (arg) => ({ kind: "get-ref", ref: arg(0) }),

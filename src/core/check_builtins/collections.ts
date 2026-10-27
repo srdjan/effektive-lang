@@ -136,6 +136,32 @@ function allCall(
   );
 }
 
+/**
+ * The Effect element type of an array of Effect values, or undefined after a
+ * diagnostic (`name` needs an array of Effect values). Shared by `partitionAll`
+ * and `race`.
+ */
+export function effectArrayMember(
+  c: Pick<CollectionContext, "table" | "isError" | "report">,
+  name: string,
+  jobs: NodeInfo,
+  at: NodeId,
+) {
+  const shape = c.table.node(c.table.unfold(jobs.type));
+  const member = shape.kind === "array"
+    ? c.table.node(c.table.unfold(shape.element))
+    : undefined;
+  if (member?.kind === "effect") return member;
+  if (!c.isError(jobs.type)) {
+    c.report(
+      "type-mismatch/010",
+      `\`${name}\` needs an array of Effect values`,
+      at,
+    );
+  }
+  return undefined;
+}
+
 function partitionAllCall(
   c: CollectionContext,
   node: NodeId,
@@ -148,18 +174,8 @@ function partitionAllCall(
     ? undefined
     : c.concurrencyBound(args[1], "partitionAll");
   c.fact(node, { kind: "partition-all", concurrency });
-  const shape = c.table.node(c.table.unfold(jobs.type));
-  const member = shape.kind === "array"
-    ? c.table.node(c.table.unfold(shape.element))
-    : undefined;
-  if (member?.kind !== "effect") {
-    if (!c.isError(jobs.type)) {
-      c.report(
-        "type-mismatch/010",
-        "`partitionAll` needs an array of Effect values",
-        args[0].node,
-      );
-    }
+  const member = effectArrayMember(c, "partitionAll", jobs, args[0].node);
+  if (member === undefined) {
     return c.finish(
       node,
       c.table.error,

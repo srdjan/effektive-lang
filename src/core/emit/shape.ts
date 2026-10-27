@@ -168,6 +168,7 @@ const ROWS = {
     children: (e) => [e.stream, e.predicate],
     leaf: "structural",
   },
+  "race-all": { children: (e) => [e.jobs], leaf: "structural" },
   "partition-all": { children: (e) => [e.jobs], leaf: "leaf" },
   "validate-all": { children: (e) => [e.jobs, e.onErrors], leaf: "leaf" },
   "all-results": { children: (e) => [e.jobs], leaf: "leaf" },

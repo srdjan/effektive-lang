@@ -803,6 +803,7 @@ export class ExprEmitter implements ExprCore {
         return this.closure(e, true);
       case "defer":
       case "retry-schedule":
+      case "race-all":
         return effectStructural(this, e, kid, mode);
       case "unfold":
       case "map-effect":
