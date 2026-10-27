@@ -1700,6 +1700,8 @@ export class ExprEmitter implements ExprCore {
         return layerLeaf(this, e);
       case "catch":
         return this.catchEffect(e);
+      case "ensure":
+        return this.ensureEffect(e);
       default:
         // The remaining leaf kinds call a function on their children. A kind
         // that has neither a case above nor a row in LEAF_CALLS fails to
@@ -1732,6 +1734,37 @@ export class ExprEmitter implements ExprCore {
       [key, ": ", arrow],
       [key, ": ", parameters, " =>", indent([hard, flush(body)])],
       [key, ":", indent([hard, arrow])],
+    ]);
+  }
+
+  /**
+   * `Effect.ensuring(body, cleanup)`, or with an outcome binding
+   * `Effect.onExit(body, (exit) => finalizer(outcome(exit)))`. Both run the
+   * finalizer once and without interruption.
+   */
+  private ensureEffect(e: Extract<Expr, { kind: "ensure" }>): Emitted {
+    const effect = this.scope.effect("Effect");
+    const body = this.asEffect(e.body);
+    if (e.finalizer.parameters.length === 0) {
+      return emitted([
+        `${effect}.ensuring`,
+        callArguments([body, this.asEffect(e.finalizer.body)]),
+      ]);
+    }
+    const exit = this.scope.temp();
+    const call = emitted([
+      at(this.closure(e.finalizer, true, true), PREC.member),
+      callArguments([emitted(`${this.scope.outcome().make}(${exit})`)]),
+    ]);
+    return emitted([
+      `${effect}.onExit`,
+      callArguments([
+        body,
+        this.arrowEmitted(`(${exit})`, {
+          kind: "expr",
+          body: call,
+        }),
+      ]),
     ]);
   }
 

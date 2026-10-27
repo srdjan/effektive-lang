@@ -2,6 +2,7 @@
 import type { TypeEnv } from "../signatures.ts";
 import { isTypeId, serviceOfCapability } from "../ids.ts";
 import {
+  type ErrorId,
   type LocalId,
   SCOPE_CAPABILITY,
   type ServiceId,
@@ -149,6 +150,45 @@ function scopeCall(
   );
 }
 
+/**
+ * The type of an outcome binding: a structural tagged union, like the result
+ * of `allResults`. The Failure member is absent when no failure remains.
+ */
+export function outcomeType(
+  table: ScopeContext["table"],
+  result: TypeRef,
+  failures: readonly ErrorId[],
+): TypeRef {
+  const member = (tag: string, field?: { name: string; type: TypeRef }) =>
+    table.record([
+      { name: "_tag", type: table.literal(tag), optional: false },
+      ...(field === undefined ? [] : [{ ...field, optional: false }]),
+    ]);
+  return table.union([
+    member("Success", { name: "success", type: result }),
+    ...(failures.length === 0 ? [] : [member("Failure", {
+      name: "failure",
+      type: table.union(failures.map((id) => table.named(id))),
+    })]),
+    member("Defect", { name: "message", type: table.string }),
+    member("Interrupted"),
+  ]);
+}
+
+/** The number of parameters that a written release callback declares. */
+function releaseWantsOutcome(c: ScopeContext, arg: Arg): boolean {
+  if (arg.pre !== undefined) return false;
+  const kind = kindOf(c.tree, arg.node);
+  if (kind === SyntaxKind.ResourceRelease) {
+    return c.kids(arg.node).some((k) => kindOf(c.tree, k) === SyntaxKind.Name);
+  }
+  if (kind !== SyntaxKind.ArrowExpr) return false;
+  const list = c.kids(arg.node).find((k) =>
+    kindOf(c.tree, k) === SyntaxKind.ParamList
+  );
+  return list !== undefined && c.kids(list).length === 2;
+}
+
 export function withResourceCall(
   c: ScopeContext,
   node: NodeId,
@@ -184,10 +224,13 @@ export function withResourceCall(
     expected,
     true,
   );
+  const useFailures = c.functionOf(use.info.type)?.failures ?? [];
   const release = c.callback(
     "withResource",
     args[2],
-    [acquire.result],
+    releaseWantsOutcome(c, args[2])
+      ? [acquire.result, outcomeType(c.table, use.result, useFailures)]
+      : [acquire.result],
     c.table.unit,
     true,
   );

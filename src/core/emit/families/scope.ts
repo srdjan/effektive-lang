@@ -1,9 +1,24 @@
 // Emission of the Scope builtins: forkScoped and withResource.
 
-import { callArguments, type Emitted, emitted } from "../emitted.ts";
+import { at, callArguments, type Emitted, emitted, PREC } from "../emitted.ts";
 import { internal } from "../scope.ts";
 import type { ExprOf } from "../shape.ts";
 import type { ExprCore } from "./context.ts";
+import type { ClosureExpr } from "../../ir.ts";
+
+/** `(r, exit) => release(r, outcome(exit))`, the release callback of `acquireUseRelease`. */
+function releaseWithOutcome(c: ExprCore, release: ClosureExpr): Emitted {
+  const resource = c.scope.temp();
+  const exit = c.scope.temp();
+  const call = emitted([
+    at(c.closure(release, true, true), PREC.member),
+    callArguments([
+      emitted(resource),
+      emitted(`${c.scope.outcome().make}(${exit})`),
+    ]),
+  ]);
+  return emitted(c.arrow(`(${resource}, ${exit})`, call), PREC.yield);
+}
 
 type ScopeLeafKind = "fork-scoped" | "with-resource";
 
@@ -31,7 +46,9 @@ export function scopeLeaf(
       }
       const acquire = c.closure(e.acquire, false, true);
       const use = c.closure(e.use, false, true);
-      const release = c.closure(e.release, false, true);
+      const release = e.release.parameters.length === 2
+        ? releaseWithOutcome(c, e.release)
+        : c.closure(e.release, false, true);
       return emitted([
         `${effect}.acquireUseRelease`,
         callArguments([

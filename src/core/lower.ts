@@ -209,6 +209,7 @@ type SpecialKind =
   | "binding"
   | "pattern"
   | "handler"
+  | "finalizer"
   | "option-fallback"
   | "record-binding";
 
@@ -739,10 +740,20 @@ class BodyLowerer {
         throw internal("missing implicit resource callback");
       }
       const source = fact.parameters[0];
+      const outcome = fact.parameters[1];
+      const outcomeName = this.kidsOfKind(region, SyntaxKind.Name)[0];
       const id: LocalId = `local:${this.body.declaration}/$using${region}`;
       const parameters = source === undefined
         ? []
         : [this.parameter(id, source.name, source.type, this.span(parts[0]))];
+      if (outcome !== undefined) {
+        parameters.push(this.parameter(
+          outcome.id,
+          outcome.name,
+          outcome.type,
+          this.span(this.required(outcomeName, "the outcome name", node)),
+        ));
+      }
       const previous = source?.id === undefined
         ? undefined
         : this.resourceBindings.get(source.id);
@@ -751,7 +762,9 @@ class BodyLowerer {
         return {
           kind: "closure",
           parameters,
-          body: this.expr(this.kids(region)[0]),
+          body: this.expr(
+            this.required(this.kids(region).at(-1), "the region body", node),
+          ),
           ...this.annotation(region),
         };
       } finally {
@@ -1027,6 +1040,7 @@ class BodyLowerer {
       case "binding":
       case "pattern":
       case "handler":
+      case "finalizer":
       case "option-fallback":
       case "record-binding":
         throw internal(
@@ -1560,13 +1574,76 @@ class BodyLowerer {
     const catchNode = kids.find((k) =>
       kindOf(this.ctx.tree, k) === SyntaxKind.CatchClause
     );
+    const finallyNode = kids.find((k) =>
+      kindOf(this.ctx.tree, k) === SyntaxKind.FinallyClause
+    );
     const body = this.expr(bodyNode);
     const handlers: Handler[] = catchNode === undefined
       ? []
       : this.kidsOfKind(catchNode, SyntaxKind.Handler).map((h) =>
         this.handler(h)
       );
-    return { kind: "catch", body, handlers, ...this.annotation(node) };
+    const whole = this.annotation(node);
+    const fact = finallyNode === undefined ? undefined : this.fact(finallyNode);
+    if (finallyNode === undefined || fact?.kind !== "finalizer") {
+      return { kind: "catch", body, handlers, ...whole };
+    }
+    // The catch node carries the effects of the protected part only.
+    const protectedPart: Expr = catchNode === undefined ? body : {
+      kind: "catch",
+      body,
+      handlers,
+      ...this.annotationWith(
+        this.info(node).type,
+        fact.protectedSet,
+        whole.span,
+      ),
+    };
+    return {
+      kind: "ensure",
+      body: protectedPart,
+      finalizer: this.finalizer(finallyNode, fact.binding),
+      ...whole,
+    };
+  }
+
+  private finalizer(
+    node: NodeId,
+    binding:
+      | { id: LocalId | undefined; name: string; type: TypeRef }
+      | undefined,
+  ): ClosureExpr {
+    const block = this.required(
+      this.kids(node).find((k) =>
+        kindOf(this.ctx.tree, k) === SyntaxKind.Block
+      ),
+      "the finally block",
+      node,
+    );
+    const name = this.kidsOfKind(node, SyntaxKind.Name)[0];
+    const info = this.info(node);
+    const body = this.expr(block);
+    return {
+      kind: "closure",
+      parameters: binding === undefined ? [] : [this.parameter(
+        binding.id,
+        binding.name,
+        binding.type,
+        this.span(this.required(name, "the outcome name", node)),
+      )],
+      body,
+      ...this.annotationWith(
+        this.ctx.types.function({
+          execution: info.mode,
+          parameters: binding === undefined ? [] : [binding.type],
+          result: info.type,
+          failures: info.failures,
+          requirements: info.requirements,
+        }),
+        PURE_EFFECTS,
+        this.span(node),
+      ),
+    };
   }
 
   private handler(node: NodeId): Handler {

@@ -231,6 +231,7 @@ export type Expr =
   | Node<{ kind: "match"; subject: Expr; arms: readonly Arm[] }>
   | Node<{ kind: "fail"; error: Expr }>
   | Node<{ kind: "catch"; body: Expr; handlers: readonly Handler[] }>
+  | Node<{ kind: "ensure"; body: Expr; finalizer: ClosureExpr }>
   | Node<{ kind: "retry"; job: Expr; times: number }>
   | Node<{ kind: "timeout"; job: Expr; durationMs: Expr }>
   | Node<{ kind: "repeat"; job: Expr; options: Expr | null }>

@@ -81,6 +81,8 @@ function localScope(
       SyntaxKind.Block,
       SyntaxKind.MatchArm,
       SyntaxKind.Handler,
+      SyntaxKind.FinallyClause,
+      SyntaxKind.ResourceRelease,
     ].includes(kindOf(tree, parent))
   ) parent = tree.parents[parent];
   return {

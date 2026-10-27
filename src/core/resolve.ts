@@ -1140,6 +1140,11 @@ class Resolver {
             for (const h of this.kidsOfKind(kid, SyntaxKind.Handler)) {
               this.handler(h);
             }
+          } else if (kindOf(this.tree, kid) === SyntaxKind.FinallyClause) {
+            const outer = this.scope;
+            this.scope = new Scope(outer);
+            this.bodyWithOutcome(kid);
+            this.scope = outer;
           } else {
             this.expr(kid, "value");
           }
@@ -1211,6 +1216,15 @@ class Resolver {
     }
   }
 
+  /** The optional outcome binding of a `finally` region, then its body. */
+  private bodyWithOutcome(region: NodeId): void {
+    for (const kid of this.kids(region)) {
+      if (kindOf(this.tree, kid) === SyntaxKind.Name) {
+        this.declareLocal(kid, false);
+      } else this.expr(kid, "value");
+    }
+  }
+
   private using(node: NodeId): void {
     const parts = this.kids(node);
     const name = parts.find((k) => kindOf(this.tree, k) === SyntaxKind.Name);
@@ -1233,7 +1247,7 @@ class Resolver {
       )
     ) {
       this.scope = new Scope(scope);
-      for (const body of this.kids(region)) this.expr(body, "value");
+      this.bodyWithOutcome(region);
     }
     this.scope = outer;
   }

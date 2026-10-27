@@ -115,6 +115,7 @@ import {
 } from "./families/schedule.ts";
 import {
   borrowedReferences,
+  ensure,
   explicitScope,
   forkScoped,
   scoped,
@@ -871,6 +872,8 @@ export class BodyValidator implements ValidatorCore {
         return this.fail(e, path);
       case "catch":
         return this.catchExpr(e, path);
+      case "ensure":
+        return ensure(this, e, path);
       case "retry":
         return retry(this, e, path);
       case "timeout":

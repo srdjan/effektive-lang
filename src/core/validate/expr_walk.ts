@@ -176,6 +176,8 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return [e.error];
     case "catch":
       return [e.body, ...e.handlers.map((h) => h.body)];
+    case "ensure":
+      return [e.body, e.finalizer];
     case "provide":
       return [e.provider, e.job];
     case "binary":

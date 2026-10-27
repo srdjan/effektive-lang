@@ -1461,6 +1461,7 @@ class Parser {
     } else this.missing("`finally`");
     this.skipNl();
     this.begin();
+    this.parseOutcomeBinding();
     this.parseBlockExpected();
     this.end(SyntaxKind.ResourceRelease);
     this.end(SyntaxKind.UsingExpr);
@@ -1617,7 +1618,8 @@ class Parser {
     this.begin();
     this.tok(); // try
     this.parseBlockExpected();
-    if (this.la() === TokenKind.KwCatch) {
+    const caught = this.la() === TokenKind.KwCatch;
+    if (caught) {
       this.skipNl();
       this.begin();
       this.tok(); // catch
@@ -1627,10 +1629,28 @@ class Parser {
         this.missing("`{`");
       }
       this.end(SyntaxKind.CatchClause);
-    } else {
-      this.missing("`catch`");
+    }
+    if (this.la() === TokenKind.KwFinally) {
+      this.skipNl();
+      this.begin();
+      this.tok(); // finally
+      this.skipNl();
+      this.parseOutcomeBinding();
+      this.parseBlockExpected();
+      this.end(SyntaxKind.FinallyClause);
+    } else if (!caught) {
+      this.missing("`catch` or `finally`");
     }
     this.end(SyntaxKind.TryExpr);
+  }
+
+  /** The optional `(outcome)` of a `finally` block. */
+  private parseOutcomeBinding(): void {
+    if (this.kind() !== TokenKind.LParen) return;
+    const group = this.open("free");
+    this.parseName("binding");
+    this.close(group, TokenKind.RParen, "`)`");
+    this.skipNl();
   }
 
   private parseHandler(): void {

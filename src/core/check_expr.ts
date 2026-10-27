@@ -113,6 +113,7 @@ import type {
 import type { SchemaContext } from "./check_builtins/schema.ts";
 import {
   checkBorrowedParameter,
+  outcomeType,
   type ScopeContext,
   withResourceCall,
 } from "./check_builtins/scope.ts";
@@ -2284,16 +2285,35 @@ class BodyChecker
       this.finish(nameNode, type, PURE_EFFECTS);
       facts.push({ id, name: nameTextOf(this.tree, nameNode) ?? "", type });
     }
+    const outcomeNode = this.kids(node).find((k) =>
+      kindOf(this.tree, k) === SyntaxKind.Name
+    );
+    if (parameters.length > 1 && outcomeNode !== undefined) {
+      facts.push(this.outcomeParameter(outcomeNode, parameters[1]));
+    }
     const result = this.callbackBody(
       node,
       facts,
-      this.kids(node)[0],
+      this.kids(node).at(-1),
       { result: undefined, failures: undefined, requirements: undefined },
       hint,
       { result: false, fails: false, uses: false },
     );
     this.refinements.restore(refinementScope);
     return result;
+  }
+
+  /** Declares the outcome binding of a `finally` region. */
+  private outcomeParameter(
+    nameNode: NodeId,
+    type: TypeRef,
+  ): ArrowParameterFact {
+    const target = this.targets.get(nameNode);
+    const id = target?.kind === "local" ? target.id : undefined;
+    if (id !== undefined) this.body.locals.set(id, type);
+    if (id !== undefined) this.refinements.addLocal(id, type);
+    this.finish(nameNode, type, PURE_EFFECTS);
+    return { id, name: nameTextOf(this.tree, nameNode) ?? "", type };
   }
 
   private callbackBody(
@@ -2583,6 +2603,9 @@ class BodyChecker
     const catchNode = kids.find((k) =>
       kindOf(this.tree, k) === SyntaxKind.CatchClause
     );
+    const finallyNode = kids.find((k) =>
+      kindOf(this.tree, k) === SyntaxKind.FinallyClause
+    );
     if (bodyNode === undefined) return this.errorInfo(node);
     const errorsBefore = this.errorCount;
     const body = this.expr(bodyNode, expected);
@@ -2658,11 +2681,43 @@ class BodyChecker
       mode: body.mode,
     };
     const type = this.joinResults(branches, expected);
-    return this.finish(
-      node,
-      type,
-      combine([remaining, ...handlerInfos, EFFECT_ONLY]),
+    const protectedPart = combine([remaining, ...handlerInfos, EFFECT_ONLY]);
+    const finalizer = finallyNode === undefined
+      ? []
+      : [this.finallyClause(finallyNode, type, protectedPart)];
+    return this.finish(node, type, combine([protectedPart, ...finalizer]));
+  }
+
+  /** The finalizer of a `try`: a unit block that may bind the outcome. */
+  private finallyClause(
+    node: NodeId,
+    result: TypeRef,
+    protectedSet: EffectSet,
+  ): NodeInfo {
+    const parts = this.kids(node);
+    const nameNode = parts.find((k) =>
+      kindOf(this.tree, k) === SyntaxKind.Name
     );
+    const block = parts.find((k) => kindOf(this.tree, k) === SyntaxKind.Block);
+    let binding: ArrowParameterFact | undefined;
+    if (nameNode !== undefined) {
+      binding = this.outcomeParameter(
+        nameNode,
+        outcomeType(this.table, result, protectedSet.failures),
+      );
+      if (!dataOnly(this.table, result, "value")) {
+        this.report(
+          "type-mismatch/010",
+          "the protected result must be data only when `finally` binds the outcome",
+          nameNode,
+        );
+      }
+    }
+    this.fact(node, { kind: "finalizer", binding, protectedSet });
+    if (block === undefined) return this.errorInfo(node);
+    const info = this.expr(block);
+    this.fits(block, info.type, this.table.unit, "the finally result");
+    return this.finish(node, this.table.unit, info);
   }
 
   private optionFallback(

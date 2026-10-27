@@ -94,6 +94,7 @@ export enum SyntaxKind {
   ResourceAcquire,
   ResourceUse,
   ResourceRelease,
+  FinallyClause,
 }
 
 /** The key and constructor options that one Schema type word selects. */

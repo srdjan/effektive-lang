@@ -256,6 +256,11 @@ export interface ImportGroup {
   }[];
 }
 
+export interface OutcomeNames {
+  readonly type: string;
+  readonly make: string;
+}
+
 /** Names for the emitted module. Each member records the name on first use. */
 export interface EmitNames {
   effect(module: EffectModule): string;
@@ -264,6 +269,7 @@ export interface EmitNames {
   intSchemaName(): string;
   intFunction(): string;
   unmatched(): string;
+  outcome(): OutcomeNames;
   hostCheck(): string;
   scopeRuntime(): ScopeRuntimeNames;
   serviceParameter(): string;
@@ -290,6 +296,7 @@ interface ImportLedger {
   hostImports(): ImportGroup[];
   usesIntFunction(): boolean;
   usesUnmatched(): boolean;
+  usesOutcome(): boolean;
   usesHostCheck(): boolean;
   usesIntSchema(): boolean;
   usesScopeRuntime(): boolean;
@@ -357,6 +364,7 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
 
   private intHelper: string | undefined;
   private unmatchedHelper: string | undefined;
+  private outcomeNames: OutcomeNames | undefined;
   private hostCheckHelper: string | undefined;
   private intSchema: string | undefined;
   private serviceName: string | undefined;
@@ -546,6 +554,19 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
   unmatched(): string {
     this.unmatchedHelper ??= this.fresh("$unmatched");
     return this.unmatchedHelper;
+  }
+
+  /** The helper `$outcome` that maps an `Exit` to the outcome record of a `finally` binding. */
+  outcome(): OutcomeNames {
+    this.outcomeNames ??= {
+      type: this.fresh("$Outcome"),
+      make: this.fresh("$outcome"),
+    };
+    return this.outcomeNames;
+  }
+
+  usesOutcome(): boolean {
+    return this.outcomeNames !== undefined;
   }
 
   /** The helper `$hostCheck` that a wrapped host provider calls for a data result. */

@@ -1,10 +1,25 @@
 // Validation of the Scope builtins: scoped, forkScoped, the explicit scope operations,
 // and withResource. This file also holds the borrow walk of a function parameter.
 
-import { type Expr, SCOPE_CAPABILITY, type Span, type Type } from "../../ir.ts";
+import {
+  type ErrorId,
+  type Expr,
+  type Field,
+  SCOPE_CAPABILITY,
+  type Span,
+  type Type,
+} from "../../ir.ts";
 import { AREA } from "../report.ts";
 import { combine, invocationOf, minus } from "../sets.ts";
-import { asFunction, dataOnly, fits, same, unfold, UNIT } from "../typing.ts";
+import {
+  asFunction,
+  dataOnly,
+  fits,
+  same,
+  show,
+  unfold,
+  UNIT,
+} from "../typing.ts";
 import { walkExprs } from "../expr_walk.ts";
 import {
   type Comp,
@@ -175,6 +190,101 @@ function scopedReferences(
   });
 }
 
+/**
+ * The type of an outcome binding, recomputed from the success type and the
+ * failures that remain. The Failure member is absent when none remain.
+ */
+function outcomeOf(result: Type, failures: readonly ErrorId[]): Type {
+  const member = (tag: string, ...fields: Field[]): Type => ({
+    kind: "record",
+    fields: [
+      {
+        name: "_tag",
+        type: { kind: "literal", value: tag },
+        optional: false,
+      },
+      ...fields,
+    ],
+  });
+  const field = (name: string, type: Type): Field => ({
+    name,
+    type,
+    optional: false,
+  });
+  return {
+    kind: "union",
+    members: [
+      member("Success", field("success", result)),
+      ...(failures.length === 0 ? [] : [member(
+        "Failure",
+        field("failure", {
+          kind: "union",
+          members: failures.map((id) => ({ kind: "named" as const, id })),
+        }),
+      )]),
+      member("Defect", field("message", { kind: "primitive", name: "string" })),
+      member("Interrupted"),
+    ],
+  };
+}
+
+export function ensure(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "ensure" }>,
+  path: string,
+): Comp {
+  const body = c.check(e.body, `${path}.body`);
+  const finalizer = c.check(e.finalizer, `${path}.finalizer`);
+  const f = asFunction(c.env, finalizer.type);
+  if (
+    e.finalizer.kind !== "closure" || f === undefined ||
+    f.parameters.length > 1 ||
+    e.finalizer.parameters.length !== f.parameters.length
+  ) {
+    c.add(
+      AREA.control,
+      `${path}.finalizer`,
+      "an ensure finalizer is a closure with zero or one parameter",
+      e.span,
+    );
+    return c.poison();
+  }
+  if (f.parameters.length === 1) {
+    const expected = outcomeOf(e.type, body.failures);
+    if (!same(c.env, f.parameters[0], expected)) {
+      c.add(
+        AREA.types,
+        `${path}.finalizer.parameters[0]`,
+        `the outcome has type ${show(expected)}, recorded ${
+          show(f.parameters[0])
+        }`,
+        e.finalizer.span,
+      );
+    }
+    if (!dataOnly(c.env, e.type, "value")) {
+      c.add(
+        AREA.types,
+        `${path}.type`,
+        "an outcome binding needs a data-only protected result",
+        e.span,
+      );
+    }
+  }
+  if (!fits(c.env, f.result, UNIT)) {
+    c.add(
+      AREA.types,
+      `${path}.finalizer.type.result`,
+      "a finalizer must return void",
+      e.finalizer.span,
+    );
+  }
+  return derivedResult(
+    body.type,
+    combine([body, finalizer, invocationOf(f), EFFECT_ONLY]),
+    "fit",
+  );
+}
+
 export function withResource(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "with-resource" }>,
@@ -201,8 +311,9 @@ export function withResource(
   }
   if (
     a.parameters.length !== 0 || u.parameters.length !== 1 ||
-    r.parameters.length !== 1 || e.acquire.parameters.length !== 0 ||
-    e.use.parameters.length !== 1 || e.release.parameters.length !== 1
+    r.parameters.length < 1 || r.parameters.length > 2 ||
+    e.acquire.parameters.length !== 0 || e.use.parameters.length !== 1 ||
+    e.release.parameters.length !== r.parameters.length
   ) {
     c.add(
       AREA.control,
@@ -233,6 +344,19 @@ export function withResource(
       "use and release must accept the acquired operation record",
       e.span,
     );
+  }
+  if (r.parameters.length === 2) {
+    const expected = outcomeOf(u.result, u.effects.failures);
+    if (!same(c.env, r.parameters[1], expected)) {
+      c.add(
+        AREA.types,
+        `${path}.release.parameters[1]`,
+        `the outcome has type ${show(expected)}, recorded ${
+          show(r.parameters[1])
+        }`,
+        e.release.span,
+      );
+    }
   }
   if (!fits(c.env, r.result, UNIT)) {
     c.add(

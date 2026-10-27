@@ -103,6 +103,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     fields.ts      Own-field construction, optional reads and declared schema input adapters.
     shape.ts       The shape table of every IR expression kind: children, deferred children, and leaf effects.
     explicit_scope.ts Shared scope representation, service capture, and close completion.
+    outcome.ts     The helper that maps an Exit to the outcome record of a `finally` binding.
     types.ts       The type printer and the schema printer.
     expr.ts        The expression scheme: pure, inGen, asEffect.
     decls.ts       Declarations, their order, and the export rule.

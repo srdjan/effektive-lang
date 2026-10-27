@@ -284,6 +284,13 @@ export type NodeFact =
     readonly type: TypeRef;
   }
   | { readonly kind: "pattern"; readonly pattern: PatternFact }
+  /** A `try` finally clause. The binding is the outcome parameter, when written. */
+  | {
+    readonly kind: "finalizer";
+    readonly binding: ArrowParameterFact | undefined;
+    /** The effects of the block and its handlers, without the finalizer. */
+    readonly protectedSet: EffectSet;
+  }
   | {
     readonly kind: "handler";
     readonly error: ErrorId | undefined;

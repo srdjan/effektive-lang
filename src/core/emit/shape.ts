@@ -260,6 +260,11 @@ const ROWS = {
     deferred: (e) => [e.body, ...e.handlers.map((h) => h.body)],
     leaf: "leaf",
   },
+  ensure: {
+    children: () => [],
+    deferred: (e) => [e.body, e.finalizer],
+    leaf: "leaf",
+  },
   retry: { children: () => [], deferred: (e) => [e.job], leaf: "leaf" },
   timeout: {
     children: (e) => [e.durationMs],

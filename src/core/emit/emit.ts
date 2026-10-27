@@ -24,6 +24,7 @@ import {
 } from "./decls.ts";
 import { EmitFailure, type ImportGroup, Scope } from "./scope.ts";
 import { scopeRuntimeDeclaration } from "./explicit_scope.ts";
+import { outcomeDeclaration } from "./outcome.ts";
 
 export interface EmitContext {
   /** The project configuration, for the paths of host modules. */
@@ -149,6 +150,7 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
   if (scope.usesIntFunction()) helpers.push([emitter.intFunctionDeclaration()]);
   if (scope.usesUnmatched()) helpers.push([emitter.unmatchedDeclaration()]);
   if (scope.usesHostCheck()) helpers.push([emitter.hostCheckDeclaration()]);
+  if (scope.usesOutcome()) helpers.push([outcomeDeclaration(scope)]);
   if (scope.usesScopeRuntime()) helpers.push([scopeRuntimeDeclaration(scope)]);
 
   helpers.push(fieldHelperDeclarations(scope));
