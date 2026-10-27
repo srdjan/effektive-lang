@@ -182,7 +182,7 @@ Deno.test("scheduleFromStep decisions use a delay field of type Duration", () =>
   );
 });
 
-Deno.test("ScheduleInput elapsed fields are Durations and start and now stay numbers", () => {
+Deno.test("ScheduleInput elapsed fields are Durations and start and now are Instants", () => {
   const source = (field: string) =>
     CUSTOM(
       `{ kind: "Continue", state: state + 1, output: state, delay: ${field} }`,
@@ -190,13 +190,15 @@ Deno.test("ScheduleInput elapsed fields are Durations and start and now stay num
   // `elapsed` and `elapsedSincePrevious` feed `delay` directly.
   assertEquals(diagnosticsOf(source("meta.elapsed")), []);
   assertEquals(diagnosticsOf(source("meta.elapsedSincePrevious")), []);
-  // `start` and `now` are clock instants in milliseconds, not Durations.
+  // `start` and `now` are Instants, not Durations.
   assertEquals(diagnosticsOf(source("meta.now")), [
-    "type-mismatch/003 the field `delay` has type number, but Duration is expected",
+    "type-mismatch/003 the field `delay` has type Instant, but Duration is expected",
   ]);
   assertEquals(diagnosticsOf(source("meta.start")), [
-    "type-mismatch/003 the field `delay` has type number, but Duration is expected",
+    "type-mismatch/003 the field `delay` has type Instant, but Duration is expected",
   ]);
+  // The difference of two Instants is a Duration.
+  assertEquals(diagnosticsOf(source("meta.now - meta.start")), []);
 });
 
 Deno.test("ScheduleMetadata has a duration field of type Duration", () => {

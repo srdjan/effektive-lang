@@ -24,7 +24,7 @@ import type {
   Type,
   ValueId,
 } from "../ir.ts";
-import { DURATION_ID } from "../ir.ts";
+import { CLOSED_UNIT_IDS } from "../ir.ts";
 import { defectMessage } from "./outcome.ts";
 import {
   alt,
@@ -722,8 +722,8 @@ export class ExprEmitter implements ExprCore {
         );
       }
       case "nominal": {
-        // A `Duration` erases to its millisecond value.
-        if (e.nominal === DURATION_ID) return kid(e.value);
+        // A `Duration` or an `Instant` erases to its millisecond value.
+        if (CLOSED_UNIT_IDS.has(e.nominal)) return kid(e.value);
         const declaration = this.scope.typeLevelDeclaration(e.nominal);
         // An untagged non-record nominal type is erased: its value is the base value.
         if (
@@ -1743,6 +1743,7 @@ export class ExprEmitter implements ExprCore {
       case "timeout":
       case "repeat":
       case "sleep":
+      case "now":
       case "uninterruptible":
       case "run":
         return effectLeaf(this, e, children);

@@ -5,7 +5,7 @@ export type LexicalOps = {
   isBlank: (value: Text) => Bool,
   isWellFormed: (value: Text) => Bool
 }
-export type TimeOps = { nowMillis: () => Int }
+export type TimeOps = { nowMillis: () => Instant }
 
 export type Key = string
 export type Payload = string

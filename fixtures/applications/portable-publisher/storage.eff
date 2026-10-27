@@ -1,4 +1,4 @@
-import { Key, Payload, Version, KeyValue, LexicalOps, InvalidKey, InvalidPayload, PlatformUnavailable, CompareConflict, WriteUncertain, Platform, TextRules } from "./platform.eff"
+import { Key, Payload, Version, KeyValue, LexicalOps, InvalidKey, InvalidPayload, PlatformUnavailable, CompareConflict, WriteUncertain, Platform, TextRules, Int } from "./platform.eff"
 import { Text, ArticleId, NonBlankText, Draft, Published, PublishPlan } from "./domain.eff"
 import { SnapshotToken, Corrupt, StorageUnavailable, StorageUncertain, ArticleConflict, ArticleStore } from "./ports.eff"
 
@@ -8,7 +8,7 @@ export type StoredArticle = {
   revision: int,
   title: Text,
   body: Text,
-  publishedAt?: int
+  publishedAt?: Instant
 }
 export type ArticleCodec = {
   encode: (article: StoredArticle) => Payload,
@@ -66,7 +66,7 @@ const toArticle = (lexical: LexicalOps, key: Key, expectedId: ArticleId, stored:
               fail(Corrupt({ key: Text(key), reason: "blank published title" }))
             } else if (lexical.isBlank(body)) {
               fail(Corrupt({ key: Text(key), reason: "blank published body" }))
-            } else if (publishedAt < 0) {
+            } else if (Int(publishedAt) < 0) {
               fail(Corrupt({ key: Text(key), reason: "negative publication time" }))
             } else {
               Published({

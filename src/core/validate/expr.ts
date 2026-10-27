@@ -29,7 +29,9 @@ import type {
   Type,
 } from "../ir.ts";
 import {
+  CLOSED_UNIT_IDS,
   DURATION_ID,
+  INSTANT_ID,
   SCHEMA_ERROR_ID,
   SCHEMA_ISSUE_ID,
   TIMEOUT_ERROR_ID,
@@ -50,6 +52,7 @@ import {
 import {
   asFunction,
   BOOLEAN,
+  closedUnitsDiffer,
   comparisonClass,
   compatibleClasses,
   containsUnknown,
@@ -64,6 +67,7 @@ import {
   INT,
   isBooleanLike,
   isDurationType,
+  isInstantType,
   isNever,
   isNumericClass,
   isStringClass,
@@ -205,8 +209,10 @@ function adoptedNumericIdentity(
   const r = numericIdentityOf(env, right);
   if ((l === undefined) === (r === undefined)) return undefined;
   const named = l ?? r;
-  // `Duration` has its own operator rules.
-  if (named?.kind === "named" && named.id === DURATION_ID) return undefined;
+  // `Duration` and `Instant` have their own operator rules.
+  if (named?.kind === "named" && CLOSED_UNIT_IDS.has(named.id)) {
+    return undefined;
+  }
   const unnamed = l === undefined ? left : right;
   const body = named?.kind === "named"
     ? identityBody(env, named.id)
@@ -901,6 +907,8 @@ export class BodyValidator implements ValidatorCore {
         return repeat(this, e, path);
       case "sleep":
         return sleep(this, e, path);
+      case "now":
+        return derivedResult({ kind: "named", id: INSTANT_ID }, EFFECT_ONLY);
       case "race-all":
         return raceAll(this, e, path);
       case "uninterruptible":
@@ -2017,8 +2025,9 @@ export class BodyValidator implements ValidatorCore {
       case "<=":
       case ">":
       case ">=":
-        // `isNumeric` widens an identity to its base, so the classes decide.
-        return l !== undefined && r !== undefined &&
+        // `isNumeric` widens an identity to its base, so the classes decide. A
+        // closed unit type compares only with its own type.
+        return !closedUnitsDiffer(l, r) && l !== undefined && r !== undefined &&
             compatibleClasses(env, l, r) &&
             isNumericClass(env, l) && isNumericClass(env, r)
           ? derivedResult(BOOLEAN, active)
@@ -2033,7 +2042,8 @@ export class BodyValidator implements ValidatorCore {
           (isNull(left.type) && fits(env, left.type, right.type)) ||
           (isNull(right.type) && fits(env, right.type, left.type));
         return nullable ||
-            l !== undefined && r !== undefined && compatibleClasses(env, l, r)
+            l !== undefined && r !== undefined &&
+              compatibleClasses(env, l, r) && !closedUnitsDiffer(l, r)
           ? derivedResult(BOOLEAN, active)
           : mismatch();
       }
@@ -2041,6 +2051,13 @@ export class BodyValidator implements ValidatorCore {
       case "-":
       case "*":
       case "/": {
+        const instant = this.instantArithmetic(
+          e.operator,
+          left.type,
+          right.type,
+        );
+        if (instant === "mismatch") return mismatch();
+        if (instant !== undefined) return derivedResult(instant, active);
         const duration = this.durationArithmetic(
           e.operator,
           left.type,
@@ -2078,6 +2095,30 @@ export class BodyValidator implements ValidatorCore {
         return mismatch();
       }
     }
+  }
+
+  /**
+   * The arithmetic of `Instant`: undefined when no operand is an `Instant`, and
+   * "mismatch" for every mix that the table does not list.
+   */
+  private instantArithmetic(
+    operator: "+" | "-" | "*" | "/",
+    left: Type,
+    right: Type,
+  ): Type | "mismatch" | undefined {
+    const env = this.env;
+    const l = isInstantType(env, left);
+    const r = isInstantType(env, right);
+    if (!l && !r) return undefined;
+    if (l && r) {
+      return operator === "-" ? { kind: "named", id: DURATION_ID } : "mismatch";
+    }
+    const duration = isDurationType(env, l ? right : left);
+    if (operator === "+" && duration) return { kind: "named", id: INSTANT_ID };
+    if (operator === "-" && l && duration) {
+      return { kind: "named", id: INSTANT_ID };
+    }
+    return "mismatch";
   }
 
   /**

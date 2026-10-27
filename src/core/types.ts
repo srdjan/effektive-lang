@@ -16,7 +16,9 @@ import type {
   TypeId,
 } from "./ir.ts";
 import {
+  CLOSED_UNIT_IDS,
   DURATION_ID,
+  INSTANT_ID,
   SCHEMA_ERROR_ID,
   SCHEMA_ISSUE_ID,
   TIMEOUT_ERROR_ID,
@@ -393,6 +395,7 @@ export class TypeTable {
     );
     this.defineError("error:effect/SchemaIssue", this.record([]));
     this.defineIdentity(DURATION_ID, this.int, false);
+    this.defineIdentity(INSTANT_ID, this.int, false);
     this.defineError(
       TIMEOUT_ERROR_ID,
       this.record([{ name: "message", type: this.string, optional: false }]),
@@ -654,7 +657,7 @@ export class TypeTable {
       ...["start", "now", "elapsed", "elapsedSincePrevious"].map((name) => ({
         name,
         type: name === "start" || name === "now"
-          ? this.number
+          ? this.named(INSTANT_ID)
           : this.named(DURATION_ID),
         optional: false,
       })),
@@ -1232,9 +1235,9 @@ export class TypeTable {
     // body of an untagged identity. A tagged record takes a record literal only
     // through implicit construction.
     if (tn.kind === "named") {
-      // `Duration` is closed: only a duration literal or a `Duration` operation
-      // makes one.
-      return adopt && sn.kind !== "named" && tn.id !== DURATION_ID &&
+      // `Duration` and `Instant` are closed: only a literal or an operation of
+      // the type makes one.
+      return adopt && sn.kind !== "named" && !CLOSED_UNIT_IDS.has(tn.id) &&
         td?.kind === "identity" &&
         td.predicate === undefined && owns(tn.id) &&
         nested(s, td.body, lift);

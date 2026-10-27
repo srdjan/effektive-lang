@@ -24,6 +24,7 @@ type EffectLeafKind =
   | "timeout"
   | "repeat"
   | "sleep"
+  | "now"
   | "uninterruptible";
 
 export function effectStructural(
@@ -111,6 +112,10 @@ export function effectLeaf(
   e: ExprOf<EffectLeafKind>,
   children: readonly Emitted[],
 ): Emitted {
+  // `now` reads the `Clock` value and needs no `Effect` import.
+  if (e.kind === "now") {
+    return emitted(`${c.scope.effect("Clock")}.currentTimeMillis`);
+  }
   const effect = c.scope.effect("Effect");
   switch (e.kind) {
     case "run":

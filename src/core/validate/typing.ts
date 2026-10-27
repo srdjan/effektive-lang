@@ -20,7 +20,9 @@
 
 import type { Execution, Field, FunctionType, Type } from "../ir.ts";
 import {
+  CLOSED_UNIT_IDS,
   DURATION_ID,
+  INSTANT_ID,
   SCHEMA_ERROR_ID,
   SCHEMA_ISSUE_ID,
   TIMEOUT_ERROR_ID,
@@ -304,9 +306,9 @@ function assignable(
   // body of an untagged identity.
   if (t.kind === "named") {
     const body = env.identities.has(t.id) ? env.aliases.get(t.id) : undefined;
-    // `Duration` is closed: an unnamed value never fits it.
+    // `Duration` and `Instant` are closed: an unnamed value never fits them.
     return adopt && env.refined?.has(t.id) !== true && s.kind !== "named" &&
-      t.id !== DURATION_ID && body !== undefined &&
+      !CLOSED_UNIT_IDS.has(t.id) && body !== undefined &&
       ownsSealed(env, t.id) && assignable(env, s, body, lift, depth + 1);
   }
   if (t.kind === "union") {
@@ -814,6 +816,22 @@ export function isDurationType(env: TypeEnv, type: Type): boolean {
   return unfolded.kind === "named" && unfolded.id === DURATION_ID;
 }
 
+/** A closed unit type compares only with a value of the same closed unit type. */
+export function closedUnitsDiffer(
+  l: string | undefined,
+  r: string | undefined,
+): boolean {
+  const closed = (cls: string | undefined) =>
+    cls !== undefined && cls.startsWith(IDENTITY_CLASS) &&
+    CLOSED_UNIT_IDS.has(cls.slice(IDENTITY_CLASS.length));
+  return (closed(l) || closed(r)) && l !== r;
+}
+
+export function isInstantType(env: TypeEnv, type: Type): boolean {
+  const unfolded = unfoldTransparent(env, type);
+  return unfolded.kind === "named" && unfolded.id === INSTANT_ID;
+}
+
 export function numericIdentityOf(env: TypeEnv, type: Type): Type | undefined {
   const unfolded = unfoldTransparent(env, type);
   if (unfolded.kind !== "named") return undefined;
@@ -915,7 +933,9 @@ export function show(type: Type): string {
     case "literal":
       return JSON.stringify(type.value);
     case "named":
-      return type.id === DURATION_ID ? "Duration" : type.id;
+      return CLOSED_UNIT_IDS.has(type.id)
+        ? type.id.slice(type.id.indexOf("/") + 1)
+        : type.id;
     case "record":
       return type.fields.length === 0
         ? "{}"

@@ -3,7 +3,6 @@ export type Bool = boolean
 export type ArticleId = string
 export type Revision = int
 export type NonBlankText = string
-export type Instant = int
 
 export type Draft = {
   id: ArticleId,

@@ -17,6 +17,16 @@ export const TIMEOUT_ERROR_ID: ErrorId = "error:effect/TimeoutError";
  * is a number of milliseconds. It is closed: an unnamed value never fits it.
  */
 export const DURATION_ID: TypeId = "type:effect/Duration";
+/**
+ * The builtin untagged identity over `int` that types a point in time. At run
+ * time it is a number of milliseconds since the Unix epoch. It is closed.
+ */
+export const INSTANT_ID: TypeId = "type:effect/Instant";
+/** The closed builtin unit identities: no unnamed value fits one, and each erases to a number. */
+export const CLOSED_UNIT_IDS: ReadonlySet<string> = new Set([
+  DURATION_ID,
+  INSTANT_ID,
+]);
 export type ValueId = `value:${string}`;
 export type LocalId = `local:${string}`;
 export type Execution = "pure" | "effect";
@@ -256,6 +266,7 @@ export type Expr =
   | Node<{ kind: "timeout"; job: Expr; durationMs: Expr }>
   | Node<{ kind: "repeat"; job: Expr; options: Expr | null }>
   | Node<{ kind: "sleep"; durationMs: Expr }>
+  | Node<{ kind: "now" }>
   | Node<{ kind: "uninterruptible"; job: Expr }>
   | Node<{ kind: "provide"; provider: Expr; job: Expr }>
   | Node<{

@@ -11,7 +11,7 @@ import type {
   FunctionType,
   Type,
 } from "../ir.ts";
-import { DURATION_ID, SCOPE_CAPABILITY } from "../ir.ts";
+import { CLOSED_UNIT_IDS, SCOPE_CAPABILITY } from "../ir.ts";
 import {
   bracketed,
   callWith,
@@ -357,7 +357,7 @@ export function encodedTypeDoc(
     case "literal":
       return typeDoc(scope, type);
     case "named":
-      if (type.id === DURATION_ID) return "number";
+      if (CLOSED_UNIT_IDS.has(type.id)) return "number";
       return recursive?.has(type.id) ? scope.encodedMirrorName(type.id) : [
         `${scope.effect("Schema")}.Codec.Encoded<typeof `,
         scope.nameOf(type.id),
@@ -440,7 +440,7 @@ export function schemaDoc(
     case "literal":
       return schemaOfLiterals(scope, [type.value]);
     case "named":
-      if (type.id === DURATION_ID) return scope.intSchemaName();
+      if (CLOSED_UNIT_IDS.has(type.id)) return scope.intSchemaName();
       return recursive?.has(type.id)
         ? [
           `${schema}.suspend((): ${schema}.Codec<`,

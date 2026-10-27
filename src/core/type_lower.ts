@@ -4,7 +4,7 @@
 
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import type { CapabilityId, ErrorId, Execution, Field, Type } from "./ir.ts";
-import { DURATION_ID } from "./ir.ts";
+import { DURATION_ID, INSTANT_ID } from "./ir.ts";
 import { TokenKind } from "./lex.ts";
 import { stronglyConnectedComponents } from "./graph.ts";
 import type { Target } from "./resolve.ts";
@@ -243,6 +243,13 @@ export class TypeLowerer {
       build: (lowerer) => ({
         ref: lowerer.env.table.named(DURATION_ID),
         ir: { kind: "named", id: DURATION_ID },
+      }),
+    },
+    Instant: {
+      kind: "plain",
+      build: (lowerer) => ({
+        ref: lowerer.env.table.named(INSTANT_ID),
+        ir: { kind: "named", id: INSTANT_ID },
       }),
     },
     CloseableScope: {

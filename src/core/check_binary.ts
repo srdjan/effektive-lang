@@ -4,7 +4,7 @@
 // and records the node.
 
 import { isErrorId } from "./ids.ts";
-import { DURATION_ID, type TypeId } from "./ir.ts";
+import { CLOSED_UNIT_IDS, DURATION_ID, INSTANT_ID, type TypeId } from "./ir.ts";
 import { flattenIdentityMembers } from "./patterns.ts";
 import type { BinaryOperator } from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
@@ -59,8 +59,8 @@ function adoptedNumericIdentity(
   const r = numericIdentity(table, right);
   if ((l === undefined) === (r === undefined)) return undefined;
   const named = l ?? r;
-  // `Duration` has its own operator rules.
-  if (named === DURATION_ID) return undefined;
+  // `Duration` and `Instant` have their own operator rules.
+  if (named !== undefined && CLOSED_UNIT_IDS.has(named)) return undefined;
   const unnamed = l === undefined ? left : right;
   const body = named === undefined ? undefined : table.identityBaseOf(named);
   return named !== undefined && body !== undefined &&
@@ -151,6 +151,56 @@ function isDuration(table: TypeTable, ref: TypeRef): boolean {
   return node.kind === "named" && node.id === DURATION_ID;
 }
 
+function isInstant(table: TypeTable, ref: TypeRef): boolean {
+  const node = table.node(table.unfoldTransparent(ref));
+  return node.kind === "named" && node.id === INSTANT_ID;
+}
+
+/**
+ * The arithmetic of `Instant`, or undefined when no operand is an `Instant`. It
+ * runs before the `Duration` rules. `Instant - Instant` is a `Duration`, and an
+ * `Instant` moves by a `Duration`. Every other mix is a mismatch.
+ */
+function instantArithmetic(
+  table: TypeTable,
+  operator: "+" | "-" | "*" | "/",
+  left: TypeRef,
+  right: TypeRef,
+): OperatorResult | undefined {
+  const l = isInstant(table, left);
+  const r = isInstant(table, right);
+  if (!l && !r) return undefined;
+  const instant = { type: table.named(INSTANT_ID), mismatch: false };
+  if (l && r) {
+    return operator === "-"
+      ? { type: table.named(DURATION_ID), mismatch: false }
+      : { type: table.error, mismatch: true };
+  }
+  const other = l ? right : left;
+  const fits = isDuration(table, other);
+  if (operator === "+" && fits) return instant;
+  if (operator === "-" && l && fits) return instant;
+  return { type: table.error, mismatch: true };
+}
+
+/** The closed unit class of a comparison class, or undefined for another class. */
+function closedUnitClass(cls: string | undefined): string | undefined {
+  return cls !== undefined && cls.startsWith(IDENTITY_CLASS) &&
+      CLOSED_UNIT_IDS.has(cls.slice(IDENTITY_CLASS.length))
+    ? cls
+    : undefined;
+}
+
+/** A closed unit type compares only with a value of the same closed unit type. */
+function closedUnitsDiffer(
+  l: string | undefined,
+  r: string | undefined,
+): boolean {
+  return (closedUnitClass(l) !== undefined ||
+    closedUnitClass(r) !== undefined) &&
+    l !== r;
+}
+
 /**
  * The arithmetic of `Duration`, or undefined when the general rules decide. A
  * bare number has no unit, so `Duration + int` and `Duration - int` do not fit.
@@ -216,9 +266,10 @@ export function operatorResult(
       const l = comparisonClass(table, left);
       const r = comparisonClass(table, right);
       const mismatch = !either &&
-        !(l !== undefined && r !== undefined &&
-          compatibleClasses(table, l, r) &&
-          isNumericClass(table, l) && isNumericClass(table, r));
+        (closedUnitsDiffer(l, r) ||
+          !(l !== undefined && r !== undefined &&
+            compatibleClasses(table, l, r) &&
+            isNumericClass(table, l) && isNumericClass(table, r)));
       return { type: table.boolean, mismatch };
     }
     case "===":
@@ -236,7 +287,7 @@ export function operatorResult(
         if (
           !nullable &&
           (l === undefined || r === undefined ||
-            !compatibleClasses(table, l, r))
+            !compatibleClasses(table, l, r) || closedUnitsDiffer(l, r))
         ) {
           mismatch = true;
         }
@@ -255,6 +306,8 @@ export function operatorResult(
         return { type: table.error, mismatch: false, sealed };
       }
       // A bare number has no unit, and a widened operand needs no shared class.
+      const instant = instantArithmetic(table, operator, left, right);
+      if (instant !== undefined) return instant;
       const duration = durationArithmetic(table, module, operator, left, right);
       if (duration !== undefined) return duration;
       const l = comparisonClass(table, left);

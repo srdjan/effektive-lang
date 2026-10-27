@@ -52,6 +52,7 @@ const PRELUDE = {
   retry: { shadowable: false },
   timeout: { shadowable: true },
   sleep: { shadowable: true },
+  now: { shadowable: true },
   uninterruptible: { shadowable: true },
   repeat: { shadowable: true },
   provide: { shadowable: false },
@@ -176,6 +177,7 @@ const BUILTIN_TYPES = [
   "Fiber",
   "CloseableScope",
   "Duration",
+  "Instant",
 ] as const;
 
 type BuiltinTypeName = typeof BUILTIN_TYPES[number];

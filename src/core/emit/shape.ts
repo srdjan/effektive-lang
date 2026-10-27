@@ -283,6 +283,7 @@ const ROWS = {
     leaf: "leaf",
   },
   sleep: { children: (e) => [e.durationMs], leaf: "leaf" },
+  now: { children: () => [], leaf: "leaf" },
   uninterruptible: {
     children: () => [],
     deferred: (e) => [e.job],

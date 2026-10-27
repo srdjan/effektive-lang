@@ -269,6 +269,7 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
   }),
   "uninterruptible": (arg) => ({ kind: "uninterruptible", job: arg(0) }),
   "sleep": (arg) => ({ kind: "sleep", durationMs: arg(0) }),
+  "now": () => ({ kind: "now" }),
   "run": (arg) => ({ kind: "run", value: arg(0) }),
   "scoped": (arg) => ({ kind: "scoped", value: arg(0) }),
   "fork-scoped": (arg) => ({ kind: "fork-scoped", job: arg(0) }),

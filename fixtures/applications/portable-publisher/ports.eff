@@ -1,4 +1,4 @@
-import { Text, Bool, ArticleId, Instant, Article, PublishPlan } from "./domain.eff"
+import { Text, Bool, ArticleId, Article, PublishPlan } from "./domain.eff"
 
 export type SnapshotToken = string
 export type ObservedArticle = { article: Article, token: SnapshotToken }

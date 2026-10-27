@@ -285,6 +285,7 @@ class ModuleChecker {
       case "Fiber":
       case "CloseableScope":
       case "Duration":
+      case "Instant":
         return false;
       default: {
         const unreachable: never = name;

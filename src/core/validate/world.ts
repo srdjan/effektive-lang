@@ -15,6 +15,7 @@ import type {
 } from "../ir.ts";
 import {
   DURATION_ID,
+  INSTANT_ID,
   SCHEMA_ERROR_ID,
   SCOPE_CAPABILITY,
   TIMEOUT_ERROR_ID,
@@ -138,6 +139,14 @@ export function buildWorld(ir: ModuleIR): World {
     kind: "type",
     id: DURATION_ID,
     name: "Duration",
+    definition: { kind: "nominal", base: { kind: "primitive", name: "int" } },
+    span: { source: ir.module, start: 0, end: 0 },
+  });
+  // `Instant` is the builtin untagged identity over `int`.
+  types.set(INSTANT_ID, {
+    kind: "type",
+    id: INSTANT_ID,
+    name: "Instant",
     definition: { kind: "nominal", base: { kind: "primitive", name: "int" } },
     span: { source: ir.module, start: 0, end: 0 },
   });

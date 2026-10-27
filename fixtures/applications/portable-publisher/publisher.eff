@@ -1,12 +1,12 @@
 import { PlatformUnavailable, Platform, TextRules, Time } from "./platform.eff"
-import { Text, Instant } from "./domain.eff"
+import { Text } from "./domain.eff"
 import { Clock, Lexical } from "./ports.eff"
 import { ArticleJson, articleStoreLive } from "./storage.eff"
 import { PublishReceipt, PublishFailure, publishArticleFeature, publishAllFeature } from "./feature.eff"
 
 const clockLive = layer(Clock, () => {
   const time = Time.acquire()
-  ({ now: () => Instant(time.nowMillis()) })
+  ({ now: () => time.nowMillis() })
 })
 
 const lexicalLive = layer(Lexical, () => {

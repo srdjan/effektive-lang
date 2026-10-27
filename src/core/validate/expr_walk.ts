@@ -11,6 +11,7 @@ export function exprChildren(e: Expr): readonly Expr[] {
   switch (e.kind) {
     case "take-sink":
     case "make-scope":
+    case "now":
     case "null":
     case "literal":
     case "reference":

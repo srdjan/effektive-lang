@@ -2,9 +2,10 @@
 // scheduleExponential, scheduleCron, scheduleJittered, scheduleMap, scheduleMax, scheduleMin, and scheduleConcat.
 
 import { cronExpressionProblem, cronZoneProblem } from "../../cron.ts";
-import { DURATION_ID, type Expr, type Type } from "../../ir.ts";
+import { DURATION_ID, type Expr, INSTANT_ID, type Type } from "../../ir.ts";
 
 const DURATION: Type = { kind: "named", id: DURATION_ID };
+const INSTANT: Type = { kind: "named", id: INSTANT_ID };
 import { AREA } from "../report.ts";
 import { combine, unionEffects } from "../sets.ts";
 import {
@@ -31,7 +32,7 @@ function scheduleInput(
       { name: "attempt", type: INT, optional: false },
       ...["start", "now", "elapsed", "elapsedSincePrevious"].map((name) => ({
         name,
-        type: name === "start" || name === "now" ? NUMBER : DURATION,
+        type: name === "start" || name === "now" ? INSTANT : DURATION,
         optional: false,
       })),
     ],

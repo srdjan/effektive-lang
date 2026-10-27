@@ -35,7 +35,7 @@ export const runWorker = (input: unknown): Report
   fails SchemaError | InvalidPolicy | JobFailure
   uses Jobs.open | Jobs.execute | Jobs.close | Clock.wait => {
     const policy = schemaDecode(policySchema, input)
-    if (policy.runs < 0 || policy.delayMillis < 0 || policy.retries < 0 || policy.retryMillis < 0) {
+    if (policy.runs < 0 || policy.delayMillis < 0ms || policy.retries < 0 || policy.retryMillis < 0ms) {
       fail(InvalidPolicy({}))
     } else { cycle(policy, 0, None) }
   }

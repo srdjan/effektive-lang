@@ -152,6 +152,7 @@ export type NodeFact =
   | { readonly kind: "timeout" }
   | { readonly kind: "repeat"; readonly options: boolean }
   | { readonly kind: "sleep" }
+  | { readonly kind: "now" }
   | { readonly kind: "uninterruptible" }
   | { readonly kind: "run" }
   | { readonly kind: "scoped" | "fork-scoped" }

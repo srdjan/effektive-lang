@@ -3,6 +3,7 @@ import { isErrorId } from "../ids.ts";
 import {
   DURATION_ID,
   type ErrorId,
+  INSTANT_ID,
   type Result,
   TIMEOUT_ERROR_ID,
 } from "../ir.ts";
@@ -627,6 +628,10 @@ export const EFFECT_ROWS = {
   uninterruptible: {
     prologue: piped(1, "effect", { fact: { kind: "uninterruptible" } }),
     handle: (c, node, _name, args) => uninterruptibleCall(c, node, args),
+  },
+  now: {
+    prologue: direct(0, "effect", { fact: { kind: "now" } }),
+    handle: (c, node) => c.finish(node, c.table.named(INSTANT_ID), EFFECT_ONLY),
   },
   sleep: {
     prologue: direct(1, "effect", { fact: { kind: "sleep" } }),
