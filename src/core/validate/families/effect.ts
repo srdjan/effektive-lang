@@ -76,6 +76,20 @@ export function timeout(
   );
 }
 
+export function uninterruptible(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "uninterruptible" }>,
+  path: string,
+): Comp {
+  const job = c.check(e.job, `${path}.job`);
+  const fn = c.jobFunction(job, `${path}.job`, e.job.span, "uninterruptible");
+  if (fn === undefined) return c.poison();
+  return derivedResult(
+    fn.result,
+    combine([job, invocationOf(fn), EFFECT_ONLY]),
+  );
+}
+
 export function sleep(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "sleep" }>,

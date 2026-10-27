@@ -281,6 +281,11 @@ const ROWS = {
     leaf: "leaf",
   },
   sleep: { children: (e) => [e.durationMs], leaf: "leaf" },
+  uninterruptible: {
+    children: () => [],
+    deferred: (e) => [e.job],
+    leaf: "leaf",
+  },
   provide: {
     children: () => [],
     deferred: (e) => [e.provider, e.job],

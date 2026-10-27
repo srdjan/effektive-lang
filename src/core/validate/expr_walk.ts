@@ -126,6 +126,8 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return [e.value];
     case "repeat":
       return e.options === null ? [e.job] : [e.job, e.options];
+    case "uninterruptible":
+      return [e.job];
     case "sleep":
       return [e.durationMs];
     case "timeout":

@@ -460,6 +460,20 @@ function timeoutCall(
   );
 }
 
+function uninterruptibleCall(
+  c: EffectContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const job = c.argInfo(args[0]);
+  const fn = c.jobFunction("uninterruptible", args[0], job);
+  return c.finish(
+    node,
+    fn?.result ?? c.table.error,
+    combine([job, invocationOf(fn), EFFECT_ONLY]),
+  );
+}
+
 function sleepCall(
   c: EffectContext,
   node: NodeId,
@@ -594,6 +608,10 @@ export const EFFECT_ROWS = {
   timeout: {
     prologue: piped(2, "effect", { fact: { kind: "timeout" } }),
     handle: (c, node, _name, args) => timeoutCall(c, node, args),
+  },
+  uninterruptible: {
+    prologue: piped(1, "effect", { fact: { kind: "uninterruptible" } }),
+    handle: (c, node, _name, args) => uninterruptibleCall(c, node, args),
   },
   sleep: {
     prologue: direct(1, "effect", { fact: { kind: "sleep" } }),

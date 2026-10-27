@@ -264,6 +264,7 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
     job: arg(0),
     options: fact.options ? arg(1) : null,
   }),
+  "uninterruptible": (arg) => ({ kind: "uninterruptible", job: arg(0) }),
   "sleep": (arg) => ({ kind: "sleep", durationMs: arg(0) }),
   "run": (arg) => ({ kind: "run", value: arg(0) }),
   "scoped": (arg) => ({ kind: "scoped", value: arg(0) }),

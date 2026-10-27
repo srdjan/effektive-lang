@@ -23,7 +23,8 @@ type EffectLeafKind =
   | "run"
   | "timeout"
   | "repeat"
-  | "sleep";
+  | "sleep"
+  | "uninterruptible";
 
 export function effectStructural(
   c: ExprCore,
@@ -131,6 +132,11 @@ export function effectLeaf(
           `${effect}.timeout`,
           callArguments([c.suspended(e.job), ms]),
         ]));
+    case "uninterruptible":
+      return emitted([
+        `${effect}.uninterruptible`,
+        callArguments([c.suspended(e.job)]),
+      ]);
     case "sleep":
       return guardedDuration(
         c,

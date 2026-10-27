@@ -73,6 +73,7 @@ const ARITY_ROWS: readonly ArityRow[] = [
   ...fixed("retry", 2),
   ...fixed("timeout", 2),
   ...fixed("sleep", 1),
+  ...fixed("uninterruptible", 1),
   ...bounded(
     "repeat",
     1,

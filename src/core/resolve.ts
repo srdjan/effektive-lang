@@ -52,6 +52,7 @@ const PRELUDE = {
   retry: { shadowable: false },
   timeout: { shadowable: true },
   sleep: { shadowable: true },
+  uninterruptible: { shadowable: true },
   repeat: { shadowable: true },
   provide: { shadowable: false },
   defer: { shadowable: false },

@@ -1682,6 +1682,7 @@ export class ExprEmitter implements ExprCore {
       case "timeout":
       case "repeat":
       case "sleep":
+      case "uninterruptible":
       case "run":
         return effectLeaf(this, e, children);
       case "partition-all":

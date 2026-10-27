@@ -102,6 +102,7 @@ import {
   run,
   sleep,
   timeout,
+  uninterruptible,
 } from "./families/effect.ts";
 import { fiberOperation, withFiber } from "./families/fiber.ts";
 import { layer, mergeLayers, provide } from "./families/layer.ts";
@@ -888,6 +889,8 @@ export class BodyValidator implements ValidatorCore {
         return repeat(this, e, path);
       case "sleep":
         return sleep(this, e, path);
+      case "uninterruptible":
+        return uninterruptible(this, e, path);
       case "provide":
         return provide(this, e, path);
       case "binary":
