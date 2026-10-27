@@ -22,6 +22,7 @@ export function patternBinding(pattern: Pattern): Parameter | null {
       return pattern.binding;
     case "wildcard":
     case "literal":
+    case "duration":
     case "none":
       return null;
     default: {

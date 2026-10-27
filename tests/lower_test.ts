@@ -542,6 +542,8 @@ const label = (o: Option<Int>): Text =>
   }
 const pick = (n: Int): Text =>
   match n { 1 => "one", _ => "many" }
+const wait = (d: Duration): Int =>
+  match d { 5s => 1, _ => 0 }
 const code = (e: Boom | Bust): Int =>
   match e { Boom(b) => b.code, Bust(x) => 0 }
 const wrap = (v: Text): Id => Id(v)
@@ -615,7 +617,7 @@ Deno.test("every expression kind and pattern kind lowers", () => {
   );
   assertEquals(
     [...patterns].sort(),
-    ["error", "literal", "none", "some", "tag", "wildcard"],
+    ["duration", "error", "literal", "none", "some", "tag", "wildcard"],
   );
   const text = serializeModule(wide);
   assert(text.ok);

@@ -97,14 +97,23 @@ export function kidsOf(tree: SyntaxTree, node: NodeId): NodeId[] {
   return result;
 }
 
-/** True when the literal node is a Number token with a duration suffix. */
-export function isDurationLiteral(tree: SyntaxTree, node: NodeId): boolean {
+/** The source text of the Number token of a literal node, if it has one. */
+export function numberTextOf(
+  tree: SyntaxTree,
+  node: NodeId,
+): string | undefined {
   for (const child of childrenOf(tree, node)) {
     if (kindOf(tree, child) !== SyntaxKind.Token) continue;
     if (tree.lexed.kinds[tree.tokens[child]] !== TokenKind.Number) continue;
-    return isDurationText(nodeText(tree, child));
+    return nodeText(tree, child);
   }
-  return false;
+  return undefined;
+}
+
+/** True when the literal node is a Number token with a duration suffix. */
+export function isDurationLiteral(tree: SyntaxTree, node: NodeId): boolean {
+  const text = numberTextOf(tree, node);
+  return text !== undefined && isDurationText(text);
 }
 
 export function literalOf(

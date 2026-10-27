@@ -1680,10 +1680,12 @@ export class BodyValidator implements ValidatorCore {
       const branch = this.refinements.snapshot();
       for (const fact of excluded) this.refinements.addBranch(fact);
       const added = this.pattern(arm.pattern, subject.type, `${at}.pattern`);
-      if (arm.pattern.kind === "literal") {
+      if (arm.pattern.kind === "literal" || arm.pattern.kind === "duration") {
         const matched = this.refinements.literalMatch(
           e.subject,
-          arm.pattern.value,
+          arm.pattern.kind === "literal"
+            ? arm.pattern.value
+            : arm.pattern.millis,
         );
         this.refinements.addBranch(matched);
         excluded.push(negateRefinement(matched));
@@ -1728,9 +1730,31 @@ export class BodyValidator implements ValidatorCore {
     switch (p.kind) {
       case "wildcard":
         return added;
-      case "literal":
-        if (!tagMayEqual(env, subject, p.value)) {
-          foreign(`the literal ${JSON.stringify(p.value)}`);
+      case "literal": {
+        // A bare number never fits a `Duration` member: the identity is closed.
+        const all = identityMembers(env, subject);
+        const fitting = typeof p.value === "number" &&
+            all.some((m) => isDurationType(env, m))
+          ? all.some((m) =>
+            !isDurationType(env, m) && tagMayEqual(env, m, p.value)
+          )
+          : tagMayEqual(env, subject, p.value);
+        if (!fitting) foreign(`the literal ${JSON.stringify(p.value)}`);
+        return added;
+      }
+      case "duration":
+        if (!Number.isSafeInteger(p.millis)) {
+          this.add(
+            AREA.types,
+            `${path}.millis`,
+            `a duration pattern needs a safe integer of milliseconds, found ${p.millis}`,
+            p.span,
+          );
+        }
+        if (
+          !identityMembers(env, subject).some((m) => isDurationType(env, m))
+        ) {
+          foreign(`the duration ${p.millis}ms`);
         }
         return added;
       case "none":

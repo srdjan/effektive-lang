@@ -1545,6 +1545,8 @@ class BodyLowerer {
         return { kind: "wildcard", span };
       case "literal":
         return { kind: "literal", value: pattern.value, span };
+      case "duration":
+        return { kind: "duration", millis: pattern.millis, span };
       case "none":
         return { kind: "none", span };
       case "some":

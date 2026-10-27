@@ -1443,6 +1443,8 @@ export class ExprEmitter implements ExprCore {
           selector,
           pattern.value === null ? "null" : this.literal(pattern.value),
         );
+      case "duration":
+        return armEquality(selector, this.literal(pattern.millis));
       case "error":
         if (pattern.error === "error:effect/SchemaIssue") {
           return armEquality(

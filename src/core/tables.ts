@@ -91,6 +91,11 @@ export type PatternFact =
     readonly kind: "literal";
     readonly value: string | number | boolean | null;
   }
+  | {
+    readonly kind: "duration";
+    readonly millis: number;
+    readonly text: string;
+  }
   | { readonly kind: "none" }
   | { readonly kind: "some"; readonly binding: LocalId | undefined }
   | {

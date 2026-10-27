@@ -110,6 +110,7 @@ type Node<T> = Readonly<T> & Annotation;
 export type Pattern =
   | { readonly kind: "wildcard"; readonly span: Span }
   | { readonly kind: "literal"; readonly value: string | number | boolean | null; readonly span: Span }
+  | { readonly kind: "duration"; readonly millis: number; readonly span: Span }
   | { readonly kind: "none"; readonly span: Span }
   | { readonly kind: "some"; readonly binding: Parameter; readonly span: Span }
   | { readonly kind: "error"; readonly error: ErrorId; readonly binding: Parameter; readonly span: Span }

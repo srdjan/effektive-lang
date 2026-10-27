@@ -241,9 +241,7 @@ const source = unfold(0, (n) => Source.next(n))\n`;
 
 // ------------------------------------------------------------------ patterns
 
-Deno.test("a duration literal pattern is the number of milliseconds it names", () => {
-  // Outcome of the ES1b check: `5s` is accepted as a plain number pattern with
-  // the value 5000. It does not carry the type Duration.
+Deno.test("a duration literal pattern on a Duration subject emits the number of milliseconds", () => {
   const source = `${TYPES}export const f = (d: Duration): Int =>
   match (d) { 5s => 1, _ => 2 }\n`;
   assertEquals(diagnosticsOf(source), []);
@@ -251,6 +249,47 @@ Deno.test("a duration literal pattern is the number of milliseconds it names", (
     .get("m")?.text;
   assert(text !== undefined);
   assertStringIncludes(text, "=== 5000");
+});
+
+Deno.test("a duration literal pattern needs a Duration subject", () => {
+  assertEquals(
+    diagnosticsOf(
+      `${TYPES}export const f = (n: Int): Int =>\n  match (n) { 5s => 1, _ => 2 }\n`,
+    ),
+    ["pattern/003 5s does not belong to the subject (a int)"],
+  );
+  assertEquals(
+    diagnosticsOf(
+      `${TYPES}type Text = string\nexport const f = (t: Text): Int =>\n  match (t) { 5s => 1, _ => 2 }\n`,
+    ),
+    ["pattern/003 5s does not belong to the subject (a string)"],
+  );
+});
+
+Deno.test("a plain number pattern does not fit a Duration subject", () => {
+  assertEquals(
+    diagnosticsOf(
+      `${TYPES}export const f = (d: Duration): Int =>\n  match (d) { 5000 => 1, _ => 2 }\n`,
+    ),
+    ["pattern/003 5000 does not belong to the subject (a Duration)"],
+  );
+});
+
+Deno.test("two duration patterns of the same value make the second unreachable", () => {
+  const codes = diagnosticsOf(
+    `${TYPES}export const f = (d: Duration): Int =>\n  match (d) { 5s => 1, 5000ms => 2, _ => 3 }\n`,
+  ).map((d) => d.split(" ")[0]);
+  assertEquals(codes, ["pattern/002"]);
+});
+
+Deno.test("a duration pattern works inside an Option<Duration> match", () => {
+  assertEquals(
+    diagnosticsOf(
+      `${TYPES}export const f = (o: Option<Duration>): Int =>
+  match (o) { Some(d) => match (d) { 5s => 1, _ => 2 }, None => 0 }\n`,
+    ),
+    [],
+  );
 });
 
 // ------------------------------------------------------------------ emission
@@ -463,3 +502,59 @@ for (const [name, recorded, message] of RECORDED) {
     }]);
   });
 }
+
+const PATTERN_SOURCE = `${TYPES}export const dur = (d: Duration): Int =>
+  match (d) { 5s => 1, _ => 2 }
+export const num = (n: Int): Int =>
+  match (n) { 5000 => 1, _ => 2 }
+`;
+
+function firstPattern(ir: ModuleIR, name: string) {
+  const found =
+    all({ ...ir, declarations: [declarationOf(ir, name)] }, "match")[0];
+  assert(found !== undefined, name);
+  return found.arms[0];
+}
+
+Deno.test("the validator rejects a forged duration pattern on an int subject", () => {
+  const ir = lowered(PATTERN_SOURCE);
+  const arm = firstPattern(ir, "num");
+  (arm as { pattern: unknown }).pattern = {
+    kind: "duration",
+    millis: 5000,
+    span: arm.pattern.span,
+  };
+  assertEquals(validate(ir, PATTERN_SOURCE), [{
+    code: "validation/002",
+    path: `${pathOf(ir, "num")}.body.arms[0].pattern`,
+    message:
+      "the duration 5000ms does not belong to the subject of type type:m#Int",
+  }]);
+});
+
+Deno.test("the validator rejects a forged literal pattern on a Duration subject", () => {
+  const ir = lowered(PATTERN_SOURCE);
+  const arm = firstPattern(ir, "dur");
+  (arm as { pattern: unknown }).pattern = {
+    kind: "literal",
+    value: 5000,
+    span: arm.pattern.span,
+  };
+  assertEquals(validate(ir, PATTERN_SOURCE), [{
+    code: "validation/002",
+    path: `${pathOf(ir, "dur")}.body.arms[0].pattern`,
+    message: "the literal 5000 does not belong to the subject of type Duration",
+  }]);
+});
+
+Deno.test("the validator rejects a forged duration pattern with a fractional value", () => {
+  const ir = lowered(PATTERN_SOURCE);
+  const arm = firstPattern(ir, "dur");
+  (arm.pattern as { millis: number }).millis = 1.5;
+  assertEquals(validate(ir, PATTERN_SOURCE), [{
+    code: "validation/002",
+    path: `${pathOf(ir, "dur")}.body.arms[0].pattern.millis`,
+    message:
+      "a duration pattern needs a safe integer of milliseconds, found 1.5",
+  }]);
+});

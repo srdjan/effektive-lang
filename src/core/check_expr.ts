@@ -2834,10 +2834,14 @@ class BodyChecker
         pattern(this, patternNode, domain, state);
         const fact = this.body.facts.get(patternNode);
         if (fact?.kind === "pattern") {
-          if (fact.pattern.kind === "literal") {
+          if (
+            fact.pattern.kind === "literal" || fact.pattern.kind === "duration"
+          ) {
             const matched = this.refinements.matchLiteral(
               subjectNode,
-              fact.pattern.value,
+              fact.pattern.kind === "literal"
+                ? fact.pattern.value
+                : fact.pattern.millis,
             );
             this.refinements.addBranch(matched);
             if (matched !== undefined) excluded.push(not(matched));

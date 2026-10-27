@@ -3,7 +3,7 @@
 // match must cover. The functions here are pure. The body checker walks the
 // arms and reports the diagnostics.
 
-import type { ErrorId, TypeId } from "./ir.ts";
+import { DURATION_ID, type ErrorId, type TypeId } from "./ir.ts";
 import { MAX_DEPTH, type TypeRef, type TypeTable } from "./types.ts";
 import { isErrorId } from "./ids.ts";
 
@@ -27,7 +27,12 @@ export type Domain =
   /** A closed set of literal values, including `boolean`. */
   | { readonly kind: "literals"; readonly values: readonly LiteralValue[] }
   /** An unbounded primitive. A complete match needs `_`. */
-  | { readonly kind: "open"; readonly primitive: "string" | "int" | "number" }
+  | {
+    readonly kind: "open";
+    readonly primitive: "string" | "int" | "number";
+    /** The subject is `Duration`: only a duration literal pattern fits. */
+    readonly duration?: true;
+  }
   /** The subject has the error type. The checker reports nothing about it. */
   | { readonly kind: "error" }
   | { readonly kind: "unsupported" };
@@ -153,7 +158,11 @@ export function domainOf(table: TypeTable, subject: TypeRef): Domain {
       (only.name === "string" || only.name === "int" ||
         only.name === "number")
     ) {
-      return { kind: "open", primitive: only.name };
+      const isDuration = named.length === 1 && named[0].kind === "named" &&
+        named[0].id === DURATION_ID;
+      return isDuration
+        ? { kind: "open", primitive: only.name, duration: true }
+        : { kind: "open", primitive: only.name };
     }
   }
   return { kind: "unsupported" };

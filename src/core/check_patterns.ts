@@ -14,7 +14,8 @@ import {
 } from "./patterns.ts";
 import { type Target, targetText } from "./resolve.ts";
 import { kindOf, type NodeId, SyntaxKind, type SyntaxTree } from "./syntax.ts";
-import { literalOf, nameTextOf } from "./syntax_queries.ts";
+import { literalOf, nameTextOf, numberTextOf } from "./syntax_queries.ts";
+import { isDurationText } from "./lex.ts";
 import type { BodyTable, NodeFact, PatternFact } from "./tables.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 import { showTypes } from "./type_show.ts";
@@ -280,10 +281,25 @@ export function pattern(
         patternFact(c, node, { kind: "invalid" });
         return;
       }
+      const text = numberTextOf(c.tree, node);
+      if (
+        text !== undefined && isDurationText(text) &&
+        typeof value === "number"
+      ) {
+        const fitsDuration = domain.kind === "open" &&
+          domain.duration === true;
+        if (fitsDuration) {
+          reach(c, node, state, `L:${JSON.stringify(value)}`);
+        } else if (!silent) {
+          foreign(c, node, text, domain);
+        }
+        patternFact(c, node, { kind: "duration", millis: value, text });
+        return;
+      }
       let fits = false;
       if (domain.kind === "literals") {
         fits = domain.values.includes(value);
-      } else if (domain.kind === "open") {
+      } else if (domain.kind === "open" && domain.duration !== true) {
         fits = domain.primitive === "string"
           ? typeof value === "string"
           : domain.primitive === "int"
@@ -437,7 +453,7 @@ function describeDomain(table: TypeTable, domain: Domain): string {
     case "literals":
       return `the values ${domain.values.map(describeLiteral).join(" | ")}`;
     case "open":
-      return `a ${domain.primitive}`;
+      return domain.duration === true ? "a Duration" : `a ${domain.primitive}`;
     case "mixed":
     case "error":
     case "unsupported":
