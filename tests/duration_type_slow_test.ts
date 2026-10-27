@@ -152,3 +152,16 @@ console.log(JSON.stringify({
   );
   assertEquals(result, { exponential: [100, 200, 400], stepped: [0, 1] });
 });
+
+Deno.test("an int identity constructor converts a Duration, and a count times 1ms converts back", async () => {
+  const result = await compileAndRun(
+    `type Millis = int
+export const toCount = (wait: Duration): Millis => Millis(wait)
+export const back = (count: Millis): Duration => count * 1ms
+`,
+    `import { back, toCount } from "./main.ts";
+console.log(JSON.stringify({ count: toCount(1500), back: back(250) }));
+`,
+  );
+  assertEquals(result, { count: 1500, back: 250 });
+});

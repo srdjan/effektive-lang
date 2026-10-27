@@ -513,6 +513,9 @@ These points stay open:
 
 - (a) A `Duration` does not fit a user identity such as `type Int = int`, and
   source has no way to get an `Int` millisecond count from a `Duration`.
+  Correction: the second half was wrong. `Int(d)` converts a `Duration`, and
+  `n * 1ms` converts back. The
+  [leftovers plan](2026-10-27-effect-surface-leftovers.md) documents this.
 - (b) A `match` on a `5s` pattern compares as a plain number. The pattern does
   not carry the type `Duration`.
 - (c) The test for an effectful or pure callback is repeated in
@@ -520,3 +523,6 @@ These points stay open:
 - (d) Cron (item 5) and the other items of the status table stay open. The
   [status table](../../status.md#effect-4-features-to-surface-in-source) lists
   them.
+
+The [leftovers plan](2026-10-27-effect-surface-leftovers.md) closed (b) in
+EL2, (c) in EL1 and Cron in EL3.

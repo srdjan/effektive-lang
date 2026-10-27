@@ -198,8 +198,13 @@ feature carries user intent that the compiler cannot infer. The transpiler uses
 the other features in the emitted TypeScript only. The user selected items 1 to
 8 and 19 to 21 first. Items 1 to 4, 6 to 8 and 19 to 21 are done in the
 [effect surface plan](archive/plans/2026-10-27-effect-surface.md), units ES1 to
-ES11. Item 5 (Cron) stays open. The other items have no implementation
-commitment. The forms of the open items are candidates, not accepted syntax.
+ES11. Item 5 (Cron) is done in the
+[effect surface leftovers plan](archive/plans/2026-10-27-effect-surface-leftovers.md),
+unit EL3, as `scheduleCron`. That plan also typed duration literal patterns
+(EL2). On 2026-10-27 the user chose items 22, 18 and 16 as the second
+selection; that selection has no plan yet. The other items have no
+implementation commitment. The forms of the open items are candidates, not
+accepted syntax.
 
 The unit ES1b added the closed type `Duration` (type word, literals such as
 `200ms`, `5s`, `2m` and `1h`). A bare `int` never fits a `Duration`. The
@@ -213,7 +218,7 @@ The IR is at version 7.
 | 2 Delay (done, ES2) | Wait time | `sleep(200ms)` | `Duration`, `Clock` |
 | 3 Repetition (done, ES4) | Repeat or loop | `repeat(job)` and `repeat(job, options)` | `Schedule` consumers |
 | 4 General policies (done, ES3) | Backoff, jitter, limits, stop conditions | `retry` accepts any `Schedule` and the options `times`, `schedule`, `while` and `until`, with `scheduleExponential` and `scheduleJittered` | `Schedule` |
-| 5 Cron | Calendar policy | A cron schedule constructor | `Cron` |
+| 5 Cron (done, EL3) | Calendar policy | `scheduleCron(expression, zone?)` with string literals and a UTC default | `Cron` |
 | 6 Outcome-aware cleanup (done, ES5) | Action on success, failure or interruption | `finally (outcome) { ... }` | `Exit` |
 | 7 Defect recovery (done, ES6) | Where unexpected failures stop | A defect arm in `catch` | `Cause` |
 | 8 Interruption masks (done, ES7) | Region that must not be interrupted | `uninterruptible(job)` | Interruption masks |

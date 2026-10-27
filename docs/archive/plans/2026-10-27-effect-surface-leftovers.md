@@ -1,13 +1,13 @@
 # Effect surface leftovers
 
 Date: 2026-10-27. Baseline: `9e0227e`. EL identifies this plan's units.
-Status: validated by Fable, approved by the user on 2026-10-27.
+Status: validated by Fable, approved by the user on 2026-10-27, complete.
 
-The [effect surface plan](../archive/plans/2026-10-27-effect-surface.md) closed
+The [effect surface plan](2026-10-27-effect-surface.md) closed
 with four open points, (a) to (d). On 2026-10-27 the user chose to close them
 in one plan before a second selection of Effect features. This plan covers
 those four points. It selects no other item of the
-[status table](../status.md#effect-4-features-to-surface-in-source).
+[status table](../../status.md#effect-4-features-to-surface-in-source).
 
 ## Evidence from the baseline
 
@@ -303,3 +303,23 @@ subject (`check_patterns.ts:440`). This plan does not change that text.
 On 2026-10-27 the user also chose the second selection of Effect features:
 item 22 (`Map` and `Set`), item 18 (`now()` and `random()`) and item 16
 (logging). That selection gets its own plan after EL4.
+
+## Disposition
+
+Units EL1 to EL4 are done. The commit that archives this plan completes EL4.
+
+- Plan: `f289c3c`, approval and EL-D1 and EL-D2 (a): `6cdd74b`.
+- EL1 one effectful-callback test: `2df8ff0`. The behavior capture of
+  `6cdd74b` and `2df8ff0` gave 11865 records on each side, 0 new and 0
+  missing.
+- EL2 typed duration patterns: `cae9e60`.
+- EL3 `scheduleCron`: `e45a929`.
+- EL4 website spec draft 0.67: `f4e0904` in `../effektive`.
+
+These points stay open:
+
+- (a) `pattern/003` prints "a int" for an int subject.
+- (b) A host whose ICU data differs from the compiling host can reject a zone
+  that the compiler accepted. The schedule then fails with a defect at its
+  first step.
+- (c) The second selection (items 22, 18 and 16) needs its own plan.
