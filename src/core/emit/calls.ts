@@ -68,7 +68,17 @@ export type OperandCallKind =
   | "zip-streams"
   | "concat-streams"
   | "merge-layers"
-  | "race";
+  | "race"
+  | "map-of"
+  | "get-map"
+  | "put-map"
+  | "remove-map"
+  | "has-map"
+  | "entries-map"
+  | "set-of"
+  | "add-set"
+  | "remove-set"
+  | "has-set";
 
 export const OPERAND_CALLS: {
   readonly [K in OperandCallKind]: OperandCall<ExprOf<K>>;
@@ -164,6 +174,46 @@ export const OPERAND_CALLS: {
   race: {
     callee: method("Effect", "race"),
     operands: (e) => [[e.left, "value"], [e.right, "value"]],
+  },
+  "map-of": {
+    callee: method("HashMap", "fromIterable"),
+    operands: (e) => [[e.entries, "value"]],
+  },
+  "get-map": {
+    callee: method("HashMap", "get"),
+    operands: (e) => [[e.map, "value"], [e.key, "value"]],
+  },
+  "put-map": {
+    callee: method("HashMap", "set"),
+    operands: (e) => [[e.map, "value"], [e.key, "value"], [e.value, "value"]],
+  },
+  "remove-map": {
+    callee: method("HashMap", "remove"),
+    operands: (e) => [[e.map, "value"], [e.key, "value"]],
+  },
+  "has-map": {
+    callee: method("HashMap", "has"),
+    operands: (e) => [[e.map, "value"], [e.key, "value"]],
+  },
+  "entries-map": {
+    callee: method("HashMap", "toEntries"),
+    operands: (e) => [[e.map, "value"]],
+  },
+  "set-of": {
+    callee: method("HashSet", "fromIterable"),
+    operands: (e) => [[e.items, "value"]],
+  },
+  "add-set": {
+    callee: method("HashSet", "add"),
+    operands: (e) => [[e.set, "value"], [e.element, "value"]],
+  },
+  "remove-set": {
+    callee: method("HashSet", "remove"),
+    operands: (e) => [[e.set, "value"], [e.element, "value"]],
+  },
+  "has-set": {
+    callee: method("HashSet", "has"),
+    operands: (e) => [[e.set, "value"], [e.element, "value"]],
   },
 };
 

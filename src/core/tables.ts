@@ -242,6 +242,20 @@ export type NodeFact =
   | { readonly kind: "zip-streams" }
   | { readonly kind: "concat-streams" }
   | { readonly kind: "race" | "race-all" }
+  | {
+    readonly kind:
+      | "map-of"
+      | "get-map"
+      | "put-map"
+      | "remove-map"
+      | "has-map"
+      | "entries-map"
+      | "set-of"
+      | "add-set"
+      | "remove-set"
+      | "has-set"
+      | "items-set";
+  }
   | { readonly kind: "make-ref" | "get-ref" | "set-ref" | "update-ref" }
   | { readonly kind: "layer"; readonly service: ServiceId | undefined }
   | { readonly kind: "merge-layers" }

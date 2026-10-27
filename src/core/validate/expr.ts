@@ -162,6 +162,7 @@ import {
   zipStreams,
 } from "./families/stream.ts";
 import { schema, schemaOperation } from "./families/schema.ts";
+import { mapSetOperation } from "./families/map_set.ts";
 import { refOperation } from "./families/ref.ts";
 import { negateRefinement, RefinementValidator } from "./refinements.ts";
 
@@ -863,6 +864,18 @@ export class BodyValidator implements ValidatorCore {
       case "set-ref":
       case "update-ref":
         return refOperation(this, e, path);
+      case "map-of":
+      case "get-map":
+      case "put-map":
+      case "remove-map":
+      case "has-map":
+      case "entries-map":
+      case "set-of":
+      case "add-set":
+      case "remove-set":
+      case "has-set":
+      case "items-set":
+        return mapSetOperation(this, e, path);
       case "layer":
         return layer(this, e, path);
       case "merge-layers":

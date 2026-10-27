@@ -839,6 +839,13 @@ export class ExprEmitter implements ExprCore {
         return codecStructural(this, e, kid);
       case "schema":
         return schemaStructural(this, e, kid);
+      case "items-set":
+        // `Array` is not a reserved target name, so the spread prints.
+        return emitted(
+          bracketed("[", "]", [["...", at(kid(e.set), PREC.member)]], false),
+          PREC.member,
+          { huggable: true, bracket: true },
+        );
       case "call":
         return this.nonLeafCall(e, kid);
       case "block":

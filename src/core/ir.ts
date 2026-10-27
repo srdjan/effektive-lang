@@ -244,6 +244,17 @@ export type Expr =
   | Node<{ kind: "concat-streams"; left: Expr; right: Expr }>
   | Node<{ kind: "race"; left: Expr; right: Expr }>
   | Node<{ kind: "race-all"; jobs: Expr }>
+  | Node<{ kind: "map-of"; entries: Expr }>
+  | Node<{ kind: "get-map"; map: Expr; key: Expr }>
+  | Node<{ kind: "put-map"; map: Expr; key: Expr; value: Expr }>
+  | Node<{ kind: "remove-map"; map: Expr; key: Expr }>
+  | Node<{ kind: "has-map"; map: Expr; key: Expr }>
+  | Node<{ kind: "entries-map"; map: Expr }>
+  | Node<{ kind: "set-of"; items: Expr }>
+  | Node<{ kind: "add-set"; set: Expr; element: Expr }>
+  | Node<{ kind: "remove-set"; set: Expr; element: Expr }>
+  | Node<{ kind: "has-set"; set: Expr; element: Expr }>
+  | Node<{ kind: "items-set"; set: Expr }>
   | Node<{ kind: "make-ref"; value: Expr }>
   | Node<{ kind: "get-ref"; ref: Expr }>
   | Node<{ kind: "set-ref"; ref: Expr; value: Expr }>

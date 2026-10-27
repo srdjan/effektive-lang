@@ -111,11 +111,12 @@ import type { EffectContext } from "./check_builtins/effect.ts";
 import type { FiberContext } from "./check_builtins/fiber.ts";
 import type { LayerContext } from "./check_builtins/layer.ts";
 import { type CoreRowName, FAMILY_ROWS } from "./check_builtins/registry.ts";
-import type {
-  BuiltinRow,
-  PreludeCallName,
-  Prologue,
-  Rows,
+import {
+  type BuiltinRow,
+  direct,
+  type PreludeCallName,
+  type Prologue,
+  type Rows,
 } from "./check_builtins/rows.ts";
 import type { SchemaContext } from "./check_builtins/schema.ts";
 import {
@@ -1190,6 +1191,16 @@ class BodyChecker
       handle: (c, node, _name, args, expected) =>
         c.someCall(node, args, expected),
     },
+    mapOf: {
+      prologue: direct(1, "pure", { fact: { kind: "map-of" } }),
+      handle: (c, node, _name, args, expected) =>
+        c.mapOfCall(node, args[0], expected),
+    },
+    setOf: {
+      prologue: direct(1, "pure", { fact: { kind: "set-of" } }),
+      handle: (c, node, _name, args, expected) =>
+        c.setOfCall(node, args[0], expected),
+    },
   };
 
   /**
@@ -1221,6 +1232,277 @@ class BodyChecker
       node,
     );
     return false;
+  }
+
+  /** The key and value of an expected Map type, when the expected type is one. */
+  private expectedMap(
+    expected: TypeRef | undefined,
+  ): { readonly key: TypeRef; readonly value: TypeRef } | undefined {
+    if (expected === undefined) return undefined;
+    const node = this.table.node(this.table.unfold(expected));
+    return node.kind === "map"
+      ? { key: node.key, value: node.value }
+      : undefined;
+  }
+
+  /** The element of an expected Set type, when the expected type is one. */
+  private expectedSet(expected: TypeRef | undefined): TypeRef | undefined {
+    if (expected === undefined) return undefined;
+    const node = this.table.node(this.table.unfold(expected));
+    return node.kind === "set" ? node.element : undefined;
+  }
+
+  /** The key and value of an array of two-element tuples, or undefined. */
+  private pairParts(
+    ref: TypeRef,
+  ): { readonly key: TypeRef; readonly value: TypeRef } | undefined {
+    const list = this.table.node(this.table.unfold(ref));
+    if (list.kind !== "array") return undefined;
+    const pair = this.table.node(this.table.unfold(list.element));
+    return pair.kind === "tuple" && pair.elements.length === 2
+      ? { key: pair.elements[0], value: pair.elements[1] }
+      : undefined;
+  }
+
+  private isListLiteral(arg: Arg): boolean {
+    return arg.pre === undefined &&
+      kindOf(this.tree, arg.node) === SyntaxKind.ListExpr;
+  }
+
+  /** The common type of the widened `types`, or the error type after a report. */
+  private joinTypes(
+    types: readonly TypeRef[],
+    nodes: readonly NodeId[],
+    what: string,
+  ): TypeRef {
+    let joined = this.widen(types[0]);
+    for (let i = 1; i < types.length; i++) {
+      const next = this.widen(types[i]);
+      if (this.isError(joined) || this.isError(next)) {
+        joined = this.table.error;
+      } else if (this.assignable(next, joined)) {
+        continue;
+      } else if (this.assignable(joined, next)) {
+        joined = next;
+      } else {
+        const [nextText, joinedText] = showTypes(this.table, next, joined);
+        this.report(
+          "type-mismatch/012",
+          `${what} ${
+            i + 1
+          } has type ${nextText}, which has no common type with ${joinedText}`,
+          nodes[i],
+        );
+        joined = this.table.error;
+      }
+    }
+    return joined;
+  }
+
+  /** Reports `declaration/019` when an inferred key or element is not data. */
+  private requireInferredData(
+    role: string,
+    type: TypeRef,
+    node: NodeId,
+  ): void {
+    if (this.isError(type) || dataOnly(this.table, type, "value", true)) return;
+    this.report(
+      "declaration/019",
+      `A ${role} must be data, found \`${this.show(type)}\``,
+      node,
+    );
+  }
+
+  /**
+   * Infers the entries of `mapOf` from a list literal with no expected type.
+   * Each inner two-element list literal is a pair. The checker joins the key
+   * types and the value types separately.
+   */
+  private inferPairs(
+    list: NodeId,
+  ): {
+    readonly key: TypeRef;
+    readonly value: TypeRef;
+    readonly info: NodeInfo;
+  } {
+    const table = this.table;
+    const keys: TypeRef[] = [];
+    const values: TypeRef[] = [];
+    const keyNodes: NodeId[] = [];
+    const valueNodes: NodeId[] = [];
+    const infos: NodeInfo[] = [];
+    let broken = false;
+    this.kids(list).forEach((entry, i) => {
+      const parts = this.kids(entry);
+      if (
+        kindOf(this.tree, entry) === SyntaxKind.ListExpr && parts.length === 2
+      ) {
+        this.fact(entry, { kind: "list", shape: "tuple" });
+        const [k, v] = parts.map((part) => this.expr(part));
+        const info = this.finish(
+          entry,
+          table.tuple([this.widen(k.type), this.widen(v.type)]),
+          combine([k, v]),
+        );
+        infos.push(info);
+        keys.push(k.type);
+        values.push(v.type);
+        keyNodes.push(parts[0]);
+        valueNodes.push(parts[1]);
+        return;
+      }
+      const info = this.expr(entry);
+      infos.push(info);
+      const pair = this.pairParts(table.array(info.type));
+      if (pair === undefined) {
+        broken = true;
+        if (!this.isError(info.type)) {
+          this.report(
+            "type-mismatch/012",
+            `mapOf entry ${i + 1} must be a [key, value] pair`,
+            entry,
+          );
+        }
+        return;
+      }
+      keys.push(pair.key);
+      values.push(pair.value);
+      keyNodes.push(entry);
+      valueNodes.push(entry);
+    });
+    this.fact(list, { kind: "list", shape: "array" });
+    if (broken) {
+      return {
+        key: table.error,
+        value: table.error,
+        info: this.finish(list, table.array(table.error), combine(infos)),
+      };
+    }
+    const key = this.joinTypes(keys, keyNodes, "map key");
+    const value = this.joinTypes(values, valueNodes, "map value");
+    const info = this.finish(
+      list,
+      table.array(table.tuple([key, value])),
+      combine(infos),
+    );
+    return { key, value, info };
+  }
+
+  mapOfCall(
+    node: NodeId,
+    arg: Arg,
+    expected: TypeRef | undefined,
+  ): NodeInfo {
+    const table = this.table;
+    const wanted = this.expectedMap(expected);
+    if (wanted !== undefined) {
+      const hint = table.array(table.tuple([wanted.key, wanted.value]));
+      const info = this.argInfo(arg, hint);
+      if (!this.fits(arg.node, info.type, hint, "the mapOf entries")) {
+        return this.finish(node, table.error, info);
+      }
+      const given = this.pairParts(info.type);
+      const sameKey = given !== undefined &&
+        this.assignable(wanted.key, given.key) &&
+        this.assignable(given.key, wanted.key);
+      return this.finish(
+        node,
+        sameKey || given === undefined
+          ? table.map(wanted.key, wanted.value)
+          : table.map(given.key, given.value),
+        info,
+      );
+    }
+    if (this.isListLiteral(arg)) {
+      if (this.kids(arg.node).length === 0) {
+        this.fact(arg.node, { kind: "list", shape: "array" });
+        this.report(
+          "type-mismatch/012",
+          "`mapOf([])` needs an expected Map type",
+          arg.node,
+        );
+        const info = this.finish(
+          arg.node,
+          table.array(table.error),
+          PURE_EFFECTS,
+        );
+        return this.finish(node, table.error, info);
+      }
+      const inferred = this.inferPairs(arg.node);
+      if (this.isError(inferred.key) || this.isError(inferred.value)) {
+        return this.finish(node, table.error, inferred.info);
+      }
+      this.requireInferredData("Map key", inferred.key, arg.node);
+      return this.finish(
+        node,
+        table.map(inferred.key, inferred.value),
+        inferred.info,
+      );
+    }
+    const info = this.argInfo(arg);
+    const pair = this.pairParts(info.type);
+    if (pair === undefined) {
+      if (!this.isError(info.type)) {
+        this.report(
+          "type-mismatch/003",
+          `the mapOf entries has type ${
+            this.show(info.type)
+          }, but an array of [key, value] pairs is expected`,
+          arg.node,
+        );
+      }
+      return this.finish(node, table.error, info);
+    }
+    this.requireInferredData("Map key", pair.key, arg.node);
+    return this.finish(node, table.map(pair.key, pair.value), info);
+  }
+
+  setOfCall(
+    node: NodeId,
+    arg: Arg,
+    expected: TypeRef | undefined,
+  ): NodeInfo {
+    const table = this.table;
+    const wanted = this.expectedSet(expected);
+    if (wanted !== undefined) {
+      const hint = table.array(wanted);
+      const info = this.argInfo(arg, hint);
+      if (!this.fits(arg.node, info.type, hint, "the setOf items")) {
+        return this.finish(node, table.error, info);
+      }
+      return this.finish(node, table.set(wanted), info);
+    }
+    if (this.isListLiteral(arg) && this.kids(arg.node).length === 0) {
+      this.fact(arg.node, { kind: "list", shape: "array" });
+      this.report(
+        "type-mismatch/012",
+        "`setOf([])` needs an expected Set type",
+        arg.node,
+      );
+      const info = this.finish(
+        arg.node,
+        table.array(table.error),
+        PURE_EFFECTS,
+      );
+      return this.finish(node, table.error, info);
+    }
+    const info = this.argInfo(arg);
+    const list = table.node(table.unfold(info.type));
+    if (list.kind !== "array") {
+      if (!this.isError(info.type)) {
+        this.report(
+          "type-mismatch/003",
+          `the setOf items has type ${
+            this.show(info.type)
+          }, but an array is expected`,
+          arg.node,
+        );
+      }
+      return this.finish(node, table.error, info);
+    }
+    if (this.isError(list.element)) return this.finish(node, table.error, info);
+    this.requireInferredData("Set element", list.element, arg.node);
+    return this.finish(node, table.set(list.element), info);
   }
 
   private someCall(

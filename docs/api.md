@@ -41,6 +41,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     effect.ts      Effect construction, execution, failures and retry options through EffectContext.
     fiber.ts       Fiber operations and inline borrow lifetimes through FiberContext.
     layer.ts       Layer construction, merging and provision through LayerContext.
+    map_set.ts     Map and Set operations: getMap, putMap, removeMap, hasMap, entriesMap, addSet, removeSet, hasSet and itemsSet. mapOf and setOf stay in check_expr.ts.
     ref.ts         Mutable reference construction, reads, writes and pure update callbacks.
     schedule.ts    General Schedule construction, mapping and comparable-input composition.
     schema.ts      Schema metadata, exhaustive handlers, defaults, directional effects and recursion through SchemaContext.

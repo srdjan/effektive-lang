@@ -124,6 +124,24 @@ export function exprChildren(e: Expr): readonly Expr[] {
     case "zip-streams":
     case "concat-streams":
       return [e.left, e.right];
+    case "map-of":
+      return [e.entries];
+    case "get-map":
+    case "remove-map":
+    case "has-map":
+      return [e.map, e.key];
+    case "put-map":
+      return [e.map, e.key, e.value];
+    case "entries-map":
+      return [e.map];
+    case "set-of":
+      return [e.items];
+    case "add-set":
+    case "remove-set":
+    case "has-set":
+      return [e.set, e.element];
+    case "items-set":
+      return [e.set];
     case "race":
       return [e.left, e.right];
     case "make-ref":
