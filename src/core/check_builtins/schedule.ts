@@ -1,13 +1,23 @@
 // Schedule construction, mapping and composition. These handlers run after
 // the body checker's prelude prologue has checked arity and recorded facts.
 
+import { cronExpressionProblem, cronZoneProblem } from "../cron.ts";
 import { flattenMembers } from "../patterns.ts";
 import { DURATION_ID } from "../ir.ts";
-import type { NodeId } from "../syntax.ts";
-import { combine, type NodeInfo } from "../tables.ts";
+import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
+import { literalOf } from "../syntax_queries.ts";
+import { combine, type NodeInfo, PURE_EFFECTS } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
-import type { Arg, BuiltinContext } from "./context.ts";
-import { direct, type PreludeCallName, type Rows } from "./rows.ts";
+import type { Arg, BuiltinContext, FactWriter, SyntaxView } from "./context.ts";
+import {
+  direct,
+  optionalLast,
+  type PreludeCallName,
+  type Rows,
+} from "./rows.ts";
+
+/** The checker operations that the cron row reads, beyond the shared ones. */
+export type ScheduleContext = SyntaxView & FactWriter;
 
 function simpleScheduleCall(
   c: BuiltinContext,
@@ -43,6 +53,61 @@ function scheduleExponentialCall(
     c.fits(args[1].node, factor.type, c.table.number, "the exponential factor");
     infos.push(factor);
   }
+  return c.finish(
+    node,
+    c.table.schedule(duration, c.table.unknown, [], []),
+    combine(infos),
+  );
+}
+
+/** The text of a string literal argument, or undefined for any other argument. */
+function stringLiteralOf(c: ScheduleContext, arg: Arg): string | undefined {
+  if (
+    arg.pre !== undefined || kindOf(c.tree, arg.node) !== SyntaxKind.LiteralExpr
+  ) {
+    return undefined;
+  }
+  const value = literalOf(c.tree, arg.node);
+  return typeof value === "string" ? value : undefined;
+}
+
+function scheduleCronCall(
+  c: BuiltinContext & ScheduleContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const duration = c.table.named(DURATION_ID);
+  let expression: string | undefined;
+  let zone: string | undefined = args[1] === undefined ? "UTC" : undefined;
+  const infos: NodeInfo[] = [];
+  args.forEach((arg, index) => {
+    const what = index === 0 ? "expression" : "time zone";
+    const text = stringLiteralOf(c, arg);
+    if (text === undefined) {
+      infos.push(c.argInfo(arg));
+      c.report(
+        "type-mismatch/010",
+        `\`scheduleCron\` needs a string literal ${what}`,
+        arg.node,
+      );
+      return;
+    }
+    infos.push(c.finish(arg.node, c.table.string, PURE_EFFECTS));
+    const problem = index === 0
+      ? cronExpressionProblem(text)
+      : cronZoneProblem(text);
+    if (problem !== undefined) {
+      c.report(
+        "type-mismatch/010",
+        `\`scheduleCron\` got an invalid ${what}: ${problem}`,
+        arg.node,
+      );
+      return;
+    }
+    if (index === 0) expression = text;
+    else zone = text;
+  });
+  c.fact(node, { kind: "schedule-cron", expression, zone });
   return c.finish(
     node,
     c.table.schedule(duration, c.table.unknown, [], []),
@@ -259,6 +324,16 @@ export const SCHEDULE_ROWS = {
     },
     handle: (c, node, _name, args) => scheduleExponentialCall(c, node, args),
   },
+  scheduleCron: {
+    prologue: {
+      ...optionalLast(
+        1,
+        "`scheduleCron` takes a cron expression and an optional time zone",
+      ),
+      fact: { kind: "schedule-cron", expression: undefined, zone: undefined },
+    },
+    handle: (c, node, _name, args) => scheduleCronCall(c, node, args),
+  },
   scheduleJittered: {
     prologue: direct(1, "pure", { fact: { kind: "schedule-jittered" } }),
     handle: (c, node, _name, args) => scheduleJitteredCall(c, node, args),
@@ -280,4 +355,6 @@ export const SCHEDULE_ROWS = {
     prologue: direct(2, "pure", { fact: { kind: "schedule-concat" } }),
     handle: (c, node, name, args) => scheduleComposeCall(c, node, args, name),
   },
-} satisfies Partial<Rows<PreludeCallName, BuiltinContext>>;
+} satisfies Partial<
+  Rows<PreludeCallName, BuiltinContext & ScheduleContext>
+>;

@@ -196,6 +196,7 @@ const ROWS = {
     children: (e) => e.factor === null ? [e.baseMs] : [e.baseMs, e.factor],
     leaf: "structural",
   },
+  "schedule-cron": { children: () => [], leaf: "structural" },
   "schedule-jittered": { children: (e) => [e.schedule], leaf: "structural" },
   "schedule-map": {
     children: (e) => [e.schedule, e.transform],

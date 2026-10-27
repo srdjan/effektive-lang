@@ -496,6 +496,12 @@ function syntheticNodes(): Record<Expr["kind"], Expr> {
       baseMs: leaf(),
       factor: leaf(),
     },
+    "schedule-cron": {
+      ...a,
+      kind: "schedule-cron",
+      expression: "* * * * *",
+      zone: "UTC",
+    },
     "schedule-jittered": { ...a, kind: "schedule-jittered", schedule: leaf() },
     "schedule-map": {
       ...a,
@@ -697,8 +703,8 @@ Deno.test("exprChildren equals a reflective walk on every node of every fixture 
 Deno.test("exprChildren equals a reflective walk on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
   const kinds = Object.keys(synthetic);
-  // The plan counts 107 kinds in the Expr union of src/core/ir.ts.
-  assertEquals(kinds.length, 107);
+  // The plan counts 108 kinds in the Expr union of src/core/ir.ts.
+  assertEquals(kinds.length, 108);
   for (const [kind, node] of Object.entries(synthetic)) {
     assertEquals(node.kind, kind);
     assertSameChildren(node, "synthetic");
@@ -711,6 +717,7 @@ Deno.test("exprChildren equals a reflective walk on a synthetic node of every Ex
     "none",
     "make-scope",
     "take-sink",
+    "schedule-cron",
   ]);
   for (const [kind, node] of Object.entries(synthetic)) {
     assertEquals(exprChildren(node).length === 0, leaves.has(kind), kind);
@@ -725,6 +732,6 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
     for (const node of all) reached.add(node.kind);
   }
   const synthetic = new Set(Object.keys(syntheticNodes()));
-  assertEquals(new Set([...reached, ...synthetic]).size, 107);
+  assertEquals(new Set([...reached, ...synthetic]).size, 108);
   for (const kind of reached) assert(synthetic.has(kind), kind);
 });

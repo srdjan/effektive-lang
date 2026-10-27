@@ -203,6 +203,7 @@ type SpecialKind =
   | "debounce-stream"
   | "throttle-stream"
   | "take-sink"
+  | "schedule-cron"
   | "buffer-stream"
   | "layer"
   | "none"
@@ -1037,6 +1038,17 @@ class BodyLowerer {
           units: this.required(fact.units, "throttle units", node),
           durationMs: this.required(fact.durationMs, "throttle duration", node),
           strategy: this.required(fact.strategy, "throttle strategy", node),
+          ...annotation,
+        };
+      case "schedule-cron":
+        return {
+          kind: "schedule-cron",
+          expression: this.required(
+            fact.expression,
+            "the cron expression",
+            node,
+          ),
+          zone: this.required(fact.zone, "the cron time zone", node),
           ...annotation,
         };
       case "take-sink":

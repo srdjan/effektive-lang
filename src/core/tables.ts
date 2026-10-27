@@ -222,6 +222,11 @@ export type NodeFact =
   | { readonly kind: "schedule-recurs" }
   | { readonly kind: "schedule-spaced" }
   | { readonly kind: "schedule-exponential"; readonly factor: boolean }
+  | {
+    readonly kind: "schedule-cron";
+    readonly expression: string | undefined;
+    readonly zone: string | undefined;
+  }
   | { readonly kind: "schedule-jittered" }
   | { readonly kind: "schedule-map" }
   | { readonly kind: "schedule-max" | "schedule-min" | "schedule-concat" }

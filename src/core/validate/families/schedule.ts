@@ -1,6 +1,7 @@
 // Validation of the Schedule builtins: scheduleRecurs, scheduleSpaced, scheduleFromStep,
-// scheduleExponential, scheduleJittered, scheduleMap, scheduleMax, scheduleMin, and scheduleConcat.
+// scheduleExponential, scheduleCron, scheduleJittered, scheduleMap, scheduleMax, scheduleMin, and scheduleConcat.
 
+import { cronExpressionProblem, cronZoneProblem } from "../../cron.ts";
 import { DURATION_ID, type Expr, type Type } from "../../ir.ts";
 
 const DURATION: Type = { kind: "named", id: DURATION_ID };
@@ -121,6 +122,41 @@ export function scheduleExponential(
     input: { kind: "primitive", name: "unknown" },
     effects: { failures: [], requirements: [] },
   }, combine(factor === undefined ? [base] : [base, factor]));
+}
+
+export function scheduleCron(
+  c: ValidatorCore,
+  e: Extract<Expr, { kind: "schedule-cron" }>,
+  path: string,
+): Comp {
+  const expression = typeof e.expression === "string"
+    ? cronExpressionProblem(e.expression)
+    : "the expression is not a string";
+  if (expression !== undefined) {
+    c.add(
+      AREA.types,
+      `${path}.expression`,
+      `scheduleCron needs a valid cron expression: ${expression}`,
+      e.span,
+    );
+  }
+  const zone = typeof e.zone === "string"
+    ? cronZoneProblem(e.zone)
+    : "the time zone is not a string";
+  if (zone !== undefined) {
+    c.add(
+      AREA.types,
+      `${path}.zone`,
+      `scheduleCron needs a valid time zone: ${zone}`,
+      e.span,
+    );
+  }
+  return derivedResult({
+    kind: "schedule",
+    output: DURATION,
+    input: { kind: "primitive", name: "unknown" },
+    effects: { failures: [], requirements: [] },
+  }, combine([]));
 }
 
 export function scheduleJittered(

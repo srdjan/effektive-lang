@@ -45,6 +45,7 @@ export type EffectModule =
   | "Schedule"
   | "Duration"
   | "Cause"
+  | "Cron"
   | "Fiber"
   | "Deferred"
   | "Exit"

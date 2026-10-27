@@ -209,6 +209,7 @@ export type Expr =
   | Node<{ kind: "schedule-recurs"; times: Expr }>
   | Node<{ kind: "schedule-spaced"; delayMillis: Expr }>
   | Node<{ kind: "schedule-exponential"; baseMs: Expr; factor: Expr | null }>
+  | Node<{ kind: "schedule-cron"; expression: string; zone: string }>
   | Node<{ kind: "schedule-jittered"; schedule: Expr }>
   | Node<{ kind: "schedule-map"; schedule: Expr; transform: Expr }>
   | Node<{ kind: "schedule-max"; left: Expr; right: Expr }>

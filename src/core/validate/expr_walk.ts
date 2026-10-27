@@ -106,6 +106,8 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return [e.delayMillis];
     case "schedule-exponential":
       return e.factor === null ? [e.baseMs] : [e.baseMs, e.factor];
+    case "schedule-cron":
+      return [];
     case "schedule-jittered":
       return [e.schedule];
     case "schedule-map":

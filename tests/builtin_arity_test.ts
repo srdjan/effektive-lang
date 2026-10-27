@@ -117,6 +117,11 @@ const ARITY_ROWS: readonly ArityRow[] = [
     1,
     "`scheduleExponential` takes a base and an optional factor",
   ),
+  ...bounded(
+    "scheduleCron",
+    1,
+    "`scheduleCron` takes a cron expression and an optional time zone",
+  ),
   ...fixed("scheduleJittered", 1),
   ...fixed("scheduleMap", 2),
   ...fixed("scheduleMax", 2),

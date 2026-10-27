@@ -50,6 +50,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   tables.ts      Side tables of a body: node info and lowering facts.
   patterns.ts    Pattern domains of match subjects.
   predicates.ts  The predicate model of refinements: terms, builders, normalization, solver limits, and proof certificates.
+  cron.ts        cronExpressionProblem, cronZoneProblem: the grammar of a cron expression and the zone rules of `scheduleCron`, shared by the checker and the validator.
   predicate_source.ts predicateFromSource: the predicate of a refinement written in source.
   infer_inputs.ts inferFunctionInputs, inferArrowInputs, withInferredInputs: input contracts that the checker infers for non-exported functions.
   modes.ts       The mode fixed point of recursive groups.

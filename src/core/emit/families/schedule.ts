@@ -16,6 +16,7 @@ import type { ExprCore } from "./context.ts";
 type ScheduleStructuralKind =
   | "schedule-spaced"
   | "schedule-exponential"
+  | "schedule-cron"
   | "schedule-map"
   | "schedule-max"
   | "schedule-min"
@@ -49,6 +50,24 @@ export function scheduleStructural(
         at(kid(e.baseMs), PREC.yield),
         ")",
       ]);
+    }
+    case "schedule-cron": {
+      const schedule = c.scope.effect("Schedule");
+      const effect = c.scope.effect("Effect");
+      const cause = c.scope.effect("Cause");
+      const duration = c.scope.effect("Duration");
+      const cron = c.scope.effect("Cron");
+      const parsed = c.scope.temp();
+      const meta = c.scope.temp();
+      const delay = c.scope.temp();
+      // The compiler checked the grammar, so a parse failure is a defect.
+      return emitted(
+        `${schedule}.fromStepWithMetadata(${effect}.suspend(() => { const ${parsed} = ${cron}.parseUnsafe(${
+          JSON.stringify(e.expression)
+        }, ${
+          JSON.stringify(e.zone)
+        }); return ${effect}.succeed((${meta}: ${schedule}.InputMetadata<unknown>) => { if (${meta}.now === Number.POSITIVE_INFINITY) return ${cause}.done(0); const ${delay} = ${cron}.next(${parsed}, ${meta}.now).getTime() - ${meta}.now; return ${effect}.succeed([${delay}, ${duration}.millis(${delay})] as [number, ${duration}.Duration]); }); }))`,
+      );
     }
     case "schedule-map": {
       const schedule = c.scope.effect("Schedule");
