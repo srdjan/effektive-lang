@@ -36,3 +36,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | ES | [`docs/archive/plans/2026-10-27-effect-surface.md`](../archive/plans/2026-10-27-effect-surface.md) | First selection of Effect 4 features to surface in source |
 | LR | [`docs/archive/plans/2026-10-27-replay-integrity.md`](../archive/plans/2026-10-27-replay-integrity.md) | Replay ordering and source retention |
 | EL | [`docs/archive/plans/2026-10-27-effect-surface-leftovers.md`](../archive/plans/2026-10-27-effect-surface-leftovers.md) | Open points of the effect surface plan: Cron, typed duration patterns, one callback test |
+| SL | [`docs/plans/2026-10-27-second-effect-selection.md`](2026-10-27-second-effect-selection.md) | Second selection of Effect features: `now()`, `random()`, logging, `Map` and `Set` |
