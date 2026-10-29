@@ -1,6 +1,6 @@
 {
   "name": "@srdjan/effektive-lang",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "license": "MIT",
   "exports": {
     ".": "./src/core/mod.ts",
