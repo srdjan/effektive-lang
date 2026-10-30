@@ -1,9 +1,9 @@
 # Reset implementation plan for a stable base
 
-Status: draft for independent validation. Date: 2026-10-30.
+Status: implementation in progress. Date: 2026-10-30.
 Planned revision: `fd20ff599fdfb43d1df20d4dbbaf7141536dd411` on local `main`.
-Documentation refresh revision: `26b7eb487d087f6a5fc0b67e09d357257fef70e6`.
-The refresh changes the changelog heading only; the reviewed source remains equal.
+Documentation refresh revision: `66834187fc930198b97e6f5d481a8dd586097293`.
+The refresh changes the changelog and status guide only; the reviewed source remains equal.
 
 ## Authority and scope
 
@@ -13,7 +13,8 @@ The completed reset plans remain historical evidence.
 The canonical specification and current project status retain their existing authority.
 
 The current request authorizes changes to this document only.
-Source files, other documents, the registry, and the website remain unchanged during planning.
+This agent changes no source file, other document, registry, or website during planning.
+Concurrent edits by other workspace actors are recorded below and preserved.
 The coordinator will register this document only after implementation receives authorization.
 This planning task ends when this document is complete.
 
@@ -29,8 +30,14 @@ Accepted direction: retain the current architecture and repair the two remaining
 Evidence: the main agent reproduced every accepted finding.
 Concurrent change: another workspace actor committed the changelog correction as `26b7eb4`.
 The same actor also changed the Schedule row in `docs/status.md`.
-The main agent did not make or revert that edit.
-Next action: obtain Astra validation, reconcile its findings, and complete this document.
+Commit `6683418` records that status correction.
+The main agent did not make or revert those edits.
+User steering: include the six known risks without adding action.
+Completed: independent reviews, reproduced findings, Astra validation, and reconciliation.
+Authorization: the user invoked LFG to execute this plan on 2026-10-30.
+The invocation authorizes required verification, including captures and full measurements that exceed two minutes.
+The coordinator will preserve the six known risks without adding remediation tasks.
+Next action: register the authority and check the baseline before source changes.
 
 | Unit | Owner and model | Read scope | Acceptance check | Turn budget |
 | --- | --- | --- | --- | --- |
@@ -68,7 +75,7 @@ The main agent then reran `deno test --allow-read tests/docs_test.ts`: all four 
 That edit belongs to another workspace actor and stays outside this agent's write scope.
 NB0 must reconcile the existing edit instead of overwriting or claiming it.
 Commit `26b7eb4` subsequently recorded the correction.
-The concurrent status edit remains separate from this planning work.
+The concurrent status correction remains separate from this planning work.
 The main agent reran `deno task check` after the heading correction.
 It exited zero in 82.778 seconds, including 282 passing slow tests.
 This refresh establishes a green working-copy baseline without a source change.
@@ -145,6 +152,18 @@ That sharing requires unchanged semantic and lowering keys.
 The repair must preserve interface cutoffs, span invalidation, and weak output-cache keys.
 The reset will not lower eagerly or clear all caches after every edit.
 
+Each cached `CheckedModule` also retains its last-check table through `declarations.env.table`.
+That environment remains the module's last-check state.
+`Revision.types` provides the current revision's definition view.
+The repair will preserve both meanings and existing checked-module object identity.
+It will not rebind or remove the public environment field.
+
+Without caller-retained objects, distinct retained tables cannot exceed the current cached-module count plus the current table.
+This is a structural count bound, not a byte bound.
+Each retained table may hold copied definition maps.
+Caller-retained revisions or checked modules can retain additional tables.
+All-module measurements below must expose that storage cost before acceptance.
+
 ## Detailed findings review
 
 This section contains the complete findings review for this reset.
@@ -174,8 +193,8 @@ Priority: high. Confidence: confirmed. Disposition: NB2 and NB3, isolate definit
 
 `src/core/db.ts:288` retains one `TypeTable` for the whole program.
 `src/core/db.ts:444-446` puts that table into each checked project.
-`src/core/db.ts:187-189` exposes it through `Revision.types`.
-`src/core/db.ts:264-271` delays lowering until a query requests a module.
+`src/core/db.ts:180-182` exposes it through `Revision.types`.
+`src/core/db.ts:266-274` delays lowering until a query requests a module.
 These choices allow an old revision to read definitions from a later edit.
 
 `src/core/types.ts:379-380` stores mutable alias and error-record definitions.
@@ -209,6 +228,13 @@ Freezing only `Revision.types` would leave `lowerModule` attached to the mutable
 `lower.ts:1718` also interns a function type during finalizer lowering.
 The proposed fork preserves that capability without sharing definition writes.
 `type_ir.ts` serializes named references without unfolding them, which permits shared canonical IR keys.
+
+The first draft understated retention after the fork.
+`signatures.ts:133-135` exposes `ModuleDeclarations.env`, whose `table` field appears at line 60.
+`check.ts:183-184` retains that environment in each checked module.
+`tests/db_test.ts:199-201,238,287` requires reuse of checked modules and declarations.
+Consequently, discarding a revision does not necessarily release its table.
+The final design preserves that bounded ownership and measures its cost.
 
 ### NBF3: the deletion guard confuses a prefix with a path component
 
@@ -259,6 +285,24 @@ Replay skips CLI watch and target checking.
 The published IR assignment guard cannot detect every extra optional property.
 None of those documented limits requires a new framework for the three accepted findings.
 
+## Known risks: no action needed now
+
+The user supplied these six risks on 2026-10-30.
+The counts and prior attempts describe the earlier review.
+This planning task does not remeasure those counts or add remediation phases.
+
+- Nothing ties published website examples to compiler fixtures. The examples can drift again, as the scheduled worker did.
+- Of 65 website code blocks, 22 are not fully checked. They are fragments or need declarations from elsewhere.
+- `withFiber` is the only callback the user fixed. Three attempts could not express the `mapGroups` case in source.
+  That site has no evidence either way.
+- `tests/target_helpers.ts:106` still uses `--no-lock`.
+- Two fast cases in `tests/proof_budget_test.ts` run close to the time limit.
+- The earlier p90 spike has no confirmed cause. Other machine work is the probable cause.
+
+A controlled alternating benchmark with machine-load records could test the p90 explanation.
+That possible check is not a new task in this reset.
+The known risks remain open evidence limits after the reset.
+
 ## Preservation contract
 
 The reset preserves intended current functionality and repairs the two reproduced incorrect behaviors.
@@ -288,7 +332,8 @@ The linked portable-publisher fixture remains.
 
 ## Execution rules and shared verification
 
-Implementation is not authorized by this planning request.
+The original planning request authorized no implementation.
+The later LFG invocation authorizes execution and required verification of this plan.
 The future coordinator will compare the live checkout with the planned revision.
 The coordinator will reconcile changes to cited files before dispatch.
 The coordinator will preserve unrelated edits and work on local `main`.
@@ -330,8 +375,8 @@ New test filenames below are proposed files.
 
 Capture and full benchmark commands can exceed two minutes.
 The coordinator must obtain the permission required by project instructions before those commands run during implementation.
-This review does not run or authorize those long commands.
-Missing permission keeps the affected phase open.
+The later LFG invocation supplies that verification permission for this run.
+It does not authorize unrelated long scripts or destructive operations.
 
 ## Phases
 
@@ -467,7 +512,8 @@ Configuration failures will retain existing `Result` behavior and file-change se
 
 The executor will preserve module keys, `Entry` sharing, lazy lowering, and counters.
 The executor will not remap references or rebuild every module.
-The executor will not retain table history in `Program` or caches.
+The executor will not add a table-history collection or parent links.
+Cached module environments will retain their last-check tables, as specified in the ownership section.
 The architecture guide will explain shared interned storage and separate revision definitions.
 
 The new tests will use `frontend.ts` and `typescript.ts`.
@@ -489,12 +535,17 @@ The new tests will cover this matrix:
 | Interface-span-only edit and unrelated edit | Existing invalidation and unchanged-module counts remain |
 | Interleaved retained-revision queries | Query order cannot change results |
 | Finalizer lowering after a later update | Lazy function interning remains valid and independently checked |
+| Rotating edits across independent modules | Reachable table count remains bounded by current cached modules plus one |
 
 Each test will run in under one second.
 The executor will split cases by behavior.
 Tests must assert IR and validation, because emitted text alone misses NBF2.
 Editor assertions will compare public results with a fresh program for the original source.
 Numeric reference order must not become an expected semantic result.
+The retention case will use current `Revision.types` and each current `checkedModule(name).declarations.env.table`.
+The test will discard earlier revision handles before counting distinct table identities.
+Several complete edit sweeps must respect the same structural bound.
+The test must also preserve checked-module identity on unrelated edits.
 
 Focused verification:
 
@@ -538,11 +589,51 @@ M4, the memory measurement, must run with both saved-output settings, as the exi
 M4 has no adopted numerical memory budget.
 The coordinator must report measured storage cost and inspect growth across edit counts.
 
+The normal M4 profile rotates only three documents.
+That profile cannot establish the cost when many cached modules retain different tables.
+The coordinator will therefore run this additional bounded measurement through existing public benchmark functions:
+
+~~~sh
+NB_BENCH_SIZE=small deno eval --check '
+import { runM4 } from "./bench/m4.ts";
+import { loadInput } from "./bench/lsp_script.ts";
+const size = Deno.env.get("NB_BENCH_SIZE");
+if (size !== "small" && size !== "medium" && size !== "large") {
+  throw Error("NB_BENCH_SIZE must name an existing size");
+}
+const input = loadInput(size, 1);
+const count = [...input.files.keys()].filter(path => path.endsWith(".eff")).length;
+for (const writeOnSave of [false, true]) {
+  const result = await runM4({
+    seed: 1,
+    size,
+    openDocuments: count,
+    stepCounts: [count, 2 * count, 4 * count],
+    timeoutMs: 60000,
+    writeOnSave
+  });
+  if (!result.ok) throw Error(JSON.stringify(result.error));
+  console.log(JSON.stringify(result.value));
+}
+'
+~~~
+
+The small run must first complete the full measurement pipeline in under one minute.
+The coordinator will then repeat the identical command with only `NB_BENCH_SIZE` changed to `medium` and `large`.
+Each size must run on both the NB2 baseline and NB3 candidate.
+The measured document count and per-document edit counts must prove that every source module received edits.
+The output must contain successful runs for both saved-output settings.
+The coordinator will compare initial, peak, and final heap and RSS samples at each complete sweep.
+Counts and memory values must come from the output, rather than a prediction.
+This check adds no production harness file.
+
 A sustained new growth trend requires investigation before acceptance.
 No guessed percentage can replace measurement.
 The coordinator will also inspect ownership for discarded revisions.
-No new strong history link may retain their definition maps.
-Old maps may remain while callers retain their revisions.
+No new parent link or revision-history collection may retain definition maps.
+Current cached module environments and caller-retained objects may retain old maps.
+The table census checks the first retention path without relying on garbage collection.
+It does not measure bytes or prove garbage-collection timing.
 If copying misses the latency limit, NB3 stays open pending a revised design and review.
 
 Cross-revision capture needs the same existing tests on both sides.
@@ -716,17 +807,45 @@ Deferred features and manual acceptance stay outside completion.
 
 ## Independent validation
 
-Pending: Codex Astra, `gpt-6-astra`, with `xhigh` reasoning.
-The main agent will record each finding and disposition here before completing the plan.
+Codex Astra, `gpt-6-astra`, completed one validation turn with `xhigh` reasoning on 2026-10-30.
+Its verdict was ready after one material amendment.
+The validator inspected source and ran a public-API probe.
+It changed no files and ran no gate, capture, benchmark, generator, or deletion probe.
+
+| Review finding | Condition and effect | Final disposition |
+| --- | --- | --- |
+| Medium: retained module ownership | Reused `CheckedModule.declarations.env.table` keeps an older table after its revision handle disappears. The initial draft understated memory retention. | Corrected the ownership contract, preserved checked-module identity, specified the table-count bound, and added a public census plus all-module measurements. |
+| Low: source references | Two draft line ranges did not identify the cited revision methods. | Corrected the ranges to `db.ts:180-182` and `db.ts:266-274`. |
+
+The main agent independently inspected the retained environment and existing identity assertions.
+The validator confirmed that shared interned storage and separate definition maps fit current code.
+The validator also confirmed the temporary-index procedure and current task interfaces.
+The six user-supplied risks remain observations without remediation tasks.
+The main agent reconciled both findings in this document.
+Implementation measurements remain mandatory; validation does not establish their outcome.
+
+### Final document checks
+
+The final focused command was `deno test --allow-read tests/docs_test.ts tests/versions_test.ts`.
+It passed all 17 tests with zero failures.
+The document's referenced existing file paths and task interfaces were checked.
+Proposed test files, example output paths, and the future archive path are identified as such.
+The shell interface and benchmark exports for the additional memory command were inspected.
+That measurement command remains unexecuted until implementation.
+
+Another workspace actor committed an earlier draft of this document as `26d4fc6` during planning.
+The main agent did not create that commit or alter its history.
+Subsequent changes by this agent affect only this plan document.
+The reviewed source, tests, fixtures, configuration, and website remain unchanged by this agent.
 
 ## Execution ledger
 
 | Phase | State | Entry SHA | Commit and evidence |
 | --- | --- | --- | --- |
-| NB0: restore baseline | Not started | - | Planning only |
+| NB0: restore baseline | Done | `26d4fc6` | Registry added. Focused documentation/version checks: 17 passed. Full gate: exit 0 in 46.934 s, including 282 slow tests. Source, tests, fixtures, and configuration equal the reviewed source. |
 | NB1: path boundary | Not started | - | Planning only |
 | NB2: table fork | Not started | - | Planning only |
 | NB3: revision ownership | Not started | - | Planning only |
 | NB4: final documents | Not started | - | Planning only |
 
-Next owner: the main agent will finish validation and the final document check.
+Next owner: the main coordinator will finish the baseline gate and execute the dependent phases.
