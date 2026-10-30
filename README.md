@@ -107,8 +107,7 @@ layout, the error fixture convention, and the format and lint scope.
 
 ## Status
 
-All parts of the Phase A plan, the language server plan, and the playground plan
-exist. The three application gates pass with existing language forms. Two more
+The compiler, the language server, and the browser playground exist. The three application gates pass with existing language forms. Two more
 applications are witnesses and not gates: order-lifecycle for types with
 identity, and portable-publisher for portability.
 [docs/status.md](docs/status.md) gives the project status, the application

@@ -77,7 +77,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   sha256.ts      Synchronous SHA-256 over the UTF-8 bytes of a string.
   lower.ts       Checked modules to typed IR: pipelines, builtin specialization, imports.
   serialize.ts   Canonical JSON of a module IR, with the set and number checks.
-  validate/      The independent IR validator. It imports only ir.ts, source.ts, and diagnostics.ts.
+  validate/      The independent IR validator. It imports only ir.ts, source.ts, diagnostics.ts, and cron.ts.
     index.ts       validateModule: the public entry.
     world.ts       Identities in scope, imports, declaration headers, recursive types.
     expr.ts        Bottom-up recomputation of types, sets, and modes of each body.
@@ -367,7 +367,8 @@ the node, for example `declarations[2].body.arguments[0]`.
 `validateProject(project, lowered)` validates each module in the map that
 `lowerProject` returns. It reads the source texts from the parse trees of the
 project. A module that did not lower has no entry in the result. The command
-`build --validate` calls this function.
+`build --validate` calls this function. Only that command runs the validator.
+The `check` and `watch` commands, the language server, and the playground do not.
 
 Each lowered map key must equal the recorded IR module name. A mismatch reports `validation/001`.
 Non-prelude import payloads cannot declare identities owned by the consumer module. Payloads can retain supporting types from other modules.
@@ -377,8 +378,8 @@ modes from the children of each node, with the equations of the spec. It
 compares the result with the recorded annotation. After a disagreement it
 continues with the recomputed value, so one fault gives one diagnostic. It
 reimplements type compatibility and does not call the checker. A test checks
-that `src/core/validate/` imports only `ir.ts`, `source.ts`, and
-`diagnostics.ts`.
+that `src/core/validate/` imports only `ir.ts`, `source.ts`,
+`diagnostics.ts`, and `cron.ts`.
 
 Each code names a validation area. `validation/001` is Identity, `002` is Types,
 `003` is Contracts, `004` is Execution, `005` is Recovery, `006` is Control,

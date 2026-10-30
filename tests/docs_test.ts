@@ -1,7 +1,7 @@
 // Guards for the live documents: every relative link resolves, and the source
 // file map in docs/api.md names every source file by its repository path.
 
-import { assert } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 
 const ROOT = new URL("../", import.meta.url);
 // `demos` and `.playwright-mcp` hold local, gitignored artifacts.
@@ -111,4 +111,23 @@ Deno.test("the source file map in docs/api.md names every source file", async ()
     !named.has(path) && !leaves.some((leaf) => path.startsWith(leaf))
   ).sort();
   assert(missing.length === 0, `Not in the file map:\n${missing.join("\n")}`);
+});
+
+Deno.test("each test that the layering table of docs/architecture.md cites exists in the named file", async () => {
+  const architecture = await Deno.readTextFile(
+    new URL("docs/architecture.md", ROOT),
+  );
+  const section = architecture.split("## Layering rules")[1]!.split(
+    "\n## ",
+  )[0]!;
+  const cited = [...section.matchAll(/`(tests\/[\w.-]+\.ts)`, "([^"]+)"/g)]
+    .map((match) => ({ file: match[1]!, name: match[2]! }));
+  assertEquals(cited.length, 6);
+  for (const { file, name } of cited) {
+    const text = await Deno.readTextFile(new URL(file, ROOT));
+    assert(
+      text.includes(`Deno.test("${name}"`),
+      `${file} has no test named "${name}"`,
+    );
+  }
 });

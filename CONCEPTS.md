@@ -53,7 +53,7 @@ _Avoid: mirror, shadow program_
 
 The one table that lists every prelude operation, with a flag that tells whether a source binding may shadow it.
 
-The prelude name type and the name sets all derive from this table. The checker keeps two tables keyed by the same names. One table has a handler for each prelude name except `None`. The other table has a prologue row for each of those names. A name without a handler or a prologue row is a compile error. A prologue row may state that the handler tests its own argument count.
+The prelude name type and the name sets all derive from this table. The checker keeps one row for each prelude name except `None`. A row holds a prologue and a handler. A name without a row is a compile error. A row may state that the handler tests its own argument count.
 
 ### Stage set
 

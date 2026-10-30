@@ -35,28 +35,32 @@ browser playground in `playground/`. The VS Code client is in `editors/vscode/`.
 ## Layering rules
 
 Each layer depends only on the layers below it. The core has no I/O. It reads
-files through `SourceHost`. Five tests enforce the rules.
+files through `SourceHost`. Six tests enforce the rules.
 
 | Rule | Test |
 | --- | --- |
 | `src/core` calls no Deno or global host API, and imports only relative files. | `tests/core_boundary_test.ts`, "src/core uses no host API, no global API, and no non-relative import" |
 | The frontend entry point and the editor queries cannot reach the emitter, `typescript.ts`, or `src/host/`. | `tests/core_boundary_test.ts`, "the frontend and source queries cannot reach TypeScript output or host adapters" |
 | `src/host/`, `src/cli/`, `src/lsp/`, and `playground/src/` import the core only through `frontend.ts`, `typescript.ts`, or `mod.ts`. | `tests/core_boundary_test.ts`, "host, CLI, LSP and playground adapters use public core entry points" |
-| The validator imports only `ir.ts`, `source.ts`, `diagnostics.ts`, and its own files, plus a type-only import of `predicates.ts`. | `tests/validate_test.ts`, "src/core/validate imports only ir.ts, source.ts, diagnostics.ts, and its own files" |
-| The emitter families never import `emit/expr.ts`, and no value import of the emitter reaches a checker module. | `tests/emit_families_test.ts`, both tests |
+| The validator imports only `ir.ts`, `source.ts`, `diagnostics.ts`, `cron.ts`, and its own files, plus a type-only import of `predicates.ts`. | `tests/validate_test.ts`, "src/core/validate imports only ir.ts, source.ts, diagnostics.ts, cron.ts, and its own files" |
+| The emitter families never import `emit/expr.ts`, and no value import of the emitter reaches a checker module. | `tests/emit_families_test.ts`, "src/core/emit/families imports only ir.ts, ids.ts, and emit files other than expr.ts"; `tests/emit_families_test.ts`, "the value imports of src/core/emit reach no checker-phase module" |
 
 ## Invariants
 
 1. The layers depend only downward. The core has no Deno call and no import from
    `src/cli`, `src/host`, or `src/lsp`.
-2. The independent validator shares no code with the checker. The checker and the
-   validator duplicate rules on purpose, because the validator is a differential
-   oracle. The emitter `ROWS` table in `emit/shape.ts` and the validator
-   `exprChildren` in `validate/expr_walk.ts` also stay separate.
+2. The independent validator shares only these modules with the checker: `ir.ts`,
+   `source.ts`, `diagnostics.ts`, and `cron.ts`. The module `ir.ts` holds the IR
+   types and the shared rule data `CLOSED_UNIT_IDS` and `LOG_LEVELS`. The module
+   `cron.ts` holds the cron grammar. The validator also imports the types of
+   `predicates.ts`. The checker and the validator duplicate all other rules on
+   purpose, because the validator is a differential oracle. The emitter `ROWS`
+   table in `emit/shape.ts` and the validator `exprChildren` in
+   `validate/expr_walk.ts` also stay separate.
 3. The typed IR is the contract between the checker and every later stage.
    `ir.ts` is the authored contract. The sibling `typed-ir.ts` is a published
-   standalone copy. The IR node `nominal` is
-   part of IR version 7 (and of version 6).
+   standalone copy. The IR node `nominal` is part of IR version 7 (and of
+   version 6).
 4. Emitted text is byte-identical across refactors. The golden files in
    `fixtures/golden/` and the mutation fixtures in `fixtures/validate/` change
    only when the emitted text or the validator rules change on purpose. Run
@@ -66,6 +70,12 @@ files through `SourceHost`. Five tests enforce the rules.
    outside code imports the package.
 6. The website links to `fixtures/applications/portable-publisher`. That path
    stays.
+7. The target lock `src/cli/target_lock.json` pins the full closure of npm
+   packages that `--tsc` uses. A change of `EFFECT_VERSION` or `TARGET_IMPORTS`
+   needs a new lock. See [development.md](development.md#target-lock).
+8. The surface snapshot, `fixtures/surface/cli.json` and
+   `fixtures/surface/lsp.json`, records the command-line and language server
+   output. `tests/surface_test.ts` compares it with the current build.
 
 ## Decision record
 
