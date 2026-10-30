@@ -2522,7 +2522,9 @@ class BodyChecker
         this.body.locals,
       )
       : { types: [], diagnostics: [] };
-    this.sink.push(...inference.diagnostics);
+    for (const diagnostic of inference.diagnostics) {
+      this.sink.push(diagnostic);
+    }
     const parameterFacts: ArrowParameterFact[] = inferredParameters.map(
       (parameter, index) => {
         const type = inference.types[index] ?? parameter.type;

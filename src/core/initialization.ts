@@ -61,7 +61,9 @@ export function buildInitializationGraph(
       if (nodes[next].kind === "constant") {
         found.add(next);
       } else {
-        pending.push(...edges[next]);
+        for (const edge of edges[next]) {
+          pending.push(edge);
+        }
       }
     }
     dependencies.set(

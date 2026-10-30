@@ -664,7 +664,9 @@ export class TypeLowerer {
       );
       if (clause !== undefined) {
         for (const qn of this.kidsOfKind(clause, SyntaxKind.QualifiedName)) {
-          provides.push(...this.capabilitiesOf(qn));
+          for (const capability of this.capabilitiesOf(qn)) {
+            provides.push(capability);
+          }
         }
       }
       return this.providerOf(provides, failures, requirements);
@@ -856,7 +858,9 @@ export class TypeLowerer {
     if (clause === undefined) return [];
     const ids: CapabilityId[] = [];
     for (const qn of this.kidsOfKind(clause, SyntaxKind.QualifiedName)) {
-      ids.push(...this.capabilitiesOf(qn));
+      for (const capability of this.capabilitiesOf(qn)) {
+        ids.push(capability);
+      }
     }
     return sortedUnique(ids);
   }

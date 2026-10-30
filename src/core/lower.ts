@@ -1430,7 +1430,9 @@ class BodyLowerer {
       const item = items[i];
       if (kindOf(this.ctx.tree, item) === SyntaxKind.ConstDecl) {
         if (this.fact(item)?.kind === "record-binding") {
-          steps.push(...this.recordBinding(item));
+          for (const recordStep of this.recordBinding(item)) {
+            steps.push(recordStep);
+          }
         } else steps.push(this.binding(item));
       } else if (i === items.length - 1) {
         result = this.expr(item);

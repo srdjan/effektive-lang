@@ -297,7 +297,9 @@ export function orderConstants(ir: ModuleIR): ConstantDecl[] {
       if (target.kind === "constant") {
         found.set(id, target);
       } else {
-        pending.push(...valueReferences(target));
+        for (const reference of valueReferences(target)) {
+          pending.push(reference);
+        }
       }
     }
     return [...found.values()].sort((a, b) => a.span.start - b.span.start);
@@ -1063,7 +1065,11 @@ export class DeclarationEmitter {
         throw unsupported(`the host binding ${host.local} is not a provider`);
       }
       const wrapped = this.wrappedProvider(host, provider);
-      if (wrapped !== undefined) result.push(...wrapped.checks);
+      if (wrapped !== undefined) {
+        for (const check of wrapped.checks) {
+          result.push(check);
+        }
+      }
       result.push(marked(host.hostName, [
         `const ${host.hostName}: `,
         typeDoc(this.scope, provider),

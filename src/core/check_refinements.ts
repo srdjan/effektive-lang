@@ -99,7 +99,9 @@ export class RefinementChecker {
   addLocal(id: LocalId, type: TypeRef, init?: NodeId): void {
     this.locals.set(id, type);
     if (init === undefined) return;
-    this.aliases.push(...this.aliasEquations(id, type, init));
+    for (const equation of this.aliasEquations(id, type, init)) {
+      this.aliases.push(equation);
+    }
   }
 
   addFieldLocal(
@@ -218,7 +220,9 @@ export class RefinementChecker {
   private typeAssumptions(): Predicate[] {
     const assumptions: Predicate[] = [];
     for (const [id, type] of this.locals) {
-      assumptions.push(...typeAssumptionsAt(this.table, type, [id]));
+      for (const assumption of typeAssumptionsAt(this.table, type, [id])) {
+        assumptions.push(assumption);
+      }
     }
     return assumptions;
   }

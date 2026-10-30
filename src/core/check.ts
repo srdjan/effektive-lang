@@ -864,7 +864,9 @@ class ModuleChecker {
       for (
         const qn of this.lowerer.kidsOfKind(clause, SyntaxKind.QualifiedName)
       ) {
-        provides.push(...this.lowerer.capabilitiesOf(qn));
+        for (const capability of this.lowerer.capabilitiesOf(qn)) {
+          provides.push(capability);
+        }
       }
     }
     const failures = this.lowerer.failures(

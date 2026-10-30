@@ -628,7 +628,9 @@ function linkModules(
   const diagnostics: Diagnostic[] = [];
   for (const indexes of stronglyConnectedComponents(names.length, edges)) {
     const component = indexes.map((i) => names[i]);
-    order.push(...component);
+    for (const moduleName of component) {
+      order.push(moduleName);
+    }
     const selfLoop = component.length === 1 &&
       targetLists[indexes[0]].includes(component[0]);
     if (component.length > 1 || selfLoop) {

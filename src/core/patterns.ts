@@ -175,7 +175,9 @@ export function taggedValues(
 ): LiteralValue[] {
   const values: LiteralValue[] = [];
   for (const member of members) {
-    values.push(...(member.literals.get(field) ?? []));
+    for (const literal of member.literals.get(field) ?? []) {
+      values.push(literal);
+    }
   }
   return unique(values);
 }

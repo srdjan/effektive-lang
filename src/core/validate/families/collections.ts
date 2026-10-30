@@ -155,7 +155,9 @@ export function allResults(
         ],
       },
     ]));
-    requirements.push(...member.effects.requirements);
+    for (const requirement of member.effects.requirements) {
+      requirements.push(requirement);
+    }
   }
   c.checkConcurrency(e, path, "allResults");
   const result = rebuildContainer(container, outcomes);

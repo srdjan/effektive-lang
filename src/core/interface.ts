@@ -305,7 +305,9 @@ export function reachableModules(analysis: Analysis, module: string): string[] {
   for (let next = stack.pop(); next !== undefined; next = stack.pop()) {
     if (seen.has(next)) continue;
     seen.add(next);
-    stack.push(...(analysis.project.graph.get(next) ?? []));
+    for (const dependency of analysis.project.graph.get(next) ?? []) {
+      stack.push(dependency);
+    }
   }
   seen.delete(module);
   return [...seen].sort(compareText);

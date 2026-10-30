@@ -57,8 +57,12 @@ export function combine(parts: readonly EffectSet[]): EffectSet {
   const requirements: CapabilityId[] = [];
   let effect = false;
   for (const part of parts) {
-    failures.push(...part.failures);
-    requirements.push(...part.requirements);
+    for (const failure of part.failures) {
+      failures.push(failure);
+    }
+    for (const requirement of part.requirements) {
+      requirements.push(requirement);
+    }
     if (part.mode === "effect") effect = true;
   }
   const f = sortedUnique(failures);

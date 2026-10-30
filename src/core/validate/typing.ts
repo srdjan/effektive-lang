@@ -222,7 +222,9 @@ function flatten(
   if (unfolded.kind === "union" && depth < MAX_DEPTH) {
     const out: Type[] = [];
     for (const member of unfolded.members) {
-      out.push(...flatten(env, member, depth + 1, step));
+      for (const flat of flatten(env, member, depth + 1, step)) {
+        out.push(flat);
+      }
     }
     return out;
   }
@@ -592,7 +594,9 @@ function unknownPredicateInput(
     seen.add(current);
     if (current.kind === "not") pending.push(current.operand);
     else if (current.kind === "and" || current.kind === "or") {
-      pending.push(...current.operands);
+      for (const operand of current.operands) {
+        pending.push(operand);
+      }
     } else if (current.kind === "difference") {
       for (const term of [current.left, current.right]) {
         if (term.kind === "zero") continue;

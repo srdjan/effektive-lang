@@ -309,7 +309,9 @@ export class RefinementValidator {
   private typeAssumptions(): Predicate[] {
     const assumptions: Predicate[] = [];
     for (const [id, type] of this.locals) {
-      assumptions.push(...typeAssumptionsAt(this.ctx, type, [id]));
+      for (const assumption of typeAssumptionsAt(this.ctx, type, [id])) {
+        assumptions.push(assumption);
+      }
     }
     return assumptions;
   }
