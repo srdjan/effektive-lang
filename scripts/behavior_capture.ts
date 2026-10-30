@@ -223,6 +223,15 @@ const CAPTURE_TESTS: readonly (readonly string[])[] = [
   ],
 ];
 
+/**
+ * The failure text of a command: its last 40 lines, with stderr first. The
+ * failure summary is at the end of stdout, and stderr says why it failed, so
+ * the 40 lines keep the summary when stdout is long.
+ */
+export function failureText(stdout: string, stderr: string): string {
+  return (stderr + stdout).split("\n").slice(-40).join("\n");
+}
+
 async function run(
   command: string,
   args: readonly string[],
@@ -238,9 +247,9 @@ async function run(
   }).output();
   if (!result.success) {
     const decoder = new TextDecoder();
-    const output = decoder.decode(result.stdout) +
-      decoder.decode(result.stderr);
-    console.error(output.split("\n").slice(-40).join("\n"));
+    console.error(
+      failureText(decoder.decode(result.stdout), decoder.decode(result.stderr)),
+    );
   }
   return result.success;
 }
