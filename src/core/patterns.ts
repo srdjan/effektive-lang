@@ -1,4 +1,4 @@
-// The pattern domain of a match subject (plan section 5.1). Given the type of a
+// The pattern domain of a match subject. Given the type of a
 // subject, `domainOf` says which pattern forms apply and which values a complete
 // match must cover. The functions here are pure. The body checker walks the
 // arms and reports the diagnostics.

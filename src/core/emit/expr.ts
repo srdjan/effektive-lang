@@ -6,7 +6,7 @@ import {
   sensitiveField,
   taggedFields,
 } from "./fields.ts";
-// The expression scheme (plan sections 6.1 to 6.4): `pure`, `inGen`, and
+// The expression scheme: `pure`, `inGen`, and
 // `asEffect`, the leaf and hoist rules, the control forms, and the parentheses
 // around `yield*`.
 
@@ -1605,7 +1605,7 @@ export class ExprEmitter implements ExprCore {
   /**
    * The leaf `e` as an Effect-valued expression. When an evaluated child is
    * effectful, the emitter hoists the children up to the last effectful one
-   * into temporaries inside a nested `Effect.gen` (plan section 6.1).
+   * into temporaries inside a nested `Effect.gen`.
    */
   private leafEffect(e: Expr, yielded: boolean): Emitted {
     const children = this.evaluatedChildren(e);

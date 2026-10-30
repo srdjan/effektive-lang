@@ -1,5 +1,5 @@
 import { fieldKey } from "./fields.ts";
-// The type printer and the schema printer (plan sections 6.5 and 6.6).
+// The type printer and the schema printer.
 //
 // `typeDoc` prints a TypeScript type. `schemaDoc` prints the Effect Schema
 // value of a type that has no function or provider inside.

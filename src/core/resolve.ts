@@ -1,6 +1,6 @@
 // Name resolution. Each name node gets one entry in a side table from the node id
 // to its target: a declaration identity, a local identity, a prelude builtin, or
-// a builtin type. See plan sections 5.2 to 5.4 for the rules.
+// a builtin type.
 //
 // Scope rules. Module-level names live in one namespace for the whole module
 // (types, errors, services, providers, consts, and imports) and are visible

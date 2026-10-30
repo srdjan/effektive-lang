@@ -1,5 +1,5 @@
-// The project driver of part A3b. For each module, in topological order, it runs
-// the declaration checker (A3a), checks every body, solves the execution modes,
+// The project driver. For each module, in topological order, it runs
+// the declaration checker, checks every body, solves the execution modes,
 // builds the initialization graph, and builds the module interface with the
 // modes. The finished interface goes to the modules that import it.
 //
@@ -7,8 +7,7 @@
 // constants gives strongly connected components, callees first. A component of
 // one declaration without a self reference is checked once. A recursive component
 // starts its pending modes at `pure` and iterates (modes.ts). The diagnostics of
-// the iteration are held, and only the last round's diagnostics are published
-// (design 4.6).
+// the iteration are held, and only the last round's diagnostics are published.
 
 import type { Analysis } from "./analyze.ts";
 import { analyzeProject } from "./analyze.ts";

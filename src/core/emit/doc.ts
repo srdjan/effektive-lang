@@ -1,10 +1,10 @@
-// The printer of the emitter (plan section 6, part A6a): an indentation-aware
+// The printer of the emitter: an indentation-aware
 // text builder in the style of Wadler and Prettier. The emitter builds a `Doc`
 // tree. `render` lays the tree out at a fixed width with one fixed style.
 //
 // A `span` node tags a part of the output with a source span. `render` returns
-// the generated range of each tag. Part A6b builds the span table and the
-// source map from these ranges. A `mark` node tags a part of the output with a
+// the generated range of each tag. The span table and the source map
+// are built from these ranges. A `mark` node tags a part of the output with a
 // key, for the ranges that have no source span, such as a host assertion.
 
 import type { Span } from "../ir.ts";

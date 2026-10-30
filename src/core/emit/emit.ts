@@ -1,5 +1,5 @@
 import { fieldHelperDeclarations } from "./fields.ts";
-// The Effect-TS emitter (plan section 6, part A6a). `emitModule` turns one
+// The Effect-TS emitter. `emitModule` turns one
 // `ModuleIR` into the text of one TypeScript module. It reads only the IR and
 // the project configuration. It is synchronous and pure: the caller writes files.
 

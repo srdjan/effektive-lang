@@ -1,6 +1,6 @@
 // The project: `effektive.json`, module identity, the host registry, the module
-// graph, import cycles, and the topological order. Plan section 5.3 states the
-// rules. The core reads files only through SourceHost.
+// graph, import cycles, and the topological order. The core reads files
+// only through SourceHost.
 
 import {
   type Diagnostic,
@@ -669,7 +669,7 @@ function cycleDiagnostic(
  * builds the module graph, and orders the modules. Entry paths are relative to
  * the root. A missing or malformed project file is an error value. Other
  * problems are diagnostics in the project. The optional `parseFile` replaces
- * the parser, for memoization (part A7).
+ * the parser, for memoization.
  */
 export function loadProject(
   host: SourceHost,

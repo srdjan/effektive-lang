@@ -1,4 +1,4 @@
-// The naming state of one emitted module (plan sections 5.3 and 5.6): the names
+// The naming state of one emitted module: the names
 // that the module owns, the names that the emitter generates, the imports that
 // the module must print, and the host registry.
 

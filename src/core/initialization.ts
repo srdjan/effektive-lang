@@ -1,8 +1,8 @@
-// The eager dependency graph of module initialization (plan section 5.4, spec
-// gap Q15). A module constant depends on each declaration that its initializer
-// references. A reference to a function adds every declaration that the function
-// body references, transitively. A cycle that holds a constant cannot be
-// initialized. Part A6a orders the emitted constants by `order`.
+// The eager dependency graph of module initialization. A module constant
+// depends on each declaration that its initializer references. A reference to a
+// function adds every declaration that the function body references,
+// transitively. A cycle that holds a constant cannot be initialized. The emitter
+// orders the emitted constants by `order`.
 
 import { stronglyConnectedComponents } from "./graph.ts";
 import type { ValueId } from "./ir.ts";

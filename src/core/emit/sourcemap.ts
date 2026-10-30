@@ -1,4 +1,4 @@
-// Source maps (plan section 6.7, part A6b). A version 3 source map for one
+// Source maps. A version 3 source map for one
 // generated module, derived from its span table. The file also holds a base64
 // VLQ encoder and decoder. The core has no dependencies, so it has its own.
 //

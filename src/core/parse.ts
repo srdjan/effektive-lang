@@ -1,7 +1,7 @@
 // Recursive-descent parser. It never throws and never stops at the first error.
 // It builds a lossless tree: every token becomes a leaf, and a missing token or
 // construct becomes a zero-width Missing node. See docs/archive/plans/2026-10-16-phase-a.md
-// section 5.1 for the grammar addendum and design section 6.4 for recovery.
+// for the grammar addendum and the recovery design.
 //
 // Newline handling. The parser keeps a flag `sig`. In a module, a block, or a
 // service body, a newline token separates items and the parser leaves it in

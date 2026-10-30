@@ -5,7 +5,7 @@ import {
   sensitiveField,
   taggedFields,
 } from "./fields.ts";
-// Declarations and their order (plan section 6.5), and the export rule (I8).
+// Declarations and their order, and the export rule.
 
 import type {
   CapabilityId,
@@ -275,7 +275,7 @@ export function orderTypeLevel(ir: ModuleIR): TypeLevel[] {
   return ordered;
 }
 
-/** Constants in the order of their eager dependencies (plan section 5.4). */
+/** Constants in the order of their eager dependencies. */
 export function orderConstants(ir: ModuleIR): ConstantDecl[] {
   const constants = ir.declarations.filter(
     (d): d is ConstantDecl => d.kind === "constant",

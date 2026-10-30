@@ -1,5 +1,4 @@
-// The `tsc` oracle on the Effektive side (plan sections 5.3 and 6.5, part
-// A6b). Two pure functions:
+// The `tsc` oracle on the Effektive side. Two pure functions:
 //
 // - `parseDenoCheck` reads the text that `deno check` prints on failure and
 //   returns its TypeScript diagnostics.

@@ -1,4 +1,4 @@
-// The span table (plan section 6.7, part A6b). The emitter records the
+// The span table. The emitter records the
 // generated range of every printed node together with the source span of the
 // node. The span table answers one question: which source span does a
 // generated position belong to? A `tsc` diagnostic and a source map both use

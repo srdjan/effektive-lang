@@ -3,7 +3,7 @@
 // and whether the emitter treats it as a leaf effect. `childrenOf`,
 // `evaluatedChildren`, and `isLeafExpr` derive from the table. A new Expr kind
 // is a compile error until it has a row. The validator keeps its own child
-// list (`validate/expr.ts` exprChildren) and must not import this module.
+// list (`validate/expr_walk.ts` exprChildren) and must not import this module.
 
 import type { Expr } from "../ir.ts";
 

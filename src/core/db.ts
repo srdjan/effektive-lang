@@ -1,5 +1,5 @@
-// The program of part A7: the state of one project across revisions, with
-// memoized queries and an early cutoff at module level (design D4, section 4.4).
+// The program: the state of one project across revisions, with
+// memoized queries and an early cutoff at module level.
 //
 // `update` starts a new revision from a set of file changes. The revision then
 // answers frontend queries: checked modules, diagnostics, and lazy typed IR.
@@ -10,7 +10,7 @@
 // 1. Parse memo. A file whose text equals the text of the last parse keeps its
 //    syntax tree object, its parse diagnostics, and its declaration index.
 // 2. Check memo. The memo key of a module holds its own text and the interface
-//    hash (design I8) of every module that it reaches. A module with an
+//    hash of every module that it reaches. A module with an
 //    unchanged key is not checked again. Its checked module, type graph, and
 //    interface are reused.
 // 3. Lowering memo. The lowering key holds the hash of the full interface
@@ -30,7 +30,7 @@
 // Note on spans. The IR import of a module carries the interface payload of the
 // imported module, and the payload carries the source spans of the declarations.
 // The interface of a module also copies the declarations of other modules that
-// it reaches. The interface hash of design I8 leaves the spans out. An edit that
+// it reaches. The interface hash leaves the spans out. An edit that
 // only moves a declaration of an imported module keeps that hash, so the
 // importer is not checked again. Its lowering key changes, so the program builds
 // its interface again from the reused declarations and lowers it again. The IR
@@ -244,7 +244,7 @@ export class Revision {
     return this.pathMap;
   }
 
-  /** The interface hash of design I8, which leaves out source spans. */
+  /** The interface hash, which leaves out source spans. */
   interfaceHash(name: string): string | undefined {
     return this.entries.get(name)?.checked.hash;
   }

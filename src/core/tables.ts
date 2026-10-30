@@ -1,7 +1,7 @@
-// The side tables of body checking (plan section 7). For each declaration body
+// The side tables of body checking. For each declaration body
 // the checker records, per syntax node, the type, the active failure and
 // requirement sets, and the execution mode. It also records the facts that
-// lowering (part A4) needs and cannot read from the tree alone: which kind of
+// lowering needs and cannot read from the tree alone: which kind of
 // call a call node is, which pattern kind a pattern node is, and so on.
 //
 // All sets are sorted and unique. The mode is `effect` whenever a set is

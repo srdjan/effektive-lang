@@ -1,4 +1,4 @@
-// Lowering of a checked module to typed IR (plan part A4, design 6.1 and 6.3).
+// Lowering of a checked module to typed IR.
 //
 // The lowering reads the syntax tree and the side tables that body checking
 // built. It never infers a type or an effect set itself. A pipeline stage whose
