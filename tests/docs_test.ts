@@ -131,3 +131,18 @@ Deno.test("each test that the layering table of docs/architecture.md cites exist
     );
   }
 });
+
+Deno.test("the newest versioned heading of CHANGELOG.md equals the version in deno.json", async () => {
+  const changelog = await Deno.readTextFile(new URL("CHANGELOG.md", ROOT));
+  const config: unknown = JSON.parse(
+    await Deno.readTextFile(new URL("deno.json", ROOT)),
+  );
+  const version = typeof config === "object" && config !== null &&
+      "version" in config && typeof config.version === "string"
+    ? config.version
+    : undefined;
+  assert(version !== undefined, "deno.json has no string version");
+  const heading = /^## (\d+\.\d+\.\d+) - /m.exec(changelog);
+  assert(heading !== null, "CHANGELOG.md has no versioned heading");
+  assertEquals(heading[1], version);
+});

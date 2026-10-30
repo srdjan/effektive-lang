@@ -2,6 +2,57 @@
 
 ## Unreleased
 
+- `build --tsc` resolves the pinned dependency closure of the target, not the
+  newest versions in range. A host import whose range overlaps the closure
+  also takes the pinned version.
+- A file with very many diagnostics returns all of them and no longer crashes.
+- The proof budget belongs to one module, not to one run. A module no longer
+  spends the budget of an earlier module.
+
+## 0.10.4 - 2026-10-29
+
+Source can use more Effect features, and the playground and the logs are new.
+
+Time and retry:
+
+- Duration literals such as `5s` and `100ms` make a value of the new closed
+  type `Duration`. `Duration` supports addition, subtraction, scaling, and
+  comparison.
+- `timeout(job, 5s)` limits a job and fails with the reserved error
+  `TimeoutError`. `sleep(1s)` waits.
+- `repeat(job)` runs a job again after each success. `repeat(job, options)`
+  takes `times`, `schedule`, `while`, and `until`.
+- `retry` takes the options `times`, `schedule`, `while`, and `until`, and a
+  general `Schedule`.
+- `scheduleExponential`, `scheduleJittered`, and `scheduleCron` build
+  schedules. `scheduleCron` checks its cron expression and time zone at
+  compile time.
+- `now()` returns the current time as the closed type `Instant`. `Instant`
+  minus `Instant` gives a `Duration`.
+
+Failure and cleanup:
+
+- `finally (outcome) { ... }` binds the outcome of the protected part:
+  `Success`, `Failure`, `Defect`, or `Interrupted`. A `using` release can bind
+  it too.
+- A `catch` block can hold one `Defect(name) => expression` arm. It handles a
+  defect with a `message`.
+- `uninterruptible(job)` runs a job to its end, even when a `timeout` or a
+  `race` interrupts it.
+
+Callbacks and values:
+
+- `map`, `filter`, and `fold` accept effectful callbacks. `updateRef` accepts
+  an effectful callback and keeps each update atomic.
+- `race` takes an array of Effect values.
+- `random()` and `randomInt(min, max)` return random values from the Effect
+  runtime. `log(message, options)` writes a log line with a level and fields.
+- `Map<K, V>` and `Set<T>` are builtin types. `mapOf`, `getMap`, `putMap`,
+  `removeMap`, `hasMap`, `entriesMap`, `setOf`, `addSet`, `removeSet`,
+  `hasSet`, and `itemsSet` build and read them.
+
+Tools:
+
 - The playground looks and works like an IDE: a file explorer, editor tabs, a
   Problems panel, and a status bar with the cursor position and the contract.
 - The playground status bar shows how many fewer code characters the source
@@ -10,6 +61,23 @@
   local session log. `deno task logs:report` summarizes the logs, and
   `deno task logs:replay` runs a session again as a regression check. See
   [docs/logging.md](docs/logging.md).
+
+Breaking changes:
+
+- The IR moves to version 7. It adds the expression kinds `timeout`, `sleep`,
+  `repeat`, `uninterruptible`, `ensure`, `race-all`, `schedule-exponential`,
+  and `schedule-jittered`. The `catch` node has an optional `defect` handler.
+  A `with-resource` release closure has one or two parameters. See
+  [docs/archive/api-migrations.md](docs/archive/api-migrations.md#ir-version-7).
+- `Duration` and `Instant` are closed. A bare `int` does not fit them. A
+  module cannot declare a type named `Duration`, `Instant`, `Map`, or `Set`.
+- Millisecond arguments became `Duration` values: `scheduleSpaced`,
+  `debounceStream`, and the `throttleStream` option `duration` (before
+  `durationMs`). `retrySchedule` callbacks return `Option<Duration>`.
+  `scheduleFromStep` decisions use `delay`, and `ScheduleMetadata` uses
+  `duration`, both of type `Duration`.
+
+Requires Deno 2.9.8 and targets Effect 4.0.5.
 
 ## 0.10.3 - 2026-10-26
 

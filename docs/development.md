@@ -1,8 +1,8 @@
 # Development
 
 This file gives the task commands, the repository layout, the error fixture
-convention, the target lock, and the format and lint scope. The
-[README](../README.md) gives a short overview.
+convention, the target lock, the release steps, and the format and lint scope.
+The [README](../README.md) gives a short overview.
 
 ## Commands
 
@@ -155,6 +155,17 @@ Generate the lockfile again in an empty temporary directory.
 3. Run `deno cache a.ts`.
 4. Save the new `deno.lock` as `tests/application_lock.json`.
 5. Run `deno fmt tests/application_lock.json`.
+
+## Release
+
+The history shows this path for each version. It has no release tag.
+
+1. Add a heading `## X.Y.Z - YYYY-MM-DD` to `CHANGELOG.md`. Move the entries of
+   "Unreleased" under it. List each breaking change under "Breaking changes".
+2. Set `version` in `deno.json` to `X.Y.Z`.
+3. Run `deno task check`. It must exit 0. `tests/docs_test.ts` fails when the
+   newest versioned heading of `CHANGELOG.md` differs from `version`.
+4. Commit with the subject `vX.Y.Z`. Never push: the maintainer pushes.
 
 ## Root lock
 
