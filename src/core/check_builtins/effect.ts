@@ -164,6 +164,32 @@ interface OptionsSpec {
   readonly retrySchedule: boolean;
 }
 
+/** The label, name, and value of a `name: value` option field, or undefined after a diagnostic. */
+function optionField(
+  c: EffectContext,
+  call: string,
+  field: NodeId,
+):
+  | { readonly label: NodeId; readonly name: string; readonly value: NodeId }
+  | undefined {
+  const parts = c.kids(field);
+  const label = parts.find((k) => kindOf(c.tree, k) === SyntaxKind.Name);
+  const value = parts.find((k) => k !== label);
+  const name = label === undefined ? undefined : nameTextOf(c.tree, label);
+  if (
+    kindOf(c.tree, field) !== SyntaxKind.RecordField || label === undefined ||
+    name === undefined || value === undefined
+  ) {
+    c.report(
+      "type-mismatch/010",
+      `\`${call}\` options need the form \`name: value\``,
+      field,
+    );
+    return undefined;
+  }
+  return { label, name, value };
+}
+
 /**
  * Checks a general options record of `retry` or `repeat`: each key is `times`,
  * `schedule`, `while`, or `until`, at most once. The result carries the effects
@@ -199,21 +225,9 @@ function callOptions(
   const types: { name: string; type: TypeRef; optional: boolean }[] = [];
   const seen = new Set<string>();
   for (const field of fields) {
-    const parts = c.kids(field);
-    const label = parts.find((k) => kindOf(c.tree, k) === SyntaxKind.Name);
-    const value = parts.find((k) => k !== label);
-    const name = label === undefined ? undefined : nameTextOf(c.tree, label);
-    if (
-      kindOf(c.tree, field) !== SyntaxKind.RecordField || name === undefined ||
-      value === undefined
-    ) {
-      c.report(
-        "type-mismatch/010",
-        `\`${call}\` options need the form \`name: value\``,
-        field,
-      );
-      continue;
-    }
+    const parsed = optionField(c, call, field);
+    if (parsed === undefined) continue;
+    const { label, name, value } = parsed;
     const valueArg: Arg = { node: value };
     let info: NodeInfo;
     if (name === "while" || name === "until") {
@@ -245,13 +259,13 @@ function callOptions(
       c.report(
         "type-mismatch/010",
         `\`${call}\` has no option \`${name}\`; the options are times, schedule, while, until`,
-        label!,
+        label,
       );
     } else if (seen.has(name)) {
       c.report(
         "type-mismatch/010",
         `\`${call}\` option \`${name}\` appears twice`,
-        label!,
+        label,
       );
     } else {
       types.push({ name, type: info.type, optional: false });
@@ -558,21 +572,9 @@ function logOptions(
   const types: { name: string; type: TypeRef; optional: boolean }[] = [];
   const seen = new Set<string>();
   for (const field of fields) {
-    const parts = c.kids(field);
-    const label = parts.find((k) => kindOf(c.tree, k) === SyntaxKind.Name);
-    const value = parts.find((k) => k !== label);
-    const name = label === undefined ? undefined : nameTextOf(c.tree, label);
-    if (
-      kindOf(c.tree, field) !== SyntaxKind.RecordField || name === undefined ||
-      value === undefined
-    ) {
-      c.report(
-        "type-mismatch/010",
-        "`log` options need the form `name: value`",
-        field,
-      );
-      continue;
-    }
+    const parsed = optionField(c, "log", field);
+    if (parsed === undefined) continue;
+    const { label, name, value } = parsed;
     const info = c.argInfo({ node: value });
     if (name === "level") level = logLevel(c, value) ?? level;
     else if (name === "fields") logFields(c, value, info);
@@ -580,13 +582,13 @@ function logOptions(
       c.report(
         "type-mismatch/010",
         `\`log\` has no option \`${name}\`; the options are level, fields`,
-        label!,
+        label,
       );
     } else if (seen.has(name)) {
       c.report(
         "type-mismatch/010",
         `\`log\` option \`${name}\` appears twice`,
-        label!,
+        label,
       );
     } else {
       types.push({ name, type: info.type, optional: false });
