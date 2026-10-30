@@ -1,6 +1,6 @@
 {
   "name": "@srdjan/effektive-lang",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "license": "MIT",
   "lock": { "path": "./deno.lock", "frozen": true },
   "exports": {
