@@ -53,7 +53,7 @@ The package has three entry points: the whole API, the frontend, and the
 TypeScript backend. `TypeScriptOutputs` owns lazy generated output, so source
 hover does not lower or emit. The IR has version 7, and the validator rejects
 other wire versions without conversion. The
-[migration guide](api.md#migrating-the-frontend-and-typescript-apis) gives the
+[migration guide](archive/api-migrations.md#migrating-the-frontend-and-typescript-apis) gives the
 API and IR replacements. [architecture.md](architecture.md) describes the
 pipeline and its layering rules. The
 [completed plan](archive/plans/2026-10-24-compiler-boundaries-source-forms.md)
