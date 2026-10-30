@@ -1,7 +1,7 @@
 // Fixed traces of the disk save round of the language server and of the forget
-// policy of watch mode (plan SB2, unit 2). Each trace pins the behavior before a
-// later phase moves the disk session state. The expected values are literals.
-// The failure controls are the in-memory `unwritable` set and the file map, and
+// policy of watch mode. Each trace pins the observable behavior, and each must
+// hold across changes of the disk session state. The expected values are
+// literals. The failure controls are the in-memory `unwritable` set and the file map, and
 // no trace waits for elapsed time.
 
 import { assertEquals } from "@std/assert";

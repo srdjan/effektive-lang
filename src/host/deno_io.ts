@@ -118,7 +118,8 @@ function attempt<T>(run: () => T): Result<T, FileFailure> {
 /**
  * Runs `deno check` in the project directory. The generated configuration goes
  * to a temporary directory that the call removes, so the project directory
- * gets no new file. `--no-lock` keeps `deno check` from writing a lock file.
+ * gets no new file. The seeded lockfile goes to the same directory, so
+ * `deno check` writes any new lock entry there and not in the project.
  */
 async function denoCheck(
   request: DenoCheckRequest,
