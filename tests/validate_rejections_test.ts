@@ -11,6 +11,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { checkProject } from "../src/core/check_project.ts";
 import type {
+  ConstantDecl,
   Declaration,
   Expr,
   FunctionDecl,
@@ -71,6 +72,28 @@ const owner = (): void => {
 const mapped = (): Int[] => map([1], (n) => n + 1)
 `;
 
+const EFFECTS_SOURCE = `type Int = int
+error Boom = { code: Int }
+service Clock { now(): Int }
+service Tick { now(): Int }
+service Log { write(): void }
+const timed = (): Int fails TimeoutError => timeout(() => 1, 5ms)
+const retryPolicy = retrySchedule((e: Boom, attempt: Int): Option<Duration> => Some(1ms))
+const ran = (): Int => run(defer(() => 1))
+const raced = () => race(defer(() => 1), defer(() => 2))
+const clockLive = layer(Clock, () => ({ now: () => 1 }))
+const logLive = layer(Log, () => ({ write: () => {} }))
+const needy = layer(Clock, () => {
+  Tick.now()
+  ({ now: () => 1 })
+})
+const both = mergeLayers(clockLive, logLive)
+const exponential = scheduleExponential(1ms, 2)
+const mapped = scheduleMap(scheduleRecurs(1), (meta: ScheduleMetadata<Int, unknown>): Int => 1)
+const longest = scheduleMax(scheduleRecurs(1), scheduleSpaced(2ms))
+const one = (): Int => 1
+`;
+
 const PROGRAMS = {
   core: {
     files: {
@@ -80,6 +103,10 @@ const PROGRAMS = {
       "host.effi": HOST_INTERFACE,
       "m.eff": CORE_SOURCE,
     },
+    entry: "m.eff",
+  },
+  effects: {
+    files: { "effektive.json": "{}", "m.eff": EFFECTS_SOURCE },
     entry: "m.eff",
   },
 } as const satisfies Readonly<Record<string, Program>>;
@@ -125,6 +152,13 @@ function declaration(ir: ForgedIR, name: string): Mutable<Declaration> {
   return found;
 }
 
+/** A constant declaration, whose `value` is the expression to forge. */
+function constant(ir: ForgedIR, name: string): Mutable<ConstantDecl> {
+  const found = declaration(ir, name);
+  assert(found.kind === "constant", name);
+  return found;
+}
+
 function fn(ir: ForgedIR, name: string): Mutable<FunctionDecl> {
   const found = declaration(ir, name);
   assert(found.kind === "function", name);
@@ -163,6 +197,15 @@ function preludeImport(ir: ForgedIR): ForgedIR["imports"][number] {
   return found;
 }
 
+/** The function type of a closure expression. */
+function closureType(
+  closure: Mutable<Extract<Expr, { kind: "closure" }>>,
+): Mutable<Extract<Type, { kind: "function" }>> {
+  const type = closure.type;
+  assert(type.kind === "function");
+  return type;
+}
+
 function method(ir: ForgedIR, name: string) {
   const found = hostImport(ir).services[0].methods.find((m) => m.name === name);
   assert(found !== undefined, name);
@@ -173,9 +216,12 @@ const INT: Type = { kind: "primitive", name: "int" };
 const STRING: Type = { kind: "primitive", name: "string" };
 const UNKNOWN: Type = { kind: "primitive", name: "unknown" };
 
-/** A fresh literal expression of type int, copied from the `pair` function. */
-function intLiteral(ir: ForgedIR): Mutable<Extract<Expr, { kind: "literal" }>> {
-  return structuredClone(find(fn(ir, "pair").body, "literal"));
+/** A fresh literal expression of type int, copied from a function body. */
+function intLiteral(
+  ir: ForgedIR,
+  from = "pair",
+): Mutable<Extract<Expr, { kind: "literal" }>> {
+  return structuredClone(find(fn(ir, from).body, "literal"));
 }
 
 // ------------------------------------------------------------------ rows
@@ -653,6 +699,223 @@ const ROWS: readonly Row[] = [
     },
     expected: [
       "validation/001 imports[1].values[0].name: the builtin name is the text after # in its identity, recorded other",
+    ],
+  },
+  // ---------------------------------------------------------------- effect.ts
+  {
+    site: "effect.ts:71",
+    name: "a timeout duration that is not a Duration",
+    program: "effects",
+    change: (ir) => {
+      const t = find(fn(ir, "timed").body, "timeout");
+      t.durationMs = illegal(find(t.durationMs, "literal"));
+    },
+    expected: [
+      "validation/002 declarations[5].body.durationMs: timeout needs a Duration, found int",
+    ],
+  },
+  {
+    site: "effect.ts:207",
+    name: "a retry schedule step that is not a function",
+    program: "effects",
+    change: (ir) => {
+      const r = find(constant(ir, "retryPolicy").value, "retry-schedule");
+      r.step = intLiteral(ir, "one");
+    },
+    expected: [
+      "validation/006 declarations[6].value.step: retry schedule needs a two-parameter callback",
+    ],
+  },
+  {
+    site: "effect.ts:217",
+    name: "a retry schedule error parameter that is not a declared error",
+    program: "effects",
+    change: (ir) => {
+      const step = find(constant(ir, "retryPolicy").value, "closure");
+      step.parameters[0].type = INT;
+      closureType(step).parameters[0] = INT;
+    },
+    expected: [
+      "validation/002 declarations[6].value.type: expected RetrySchedule<int>, recorded RetrySchedule<error:m#Boom>",
+      "validation/002 declarations[6].value: the initializer type RetrySchedule<int> does not fit the constant type RetrySchedule<error:m#Boom>",
+      "validation/002 declarations[6].value.step: retry schedule needs a declared error parameter",
+    ],
+  },
+  {
+    site: "effect.ts:228",
+    name: "a retry schedule attempt parameter that is not an int",
+    program: "effects",
+    change: (ir) => {
+      const step = find(constant(ir, "retryPolicy").value, "closure");
+      step.parameters[1].type = STRING;
+      closureType(step).parameters[1] = STRING;
+    },
+    expected: [
+      "validation/002 declarations[6].value.step: retry schedule needs an Int attempt and Option<Duration> result",
+    ],
+  },
+  {
+    site: "effect.ts:236",
+    name: "a retry schedule callback that is not pure",
+    program: "effects",
+    change: (ir) => {
+      const step = find(constant(ir, "retryPolicy").value, "closure");
+      closureType(step).execution = "effect";
+    },
+    expected: [
+      "validation/004 declarations[6].value.step.type.execution: expected pure, recorded effect",
+      "validation/006 declarations[6].value.step: retry schedule callback must be pure",
+    ],
+  },
+  {
+    site: "effect.ts:438",
+    name: "run of a value that is not an Effect",
+    program: "effects",
+    change: (ir) => {
+      find(fn(ir, "ran").body, "run").value = intLiteral(ir, "one");
+    },
+    expected: [
+      "validation/006 declarations[7].body.value: run needs an Effect value, but the expression has type int",
+    ],
+  },
+  {
+    site: "effect.ts:471",
+    name: "race of a value that is not an Effect",
+    program: "effects",
+    change: (ir) => {
+      find(fn(ir, "raced").body, "race").left = intLiteral(ir, "one");
+    },
+    expected: [
+      "validation/002 declarations[8].body: race needs two Effect values",
+    ],
+  },
+  // ---------------------------------------------------------------- layer.ts
+  {
+    site: "layer.ts:32",
+    name: "a layer of a service that is not declared",
+    program: "effects",
+    change: (ir) => {
+      find(constant(ir, "clockLive").value, "layer").service = illegal(
+        "service:m#Nope",
+      );
+    },
+    expected: [
+      "validation/006 declarations[9].value: layer needs a declared service and inline zero-argument callback",
+    ],
+  },
+  {
+    site: "layer.ts:45",
+    name: "a layer record with fewer fields than the service methods",
+    program: "effects",
+    change: (ir) => {
+      const result = closureType(
+        find(constant(ir, "clockLive").value, "closure"),
+      ).result;
+      assert(result.kind === "record");
+      result.fields = [];
+    },
+    expected: [
+      "validation/002 declarations[9].value.acquire: layer must return exactly the service methods",
+      "validation/002 declarations[9].value.acquire.body: the body type { now: () => type:m#Int [effect] } does not fit the closure result {}",
+    ],
+  },
+  {
+    site: "layer.ts:59",
+    name: "a layer method that does not fit its service contract",
+    program: "effects",
+    change: (ir) => {
+      const result = closureType(
+        find(constant(ir, "clockLive").value, "closure"),
+      ).result;
+      assert(result.kind === "record");
+      result.fields[0].type = INT;
+    },
+    expected: [
+      "validation/002 declarations[9].value.acquire: layer method now does not fit its service contract",
+      "validation/002 declarations[9].value.acquire.body: the body type { now: () => type:m#Int [effect] } does not fit the closure result { now: int }",
+    ],
+  },
+  {
+    site: "layer.ts:69",
+    name: "a layer acquisition that requires a method it provides",
+    program: "effects",
+    change: (ir) => {
+      find(constant(ir, "needy").value, "layer").service = illegal(
+        "service:m#Tick",
+      );
+    },
+    expected: [
+      "validation/002 declarations[11].value.type: expected provider provides cap:m#Tick.now [effect], recorded provider provides cap:m#Clock.now [effect]",
+      "validation/002 declarations[11].value: the initializer type provider provides cap:m#Tick.now [effect] does not fit the constant type provider provides cap:m#Clock.now [effect]",
+      "validation/006 declarations[11].value: layer acquisition requires a method it provides",
+    ],
+  },
+  {
+    site: "layer.ts:93",
+    name: "mergeLayers of a value that is not a Layer",
+    program: "effects",
+    change: (ir) => {
+      find(constant(ir, "both").value, "merge-layers").left = intLiteral(
+        ir,
+        "one",
+      );
+    },
+    expected: [
+      "validation/002 declarations[12].value: mergeLayers needs two Layer values",
+    ],
+  },
+  // ---------------------------------------------------------------- schedule.ts
+  {
+    site: "schedule.ts:105",
+    name: "a scheduleExponential base that is not a Duration",
+    program: "effects",
+    change: (ir) => {
+      const s = find(constant(ir, "exponential").value, "schedule-exponential");
+      s.baseMs = illegal(find(s.baseMs, "literal"));
+    },
+    expected: [
+      "validation/002 declarations[13].value.baseMs: scheduleExponential needs a Duration base, found int",
+    ],
+  },
+  {
+    site: "schedule.ts:252",
+    name: "a scheduleMap over a value that is not a Schedule",
+    program: "effects",
+    change: (ir) => {
+      find(constant(ir, "mapped").value, "schedule-map").schedule = intLiteral(
+        ir,
+        "one",
+      );
+    },
+    expected: [
+      "validation/002 declarations[14].value: scheduleMap needs a Schedule and inline callback",
+    ],
+  },
+  {
+    site: "schedule.ts:270",
+    name: "a scheduleMap callback without ScheduleMetadata",
+    program: "effects",
+    change: (ir) => {
+      const callback = find(constant(ir, "mapped").value, "closure");
+      callback.parameters[0].type = INT;
+      closureType(callback).parameters[0] = INT;
+    },
+    expected: [
+      "validation/002 declarations[14].value: scheduleMap callback needs ScheduleMetadata<Output, Input>",
+    ],
+  },
+  {
+    site: "schedule.ts:300",
+    name: "a schedule composition over a value that is not a Schedule",
+    program: "effects",
+    change: (ir) => {
+      find(constant(ir, "longest").value, "schedule-max").left = intLiteral(
+        ir,
+        "one",
+      );
+    },
+    expected: [
+      "validation/002 declarations[15].value: schedule composition needs two Schedules",
     ],
   },
   // ---------------------------------------------------------------- serialization.ts
