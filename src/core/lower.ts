@@ -74,11 +74,9 @@ import {
   type NodeFact,
   type NodeInfo,
 } from "./tables.ts";
-import type { TypeNode, TypeRef, TypeTable } from "./types.ts";
+import type { TypeRef, TypeTable } from "./types.ts";
 import { functionTypeToIr, typeToIr } from "./type_ir.ts";
 import { builtinInstanceId } from "./ids.ts";
-
-type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
 
 // ------------------------------------------------------------------ errors
 
@@ -623,14 +621,6 @@ class BodyLowerer {
       throw internal(`${what} is missing at ${this.describe(node)}`);
     }
     return value;
-  }
-
-  private functionOf(ref: TypeRef): FunctionNode {
-    const node = this.ctx.types.node(this.ctx.types.unfold(ref));
-    if (node.kind !== "function") {
-      throw internal("a callee does not have a function type");
-    }
-    return node;
   }
 
   private parameter(

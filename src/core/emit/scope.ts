@@ -263,7 +263,7 @@ export interface ImportGroup {
   }[];
 }
 
-export interface OutcomeNames {
+interface OutcomeNames {
   readonly type: string;
   readonly make: string;
 }

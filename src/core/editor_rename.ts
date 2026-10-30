@@ -16,7 +16,6 @@ import {
   type SymbolOccurrence,
 } from "./editor_index.ts";
 
-export type { SourceEdit } from "./source.ts";
 export interface RenameTarget {
   readonly span: Span;
   readonly name: string;

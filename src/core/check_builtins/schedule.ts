@@ -17,7 +17,7 @@ import {
 } from "./rows.ts";
 
 /** The checker operations that the cron row reads, beyond the shared ones. */
-export type ScheduleContext = SyntaxView & FactWriter;
+type ScheduleContext = SyntaxView & FactWriter;
 
 function simpleScheduleCall(
   c: BuiltinContext,

@@ -13,23 +13,6 @@ import { diskHost, EXAMPLE_ENTRIES } from "../tests/helpers.ts";
 
 type Obj = Record<string, unknown>;
 
-export interface Fixture {
-  /** File name under `fixtures/validate/`. */
-  readonly file: string;
-  /** The expected validation code. */
-  readonly code: string;
-  /** The area name. */
-  readonly area: string;
-  /** What the mutation does. */
-  readonly mutation: string;
-  /** The IR path that the first diagnostic names. */
-  readonly path: string;
-  /** Source identifier to the fixture path of its text, relative to `fixtures/`. */
-  readonly sources: Readonly<Record<string, string>>;
-  /** The mutated IR. */
-  readonly ir: unknown;
-}
-
 // ------------------------------------------------------------------ JSON helpers
 
 function isObj(value: unknown): value is Obj {
