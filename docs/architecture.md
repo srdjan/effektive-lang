@@ -32,6 +32,26 @@ The host adapters are in `src/host/`. They read and write files and run
 command-line tool is in `src/cli/`, the language server in `src/lsp/`, and the
 browser playground in `playground/`. The VS Code client is in `editors/vscode/`.
 
+## Revision ownership
+
+Each successful `Program.update` forks the current type table before checking modules.
+The fork copies alias definitions and error-record definitions.
+All forks share append-only interned nodes, intern keys, and canonical IR keys.
+Shared storage keeps `TypeRef` values valid in reused modules.
+The public `TypeReader.size` reports the cumulative count of shared nodes.
+
+Each revision retains its check table through `Revision.types`.
+Lazy lowering and editor queries use that revision's definitions.
+The program retains the current table without parent links or a table history.
+A configuration failure does not replace the current table.
+The changed files remain available for a later recovery update.
+
+An unchanged module can retain its checked object and cached lowering.
+Its `declarations.env.table` remains the table from its last check.
+That environment describes the module's last check; `Revision.types` describes the current revision.
+Interface hashes, span invalidation, lazy lowering, and weak output caches retain their existing roles.
+The independent validator and the IR version 7 contract remain unchanged.
+
 ## Layering rules
 
 Each layer depends only on the layers below it. The core has no I/O. It reads

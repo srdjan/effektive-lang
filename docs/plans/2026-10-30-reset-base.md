@@ -732,11 +732,14 @@ if (a === undefined || b === undefined || !a.ok || !b.ok) throw Error("lowering"
 const outputs = new TypeScriptOutputs();
 const x = outputs.emitted(cold, "m");
 const y = outputs.emitted(retained, "m");
+const coldIr = serializeModule(a.value);
+const retainedIr = serializeModule(b.value);
+if (!coldIr.ok || !retainedIr.ok) throw Error("serialization");
 console.log({
   diagnostics: [cold.diagnostics.length, retained.diagnostics.length, edit.value.diagnostics.length],
   coldValidation: [...cold.validate(new Map([["m", a]]))].flatMap(([, ds]) => ds).length,
   retainedValidation: [...retained.validate(new Map([["m", b]]))].flatMap(([, ds]) => ds).length,
-  irEqual: serializeModule(a.value) === serializeModule(b.value),
+  irEqual: coldIr.value === retainedIr.value,
   emittedBytesEqual: x?.ok && y?.ok && x.value.text === y.value.text,
   readerChanged: before !== retained.types.taggedRecordOf(id)
 });
@@ -757,6 +760,10 @@ readerChanged: true
 After NB3, expected values are `[0, 0, 0]`, `0`, `0`, `true`, `true`, and `false`, respectively.
 Throws in the probe assert unexpected setup failures.
 They do not propose exceptions for expected compiler failures.
+The implementation review corrected this probe to compare serialized text values.
+The original draft compared two `Result` objects by identity, so its IR comparison alone was not evidence.
+The independent validation failure and definition-reader change still established the baseline defect.
+The regression tests compare serialization results by deep value equality.
 
 The path reproduction is:
 
@@ -845,7 +852,7 @@ The reviewed source, tests, fixtures, configuration, and website remain unchange
 | NB0: restore baseline | Done | `26d4fc6` | Registry added. Focused documentation/version checks: 17 passed. Full gate: exit 0 in 46.934 s, including 282 slow tests. Source, tests, fixtures, and configuration equal the reviewed source. |
 | NB1: path boundary | Done | `fa0d244` | Existing guard test failed on `..scratch` before the fix. Both guard tests and the external build test pass. Full gate: exit 0 in 54.532 s, including 282 slow tests. Fixtures unchanged. |
 | NB2: table fork | Done | `fa0d244` | Sol added the fork and three public-method tests. The red run failed only because `fork` was absent. Main reviewed every changed line and passed 296 focused tests. Full gate: exit 0 in 54.671 s, with 2,872 fast and 282 slow tests. No production fork caller or fixture change. |
-| NB3: revision ownership | Not started | - | Planning only |
+| NB3: revision ownership | Source checked; comparisons pending | `650cd81` | Main reviewed the three changed files and 12 public regression cases. The baseline test failed with three `validation/002` errors. Main reran 40 revision tests and 204 editor/validator tests. Full gate: exit 0 in 80.539 s, with 2,884 fast and 282 slow tests. Corrected probe: zero validation errors, equal IR and emitted bytes, unchanged old reader. Fixtures unchanged. |
 | NB4: final documents | Not started | - | Planning only |
 
 Next owner: the main coordinator will finish the baseline gate and execute the dependent phases.

@@ -23,8 +23,8 @@
 // the result of a revision equals the result of a check from scratch. One test
 // compares both.
 //
-// One `TypeTable` lives as long as the program, so that the type references in a
-// reused module stay valid. Its interned nodes only grow. Its memory growth over a long
+// Each revision owns its definitions and shares append-only interned storage.
+// Type references in reused modules stay valid. Memory growth over a long
 // watch session is measurement M4.
 //
 // Note on spans. The IR import of a module carries the interface payload of the
@@ -284,8 +284,8 @@ export class Program {
     { readonly text: string; readonly file: ParsedFile }
   >();
   private entries = new Map<string, Entry>();
-  /** The one intern table of the program. Reused modules keep valid type references. */
-  private readonly table = new TypeTable();
+  /** The current definitions over shared interned storage. */
+  private table = new TypeTable();
   private count = 0;
   private readonly counters: Counters = {
     parses: 0,
@@ -347,6 +347,7 @@ export class Program {
 
   /** The same per-module step and order as `checkAnalysis`, with the memo around each module. */
   private check(analysis: Analysis): Revision {
+    const table = this.table.fork();
     const { project } = analysis;
     const config = configKey(project.config);
     const graphs = new Map<string, TypeGraph>();
@@ -385,7 +386,7 @@ export class Program {
           analysis,
           info,
           name,
-          this.table,
+          table,
           seen,
         );
         const iface = checked.interface.ok
@@ -441,9 +442,10 @@ export class Program {
       }
     }
     this.entries = entries;
+    this.table = table;
     const checked: CheckedProject = {
       analysis,
-      table: this.table,
+      table,
       modules,
       diagnostics: normalizeDiagnostics(diagnostics),
     };
