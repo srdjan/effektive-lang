@@ -154,6 +154,7 @@ playground/    The browser playground. See "Playground". The page is in src/, th
     replay.ts      The pure parts of ?replay=: the steps of a session file, edit application, and the timed player.
 scripts/       Scripts that the tasks run.
                golden_update.ts writes the golden files.
+               surface_update.ts writes the command-line and language server records in fixtures/surface/.
                test_slow.ts runs the slow tests with a fresh DENO_DIR.
                validate_fixtures.ts writes the mutation fixtures.
                behavior_capture.ts records the hashed compiler behavior of a git revision.

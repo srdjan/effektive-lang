@@ -1,0 +1,2257 @@
+{
+  "examples-check": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 0,
+    "events": [
+      {
+        "kind": "stderr",
+        "text": "6 modules, 0 diagnostics\n"
+      }
+    ]
+  },
+  "examples-build": {
+    "args": [
+      "build",
+      "/proj"
+    ],
+    "code": 0,
+    "events": [
+      {
+        "kind": "write",
+        "path": "/proj/collections.ts",
+        "sha256": "191780cb6a1f8cc77e85c3b8cd3073b347623b7d82ba741537b39fe8f6e0bb0e"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/collections.ts.map",
+        "sha256": "f7dbbce168c3070efae981dc50a095bda65b2557df846e4c348dc471a4113bfa"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/users.ts",
+        "sha256": "8eff1b5338f4e51b219102dc69bb7d7f14fb3936bdf1fc2707568f152f5aa110"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/users.ts.map",
+        "sha256": "0bcb7e9905edfa4f241d4ef26cbc86e7c186e959ba9750180397f143f9197a7d"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/host/providers.effi.ts",
+        "sha256": "b97a64eba2b59904eb7dce155f3a164d47147933b65ecc18d19b1735aadd8888"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/host/providers.effi.ts.map",
+        "sha256": "8ff1374bd855a3e0bc7f35b26b4abe8f9faf17fda62629d2625a324cd7af5861"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/log.ts",
+        "sha256": "9ee6082d3dbb6a0cda6d798e7daf94c99292c8f5eba7f8ea37c194a78312a859"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/log.ts.map",
+        "sha256": "5980d055033cfa48c3c3792b842a8c7d01415af7102750235096216d1754eeb3"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/main.ts",
+        "sha256": "8d3c36a2842531141d65a614496d2d4c933e538ab7db8c1e51afbd736e3cfa53"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/main.ts.map",
+        "sha256": "ef65c109bebd33dba985a41b58180dd1369dd33ec72cc619f76382c05f34807f"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/pay.ts",
+        "sha256": "d6ec49c65ccad1070a9123b8dd8a7382343781ab747130004f8f4db2bb84a73b"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/pay.ts.map",
+        "sha256": "8b8e9c3fa99ef97152441bec4a624bf77d45ef11450c83493870ccc9f7a0ef02"
+      },
+      {
+        "kind": "stderr",
+        "text": "6 modules, 0 diagnostics, wrote 12 files\n"
+      }
+    ]
+  },
+  "examples-build-validate": {
+    "args": [
+      "build",
+      "/proj",
+      "--validate"
+    ],
+    "code": 0,
+    "events": [
+      {
+        "kind": "write",
+        "path": "/proj/collections.ts",
+        "sha256": "191780cb6a1f8cc77e85c3b8cd3073b347623b7d82ba741537b39fe8f6e0bb0e"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/collections.ts.map",
+        "sha256": "f7dbbce168c3070efae981dc50a095bda65b2557df846e4c348dc471a4113bfa"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/users.ts",
+        "sha256": "8eff1b5338f4e51b219102dc69bb7d7f14fb3936bdf1fc2707568f152f5aa110"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/users.ts.map",
+        "sha256": "0bcb7e9905edfa4f241d4ef26cbc86e7c186e959ba9750180397f143f9197a7d"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/host/providers.effi.ts",
+        "sha256": "b97a64eba2b59904eb7dce155f3a164d47147933b65ecc18d19b1735aadd8888"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/host/providers.effi.ts.map",
+        "sha256": "8ff1374bd855a3e0bc7f35b26b4abe8f9faf17fda62629d2625a324cd7af5861"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/log.ts",
+        "sha256": "9ee6082d3dbb6a0cda6d798e7daf94c99292c8f5eba7f8ea37c194a78312a859"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/log.ts.map",
+        "sha256": "5980d055033cfa48c3c3792b842a8c7d01415af7102750235096216d1754eeb3"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/main.ts",
+        "sha256": "8d3c36a2842531141d65a614496d2d4c933e538ab7db8c1e51afbd736e3cfa53"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/main.ts.map",
+        "sha256": "ef65c109bebd33dba985a41b58180dd1369dd33ec72cc619f76382c05f34807f"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/pay.ts",
+        "sha256": "d6ec49c65ccad1070a9123b8dd8a7382343781ab747130004f8f4db2bb84a73b"
+      },
+      {
+        "kind": "write",
+        "path": "/proj/pay.ts.map",
+        "sha256": "8b8e9c3fa99ef97152441bec4a624bf77d45ef11450c83493870ccc9f7a0ef02"
+      },
+      {
+        "kind": "stderr",
+        "text": "6 modules, 0 diagnostics, wrote 12 files\n"
+      }
+    ]
+  },
+  "usage-no-arguments": {
+    "args": [],
+    "code": 2,
+    "events": [
+      {
+        "kind": "stderr",
+        "text": "effektive: missing command\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc] [--validate]     also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+      }
+    ]
+  },
+  "usage-help": {
+    "args": [
+      "--help"
+    ],
+    "code": 0,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "usage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc] [--validate]     also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+      }
+    ]
+  },
+  "usage-unknown-command": {
+    "args": [
+      "nope"
+    ],
+    "code": 2,
+    "events": [
+      {
+        "kind": "stderr",
+        "text": "effektive: unknown command `nope`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc] [--validate]     also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+      }
+    ]
+  },
+  "usage-missing-project": {
+    "args": [
+      "check",
+      "/missing"
+    ],
+    "code": 2,
+    "events": [
+      {
+        "kind": "stderr",
+        "text": "effektive: the root directory /missing does not exist\n"
+      }
+    ]
+  },
+  "usage-unknown-flag": {
+    "args": [
+      "check",
+      "/proj",
+      "--nope"
+    ],
+    "code": 2,
+    "events": [
+      {
+        "kind": "stderr",
+        "text": "effektive: unknown flag `--nope` for `check`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc] [--validate]     also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+      }
+    ]
+  },
+  "errors-declaration-duplicate-field": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-duplicate-field.eff:2:41: error declaration/010: the record type already has a field named `id`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-duplicate-field.eff:5:34: error declaration/010: the record type already has a field named `reason`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-duplicate-name": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-duplicate-name.eff:4:6: error declaration/001: `A` is already declared in this module\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-duplicate-name.eff:7:7: error declaration/001: `A` is already declared in this module\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-duplicate-name.eff:12:3: error declaration/001: service `S` already has a method named `m`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-duplicate-name.eff:18:3: error declaration/001: `p` is already bound in this scope\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-duplicate-name.eff:24:9: error declaration/001: `v` is already bound in this scope\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 5 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-error-tag-field": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-error-tag-field.eff:2:18: error declaration/009: the field name `_tag` is reserved for generated tags\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-declaration-exported-const-annotation": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-exported-const-annotation.eff:2:14: error declaration/006: the exported constant `answer` needs a type annotation\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-exported-const-annotation.eff:5:14: error declaration/006: the exported constant `label` needs a type annotation\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-exported-function-annotations": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-exported-function-annotations.eff:2:14: error declaration/005: the exported function `noResult` needs a result annotation\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-exported-function-annotations.eff:7:14: error declaration/005: the exported function `neither` needs a result annotation\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-function-field": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:8:22: error declaration/015: the field `run` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:11:23: error declaration/015: the field `run` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:15:10: error declaration/015: the field `maybe` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:17:9: error declaration/015: the field `many` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:19:11: error declaration/015: the field `nested` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:21:11: error declaration/015: the field `either` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:25:30: error declaration/015: the field `steps` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:29:23: error declaration/015: the field `later` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:35:8: error declaration/015: the field `job` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:37:9: error declaration/015: the field `cell` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-function-field.eff:39:10: error declaration/015: the field `items` has a function or deferred type, which a tagged record or error declaration cannot hold\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 11 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-map-key": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-map-key.eff:4:19: error declaration/019: A Map key must be data, found `() => Int`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-map-key.eff:7:20: error declaration/019: A Set element must be data, found `Ref<Int>`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-opaque-field": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "host.effi:6:30: error declaration/016: the field `conn` has an opaque type, which has no schema\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:6:23: error declaration/016: the field `conn` has an opaque type, which has no schema\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:9:24: error declaration/016: the field `conn` has an opaque type, which has no schema\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:13:10: error declaration/016: the field `maybe` has an opaque type, which has no schema\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:15:9: error declaration/016: the field `pair` has an opaque type, which has no schema\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:17:11: error declaration/016: the field `nested` has an opaque type, which has no schema\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:19:11: error declaration/016: the field `either` has an opaque type, which has no schema\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:23:30: error declaration/016: the field `conns` has an opaque type, which has no schema\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:27:23: error declaration/016: the field `later` has an opaque type, which has no schema\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "2 modules, 9 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-primitive-position-host": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "host.effi:5:13: error declaration/013: the primitive type `string` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "2 modules, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-declaration-primitive-position": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-primitive-position.eff:10:29: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-primitive-position.eff:13:34: error declaration/013: the primitive type `number` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-primitive-position.eff:17:14: error declaration/013: the primitive type `string` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-primitive-position.eff:23:14: error declaration/013: the primitive type `number` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-primitive-position.eff:27:24: error declaration/013: the primitive type `boolean` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-primitive-position.eff:32:18: error declaration/013: the primitive type `string` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-primitive-position.eff:35:26: error declaration/013: the primitive type `string` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-primitive-position.eff:38:21: error declaration/013: the primitive type `\"paid\"` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 8 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-provides-method": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "host.effi:4:31: error declaration/003: a provider provides whole services; a method name is not allowed here\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "3 modules, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-declaration-recursive-nominal": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:21:6: error declaration/007: the type `Lone` is defined in terms of itself\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:24:6: error declaration/007: recursive type definition: Odd -> Even -> Odd\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:30:6: error declaration/007: the type `Loop` is defined in terms of itself\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:33:6: error declaration/007: recursive type definition: Ping -> Pong -> Ping\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:39:6: error declaration/007: recursive type definition: Left -> Right -> Left\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:45:6: error declaration/007: recursive type definition: First -> Second -> Anchor -> First\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:53:6: error declaration/007: recursive type definition: Wraps -> Failure -> Wraps\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 7 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-recursive-type": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-type.eff:5:6: error declaration/007: recursive type definition: Ping -> Pong -> Ping\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-type.eff:10:6: error declaration/007: the type `Loop` is defined in terms of itself\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-type.eff:13:7: error declaration/007: the type `Chain` is defined in terms of itself\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-refinement": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-refinement.eff:4:18: error declaration/018: the transparent alias `Alias` cannot have a refinement\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-declaration-reserved-name": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-reserved-name.eff:2:7: error declaration/002: `map` is a reserved prelude or builtin name and cannot be declared\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-reserved-name.eff:5:6: error declaration/002: `string` is a reserved prelude or builtin name and cannot be declared\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-reserved-name.eff:8:12: error declaration/002: `filter` is a reserved prelude name and cannot be a binding\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-reserved-name.eff:12:7: error declaration/002: `Number` is reserved because the generated TypeScript needs it\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-reserved-name.eff:15:6: error declaration/002: `any` is reserved because the generated TypeScript needs it\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-reserved-name.eff:18:12: error declaration/002: `undefined` is reserved because the generated TypeScript needs it\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 6 diagnostics\n"
+      }
+    ]
+  },
+  "errors-declaration-tag-field": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-tag-field.eff:2:17: error declaration/009: the field name `_tag` is reserved for generated tags\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-declaration-type-too-deep": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-type-too-deep.eff:3:6: error declaration/012: the type `A0` is nested deeper than 128 levels, counting the levels inside its aliases\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-declaration-use-before-bind": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "declaration-use-before-bind.eff:6:9: error declaration/004: `outer` is used earlier in this block as an outer name, and this binding would capture that use\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-execution-mode-effectful-constant": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "execution-mode-effectful-constant.eff:6:24: error execution-mode/002: a module constant must have a pure initializer with empty failure and requirement sets\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-execution-mode-impure-callback": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "execution-mode-impure-callback.eff:10:27: error execution-mode/001: the retry schedule callback must be pure\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-execution-mode-pure-type-rows": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "execution-mode-pure-type-rows.eff:5:12: error execution-mode/005: a pure function type cannot declare failures or requirements\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-execution-mode-recursion-signature": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "execution-mode-recursion-signature.eff:2:7: error execution-mode/003: `countdown` is recursive, so it needs explicit parameter and result annotations\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-execution-mode-round-cap": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "execution-mode-round-cap.eff:4:7: error execution-mode/004: the execution modes and effect sets of the recursive group with `f1` did not settle within the round cap\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-failure-contract-absent-handler": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "failure-contract-absent-handler.eff:8:5: error failure-contract/002: the protected block cannot fail with `Missing`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-failure-contract-alias-member": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "failure-contract-alias-member.eff:7:37: error failure-contract/004: `Mixed` has a member that is not an error: `Name`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "failure-contract-alias-member.eff:10:38: error failure-contract/004: `Nested` has a member that is not an error: `Name`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-failure-contract-duplicate-handler": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "failure-contract-duplicate-handler.eff:12:5: error failure-contract/003: the error `Missing` already has a handler\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "failure-contract-duplicate-handler.eff:23:5: error failure-contract/002: the protected block cannot fail with `Absent`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "failure-contract-duplicate-handler.eff:25:5: error failure-contract/003: the error `Absent` already has a handler\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
+      }
+    ]
+  },
+  "errors-failure-contract-extra-failure": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "failure-contract-extra-failure.eff:14:3: error failure-contract/001: the body can fail with Missing, which the `fails` clause does not list\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-module-bad-specifier": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "main.eff:2:19: error module/001: relative import `./lib` must end in .eff\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:4:19: error module/001: import `lodash` must start with ./ or ../, or use the host: prefix\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:6:19: error module/001: import `../outside.eff` leaves the project root\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
+      }
+    ]
+  },
+  "errors-module-import-cycle": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "a.eff:2:19: error module/003: import cycle: a -> b -> a\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "2 modules, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-module-import-policy": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "domain/main.eff:2:23: error module/005: module `domain/main` cannot import `outside` under the project import rules\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "2 modules, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-module-initialization-cycle": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "module-initialization-cycle.eff:2:7: error module/004: module initialization cycle: first -> second -> first\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-module-missing-file": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "main.eff:2:19: error module/002: cannot load nothere.eff: the file does not exist\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:4:19: error module/002: host module `nothing` is not registered in effektive.json\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-pattern-foreign-constructor": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "pattern-foreign-constructor.eff:5:5: error pattern/003: \"text\" does not belong to the subject (an option)\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-pattern-nominal-coverage": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "pattern-nominal-coverage.eff:13:3: error pattern/001: the match is not exhaustive; it needs Square(_)\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "pattern-nominal-coverage.eff:19:3: error pattern/001: the match is not exhaustive; it needs Circle(_)\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "pattern-nominal-coverage.eff:27:5: error pattern/002: this arm is unreachable, because an earlier arm matches the same value\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "pattern-nominal-coverage.eff:35:5: error pattern/002: this arm is unreachable, because an earlier `_` arm matches every value\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 4 diagnostics\n"
+      }
+    ]
+  },
+  "errors-pattern-nominal-foreign": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "pattern-nominal-foreign.eff:15:5: error pattern/003: `Broken` does not belong to the subject (the names Circle | Square)\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-pattern-nominal-subject": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "pattern-nominal-subject.eff:20:5: error pattern/004: a record pattern does not apply to the names Circle | Square; match each by name, as in `Name(x)`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "pattern-nominal-subject.eff:26:9: error pattern/004: a match cannot take a value of type Mixed, which mixes tagged records or errors with other types; a match over names needs tagged records or errors only\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "pattern-nominal-subject.eff:34:5: error pattern/004: `Alias` is a type alias, not a tagged record; a constructor pattern names a tagged record or an error\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "pattern-nominal-subject.eff:41:5: error pattern/004: `Id` is a type alias, not a tagged record; a constructor pattern names a tagged record or an error\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "pattern-nominal-subject.eff:48:5: error pattern/004: a constructor pattern needs a binding, as in `Some(x)` or `E(x)`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 5 diagnostics\n"
+      }
+    ]
+  },
+  "errors-pattern-not-exhaustive": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "pattern-not-exhaustive.eff:3:3: error pattern/001: the match is not exhaustive; it needs None\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-pattern-unreachable-arm": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "pattern-unreachable-arm.eff:6:5: error pattern/002: this arm is unreachable, because an earlier `_` arm matches every value\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-pattern-unsupported-subject": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "pattern-unsupported-subject.eff:3:9: error pattern/004: a match cannot take a value of type Int[]; version 0 matches options, errors, tagged records, records with a literal discriminator field, literals, and primitives\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-pattern-untagged-record": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "main.eff:9:5: error pattern/004: `Circle` has no runtime tag; no union alias of its module lists it\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "2 modules, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-requirement-contract-effectful-map": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "requirement-contract-effectful-map.eff:7:3: error requirement-contract/001: the body requires Counter.next, which the `uses` clause does not list\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-requirement-contract-extra-requirement": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "requirement-contract-extra-requirement.eff:7:3: error requirement-contract/001: the body requires Clock.now, which the `uses` clause does not list\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-sealed-authority": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "lib.eff:9:20: error declaration/017: `sealed` needs a type with identity, and the body of `Choice` is a union with a non-literal member or a bare name\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "lib.eff:12:20: error declaration/017: `sealed` needs a type with identity, and the body of `Same` is a union with a non-literal member or a bare name\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:5:3: error sealed/001: only the declaring module can construct the sealed type `Positive`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:9:4: error sealed/002: only the declaring module can update the sealed type `Article`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:13:3: error sealed/003: only the declaring module can use arithmetic on the sealed type `Positive`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:16:35: error sealed/004: only the declaring module can derive a Schema that decodes to a sealed type\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:20:3: error type-mismatch/003: the function body has type int, but Positive is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:24:3: error type-mismatch/003: the function body has type int, but Natural is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:28:3: error type-mismatch/003: the function body has type Positive, but Int is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:32:3: error type-mismatch/003: the function body has type Natural, but Int is expected\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "2 modules, 10 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-bad-escape": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-bad-escape.eff:2:16: error syntax/003: invalid escape sequence: \\q\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-bad-escape.eff:4:18: error syntax/003: invalid escape sequence: \\u needs four hex digits\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-bad-escape.eff:7:11: error syntax/002: string literal has no closing quote\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-bad-escape.eff:7:21: error syntax/003: invalid escape sequence: backslash at end of line\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-bad-escape.eff:9:17: error syntax/003: string literal contains the control character U+0009; use an escape sequence\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 5 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-expected-token": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:2:27: error syntax/008: expected an expression, found end of line\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:4:19: error syntax/008: expected a type, found end of line\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:6:36: error syntax/008: expected `else`, found end of line\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:8:14: error module/002: cannot load x.eff: the file does not exist\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:8:14: error syntax/008: expected `from`, found `\"./x.eff\"`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:11:8: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:11:13: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:11:13: error syntax/008: expected `:`, found `int`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:14:22: error unknown-name/001: unknown name `foo`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:14:28: error syntax/008: expected `,`, found `2`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:16:28: error unknown-name/001: unknown name `x`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:16:40: error syntax/008: expected `=>`, found `1`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:18:8: error syntax/008: expected a declaration, found `5`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:20:22: error unknown-name/001: unknown name `foo`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-expected-token.eff:20:28: error syntax/008: expected `)`, found the start of the next declaration\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 15 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-host-const": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 0,
+    "events": [
+      {
+        "kind": "stderr",
+        "text": "0 modules, 0 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-invalid-pattern": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:1:34: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:1:42: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:4:10: error syntax/011: nested patterns are not supported; bind one name\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:7:19: error unknown-name/001: unknown type `Shape`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:7:27: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:10:13: error syntax/011: a field in a record pattern must match a literal\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:13:25: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:13:32: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:16:5: error syntax/011: expected a pattern, found `=>`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:19:28: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:19:35: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-invalid-pattern.eff:22:10: error syntax/011: nested patterns are not supported; bind one name\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 12 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-malformed-number": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-malformed-number.eff:2:21: error syntax/006: malformed number: a number cannot have a leading zero\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-malformed-number.eff:4:26: error syntax/006: malformed number: the exponent has no digits\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-malformed-number.eff:6:30: error syntax/006: malformed number: the exponent has no digits\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-malformed-number.eff:8:25: error syntax/006: malformed number: a number cannot be followed by letters\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 4 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-number-not-finite": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-number-not-finite.eff:3:16: error syntax/005: number literal is not a finite value\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-number-not-finite.eff:5:20: error syntax/005: number literal is not a finite value\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-option-fallback-logical": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-option-fallback-logical.eff:2:37: error syntax/015: parenthesize logical operands when mixing `??` with `&&` or `||`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-syntax-provider-in-eff": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-provider-in-eff.eff:1:23: error module/002: cannot load users.eff: the file does not exist\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-provider-in-eff.eff:3:1: error syntax/013: a provider declaration is allowed only in a host interface file (.effi)\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-provider-in-eff.eff:5:8: error syntax/013: a provider declaration is allowed only in a host interface file (.effi)\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-record-spread": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-record-spread.eff:3:22: error syntax/014: a spread must be the first field and appear only once\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-record-spread.eff:3:22: error type-mismatch/005: a record spread must come first\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-record-spread.eff:5:26: error syntax/014: a spread must be the first field and appear only once\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-record-spread.eff:5:26: error type-mismatch/005: a record spread must come first\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 4 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-reserved-word": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-reserved-word.eff:2:7: error syntax/007: `class` is a reserved word and cannot be a name\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-reserved-word.eff:4:7: error declaration/002: `void` is a reserved prelude or builtin name and cannot be declared\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-reserved-word.eff:4:7: error syntax/007: `void` is a reserved word and cannot be a name\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-reserved-word.eff:6:12: error syntax/007: `function` is a reserved word and cannot be a name\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-reserved-word.eff:6:22: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-reserved-word.eff:6:28: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-reserved-word.eff:8:15: error declaration/013: the primitive type `int` can occur only inside a type or error declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-reserved-word.eff:8:22: error syntax/007: `this` is a reserved word and cannot be a name\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-reserved-word.eff:8:22: error unknown-name/001: unknown name `this`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-reserved-word.eff:9:22: error unknown-name/004: `void` is a value, not a type\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 10 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-unary-operator": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-unary-operator.eff:2:18: error syntax/010: unary operator `-` is not supported; write `0 - x` for a negative value\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unary-operator.eff:4:17: error syntax/010: unary operator `!` is not supported; write `x === false` for a negation\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unary-operator.eff:6:14: error syntax/010: unary operator `+` is not supported\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unary-operator.eff:8:19: error syntax/010: unary operator `-` is not supported; write `0 - x` for a negative value\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 4 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-unexpected-character": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-character.eff:3:15: error syntax/001: unexpected character '@'\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-character.eff:5:20: error syntax/001: unexpected `==`; the equality operator is `===`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-character.eff:7:14: error syntax/001: unexpected character '#'\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-character.eff:9:16: error syntax/001: unexpected character 'é'\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-character.eff:12:16: error syntax/001: unexpected character '''\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-character.eff:12:18: error syntax/001: unexpected character '''\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-character.eff:14:17: error syntax/001: unexpected character '&'; the AND operator is `&&`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-character.eff:16:17: error syntax/001: unexpected `!=`; the inequality operator is `!==`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 8 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-unexpected-token": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-token.eff:2:1: error syntax/009: unexpected `foo`; expected a declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-token.eff:5:1: error syntax/009: unexpected `}`; expected a declaration\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "syntax-unexpected-token.eff:8:1: error syntax/009: unexpected `)`; expected a declaration\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
+      }
+    ]
+  },
+  "errors-syntax-unterminated-comment": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-unterminated-comment.eff:3:1: error syntax/004: block comment has no closing `*/`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-syntax-unterminated-string": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-unterminated-string.eff:3:11: error syntax/002: string literal has no closing quote\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-argument-count": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-argument-count.eff:5:3: error type-mismatch/004: the function takes 1 argument, but 2 are given\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-argument-type": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-argument-type.eff:5:6: error type-mismatch/003: argument 1 has type string, but Int is expected\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-binding-arrow": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-binding-arrow.eff:4:46: error type-mismatch/003: the function has type (Int) => Int, but (Int) => Text is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-binding-arrow.eff:7:52: error type-mismatch/003: the function has type (Int) => Int, but (Int, Int) => Int is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-binding-arrow.eff:10:26: error type-mismatch/003: the value is a function, but Int is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-binding-arrow.eff:16:39: error type-mismatch/003: the function has type (Num) => Int, but (Int) => Num is expected\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 4 diagnostics\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-branch-types": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-branch-types.eff:2:50: error type-mismatch/009: this branch has type string, which has no common type with int from the earlier branches\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-field-read": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-field-read.eff:5:8: error type-mismatch/006: the type { name: string } has no field `nickname`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-inferred-input": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-inferred-input.eff:9:9: error type-mismatch/014: the inferred input `input` has conflicting requirements at `input`: Right and Left\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-inferred-input.eff:12:8: error type-mismatch/003: argument 1 has type Right, but Left is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-inferred-input.eff:12:8: error type-mismatch/014: the inferred input `input` has conflicting requirements at `input`: Right and Left\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-layer-method-shape": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-layer-method-shape.eff:12:11: error type-mismatch/003: the field `save` has type pure (Int, Text) => Int, but (Int, Text) => Text is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-layer-method-shape.eff:18:23: error type-mismatch/005: the record is missing the field `save`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-list-literal": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-list-literal.eff:3:3: error type-mismatch/012: an empty list needs an expected array or tuple type\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-list-literal.eff:7:7: error type-mismatch/012: list element 2 has type string, which has no common array element type with int\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-list-literal.eff:11:3: error type-mismatch/012: the tuple needs 2 elements, but 1 are given\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-local-parameter": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-local-parameter.eff:4:5: error type-mismatch/003: argument 1 has type int, but unknown is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-local-parameter.eff:10:3: error type-mismatch/008: a value of type unknown is not a function\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-local-parameter.eff:10:3: error type-mismatch/011: the parameter `callback` needs a type annotation because its callback type cannot be inferred\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-nominal-identity": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-nominal-identity.eff:23:3: error type-mismatch/003: the function body has type { id: UserId, name: Text, nick?: Text }, but User is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-nominal-identity.eff:29:3: error type-mismatch/003: the function body has type User, but Twin is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-nominal-identity.eff:37:3: error type-mismatch/003: the function body has type Email, but UserId is expected\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-nominal-identity.eff:43:3: error type-mismatch/007: the operator `===` does not accept operands of type UserId and Email\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-nominal-identity.eff:47:3: error type-mismatch/007: the operator `===` does not accept operands of type User and User\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 5 diagnostics\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-nominal-record": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-nominal-record.eff:16:12: error type-mismatch/003: argument 1 has type Dog, but User is expected\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-not-callable": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-not-callable.eff:3:3: error type-mismatch/008: a value of type Int is not a function\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-operand": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-operand.eff:3:3: error type-mismatch/007: the operator `+` does not accept operands of type int and string\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-prelude-argument": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-prelude-argument.eff:3:8: error type-mismatch/010: `fail` needs a value of a named error type, but the value has type Int\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-prelude-argument.eff:10:10: error type-mismatch/010: the error `Boom` needs a record literal such as Boom({ field: value })\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-prelude-argument.eff:15:10: error type-mismatch/010: the error `Boom` needs a record literal such as Boom({ field: value })\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-record-field": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-record-field.eff:5:4: error type-mismatch/005: the record is missing the field `active`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-record-literal": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-record-literal.eff:17:20: error type-mismatch/003: a record literal does not pick a variant; write `Fixed({ ... })` or `Times({ ... })`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-record-literal.eff:23:25: error type-mismatch/003: the constant has type { amount: int }, but Fixed is expected\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-refinement": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-refinement.eff:7:8: error type-mismatch/013: argument 1 does not satisfy the required refinement Positive\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-type-arguments": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-type-arguments.eff:4:10: error type-mismatch/001: `Option` takes 1 type argument, but 2 are given\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-type-arguments.eff:7:10: error type-mismatch/001: `Option` takes 1 type argument, but 0 are given\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-type-arguments.eff:10:13: error type-mismatch/001: `int` takes no type arguments\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-type-arguments.eff:13:15: error type-mismatch/001: `Count` takes no type arguments\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-type-arguments.eff:16:10: error type-mismatch/001: `Option` takes 1 type argument, but 2 are given\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 5 diagnostics\n"
+      }
+    ]
+  },
+  "errors-type-mismatch-void-aggregate": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-void-aggregate.eff:2:23: error type-mismatch/002: `void` cannot be a record field, an array element, or a tuple element\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-void-aggregate.eff:5:14: error type-mismatch/002: `void` cannot be a record field, an array element, or a tuple element\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "type-mismatch-void-aggregate.eff:8:19: error type-mismatch/002: `void` cannot be a record field, an array element, or a tuple element\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
+      }
+    ]
+  },
+  "errors-unknown-name-catch-nominal": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "unknown-name-catch-nominal.eff:12:5: error unknown-name/004: `Circle` is a type, not an error\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-unknown-name-import-export": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "main.eff:3:17: error unknown-name/002: `hidden` is not exported by module `lib`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "main.eff:3:25: error unknown-name/002: module `lib` has no declaration named `absent`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "2 modules, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-unknown-name-service-method": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "unknown-name-service-method.eff:6:30: error unknown-name/003: service `Store` has no method named `put`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-service-method.eff:9:43: error unknown-name/003: service `Store` has no method named `nope`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-unknown-name-undefined-name": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "unknown-name-undefined-name.eff:6:21: error unknown-name/001: unknown type `Nope`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-undefined-name.eff:9:22: error unknown-name/001: unknown name `missing`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-undefined-name.eff:13:9: error unknown-name/001: unknown error `Nope`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-undefined-name.eff:16:24: error unknown-name/001: unknown service `Ghost`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-undefined-name.eff:20:13: error unknown-name/001: `x` is used in its own initializer before it is bound\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-undefined-name.eff:25:15: error unknown-name/001: unknown type `Absent`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 6 diagnostics\n"
+      }
+    ]
+  },
+  "errors-unknown-name-wrong-kind": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "unknown-name-wrong-kind.eff:8:22: error unknown-name/004: `User` is a type, not a value; call it to construct a value\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-wrong-kind.eff:11:22: error unknown-name/004: the builtin `map` can only be called or used as a pipeline stage\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-wrong-kind.eff:14:24: error unknown-name/004: `User` is a type, not a service\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-wrong-kind.eff:17:17: error unknown-name/004: `Store` is a service, not a type\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-wrong-kind.eff:20:25: error unknown-name/004: `Store` is a service, not an error\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 5 diagnostics\n"
+      }
+    ]
+  }
+}

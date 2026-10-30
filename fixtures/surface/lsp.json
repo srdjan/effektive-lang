@@ -1,0 +1,1924 @@
+[
+  {
+    "step": "initialize",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "capabilities": {
+            "positionEncoding": "utf-16",
+            "textDocumentSync": {
+              "openClose": true,
+              "change": 2,
+              "save": {
+                "includeText": false
+              }
+            },
+            "hoverProvider": true,
+            "definitionProvider": true,
+            "documentSymbolProvider": true,
+            "referencesProvider": true,
+            "renameProvider": {
+              "prepareProvider": true
+            },
+            "completionProvider": {
+              "triggerCharacters": [
+                "."
+              ]
+            },
+            "signatureHelpProvider": {
+              "triggerCharacters": [
+                "(",
+                ","
+              ]
+            },
+            "semanticTokensProvider": {
+              "legend": {
+                "tokenTypes": [
+                  "type",
+                  "class",
+                  "interface",
+                  "parameter",
+                  "variable",
+                  "property",
+                  "function",
+                  "method",
+                  "keyword",
+                  "string",
+                  "number",
+                  "comment",
+                  "operator"
+                ],
+                "tokenModifiers": [
+                  "declaration",
+                  "readonly"
+                ]
+              },
+              "full": true
+            },
+            "codeActionProvider": {
+              "codeActionKinds": [
+                "quickfix"
+              ]
+            },
+            "inlayHintProvider": true
+          },
+          "serverInfo": {
+            "name": "effektive"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "step": "initialized",
+    "sent": []
+  },
+  {
+    "step": "textDocument/didOpen main",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": {
+          "uri": "file:///work/examples/main.eff",
+          "version": 1,
+          "diagnostics": []
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/didOpen users",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": {
+          "uri": "file:///work/examples/users.eff",
+          "version": 1,
+          "diagnostics": []
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/hover",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "result": {
+          "contents": {
+            "kind": "markdown",
+            "value": "```effektive\n(UserId) => Name fails StoreUnavailable uses Users.find\n```"
+          },
+          "range": {
+            "start": {
+              "line": 5,
+              "character": 27
+            },
+            "end": {
+              "line": 5,
+              "character": 38
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/definition",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "result": {
+          "uri": "file:///work/examples/users.eff",
+          "range": {
+            "start": {
+              "line": 35,
+              "character": 13
+            },
+            "end": {
+              "line": 35,
+              "character": 24
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/references",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "result": [
+          {
+            "uri": "file:///work/examples/main.eff",
+            "range": {
+              "start": {
+                "line": 0,
+                "character": 9
+              },
+              "end": {
+                "line": 0,
+                "character": 20
+              }
+            }
+          },
+          {
+            "uri": "file:///work/examples/main.eff",
+            "range": {
+              "start": {
+                "line": 5,
+                "character": 27
+              },
+              "end": {
+                "line": 5,
+                "character": 38
+              }
+            }
+          },
+          {
+            "uri": "file:///work/examples/users.eff",
+            "range": {
+              "start": {
+                "line": 35,
+                "character": 13
+              },
+              "end": {
+                "line": 35,
+                "character": 24
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "step": "textDocument/prepareRename",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "result": {
+          "range": {
+            "start": {
+              "line": 5,
+              "character": 27
+            },
+            "end": {
+              "line": 5,
+              "character": 38
+            }
+          },
+          "placeholder": "displayName"
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/rename",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "result": {
+          "documentChanges": [
+            {
+              "textDocument": {
+                "uri": "file:///work/examples/main.eff",
+                "version": 1
+              },
+              "edits": [
+                {
+                  "range": {
+                    "start": {
+                      "line": 0,
+                      "character": 9
+                    },
+                    "end": {
+                      "line": 0,
+                      "character": 20
+                    }
+                  },
+                  "newText": "shownName"
+                },
+                {
+                  "range": {
+                    "start": {
+                      "line": 5,
+                      "character": 27
+                    },
+                    "end": {
+                      "line": 5,
+                      "character": 38
+                    }
+                  },
+                  "newText": "shownName"
+                }
+              ]
+            },
+            {
+              "textDocument": {
+                "uri": "file:///work/examples/users.eff",
+                "version": 1
+              },
+              "edits": [
+                {
+                  "range": {
+                    "start": {
+                      "line": 35,
+                      "character": 13
+                    },
+                    "end": {
+                      "line": 35,
+                      "character": 24
+                    }
+                  },
+                  "newText": "shownName"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/completion",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "isIncomplete": false,
+          "items": [
+            {
+              "label": "displayName",
+              "kind": 3,
+              "textEdit": {
+                "range": {
+                  "start": {
+                    "line": 5,
+                    "character": 27
+                  },
+                  "end": {
+                    "line": 5,
+                    "character": 38
+                  }
+                },
+                "newText": "displayName"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/signatureHelp",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 8,
+        "result": {
+          "signatures": [
+            {
+              "label": "displayName(id: UserId): Name fails StoreUnavailable uses Users.find",
+              "parameters": [
+                {
+                  "label": "id: UserId"
+                }
+              ]
+            }
+          ],
+          "activeSignature": 0,
+          "activeParameter": 0
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/semanticTokens/full",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "result": {
+          "data": [
+            0,
+            0,
+            6,
+            8,
+            0,
+            0,
+            7,
+            4,
+            8,
+            0,
+            0,
+            5,
+            6,
+            0,
+            3,
+            0,
+            9,
+            6,
+            0,
+            0,
+            1,
+            0,
+            6,
+            8,
+            0,
+            0,
+            7,
+            4,
+            8,
+            0,
+            0,
+            5,
+            4,
+            0,
+            3,
+            0,
+            7,
+            6,
+            0,
+            0,
+            2,
+            0,
+            6,
+            8,
+            0,
+            0,
+            7,
+            4,
+            8,
+            0,
+            0,
+            5,
+            4,
+            0,
+            3,
+            1,
+            2,
+            2,
+            5,
+            0,
+            0,
+            4,
+            6,
+            0,
+            0,
+            1,
+            2,
+            4,
+            5,
+            0,
+            0,
+            6,
+            6,
+            0,
+            0,
+            1,
+            2,
+            6,
+            5,
+            0,
+            0,
+            8,
+            7,
+            0,
+            0,
+            3,
+            0,
+            6,
+            8,
+            0,
+            0,
+            7,
+            5,
+            8,
+            0,
+            0,
+            6,
+            11,
+            1,
+            3,
+            0,
+            16,
+            2,
+            5,
+            0,
+            0,
+            4,
+            6,
+            0,
+            0,
+            1,
+            0,
+            6,
+            8,
+            0,
+            0,
+            7,
+            5,
+            8,
+            0,
+            0,
+            6,
+            16,
+            1,
+            3,
+            0,
+            21,
+            7,
+            5,
+            0,
+            0,
+            9,
+            6,
+            0,
+            0,
+            2,
+            0,
+            6,
+            8,
+            0,
+            0,
+            7,
+            7,
+            8,
+            0,
+            0,
+            8,
+            5,
+            2,
+            3,
+            1,
+            2,
+            4,
+            7,
+            3,
+            0,
+            5,
+            2,
+            5,
+            0,
+            0,
+            4,
+            6,
+            0,
+            2,
+            0,
+            9,
+            6,
+            0,
+            0,
+            0,
+            6,
+            1,
+            12,
+            0,
+            0,
+            1,
+            4,
+            0,
+            2,
+            0,
+            4,
+            1,
+            12,
+            0,
+            0,
+            2,
+            5,
+            8,
+            0,
+            0,
+            6,
+            16,
+            1,
+            2,
+            1,
+            2,
+            4,
+            7,
+            3,
+            0,
+            5,
+            4,
+            5,
+            0,
+            0,
+            6,
+            4,
+            0,
+            2,
+            0,
+            7,
+            4,
+            0,
+            0,
+            0,
+            5,
+            5,
+            8,
+            0,
+            0,
+            6,
+            16,
+            1,
+            2,
+            1,
+            2,
+            3,
+            7,
+            3,
+            0,
+            7,
+            4,
+            0,
+            2,
+            0,
+            7,
+            5,
+            8,
+            0,
+            0,
+            6,
+            16,
+            1,
+            2,
+            3,
+            0,
+            6,
+            8,
+            0,
+            0,
+            7,
+            5,
+            8,
+            0,
+            0,
+            6,
+            7,
+            6,
+            3,
+            0,
+            11,
+            2,
+            3,
+            3,
+            0,
+            4,
+            6,
+            0,
+            2,
+            0,
+            9,
+            4,
+            0,
+            2,
+            1,
+            2,
+            5,
+            8,
+            0,
+            0,
+            6,
+            11,
+            1,
+            2,
+            0,
+            12,
+            1,
+            12,
+            0,
+            0,
+            2,
+            16,
+            1,
+            2,
+            1,
+            2,
+            4,
+            8,
+            0,
+            0,
+            5,
+            5,
+            2,
+            2,
+            0,
+            6,
+            4,
+            7,
+            2,
+            0,
+            5,
+            2,
+            12,
+            0,
+            1,
+            2,
+            5,
+            8,
+            0,
+            0,
+            6,
+            5,
+            2,
+            2,
+            0,
+            6,
+            4,
+            7,
+            2,
+            0,
+            5,
+            2,
+            3,
+            2,
+            1,
+            4,
+            4,
+            6,
+            2,
+            0,
+            5,
+            4,
+            4,
+            3,
+            0,
+            6,
+            2,
+            12,
+            0,
+            0,
+            3,
+            4,
+            4,
+            2,
+            1,
+            4,
+            4,
+            6,
+            2,
+            0,
+            5,
+            2,
+            12,
+            0,
+            0,
+            3,
+            4,
+            6,
+            2,
+            0,
+            5,
+            11,
+            1,
+            2,
+            0,
+            14,
+            2,
+            3,
+            2,
+            3,
+            0,
+            6,
+            8,
+            0,
+            0,
+            7,
+            5,
+            8,
+            0,
+            0,
+            6,
+            6,
+            6,
+            3,
+            0,
+            10,
+            2,
+            3,
+            3,
+            0,
+            4,
+            6,
+            0,
+            2,
+            0,
+            8,
+            4,
+            3,
+            3,
+            0,
+            6,
+            4,
+            0,
+            2,
+            0,
+            7,
+            4,
+            0,
+            2,
+            1,
+            2,
+            5,
+            8,
+            0,
+            0,
+            6,
+            11,
+            1,
+            2,
+            0,
+            12,
+            1,
+            12,
+            0,
+            0,
+            2,
+            16,
+            1,
+            2,
+            1,
+            2,
+            4,
+            8,
+            0,
+            0,
+            5,
+            5,
+            2,
+            2,
+            0,
+            6,
+            4,
+            7,
+            2,
+            0,
+            5,
+            1,
+            12,
+            0,
+            0,
+            2,
+            5,
+            2,
+            2,
+            0,
+            6,
+            4,
+            7,
+            2,
+            0,
+            5,
+            2,
+            12,
+            0,
+            1,
+            2,
+            5,
+            8,
+            0,
+            0,
+            6,
+            4,
+            4,
+            3,
+            0,
+            7,
+            7,
+            6,
+            2,
+            0,
+            8,
+            2,
+            3,
+            2,
+            1,
+            2,
+            5,
+            8,
+            0,
+            0,
+            6,
+            7,
+            4,
+            3,
+            0,
+            15,
+            4,
+            4,
+            2,
+            0,
+            6,
+            4,
+            3,
+            2,
+            1,
+            2,
+            5,
+            2,
+            2,
+            0,
+            6,
+            4,
+            7,
+            2,
+            0,
+            5,
+            7,
+            4,
+            2,
+            1,
+            2,
+            7,
+            4,
+            2,
+            3,
+            0,
+            6,
+            8,
+            0,
+            0,
+            7,
+            5,
+            8,
+            0,
+            0,
+            6,
+            11,
+            6,
+            3,
+            0,
+            15,
+            2,
+            3,
+            3,
+            0,
+            4,
+            6,
+            0,
+            2,
+            0,
+            9,
+            4,
+            0,
+            2,
+            1,
+            2,
+            5,
+            8,
+            0,
+            0,
+            6,
+            16,
+            1,
+            2,
+            1,
+            2,
+            4,
+            8,
+            0,
+            0,
+            5,
+            5,
+            2,
+            2,
+            0,
+            6,
+            4,
+            7,
+            2,
+            0,
+            5,
+            2,
+            12,
+            0,
+            1,
+            2,
+            3,
+            8,
+            0,
+            1,
+            4,
+            7,
+            6,
+            2,
+            0,
+            8,
+            2,
+            3,
+            2,
+            0,
+            4,
+            4,
+            5,
+            0,
+            1,
+            4,
+            5,
+            8,
+            0,
+            1,
+            4,
+            11,
+            1,
+            2,
+            0,
+            12,
+            5,
+            4,
+            3,
+            0,
+            7,
+            2,
+            12,
+            0,
+            0,
+            3,
+            7,
+            9,
+            0,
+            3,
+            0,
+            6,
+            8,
+            0,
+            0,
+            7,
+            5,
+            8,
+            0,
+            0,
+            6,
+            11,
+            6,
+            3,
+            0,
+            18,
+            4,
+            0,
+            2,
+            1,
+            2,
+            5,
+            8,
+            0,
+            0,
+            6,
+            16,
+            1,
+            2,
+            1,
+            2,
+            4,
+            8,
+            0,
+            0,
+            5,
+            5,
+            2,
+            2,
+            0,
+            6,
+            3,
+            7,
+            2,
+            0,
+            4,
+            2,
+            12,
+            0,
+            1,
+            2,
+            5,
+            2,
+            2,
+            0,
+            6,
+            3,
+            7,
+            2,
+            1,
+            4,
+            2,
+            12,
+            0,
+            0,
+            3,
+            6,
+            6,
+            2,
+            0,
+            7,
+            4,
+            3,
+            3,
+            0,
+            5,
+            2,
+            12,
+            0,
+            0,
+            3,
+            4,
+            3,
+            2,
+            0,
+            5,
+            6,
+            5,
+            0,
+            1,
+            4,
+            2,
+            12,
+            0,
+            0,
+            3,
+            3,
+            6,
+            2,
+            0,
+            4,
+            4,
+            3,
+            3,
+            0,
+            5,
+            2,
+            12,
+            0,
+            0,
+            3,
+            4,
+            3,
+            2,
+            0,
+            5,
+            4,
+            5,
+            0
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/documentSymbol",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "result": [
+          {
+            "name": "UserId",
+            "kind": 23,
+            "range": {
+              "start": {
+                "line": 0,
+                "character": 0
+              },
+              "end": {
+                "line": 0,
+                "character": 27
+              }
+            },
+            "selectionRange": {
+              "start": {
+                "line": 0,
+                "character": 12
+              },
+              "end": {
+                "line": 0,
+                "character": 18
+              }
+            }
+          },
+          {
+            "name": "Name",
+            "kind": 23,
+            "range": {
+              "start": {
+                "line": 1,
+                "character": 0
+              },
+              "end": {
+                "line": 1,
+                "character": 25
+              }
+            },
+            "selectionRange": {
+              "start": {
+                "line": 1,
+                "character": 12
+              },
+              "end": {
+                "line": 1,
+                "character": 16
+              }
+            }
+          },
+          {
+            "name": "User",
+            "kind": 23,
+            "range": {
+              "start": {
+                "line": 3,
+                "character": 0
+              },
+              "end": {
+                "line": 7,
+                "character": 1
+              }
+            },
+            "selectionRange": {
+              "start": {
+                "line": 3,
+                "character": 12
+              },
+              "end": {
+                "line": 3,
+                "character": 16
+              }
+            }
+          },
+          {
+            "name": "UserMissing",
+            "kind": 5,
+            "range": {
+              "start": {
+                "line": 9,
+                "character": 0
+              },
+              "end": {
+                "line": 9,
+                "character": 41
+              }
+            },
+            "selectionRange": {
+              "start": {
+                "line": 9,
+                "character": 13
+              },
+              "end": {
+                "line": 9,
+                "character": 24
+              }
+            }
+          },
+          {
+            "name": "StoreUnavailable",
+            "kind": 5,
+            "range": {
+              "start": {
+                "line": 10,
+                "character": 0
+              },
+              "end": {
+                "line": 10,
+                "character": 51
+              }
+            },
+            "selectionRange": {
+              "start": {
+                "line": 10,
+                "character": 13
+              },
+              "end": {
+                "line": 10,
+                "character": 29
+              }
+            }
+          },
+          {
+            "name": "Users",
+            "kind": 11,
+            "range": {
+              "start": {
+                "line": 12,
+                "character": 0
+              },
+              "end": {
+                "line": 16,
+                "character": 1
+              }
+            },
+            "selectionRange": {
+              "start": {
+                "line": 12,
+                "character": 15
+              },
+              "end": {
+                "line": 12,
+                "character": 20
+              }
+            },
+            "children": [
+              {
+                "name": "find",
+                "kind": 6,
+                "range": {
+                  "start": {
+                    "line": 13,
+                    "character": 2
+                  },
+                  "end": {
+                    "line": 13,
+                    "character": 55
+                  }
+                },
+                "selectionRange": {
+                  "start": {
+                    "line": 13,
+                    "character": 2
+                  },
+                  "end": {
+                    "line": 13,
+                    "character": 6
+                  }
+                }
+              },
+              {
+                "name": "save",
+                "kind": 6,
+                "range": {
+                  "start": {
+                    "line": 14,
+                    "character": 2
+                  },
+                  "end": {
+                    "line": 14,
+                    "character": 47
+                  }
+                },
+                "selectionRange": {
+                  "start": {
+                    "line": 14,
+                    "character": 2
+                  },
+                  "end": {
+                    "line": 14,
+                    "character": 6
+                  }
+                }
+              },
+              {
+                "name": "all",
+                "kind": 6,
+                "range": {
+                  "start": {
+                    "line": 15,
+                    "character": 2
+                  },
+                  "end": {
+                    "line": 15,
+                    "character": 38
+                  }
+                },
+                "selectionRange": {
+                  "start": {
+                    "line": 15,
+                    "character": 2
+                  },
+                  "end": {
+                    "line": 15,
+                    "character": 5
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "getUser",
+            "kind": 12,
+            "range": {
+              "start": {
+                "line": 18,
+                "character": 0
+              },
+              "end": {
+                "line": 24,
+                "character": 3
+              }
+            },
+            "selectionRange": {
+              "start": {
+                "line": 18,
+                "character": 13
+              },
+              "end": {
+                "line": 18,
+                "character": 20
+              }
+            }
+          },
+          {
+            "name": "rename",
+            "kind": 12,
+            "range": {
+              "start": {
+                "line": 26,
+                "character": 0
+              },
+              "end": {
+                "line": 33,
+                "character": 1
+              }
+            },
+            "selectionRange": {
+              "start": {
+                "line": 26,
+                "character": 13
+              },
+              "end": {
+                "line": 26,
+                "character": 19
+              }
+            }
+          },
+          {
+            "name": "displayName",
+            "kind": 12,
+            "range": {
+              "start": {
+                "line": 35,
+                "character": 0
+              },
+              "end": {
+                "line": 42,
+                "character": 3
+              }
+            },
+            "selectionRange": {
+              "start": {
+                "line": 35,
+                "character": 13
+              },
+              "end": {
+                "line": 35,
+                "character": 24
+              }
+            }
+          },
+          {
+            "name": "activeNames",
+            "kind": 12,
+            "range": {
+              "start": {
+                "line": 44,
+                "character": 0
+              },
+              "end": {
+                "line": 49,
+                "character": 29
+              }
+            },
+            "selectionRange": {
+              "start": {
+                "line": 44,
+                "character": 13
+              },
+              "end": {
+                "line": 44,
+                "character": 24
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "step": "effektive/generatedTypeScript",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "result": {
+          "text": "sha256:8d3c36a2842531141d65a614496d2d4c933e538ab7db8c1e51afbd736e3cfa53 (455 characters)",
+          "stale": false
+        }
+      }
+    ]
+  },
+  {
+    "step": "effektive/stats",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "result": {
+          "revision": 1,
+          "rechecked": [
+            "collections",
+            "users",
+            "host/providers",
+            "log",
+            "main",
+            "pay"
+          ],
+          "counts": {
+            "parses": 6,
+            "checks": 6,
+            "lowerings": 1,
+            "emits": 1
+          },
+          "delta": {
+            "interfaceChanged": [
+              "collections",
+              "users",
+              "host/providers",
+              "log",
+              "main",
+              "pay"
+            ],
+            "modeChanged": [
+              "collections",
+              "users",
+              "host/providers",
+              "log",
+              "main",
+              "pay"
+            ]
+          },
+          "typeTableSize": 75,
+          "memory": {
+            "rss": 123456,
+            "heapUsed": 78901
+          }
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/didOpen scratch",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": {
+          "uri": "file:///work/examples/scratch.eff",
+          "version": 1,
+          "diagnostics": [
+            {
+              "range": {
+                "start": {
+                  "line": 3,
+                  "character": 32
+                },
+                "end": {
+                  "line": 3,
+                  "character": 43
+                }
+              },
+              "severity": 1,
+              "code": "failure-contract/001",
+              "source": "effektive",
+              "message": "the body can fail with Failed, which the `fails` clause does not list"
+            },
+            {
+              "range": {
+                "start": {
+                  "line": 3,
+                  "character": 32
+                },
+                "end": {
+                  "line": 3,
+                  "character": 43
+                }
+              },
+              "severity": 1,
+              "code": "requirement-contract/001",
+              "source": "effektive",
+              "message": "the body requires Clock.now, which the `uses` clause does not list"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/codeAction",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 13,
+        "result": [
+          {
+            "title": "Add missing fails and uses entries",
+            "kind": "quickfix",
+            "edit": {
+              "documentChanges": [
+                {
+                  "textDocument": {
+                    "uri": "file:///work/examples/scratch.eff",
+                    "version": 1
+                  },
+                  "edits": [
+                    {
+                      "range": {
+                        "start": {
+                          "line": 3,
+                          "character": 29
+                        },
+                        "end": {
+                          "line": 3,
+                          "character": 29
+                        }
+                      },
+                      "newText": "fails Failed uses Clock.now "
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "step": "textDocument/didOpen hints",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": {
+          "uri": "file:///work/examples/hints.eff",
+          "version": 1,
+          "diagnostics": []
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/inlayHint",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 14,
+        "result": [
+          {
+            "position": {
+              "line": 3,
+              "character": 15
+            },
+            "label": " fails Failed uses Clock.now",
+            "kind": 1,
+            "paddingLeft": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "step": "textDocument/didChange",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": {
+          "uri": "file:///work/examples/main.eff",
+          "version": 2,
+          "diagnostics": [
+            {
+              "range": {
+                "start": {
+                  "line": 5,
+                  "character": 39
+                },
+                "end": {
+                  "line": 5,
+                  "character": 40
+                }
+              },
+              "severity": 1,
+              "code": "type-mismatch/003",
+              "source": "effektive",
+              "message": "argument 1 has type int, but UserId is expected"
+            }
+          ]
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "effektive/generatedChanged",
+        "params": {
+          "uri": "file:///work/examples/main.eff"
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/didChange users",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": {
+          "uri": "file:///work/examples/main.eff",
+          "version": 2,
+          "diagnostics": [
+            {
+              "range": {
+                "start": {
+                  "line": 0,
+                  "character": 9
+                },
+                "end": {
+                  "line": 0,
+                  "character": 20
+                }
+              },
+              "severity": 1,
+              "code": "unknown-name/002",
+              "source": "effektive",
+              "message": "module `users` has no declaration named `displayName`"
+            }
+          ]
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": {
+          "uri": "file:///work/examples/users.eff",
+          "version": 2,
+          "diagnostics": [
+            {
+              "range": {
+                "start": {
+                  "line": 52,
+                  "character": 21
+                },
+                "end": {
+                  "line": 52,
+                  "character": 24
+                }
+              },
+              "severity": 1,
+              "code": "declaration/013",
+              "source": "effektive",
+              "message": "the primitive type `int` can occur only inside a type or error declaration"
+            },
+            {
+              "range": {
+                "start": {
+                  "line": 52,
+                  "character": 27
+                },
+                "end": {
+                  "line": 52,
+                  "character": 31
+                }
+              },
+              "severity": 1,
+              "code": "type-mismatch/003",
+              "source": "effektive",
+              "message": "the constant has type boolean, but int is expected"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/didSave",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote collections.ts"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote collections.ts.map"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote users.ts"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote users.ts.map"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote host/providers.effi.ts"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote host/providers.effi.ts.map"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote log.ts"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote log.ts.map"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote main.ts"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote main.ts.map"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote pay.ts"
+        }
+      },
+      {
+        "jsonrpc": "2.0",
+        "method": "window/logMessage",
+        "params": {
+          "type": 4,
+          "message": "wrote pay.ts.map"
+        }
+      }
+    ]
+  },
+  {
+    "step": "workspace/didChangeWatchedFiles",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/publishDiagnostics",
+        "params": {
+          "uri": "file:///work/examples/collections.eff",
+          "diagnostics": [
+            {
+              "range": {
+                "start": {
+                  "line": 13,
+                  "character": 21
+                },
+                "end": {
+                  "line": 13,
+                  "character": 24
+                }
+              },
+              "severity": 1,
+              "code": "declaration/013",
+              "source": "effektive",
+              "message": "the primitive type `int` can occur only inside a type or error declaration"
+            },
+            {
+              "range": {
+                "start": {
+                  "line": 13,
+                  "character": 27
+                },
+                "end": {
+                  "line": 13,
+                  "character": 31
+                }
+              },
+              "severity": 1,
+              "code": "type-mismatch/003",
+              "source": "effektive",
+              "message": "the constant has type boolean, but int is expected"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "step": "textDocument/didClose",
+    "sent": []
+  },
+  {
+    "step": "textDocument/formatting",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 15,
+        "error": {
+          "code": -32601,
+          "message": "method not found: textDocument/formatting"
+        }
+      }
+    ]
+  },
+  {
+    "step": "ignored notification",
+    "sent": []
+  },
+  {
+    "step": "shutdown",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 16,
+        "result": null
+      }
+    ]
+  },
+  {
+    "step": "exit",
+    "sent": [],
+    "exits": [
+      0
+    ]
+  }
+]
