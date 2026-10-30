@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.11.0 - 2026-10-30
 
 - `build --tsc` resolves the pinned dependency closure of the target, not the
   newest versions in range. A host import whose range overlaps the closure
