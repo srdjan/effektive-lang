@@ -3,7 +3,7 @@
 import type { Expr, Type } from "../../ir.ts";
 import { AREA } from "../report.ts";
 import { combine, invocationOf } from "../sets.ts";
-import { asFunction, dataOnly, same, unfold, UNIT } from "../typing.ts";
+import { asFunction, dataOnly, fits, unfold, UNIT } from "../typing.ts";
 import { walkExprs } from "../expr_walk.ts";
 import {
   type Comp,
@@ -39,7 +39,8 @@ export function withFiber(
     result: effect.result,
     failures: effect.effects.failures,
   };
-  if (!same(c.env, fn.parameters[0], fiber)) {
+  // The parameter can name the child type, so the fit runs one way, as a callback argument.
+  if (!fits(c.env, fiber, fn.parameters[0])) {
     c.add(
       AREA.types,
       `${path}.use`,

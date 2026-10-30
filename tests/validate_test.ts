@@ -3536,3 +3536,19 @@ const run = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => j
     assert(codesOf(wrong, sources).includes(code), path);
   }
 });
+
+Deno.test("a withFiber parameter may name the type of its child", () => {
+  const { ir, sources } = lowerText(`type Int = int
+type Item = { id: Int }
+type Done = { id: Int }
+type Stopped = { code: Int }
+type State = Done | Stopped
+const item = (): Item => ({ id: 1 })
+const done = (): Done => Done({ id: 1 })
+const adopted = (): Int => withFiber(defer(() => 1), (fiber: Fiber<Int, never>) => 1)
+const widened = (): Int => withFiber(defer(() => item()), (fiber: Fiber<{ id: Int }, never>) => 1)
+const tagged = (): Int => withFiber(defer(() => done()), (fiber: Fiber<{ id: Int }, never>) => 1)
+const exact = (): Int => withFiber(defer(() => item()), (fiber: Fiber<Item, never>) => 1)
+`);
+  assertEquals(codesOf(ir, sources), []);
+});

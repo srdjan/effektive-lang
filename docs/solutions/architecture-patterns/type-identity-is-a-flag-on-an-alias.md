@@ -11,7 +11,7 @@ applies_when:
   - "You reorder or add a step in `TypeTable.assignable`"
   - "You add a rule that lets an unnamed value fit a named type"
   - "You compare two types for equality in the IR validator"
-last_updated: 2026-10-25
+last_updated: 2026-10-30
 tags: [type-identity, transparent-alias, tagged-record, assignability, widening, type-table, validator, nominal]
 ---
 
@@ -55,6 +55,7 @@ Keeping identity on the alias also kept the change small: structural queries tha
 - When you edit `TypeTable.assignable` or the validator `assignable`, keep the step order above, and run `tests/types_test.ts`, `tests/validate_typing_test.ts`, and the union tests in `tests/check_body_test.ts`.
 - When you add a coercion from an unnamed value, exclude tagged and opaque targets and union sources, and put construction in the checker, not in assignability.
 - When the validator compares types, decide whether names matter. If they do, use `same()`, not two-way `assignable`.
+- When the validator checks a callback parameter that source can annotate, use one-way `fits()`, not `same()`. The checker fits the supplied type to the declared parameter in one direction. `type Int = int` is an identity, not an alias, so an unnamed `int` child gives `Fiber<int, never>`, and `Fiber<Int, never>` adopts it. `same()` compares names and rejects that valid program. `withFiber` had this defect until 2026-10-30.
 
 ## Examples
 

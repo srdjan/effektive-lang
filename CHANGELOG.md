@@ -8,6 +8,9 @@
 - A file with very many diagnostics returns all of them and no longer crashes.
 - The proof budget belongs to one module, not to one run. A module no longer
   spends the budget of an earlier module.
+- `build --validate` accepts a `withFiber` callback whose parameter names the
+  child type, such as `(fiber: Fiber<Int, never>) => 1` over a literal child.
+  `check` and `build --tsc` already accepted it.
 
 ## 0.10.4 - 2026-10-29
 

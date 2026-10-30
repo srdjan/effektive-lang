@@ -110,6 +110,10 @@ const update = (ref: Ref<Int>): void => updateRef(ref, (n) => n)
 const decodeInt = (input: unknown): Int fails SchemaError => schemaDecode(integer, input)
 const merged = (s: Stream<Int>, t: Stream<Int>) => mergeStreams(s, t)
 const mixed = (jobs: Effect<Int>[]) => allResults(jobs)
+type Cents = int
+type Score = int
+const scored = (): Score => 1
+const scoredFiber = (): Int => withFiber(defer(() => scored()), (fiber) => 1)
 `;
 
 const PROGRAMS = {
@@ -1048,7 +1052,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "fiber.ts:43",
+    site: "fiber.ts:44",
     name: "a withFiber callback whose parameter is not the child Fiber",
     program: "families",
     change: (ir) => {
@@ -1061,7 +1065,61 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "fiber.ts:51",
+    site: "fiber.ts:44",
+    name: "a withFiber parameter that gives a named child a second name",
+    program: "families",
+    change: (ir) => {
+      const use = find(fn(ir, "scoredFiber").body, "with-fiber").use;
+      const forged: Mutable<Type> = {
+        kind: "fiber",
+        result: { kind: "named", id: "type:m#Cents" },
+        failures: [],
+      };
+      use.parameters[0].type = forged;
+      closureType(use).parameters[0] = forged;
+    },
+    expected: [
+      "validation/002 declarations[19].body.use: fiber use parameter does not match child type",
+    ],
+  },
+  {
+    site: "fiber.ts:44",
+    name: "a withFiber parameter with other failures than the child",
+    program: "families",
+    change: (ir) => {
+      const use = find(fn(ir, "fibered").body, "with-fiber").use;
+      const forged: Mutable<Type> = {
+        kind: "fiber",
+        result: INT,
+        failures: ["error:effect/SchemaError"],
+      };
+      use.parameters[0].type = forged;
+      closureType(use).parameters[0] = forged;
+    },
+    expected: [
+      "validation/002 declarations[9].body.use: fiber use parameter does not match child type",
+    ],
+  },
+  {
+    site: "fiber.ts:44",
+    name: "a withFiber parameter that lifts the child Fiber into an Effect",
+    program: "families",
+    change: (ir) => {
+      const use = find(fn(ir, "fibered").body, "with-fiber").use;
+      const forged: Mutable<Type> = {
+        kind: "effect",
+        result: { kind: "fiber", result: INT, failures: [] },
+        effects: { failures: [], requirements: [] },
+      };
+      use.parameters[0].type = forged;
+      closureType(use).parameters[0] = forged;
+    },
+    expected: [
+      "validation/002 declarations[9].body.use: fiber use parameter does not match child type",
+    ],
+  },
+  {
+    site: "fiber.ts:52",
     name: "a withFiber callback whose result is not data",
     program: "families",
     change: (ir) => {
