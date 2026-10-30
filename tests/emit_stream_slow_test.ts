@@ -1,0 +1,2233 @@
+// Slow tests of the emitter: streams. Each test copies a fixture project to a
+// temporary directory, builds there, and runs `deno check`, `deno fmt`, or
+// `deno run` on the result. Nothing is written under fixtures/.
+
+import { assertEquals } from "@std/assert";
+import { runScript } from "./process_helpers.ts";
+import { build, withTemporary } from "./emit_slow_helpers.ts";
+
+Deno.test("switchMapStreams interrupts superseded inners and waits for cleanup", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Outer { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Inner { next(n: Int): Option<[Int, Int]> }",
+        "const outer = unfold(0, (n) => Outer.next(n))",
+        "const switched = switchMapStreams(outer, (n) => unfold(n, (m) => Inner.next(m)))",
+        "export const main = (): Int[] fails Stop uses Outer.next | Inner.next => collectStream(switched)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Deferred, Effect, Layer, Option } from "effect";
+import { Outer, Inner, Stop, main } from "./main.ts";
+
+let ready = [Deferred.makeUnsafe<void>(), Deferred.makeUnsafe<void>()];
+let failOuter = false;
+const outerCalls: number[] = [];
+const started: number[] = [];
+const released: number[] = [];
+const OuterLive = Layer.succeed(Outer)({
+  next: (n) => Effect.sync(() => { outerCalls.push(n); }).pipe(
+    Effect.flatMap(() => n === 0
+      ? Effect.succeed(Option.some([1, 1] as const))
+      : n === 1
+      ? Deferred.await(ready[0]!).pipe(Effect.as(Option.some([2, 2] as const)))
+      : n === 2
+      ? Deferred.await(ready[1]!).pipe(Effect.flatMap(() => failOuter
+        ? Effect.fail(new Stop({}))
+        : Effect.succeed(Option.some([3, 3] as const))))
+      : Effect.succeed(Option.none())),
+  ),
+});
+const InnerLive = Layer.succeed(Inner)({
+  next: (n) => n > 3 ? Effect.succeed(Option.none()) :
+    n === 3 ? Effect.sync(() => { started.push(n); return Option.some([n, n + 100] as const); }) :
+    Effect.sync(() => { started.push(n); }).pipe(
+      Effect.andThen(Deferred.succeed(ready[n - 1]!, undefined)),
+      Effect.andThen(Effect.never),
+      Effect.onInterrupt(() => Effect.sync(() => { released.push(n); })),
+    ),
+});
+const Live = Layer.merge(OuterLive, InnerLive);
+const pending = main().pipe(Effect.provide(Live));
+const before = { outerCalls: [...outerCalls], started: [...started] };
+const values = await Effect.runPromise(pending);
+const success = { values, outerCalls: [...outerCalls], started: [...started], released: [...released] };
+ready = [Deferred.makeUnsafe<void>(), Deferred.makeUnsafe<void>()];
+outerCalls.length = 0;
+started.length = 0;
+released.length = 0;
+failOuter = true;
+const error = await Effect.runPromise(Effect.flip(pending));
+const failure = { tag: error._tag, outerCalls: [...outerCalls], started: [...started], released: [...released] };
+console.log(JSON.stringify({ before, success, failure }));
+`,
+    );
+    assertEquals(result, {
+      before: { outerCalls: [], started: [] },
+      success: {
+        values: [3],
+        outerCalls: [0, 1, 2, 3],
+        started: [1, 2, 3],
+        released: [1, 2],
+      },
+      failure: {
+        tag: "main#Stop",
+        outerCalls: [0, 1, 2],
+        started: [1, 2],
+        released: [1, 2],
+      },
+    });
+  });
+});
+
+Deno.test("catchStream retains earlier values and switches on typed failure", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = { code: Int }",
+        "export error RecoveryStop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Recovery { next(n: Int): Option<[Int, Int]> fails RecoveryStop }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const recovered = catchStream(source, (err) => unfold(err.code, (n) => Recovery.next(n)))",
+        "export const main = (): Int[] fails RecoveryStop uses Source.next | Recovery.next => collectStream(recovered)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Source, Recovery, Stop, RecoveryStop, main } from "./main.ts";
+
+let failRecovery = false;
+const sourceCalls: number[] = [];
+const recoveryCalls: number[] = [];
+const finalized: number[] = [];
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.sync(() => { sourceCalls.push(n); }).pipe(
+    Effect.flatMap(() => n < 2
+      ? Effect.succeed(Option.some([n + 1, n + 1] as const))
+      : Effect.fail(new Stop({ code: 9 }))),
+    Effect.ensuring(Effect.sync(() => { finalized.push(n); })),
+  ),
+});
+const RecoveryLive = Layer.succeed(Recovery)({
+  next: (n) => Effect.sync(() => { recoveryCalls.push(n); }).pipe(
+    Effect.flatMap(() => failRecovery
+      ? Effect.fail(new RecoveryStop({}))
+      : n === 9
+      ? Effect.succeed(Option.some([90, 10] as const))
+      : Effect.succeed(Option.none())),
+  ),
+});
+const pending = main().pipe(Effect.provide(Layer.merge(SourceLive, RecoveryLive)));
+const before = { sourceCalls: [...sourceCalls], recoveryCalls: [...recoveryCalls] };
+const first = await Effect.runPromise(pending);
+const second = await Effect.runPromise(pending);
+failRecovery = true;
+const error = await Effect.runPromise(Effect.flip(pending));
+console.log(JSON.stringify({ before, first, second, tag: error._tag, sourceCalls, recoveryCalls, finalized }));
+`,
+    );
+    assertEquals(result, {
+      before: { sourceCalls: [], recoveryCalls: [] },
+      first: [1, 2, 90],
+      second: [1, 2, 90],
+      tag: "main#RecoveryStop",
+      sourceCalls: [0, 1, 2, 0, 1, 2, 0, 1, 2],
+      recoveryCalls: [9, 10, 9, 10, 9],
+      finalized: [0, 1, 2, 0, 1, 2, 0, 1, 2],
+    });
+  });
+});
+
+Deno.test("retryStream replays values and resets its schedule after output", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Duration> => if (attempt < 2) { Some(0ms) } else { None })",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const retried = retryStream(source, policy)",
+        "export const main = (): Int[] fails Stop uses Source.next => collectStream(retried)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Source, Stop, main } from "./main.ts";
+
+let attempt = 0;
+const calls: number[] = [];
+const finalized: number[] = [];
+const Live = Layer.succeed(Source)({
+  next: (n) => Effect.sync(() => {
+    calls.push(n);
+    if (n === 0) attempt++;
+  }).pipe(
+    Effect.flatMap(() => n === 0
+      ? Effect.succeed(Option.some([1, 1] as readonly [number, number]))
+      : n === 1 && attempt < 3
+      ? Effect.fail(new Stop({}))
+      : n === 1
+      ? Effect.succeed(Option.some([2, 2] as readonly [number, number]))
+      : Effect.succeed(Option.none())),
+    Effect.ensuring(Effect.sync(() => { finalized.push(n); })),
+  ),
+});
+const pending = main().pipe(Effect.provide(Live));
+const before = { calls: [...calls], attempt };
+const first = await Effect.runPromise(pending);
+const firstRun = { attempt, calls: [...calls], finalized: [...finalized] };
+attempt = 0;
+calls.length = 0;
+finalized.length = 0;
+const second = await Effect.runPromise(pending);
+console.log(JSON.stringify({ before, first, firstRun, second, attempt, calls, finalized }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], attempt: 0 },
+      first: [1, 1, 1, 2],
+      firstRun: {
+        attempt: 3,
+        calls: [0, 1, 0, 1, 0, 1, 2],
+        finalized: [0, 1, 0, 1, 0, 1, 2],
+      },
+      second: [1, 1, 1, 2],
+      attempt: 3,
+      calls: [0, 1, 0, 1, 0, 1, 2],
+      finalized: [0, 1, 0, 1, 0, 1, 2],
+    });
+  });
+});
+
+Deno.test("temporal stream controls coalesce and shape or drop elements", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const debounced = debounceStream(source, 0ms)",
+        'const enforced = throttleStream(source, { units: 1, duration: 1000ms, strategy: "enforce" })',
+        'const shaped = throttleStream(source, { units: 1, duration: 1ms, strategy: "shape" })',
+        "export const debounceRun = (): Int[] fails Stop uses Source.next => collectStream(debounced)",
+        "export const enforceRun = (): Int[] fails Stop uses Source.next => collectStream(enforced)",
+        "export const shapeRun = (): Int[] fails Stop uses Source.next => collectStream(shaped)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Source, Stop, debounceRun, enforceRun, shapeRun } from "./main.ts";
+
+let calls = 0;
+let failSource = false;
+const finalized: number[] = [];
+const Live = Layer.succeed(Source)({
+  next: (n) => Effect.sync(() => { calls++; }).pipe(
+    Effect.flatMap(() => failSource && n === 2
+      ? Effect.fail(new Stop({}))
+      : Effect.succeed(n < 3
+        ? Option.some([n + 1, n + 1] as readonly [number, number])
+        : Option.none())),
+    Effect.ensuring(Effect.sync(() => { finalized.push(n); })),
+  ),
+});
+const before = calls;
+const debounced = await Effect.runPromise(debounceRun().pipe(Effect.provide(Live)));
+const enforced = await Effect.runPromise(enforceRun().pipe(Effect.provide(Live)));
+const shaped = await Effect.runPromise(shapeRun().pipe(Effect.provide(Live)));
+failSource = true;
+const failure = await Effect.runPromise(Effect.flip(shapeRun().pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, debounced, enforced, shaped, calls, tag: failure._tag, finalized }));
+`,
+    );
+    assertEquals(result, {
+      before: 0,
+      debounced: [3],
+      enforced: [1],
+      shaped: [1, 2, 3],
+      calls: 15,
+      tag: "main#Stop",
+      finalized: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2],
+    });
+  });
+});
+
+Deno.test("concurrent stream mapping bounds work and closes failed siblings", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> }",
+        "export service Worker { work(n: Int): Int fails Stop }",
+        "export service Inner { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const mapped = mapEffect(source, (n) => Worker.work(n), { concurrency: 2 })",
+        "const nested = flatMapStreams(source, (n) => unfold(n, (m) => Inner.next(m)), { concurrency: 2 })",
+        "export const mapMain = (): Int[] fails Stop uses Source.next | Worker.work => collectStream(mapped)",
+        "export const flatMain = (): Int[] fails Stop uses Source.next | Inner.next => collectStream(nested)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Source, Worker, Inner, Stop, mapMain, flatMain } from "./main.ts";
+
+const calls: number[] = [];
+let active = 0;
+let maximum = 0;
+let fail = false;
+const started: number[] = [];
+const released: number[] = [];
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.sync(() => {
+    calls.push(n);
+    return n >= 3 ? Option.none() : Option.some([n + 1, n + 1] as const);
+  }),
+});
+const perform = (n: number) => Effect.acquireUseRelease(
+  Effect.sync(() => {
+    active++;
+    maximum = Math.max(maximum, active);
+    started.push(n);
+  }),
+  () => Effect.sleep(n === 1 ? "40 millis" : "10 millis").pipe(
+    Effect.flatMap(() => fail && n === 2 ? Effect.fail(new Stop({})) : Effect.succeed(n)),
+  ),
+  () => Effect.sync(() => { active--; released.push(n); }),
+);
+const WorkerLive = Layer.succeed(Worker)({
+  work: (n) => perform(n).pipe(Effect.map((value) => value * 10)),
+});
+const InnerLive = Layer.succeed(Inner)({
+  next: (n) => n > 3 ? Effect.succeed(Option.none()) :
+    perform(n).pipe(Effect.map((value) => Option.some([value, value + 10] as const))),
+});
+const Live = Layer.mergeAll(SourceLive, WorkerLive, InnerLive);
+const reset = () => {
+  calls.length = 0;
+  started.length = 0;
+  released.length = 0;
+  active = 0;
+  maximum = 0;
+};
+const pendingMap = mapMain().pipe(Effect.provide(Live));
+const before = { calls: [...calls], started: [...started] };
+const mapped = await Effect.runPromise(pendingMap);
+const mapSuccess = { mapped, maximum, active, started: [...started], released: [...released].sort() };
+reset();
+fail = true;
+const mapFailure = await Effect.runPromise(Effect.flip(pendingMap));
+const mapFailed = { tag: mapFailure._tag, active, started: [...started], released: [...released].sort() };
+reset();
+fail = false;
+const flat = await Effect.runPromise(flatMain().pipe(Effect.provide(Live)));
+const flatSuccess = { values: [...flat].sort(), maximum, active, started: [...started], released: [...released].sort() };
+reset();
+fail = true;
+const flatFailure = await Effect.runPromise(Effect.flip(flatMain().pipe(Effect.provide(Live))));
+const flatFailed = { tag: flatFailure._tag, active, started: [...started], released: [...released].sort() };
+console.log(JSON.stringify({ before, mapSuccess, mapFailed, flatSuccess, flatFailed }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], started: [] },
+      mapSuccess: {
+        mapped: [10, 20, 30],
+        maximum: 2,
+        active: 0,
+        started: [1, 2, 3],
+        released: [1, 2, 3],
+      },
+      mapFailed: {
+        tag: "main#Stop",
+        active: 0,
+        started: [1, 2],
+        released: [1, 2],
+      },
+      flatSuccess: {
+        values: [1, 2, 3],
+        maximum: 2,
+        active: 0,
+        started: [1, 2, 3],
+        released: [1, 2, 3],
+      },
+      flatFailed: {
+        tag: "main#Stop",
+        active: 0,
+        started: [1, 2],
+        released: [1, 2],
+      },
+    });
+  });
+});
+
+Deno.test("source-authored streams pull incrementally through an effectful sink", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "export error Stop = {}",
+        "export service Source { next(state: Int): Option<[Int, Int]> fails Stop }",
+        "export service Transform { double(value: Int): Int fails Stop }",
+        "export service Consumer { accept(value: Int): void fails Stop }",
+        "const numbers: Stream<Int, Stop, Source.next> = unfold(0, (state) => Source.next(state))",
+        "const doubled: Stream<Int, Stop, Source.next | Transform.double> = mapEffect(numbers, (value) => Transform.double(value))",
+        "const consume: Sink<Int, void, Stop, Consumer.accept> = sinkForEach((value: Int) => Consumer.accept(value))",
+        "export const main = (): void fails Stop uses Source.next | Transform.double | Consumer.accept => runStream(doubled, consume)",
+        "type Int = int",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Consumer, Source, Transform, main } from "./main.ts";
+
+let produced = 0;
+let consumed = 0;
+let maximumAhead = 0;
+const output: number[] = [];
+const SourceLive = Layer.succeed(Source)({
+  next: (state) => Effect.sync(() => {
+    if (state === 4) return Option.none();
+    produced++;
+    maximumAhead = Math.max(maximumAhead, produced - consumed);
+    return Option.some([state, state + 1] as const);
+  }),
+});
+const TransformLive = Layer.succeed(Transform)({
+  double: (value) => Effect.succeed(value * 2),
+});
+const ConsumerLive = Layer.succeed(Consumer)({
+  accept: (value) => Effect.sync(() => { output.push(value); consumed++; }),
+});
+const before = produced;
+await Effect.runPromise(main().pipe(Effect.provide(Layer.mergeAll(
+  SourceLive, TransformLive, ConsumerLive,
+))));
+console.log(JSON.stringify({ before, produced, consumed, maximumAhead, output }));
+`,
+    );
+    assertEquals(result, {
+      before: 0,
+      produced: 4,
+      consumed: 4,
+      maximumAhead: 1,
+      output: [0, 2, 4, 6],
+    });
+  });
+});
+
+Deno.test("buffered merged streams defer production and preserve each source order", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "export service Source { next(state: Int): Option<[Int, Int]> }",
+        "export service Consumer { accept(value: Int): void }",
+        "const first = unfold(0, (state) => Source.next(state))",
+        "const second = unfold(10, (state) => Source.next(state))",
+        "const combined = mergeStreams(bufferStream(first, { capacity: 2 }), second)",
+        "const sink = sinkForEach((value: Int) => Consumer.accept(value))",
+        "export const main = (): void uses Source.next | Consumer.accept => runStream(combined, sink)",
+        "type Int = int",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Consumer, Source, main } from "./main.ts";
+let produced = 0;
+const output: number[] = [];
+const SourceLive = Layer.succeed(Source)({
+  next: (state) => Effect.sync(() => {
+    if (state === 3 || state === 13) return Option.none();
+    produced++;
+    return Option.some([state, state + 1] as const);
+  }),
+});
+const ConsumerLive = Layer.succeed(Consumer)({
+  accept: (value) => Effect.sync(() => { output.push(value); }),
+});
+const before = produced;
+await Effect.runPromise(main().pipe(Effect.provide(Layer.merge(SourceLive, ConsumerLive))));
+console.log(JSON.stringify({ before, produced, first: output.filter((n) => n < 10), second: output.filter((n) => n >= 10) }));
+`,
+    );
+    assertEquals(result, {
+      before: 0,
+      produced: 6,
+      first: [0, 1, 2],
+      second: [10, 11, 12],
+    });
+  });
+});
+
+Deno.test("zipped streams defer production and stop at the shorter input", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "type Text = string",
+        "export service Left { next(n: Int): Option<[Int, Int]> }",
+        "export service Right { next(n: Int): Option<[Text, Int]> }",
+        "export service Output { accept(pair: [Int, Text]): void }",
+        "const left = unfold(0, (n) => Left.next(n))",
+        "const right = unfold(0, (n) => Right.next(n))",
+        "const pairs = zipStreams(left, right)",
+        "const sink = sinkForEach((pair: [Int, Text]) => Output.accept(pair))",
+        "export const main = (): void uses Left.next | Right.next | Output.accept => runStream(pairs, sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Left, Right, Output, main } from "./main.ts";
+let produced = 0;
+const output: Array<readonly [number, string]> = [];
+const LeftLive = Layer.succeed(Left)({
+  next: (n) => Effect.sync(() => {
+    if (n === 2) return Option.none();
+    produced++;
+    return Option.some([n, n + 1] as const);
+  }),
+});
+const RightLive = Layer.succeed(Right)({
+  next: (n) => Effect.sync(() => {
+    if (n === 4) return Option.none();
+    produced++;
+    return Option.some([String(n), n + 1] as const);
+  }),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (pair) => Effect.sync(() => { output.push(pair); }),
+});
+const before = produced;
+await Effect.runPromise(main().pipe(Effect.provide(Layer.mergeAll(LeftLive, RightLive, OutputLive))));
+console.log(JSON.stringify({ before, output }));
+`,
+    );
+    assertEquals(result, { before: 0, output: [[0, "0"], [1, "1"]] });
+  });
+});
+
+Deno.test("zipped stream failure interrupts its waiting peer", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Left { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Right { next(n: Int): Option<[Int, Int]> }",
+        "export service Output { accept(pair: [Int, Int]): void }",
+        "const pairs = zipStreams(unfold(0, (n) => Left.next(n)), unfold(0, (n) => Right.next(n)))",
+        "const sink = sinkForEach((pair: [Int, Int]) => Output.accept(pair))",
+        "export const main = (): void fails Stop uses Left.next | Right.next | Output.accept => runStream(pairs, sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Deferred, Effect, Layer, Option } from "effect";
+import { Left, Right, Output, Stop, main } from "./main.ts";
+const ready = Deferred.makeUnsafe<void>();
+let started = 0;
+let released = 0;
+const LeftLive = Layer.succeed(Left)({
+  next: (n) => n === 0
+    ? Effect.succeed(Option.some([0, 1] as const))
+    : Deferred.await(ready).pipe(Effect.andThen(Effect.fail(new Stop({})))),
+});
+const RightLive = Layer.succeed(Right)({
+  next: (n) => n === 0
+    ? Effect.succeed(Option.some([0, 1] as const))
+    : Effect.sync(() => { started++; }).pipe(
+      Effect.andThen(Deferred.succeed(ready, undefined)),
+      Effect.andThen(Effect.never),
+      Effect.onInterrupt(() => Effect.sync(() => { released++; })),
+    ),
+});
+const OutputLive = Layer.succeed(Output)({ accept: () => Effect.void });
+const error = await Effect.runPromise(Effect.flip(main().pipe(Effect.provide(Layer.mergeAll(LeftLive, RightLive, OutputLive)))));
+console.log(JSON.stringify({ tag: error._tag, started, released }));
+`,
+    );
+    assertEquals(result, { tag: "main#Stop", started: 1, released: 1 });
+  });
+});
+
+Deno.test("concatenated streams run in sequence and skip the right side after failure", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "type Text = string",
+        "export error Stop = {}",
+        "export service Left { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Right { next(n: Int): Option<[Text, Int]> }",
+        "export service Output { accept(value: Int | Text): void }",
+        "const left = unfold(0, (n) => Left.next(n))",
+        "const right = unfold(0, (n) => Right.next(n))",
+        "const values = concatStreams(left, right)",
+        "const sink = sinkForEach((value: Int | Text) => Output.accept(value))",
+        "export const main = (): void fails Stop uses Left.next | Right.next | Output.accept => runStream(values, sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Left, Right, Output, Stop, main } from "./main.ts";
+const emitted: Array<number | string> = [];
+let leftDone = false;
+let leftStarted = 0;
+let rightStarted = 0;
+const LeftSuccess = Layer.succeed(Left)({
+  next: (n) => Effect.sync(() => {
+    leftStarted++;
+    if (n === 2) { leftDone = true; return Option.none(); }
+    return Option.some([n, n + 1] as const);
+  }),
+});
+const RightLive = Layer.succeed(Right)({
+  next: (n) => Effect.sync(() => {
+    if (!leftDone) throw new Error("right started before left completed");
+    rightStarted++;
+    return n === 2 ? Option.none() : Option.some([String(n), n + 1] as const);
+  }),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (value) => Effect.sync(() => { emitted.push(value); }),
+});
+const before = { leftStarted, rightStarted };
+await Effect.runPromise(main().pipe(Effect.provide(Layer.mergeAll(LeftSuccess, RightLive, OutputLive))));
+const success = { emitted: [...emitted], leftDone, leftStarted, rightStarted };
+emitted.length = 0;
+rightStarted = 0;
+leftDone = false;
+const LeftFailure = Layer.succeed(Left)({
+  next: (n) => n === 0
+    ? Effect.succeed(Option.some([0, 1] as const))
+    : Effect.fail(new Stop({})),
+});
+const error = await Effect.runPromise(Effect.flip(main().pipe(Effect.provide(Layer.mergeAll(LeftFailure, RightLive, OutputLive)))));
+console.log(JSON.stringify({ before, success, failure: { tag: error._tag, emitted, rightStarted } }));
+`,
+    );
+    assertEquals(result, {
+      before: { leftStarted: 0, rightStarted: 0 },
+      success: {
+        emitted: [0, 1, "0", "1"],
+        leftDone: true,
+        leftStarted: 3,
+        rightStarted: 3,
+      },
+      failure: { tag: "main#Stop", emitted: [0], rightStarted: 0 },
+    });
+  });
+});
+
+Deno.test("flat mapped streams exhaust each inner stream and stop after inner failure", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "type Text = string",
+        "type State = { outer: Int, offset: Int }",
+        "export error Stop = {}",
+        "export service Outer { next(n: Int): Option<[Int, Int]> }",
+        "export service Inner { next(state: State): Option<[Text, State]> fails Stop }",
+        "export service Output { accept(value: Text): void }",
+        "const outer = unfold(0, (n) => Outer.next(n))",
+        "const nested = flatMapStreams(outer, (value) => unfold({ outer: value, offset: 0 }, (state) => Inner.next(state)))",
+        "const sink = sinkForEach((value: Text) => Output.accept(value))",
+        "export const main = (): void fails Stop uses Outer.next | Inner.next | Output.accept => runStream(nested, sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Deferred, Effect, Fiber, Layer, Option } from "effect";
+import { Inner, Outer, Output, Stop, main } from "./main.ts";
+const output: string[] = [];
+let outerCalls = 0;
+let firstFinished = false;
+const OuterLive = Layer.succeed(Outer)({
+  next: (n) => Effect.sync(() => {
+    if (n === 1 && !firstFinished) throw new Error("outer advanced before first inner ended");
+    outerCalls++;
+    return n === 2 ? Option.none() : Option.some([n + 1, n + 1] as const);
+  }),
+});
+const InnerSuccess = Layer.succeed(Inner)({
+  next: (state) => Effect.sync(() => {
+    if (state.offset === 2) {
+      if (state.outer === 1) firstFinished = true;
+      return Option.none();
+    }
+    return Option.some([state.outer + "." + state.offset, { ...state, offset: state.offset + 1 }] as const);
+  }),
+});
+const OutputLive = Layer.succeed(Output)({ accept: (value) => Effect.sync(() => { output.push(value); }) });
+const before = { output: [...output], outerCalls };
+await Effect.runPromise(main().pipe(Effect.provide(Layer.mergeAll(OuterLive, InnerSuccess, OutputLive))));
+const success = { output: [...output], outerCalls };
+output.length = 0;
+outerCalls = 0;
+firstFinished = false;
+const InnerFailure = Layer.succeed(Inner)({
+  next: (state) => state.outer === 1 && state.offset === 1
+    ? Effect.fail(new Stop({}))
+    : Effect.succeed(Option.some([state.outer + "." + state.offset, { ...state, offset: state.offset + 1 }] as const)),
+});
+const error = await Effect.runPromise(Effect.flip(main().pipe(Effect.provide(Layer.mergeAll(OuterLive, InnerFailure, OutputLive)))));
+const failure = { tag: error._tag, output: [...output], outerCalls };
+output.length = 0;
+outerCalls = 0;
+const ready = Deferred.makeUnsafe<void>();
+let released = 0;
+const InnerBlocked = Layer.succeed(Inner)({
+  next: (state) => state.offset === 0
+    ? Effect.succeed(Option.some([state.outer + ".0", { ...state, offset: 1 }] as const))
+    : Deferred.succeed(ready, undefined).pipe(
+      Effect.andThen(Effect.never),
+      Effect.onInterrupt(() => Effect.sync(() => { released++; })),
+    ),
+});
+await Effect.runPromise(Effect.gen(function* () {
+  const fiber = yield* Effect.forkChild(main().pipe(Effect.provide(Layer.mergeAll(OuterLive, InnerBlocked, OutputLive))));
+  yield* Deferred.await(ready);
+  yield* Fiber.interrupt(fiber);
+}));
+console.log(JSON.stringify({ before, success, failure, interrupted: { output, outerCalls, released } }));
+`,
+    );
+    assertEquals(result, {
+      before: { output: [], outerCalls: 0 },
+      success: { output: ["1.0", "1.1", "2.0", "2.1"], outerCalls: 3 },
+      failure: { tag: "main#Stop", output: ["1.0"], outerCalls: 1 },
+      interrupted: { output: ["1.0"], outerCalls: 1, released: 1 },
+    });
+  });
+});
+
+Deno.test("takeStream stops upstream pulls at a dynamic count", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Output { accept(value: Int): void }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const sink = sinkForEach((value: Int) => Output.accept(value))",
+        "export const main = (count: Int): void fails Stop uses Source.next | Output.accept =>",
+        "  runStream(takeStream(source, count), sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Output, Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+const values: number[] = [];
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 3 ? Effect.fail(new Stop({})) : Effect.succeed(Option.some([n, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (value) => Effect.sync(() => { values.push(value); }),
+});
+const Live = Layer.mergeAll(SourceLive, OutputLive);
+const run = async (count: number) => {
+  calls.length = 0;
+  released.length = 0;
+  values.length = 0;
+  await Effect.runPromise(main(count).pipe(Effect.provide(Live)));
+  return { calls: [...calls], released: [...released], values: [...values] };
+};
+const before = { calls: [...calls], released: [...released], values: [...values] };
+const zero = await run(0);
+const negative = await run(-1);
+const two = await run(2);
+const failure = await Effect.runPromise(Effect.flip(main(4).pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, zero, negative, two, failure: { tag: failure._tag, calls, released, values } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [], values: [] },
+      zero: { calls: [], released: [], values: [] },
+      negative: { calls: [], released: [], values: [] },
+      two: { calls: [0, 1], released: [0, 1], values: [0, 1] },
+      failure: {
+        tag: "main#Stop",
+        calls: [0, 1, 0, 1, 2, 3],
+        released: [0, 1, 0, 1, 2, 3],
+        values: [0, 1, 0, 1, 2],
+      },
+    });
+  });
+});
+
+Deno.test("dropStream consumes a dynamic prefix and propagates skipped failures", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Output { accept(value: Int): void }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const sink = sinkForEach((value: Int) => Output.accept(value))",
+        "export const main = (count: Int): void fails Stop uses Source.next | Output.accept =>",
+        "  runStream(dropStream(source, count), sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Output, Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+const values: number[] = [];
+let failAtThree = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 3 && failAtThree ? Effect.fail(new Stop({})) :
+      n === 4 ? Effect.succeed(Option.none()) : Effect.succeed(Option.some([n, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (value) => Effect.sync(() => { values.push(value); }),
+});
+const Live = Layer.mergeAll(SourceLive, OutputLive);
+const run = async (count: number) => {
+  calls.length = 0;
+  released.length = 0;
+  values.length = 0;
+  await Effect.runPromise(main(count).pipe(Effect.provide(Live)));
+  return { calls: [...calls], released: [...released], values: [...values] };
+};
+const before = { calls: [...calls], released: [...released], values: [...values] };
+const zero = await run(0);
+const negative = await run(-1);
+const two = await run(2);
+const beyond = await run(6);
+calls.length = 0;
+released.length = 0;
+values.length = 0;
+failAtThree = true;
+const failure = await Effect.runPromise(Effect.flip(main(4).pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, zero, negative, two, beyond, failure: { tag: failure._tag, calls, released, values } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [], values: [] },
+      zero: {
+        calls: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        values: [0, 1, 2, 3],
+      },
+      negative: {
+        calls: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        values: [0, 1, 2, 3],
+      },
+      two: {
+        calls: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        values: [2, 3],
+      },
+      beyond: {
+        calls: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        values: [],
+      },
+      failure: {
+        tag: "main#Stop",
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+        values: [],
+      },
+    });
+  });
+});
+
+Deno.test("takeWhileEffectStream with a pure callback omits the false element and closes upstream work", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Output { accept(value: Int): void }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const sink = sinkForEach((value: Int) => Output.accept(value))",
+        "export const main = (limit: Int): void fails Stop uses Source.next | Output.accept =>",
+        "  runStream(takeWhileEffectStream(source, (n) => n < limit), sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Output, Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+const values: number[] = [];
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 4 ? Effect.fail(new Stop({})) : Effect.succeed(Option.some([n, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (value) => Effect.sync(() => { values.push(value); }),
+});
+const Live = Layer.mergeAll(SourceLive, OutputLive);
+const run = async (limit: number) => {
+  calls.length = 0;
+  released.length = 0;
+  values.length = 0;
+  await Effect.runPromise(main(limit).pipe(Effect.provide(Live)));
+  return { calls: [...calls], released: [...released], values: [...values] };
+};
+const before = { calls: [...calls], released: [...released], values: [...values] };
+const empty = await run(0);
+const prefix = await run(3);
+calls.length = 0;
+released.length = 0;
+values.length = 0;
+const failure = await Effect.runPromise(Effect.flip(main(5).pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, empty, prefix, failure: { tag: failure._tag, calls, released, values } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [], values: [] },
+      empty: { calls: [0], released: [0], values: [] },
+      prefix: {
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+        values: [0, 1, 2],
+      },
+      failure: {
+        tag: "main#Stop",
+        calls: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        values: [0, 1, 2, 3],
+      },
+    });
+  });
+});
+
+Deno.test("takeUntilEffectStream with a pure callback includes the matching element and closes upstream work", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Output { accept(value: Int): void }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const sink = sinkForEach((value: Int) => Output.accept(value))",
+        "export const main = (limit: Int): void fails Stop uses Source.next | Output.accept =>",
+        "  runStream(takeUntilEffectStream(source, (n) => n === limit), sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Output, Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+const values: number[] = [];
+let failAtFour = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 4 && failAtFour ? Effect.fail(new Stop({})) :
+      n === 5 ? Effect.succeed(Option.none()) : Effect.succeed(Option.some([n, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (value) => Effect.sync(() => { values.push(value); }),
+});
+const Live = Layer.mergeAll(SourceLive, OutputLive);
+const run = async (limit: number) => {
+  calls.length = 0;
+  released.length = 0;
+  values.length = 0;
+  await Effect.runPromise(main(limit).pipe(Effect.provide(Live)));
+  return { calls: [...calls], released: [...released], values: [...values] };
+};
+const before = { calls: [...calls], released: [...released], values: [...values] };
+const first = await run(0);
+const prefix = await run(3);
+const noMatch = await run(-1);
+calls.length = 0;
+released.length = 0;
+values.length = 0;
+failAtFour = true;
+const failure = await Effect.runPromise(Effect.flip(main(5).pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, first, prefix, noMatch, failure: { tag: failure._tag, calls, released, values } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [], values: [] },
+      first: { calls: [0], released: [0], values: [0] },
+      prefix: {
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+        values: [0, 1, 2, 3],
+      },
+      noMatch: {
+        calls: [0, 1, 2, 3, 4, 5],
+        released: [0, 1, 2, 3, 4, 5],
+        values: [0, 1, 2, 3, 4],
+      },
+      failure: {
+        tag: "main#Stop",
+        calls: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        values: [0, 1, 2, 3],
+      },
+    });
+  });
+});
+
+Deno.test("dropWhileEffectStream with a pure callback emits the first false element and all later elements", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Output { accept(value: Int): void }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const sink = sinkForEach((value: Int) => Output.accept(value))",
+        "export const main = (limit: Int): void fails Stop uses Source.next | Output.accept =>",
+        "  runStream(dropWhileEffectStream(source, (n) => n < limit), sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Output, Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+const values: number[] = [];
+const sourceValues = [0, 1, 3, 0, 4];
+let failAtOne = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 1 && failAtOne ? Effect.fail(new Stop({})) :
+      n === 5 ? Effect.succeed(Option.none()) : Effect.succeed(Option.some([sourceValues[n]!, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (value) => Effect.sync(() => { values.push(value); }),
+});
+const Live = Layer.mergeAll(SourceLive, OutputLive);
+const run = async (limit: number) => {
+  calls.length = 0;
+  released.length = 0;
+  values.length = 0;
+  await Effect.runPromise(main(limit).pipe(Effect.provide(Live)));
+  return { calls: [...calls], released: [...released], values: [...values] };
+};
+const before = { calls: [...calls], released: [...released], values: [...values] };
+const immediate = await run(0);
+const suffix = await run(3);
+const allDropped = await run(6);
+calls.length = 0;
+released.length = 0;
+values.length = 0;
+failAtOne = true;
+const failure = await Effect.runPromise(Effect.flip(main(3).pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, immediate, suffix, allDropped, failure: { tag: failure._tag, calls, released, values } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [], values: [] },
+      immediate: {
+        calls: [0, 1, 2, 3, 4, 5],
+        released: [0, 1, 2, 3, 4, 5],
+        values: [0, 1, 3, 0, 4],
+      },
+      suffix: {
+        calls: [0, 1, 2, 3, 4, 5],
+        released: [0, 1, 2, 3, 4, 5],
+        values: [3, 0, 4],
+      },
+      allDropped: {
+        calls: [0, 1, 2, 3, 4, 5],
+        released: [0, 1, 2, 3, 4, 5],
+        values: [],
+      },
+      failure: {
+        tag: "main#Stop",
+        calls: [0, 1],
+        released: [0, 1],
+        values: [],
+      },
+    });
+  });
+});
+
+Deno.test("effectful stream predicates stop, fail, and close pulls", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "type Bool = boolean",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> }",
+        "export service Gate { check(n: Int): Bool fails Stop }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "export const filtered = (): Int[] fails Stop uses Source.next | Gate.check => collectStream(filterEffectStream(source, (n) => Gate.check(n)))",
+        "export const taken = (): Int[] fails Stop uses Source.next | Gate.check => collectStream(takeWhileEffectStream(source, (n) => Gate.check(n)))",
+        "export const until = (): Int[] fails Stop uses Source.next | Gate.check => collectStream(takeUntilEffectStream(source, (n) => Gate.check(n)))",
+        "export const dropped = (): Int[] fails Stop uses Source.next | Gate.check => collectStream(dropWhileEffectStream(source, (n) => Gate.check(n)))",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Source, Gate, Stop, filtered, taken, until, dropped } from "./main.ts";
+
+const pulled: number[] = [];
+const released: number[] = [];
+const tested: number[] = [];
+let mode = "filter";
+let fail = false;
+let empty = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { pulled.push(n); }),
+    () => Effect.succeed(empty || n === 4
+      ? Option.none()
+      : Option.some([n + 1, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const GateLive = Layer.succeed(Gate)({
+  check: (n) => Effect.sync(() => { tested.push(n); }).pipe(
+    Effect.flatMap(() => fail && n === 2
+      ? Effect.fail(new Stop({}))
+      : Effect.succeed(mode === "filter" ? n % 2 === 0
+        : mode === "until" ? n === 3 : n < 3)),
+  ),
+});
+const Live = Layer.merge(SourceLive, GateLive);
+const reset = (nextMode: string) => {
+  mode = nextMode;
+  pulled.length = 0;
+  released.length = 0;
+  tested.length = 0;
+  fail = false;
+  empty = false;
+};
+const snapshot = (values: readonly number[]) => ({
+  values, pulled: [...pulled], released: [...released], tested: [...tested],
+});
+const pending = filtered().pipe(Effect.provide(Live));
+const before = snapshot([]);
+const filterResult = snapshot(await Effect.runPromise(pending));
+reset("while");
+const whileResult = snapshot(await Effect.runPromise(taken().pipe(Effect.provide(Live))));
+reset("until");
+const untilResult = snapshot(await Effect.runPromise(until().pipe(Effect.provide(Live))));
+reset("drop");
+const dropResult = snapshot(await Effect.runPromise(dropped().pipe(Effect.provide(Live))));
+reset("filter");
+empty = true;
+const emptyResult = snapshot(await Effect.runPromise(pending));
+reset("filter");
+const repeated = snapshot(await Effect.runPromise(pending));
+const failures = [];
+for (const [nextMode, program] of [
+  ["filter", filtered], ["while", taken], ["until", until], ["drop", dropped],
+] as const) {
+  reset(nextMode);
+  fail = true;
+  const error = await Effect.runPromise(Effect.flip(program().pipe(Effect.provide(Live))));
+  failures.push({ mode: nextMode, tag: error._tag, pulled: [...pulled], released: [...released], tested: [...tested] });
+}
+console.log(JSON.stringify({ before, filterResult, whileResult, untilResult, dropResult, emptyResult, repeated, failures }));
+`,
+    );
+    assertEquals(result, {
+      before: { values: [], pulled: [], released: [], tested: [] },
+      filterResult: {
+        values: [2, 4],
+        pulled: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        tested: [1, 2, 3, 4],
+      },
+      whileResult: {
+        values: [1, 2],
+        pulled: [0, 1, 2],
+        released: [0, 1, 2],
+        tested: [1, 2, 3],
+      },
+      untilResult: {
+        values: [1, 2, 3],
+        pulled: [0, 1, 2],
+        released: [0, 1, 2],
+        tested: [1, 2, 3],
+      },
+      dropResult: {
+        values: [3, 4],
+        pulled: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        tested: [1, 2, 3],
+      },
+      emptyResult: {
+        values: [],
+        pulled: [0],
+        released: [0],
+        tested: [],
+      },
+      repeated: {
+        values: [2, 4],
+        pulled: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        tested: [1, 2, 3, 4],
+      },
+      failures: ["filter", "while", "until", "drop"].map((mode) => ({
+        mode,
+        tag: "main#Stop",
+        pulled: [0, 1],
+        released: [0, 1],
+        tested: [1, 2],
+      })),
+    });
+  });
+});
+
+Deno.test("filterEffectStream with a pure callback evaluates every element and propagates source failures", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Output { accept(value: Int): void }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const sink = sinkForEach((value: Int) => Output.accept(value))",
+        "export const main = (limit: Int): void fails Stop uses Source.next | Output.accept =>",
+        "  runStream(filterEffectStream(source, (n) => n >= limit), sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Output, Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+const values: number[] = [];
+const sourceValues = [0, 1, 3, 0, 4];
+let failAtOne = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 1 && failAtOne ? Effect.fail(new Stop({})) :
+      n === 5 ? Effect.succeed(Option.none()) : Effect.succeed(Option.some([sourceValues[n]!, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (value) => Effect.sync(() => { values.push(value); }),
+});
+const Live = Layer.mergeAll(SourceLive, OutputLive);
+const run = async (limit: number) => {
+  calls.length = 0;
+  released.length = 0;
+  values.length = 0;
+  await Effect.runPromise(main(limit).pipe(Effect.provide(Live)));
+  return { calls: [...calls], released: [...released], values: [...values] };
+};
+const before = { calls: [...calls], released: [...released], values: [...values] };
+const all = await run(0);
+const selected = await run(3);
+const none = await run(6);
+calls.length = 0;
+released.length = 0;
+values.length = 0;
+failAtOne = true;
+const failure = await Effect.runPromise(Effect.flip(main(3).pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, all, selected, none, failure: { tag: failure._tag, calls, released, values } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [], values: [] },
+      all: {
+        calls: [0, 1, 2, 3, 4, 5],
+        released: [0, 1, 2, 3, 4, 5],
+        values: [0, 1, 3, 0, 4],
+      },
+      selected: {
+        calls: [0, 1, 2, 3, 4, 5],
+        released: [0, 1, 2, 3, 4, 5],
+        values: [3, 4],
+      },
+      none: {
+        calls: [0, 1, 2, 3, 4, 5],
+        released: [0, 1, 2, 3, 4, 5],
+        values: [],
+      },
+      failure: {
+        tag: "main#Stop",
+        calls: [0, 1],
+        released: [0, 1],
+        values: [],
+      },
+    });
+  });
+});
+
+Deno.test("mapEffect with a pure callback changes element type and propagates source failures", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "type Bool = boolean",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Output { accept(value: Bool): void }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const sink = sinkForEach((value: Bool) => Output.accept(value))",
+        "export const main = (limit: Int): void fails Stop uses Source.next | Output.accept =>",
+        "  runStream(mapEffect(source, (n) => n >= limit), sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Output, Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+const values: boolean[] = [];
+const sourceValues = [0, 1, 3, 0, 4];
+let failAtOne = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 1 && failAtOne ? Effect.fail(new Stop({})) :
+      n === 5 ? Effect.succeed(Option.none()) : Effect.succeed(Option.some([sourceValues[n]!, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (value) => Effect.sync(() => { values.push(value); }),
+});
+const Live = Layer.mergeAll(SourceLive, OutputLive);
+const run = async (limit: number) => {
+  calls.length = 0;
+  released.length = 0;
+  values.length = 0;
+  await Effect.runPromise(main(limit).pipe(Effect.provide(Live)));
+  return { calls: [...calls], released: [...released], values: [...values] };
+};
+const before = { calls: [...calls], released: [...released], values: [...values] };
+const all = await run(0);
+const selected = await run(3);
+const none = await run(6);
+calls.length = 0;
+released.length = 0;
+values.length = 0;
+failAtOne = true;
+const failure = await Effect.runPromise(Effect.flip(main(3).pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, all, selected, none, failure: { tag: failure._tag, calls, released, values } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [], values: [] },
+      all: {
+        calls: [0, 1, 2, 3, 4, 5],
+        released: [0, 1, 2, 3, 4, 5],
+        values: [true, true, true, true, true],
+      },
+      selected: {
+        calls: [0, 1, 2, 3, 4, 5],
+        released: [0, 1, 2, 3, 4, 5],
+        values: [false, false, true, false, true],
+      },
+      none: {
+        calls: [0, 1, 2, 3, 4, 5],
+        released: [0, 1, 2, 3, 4, 5],
+        values: [false, false, false, false, false],
+      },
+      failure: {
+        tag: "main#Stop",
+        calls: [0, 1],
+        released: [0, 1],
+        values: [false],
+      },
+    });
+  });
+});
+
+Deno.test("scanStream emits fresh seed and state before source failure", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Output { accept(value: Int): void }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const sink = sinkForEach((value: Int) => Output.accept(value))",
+        "export const main = (seed: Int): void fails Stop uses Source.next | Output.accept =>",
+        "  runStream(scanStream(source, seed, (sum, n) => sum + n), sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Output, Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+const values: number[] = [];
+const events: string[] = [];
+let empty = false;
+let failAtTwo = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); events.push("pull:" + n); return n; }),
+    () => n === 2 && failAtTwo ? Effect.fail(new Stop({})) :
+      empty || n === 3 ? Effect.succeed(Option.none()) :
+      Effect.succeed(Option.some([n + 1, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (value) => Effect.sync(() => {
+    values.push(value);
+    events.push("emit:" + value);
+  }),
+});
+const Live = Layer.mergeAll(SourceLive, OutputLive);
+const reset = () => {
+  calls.length = 0;
+  released.length = 0;
+  values.length = 0;
+  events.length = 0;
+};
+const snapshot = () => ({
+  calls: [...calls], released: [...released], values: [...values],
+  firstEvent: events[0],
+});
+const run = async (seed: number) => {
+  reset();
+  await Effect.runPromise(main(seed).pipe(Effect.provide(Live)));
+  return snapshot();
+};
+const before = snapshot();
+const first = await run(10);
+const second = await run(10);
+empty = true;
+const emptyResult = await run(7);
+empty = false;
+failAtTwo = true;
+reset();
+const failure = await Effect.runPromise(Effect.flip(main(0).pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, first, second, emptyResult, failure: { tag: failure._tag, ...snapshot() } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [], values: [] },
+      first: {
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+        values: [10, 11, 13, 16],
+        firstEvent: "emit:10",
+      },
+      second: {
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+        values: [10, 11, 13, 16],
+        firstEvent: "emit:10",
+      },
+      emptyResult: {
+        calls: [0],
+        released: [0],
+        values: [7],
+        firstEvent: "emit:7",
+      },
+      failure: {
+        tag: "main#Stop",
+        calls: [0, 1, 2],
+        released: [0, 1, 2],
+        values: [0, 1, 3],
+        firstEvent: "emit:0",
+      },
+    });
+  });
+});
+
+Deno.test("mapAccumStream threads state and emits zero or more values", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "export service Output { accept(value: Int): void }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "const sink = sinkForEach((value: Int) => Output.accept(value))",
+        "export const main = (seed: Int): void fails Stop uses Source.next | Output.accept =>",
+        "  runStream(mapAccumStream(source, seed, (total, n): [Int, Int[]] =>",
+        "    [total + n, if (n < 2) { [] } else { if (n < 3) { [total + n] } else { [total + n, total + n + 10] } }]), sink)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Output, Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+const values: number[] = [];
+let empty = false;
+let failAtTwo = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 2 && failAtTwo ? Effect.fail(new Stop({})) :
+      empty || n === 4 ? Effect.succeed(Option.none()) :
+      Effect.succeed(Option.some([n + 1, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const OutputLive = Layer.succeed(Output)({
+  accept: (value) => Effect.sync(() => { values.push(value); }),
+});
+const Live = Layer.mergeAll(SourceLive, OutputLive);
+const reset = () => {
+  calls.length = 0;
+  released.length = 0;
+  values.length = 0;
+};
+const snapshot = () => ({
+  calls: [...calls], released: [...released], values: [...values],
+});
+const run = async (seed: number) => {
+  reset();
+  await Effect.runPromise(main(seed).pipe(Effect.provide(Live)));
+  return snapshot();
+};
+const before = snapshot();
+const first = await run(0);
+const second = await run(0);
+const shifted = await run(10);
+empty = true;
+const emptyResult = await run(7);
+empty = false;
+failAtTwo = true;
+reset();
+const failure = await Effect.runPromise(Effect.flip(main(0).pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, first, second, shifted, emptyResult, failure: { tag: failure._tag, ...snapshot() } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [], values: [] },
+      first: {
+        calls: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        values: [3, 6, 16, 10, 20],
+      },
+      second: {
+        calls: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        values: [3, 6, 16, 10, 20],
+      },
+      shifted: {
+        calls: [0, 1, 2, 3, 4],
+        released: [0, 1, 2, 3, 4],
+        values: [13, 16, 26, 20, 30],
+      },
+      emptyResult: { calls: [0], released: [0], values: [] },
+      failure: {
+        tag: "main#Stop",
+        calls: [0, 1, 2],
+        released: [0, 1, 2],
+        values: [3],
+      },
+    });
+  });
+});
+
+Deno.test("foldStream returns fresh final state and propagates source failure", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "export const main = (seed: Int): Int fails Stop uses Source.next =>",
+        "  foldStream(source, seed, (total, n) => total + n)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+let empty = false;
+let failAtTwo = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 2 && failAtTwo ? Effect.fail(new Stop({})) :
+      empty || n === 3 ? Effect.succeed(Option.none()) :
+      Effect.succeed(Option.some([n + 1, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const snapshot = () => ({ calls: [...calls], released: [...released] });
+const reset = () => { calls.length = 0; released.length = 0; };
+const pending = main(10).pipe(Effect.provide(SourceLive));
+const before = snapshot();
+const firstValue = await Effect.runPromise(pending);
+const first = { value: firstValue, ...snapshot() };
+reset();
+const secondValue = await Effect.runPromise(pending);
+const second = { value: secondValue, ...snapshot() };
+reset();
+empty = true;
+const emptyValue = await Effect.runPromise(main(7).pipe(Effect.provide(SourceLive)));
+const emptyResult = { value: emptyValue, ...snapshot() };
+reset();
+empty = false;
+failAtTwo = true;
+const failure = await Effect.runPromise(Effect.flip(main(0).pipe(Effect.provide(SourceLive))));
+console.log(JSON.stringify({ before, first, second, emptyResult, failure: { tag: failure._tag, ...snapshot() } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [] },
+      first: { value: 16, calls: [0, 1, 2, 3], released: [0, 1, 2, 3] },
+      second: { value: 16, calls: [0, 1, 2, 3], released: [0, 1, 2, 3] },
+      emptyResult: { value: 7, calls: [0], released: [0] },
+      failure: {
+        tag: "main#Stop",
+        calls: [0, 1, 2],
+        released: [0, 1, 2],
+      },
+    });
+  });
+});
+
+Deno.test("foldEffectStream runs updates sequentially and stops on failure", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error SourceStop = {}",
+        "export error UpdateStop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails SourceStop }",
+        "export service Accum { add(total: Int, n: Int): Int fails UpdateStop }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "export const main = (seed: Int): Int fails SourceStop | UpdateStop uses Source.next | Accum.add =>",
+        "  foldEffectStream(source, seed, (total, n) => Accum.add(total, n))",
+        "export const pureMain = (seed: Int): Int fails SourceStop uses Source.next =>",
+        "  foldEffectStream(source, seed, (total, n) => total + n)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Accum, Source, SourceStop, UpdateStop, main, pureMain } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+const updates: Array<[number, number]> = [];
+let empty = false;
+let failSource = false;
+let failUpdate = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 2 && failSource ? Effect.fail(new SourceStop({})) :
+      empty || n === 3 ? Effect.succeed(Option.none()) :
+      Effect.succeed(Option.some([n + 1, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const AccumLive = Layer.succeed(Accum)({
+  add: (total, n) => Effect.sync(() => {
+    updates.push([total, n]);
+    return total + n;
+  }).pipe(Effect.flatMap((next) => failUpdate && n === 2 ?
+    Effect.fail(new UpdateStop({})) : Effect.succeed(next))),
+});
+const Live = Layer.mergeAll(SourceLive, AccumLive);
+const snapshot = () => ({
+  calls: [...calls], released: [...released], updates: [...updates],
+});
+const reset = () => {
+  calls.length = 0;
+  released.length = 0;
+  updates.length = 0;
+};
+const pending = main(10).pipe(Effect.provide(Live));
+const before = snapshot();
+const firstValue = await Effect.runPromise(pending);
+const first = { value: firstValue, ...snapshot() };
+reset();
+const secondValue = await Effect.runPromise(pending);
+const second = { value: secondValue, ...snapshot() };
+reset();
+const pureValue = await Effect.runPromise(pureMain(10).pipe(Effect.provide(SourceLive)));
+const pure = { value: pureValue, ...snapshot() };
+reset();
+empty = true;
+const emptyValue = await Effect.runPromise(main(7).pipe(Effect.provide(Live)));
+const emptyResult = { value: emptyValue, ...snapshot() };
+reset();
+empty = false;
+failSource = true;
+const sourceFailure = await Effect.runPromise(Effect.flip(main(0).pipe(Effect.provide(Live))));
+const sourceResult = { tag: sourceFailure._tag, ...snapshot() };
+reset();
+failSource = false;
+failUpdate = true;
+const updateFailure = await Effect.runPromise(Effect.flip(main(0).pipe(Effect.provide(Live))));
+console.log(JSON.stringify({ before, first, second, pure, emptyResult, sourceResult, updateResult: { tag: updateFailure._tag, ...snapshot() } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [], updates: [] },
+      first: {
+        value: 16,
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+        updates: [[10, 1], [11, 2], [13, 3]],
+      },
+      second: {
+        value: 16,
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+        updates: [[10, 1], [11, 2], [13, 3]],
+      },
+      pure: {
+        value: 16,
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+        updates: [],
+      },
+      emptyResult: {
+        value: 7,
+        calls: [0],
+        released: [0],
+        updates: [],
+      },
+      sourceResult: {
+        tag: "main#SourceStop",
+        calls: [0, 1, 2],
+        released: [0, 1, 2],
+        updates: [[0, 1], [1, 2]],
+      },
+      updateResult: {
+        tag: "main#UpdateStop",
+        calls: [0, 1],
+        released: [0, 1],
+        updates: [[0, 1], [1, 2]],
+      },
+    });
+  });
+});
+
+Deno.test("collectStream gathers ordered values and closes failed pulls", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "export const main = (): Int[] fails Stop uses Source.next => collectStream(source)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+let empty = false;
+let failAtTwo = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 2 && failAtTwo ? Effect.fail(new Stop({})) :
+      empty || n === 3 ? Effect.succeed(Option.none()) :
+      Effect.succeed(Option.some([n + 1, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const snapshot = () => ({ calls: [...calls], released: [...released] });
+const reset = () => { calls.length = 0; released.length = 0; };
+const pending = main().pipe(Effect.provide(SourceLive));
+const before = snapshot();
+const firstValue = await Effect.runPromise(pending);
+const first = { values: firstValue, ...snapshot() };
+reset();
+const secondValue = await Effect.runPromise(pending);
+const second = { values: secondValue, ...snapshot(), freshArray: firstValue !== secondValue };
+reset();
+empty = true;
+const emptyValue = await Effect.runPromise(main().pipe(Effect.provide(SourceLive)));
+const emptyResult = { values: emptyValue, ...snapshot() };
+reset();
+empty = false;
+failAtTwo = true;
+const failure = await Effect.runPromise(Effect.flip(main().pipe(Effect.provide(SourceLive))));
+console.log(JSON.stringify({ before, first, second, emptyResult, failure: { tag: failure._tag, ...snapshot() } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [] },
+      first: {
+        values: [1, 2, 3],
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+      },
+      second: {
+        values: [1, 2, 3],
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+        freshArray: true,
+      },
+      emptyResult: { values: [], calls: [0], released: [0] },
+      failure: { tag: "main#Stop", calls: [0, 1, 2], released: [0, 1, 2] },
+    });
+  });
+});
+
+Deno.test("headStream stops after the first element and closes upstream work", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "export const main = (): Option<Int> fails Stop uses Source.next => headStream(source)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+let empty = false;
+let fail = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => fail ? Effect.fail(new Stop({})) :
+      empty ? Effect.succeed(Option.none()) :
+      Effect.succeed(Option.some([n + 1, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const snapshot = () => ({ calls: [...calls], released: [...released] });
+const reset = () => { calls.length = 0; released.length = 0; };
+const describe = (value: Option.Option<number>) => Option.isSome(value) ? { tag: "Some", value: value.value } : { tag: "None" };
+const pending = main().pipe(Effect.provide(SourceLive));
+const before = snapshot();
+const first = { result: describe(await Effect.runPromise(pending)), ...snapshot() };
+reset();
+const second = { result: describe(await Effect.runPromise(pending)), ...snapshot() };
+reset();
+empty = true;
+const emptyResult = { result: describe(await Effect.runPromise(pending)), ...snapshot() };
+reset();
+empty = false;
+fail = true;
+const failure = await Effect.runPromise(Effect.flip(pending));
+console.log(JSON.stringify({ before, first, second, emptyResult, failure: { tag: failure._tag, ...snapshot() } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [] },
+      first: {
+        result: { tag: "Some", value: 1 },
+        calls: [0],
+        released: [0],
+      },
+      second: {
+        result: { tag: "Some", value: 1 },
+        calls: [0],
+        released: [0],
+      },
+      emptyResult: {
+        result: { tag: "None" },
+        calls: [0],
+        released: [0],
+      },
+      failure: { tag: "main#Stop", calls: [0], released: [0] },
+    });
+  });
+});
+
+Deno.test("lastStream consumes through completion and closes upstream work", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "export const main = (): Option<Int> fails Stop uses Source.next => lastStream(source)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+let empty = false;
+let failAtTwo = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 2 && failAtTwo ? Effect.fail(new Stop({})) :
+      empty || n === 3 ? Effect.succeed(Option.none()) :
+      Effect.succeed(Option.some([n + 1, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const snapshot = () => ({ calls: [...calls], released: [...released] });
+const reset = () => { calls.length = 0; released.length = 0; };
+const describe = (value: Option.Option<number>) => Option.isSome(value) ? { tag: "Some", value: value.value } : { tag: "None" };
+const pending = main().pipe(Effect.provide(SourceLive));
+const before = snapshot();
+const first = { result: describe(await Effect.runPromise(pending)), ...snapshot() };
+reset();
+const second = { result: describe(await Effect.runPromise(pending)), ...snapshot() };
+reset();
+empty = true;
+const emptyResult = { result: describe(await Effect.runPromise(pending)), ...snapshot() };
+reset();
+empty = false;
+failAtTwo = true;
+const failure = await Effect.runPromise(Effect.flip(pending));
+console.log(JSON.stringify({ before, first, second, emptyResult, failure: { tag: failure._tag, ...snapshot() } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [] },
+      first: {
+        result: { tag: "Some", value: 3 },
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+      },
+      second: {
+        result: { tag: "Some", value: 3 },
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+      },
+      emptyResult: {
+        result: { tag: "None" },
+        calls: [0],
+        released: [0],
+      },
+      failure: { tag: "main#Stop", calls: [0, 1, 2], released: [0, 1, 2] },
+    });
+  });
+});
+
+Deno.test("drainStream consumes every value and closes upstream work", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "type Int = int",
+        "export error Stop = {}",
+        "export service Source { next(n: Int): Option<[Int, Int]> fails Stop }",
+        "const source = unfold(0, (n) => Source.next(n))",
+        "export const main = (): void fails Stop uses Source.next => drainStream(source)",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer, Option } from "effect";
+import { Source, Stop, main } from "./main.ts";
+
+const calls: number[] = [];
+const released: number[] = [];
+let empty = false;
+let failAtTwo = false;
+const SourceLive = Layer.succeed(Source)({
+  next: (n) => Effect.acquireUseRelease(
+    Effect.sync(() => { calls.push(n); return n; }),
+    () => n === 2 && failAtTwo ? Effect.fail(new Stop({})) :
+      empty || n === 3 ? Effect.succeed(Option.none()) :
+      Effect.succeed(Option.some([n + 1, n + 1] as const)),
+    () => Effect.sync(() => { released.push(n); }),
+  ),
+});
+const snapshot = () => ({ calls: [...calls], released: [...released] });
+const reset = () => { calls.length = 0; released.length = 0; };
+const describe = (value: void) => value === undefined;
+const pending = main().pipe(Effect.provide(SourceLive));
+const before = snapshot();
+const first = { result: describe(await Effect.runPromise(pending)), ...snapshot() };
+reset();
+const second = { result: describe(await Effect.runPromise(pending)), ...snapshot() };
+reset();
+empty = true;
+const emptyResult = { result: describe(await Effect.runPromise(pending)), ...snapshot() };
+reset();
+empty = false;
+failAtTwo = true;
+const failure = await Effect.runPromise(Effect.flip(pending));
+console.log(JSON.stringify({ before, first, second, emptyResult, failure: { tag: failure._tag, ...snapshot() } }));
+`,
+    );
+    assertEquals(result, {
+      before: { calls: [], released: [] },
+      first: {
+        result: true,
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+      },
+      second: {
+        result: true,
+        calls: [0, 1, 2, 3],
+        released: [0, 1, 2, 3],
+      },
+      emptyResult: {
+        result: true,
+        calls: [0],
+        released: [0],
+      },
+      failure: { tag: "main#Stop", calls: [0, 1, 2], released: [0, 1, 2] },
+    });
+  });
+});
+
+Deno.test("stream pull releases a scoped operation on failure and interruption", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "export error Stop = {}",
+        "export service Source { open(state: Int): { next: () => Option<[Int, Int]> fails Stop, close: () => void } }",
+        "const numbers = unfold(0, (state) => withResource(() => Source.open(state), (source) => source.next(), (source) => source.close()))",
+        "const sink = sinkForEach((value: Int) => {})",
+        "export const main = (): void fails Stop uses Source.open => runStream(numbers, sink)",
+        "type Int = int",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Deferred, Effect, Exit, Fiber, Layer } from "effect";
+import { Source, Stop, main } from "./main.ts";
+
+const events: string[] = [];
+let interrupt = false;
+let started: Deferred.Deferred<void> | undefined;
+const Live = Layer.succeed(Source)({
+  open: () => Effect.sync(() => {
+    events.push("acquire");
+    return {
+      next: () => interrupt
+        ? Deferred.succeed(started!, undefined).pipe(Effect.andThen(Effect.never))
+        : Effect.fail(new Stop({})),
+      close: () => Effect.sync(() => { events.push("release"); }),
+    };
+  }),
+});
+const failed = Effect.runSyncExit(main().pipe(Effect.provide(Live)));
+const failure = { failed: Exit.isFailure(failed), events: [...events] };
+events.length = 0;
+interrupt = true;
+await Effect.runPromise(Effect.gen(function* () {
+  started = yield* Deferred.make<void>();
+  const fiber = yield* Effect.forkChild(main().pipe(Effect.provide(Live)));
+  yield* Deferred.await(started);
+  yield* Fiber.interrupt(fiber);
+  events.push("interrupted");
+}));
+console.log(JSON.stringify({ failure, interruption: events }));
+`,
+    );
+    assertEquals(result, {
+      failure: { failed: true, events: ["acquire", "release"] },
+      interruption: ["acquire", "release", "interrupted"],
+    });
+  });
+});
