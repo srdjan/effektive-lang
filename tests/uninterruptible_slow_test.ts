@@ -2,42 +2,8 @@
 // module with independent validation, type-checks the emitted TypeScript under
 // the strict target options, and runs it.
 
-import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  emitProject,
-  lowerProject,
-  memoryHost,
-  validateProject,
-} from "../src/core/mod.ts";
-import { runStrictTarget } from "./target_helpers.ts";
-
-async function compileAndRun(source: string, run: string): Promise<unknown> {
-  const project = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": source }),
-    "",
-    ["main.eff"],
-  );
-  assert(project.ok, JSON.stringify(project));
-  assertEquals(project.value.diagnostics, []);
-  const lowered = lowerProject(project.value);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(
-      project.value.analysis.project,
-      lowered,
-    ).values()
-  ) assertEquals(diagnostics, []);
-  return JSON.parse(
-    await runStrictTarget(
-      emitProject(lowered, { config: project.value.analysis.project.config }),
-      run,
-      "effektive-uninterruptible-",
-    ),
-  );
-}
+import { assertEquals } from "@std/assert";
+import { compileAndRun } from "./target_helpers.ts";
 
 const SOURCE = `type Int = int
 type Name = string

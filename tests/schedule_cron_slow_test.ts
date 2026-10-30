@@ -2,18 +2,11 @@
 // `Cron.parse` of effect@4.0.5, and the runtime behavior of the emitted
 // schedule under TestClock. No wall-clock time passes in the runtime tests.
 
-import { assert, assertEquals } from "@std/assert";
+import { assertEquals } from "@std/assert";
 import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
-import {
-  checkProject,
-  emitProject,
-  lowerProject,
-  memoryHost,
-  validateProject,
-} from "../src/core/mod.ts";
 import { EXPRESSIONS, ZONES } from "./cron_cases.ts";
 import { runScript, withTemporaryDirectory } from "./process_helpers.ts";
-import { runStrictTarget } from "./target_helpers.ts";
+import { compileAndRun } from "./target_helpers.ts";
 
 Deno.test("Cron.parse gives the literal verdict of each expression and zone", async () => {
   const script = `
@@ -44,33 +37,6 @@ console.log(JSON.stringify({
     assertEquals(effect.zones[index], valid, JSON.stringify(input))
   );
 });
-
-async function compileAndRun(source: string, run: string): Promise<unknown> {
-  const project = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": source }),
-    "",
-    ["main.eff"],
-  );
-  assert(project.ok, JSON.stringify(project));
-  assertEquals(project.value.diagnostics, []);
-  const lowered = lowerProject(project.value);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(
-      project.value.analysis.project,
-      lowered,
-    ).values()
-  ) assertEquals(diagnostics, []);
-  return JSON.parse(
-    await runStrictTarget(
-      emitProject(lowered, { config: project.value.analysis.project.config }),
-      run,
-      "effektive-cron-",
-    ),
-  );
-}
 
 const SOURCE = `type Int = int
 export error Stop = {}

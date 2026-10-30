@@ -51,6 +51,24 @@ export function compileStrictTarget(
 }
 
 /**
+ * Compiles `source` as the one entry `main.eff`, runs `run` against the emitted
+ * project with `compileStrictTarget`, and returns the parsed JSON output.
+ */
+export async function compileAndRun(
+  source: string,
+  run: string,
+): Promise<unknown> {
+  return JSON.parse(
+    await compileStrictTarget(
+      { "main.eff": source },
+      ["main.eff"],
+      run,
+      "effektive-target-",
+    ),
+  );
+}
+
+/**
  * Writes the emitted modules and `run` as `run.ts` into a temporary directory
  * with the strict target configuration, then runs `deno check` and `deno run`
  * on `run.ts`. `extraFiles` are written beside them, such as a host module.

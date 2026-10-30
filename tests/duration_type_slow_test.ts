@@ -3,18 +3,7 @@
 // the strict target options, and runs it.
 
 import { assertEquals } from "@std/assert";
-import { compileStrictTarget } from "./target_helpers.ts";
-
-async function compileAndRun(source: string, run: string): Promise<unknown> {
-  return JSON.parse(
-    await compileStrictTarget(
-      { "main.eff": source },
-      ["main.eff"],
-      run,
-      "effektive-duration-",
-    ),
-  );
-}
+import { compileAndRun } from "./target_helpers.ts";
 
 const SOURCE = `type Int = int
 type Num = number

@@ -1,45 +1,11 @@
-import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  emitProject,
-  lowerProject,
-  memoryHost,
-  validateProject,
-} from "../src/core/mod.ts";
-import { runStrictTarget } from "./target_helpers.ts";
+import { assertEquals } from "@std/assert";
+import { compileAndRun } from "./target_helpers.ts";
 
 /**
  * Compiles one Effektive module with the validator, writes the emitted
  * TypeScript beside `run.ts`, and runs `run.ts` after a strict type check.
  * Returns the JSON that `run.ts` prints to standard output.
  */
-async function compileAndRun(source: string, run: string): Promise<unknown> {
-  const project = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": source }),
-    "",
-    ["main.eff"],
-  );
-  assert(project.ok, JSON.stringify(project));
-  assertEquals(project.value.diagnostics, []);
-  const lowered = lowerProject(project.value);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(
-      project.value.analysis.project,
-      lowered,
-    ).values()
-  ) assertEquals(diagnostics, []);
-  return JSON.parse(
-    await runStrictTarget(
-      emitProject(lowered, { config: project.value.analysis.project.config }),
-      run,
-      "effektive-schedule-emit-",
-    ),
-  );
-}
-
 Deno.test("scheduleFromStep runs its initial state per execution, not at module load", async () => {
   const result = await compileAndRun(
     `type Int = int
