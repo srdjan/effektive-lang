@@ -1,6 +1,6 @@
 # Reset implementation plan for a stable base
 
-Status: implementation complete; final LFG review pending. Date: 2026-10-30.
+Status: reset complete; LFG publication blocked by the no-push rule. Date: 2026-10-30.
 Planned revision: `fd20ff599fdfb43d1df20d4dbbaf7141536dd411` on local `main`.
 Documentation refresh revision: `66834187fc930198b97e6f5d481a8dd586097293`.
 The refresh changes the changelog and status guide only; the reviewed source remains equal.
@@ -939,4 +939,40 @@ No variance waiver or fixture update was required.
 | NB3: revision ownership | Done | `650cd81` | Commit `e44a680`. Main reviewed the three changed files and 12 public regression cases. The red test had three `validation/002` errors. Main passed 40 revision tests, 204 editor/validator tests, and the full gate in 80.539 s: 2,884 fast and 282 slow tests. All planned measurements passed their stated checks. Capture: 12,849 records per side, zero new or missing. Corrected probe and fixture checks pass. |
 | NB4: final documents | Done | `e44a680` | Glossary, API, development, status, and changelog updated. The plan and registry move to the archive together. Focused checks: 17 passed. Full gate: exit 0 in 69.128 s, with 2,884 fast and 282 slow tests. Fixtures, IR, and locks unchanged. The website specification has no revision-storage contract; no source form or wire type changed. Website unchanged. |
 
-Next owner: the main coordinator will run the remaining LFG quality and delivery checks.
+### Final quality and delivery checks
+
+The simplification pass removed two redundant private comments from `db.ts` and `types.ts`.
+It changed no runtime code or proof test.
+Lint, project-wide type checks, and 333 focused tests passed after that pass.
+
+Three independent Sol high contexts reviewed correctness, security, and adversarial failure cases.
+The review retained no actionable finding or missing requirement.
+The main coordinator checked standards, tests, maintainability, measurements, and prior solutions inline.
+Those checks did not have separate reviewer contexts because the user limited independent agents.
+No different-provider peer ran under the user's Sol-only instruction.
+The review records its full coverage limits in run `20261030-reset-axug1hyi`.
+Its temporary artifacts are review records; this plan remains the authority.
+
+The browser check exercised `/` through the installed `agent-browser` fallback.
+The integrated browser host was unavailable before testing began.
+The default example compiled without diagnostics.
+A tagged-record edit changed the generated TypeScript.
+An invalid field produced two expected diagnostics and retained the last good output.
+Restoring the source cleared the diagnostics and restored the original field in generated output.
+The browser reported no page errors or console messages.
+The coordinator inspected the screenshot, closed the test browser, and stopped the test server.
+This check does not replace installed-editor acceptance or prove all browser behavior.
+
+The final code, tests, and plan already carry the durable reasoning.
+No additional solution document is required.
+The final closure commit requires a passing `deno task check` on its exact working tree.
+Fixtures, IR, dependency locks, and the website remain outside the final changes.
+
+The repository has an `origin` remote.
+The user's active Git instruction says, "Never push - the user does that."
+The coordinator therefore makes local commits only.
+LFG cannot complete publication, PR creation, or CI monitoring under that instruction.
+No push, PR, publication, or merge occurred.
+The reset phases are complete; the delivery limit does not create another reset phase.
+
+Next owner: the user owns publication and the previously deferred manual acceptance checks.

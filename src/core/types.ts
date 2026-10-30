@@ -385,7 +385,6 @@ interface TypeTableState {
 
 export class TypeTable {
   private readonly storage: TypeStorage;
-  /** Each writer replaces a complete definition in this table. */
   private readonly defs: Map<TypeId, AliasDef>;
   private readonly errorRecords: Map<ErrorId, TypeRef>;
 

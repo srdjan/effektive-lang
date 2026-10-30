@@ -284,7 +284,6 @@ export class Program {
     { readonly text: string; readonly file: ParsedFile }
   >();
   private entries = new Map<string, Entry>();
-  /** The current definitions over shared interned storage. */
   private table = new TypeTable();
   private count = 0;
   private readonly counters: Counters = {
