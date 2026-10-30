@@ -174,6 +174,14 @@ SBF26 (low, confirmed). Two contracts are not written down. First, `.gitignore` 
 
 SBF27 (no defect, reported). No single-table builtin design pays. The core review measured 15 builtin commits: 3,878 core lines, with 37.3% in the checker, 30.2% in the validator, 15.7% in the emitter, and 4.8% in lowering. Mechanical lines are 245 of 3,878 (6.3%). A name-to-fact derivation removes 1.0%, field-list lowering 0.5%, and family dispatch registries 1.7%. A shared child table removes 2.5%, but it breaks invariant 2. The old count of four edit sites is too low: the smallest case touches 11 core files. The conclusion of the last reset stands. Disposition: declined, section 9. SB9 corrects the worked text in `docs/builtin-changes.md` if it states a count.
 
+### Found during execution
+
+SBF28 (medium, confirmed, not fixed). `build --validate` rejects a program that the checker accepts. SB4 unit 4 found this case. With `type Int = int`, take `withFiber(defer(() => 1), (fiber: Fiber<Int, never>) => 1)`. The parameter lowers as `named type:m#Int`, and the child result lowers as `primitive int`. The function `same` at `validate/typing.ts:704` compares name signatures, so `validate/families/fiber.ts:43` reports `validation/002`.
+
+Observed results: `check`, `build`, and `build --tsc` exit 0 on that program, and only `build --validate` exits 1. The bare callback `(fiber) => 1` passes all four. A child whose declared result is `Int` also passes. `Fiber<int, never>` fails with `declaration/013`, so a literal child has no annotation that validates. The other 26 `same` calls in `src/core/validate/` have no test for this condition.
+
+Disposition: this plan does not change the rule. A fix changes an observable result outside section 5. A fix also needs a language decision: the checker or the validator is wrong. `docs/status.md` holds the open item.
+
 ### Areas that stay as they are
 
 The reviews looked at these areas and found no reason to change them.
@@ -722,13 +730,29 @@ The main session rejected only the model name part of V11.
 
 | Phase | State | Entry SHA | Commits | Measurements and notes |
 | --- | --- | --- | --- | --- |
-| SB0 | In progress | `b2f356db2939e129525c25d4eda42b1488d96357` | | |
-| SB1 | Not started | | | |
-| SB2 | Not started | | | |
-| SB3 | Not started | | | |
-| SB4 | Not started | | | |
+| SB0 | Done | `b2f356db2939e129525c25d4eda42b1488d96357` | `54f0028`, `26cfe83`, `82df64c` | Gate exit 0: 2,679 fast and 280 slow passed. Byte identity exit 0, and `src/core` and `fixtures` equal `45218f3`. Capture `HEAD HEAD`: exit 0 in 392 s beside other work, 12,567 records on each side, 0 new, 0 missing. |
+| SB1 | Done | `82df64cb9eff77ee53fe469ecb5b2eef1909006f` | `b6668f4`, `42955cf`, `9be79f0` | Gate exit 0: 2,692 fast and 280 slow passed. Stale Effect pin failed `tests/versions_test.ts`. Changed fixture configuration failed with "The lockfile is out of date". Fixture configurations stayed `^1`, and no fixture changed. |
+| SB2 | Done | `9be79f0473761f4fa76289fb3facaa203727a836` | `4648813`, `d9d96ee`, `0dcd2a7` | Gate exit 0: 2,787 fast and 280 slow passed. A second `surface:update` changed nothing, and `src/` equals the phase base. Temporary source edits: a message failed 1 test, an exit code failed 4 tests, two reversed publishes failed 1 test, and swapped `publishDiagnostics` and `effektive/generatedChanged` failed 1 test. The first reversal passed, because no step published two documents, so the main session added that step. |
+| SB3 | Done | `0dcd2a7e781e6d7c4221f9b7e635c5e051f5d49d` | `7c18074`, `6690d66`, `b5916df` | Gate exit 0: 2,790 fast and 280 slow passed. Byte identity exit 0. Capture against the phase base: exit 0 in 408 s beside other work, 0 missing, 7 new (3 `check`, 4 `program`). All 7 come from `tests/diagnostic_volume_test.ts` and `tests/proof_budget_test.ts`, and their result sizes match those tests. Spread review: 21 of the other 23 sites have a size that depends on one source construct, so `6690d66` changed them. No crash was reproduced at those 21 sites. `predicates.ts:94,108` stay, because the caller bounds the size. `checkModuleStep` keeps its optional `proofBudget` parameter, because `tests/refinement_proofs_test.ts` passes small budgets to it. |
+| SB4 | Done | `b5916df84f09233765a2f0a4be6384b22ec06077` | `5af1e03`, `d25efda`, `73eba8e`, `968c56c`, `8e78386` | Gate exit 0: 2,863 fast and 280 slow passed. `src` equals the phase base. `rules:unfired` first printed 68 sites (list below the table), and it now prints 0. The test has 68 rows. No site is unreachable, and no rule is dead. Child tables: 123 kinds with no content difference. Only `timeout` differs in order: the emitter gives `[durationMs, job]` because `job` is deferred, and the validator gives `[job, durationMs]`. The orchestrator deleted `world.ts:776`, `effect.ts:438`, and `ref.ts:42` in scratch edits. Each deletion failed exactly its own row, and `src` was restored. Unit 4 found SBF28. |
 | SB5 | Not started | | | |
 | SB6 | Not started | | | |
 | SB7 | Not started | | | |
 | SB8 | Not started | | | |
 | SB9 | Not started | | | |
+
+The first `rules:unfired` output of SB4 listed these 68 sites in `src/core/validate/`:
+
+- `expr.ts`: 266, 475, 484, 497, 505, 513, 557, 737, 1139, 1313, 1616
+- `families/codec.ts`: 28, 48, 93, 102
+- `families/collections.ts`: 19, 109, 122
+- `families/effect.ts`: 71, 207, 217, 228, 236, 438, 471
+- `families/fiber.ts`: 29, 43, 51
+- `families/layer.ts`: 32, 45, 59, 69, 93
+- `families/ref.ts`: 33, 42, 58
+- `families/schedule.ts`: 105, 252, 270, 300
+- `families/schema.ts`: 941
+- `families/scope.ts`: 39, 60, 64, 104, 144, 160, 265, 341, 362, 370
+- `families/stream.ts`: 1021
+- `serialization.ts`: 152
+- `world.ts`: 542, 575, 583, 593, 602, 612, 624, 729, 776, 1146, 1312, 1315, 1367, 1375, 1395
