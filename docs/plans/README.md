@@ -37,3 +37,5 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | LR | [`docs/archive/plans/2026-10-27-replay-integrity.md`](../archive/plans/2026-10-27-replay-integrity.md) | Replay ordering and source retention |
 | EL | [`docs/archive/plans/2026-10-27-effect-surface-leftovers.md`](../archive/plans/2026-10-27-effect-surface-leftovers.md) | Open points of the effect surface plan: Cron, typed duration patterns, one callback test |
 | SL | [`docs/archive/plans/2026-10-27-second-effect-selection.md`](../archive/plans/2026-10-27-second-effect-selection.md) | Second selection of Effect features: `now()`, `random()`, logging, `Map` and `Set` |
+| SB (phases), SBF (findings) | [`docs/plans/2026-10-30-stable-base-reset.md`](2026-10-30-stable-base-reset.md) | Stable base reset |
+| RST (phases), RSTF (findings), RSTD (decisions) | [`docs/archive/plans/2026-10-30-reset-implementation.md`](../archive/plans/2026-10-30-reset-implementation.md) | Parallel reset plan, not selected |
