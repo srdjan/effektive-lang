@@ -657,7 +657,6 @@ export function checkAnalysis(analysis: Analysis): CheckedProject {
   const interfaces = new Map<string, ModuleInterface>();
   const modules = new Map<string, CheckedModule>();
   const diagnostics: Diagnostic[] = [...analysis.diagnostics];
-  const proofBudget: ProofBudget = { remaining: REFINEMENT_AGGREGATE_STEPS };
   for (const name of analysis.project.order) {
     const info = analysis.project.modules.get(name);
     if (info === undefined) continue;
@@ -667,7 +666,6 @@ export function checkAnalysis(analysis: Analysis): CheckedProject {
       name,
       table,
       reachedModules(analysis, name, graphs, interfaces),
-      proofBudget,
     );
     graphs.set(name, step.graph);
     if (step.checked.interface.ok) {

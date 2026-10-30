@@ -37,10 +37,6 @@
 // then carries the new spans.
 
 import { type Analysis, analyzeProject } from "./analyze.ts";
-import {
-  type ProofBudget,
-  REFINEMENT_AGGREGATE_STEPS,
-} from "./check_refinements.ts";
 import { PREDICATE_RULES_VERSION } from "./predicates.ts";
 import type { ModeMap, TypeGraph } from "./signatures.ts";
 import {
@@ -363,7 +359,6 @@ export class Program {
     const diagnostics: Diagnostic[] = [...analysis.diagnostics];
     const texts = new Map<string, string>();
 
-    const proofBudget: ProofBudget = { remaining: REFINEMENT_AGGREGATE_STEPS };
     for (const name of project.order) {
       const info = project.modules.get(name);
       if (info === undefined) continue;
@@ -392,7 +387,6 @@ export class Program {
           name,
           this.table,
           seen,
-          proofBudget,
         );
         const iface = checked.interface.ok
           ? checked.interface.value

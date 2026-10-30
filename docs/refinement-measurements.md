@@ -28,8 +28,8 @@ The compiler workload checks 200 refined functions in one module through `Progra
 Thirty distinct source updates had a p90 of 5.839916 milliseconds and a maximum of 15.316834 milliseconds.
 Every update had no diagnostics. The existing editor budget is 100 milliseconds at p90.
 
-The source checker permits 8,192 solver steps per query and 100,000 steps per compiler update.
-Every body shares the update allowance. The checker subtracts actual solver work.
+The source checker permits 8,192 solver steps per query and 100,000 steps per module.
+Every body of one module shares the module allowance. The checker subtracts actual solver work.
 The independent certificate checker has its own bounded work counters.
 Exhaustion rejects the affected static obligation. These measurements establish no general latency or memory bound.
 
