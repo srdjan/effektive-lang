@@ -11,6 +11,7 @@ import {
 import type { HostIo } from "../host/io.ts";
 import type { EventLog } from "../host/log.ts";
 import { formatTscMappings, type TextOf } from "./format.ts";
+import targetLock from "./target_lock.json" with { type: "json" };
 
 /** The version of Effect that the generated code targets. */
 export const EFFECT_VERSION = "4.0.5";
@@ -40,6 +41,11 @@ export function tscConfig(): string {
   ) + "\n";
 }
 
+/** The lockfile of the generated check: it pins the packages behind the host imports. */
+export function tscLock(): string {
+  return JSON.stringify(targetLock, null, 2) + "\n";
+}
+
 interface TscOutcome {
   /** Lines for stdout: one per mapped diagnostic. */
   readonly lines: readonly string[];
@@ -66,7 +72,12 @@ export async function runTsc(
   const files = [...new Set([...generated, ...hosts.keys()])];
   const absolute = io.fs.absolute(root);
   const started = performance.now();
-  const run = await io.denoCheck({ cwd: absolute, config: tscConfig(), files });
+  const run = await io.denoCheck({
+    cwd: absolute,
+    config: tscConfig(),
+    lock: tscLock(),
+    files,
+  });
   if (!run.ok) {
     log.append("cli.error", {
       message: `cannot run deno check: ${run.error.message}`,

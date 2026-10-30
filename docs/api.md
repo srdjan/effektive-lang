@@ -633,8 +633,12 @@ with a validation diagnostic is not written.
 `--tsc` runs `deno check` with a generated configuration. The configuration sets
 strict mode, `exactOptionalPropertyTypes`, and `noUncheckedIndexedAccess`. It
 maps `effect` and `@effect/platform-node` to their pinned 4.0.5 packages. The
-tool writes the configuration to a temporary directory and removes it after the
-run. It passes `--no-lock`, so the project directory gets no new file.
+tool writes the configuration and the pinned lockfile `src/cli/target_lock.json`
+to a temporary directory and removes both after the run. It passes `--lock=` with
+that lockfile, so the transitive packages stay at fixed versions. The project
+directory gets no new file. A host module can import another npm package. A host
+import whose range overlaps the pinned packages resolves to the pin. The lockfile
+covers only this check, so a project needs its own lockfile for its own `deno run`.
 
 Each project command writes a session log to `<root>/.effektive/logs/`, and a
 self-ignoring `.effektive/.gitignore`. The log holds one JSON object per line,

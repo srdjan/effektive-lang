@@ -20,7 +20,7 @@
 // and leaves nothing in the working tree.
 
 import { denoIo } from "../src/host/deno_io.ts";
-import { tscConfig } from "../src/cli/tsc.ts";
+import { tscConfig, tscLock } from "../src/cli/tsc.ts";
 import type { Result } from "../src/core/source.ts";
 import {
   DISTRIBUTION_HEADER,
@@ -81,6 +81,7 @@ async function timeCheck(
   const run = await io.denoCheck({
     cwd: absolute,
     config: tscConfig(),
+    lock: tscLock(),
     files: [...target.files.keys()].sort(),
   });
   const elapsed = performance.now() - start;

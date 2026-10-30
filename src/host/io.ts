@@ -33,6 +33,8 @@ export interface DenoCheckRequest {
   readonly cwd: string;
   /** The text of the configuration file. The runner writes it where it likes and removes it. */
   readonly config: string;
+  /** The text of the lockfile that seeds the check. */
+  readonly lock: string;
   /** Root-relative paths of the files to check. */
   readonly files: readonly string[];
 }

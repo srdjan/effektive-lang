@@ -1,8 +1,8 @@
 # Development
 
 This file gives the task commands, the repository layout, the error fixture
-convention, and the format and lint scope. The [README](../README.md) gives a
-short overview.
+convention, the target lock, and the format and lint scope. The
+[README](../README.md) gives a short overview.
 
 ## Commands
 
@@ -107,6 +107,33 @@ The files `fixtures/parse/recovery-*.eff` use the same markers. The files
 `fixtures/parse/ok-*` and the files in `fixtures/examples/` must parse with no
 diagnostics. The project files `fixtures/examples/effektive.json` and
 `fixtures/ir/effektive.json` set the module roots.
+
+## Target lock
+
+The `--tsc` check and the generated `deno.json` pin `effect` and
+`@effect/platform-node` to `EFFECT_VERSION`. Their transitive packages stay open
+without a lockfile. In October 2026 a new `@effect/platform-node-shared` release
+needed a newer `effect` and broke the gate. The file `src/cli/target_lock.json`
+pins the full closure of 14 npm packages. `tscLock()` returns its text, and
+`deno check` reads it as `deno.lock`.
+
+Generate the file again after a change of `EFFECT_VERSION` or `TARGET_IMPORTS`.
+Work in an empty temporary directory.
+
+1. Write a `deno.json` with `"nodeModulesDir": "auto"` and the two entries of
+   `TARGET_IMPORTS`.
+2. Write a `package.json` with
+   `{ "overrides": { "@effect/platform-node-shared": "<version>" } }`. Use the
+   `EFFECT_VERSION` value as `<version>`.
+3. Write `a.ts`. It imports `NodeFileSystem` from `@effect/platform-node` and
+   `Effect` from `effect`.
+4. Run `deno run --allow-read --allow-env --config deno.json a.ts`.
+5. Delete the key `workspace.packageJson` from the new `deno.lock`. Save the file
+   as `src/cli/target_lock.json`.
+6. Run `deno fmt src/cli/target_lock.json`.
+
+Only the `overrides` entry in `package.json` holds the shared package at the
+target version. The same entry in `deno.json` does not.
 
 ## Format and lint scope
 

@@ -4,7 +4,7 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { decodeMappings } from "../src/core/emit/sourcemap.ts";
-import { tscConfig } from "../src/cli/tsc.ts";
+import { tscConfig, tscLock } from "../src/cli/tsc.ts";
 import { COMPANION_FILES, copyDirectory, FIXTURES } from "./helpers.ts";
 import {
   deno,
@@ -405,6 +405,7 @@ Deno.test("a typed FileSystem host adapter builds and maps package failures", as
     const built = await effektive(["build", dir, "--validate", "--tsc"]);
     assertEquals(built.code, 0, built.stderr);
     Deno.writeTextFileSync(`${dir}/deno.json`, tscConfig());
+    Deno.writeTextFileSync(`${dir}/deno.lock`, tscLock());
     Deno.writeTextFileSync(`${dir}/sample.txt`, "hello from Effect\n");
     Deno.writeTextFileSync(
       `${dir}/run.ts`,
@@ -422,6 +423,7 @@ console.log(JSON.stringify({ value, missing: missing._tag, invalid: invalid.mess
         "run",
         "--allow-read",
         "--allow-env",
+        "--frozen",
         "--config",
         "deno.json",
         "--check",
@@ -586,5 +588,44 @@ Deno.test("build --validate accepts an inline record type 100 levels deep", asyn
     const run = await effektive(["build", dir, "--validate"]);
     assertEquals(run.code, 0, run.stderr);
     assert(!run.stderr.includes("validation/"), run.stderr);
+  });
+});
+
+Deno.test("a host module that imports another npm package builds with --tsc under the lockfile", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("host-adapter-files/", FIXTURES), dir);
+    const host = `${dir}/files-live.ts`;
+    Deno.writeTextFileSync(
+      host,
+      `import ms from "npm:ms@2.1.3";\nexport const hostMs: unknown = ms;\n` +
+        Deno.readTextFileSync(host),
+    );
+    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    assertEquals(built.code, 0, built.stdout + built.stderr);
+  });
+});
+
+Deno.test("deno check keeps the pinned closure when a host module imports an overlapping range", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/deno.json`, tscConfig());
+    Deno.writeTextFileSync(`${dir}/deno.lock`, tscLock());
+    Deno.writeTextFileSync(
+      `${dir}/host.ts`,
+      `import * as shared from "npm:@effect/platform-node-shared@^4.0.5";\n` +
+        `import * as ws from "npm:ws@^8";\n` +
+        `export const modules: unknown = [shared, ws];\n`,
+    );
+    const checked = await deno(dir, ["check", "--lock=deno.lock", "host.ts"]);
+    assertEquals(checked.code, 0, checked.stderr);
+    const lock = JSON.parse(Deno.readTextFileSync(`${dir}/deno.lock`));
+    const pinned = JSON.parse(tscLock());
+    assertEquals(Object.keys(lock.npm).length, 14);
+    assertEquals(
+      Object.keys(lock.npm).includes(
+        "@effect/platform-node-shared@4.0.5_effect@4.0.5",
+      ),
+      true,
+    );
+    assertEquals(lock.npm, pinned.npm);
   });
 });

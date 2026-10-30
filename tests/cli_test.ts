@@ -358,6 +358,20 @@ Deno.test("build --tsc runs deno check over the generated files and the host mod
   });
 });
 
+Deno.test("build --tsc passes the pinned lockfile of the Effect target", async () => {
+  const r = await run(["build", ROOT, "--tsc"], under(ROOT, exampleFiles()));
+  assertEquals(r.code, 0, r.stderr);
+  const lock = JSON.parse(r.m.checks[0].lock);
+  assertEquals(lock.specifiers, {
+    "npm:@effect/platform-node@4.0.5": "4.0.5_effect@4.0.5_redis@6.3.1",
+    "npm:effect@4.0.5": "4.0.5",
+  });
+  assert(
+    "@effect/platform-node-shared@4.0.5_effect@4.0.5" in lock.npm,
+    "the lockfile pins the shared package to 4.0.5",
+  );
+});
+
 Deno.test("build --tsc prints a host-boundary diagnostic at the import and a host-module diagnostic in the host file", async () => {
   const r = await run(
     ["build", ROOT, "--tsc"],

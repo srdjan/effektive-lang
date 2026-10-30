@@ -128,8 +128,10 @@ async function denoCheck(
     directory = Deno.makeTempDirSync({ prefix: "effektive-tsc-" });
     const config = `${directory}/deno.json`;
     Deno.writeTextFileSync(config, request.config);
+    const lock = `${directory}/deno.lock`;
+    Deno.writeTextFileSync(lock, request.lock);
     const output = await new Deno.Command("deno", {
-      args: ["check", "--no-lock", "--config", config, ...request.files],
+      args: ["check", `--lock=${lock}`, "--config", config, ...request.files],
       cwd: request.cwd,
       env: { NO_COLOR: "1" },
       stdout: "piped",
