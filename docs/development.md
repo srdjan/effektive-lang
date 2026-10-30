@@ -20,6 +20,7 @@ Run every command from the repository root.
 | `deno task behavior:capture`  | Compares two revisions using instrumented compiler entry points during tests, including subprocesses. See the capture note below. Use it for refactors. |
 | `deno task logs:report`        | Prints a Markdown report of the session logs: `[--since <N>(m|h|d)] [folder ...]`. The default window is 24h and the default folder is `playground/.effektive/logs/`. |
 | `deno task logs:replay`        | Runs a logged session again on the current build: `<session.jsonl>`. Exit 0 when the outcomes match, 1 at the first difference, 2 for a usage error or an unsupported session. It skips `--tsc`, and it does not replay watch sessions. |
+| `deno task rules:unfired`      | Runs the fast suite with coverage and prints `path:line: text` for each validator rejection site in `src/core/validate/` that no fast test fires, then the count. Exit 0 when the list is complete. |
 | `deno task measure`           | Prints the lines, branches, and cyclomatic numbers of the files that you name, as JSON.                                                                 |
 | `deno task measure:functions` | Prints the branches and cyclomatic number of each function in the files that you name, as TSV.                                                          |
 | `deno task effektive`         | Runs the command-line tool. See [Using the command line](api.md#using-the-command-line).                                                                |
