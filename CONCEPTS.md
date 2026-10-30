@@ -38,9 +38,16 @@ The frontend owns checking and lazy lowering. Output queries take a revision exp
 
 ### Type table
 
-The project-wide store in which the checker interns each type once and refers to it by a reference number.
+The checker stores each structural type once in shared interned storage and refers to it by a reference number.
 
-A reference number depends on the order in which types were first interned, and the incremental program keeps one table across all edits. So a reference number must never decide an order, a choice, or a message that a user can see; a canonical structural key decides those, and the number only breaks ties.
+Each revision has separate alias definitions and error-record definitions over that shared storage.
+Later updates cannot change the definitions that an earlier revision reads.
+Cached modules retain their last-check tables.
+The current revision exposes its own table through `Revision.types`.
+
+Reference numbers depend on intern order.
+A reference number must never decide an order, choice, or message that the user can see.
+A canonical structural key decides those results; the reference number only breaks ties.
 
 ### Disk program
 

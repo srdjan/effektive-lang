@@ -59,6 +59,10 @@ pipeline and its layering rules. The
 [completed plan](archive/plans/2026-10-24-compiler-boundaries-source-forms.md)
 records the parity, performance, and editor evidence.
 
+Each revision retains separate type definitions over shared interned storage.
+Later edits cannot change earlier lazy lowering or editor queries.
+The [revision reset plan](archive/plans/2026-10-30-reset-base.md) records the checks and known risks.
+
 ### Concise source forms
 
 Bare single-parameter arrows, lazy Option `??`, flat block-local record

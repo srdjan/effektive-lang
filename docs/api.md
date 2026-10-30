@@ -564,10 +564,17 @@ declarations. An edit that only moves such a declaration keeps the interface
 hash, so the importer is not checked again. The program builds the interface of
 the importer again and lowers the importer again.
 
-One `TypeTable` lives as long as the program, so reused modules keep valid type
-references. Its interned nodes only grow; redefining a type replaces its
-previous alias, identity, tagged, opaque, and recursion metadata. Its memory growth in a
-long watch session is measurement M4.
+All revisions share append-only interned storage, so reused modules keep valid type references.
+Each successful update forks the alias and error-record definition maps before checking.
+The revision retains that table for editor queries and lazy lowering.
+An earlier revision therefore keeps its original definitions even when its first output query follows a later edit.
+
+A reused checked module keeps its original object and `declarations.env.table` from its last check.
+`Revision.types` gives the definition view for the current revision.
+`TypeReader.size` counts all nodes in shared storage, including nodes that later revisions or delayed lowering add.
+Tables have no parent link or revision-history collection.
+Cached modules and caller-retained objects can keep earlier definition maps alive.
+Measurement M4 records memory over edits; it does not establish a byte bound.
 
 `src/core/mod.ts` re-exports the program and the pipeline functions. It also
 re-exports the span table and source map builders, the `deno check` parser and

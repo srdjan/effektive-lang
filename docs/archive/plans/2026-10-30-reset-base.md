@@ -1,6 +1,6 @@
 # Reset implementation plan for a stable base
 
-Status: implementation in progress. Date: 2026-10-30.
+Status: implementation complete; final LFG review pending. Date: 2026-10-30.
 Planned revision: `fd20ff599fdfb43d1df20d4dbbaf7141536dd411` on local `main`.
 Documentation refresh revision: `66834187fc930198b97e6f5d481a8dd586097293`.
 The refresh changes the changelog and status guide only; the reviewed source remains equal.
@@ -12,11 +12,11 @@ It contains the detailed findings review, target design, phases, verification, a
 The completed reset plans remain historical evidence.
 The canonical specification and current project status retain their existing authority.
 
-The current request authorizes changes to this document only.
-This agent changes no source file, other document, registry, or website during planning.
+The original planning request authorized changes to this document only.
+During planning, this agent changed only this document.
 Concurrent edits by other workspace actors are recorded below and preserved.
-The coordinator will register this document only after implementation receives authorization.
-This planning task ends when this document is complete.
+The later LFG invocation authorized the implementation phases and required verification.
+The coordinator registered this authority in the baseline phase.
 
 NB identifies phases for the new base.
 NBF identifies findings for the new base.
@@ -37,7 +37,10 @@ Completed: independent reviews, reproduced findings, Astra validation, and recon
 Authorization: the user invoked LFG to execute this plan on 2026-10-30.
 The invocation authorizes required verification, including captures and full measurements that exceed two minutes.
 The coordinator will preserve the six known risks without adding remediation tasks.
-Next action: register the authority and check the baseline before source changes.
+Completed: registered baseline, committed guard repair, committed table fork, committed revision repair, and required measurements.
+Completed: unchanged-corpus capture with zero new or missing records.
+Completed: final documentation gate and archive link checks.
+Current work: commit the archive move, then run final LFG review and delivery checks.
 
 | Unit | Owner and model | Read scope | Acceptance check | Turn budget |
 | --- | --- | --- | --- | --- |
@@ -583,6 +586,7 @@ Optional raw artifacts belong in gitignored `demos/`.
 Benchmark runs must not overlap gates, captures, or other benchmarks.
 
 M1, the diagnostic-latency measurement, must retain the existing large-input p90 limit of 100 ms.
+A noise floor is the observed variation between paired runs of the same build.
 Differences below a measured row's noise floor are inconclusive.
 M3, the incremental-work measurement, must retain existing check, lowering, and emit counts for the same steps.
 M4, the memory measurement, must run with both saved-output settings, as the existing task already does.
@@ -831,7 +835,7 @@ The six user-supplied risks remain observations without remediation tasks.
 The main agent reconciled both findings in this document.
 Implementation measurements remain mandatory; validation does not establish their outcome.
 
-### Final document checks
+### Planning document checks
 
 The final focused command was `deno test --allow-read tests/docs_test.ts tests/versions_test.ts`.
 It passed all 17 tests with zero failures.
@@ -842,17 +846,97 @@ That measurement command remains unexecuted until implementation.
 
 Another workspace actor committed an earlier draft of this document as `26d4fc6` during planning.
 The main agent did not create that commit or alter its history.
-Subsequent changes by this agent affect only this plan document.
-The reviewed source, tests, fixtures, configuration, and website remain unchanged by this agent.
+At planning completion, this agent had changed only the plan document.
+The LFG implementation began later.
+Its changes and checks appear in the execution ledger.
 
 ## Execution ledger
 
+### Comparison checkpoint
+
+The source repair is commit `e44a6802ddf7200b586feea68d8bc8079dbefe94`.
+Its comparison baseline is `650cd813408e943fa3aee21f518d8f02afb36d79`.
+Both benchmarks use committed exports and run serially.
+The small benchmark pipeline passed eight tests in 4.935 seconds.
+
+Quick baseline and candidate runs completed in 52.799 and 61.020 seconds, respectively.
+Their M3 rows match exactly.
+Candidate large-input p90 values are 17.743, 70.045, 68.977, and 66.108 ms for body, header, alias, and mode-flip edits.
+Those quick values satisfy the 100 ms limit.
+They do not replace the full measurements.
+
+The full baseline and candidate completed in 666.346 and 855.392 seconds, respectively.
+Their M3 rows match exactly, including every step count and interface or mode change.
+All candidate large-input p90 values satisfy the 100 ms limit.
+Median differences remain within the larger measured noise floor of each pair.
+The sequential runs do not establish a speedup.
+
+| Large edit | Baseline p90, ms | Candidate p90, ms | Baseline floor, percent | Candidate floor, percent |
+| --- | --- | --- | --- | --- |
+| Body | 15.146 | 12.886 | 23.0 | 9.2 |
+| Header | 71.339 | 65.819 | 11.0 | 7.8 |
+| Alias | 68.843 | 63.194 | 11.8 | 7.7 |
+| Mode flip | 148.572 | 65.800 | 28.3 | 12.5 |
+
+The baseline mode-flip spike precedes the revision repair.
+Its cause remains unconfirmed.
+The candidate run satisfies the latency limit without changing the measurement workload.
+The higher total candidate runtime remains an observation, rather than evidence of equal throughput.
+The plan adopts no benchmark wall-time budget.
+
+The tables below give final heap samples for the two server processes, A and B.
+MiB means 1,048,576 bytes.
+The harness samples after steps and does not force garbage collection.
+
+| Saved output | Edits per server | Baseline heap A/B, MiB | Candidate heap A/B, MiB |
+| --- | --- | --- | --- |
+| Off | 200 | 49.587 / 42.454 | 35.701 / 37.454 |
+| Off | 500 | 58.169 / 61.918 | 46.931 / 44.886 |
+| Off | 1,000 | 48.942 / 73.232 | 56.760 / 46.590 |
+| Off | 10,000 | 38.496 / 90.882 | 50.083 / 47.708 |
+| On | 200 | 43.192 / 71.915 | 66.717 / 78.417 |
+| On | 500 | 67.211 / 35.503 | 56.983 / 41.321 |
+| On | 1,000 | 63.188 / 88.471 | 105.487 / 103.882 |
+| On | 10,000 | 53.935 / 53.780 | 93.960 / 67.501 |
+
+Every row ends with 99 interned types per server on both builds.
+The candidate heap samples do not increase from 1,000 to 10,000 saved edits.
+The source review found no parent link or table-history collection.
+Cached module environments retain their last-check tables, as the public census proves.
+These observations do not establish a bound in bytes or garbage-collection timing.
+
+The all-module runs cover 3, 7, and 52 source modules.
+Every module received edits on both servers and both saved-output settings.
+The small baseline and candidate pipelines completed in 4.137 and 4.076 seconds before scaling.
+Only the size parameter changed for the medium and large runs.
+
+| Modules | Saved output | Last row: edits per server | Baseline final heap A/B, MiB | Candidate final heap A/B, MiB |
+| --- | --- | --- | --- | --- |
+| 3 | Off | 12 | 14.717 / 14.701 | 14.739 / 14.740 |
+| 3 | On | 12 | 19.854 / 19.665 | 19.853 / 19.633 |
+| 7 | Off | 28 | 31.236 / 31.256 | 31.326 / 31.286 |
+| 7 | On | 28 | 68.722 / 61.349 | 68.851 / 61.270 |
+| 52 | Off | 208 | 119.215 / 133.547 | 119.278 / 182.998 |
+| 52 | On | 208 | 202.499 / 192.697 | 128.315 / 313.730 |
+
+RSS is the memory that a process currently holds in RAM.
+Across the large all-module rows, peak RSS reached 625.562 MiB in the baseline and 714.328 MiB in the candidate.
+The paired samples vary; the wider case does not show a consistent increasing heap trend on both candidate servers.
+No memory budget exists, and these samples do not prove memory parity or a memory saving.
+The coordinator accepted the structural ownership check and measured cost under those limits.
+
+Raw commands, samples, and execution records stay in gitignored `demos/`.
+The unchanged-corpus capture compares `650cd81` with temporary commit `3103d97486e43db4ec1fe1e60c5b95ba6dbc178f`.
+That commit holds source `e44a680` and the baseline tests without moving `main`.
+Capture passed in 416.912 seconds: 12,849 records per side, zero new, and zero missing.
+No variance waiver or fixture update was required.
+
 | Phase | State | Entry SHA | Commit and evidence |
 | --- | --- | --- | --- |
-| NB0: restore baseline | Done | `26d4fc6` | Registry added. Focused documentation/version checks: 17 passed. Full gate: exit 0 in 46.934 s, including 282 slow tests. Source, tests, fixtures, and configuration equal the reviewed source. |
-| NB1: path boundary | Done | `fa0d244` | Existing guard test failed on `..scratch` before the fix. Both guard tests and the external build test pass. Full gate: exit 0 in 54.532 s, including 282 slow tests. Fixtures unchanged. |
-| NB2: table fork | Done | `fa0d244` | Sol added the fork and three public-method tests. The red run failed only because `fork` was absent. Main reviewed every changed line and passed 296 focused tests. Full gate: exit 0 in 54.671 s, with 2,872 fast and 282 slow tests. No production fork caller or fixture change. |
-| NB3: revision ownership | Source checked; comparisons pending | `650cd81` | Main reviewed the three changed files and 12 public regression cases. The baseline test failed with three `validation/002` errors. Main reran 40 revision tests and 204 editor/validator tests. Full gate: exit 0 in 80.539 s, with 2,884 fast and 282 slow tests. Corrected probe: zero validation errors, equal IR and emitted bytes, unchanged old reader. Fixtures unchanged. |
-| NB4: final documents | Not started | - | Planning only |
+| NB0: restore baseline | Done | `26d4fc6` | Commit `fa0d244`. Registry added. Focused documentation/version checks: 17 passed. Full gate: exit 0 in 46.934 s, including 282 slow tests. Source, tests, fixtures, and configuration equal the reviewed source. |
+| NB1: path boundary | Done | `fa0d244` | Commit `16c87b6`. Existing guard test failed on `..scratch` before the fix. Both guard tests and the external build test pass. Full gate: exit 0 in 54.532 s, including 282 slow tests. Fixtures unchanged. |
+| NB2: table fork | Done | `fa0d244` | Commit `650cd81`. Sol added the fork and three public-method tests. The red run failed only because `fork` was absent. Main reviewed every changed line and passed 296 focused tests. Full gate: exit 0 in 54.671 s, with 2,872 fast and 282 slow tests. No production fork caller or fixture change. |
+| NB3: revision ownership | Done | `650cd81` | Commit `e44a680`. Main reviewed the three changed files and 12 public regression cases. The red test had three `validation/002` errors. Main passed 40 revision tests, 204 editor/validator tests, and the full gate in 80.539 s: 2,884 fast and 282 slow tests. All planned measurements passed their stated checks. Capture: 12,849 records per side, zero new or missing. Corrected probe and fixture checks pass. |
+| NB4: final documents | Done | `e44a680` | Glossary, API, development, status, and changelog updated. The plan and registry move to the archive together. Focused checks: 17 passed. Full gate: exit 0 in 69.128 s, with 2,884 fast and 282 slow tests. Fixtures, IR, and locks unchanged. The website specification has no revision-storage contract; no source form or wire type changed. Website unchanged. |
 
-Next owner: the main coordinator will finish the baseline gate and execute the dependent phases.
+Next owner: the main coordinator will run the remaining LFG quality and delivery checks.

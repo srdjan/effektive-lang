@@ -41,6 +41,17 @@ lower-level checker call. The temporary hooks embed their destination path, so
 child processes need write permission but no environment permission. A recording
 failure fails the capture visibly.
 
+## Reset regression checks
+
+`tests/revision_isolation_test.ts` delays queries on retained revisions until after later definition edits.
+It compares independently validated IR, emitted text, mappings, and editor results with a fresh program.
+Its table census also checks cached-module reuse across rotating edits.
+The census bounds visible table identities; it does not measure retained bytes or garbage-collection timing.
+
+`tests/playground_build_test.ts` checks the output-directory guard without deleting repository data.
+The guard compares complete parent components, so a repository child called `..scratch` remains protected.
+The existing slow build test checks supported external output.
+
 ## Layout
 
 The core reads files only through `SourceHost`. It calls no Deno API. Tests may
