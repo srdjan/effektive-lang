@@ -5,17 +5,7 @@ import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { Expr, ModuleIR } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { emitFiles } from "./helpers.ts";
-
-function diagnosticsOf(source: string): string[] {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
-}
+import { diagnosticsOf, emitFiles } from "./helpers.ts";
 
 const TYPES = `type Text = string
 type Id = int

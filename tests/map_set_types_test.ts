@@ -10,7 +10,7 @@ import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import { showType } from "../src/core/type_show.ts";
 import { TypeTable } from "../src/core/types.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { emitFiles } from "./helpers.ts";
+import { diagnosticsOf, emitFiles } from "./helpers.ts";
 
 const TYPES = `type Text = string
 type Int = int
@@ -19,16 +19,6 @@ type A = { id: Int }
 type B = { name: Text }
 type AB = A | B
 `;
-
-function diagnosticsOf(source: string): string[] {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
-}
 
 /** The diagnostics of `export const f = (m: <from>): <to> => m`. */
 function convert(from: string, to: string): string[] {

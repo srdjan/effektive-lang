@@ -683,3 +683,14 @@ export function hostBoundaryManifest(): readonly HostBoundaryFixture[] {
   }
   return parsed.fixtures as HostBoundaryFixture[];
 }
+
+/** Check one `m.eff` module and return each diagnostic as `code message`. */
+export function diagnosticsOf(source: string): string[] {
+  const checked = checkProject(
+    memoryHost({ "effektive.json": "{}", "m.eff": source }),
+    "",
+    ["m.eff"],
+  );
+  assert(checked.ok);
+  return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
+}

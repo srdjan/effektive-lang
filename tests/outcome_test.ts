@@ -9,6 +9,7 @@ import type { Expr, ModuleIR } from "../src/core/ir.ts";
 import { parse } from "../src/core/parse.ts";
 import { kindName, kindOf, SyntaxKind, walk } from "../src/core/syntax.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { diagnosticsOf } from "./helpers.ts";
 
 const HEAD = `type Int = int
 export error Stop = { n: Int }
@@ -18,16 +19,6 @@ export service Log {
   check(): void fails Stop
 }
 `;
-
-function diagnosticsOf(source: string): string[] {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
-}
 
 // ------------------------------------------------------------------ parsing
 

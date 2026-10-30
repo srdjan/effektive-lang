@@ -5,6 +5,7 @@ import { assert, assertEquals } from "@std/assert";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { Expr, ModuleIR } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { diagnosticsOf as sharedDiagnosticsOf } from "./helpers.ts";
 
 const HEAD = `type Int = int
 type Bool = boolean
@@ -15,15 +16,8 @@ export service Jobs { next(): Int fails Stop }
 export service Gate { open(n: Int): Bool fails Other }
 `;
 
-function diagnosticsOf(source: string): string[] {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": HEAD + source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
-}
+const diagnosticsOf = (source: string): string[] =>
+  sharedDiagnosticsOf(HEAD + source);
 
 const REPEAT = "repeat(() => Jobs.next(), ";
 const SIG = "(): Int fails Stop uses Jobs.next";

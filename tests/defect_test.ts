@@ -6,6 +6,7 @@ import { Program, sourceHoverAt } from "../src/core/frontend.ts";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { Expr, ModuleIR } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { diagnosticsOf } from "./helpers.ts";
 
 const HEAD = `type Int = int
 type Text = string
@@ -17,16 +18,6 @@ export service Log {
   other(): Int fails Stop
 }
 `;
-
-function diagnosticsOf(source: string): string[] {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
-}
 
 Deno.test("a catch block with only a Defect arm is valid", () => {
   assertEquals(

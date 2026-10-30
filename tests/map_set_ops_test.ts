@@ -7,7 +7,7 @@ import { assert, assertEquals } from "@std/assert";
 import type { ModuleIR, Type } from "../src/core/ir.ts";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { emitFiles } from "./helpers.ts";
+import { diagnosticsOf, emitFiles } from "./helpers.ts";
 
 const TYPES = `type Text = string
 type Int = int
@@ -16,16 +16,6 @@ type A = { id: Int }
 type B = { name: Text }
 type AB = A | B
 `;
-
-function diagnosticsOf(source: string): string[] {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
-}
 
 /** The diagnostics of one function with the parameters `m`, `s` and `es` and the body `body`. */
 function body(result: string, body: string): string[] {
