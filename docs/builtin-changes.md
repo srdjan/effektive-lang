@@ -13,7 +13,8 @@ effects of evaluating an argument from effects deferred inside its callback.
 Record diagnostic codes, text, spans and check order for rejected inputs.
 
 Use an existing IR operation when it expresses the contract. `src/core/ir.ts`
-is the canonical copy from the sibling repository; a new IR shape needs its own
+is the authored contract. Edit it first, and then update the published copy
+`../effektive/public/typed-ir.ts` to follow. A new IR shape needs its own
 accepted change. Payload-free checker facts are not automatically redundant:
 confirm the resolver identity and specialization that lowering needs.
 

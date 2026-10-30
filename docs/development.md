@@ -163,8 +163,10 @@ needs a change of the lockfile. To change a dependency on purpose, run
 ## Format and lint scope
 
 `deno fmt` skips `docs/`, `src/core/ir.ts`, `editors/vscode/node_modules/`, and
-every `.eff` and `.effi` file. The copy of `ir.ts` stays as it is in the sibling
-repository. `deno fmt` checks `fixtures/golden/`. `deno lint` skips `docs/` and
+every `.eff` and `.effi` file. The file `ir.ts` keeps the layout of its
+published copy. `tests/ir_site_slow_test.ts` guards assignment compatibility of
+`ModuleIR` in both directions. It cannot see an extra optional property.
+`deno fmt` checks `fixtures/golden/`. `deno lint` skips `docs/` and
 `fixtures/golden/`, because generated code keeps unused handler parameters. It
 also skips `editors/vscode/`, which holds plain JavaScript. Both tools skip
 `playground/dist/`, but `deno fmt` checks `playground/index.html` and

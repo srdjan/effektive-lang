@@ -9,7 +9,7 @@ and the repository layout.
 
 ```
 src/core/      The core library. It is synchronous and does no I/O. Program memoizes its queries.
-  ir.ts          Typed IR model, copied from the sibling repository effektive.
+  ir.ts          Typed IR model. This file is the authored contract. The sibling repository effektive publishes a copy.
   source.ts      SourceHost, line tables, positions, and span helpers.
   file_diff.ts   diffFiles: the set and remove lists that turn one file map into another, for Program.update.
   diagnostics.ts Diagnostic type, the registry of codes, sort and dedupe.
