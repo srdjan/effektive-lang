@@ -58,12 +58,16 @@ Deno.test("service workflow passes real loopback HTTP and file-backed SQLite acc
       assert(result.ok, JSON.stringify(result));
       Deno.writeTextFileSync(`${dir}/${result.value.path}`, result.value.text);
     }
+    Deno.copyFileSync(
+      new URL("./application_lock.json", import.meta.url),
+      `${dir}/deno.lock`,
+    );
     for (
       const args of [
-        ["check", "--no-lock", "integration_runtime_test.ts"],
+        ["check", "--frozen", "integration_runtime_test.ts"],
         [
           "test",
-          "--no-lock",
+          "--frozen",
           "--no-prompt",
           `--allow-read=${Deno.realPathSync(dir)}`,
           `--allow-write=${Deno.realPathSync(dir)}`,

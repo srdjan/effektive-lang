@@ -2,6 +2,7 @@
   "name": "@srdjan/effektive-lang",
   "version": "0.10.4",
   "license": "MIT",
+  "lock": { "path": "./deno.lock", "frozen": true },
   "exports": {
     ".": "./src/core/mod.ts",
     "./frontend": "./src/core/frontend.ts",

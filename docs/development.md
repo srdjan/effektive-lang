@@ -135,6 +135,29 @@ Work in an empty temporary directory.
 Only the `overrides` entry in `package.json` holds the shared package at the
 target version. The same entry in `deno.json` does not.
 
+## Application lock
+
+The application harnesses copy `tests/application_lock.json` to `deno.lock` in
+their temporary directory. They run `deno` with `--frozen`. A new release of
+`@std/assert` or `@std/internal` then cannot change the gate.
+
+A change to the configuration of a fixture in `fixtures/applications/` needs a
+new lockfile. Without it, the harness fails with "The lockfile is out of date".
+Generate the lockfile again in an empty temporary directory.
+
+1. Copy `fixtures/applications/order-lifecycle/deno.json` to `deno.json`.
+2. Write `a.ts`. It imports `Effect` from `effect` and `assertEquals` from
+   `@std/assert`.
+3. Run `deno cache a.ts`.
+4. Save the new `deno.lock` as `tests/application_lock.json`.
+5. Run `deno fmt tests/application_lock.json`.
+
+## Root lock
+
+The key `lock` in `deno.json` freezes `deno.lock`. A task fails when an import
+needs a change of the lockfile. To change a dependency on purpose, run
+`deno install --frozen=false`. Then commit the new `deno.lock`.
+
 ## Format and lint scope
 
 `deno fmt` skips `docs/`, `src/core/ir.ts`, `editors/vscode/node_modules/`, and

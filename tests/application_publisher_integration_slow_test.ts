@@ -62,12 +62,16 @@ Deno.test("portable publisher passes one KV contract on memory and file-backed S
       assert(module.ok, JSON.stringify(module));
       Deno.writeTextFileSync(`${dir}/${module.value.path}`, module.value.text);
     }
+    Deno.copyFileSync(
+      new URL("./application_lock.json", import.meta.url),
+      `${dir}/deno.lock`,
+    );
     for (
       const args of [
-        ["check", "--no-lock", "sqlite_runtime_test.ts"],
+        ["check", "--frozen", "sqlite_runtime_test.ts"],
         [
           "test",
-          "--no-lock",
+          "--frozen",
           "--no-prompt",
           `--allow-read=${Deno.realPathSync(dir)}`,
           `--allow-write=${Deno.realPathSync(dir)}`,

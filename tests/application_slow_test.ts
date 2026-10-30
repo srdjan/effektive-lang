@@ -195,13 +195,17 @@ for (const app of APPLICATIONS) {
           Deno.readTextFileSync(new URL(name, base)),
         );
       }
+      Deno.copyFileSync(
+        new URL("./application_lock.json", import.meta.url),
+        `${dir}/deno.lock`,
+      );
       const runtimeTests = app.runtimeTests ?? ["runtime_test.ts"];
       for (
-        const args of [["check", "--no-lock", "main.ts", ...runtimeTests], [
+        const args of [["check", "--frozen", "main.ts", ...runtimeTests], [
           "test",
-          "--no-lock",
+          "--frozen",
           ...runtimeTests,
-        ], ["run", "--no-lock", "main.ts"]]
+        ], ["run", "--frozen", "main.ts"]]
       ) {
         const result = await new Deno.Command(Deno.execPath(), {
           args,
