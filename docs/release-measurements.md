@@ -1,5 +1,7 @@
 # Release measurements — 2026-10-21
 
+The newest run is in [Reset run, 2026-10-30](#reset-run-2026-10-30).
+
 The full M1/M3/M4 run completed successfully. All four large-input diagnostics p90 values are below the accepted **100 ms** budget; the highest is **73.923 ms** for alias edits. The long session completed **10,000 distinct edits per server across three concurrently open documents**. These measurements do not establish a memory bound.
 
 ## Reproduce and inspect
@@ -97,3 +99,46 @@ M4 ran twice on the medium input with three open documents. In the second run, e
 | 10,000 | 218.0 / 210.0 | 275.9 / 290.4 | 174 → 176 |
 
 The sampled RSS peak was higher with saves in every row. Peaks are sampled at step ends, and garbage collection is not forced. This run establishes no memory bound and no memory budget.
+
+## Reset run, 2026-10-30
+
+The full M1/M3/M4 run of commit `4d68be0` passed the budget. All four large-input diagnostics p90 values are below **100 ms**. The run exited 0. M1/M3 took **53.3 / 23.7 seconds**. M4 took **84.6 seconds** without saves and **376.5 seconds** with saves. Environment: Deno **2.9.8**, V8 **15.0.245.2-rusty**, TypeScript **6.0.3**, `aarch64-apple-darwin`, **14 logical cores**.
+
+```sh
+deno task bench --full m1 m3 m4 --json docs/evidence/release-measurements-2026-10-30.json > docs/evidence/release-measurements-2026-10-30.txt
+```
+
+- [Raw samples](evidence/release-measurements-2026-10-30.json)
+- [Complete text report](evidence/release-measurements-2026-10-30.txt)
+- [Comparison with the commit before the reset](evidence/release-measurements-2026-10-30-compare.txt)
+
+| Large-input edit | Samples | Median ms | p90 ms | Maximum ms | A/A floor % |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| body | 200 | 11.881 | 12.873 | 24.574 | 8.9 |
+| header | 200 | 59.625 | 61.930 | 91.123 | 4.5 |
+| alias | 200 | 58.650 | 60.023 | 90.481 | 4.1 |
+| flip | 200 | 61.393 | 65.419 | 97.819 | 7.6 |
+
+The table of 2026-10-21 cannot show the effect of the reset, because many features came between the two runs. So M1 also ran eight times from extracted commits, in turn: four runs of `b2f356d`, the commit before the reset, and four runs of `4d68be0`.
+
+| Large-input edit | Median of four medians ms, before / after | p90 range ms, before | p90 range ms, after |
+| --- | ---: | ---: | ---: |
+| body | 12.171 / 12.221 | 12.507 to 13.669 | 12.707 to 21.307 |
+| header | 62.454 / 63.421 | 63.362 to 76.932 | 69.247 to **124.113** |
+| alias | 60.993 / 61.739 | 63.523 to 77.958 | 62.114 to 66.908 |
+| flip | 62.768 / 61.709 | 68.637 to **110.508** | 61.842 to 66.958 |
+
+The medians differ by at most 1.7%, which is below the A/A floor of each row, so this comparison measures no regression from the reset. Each commit passed 100 ms in one p90 of its four runs. Those rows have floors of 37.0% and 49.4%, and the other rows of those runs stayed low. A high floor shows interference on the machine, not a property of the commit. The probable cause is other work on the machine, and these runs do not confirm it. The full run above passed, but the margin under the budget is smaller under load than that run alone shows.
+
+M3 ran 100 steps per input and edit kind, without hover. Each step parsed one module and performed no lowering or emission. A large header, alias, or flip edit checked 26 modules.
+
+M4 ran twice on the medium input with three open documents. In the second run, each step wrote the text to disk and saved it.
+
+| Edits per side | RSS sampled peak A/B MiB, no saves | RSS sampled peak A/B MiB, with saves | Type table start → last |
+| ---: | ---: | ---: | ---: |
+| 200 | 201.9 / 208.7 | 289.0 / 243.0 | 97 → 99 |
+| 500 | 212.9 / 229.8 | 290.5 / 255.3 | 97 → 99 |
+| 1,000 | 217.8 / 235.9 | 254.7 / 277.3 | 97 → 99 |
+| 10,000 | 250.3 / 238.0 | 288.7 / 305.6 | 97 → 99 |
+
+Peaks are sampled at step ends, and garbage collection is not forced. This run establishes no memory bound.

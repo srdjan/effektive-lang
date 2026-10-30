@@ -1,6 +1,6 @@
 # Reset implementation plan
 
-Not selected. On 2026-10-30 the user selected the [stable base reset plan](../../plans/2026-10-30-stable-base-reset.md) as the reset authority.
+Not selected. On 2026-10-30 the user selected the [stable base reset plan](2026-10-30-stable-base-reset.md) as the reset authority.
 
 Date: 2026-10-30. Planned revision: `45218f36931f02999251c127614e9c48c821e122` (`v0.10.4`).
 Plan status: complete and independently validated; ready for user review.
