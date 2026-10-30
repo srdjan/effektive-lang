@@ -94,6 +94,24 @@ const longest = scheduleMax(scheduleRecurs(1), scheduleSpaced(2ms))
 const one = (): Int => 1
 `;
 
+const FAMILIES_SOURCE = `type Int = int
+type Text = string
+const integer: Schema<Int> = schema()
+const shift: Codec<Int, Int> = codec((n: Int): Int => 1, (n: Int): Int => 2)
+const decoded = (input: unknown): Option<Int> => decode(shift, input)
+const encoded = (n: Int): Option<Int> => encode(shift, n)
+const word = (): Text => "x"
+const parted = () => partitionAll([defer(() => 1)])
+const results = () => allResults([defer(() => 1)])
+const fibered = (): Int => withFiber(defer(() => 1), (fiber) => 1)
+const read = (ref: Ref<Int>): Int => getRef(ref)
+const write = (ref: Ref<Int>): void => setRef(ref, 2)
+const update = (ref: Ref<Int>): void => updateRef(ref, (n) => n)
+const decodeInt = (input: unknown): Int fails SchemaError => schemaDecode(integer, input)
+const merged = (s: Stream<Int>, t: Stream<Int>) => mergeStreams(s, t)
+const mixed = (jobs: Effect<Int>[]) => allResults(jobs)
+`;
+
 const PROGRAMS = {
   core: {
     files: {
@@ -107,6 +125,10 @@ const PROGRAMS = {
   },
   effects: {
     files: { "effektive.json": "{}", "m.eff": EFFECTS_SOURCE },
+    entry: "m.eff",
+  },
+  families: {
+    files: { "effektive.json": "{}", "m.eff": FAMILIES_SOURCE },
     entry: "m.eff",
   },
 } as const satisfies Readonly<Record<string, Program>>;
@@ -916,6 +938,210 @@ const ROWS: readonly Row[] = [
     },
     expected: [
       "validation/002 declarations[15].value: schedule composition needs two Schedules",
+    ],
+  },
+  // ---------------------------------------------------------------- families
+  {
+    site: "codec.ts:28",
+    name: "a codec over values that are not functions",
+    program: "families",
+    change: (ir) => {
+      find(constant(ir, "shift").value, "codec").decode = intLiteral(
+        ir,
+        "word",
+      );
+    },
+    expected: [
+      "validation/002 declarations[3].value: codec needs two single-argument functions",
+    ],
+  },
+  {
+    site: "codec.ts:48",
+    name: "a codec whose encode input does not fit the decode result",
+    program: "families",
+    change: (ir) => {
+      const encode = find(
+        find(constant(ir, "shift").value, "codec").encode,
+        "closure",
+      );
+      encode.parameters[0].type = STRING;
+      closureType(encode).parameters[0] = STRING;
+    },
+    expected: [
+      "validation/002 declarations[3].value: codec encode transformation must reverse decode types",
+    ],
+  },
+  {
+    site: "codec.ts:93",
+    name: "a decode over a value that is not a Codec",
+    program: "families",
+    change: (ir) => {
+      find(fn(ir, "decoded").body, "decode").codec = intLiteral(ir, "word");
+    },
+    expected: [
+      "validation/002 declarations[4].body.codec: decode needs a Codec value",
+    ],
+  },
+  {
+    site: "codec.ts:102",
+    name: "an encode of an input that does not fit the decoded type",
+    program: "families",
+    change: (ir) => {
+      find(fn(ir, "encoded").body, "encode").input = intLiteral(ir, "word");
+    },
+    expected: [
+      "validation/002 declarations[5].body.input: encode input does not fit decoded type",
+    ],
+  },
+  {
+    site: "collections.ts:19",
+    name: "a partitionAll over a value that is not an array of Effects",
+    program: "families",
+    change: (ir) => {
+      find(fn(ir, "parted").body, "partition-all").jobs = intLiteral(
+        ir,
+        "word",
+      );
+    },
+    expected: [
+      "validation/002 declarations[7].body: partitionAll needs an array of Effect values",
+    ],
+  },
+  {
+    site: "collections.ts:109",
+    name: "an allResults over a value that is not a collection",
+    program: "families",
+    change: (ir) => {
+      find(fn(ir, "results").body, "all-results").jobs = intLiteral(
+        ir,
+        "word",
+      );
+    },
+    expected: [
+      "validation/002 declarations[8].body: allResults needs a tuple, record, or array of Effect values with required fields",
+    ],
+  },
+  {
+    site: "collections.ts:122",
+    name: "an allResults over a collection with a member that is not an Effect",
+    program: "families",
+    change: (ir) => {
+      const array: Mutable<Type> = { kind: "array", element: INT };
+      const f = fn(ir, "mixed");
+      f.parameters[0].type = array;
+      f.type.parameters[0] = array;
+      find(f.body, "reference").type = array;
+    },
+    expected: [
+      "validation/002 declarations[15].body: allResults requires an Effect value at every position",
+    ],
+  },
+  {
+    site: "fiber.ts:29",
+    name: "a withFiber over a job that is not an Effect",
+    program: "families",
+    change: (ir) => {
+      find(fn(ir, "fibered").body, "with-fiber").job = intLiteral(ir, "word");
+    },
+    expected: [
+      "validation/006 declarations[9].body: with-fiber needs an Effect and one inline use callback",
+    ],
+  },
+  {
+    site: "fiber.ts:43",
+    name: "a withFiber callback whose parameter is not the child Fiber",
+    program: "families",
+    change: (ir) => {
+      const use = find(fn(ir, "fibered").body, "with-fiber").use;
+      use.parameters[0].type = INT;
+      closureType(use).parameters[0] = INT;
+    },
+    expected: [
+      "validation/002 declarations[9].body.use: fiber use parameter does not match child type",
+    ],
+  },
+  {
+    site: "fiber.ts:51",
+    name: "a withFiber callback whose result is not data",
+    program: "families",
+    change: (ir) => {
+      closureType(find(fn(ir, "fibered").body, "with-fiber").use).result =
+        UNKNOWN;
+    },
+    expected: [
+      "validation/002 declarations[9].body.type: expected unknown, recorded int",
+      "validation/002 declarations[9].body: the body type unknown does not fit the declared result type:m#Int",
+      "validation/002 declarations[9].body.use: fiber use result must be data only",
+      "validation/002 declarations[9].body.use.body: the body type int does not fit the closure result unknown",
+    ],
+  },
+  {
+    site: "ref.ts:33",
+    name: "a getRef over a value that is not a Ref",
+    program: "families",
+    change: (ir) => {
+      find(fn(ir, "read").body, "get-ref").ref = intLiteral(ir, "word");
+    },
+    expected: [
+      "validation/002 declarations[10].body: get-ref needs a Ref value",
+    ],
+  },
+  {
+    site: "ref.ts:42",
+    name: "a setRef of a value that does not fit the Ref element",
+    program: "families",
+    change: (ir) => {
+      find(fn(ir, "write").body, "set-ref").value = intLiteral(ir, "word");
+    },
+    expected: [
+      "validation/002 declarations[11].body.value: the new value must fit the Ref element",
+    ],
+  },
+  {
+    site: "ref.ts:58",
+    name: "an updateRef whose callback is not a function",
+    program: "families",
+    change: (ir) => {
+      find(fn(ir, "update").body, "update-ref").transform = intLiteral(
+        ir,
+        "word",
+      );
+    },
+    expected: [
+      "validation/004 declarations[12].body.transform: updateRef needs an element-to-element callback",
+    ],
+  },
+  {
+    site: "schema.ts:941",
+    name: "a schemaDecode over a value that is not a Schema",
+    program: "families",
+    change: (ir) => {
+      find(fn(ir, "decodeInt").body, "schema-decode").schema = intLiteral(
+        ir,
+        "word",
+      );
+    },
+    expected: [
+      "validation/002 declarations[13].body: schema runner needs an ordinary Schema value",
+    ],
+  },
+  {
+    site: "stream.ts:1021",
+    name: "a mergeStreams over streams of unrelated element types",
+    program: "families",
+    change: (ir) => {
+      const text: Mutable<Type> = {
+        kind: "stream",
+        element: STRING,
+        effects: { failures: [], requirements: [] },
+      };
+      const f = fn(ir, "merged");
+      f.parameters[1].type = text;
+      f.type.parameters[1] = text;
+      find(f.body, "merge-streams").right.type = text;
+    },
+    expected: [
+      "validation/002 declarations[14].body: mergeStreams needs compatible element types",
     ],
   },
   // ---------------------------------------------------------------- serialization.ts
