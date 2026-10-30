@@ -307,7 +307,11 @@ function moduleValues(
       proofBudget: args.proofBudget,
     }),
     publish(run, recursive) {
-      if (!run.entry.broken) diagnostics.push(...run.run.diagnostics);
+      if (!run.entry.broken) {
+        for (const diagnostic of run.run.diagnostics) {
+          diagnostics.push(diagnostic);
+        }
+      }
       if (run.kind === "function") {
         const { signature, bodyNode } = run.entry;
         const { diagnostics: _, ...result } = run.run;
@@ -397,7 +401,11 @@ function scheduleRuns(
         entries[component[0]] = finalized;
         members = [finalized];
         signatures.set(signature.id, signature);
-        if (!entry.broken) diagnostics.push(...inference.diagnostics);
+        if (!entry.broken) {
+          for (const diagnostic of inference.diagnostics) {
+            diagnostics.push(diagnostic);
+          }
+        }
       }
       values.publish(
         runEntry(members[0], values.environment(solved)),
@@ -522,7 +530,9 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
     diagnostics,
   );
   const initialization = initializationDiagnostics(entries);
-  diagnostics.push(...initialization.diagnostics);
+  for (const diagnostic of initialization.diagnostics) {
+    diagnostics.push(diagnostic);
+  }
 
   // Source order for the maps, whatever order the components ran in.
   const { functions, constants } = values.bodies();
@@ -663,7 +673,9 @@ export function checkAnalysis(analysis: Analysis): CheckedProject {
     if (step.checked.interface.ok) {
       interfaces.set(name, step.checked.interface.value);
     }
-    diagnostics.push(...step.checked.diagnostics);
+    for (const diagnostic of step.checked.diagnostics) {
+      diagnostics.push(diagnostic);
+    }
     modules.set(name, step.checked);
   }
   return {

@@ -442,7 +442,9 @@ export class Program {
       signatures.set(name, entry.signature);
       payloads.set(name, entry.payload);
       modules.set(name, entry.checked);
-      diagnostics.push(...entry.checked.diagnostics);
+      for (const diagnostic of entry.checked.diagnostics) {
+        diagnostics.push(diagnostic);
+      }
     }
     this.entries = entries;
     const checked: CheckedProject = {

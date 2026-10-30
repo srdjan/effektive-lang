@@ -37,10 +37,14 @@ export function analyzeProject(
   const resolutions = resolveProject(project);
   const diagnostics: Diagnostic[] = [...project.diagnostics];
   for (const module of project.modules.values()) {
-    diagnostics.push(...module.parseDiagnostics);
+    for (const diagnostic of module.parseDiagnostics) {
+      diagnostics.push(diagnostic);
+    }
   }
   for (const resolution of resolutions.values()) {
-    diagnostics.push(...resolution.diagnostics);
+    for (const diagnostic of resolution.diagnostics) {
+      diagnostics.push(diagnostic);
+    }
   }
   return {
     ok: true,
