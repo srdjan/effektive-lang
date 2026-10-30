@@ -21,9 +21,13 @@ problems and the generated TypeScript.
 
 ## Requirements
 
-The project needs Deno 2.9.8. The first test run downloads `@std/assert` from
-jsr, so it needs network access once. Generated TypeScript targets Effect 4.0.5.
-To build the VS Code extension, you also need Node 20 or later with npm.
+The project needs Deno 2.9.8. Generated TypeScript targets Effect 4.0.5.
+
+Each slow test run starts from an empty cache. It downloads `@std/assert` from
+jsr and the Effect packages from npm, so it needs network access. The command
+`deno task check` also needs npm and `unzip`, because the installation test runs
+`npm ci` and unpacks the extension archive. To build the VS Code extension, you
+also need Node 20 or later with npm.
 
 ## Installation
 
