@@ -8,7 +8,7 @@ import { COLLECTION_ROWS, type CollectionContext } from "./collections.ts";
 import { EFFECT_ROWS, type EffectContext } from "./effect.ts";
 import { FIBER_ROWS, type FiberContext } from "./fiber.ts";
 import { LAYER_ROWS, type LayerContext } from "./layer.ts";
-import { MAP_SET_ROWS } from "./map_set.ts";
+import { MAP_SET_ROWS, type MapSetContext } from "./map_set.ts";
 import { REF_ROWS } from "./ref.ts";
 import type { PreludeCallName, Rows } from "./rows.ts";
 import { SCHEDULE_ROWS } from "./schedule.ts";
@@ -17,13 +17,11 @@ import { SCOPE_ROWS, type ScopeContext } from "./scope.ts";
 import { STREAM_ROWS, type StreamContext } from "./stream.ts";
 
 /** The builtins whose rows stay in the body checker, because they call its private members. */
-export type CoreRowName = "Some" | "mapOf" | "setOf";
+export type CoreRowName = "Some";
 
 /** The names of the rows in `BodyChecker`. The type above and this list must agree. */
 export const CORE_ROW_NAMES: readonly CoreRowName[] = [
   "Some",
-  "mapOf",
-  "setOf",
 ];
 
 /** Every operation that a family handler or prologue reads from the checker. */
@@ -32,6 +30,7 @@ type FamilyContext =
   & CollectionContext
   & EffectContext
   & LayerContext
+  & MapSetContext
   & FiberContext
   & ScopeContext
   & StreamContext

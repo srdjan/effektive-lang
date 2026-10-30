@@ -1,12 +1,16 @@
-// The Map and Set operations that need no private checker member. Every
-// operation is pure. `mapOf` and `setOf` infer from list literals, so they sit
-// in the body checker. Prelude dispatch checks arity and records facts first.
+// The Map and Set operations. Every operation is pure. `mapOf` and `setOf`
+// infer from list literals. Prelude dispatch checks arity and records facts
+// first.
 
-import type { NodeId } from "../syntax.ts";
-import { combine, type NodeInfo } from "../tables.ts";
-import type { TypeRef } from "../types.ts";
-import type { Arg, BuiltinContext } from "./context.ts";
+import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
+import { combine, type NodeInfo, PURE_EFFECTS } from "../tables.ts";
+import { dataOnly, type TypeRef } from "../types.ts";
+import { showType, showTypes } from "../type_show.ts";
+import type { Arg, BuiltinContext, FactWriter, SyntaxView } from "./context.ts";
 import { direct, type PreludeCallName, type Rows } from "./rows.ts";
+
+/** The checker operations that `mapOf` and `setOf` read. */
+export interface MapSetContext extends BuiltinContext, SyntaxView, FactWriter {}
 
 type MapSetName =
   | "getMap"
@@ -109,7 +113,286 @@ function setCall(
   return c.finish(node, type, combine(infos));
 }
 
-/** The rows of the Map and Set operations, except `mapOf` and `setOf`. */
+/** The key and value of an expected Map type, when the expected type is one. */
+function expectedMap(
+  c: MapSetContext,
+  expected: TypeRef | undefined,
+): { readonly key: TypeRef; readonly value: TypeRef } | undefined {
+  if (expected === undefined) return undefined;
+  const node = c.table.node(c.table.unfold(expected));
+  return node.kind === "map" ? { key: node.key, value: node.value } : undefined;
+}
+
+/** The element of an expected Set type, when the expected type is one. */
+function expectedSet(
+  c: MapSetContext,
+  expected: TypeRef | undefined,
+): TypeRef | undefined {
+  if (expected === undefined) return undefined;
+  const node = c.table.node(c.table.unfold(expected));
+  return node.kind === "set" ? node.element : undefined;
+}
+
+/** The key and value of an array of two-element tuples, or undefined. */
+function pairParts(
+  c: MapSetContext,
+  ref: TypeRef,
+): { readonly key: TypeRef; readonly value: TypeRef } | undefined {
+  const list = c.table.node(c.table.unfold(ref));
+  if (list.kind !== "array") return undefined;
+  const pair = c.table.node(c.table.unfold(list.element));
+  return pair.kind === "tuple" && pair.elements.length === 2
+    ? { key: pair.elements[0], value: pair.elements[1] }
+    : undefined;
+}
+
+function isListLiteral(c: MapSetContext, arg: Arg): boolean {
+  return arg.pre === undefined &&
+    kindOf(c.tree, arg.node) === SyntaxKind.ListExpr;
+}
+
+/** The common type of the widened `types`, or the error type after a report. */
+function joinTypes(
+  c: MapSetContext,
+  types: readonly TypeRef[],
+  nodes: readonly NodeId[],
+  what: string,
+): TypeRef {
+  let joined = c.widen(types[0]);
+  for (let i = 1; i < types.length; i++) {
+    const next = c.widen(types[i]);
+    if (c.isError(joined) || c.isError(next)) {
+      joined = c.table.error;
+    } else if (c.assignable(next, joined)) {
+      continue;
+    } else if (c.assignable(joined, next)) {
+      joined = next;
+    } else {
+      const [nextText, joinedText] = showTypes(c.table, next, joined);
+      c.report(
+        "type-mismatch/012",
+        `${what} ${
+          i + 1
+        } has type ${nextText}, which has no common type with ${joinedText}`,
+        nodes[i],
+      );
+      joined = c.table.error;
+    }
+  }
+  return joined;
+}
+
+/** Reports `declaration/019` when an inferred key or element is not data. */
+function requireInferredData(
+  c: MapSetContext,
+  role: string,
+  type: TypeRef,
+  node: NodeId,
+): void {
+  if (c.isError(type) || dataOnly(c.table, type, "value", true)) return;
+  c.report(
+    "declaration/019",
+    `A ${role} must be data, found \`${showType(c.table, type)}\``,
+    node,
+  );
+}
+
+/**
+ * Infers the entries of `mapOf` from a list literal with no expected type.
+ * Each inner two-element list literal is a pair. The checker joins the key
+ * types and the value types separately.
+ */
+function inferPairs(
+  c: MapSetContext,
+  list: NodeId,
+): {
+  readonly key: TypeRef;
+  readonly value: TypeRef;
+  readonly info: NodeInfo;
+} {
+  const table = c.table;
+  const keys: TypeRef[] = [];
+  const values: TypeRef[] = [];
+  const keyNodes: NodeId[] = [];
+  const valueNodes: NodeId[] = [];
+  const infos: NodeInfo[] = [];
+  let broken = false;
+  c.kids(list).forEach((entry, i) => {
+    const parts = c.kids(entry);
+    if (
+      kindOf(c.tree, entry) === SyntaxKind.ListExpr && parts.length === 2
+    ) {
+      c.fact(entry, { kind: "list", shape: "tuple" });
+      const [k, v] = parts.map((part) => c.argInfo({ node: part }));
+      const info = c.finish(
+        entry,
+        table.tuple([c.widen(k.type), c.widen(v.type)]),
+        combine([k, v]),
+      );
+      infos.push(info);
+      keys.push(k.type);
+      values.push(v.type);
+      keyNodes.push(parts[0]);
+      valueNodes.push(parts[1]);
+      return;
+    }
+    const info = c.argInfo({ node: entry });
+    infos.push(info);
+    const pair = pairParts(c, table.array(info.type));
+    if (pair === undefined) {
+      broken = true;
+      if (!c.isError(info.type)) {
+        c.report(
+          "type-mismatch/012",
+          `mapOf entry ${i + 1} must be a [key, value] pair`,
+          entry,
+        );
+      }
+      return;
+    }
+    keys.push(pair.key);
+    values.push(pair.value);
+    keyNodes.push(entry);
+    valueNodes.push(entry);
+  });
+  c.fact(list, { kind: "list", shape: "array" });
+  if (broken) {
+    return {
+      key: table.error,
+      value: table.error,
+      info: c.finish(list, table.array(table.error), combine(infos)),
+    };
+  }
+  const key = joinTypes(c, keys, keyNodes, "map key");
+  const value = joinTypes(c, values, valueNodes, "map value");
+  const info = c.finish(
+    list,
+    table.array(table.tuple([key, value])),
+    combine(infos),
+  );
+  return { key, value, info };
+}
+
+function mapOfCall(
+  c: MapSetContext,
+  node: NodeId,
+  arg: Arg,
+  expected: TypeRef | undefined,
+): NodeInfo {
+  const table = c.table;
+  const wanted = expectedMap(c, expected);
+  if (wanted !== undefined) {
+    const hint = table.array(table.tuple([wanted.key, wanted.value]));
+    const info = c.argInfo(arg, hint);
+    if (!c.fits(arg.node, info.type, hint, "the mapOf entries")) {
+      return c.finish(node, table.error, info);
+    }
+    const given = pairParts(c, info.type);
+    const sameKey = given !== undefined &&
+      c.assignable(wanted.key, given.key) &&
+      c.assignable(given.key, wanted.key);
+    return c.finish(
+      node,
+      sameKey || given === undefined
+        ? table.map(wanted.key, wanted.value)
+        : table.map(given.key, given.value),
+      info,
+    );
+  }
+  if (isListLiteral(c, arg)) {
+    if (c.kids(arg.node).length === 0) {
+      c.fact(arg.node, { kind: "list", shape: "array" });
+      c.report(
+        "type-mismatch/012",
+        "`mapOf([])` needs an expected Map type",
+        arg.node,
+      );
+      const info = c.finish(
+        arg.node,
+        table.array(table.error),
+        PURE_EFFECTS,
+      );
+      return c.finish(node, table.error, info);
+    }
+    const inferred = inferPairs(c, arg.node);
+    if (c.isError(inferred.key) || c.isError(inferred.value)) {
+      return c.finish(node, table.error, inferred.info);
+    }
+    requireInferredData(c, "Map key", inferred.key, arg.node);
+    return c.finish(
+      node,
+      table.map(inferred.key, inferred.value),
+      inferred.info,
+    );
+  }
+  const info = c.argInfo(arg);
+  const pair = pairParts(c, info.type);
+  if (pair === undefined) {
+    if (!c.isError(info.type)) {
+      c.report(
+        "type-mismatch/003",
+        `the mapOf entries has type ${
+          showType(c.table, info.type)
+        }, but an array of [key, value] pairs is expected`,
+        arg.node,
+      );
+    }
+    return c.finish(node, table.error, info);
+  }
+  requireInferredData(c, "Map key", pair.key, arg.node);
+  return c.finish(node, table.map(pair.key, pair.value), info);
+}
+
+function setOfCall(
+  c: MapSetContext,
+  node: NodeId,
+  arg: Arg,
+  expected: TypeRef | undefined,
+): NodeInfo {
+  const table = c.table;
+  const wanted = expectedSet(c, expected);
+  if (wanted !== undefined) {
+    const hint = table.array(wanted);
+    const info = c.argInfo(arg, hint);
+    if (!c.fits(arg.node, info.type, hint, "the setOf items")) {
+      return c.finish(node, table.error, info);
+    }
+    return c.finish(node, table.set(wanted), info);
+  }
+  if (isListLiteral(c, arg) && c.kids(arg.node).length === 0) {
+    c.fact(arg.node, { kind: "list", shape: "array" });
+    c.report(
+      "type-mismatch/012",
+      "`setOf([])` needs an expected Set type",
+      arg.node,
+    );
+    const info = c.finish(
+      arg.node,
+      table.array(table.error),
+      PURE_EFFECTS,
+    );
+    return c.finish(node, table.error, info);
+  }
+  const info = c.argInfo(arg);
+  const list = table.node(table.unfold(info.type));
+  if (list.kind !== "array") {
+    if (!c.isError(info.type)) {
+      c.report(
+        "type-mismatch/003",
+        `the setOf items has type ${
+          showType(c.table, info.type)
+        }, but an array is expected`,
+        arg.node,
+      );
+    }
+    return c.finish(node, table.error, info);
+  }
+  if (c.isError(list.element)) return c.finish(node, table.error, info);
+  requireInferredData(c, "Set element", list.element, arg.node);
+  return c.finish(node, table.set(list.element), info);
+}
+
+/** The rows of the Map and Set operations. */
 export const MAP_SET_ROWS = {
   getMap: {
     prologue: direct(2, "pure", { fact: { kind: "get-map" } }),
@@ -147,4 +430,14 @@ export const MAP_SET_ROWS = {
     prologue: direct(1, "pure", { fact: { kind: "items-set" } }),
     handle: (c, node, name, args) => setCall(c, node, name, args),
   },
-} satisfies Partial<Rows<PreludeCallName, BuiltinContext>>;
+  mapOf: {
+    prologue: direct(1, "pure", { fact: { kind: "map-of" } }),
+    handle: (c, node, _name, args, expected) =>
+      mapOfCall(c, node, args[0], expected),
+  },
+  setOf: {
+    prologue: direct(1, "pure", { fact: { kind: "set-of" } }),
+    handle: (c, node, _name, args, expected) =>
+      setOfCall(c, node, args[0], expected),
+  },
+} satisfies Partial<Rows<PreludeCallName, MapSetContext>>;
