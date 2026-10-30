@@ -195,37 +195,26 @@ implementation commitment.
 On 2026-10-27 the user accepted a second change to the target. Effektive hides
 the verbosity of Effect. A source form exposes an Effect 4 feature only when the
 feature carries user intent that the compiler cannot infer. The transpiler uses
-the other features in the emitted TypeScript only. The user selected items 1 to
-8 and 19 to 21 first. Items 1 to 4, 6 to 8 and 19 to 21 are done in the
-[effect surface plan](archive/plans/2026-10-27-effect-surface.md), units ES1 to
-ES11. Item 5 (Cron) is done in the
-[effect surface leftovers plan](archive/plans/2026-10-27-effect-surface-leftovers.md),
-unit EL3, as `scheduleCron`. That plan also typed duration literal patterns
-(EL2). On 2026-10-27 the user chose items 22, 18 and 16 as the second
-selection. Items 18 and 22, and the logging half of item 16, are done in the
-[second selection plan](archive/plans/2026-10-27-second-effect-selection.md),
-units SL1 to SL6. Metrics stay open. On 2026-10-27 the user asked for a sort builtin (item 24) in a
-later selection; until then, an application that needs ordered output sorts in
-host code. The other items have no
-implementation commitment. The forms of the open items are candidates, not
-accepted syntax.
+the other features in the emitted TypeScript only.
 
-The unit ES1b added the closed type `Duration` (type word, literals such as
-`200ms`, `5s`, `2m` and `1h`). A bare `int` never fits a `Duration`. The
-builtins that take a time (`timeout`, `sleep`, `scheduleSpaced`,
-`scheduleExponential`, `debounceStream`, `throttleStream`) take a `Duration`.
-The IR is at version 7.
+Items 1 to 8, items 18 to 22, and the logging half of item 16 are done.
+[language-rules.md](language-rules.md) holds their rules. The
+[effect surface plan](archive/plans/2026-10-27-effect-surface.md), the
+[effect surface leftovers plan](archive/plans/2026-10-27-effect-surface-leftovers.md),
+and the [second selection plan](archive/plans/2026-10-27-second-effect-selection.md)
+hold their history. Those source forms hide `Duration`, `Clock`, `Schedule`,
+`Cron`, `Exit`, `Cause`, the interruption masks, `Logger`, `LogLevel`, `Random`,
+`Effect.forEach`, `Effect.filter`, `Effect.reduce`, `SynchronizedRef`,
+`Effect.raceAll`, `HashMap`, `HashSet`, `Equal`, and `Hash`.
+
+The table lists the open items. Each item keeps its first number. The open items
+have no implementation commitment, and their forms are candidates, not accepted
+syntax. On 2026-10-27 the user asked for a sort builtin (item 24) in a later
+selection. Until then, an application that needs ordered output sorts in host
+code.
 
 | Item | User intent | Candidate form | Hidden Effect modules |
 | --- | --- | --- | --- |
-| 1 Timeout (done, ES2) | Time limit | `timeout(job, 5s)` with a typed timeout error | `Duration` |
-| 2 Delay (done, ES2) | Wait time | `sleep(200ms)` | `Duration`, `Clock` |
-| 3 Repetition (done, ES4) | Repeat or loop | `repeat(job)` and `repeat(job, options)` | `Schedule` consumers |
-| 4 General policies (done, ES3) | Backoff, jitter, limits, stop conditions | `retry` accepts any `Schedule` and the options `times`, `schedule`, `while` and `until`, with `scheduleExponential` and `scheduleJittered` | `Schedule` |
-| 5 Cron (done, EL3) | Calendar policy | `scheduleCron(expression, zone?)` with string literals and a UTC default | `Cron` |
-| 6 Outcome-aware cleanup (done, ES5) | Action on success, failure or interruption | `finally (outcome) { ... }` | `Exit` |
-| 7 Defect recovery (done, ES6) | Where unexpected failures stop | A defect arm in `catch` | `Cause` |
-| 8 Interruption masks (done, ES7) | Region that must not be interrupted | `uninterruptible(job)` | Interruption masks |
 | 9 Detached work | Lifetime beyond the caller | A daemon variant of `forkScoped` | `Fiber` status APIs |
 | 10 Keyed background jobs | Replace by key, or a set | One keyed form | `FiberMap`, `FiberSet` |
 | 11 Coordination | Producer-consumer and fan-out design | `Queue`, `PubSub`, `Deferred`, `Semaphore` types | `Latch`, `Take` |
@@ -233,13 +222,8 @@ The IR is at version 7.
 | 13 Atomic updates | Transaction boundary | `atomic { ... }` over `Ref` values | `Tx*` modules |
 | 14 Caching and pools | TTL, capacity, size | `cached(job, options)`, `pool(acquire, options)` | `Cache`, `ScopedCache`, `Pool`, `RcRef`, `RcMap` |
 | 15 Request batching | A batched service method | A `batched` marker | `Request`, `RequestResolver` |
-| 16 Logging and metrics (logging done, SL3; metrics open) | Messages, levels, metric names | `log(message, { level, fields })`; counters and histograms open | `Logger`, `LogLevel`, `Metric` |
+| 16 Metrics | Metric names | Counters and histograms | `Metric` |
 | 17 Configuration | Keys and secret status | A `config` declaration and `Secret<T>` | `Config`, `ConfigProvider`, `Redacted` |
-| 18 Time and randomness (done, SL1 and SL2) | Current time, random values | `now()` with the closed type `Instant`, `random()`, `randomInt(min, max)` | `Clock`, `Random` |
-| 19 Effectful collection callbacks (done, ES8) | Effects inside `map`, `filter`, `fold` | Relax the pure-callback rule | `Effect.forEach`, `Effect.filter`, `Effect.reduce` |
-| 20 Effectful `updateRef` (done, ES9) | Effects inside an atomic update | Relax the pure-callback rule | `SynchronizedRef` |
-| 21 `race` over an array (done, ES10) | First of many | Accept an array | `Effect.raceAll` |
-| 22 `Map` and `Set` types (done, SL4 and SL5) | Keyed and unique data | `Map<K,V>`, `Set<T>`, `mapOf`, `getMap`, `putMap`, `removeMap`, `hasMap`, `entriesMap`, `setOf`, `addSet`, `removeSet`, `hasSet`, `itemsSet` | `HashMap`, `HashSet`, `Equal`, `Hash` |
 | 23 Recursive types | Recursive Option data, mutual alias recursion | Ordinary type declarations | Schema recursion |
 | 24 Sorting | Ordered output of arrays, and of `entriesMap` and `itemsSet`, which return hash order | A sort builtin over an array, with a key or an order | `Array.sort`, `Order` |
 
@@ -318,5 +302,3 @@ The list gives the items that still need a person.
 | False fiber rejection | `build --validate` rejects `(fiber: Fiber<Int, never>) => 1` over a literal child, but `check`, `build`, and `build --tsc` accept it. The bare callback `(fiber) => 1` passes all four. Finding SBF28 of the [stable base reset plan](plans/2026-10-30-stable-base-reset.md) gives the evidence. | The user decides whether the checker or the validator is wrong |
 | Hand test of the VS Code client | The installed VSIX passed automated references, rename, completion, semantic tokens, contract quick fixes, generated output, save, error recovery and restart on 2026-10-21; [installation evidence](installation.md). User acceptance check 5 of the [language server plan](archive/plans/2026-10-16-lsp.md) remains pending.                                                                                           | User  |
 | Playground acceptance           | The user has not accepted the page (acceptance check 5 of the [playground plan](archive/plans/2026-10-16-playground.md)). An [automated browser review on 2026-10-21](archive/playground-review-2026-10-21.md) passed at 375, 720 and 1280 pixels, including keyboard navigation, type/syntax error recovery and screenshot inspection. It does not replace the user’s manual acceptance.                                        | User  |
-| Rederive review | VAL-8 of the [rederive review](archive/plans/2026-10-20-rederive-review.md) is complete. ARC-5 is declined after its name-only mapping prerequisite failed; the [assessment](archive/plans/rederive-review-evidence/arc-5-builtin-facts.md) records six names with context-dependent lowering kinds. R12 FE-2, CHK-11, CHK-12, R13, R15a, R15b, C10 and A6 are complete. The reset plan closed C7, F3, and F9b as declined. No item has an owner. | User |
-| Measured numbers                | Earlier evidence remains in `rejected.md` (the lexer split) and the audit fix plan (AU1). The [full release measurements](release-measurements.md) meet the unchanged 100 ms large-input p90 diagnostics budget and include three open documents with 10,000 distinct edits. Raw RSS, heap and type-table samples record growth; they establish no memory bound.                                                         | User  |
