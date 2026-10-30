@@ -91,9 +91,14 @@ function copyDirectory(from: string, to: string): string[] {
  */
 export function isUnsafe(outDir: string): boolean {
   const fromOutDir = relative(outDir, REPOSITORY_ROOT);
-  if (fromOutDir === "" || !fromOutDir.startsWith("..")) return true;
+  if (
+    fromOutDir !== ".." && !fromOutDir.startsWith(".." + SEPARATOR)
+  ) return true;
   const fromRoot = relative(REPOSITORY_ROOT, outDir);
-  if (fromRoot.startsWith("..") || isAbsolute(fromRoot)) return false;
+  if (
+    fromRoot === ".." || fromRoot.startsWith(".." + SEPARATOR) ||
+    isAbsolute(fromRoot)
+  ) return false;
   const dist = join("playground", "dist");
   return fromRoot !== dist && !fromRoot.startsWith(dist + SEPARATOR);
 }

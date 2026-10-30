@@ -9,7 +9,21 @@ import { isUnsafe } from "../playground/build.ts";
 const ROOT = fromFileUrl(new URL("../", import.meta.url));
 
 Deno.test("the build refuses to remove a repository directory", () => {
-  for (const dir of ["", "..", "playground", "src", "src/core", "docs"]) {
+  for (
+    const dir of [
+      "",
+      "..",
+      "playground",
+      "src",
+      "src/core",
+      "docs",
+      "..scratch",
+      "..scratch/nested",
+      "...",
+      "src/../..scratch",
+      "playground/dist-other",
+    ]
+  ) {
     assertEquals(isUnsafe(join(ROOT, dir)), true, dir);
   }
 });
@@ -18,5 +32,6 @@ Deno.test("the build may remove playground/dist and a directory outside the repo
   assertEquals(isUnsafe(join(ROOT, "playground", "dist")), false);
   assertEquals(isUnsafe(join(ROOT, "playground", "dist", "nested")), false);
   assertEquals(isUnsafe(join(ROOT, "..", "elsewhere-out")), false);
+  assertEquals(isUnsafe(join(ROOT, "..", "..sibling-out")), false);
   assertEquals(isUnsafe("/tmp/playground-out"), false);
 });
