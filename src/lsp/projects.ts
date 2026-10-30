@@ -64,6 +64,18 @@ type ProjectPhase =
     readonly last: CompletedProject | undefined;
   };
 
+/** The disk state of one project. It sees disk texts only. `saveRound` owns it. */
+interface DiskSession {
+  readonly program: Program;
+  readonly outputs: TypeScriptOutputs;
+  /** The texts that the last round gave to `program`, whether or not that update succeeded. */
+  inputs: ReadonlyMap<string, string>;
+  /** The module names of the last successful round, plus names whose removal failed. */
+  modules: readonly string[];
+  /** The reason last logged for each held module, so that a repeat stays silent. */
+  readonly heldReasons: Map<string, string>;
+}
+
 /** The state of one project. The set owns it. Other code reads it. */
 export class ProjectState {
   /** The disk texts, by root-relative path. */
@@ -83,18 +95,13 @@ export class ProjectState {
   readonly program: Program;
   readonly outputs = new TypeScriptOutputs();
 
-  /**
-   * The disk program of the save round. It sees disk texts only. Created on the
-   * first round, and only when `writeOnSave` is true.
-   */
-  diskProgram: Program | undefined;
-  diskOutputs: TypeScriptOutputs | undefined;
-  /** The texts that the last round gave to `diskProgram`, whether or not that update succeeded. */
-  diskInputs: ReadonlyMap<string, string> = new Map();
-  /** The module names of the last successful round, plus names whose removal failed. */
-  diskModules: readonly string[] = [];
-  /** The reason last logged for each held module, so that a repeat stays silent. */
-  readonly heldReasons = new Map<string, string>();
+  /** The disk state of the save round. Created on the first round, and only when `writeOnSave` is true. */
+  diskSession: DiskSession | undefined;
+
+  /** The disk program of the save round, or `undefined` before the first round. */
+  get diskProgram(): Program | undefined {
+    return this.diskSession?.program;
+  }
 
   constructor(readonly root: string) {
     this.program = new Program(root);
@@ -450,11 +457,17 @@ export class ProjectSet {
       project.disk = workspace;
       project.dirty = true;
     }
-    const program = project.diskProgram ??= new Program(project.root);
-    const outputs = project.diskOutputs ??= new TypeScriptOutputs();
-    const { set, remove } = diffFiles(project.diskInputs, workspace);
+    const session = project.diskSession ??= {
+      program: new Program(project.root),
+      outputs: new TypeScriptOutputs(),
+      inputs: new Map(),
+      modules: [],
+      heldReasons: new Map(),
+    };
+    const { program, outputs } = session;
+    const { set, remove } = diffFiles(session.inputs, workspace);
     const updated = program.update({ set, remove });
-    project.diskInputs = workspace;
+    session.inputs = workspace;
     if (!updated.ok) {
       log(1, describeConfigError(updated.error));
       return;
@@ -468,7 +481,7 @@ export class ProjectSet {
       root: project.root,
       revision,
       outputs,
-      previous: project.diskModules,
+      previous: session.modules,
       removal: "retry",
       owns,
       write: true,
@@ -477,7 +490,7 @@ export class ProjectSet {
       for (const path of removed) log(4, `removed ${path}`);
       for (const note of notes) log(1, note);
     }
-    project.diskModules = round.modules;
+    session.modules = round.modules;
 
     // `writableModules` also keeps a module whose own lowering failed, and
     // `writeGenerated` skips it. A module is written only when it lowered.
@@ -492,12 +505,12 @@ export class ProjectSet {
       if (writableSet.has(name) || !owns(name)) continue;
       held.add(name);
       const reason = heldReason(revision, name, writableSet);
-      if (project.heldReasons.get(name) === reason) continue;
-      project.heldReasons.set(name, reason);
+      if (session.heldReasons.get(name) === reason) continue;
+      session.heldReasons.set(name, reason);
       log(3, reason);
     }
-    for (const name of [...project.heldReasons.keys()]) {
-      if (!held.has(name)) project.heldReasons.delete(name);
+    for (const name of [...session.heldReasons.keys()]) {
+      if (!held.has(name)) session.heldReasons.delete(name);
     }
   }
 
