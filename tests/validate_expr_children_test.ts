@@ -15,6 +15,7 @@ import type {
   Pattern,
   Type,
 } from "../src/core/ir.ts";
+import { childrenOf } from "../src/core/emit/shape.ts";
 import { exprChildren } from "../src/core/validate/expr.ts";
 import { FIXTURES } from "./helpers.ts";
 
@@ -757,4 +758,30 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
   const synthetic = new Set(Object.keys(syntheticNodes()));
   assertEquals(new Set([...reached, ...synthetic]).size, 123);
   for (const kind of reached) assert(synthetic.has(kind), kind);
+});
+
+// The two enumerations are independent copies. This test compares them on the
+// synthetic node of each kind, as multisets of node identities, because a child
+// can occur twice. The emitter lists a kind's evaluated children first and its
+// deferred children after them. The validator lists the children in source
+// order. The only kind where the two orders differ is `timeout`: the emitter
+// gives [durationMs, job], because `job` is deferred, and the validator gives
+// [job, durationMs].
+Deno.test("childrenOf and exprChildren give the same child multiset on a synthetic node of every Expr kind", () => {
+  const synthetic = syntheticNodes();
+  assertEquals(Object.keys(synthetic).length, 123);
+  const differentOrder: string[] = [];
+  for (const [kind, node] of Object.entries(synthetic)) {
+    const emitted = childrenOf(node);
+    const validated = exprChildren(node);
+    assertEquals(emitted.length, validated.length, kind);
+    const wanted = identityCounts(validated);
+    for (const [child, count] of identityCounts(emitted)) {
+      assertEquals(wanted.get(child), count, `${kind} child ${child.kind}`);
+    }
+    if (emitted.some((child, i) => child !== validated[i])) {
+      differentOrder.push(kind);
+    }
+  }
+  assertEquals(differentOrder, ["timeout"]);
 });
