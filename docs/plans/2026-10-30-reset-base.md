@@ -844,7 +844,7 @@ The reviewed source, tests, fixtures, configuration, and website remain unchange
 | --- | --- | --- | --- |
 | NB0: restore baseline | Done | `26d4fc6` | Registry added. Focused documentation/version checks: 17 passed. Full gate: exit 0 in 46.934 s, including 282 slow tests. Source, tests, fixtures, and configuration equal the reviewed source. |
 | NB1: path boundary | Done | `fa0d244` | Existing guard test failed on `..scratch` before the fix. Both guard tests and the external build test pass. Full gate: exit 0 in 54.532 s, including 282 slow tests. Fixtures unchanged. |
-| NB2: table fork | In progress | `fa0d244` | Sol added the fork and three tests. Missing-method failure preceded implementation. Main review and 296 focused tests pass. Separate canonical gate and commit pending. |
+| NB2: table fork | Done | `fa0d244` | Sol added the fork and three public-method tests. The red run failed only because `fork` was absent. Main reviewed every changed line and passed 296 focused tests. Full gate: exit 0 in 54.671 s, with 2,872 fast and 282 slow tests. No production fork caller or fixture change. |
 | NB3: revision ownership | Not started | - | Planning only |
 | NB4: final documents | Not started | - | Planning only |
 

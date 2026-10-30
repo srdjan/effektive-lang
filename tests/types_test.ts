@@ -6,7 +6,17 @@ import {
   assertNotEquals,
   assertStrictEquals,
 } from "@std/assert";
-import type { ErrorId, Type, TypeId } from "../src/core/ir.ts";
+import {
+  DURATION_ID,
+  type ErrorId,
+  INSTANT_ID,
+  SCHEMA_ERROR_ID,
+  SCHEMA_ISSUE_ID,
+  TIMEOUT_ERROR_ID,
+  type Type,
+  type TypeId,
+} from "../src/core/ir.ts";
+import type { Predicate } from "../src/core/predicates.ts";
 import { type TypeRef, TypeTable } from "../src/core/types.ts";
 import { canonicalJson } from "../src/core/util.ts";
 import { typeFromIr, typeToIr } from "../src/core/type_ir.ts";
@@ -21,6 +31,197 @@ const OTHER_FAIL = "error:m#Other" as ErrorId;
 function fresh(): TypeTable {
   return new TypeTable();
 }
+
+Deno.test("forks share interned nodes and preserve builtin references", () => {
+  const original = fresh();
+  const before = original.record([field("id", original.int)]);
+  const fork = original.fork();
+  const sibling = original.fork();
+  const builtins = [
+    "error",
+    "string",
+    "boolean",
+    "int",
+    "number",
+    "unit",
+    "never",
+    "unknown",
+    "closeableScope",
+  ] as const;
+  for (const table of [fork, sibling]) {
+    assertEquals(table.size, original.size);
+    for (const name of builtins) {
+      assertStrictEquals(table[name], original[name]);
+      assertStrictEquals(
+        table.node(table[name]),
+        original.node(original[name]),
+      );
+    }
+    for (const id of [DURATION_ID, INSTANT_ID]) {
+      assertEquals(table.identityBaseOf(id), table.int);
+      assert(table.isIdentity(id));
+    }
+    for (const id of [SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID, TIMEOUT_ERROR_ID]) {
+      assertEquals(table.errorRecordOf(id), original.errorRecordOf(id));
+      assert(table.isDefined(id));
+    }
+    assertStrictEquals(table.record([field("id", table.int)]), before);
+  }
+  const startSize = original.size;
+  const additions = [
+    original.literal("z"),
+    fork.literal("a"),
+    sibling.literal("m"),
+  ];
+  for (const table of [original, fork, sibling]) {
+    assertEquals(table.size, startSize + additions.length);
+    for (const [index, value] of ["z", "a", "m"].entries()) {
+      assertStrictEquals(table.literal(value), additions[index]);
+      assertStrictEquals(
+        table.node(additions[index]),
+        original.node(additions[index]),
+      );
+    }
+  }
+  const union = original.union(additions);
+  for (const table of [original, fork, sibling]) {
+    assertStrictEquals(table.union([...additions].reverse()), union);
+    assertEquals(typeToIr(table, union), {
+      kind: "union",
+      members: ["a", "m", "z"].map((value) => ({
+        kind: "literal" as const,
+        value,
+      })),
+    });
+    assertEquals(table.size, original.size);
+  }
+});
+
+Deno.test("forks keep independent definitions after writes to each table", () => {
+  const original = fresh();
+  const opaque = "type:m#ForkOpaque" as TypeId;
+  const recursive = "type:m#ForkRecursive" as TypeId;
+  const read = (table: TypeTable) => ({
+    alias: table.aliasOf(USER),
+    unfolded: table.unfold(table.named(USER)),
+    identity: table.identityBaseOf(ID_A),
+    identitySealed: table.isSealed(ID_A),
+    identityPredicate: table.predicateOf(ID_A),
+    tagged: table.taggedRecordOf(ID_B),
+    taggedId: table.taggedIdOf(table.named(ID_B)),
+    taggedSealed: table.isSealed(ID_B),
+    taggedPredicate: table.predicateOf(ID_B),
+    opaque: table.isOpaque(opaque),
+    opaqueBase: table.identityBaseOf(opaque),
+    opaqueAlias: table.aliasOf(opaque),
+    error: table.errorRecordOf(MISSING),
+    exceedsDepth: table.exceedsDepth(table.named(recursive), 2, new Map()),
+  });
+  const write = (
+    table: TypeTable,
+    body: TypeRef,
+    sealed: boolean,
+    predicate: Predicate | undefined,
+    opaqueDefinition: boolean,
+  ) => {
+    const record = table.record([field("value", body)]);
+    table.defineAlias(USER, body);
+    table.defineIdentity(ID_A, body, sealed, false, predicate);
+    table.defineTagged(ID_B, record, sealed, predicate);
+    if (opaqueDefinition) table.defineOpaque(opaque);
+    else table.defineIdentity(opaque, body, false);
+    table.defineError(MISSING, record);
+    table.defineAlias(
+      recursive,
+      table.array(sealed ? table.named(recursive) : body),
+      sealed,
+    );
+    const expected = {
+      alias: body,
+      unfolded: body,
+      identity: body,
+      identitySealed: sealed,
+      identityPredicate: predicate,
+      tagged: record,
+      taggedId: ID_B,
+      taggedSealed: sealed,
+      taggedPredicate: predicate,
+      opaque: opaqueDefinition,
+      opaqueBase: opaqueDefinition ? table.unknown : body,
+      opaqueAlias: opaqueDefinition ? undefined : body,
+      error: record,
+      exceedsDepth: !sealed,
+    };
+    assertEquals(read(table), expected);
+    return expected;
+  };
+  const inherited = write(original, original.int, true, {
+    kind: "constant",
+    value: true,
+  }, true);
+  const fork = original.fork();
+  const sibling = original.fork();
+  assertEquals(read(fork), inherited);
+  assertEquals(read(sibling), inherited);
+
+  const originalState = write(original, original.string, false, {
+    kind: "constant",
+    value: false,
+  }, false);
+  assertEquals(read(fork), inherited);
+  assertEquals(read(sibling), inherited);
+
+  const forkState = write(fork, fork.boolean, false, undefined, false);
+  assertEquals(read(original), originalState);
+  assertEquals(read(sibling), inherited);
+
+  write(sibling, sibling.unit, true, {
+    kind: "not",
+    operand: { kind: "constant", value: false },
+  }, false);
+  assertEquals(read(original), originalState);
+  assertEquals(read(fork), forkState);
+
+  fork.defineAlias(ID_A, fork.number);
+  fork.defineOpaque(ID_B);
+  assert(!fork.isIdentity(ID_A));
+  assertEquals(fork.predicateOf(ID_A), undefined);
+  assertEquals(fork.taggedRecordOf(ID_B), undefined);
+  assertEquals(fork.predicateOf(ID_B), undefined);
+  assert(!fork.isSealed(ID_B));
+  assertEquals(read(original), originalState);
+
+  const descendant = fork.fork();
+  assertEquals(read(descendant), read(fork));
+  fork.defineAlias(USER, fork.never);
+  assertEquals(descendant.aliasOf(USER), forkState.alias);
+  descendant.defineAlias(USER, descendant.number);
+  assertEquals(fork.aliasOf(USER), fork.never);
+});
+
+Deno.test("forks preserve replacements for builtin definitions", () => {
+  const original = fresh();
+  original.defineAlias(DURATION_ID, original.string);
+  original.defineError(
+    SCHEMA_ERROR_ID,
+    original.record([field("detail", original.int)]),
+  );
+  const fork = original.fork();
+  assertEquals(fork.aliasOf(DURATION_ID), fork.string);
+  assert(!fork.isIdentity(DURATION_ID));
+  assertEquals(
+    fork.errorRecordOf(SCHEMA_ERROR_ID),
+    original.errorRecordOf(SCHEMA_ERROR_ID),
+  );
+  fork.defineIdentity(DURATION_ID, fork.boolean, true);
+  fork.defineError(SCHEMA_ERROR_ID, fork.record([]));
+  assertEquals(original.aliasOf(DURATION_ID), original.string);
+  assert(!original.isIdentity(DURATION_ID));
+  assertNotEquals(
+    fork.errorRecordOf(SCHEMA_ERROR_ID),
+    original.errorRecordOf(SCHEMA_ERROR_ID),
+  );
+});
 
 Deno.test("each writer replaces the whole earlier definition of a type", () => {
   const t = fresh();

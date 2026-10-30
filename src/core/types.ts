@@ -3,7 +3,7 @@
 // name: a `named` type points at the alias `TypeId`, and compatibility unfolds
 // the alias on demand. Types with identity, tagged records, and errors are nominal by identity.
 //
-// The table is mutable and deterministic. A project owns one table. The ids
+// Tables share interned storage and keep separate definition maps. The ids
 // depend on the order of interning, so no output may depend on a raw id. The
 // serialization functions below sort by canonical text, not by id.
 
@@ -370,14 +370,24 @@ export type TypeReader = Pick<
   | "size"
 >;
 
+interface TypeStorage {
+  readonly nodes: TypeNode[];
+  readonly byKey: Map<string, TypeRef>;
+  /** Canonical IR text depends on immutable nodes, not definitions. */
+  readonly irKeys: Map<TypeRef, string>;
+}
+
+interface TypeTableState {
+  readonly storage: TypeStorage;
+  readonly defs: Map<TypeId, AliasDef>;
+  readonly errorRecords: Map<ErrorId, TypeRef>;
+}
+
 export class TypeTable {
-  private readonly nodes: TypeNode[] = [];
-  private readonly byKey = new Map<string, TypeRef>();
-  /** The canonical IR text of a type, for the member order of unions. A node never changes, so the text is stable. */
-  private readonly irKeys = new Map<TypeRef, string>();
-  /** The one definition of each type id. A writer replaces the whole definition. */
-  private readonly defs = new Map<TypeId, AliasDef>();
-  private readonly errorRecords = new Map<ErrorId, TypeRef>();
+  private readonly storage: TypeStorage;
+  /** Each writer replaces a complete definition in this table. */
+  private readonly defs: Map<TypeId, AliasDef>;
+  private readonly errorRecords: Map<ErrorId, TypeRef>;
 
   /** The recovery type. */
   readonly error: TypeRef;
@@ -390,7 +400,14 @@ export class TypeTable {
   readonly unknown: TypeRef;
   readonly closeableScope: TypeRef;
 
-  constructor() {
+  constructor(state?: TypeTableState) {
+    this.storage = state?.storage ?? {
+      nodes: [],
+      byKey: new Map(),
+      irKeys: new Map(),
+    };
+    this.defs = state?.defs ?? new Map();
+    this.errorRecords = state?.errorRecords ?? new Map();
     this.error = this.intern({ kind: "error" });
     this.string = this.primitive("string");
     this.boolean = this.primitive("boolean");
@@ -400,6 +417,7 @@ export class TypeTable {
     this.never = this.primitive("never");
     this.unknown = this.primitive("unknown");
     this.closeableScope = this.intern({ kind: "closeable-scope" });
+    if (state !== undefined) return;
     this.defineError(
       "error:effect/SchemaError",
       this.record([{ name: "message", type: this.string, optional: false }]),
@@ -413,13 +431,22 @@ export class TypeTable {
     );
   }
 
-  /** Number of interned types. */
+  /** Shares interned nodes and copies the definitions for independent writes. */
+  fork(): TypeTable {
+    return new TypeTable({
+      storage: this.storage,
+      defs: new Map(this.defs),
+      errorRecords: new Map(this.errorRecords),
+    });
+  }
+
+  /** Number of interned types across tables that share storage. */
   get size(): number {
-    return this.nodes.length;
+    return this.storage.nodes.length;
   }
 
   node(ref: TypeRef): TypeNode {
-    const node = this.nodes[ref];
+    const node = this.storage.nodes[ref];
     if (node === undefined) throw new Error(`unknown type ref ${ref}`);
     return node;
   }
@@ -531,11 +558,11 @@ export class TypeTable {
   /** Interns a node that is already in normal form. */
   private intern(node: TypeNode): TypeRef {
     const key = this.keyOf(node);
-    const existing = this.byKey.get(key);
+    const existing = this.storage.byKey.get(key);
     if (existing !== undefined) return existing;
-    const ref = this.nodes.length as TypeRef;
-    this.nodes.push(node);
-    this.byKey.set(key, ref);
+    const ref = this.storage.nodes.length as TypeRef;
+    this.storage.nodes.push(node);
+    this.storage.byKey.set(key, ref);
     return ref;
   }
 
@@ -756,10 +783,10 @@ export class TypeTable {
   }
 
   private irKey(ref: TypeRef): string {
-    let key = this.irKeys.get(ref);
+    let key = this.storage.irKeys.get(ref);
     if (key === undefined) {
       key = canonicalJson(typeToIr(this, ref));
-      this.irKeys.set(ref, key);
+      this.storage.irKeys.set(ref, key);
     }
     return key;
   }
