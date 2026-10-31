@@ -2,8 +2,9 @@
 // <version> is `X.Y.Z`. The task moves the entries of "Unreleased" in
 // CHANGELOG.md under a new heading `## <version> - <date>`, with today's UTC
 // date. It sets `version` in deno.json to <version>. Then it runs
-// `deno task check`. When the check fails, the script writes the original
-// texts back and exits 1. The script refuses to run on a dirty working tree.
+// `deno task check` and, when the check succeeds, `deno task coverage`. When
+// the check or the coverage run fails, the script writes the original texts
+// back and exits 1. The script refuses to run on a dirty working tree.
 // It exits 2 when the version argument is missing. It never commits and never
 // pushes: the maintainer commits with the subject `vX.Y.Z` and pushes.
 
@@ -120,6 +121,25 @@ async function git(args: string[]): Promise<string> {
   return new TextDecoder().decode(output.stdout);
 }
 
+/** Runs one `deno task` and returns true when it exits 0. */
+async function runTask(name: string): Promise<boolean> {
+  const output = await new Deno.Command("deno", {
+    args: ["task", name],
+    cwd: ROOT,
+    stdout: "inherit",
+    stderr: "inherit",
+  }).output();
+  return output.success;
+}
+
+/** The name of the first release task that fails, or undefined. */
+async function failedTask(): Promise<string | undefined> {
+  for (const name of ["check", "coverage"]) {
+    if (!(await runTask(name))) return name;
+  }
+  return undefined;
+}
+
 async function main(): Promise<number> {
   const version = Deno.args[0];
   if (version === undefined) {
@@ -144,17 +164,12 @@ async function main(): Promise<number> {
   }
   await Deno.writeTextFile(changelogPath, texts.value.changelog);
   await Deno.writeTextFile(configPath, texts.value.config);
-  const check = await new Deno.Command("deno", {
-    args: ["task", "check"],
-    cwd: ROOT,
-    stdout: "inherit",
-    stderr: "inherit",
-  }).output();
-  if (!check.success) {
+  const failed = await failedTask();
+  if (failed !== undefined) {
     await Deno.writeTextFile(changelogPath, changelog);
     await Deno.writeTextFile(configPath, config);
     console.error(
-      "release: deno task check failed. CHANGELOG.md and deno.json are restored.",
+      `release: deno task ${failed} failed. CHANGELOG.md and deno.json are restored.`,
     );
     return 1;
   }

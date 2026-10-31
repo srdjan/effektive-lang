@@ -2,8 +2,9 @@
 // `deno task rules:unfired`. The task runs the fast suite with coverage in a
 // temporary directory, reads the lcov report for src/core/validate/, and
 // prints `path:line: text` for each uncovered line that starts a rejection.
-// The last line gives the count. The list is a report, not a gate: the script
-// exits 0 when it succeeds and 1 when the suite or the coverage report fails.
+// The last line gives the count. The list is a gate: the script exits 1 when
+// the list has a site, or when the suite or the coverage report fails. It
+// exits 0 when the list is empty.
 //
 // A rejection starts at a line that calls `add` or `addDepth` on a report
 // receiver: `report`, `ctx.report`, `this.ctx.report`, `this` (the expression
@@ -72,6 +73,14 @@ export function formatUnfired(
   return [...out, `${out.length} unfired rejection sites`];
 }
 
+/**
+ * The exit code for a formatted list: 1 when the list has a site before its
+ * count line, and 0 when the count line is alone.
+ */
+export function unfiredExitCode(formatted: readonly string[]): number {
+  return formatted.length > 1 ? 1 : 0;
+}
+
 async function run(
   args: string[],
 ): Promise<{ ok: boolean; stdout: string; stderr: string }> {
@@ -97,6 +106,8 @@ async function main(): Promise<number> {
       "--allow-read",
       "--parallel",
       "--ignore=**/*_slow_test.ts",
+      // The floors in deno.json are for the whole project, not for this suite.
+      "--coverage-raw-data-only",
       `--coverage=${dir}`,
       "tests/",
     ]);
@@ -109,6 +120,8 @@ async function main(): Promise<number> {
     const report = await run([
       "coverage",
       "--lcov",
+      // The floors in deno.json are for the whole project, not for this subset.
+      "--threshold=1",
       `--include=${VALIDATE_DIR}`,
       dir,
     ]);
@@ -129,8 +142,9 @@ async function main(): Promise<number> {
       uncovered[path] = lines;
       sources[path] = await Deno.readTextFile(join(ROOT, path));
     }
-    console.log(formatUnfired(uncovered, sources).join("\n"));
-    return 0;
+    const formatted = formatUnfired(uncovered, sources);
+    console.log(formatted.join("\n"));
+    return unfiredExitCode(formatted);
   } finally {
     await Deno.remove(dir, { recursive: true });
   }

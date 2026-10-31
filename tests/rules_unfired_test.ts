@@ -6,6 +6,7 @@ import {
   formatUnfired,
   parseLcovUncovered,
   rejectionLines,
+  unfiredExitCode,
 } from "../scripts/rules_unfired.ts";
 
 Deno.test("parseLcovUncovered returns the zero-count lines of each file", () => {
@@ -72,4 +73,25 @@ Deno.test("formatUnfired lists path:line: text sorted, then the count", () => {
     "src/core/validate/b.ts:2: c.add(AREA.types, p, 'm', s);",
     "3 unfired rejection sites",
   ]);
+});
+
+Deno.test("unfiredExitCode is 1 for a forged uncovered site", () => {
+  const formatted = formatUnfired(
+    { "src/core/validate/a.ts": [1] },
+    { "src/core/validate/a.ts": "report.add(\n);" },
+  );
+  assertEquals(formatted, [
+    "src/core/validate/a.ts:1: report.add(",
+    "1 unfired rejection sites",
+  ]);
+  assertEquals(unfiredExitCode(formatted), 1);
+});
+
+Deno.test("unfiredExitCode is 0 when no site is uncovered", () => {
+  const formatted = formatUnfired(
+    { "src/core/validate/a.ts": [2] },
+    { "src/core/validate/a.ts": "report.add(\nconst x = 1;" },
+  );
+  assertEquals(formatted, ["0 unfired rejection sites"]);
+  assertEquals(unfiredExitCode(formatted), 0);
 });

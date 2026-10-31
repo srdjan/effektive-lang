@@ -20,7 +20,8 @@ Run every command from the repository root.
 | `deno task behavior:capture`  | Compares two revisions using instrumented compiler entry points during tests, including subprocesses. See the capture note below. Use it for refactors. |
 | `deno task logs:report`        | Prints a Markdown report of the session logs: `[--since <N>(m|h|d)] [folder ...]`. The default window is 24h and the default folder is `playground/.effektive/logs/`. |
 | `deno task logs:replay`        | Runs a logged session again on the current build: `<session.jsonl>`. Exit 0 when the outcomes match, 1 at the first difference, 2 for a usage error or an unsupported session. It skips `--tsc`, and it does not replay watch sessions. |
-| `deno task rules:unfired`      | Runs the fast suite with coverage and prints `path:line: text` for each validator rejection site in `src/core/validate/` that no fast test fires, then the count. Exit 0 when the list is complete. |
+| `deno task rules:unfired`      | Runs the fast suite with coverage and prints `path:line: text` for each validator rejection site in `src/core/validate/` that no fast test fires, then the count. Exit 1 when the list has a site, and exit 0 when the count is 0. |
+| `deno task coverage`           | Runs the fast suite and the slow suite with child-process coverage. Prints the line and branch percent for each directory and for the 20 lowest files. Exit 1 when a suite fails or a floor fails. The floors are `coverage.thresholds` in `deno.json`: lines 96, branches 94, functions 99. |
 | `deno task measure`           | Prints the lines, branches, and cyclomatic numbers of the files that you name, as JSON.                                                                 |
 | `deno task measure:functions` | Prints the branches and cyclomatic number of each function in the files that you name, as TSV.                                                          |
 | `deno task effektive`         | Runs the command-line tool. See [Using the command line](api.md#using-the-command-line).                                                                |
@@ -29,7 +30,7 @@ Run every command from the repository root.
 | `deno task playground:build`  | Writes the playground page to `playground/dist/`. See [Playground](api.md#playground).                                                                  |
 | `deno task playground:serve`  | Builds the playground page, then serves it on `http://127.0.0.1:8790/`.                                                                                 |
 | `deno task package`           | Builds standalone CLI/server bundles and the complete local VSIX. See [installation](installation.md).                                                  |
-| `deno task release`           | Prepares a release: `<version>` as `X.Y.Z`. Moves the entries of "Unreleased" under a new dated heading, sets `version` in `deno.json`, and runs `deno task check`. See [Release](#release). |
+| `deno task release`           | Prepares a release: `<version>` as `X.Y.Z`. Moves the entries of "Unreleased" under a new dated heading, sets `version` in `deno.json`, and runs `deno task check` and `deno task coverage`. See [Release](#release). |
 | `deno task test:installation` | Checks reproducible packaging and isolated offline installation.                                                                                        |
 | `deno task test:vscode`       | Runs installed VSIX acceptance in a local VS Code application.                                                                                          |
 | `deno task fmt`               | Formats the source files.                                                                                                                               |
@@ -42,16 +43,6 @@ lower-level checker call. The temporary hooks embed their destination path, so
 child processes need write permission but no environment permission. A recording
 failure fails the capture visibly.
 
-## Reset regression checks
-
-`tests/revision_isolation_test.ts` delays queries on retained revisions until after later definition edits.
-It compares independently validated IR, emitted text, mappings, and editor results with a fresh program.
-Its table census also checks cached-module reuse across rotating edits.
-The census bounds visible table identities; it does not measure retained bytes or garbage-collection timing.
-
-`tests/playground_build_test.ts` checks the output-directory guard without deleting repository data.
-The guard compares complete parent components, so a repository child called `..scratch` remains protected.
-The existing slow build test checks supported external output.
 
 ## Layout
 
@@ -178,8 +169,9 @@ The history shows this path for each version. It has no release tag.
 3. Run `deno task release X.Y.Z`. The version must rise above `version` in
    `deno.json`, and "Unreleased" must have entries. The task moves the entries
    under the heading `## X.Y.Z - YYYY-MM-DD` with the UTC date of today. It sets
-   `version` in `deno.json`. It runs `deno task check`, which must exit 0. When
-   the check fails, the task restores both files and exits 1.
+   `version` in `deno.json`. It runs `deno task check`, which must exit 0. Then it
+   runs `deno task coverage`, which must exit 0. When the check or the coverage
+   run fails, the task restores both files and exits 1.
    `tests/docs_test.ts` fails when the newest versioned heading of
    `CHANGELOG.md` differs from `version`.
 4. Commit with the subject `vX.Y.Z`. The task never commits. Never push: the
