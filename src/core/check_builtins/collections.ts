@@ -127,7 +127,6 @@ function allCall(
   c.fact(node, {
     kind: "builtin",
     name: "all",
-    specialized,
     ir: functionTypeToIr(table, specialized),
   });
   return c.finish(
@@ -447,7 +446,6 @@ function collectionCall(
   c.fact(node, {
     kind: "builtin",
     name,
-    specialized,
     ir: functionTypeToIr(table, specialized),
   });
   const invocation = c.table.node(specialized);

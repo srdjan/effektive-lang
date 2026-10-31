@@ -69,7 +69,6 @@ interface TriviaTable {
 }
 
 export interface Lexed {
-  readonly source: string;
   readonly text: string;
   /** Number of tokens, including the final Eof token. */
   readonly count: number;
@@ -664,7 +663,6 @@ export function lex(source: string, text: string): Lexed {
   push(TokenKind.Eof, n, n);
 
   return {
-    source,
     text,
     count: kinds.length,
     kinds: Uint8Array.from(kinds),

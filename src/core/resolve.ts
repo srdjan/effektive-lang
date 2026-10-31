@@ -297,7 +297,6 @@ interface Binding {
 }
 
 export interface ModuleResolution {
-  readonly module: string;
   /** From syntax node id to target. Every resolved name node has one entry. */
   readonly targets: ReadonlyMap<NodeId, Target>;
   /** From local identity to the span of the name that binds it. */
@@ -1429,7 +1428,6 @@ class Resolver {
     this.bindImports();
     for (const decl of this.info.index.decls) this.resolveDecl(decl);
     return {
-      module: this.name,
       targets: this.targets,
       locals: this.locals,
       namespace: this.namespace,

@@ -2093,27 +2093,79 @@ Deno.test("a pipeline stage records the closed builtin specialization", () => {
   ]);
   const filter = builtins[0];
   assert(filter.kind === "builtin");
-  assertEquals(
-    showType(project.table, filter.specialized),
-    "pure (User[], pure (User) => boolean) => User[]",
-  );
+  assertEquals(filter.ir, {
+    kind: "function",
+    execution: "pure",
+    parameters: [
+      {
+        kind: "array",
+        element: { kind: "named", id: "type:collections#User" },
+      },
+      {
+        kind: "function",
+        execution: "pure",
+        parameters: [{ kind: "named", id: "type:collections#User" }],
+        result: { kind: "primitive", name: "boolean" },
+        effects: { failures: [], requirements: [] },
+      },
+    ],
+    result: {
+      kind: "array",
+      element: { kind: "named", id: "type:collections#User" },
+    },
+    effects: { failures: [], requirements: [] },
+  });
   assertEquals(filter.ir.execution, "pure");
   assertEquals(filter.ir.parameters.length, 2);
   assertEquals(activeNames.mode, "pure");
   const map = builtins[1];
   assert(map.kind === "builtin");
-  assertEquals(
-    showType(project.table, map.specialized),
-    "pure (User[], pure (User) => string) => string[]",
-  );
+  assertEquals(map.ir, {
+    kind: "function",
+    execution: "pure",
+    parameters: [
+      {
+        kind: "array",
+        element: { kind: "named", id: "type:collections#User" },
+      },
+      {
+        kind: "function",
+        execution: "pure",
+        parameters: [{ kind: "named", id: "type:collections#User" }],
+        result: { kind: "primitive", name: "string" },
+        effects: { failures: [], requirements: [] },
+      },
+    ],
+    result: { kind: "array", element: { kind: "primitive", name: "string" } },
+    effects: { failures: [], requirements: [] },
+  });
   const fold = factsOf(project, "collections", "total").find((f) =>
     f.kind === "builtin"
   );
   assert(fold !== undefined && fold.kind === "builtin");
-  assertEquals(
-    showType(project.table, fold.specialized),
-    "pure (Amount[], Amount, pure (Amount, Amount) => Amount) => Amount",
-  );
+  assertEquals(fold.ir, {
+    kind: "function",
+    execution: "pure",
+    parameters: [
+      {
+        kind: "array",
+        element: { kind: "named", id: "type:collections#Amount" },
+      },
+      { kind: "named", id: "type:collections#Amount" },
+      {
+        kind: "function",
+        execution: "pure",
+        parameters: [
+          { kind: "named", id: "type:collections#Amount" },
+          { kind: "named", id: "type:collections#Amount" },
+        ],
+        result: { kind: "named", id: "type:collections#Amount" },
+        effects: { failures: [], requirements: [] },
+      },
+    ],
+    result: { kind: "named", id: "type:collections#Amount" },
+    effects: { failures: [], requirements: [] },
+  });
 });
 
 Deno.test("call facts tell performs, constructions, fail, and retry apart", () => {

@@ -65,7 +65,7 @@ import {
   type SyntaxTree,
   walk,
 } from "./syntax.ts";
-import type { BodyTable, NodeInfo } from "./tables.ts";
+import type { BodyTable } from "./tables.ts";
 import { type TypeRef, TypeTable } from "./types.ts";
 import { functionTypeFromIr, typeFromIr } from "./type_ir.ts";
 
@@ -85,7 +85,6 @@ export interface ConstantBody {
   readonly signature: ConstantSignature;
   readonly initNode: NodeId | undefined;
   readonly table: BodyTable;
-  readonly init: NodeInfo | undefined;
   readonly type: TypeRef;
 }
 
@@ -336,7 +335,6 @@ function moduleValues(
           signature,
           initNode,
           table: run.run.table,
-          init: run.run.init,
           type: run.run.type,
         });
       }

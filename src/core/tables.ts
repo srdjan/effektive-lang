@@ -297,7 +297,6 @@ export type NodeFact =
   | {
     readonly kind: "builtin";
     readonly name: "map" | "filter" | "fold" | "all" | "traverse";
-    readonly specialized: TypeRef;
     readonly ir: FunctionType;
   }
   /** A field read. `optional` is true when the field is optional and the read is `Option<T>`. */

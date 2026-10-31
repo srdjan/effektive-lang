@@ -24,7 +24,6 @@ interface HostAssertionEntry extends HostAssertionRecord {
 }
 
 export interface SpanTable {
-  readonly module: string;
   /** The generated file, relative to the project root: `users.ts`. */
   readonly path: string;
   /** The length of the generated text in UTF-16 code units. */
@@ -75,7 +74,6 @@ export function buildSpanTable(
     open.push(i);
   });
   return {
-    module: emitted.module,
     path: emitted.path,
     textLength: emitted.text.length,
     lineStarts: lineStarts(emitted.text),

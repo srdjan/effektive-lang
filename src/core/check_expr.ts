@@ -178,7 +178,6 @@ export interface FunctionRun extends BodyOutcome {
 
 export interface ConstantRun {
   readonly table: BodyTable;
-  readonly init: NodeInfo | undefined;
   /** The binding annotation, or the widened type of the initializer. */
   readonly type: TypeRef;
   readonly diagnostics: readonly Diagnostic[];
@@ -529,9 +528,9 @@ class BodyChecker
   checkConstant(
     initNode: NodeId | undefined,
     annotation: TypeRef | undefined,
-  ): { readonly init: NodeInfo | undefined; readonly type: TypeRef } {
+  ): { readonly type: TypeRef } {
     if (initNode === undefined) {
-      return { init: undefined, type: annotation ?? this.table.error };
+      return { type: annotation ?? this.table.error };
     }
     const init = this.expr(initNode, annotation);
     this.fits(initNode, init.type, annotation, "the constant");
@@ -545,7 +544,7 @@ class BodyChecker
         initNode,
       );
     }
-    return { init, type: annotation ?? this.widen(init.type) };
+    return { type: annotation ?? this.widen(init.type) };
   }
 
   // -------------------------------------------------------------- expressions
@@ -2992,7 +2991,6 @@ export function checkConstantBody(
   const run = checker.checkConstant(initNode, signature.type?.ref);
   return {
     table: checker.body,
-    init: run.init,
     type: run.type,
     diagnostics: checker.sink,
   };

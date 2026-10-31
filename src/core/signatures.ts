@@ -118,7 +118,6 @@ export interface ConstantSignature extends SignatureBase {
 export interface ProviderSignature extends SignatureBase {
   readonly kind: "provider";
   readonly id: ValueId;
-  readonly provides: readonly CapabilityId[];
   readonly failures: readonly ErrorId[];
   readonly requirements: readonly CapabilityId[];
   /** The provider type: acquisition execution is always `effect`. */

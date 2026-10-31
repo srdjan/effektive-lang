@@ -10,8 +10,6 @@ import type { ValueId } from "./ir.ts";
 export interface InitializationGraph {
   /** Module constants in source order. */
   readonly constants: readonly ValueId[];
-  /** The module-level declarations that each function or constant references directly, sorted by source order. */
-  readonly references: ReadonlyMap<ValueId, readonly ValueId[]>;
   /**
    * For each constant, the other constants that must be initialized first. A
    * reference through functions counts. Sorted by source order.
@@ -42,11 +40,6 @@ export function buildInitializationGraph(
       .filter((p): p is number => p !== undefined)
       .sort((a, b) => a - b)
   );
-  const references = new Map<ValueId, readonly ValueId[]>();
-  nodes.forEach((node, i) => {
-    references.set(node.id, edges[i].map((p) => nodes[p].id));
-  });
-
   const constants = nodes.filter((n) => n.kind === "constant").map((n) => n.id);
 
   const dependencies = new Map<ValueId, readonly ValueId[]>();
@@ -122,5 +115,5 @@ export function buildInitializationGraph(
     order.push(next);
   }
 
-  return { constants, references, dependencies, order, cycles };
+  return { constants, dependencies, order, cycles };
 }

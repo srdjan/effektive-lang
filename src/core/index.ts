@@ -62,7 +62,6 @@ export interface ImportEntry {
 }
 
 export interface FileIndex {
-  readonly source: string;
   /** Every declaration whose name parsed, in source order. */
   readonly decls: readonly DeclEntry[];
   /** The first declaration for each name. Later declarations of the name are duplicates. */
@@ -218,5 +217,5 @@ export function buildIndex(tree: SyntaxTree): FileIndex {
     decls.push(entry);
     if (!byName.has(entry.name)) byName.set(entry.name, entry);
   }
-  return { source: tree.source, decls, byName, imports };
+  return { decls, byName, imports };
 }

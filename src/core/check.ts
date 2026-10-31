@@ -55,7 +55,7 @@ import {
   isTypeId,
 } from "./ids.ts";
 import { initOf, isTypeKind } from "./syntax_queries.ts";
-import { compareText, sortedUnique } from "./util.ts";
+import { compareText } from "./util.ts";
 import {
   checkedInputFlags,
   type FunctionSignature,
@@ -879,7 +879,6 @@ class ModuleChecker {
       kind: "provider",
       id,
       ...this.base(entry),
-      provides: sortedUnique(provides),
       failures,
       requirements,
       type: this.lowerer.providerOf(provides, failures, requirements),

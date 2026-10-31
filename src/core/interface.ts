@@ -45,7 +45,6 @@ type InterfacePayload = Pick<
 >;
 
 export interface ModuleInterface {
-  readonly module: string;
   readonly payload: InterfacePayload;
   /** FNV-1a 64 of the canonical JSON of the payload without spans. */
   readonly hash: string;
@@ -289,7 +288,6 @@ export function buildInterface(
   return {
     ok: true,
     value: {
-      module: declarations.module,
       payload,
       hash: interfaceHash(payload),
     },
