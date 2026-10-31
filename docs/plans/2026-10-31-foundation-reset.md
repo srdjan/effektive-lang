@@ -257,6 +257,20 @@ FNF26 (no defect, confirmed). Adapters and tools are healthy. A scan found 7 dup
 
 FNF27 (no defect, confirmed for the count). Most builtin names serve no application. 86 of the 117 prelude names have no word match in the 15 application `.eff` files, the examples, or the tutorial. The count covers 16 of 19 Schema names, 26 of 32 stream names, and 10 of 10 Schedule names. The stopping rule of 2026-10-19 ended automatic parity work, and the rule of 2026-10-27 asks that a source form carry user intent. A word match is an approximate measure, and each name has tests and a specification entry. Disposition: FND1.
 
+### Findings during execution
+
+FNF28 (medium, confirmed, open). The checker accepts a program that the validator rejects. FN3 unit 2 found this case. Take `export sealed type Positive = int` in `lib.eff`. In `main.eff`, take `type R = { s: Schema<int, int, never, never, Positive> }`, `type Q = { s: Schema<int> }`, and `export const f = (r: R): Q => ({ s: r.s })`.
+
+Observed results: `check`, `build`, and `build --tsc` exit 0, and only `build --validate` exits 1 with two `validation/002` diagnostics. Probable cause: `TypeTable.schema` at `src/core/types.ts:644` drops `makeInput` when `isAssignable` holds both ways. That call has no module, so it has every sealed authority. The IR keeps `makeInput` at `src/core/type_lower.ts:647`, and the validator needs authority at `src/core/validate/typing.ts:377`. A check that can confirm the cause: pass a module with no authority at that call, and run the test below. The call at `src/core/check_builtins/schema.ts:429` reads authority in the same way.
+
+The rule is clear: a sealed value widens only inside its declaring module, and `Schema` stays invariant. So the checker is the wrong side, and the expected result is `type-mismatch/003`. A repair rejects a program that the checker accepts today, so it changes an observable result outside section 6. This plan does not make that change. The case follows the path of SBF28: it stays open in `docs/status.md` for a user decision. No unit needs the repair.
+
+FNF29 (medium, confirmed, open). The checker accepts a second program that the validator rejects. The orchestrator found this case while it read the other `isAssignable` calls. Take `export sealed type Code = null | 1` and `export type Flag = boolean` in `lib.eff`. In `main.eff`, take `export const f = (c: Code): Flag => c === null`.
+
+Observed results: the checker reports nothing, and the validator reports one `validation/002`. The comparison `c === 1` passes on both sides. Probable cause: `src/core/check_binary.ts:285` tests `null` through `isAssignable`, which has every sealed authority, and the validator applies authority to the same comparison. The rules let another module compare primitive values, so the validator is probably the wrong side. A check that can confirm the cause: read the `===` case in `src/core/validate/expr.ts`. This case stays open on the same path as FNF28.
+
+`tests/type_laws_property_test.ts` holds three tests whose names start with "known difference". Each test first failed with the correct expected value, for the reason of its defect. Each test now pins the current wrong result, so a repair must change it.
+
 ### Corrections to the inputs
 
 The main session checked the reviewer reports, and these claims changed.
@@ -500,10 +514,10 @@ The tests use `makeRandom` from `bench/generate.ts`, a literal table of seeds, a
 
 | Unit | Model | Files | Acceptance | Budget |
 | --- | --- | --- | --- | --- |
-| 1. P1, incremental equals fresh. Start from `generateProject({ declarations: 30, seed })`. Apply a seeded edit sequence with body edits, signature edits, alias edits, a syntax error, a type error, a restore, and a module removal. After each step, compare the long-lived `Program` with a new `Program`, and compare both with `checkProject` and `lowerProject` on the same files. Add an `observe` helper that records success and failure states: diagnostics, module names, lowering, validation, emission, source maps, span tables, and `Revision.interfaceHash`. The third result covers diagnostics and IR only. The helper `snapshot()` at `tests/revision_isolation_test.ts:36` stays, because it asserts a clean revision. | Opus | `tests/incremental_property_test.ts` | Kill check below | 30 turns |
+| 1. P1, incremental equals fresh. Start from `generateProject({ declarations: 30, seed })`. Apply a seeded edit sequence with body edits, signature edits, alias edits, a syntax error, a type error, a restore, and a module removal. After each step, compare the long-lived `Program` with a new `Program`, and compare both with `checkProject` and `lowerProject` on the same files. Add an `observe` helper that records success and failure states: diagnostics, module names, lowering, validation, emission, source maps, span tables, and `Revision.interfaceHash`. The third result covers diagnostics and IR only. A second long-lived `Program` keeps each revision without a query, and the test queries those revisions after the last step. The helper `snapshot()` at `tests/revision_isolation_test.ts:36` stays, because it asserts a clean revision. | Opus | `tests/incremental_property_test.ts` | Kill check below | 30 turns |
 | 2. P2, type laws. Build a `TypeTable` and a `TypeEnv` from one generated definition set, with one owner module. Prove reflexivity on all generated types. Prove transitivity only on primitives, literals, and arrays, tuples, and records of those kinds. Two rules are not transitive, so assert each as a literal case. Nominal widening: for identities `A` and `B` over `int`, `A` fits `int`, `int` fits `B`, and `A` does not fit `B`. Function lifting: a pure function fits its effect counterpart, that effect type fits a union that holds it, and the pure function does not fit that union. Prove that `TypeTable.isAssignableIn` and the validator `fits` agree on generated pairs, through `type_ir.ts`. Private imports are justified here. | Opus | `tests/type_laws_property_test.ts` | Kill check below | 30 turns |
 | 3. P3, solver soundness. Generate small predicates over three integer terms. Put explicit bounds on each term in the assumptions. Evaluate by brute force over those bounds, and assert that the satisfying set is not empty. A "proved" result must make the predicate true for each satisfying assignment. A "disproved" result must make the predicate false for each satisfying assignment. `verifyCertificate` must accept each certificate. Prove the identity and absorption laws of `and` and `or`. | Sonnet | `tests/predicates_property_test.ts` | Kill check below | 25 turns |
-| 4. P4, accepted implies valid. Start from the examples and from generated projects. Apply seeded token edits. When the checker gives no diagnostic, the validator must give none, and emission must succeed. Assert the literal count of accepted programs for the fixed seeds, so the test cannot pass empty. | Sonnet | `tests/acceptance_property_test.ts` | Kill check below | 25 turns |
+| 4. P4, accepted implies valid. Start from the examples and from generated projects. Apply seeded token edits. When the checker gives no diagnostic, the validator must give none, and emission must succeed. Assert the literal count of accepted programs for the fixed seeds, so the test cannot pass empty. | Sonnet | `tests/acceptance_property_slow_test.ts` | Kill check below | 25 turns |
 
 Verification:
 
@@ -512,7 +526,7 @@ git diff --exit-code <phase-base> -- src
 deno task mutate --seed 11 --sample 30 --workers 4 --tests tests/incremental_property_test.ts src/core/db.ts
 deno task mutate --seed 12 --sample 30 --workers 4 --tests tests/type_laws_property_test.ts src/core/types.ts
 deno task mutate --seed 13 --sample 30 --workers 4 --tests tests/predicates_property_test.ts src/core/predicates.ts
-deno task mutate --seed 14 --sample 30 --workers 4 --tests tests/acceptance_property_test.ts src/core/check_binary.ts
+deno task mutate --seed 14 --sample 30 --workers 4 --tests tests/acceptance_property_slow_test.ts src/core/check_binary.ts
 ```
 
 Expected: the source diff prints nothing. Each report shows at least one killed mutant. Exit 1 is correct here, because the single test file leaves survivors. Record each kill count in section 16. Then find the current line of the `Fiber` site and of the `or` site, and run these two commands.
@@ -831,8 +845,8 @@ No pass ran the phases, the full suites, coverage, mutation, capture, benchmarks
 | --- | --- | --- | --- | --- |
 | FN0 | Complete | `c2250852577f7ab31b4d11d21699e6c1f9082efb` | `33210d7`, `80dfbff` | Gate exit 0: 2,884 fast and 282 slow passed, none ignored. Three files changed, as planned. |
 | FN1 | Complete | `80dfbff` | `682cf52`, `1828afa`, `ad38702`, `18083c5` | Gate exit 0: 2,891 fast and 284 slow passed. Six slow suites ran in concurrent groups of three at load averages up to 106, with no failure. A first group failed `tests/repeat_slow_test.ts`, which `18083c5` fixed. Minimum fast-test time in three runs: below 1 s, at a load average of 23. All release checks passed, including the restore after a failed gate. Deviation: the rename of unit 3 landed in `682cf52`, because it was already staged. |
-| FN2 | In progress | `18083c5` | | |
-| FN3 | Not started | | | |
+| FN2 | Complete | `18083c5` | `0687715`, `58caced`, `f029960` | Gate exit 0: 2,904 fast and 298 slow passed. NAMES: 27 added, 0 removed. `git diff --exit-code 18083c5 -- src` exit 0. `deno task coverage` exit 0: lines 96.77%, branches 94.26%, functions 99.14%. `deno task rules:unfired` exit 0: 0 sites. `deno task mutate` on `src/core/paths.ts`: 17 sites, 17 killed, exit 0. The report path gave exit 1 with `--tests tests/docs_test.ts`. In a clone with a branch floor of 96, `deno task release` exited 1, restored both files, and left the tree clean. Deviation: units 1, 2, and 5 share `0687715`, because the gate on unfired sites and the coverage task change the same files. |
+| FN3 | In progress | `f029960` | | |
 | FN4 | Not started | | | |
 | FN5 | Not started | | | |
 | FN6 | Not started | | | |

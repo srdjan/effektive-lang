@@ -49,6 +49,19 @@ A capture exits 1 for a missing record, and also for a failed test. So read its 
 
 `tests/playground_build_test.ts` checks the output-directory guard without deleting repository data. The guard compares complete parent components, so a repository child called `..scratch` stays protected. The slow build test checks supported external output.
 
+## Property tests
+
+A property test generates its inputs from a literal table of seeds, with `makeRandom` from `bench/generate.ts`. It asserts literal counts of each outcome, so it cannot pass with no effective input. A failure message prints the seed and the step.
+
+| File | What it proves | What it can miss |
+| --- | --- | --- |
+| `tests/incremental_property_test.ts` | After each edit, a long-lived `Program` equals a new `Program` and the older driver. A revision that gets its first query after later edits gives the recorded result. | The projects have one feature module at this size. `effektive.json` and host declarations do not change. |
+| `tests/type_laws_property_test.ts` | Each generated type fits itself. Assignment of plain types is transitive. `isAssignableIn` and `fits` agree on generated pairs. | A rare shape can stay outside the generated pairs. The test names that start with "known difference" pin open defects of this kind. |
+| `tests/predicates_property_test.ts` | Brute force confirms each `proved` and `disproved` result on a bounded domain. `verifyCertificate` accepts each certificate. `and` and `or` obey the identity and absorption laws. | The test does not judge an `unknown` result. |
+| `tests/acceptance_property_slow_test.ts` | After seeded token edits, a program that the checker accepts lowers, validates, and emits. | The edits stay near the input programs. Only `.eff` files change. |
+
+A property that fails is a finding about the compiler until the evidence shows otherwise. Do not weaken the property, and do not filter out the input.
+
 ## Coverage
 
 `deno task coverage` runs both suites with coverage, and it includes child processes through `DENO_COVERAGE_DIR`. It prints a table by directory and the 20 lowest files. The task exits 1 when a floor fails. `deno.json` holds the floors under `coverage.thresholds`.
