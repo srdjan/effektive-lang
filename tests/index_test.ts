@@ -62,72 +62,42 @@ Deno.test("a private declaration is not exported", () => {
   assertEquals(index.byName.get("b")!.exported, true);
 });
 
-Deno.test("for a const arrow the header holds the signature and the body follows =>", () => {
+Deno.test("a const arrow is flagged and its name span covers the name", () => {
   const text =
     "export const f = (x: int): int\n  fails E\n  uses S.m => x + 1\n";
   const d = decl(text, "f");
   assertEquals(d.isArrow, true);
-  assertEquals(
-    sliceOf(text, d.headerSpan),
-    "export const f = (x: int): int\n  fails E\n  uses S.m",
-  );
-  assertEquals(sliceOf(text, d.bodySpan), "x + 1");
   assertEquals(sliceOf(text, d.nameSpan), "f");
 });
 
-Deno.test("a block body keeps its braces in the body span", () => {
-  const text = "const f = (): int => {\n  1\n}\n";
-  assertEquals(sliceOf(text, decl(text, "f").bodySpan), "{\n  1\n}");
+Deno.test("isArrow is true only for a const whose first value node is an arrow", () => {
+  const rows: readonly (readonly [string, string, boolean])[] = [
+    ["const f = (x: int): int => x\n", "f", true],
+    ["const k: int = 3\n", "k", false],
+    ["type T = { a: int }\n", "T", false],
+    ["const k\n", "k", false],
+    ["const f = (x: int): int =>\n", "f", true],
+  ];
+  for (const [text, name, expected] of rows) {
+    const entry = indexOf(text).byName.get(name);
+    assertEquals(entry?.isArrow, expected, text);
+  }
 });
 
-Deno.test("a body edit changes the body hash and keeps the header hash", () => {
-  const before = "export const f = (x: int): int => x + 1\n";
-  const after = "export const f = (x: int): int => x + 2\n";
-  const a = decl(before, "f");
-  const b = decl(after, "f");
-  assertEquals(a.headerHash, b.headerHash);
-  assertNotEquals(a.bodyHash, b.bodyHash);
-});
-
-Deno.test("a signature edit changes the header hash and keeps the body hash", () => {
-  const a = decl("const f = (x: int): int => x\n", "f");
-  const b = decl("const f = (x: int): number => x\n", "f");
-  assertNotEquals(a.headerHash, b.headerHash);
-  assertEquals(a.bodyHash, b.bodyHash);
-});
-
-Deno.test("a non-arrow const and a type split at the equals sign", () => {
-  const text =
-    "const k: int = 3\ntype T = { a: int }\nerror E = { b: string }\n";
-  const k = decl(text, "k");
-  assertEquals(k.isArrow, false);
-  assertEquals(sliceOf(text, k.headerSpan), "const k: int =");
-  assertEquals(sliceOf(text, k.bodySpan), "3");
-  assertEquals(sliceOf(text, decl(text, "T").bodySpan), "{ a: int }");
-  assertEquals(sliceOf(text, decl(text, "E").bodySpan), "{ b: string }");
-});
-
-Deno.test("a service header is its name and its body is the brace block", () => {
+Deno.test("a service method span covers the method signature", () => {
   const text = "export service S {\n  a(): int\n  b(x: int): int fails E\n}\n";
   const s = decl(text, "S");
-  assertEquals(sliceOf(text, s.headerSpan), "export service S");
-  assertEquals(
-    sliceOf(text, s.bodySpan),
-    "{\n  a(): int\n  b(x: int): int fails E\n}",
-  );
   assertEquals(
     sliceOf(text, s.methods.get("b")!.span),
     "b(x: int): int fails E",
   );
 });
 
-Deno.test("a provider in an interface file has no body", () => {
+Deno.test("a provider in an interface file is indexed with the provider kind", () => {
   const text = 'import { U } from "./u.eff"\nexport provider P provides U\n';
-  const index = indexOf(text, "h.effi");
-  const p = index.byName.get("P")!;
+  const p = indexOf(text, "h.effi").byName.get("P")!;
   assertEquals(p.kind, "provider");
-  assertEquals(sliceOf(text, p.headerSpan), "export provider P provides U");
-  assertEquals(p.bodySpan.start, p.bodySpan.end);
+  assertEquals(sliceOf(text, p.span), "export provider P provides U");
 });
 
 Deno.test("an import entry holds its names and its decoded specifier", () => {

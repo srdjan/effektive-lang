@@ -1,16 +1,6 @@
 // The declaration index of one file. It lists each top-level declaration by name
-// with its kind, export flag, spans, and two content hashes. Later parts use the
-// header hash and the body hash to find out what an edit changed.
-//
-// Header and body. For a const, a type, or an error, the header runs from the
-// start of the declaration (the `export` keyword when present) to the end of the
-// text before the body. For a const whose value is an arrow, the body is the text
-// after `=>` and the header holds the parameter list, the result annotation, and
-// the effects. For a type, an error, or a non-arrow const, the body is the text
-// after `=`. For a service, the header is `service Name` and the body runs from
-// `{` to `}`. A provider has no body: its header is the whole declaration.
+// with its kind, export flag, spans, and methods.
 
-import { fnv1a64 } from "./hash.ts";
 import { TokenKind } from "./lex.ts";
 import type { Span } from "./source.ts";
 import { nameTextOf, tokenKindOf } from "./syntax_queries.ts";
@@ -34,8 +24,6 @@ export interface MethodEntry {
   readonly nameNode: NodeId;
   readonly nameSpan: Span;
   readonly span: Span;
-  /** Hash of the whole method text: a method has a signature and no body. */
-  readonly hash: string;
 }
 
 export interface DeclEntry {
@@ -48,10 +36,6 @@ export interface DeclEntry {
   readonly nameNode: NodeId;
   readonly nameSpan: Span;
   readonly span: Span;
-  readonly headerSpan: Span;
-  readonly bodySpan: Span;
-  readonly headerHash: string;
-  readonly bodyHash: string;
   /** Methods by name. The first method wins when a name repeats. Empty unless a service. */
   readonly methods: ReadonlyMap<string, MethodEntry>;
   /** Every method in source order, including repeated names. */
@@ -109,132 +93,19 @@ function firstChildOfKind(
   return undefined;
 }
 
-function isRealChild(tree: SyntaxTree, child: NodeId): boolean {
-  const kind = kindOf(tree, child);
-  if (kind === SyntaxKind.Missing) return false;
-  return tokenKindOf(tree, child) !== TokenKind.Newline;
-}
-
 /**
- * Splits the children of `node` at the first token of `kind`. Returns the end of
- * the last real child up to and including that token, and the child nodes after it.
+ * True for a const whose first value node after `=` is an arrow expression. A
+ * const with no `=` or no value is not an arrow. A broken arrow still counts.
  */
-function splitAfterToken(
-  tree: SyntaxTree,
-  node: NodeId,
-  tokenKind: TokenKind,
-): { readonly headerEnd: number; readonly after: NodeId[] } | undefined {
-  const children = childrenOf(tree, node);
-  for (let i = 0; i < children.length; i++) {
-    if (tokenKindOf(tree, children[i]) !== tokenKind) continue;
-    const after: NodeId[] = [];
-    for (let j = i + 1; j < children.length; j++) {
-      const kind = kindOf(tree, children[j]);
-      if (kind !== SyntaxKind.Token && kind !== SyntaxKind.Missing) {
-        after.push(children[j]);
-      }
-    }
-    return { headerEnd: tree.ends[children[i]], after };
-  }
-  return undefined;
-}
-
-function lastRealEnd(tree: SyntaxTree, node: NodeId): number {
-  let end = tree.starts[node];
-  for (const child of childrenOf(tree, node)) {
-    if (isRealChild(tree, child)) end = tree.ends[child];
-  }
-  return end;
-}
-
-interface Split {
-  readonly headerEnd: number;
-  readonly bodyStart: number;
-  readonly bodyEnd: number;
-  readonly isArrow: boolean;
-}
-
-function emptyBody(at: number, isArrow = false): Split {
-  return { headerEnd: at, bodyStart: at, bodyEnd: at, isArrow };
-}
-
-/** Header and body offsets for a declaration whose body follows an `=`. */
-function splitAtEquals(
-  tree: SyntaxTree,
-  decl: NodeId,
-  allowArrow: boolean,
-): Split {
-  const split = splitAfterToken(tree, decl, TokenKind.Eq);
-  if (split === undefined) return emptyBody(lastRealEnd(tree, decl));
-  const body = split.after[0];
-  if (body === undefined) return emptyBody(split.headerEnd);
-  if (allowArrow && kindOf(tree, body) === SyntaxKind.ArrowExpr) {
-    const arrow = splitAfterToken(tree, body, TokenKind.Arrow);
-    if (arrow === undefined) {
-      const end = lastRealEnd(tree, body);
-      return { headerEnd: end, bodyStart: end, bodyEnd: end, isArrow: true };
-    }
-    const arrowBody = arrow.after[0];
-    const headerEnd = headerEndBefore(tree, body, TokenKind.Arrow);
-    if (arrowBody === undefined) {
-      return emptyBody(headerEnd, true);
-    }
-    return {
-      headerEnd,
-      bodyStart: tree.starts[arrowBody],
-      bodyEnd: tree.ends[arrowBody],
-      isArrow: true,
-    };
-  }
-  return {
-    headerEnd: split.headerEnd,
-    bodyStart: tree.starts[body],
-    bodyEnd: tree.ends[body],
-    isArrow: false,
-  };
-}
-
-/** The end of the last real child before the first token of `tokenKind`. */
-function headerEndBefore(
-  tree: SyntaxTree,
-  node: NodeId,
-  tokenKind: TokenKind,
-): number {
-  let end = tree.starts[node];
-  for (const child of childrenOf(tree, node)) {
-    if (tokenKindOf(tree, child) === tokenKind) break;
-    if (isRealChild(tree, child)) end = tree.ends[child];
-  }
-  return end;
-}
-
-function splitDecl(
-  tree: SyntaxTree,
-  decl: NodeId,
-  kind: DeclKind,
-  nameNode: NodeId,
-): Split {
-  switch (kind) {
-    case "const":
-      return splitAtEquals(tree, decl, true);
-    case "type":
-    case "error":
-      return splitAtEquals(tree, decl, false);
-    case "service": {
-      const brace = childrenOf(tree, decl).find((c) =>
-        tokenKindOf(tree, c) === TokenKind.LBrace
-      );
-      if (brace === undefined) return emptyBody(tree.ends[nameNode]);
-      return {
-        headerEnd: tree.ends[nameNode],
-        bodyStart: tree.starts[brace],
-        bodyEnd: lastRealEnd(tree, decl),
-        isArrow: false,
-      };
-    }
-    case "provider":
-      return emptyBody(lastRealEnd(tree, decl));
-  }
+function isArrowConst(tree: SyntaxTree, decl: NodeId): boolean {
+  const children = childrenOf(tree, decl);
+  const eq = children.findIndex((c) => tokenKindOf(tree, c) === TokenKind.Eq);
+  if (eq < 0) return false;
+  const value = children.slice(eq + 1).find((c) => {
+    const kind = kindOf(tree, c);
+    return kind !== SyntaxKind.Token && kind !== SyntaxKind.Missing;
+  });
+  return value !== undefined && kindOf(tree, value) === SyntaxKind.ArrowExpr;
 }
 
 const DECL_KINDS: ReadonlyMap<SyntaxKind, DeclKind> = new Map([
@@ -253,14 +124,12 @@ function indexMethods(tree: SyntaxTree, service: NodeId): MethodEntry[] {
     if (nameNode === undefined) continue;
     const name = nameTextOf(tree, nameNode);
     if (name === undefined) continue;
-    const span = nodeSpan(tree, child);
     methods.push({
       name,
       node: child,
       nameNode,
       nameSpan: nodeSpan(tree, nameNode),
-      span,
-      hash: fnv1a64(tree.text.slice(span.start, span.end)),
+      span: nodeSpan(tree, child),
     });
   }
   return methods;
@@ -283,17 +152,6 @@ function indexDecl(
     tokenKindOf(tree, head) === TokenKind.Ident &&
     tree.text.slice(tree.starts[head], tree.ends[head]) === "sealed";
   const span = nodeSpan(tree, decl);
-  const split = splitDecl(tree, decl, kind, nameNode);
-  const headerSpan: Span = {
-    source: tree.source,
-    start: span.start,
-    end: Math.max(span.start, split.headerEnd),
-  };
-  const bodySpan: Span = {
-    source: tree.source,
-    start: split.bodyStart,
-    end: Math.max(split.bodyStart, split.bodyEnd),
-  };
   const methodList = kind === "service" ? indexMethods(tree, decl) : [];
   const methods = new Map<string, MethodEntry>();
   for (const method of methodList) {
@@ -308,13 +166,9 @@ function indexDecl(
     nameNode,
     nameSpan: nodeSpan(tree, nameNode),
     span,
-    headerSpan,
-    bodySpan,
-    headerHash: fnv1a64(tree.text.slice(headerSpan.start, headerSpan.end)),
-    bodyHash: fnv1a64(tree.text.slice(bodySpan.start, bodySpan.end)),
     methods,
     methodList,
-    isArrow: split.isArrow,
+    isArrow: kind === "const" && isArrowConst(tree, decl),
     broken: hasProblem(tree, decl),
   };
 }
