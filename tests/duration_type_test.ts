@@ -4,10 +4,14 @@
 // duration_type_slow_test.ts.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import { DURATION_ID, type Expr, type ModuleIR } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { diagnosticsOf, emitFiles } from "./helpers.ts";
+import {
+  allExprs,
+  diagnosticsOf,
+  emitFiles,
+  loweredModule,
+} from "./helpers.ts";
 
 const TYPES = `type Int = int
 type Num = number
@@ -324,20 +328,6 @@ export const decoded = (input: unknown): Policy fails SchemaError =>
 
 // ------------------------------------------------------------------ validator
 
-function lowered(source: string): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const module = lowerProject(checked.value).get("m");
-  assert(module?.ok, JSON.stringify(module));
-  assertEquals(validateModule(module.value, new Map([["m.eff", source]])), []);
-  return structuredClone(module.value);
-}
-
 function validate(
   ir: ModuleIR,
   source: string,
@@ -351,22 +341,6 @@ function validate(
       message: d.message.slice(colon + 2),
     };
   });
-}
-
-function all<K extends Expr["kind"]>(
-  ir: ModuleIR,
-  kind: K,
-): Extract<Expr, { kind: K }>[] {
-  const found: Extract<Expr, { kind: K }>[] = [];
-  const visit = (value: unknown): void => {
-    if (typeof value !== "object" || value === null) return;
-    if ((value as { kind?: unknown }).kind === kind) {
-      found.push(value as Extract<Expr, { kind: K }>);
-    }
-    for (const child of Object.values(value)) visit(child);
-  };
-  visit(ir.declarations);
-  return found;
 }
 
 const NOMINAL_SOURCE = `${TYPES}export const lit = (): Duration => 5s
@@ -387,13 +361,13 @@ function declarationOf(ir: ModuleIR, name: string) {
 
 function binaryOf(ir: ModuleIR, name: string) {
   const d = declarationOf(ir, name);
-  const found = all({ ...ir, declarations: [d] }, "binary")[0];
+  const found = allExprs({ ...ir, declarations: [d] }, "binary")[0];
   assert(found !== undefined, name);
   return found;
 }
 
 function durationLiterals(ir: ModuleIR) {
-  return all(ir, "nominal").filter((e) => e.nominal === DURATION_ID);
+  return allExprs(ir, "nominal").filter((e) => e.nominal === DURATION_ID);
 }
 
 function pathOf(ir: ModuleIR, name: string): string {
@@ -401,13 +375,13 @@ function pathOf(ir: ModuleIR, name: string): string {
 }
 
 const INT_LITERAL = (ir: ModuleIR): Expr => {
-  const literal = all(ir, "literal")[0];
+  const literal = allExprs(ir, "literal")[0];
   assert(literal !== undefined);
   return structuredClone(literal);
 };
 
 Deno.test("a duration literal lowers to a nominal Duration over an int literal", () => {
-  const ir = lowered(NOMINAL_SOURCE);
+  const ir = loweredModule(NOMINAL_SOURCE);
   const [first] = durationLiterals(ir);
   assertEquals(first.nominal, DURATION_ID);
   assert(first.value.kind === "literal");
@@ -417,7 +391,7 @@ Deno.test("a duration literal lowers to a nominal Duration over an int literal",
 });
 
 Deno.test("the validator rejects a forged duration literal whose value is not an int", () => {
-  const ir = lowered(NOMINAL_SOURCE);
+  const ir = loweredModule(NOMINAL_SOURCE);
   const [first] = durationLiterals(ir);
   (first.value as { value: unknown }).value = "x";
   const at = `${pathOf(ir, "lit")}.body.value`;
@@ -436,8 +410,8 @@ Deno.test("the validator rejects a forged duration literal whose value is not an
 });
 
 Deno.test("the validator rejects an unnamed int where a Duration is needed", () => {
-  const ir = lowered(NOMINAL_SOURCE);
-  const sleep = all(ir, "sleep")[0];
+  const ir = loweredModule(NOMINAL_SOURCE);
+  const sleep = allExprs(ir, "sleep")[0];
   (sleep as { durationMs: Expr }).durationMs = INT_LITERAL(ir);
   assertEquals(validate(ir, NOMINAL_SOURCE), [{
     code: "validation/002",
@@ -447,7 +421,7 @@ Deno.test("the validator rejects an unnamed int where a Duration is needed", () 
 });
 
 Deno.test("the validator rejects an unnamed int as the body of a Duration function", () => {
-  const ir = lowered(NOMINAL_SOURCE);
+  const ir = loweredModule(NOMINAL_SOURCE);
   const lit = declarationOf(ir, "lit");
   (lit as { body: Expr }).body = INT_LITERAL(ir);
   assertEquals(validate(ir, NOMINAL_SOURCE), [{
@@ -459,7 +433,7 @@ Deno.test("the validator rejects an unnamed int as the body of a Duration functi
 
 Deno.test("the validator rejects Duration plus int and Duration minus int", () => {
   for (const [name, operator] of [["sum", "+"], ["diff", "-"]] as const) {
-    const ir = lowered(NOMINAL_SOURCE);
+    const ir = loweredModule(NOMINAL_SOURCE);
     (binaryOf(ir, name) as { right: Expr }).right = INT_LITERAL(ir);
     assertEquals(validate(ir, NOMINAL_SOURCE), [{
       code: "validation/002",
@@ -483,7 +457,7 @@ const RECORDED: readonly [
 
 for (const [name, recorded, message] of RECORDED) {
   Deno.test(`the validator recomputes the Duration rule of ${name}`, () => {
-    const ir = lowered(NOMINAL_SOURCE);
+    const ir = loweredModule(NOMINAL_SOURCE);
     (binaryOf(ir, name) as { type: unknown }).type = recorded === "Duration"
       ? { kind: "named", id: DURATION_ID }
       : { kind: "primitive", name: recorded };
@@ -503,13 +477,13 @@ export const num = (n: Int): Int =>
 
 function firstPattern(ir: ModuleIR, name: string) {
   const found =
-    all({ ...ir, declarations: [declarationOf(ir, name)] }, "match")[0];
+    allExprs({ ...ir, declarations: [declarationOf(ir, name)] }, "match")[0];
   assert(found !== undefined, name);
   return found.arms[0];
 }
 
 Deno.test("the validator rejects a forged duration pattern on an int subject", () => {
-  const ir = lowered(PATTERN_SOURCE);
+  const ir = loweredModule(PATTERN_SOURCE);
   const arm = firstPattern(ir, "num");
   (arm as { pattern: unknown }).pattern = {
     kind: "duration",
@@ -525,7 +499,7 @@ Deno.test("the validator rejects a forged duration pattern on an int subject", (
 });
 
 Deno.test("the validator rejects a forged literal pattern on a Duration subject", () => {
-  const ir = lowered(PATTERN_SOURCE);
+  const ir = loweredModule(PATTERN_SOURCE);
   const arm = firstPattern(ir, "dur");
   (arm as { pattern: unknown }).pattern = {
     kind: "literal",
@@ -540,7 +514,7 @@ Deno.test("the validator rejects a forged literal pattern on a Duration subject"
 });
 
 Deno.test("the validator rejects a forged duration pattern with a fractional value", () => {
-  const ir = lowered(PATTERN_SOURCE);
+  const ir = loweredModule(PATTERN_SOURCE);
   const arm = firstPattern(ir, "dur");
   (arm.pattern as { millis: number }).millis = 1.5;
   assertEquals(validate(ir, PATTERN_SOURCE), [{

@@ -30,7 +30,8 @@ import { Program, serializeModule } from "../src/core/frontend.ts";
 import { lowerProject } from "../src/core/lower.ts";
 import type { Project } from "../src/core/project.ts";
 import type { ModeMap } from "../src/core/signatures.ts";
-import type { Execution, ValueId } from "../src/core/ir.ts";
+import type { Execution, Expr, ModuleIR, ValueId } from "../src/core/ir.ts";
+import { validateModule } from "../src/core/validate/index.ts";
 import {
   childrenOf,
   hasProblem,
@@ -693,4 +694,51 @@ export function diagnosticsOf(source: string): string[] {
   );
   assert(checked.ok);
   return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
+}
+
+/**
+ * Check, lower, and validate one `m.eff` module. Returns a mutable copy of the
+ * module IR so that a test can forge it.
+ */
+export function loweredModule(source: string): ModuleIR {
+  const checked = checkProject(
+    memoryHost({ "effektive.json": "{}", "m.eff": source }),
+    "",
+    ["m.eff"],
+  );
+  assert(checked.ok);
+  assertEquals(checked.value.diagnostics, []);
+  const module = lowerProject(checked.value).get("m");
+  assert(module?.ok, JSON.stringify(module));
+  assertEquals(validateModule(module.value, new Map([["m.eff", source]])), []);
+  return structuredClone(module.value);
+}
+
+/** Lower `source`, apply `change` to the IR, and return the validator output as `code message`. */
+export function forgedModule(
+  source: string,
+  change: (ir: ModuleIR) => void,
+): string[] {
+  const ir = loweredModule(source);
+  change(ir);
+  return validateModule(ir, new Map([["m.eff", source]])).map((d) =>
+    `${d.code} ${d.message}`
+  );
+}
+
+/** Every expression of `kind` in the declarations of `ir`, in visit order. */
+export function allExprs<K extends Expr["kind"]>(
+  ir: ModuleIR,
+  kind: K,
+): Extract<Expr, { kind: K }>[] {
+  const found: Extract<Expr, { kind: K }>[] = [];
+  const visit = (value: unknown): void => {
+    if (typeof value !== "object" || value === null) return;
+    if ((value as { kind?: unknown }).kind === kind) {
+      found.push(value as Extract<Expr, { kind: K }>);
+    }
+    for (const child of Object.values(value)) visit(child);
+  };
+  visit(ir.declarations);
+  return found;
 }

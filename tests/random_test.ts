@@ -3,10 +3,14 @@
 // random_slow_test.ts.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { Expr, ModuleIR } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { diagnosticsOf, emitFiles } from "./helpers.ts";
+import {
+  allExprs,
+  diagnosticsOf,
+  emitFiles,
+  loweredModule,
+} from "./helpers.ts";
 
 const TYPES = `type Int = int
 type Num = number
@@ -85,47 +89,17 @@ Deno.test("random emits Random.next and randomInt checks the range", () => {
 
 // ------------------------------------------------------------------ validator
 
-function lowered(source: string): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const module = lowerProject(checked.value).get("m");
-  assert(module?.ok, JSON.stringify(module));
-  assertEquals(validateModule(module.value, new Map([["m.eff", source]])), []);
-  return structuredClone(module.value);
-}
-
 function validate(ir: ModuleIR) {
   return validateModule(ir, new Map([["m.eff", SOURCE]]));
 }
 
-function all<K extends Expr["kind"]>(
-  ir: ModuleIR,
-  kind: K,
-): Extract<Expr, { kind: K }>[] {
-  const found: Extract<Expr, { kind: K }>[] = [];
-  const visit = (value: unknown): void => {
-    if (typeof value !== "object" || value === null) return;
-    if ((value as { kind?: unknown }).kind === kind) {
-      found.push(value as Extract<Expr, { kind: K }>);
-    }
-    for (const child of Object.values(value)) visit(child);
-  };
-  visit(ir.declarations);
-  return found;
-}
-
 Deno.test("the lowered random and randomInt are effect leaves with the right types", () => {
-  const ir = lowered(SOURCE);
-  const [random] = all(ir, "random");
+  const ir = loweredModule(SOURCE);
+  const [random] = allExprs(ir, "random");
   assertEquals(random.type, { kind: "primitive", name: "number" });
   assertEquals(random.execution, "effect");
   assertEquals(random.effects, { failures: [], requirements: [] });
-  const [randomInt] = all(ir, "random-int");
+  const [randomInt] = allExprs(ir, "random-int");
   assertEquals(randomInt.type, { kind: "primitive", name: "int" });
   assertEquals(randomInt.execution, "effect");
   assertEquals(randomInt.effects, { failures: [], requirements: [] });
@@ -135,12 +109,12 @@ Deno.test("the validator rejects a forged non-int randomInt child", () => {
   const source = `${SOURCE}type Str = string
 export const g = (x: Str): Str => x\n`;
   for (const side of ["min", "max"] as const) {
-    const ir = lowered(source);
-    const text = all(ir, "reference").find((r) =>
+    const ir = loweredModule(source);
+    const text = allExprs(ir, "reference").find((r) =>
       JSON.stringify(r.type).includes("Str")
     );
     assert(text !== undefined);
-    const [node] = all(ir, "random-int");
+    const [node] = allExprs(ir, "random-int");
     (node as { min: Expr; max: Expr })[side] = structuredClone(text);
     const found = validateModule(ir, new Map([["m.eff", source]]));
     assert(
@@ -157,8 +131,8 @@ Deno.test("the validator rejects wrong result types", () => {
       ["random-int", { kind: "primitive", name: "number" }],
     ] as const
   ) {
-    const ir = lowered(SOURCE);
-    (all(ir, kind)[0] as { type: unknown }).type = wrong;
+    const ir = loweredModule(SOURCE);
+    (allExprs(ir, kind)[0] as { type: unknown }).type = wrong;
     const found = validate(ir);
     assert(found.length > 0, kind);
     assert(found.some((d) => d.code === "validation/002"), kind);
@@ -167,8 +141,8 @@ Deno.test("the validator rejects wrong result types", () => {
 
 Deno.test("the validator rejects a pure random or randomInt", () => {
   for (const kind of ["random", "random-int"] as const) {
-    const ir = lowered(SOURCE);
-    (all(ir, kind)[0] as { execution: unknown }).execution = "pure";
+    const ir = loweredModule(SOURCE);
+    (allExprs(ir, kind)[0] as { execution: unknown }).execution = "pure";
     assertEquals(validate(ir).map((d) => d.code), ["validation/004"], kind);
   }
 });

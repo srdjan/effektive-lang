@@ -3,11 +3,11 @@
 // IR through validateModule. Runtime behavior is in schedule_cron_slow_test.ts.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import { cronExpressionProblem, cronZoneProblem } from "../src/core/cron.ts";
-import type { Expr, ModuleIR } from "../src/core/ir.ts";
-import { validateModule } from "../src/core/validate/index.ts";
+import type { ModuleIR } from "../src/core/ir.ts";
+import { checkProject, memoryHost } from "../src/core/mod.ts";
 import { EXPRESSIONS, ZONES } from "./cron_cases.ts";
+import { allExprs, forgedModule, loweredModule } from "./helpers.ts";
 
 // -------------------------------------------------------------- grammar
 
@@ -175,57 +175,23 @@ const SOURCE = `export const plain = ${SIG} scheduleCron("0 4 * * *")
 export const zoned = ${SIG} scheduleCron("0 4 * * *", "Europe/London")
 `;
 
-function lowered(): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": SOURCE }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const module = lowerProject(checked.value).get("m");
-  assert(module?.ok, JSON.stringify(module));
-  assertEquals(validateModule(module.value, new Map([["m.eff", SOURCE]])), []);
-  return structuredClone(module.value);
-}
-
-function all<K extends Expr["kind"]>(
-  ir: ModuleIR,
-  kind: K,
-): Extract<Expr, { kind: K }>[] {
-  const found: Extract<Expr, { kind: K }>[] = [];
-  const visit = (value: unknown): void => {
-    if (typeof value !== "object" || value === null) return;
-    if ((value as { kind?: unknown }).kind === kind) {
-      found.push(value as Extract<Expr, { kind: K }>);
-    }
-    for (const child of Object.values(value)) visit(child);
-  };
-  visit(ir.declarations);
-  return found;
-}
+const lowered = () => loweredModule(SOURCE);
 
 Deno.test("scheduleCron lowers a missing zone to UTC", () => {
   assertEquals(
-    all(lowered(), "schedule-cron").map((e) => [e.expression, e.zone]),
+    allExprs(lowered(), "schedule-cron").map((e) => [e.expression, e.zone]),
     [["0 4 * * *", "UTC"], ["0 4 * * *", "Europe/London"]],
   );
 });
 
 // ---------------------------------------------------------------- validator
 
-function forged(change: (ir: ModuleIR) => void): string[] {
-  const ir = lowered();
-  change(ir);
-  return validateModule(ir, new Map([["m.eff", SOURCE]])).map((d) =>
-    `${d.code} ${d.message}`
-  );
-}
+const forged = (change: (ir: ModuleIR) => void) => forgedModule(SOURCE, change);
 
 Deno.test("the validator rejects an invalid cron expression", () => {
   assertEquals(
     forged((ir) => {
-      (all(ir, "schedule-cron")[0] as { expression: string }).expression =
+      (allExprs(ir, "schedule-cron")[0] as { expression: string }).expression =
         "* * * *";
     }),
     [
@@ -237,7 +203,7 @@ Deno.test("the validator rejects an invalid cron expression", () => {
 Deno.test("the validator rejects an invalid cron time zone", () => {
   assertEquals(
     forged((ir) => {
-      (all(ir, "schedule-cron")[1] as { zone: string }).zone = "GMT";
+      (allExprs(ir, "schedule-cron")[1] as { zone: string }).zone = "GMT";
     }),
     [
       "validation/002 declarations[1].body.zone: scheduleCron needs a valid time zone: an offset zone must end with +hh:mm or -hh:mm",
@@ -248,7 +214,7 @@ Deno.test("the validator rejects an invalid cron time zone", () => {
 Deno.test("the validator rejects a scheduleCron that records a string output", () => {
   assertEquals(
     forged((ir) => {
-      (all(ir, "schedule-cron")[0] as { type: unknown }).type = {
+      (allExprs(ir, "schedule-cron")[0] as { type: unknown }).type = {
         kind: "schedule",
         output: { kind: "primitive", name: "string" },
         input: { kind: "primitive", name: "unknown" },

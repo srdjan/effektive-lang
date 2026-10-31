@@ -4,12 +4,10 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { Program, sourceHoverAt } from "../src/core/frontend.ts";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { Expr, ModuleIR } from "../src/core/ir.ts";
 import { parse } from "../src/core/parse.ts";
 import { kindName, kindOf, SyntaxKind, walk } from "../src/core/syntax.ts";
-import { validateModule } from "../src/core/validate/index.ts";
-import { diagnosticsOf } from "./helpers.ts";
+import { diagnosticsOf, forgedModule } from "./helpers.ts";
 
 const HEAD = `type Int = int
 export error Stop = { n: Int }
@@ -208,20 +206,6 @@ export const resource = (): Int uses Pool.open =>
   withResource(() => Pool.open(), (h) => h.wait(), (h, outcome) => { })
 `;
 
-function lowered(): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": SOURCE }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const module = lowerProject(checked.value).get("m");
-  assert(module?.ok);
-  assertEquals(validateModule(module.value, new Map([["m.eff", SOURCE]])), []);
-  return structuredClone(module.value);
-}
-
 function findAll<K extends Expr["kind"]>(
   ir: ModuleIR,
   kind: K,
@@ -239,13 +223,7 @@ function findAll<K extends Expr["kind"]>(
   return found;
 }
 
-function forged(change: (ir: ModuleIR) => void): string[] {
-  const ir = lowered();
-  change(ir);
-  return validateModule(ir, new Map([["m.eff", SOURCE]])).map((d) =>
-    `${d.code} ${d.message}`
-  );
-}
+const forged = (change: (ir: ModuleIR) => void) => forgedModule(SOURCE, change);
 
 const UNIT_TYPE = { kind: "primitive", name: "unit" };
 const INT_TYPE = { kind: "primitive", name: "int" };

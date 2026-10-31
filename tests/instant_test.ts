@@ -3,7 +3,6 @@
 // instant_slow_test.ts.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import {
   DURATION_ID,
   type Expr,
@@ -11,7 +10,12 @@ import {
   type ModuleIR,
 } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { diagnosticsOf, emitFiles } from "./helpers.ts";
+import {
+  allExprs,
+  diagnosticsOf,
+  emitFiles,
+  loweredModule,
+} from "./helpers.ts";
 
 const TYPES = `type Int = int
 type Num = number
@@ -204,20 +208,6 @@ export const since = (start: Instant): Duration => now() - start
 
 // ------------------------------------------------------------------ validator
 
-function lowered(source: string): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const module = lowerProject(checked.value).get("m");
-  assert(module?.ok, JSON.stringify(module));
-  assertEquals(validateModule(module.value, new Map([["m.eff", source]])), []);
-  return structuredClone(module.value);
-}
-
 function validate(
   ir: ModuleIR,
   source: string,
@@ -230,22 +220,6 @@ function validate(
       message: d.message.slice(colon + 2),
     };
   });
-}
-
-function all<K extends Expr["kind"]>(
-  ir: ModuleIR,
-  kind: K,
-): Extract<Expr, { kind: K }>[] {
-  const found: Extract<Expr, { kind: K }>[] = [];
-  const visit = (value: unknown): void => {
-    if (typeof value !== "object" || value === null) return;
-    if ((value as { kind?: unknown }).kind === kind) {
-      found.push(value as Extract<Expr, { kind: K }>);
-    }
-    for (const child of Object.values(value)) visit(child);
-  };
-  visit(ir.declarations);
-  return found;
 }
 
 const SOURCE = `${TYPES}export const stamp = (): Instant => now()
@@ -263,20 +237,20 @@ function pathOf(ir: ModuleIR, name: string): string {
 function binaryOf(ir: ModuleIR, name: string) {
   const d = ir.declarations.find((x) => x.name === name);
   assert(d?.kind === "function", name);
-  const found = all({ ...ir, declarations: [d] }, "binary")[0];
+  const found = allExprs({ ...ir, declarations: [d] }, "binary")[0];
   assert(found !== undefined, name);
   return found;
 }
 
 const INT_LITERAL = (ir: ModuleIR): Expr => {
-  const literal = all(ir, "literal")[0];
+  const literal = allExprs(ir, "literal")[0];
   assert(literal !== undefined);
   return structuredClone(literal);
 };
 
 Deno.test("the lowered now is a leaf of type Instant with an effect mode", () => {
-  const ir = lowered(SOURCE);
-  const [now] = all(ir, "now");
+  const ir = loweredModule(SOURCE);
+  const [now] = allExprs(ir, "now");
   assertEquals(now.type, { kind: "named", id: INSTANT_ID });
   assertEquals(now.execution, "effect");
   assertEquals(now.effects, { failures: [], requirements: [] });
@@ -289,8 +263,8 @@ Deno.test("the validator rejects a now with a wrong result type", () => {
       { kind: "named", id: DURATION_ID },
     ]
   ) {
-    const ir = lowered(SOURCE);
-    (all(ir, "now")[0] as { type: unknown }).type = wrong;
+    const ir = loweredModule(SOURCE);
+    (allExprs(ir, "now")[0] as { type: unknown }).type = wrong;
     const found = validate(ir, SOURCE);
     assertEquals(found.length, 1, JSON.stringify(wrong));
     assertEquals(found[0].code, "validation/002");
@@ -299,20 +273,20 @@ Deno.test("the validator rejects a now with a wrong result type", () => {
 });
 
 Deno.test("the validator rejects a now with a pure mode", () => {
-  const ir = lowered(SOURCE);
-  (all(ir, "now")[0] as { execution: unknown }).execution = "pure";
+  const ir = loweredModule(SOURCE);
+  (allExprs(ir, "now")[0] as { execution: unknown }).execution = "pure";
   assertEquals(validate(ir, SOURCE).map((d) => d.code), ["validation/004"]);
 });
 
 Deno.test("the validator rejects Instant plus int and Instant plus Instant", () => {
-  const ir = lowered(SOURCE);
+  const ir = loweredModule(SOURCE);
   (binaryOf(ir, "later") as { right: Expr }).right = INT_LITERAL(ir);
   assertEquals(validate(ir, SOURCE), [{
     code: "validation/002",
     path: `${pathOf(ir, "later")}.body`,
     message: "the operator + does not accept operands of type Instant and int",
   }]);
-  const second = lowered(SOURCE);
+  const second = loweredModule(SOURCE);
   const sum = binaryOf(second, "later") as { right: Expr; left: Expr };
   sum.right = structuredClone(sum.left);
   assertEquals(validate(second, SOURCE), [{
@@ -324,7 +298,7 @@ Deno.test("the validator rejects Instant plus int and Instant plus Instant", () 
 });
 
 Deno.test("the validator recomputes the type of Instant - Instant as a Duration", () => {
-  const ir = lowered(SOURCE);
+  const ir = loweredModule(SOURCE);
   (binaryOf(ir, "gap") as { type: unknown }).type = {
     kind: "named",
     id: INSTANT_ID,
@@ -337,7 +311,7 @@ Deno.test("the validator recomputes the type of Instant - Instant as a Duration"
 });
 
 Deno.test("the validator rejects a forged comparison of an Instant with an int", () => {
-  const ir = lowered(SOURCE);
+  const ir = loweredModule(SOURCE);
   (binaryOf(ir, "before") as { right: Expr }).right = INT_LITERAL(ir);
   assertEquals(validate(ir, SOURCE), [{
     code: "validation/002",
@@ -347,7 +321,7 @@ Deno.test("the validator rejects a forged comparison of an Instant with an int",
 });
 
 Deno.test("the validator rejects a forged comparison of a Duration with an int", () => {
-  const ir = lowered(SOURCE);
+  const ir = loweredModule(SOURCE);
   (binaryOf(ir, "lag") as { right: Expr }).right = INT_LITERAL(ir);
   assertEquals(validate(ir, SOURCE), [{
     code: "validation/002",
@@ -357,12 +331,12 @@ Deno.test("the validator rejects a forged comparison of a Duration with an int",
 });
 
 Deno.test("the validator rejects a forged equality of an Instant with a Duration", () => {
-  const ir = lowered(
+  const ir = loweredModule(
     `${TYPES}export const same = (a: Instant, b: Instant): Flag => a === b
 export const d = (x: Duration): Duration => x
 `,
   );
-  const duration = all(ir, "reference").find((r) =>
+  const duration = allExprs(ir, "reference").find((r) =>
     JSON.stringify(r.type) ===
       JSON.stringify({ kind: "named", id: DURATION_ID })
   );

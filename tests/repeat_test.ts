@@ -2,10 +2,13 @@
 // validateModule. Runtime behavior is in repeat_slow_test.ts.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { Expr, ModuleIR } from "../src/core/ir.ts";
-import { validateModule } from "../src/core/validate/index.ts";
-import { diagnosticsOf as sharedDiagnosticsOf } from "./helpers.ts";
+import {
+  allExprs,
+  diagnosticsOf as sharedDiagnosticsOf,
+  forgedModule,
+  loweredModule,
+} from "./helpers.ts";
 
 const HEAD = `type Int = int
 type Bool = boolean
@@ -171,39 +174,11 @@ export const limited = ${SIG} => ${REPEAT}{ times: 2, until: (n) => n > 2 })
 export const policy: RetrySchedule<Stop> = retrySchedule((e: Stop, n: Int): Option<Duration> => None)
 `;
 
-function lowered(): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": SOURCE }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const module = lowerProject(checked.value).get("m");
-  assert(module?.ok, JSON.stringify(module));
-  assertEquals(validateModule(module.value, new Map([["m.eff", SOURCE]])), []);
-  return structuredClone(module.value);
-}
-
-function all<K extends Expr["kind"]>(
-  ir: ModuleIR,
-  kind: K,
-): Extract<Expr, { kind: K }>[] {
-  const found: Extract<Expr, { kind: K }>[] = [];
-  const visit = (value: unknown): void => {
-    if (typeof value !== "object" || value === null) return;
-    if ((value as { kind?: unknown }).kind === kind) {
-      found.push(value as Extract<Expr, { kind: K }>);
-    }
-    for (const child of Object.values(value)) visit(child);
-  };
-  visit(ir.declarations);
-  return found;
-}
+const lowered = () => loweredModule(SOURCE);
 
 Deno.test("repeat lowers to the repeat kind with null or record options", () => {
   const ir = lowered();
-  const [forever, limited] = all(ir, "repeat");
+  const [forever, limited] = allExprs(ir, "repeat");
   assertEquals(forever.options, null);
   assert(limited.options?.kind === "record");
   assertEquals(limited.options.fields.map((f) => f.name), ["times", "until"]);
@@ -211,19 +186,13 @@ Deno.test("repeat lowers to the repeat kind with null or record options", () => 
 
 // ------------------------------------------------------------------ validator
 
-function forged(change: (ir: ModuleIR) => void): string[] {
-  const ir = lowered();
-  change(ir);
-  return validateModule(ir, new Map([["m.eff", SOURCE]])).map((d) =>
-    `${d.code} ${d.message}`
-  );
-}
+const forged = (change: (ir: ModuleIR) => void) => forgedModule(SOURCE, change);
 
 const FOREVER = "declarations[7].body";
 const LIMITED = "declarations[8].body";
 
 function limitedOptions(ir: ModuleIR): Extract<Expr, { kind: "record" }> {
-  const e = all(ir, "repeat")[1].options;
+  const e = allExprs(ir, "repeat")[1].options;
   assert(e?.kind === "record");
   return e;
 }
@@ -253,7 +222,7 @@ Deno.test("the validator rejects a RetrySchedule in a repeat schedule", () => {
   const found = forged((ir) => {
     const options = limitedOptions(ir);
     // A type also has the kind retry-schedule; only the expression has a step.
-    const value = all(ir, "retry-schedule").find((e) => "step" in e)!;
+    const value = allExprs(ir, "retry-schedule").find((e) => "step" in e)!;
     (options as { fields: unknown }).fields = [{ name: "schedule", value }];
     (options as { type: unknown }).type = {
       kind: "record",
@@ -270,7 +239,8 @@ Deno.test("the validator rejects a RetrySchedule in a repeat schedule", () => {
 
 Deno.test("the validator rejects a repeat job that is not a function", () => {
   const found = forged((ir) => {
-    (all(ir, "repeat")[0] as { job: unknown }).job = all(ir, "literal")[0];
+    (allExprs(ir, "repeat")[0] as { job: unknown }).job =
+      allExprs(ir, "literal")[0];
   });
   assert(
     found.includes(
@@ -282,8 +252,8 @@ Deno.test("the validator rejects a repeat job that is not a function", () => {
 
 Deno.test("the validator rejects repeat options that are not a record", () => {
   const found = forged((ir) => {
-    (all(ir, "repeat")[1] as { options: unknown }).options =
-      all(ir, "literal")[0];
+    (allExprs(ir, "repeat")[1] as { options: unknown }).options =
+      allExprs(ir, "literal")[0];
   });
   assert(
     found.includes(

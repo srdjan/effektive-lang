@@ -6,11 +6,10 @@
 
 import { assert, assertEquals } from "@std/assert";
 import type { ModuleIR, Type } from "../src/core/ir.ts";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import { showType } from "../src/core/type_show.ts";
 import { TypeTable } from "../src/core/types.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { diagnosticsOf, emitFiles } from "./helpers.ts";
+import { diagnosticsOf, emitFiles, loweredModule } from "./helpers.ts";
 
 const TYPES = `type Text = string
 type Int = int
@@ -302,19 +301,7 @@ export const f = (m: Map<Text, Int>): Map<Text, Int> => m
 export const g = (s: Set<Text>): Set<Text> => s
 `;
 
-function lowered(): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": SOURCE }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const module = lowerProject(checked.value).get("m");
-  assert(module?.ok, JSON.stringify(module));
-  assertEquals(validateModule(module.value, new Map([["m.eff", SOURCE]])), []);
-  return structuredClone(module.value);
-}
+const lowered = () => loweredModule(SOURCE);
 
 function messages(ir: ModuleIR): string[] {
   return validateModule(ir, new Map([["m.eff", SOURCE]])).map((d) =>
