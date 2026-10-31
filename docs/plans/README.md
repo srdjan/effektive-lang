@@ -40,3 +40,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | SB (phases), SBF (findings) | [`docs/archive/plans/2026-10-30-stable-base-reset.md`](../archive/plans/2026-10-30-stable-base-reset.md) | Stable base reset |
 | RST (phases), RSTF (findings), RSTD (decisions) | [`docs/archive/plans/2026-10-30-reset-implementation.md`](../archive/plans/2026-10-30-reset-implementation.md) | Parallel reset plan, not selected |
 | NB (phases), NBF (findings), NBD (decisions) | [`docs/archive/plans/2026-10-30-reset-base.md`](../archive/plans/2026-10-30-reset-base.md) | Revision definitions and playground output paths |
+| FN (phases), FNF (findings), FND (decisions) | [`docs/plans/2026-10-31-foundation-reset.md`](2026-10-31-foundation-reset.md) | Foundation reset |
