@@ -86,8 +86,9 @@ files through `SourceHost`. Six tests enforce the rules.
    only when the emitted text or the validator rules change on purpose. Run
    `golden:update` and `validate:update` for that reason only, never to make a
    test pass.
-5. The three package entry points in `deno.json` keep their exported names. No
-   outside code imports the package.
+5. The three package entry points in `deno.json` hold what the repository uses.
+   No outside code imports the package. Check this fact again before the project
+   publishes the package.
 6. The website links to `fixtures/applications/portable-publisher`. That path
    stays.
 7. The target lock `src/cli/target_lock.json` pins the full closure of npm
