@@ -41,7 +41,7 @@
     "test:vscode": "deno run --allow-all scripts/package_vscode_smoke.ts"
   },
   "coverage": {
-    "thresholds": { "lines": 96, "branches": 94, "functions": 99 }
+    "thresholds": { "lines": 97, "branches": 95, "functions": 99 }
   },
   "compilerOptions": {
     "strict": true,
