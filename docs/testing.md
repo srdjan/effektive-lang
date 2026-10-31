@@ -68,6 +68,21 @@ A property that fails is a finding about the compiler until the evidence shows o
 
 The gate does not run this task, because it takes several minutes. `deno task release` runs it. A floor can rise. A change that lowers a floor needs a reason in the commit.
 
+Three solver files have sites that no input can reach, so these sites have no test. Each site guards a case that the code around it rules out, and the type checker needs most of them.
+
+| File | Function | Site | Reason |
+| --- | --- | --- | --- |
+| `src/core/predicates.ts` | `contradiction` | `task === undefined` | The `while` condition holds the list length, so `pop()` returns a task. |
+| `src/core/predicates.ts` | `contradiction` | `proof === undefined` | Each finished task adds a proof, and `reduce` handles an empty operand list first. |
+| `src/core/predicates.ts` | `reduce` | `current === undefined` | The `while` condition holds the list length, so `pop()` returns an item. |
+| `src/core/predicates.ts` | `negativeCycle` | Each `?? 0n` in the relaxation loop | Each node has a first distance before the passes start. |
+| `src/core/validate/predicates.ts` | `verifyCertificate` | `task === undefined` | The `while` condition holds the list length, so `pop()` returns a task. |
+| `src/core/validate/predicates.ts` | `checkBranch` | `signed === undefined` | The `while` condition holds the list length, so `pop()` returns an item. |
+| `src/core/predicate_source.ts` | `termKey` | `case "zero"` | `compileTerm` builds only `input`, `field`, and `length` terms. |
+| `src/core/predicate_source.ts` | `compareLinear` | `fail` after `comparison` | Source always gives a valid term and a normalized offset. |
+
+Two groups of sites are probably unreachable, and no proof exists. In `negativeCycle`, the walk back through `predecessor` has three guards. A random run of 30,000 cases did not reach them. In `predicate_source.ts`, three branches guard a missing parse child: a missing `ParamList`, a `Param` with no `Name`, and a field expression with no second child. No tried program reached them, because the parser keeps those nodes during recovery.
+
 Line coverage shows that a line ran. It does not show that a test detects a fault in that line. Use mutation for that.
 
 ## Mutation
