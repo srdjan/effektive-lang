@@ -165,6 +165,7 @@ scripts/       Scripts that the tasks run.
                measure.ts counts branches and cyclomatic complexity of the files given.
                measure_functions.ts counts the same for each function.
                measure_kernel.ts holds the counting rules that both measure scripts share.
+               release.ts moves the Unreleased changelog entries under a new version heading, sets the version in deno.json, and runs the check.
                package.ts builds deterministic local CLI/server bundles and a complete VSIX.
                package_vscode_smoke.ts tests the installed VSIX in isolated editor directories.
 tests/         Deno tests and test helpers.

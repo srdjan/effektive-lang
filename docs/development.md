@@ -29,6 +29,7 @@ Run every command from the repository root.
 | `deno task playground:build`  | Writes the playground page to `playground/dist/`. See [Playground](api.md#playground).                                                                  |
 | `deno task playground:serve`  | Builds the playground page, then serves it on `http://127.0.0.1:8790/`.                                                                                 |
 | `deno task package`           | Builds standalone CLI/server bundles and the complete local VSIX. See [installation](installation.md).                                                  |
+| `deno task release`           | Prepares a release: `<version>` as `X.Y.Z`. Moves the entries of "Unreleased" under a new dated heading, sets `version` in `deno.json`, and runs `deno task check`. See [Release](#release). |
 | `deno task test:installation` | Checks reproducible packaging and isolated offline installation.                                                                                        |
 | `deno task test:vscode`       | Runs installed VSIX acceptance in a local VS Code application.                                                                                          |
 | `deno task fmt`               | Formats the source files.                                                                                                                               |
@@ -171,12 +172,18 @@ Generate the lockfile again in an empty temporary directory.
 
 The history shows this path for each version. It has no release tag.
 
-1. Add a heading `## X.Y.Z - YYYY-MM-DD` to `CHANGELOG.md`. Move the entries of
-   "Unreleased" under it. List each breaking change under "Breaking changes".
-2. Set `version` in `deno.json` to `X.Y.Z`.
-3. Run `deno task check`. It must exit 0. `tests/docs_test.ts` fails when the
-   newest versioned heading of `CHANGELOG.md` differs from `version`.
-4. Commit with the subject `vX.Y.Z`. Never push: the maintainer pushes.
+1. List each breaking change under "Breaking changes" in "Unreleased" of
+   `CHANGELOG.md`.
+2. Commit all other changes. The working tree must be clean.
+3. Run `deno task release X.Y.Z`. The version must rise above `version` in
+   `deno.json`, and "Unreleased" must have entries. The task moves the entries
+   under the heading `## X.Y.Z - YYYY-MM-DD` with the UTC date of today. It sets
+   `version` in `deno.json`. It runs `deno task check`, which must exit 0. When
+   the check fails, the task restores both files and exits 1.
+   `tests/docs_test.ts` fails when the newest versioned heading of
+   `CHANGELOG.md` differs from `version`.
+4. Commit with the subject `vX.Y.Z`. The task never commits. Never push: the
+   maintainer pushes.
 
 ## Root lock
 

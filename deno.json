@@ -33,6 +33,7 @@
     "playground:serve": "deno run --allow-read --allow-write --allow-run=deno --allow-net=127.0.0.1:8790 playground/serve.ts",
     "fmt": "deno fmt",
     "lint": "deno lint",
+    "release": "deno run --allow-read --allow-write --allow-run=git,deno scripts/release.ts",
     "package": "deno run --allow-read --allow-write --allow-run=deno,npm --allow-env scripts/package.ts",
     "test:installation": "deno test --allow-all tests/installation_slow_test.ts",
     "test:vscode": "deno run --allow-all scripts/package_vscode_smoke.ts"
