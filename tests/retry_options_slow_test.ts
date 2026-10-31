@@ -1,7 +1,7 @@
 // Runtime behavior of the general `retry` options, `scheduleExponential`, and
 // `scheduleJittered` (unit ES3). Each test compiles one module with
 // independent validation, type-checks the emitted TypeScript under the strict
-// target options, and runs it. Delays use real small times with tolerant bounds.
+// target options, and runs it. A test clock drives the delays, so the gaps are exact.
 
 import { assert, assertEquals } from "@std/assert";
 import { compileAndRun } from "./target_helpers.ts";
@@ -37,7 +37,9 @@ export const backoff = (ms: Int): Int fails Stop uses Jobs.next =>
 `;
 
 // The host runs a program with a job that fails \`failures\` times, then succeeds.
-const HARNESS = `import { Cause, Effect, Exit, Layer } from "effect";
+const HARNESS =
+  `import { Cause, Clock, Effect, Exit, Fiber, Layer } from "effect";
+import { TestClock } from "effect/testing";
 import * as M from "./main.ts";
 const stamps: number[] = [];
 const run = async (
@@ -49,16 +51,24 @@ const run = async (
   let allowed = 0;
   const Live = Layer.mergeAll(
     Layer.succeed(M.Jobs)({
-      next: () => Effect.suspend(() => {
-        stamps.push(Date.now());
+      next: () => Effect.gen(function* () {
+        stamps.push(yield* Clock.currentTimeMillis);
         return stamps.length > failures
-          ? Effect.succeed(stamps.length)
-          : Effect.fail(new M.Stop({}));
+          ? stamps.length
+          : yield* Effect.fail(new M.Stop({}));
       }),
     }),
     Layer.succeed(M.Gate)({ allow: () => Effect.sync(() => gate(++allowed)) }),
   );
-  const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(Live)));
+  const exit = await Effect.runPromise(Effect.gen(function* () {
+    const fiber = yield* Effect.forkChild(Effect.exit(program.pipe(Effect.provide(Live))));
+    for (let step = 0; step < 2000; step++) {
+      yield* Effect.yieldNow;
+      yield* TestClock.adjust(1);
+      if (fiber.pollUnsafe() !== undefined) break;
+    }
+    return yield* Fiber.join(fiber);
+  }).pipe(Effect.scoped, Effect.provide(TestClock.layer())));
   const gaps = stamps.slice(1).map((t, i) => t - (stamps[i] ?? 0));
   return { exit, attempts: stamps.length, gaps, total: stamps.length > 0 ? (stamps[stamps.length - 1] ?? 0) - (stamps[0] ?? 0) : 0 };
 };
@@ -157,11 +167,8 @@ console.log(JSON.stringify({ doubling: [doubling.attempts, doubling.gaps], tripl
   };
   assertEquals(result.doubling[0], 4);
   assertEquals(result.tripling[0], 4);
-  // Timers never fire early; the upper bound is loose for a loaded machine.
-  const near = (gaps: number[], expected: number[]) =>
-    gaps.every((g, i) => g >= expected[i] - 2 && g < expected[i] + 80);
-  assert(near(result.doubling[1], [30, 60, 120]), `${result.doubling[1]}`);
-  assert(near(result.tripling[1], [10, 30, 90]), `${result.tripling[1]}`);
+  assertEquals(result.doubling[1], [30, 60, 120]);
+  assertEquals(result.tripling[1], [10, 30, 90]);
 });
 
 Deno.test("scheduleMax limits an exponential schedule by count and scheduleMin does not", async () => {
@@ -182,14 +189,13 @@ console.log(JSON.stringify({
   // The max stops after two retries and keeps the 100 ms and 200 ms backoff.
   assertEquals(result.max[0], 3);
   assertEquals(result.max[2], { failed: true });
-  assert(result.max[1] >= 295, `max total ${result.max[1]}`);
+  assertEquals(result.max[1], 300);
   // The min recurs while any schedule recurs, so the exponential schedule keeps
   // it going after the count ends. While the count lasts, the zero delay of
   // scheduleRecurs wins, so the first two gaps have no backoff.
   assertEquals(result.min[0], 5);
   assertEquals(result.min[2], { ok: 5 });
-  assert(result.min[1][0] < 9 && result.min[1][1] < 9, `${result.min[1]}`);
-  assert(result.min[1][2] >= 35, `${result.min[1]}`);
+  assertEquals(result.min[1], [0, 0, 40, 80]);
 });
 
 Deno.test("scheduleJittered compiles, runs, and keeps the retry limit", async () => {
@@ -202,8 +208,8 @@ console.log(JSON.stringify({ attempts: jittered.attempts, gaps: jittered.gaps })
   ) as { attempts: number; gaps: number[] };
   assertEquals(result.attempts, 3);
   // Jitter scales each delay (20 ms and 40 ms) by a factor in [0.8, 1.2).
-  assert(result.gaps[0] >= 14 && result.gaps[0] < 100, `${result.gaps}`);
-  assert(result.gaps[1] >= 28 && result.gaps[1] < 150, `${result.gaps}`);
+  assert(result.gaps[0] >= 16 && result.gaps[0] < 24, `${result.gaps}`);
+  assert(result.gaps[1] >= 32 && result.gaps[1] < 48, `${result.gaps}`);
 });
 
 Deno.test("a negative exponential base is a defect", async () => {
