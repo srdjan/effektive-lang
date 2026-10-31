@@ -138,7 +138,7 @@ These changes are intended. No other observable change is allowed.
 
 FNF1 (high, confirmed). The gate is red at the base. Commit `171b212` raised `deno.json:3` to 0.11.1 and added no changelog heading. The newest heading is 0.11.0, so `tests/docs_test.ts:135` fails. `deno task check` uses `&&`, so a fast failure stops the gate before the slow suite. Effect: no commit can pass the gate. The same failure occurred one day earlier as NBF1. The cause of the repeat is the release path: two hand edits and a rule. Disposition: FN0 repairs the record, and FN1 adds a release task.
 
-FNF2 (high, confirmed flake; load is the probable cause). `tests/retry_options_slow_test.ts:205` asserts a wall-clock upper bound. One run measured `196,258` against limits of 100 and 150, under load from two reviews. The same commit then passed three times, once quiet and twice in two concurrent suites. So load alone does not always trigger it. A planned check can confirm the cause: run FN1 under three concurrent suites. Lines 162, 191, and 206 have the same weakness, and line 191 has a limit of 9 ms. The stable base plan deferred this flake until it occurred, and it has now occurred. A probe in an export replaced `Date.now()` with `TestClock`. All 8 tests passed, with exact gaps `[30,60,120]` and `[10,30,90]`, and jitter gaps of 17.8 and 32.4 inside their nominal ranges. Disposition: FN1.
+FNF2 (high, confirmed flake; load is the probable cause). `tests/retry_options_slow_test.ts:205` asserts a wall-clock upper bound. One run measured `196,258` against limits of 100 and 150, under load from two reviews. The same commit then passed three times, once quiet and twice in two concurrent suites. So load alone does not always trigger it. A planned check can confirm the cause: run FN1 under three concurrent suites. Lines 162, 191, and 206 have the same weakness, and line 191 has a limit of 9 ms. The stable base plan deferred this flake until it occurred, and it has now occurred. A probe in an export replaced `Date.now()` with `TestClock`. All 8 tests passed, with exact gaps `[30,60,120]` and `[10,30,90]`, and jitter gaps of 17.8 and 32.4 inside their nominal ranges. FN1 found a second test of this kind: `tests/repeat_slow_test.ts:107` failed in one of three concurrent suites at a load average of 76, because a real 50 ms timeout fired before the second 1 ms job finished. That run confirms load as a cause. Disposition: FN1.
 
 FNF3 (medium, confirmed). `tests/target_helpers.ts:106` and `tests/tutorial_slow_test.ts:33` resolve the target with `--no-lock`, but `src/host/deno_io.ts:134` uses a seeded lock. Effect: strict target tests take a different resolution path from the path that users run. The present float is narrow, because `effect@4.0.5` has no npm dependencies. A probe in an export seeded the lock in `target_helpers.ts`, and 282 slow tests passed. The other `--no-lock` rows run the local tool, read two local files, or assert launch arguments. They stay. Disposition: FN1.
 
@@ -432,7 +432,7 @@ Goal: the same commit gives the same gate result under load. Findings: FNF1, FNF
 | --- | --- | --- | --- | --- |
 | 1. Run the retry harness under `TestClock`. Read the time through `Clock.currentTimeMillis`. Fork the program with `Effect.forkChild`, step `TestClock.adjust(1)` until the fiber ends, and join it. Assert the probe values exactly: gaps `[30, 60, 120]` and `[10, 30, 90]`, a total of 300, and gaps `[0, 0, 40, 80]`. Assert jitter inside `[16, 24)` and `[32, 48)`. Correct the header comment. | Sonnet | `tests/retry_options_slow_test.ts` | The file passes, and `command grep -c 'Date.now' tests/retry_options_slow_test.ts` prints 0 | 15 turns |
 | 2. Write `tscLock()` to `deno.lock` in the temporary directory of each test. In `tests/target_helpers.ts`, the process runs in that directory, so use `--lock=deno.lock`. In `tests/tutorial_slow_test.ts`, the process runs at the repository root, so use `--lock=${dir}/deno.lock`. | Sonnet | `tests/target_helpers.ts`, `tests/tutorial_slow_test.ts` | Slow suite passes in an empty cache, and `git diff --exit-code deno.lock` prints nothing | 15 turns |
-| 3. Rename the file with `git mv`, and change nothing else in it. | Sonnet | `tests/proof_budget_test.ts` to `tests/proof_budget_slow_test.ts` | Fast-time command below prints nothing | 5 turns |
+| 3. Rename the file with `git mv`, and change nothing else in it. | Sonnet | `tests/proof_budget_test.ts` to `tests/proof_budget_slow_test.ts` | Fast-test time check below passes | 5 turns |
 | 4. Add `deno task release <version>`. A pure function `releaseTexts(changelog, config, version, date)` returns a `Result`, and it fails when "Unreleased" has no entries or the version does not rise. The script refuses a dirty tree, writes both files, and runs `deno task check`. On failure, it restores both files and exits 1. It never commits or pushes. Add a literal table test. `tests/docs_test.ts` requires a file map row for each new script. | Sonnet | `scripts/release.ts`, `tests/release_test.ts`, `deno.json`, `docs/development.md`, `docs/api.md` | Release checks below pass | 25 turns |
 
 Verification:
@@ -440,13 +440,14 @@ Verification:
 ```sh
 git diff --exit-code <phase-base> -- src
 git grep -n -- '--no-lock' tests/
-NO_COLOR=1 deno task test 2>&1 | command grep -E 'ok \(([0-9]+m)?[0-9]+s\)'
 for i in 1 2 3; do mkdir -p /tmp/fn1-$i; git archive HEAD | tar -x -C /tmp/fn1-$i; done
 pids=(); for i in 1 2 3; do (cd /tmp/fn1-$i && deno task test:slow > /tmp/fn1-load-$i.log 2>&1) & pids+=($!); done; for p in $pids; do wait $p; echo "load suite exit $?"; done
 command rm -rf /tmp/fn1-1 /tmp/fn1-2 /tmp/fn1-3
 ```
 
-Expected: the first command prints nothing. The second command lists only the rows of `tests/emit_lift_slot_slow_test.ts`, `tests/parse_chain_slow_test.ts`, `tests/installation_slow_test.ts`, `tests/ir_site_slow_test.ts`, and `tests/vscode_client_test.ts`. The third command prints nothing, because Deno prints seconds only at 1 s or more. Each load suite exits 0. If a load suite fails, a test still depends on load. Fix that test in this phase, and record it in FNF2.
+Expected: the first command prints nothing. The second command lists only the rows of `tests/emit_lift_slot_slow_test.ts`, `tests/parse_chain_slow_test.ts`, `tests/installation_slow_test.ts`, `tests/ir_site_slow_test.ts`, and `tests/vscode_client_test.ts`. Each load suite exits 0. If a load suite fails, a test still depends on load. Fix that test in this phase, and record it in FNF2.
+
+Fast-test time check. Run `NO_COLOR=1 deno task test` three times, and keep the minimum of each test. Expected: each minimum is below 1 s. One run is not enough, because a test at 540 ms on a quiet machine reaches 1 s at a load average of 23.
 
 Release checks. Run these in a `git clone` under `/tmp`, because the task reads git state. Run `deno task release 0.11.2`. Expected: exit 1, with a message that "Unreleased" has no entries, and both files unchanged. Add one entry under "Unreleased" in the copy, commit it there, and run the task again. Expected: exit 0, heading `## 0.11.2 - <today>`, and `version` 0.11.2. Commit that result in the clone. Add one more entry under "Unreleased", and commit it. Run `deno task release 0.11.1`. Expected: exit 1, with a message that the version does not rise. Then change one file without a commit, and run `deno task release 0.11.3`. Expected: exit 1, with a message that the tree is dirty.
 
@@ -773,7 +774,7 @@ The reset is complete when each row holds at the final commit.
 | --- | --- | --- | --- |
 | Gate | Exit 1 | Exit 0 | GATE |
 | Gate under load | One failure in four runs | Three concurrent suites pass | FN1 |
-| Fast test at or over 1 s | 1 | 0 | FN1 time command |
+| Fast test with a minimum at or over 1 s in three runs | 1 | 0 | FN1 time check |
 | Coverage | No floor. 96.8% of lines, 94.26% of branches | Floors in place, at the final values | `deno task coverage` |
 | Unfired validator sites | 0, as a report | 0, with exit 1 otherwise | `deno task rules:unfired` |
 | Mutation scope of FN4 | 44 of 48 in a sample | Exit 0: each survivor has a test or a row | `deno task mutate` |
@@ -828,7 +829,7 @@ No pass ran the phases, the full suites, coverage, mutation, capture, benchmarks
 
 | Phase | State | Entry SHA | Commits | Measurements and notes |
 | --- | --- | --- | --- | --- |
-| FN0 | In progress | `c2250852577f7ab31b4d11d21699e6c1f9082efb` | | |
+| FN0 | Complete | `c2250852577f7ab31b4d11d21699e6c1f9082efb` | `33210d7`, `80dfbff` | Gate exit 0: 2,884 fast and 282 slow passed, none ignored. Three files changed, as planned. |
 | FN1 | Not started | | | |
 | FN2 | Not started | | | |
 | FN3 | Not started | | | |

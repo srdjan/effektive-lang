@@ -1,6 +1,7 @@
 // Runtime behavior of `repeat` (unit ES4). Each test compiles one module with
 // independent validation, type-checks the emitted TypeScript under the strict
-// target options, and runs it.
+// target options, and runs it. A test clock drives the delays, so the number of
+// runs before a timeout is exact.
 
 import { assertEquals } from "@std/assert";
 import { compileAndRun } from "./target_helpers.ts";
@@ -25,7 +26,8 @@ export const limited = (): never fails TimeoutError | Stop uses Jobs.next =>
 `;
 
 // The job counts its runs and succeeds with the count, or fails at run \`failAt\`.
-const HARNESS = `import { Cause, Effect, Exit, Layer } from "effect";
+const HARNESS = `import { Cause, Effect, Exit, Fiber, Layer } from "effect";
+import { TestClock } from "effect/testing";
 import * as M from "./main.ts";
 const run = async (program: Effect.Effect<unknown, M.Stop | Cause.TimeoutError, M.Jobs>, failAt = 0) => {
   let runs = 0;
@@ -35,7 +37,15 @@ const run = async (program: Effect.Effect<unknown, M.Stop | Cause.TimeoutError, 
       return runs === failAt ? Effect.fail(new M.Stop({})) : Effect.sleep(1).pipe(Effect.as(runs));
     }),
   });
-  const exit = await Effect.runPromiseExit(program.pipe(Effect.provide(Live)));
+  const exit = await Effect.runPromise(Effect.gen(function* () {
+    const fiber = yield* Effect.forkChild(Effect.exit(program.pipe(Effect.provide(Live))));
+    for (let step = 0; step < 200; step++) {
+      yield* Effect.yieldNow;
+      yield* TestClock.adjust(1);
+      if (fiber.pollUnsafe() !== undefined) break;
+    }
+    return yield* Fiber.join(fiber);
+  }).pipe(Effect.scoped, Effect.provide(TestClock.layer())));
   const outcome = Exit.isSuccess(exit)
     ? { ok: exit.value }
     : Cause.hasFails(exit.cause)
@@ -109,8 +119,8 @@ Deno.test("repeat(job) ends only through timeout, and the job ran more than once
     SOURCE,
     `${HARNESS}
 const limited = await run(M.limited());
-console.log(JSON.stringify({ tag: limited.outcome, many: limited.runs > 1 }));
+console.log(JSON.stringify(limited));
 `,
   );
-  assertEquals(result, { tag: { failed: "timeout" }, many: true });
+  assertEquals(result, { runs: 50, outcome: { failed: "timeout" } });
 });
