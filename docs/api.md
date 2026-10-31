@@ -163,6 +163,7 @@ scripts/       Scripts that the tasks run.
                logs_replay.ts runs a logged session again on the current build and prints the first difference.
                rules_unfired.ts runs the fast suite with coverage and prints each validator rejection site that no fast test fires. It exits 1 when the list has a site.
                coverage.ts runs both suites with coverage, prints the line and branch percent by directory, and exits 1 when a floor in deno.json fails.
+               mutate.ts flips one source site at a time in copies of HEAD, runs the tests, and reports which changes no test detects.
                measure.ts counts branches and cyclomatic complexity of the files given.
                measure_functions.ts counts the same for each function.
                measure_kernel.ts holds the counting rules that both measure scripts share.
