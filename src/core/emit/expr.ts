@@ -82,7 +82,6 @@ import {
   resolvedAs,
   serviceOfCapability,
   tokenOfId,
-  unsupported,
 } from "./scope.ts";
 import { channelTypeArguments, typeArguments, typeDoc } from "./types.ts";
 import {
@@ -920,7 +919,7 @@ export class ExprEmitter implements ExprCore {
     const host = this.scope.hostBinding(target as ValueId);
     if (host !== undefined) return host.hostName;
     if (builtinInstanceName(target) !== undefined) {
-      throw unsupported(`the builtin ${target} is not in callee position`);
+      throw internal(`the builtin ${target} is not in callee position`);
     }
     return this.scope.nameOf(target as ValueId);
   }
@@ -1260,7 +1259,7 @@ export class ExprEmitter implements ExprCore {
         ]);
       }
       default:
-        throw unsupported(`the builtin ${name} has no emission form`, e.span);
+        throw internal(`the builtin ${name} has no emission form`);
     }
   }
 
@@ -1431,7 +1430,7 @@ export class ExprEmitter implements ExprCore {
 
   private armBinding(pattern: Pattern): Parameter | null {
     if (pattern.kind === "some") {
-      throw unsupported(
+      throw internal(
         "a Some pattern in a match that is not an option match",
       );
     }
@@ -1495,7 +1494,7 @@ export class ExprEmitter implements ExprCore {
       }
       case "none":
       case "some":
-        throw unsupported(
+        throw internal(
           "an option pattern in a match that is not an option match",
         );
     }

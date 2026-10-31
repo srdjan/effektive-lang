@@ -1,9 +1,11 @@
-// Tests for the failure results of lowering and emission. Twelve sites throw
-// `unsupported`. The checker or the parser excludes all of them, so no source
-// program reaches one, and these tests forge the input: a changed CheckedProject for `lowerModule`, and changed IR for
-// `emitModule`.
+// Tests for the failure results of lowering and emission. Thirteen sites throw
+// an `internal` failure: two in the lowering and eleven in the emitter. The
+// checker or the parser excludes all of them, so no source program reaches one.
+// These tests forge the input: a changed CheckedProject for `lowerModule`, and
+// changed IR for `emitModule`. Each test asserts the whole error value, which
+// has no `span`.
 // The same file tests the other results of the two entry points: `no-interface`,
-// `internal`, and the rethrow of a foreign error.
+// the `internal` result of a broken table, and the rethrow of a foreign error.
 
 import { assert, assertEquals, assertThrows } from "@std/assert";
 import {
@@ -156,8 +158,8 @@ Deno.test("a wrong-arity pipeline into an error constructor keeps its arity diag
 
 // ------------------------------------------------------------------ lowering: forged CheckedProject
 
-Deno.test("a record spread after a field lowers to an unsupported error when the diagnostics are forged away", () => {
-  // The parser (parse.ts:1360, syntax/014) and the checker (check_expr.ts:6383,
+Deno.test("a record spread after a field lowers to an internal error when the diagnostics are forged away", () => {
+  // The parser (parse.ts, syntax/014) and the checker (check_expr.ts,
   // type-mismatch/005) reject the program. Removing the diagnostics reaches
   // the lowering of the tree.
   const text = "type R = { a: int, b: int }\n" +
@@ -172,19 +174,14 @@ Deno.test("a record spread after a field lowers to an unsupported error when the
   assert(!lowerModule(checked, "main").ok);
   const forged = lowerModule(withoutDiagnostics(checked), "main");
   assert(!forged.ok);
-  assert(forged.error.tag === "unsupported", JSON.stringify(forged.error));
-  assertEquals(
-    forged.error.message,
-    "a record spread must come first in a record",
-  );
-  assert(
-    text.slice(forged.error.span.start, forged.error.span.end).includes(
-      "...base",
-    ),
-  );
+  assertEquals(forged.error, {
+    tag: "internal",
+    module: "main",
+    message: "a record spread must come first in a record",
+  });
 });
 
-Deno.test("a pipeline into an error constructor lowers to an unsupported error when the diagnostics are forged away", () => {
+Deno.test("a pipeline into an error constructor lowers to an internal error when the diagnostics are forged away", () => {
   // The checker rejects the program (type-mismatch/010). Removing the
   // diagnostics reaches the lowering of the error construction.
   const text = "error Stop = { code: int }\n" +
@@ -194,15 +191,12 @@ Deno.test("a pipeline into an error constructor lowers to an unsupported error w
   assert(!lowerModule(checked, "main").ok);
   const forged = lowerModule(withoutDiagnostics(checked), "main");
   assert(!forged.ok);
-  assert(forged.error.tag === "unsupported", JSON.stringify(forged.error));
-  assertEquals(
-    forged.error.message,
-    "an error is constructed from a record literal; this argument is not one",
-  );
-  assertEquals(
-    text.slice(forged.error.span.start, forged.error.span.end),
-    "Stop()",
-  );
+  assertEquals(forged.error, {
+    tag: "internal",
+    module: "main",
+    message:
+      "an error is constructed from a record literal; this argument is not one",
+  });
 });
 
 Deno.test("an imported module without an interface gives no-interface", () => {
@@ -293,7 +287,7 @@ Deno.test("an effect-mode branch with a pure function type emits with a wrap", (
   // Decision D6. The block of the then branch is effect-mode and has a pure
   // function type, and the if has an effect function type. The emitter gives
   // the slot type to the branch, so the pure function is wrapped and no
-  // `unsupported` result remains (emit/expr.ts fit).
+  // emission error remains (emit/expr.ts fit).
   const text = `type Int = int
 error Stop = {}
 service Gate { pick(): Int fails Stop }
@@ -311,8 +305,8 @@ const choose = (): ((n: Int) => Int fails Stop) fails Stop uses Gate.pick =>
 
 // ------------------------------------------------------------------ emission: forged IR
 
-Deno.test("a builtin that is not a callee gives an unsupported emission error", () => {
-  // The resolver rejects a builtin value (resolve.ts:863, unknown-name/004), and
+Deno.test("a builtin that is not a callee gives an internal emission error", () => {
+  // The resolver rejects a builtin value (resolve.ts, unknown-name/004), and
   // the validator rejects it (validation/001).
   const { ir } = lowerOk(
     "type Int = int\nconst xs: Int[] = [1]\nconst ys = xs |> map((n) => n + 1)\n",
@@ -326,19 +320,17 @@ Deno.test("a builtin that is not a callee gives an unsupported emission error", 
   const declaration = declarationOf(forged, "ys");
   assert(declaration.kind === "constant");
   Object.assign(declaration, { value: call.callee });
-  const error = emitError(forged);
-  assert(error.tag === "unsupported");
-  assertEquals(error.span, undefined);
-  assert(
-    /^the builtin value:main#\$builtin\/map\/[0-9a-f]+ is not in callee position$/
-      .test(error.message),
-    error.message,
-  );
+  assertEquals(emitError(forged), {
+    tag: "internal",
+    module: "main",
+    message:
+      "the builtin value:main#$builtin/map/aa2171ba29aa is not in callee position",
+  });
 });
 
-Deno.test("a builtin with no emission form gives an unsupported emission error", () => {
+Deno.test("a builtin with no emission form gives an internal emission error", () => {
   // The checker makes builtin facts only for map, filter, fold, all, and
-  // traverse (check_expr.ts:5732, 6070). The last two are effects and never
+  // traverse (check_expr.ts). The last two are effects and never
   // reach the pure call path.
   const { ir } = lowerOk(
     "type Int = int\nconst xs: Int[] = [1]\nconst ys = xs |> map((n) => n + 1)\n",
@@ -352,10 +344,11 @@ Deno.test("a builtin with no emission form gives an unsupported emission error",
   Object.assign(call.callee, {
     target: call.callee.target.replace("/map/", "/sort/"),
   });
-  const error = emitError(forged);
-  assert(error.tag === "unsupported");
-  assertEquals(error.message, "the builtin sort has no emission form");
-  assert(error.span !== undefined);
+  assertEquals(emitError(forged), {
+    tag: "internal",
+    module: "main",
+    message: "the builtin sort has no emission form",
+  });
 });
 
 const OPTION_MATCH = `type Int = int
@@ -378,31 +371,35 @@ function forgedMatch(arms: (arms: Obj[]) => Obj[]): ModuleIR {
   return forged;
 }
 
-Deno.test("a Some pattern in a match that is not an option match gives an unsupported emission error", () => {
-  // The checker rejects it (check_expr.ts:7174, pattern/003). The last arm
+Deno.test("a Some pattern in a match that is not an option match gives an internal emission error", () => {
+  // The checker rejects it (check_patterns.ts, pattern/003). The last arm
   // decides the binding first, so the Some arm comes last.
-  const error = emitError(forgedMatch(([some, , literal]) => [literal, some]));
-  assert(error.tag === "unsupported");
   assertEquals(
-    error.message,
-    "a Some pattern in a match that is not an option match",
+    emitError(forgedMatch(([some, , literal]) => [literal, some])),
+    {
+      tag: "internal",
+      module: "main",
+      message: "a Some pattern in a match that is not an option match",
+    },
   );
 });
 
-Deno.test("an option test in a match that is not an option match gives an unsupported emission error", () => {
+Deno.test("an option test in a match that is not an option match gives an internal emission error", () => {
   // The Some arm comes before the last arm, so the arm test fails first.
-  const error = emitError(
-    forgedMatch(([some, wildcard, literal]) => [some, literal, wildcard]),
-  );
-  assert(error.tag === "unsupported");
   assertEquals(
-    error.message,
-    "an option pattern in a match that is not an option match",
+    emitError(
+      forgedMatch(([some, wildcard, literal]) => [some, literal, wildcard]),
+    ),
+    {
+      tag: "internal",
+      module: "main",
+      message: "an option pattern in a match that is not an option match",
+    },
   );
 });
 
-Deno.test("constants that depend on each other give an unsupported emission error", () => {
-  // The checker rejects a cycle (check_project.ts:403, module/004). A constant
+Deno.test("constants that depend on each other give an internal emission error", () => {
+  // The checker rejects a cycle (check_project.ts, module/004). A constant
   // that names itself is skipped by the ordering, so the cycle has two members.
   const { ir } = lowerOk(
     "type Int = int\nconst a: Int = 1\nconst b: Int = a\n",
@@ -416,10 +413,11 @@ Deno.test("constants that depend on each other give an unsupported emission erro
   const toB = structuredClone(toA);
   Object.assign(toB, { target: b.id });
   Object.assign(a, { value: toB });
-  const error = emitError(forged);
-  assert(error.tag === "unsupported");
-  assertEquals(error.message, "the constant a depends on itself");
-  assert(error.span !== undefined);
+  assertEquals(emitError(forged), {
+    tag: "internal",
+    module: "main",
+    message: "the constant a depends on itself",
+  });
 });
 
 const HOST_FILES = {
@@ -441,8 +439,8 @@ function hostProject() {
   return { ir: lowered.value, config: checked.value.analysis.project.config };
 }
 
-Deno.test("a host binding that is not a provider gives an unsupported emission error", () => {
-  // A host interface file holds only providers: parse.ts:747 rejects a const
+Deno.test("a host binding that is not a provider gives an internal emission error", () => {
+  // A host interface file holds only providers: parse.ts rejects a const
   // (syntax/012). The forged import gives the provider a function type.
   const { ir, config } = hostProject();
   assert(emitModule(ir, { config }).ok);
@@ -451,24 +449,25 @@ Deno.test("a host binding that is not a provider gives an unsupported emission e
   assert(host !== undefined);
   assertEquals(host.values.length, 1);
   Object.assign(host.values[0], { type: FUNCTION });
-  const error = emitError(forged, { config });
-  assert(error.tag === "unsupported");
-  assertEquals(error.message, "the host binding L is not a provider");
+  assertEquals(emitError(forged, { config }), {
+    tag: "internal",
+    module: "m",
+    message: "the host binding L is not a provider",
+  });
 });
 
-Deno.test("a host module that the project file lacks gives an unsupported emission error", () => {
-  // project.ts:418 reports it as module/002 when the program is checked.
+Deno.test("a host module that the project file lacks gives an internal emission error", () => {
+  // project.ts reports it as module/002 when the program is checked.
   const { ir } = hostProject();
-  const error = emitError(ir, { config: { host: new Map() } });
-  assert(error.tag === "unsupported");
-  assertEquals(
-    error.message,
-    "the host module host:p is not in the project file",
-  );
+  assertEquals(emitError(ir, { config: { host: new Map() } }), {
+    tag: "internal",
+    module: "m",
+    message: "the host module host:p is not in the project file",
+  });
 });
 
-Deno.test("a host module path outside the project root gives an unsupported emission error", () => {
-  // project.ts:184-198 drops such an entry and reports module/001.
+Deno.test("a host module path outside the project root gives an internal emission error", () => {
+  // project.ts drops such an entry and reports module/001.
   const { ir } = hostProject();
   const config: ProjectConfig = {
     host: new Map([["p", {
@@ -476,13 +475,46 @@ Deno.test("a host module path outside the project root gives an unsupported emis
       modulePath: "/live.ts",
     }]]),
   };
-  const error = emitError(ir, { config });
-  assert(error.tag === "unsupported");
-  assertEquals(error.message, "the host module path /live.ts is not valid");
+  assertEquals(emitError(ir, { config }), {
+    tag: "internal",
+    module: "m",
+    message: "the host module path /live.ts is not valid",
+  });
 });
 
-Deno.test("a Schema of a function type gives an unsupported emission error", () => {
-  // check.ts:774 and check_expr.ts:1737 require data-only Schema types
+Deno.test("an opaque host type without a host module for its interface gives an internal emission error", () => {
+  // The module `main` names `Conn` from `lib.eff` without importing it. The
+  // type is opaque, so the emitter looks for the host module of `host.effi`.
+  // The checked project has the entry, and the forged emission context has not.
+  const checked = checkProject(
+    memoryHost({
+      "effektive.json":
+        '{ "host": { "db": { "interface": "./host.effi", "module": "./adapter.ts" } } }',
+      "host.effi":
+        "export opaque type Conn\nexport service Db { open(): Conn }\nexport provider DbLive provides Db\n",
+      "lib.eff":
+        'import { Conn, Db } from "host:db"\nexport const openIt = (): Conn uses Db.open => Db.open()\n',
+      "main.eff":
+        'import { openIt } from "./lib.eff"\nconst twice = () => {\n  const c = openIt()\n  c\n}\n',
+    }),
+    "",
+    ["main.eff"],
+  );
+  assert(checked.ok);
+  assertEquals(checked.value.diagnostics, []);
+  const lowered = lowerProject(checked.value).get("main");
+  assert(lowered?.ok, JSON.stringify(lowered));
+  const config = checked.value.analysis.project.config;
+  assert(emitModule(lowered.value, { config }).ok);
+  assertEquals(emitError(lowered.value, { config: { host: new Map() } }), {
+    tag: "internal",
+    module: "main",
+    message: "the interface host has no host module",
+  });
+});
+
+Deno.test("a Schema of a function type gives an internal emission error", () => {
+  // check.ts and check_expr.ts require data-only Schema types
   // (type-mismatch/010). schemaDoc fails for the descriptor of a constant.
   const { ir } = lowerOk(
     "type Int = int\nconst s: Schema<Int> = schema()\n",
@@ -491,18 +523,17 @@ Deno.test("a Schema of a function type gives an unsupported emission error", () 
   const value = rootOf(valueForged, "s");
   assert(value.kind === "schema" && value.type.kind === "schema");
   assign(value, { type: { ...value.type, decoded: FUNCTION } });
-  const fromValue = emitError(valueForged);
-  assert(fromValue.tag === "unsupported");
-  assertEquals(
-    fromValue.message,
-    "a deferred or function type has no schema",
-  );
+  assertEquals(emitError(valueForged), {
+    tag: "internal",
+    module: "main",
+    message: "a deferred or function type has no schema",
+  });
 });
 
-Deno.test("a recursive type with a function field gives an unsupported emission error", () => {
+Deno.test("a recursive type with a function field gives an internal emission error", () => {
   // The encoded mirror of a recursive type declaration needs a schema for each
   // field (encodedTypeDoc). The checker rejects such a type unless it is data
-  // only (check.ts:1436-1446, declaration/007).
+  // only (check.ts, declaration/007).
   const { ir } = lowerOk(
     "type Int = int\ntype Tree = { score: Int, children: Tree[] }\n",
   );
@@ -511,9 +542,11 @@ Deno.test("a recursive type with a function field gives an unsupported emission 
   assert(tree.kind === "type" && tree.definition.kind === "nominal");
   assert(tree.definition.base.kind === "record");
   Object.assign(tree.definition.base.fields[0], { type: FUNCTION });
-  const error = emitError(forged);
-  assert(error.tag === "unsupported");
-  assertEquals(error.message, "a deferred or function type has no schema");
+  assertEquals(emitError(forged), {
+    tag: "internal",
+    module: "main",
+    message: "a deferred or function type has no schema",
+  });
 });
 
 // ------------------------------------------------------------------ emission: the throw-to-Result conversion
@@ -534,13 +567,4 @@ Deno.test("emitModule converts an internal failure and rethrows a foreign error"
   // conversion does not catch it.
   const broken = { ...ir, declarations: undefined } as unknown as ModuleIR;
   assertThrows(() => emitModule(broken, NO_CONFIG), TypeError);
-});
-
-Deno.test("emitModule keeps the span of an unsupported failure and omits an absent span", () => {
-  // The two shapes of the conversion at emit/emit.ts:185-209. `fit` throws with
-  // a span (tested above); an unknown host module throws without one.
-  const { ir } = hostProject();
-  const error = emitError(ir, { config: { host: new Map() } });
-  assert(error.tag === "unsupported");
-  assert(!("span" in error));
 });

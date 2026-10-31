@@ -37,7 +37,6 @@ function describeLowerError(error: LowerError): string {
       return `${error.module}: ${error.tag}`;
     case "no-interface":
       return `${error.module} imports ${error.imported}, which has no interface`;
-    case "unsupported":
     case "internal":
       return `${error.module}: ${error.message}`;
   }
@@ -47,7 +46,6 @@ function describeEmitError(error: EmitProjectError): string {
   switch (error.tag) {
     case "lowering":
       return describeLowerError(error.error);
-    case "unsupported":
     case "internal":
       return error.message;
   }

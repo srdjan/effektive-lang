@@ -1436,7 +1436,7 @@ Deno.test("emitModule returns an error value for a host module that the project 
     config: { host: new Map() },
   });
   assert(!result.ok);
-  assertEquals(result.error.tag, "unsupported");
+  assertEquals(result.error.tag, "internal");
 });
 
 Deno.test("the example list stays in step with the helper", () => {

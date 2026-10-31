@@ -50,7 +50,6 @@ import {
   serviceOfCapability,
   servicesOf,
   tokenOfId,
-  unsupported,
 } from "./scope.ts";
 import {
   effectTypeDoc,
@@ -310,10 +309,7 @@ export function orderConstants(ir: ModuleIR): ConstantDecl[] {
     const known = state.get(constant.id);
     if (known === "done") return;
     if (known === "active") {
-      throw unsupported(
-        `the constant ${constant.name} depends on itself`,
-        constant.span,
-      );
+      throw internal(`the constant ${constant.name} depends on itself`);
     }
     state.set(constant.id, "active");
     for (const dependency of eagerDependencies(constant)) {
@@ -1062,7 +1058,7 @@ export class DeclarationEmitter {
         if (found !== undefined) provider = found.type;
       }
       if (provider === undefined || provider.kind !== "provider") {
-        throw unsupported(`the host binding ${host.local} is not a provider`);
+        throw internal(`the host binding ${host.local} is not a provider`);
       }
       const wrapped = this.wrappedProvider(host, provider);
       if (wrapped !== undefined) {

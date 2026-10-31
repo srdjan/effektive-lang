@@ -93,13 +93,6 @@ export type LowerError =
     readonly module: string;
     readonly imported: string;
   }
-  /** A form that the IR cannot express. */
-  | {
-    readonly tag: "unsupported";
-    readonly module: string;
-    readonly message: string;
-    readonly span: Span;
-  }
   /** A violated invariant between the checker tables and the tree. */
   | {
     readonly tag: "internal";
@@ -107,27 +100,11 @@ export type LowerError =
     readonly message: string;
   };
 
-type Failure =
-  | {
-    readonly tag: "unsupported";
-    readonly message: string;
-    readonly span: Span;
-  }
-  | { readonly tag: "internal"; readonly message: string };
-
 /** Thrown inside the lowering only. `lowerModule` turns it into a `LowerError`. */
-class LowerFailure extends Error {
-  constructor(readonly failure: Failure) {
-    super(failure.message);
-  }
-}
+class LowerFailure extends Error {}
 
 function internal(message: string): LowerFailure {
-  return new LowerFailure({ tag: "internal", message });
-}
-
-function unsupported(message: string, span: Span): LowerFailure {
-  return new LowerFailure({ tag: "unsupported", message, span });
+  return new LowerFailure(message);
 }
 
 // ------------------------------------------------------------------ context
@@ -930,9 +907,8 @@ class BodyLowerer {
           pre !== undefined || argNodes.length !== 1 || record === undefined ||
           kindOf(this.ctx.tree, record) !== SyntaxKind.RecordExpr
         ) {
-          throw unsupported(
+          throw internal(
             "an error is constructed from a record literal; this argument is not one",
-            this.span(node),
           );
         }
         return {
@@ -1288,10 +1264,7 @@ class BodyLowerer {
   } {
     const kind = kindOf(this.ctx.tree, field);
     if (kind !== SyntaxKind.RecordField && kind !== SyntaxKind.ShorthandField) {
-      throw unsupported(
-        "a record spread must come first in a record",
-        this.span(field),
-      );
+      throw internal("a record spread must come first in a record");
     }
     const parts = this.kids(field);
     const labelNode = this.required(
@@ -2030,14 +2003,7 @@ export function lowerModule(
     if (e instanceof LowerFailure) {
       return {
         ok: false,
-        error: e.failure.tag === "unsupported"
-          ? {
-            tag: "unsupported",
-            module,
-            message: e.failure.message,
-            span: e.failure.span,
-          }
-          : { tag: "internal", module, message: e.failure.message },
+        error: { tag: "internal", module, message: e.message },
       };
     }
     throw e;

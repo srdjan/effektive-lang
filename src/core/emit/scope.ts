@@ -11,7 +11,6 @@ import type {
   ModuleIR,
   ServiceDecl,
   ServiceId,
-  Span,
   Type,
   TypeDecl,
 } from "../ir.ts";
@@ -63,31 +62,11 @@ interface ScopeRuntimeNames {
   readonly close: string;
 }
 
-type EmitFailureData =
-  | {
-    readonly tag: "unsupported";
-    readonly message: string;
-    readonly span?: Span;
-  }
-  | { readonly tag: "internal"; readonly message: string };
-
 /** Thrown inside the emitter only. `emitModule` turns it into an `EmitError`. */
-export class EmitFailure extends Error {
-  constructor(readonly failure: EmitFailureData) {
-    super(failure.message);
-  }
-}
+export class EmitFailure extends Error {}
 
 export function internal(message: string): EmitFailure {
-  return new EmitFailure({ tag: "internal", message });
-}
-
-export function unsupported(message: string, span?: Span): EmitFailure {
-  return new EmitFailure(
-    span === undefined
-      ? { tag: "unsupported", message }
-      : { tag: "unsupported", message, span },
-  );
+  return new EmitFailure(message);
 }
 
 // ------------------------------------------------------------------ deferred types
@@ -437,11 +416,11 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
     const key = label.slice("host:".length);
     const host = this.config.host.get(key);
     if (host === undefined) {
-      throw unsupported(`the host module ${label} is not in the project file`);
+      throw internal(`the host module ${label} is not in the project file`);
     }
     const target = normalizeRelative(host.modulePath);
     if (target === undefined) {
-      throw unsupported(`the host module path ${host.modulePath} is not valid`);
+      throw internal(`the host module path ${host.modulePath} is not valid`);
     }
     const specifier = relativeSpecifier(this.path, target);
     for (const binding of bindings) {
@@ -494,7 +473,7 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
       this.hostDeclarations.set(specifier, names);
       return;
     }
-    throw unsupported(`the interface ${module} has no host module`);
+    throw internal(`the interface ${module} has no host module`);
   }
 
   // -------------------------------------------------------------- allocation

@@ -413,14 +413,16 @@ map from it.
 
 `emitProject(lowered, { config })` emits every module of the map that
 `lowerProject` returns. A module that did not lower gives a `lowering` error
-value. Expected failures are error values with the tag `unsupported` or
-`internal`.
+value. An emission failure is an error value with the tag `internal`. It marks
+a violated invariant, and no source program reaches it.
 
 An import of another module becomes a relative `.ts` specifier. An import of an
 `.effi` declaration becomes a relative path to its companion module, such as
 `host.effi.ts`. An opaque type and a provider come from the host module of
-`effektive.json`. A module that names an opaque type of a `.effi` file without a
-host module in `effektive.json` gives an `unsupported` error value. The emitter checks provider imports against the registry:
+`effektive.json`. A project that lacks the host module of a `.effi` file gets a
+`module/002` diagnostic from the checker. When a caller gives `emitModule` a
+context with no host entry for that file, the emission gives an `internal`
+error value. The emitter checks provider imports against the registry:
 `const UsersLive$host: Layer.Layer<Users> = UsersLive`. When a provided service
 method returns a tagged record value, the constant wraps the host Layer with run-time
 checks ([host boundary checks](archive/plans/2026-10-23-host-boundary-checks.md)).

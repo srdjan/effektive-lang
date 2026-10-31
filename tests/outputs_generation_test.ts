@@ -118,10 +118,6 @@ Deno.test("writeGenerated skips absent or diagnosed modules and reports each gen
     }, "error: cannot emit m: broken"],
     [{
       kind: "emit",
-      error: { tag: "unsupported", module: "m", message: "no such form" },
-    }, "error: cannot emit m: no such form"],
-    [{
-      kind: "emit",
       error: {
         tag: "lowering",
         module: "m",
@@ -159,12 +155,6 @@ Deno.test("writeGenerated reports every non-diagnostic lowering failure", () => 
       { tag: "no-interface", module: "m", imported: "dep" },
       "m imports dep, which has no interface",
     ],
-    [{
-      tag: "unsupported",
-      module: "m",
-      message: "unsupported form",
-      span: { source: "m.eff", start: 0, end: 1 },
-    }, "m: unsupported form"],
     [{ tag: "internal", module: "m", message: "broken" }, "m: broken"],
   ];
   for (const [error, message] of errors) {

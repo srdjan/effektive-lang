@@ -30,7 +30,6 @@ import {
   internal,
   isDeferredType,
   servicesOf,
-  unsupported,
 } from "./scope.ts";
 
 function literalText(value: string | number | boolean | null): string {
@@ -364,7 +363,7 @@ export function encodedTypeDoc(
   recursive?: ReadonlySet<string>,
 ): Doc {
   if (isDeferredType(type)) {
-    throw unsupported("a deferred or function type has no schema");
+    throw internal("a deferred or function type has no schema");
   }
   switch (type.kind) {
     case "primitive":
@@ -444,7 +443,7 @@ export function schemaDoc(
 ): Doc {
   const schema = scope.effect("Schema");
   if (isDeferredType(type)) {
-    throw unsupported("a deferred or function type has no schema");
+    throw internal("a deferred or function type has no schema");
   }
   switch (type.kind) {
     case "primitive":

@@ -6,7 +6,6 @@ import { fieldHelperDeclarations } from "./fields.ts";
 import type { Declaration, ModuleIR, Result, TypeDecl } from "../ir.ts";
 import { generatedHeader } from "../paths.ts";
 import type { ProjectConfig } from "../project.ts";
-import type { Span } from "../ir.ts";
 import {
   bracketed,
   type Doc,
@@ -61,18 +60,11 @@ export interface EmittedModule {
   readonly hostAssertions: readonly HostAssertionRecord[];
 }
 
-export type EmitError =
-  | {
-    readonly tag: "unsupported";
-    readonly module: string;
-    readonly message: string;
-    readonly span?: Span;
-  }
-  | {
-    readonly tag: "internal";
-    readonly module: string;
-    readonly message: string;
-  };
+export type EmitError = {
+  readonly tag: "internal";
+  readonly module: string;
+  readonly message: string;
+};
 
 function importLine(group: ImportGroup): Doc {
   const names = group.names.map((n) => {
@@ -220,23 +212,9 @@ export function emitModule(
     return { ok: true, value: build(ir, context) };
   } catch (e) {
     if (e instanceof EmitFailure) {
-      const failure = e.failure;
       return {
         ok: false,
-        error: failure.tag === "unsupported"
-          ? failure.span === undefined
-            ? {
-              tag: "unsupported",
-              module: ir.module,
-              message: failure.message,
-            }
-            : {
-              tag: "unsupported",
-              module: ir.module,
-              message: failure.message,
-              span: failure.span,
-            }
-          : { tag: "internal", module: ir.module, message: failure.message },
+        error: { tag: "internal", module: ir.module, message: e.message },
       };
     }
     throw e;
