@@ -17,8 +17,12 @@ function checkDeclarations(text: string) {
   );
   assert(analysis.ok, JSON.stringify(analysis));
   const table = new TypeTable();
+  const info = analysis.value.project.modules.get("m");
+  const resolution = analysis.value.resolutions.get("m");
+  assert(info !== undefined && resolution !== undefined);
   const declarations = checkModuleDeclarations(
-    analysis.value,
+    info,
+    resolution,
     "m",
     table,
     new Map(),

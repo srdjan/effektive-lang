@@ -61,6 +61,19 @@ interface ProjectCheck {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+/** Checks the declarations of one module of an analysis. */
+function declarationsOf(
+  analysis: Analysis,
+  name: string,
+  table: TypeTable,
+  imported: ReadonlyMap<string, TypeGraph>,
+): ModuleDeclarations {
+  const info = analysis.project.modules.get(name);
+  const resolution = analysis.resolutions.get(name);
+  assert(info !== undefined && resolution !== undefined);
+  return checkModuleDeclarations(info, resolution, name, table, imported);
+}
+
 /**
  * Checks the declarations of every module in topological order with a mode map
  * that the test supplies. The project drivers take their modes from the body
@@ -80,12 +93,7 @@ function checkDeclarations(
       const graph = graphs.get(other);
       if (graph !== undefined) imported.set(other, graph);
     }
-    const declarations = checkModuleDeclarations(
-      analysis,
-      name,
-      table,
-      imported,
-    );
+    const declarations = declarationsOf(analysis, name, table, imported);
     graphs.set(name, buildTypeGraph(declarations));
     modules.set(name, {
       module: name,
@@ -767,7 +775,7 @@ export const show = (name: Name, wrapper: Wrapper): Name => name
     errors: aGraph.errors,
     services: aGraph.services,
   };
-  checkModuleDeclarations(analysis, "b", fresh, new Map([["a", graph]]));
+  declarationsOf(analysis, "b", fresh, new Map([["a", graph]]));
   assert(fresh.isAssignable(fresh.named("type:a#Name"), fresh.string));
   assert(fresh.isAssignable(fresh.string, fresh.named("type:a#Name")));
   assert(fresh.aliasOf("type:a#Hidden") !== undefined);
@@ -920,7 +928,7 @@ export const first = (t: T): T => t
     services: aGraph.services,
   };
   assertEquals(reordered.types.map((t) => t.name), ["T", "B", "A"]);
-  checkModuleDeclarations(analysis, "b", fresh, new Map([["a", reordered]]));
+  declarationsOf(analysis, "b", fresh, new Map([["a", reordered]]));
   // The table walks a guarded alias once, and it walks an unguarded cycle forever.
   assert(!fresh.exceedsDepth(fresh.named("type:a#T"), 128, new Map()));
 });

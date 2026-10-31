@@ -10,6 +10,7 @@
 // the iteration are held, and only the last round's diagnostics are published.
 
 import type { Analysis } from "./analyze.ts";
+import type { ModuleResolution } from "./resolve.ts";
 import { analyzeProject } from "./analyze.ts";
 import {
   type ConstantSignature,
@@ -151,7 +152,8 @@ interface ConstantEntry extends EntryInfo {
 type Entry = FunctionEntry | ConstantEntry;
 
 interface CheckArguments {
-  readonly analysis: Analysis;
+  readonly info: ModuleInfo;
+  readonly resolution: ModuleResolution;
   readonly module: string;
   readonly declarations: ModuleDeclarations & {
     readonly values: Map<ValueId, ValueSignature>;
@@ -174,12 +176,7 @@ type Run =
   };
 
 function collectEntries(args: CheckArguments): Entry[] {
-  const { analysis, module, declarations } = args;
-  const info = analysis.project.modules.get(module);
-  const resolution = analysis.resolutions.get(module);
-  if (info === undefined || resolution === undefined) {
-    throw new Error(`module ${module} is not part of the analysis`);
-  }
+  const { info, resolution, declarations } = args;
   const tree = info.tree;
   const targets = resolution.targets;
   const local = new Set<ValueId>();
@@ -595,15 +592,16 @@ interface ModuleStep {
  * scratch and a revision of the program give the same result.
  */
 export function checkModuleStep(
-  analysis: Analysis,
   info: ModuleInfo,
+  resolution: ModuleResolution,
   name: string,
   table: TypeTable,
   seen: ReachedModules,
   proofBudget: ProofBudget = { remaining: REFINEMENT_AGGREGATE_STEPS },
 ): ModuleStep {
   const checkedDeclarations = checkModuleDeclarations(
-    analysis,
+    info,
+    resolution,
     name,
     table,
     seen.graphs,
@@ -615,7 +613,8 @@ export function checkModuleStep(
     values: signatures,
   };
   const bodies = checkModuleBodies({
-    analysis,
+    info,
+    resolution,
     module: name,
     declarations,
     proofBudget,
@@ -656,10 +655,11 @@ export function checkAnalysis(analysis: Analysis): CheckedProject {
   const diagnostics: Diagnostic[] = [...analysis.diagnostics];
   for (const name of analysis.project.order) {
     const info = analysis.project.modules.get(name);
-    if (info === undefined) continue;
+    const resolution = analysis.resolutions.get(name);
+    if (info === undefined || resolution === undefined) continue;
     const step = checkModuleStep(
-      analysis,
       info,
+      resolution,
       name,
       table,
       reachedModules(analysis, name, graphs, interfaces),

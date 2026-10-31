@@ -5,7 +5,7 @@
 // type_lower.ts. check_expr.ts checks the bodies, and check_project.ts drives the
 // whole project.
 
-import type { Analysis } from "./analyze.ts";
+import type { ModuleResolution } from "./resolve.ts";
 import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";
 import type { DeclEntry } from "./index.ts";
 import type {
@@ -1128,16 +1128,12 @@ class ModuleChecker {
  * definitions before it lowers any local type.
  */
 export function checkModuleDeclarations(
-  analysis: Analysis,
+  info: ModuleInfo,
+  resolution: ModuleResolution,
   module: string,
   table: TypeTable,
   imported: ReadonlyMap<string, TypeGraph>,
 ): ModuleDeclarations {
-  const info = analysis.project.modules.get(module);
-  const resolution = analysis.resolutions.get(module);
-  if (info === undefined || resolution === undefined) {
-    throw new Error(`module ${module} is not part of the analysis`);
-  }
   const services = new Map<ServiceId, ServiceDecl>();
   for (const graph of imported.values()) {
     table.load(graph);

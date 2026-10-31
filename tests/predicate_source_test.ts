@@ -15,10 +15,14 @@ function refine(declaration: string, allowSyntaxErrors = false) {
   );
   assert(analysis.ok, JSON.stringify(analysis));
   if (!allowSyntaxErrors) assertEquals(analysis.value.diagnostics, []);
+  const info = analysis.value.project.modules.get("m");
+  const resolution = analysis.value.resolutions.get("m");
+  assert(info !== undefined && resolution !== undefined);
   return {
     parse: analysis.value.diagnostics,
     declarations: checkModuleDeclarations(
-      analysis.value,
+      info,
+      resolution,
       "m",
       new TypeTable(),
       new Map(),

@@ -162,12 +162,13 @@ const bump = (p: Positive): Positive => p + 1
   );
   assert(analysis.ok);
   const info = analysis.value.project.modules.get("m");
-  assert(info !== undefined);
+  const resolution = analysis.value.resolutions.get("m");
+  assert(info !== undefined && resolution !== undefined);
   for (const remaining of [0, 1]) {
     const budget = { remaining };
     const step = checkModuleStep(
-      analysis.value,
       info,
+      resolution,
       "m",
       new TypeTable(),
       reachedModules(analysis.value, "m", new Map(), new Map()),

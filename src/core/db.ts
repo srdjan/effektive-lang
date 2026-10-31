@@ -361,7 +361,8 @@ export class Program {
 
     for (const name of project.order) {
       const info = project.modules.get(name);
-      if (info === undefined) continue;
+      const resolution = analysis.resolutions.get(name);
+      if (info === undefined || resolution === undefined) continue;
       texts.set(info.path, info.tree.text);
       const seen = reachedModules(analysis, name, graphs, interfaces);
       const { reached } = seen;
@@ -382,8 +383,8 @@ export class Program {
         entry.rest !== rest
       ) {
         const { checked, graph } = checkModuleStep(
-          analysis,
           info,
+          resolution,
           name,
           table,
           seen,
