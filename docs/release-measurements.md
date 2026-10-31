@@ -14,7 +14,7 @@ deno task bench --full m1 m3 m4 --json docs/evidence/release-measurements-2026-1
 
 Exit status: **0**. M1/M3/M4 wall times were **47.7 / 20.5 / 72.5 seconds**. Environment: Deno **2.9.7**, V8 **15.0.245.2-rusty**, TypeScript **6.0.3**, `aarch64-apple-darwin`, **14 logical cores**. Timing uses `performance.now()`; execution is not pinned to a core. Memory units below are MiB (1,048,576 bytes).
 
-- [Raw samples](evidence/release-measurements-2026-10-21.json): all latency pairs, count deltas, memory baselines and step-end samples.
+- Raw samples: commit `5dfef94`, file `docs/evidence/release-measurements-2026-10-21.json`: all latency pairs, count deltas, memory baselines and step-end samples.
 - [Complete text report](evidence/release-measurements-2026-10-21.txt): latency distributions and row noise floors, work counts and session summaries.
 - [General measurement methodology](measurements.md).
 
@@ -108,7 +108,7 @@ The full M1/M3/M4 run of commit `4d68be0` passed the budget. All four large-inpu
 deno task bench --full m1 m3 m4 --json docs/evidence/release-measurements-2026-10-30.json > docs/evidence/release-measurements-2026-10-30.txt
 ```
 
-- [Raw samples](evidence/release-measurements-2026-10-30.json)
+- Raw samples: commit `5dfef94`, file `docs/evidence/release-measurements-2026-10-30.json`
 - [Complete text report](evidence/release-measurements-2026-10-30.txt)
 - [Comparison with the commit before the reset](evidence/release-measurements-2026-10-30-compare.txt)
 
