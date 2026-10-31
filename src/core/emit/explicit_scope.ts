@@ -1,9 +1,9 @@
 // Shared structural representation across emitted modules. Source cannot inspect
 // these fields; aliases carry the same object and completion cell across roots.
 import { type Doc, hard, join } from "./doc.ts";
-import type { Scope } from "./scope.ts";
+import type { ModuleState } from "./module_state.ts";
 
-export function scopeRuntimeDeclaration(scope: Scope): Doc {
+export function scopeRuntimeDeclaration(scope: ModuleState): Doc {
   const names = scope.scopeRuntime();
   const effect = scope.effect("Effect");
   const raw = scope.effect("Scope");

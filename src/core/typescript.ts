@@ -16,7 +16,8 @@ import {
 } from "./emit/sourcemap.ts";
 import { type Doc, render } from "./emit/doc.ts";
 import { constantTypeDoc, functionHeaderDoc } from "./emit/decls.ts";
-import { EmitFailure, Scope } from "./emit/scope.ts";
+import { EmitFailure } from "./emit/failure.ts";
+import { ModuleState } from "./emit/module_state.ts";
 import { sourceHoverAt } from "./editor.ts";
 import type { Span } from "./source.ts";
 
@@ -166,7 +167,7 @@ function backendOf(
   const declaration = ir.declarations.find((d) => d.id === id);
   if (declaration === undefined) return unavailable;
   try {
-    const scope = new Scope(ir, revision.config);
+    const scope = new ModuleState(ir, revision.config);
     if (declaration.kind === "function") {
       return {
         tag: "type",

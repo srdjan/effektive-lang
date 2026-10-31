@@ -1,14 +1,14 @@
 // The helper that maps an Exit to the outcome record of a `finally` binding.
 // A typed failure wins over a defect, and a defect wins over an interruption.
 import { type Doc, hard, join } from "./doc.ts";
-import type { Scope } from "./scope.ts";
+import type { ModuleState } from "./module_state.ts";
 
 /** The message of a defect value. The Defect arm of `catch` uses the same rule. */
 export function defectMessage(value: string): string {
   return `${value} instanceof Error ? ${value}.message : String(${value})`;
 }
 
-export function outcomeDeclaration(scope: Scope): Doc {
+export function outcomeDeclaration(scope: ModuleState): Doc {
   const names = scope.outcome();
   const exit = scope.effect("Exit");
   return join(hard, [

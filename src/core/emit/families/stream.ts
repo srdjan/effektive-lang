@@ -10,7 +10,7 @@ import {
   type Kid,
   PREC,
 } from "../emitted.ts";
-import { resolvedAs } from "../scope.ts";
+import { resolvedAs } from "../module_state.ts";
 import type { ExprOf } from "../shape.ts";
 import { channelTypeArguments, typeArguments, typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";

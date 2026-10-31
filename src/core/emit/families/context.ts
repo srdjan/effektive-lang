@@ -4,7 +4,7 @@
 import type { Expr, FunctionType, Type } from "../../ir.ts";
 import type { Doc, GroupId } from "../doc.ts";
 import type { Emitted, Kid, Mode } from "../emitted.ts";
-import type { ExprScope } from "../scope.ts";
+import type { ExprScope } from "../module_state.ts";
 
 /**
  * The operations that the builtin families use from the expression emitter.

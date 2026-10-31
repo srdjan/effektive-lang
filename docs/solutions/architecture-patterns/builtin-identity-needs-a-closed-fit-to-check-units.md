@@ -64,8 +64,8 @@ own operator table that runs before NI25 adoption.
   literal lowers to the existing `nominal` IR node, so the validator checks it
   like any construction and the IR needs no new kind.
 - A builtin id has no declaration, so the emitter needs explicit cases:
-  `nameOf` prints `number` (`src/core/emit/scope.ts` near 704), `resolve` reaches `int`
-  so the `$int` overflow guard stays (`src/core/emit/scope.ts` near 668), and the
+  `nameOf` prints `number` (`src/core/emit/module_state.ts` near 662), `resolve` reaches `int`
+  so the `$int` overflow guard stays (`src/core/emit/module_state.ts` near 622), and the
   `nominal` expression erases to its value (`src/core/emit/expr.ts` near 726). Without
   these, emission falls through to `Duration.make(...)`.
 - `int / int` gives `number` in Effektive, so an integral division result needs

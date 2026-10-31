@@ -5,7 +5,7 @@
 // the compiler rejects a kind that has neither.
 
 import type { Expr } from "../ir.ts";
-import type { EffectModule } from "./scope.ts";
+import type { EffectModule } from "./module_state.ts";
 import type { ExprOf } from "./shape.ts";
 
 /** The runtime helpers that the emitter writes for a closeable scope. */

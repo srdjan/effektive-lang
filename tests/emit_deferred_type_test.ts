@@ -1,10 +1,10 @@
 // The deferred Type kinds have no schema and no runtime value. `isDeferredType`
-// of emit/scope.ts is the one list of them. The table below has one sample for
+// of emit/module_state.ts is the one list of them. The table below has one sample for
 // every Type kind, so a new kind is a compile error here until it is classified.
 
 import { assertEquals } from "@std/assert";
 import type { Effects, Type } from "../src/core/ir.ts";
-import { isDeferredType } from "../src/core/emit/scope.ts";
+import { isDeferredType } from "../src/core/emit/module_state.ts";
 
 const NONE: Effects = { failures: [], requirements: [] };
 const STRING: Type = { kind: "primitive", name: "string" };

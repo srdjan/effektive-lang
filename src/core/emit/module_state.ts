@@ -24,6 +24,7 @@ import {
 import { generatedPathOf, moduleNameOf, normalizeRelative } from "../paths.ts";
 import type { ProjectConfig } from "../project.ts";
 import { compareText } from "../util.ts";
+import { internal } from "./failure.ts";
 import { collectBinderNames } from "./walk.ts";
 
 const INT_TYPE: Type = { kind: "primitive", name: "int" };
@@ -60,13 +61,6 @@ interface ScopeRuntimeNames {
   readonly provide: string;
   readonly register: string;
   readonly close: string;
-}
-
-/** Thrown inside the emitter only. `emitModule` turns it into an `EmitError`. */
-export class EmitFailure extends Error {}
-
-export function internal(message: string): EmitFailure {
-  return new EmitFailure(message);
 }
 
 // ------------------------------------------------------------------ deferred types
@@ -303,9 +297,13 @@ export type ExprScope =
   & EmitNames
   & Temporaries
   & TypeLookup
-  & Pick<Scope, "locals" | "hostBinding" | "fieldAdapters" | "fieldHelpers">;
+  & Pick<
+    ModuleState,
+    "locals" | "hostBinding" | "fieldAdapters" | "fieldHelpers"
+  >;
 
-export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
+export class ModuleState
+  implements EmitNames, Temporaries, TypeLookup, ImportLedger {
   readonly module: string;
   /** The source file of the module, as its header names it. */
   readonly source: string;

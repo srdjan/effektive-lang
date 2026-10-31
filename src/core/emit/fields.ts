@@ -2,7 +2,7 @@
 // shapes only: they do not traverse arbitrary host objects or deferred values.
 import type { Field, Type, TypeDecl } from "../ir.ts";
 import { type Doc, hard } from "./doc.ts";
-import type { ExprScope, TypeLookup } from "./scope.ts";
+import type { ExprScope, TypeLookup } from "./module_state.ts";
 
 export function fieldKey(name: string): string {
   return name === "__proto__" ? '["__proto__"]' : name;

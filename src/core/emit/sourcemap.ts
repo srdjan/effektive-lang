@@ -14,7 +14,7 @@
 
 import type { Result } from "../ir.ts";
 import { lineIndexOf, lineStarts } from "../source.ts";
-import { relativeSpecifier } from "./scope.ts";
+import { relativeSpecifier } from "./module_state.ts";
 import { recordAtOffset, type SpanTable, zeroBasedPosition } from "./spans.ts";
 
 // ------------------------------------------------------------------ base64 VLQ

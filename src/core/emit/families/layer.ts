@@ -3,7 +3,7 @@
 import { bracketed, type Doc } from "../doc.ts";
 import { callArguments, type Emitted, emitted } from "../emitted.ts";
 import { fieldKey } from "../fields.ts";
-import { internal } from "../scope.ts";
+import { internal } from "../failure.ts";
 import type { ExprOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";

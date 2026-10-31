@@ -76,14 +76,14 @@ import {
   PREC,
   type Run,
 } from "./emitted.ts";
+import { internal } from "./failure.ts";
 import {
   type ExprScope,
-  internal,
   methodOfCapability,
   resolvedAs,
   serviceOfCapability,
   tokenOfId,
-} from "./scope.ts";
+} from "./module_state.ts";
 import { channelTypeArguments, typeArguments, typeDoc } from "./types.ts";
 import {
   type Callee,

@@ -42,15 +42,15 @@ import {
 } from "./doc.ts";
 import { at } from "./emitted.ts";
 import { ExprEmitter } from "./expr.ts";
+import { internal } from "./failure.ts";
 import {
-  internal,
   isDeferredType,
+  type ModuleState,
   nameOfId,
-  type Scope,
   serviceOfCapability,
   servicesOf,
   tokenOfId,
-} from "./scope.ts";
+} from "./module_state.ts";
 import {
   effectTypeDoc,
   encodedTypeDoc,
@@ -330,7 +330,7 @@ export function orderConstants(ir: ModuleIR): ConstantDecl[] {
  * `"contract"`. Hover passes `"always"`, because it shows the inferred result.
  */
 export function functionHeaderDoc(
-  scope: Scope,
+  scope: ModuleState,
   d: FunctionDecl,
   result: "contract" | "always",
 ): Doc {
@@ -351,7 +351,7 @@ export function functionHeaderDoc(
 }
 
 /** The declared type of a constant. */
-export function constantTypeDoc(scope: Scope, d: ConstantDecl): Doc {
+export function constantTypeDoc(scope: ModuleState, d: ConstantDecl): Doc {
   return typeDoc(scope, d.type);
 }
 
@@ -359,7 +359,7 @@ export class DeclarationEmitter {
   readonly expr: ExprEmitter;
 
   constructor(
-    readonly scope: Scope,
+    readonly scope: ModuleState,
     readonly exported: ReadonlySet<DeclarationId>,
     private readonly groups: ReadonlyMap<
       DeclarationId,

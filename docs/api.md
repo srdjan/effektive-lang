@@ -100,7 +100,8 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     sourcemap.ts   Version 3 source maps and the base64 VLQ coding.
     tsc.ts         Parser for deno check output and the mapping of its errors.
     doc.ts         The printer: documents, layout at 80 columns, span tags.
-    scope.ts       Names, fresh names, imports, host bindings, specifiers.
+    module_state.ts ModuleState: names, fresh names, imports, host bindings, specifiers.
+    failure.ts     EmitFailure and internal: the failure that the emitter throws inside one module.
     calls.ts       The simple calls: tables of the structural and leaf kinds that print as callee(operands).
     fields.ts      Own-field construction, optional reads and declared schema input adapters.
     shape.ts       The shape table of every IR expression kind: children, deferred children, and leaf effects.

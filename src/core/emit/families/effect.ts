@@ -11,7 +11,7 @@ import {
   type Mode,
   PREC,
 } from "../emitted.ts";
-import { resolvedAs } from "../scope.ts";
+import { resolvedAs } from "../module_state.ts";
 import type { ExprOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";

@@ -8,7 +8,8 @@ import {
   type Kid,
   PREC,
 } from "../emitted.ts";
-import { internal, resolvedAs } from "../scope.ts";
+import { internal } from "../failure.ts";
+import { resolvedAs } from "../module_state.ts";
 import type { ExprOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";

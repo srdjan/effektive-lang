@@ -21,12 +21,12 @@ import {
   orderTypeLevel,
   recursiveGroups,
 } from "./decls.ts";
+import { EmitFailure } from "./failure.ts";
 import {
-  EmitFailure,
   type HelperKey,
   type ImportGroup,
-  Scope,
-} from "./scope.ts";
+  ModuleState,
+} from "./module_state.ts";
 import { scopeRuntimeDeclaration } from "./explicit_scope.ts";
 import { outcomeDeclaration } from "./outcome.ts";
 
@@ -119,7 +119,7 @@ function normalized(ir: ModuleIR): ModuleIR {
 
 function build(source: ModuleIR, context: EmitContext): EmittedModule {
   const ir = normalized(source);
-  const scope = new Scope(ir, context.config);
+  const scope = new ModuleState(ir, context.config);
   const exported = exportedIds(ir);
   const emitter = new DeclarationEmitter(
     scope,

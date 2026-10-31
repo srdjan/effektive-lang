@@ -1,7 +1,7 @@
 // Emission of the Scope builtins: forkScoped and withResource.
 
 import { at, callArguments, type Emitted, emitted, PREC } from "../emitted.ts";
-import { internal } from "../scope.ts";
+import { internal } from "../failure.ts";
 import type { ExprOf } from "../shape.ts";
 import type { ExprCore } from "./context.ts";
 import type { ClosureExpr } from "../../ir.ts";
