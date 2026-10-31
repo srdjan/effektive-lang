@@ -383,6 +383,59 @@ interface TypeTableState {
   readonly errorRecords: Map<ErrorId, TypeRef>;
 }
 
+/**
+ * The children of each node kind except `named`, in visit order. The first
+ * match of `foreignSealedOf` selects a diagnostic, so this order is observable.
+ * A switch over every kind makes a new kind a compile error here.
+ */
+function structuralChildren(
+  node: Exclude<TypeNode, { readonly kind: "named" }>,
+): readonly TypeRef[] {
+  switch (node.kind) {
+    case "record":
+      return node.fields.map((field) => field.type);
+    case "array":
+    case "option":
+    case "set":
+    case "ref":
+    case "stream":
+      return [node.element];
+    case "map":
+      return [node.key, node.value];
+    case "tuple":
+      return node.elements;
+    case "union":
+      return node.members;
+    case "retry-schedule":
+      return [node.error];
+    case "codec":
+      return [node.decoded, node.encoded];
+    case "schema":
+      return node.makeInput === undefined
+        ? [node.decoded, node.encoded]
+        : [node.decoded, node.encoded, node.makeInput];
+    case "fiber":
+    case "effect":
+      return [node.result];
+    case "schedule":
+      return [node.output, node.input];
+    case "sink":
+      return [node.input, node.result, node.leftover];
+    case "function":
+      return [...node.parameters, node.result];
+    case "primitive":
+    case "literal":
+    case "closeable-scope":
+    case "provider":
+    case "error":
+      return [];
+    default: {
+      const unreachable: never = node;
+      return unreachable;
+    }
+  }
+}
+
 export class TypeTable {
   private readonly storage: TypeStorage;
   private readonly defs: Map<TypeId, AliasDef>;
@@ -907,72 +960,24 @@ export class TypeTable {
   /** A foreign sealed nominal identity contained in this type, if one exists. */
   foreignSealedOf(module: string, ref: TypeRef): TypeId | undefined {
     const seen = new Set<TypeRef>();
-    const visitAll = (refs: readonly TypeRef[]): TypeId | undefined => {
-      for (const child of refs) {
-        const found = visit(child);
-        if (found !== undefined) return found;
-      }
-      return undefined;
-    };
     const visit = (current: TypeRef): TypeId | undefined => {
       if (seen.has(current)) return undefined;
       seen.add(current);
       const node = this.node(current);
-      switch (node.kind) {
-        case "named": {
-          if (!isErrorId(node.id) && !this.ownsSealed(module, node.id)) {
-            return node.id;
-          }
-          const target = isErrorId(node.id)
-            ? this.errorRecords.get(node.id)
-            : this.aliasOf(node.id);
-          return target === undefined ? undefined : visit(target);
+      if (node.kind === "named") {
+        if (!isErrorId(node.id) && !this.ownsSealed(module, node.id)) {
+          return node.id;
         }
-        case "record":
-          return visitAll(node.fields.map((field) => field.type));
-        case "array":
-        case "option":
-        case "set":
-        case "ref":
-          return visit(node.element);
-        case "map":
-          return visitAll([node.key, node.value]);
-        case "tuple":
-          return visitAll(node.elements);
-        case "union":
-          return visitAll(node.members);
-        case "retry-schedule":
-          return visit(node.error);
-        case "codec":
-          return visitAll([node.decoded, node.encoded]);
-        case "schema":
-          return visitAll([
-            node.decoded,
-            node.encoded,
-            ...(node.makeInput === undefined ? [] : [node.makeInput]),
-          ]);
-        case "fiber":
-        case "effect":
-          return visit(node.result);
-        case "stream":
-          return visit(node.element);
-        case "schedule":
-          return visitAll([node.output, node.input]);
-        case "sink":
-          return visitAll([node.input, node.result, node.leftover]);
-        case "function":
-          return visitAll([...node.parameters, node.result]);
-        case "primitive":
-        case "literal":
-        case "closeable-scope":
-        case "provider":
-        case "error":
-          return undefined;
-        default: {
-          const unreachable: never = node;
-          return unreachable;
-        }
+        const target = isErrorId(node.id)
+          ? this.errorRecords.get(node.id)
+          : this.aliasOf(node.id);
+        return target === undefined ? undefined : visit(target);
       }
+      for (const child of structuralChildren(node)) {
+        const found = visit(child);
+        if (found !== undefined) return found;
+      }
+      return undefined;
     };
     return visit(ref);
   }
@@ -1161,61 +1166,16 @@ export class TypeTable {
   /**
    * The types that one level below `node` counts toward its height. An alias
    * name has its target as its child, unless the alias is guarded or undefined.
-   * A switch over every node kind makes a new kind a compile error here.
    */
   private childRefs(node: TypeNode): readonly TypeRef[] {
-    switch (node.kind) {
-      case "named": {
-        if (isErrorId(node.id)) return [];
-        const def = this.defs.get(node.id);
-        if (
-          def === undefined || def.kind === "opaque" || def.kind === "tagged" ||
-          def.guarded
-        ) return [];
-        return [def.body];
-      }
-      case "record":
-        return node.fields.map((field) => field.type);
-      case "array":
-      case "option":
-      case "set":
-      case "ref":
-      case "stream":
-        return [node.element];
-      case "map":
-        return [node.key, node.value];
-      case "tuple":
-        return node.elements;
-      case "union":
-        return node.members;
-      case "function":
-        return [node.result, ...node.parameters];
-      case "effect":
-      case "fiber":
-        return [node.result];
-      case "retry-schedule":
-        return [node.error];
-      case "schema":
-        return node.makeInput === undefined
-          ? [node.decoded, node.encoded]
-          : [node.makeInput, node.decoded, node.encoded];
-      case "codec":
-        return [node.decoded, node.encoded];
-      case "schedule":
-        return [node.output, node.input];
-      case "sink":
-        return [node.input, node.result, node.leftover];
-      case "primitive":
-      case "literal":
-      case "provider":
-      case "closeable-scope":
-      case "error":
-        return [];
-      default: {
-        const unreachable: never = node;
-        return unreachable;
-      }
-    }
+    if (node.kind !== "named") return structuralChildren(node);
+    if (isErrorId(node.id)) return [];
+    const def = this.defs.get(node.id);
+    if (
+      def === undefined || def.kind === "opaque" || def.kind === "tagged" ||
+      def.guarded
+    ) return [];
+    return [def.body];
   }
 
   // -------------------------------------------------------------- compatibility

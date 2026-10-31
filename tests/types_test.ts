@@ -1120,6 +1120,40 @@ Deno.test("foreignSealedOf finds a sealed type that only the make input of a sch
   assertEquals(t.containsForeignSealed("other", withoutMakeInput), false);
 });
 
+const SEALED_B = "type:m#SealedB" as TypeId;
+
+Deno.test("foreignSealedOf gives the first parameter of a function with two foreign sealed children", () => {
+  const t = fresh();
+  t.defineIdentity(SEALED, t.int, true);
+  t.defineIdentity(SEALED_B, t.int, true);
+  const inParameter = pureFn(t, [t.named(SEALED_B)], t.named(SEALED));
+  assertEquals(t.foreignSealedOf("other", inParameter), SEALED_B);
+});
+
+Deno.test("foreignSealedOf enters an error field", () => {
+  const t = fresh();
+  t.defineIdentity(SEALED, t.int, true);
+  t.defineError(MISSING, t.record([field("id", t.named(SEALED))]));
+  assertEquals(t.foreignSealedOf("other", t.named(MISSING)), SEALED);
+  assertEquals(t.foreignSealedOf("m", t.named(MISSING)), undefined);
+});
+
+Deno.test("foreignSealedOf enters a tagged body", () => {
+  const t = fresh();
+  t.defineIdentity(SEALED, t.int, true);
+  t.defineTagged(USER, t.record([field("id", t.named(SEALED))]), false);
+  assertEquals(t.foreignSealedOf("other", t.named(USER)), SEALED);
+  assertEquals(t.foreignSealedOf("m", t.named(USER)), undefined);
+});
+
+Deno.test("foreignSealedOf enters a guarded alias", () => {
+  const t = fresh();
+  t.defineIdentity(SEALED, t.int, true);
+  t.defineAlias(ID_A, t.named(SEALED), true);
+  assertEquals(t.foreignSealedOf("other", t.named(ID_A)), SEALED);
+  assertEquals(t.foreignSealedOf("m", t.named(ID_A)), undefined);
+});
+
 Deno.test("aliasOf is undefined for an undefined type", () => {
   const t = fresh();
   assertEquals(t.aliasOf("type:m#Nowhere" as TypeId), undefined);
