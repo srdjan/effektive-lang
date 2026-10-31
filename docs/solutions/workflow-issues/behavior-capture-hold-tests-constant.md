@@ -12,8 +12,9 @@ applies_when:
   - "A change renames or removes a source form, so tests rewrite their own Effektive sources"
   - "A capture shows one new or one missing program record and nothing else"
   - "A refactor changes the CLI or the language server output, which the capture does not record"
+  - "A capture spans many phases, and the head tests do not load on the base source"
 tags: [behavior-capture, oracle, refactor, git-commit-tree, byte-identity, rederive, run-variance, characterization-test]
-last_updated: 2026-10-26
+last_updated: 2026-10-31
 ---
 
 # Hold the test set constant to read behavior:capture when a change also moves tests
@@ -80,6 +81,28 @@ use a byte-identity proof: extract the base compiler with
 compile the rewritten source with the head compiler, and compare the emitted
 TypeScript, the serialized IR, the interface hash, and the hover text. The S1,
 S2, and S4 builtin removals were verified this way.
+
+## A span that is too long to hold the tests constant
+
+The method also fails over a span of many phases. The head tests can import a
+renamed file or a name that the base does not have, so they do not load on the
+base source. Run the plain capture, then explain each missing row:
+
+1. Find the last revision with the base source:
+   `git diff --shortstat <base> <rev> -- src` prints nothing.
+2. Run `deno task behavior:capture <base> <rev>`. No source changed in this
+   span, so each missing row of this capture comes from a test edit.
+3. Compare the two missing lists with `comm -13` on sorted rows. A row with an
+   equal kind and equal hashes in both lists has the same cause.
+4. Search the capture logs of the later phases for each row that remains. A row
+   in the plain capture of a phase, and not in its held-tests capture, comes
+   from a test edit of that phase.
+5. Treat a row that no log explains as a behavior change.
+
+This proof is weaker than a held-tests capture. It gives the cause of each
+missing row, but an input that left the test set has no record at the head. So
+this proof says nothing about the head behavior for that input. Step 4 also
+needs the phase logs, so keep each capture log until the work closes.
 
 ## Run variance and blind spots
 
@@ -186,3 +209,10 @@ moved its tests to `hoverAt`. The direct capture
 plus the head tests) against HEAD reported "new 0, missing 0". That result
 showed that the source changes of the batch kept behavior, and that the whole
 difference came from the test move.
+
+The foundation reset captured `80dfbff` against `de79193`, and 15 missing rows
+stayed outside the expected `emit-error` and `lower-error` kinds: 12 `check` and
+3 `lower`. The source of `d64b7cb` equals the source of `80dfbff`, and the capture
+of that span held 11 of the 15 rows. The plain capture of FN6 unit 4 held the
+other 4 rows, and its held-tests capture held none of them. So test edits caused
+all 15 rows.
