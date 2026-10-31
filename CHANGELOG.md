@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.11.1 - 2026-10-30
+
 - Retained program revisions keep their original type definitions for delayed
   lowering and editor queries.
 - The playground build rejects repository output directories whose names start
