@@ -1,7 +1,11 @@
 // Runs emitted TypeScript against the strict target configuration.
 
 import { assert, assertEquals } from "@std/assert";
-import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
+import {
+  TARGET_COMPILER_OPTIONS,
+  TARGET_IMPORTS,
+  tscLock,
+} from "../src/cli/tsc.ts";
 import {
   checkProject,
   emitProject,
@@ -99,11 +103,12 @@ export async function runStrictTarget(
       Deno.writeTextFileSync(`${dir}/${path}`, text);
     }
     Deno.writeTextFileSync(`${dir}/run.ts`, run);
+    Deno.writeTextFileSync(`${dir}/deno.lock`, tscLock());
     const decoder = new TextDecoder();
     let stdout = "";
     for (const command of ["check", "run"]) {
       const result = await new Deno.Command(Deno.execPath(), {
-        args: [command, "--no-lock", "run.ts"],
+        args: [command, "--lock=deno.lock", "run.ts"],
         cwd: dir,
         stdout: "piped",
         stderr: "piped",

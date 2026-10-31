@@ -2,6 +2,7 @@
 // validation and target checking, type-check the entry point, and run it.
 
 import { assertEquals, assertNotEquals } from "@std/assert";
+import { tscLock } from "../src/cli/tsc.ts";
 import { copyDirectory, FIXTURES } from "./helpers.ts";
 import { withTemporaryDirectory } from "./process_helpers.ts";
 
@@ -22,6 +23,7 @@ async function run(args: string[], cwd: string | URL): Promise<string> {
 Deno.test("the tutorial project builds, type-checks, and prints the shown output", async () => {
   await withTemporaryDirectory("effektive-tutorial-", async (dir) => {
     copyDirectory(new URL("tutorial/", FIXTURES), dir);
+    Deno.writeTextFileSync(`${dir}/deno.lock`, tscLock());
     await run(
       ["task", "effektive", "build", dir, "--validate", "--tsc"],
       new URL("../", import.meta.url),
@@ -30,7 +32,7 @@ Deno.test("the tutorial project builds, type-checks, and prints the shown output
     const entry = [
       "--config",
       `${dir}/deno.json`,
-      "--no-lock",
+      `--lock=${dir}/deno.lock`,
       `${dir}/main.ts`,
     ];
     await run(["check", ...entry], root);
