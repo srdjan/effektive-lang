@@ -1,120 +1,134 @@
-# effektive-lang
+# Effektive
 
-Effektive is a small functional language that transpiles to Effect-TS 4. This
-repository holds the transpiler core library, its command-line tool, a language
-server, a VS Code client, and a browser playground.
+**Plain code. Typed effects.**
 
-The canonical specification is in the sibling repository
-`../effektive/public/effektive-spec.html` and governs the language. The
-implemented language rules are in
-[docs/language-rules.md](docs/language-rules.md).
+Effektive is a small functional language that compiles to TypeScript for Effect 4.
+You write application logic with direct function calls. The compiler checks each
+exported function's result, expected failures, and required service operations.
+
+[Tutorial](docs/tutorial.md) · [Specification](https://effektive.timok.deno.net/effektive-spec.html) ·
+[Playground](#playground) · [Project status](docs/status.md)
+
+```eff
+export type BookId = string
+export type Title = string
+export type Book = { id: BookId, title: Title }
+
+export error BookMissing = { id: BookId }
+export error StoreDown = { message: string }
+
+export service Shelf {
+  find(id: BookId): Option<Book> fails StoreDown
+}
+
+export const findBook = (id: BookId): Book
+  fails BookMissing | StoreDown
+  uses Shelf.find =>
+  Shelf.find(id) ?? fail(BookMissing({ id }))
+```
+
+`findBook` returns a `Book`, can fail with either declared error, and requires
+only `Shelf.find`. The `??` operator evaluates the fallback only when the service
+returns `None`. The compiler rejects undeclared failures and service operations.
 
 ## Features
 
-The command-line tool checks a project, writes the generated TypeScript with
-source maps, and can run `deno check` over the result. The `watch` command
-builds again after each source change. The language server gives diagnostics,
-hover, go-to-definition, references, rename, completion, semantic tokens, and
-contract quick fixes. The VS Code client shows the generated TypeScript and
-writes it on save. The playground runs the core in the browser and shows the
-problems and the generated TypeScript.
+| Capability         | What it gives you                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Explicit contracts | Exported functions name their result, failures, and service operations. The compiler infers contracts for private functions.         |
+| Domain types       | `BookId` and `Title` have separate identities even though both contain strings.                                                      |
+| Effect runtime     | Concurrency, streams, and resource management compile to Effect 4. Typed host adapters connect external packages.                    |
+| Editor support     | The language server supplies diagnostics, navigation, rename, completion, and contract fixes. VS Code previews generated TypeScript. |
 
 ## Requirements
 
 The project needs Deno 2.9.8. Generated TypeScript targets Effect 4.0.5.
-
-Each slow test run starts from an empty cache. It downloads `@std/assert` from
-jsr and the Effect packages from npm, so it needs network access. The command
-`deno task check` also needs npm and `unzip`, because the installation test runs
-`npm ci` and unpacks the extension archive. To build the VS Code extension, you
-also need Node 20 or later with npm.
+Building the VS Code extension also requires Node 20 or later with npm.
 
 ## Installation
 
-To use the tools from a checkout, clone the repository and run the tasks from
-its root. No other installation step is necessary.
+Clone the repository and enter the checkout:
 
-To install the standalone command-line tool and the VS Code extension, read
-[docs/installation.md](docs/installation.md).
+```sh
+git clone https://github.com/srdjan/effective-lang.git
+cd effective-lang
+```
+
+The commands below run directly from the checkout.
+[Installation instructions](docs/installation.md) cover the standalone command-line
+tool and the VS Code extension.
 
 ## Usage
 
-To learn the language, read [docs/tutorial.md](docs/tutorial.md). It builds and
-runs a small application step by step.
-
-Run each command from the repository root. Give the project directory that holds
-`effektive.json`:
+Check the example project, then build its TypeScript:
 
 ```sh
-deno task effektive check fixtures/examples
-deno task effektive build fixtures/examples
-deno task effektive watch fixtures/examples
+deno task effektive check fixtures/tutorial
+deno task effektive build fixtures/tutorial --validate --tsc
 ```
 
-`check` prints the diagnostics. `build` also writes `<module>.ts` and
-`<module>.ts.map` next to each source file, and a companion module
-`<name>.effi.ts` for each host interface file. `watch` builds again after each
-source change. [docs/api.md](docs/api.md) describes the command-line tool, the
-language server, the VS Code client, and the playground.
+`--validate` independently checks the typed intermediate representation.
+`--tsc` checks the generated TypeScript. The first target check needs network
+access to download dependencies.
 
-## Development
+```mermaid
+flowchart LR
+  A["Effektive source"] --> B["Checked contracts"]
+  B --> C["TypeScript + source maps"]
+  C --> D["Effect 4 runtime"]
+```
 
-Run `deno task check` before each commit. It runs the format check, the lint,
-the type check, the fast tests, and the slow tests. Run `deno task test` for the
-fast tests only.
+`build` writes `.ts` and `.ts.map` files beside the source files. For automatic
+rebuilds, run `deno task effektive watch fixtures/tutorial`.
 
-[docs/development.md](docs/development.md) lists every task, the repository
-layout, the error fixture convention, and the format and lint scope.
+The [tutorial](docs/tutorial.md) extends the example into a library application
+with typed failures and resource cleanup. It includes the TypeScript host that
+supplies services and runs the generated program.
 
-## Project layout
+### Playground
 
-| Directory         | Content                                                                 |
-| ----------------- | ----------------------------------------------------------------------- |
-| `src/core/`       | The core library: parser, checker, lowering, IR validator, and emitter. |
-| `src/cli/`        | The command-line tool.                                                  |
-| `src/host/`       | The host adapters that the command-line tool and the server share.      |
-| `src/lsp/`        | The language server.                                                    |
-| `editors/vscode/` | The VS Code client.                                                     |
-| `playground/`     | The browser playground.                                                 |
-| `bench/`          | The measurement harnesses.                                              |
-| `scripts/`        | The scripts that the tasks run.                                         |
-| `tests/`          | Tests and test helpers.                                                 |
-| `fixtures/`       | Test inputs.                                                            |
-| `docs/`           | Design, rules, status, plans, and reference documents.                  |
+Start the local browser playground:
+
+```sh
+deno task playground:serve
+```
+
+Open <http://127.0.0.1:8790> to edit source and inspect diagnostics and generated
+TypeScript.
 
 ## Documentation
 
-| Topic                                                          | Document                                                                                     |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Release notes                                                  | [CHANGELOG.md](CHANGELOG.md)                                                                 |
-| Tasks, layout, fixture conventions, format and lint scope      | [docs/development.md](docs/development.md)                                                   |
-| Pipeline, layering rules, and decision record                  | [docs/architecture.md](docs/architecture.md)                                                 |
-| Language rules that the implementation chose                   | [docs/language-rules.md](docs/language-rules.md)                                             |
-| Project status and open items                                  | [docs/status.md](docs/status.md)                                                             |
-| API, command line, language server, VS Code client, playground | [docs/api.md](docs/api.md)                                                                   |
-| Editor queries and rename boundaries                           | [docs/editor.md](docs/editor.md)                                                             |
-| Local installation and artifacts                               | [docs/installation.md](docs/installation.md)                                                 |
-| HTTP/SQLite integration acceptance                             | [docs/integration.md](docs/integration.md)                                                   |
-| Measurement harnesses and protocol                             | [docs/measurements.md](docs/measurements.md)                                                 |
-| Session logs, report, and replay                               | [docs/logging.md](docs/logging.md)                                                           |
-| Release benchmark results                                      | [docs/release-measurements.md](docs/release-measurements.md)                                 |
-| Playground browser acceptance                                  | [docs/archive/playground-review-2026-10-21.md](docs/archive/playground-review-2026-10-21.md) |
-| Rejected ideas                                                 | [docs/rejected.md](docs/rejected.md)                                                         |
-| Solved problems                                                | `docs/solutions/`                                                                            |
-| Live plans                                                     | `docs/plans/`                                                                                |
-| Finished plans and ledgers                                     | `docs/archive/`                                                                              |
-| Shared terms                                                   | [CONCEPTS.md](CONCEPTS.md)                                                                   |
+| Start here                               | Read next                                                   |
+| ---------------------------------------- | ----------------------------------------------------------- |
+| [Tutorial](docs/tutorial.md)             | Build and run an application.                               |
+| [Language rules](docs/language-rules.md) | Learn the implemented syntax and contracts.                 |
+| [Tool reference](docs/api.md)            | Use the command-line tool, editor, and playground.          |
+| [Architecture](docs/architecture.md)     | Follow the compiler pipeline and independent validation.    |
+| [Development guide](docs/development.md) | Find tasks, the repository layout, and fixture conventions. |
+| [Changelog](CHANGELOG.md)                | Review changes between versions.                            |
+
+The [canonical specification](https://effektive.timok.deno.net/effektive-spec.html)
+governs the language. Its source is in `../effektive/public/effektive-spec.html`.
 
 ## Status
 
-The compiler, the language server, and the browser playground exist. The three application gates pass with existing language forms. Two more
-applications are witnesses and not gates: order-lifecycle for types with
-identity, and portable-publisher for portability.
-[docs/status.md](docs/status.md) gives the project status, the application
-stopping rule, the open items, and the deferred gaps.
+The repository includes the compiler, command-line tool, language server,
+VS Code extension, and browser playground. The
+[project status](docs/status.md) records application checks, remaining gaps,
+and release acceptance limits.
 
 ## Contributing
 
-[AGENTS.md](AGENTS.md) gives the repository rules: structure, commands, style,
-tests, commits, and plan ID prefixes. Use one commit for each complete unit of
-work, and run `deno task check` before each commit.
+Read [AGENTS.md](AGENTS.md) for repository rules. Run the complete check before
+each commit:
+
+```sh
+deno task check
+```
+
+The check runs formatting, lint, type checking, and all tests. It needs network
+access, npm, and `unzip`. For the fast tests alone, run `deno task test`.
+
+## License
+
+[MIT](LICENSE) - Copyright 2026 Srdjan Strbanovic.
