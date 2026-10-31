@@ -96,7 +96,7 @@ import {
 } from "./types.ts";
 import { sortedUnique } from "./util.ts";
 import { showType, showTypes } from "./type_show.ts";
-import { isErrorId, shortName } from "./ids.ts";
+import { isErrorId, isTypeId, shortName } from "./ids.ts";
 import {
   type Arg,
   type BuiltinContext,
@@ -355,8 +355,8 @@ class BodyChecker
     ref: TypeRef,
   ): { readonly id: TypeId; readonly base: TypeRef } | undefined {
     const node = this.table.node(this.table.unfoldTransparent(ref));
-    if (node.kind !== "named" || !node.id.startsWith("type:")) return undefined;
-    const id = node.id as TypeId;
+    if (node.kind !== "named" || !isTypeId(node.id)) return undefined;
+    const id = node.id;
     if (this.table.predicateOf(id) === undefined) return undefined;
     const base = this.table.identityBaseOf(id);
     return base === undefined ? undefined : { id, base };
@@ -845,8 +845,8 @@ class BodyChecker
         this.checkedTypeFits(source, member, depth + 1)
       );
     }
-    if (t.kind === "named" && t.id.startsWith("type:") && s.kind !== "named") {
-      const id = t.id as TypeId;
+    if (t.kind === "named" && isTypeId(t.id) && s.kind !== "named") {
+      const id = t.id;
       const base = this.table.identityBaseOf(id);
       const predicate = this.table.predicateOf(id);
       if (
@@ -858,8 +858,8 @@ class BodyChecker
       return base !== undefined &&
         this.checkedTypeFits(source, base, depth + 1);
     }
-    if (s.kind === "named" && s.id.startsWith("type:") && t.kind !== "named") {
-      const id = s.id as TypeId;
+    if (s.kind === "named" && isTypeId(s.id) && t.kind !== "named") {
+      const id = s.id;
       if (!this.table.ownsSealed(this.module, id)) return false;
       const base = this.table.identityBaseOf(id) ??
         this.table.taggedRecordOf(id);
@@ -2076,12 +2076,12 @@ class BodyChecker
     const result = this.finish(node, base.type, combine(infos));
     const identity = this.table.node(this.table.unfoldTransparent(base.type));
     if (
-      identity.kind === "named" && identity.id.startsWith("type:") &&
-      this.table.predicateOf(identity.id as TypeId) !== undefined
+      identity.kind === "named" && isTypeId(identity.id) &&
+      this.table.predicateOf(identity.id) !== undefined
     ) {
       this.preserveRefinement(
         node,
-        identity.id as TypeId,
+        identity.id,
         "the record update",
       );
     }
@@ -2141,12 +2141,12 @@ class BodyChecker
       (operator === "+" || operator === "-" || operator === "*" ||
         operator === "/") &&
       identity.kind === "named" &&
-      identity.id.startsWith("type:") &&
-      this.table.predicateOf(identity.id as TypeId) !== undefined
+      isTypeId(identity.id) &&
+      this.table.predicateOf(identity.id) !== undefined
     ) {
       this.preserveRefinement(
         node,
-        identity.id as TypeId,
+        identity.id,
         "the arithmetic result",
       );
     }

@@ -18,6 +18,7 @@ import type {
   Field,
   FunctionType,
   Handler,
+  LocalId,
   Parameter,
   Pattern,
   Step,
@@ -910,18 +911,18 @@ export class ExprEmitter implements ExprCore {
     return String(value);
   }
 
-  private reference(target: string): Doc {
+  private reference(target: LocalId | ValueId): Doc {
     if (isLocalId(target)) {
       const name = this.scope.locals.get(target);
       if (name === undefined) throw internal(`unbound local ${target}`);
       return name;
     }
-    const host = this.scope.hostBinding(target as ValueId);
+    const host = this.scope.hostBinding(target);
     if (host !== undefined) return host.hostName;
     if (builtinInstanceName(target) !== undefined) {
       throw internal(`the builtin ${target} is not in callee position`);
     }
-    return this.scope.nameOf(target as ValueId);
+    return this.scope.nameOf(target);
   }
 
   private field(

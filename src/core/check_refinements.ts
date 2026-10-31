@@ -1,4 +1,5 @@
 import { compareText } from "./util.ts";
+import { isTypeId } from "./ids.ts";
 import type { LocalId, RefinementProof, TypeId } from "./ir.ts";
 import { and, entails, not, type Predicate, type Term } from "./predicates.ts";
 import { flattenMembers } from "./patterns.ts";
@@ -407,8 +408,8 @@ function refinedTarget(
   ref: TypeRef,
 ): { readonly id: TypeId; readonly predicate: Predicate } | undefined {
   const node = table.node(table.unfoldTransparent(ref));
-  if (node.kind !== "named" || !node.id.startsWith("type:")) return undefined;
-  const id = node.id as TypeId;
+  if (node.kind !== "named" || !isTypeId(node.id)) return undefined;
+  const id = node.id;
   const predicate = table.predicateOf(id);
   return predicate === undefined ? undefined : { id, predicate };
 }
@@ -422,8 +423,8 @@ function typeAssumptionsAt(
   if (seen.has(ref)) return [];
   const nextSeen = new Set(seen).add(ref);
   const node = table.node(table.unfoldTransparent(ref));
-  if (node.kind === "named" && node.id.startsWith("type:")) {
-    const id = node.id as TypeId;
+  if (node.kind === "named" && isTypeId(node.id)) {
+    const id = node.id;
     const assumptions: Predicate[] = [];
     const predicate = table.predicateOf(id);
     if (predicate !== undefined) {
