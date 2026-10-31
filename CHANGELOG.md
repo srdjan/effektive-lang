@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+This reset changes no source form, no wire format, and no emitted text.
+
+- `frontend.ts` and `typescript.ts` no longer export 20 names that no code
+  imported. Six span helpers left the core, and nine unread fields left
+  exported records.
+- The declaration index holds no declaration hashes, and no header or body
+  spans.
+- An emission failure has the tag `internal`. The tag `unsupported` is gone.
+- `deno task coverage` enforces floors over both test suites, and
+  `deno task release` runs it.
+- `deno task mutate` measures fault detection, and
+  `fixtures/mutation/survivors.json` records each accepted survivor.
+- `docs/testing.md` describes each test layer and each oracle.
+- `deno task release` moves the "Unreleased" entries, sets the version, and
+  runs the release checks.
+- Raw measurement JSON files and review PNG files left the tree. Commit
+  `5dfef94` holds them.
+
 ## 0.11.1 - 2026-10-30
 
 - Retained program revisions keep their original type definitions for delayed

@@ -139,6 +139,27 @@ The refactor oracle for command-line and language server output. `fixtures/surfa
 `tests/surface_test.ts` compares the current build with these files. Run `deno task surface:update` only after a deliberate change of that output.
 _Avoid: golden file, transcript_
 
+### Mutant
+
+One small fault that `deno task mutate` makes in a copy of the source, such as a flipped comparison.
+
+A test kills a mutant when the test fails against that fault. A mutant that no test kills is a survivor, and it shows a missing test or a change that no input can observe.
+_Avoid: mutation fixture, which is a forged IR in `fixtures/validate/`_
+
+### Survivor register
+
+The file `fixtures/mutation/survivors.json`, with one row for each survivor that the project accepts, and the reason.
+
+`deno task mutate` exits 1 for a survivor with no row and for a row that matches no site, so the register stays current.
+_Avoid: ignore list_
+
+### Property test
+
+A test that generates its inputs from a literal table of seeds and asserts one law over each input.
+
+The test also asserts literal counts of each outcome, so it cannot pass with no effective input. `docs/testing.md` lists each property test and what it can miss.
+_Avoid: fuzz test_
+
 ## Inferred inputs
 
 ### Input contract
