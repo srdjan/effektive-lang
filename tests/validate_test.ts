@@ -1,4 +1,4 @@
-// Tests for part A5: the independent IR validator. The tests run through the
+// Tests for the independent IR validator. The tests run through the
 // public entries `validateModule` and `validateProject`. Differential tests
 // lower the fixture programs and require zero diagnostics. Mutation tests
 // change one fact of a lowered IR and require the diagnostic of its area.

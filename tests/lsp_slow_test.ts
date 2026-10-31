@@ -1,4 +1,4 @@
-// Slow tests of the language server (plan L3a and L3b). They start the real
+// Slow tests of the language server. They start the real
 // server as a subprocess on a copy of `fixtures/examples` and talk to it over
 // stdio. Nothing is written under fixtures/.
 

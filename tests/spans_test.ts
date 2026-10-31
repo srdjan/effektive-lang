@@ -1,4 +1,4 @@
-// Tests for part A6b: the span table. They go through the public functions of
+// Tests for the span table. They go through the public functions of
 // src/core/emit/spans.ts on the emitted examples and forms.
 
 import { assert, assertEquals } from "@std/assert";

@@ -140,7 +140,7 @@ function fenced(language: string, body: string): string {
   return "```" + language + "\n" + body + "\n```";
 }
 
-/** `textDocument/hover` (plan 5.6). */
+/** `textDocument/hover`. */
 export function hoverRequest(
   params: PositionParams,
   ctx: ServerContext,
@@ -169,7 +169,7 @@ export function hoverRequest(
 
 // ---- Definition -------------------------------------------------------------
 
-/** `textDocument/definition` (plan 5.7). */
+/** `textDocument/definition`. */
 export function definitionRequest(
   params: PositionParams,
   ctx: ServerContext,
@@ -214,7 +214,7 @@ function convertSymbol(
 }
 
 /**
- * `textDocument/documentSymbol` (plan 5.7). The text is the open document, else
+ * `textDocument/documentSymbol`. The text is the open document, else
  * the disk text, else the text of the revision. Without a revision, the file is
  * parsed on its own.
  */
@@ -245,7 +245,7 @@ interface GeneratedEntry {
 }
 
 /**
- * The generated TypeScript of the subscribed modules (plan 5.8). A request
+ * The generated TypeScript of the subscribed modules. A request
  * subscribes the module. After each flush that produced a revision, the tracker
  * sends `effektive/generatedChanged` for each subscribed module whose text or
  * stale flag differs from what the client has.
@@ -328,7 +328,7 @@ export class GeneratedTexts {
   }
 }
 
-/** `effektive/generatedTypeScript` (plan 5.8). */
+/** `effektive/generatedTypeScript`. */
 export function generatedTypeScriptRequest(
   params: TextDocumentParams,
   ctx: ServerContext,
@@ -342,7 +342,7 @@ export function generatedTypeScriptRequest(
 // ---- Save -------------------------------------------------------------------
 
 /**
- * `textDocument/didSave` (plan 5.9, plan SV). A save of a `.eff` or `.effi`
+ * `textDocument/didSave`. A save of a `.eff` or `.effi`
  * document of a known project starts a save round, which brings every output
  * of the project up to date from the disk texts. The round does nothing when
  * `writeOnSave` is false.
@@ -356,7 +356,7 @@ export function didSave(params: TextDocumentParams, ctx: ServerContext): void {
 
 // ---- Stats ------------------------------------------------------------------
 
-/** `effektive/stats` (plan 5.11). */
+/** `effektive/stats`. */
 export function statsRequest(
   params: TextDocumentParams,
   ctx: ServerContext,

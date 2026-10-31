@@ -1,4 +1,4 @@
-// The page logic of the playground that needs no DOM (plan 5.5): the tab from
+// The page logic of the playground that needs no DOM: the tab from
 // the URL hash, the Problems list, the error count of each tab, the state of
 // the TypeScript pane, and the hover texts. Fast tests cover each function.
 

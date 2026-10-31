@@ -1,4 +1,4 @@
-// Projects and the open-document overlay (plan 5.3 and 5.5). A project is a
+// Projects and the open-document overlay. A project is a
 // directory with `effektive.json`. The set keeps one `Program` per project for
 // the life of the server. The text that the program sees is the disk text of
 // each file with the open documents laid over it. A flush gives the program the
@@ -438,7 +438,7 @@ export class ProjectSet {
   // ---- Save round ---------------------------------------------------------
 
   /**
-   * One save round (plan SV, section 3.2): reads the workspace from disk,
+   * One save round: reads the workspace from disk,
    * brings the disk program up to date, removes the outputs of deleted
    * modules, and writes the outputs of every writable module that the project
    * owns. Does nothing when `writeOnSave` is false.

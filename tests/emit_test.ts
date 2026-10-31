@@ -1,4 +1,4 @@
-// Tests for part A6a: the Effect-TS emitter. The tests run through the public
+// Tests for the Effect-TS emitter. The tests run through the public
 // entries `emitModule` and `emitProject` and compare the emitted text.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";

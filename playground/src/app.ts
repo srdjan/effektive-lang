@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-// The playground page (plan 5.4, 6.2 to 6.5). It fetches `examples.json`,
+// The playground page. It fetches `examples.json`,
 // starts the compile facade, and wires the file tabs, the three regions, the
 // source editor, the Problems list, the TypeScript pane, and the URL hash.
 // The DOM-free logic lives in `model.ts`. The CodeMirror parts live in

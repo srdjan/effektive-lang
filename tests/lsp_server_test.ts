@@ -1,4 +1,4 @@
-// Fast tests of the language server (plan L3a), driven in process through the
+// Fast tests of the language server, driven in process through the
 // harness: lifecycle, protocol edge cases, the overlay, diagnostics, scheduling.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";

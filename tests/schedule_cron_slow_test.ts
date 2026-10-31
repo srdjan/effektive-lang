@@ -1,4 +1,4 @@
-// `scheduleCron` (unit EL3): the differential test of src/core/cron.ts against
+// `scheduleCron`: the differential test of src/core/cron.ts against
 // `Cron.parse` of effect@4.0.5, and the runtime behavior of the emitted
 // schedule under TestClock. No wall-clock time passes in the runtime tests.
 

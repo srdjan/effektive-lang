@@ -1,4 +1,4 @@
-// The `Map` and `Set` types (unit SL4): builtin type applications over
+// The `Map` and `Set` types: builtin type applications over
 // `HashMap` and `HashSet`. Checking runs through checkProject, emission through
 // emitFiles, and forged IR through validateModule. The type has no operation
 // yet, so each test reaches a value through a parameter. Runtime behavior is in

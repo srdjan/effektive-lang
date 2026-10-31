@@ -1,4 +1,4 @@
-// `uninterruptible` (unit ES7): checking through checkProject, and forged IR
+// `uninterruptible`: checking through checkProject, and forged IR
 // through validateModule. Runtime behavior is in uninterruptible_slow_test.ts.
 
 import { assert, assertEquals } from "@std/assert";

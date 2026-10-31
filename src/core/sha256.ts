@@ -1,5 +1,5 @@
 // A small synchronous SHA-256 over the UTF-8 bytes of a string. Builtin
-// specialization (plan 5.4, Q1) uses it, because the core cannot call the
+// specialization uses it, because the core cannot call the
 // asynchronous Web Crypto API. The function returns 64 lowercase hex digits.
 
 const K: Uint32Array = Uint32Array.from([

@@ -1,4 +1,4 @@
-// Runtime behavior of the Map and Set operations (unit SL5). Each test compiles
+// Runtime behavior of the Map and Set operations. Each test compiles
 // a project with independent validation, type-checks the emitted TypeScript
 // under the strict target options, and runs a driver on the compiled functions.
 

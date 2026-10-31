@@ -1,4 +1,4 @@
-// Tests for the layout engine of the emitter (part A6a).
+// Tests for the layout engine of the emitter.
 
 import { assertEquals } from "@std/assert";
 import {

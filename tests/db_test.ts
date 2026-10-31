@@ -6,7 +6,7 @@ import {
   TypeScriptOutputs,
 } from "../src/core/typescript.ts";
 const outputs = new TypeScriptOutputs();
-// Tests for the program of part A7: the memo, the module cutoff, and the
+// Tests for the program: the memo, the module cutoff, and the
 // differential check against a run from scratch.
 
 import {

@@ -1,4 +1,4 @@
-// Runtime behavior of `random()` and `randomInt` (unit SL2). Each test compiles
+// Runtime behavior of `random()` and `randomInt`. Each test compiles
 // one module with independent validation, type-checks the emitted TypeScript
 // under the strict target options, and runs it under Random.withSeed.
 

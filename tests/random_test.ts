@@ -1,4 +1,4 @@
-// `random()` and `randomInt` (unit SL2): checking through checkProject,
+// `random()` and `randomInt`: checking through checkProject,
 // emission text, and forged IR through validateModule. Runtime behavior is in
 // random_slow_test.ts.
 

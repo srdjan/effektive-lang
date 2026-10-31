@@ -1,4 +1,4 @@
-// `timeout` and `sleep` (unit ES2): checking through checkProject, and forged
+// `timeout` and `sleep`: checking through checkProject, and forged
 // IR through validateModule. Runtime behavior is in timeout_slow_test.ts.
 
 import { assert, assertEquals } from "@std/assert";

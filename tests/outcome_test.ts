@@ -1,4 +1,4 @@
-// Outcome-aware cleanup (unit ES5): `try` with `finally`, `using` with an outcome
+// Outcome-aware cleanup: `try` with `finally`, `using` with an outcome
 // binding, and `withResource` with a two-parameter release. Runtime behavior is in
 // outcome_slow_test.ts.
 

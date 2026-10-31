@@ -1,4 +1,4 @@
-// `repeat` (unit ES4): checking, lowering, and forged IR through
+// `repeat`: checking, lowering, and forged IR through
 // validateModule. Runtime behavior is in repeat_slow_test.ts.
 
 import { assert, assertEquals } from "@std/assert";

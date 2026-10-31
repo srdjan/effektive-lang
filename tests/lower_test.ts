@@ -1,4 +1,4 @@
-// Tests for part A4: lowering checked modules to typed IR and serializing it.
+// Tests for lowering checked modules to typed IR and serializing it.
 // Each test runs through the public entries `checkProject`, `lowerModule`,
 // `lowerProject`, and `serializeModule`.
 

@@ -1,6 +1,6 @@
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 const outputCache = new TypeScriptOutputs();
-// Fast tests of the save round (plan SV, units SV3 and SV4). Each test drives
+// Fast tests of the save round. Each test drives
 // the round through `didSave` on the in-memory file system of the harness, and
 // compares the generated files with an oracle: a fresh `Program` over the same
 // disk texts, the shared write rule, and the emitted text with its source map.

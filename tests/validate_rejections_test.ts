@@ -1,7 +1,7 @@
-// Tests for the validator rejection sites that no other fast test fires (plan
-// stable-base-reset, SB4, finding SBF9). Each row lowers a valid program,
-// forges one fact of the IR payload, runs the public entry `validateModule`,
-// and requires the exact diagnostics. A row fails if its site is deleted.
+// Tests for the validator rejection sites that no other fast test fires.
+// Each row lowers a valid program, forges one fact of the IR payload, runs the
+// public entry `validateModule`, and requires the exact diagnostics. A row fails
+// if its site is deleted.
 //
 // To add a row, append to ROWS. A row names the rejection site (`file:line` in
 // src/core/validate), the program it forges from, the module of that program,

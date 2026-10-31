@@ -1,4 +1,4 @@
-// Runtime behavior of `now()` and the `Instant` type (unit SL1). Each test
+// Runtime behavior of `now()` and the `Instant` type. Each test
 // compiles one module with independent validation, type-checks the emitted
 // TypeScript under the strict target options, and runs it under TestClock.
 

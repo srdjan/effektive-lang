@@ -1,4 +1,4 @@
-// The `Instant` type and `now()` (unit SL1): checking through checkProject,
+// The `Instant` type and `now()`: checking through checkProject,
 // emission text, and forged IR through validateModule. Runtime behavior is in
 // instant_slow_test.ts.
 

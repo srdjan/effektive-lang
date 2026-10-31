@@ -64,7 +64,7 @@ export const FileChangeType = {
 
 type FileChangeTypeValue = 1 | 2 | 3;
 
-/** The symbol kinds of plan section 5.7. */
+/** The symbol kinds of the protocol. */
 export const SymbolKind = {
   Class: 5,
   Method: 6,
@@ -206,7 +206,7 @@ export interface GeneratedChangedParams {
   readonly uri: string;
 }
 
-/** The result of `effektive/stats` (plan 5.11). */
+/** The result of `effektive/stats`. */
 export interface StatsResult {
   /** The number of the newest good revision, or 0 before the first one. */
   readonly revision: number;

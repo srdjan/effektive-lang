@@ -1,6 +1,6 @@
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 const outputs = new TypeScriptOutputs();
-// Tests for part A3b: expression checking, effects, modes, contracts, patterns,
+// Tests for expression checking, effects, modes, contracts, patterns,
 // the initialization graph, and the hover text of a checked node. Each test runs through the public entry
 // `checkProject`.
 

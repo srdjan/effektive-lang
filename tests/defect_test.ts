@@ -1,4 +1,4 @@
-// Defect recovery (unit ES6): the `Defect(name) => expression` arm of `catch`.
+// Defect recovery: the `Defect(name) => expression` arm of `catch`.
 // Runtime behavior is in defect_slow_test.ts.
 
 import { assert, assertEquals } from "@std/assert";

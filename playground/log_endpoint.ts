@@ -1,4 +1,4 @@
-// The request check of `POST /log` on `serve.ts` (plan LG4, trust boundary).
+// The request check of `POST /log` on `serve.ts`. It is a trust boundary.
 // It is pure: the caller reads the request and gives the method, the headers,
 // and the body text. The result is the envelopes to write, or the refusal.
 

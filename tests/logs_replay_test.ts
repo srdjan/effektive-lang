@@ -1,4 +1,4 @@
-// Tests of `logs:replay` (plan LG6). Each test records a session in process on
+// Tests of `logs:replay`. Each test records a session in process on
 // the current build with a memory log, then replays its events. A committed
 // recording would break each time a message or an output changes.
 

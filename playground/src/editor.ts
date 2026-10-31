@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-// The CodeMirror parts of the playground page (plan 5.4 and 6.1): the extension
+// The CodeMirror parts of the playground page: the extension
 // arrays of the source editor and of the read-only TypeScript pane, the
 // highlight decorations from the core lexer, the hover tooltip, the push model
 // for diagnostics, and one dark theme bound to the custom properties of

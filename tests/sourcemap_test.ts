@@ -1,4 +1,4 @@
-// Tests for part A6b: VLQ coding and source maps. A round trip decodes the
+// Tests for VLQ coding and source maps. A round trip decodes the
 // mappings of a map and compares each generated position with the span table.
 
 import { assert, assertEquals } from "@std/assert";

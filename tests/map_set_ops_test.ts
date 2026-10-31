@@ -1,4 +1,4 @@
-// The Map and Set operations (unit SL5): mapOf, getMap, putMap, removeMap,
+// The Map and Set operations: mapOf, getMap, putMap, removeMap,
 // hasMap, entriesMap, setOf, addSet, removeSet, hasSet and itemsSet. Checking
 // runs through checkProject, emission through emitFiles, and forged IR through
 // validateModule. Runtime behavior is in map_set_ops_slow_test.ts.

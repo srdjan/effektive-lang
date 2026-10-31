@@ -1,4 +1,4 @@
-// Runtime behavior of `race(jobs)` over an array (unit ES10). Each test compiles
+// Runtime behavior of `race(jobs)` over an array. Each test compiles
 // one module with independent validation, type-checks the emitted TypeScript
 // under the strict target options, and runs it.
 

@@ -1,4 +1,4 @@
-// The pure parts of the playground replay (plan LG6): the steps of a logged
+// The pure parts of the playground replay: the steps of a logged
 // session, the application of an edit to a text, and the timed player. The
 // page and `scripts/logs_replay.ts` share this file. It has no DOM code.
 

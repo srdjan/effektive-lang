@@ -1,4 +1,4 @@
-// Runtime behavior of `uninterruptible` (unit ES7). Each test compiles one
+// Runtime behavior of `uninterruptible`. Each test compiles one
 // module with independent validation, type-checks the emitted TypeScript under
 // the strict target options, and runs it.
 

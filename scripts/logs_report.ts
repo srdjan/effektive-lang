@@ -1,4 +1,4 @@
-// Turns session logs into a Markdown report (plan LG5): sessions, broken
+// Turns session logs into a Markdown report: sessions, broken
 // behavior, latency, friction, and outcomes.
 //
 // Run `deno task logs:report [--since <N>(m|h|d)] [folder ...]` from the

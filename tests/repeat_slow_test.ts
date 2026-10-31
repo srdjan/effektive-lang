@@ -1,4 +1,4 @@
-// Runtime behavior of `repeat` (unit ES4). Each test compiles one module with
+// Runtime behavior of `repeat`. Each test compiles one module with
 // independent validation, type-checks the emitted TypeScript under the strict
 // target options, and runs it. A test clock drives the delays, so the number of
 // runs before a timeout is exact.

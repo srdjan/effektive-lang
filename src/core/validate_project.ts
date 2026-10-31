@@ -1,6 +1,6 @@
 // The project entry of the IR validator. It validates the IR that
-// `lowerProject` returns, reading source texts through the project. Part A7
-// wires it to `build --validate`.
+// `lowerProject` returns, reading source texts through the project.
+// `build --validate` calls this entry.
 //
 // This file sits outside `validate/` because it reads the project type. The
 // validator itself stays independent of the checker and the lowering.

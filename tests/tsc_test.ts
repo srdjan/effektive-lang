@@ -1,4 +1,4 @@
-// Tests for part A6b: the parser of `deno check` output and the mapping of a
+// Tests for the parser of `deno check` output and the mapping of a
 // TypeScript diagnostic back to the Effektive source. The captured output
 // texts are in fixtures/host-boundary/. They show the real format of
 // `deno check` 2.9.7 for the wrong host module of that fixture.

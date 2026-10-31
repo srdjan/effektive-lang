@@ -1,4 +1,4 @@
-// The build of the playground (plan section 8). `build(outDir)` bundles the
+// The build of the playground. `build(outDir)` bundles the
 // page script with `deno bundle`, copies the static files, and writes
 // `examples.json`. Expected failures come back as `BuildError` values.
 //
@@ -22,7 +22,7 @@ export const REPOSITORY_ROOT: string = resolve(
   "..",
 );
 
-/** The files of `fixtures/examples` that the page edits (plan 5.2). */
+/** The files of `fixtures/examples` that the page edits. */
 export const EXAMPLE_FILES: readonly string[] = [
   "effektive.json",
   "collections.eff",

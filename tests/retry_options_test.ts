@@ -1,5 +1,5 @@
 // General `retry` options and the Schedule builtins `scheduleExponential` and
-// `scheduleJittered` (unit ES3): checking, lowering, and forged IR through
+// `scheduleJittered`: checking, lowering, and forged IR through
 // validateModule. Runtime behavior is in retry_options_slow_test.ts.
 
 import { assert, assertEquals } from "@std/assert";

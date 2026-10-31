@@ -1,5 +1,5 @@
 // Runtime behavior of the general `retry` options, `scheduleExponential`, and
-// `scheduleJittered` (unit ES3). Each test compiles one module with
+// `scheduleJittered`. Each test compiles one module with
 // independent validation, type-checks the emitted TypeScript under the strict
 // target options, and runs it. A test clock drives the delays, so the gaps are exact.
 

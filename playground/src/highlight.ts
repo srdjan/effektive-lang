@@ -1,4 +1,4 @@
-// Syntax highlighting from the core lexer (plan 5.3). The page and the compiler
+// Syntax highlighting from the core lexer. The page and the compiler
 // then agree on every token. The function merges the token table and the trivia
 // table into one sorted list of ranges. Words and spaces that need no color give
 // no range.

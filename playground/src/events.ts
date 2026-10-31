@@ -1,4 +1,4 @@
-// The data of the playground log events (plan LG4). Each function returns the
+// The data of the playground log events. Each function returns the
 // `data` of one `pg.*` kind, as plain JSON values. The page wraps the data in
 // an envelope through `log_client.ts`. This file has no DOM code.
 

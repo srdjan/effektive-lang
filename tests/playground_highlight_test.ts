@@ -1,5 +1,5 @@
-// Tests for the playground highlighter: one case for each row of the table in
-// plan 5.3, the position rule of the contextual words, and the order of ranges.
+// Tests for the playground highlighter: the highlight kinds, the position rule of
+// the contextual words, and the order of ranges.
 
 import { assert, assertEquals } from "@std/assert";
 import {

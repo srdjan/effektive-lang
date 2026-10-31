@@ -1,4 +1,4 @@
-// Runtime behavior of defect recovery (unit ES6). Each test compiles one module
+// Runtime behavior of defect recovery. Each test compiles one module
 // with independent validation, type-checks the emitted TypeScript under the
 // strict target options, and runs it.
 

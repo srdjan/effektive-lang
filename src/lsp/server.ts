@@ -1,5 +1,5 @@
 // The language server: lifecycle, message dispatch, and flush scheduling
-// (plan 5.1, 5.4, and 5.10). The server has no I/O of its own. It reaches the
+// The server has no I/O of its own. It reaches the
 // outside through the ports of `ServerPorts`, so that tests drive it in process.
 //
 // The server handles one message at a time. A change marks its project dirty.
@@ -319,7 +319,7 @@ export class LanguageServer {
     }
   }
 
-  /** Call after the messages of one read. Plan 5.4. */
+  /** Call after the messages of one read. */
   afterBatch(): void {
     if (this.#phase !== "running") return;
     if (this.#projects.dirtyProjects().length === 0) return;

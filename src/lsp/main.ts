@@ -1,4 +1,4 @@
-// The stdio entry of the language server (plan 5.4 and 5.12). It reads frames
+// The stdio entry of the language server. It reads frames
 // from stdin, feeds them to the server, and writes each reply with a blocking
 // write. `WireLog` records the frames and the port calls. Log text goes to
 // stderr and never to stdout. The end of stdin ends the process: code 0 after

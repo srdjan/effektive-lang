@@ -1,4 +1,4 @@
-// Runtime behavior of the `Map` and `Set` types (unit SL4). Each test compiles
+// Runtime behavior of the `Map` and `Set` types. Each test compiles
 // a project with independent validation, type-checks the emitted TypeScript
 // under the strict target options, and runs a driver that builds `HashMap` and
 // `HashSet` values, as a host adapter must.

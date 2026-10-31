@@ -1,6 +1,6 @@
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 const outputs = new TypeScriptOutputs();
-// Fast tests of the language features (plan L3b), driven in process through the
+// Fast tests of the language features, driven in process through the
 // harness on the examples: hover, definition, document symbols, generated
 // TypeScript, save, and stats.
 
@@ -702,7 +702,7 @@ Deno.test("stats has the revision, the counts, the delta, and the memory", () =>
   assert(header !== null);
   assertEquals(header.revision, 3);
   assertEquals(header.delta.interfaceChanged, ["users"]);
-  // The mode map has a new function id, so the mode map differs too (plan 5.11).
+  // The mode map has a new function id, so the mode map differs too.
   assertEquals(header.delta.modeChanged, ["users"]);
   assert(header.counts.checks > body.counts.checks);
 });

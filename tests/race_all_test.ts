@@ -1,4 +1,4 @@
-// `race(jobs)` over an array (unit ES10): checking through checkProject, and
+// `race(jobs)` over an array: checking through checkProject, and
 // forged IR through validateModule. Runtime behavior is in race_all_slow_test.ts.
 
 import { assert, assertEquals } from "@std/assert";

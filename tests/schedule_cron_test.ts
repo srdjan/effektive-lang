@@ -1,4 +1,4 @@
-// `scheduleCron` (unit EL3): the grammar of src/core/cron.ts against
+// `scheduleCron`: the grammar of src/core/cron.ts against
 // `Cron.parse` of effect@4.0.5, the checker diagnostics, lowering, and forged
 // IR through validateModule. Runtime behavior is in schedule_cron_slow_test.ts.
 

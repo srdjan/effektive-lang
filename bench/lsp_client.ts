@@ -1,5 +1,5 @@
 // A client over a spawned language server process, for the measurements M1, M3,
-// and M4 (plan section 8). It spawns PATH’s `deno`, or the `executable` option,
+// and M4. It spawns PATH’s `deno`, or the `executable` option,
 // with the arguments of the VS Code client. The client reads stdout from the start into a
 // `FrameDecoder` and keeps reading while it sends. Otherwise a large response
 // could fill the pipe and block the synchronous server. It drains stderr too.

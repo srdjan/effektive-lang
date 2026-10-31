@@ -1,5 +1,5 @@
-// Replays a logged session on the current build and compares the outcomes
-// (plan LG6). Run `deno task logs:replay <session.jsonl>`. The blobs come from
+// Replays a logged session on the current build and compares the outcomes.
+// Run `deno task logs:replay <session.jsonl>`. The blobs come from
 // the `blobs/` folder beside the session file.
 //
 // Exit codes: 0 when every compared outcome matches, 1 on the first

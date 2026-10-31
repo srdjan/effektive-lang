@@ -1,4 +1,4 @@
-// `log` (unit SL3): checking through checkProject, lowering, emission text, and
+// `log`: checking through checkProject, lowering, emission text, and
 // forged IR through validateModule. Runtime behavior is in log_builtin_slow_test.ts.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";

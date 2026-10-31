@@ -1,4 +1,4 @@
-// The compile facade of the playground (plan 5.1). It keeps one `Program`
+// The compile facade of the playground. It keeps one `Program`
 // across edits and turns a revision into plain data for the page: diagnostics
 // per file, generated TypeScript per `.eff` or `.effi` file, and the time of
 // the update.
