@@ -47,7 +47,6 @@ import { checkRefinementDeclaration } from "./refinements.ts";
 const PRELUDE_MODULE = "effektive:prelude";
 
 interface World {
-  readonly module: string;
   readonly env: TypeEnv;
   readonly exports: ReadonlySet<string>;
   readonly types: ReadonlyMap<string, TypeDecl>;
@@ -192,7 +191,6 @@ export function buildWorld(ir: ModuleIR): World {
   const errorFields = new Map<string, readonly Field[]>();
   for (const e of errors.values()) errorFields.set(e.id, e.fields);
   return {
-    module: ir.module,
     exports: new Set(ir.exports),
     env: {
       module: ir.module,

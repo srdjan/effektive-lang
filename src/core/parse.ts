@@ -150,7 +150,6 @@ class Parser {
   private readonly kinds: Uint8Array;
   private readonly starts: Uint32Array;
   private readonly ends: Uint32Array;
-  private readonly count: number;
   private readonly match: Int32Array;
 
   private pos = 0;
@@ -181,7 +180,6 @@ class Parser {
     this.kinds = lexed.kinds;
     this.starts = lexed.starts;
     this.ends = lexed.ends;
-    this.count = lexed.count;
     this.match = matchBrackets(lexed.kinds, lexed.count);
   }
 

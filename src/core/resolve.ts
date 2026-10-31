@@ -417,10 +417,6 @@ class Resolver {
     this.set(node, { kind: "unresolved", name });
   }
 
-  private id(prefix: string, name: string): string {
-    return `${prefix}:${this.name}#${name}`;
-  }
-
   // -------------------------------------------------------------- namespace
 
   private declareModuleName(

@@ -46,8 +46,6 @@ import type {
   Parameter,
   Pattern,
   Result,
-  ServiceDecl,
-  ServiceId,
   Span,
   Step,
   Type,
@@ -136,7 +134,6 @@ function unsupported(message: string, span: Span): LowerFailure {
 
 /** A specialized builtin instance of one module. */
 interface BuiltinInstance {
-  readonly name: string;
   readonly type: FunctionType;
 }
 
@@ -146,8 +143,6 @@ interface ModuleContext {
   readonly tree: SyntaxTree;
   readonly types: TypeTable;
   readonly targets: ReadonlyMap<NodeId, Target>;
-  /** Local and imported services by identity. */
-  readonly services: ReadonlyMap<ServiceId, ServiceDecl>;
   /** Specialized builtins in the order of first use. */
   readonly builtins: Map<ValueId, BuiltinInstance>;
   /** The identifier texts of the module, which a generated `$p<n>` name skips. */
@@ -1143,7 +1138,7 @@ class BodyLowerer {
     const id: ValueId = builtinInstanceId(this.ctx.module, name, hash);
     const known = this.ctx.builtins.get(id);
     if (known === undefined) {
-      this.ctx.builtins.set(id, { name, type });
+      this.ctx.builtins.set(id, { type });
     } else if (canonicalJson(known.type) !== json) {
       // The 12-digit hash is a truncation, so two types could share an id.
       throw internal(`two builtin instance types share the id ${id}`);
@@ -2007,7 +2002,6 @@ export function lowerModule(
     tree: checkedModule.tree,
     types: checked.table,
     targets: resolution.targets,
-    services: checkedModule.declarations.env.services,
     builtins: new Map(),
     identifiers: identifiersOf(checkedModule.tree),
   };
