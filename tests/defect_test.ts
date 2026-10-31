@@ -188,7 +188,9 @@ Deno.test("the validator rejects a defect body that does not fit the result", ()
     body.type = { kind: "primitive", name: "string" };
     body.value = "x";
   });
-  assert(found.length > 0);
+  assertEquals(found, [
+    "validation/005 declarations[4].body.defect.body: the branch has type string, which does not fit the recorded type type:m#Int",
+  ]);
   assert(found.every((f) => f.includes(".defect.body")), found.join("\n"));
   assert(found.some((f) => f.startsWith("validation/005 ")), found.join("\n"));
 });

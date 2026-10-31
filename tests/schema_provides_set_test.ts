@@ -78,7 +78,7 @@ Deno.test("a provider type must list provides sorted and unique", () => {
   assert(module !== undefined);
   stringLists(module, "$", found);
   const provides = found.filter((f) => f.key === "provides");
-  assert(provides.length > 0);
+  assertEquals(provides.length, 2);
   for (const { path, list } of provides) {
     assertEquals(list.length, 2);
     for (const bad of [[...list].reverse(), [list[0], ...list]]) {

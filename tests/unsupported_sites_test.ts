@@ -163,7 +163,11 @@ Deno.test("a record spread after a field lowers to an unsupported error when the
     "const base: R = { a: 1, b: 2 }\n" +
     "const mk = (): R => ({ a: 1, ...base })\n";
   const checked = check({ "main.eff": text });
-  assert(checked.diagnostics.length > 0);
+  assertEquals(checked.diagnostics.map((d) => d.code), [
+    "type-mismatch/005",
+    "syntax/014",
+    "type-mismatch/005",
+  ]);
   assert(!lowerModule(checked, "main").ok);
   const forged = lowerModule(withoutDiagnostics(checked), "main");
   assert(!forged.ok);
@@ -185,7 +189,7 @@ Deno.test("a pipeline into an error constructor lowers to an unsupported error w
   const text = "error Stop = { code: int }\n" +
     "const mk = (): Stop => ({ code: 1 }) |> Stop()\n";
   const checked = check({ "main.eff": text });
-  assert(checked.diagnostics.length > 0);
+  assertEquals(checked.diagnostics.map((d) => d.code), ["type-mismatch/010"]);
   assert(!lowerModule(checked, "main").ok);
   const forged = lowerModule(withoutDiagnostics(checked), "main");
   assert(!forged.ok);
@@ -256,7 +260,10 @@ Deno.test("a missing target table entry gives an internal lowering error", () =>
   assert(!result.ok);
   assert(result.error.tag === "internal", JSON.stringify(result.error));
   assertEquals(result.error.module, "main");
-  assert(result.error.message.length > 0);
+  assertEquals(
+    result.error.message,
+    "the name at main.eff:53-54 does not refer to a value",
+  );
 });
 
 Deno.test("lowerModule rethrows an error that is not a lowering failure", () => {
@@ -440,7 +447,8 @@ Deno.test("a host binding that is not a provider gives an unsupported emission e
   assert(emitModule(ir, { config }).ok);
   const forged = structuredClone(ir);
   const host = forged.imports.find((i) => i.module.startsWith("host:"));
-  assert(host !== undefined && host.values.length > 0);
+  assert(host !== undefined);
+  assertEquals(host.values.length, 1);
   Object.assign(host.values[0], { type: FUNCTION });
   const error = emitError(forged, { config });
   assert(error.tag === "unsupported");

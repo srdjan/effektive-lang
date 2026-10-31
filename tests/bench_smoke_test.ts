@@ -3,7 +3,12 @@
 // of the result. It makes no claim about the time values. It also tests the
 // statistics helpers.
 
-import { assert, assertAlmostEquals, assertEquals } from "@std/assert";
+import {
+  assert,
+  assertAlmostEquals,
+  assertEquals,
+  assertMatch,
+} from "@std/assert";
 import {
   ChecksumGate,
   formatM2,
@@ -40,7 +45,7 @@ Deno.test("M2 on the small size returns the stages, the pairs, and the increment
   assert(size !== undefined);
   assertEquals(size.name, "small");
   assertEquals(size.iterations, 2);
-  assert(size.checksum.length > 0);
+  assertMatch(size.checksum, /^[0-9a-f]+$/);
   assertEquals(size.stages.map((s) => s.stage), [...STAGES, "total"]);
   for (const stage of size.stages) {
     // Two timed iterations, two sides each.

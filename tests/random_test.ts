@@ -169,6 +169,6 @@ Deno.test("the validator rejects a pure random or randomInt", () => {
   for (const kind of ["random", "random-int"] as const) {
     const ir = lowered(SOURCE);
     (all(ir, kind)[0] as { execution: unknown }).execution = "pure";
-    assert(validate(ir).length > 0, kind);
+    assertEquals(validate(ir).map((d) => d.code), ["validation/004"], kind);
   }
 });

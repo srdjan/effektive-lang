@@ -182,25 +182,50 @@ Deno.test("isSourcePath accepts sources and the project file, and skips hidden a
 
 Deno.test("usage and configuration errors exit 2", async () => {
   const good = under(ROOT, exampleFiles());
-  const cases: [string, readonly string[], Readonly<Record<string, string>>][] =
+  const cases: [
+    string,
+    readonly string[],
+    Readonly<Record<string, string>>,
+    string,
+  ][] = [
+    ["no command", [], NO_FILES, "effektive: missing command"],
+    ["unknown command", ["nope"], good, "effektive: unknown command `nope`"],
     [
-      ["no command", [], NO_FILES],
-      ["unknown command", ["nope"], good],
-      ["unknown flag", ["check", ROOT, "--tsc"], good],
-      ["missing root", ["check", "/nowhere"], good],
-      ["missing project file", ["check", ROOT], { [`${ROOT}/a.eff`]: "" }],
-      ["malformed project file", ["check", ROOT], {
-        [`${ROOT}/effektive.json`]: "{",
-      }],
-      ["invalid project file", ["build", ROOT], {
-        [`${ROOT}/effektive.json`]: "[]",
-      }],
-    ];
-  for (const [title, args, files] of cases) {
+      "unknown flag",
+      ["check", ROOT, "--tsc"],
+      good,
+      "effektive: unknown flag `--tsc` for `check`",
+    ],
+    [
+      "missing root",
+      ["check", "/nowhere"],
+      good,
+      "effektive: the root directory /nowhere does not exist",
+    ],
+    [
+      "missing project file",
+      ["check", ROOT],
+      { [`${ROOT}/a.eff`]: "" },
+      "effektive: /proj/effektive.json does not exist",
+    ],
+    [
+      "malformed project file",
+      ["check", ROOT],
+      { [`${ROOT}/effektive.json`]: "{" },
+      "effektive: effektive.json is not valid JSON: Expected property name or '}' in JSON at position 1 (line 1 column 2)",
+    ],
+    [
+      "invalid project file",
+      ["build", ROOT],
+      { [`${ROOT}/effektive.json`]: "[]" },
+      "effektive: effektive.json is not a valid project file: the top level must be an object",
+    ],
+  ];
+  for (const [title, args, files, firstLine] of cases) {
     const r = await run(args, files);
     assertEquals(r.code, 2, title);
     assertEquals(r.stdout, "", title);
-    assert(r.stderr.length > 0, title);
+    assertEquals(r.stderr.split("\n")[0], firstLine, title);
   }
 });
 

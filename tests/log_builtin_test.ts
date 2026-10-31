@@ -34,7 +34,11 @@ Deno.test("log takes one or two arguments and no pipeline form", () => {
   const piped = diagnosticsOf(
     `${TYPES}export const f = (msg: Text): void => msg |> log()\n`,
   );
-  assert(piped.length > 0, "a pipeline left side is rejected");
+  assertEquals(
+    piped,
+    ["type-mismatch/010 `log` requires direct call syntax"],
+    "a pipeline left side is rejected",
+  );
 });
 
 Deno.test("log needs a string message", () => {
@@ -214,5 +218,5 @@ Deno.test("the validator rejects a wrong result type and a pure log", () => {
   assert(validate(wrong).some((d) => d.code === "validation/002"));
   const pure = lowered(SOURCE);
   (all(pure, "log")[0] as { execution: unknown }).execution = "pure";
-  assert(validate(pure).length > 0);
+  assertEquals(validate(pure).map((d) => d.code), ["validation/004"]);
 });

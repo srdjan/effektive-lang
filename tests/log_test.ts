@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "@std/assert";
+import { assert, assertEquals, assertMatch } from "@std/assert";
 import {
   BUILD,
   type LogEntry,
@@ -256,7 +256,7 @@ Deno.test("noLog does nothing and memoryLog records", () => {
     kind: "k2",
     data: null,
   });
-  assert(BUILD.length > 0);
+  assertMatch(BUILD, /^\d+\.\d+\.\d+$/);
 });
 
 Deno.test("prepareLogFolder gives the logs folder and passes on a mkdir failure", () => {

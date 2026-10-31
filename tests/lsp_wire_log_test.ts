@@ -183,7 +183,7 @@ Deno.test("log false opens nothing and records nothing", () => {
   t.deliver(didOpen(exampleUri(MAIN), 1, mainText()));
   assertEquals(t.opened, []);
   assertEquals(t.log.events, []);
-  assert(t.sent.length > 0);
+  assertEquals(t.sent.length, 2);
 });
 
 Deno.test("no root opens nothing and records nothing", () => {

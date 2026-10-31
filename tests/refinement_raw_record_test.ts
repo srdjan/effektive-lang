@@ -139,5 +139,7 @@ const good = (raw: unknown): NamedWindow fails SchemaError => namedEntry({ low: 
     },
     proofs: [],
   });
-  assert(validateModule(erased, sources).length > 0);
+  assertEquals(validateModule(erased, sources).map((d) => d.code), [
+    "validation/002",
+  ]);
 });

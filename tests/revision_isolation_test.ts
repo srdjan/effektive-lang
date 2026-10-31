@@ -123,7 +123,7 @@ Deno.test("retained imports keep alias and tagged definitions after edits and re
   assertEquals(snapshot(second), snapshot(fresh(current)));
   assertEquals(snapshot(first), snapshot(fresh(files)));
   const removed = update(program, {}, ["dep.eff"]);
-  assert(removed.diagnostics.length > 0);
+  assertEquals(removed.diagnostics.map((d) => d.code), ["module/002"]);
   assertEquals(snapshot(first), snapshot(fresh(files)));
   const restored = update(program, files);
   assertEquals(snapshot(restored), snapshot(fresh(files)));

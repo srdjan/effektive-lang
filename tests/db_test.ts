@@ -349,7 +349,11 @@ Deno.test("differential: a sequence of edits equals a run from scratch after eac
 
   // A removed file: users.eff disappears.
   const gone = session.apply({}, [USERS]);
-  assert(gone.diagnostics.length > 0);
+  assertEquals(gone.diagnostics.map((d) => d.code), [
+    "module/002",
+    "module/002",
+    "module/002",
+  ]);
   const back = session.apply({ [USERS]: iface });
   assertEquals(back.diagnostics, []);
 

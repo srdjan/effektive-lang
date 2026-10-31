@@ -3096,13 +3096,18 @@ Deno.test("data: a data type validates and each forged rule is rejected", () => 
     return codesOf(ir, lowered.sources);
   };
   // A data node needs a data type, not a brand, an alias, or an unknown identity.
-  for (const id of ["type:m#UserId", "type:m#Text", "type:m#Missing"]) {
+  const identities: readonly (readonly [string, string])[] = [
+    ["type:m#UserId", "validation/002"],
+    ["type:m#Text", "validation/002"],
+    ["type:m#Missing", "validation/001"],
+  ];
+  for (const [id, code] of identities) {
     const found = forge((ir) => {
       const make = ir.declarations.find((d) => d.name === "make");
       assert(make?.kind === "function" && make.body.kind === "nominal");
       setAt(make, "body.nominal", id);
     });
-    assert(found.length > 0, id);
+    assertEquals(found, [code], id);
   }
   // The value must fit the base record of the data type.
   assertEquals(
@@ -3446,7 +3451,7 @@ const name: Schema<Text> = schema()
     const found = validateModule(forged, lowered.sources).filter((d) =>
       d.code === "validation/001" && d.message.includes(flag)
     );
-    assert(found.length > 0, flag);
+    assertEquals(found.length, 1, flag);
   }
 });
 

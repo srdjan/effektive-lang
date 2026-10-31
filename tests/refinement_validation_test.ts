@@ -387,7 +387,9 @@ const make = (a: Int, b: Int, p: Bool): Either => {
   );
   assert(other?.kind === "binary" && other.right.kind === "binary");
   Object.assign(other.right, { operator: "<" });
-  assert(messages(weaker.ir, weaker.sources).length > 0);
+  assertEquals(messages(weaker.ir, weaker.sources), [
+    "declarations[4].body.result.proofs: the proof certificate is invalid: invalid-certificate",
+  ]);
 });
 
 Deno.test("a nested or-fact with three operands survives a join", () => {

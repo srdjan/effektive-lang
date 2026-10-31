@@ -495,7 +495,7 @@ Deno.test("a module with a diagnostic does not lower", () => {
   const checked = checkText(
     `const bad = (x: Int): Text => x\ntype Int = int\ntype Text = string`,
   );
-  assert(checked.diagnostics.length > 0);
+  assertEquals(checked.diagnostics.map((d) => d.code), ["type-mismatch/003"]);
   assertEquals(failure(checked, "m"), {
     tag: "diagnostics",
     module: "m",
@@ -506,7 +506,7 @@ Deno.test("a module with a diagnostic does not lower", () => {
 
 Deno.test("a syntax error blocks lowering", () => {
   const checked = checkText(`type Int = int\nconst bad = (x: Int): Int =>`);
-  assert(checked.diagnostics.length > 0);
+  assertEquals(checked.diagnostics.map((d) => d.code), ["syntax/008"]);
   assertEquals(failure(checked, "m").tag, "diagnostics");
 });
 

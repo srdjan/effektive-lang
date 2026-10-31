@@ -2,7 +2,7 @@
 // with independent validation, type-checks the emitted TypeScript under the
 // strict target options, and runs it.
 
-import { assert, assertEquals } from "@std/assert";
+import { assertEquals } from "@std/assert";
 import { compileAndRun } from "./target_helpers.ts";
 
 const SOURCE = `type Int = int
@@ -74,7 +74,7 @@ console.log(JSON.stringify(out));
     { error: "kaput", string: "plain", none: "fine" },
   );
   // The message of the RangeError defect from a negative duration.
-  assert(result.arithmetic.length > 0 && result.arithmetic !== "fine");
+  assertEquals(result.arithmetic, "negative duration");
 });
 
 Deno.test("the Defect arm catches a defect raised in a typed handler", async () => {

@@ -162,7 +162,9 @@ type A = "a"
 type B = "b"
 const bad: T = { kind: "b", value: 1 }
 `);
-    assert(rejected.diagnostics.length > 0);
+    assertEquals(rejected.diagnostics.map((d) => d.code), [
+      "type-mismatch/003",
+    ]);
   }
 });
 

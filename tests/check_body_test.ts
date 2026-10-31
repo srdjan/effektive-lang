@@ -123,19 +123,30 @@ const runIt = (): Int[] fails BuildStop | SourceStop | UseStop
 });
 
 Deno.test("mapGroups rejects structural, mixed, general number, and impure keys", () => {
-  for (
-    const key of [
-      "(n) => ({ n })",
-      "(n): Num => n",
-      "(n) => [n]",
-      "(n) => Some(n)",
+  const cases: readonly (readonly [string, readonly string[]])[] = [
+    ["(n) => ({ n })", ["type-mismatch/010"]],
+    ["(n): Num => 1.5", ["type-mismatch/010"]],
+    ["(n) => [n]", ["type-mismatch/010"]],
+    ["(n) => Some(n)", ["type-mismatch/010"]],
+    [
       '(n) => if (n === 0) { "zero" } else { 1 }',
+      ["type-mismatch/009", "type-mismatch/010"],
+    ],
+    [
       '(n) => if (n === 0) { A("a") } else { B("b") }',
+      ["type-mismatch/009", "type-mismatch/010"],
+    ],
+    [
       '(n): A | Text => if (n === 0) { A("a") } else { "a" }',
-      "(n) => Read.key(n)",
+      ["type-mismatch/010"],
+    ],
+    ["(n) => Read.key(n)", ["execution-mode/001"]],
+    [
       "(n): never => fail(Stop({}))",
-    ]
-  ) {
+      ["execution-mode/001", "type-mismatch/010"],
+    ],
+  ];
+  for (const [key, expected] of cases) {
     const project = checkText(`type Int = int
 type Num = number
 type Text = string
@@ -144,7 +155,7 @@ type B = string
 error Stop = {}
 service Read { key(n: Int): Int }
 const bad = (source: Stream<Int>) => mapGroups(source, ${key}, (key, group) => key, { bufferSize: 1 })`);
-    assert(project.diagnostics.length > 0, key);
+    assertEquals(codes(project), expected, key);
     assert(
       !codes(project).includes("syntax/001"),
       messages(project).join("\n"),
@@ -210,19 +221,27 @@ const bad = (source: Stream<Int>, count: Int, options: { bufferSize: Int }) => m
       `${options}: ${messages(project)}`,
     );
   }
-  for (
-    const call of [
+  const calls: readonly (readonly [string, readonly string[]])[] = [
+    [
       "mapGroups(source, key, (key, group) => key, { bufferSize: 1 })",
+      ["type-mismatch/010"],
+    ],
+    [
       "mapGroups(source, (n) => n, use, { bufferSize: 1 })",
+      ["type-mismatch/010"],
+    ],
+    [
       "source |> mapGroups((n: Int) => n, (key: Int, group: Stream<Int>) => key, { bufferSize: 1 })",
-      "mapGroups(source, (n) => n)",
-    ]
-  ) {
+      ["type-mismatch/010"],
+    ],
+    ["mapGroups(source, (n) => n)", ["type-mismatch/004"]],
+  ];
+  for (const [call, expected] of calls) {
     const project = checkText(`type Int = int
 const key = (n: Int): Int => n
 const use = (key: Int, group: Stream<Int>): Int => key
 const bad = (source: Stream<Int>) => ${call}`);
-    assert(project.diagnostics.length > 0, call);
+    assertEquals(codes(project), expected, call);
   }
   const shadowed = checkText(
     "type Int = int\nconst mapGroups = (n: Int): Int => n\nconst use = (): Int => mapGroups(1)",
@@ -314,17 +333,28 @@ const make = (): Stream<Int, SourceStop | SinkStop, Pull.next | Add.add>
 
 Deno.test("aggregateStream rejects incompatible operands and preserves shadowing", () => {
   const prefix = `type Int = int\ntype Text = string\n`;
-  for (
-    const body of [
+  const cases: readonly (readonly [string, readonly string[]])[] = [
+    [
       "const bad = aggregateStream(1, takeSink(2))",
-      "const bad = aggregateStream()",
+      ["type-mismatch/010", "type-mismatch/010"],
+    ],
+    ["const bad = aggregateStream()", ["type-mismatch/004"]],
+    [
       "const bad = (source: Stream<Int>) => source |> aggregateStream(takeSink(2))",
+      ["type-mismatch/010"],
+    ],
+    [
       "const bad = (source: Stream<Int>, sink: Sink<Text, Int>) => aggregateStream(source, sink)",
+      ["type-mismatch/003"],
+    ],
+    [
       "const bad = (source: Stream<Int>, sink: Sink<Int, Text, never, never, Text>) => aggregateStream(source, sink)",
-    ]
-  ) {
+      ["type-mismatch/003"],
+    ],
+  ];
+  for (const [body, expected] of cases) {
     const checked = checkText(prefix + body);
-    assert(checked.diagnostics.length > 0, body);
+    assertEquals(codes(checked), expected, body);
     assert(
       !codes(checked).includes("unknown-name/001"),
       messages(checked).join("\n"),
@@ -343,16 +373,29 @@ Deno.test("general Schedule values retain four channels and scheduled aggregatio
   const project = checkText(source);
   assertEquals(codes(project), [], messages(project).join("\n"));
   assertEquals(fn(project, "m", "timed").mode, "pure");
-  for (
-    const body of [
-      "const bad = (source: Stream<Int>, policy: Schedule<Int, string>) => aggregateWithinStream(source, takeSink(2), policy)",
+  const cases: readonly (readonly [string, readonly string[]])[] = [
+    [
+      "const bad = (source: Stream<Int>, policy: Schedule<Int, Text>) => aggregateWithinStream(source, takeSink(2), policy)",
+      ["type-mismatch/003"],
+    ],
+    [
       "const bad = (source: Stream<Int>, policy: RetrySchedule<Stop>) => aggregateWithinStream(source, takeSink(2), policy)",
+      ["type-mismatch/010"],
+    ],
+    [
       "const bad = scheduleFromStep((): Int => 0, (state: Int, meta: ScheduleInput<Int>): Int => state)",
+      ["type-mismatch/010"],
+    ],
+    [
       "const bad = (source: Stream<Int>) => source |> aggregateWithinStream(takeSink(2), scheduleRecurs(0))",
-    ]
-  ) {
-    const checked = checkText(`type Int = int\nerror Stop = {}\n${body}`);
-    assert(checked.diagnostics.length > 0, body);
+      ["type-mismatch/010"],
+    ],
+  ];
+  for (const [body, expected] of cases) {
+    const checked = checkText(
+      `type Int = int\ntype Text = string\nerror Stop = {}\n${body}`,
+    );
+    assertEquals(codes(checked), expected, body);
     assert(
       !codes(checked).includes("unknown-name/001"),
       messages(checked).join("\n"),
@@ -371,16 +414,21 @@ Deno.test("Schedule composition keeps comparable input, output, and deferred cha
   const project = checkText(source);
   assertEquals(codes(project), [], messages(project).join("\n"));
   assertEquals(fn(project, "m", "assembled").mode, "effect");
-  for (
-    const body of [
-      "const bad = scheduleMax(scheduleRecurs(1), 1)",
-      "const bad = scheduleMin()",
-      "const bad = (a: Schedule<Int, string>, b: Schedule<Int, Int>) => scheduleConcat(a, b)",
-      "const bad = (a: Schedule<Int, string>) => a |> scheduleMax(scheduleRecurs(1))",
-    ]
-  ) {
-    const checked = checkText(`type Int = int\n${body}`);
-    assert(checked.diagnostics.length > 0, body);
+  const cases: readonly (readonly [string, readonly string[]])[] = [
+    ["const bad = scheduleMax(scheduleRecurs(1), 1)", ["type-mismatch/010"]],
+    ["const bad = scheduleMin()", ["type-mismatch/004"]],
+    [
+      "const bad = (a: Schedule<Int, Text>, b: Schedule<Int, Int>) => scheduleConcat(a, b)",
+      ["type-mismatch/010"],
+    ],
+    [
+      "const bad = (a: Schedule<Int, Text>) => a |> scheduleMax(scheduleRecurs(1))",
+      ["type-mismatch/010"],
+    ],
+  ];
+  for (const [body, expected] of cases) {
+    const checked = checkText(`type Int = int\ntype Text = string\n${body}`);
+    assertEquals(codes(checked), expected, body);
     assert(
       !codes(checked).includes("unknown-name/001"),
       messages(checked).join("\n"),
@@ -393,25 +441,39 @@ const use = (): Int => scheduleMax(1, 2)`);
 });
 
 Deno.test("takeSink rejects invalid counts, erased leftovers, pipelines, and borrowed captures", () => {
-  for (
-    const body of [
-      "const bad = takeSink(2)",
-      "const bad: Sink<Int, Int[]> = takeSink(2)",
-      "const bad: Pairs = takeSink(0)",
-      "const bad: Pairs = takeSink(-1)",
-      "const bad: Pairs = takeSink(1.5)",
+  const cases: readonly (readonly [string, readonly string[]])[] = [
+    ["const bad = takeSink(2)", ["type-mismatch/010"]],
+    ["const bad: Sink<Int, Int[]> = takeSink(2)", ["type-mismatch/003"]],
+    ["const bad: Pairs = takeSink(0)", ["type-mismatch/010"]],
+    ["const bad: Pairs = takeSink(0 - 1)", ["type-mismatch/010"]],
+    ["const bad: Pairs = takeSink(1.5)", ["type-mismatch/010"]],
+    [
       "const count = 2; const bad: Pairs = takeSink(count)",
-      "const bad: Pairs = takeSink()",
+      ["type-mismatch/010"],
+    ],
+    ["const bad: Pairs = takeSink()", ["type-mismatch/004"]],
+    [
       "const bad: Pairs = 2 |> takeSink",
+      ["type-mismatch/010", "type-mismatch/010"],
+    ],
+    [
       "const bad = (s: Stream<Int>) => s |> transduceStream(takeSink(2))",
+      ["type-mismatch/010"],
+    ],
+    [
       "const bad = () => withFiber(defer(() => 1), (fiber) => takeSink(2))",
+      ["type-mismatch/010", "type-mismatch/010"],
+    ],
+    [
       "const bad = (s: Stream<Int>) => withFiber(defer(() => 1), (fiber) => { collectStream(transduceStream(s, sinkForEach((n: Int) => interruptFiber(fiber)))) })",
-    ]
-  ) {
+      ["type-mismatch/010"],
+    ],
+  ];
+  for (const [body, expected] of cases) {
     const project = checkText(
       `type Int = int\ntype Pairs = Sink<Int, Int[], never, never, Int>\n${body}`,
     );
-    assert(project.diagnostics.length > 0, body);
+    assertEquals(codes(project), expected, body);
     assert(
       !codes(project).includes("unknown-name/001"),
       messages(project).join("\n"),
@@ -1727,35 +1789,54 @@ const pipeline = (): void => makeScope() |> closeScope
 });
 
 Deno.test("scope operations check arity, owners, finalizers, and escape boundaries", () => {
-  for (
-    const expression of [
-      "makeScope(1)",
-      "closeScope()",
-      "closeScope({})",
-      "provideScope(makeScope())",
-      "provideScope(makeScope(), 1)",
-      "addScopeFinalizer(makeScope(), defer(() => 1))",
-      "addScopeFinalizer(makeScope(), defer(() => fail(Stop())))",
+  const cases: readonly (readonly [string, readonly string[]])[] = [
+    ["makeScope(1)", ["type-mismatch/004"]],
+    ["closeScope()", ["type-mismatch/004"]],
+    ["closeScope({})", ["type-mismatch/003"]],
+    ["provideScope(makeScope())", ["type-mismatch/004"]],
+    ["provideScope(makeScope(), 1)", ["type-mismatch/010"]],
+    ["addScopeFinalizer(makeScope(), defer(() => 1))", ["type-mismatch/003"]],
+    [
+      "addScopeFinalizer(makeScope(), defer(() => fail(Stop({}))))",
+      ["type-mismatch/010"],
+    ],
+    [
       "addScopeFinalizer(makeScope(), defer(() => forkScoped(defer(() => 1))))",
-      "withFiber(defer(() => 1), (fiber) => makeScope())",
+      ["type-mismatch/010"],
+    ],
+    ["withFiber(defer(() => 1), (fiber) => makeScope())", [
+      "type-mismatch/010",
+    ]],
+    [
       "withResource(() => ({ close: () => {} }), (file) => ({ owner: makeScope() }), (file) => file.close())",
+      ["type-mismatch/010"],
+    ],
+    [
       "withFiber(defer(() => 1), (fiber) => addScopeFinalizer(makeScope(), defer(() => interruptFiber(fiber))))",
+      ["type-mismatch/010"],
+    ],
+    [
       "withResource(() => ({ close: () => {} }), (file) => addScopeFinalizer(makeScope(), defer(() => file.close())), (file) => file.close())",
+      ["type-mismatch/010"],
+    ],
+    [
       "codec((owner: CloseableScope) => Some(owner), (owner: CloseableScope) => Some(owner))",
-      "makeScope() === makeScope()",
-    ]
-  ) {
+      ["type-mismatch/010", "type-mismatch/003"],
+    ],
+    ["makeScope() === makeScope()", ["type-mismatch/007"]],
+  ];
+  for (const [expression, expected] of cases) {
     const project = checkText(
       `error Stop = {}\nconst bad = () => ${expression}`,
     );
-    assert(project.diagnostics.length > 0, expression);
+    assertEquals(codes(project), expected, expression);
     assert(
       !codes(project).includes("unknown-name/001"),
       messages(project).join("\n"),
     );
   }
   const generic = checkText("type Bad = CloseableScope<CloseableScope>");
-  assert(generic.diagnostics.length > 0);
+  assertEquals(codes(generic), ["type-mismatch/001"]);
   const missing = checkText(`service Audit { record(): void }
 export const bad = (owner: CloseableScope): void => addScopeFinalizer(owner, defer(() => Audit.record()))`);
   assert(

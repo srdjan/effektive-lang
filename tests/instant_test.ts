@@ -301,7 +301,7 @@ Deno.test("the validator rejects a now with a wrong result type", () => {
 Deno.test("the validator rejects a now with a pure mode", () => {
   const ir = lowered(SOURCE);
   (all(ir, "now")[0] as { execution: unknown }).execution = "pure";
-  assert(validate(ir, SOURCE).length > 0);
+  assertEquals(validate(ir, SOURCE).map((d) => d.code), ["validation/004"]);
 });
 
 Deno.test("the validator rejects Instant plus int and Instant plus Instant", () => {

@@ -79,7 +79,13 @@ Deno.test("bare lambdas match parenthesized inferred and recursive contracts", (
   }
   for (
     const text of ["const id = value: Int => value", "const id = a, b => a"]
-  ) assert(checked(text, false).diagnostics.length > 0);
+  ) {
+    assertEquals(
+      checked(text, false).diagnostics.map((d) => d.code),
+      ["unknown-name/001", "syntax/008"],
+      text,
+    );
+  }
 });
 
 Deno.test("bare lambda locals support references, rename, hover, completion, tokens and recovery", () => {
@@ -95,7 +101,7 @@ Deno.test("bare lambda locals support references, rename, hover, completion, tok
     assert(
       completionsAt(revision, "m.eff", use).some((c) => c.label === "value"),
     );
-    assert(semanticClassifications(revision, "m.eff", text).length > 0);
+    assertEquals(semanticClassifications(revision, "m.eff", text).length, 18);
     assertEquals(
       inlayHintsAt(revision, "m.eff", { start: 0, end: text.length }),
       [],
@@ -260,7 +266,10 @@ Deno.test("record destructuring rejects unsupported shapes, duplicates and scope
       binding,
     );
   }
-  assert(checked("const { id } = { id: 1 }", false).diagnostics.length > 0);
+  assertEquals(
+    checked("const { id } = { id: 1 }", false).diagnostics.map((d) => d.code),
+    ["syntax/008", "syntax/008"],
+  );
   const escaped = checked(
     `type Int = int
 service Files { open(): { read: () => Int, close: () => void } }

@@ -323,7 +323,9 @@ Deno.test("an edit of users.eff that breaks main.eff publishes main.eff, and the
   assertEquals(published[0].version, 2);
   assertEquals(published[1].version, undefined);
   assert("version" in published[0] && !("version" in published[1]));
-  assert(published[1].diagnostics.length > 0);
+  assertEquals(published[1].diagnostics.map((d) => d.code), [
+    "unknown-name/002",
+  ]);
   // The same list is not sent again.
   h.clearSent();
   h.deliver(didChangeFull(USERS, 3, `${USERS_BROKEN}\n// note\n`));
@@ -461,7 +463,9 @@ Deno.test("watched files: create, change, and delete", () => {
   const created = h.published();
   assertEquals(uris(created), [extra]);
   assert(!("version" in created[0]));
-  assert(created[0].diagnostics.length > 0);
+  assertEquals(created[0].diagnostics.map((d) => d.code), [
+    "type-mismatch/003",
+  ]);
   h.clearSent();
   h.files.set(path, "export const x = (): Num => 1\n\ntype Num = number\n");
   h.deliver(watched({ uri: extra, type: 2 }));
@@ -654,7 +658,9 @@ Deno.test("two projects side by side stay separate", () => {
   );
   const published = h.published();
   assertEquals(uris(published), [a]);
-  assert(published[0].diagnostics.length > 0);
+  assertEquals(published[0].diagnostics.map((d) => d.code), [
+    "type-mismatch/003",
+  ]);
   const main = h.server.projects.lookup(MAIN);
   const other = h.server.projects.lookup(a);
   assert(main !== undefined && other !== undefined);

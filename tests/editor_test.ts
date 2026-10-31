@@ -115,7 +115,7 @@ Deno.test("hover on an expression prints its type and sets, and has no backend",
 Deno.test("hover prints unknown (error) where the checker prints <error>", () => {
   const text = "export const g = (): Int => nope\n\ntype Int = int\n";
   const revision = loadModule(text);
-  assert(revision.diagnostics.length > 0);
+  assertEquals(revision.diagnostics.map((d) => d.code), ["unknown-name/001"]);
   const hover = hoverAt(revision, "m.eff", offsetOf(text, "nope", 1), outputs);
   assert(hover !== undefined);
   assertEquals(hover.contract, "unknown (error)");

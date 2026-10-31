@@ -226,7 +226,8 @@ Deno.test("a round shows the overlay program the new disk text of a closed file"
   setDisk(h, "users.eff", USERS_BROKEN);
   h.deliver(save(MAIN));
   const users = h.published().find((p) => p.uri === USERS);
-  assert(users !== undefined && users.diagnostics.length > 0);
+  assert(users !== undefined);
+  assertEquals(users.diagnostics.map((d) => d.code), ["type-mismatch/003"]);
 });
 
 Deno.test("a rename removes the outputs of the old path and writes the new path", () => {
