@@ -247,6 +247,18 @@ interface OutcomeNames {
   readonly make: string;
 }
 
+/** The generated helpers of a module. Each slot fills at its first use. */
+interface HelperNames {
+  intSchema?: string;
+  intFunction?: string;
+  unmatched?: string;
+  hostCheck?: string;
+  outcome?: OutcomeNames;
+  scopeRuntime?: ScopeRuntimeNames;
+}
+
+export type HelperKey = keyof HelperNames;
+
 /** Names for the emitted module. Each member records the name on first use. */
 export interface EmitNames {
   effect(module: EffectModule): string;
@@ -280,12 +292,7 @@ interface ImportLedger {
   moduleImports(): ImportGroup[];
   effectImports(): { readonly exported: string; readonly local: string }[];
   hostImports(): ImportGroup[];
-  usesIntFunction(): boolean;
-  usesUnmatched(): boolean;
-  usesOutcome(): boolean;
-  usesHostCheck(): boolean;
-  usesIntSchema(): boolean;
-  usesScopeRuntime(): boolean;
+  usesHelper(key: HelperKey): boolean;
 }
 
 /**
@@ -348,13 +355,8 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
     return name;
   }
 
-  private intHelper: string | undefined;
-  private unmatchedHelper: string | undefined;
-  private outcomeNames: OutcomeNames | undefined;
-  private hostCheckHelper: string | undefined;
-  private intSchema: string | undefined;
+  private readonly helpers: HelperNames = {};
   private serviceName: string | undefined;
-  private scopeRuntimeNames: ScopeRuntimeNames | undefined;
   private temporaries = 0;
   private declarationTemporaries: string[] = [];
   private readonly typeOnlyMemo = new Map<DeclarationId, boolean>();
@@ -530,41 +532,36 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
     return name;
   }
 
+  usesHelper(key: HelperKey): boolean {
+    return this.helpers[key] !== undefined;
+  }
+
   /** The `int` helper function `$int`. */
   intFunction(): string {
-    this.intHelper ??= this.fresh("$int");
-    return this.intHelper;
+    return this.helpers.intFunction ??= this.fresh("$int");
   }
 
   /** The helper `$unmatched` that a match calls for a value outside its type. */
   unmatched(): string {
-    this.unmatchedHelper ??= this.fresh("$unmatched");
-    return this.unmatchedHelper;
+    return this.helpers.unmatched ??= this.fresh("$unmatched");
   }
 
   /** The helper `$outcome` that maps an `Exit` to the outcome record of a `finally` binding. */
   outcome(): OutcomeNames {
-    this.outcomeNames ??= {
+    return this.helpers.outcome ??= {
       type: this.fresh("$Outcome"),
       make: this.fresh("$outcome"),
     };
-    return this.outcomeNames;
-  }
-
-  usesOutcome(): boolean {
-    return this.outcomeNames !== undefined;
   }
 
   /** The helper `$hostCheck` that a wrapped host provider calls for a data result. */
   hostCheck(): string {
-    this.hostCheckHelper ??= this.fresh("$hostCheck");
-    return this.hostCheckHelper;
+    return this.helpers.hostCheck ??= this.fresh("$hostCheck");
   }
 
   /** The `int` schema `$Int`. */
   intSchemaName(): string {
-    this.intSchema ??= this.fresh("$Int");
-    return this.intSchema;
+    return this.helpers.intSchema ??= this.fresh("$Int");
   }
 
   /** The service parameter `$s` of a `perform`. */
@@ -573,35 +570,14 @@ export class Scope implements EmitNames, Temporaries, TypeLookup, ImportLedger {
     return this.serviceName;
   }
 
-  usesIntFunction(): boolean {
-    return this.intHelper !== undefined;
-  }
-
-  usesUnmatched(): boolean {
-    return this.unmatchedHelper !== undefined;
-  }
-
-  usesHostCheck(): boolean {
-    return this.hostCheckHelper !== undefined;
-  }
-
-  usesIntSchema(): boolean {
-    return this.intSchema !== undefined;
-  }
-
   scopeRuntime(): ScopeRuntimeNames {
-    this.scopeRuntimeNames ??= {
+    return this.helpers.scopeRuntime ??= {
       type: this.fresh("$CloseableScope"),
       make: this.fresh("$makeScope"),
       provide: this.fresh("$provideScope"),
       register: this.fresh("$addScopeFinalizer"),
       close: this.fresh("$closeScope"),
     };
-    return this.scopeRuntimeNames;
-  }
-
-  usesScopeRuntime(): boolean {
-    return this.scopeRuntimeNames !== undefined;
   }
 
   // -------------------------------------------------------------- declarations

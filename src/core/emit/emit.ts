@@ -21,7 +21,12 @@ import {
   orderTypeLevel,
   recursiveGroups,
 } from "./decls.ts";
-import { EmitFailure, type ImportGroup, Scope } from "./scope.ts";
+import {
+  EmitFailure,
+  type HelperKey,
+  type ImportGroup,
+  Scope,
+} from "./scope.ts";
 import { scopeRuntimeDeclaration } from "./explicit_scope.ts";
 import { outcomeDeclaration } from "./outcome.ts";
 
@@ -137,13 +142,18 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
 
   // The host assertions come first: their check schemas register `$Int` and `$hostCheck`.
   const hostAssertions = emitter.hostAssertions();
+  const helperDeclarations: readonly (readonly [HelperKey, () => Doc])[] = [
+    ["intSchema", () => emitter.intSchemaDeclaration()],
+    ["intFunction", () => emitter.intFunctionDeclaration()],
+    ["unmatched", () => emitter.unmatchedDeclaration()],
+    ["hostCheck", () => emitter.hostCheckDeclaration()],
+    ["outcome", () => outcomeDeclaration(scope)],
+    ["scopeRuntime", () => scopeRuntimeDeclaration(scope)],
+  ];
   const helpers: Doc[][] = [];
-  if (scope.usesIntSchema()) helpers.push([emitter.intSchemaDeclaration()]);
-  if (scope.usesIntFunction()) helpers.push([emitter.intFunctionDeclaration()]);
-  if (scope.usesUnmatched()) helpers.push([emitter.unmatchedDeclaration()]);
-  if (scope.usesHostCheck()) helpers.push([emitter.hostCheckDeclaration()]);
-  if (scope.usesOutcome()) helpers.push([outcomeDeclaration(scope)]);
-  if (scope.usesScopeRuntime()) helpers.push([scopeRuntimeDeclaration(scope)]);
+  for (const [key, declaration] of helperDeclarations) {
+    if (scope.usesHelper(key)) helpers.push([declaration()]);
+  }
 
   helpers.push(fieldHelperDeclarations(scope));
 
