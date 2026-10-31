@@ -27,6 +27,7 @@ import {
   literalOf,
   nameTextOf,
   operatorOf,
+  unparen,
 } from "./syntax_queries.ts";
 import { isBoolean, operatorResult } from "./check_binary.ts";
 import {
@@ -391,11 +392,7 @@ class BodyChecker
   ): boolean {
     if (decision.status === "not-required") return true;
     if (decision.status === "proved") {
-      while (kindOf(this.tree, node) === SyntaxKind.ParenExpr) {
-        const inner = this.kids(node)[0];
-        if (inner === undefined) break;
-        node = inner;
-      }
+      node = unparen(this.tree, node);
       const current = this.body.proofs.get(node) ?? [];
       if (!current.some((proof) => proof.target === decision.proof.target)) {
         this.body.proofs.set(node, [...current, decision.proof]);
@@ -1861,12 +1858,7 @@ class BodyChecker
         if (type !== undefined) known.set(parts.label, type);
         continue;
       }
-      let valueNode = parts.value;
-      while (kindOf(this.tree, valueNode) === SyntaxKind.ParenExpr) {
-        const inner = this.kids(valueNode)[0];
-        if (inner === undefined) break;
-        valueNode = inner;
-      }
+      const valueNode = unparen(this.tree, parts.value);
       if (kindOf(this.tree, valueNode) === SyntaxKind.NameExpr) {
         const type = this.knownNameType(valueNode);
         if (type !== undefined) known.set(parts.label, type);

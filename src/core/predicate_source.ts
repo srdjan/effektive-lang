@@ -15,7 +15,13 @@ import {
   SyntaxKind,
   type SyntaxTree,
 } from "./syntax.ts";
-import { arrowBody, kidsOf, nameTextOf, operatorOf } from "./syntax_queries.ts";
+import {
+  arrowBody,
+  kidsOf,
+  nameTextOf,
+  operatorOf,
+  unparen,
+} from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 
 interface PredicateSourceError {
@@ -89,7 +95,7 @@ function compilePredicate(
   context: Context,
   node: NodeId,
 ): Result<Predicate, PredicateSourceError> {
-  const inner = unwrap(context.tree, node);
+  const inner = unparen(context.tree, node);
   const kind = kindOf(context.tree, inner);
   if (kind === SyntaxKind.LiteralExpr) {
     const text = nodeText(context.tree, inner);
@@ -178,7 +184,7 @@ function compileLinear(
   context: Context,
   node: NodeId,
 ): Result<Linear, PredicateSourceError> {
-  const inner = unwrap(context.tree, node);
+  const inner = unparen(context.tree, node);
   if (kindOf(context.tree, inner) === SyntaxKind.LiteralExpr) {
     const text = nodeText(context.tree, inner);
     if (!/^[0-9]+$/.test(text)) {
@@ -291,7 +297,7 @@ function pathOf(
   node: NodeId,
   inputName: string,
 ): Result<readonly string[], PredicateSourceError> {
-  const inner = unwrap(tree, node);
+  const inner = unparen(tree, node);
   if (kindOf(tree, inner) === SyntaxKind.NameExpr) {
     return nodeText(tree, inner) === inputName
       ? { ok: true, value: [] }
@@ -381,16 +387,6 @@ function termKey(term: Term): string {
     case "length":
       return `length:${term.path.join(".")}:${term.unit}`;
   }
-}
-
-function unwrap(tree: SyntaxTree, node: NodeId): NodeId {
-  let current = node;
-  while (kindOf(tree, current) === SyntaxKind.ParenExpr) {
-    const inner = kidsOf(tree, current)[0];
-    if (inner === undefined) return current;
-    current = inner;
-  }
-  return current;
 }
 
 function fail<T>(

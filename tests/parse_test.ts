@@ -21,6 +21,7 @@ import {
   sexp,
   treeProblems,
 } from "./helpers.ts";
+import { unparen } from "../src/core/syntax_queries.ts";
 
 /** Parses text, checks the invariants that hold for every input, and returns the result. */
 function parseChecked(text: string, mode: "eff" | "effi" = "eff") {
@@ -562,4 +563,16 @@ Deno.test("data is an ordinary name and no declaration word", () => {
     parseChecked("data Row = { id: int }\n").diagnostics.length > 0,
     true,
   );
+});
+
+Deno.test("unparen strips nested parenthesis expressions and keeps a malformed one", () => {
+  const kindsAfterUnparen = (source: string): string => {
+    const { tree } = parse("t.eff", source);
+    const initializer = constInitializer(tree, "x");
+    return kindName(kindOf(tree, unparen(tree, initializer)));
+  };
+  assertEquals(kindsAfterUnparen("const x = a\n"), "NameExpr");
+  assertEquals(kindsAfterUnparen("const x = (a)\n"), "NameExpr");
+  assertEquals(kindsAfterUnparen("const x = ((a))\n"), "NameExpr");
+  assertEquals(kindsAfterUnparen("const x = (\n"), "ParenExpr");
 });

@@ -12,7 +12,7 @@ import {
   SyntaxKind,
   type SyntaxTree,
 } from "./syntax.ts";
-import { initOf, kidsOf, tokenKindOf } from "./syntax_queries.ts";
+import { initOf, kidsOf, tokenKindOf, unparen } from "./syntax_queries.ts";
 import type { BodyTable } from "./tables.ts";
 import { effectText, showType } from "./type_show.ts";
 import type { TypeNode, TypeReader, TypeRef } from "./types.ts";
@@ -52,12 +52,8 @@ function aliasTargetNode(
   tree: SyntaxTree,
   node: NodeId,
 ): NodeId | undefined {
-  let current = node;
-  while (kindOf(tree, current) === SyntaxKind.ParenExpr) {
-    const inner = kidsOf(tree, current)[0];
-    if (inner === undefined) return undefined;
-    current = inner;
-  }
+  const current = unparen(tree, node);
+  if (kindOf(tree, current) === SyntaxKind.ParenExpr) return undefined;
   return revision.resolution(module)?.targets.has(current)
     ? current
     : undefined;

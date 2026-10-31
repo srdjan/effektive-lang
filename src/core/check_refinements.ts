@@ -10,7 +10,13 @@ import {
   SyntaxKind,
   type SyntaxTree,
 } from "./syntax.ts";
-import { kidsOf, literalOf, nameTextOf, operatorOf } from "./syntax_queries.ts";
+import {
+  kidsOf,
+  literalOf,
+  nameTextOf,
+  operatorOf,
+  unparen,
+} from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 
 const REFINEMENT_QUERY_STEPS = 8_192;
@@ -129,7 +135,7 @@ export class RefinementChecker {
   }
 
   condition(node: NodeId): Predicate | undefined {
-    const inner = this.unwrap(node);
+    const inner = unparen(this.tree, node);
     if (kindOf(this.tree, inner) !== SyntaxKind.BinaryExpr) return undefined;
     const operator = operatorOf(this.tree, inner);
     const [left, right] = kidsOf(this.tree, inner);
@@ -258,7 +264,7 @@ export class RefinementChecker {
     path: readonly string[],
     length: boolean,
   ): Linear | undefined {
-    const inner = this.unwrap(node);
+    const inner = unparen(this.tree, node);
     if (path.length > 0) {
       const field = this.recordField(inner, path[0]);
       if (field !== undefined) {
@@ -291,7 +297,7 @@ export class RefinementChecker {
   }
 
   private linear(node: NodeId): Linear | undefined {
-    const inner = this.unwrap(node);
+    const inner = unparen(this.tree, node);
     if (kindOf(this.tree, inner) === SyntaxKind.LiteralExpr) {
       const text = nodeText(this.tree, inner);
       const value = literalOf(this.tree, inner);
@@ -329,7 +335,7 @@ export class RefinementChecker {
     if (kind !== SyntaxKind.FieldExpr) return undefined;
     const [base, member] = kidsOf(this.tree, node);
     if (base === undefined || member === undefined) return undefined;
-    const path = this.pathOf(this.unwrap(base));
+    const path = this.pathOf(unparen(this.tree, base));
     const name = nameTextOf(this.tree, member);
     return path === undefined || name === undefined
       ? undefined
@@ -393,16 +399,6 @@ export class RefinementChecker {
         kindOf(this.tree, first) === SyntaxKind.SpreadField
       ? kidsOf(this.tree, first)[0]
       : undefined;
-  }
-
-  private unwrap(node: NodeId): NodeId {
-    let current = node;
-    while (kindOf(this.tree, current) === SyntaxKind.ParenExpr) {
-      const inner = kidsOf(this.tree, current)[0];
-      if (inner === undefined) break;
-      current = inner;
-    }
-    return current;
   }
 }
 

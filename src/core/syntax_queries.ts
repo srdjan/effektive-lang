@@ -97,6 +97,20 @@ export function kidsOf(tree: SyntaxTree, node: NodeId): NodeId[] {
   return result;
 }
 
+/**
+ * Strips nested parenthesis expressions. A parenthesis without an inner node,
+ * such as `(` with a Missing child, stays as the result.
+ */
+export function unparen(tree: SyntaxTree, node: NodeId): NodeId {
+  let current = node;
+  while (kindOf(tree, current) === SyntaxKind.ParenExpr) {
+    const inner = kidsOf(tree, current)[0];
+    if (inner === undefined) return current;
+    current = inner;
+  }
+  return current;
+}
+
 /** The source text of the Number token of a literal node, if it has one. */
 export function numberTextOf(
   tree: SyntaxTree,
