@@ -136,10 +136,10 @@ export class TypeScriptOutputs {
   }
 }
 
-export type HoverBackend = { readonly tag: "type"; readonly text: string } | {
+type HoverBackend = { readonly tag: "type"; readonly text: string } | {
   readonly tag: "unavailable";
 };
-export interface Hover {
+interface Hover {
   readonly span: Span;
   readonly contract: string;
   readonly backend: HoverBackend | undefined;
@@ -206,7 +206,7 @@ export function hoverAt(
 }
 
 export { emitModule } from "./emit/emit.ts";
-export type { EmitContext, EmitError, EmittedModule } from "./emit/emit.ts";
+export type { EmitContext, EmittedModule } from "./emit/emit.ts";
 export {
   buildSpanTable,
   hostImportSpans,
