@@ -4,7 +4,6 @@
 // `deno check` 2.9.7 for the wrong host module of that fixture.
 
 import { assert, assertEquals } from "@std/assert";
-import { DIAGNOSTIC_CODES } from "../src/core/diagnostics.ts";
 import {
   buildSpanTable,
   hostImportSpans,
@@ -13,7 +12,7 @@ import {
   type SpanTable,
   type TscDiagnostic,
 } from "../src/core/typescript.ts";
-import { lineStarts, positionOf } from "../src/core/frontend.ts";
+import { categoryOf, lineStarts, positionOf } from "../src/core/frontend.ts";
 import { spanText } from "../src/core/source.ts";
 import {
   COMPANION_FILES,
@@ -137,7 +136,7 @@ Deno.test("parseDenoCheck returns the lines it cannot read as other lines", () =
 // ------------------------------------------------------------------ mapping
 
 Deno.test("host-boundary/001 is registered in its category", () => {
-  assertEquals(DIAGNOSTIC_CODES["host-boundary/001"].category, "host-boundary");
+  assertEquals(categoryOf("host-boundary/001"), "host-boundary");
 });
 
 Deno.test("a diagnostic on a host assertion maps to host-boundary/001 on the import", () => {

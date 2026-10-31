@@ -16,7 +16,6 @@ import { makeSpan } from "../src/core/source.ts";
 Deno.test("every code has the form category/NNN and matches its category", () => {
   for (const code of registeredCodes()) {
     assertEquals(/^[a-z-]+\/\d{3}$/.test(code), true, code);
-    assertEquals(code.split("/")[0], categoryOf(code), code);
     assertEquals(describeCode(code).length > 10, true, code);
   }
 });
@@ -40,6 +39,15 @@ Deno.test("registered diagnostics use documented categories", () => {
     assertEquals(categories.includes(categoryOf(code)), true, code);
   }
   assertEquals(Object.keys(DIAGNOSTIC_CODES).length > 0, true);
+});
+
+Deno.test("categoryOf returns the part of the code before the slash", () => {
+  assertEquals(categoryOf("syntax/001"), "syntax");
+  assertEquals(categoryOf("type-mismatch/001"), "type-mismatch");
+  assertEquals(categoryOf("failure-contract/001"), "failure-contract");
+  assertEquals(categoryOf("requirement-contract/001"), "requirement-contract");
+  assertEquals(categoryOf("execution-mode/001"), "execution-mode");
+  assertEquals(categoryOf("host-boundary/001"), "host-boundary");
 });
 
 Deno.test("makeDiagnostic fills category and severity and keeps related spans only when given", () => {
