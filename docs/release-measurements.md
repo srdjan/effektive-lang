@@ -142,3 +142,14 @@ M4 ran twice on the medium input with three open documents. In the second run, e
 | 10,000 | 250.3 / 238.0 | 288.7 / 305.6 | 97 → 99 |
 
 Peaks are sampled at step ends, and garbage collection is not forced. This run establishes no memory bound.
+
+## Foundation reset run, 2026-10-31
+
+The full M1/M3/M4 run of commit `90f0fbe` passed the budget. All four large-input diagnostics p90 values are below **100 ms**. The run exited 0. M1/M3/M4 and the M4 run with saves took **47.2 / 20.6 / 78.5 / 327.9 seconds**. The environment was Deno **2.9.8** on `aarch64-apple-darwin`. The load average was 6.15 at the start and 1.96 at the end, so this table makes no claim of a change from the earlier run.
+
+| Large-input edit | Samples | Median ms | p90 ms | Maximum ms | A/A floor % |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| body | 200 | 10.703 | 11.615 | 40.326 | 11.6 |
+| header | 200 | 54.523 | 56.779 | 87.085 | 4.1 |
+| alias | 200 | 53.823 | 55.090 | 86.779 | 5.2 |
+| flip | 200 | 53.830 | 54.917 | 85.312 | 4.7 |
