@@ -48,7 +48,7 @@ import {
 import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";
 import { fnv1a64 } from "./hash.ts";
 import { moduleOfId, nameOfId } from "./ids.ts";
-import type { DeclEntry } from "./index.ts";
+import type { DeclEntry } from "./declaration_index.ts";
 import { buildInterface, type ModuleInterface } from "./interface.ts";
 import type { ModuleIR } from "./ir.ts";
 import { type LowerError, lowerModule } from "./lower.ts";

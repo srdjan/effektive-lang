@@ -15,7 +15,7 @@ import {
   makeDiagnostic,
   normalizeDiagnostics,
 } from "./diagnostics.ts";
-import type { DeclEntry, MethodEntry } from "./index.ts";
+import type { DeclEntry, MethodEntry } from "./declaration_index.ts";
 import {
   isPatternKind,
   isTypeKind,

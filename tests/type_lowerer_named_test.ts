@@ -1,5 +1,5 @@
 // Error paths of the built-in type names in the declaration checker
-// (`TypeLowerer.named` in src/core/check.ts): a wrong number of type arguments
+// (`TypeLowerer.named` in src/core/type_lower.ts): a wrong number of type arguments
 // for Ref, RetrySchedule, the three Schedule helper types, Codec, and Fiber, a
 // RetrySchedule over a type that is not a declared error, and a Fiber failure
 // type that is not a declared error or never. Each case pins the code, the text

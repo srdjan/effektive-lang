@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 import { analyzeProject } from "../src/core/analyze.ts";
-import { checkModuleDeclarations } from "../src/core/check.ts";
+import { checkModuleDeclarations } from "../src/core/check_declarations.ts";
 import { memoryHost } from "../src/core/frontend.ts";
 import { TypeTable } from "../src/core/types.ts";
 

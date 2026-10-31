@@ -8,7 +8,11 @@ import {
   normalizeDiagnostics,
 } from "./diagnostics.ts";
 import { stronglyConnectedComponents } from "./graph.ts";
-import { buildIndex, type FileIndex, type ImportEntry } from "./index.ts";
+import {
+  buildIndex,
+  type FileIndex,
+  type ImportEntry,
+} from "./declaration_index.ts";
 import { joinPath, moduleNameOf, normalizeRelative } from "./paths.ts";
 import { parse, type ParseResult } from "./parse.ts";
 import type { ReadError, Result, SourceHost, Span } from "./source.ts";

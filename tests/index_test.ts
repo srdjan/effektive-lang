@@ -2,7 +2,7 @@
 
 import { assert, assertEquals, assertNotEquals } from "@std/assert";
 import { fnv1a64 } from "../src/core/hash.ts";
-import { buildIndex, type DeclEntry } from "../src/core/index.ts";
+import { buildIndex, type DeclEntry } from "../src/core/declaration_index.ts";
 import { parse } from "../src/core/parse.ts";
 import { FIXTURES } from "./helpers.ts";
 

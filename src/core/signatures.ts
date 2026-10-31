@@ -1,7 +1,7 @@
 // The signature model of the declaration checker: function and constant
 // signatures, the module declarations that carry them, the execution modes,
 // and the lowering of a signature to a function type. TypeLowerer
-// and the module checker (check.ts) both build on it.
+// and the module checker (check_declarations.ts) both build on it.
 //
 // - `ModuleDeclarations.values` holds one signature for each module-level const
 //   and provider. The body checker checks each body against its signature.

@@ -18,7 +18,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   syntax_queries.ts Pure child, type/pattern-kind, literal, operator, arrow-body and initializer queries shared by the front end.
   parse.ts       Parser with recovery.
   hash.ts        Synchronous content hash (FNV-1a 64).
-  index.ts       Declaration index of one file: names, kinds, export flags, spans, and methods.
+  declaration_index.ts Declaration index of one file: names, kinds, export flags, spans, and methods.
   paths.ts       Path helpers and the generated-file header: joinPath, normalizeRelative, moduleNameOf, generatedPathOf, generatedHeader, generatedSourceOf.
   project.ts     effektive.json, module graph, cycles, order.
   resolve.ts     Names to identities, scopes, prelude, side table of targets.
@@ -27,7 +27,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   type_show.ts   Readable forms of types for messages, and effectText.
   signatures.ts  Signature model: function and constant signatures, module declarations, execution modes, and referenced identities.
   type_lower.ts  Type lowering: the builtin type rows, TypeLowerer, and the recursion check of type groups.
-  check.ts       Declaration checker: types, errors, services, providers, and module constants.
+  check_declarations.ts Declaration checker: types, errors, services, providers, and module constants.
   check_expr.ts  Body checker: expressions, calls, contracts, and the prelude dispatch.
   check_patterns.ts Match patterns, bindings, and coverage through PatternContext.
   check_refinements.ts RefinementChecker: the refinement facts of a body, the proof budget, and the proved, not-required, or failed decision of each obligation.

@@ -8,7 +8,7 @@
 import type { CheckedModule, FunctionBody } from "./check_project.ts";
 import type { Revision } from "./db.ts";
 import { methodOfCapability, serviceOfCapability, shortName } from "./ids.ts";
-import type { DeclEntry, FileIndex } from "./index.ts";
+import type { DeclEntry, FileIndex } from "./declaration_index.ts";
 import { symbolIndex } from "./editor_index.ts";
 import { parseFileFresh } from "./project.ts";
 import type { Target } from "./resolve.ts";

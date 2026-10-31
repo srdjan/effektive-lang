@@ -1,7 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { analyzeProject } from "../src/core/analyze.ts";
 import { modesAsSolved, signatureType } from "../src/core/signatures.ts";
-import { checkModuleDeclarations } from "../src/core/check.ts";
+import { checkModuleDeclarations } from "../src/core/check_declarations.ts";
 import type { TypeId } from "../src/core/ir.ts";
 import { parse } from "../src/core/parse.ts";
 import { memoryHost } from "../src/core/frontend.ts";

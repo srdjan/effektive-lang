@@ -11,7 +11,7 @@ import {
   signatureType,
   type TypeGraph,
 } from "../src/core/signatures.ts";
-import { checkModuleDeclarations } from "../src/core/check.ts";
+import { checkModuleDeclarations } from "../src/core/check_declarations.ts";
 import {
   checkProject,
   type Diagnostic,

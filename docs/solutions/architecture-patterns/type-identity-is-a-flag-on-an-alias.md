@@ -2,7 +2,7 @@
 title: Type identity is a property of an alias, and a widened value takes no second name
 date: 2026-10-24
 category: architecture-patterns
-module: src/core/types.ts, src/core/check.ts, src/core/check_expr.ts, and src/core/validate/typing.ts
+module: src/core/types.ts, src/core/check_declarations.ts, src/core/check_expr.ts, and src/core/validate/typing.ts
 problem_type: architecture_pattern
 component: type_checker
 severity: high
@@ -41,7 +41,7 @@ Before the TI change, the checker kept a nominal type in separate tables (`brand
 
 **4. Give the validator equality a name signature.** The IR validator `same()` (`src/core/validate/typing.ts:492`) once meant two-way assignability. With type identity, `int` and an identity over `int` fit each other in both directions, but they are different types. `same()` now also compares `nameSignature` (`src/core/validate/typing.ts:467`). Without it, `unionOf` merges `Cents` and `int` into one member, and the validator accepts IR that the checker did not produce. Known limit, accepted: the signature is a sorted set, so `[Cents, int]` and `[int, Cents]` count as equal.
 
-A bare-name body gives a transparent alias (`hasIdentity` in `src/core/check.ts`). So source cannot make an identity whose body is another identity. An earlier version of this doc used `type UserId = Text` as an identity over `Text`. That was wrong, and the doc no longer uses it.
+A bare-name body gives a transparent alias (`hasIdentity` in `src/core/check_declarations.ts`). So source cannot make an identity whose body is another identity. An earlier version of this doc used `type UserId = Text` as an identity over `Text`. That was wrong, and the doc no longer uses it.
 
 ## Why This Matters
 

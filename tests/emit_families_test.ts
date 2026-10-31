@@ -72,7 +72,8 @@ Deno.test("the value imports of src/core/emit reach no checker-phase module", ()
     .map((href) => href.slice(core.href.length))
     .sort();
   const forbidden = outside.filter((name) =>
-    /^(types|modes|project|parse|index|lower|resolve|check.*)\.ts$/.test(name)
+    /^(types|modes|project|parse|declaration_index|lower|resolve|check.*)\.ts$/
+      .test(name)
   );
   assert(forbidden.length === 0, `emit reaches ${forbidden.join(", ")}`);
   assert(outside.length > 0, "no import outside emit found");

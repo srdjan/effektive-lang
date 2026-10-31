@@ -514,7 +514,7 @@ Deno.test("an opaque host type without a host module for its interface gives an 
 });
 
 Deno.test("a Schema of a function type gives an internal emission error", () => {
-  // check.ts and check_expr.ts require data-only Schema types
+  // check_declarations.ts and check_expr.ts require data-only Schema types
   // (type-mismatch/010). schemaDoc fails for the descriptor of a constant.
   const { ir } = lowerOk(
     "type Int = int\nconst s: Schema<Int> = schema()\n",
@@ -533,7 +533,7 @@ Deno.test("a Schema of a function type gives an internal emission error", () => 
 Deno.test("a recursive type with a function field gives an internal emission error", () => {
   // The encoded mirror of a recursive type declaration needs a schema for each
   // field (encodedTypeDoc). The checker rejects such a type unless it is data
-  // only (check.ts, declaration/007).
+  // only (check_declarations.ts, declaration/007).
   const { ir } = lowerOk(
     "type Int = int\ntype Tree = { score: Int, children: Tree[] }\n",
   );

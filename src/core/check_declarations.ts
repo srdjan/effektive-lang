@@ -7,7 +7,7 @@
 
 import type { ModuleResolution } from "./resolve.ts";
 import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";
-import type { DeclEntry } from "./index.ts";
+import type { DeclEntry } from "./declaration_index.ts";
 import type {
   CapabilityId,
   DeclarationId,

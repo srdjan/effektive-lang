@@ -24,7 +24,7 @@ import {
   checkAnalysis,
   type CheckedProject,
 } from "../src/core/check_project.ts";
-import { buildIndex } from "../src/core/index.ts";
+import { buildIndex } from "../src/core/declaration_index.ts";
 import { lex } from "../src/core/lex.ts";
 import type { Analysis } from "../src/core/analyze.ts";
 import {

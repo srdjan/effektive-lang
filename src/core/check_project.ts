@@ -23,7 +23,7 @@ import {
   type TypeGraph,
   type ValueSignature,
 } from "./signatures.ts";
-import { checkModuleDeclarations } from "./check.ts";
+import { checkModuleDeclarations } from "./check_declarations.ts";
 import {
   type BodyEnv,
   checkConstantBody,
