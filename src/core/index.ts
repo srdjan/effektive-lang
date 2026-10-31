@@ -3,7 +3,7 @@
 
 import { TokenKind } from "./lex.ts";
 import type { Span } from "./source.ts";
-import { nameTextOf, tokenKindOf } from "./syntax_queries.ts";
+import { kidsOf, nameTextOf, tokenKindOf } from "./syntax_queries.ts";
 import {
   childrenOf,
   decodeString,
@@ -67,18 +67,6 @@ export interface FileIndex {
   /** The first declaration for each name. Later declarations of the name are duplicates. */
   readonly byName: ReadonlyMap<string, DeclEntry>;
   readonly imports: readonly ImportEntry[];
-}
-
-/** Child nodes that are not tokens or Missing nodes. */
-function nodeKids(tree: SyntaxTree, node: NodeId): NodeId[] {
-  const result: NodeId[] = [];
-  for (const child of childrenOf(tree, node)) {
-    const kind = kindOf(tree, child);
-    if (kind !== SyntaxKind.Token && kind !== SyntaxKind.Missing) {
-      result.push(child);
-    }
-  }
-  return result;
 }
 
 function firstChildOfKind(
@@ -204,7 +192,7 @@ export function buildIndex(tree: SyntaxTree): FileIndex {
   const decls: DeclEntry[] = [];
   const byName = new Map<string, DeclEntry>();
   const imports: ImportEntry[] = [];
-  for (const child of nodeKids(tree, tree.root)) {
+  for (const child of kidsOf(tree, tree.root)) {
     const kind = kindOf(tree, child);
     if (kind === SyntaxKind.ImportDecl) {
       imports.push(indexImport(tree, child));

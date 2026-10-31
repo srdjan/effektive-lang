@@ -16,7 +16,12 @@ import {
   normalizeDiagnostics,
 } from "./diagnostics.ts";
 import type { DeclEntry, MethodEntry } from "./index.ts";
-import { isPatternKind, isTypeKind, nameTextOf } from "./syntax_queries.ts";
+import {
+  isPatternKind,
+  isTypeKind,
+  kidsOf,
+  nameTextOf,
+} from "./syntax_queries.ts";
 import { declarationId, type DeclarationPrefix } from "./ids.ts";
 import type {
   CapabilityId,
@@ -30,7 +35,6 @@ import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID, TIMEOUT_ERROR_ID } from "./ir.ts";
 import type { ModuleInfo, Project } from "./project.ts";
 import type { Span } from "./source.ts";
 import {
-  childrenOf,
   kindOf,
   type NodeId,
   nodeSpan,
@@ -380,19 +384,8 @@ class Resolver {
 
   // -------------------------------------------------------------- helpers
 
-  private kids(node: NodeId): NodeId[] {
-    const result: NodeId[] = [];
-    for (const child of childrenOf(this.tree, node)) {
-      const kind = kindOf(this.tree, child);
-      if (kind !== SyntaxKind.Token && kind !== SyntaxKind.Missing) {
-        result.push(child);
-      }
-    }
-    return result;
-  }
-
   private kidsOfKind(node: NodeId, kind: SyntaxKind): NodeId[] {
-    return this.kids(node).filter((k) => kindOf(this.tree, k) === kind);
+    return kidsOf(this.tree, node).filter((k) => kindOf(this.tree, k) === kind);
   }
 
   private span(node: NodeId): Span {
@@ -943,14 +936,14 @@ class Resolver {
     const kind = kindOf(this.tree, node);
     switch (kind) {
       case SyntaxKind.NamedType:
-        for (const kid of this.kids(node)) {
+        for (const kid of kidsOf(this.tree, node)) {
           if (kindOf(this.tree, kid) === SyntaxKind.Name) this.typeRef(kid);
           else this.resolveType(kid);
         }
         return;
       case SyntaxKind.RecordType:
         for (const field of this.kidsOfKind(node, SyntaxKind.FieldType)) {
-          for (const kid of this.kids(field)) {
+          for (const kid of kidsOf(this.tree, field)) {
             if (kindOf(this.tree, kid) === SyntaxKind.Name) {
               this.fieldLabel(kid);
             } else {
@@ -960,7 +953,7 @@ class Resolver {
         }
         return;
       case SyntaxKind.FunctionType:
-        for (const kid of this.kids(node)) {
+        for (const kid of kidsOf(this.tree, node)) {
           const k = kindOf(this.tree, kid);
           if (k === SyntaxKind.ParamList) this.labelParams(kid);
           else if (
@@ -976,7 +969,7 @@ class Resolver {
       case SyntaxKind.ScheduleType:
       case SyntaxKind.SchemaType:
       case SyntaxKind.LayerType:
-        for (const kid of this.kids(node)) {
+        for (const kid of kidsOf(this.tree, node)) {
           const k = kindOf(this.tree, kid);
           if (
             k === SyntaxKind.FailsClause || k === SyntaxKind.UsesClause ||
@@ -991,7 +984,7 @@ class Resolver {
       case SyntaxKind.ArrayType:
       case SyntaxKind.UnionType:
       case SyntaxKind.ParenType:
-        for (const kid of this.kids(node)) this.resolveType(kid);
+        for (const kid of kidsOf(this.tree, node)) this.resolveType(kid);
         return;
       default:
         return;
@@ -1006,7 +999,7 @@ class Resolver {
   /** Parameter names in a signature without a body are labels. Their types resolve. */
   private labelParams(paramList: NodeId): void {
     for (const param of this.kidsOfKind(paramList, SyntaxKind.Param)) {
-      for (const kid of this.kids(param)) {
+      for (const kid of kidsOf(this.tree, param)) {
         if (kindOf(this.tree, kid) === SyntaxKind.Name) this.fieldLabel(kid);
         else this.resolveType(kid);
       }
@@ -1041,13 +1034,13 @@ class Resolver {
     switch (decl.kind) {
       case "type":
       case "error":
-        for (const kid of this.kids(node)) {
+        for (const kid of kidsOf(this.tree, node)) {
           if (kid !== decl.nameNode) this.resolveType(kid);
         }
         break;
       case "service":
         for (const method of this.kidsOfKind(node, SyntaxKind.ServiceMethod)) {
-          for (const kid of this.kids(method)) {
+          for (const kid of kidsOf(this.tree, method)) {
             const k = kindOf(this.tree, kid);
             if (k === SyntaxKind.Name) continue;
             if (k === SyntaxKind.ParamList) this.labelParams(kid);
@@ -1057,7 +1050,7 @@ class Resolver {
         }
         break;
       case "provider":
-        for (const kid of this.kids(node)) {
+        for (const kid of kidsOf(this.tree, node)) {
           const k = kindOf(this.tree, kid);
           if (k === SyntaxKind.Name) continue;
           this.clause(kid);
@@ -1072,7 +1065,7 @@ class Resolver {
 
   /** The type annotation and the initializer of a top-level const. */
   private resolveConstParts(node: NodeId, nameNode: NodeId): void {
-    const rest = this.kids(node).filter((k) => k !== nameNode);
+    const rest = kidsOf(this.tree, node).filter((k) => k !== nameNode);
     for (const kid of rest) {
       if (isTypeKind(kindOf(this.tree, kid))) this.resolveType(kid);
     }
@@ -1097,7 +1090,7 @@ class Resolver {
         this.arrow(node);
         return;
       case SyntaxKind.CallExpr: {
-        const kids = this.kids(node);
+        const kids = kidsOf(this.tree, node);
         if (kids.length > 0) this.expr(kids[0], "callee");
         if (
           kids[0] !== undefined &&
@@ -1106,7 +1099,7 @@ class Resolver {
           kids[1] !== undefined &&
           kindOf(this.tree, kids[1]) === SyntaxKind.ArgList
         ) {
-          const args = this.kids(kids[1]);
+          const args = kidsOf(this.tree, kids[1]);
           const first = args[0];
           if (
             first !== undefined &&
@@ -1132,19 +1125,19 @@ class Resolver {
         this.fieldExpr(node);
         return;
       case SyntaxKind.PipeExpr: {
-        const kids = this.kids(node);
+        const kids = kidsOf(this.tree, node);
         if (kids.length > 0) this.expr(kids[0], "value");
         for (const stage of kids.slice(1)) this.pipeStage(stage);
         return;
       }
       case SyntaxKind.RecordExpr:
-        for (const field of this.kids(node)) this.recordField(field);
+        for (const field of kidsOf(this.tree, node)) this.recordField(field);
         return;
       case SyntaxKind.Block:
         this.block(node, undefined);
         return;
       case SyntaxKind.MatchExpr: {
-        const kids = this.kids(node);
+        const kids = kidsOf(this.tree, node);
         if (kids.length > 0) this.expr(kids[0], "value");
         for (const arm of kids.slice(1)) {
           if (kindOf(this.tree, arm) === SyntaxKind.MatchArm) this.arm(arm);
@@ -1152,7 +1145,7 @@ class Resolver {
         return;
       }
       case SyntaxKind.TryExpr:
-        for (const kid of this.kids(node)) {
+        for (const kid of kidsOf(this.tree, node)) {
           if (kindOf(this.tree, kid) === SyntaxKind.CatchClause) {
             for (const h of this.kidsOfKind(kid, SyntaxKind.Handler)) {
               this.handler(h);
@@ -1173,7 +1166,7 @@ class Resolver {
       case SyntaxKind.ArgList:
       case SyntaxKind.ListExpr:
       case SyntaxKind.IfExpr:
-        for (const kid of this.kids(node)) this.expr(kid, "value");
+        for (const kid of kidsOf(this.tree, node)) this.expr(kid, "value");
         return;
       default:
         return;
@@ -1181,7 +1174,7 @@ class Resolver {
   }
 
   private fieldExpr(node: NodeId): void {
-    const kids = this.kids(node);
+    const kids = kidsOf(this.tree, node);
     const base = kids[0];
     const member = kids.find((k, i) =>
       i > 0 && kindOf(this.tree, k) === SyntaxKind.Name
@@ -1208,7 +1201,7 @@ class Resolver {
 
   private pipeStage(stage: NodeId): void {
     if (kindOf(this.tree, stage) !== SyntaxKind.PipeStage) return;
-    for (const kid of this.kids(stage)) {
+    for (const kid of kidsOf(this.tree, stage)) {
       const kind = kindOf(this.tree, kid);
       if (kind === SyntaxKind.QualifiedName) this.qualified(kid, "stage");
       else this.expr(kid, "value");
@@ -1218,24 +1211,24 @@ class Resolver {
   private recordField(field: NodeId): void {
     const kind = kindOf(this.tree, field);
     if (kind === SyntaxKind.RecordField) {
-      for (const kid of this.kids(field)) {
+      for (const kid of kidsOf(this.tree, field)) {
         if (kindOf(this.tree, kid) === SyntaxKind.Name) this.fieldLabel(kid);
         else this.expr(kid, "value");
       }
     } else if (kind === SyntaxKind.ShorthandField) {
-      for (const kid of this.kids(field)) {
+      for (const kid of kidsOf(this.tree, field)) {
         if (kindOf(this.tree, kid) !== SyntaxKind.Name) continue;
         const name = nameTextOf(this.tree, kid);
         if (name !== undefined) this.valueRef(kid, name, "value");
       }
     } else if (kind === SyntaxKind.SpreadField) {
-      for (const kid of this.kids(field)) this.expr(kid, "value");
+      for (const kid of kidsOf(this.tree, field)) this.expr(kid, "value");
     }
   }
 
   /** The optional outcome binding of a `finally` region, then its body. */
   private bodyWithOutcome(region: NodeId): void {
-    for (const kid of this.kids(region)) {
+    for (const kid of kidsOf(this.tree, region)) {
       if (kindOf(this.tree, kid) === SyntaxKind.Name) {
         this.declareLocal(kid, false);
       } else this.expr(kid, "value");
@@ -1243,7 +1236,7 @@ class Resolver {
   }
 
   private using(node: NodeId): void {
-    const parts = this.kids(node);
+    const parts = kidsOf(this.tree, node);
     const name = parts.find((k) => kindOf(this.tree, k) === SyntaxKind.Name);
     const acquire = parts.find((k) =>
       kindOf(this.tree, k) === SyntaxKind.ResourceAcquire
@@ -1251,7 +1244,7 @@ class Resolver {
     const outer = this.scope;
     if (acquire !== undefined) {
       this.scope = new Scope(outer);
-      for (const body of this.kids(acquire)) this.expr(body, "value");
+      for (const body of kidsOf(this.tree, acquire)) this.expr(body, "value");
     }
     const scope = new Scope(outer);
     this.scope = scope;
@@ -1273,11 +1266,11 @@ class Resolver {
     const outer = this.scope;
     const scope = new Scope(outer);
     this.scope = scope;
-    for (const kid of this.kids(node)) {
+    for (const kid of kidsOf(this.tree, node)) {
       const kind = kindOf(this.tree, kid);
       if (kind === SyntaxKind.ParamList) {
         for (const param of this.kidsOfKind(kid, SyntaxKind.Param)) {
-          for (const part of this.kids(param)) {
+          for (const part of kidsOf(this.tree, param)) {
             if (kindOf(this.tree, part) === SyntaxKind.Name) {
               this.declareLocal(part, false);
             } else {
@@ -1304,7 +1297,7 @@ class Resolver {
   private block(node: NodeId, shared: Scope | undefined): void {
     const outer = this.scope;
     this.scope = shared ?? new Scope(outer);
-    for (const item of this.kids(node)) {
+    for (const item of kidsOf(this.tree, node)) {
       if (kindOf(this.tree, item) === SyntaxKind.ConstDecl) {
         this.blockConst(item);
       } else {
@@ -1315,13 +1308,13 @@ class Resolver {
   }
 
   private blockConst(node: NodeId): void {
-    const kids = this.kids(node);
+    const kids = kidsOf(this.tree, node);
     const record = kids.find((k) =>
       kindOf(this.tree, k) === SyntaxKind.RecordBinding
     );
     if (record !== undefined) {
       const bindings: LocalBinding[] = [];
-      for (const field of this.kids(record)) {
+      for (const field of kidsOf(this.tree, record)) {
         const names = this.kidsOfKind(field, SyntaxKind.Name);
         if (
           kindOf(this.tree, field) === SyntaxKind.BindingField &&
@@ -1358,7 +1351,7 @@ class Resolver {
     const outer = this.scope;
     const scope = new Scope(outer);
     this.scope = scope;
-    for (const kid of this.kids(node)) {
+    for (const kid of kidsOf(this.tree, node)) {
       const kind = kindOf(this.tree, kid);
       if (isPatternKind(kind)) this.pattern(kid);
       else if (kind === SyntaxKind.Block) this.block(kid, scope);
@@ -1372,7 +1365,7 @@ class Resolver {
     const scope = new Scope(outer);
     this.scope = scope;
     let names = 0;
-    for (const kid of this.kids(node)) {
+    for (const kid of kidsOf(this.tree, node)) {
       const kind = kindOf(this.tree, kid);
       if (kind === SyntaxKind.Name) {
         // `Defect` is a handler keyword, not an error identity.
@@ -1404,7 +1397,7 @@ class Resolver {
         return;
       }
       case SyntaxKind.RecordPattern:
-        for (const field of this.kids(node)) {
+        for (const field of kidsOf(this.tree, node)) {
           const fieldKind = kindOf(this.tree, field);
           if (fieldKind === SyntaxKind.PatternField) {
             for (const name of this.kidsOfKind(field, SyntaxKind.Name)) {
