@@ -47,76 +47,19 @@ the build and run commands.
 
 ## Language and compiler state
 
-### Compiler structure
+Each row gives the state of one area, with one link to its rule.
 
-The package has three entry points: the whole API, the frontend, and the
-TypeScript backend. `TypeScriptOutputs` owns lazy generated output, so source
-hover does not lower or emit. The IR has version 7, and the validator rejects
-other wire versions without conversion. The
-[migration guide](archive/api-migrations.md#migrating-the-frontend-and-typescript-apis) gives the
-API and IR replacements. [architecture.md](architecture.md) describes the
-pipeline and its layering rules. The
-[completed plan](archive/plans/2026-10-24-compiler-boundaries-source-forms.md)
-records the parity, performance, and editor evidence.
+| Area | State | Rule |
+| --- | --- | --- |
+| Compiler structure | The package has three entry points: the whole API, the frontend, and the TypeScript backend. `TypeScriptOutputs` owns lazy generated output, so source hover does not lower or emit. The IR has version 7, and the validator rejects other wire versions without conversion. Each revision retains separate type definitions over shared interned storage, so later edits cannot change earlier lazy lowering or editor queries. | [architecture.md](architecture.md) |
+| Concise source forms | Bare single-parameter arrows, lazy Option `??`, flat block-local record bindings, and explicit `using` and `finally` expressions lower to existing IR operations. All five application witnesses pass independent validation, strict target checks, and their runtime checks. | [Concise source forms](language-rules.md#concise-source-forms) |
+| Type identity | A `type` declaration has identity by name. The `nominal` declaration word, the `data` declaration, and `Brand<T>` are deleted. The editor, the TextMate grammar, and the playground highlighter do not know the word `nominal`. The website and the canonical specification describe type identity from draft 0.64. | [Declarations and types](language-rules.md#declarations-and-types) |
+| Host interfaces | Each `.effi` file has a generated companion module, so the compiler owns every tag string. A tagged record value from unsound host code fails loudly at run time. The table below gives the measured cost of these checks. | [Emission](language-rules.md#emission) |
+| Portable extensions | Sealed types, pure function types, and optional import rules are complete. The sibling website has paired source and TypeScript panels and a runnable project for all three controls. These changes do not expand the three-application stopping rule. Named platforms continue to use existing services and Layers. | [Declarations and types](language-rules.md#declarations-and-types) |
+| Inferred inputs and refinements | The compiler infers closed input requirements, and types with identity support concrete integer and length predicates. Generics and abstract predicates remain deferred. Host mutation through retained aliases remains an evidence limit. [Measurements](refinement-measurements.md) record the bounded solver and the compiler-update checks. | [Inferred inputs and refinements](language-rules.md#inferred-inputs-and-refinements) |
+| Test strength | `deno task coverage` enforces floors of 97% lines, 95% branches, and 99% functions over both suites. Targeted mutation of 1,359 sites at seed 20261031 gave 1,334 kills, 24 registered survivors, and 1 timeout. A later change added one row, so `fixtures/mutation/survivors.json` has 25 rows. | [testing.md](testing.md) |
 
-Each revision retains separate type definitions over shared interned storage.
-Later edits cannot change earlier lazy lowering or editor queries.
-The [revision reset plan](archive/plans/2026-10-30-reset-base.md) records the checks and known risks.
-
-### Concise source forms
-
-Bare single-parameter arrows, lazy Option `??`, flat block-local record
-bindings, and explicit `using` and `finally` expressions lower to existing IR
-operations. Exported contracts remain explicit and closed. All five application
-witnesses pass independent validation, strict target checks, and their runtime
-checks.
-
-### Type identity
-
-A `type` declaration has identity by name
-([plan](archive/plans/2026-10-24-type-identity.md)). The `nominal` declaration
-word, the `data` declaration, and `Brand<T>` are deleted. They are in the
-[nominal keyword plan](archive/plans/2026-10-23-nominal-keyword.md) and the
-[nominal data types plan](archive/plans/2026-10-23-nominal-data-types.md). A
-body that is a union with a non-literal member, or a bare name, gives a
-transparent alias that has no identity. Every other body gives identity. A record
-identity is a tagged record, with a runtime `_tag`, when a union alias of its
-own module lists it. `nominal` is an ordinary name, `data` is an ordinary name,
-and `Brand` and `unbrand` are unknown names.
-
-A value of a type with identity fits its body. Sealed types restrict that
-conversion to their declaring module. A value of another type with identity needs
-the constructor. An unnamed value fits an untagged type with identity whose body
-it fits. Operators compare and combine values by class: `id === "u1"` and
-`total > 0` are legal, `total * 2` gives the type of `total`, and `cents + meters`
-is an error.
-
-A function, deferred, or opaque type in a tagged record or an error field gives
-`declaration/015` or `declaration/016`. The code `declaration/014` is deleted.
-The code `declaration/017` rejects `sealed` on a transparent alias. A `match`
-selects tagged records and errors by name. A tagged record can be recursive when
-every cycle has a base case. The IR node `nominal` constructs a value of a type
-with identity. The editor, the TextMate grammar, and the playground highlighter
-do not know the word `nominal`. The website and the canonical specification
-describe type identity from draft 0.64.
-
-### Host interfaces
-
-Each `.effi` file has a generated companion module, such as `host.effi.ts`
-([plan](archive/plans/2026-10-23-host-interface-companion.md)). It holds the
-types with identity, errors, and services of the interface. Source modules and
-host modules import them from it, so the compiler owns every tag string. So
-`.eff` code can construct an `.effi` type with identity, and the run time checks
-a provider result that is a tagged record.
-
-Tagged record values from unsound host code fail loudly at run time
-([plan](archive/plans/2026-10-23-host-boundary-checks.md)). A `match` whose last
-arm is not `_` tests that arm and throws for a value outside its type. A host
-provider whose methods return tagged record values is wrapped, and each such
-result or stream element goes through `Schema.is`. The language rules list the
-positions that stay trusted, under "Host provider checks".
-
-The table gives the measured cost on emitted code, with an in-memory host. The
+The table gives the measured cost of host checks on emitted code, with an in-memory host. The
 machine was an Apple M4 Pro with Deno 2.9.8 and Effect 4.0.5. The cost in an
 application with real I/O is not measured.
 
@@ -127,42 +70,6 @@ application with real I/O is not measured.
 | One `provide`, one array of 100 values | 3.6 us      | 19.4 us          | 15.8 us                        |
 | One `provide`, a stream of 1000 values | 6.6 us      | 133.4 us         | about 0.13 us for each element |
 | The extra arm test of one `match`      | -           | -                | about 0.27 ns                  |
-
-### Portable extensions
-
-The user approved the
-[portable extensions](archive/plans/2026-10-23-portable-extensions.md) after the
-publishing witness established its existing composition. Sealed types restrict
-construction, updates, arithmetic, widening, and schema derivation to the
-declaring module. Pure function types require pure execution and empty effect
-sets. Optional import rules restrict direct dependency edges. Existing open types
-with identity, unmarked function types, and projects without import rules keep
-their behavior.
-
-The [extension worklog](archive/plans/portable-extensions-worklog.md) records the
-compiler, validator, editor, and example checks. The sibling website includes
-paired source and TypeScript panels and a runnable project for all three
-controls. These changes do not expand the three-application stopping rule. Named
-platforms continue to use existing services and Layers.
-
-### Inferred input contracts and refinements
-
-The compiler infers closed input requirements from omitted parameter types and
-explicit `unknown`. Exported inferred contracts validate raw input and require
-`fails SchemaError`. Local functions use static inference. Exported results and
-effect contracts keep their existing requirements. Types with identity support
-concrete integer and length predicates through contextual `where` clauses. IR
-version 7 (as version 6 before it) transports contracts and independently checked proof certificates.
-
-[Input contracts](inferred-input-contracts.md) describe the behavior and limits.
-[Measurements](refinement-measurements.md) record bounded solver and
-compiler-update checks. Generics and abstract predicates remain deferred. Host
-mutation through retained aliases remains an evidence limit.
-
-The [reset plan](archive/plans/2026-10-25-reset.md) fixed two refinement defects. A
-union result no longer skips the refinement proof of a record literal (RBF20).
-The checker now keeps `or` facts in the canonical form of the validator, so
-commuted `or` facts at a branch join agree (RBF12).
 
 ## Remaining and deferred gaps
 
@@ -179,7 +86,7 @@ They are a record of gaps, not an implementation queue.
 | General Stream and Sink APIs        | Other operators, arbitrary source Sink constructors, chunk-cost throttling and unrestricted nested group streams need additional source and lifetime rules.                                                                                                     | Leftovers, transduction, aggregation and callback-owned keyed groups are implemented. Selected external interruption has a source composition. See the [investigation](archive/plans/2026-10-18-general-stream-schedule-design.md).                                    |
 | General Schedule APIs               | Composition with incomparable input types and other combinators remain uncovered.                                                                                                                           | `retry` and `repeat` consume general Schedules, and `scheduleExponential`, `scheduleJittered`, and `scheduleCron` exist. RetrySchedule and a concrete source repetition policy meet the worker gate. General schedules support aggregation and selected comparable-input composition. See the [worker limits](archive/plans/2026-10-19-scheduled-worker-application.md#disposition-and-limits). |
 | Time control                        | `now()` reads the runtime clock (SL1). A source API that controls time, such as a test clock, remains a candidate without a demonstrated application blocker.                                                                                                                                                     | Primitive clock services and native virtual-time checks cover the selected applications. See the [accepted rule](plans/2026-10-19-application-acceptance-rule.md#feature-selection).                                                                                   |
-| Schema and recursion                | Recursive Option data in an alias, mutual recursion of aliases, arbitrary self-bearing transformations and general Schema AST construction remain unsupported. Tagged records support guarded and mutual recursion (see [type identity](#type-identity)). | Guarded recursion preserves separate decoded, encoded and make-input types through selected adapters. See the [recursive field contract](archive/plans/2026-10-19-schema-recursive-adapters-contract.md).                                                              |
+| Schema and recursion                | Recursive Option data in an alias, mutual recursion of aliases, arbitrary self-bearing transformations and general Schema AST construction remain unsupported. Tagged records support guarded and mutual recursion (see [Tagged record recursion](language-rules.md#declarations-and-types)). | Guarded recursion preserves separate decoded, encoded and make-input types through selected adapters. See the [recursive field contract](archive/plans/2026-10-19-schema-recursive-adapters-contract.md).                                                              |
 | General language extensions         | User-defined generics, effect-row polymorphism, source purity assertions, macros and early returns remain deferred language extensions.                                                                                                                         | Builtin generic types and concrete source compositions cover the accepted applications. The [specification](../../effektive/public/effektive-spec.html#examples) retains the broader language boundary.                                                                |
 
 Reopen an item only for a demonstrated application blocker or an explicit change
