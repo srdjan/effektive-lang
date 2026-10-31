@@ -305,3 +305,177 @@ Deno.test("host, CLI, LSP and playground adapters use public core entry points",
   }
   assertEquals(checked > 20, true);
 });
+
+// Ratchet: a test imports a name from an entry point when an entry point exports
+// it. Only a name that no entry point exports may come from a private module.
+
+/** The modules whose imports are always allowed: the entry points and the two justified private ones. */
+const ALLOWED_MODULES: ReadonlySet<string> = new Set([
+  "frontend.ts",
+  "typescript.ts",
+  "mod.ts",
+  "ir.ts",
+  "validate/index.ts",
+]);
+
+const NAME_START = "[A-Za-z_$][\\w$]*";
+
+/** The exported name of one list item: drop `type `, and take the name after `as`. */
+function listedName(item: string): string {
+  const bare = item.trim().replace(/^type\s+/, "");
+  const alias = bare.split(/\s+as\s+/);
+  return (alias[alias.length - 1] ?? "").trim();
+}
+
+/** The names that one entry point file exports, in file order. */
+function entryNamesOf(text: string): string[] {
+  const names: string[] = [];
+  const lists = /^export\s+(?:type\s+)?\{([^}]*)\}/gm;
+  for (const match of text.matchAll(lists)) {
+    for (const item of (match[1] ?? "").split(",")) {
+      const name = listedName(item);
+      if (name !== "") names.push(name);
+    }
+  }
+  const declarations = new RegExp(
+    `^export\\s+(?:declare\\s+)?(?:async\\s+)?(?:function\\*?|class|interface|const|let|type|enum)\\s+(${NAME_START})`,
+    "gm",
+  );
+  for (const match of text.matchAll(declarations)) names.push(match[1] ?? "");
+  return names;
+}
+
+/** The imports in one file that take an entry-point name from a private core module. */
+function privateImportsOf(
+  path: string,
+  text: string,
+  entry: ReadonlySet<string>,
+): string[] {
+  const found: string[] = [];
+  const base = new URL(path, "file:///r/");
+  const imports = /^import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*"([^"]+)";/gm;
+  for (const match of text.matchAll(imports)) {
+    const specifier = match[2] ?? "";
+    if (!specifier.startsWith(".")) continue;
+    const resolved = new URL(specifier, base).pathname.slice("/r/".length);
+    if (!resolved.startsWith("src/core/")) continue;
+    const module = resolved.slice("src/core/".length);
+    if (ALLOWED_MODULES.has(module)) continue;
+    for (const item of (match[1] ?? "").split(",")) {
+      const name = item.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]
+        ?.trim() ?? "";
+      if (entry.has(name)) found.push(`${path} imports ${name} from ${module}`);
+    }
+  }
+  return found;
+}
+
+Deno.test("no test imports an entry-point name from a private core module", async () => {
+  const entry = new Set<string>();
+  for (const file of ["src/core/frontend.ts", "src/core/typescript.ts"]) {
+    for (
+      const name of entryNamesOf(
+        await Deno.readTextFile(new URL(file, ROOT)),
+      )
+    ) entry.add(name);
+  }
+  // Guard against a scan that finds nothing and so proves nothing.
+  assertEquals(entry.has("Program") && entry.has("TypeScriptOutputs"), true);
+  const files: string[] = [];
+  await sourceFiles("tests/", files);
+  files.sort();
+  assertEquals(files.length > 100, true, `only ${files.length} files`);
+  const violations: string[] = [];
+  for (const path of files) {
+    const text = await Deno.readTextFile(new URL(path, ROOT));
+    violations.push(...privateImportsOf(path, text, entry));
+  }
+  assertEquals(violations, []);
+});
+
+Deno.test("the private-import scan reports an entry name from a private module and no other import", () => {
+  assertEquals(
+    entryNamesOf([
+      'export { Program, Revision as Rev } from "./db.ts";',
+      'export type { A, B } from "./a.ts";',
+      "export {",
+      "  lex,",
+      "  type Token as Tok,",
+      '} from "./lex.ts";',
+      "export type {",
+      "  C,",
+      '} from "./c.ts";',
+      'export type * from "./ir.ts";',
+      "export function f() {}",
+      "export class K {}",
+      "export interface I {}",
+      "export type T = number;",
+      "export const c = 1;",
+    ].join("\n")),
+    ["Program", "Rev", "A", "B", "lex", "Tok", "C", "f", "K", "I", "T", "c"],
+  );
+  const entry = new Set(["Program", "Revision", "Token", "lex"]);
+  const scan = (path: string, text: string) =>
+    privateImportsOf(path, text, entry);
+  assertEquals(
+    scan("tests/a_test.ts", 'import { Program } from "../src/core/db.ts";'),
+    ["tests/a_test.ts imports Program from db.ts"],
+  );
+  assertEquals(
+    scan(
+      "tests/a_test.ts",
+      'import { Revision as R } from "../src/core/db.ts";',
+    ),
+    ["tests/a_test.ts imports Revision from db.ts"],
+  );
+  assertEquals(
+    scan(
+      "tests/a_test.ts",
+      'import { type Token, other } from "../src/core/lex.ts";',
+    ),
+    ["tests/a_test.ts imports Token from lex.ts"],
+  );
+  assertEquals(
+    scan("tests/a_test.ts", 'import type { Token } from "../src/core/lex.ts";'),
+    ["tests/a_test.ts imports Token from lex.ts"],
+  );
+  assertEquals(
+    scan(
+      "tests/a_test.ts",
+      ["import {", "  other,", "  lex,", '} from "../src/core/lex.ts";'].join(
+        "\n",
+      ),
+    ),
+    ["tests/a_test.ts imports lex from lex.ts"],
+  );
+  assertEquals(
+    scan(
+      "tests/a_test.ts",
+      'import { Program } from "../src/core/validate/typing.ts";',
+    ),
+    ["tests/a_test.ts imports Program from validate/typing.ts"],
+  );
+  assertEquals(
+    scan(
+      "tests/sub/a_test.ts",
+      'import { lex } from "../../src/core/source.ts";',
+    ),
+    ["tests/sub/a_test.ts imports lex from source.ts"],
+  );
+  assertEquals(
+    scan(
+      "tests/a_test.ts",
+      [
+        'import { other } from "../src/core/lex.ts";',
+        'import { Program } from "../src/core/frontend.ts";',
+        'import { lex } from "../src/core/typescript.ts";',
+        'import { Program as P } from "../src/core/mod.ts";',
+        'import type { Program } from "../src/core/ir.ts";',
+        'import { Program } from "../src/core/validate/index.ts";',
+        'import { Program } from "../scripts/x.ts";',
+        'import { Program } from "@std/assert";',
+      ].join("\n"),
+    ),
+    [],
+  );
+});
