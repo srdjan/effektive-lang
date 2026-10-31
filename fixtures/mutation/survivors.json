@@ -45,6 +45,15 @@
     "reason": "This is the return of the unreachable undefined branch of sameModes. See the row for offset 84."
   },
   {
+    "file": "src/core/db.ts",
+    "declaration": "Program.check",
+    "offset": 769,
+    "text": "info === undefined || resolution === undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "resolveProject fills resolutions with one entry for each name of project.order, and that name has an entry in project.modules. The two values are defined together, so && and || give one result."
+  },
+  {
     "file": "src/core/predicates.ts",
     "declaration": "spendMany",
     "offset": 67,
