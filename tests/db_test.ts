@@ -602,3 +602,64 @@ Deno.test("revision queries: path lookups, imports, declaration entries, and mod
   assertEquals(revision.declEntry("type:c#N"), undefined);
   assertEquals(revision.declEntry("not an id"), undefined);
 });
+
+// ------------------------------------------------------------------ memo keys across revisions
+
+const STAMP_LIB = "export type Stamp = int\n";
+const STAMP_MID = `import { Stamp } from "./lib.eff"
+
+export const bump = (s: Stamp): Stamp => s + 1
+`;
+const STAMP_TOP = `import { bump } from "./mid.eff"
+import { Stamp } from "./lib.eff"
+
+export const next = (s: Stamp): Stamp => bump(s)
+`;
+
+Deno.test("counts: a body edit after a span move keeps the lowering of an indirect importer", () => {
+  const program = new Program("");
+  const first = updated(program, {
+    "effektive.json": "{}",
+    "lib.eff": STAMP_LIB,
+    "mid.eff": STAMP_MID,
+    "top.eff": STAMP_TOP,
+  });
+  assertEquals(first.diagnostics, []);
+  first.lowered("top");
+  assertEquals(program.counts.lowerings, 1);
+  // A comment moves the span of `Stamp`. The interface hash of lib stays
+  // equal, so only lib is checked again, and top is lowered again.
+  const moved = updated(program, { "lib.eff": "// moved\n" + STAMP_LIB });
+  assertEquals(moved.rechecked, ["lib"]);
+  const movedTop = moved.lowered("top");
+  assertEquals(program.counts.lowerings, 2);
+  // A body edit of mid with the same length keeps every span of its interface.
+  // top reaches the same payloads as before, so its IR is not lowered again.
+  const edited = updated(program, {
+    "mid.eff": STAMP_MID.replace("s + 1", "s + 2"),
+  });
+  assertEquals(edited.rechecked, ["mid"]);
+  assert(edited.lowered("top") === movedTop);
+  assertEquals(program.counts.lowerings, 2);
+});
+
+Deno.test("revisionDelta: a new function adds a mode entry, so the module counts as mode changed", () => {
+  const program = new Program("");
+  const one = updated(program, {
+    "effektive.json": "{}",
+    "m.eff": FLIP_PURE,
+  });
+  assertEquals(one.diagnostics, []);
+  const two = updated(program, {
+    "m.eff": FLIP_PURE + "export const flop = (n: Int): Int => n + 2\n",
+  });
+  assertEquals(two.diagnostics, []);
+  assertEquals(revisionDelta(one, two), {
+    interfaceChanged: ["m"],
+    modeChanged: ["m"],
+  });
+  assertEquals(revisionDelta(two, one), {
+    interfaceChanged: ["m"],
+    modeChanged: ["m"],
+  });
+});

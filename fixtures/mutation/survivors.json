@@ -1,1 +1,218 @@
-[]
+[
+  {
+    "file": "src/core/check_binary.ts",
+    "declaration": "adoptedNumericIdentity",
+    "offset": 371,
+    "text": "named !== undefined",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The caller guarantees exactly one operand is a numeric identity, so named is never undefined here. A Duration or Instant operand never reaches this guard: instantArithmetic always returns for an Instant, and durationArithmetic already decides every Duration case whose other operand fits int."
+  },
+  {
+    "file": "src/core/check_binary.ts",
+    "declaration": "operatorResult",
+    "offset": 3303,
+    "text": "isNumericClass(table, l) && isNumericClass(table, r)",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The earlier compatibleClasses check passes only when one class is in the base chain of the other. A chain that contains number ends at number, so the two classes are both numeric or both not."
+  },
+  {
+    "file": "src/core/db.ts",
+    "declaration": "sameModes",
+    "offset": 84,
+    "text": "a === undefined || b === undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "revisionDelta passes before.modes and next.checkedModule(name)?.modes. The first is always a defined ModeMap. The second is defined because name comes from next.moduleNames(). So the undefined branch is unreachable."
+  },
+  {
+    "file": "src/core/db.ts",
+    "declaration": "Revision.declEntry",
+    "offset": 120,
+    "text": "owner === undefined || name === undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "When only one of owner and name is undefined, the lookup is Map.get(undefined) on string-keyed maps, which returns undefined. The result is undefined either way."
+  },
+  {
+    "file": "src/core/db.ts",
+    "declaration": "sameModes",
+    "offset": 127,
+    "text": "a === b",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "This is the return of the unreachable undefined branch of sameModes. See the row for offset 84."
+  },
+  {
+    "file": "src/core/predicates.ts",
+    "declaration": "spendMany",
+    "offset": 67,
+    "text": "count > budget.remaining",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "When count equals remaining, both versions leave remaining at 0. The split cases always have a non-empty pending list, so the next reduce call spends first and returns exhausted. The result and stepsUsed are the same."
+  },
+  {
+    "file": "src/core/predicates.ts",
+    "declaration": "spendMany",
+    "offset": 125,
+    "text": "return false;",
+    "operator": "boolean-return",
+    "class": "equivalent",
+    "reason": "After the budget is set to 0, a true return lets reduce return the split. The next reduce call then fails its first spend and returns exhausted. This is the same result as returning false."
+  },
+  {
+    "file": "src/core/predicates.ts",
+    "declaration": "contradiction",
+    "offset": 228,
+    "text": "tasks.length > 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "With an empty list, tasks.pop() returns undefined and the next line breaks out of the loop. The loop ends the same way as with >."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "executionFits",
+    "offset": 103,
+    "text": "source === \"pure\" && target === \"effect\"",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "Execution has only the values pure and effect, and source === target already covers equal pairs. For (pure, effect) both forms give true, and for (effect, pure) both give false."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "guardedRecord.containsSelf",
+    "offset": 238,
+    "text": "containsSelf(part.key) || containsSelf(part.value)",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "containsSelf only sets tagged for a union root. A map reachable from any member makes visit return false, so guardedRecord returns false either way."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "guardedRecord.visit",
+    "offset": 418,
+    "text": "part === type && tagged",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "hasDistinctTag implies a union root with tagged true. Every nested part is visited with guarded=true, so the part === type test matters only at the root, where the mutant gives the same value."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "guardedRecord.visit",
+    "offset": 418,
+    "text": "part === type && tagged && hasDistinctTag",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "hasDistinctTag implies a union root with tagged true. Every nested part is visited with guarded=true, so the part === type test matters only at the root, where the mutant gives the same value."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "TypeTable.heightWithin",
+    "offset": 450,
+    "text": "height > tallest",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "When height equals tallest, the assignment tallest = height does not change tallest. > and >= give the same maximum."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "TypeTable.keyOf",
+    "offset": 1214,
+    "text": "node.presence === \"optional\"",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "keyOf is private and used only as the intern byKey lookup. Flipping one boolean slot in every schema key is a bijection, so nodes intern exactly as before."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "TypeTable.keyOf",
+    "offset": 1256,
+    "text": "node.presence === \"encoded-optional\"",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "keyOf is private and used only as the intern byKey lookup. Flipping one boolean slot in every schema key is a bijection, so nodes intern exactly as before."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "TypeTable.keyOf",
+    "offset": 1306,
+    "text": "node.presence === \"decoded-optional\"",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "keyOf is private and used only as the intern byKey lookup. Flipping one boolean slot in every schema key is a bijection, so nodes intern exactly as before."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "guardedRecord",
+    "offset": 1386,
+    "text": "!field.optional && tagOf(field.type) !== undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "Each extra name the mutant adds comes from the first member and fails the later every(!optional && tagged) check on that same member. hasDistinctTag does not change."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "TypeTable.keyOf",
+    "offset": 1400,
+    "text": "node.constructorDefault === true",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "keyOf is private and used only as the intern byKey lookup. Flipping one boolean slot in every schema key is a bijection, so nodes intern exactly as before."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "guardedRecord",
+    "offset": 2022,
+    "text": "tagged && hasDistinctTag",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "tagged without hasDistinctTag happens only for a union root. visit starts with guarded=false and its union guard needs hasDistinctTag, so visit returns false, the same as the early return false."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "TypeTable.assignable",
+    "offset": 6464,
+    "text": "i < sn.elements.length",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The code checks that both tuples have the same length first. The extra iteration at index length compares undefined with undefined, and assignable returns true at once when s === t."
+  },
+  {
+    "file": "src/core/types.ts",
+    "declaration": "TypeTable.assignable",
+    "offset": 7379,
+    "text": "i < tn.parameters.length",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The code checks that both functions have the same parameter count first. The extra iteration at index length compares undefined with undefined, and assignable returns true at once when s === t."
+  },
+  {
+    "file": "src/core/validate/predicates.ts",
+    "declaration": "verifyCertificate",
+    "offset": 906,
+    "text": "tasks.length > 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "With an empty list, tasks.pop() returns undefined and the next line breaks out of the loop. The result is the same as with >."
+  },
+  {
+    "file": "src/core/validate/typing.ts",
+    "declaration": "executionFits",
+    "offset": 103,
+    "text": "source === \"pure\" && target === \"effect\"",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "Execution has only the values pure and effect, and source === target already covers equal pairs. For (pure, effect) both forms give true, and for (effect, pure) both give false."
+  },
+  {
+    "file": "src/core/validate/typing.ts",
+    "declaration": "unknownPredicateInput",
+    "offset": 1143,
+    "text": "index < path.length",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The extra iteration at index == path.length only looks up path[index], which is undefined and never equals a string field name, so it adds nothing to next. The loop then ends and candidates is not read again. The unknown check before that line runs in both versions."
+  }
+]

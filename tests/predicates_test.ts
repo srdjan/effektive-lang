@@ -1002,3 +1002,16 @@ Deno.test("verifyCertificate rejects a forged negative cycle", () => {
     "a cycle that sums to a positive number",
   );
 });
+
+Deno.test("verifyCertificate counts one step for each predicate it pops", () => {
+  const falseConstant = { kind: "constant", value: false };
+  const disproved = { claim: "disproved", proof: FALSE_PROOF };
+  same(verify(TRUE, falseConstant, disproved, { maxSteps: 0 }), {
+    ok: false,
+    error: { tag: "limit" },
+  });
+  same(verify(TRUE, falseConstant, disproved, { maxSteps: 1 }), {
+    ok: true,
+    value: { stepsUsed: 1 },
+  });
+});

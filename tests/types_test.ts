@@ -17,7 +17,14 @@ import {
   type TypeId,
 } from "../src/core/ir.ts";
 import type { Predicate } from "../src/core/predicates.ts";
-import { type TypeRef, TypeTable } from "../src/core/types.ts";
+import {
+  containsDeferredType,
+  containsUnknownPredicateInput,
+  dataOnly,
+  guardedRecord,
+  type TypeRef,
+  TypeTable,
+} from "../src/core/types.ts";
 import { canonicalJson } from "../src/core/util.ts";
 import { typeFromIr, typeToIr } from "../src/core/type_ir.ts";
 import { showType, showTypes } from "../src/core/type_show.ts";
@@ -954,4 +961,433 @@ Deno.test("a sealed identity is found through transparent aliases", () => {
   t.defineAlias(middle, t.named(SEALED));
   assertEquals(t.foreignSealedOf("other", t.named(top)), SEALED);
   assertEquals(t.foreignSealedOf("m", t.named(top)), undefined);
+});
+
+const SELF = "type:m#Self" as TypeId;
+const SELF_NAMED: Type = { kind: "named", id: SELF };
+
+function literalOf(value: string): Type {
+  return { kind: "literal", value };
+}
+
+function literalTag(type: Type): string | undefined {
+  return type.kind === "literal" && typeof type.value === "string"
+    ? type.value
+    : undefined;
+}
+
+function irField(name: string, type: Type, optional = false) {
+  return { name, type, optional };
+}
+
+Deno.test("guardedRecord rejects a tagged union whose member lacks the tag field", () => {
+  const union: Type = {
+    kind: "union",
+    members: [
+      {
+        kind: "record",
+        fields: [
+          irField("kind", literalOf("a")),
+          irField("next", SELF_NAMED, true),
+        ],
+      },
+      { kind: "record", fields: [irField("other", literalOf("b"))] },
+    ],
+  };
+  assertEquals(guardedRecord(union, SELF, literalTag), false);
+});
+
+Deno.test("guardedRecord rejects a tagged union whose member makes the tag optional", () => {
+  const union: Type = {
+    kind: "union",
+    members: [
+      {
+        kind: "record",
+        fields: [
+          irField("kind", literalOf("a")),
+          irField("next", SELF_NAMED),
+        ],
+      },
+      { kind: "record", fields: [irField("kind", literalOf("b"), true)] },
+    ],
+  };
+  assertEquals(guardedRecord(union, SELF, literalTag), false);
+});
+
+Deno.test("guardedRecord accepts a union with a distinct required tag in every member", () => {
+  const union: Type = {
+    kind: "union",
+    members: [
+      {
+        kind: "record",
+        fields: [
+          irField("kind", literalOf("a")),
+          irField("next", { kind: "array", element: SELF_NAMED }),
+        ],
+      },
+      { kind: "record", fields: [irField("kind", literalOf("b"))] },
+    ],
+  };
+  assertEquals(guardedRecord(union, SELF, literalTag), true);
+});
+
+Deno.test("guardedRecord rejects a record that holds an option or a tuple beside a guarded self", () => {
+  const withOption: Type = {
+    kind: "record",
+    fields: [
+      irField("next", SELF_NAMED, true),
+      irField("note", {
+        kind: "option",
+        element: { kind: "primitive", name: "string" },
+      }),
+    ],
+  };
+  const withTuple: Type = {
+    kind: "record",
+    fields: [
+      irField("next", SELF_NAMED, true),
+      irField("pair", {
+        kind: "tuple",
+        elements: [{ kind: "primitive", name: "int" }],
+      }),
+    ],
+  };
+  assertEquals(guardedRecord(withOption, SELF, literalTag), false);
+  assertEquals(guardedRecord(withTuple, SELF, literalTag), false);
+});
+
+Deno.test("two different guarded records never fit each other, even when their bodies would", () => {
+  const t = fresh();
+  const left = "type:m#Left" as TypeId;
+  const right = "type:m#Right" as TypeId;
+  const named = (id: TypeId): Type => ({ kind: "named", id });
+  const array = (element: Type): Type => ({ kind: "array", element });
+  // Left recurses through x. Right recurses through y and takes Left in x.
+  // Without the guard rule, Left unfolds and fits Right.
+  t.load({
+    types: [
+      {
+        id: left,
+        definition: {
+          kind: "alias",
+          type: {
+            kind: "record",
+            fields: [
+              irField("x", array(named(left))),
+              irField("y", array({ kind: "primitive", name: "never" })),
+            ],
+          },
+        },
+      },
+      {
+        id: right,
+        definition: {
+          kind: "alias",
+          type: {
+            kind: "record",
+            fields: [
+              irField("x", array(named(left))),
+              irField("y", array(named(right))),
+            ],
+          },
+        },
+      },
+    ],
+    errors: [],
+  });
+  assertEquals(t.isAssignable(t.named(left), t.named(right)), false);
+});
+
+Deno.test("a schema keeps a make input that fits the decoded type in one direction only", () => {
+  const t = fresh();
+  const widened = t.schema(t.number, t.string, [], [], { makeInput: t.int });
+  const plain = t.schema(t.number, t.string, [], []);
+  const node = t.node(widened);
+  assertEquals(node.kind === "schema" ? node.makeInput : "not a schema", t.int);
+  assertNotEquals(widened, plain);
+});
+
+Deno.test("foreignSealedOf finds a sealed type that only the make input of a schema holds", () => {
+  const t = fresh();
+  t.defineIdentity(SEALED, t.int, true);
+  const viaMakeInput = t.schema(t.number, t.string, [], [], {
+    makeInput: t.named(SEALED),
+  });
+  const withoutMakeInput = t.schema(t.number, t.string, [], []);
+  assertEquals(t.foreignSealedOf("other", viaMakeInput), SEALED);
+  assertEquals(t.foreignSealedOf("m", viaMakeInput), undefined);
+  assertEquals(t.foreignSealedOf("other", withoutMakeInput), undefined);
+  assertEquals(t.containsForeignSealed("other", withoutMakeInput), false);
+});
+
+Deno.test("aliasOf is undefined for an undefined type", () => {
+  const t = fresh();
+  assertEquals(t.aliasOf("type:m#Nowhere" as TypeId), undefined);
+});
+
+const NESTING_LIMIT = 1536;
+
+function nestedArray(t: TypeTable, levels: number, leaf: TypeRef): TypeRef {
+  return Array.from({ length: levels }).reduce<TypeRef>(
+    (inner) => t.array(inner),
+    leaf,
+  );
+}
+
+function nestedRecord(t: TypeTable, levels: number, leaf: TypeRef): TypeRef {
+  return Array.from({ length: levels }).reduce<TypeRef>(
+    (inner) => t.record([field("a", inner)]),
+    leaf,
+  );
+}
+
+function differenceOf(path: readonly string[]): Predicate {
+  return {
+    kind: "difference",
+    left: { kind: "field", path },
+    right: { kind: "zero" },
+    maximum: "0",
+  };
+}
+
+Deno.test("unfold follows a chain of aliases that uses every definition in the table", () => {
+  const t = fresh();
+  t.defineAlias(DURATION_ID, t.named(INSTANT_ID));
+  assertEquals(t.unfold(t.named(DURATION_ID)), t.int);
+});
+
+Deno.test("load registers an error declaration and keeps one that the table has", () => {
+  const t = fresh();
+  t.load({
+    types: [],
+    errors: [
+      {
+        id: MISSING,
+        fields: [irField("code", { kind: "primitive", name: "int" })],
+      },
+      {
+        id: SCHEMA_ERROR_ID,
+        fields: [irField("code", { kind: "primitive", name: "int" })],
+      },
+    ],
+  });
+  assert(t.isDefined(MISSING));
+  assertEquals(
+    t.errorRecordOf(MISSING),
+    t.record([field("code", t.int)]),
+  );
+  assertEquals(
+    t.errorRecordOf(SCHEMA_ERROR_ID),
+    fresh().errorRecordOf(SCHEMA_ERROR_ID),
+  );
+});
+
+Deno.test("a type that nests exactly to the depth limit still compares by its parts", () => {
+  const t = fresh();
+  assertEquals(
+    t.isAssignable(
+      nestedArray(t, NESTING_LIMIT, t.int),
+      nestedArray(t, NESTING_LIMIT, t.number),
+    ),
+    true,
+  );
+});
+
+Deno.test("a type that nests past the depth limit does not fit", () => {
+  const t = fresh();
+  assertEquals(
+    t.isAssignable(
+      nestedArray(t, NESTING_LIMIT + 1, t.int),
+      nestedArray(t, NESTING_LIMIT + 1, t.number),
+    ),
+    false,
+  );
+});
+
+Deno.test("a literal fits the primitive that holds its value and no other", () => {
+  const t = fresh();
+  assertEquals(t.isAssignable(t.literal("a"), t.string), true);
+  assertEquals(t.isAssignable(t.literal(true), t.boolean), true);
+  assertEquals(t.isAssignable(t.literal(2), t.int), true);
+  assertEquals(t.isAssignable(t.literal(2.5), t.int), false);
+  assertEquals(t.isAssignable(t.literal("a"), t.int), false);
+  assertEquals(t.isAssignable(t.array(t.string), t.string), false);
+});
+
+Deno.test("dataOnly on a map needs data in both the key and the value", () => {
+  const t = fresh();
+  assertEquals(dataOnly(t, t.map(t.string, t.string), "value"), true);
+  assertEquals(dataOnly(t, t.map(t.unknown, t.string), "value"), false);
+  assertEquals(dataOnly(t, t.map(t.string, t.unknown), "value"), false);
+});
+
+Deno.test("an unknown predicate input is found at the depth limit and not past it", () => {
+  const t = fresh();
+  assertEquals(
+    containsUnknownPredicateInput(
+      t,
+      nestedRecord(t, NESTING_LIMIT, t.unknown),
+      differenceOf(Array.from({ length: NESTING_LIMIT }, () => "a")),
+    ),
+    true,
+  );
+  assertEquals(
+    containsUnknownPredicateInput(
+      t,
+      nestedRecord(t, NESTING_LIMIT + 1, t.unknown),
+      differenceOf(Array.from({ length: NESTING_LIMIT + 1 }, () => "a")),
+    ),
+    false,
+  );
+});
+
+Deno.test("a field path into a type that is not a record finds no unknown input", () => {
+  const t = fresh();
+  assertEquals(
+    containsUnknownPredicateInput(t, t.int, differenceOf(["a"])),
+    false,
+  );
+});
+
+Deno.test("a constant predicate has no unknown input", () => {
+  const t = fresh();
+  assertEquals(
+    containsUnknownPredicateInput(t, t.unknown, {
+      kind: "constant",
+      value: true,
+    }),
+    false,
+  );
+});
+
+Deno.test("containsDeferredType is false for a record that repeats a plain type", () => {
+  const t = fresh();
+  assertEquals(
+    containsDeferredType(t, t.record([field("a", t.int), field("b", t.int)])),
+    false,
+  );
+});
+
+Deno.test("a cycle of aliases gives a tag field no tag, so the recursion stays unguarded", () => {
+  const t = fresh();
+  const a = "type:m#CycleA" as TypeId;
+  const b = "type:m#CycleB" as TypeId;
+  const named = (id: TypeId): Type => ({ kind: "named", id });
+  t.load({
+    types: [
+      { id: a, definition: { kind: "alias", type: named(b) } },
+      { id: b, definition: { kind: "alias", type: named(a) } },
+      {
+        id: SELF,
+        definition: {
+          kind: "alias",
+          type: {
+            kind: "union",
+            members: [
+              {
+                kind: "record",
+                fields: [
+                  irField("kind", named(a)),
+                  irField("next", { kind: "array", element: SELF_NAMED }),
+                ],
+              },
+              { kind: "record", fields: [irField("kind", named(b))] },
+            ],
+          },
+        },
+      },
+    ],
+    errors: [],
+  });
+  assertEquals(t.exceedsDepth(t.named(SELF), 3, new Map()), true);
+});
+
+Deno.test("a tagged type is no tag alias, even when its base is a literal", () => {
+  const t = fresh();
+  const tagA = "type:m#TagA" as TypeId;
+  const tagB = "type:m#TagB" as TypeId;
+  const named = (id: TypeId): Type => ({ kind: "named", id });
+  t.load({
+    types: [
+      {
+        id: tagA,
+        definition: { kind: "nominal", base: literalOf("a"), tagged: true },
+      },
+      {
+        id: tagB,
+        definition: { kind: "nominal", base: literalOf("b"), tagged: true },
+      },
+      {
+        id: SELF,
+        definition: {
+          kind: "alias",
+          type: {
+            kind: "union",
+            members: [
+              {
+                kind: "record",
+                fields: [
+                  irField("kind", named(tagA)),
+                  irField("next", { kind: "array", element: SELF_NAMED }),
+                ],
+              },
+              { kind: "record", fields: [irField("kind", named(tagB))] },
+            ],
+          },
+        },
+      },
+    ],
+    errors: [],
+  });
+  assertEquals(t.exceedsDepth(t.named(SELF), 3, new Map()), true);
+});
+
+Deno.test("an opaque type is no tag alias, even when its declared base is a literal", () => {
+  const t = fresh();
+  const tagA = "type:m#TagA" as TypeId;
+  const tagB = "type:m#TagB" as TypeId;
+  const named = (id: TypeId): Type => ({ kind: "named", id });
+  t.load({
+    types: [
+      {
+        id: tagA,
+        opaque: true,
+        definition: { kind: "nominal", base: literalOf("a") },
+      },
+      {
+        id: tagB,
+        opaque: true,
+        definition: { kind: "nominal", base: literalOf("b") },
+      },
+      {
+        id: SELF,
+        definition: {
+          kind: "alias",
+          type: {
+            kind: "union",
+            members: [
+              {
+                kind: "record",
+                fields: [
+                  irField("kind", named(tagA)),
+                  irField("next", { kind: "array", element: SELF_NAMED }),
+                ],
+              },
+              { kind: "record", fields: [irField("kind", named(tagB))] },
+            ],
+          },
+        },
+      },
+    ],
+    errors: [],
+  });
+  assertEquals(t.exceedsDepth(t.named(SELF), 3, new Map()), true);
+});
+
+Deno.test("a map type does not fit a number literal that equals the ref of its value type", () => {
+  const t = fresh();
+  assertEquals(
+    t.isAssignable(t.map(t.string, t.int), t.literal(t.int)),
+    false,
+  );
 });

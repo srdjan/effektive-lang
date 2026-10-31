@@ -5,7 +5,23 @@
 
 import { assert, assertEquals } from "@std/assert";
 import type { Field, Type } from "../src/core/ir.ts";
-import { fits, same, type TypeEnv } from "../src/core/validate/typing.ts";
+import type { Predicate, Term } from "../src/core/predicates.ts";
+import {
+  comparisonClass,
+  containsRefinement,
+  containsUnknown,
+  dataOnly,
+  entrySchemaDerivable,
+  fits,
+  fitsCheckedInput,
+  identityMembers,
+  MAX_DEPTH,
+  members,
+  same,
+  show,
+  type TypeEnv,
+  unfold,
+} from "../src/core/validate/typing.ts";
 
 const ENV: TypeEnv = {
   module: "m",
@@ -587,4 +603,541 @@ Deno.test("a union of identities takes no other name, and a literal union still 
   assert(!fits(env, { kind: "union", members: [cents, one] }, score));
   assert(fits(env, { kind: "union", members: [one, two] }, cents));
   assert(fits(env, { kind: "union", members: [cents, meters] }, INT));
+});
+
+// ------------------------------------------------- Recursion bounds and guards
+
+/** A type that nests `levels` arrays around `int`. */
+function nestedArray(levels: number): Type {
+  let type: Type = INT;
+  for (let i = 0; i < levels; i++) type = { kind: "array", element: type };
+  return type;
+}
+
+function named(id: `type:${string}` | `error:${string}`): Type {
+  return { kind: "named", id };
+}
+
+Deno.test("fits accepts a type nested to MAX_DEPTH and rejects one level deeper", () => {
+  assertEquals(MAX_DEPTH, 1536);
+  assertEquals(fits(ENV, nestedArray(1536), nestedArray(1536)), true);
+  assertEquals(fits(ENV, nestedArray(1537), nestedArray(1537)), false);
+});
+
+Deno.test("fitsCheckedInput accepts depth MAX_DEPTH and rejects depth past it", () => {
+  assertEquals(fitsCheckedInput(ENV, STRING, STRING, 1536), true);
+  assertEquals(fitsCheckedInput(ENV, STRING, STRING, 1537), false);
+});
+
+Deno.test("members and identityMembers flatten a union below MAX_DEPTH and stop at it", () => {
+  const union: Type = { kind: "union", members: [STRING, INT] };
+  assertEquals(members(ENV, union, 1535), [STRING, INT]);
+  assertEquals(members(ENV, union, 1536), [union]);
+  assertEquals(identityMembers(ENV, union, 1535), [STRING, INT]);
+  assertEquals(identityMembers(ENV, union, 1536), [union]);
+});
+
+Deno.test("unfold follows exactly MAX_DEPTH aliases of a chain", () => {
+  const aliases = new Map<string, Type>();
+  for (let i = 0; i <= 1536; i++) {
+    aliases.set(`type:c${i}`, named(`type:c${i + 1}`));
+  }
+  const env: TypeEnv = { ...ENV, aliases };
+  assertEquals(unfold(env, named("type:c0")), named("type:c1536"));
+  assertEquals(unfold(env, named("type:c1535")), named("type:c1537"));
+});
+
+Deno.test("dataOnly on a map needs data in both the key and the value", () => {
+  const map = (key: Type, value: Type): Type => ({ kind: "map", key, value });
+  assertEquals(dataOnly(ENV, map(STRING, STRING), "value"), true);
+  assertEquals(dataOnly(ENV, map(STRING, UNKNOWN), "value"), false);
+  assertEquals(dataOnly(ENV, map(UNKNOWN, STRING), "value"), false);
+});
+
+Deno.test("entrySchemaDerivable reads the fields of an error and rejects an unknown name", () => {
+  const env: TypeEnv = {
+    ...ENV,
+    errors: new Map<string, readonly Field[]>([
+      [E, [{ name: "code", type: STRING, optional: false }]],
+    ]),
+  };
+  assertEquals(entrySchemaDerivable(env, named(E)), true);
+  assertEquals(entrySchemaDerivable(env, named(F)), false);
+});
+
+Deno.test("two different guarded recursive aliases do not fit, even when a structural walk would end", () => {
+  // A = { next?: A }. B = { next?: B | A }. Both refer to themselves behind an
+  // optional field. Without the guard, A against B ends: A fits B | A by name.
+  const a = named("type:m#A");
+  const b = named("type:m#B");
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([
+      ["type:m#A", {
+        kind: "record",
+        fields: [{ name: "next", type: a, optional: true }],
+      }],
+      ["type:m#B", {
+        kind: "record",
+        fields: [{
+          name: "next",
+          type: { kind: "union", members: [b, a] },
+          optional: true,
+        }],
+      }],
+    ]),
+  };
+  assertEquals(fits(env, a, b), false);
+  assertEquals(fits(env, a, a), true);
+});
+
+Deno.test("two aliases that do not refer to themselves fit by structure", () => {
+  const record: Type = {
+    kind: "record",
+    fields: [{ name: "x", type: STRING, optional: false }],
+  };
+  const other = named("type:m#Other");
+  const union: Type = { kind: "union", members: [other, STRING] };
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([
+      ["type:m#R1", record],
+      ["type:m#R2", record],
+      ["type:m#U1", union],
+      ["type:m#U2", union],
+    ]),
+  };
+  assertEquals(fits(env, named("type:m#R1"), named("type:m#R2")), true);
+  assertEquals(fits(env, named("type:m#U1"), named("type:m#U2")), true);
+});
+
+Deno.test("fitsCheckedInput: unknown fits only when the source is unknown", () => {
+  assertEquals(fitsCheckedInput(ENV, UNKNOWN, INT), true);
+  assertEquals(fitsCheckedInput(ENV, STRING, INT), false);
+});
+
+Deno.test("fitsCheckedInput through a named target", () => {
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([["type:m#Id", INT]]),
+    identities: new Set(["type:m#Id"]),
+  };
+  assertEquals(fitsCheckedInput(env, UNKNOWN, named("type:m#Id")), true);
+  assertEquals(fitsCheckedInput(env, STRING, named("type:m#Id")), false);
+  assertEquals(fitsCheckedInput(env, STRING, named("type:m#Missing")), false);
+});
+
+Deno.test("fitsCheckedInput through a named source", () => {
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([["type:m#Id", STRING]]),
+    identities: new Set(["type:m#Id"]),
+    sealed: new Set(["type:other#Sealed"]),
+    opaqueBases: new Map<string, Type>([["type:other#Sealed", STRING]]),
+  };
+  assertEquals(fitsCheckedInput(env, named("type:m#Id"), INT), false);
+  assertEquals(fitsCheckedInput(env, named("type:m#Missing"), INT), false);
+  assertEquals(fitsCheckedInput(env, named("type:other#Sealed"), INT), false);
+  assertEquals(
+    fitsCheckedInput(env, named("type:other#Sealed"), STRING),
+    false,
+  );
+});
+
+Deno.test("fitsCheckedInput on records compares the field count", () => {
+  const one: Type = {
+    kind: "record",
+    fields: [{ name: "a", type: INT, optional: false }],
+  };
+  const two: Type = {
+    kind: "record",
+    fields: [
+      { name: "a", type: INT, optional: false },
+      { name: "b", type: INT, optional: false },
+    ],
+  };
+  const unknownOne: Type = {
+    kind: "record",
+    fields: [{ name: "a", type: UNKNOWN, optional: false }],
+  };
+  assertEquals(fitsCheckedInput(ENV, one, two), false);
+  assertEquals(fitsCheckedInput(ENV, unknownOne, one), true);
+  assertEquals(fitsCheckedInput(ENV, STRING, one), false);
+  assertEquals(fitsCheckedInput(ENV, one, STRING), false);
+});
+
+Deno.test("a recursive alias fits a union that names it", () => {
+  // Tree = (Tree | string)[]. Tree fits Tree | string by name. If the walk
+  // unfolded Tree first, it would meet Tree | string inside the array again.
+  const tree = named("type:m#Tree");
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([[
+      "type:m#Tree",
+      { kind: "array", element: { kind: "union", members: [tree, STRING] } },
+    ]]),
+  };
+  assertEquals(
+    fits(env, tree, { kind: "union", members: [tree, STRING] }),
+    true,
+  );
+  assertEquals(
+    fits(env, tree, { kind: "union", members: [STRING, tree] }),
+    true,
+  );
+  assertEquals(
+    fits(env, tree, { kind: "union", members: [STRING, INT] }),
+    false,
+  );
+});
+
+Deno.test("fitsCheckedInput accepts an unknown element inside an array, an option, or a tuple, and nothing else", () => {
+  const array = (element: Type): Type => ({ kind: "array", element });
+  const option = (element: Type): Type => ({ kind: "option", element });
+  const tuple = (...elements: Type[]): Type => ({ kind: "tuple", elements });
+  const table: readonly (readonly [string, Type, Type, boolean])[] = [
+    ["array of unknown into array of int", array(UNKNOWN), array(INT), true],
+    ["array of string into array of int", array(STRING), array(INT), false],
+    ["array of unknown into int", array(UNKNOWN), INT, false],
+    ["string into array of int", STRING, array(INT), false],
+    [
+      "option of unknown into option of int",
+      option(UNKNOWN),
+      option(INT),
+      true,
+    ],
+    ["option of string into option of int", option(STRING), option(INT), false],
+    ["option of unknown into int", option(UNKNOWN), INT, false],
+    ["string into option of int", STRING, option(INT), false],
+    [
+      "tuple with unknown into tuple of int",
+      tuple(UNKNOWN, INT),
+      tuple(INT, INT),
+      true,
+    ],
+    [
+      "tuple of string into tuple of int",
+      tuple(STRING, INT),
+      tuple(INT, INT),
+      false,
+    ],
+    [
+      "shorter tuple into longer tuple",
+      tuple(UNKNOWN),
+      tuple(INT, INT),
+      false,
+    ],
+    [
+      "longer tuple into shorter tuple",
+      tuple(UNKNOWN, UNKNOWN),
+      tuple(INT),
+      false,
+    ],
+    ["tuple of unknown into int", tuple(UNKNOWN), INT, false],
+    ["string into tuple of int", STRING, tuple(INT), false],
+    ["array of unknown into tuple of int", array(UNKNOWN), tuple(INT), false],
+    ["tuple of unknown into array of int", tuple(UNKNOWN), array(INT), false],
+    ["array of unknown into option of int", array(UNKNOWN), option(INT), false],
+  ];
+  for (const [label, source, target, expected] of table) {
+    assertEquals(fitsCheckedInput(ENV, source, target), expected, label);
+  }
+});
+
+Deno.test("entrySchemaDerivable rejects the schema, issue, and timeout errors and an opaque type", () => {
+  const body: readonly Field[] = [
+    { name: "code", type: STRING, optional: false },
+  ];
+  const env: TypeEnv = {
+    ...ENV,
+    errors: new Map<string, readonly Field[]>([
+      ["error:effect/SchemaError", body],
+      ["error:effect/SchemaIssue", body],
+      ["error:effect/TimeoutError", body],
+      [E, body],
+    ]),
+    aliases: new Map<string, Type>([["type:m#Opaque", STRING]]),
+    opaque: new Set(["type:m#Opaque"]),
+  };
+  assertEquals(entrySchemaDerivable(env, named(E)), true);
+  assertEquals(
+    entrySchemaDerivable(env, named("error:effect/SchemaError")),
+    false,
+  );
+  assertEquals(
+    entrySchemaDerivable(env, named("error:effect/SchemaIssue")),
+    false,
+  );
+  assertEquals(
+    entrySchemaDerivable(env, named("error:effect/TimeoutError")),
+    false,
+  );
+  assertEquals(entrySchemaDerivable(env, named("type:m#Opaque")), false);
+});
+
+Deno.test("entrySchemaDerivable follows the body of a name, ends on a repeated name, and needs both sides of a map", () => {
+  const scope: Type = { kind: "closeable-scope" };
+  const map = (key: Type, value: Type): Type => ({ kind: "map", key, value });
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([
+      ["type:m#Bad", { kind: "array", element: scope }],
+      ["type:m#Good", { kind: "array", element: STRING }],
+      ["type:m#Loop", {
+        kind: "record",
+        fields: [{ name: "next", type: named("type:m#Loop"), optional: true }],
+      }],
+    ]),
+  };
+  const table: readonly (readonly [string, Type, boolean])[] = [
+    ["a name with a derivable body", named("type:m#Good"), true],
+    ["a name with a body that holds a scope", named("type:m#Bad"), false],
+    ["a name without a body", named("type:m#Missing"), false],
+    ["a name that refers to itself", named("type:m#Loop"), true],
+    ["a map of string to string", map(STRING, STRING), true],
+    ["a map with a scope as key", map(scope, STRING), false],
+    ["a map with a scope as value", map(STRING, scope), false],
+  ];
+  for (const [label, type, expected] of table) {
+    assertEquals(entrySchemaDerivable(env, type), expected, label);
+  }
+});
+
+Deno.test("fitsCheckedInput on a refined name accepts a value only when the predicate reads an unknown field", () => {
+  const record = (a: Type, b: Type): Type => ({
+    kind: "record",
+    fields: [
+      { name: "a", type: a, optional: false },
+      { name: "b", type: b, optional: false },
+    ],
+  });
+  const field = (...path: string[]): Term => ({ kind: "field", path });
+  const diff = (left: Term, right: Term): Predicate => ({
+    kind: "difference",
+    left,
+    right,
+    maximum: "0",
+  });
+  const zero: Term = { kind: "zero" };
+  const readsA = diff(field("a"), zero);
+  const readsB = diff(field("b"), zero);
+  const refined = (predicate: Predicate): TypeEnv => ({
+    ...ENV,
+    aliases: new Map<string, Type>([["type:m#R", record(INT, INT)]]),
+    identities: new Set(["type:m#R"]),
+    refined: new Set(["type:m#R"]),
+    predicates: new Map<string, Predicate>([["type:m#R", predicate]]),
+  });
+  const target = named("type:m#R");
+  const table: readonly (readonly [string, Predicate, Type, boolean])[] = [
+    [
+      "the difference reads the unknown field",
+      readsA,
+      record(UNKNOWN, INT),
+      true,
+    ],
+    ["the difference reads a known field", readsA, record(INT, UNKNOWN), false],
+    ["the other field is unknown and read", readsB, record(INT, UNKNOWN), true],
+    [
+      "the right term reads the unknown field",
+      diff(zero, field("a")),
+      record(UNKNOWN, INT),
+      true,
+    ],
+    [
+      "an and reads the unknown field",
+      { kind: "and", operands: [readsB, readsA] },
+      record(UNKNOWN, INT),
+      true,
+    ],
+    [
+      "an or reads the unknown field",
+      { kind: "or", operands: [readsB, readsA] },
+      record(UNKNOWN, INT),
+      true,
+    ],
+    [
+      "a not reads the unknown field",
+      { kind: "not", operand: readsA },
+      record(UNKNOWN, INT),
+      true,
+    ],
+    [
+      "an and reads only known fields",
+      { kind: "and", operands: [readsB, readsB] },
+      record(UNKNOWN, INT),
+      false,
+    ],
+    [
+      "a constant reads nothing",
+      { kind: "constant", value: true },
+      record(UNKNOWN, INT),
+      false,
+    ],
+  ];
+  for (const [label, predicate, source, expected] of table) {
+    assertEquals(
+      fitsCheckedInput(refined(predicate), source, target),
+      expected,
+      label,
+    );
+  }
+});
+
+/** `levels` arrays around `inner`. */
+function wrapArrays(levels: number, inner: Type): Type {
+  let type = inner;
+  for (let i = 0; i < levels; i++) type = { kind: "array", element: type };
+  return type;
+}
+
+Deno.test("same reads the names of a type down to MAX_DEPTH and not below", () => {
+  // `Wide` is an alias of `X`. `Deep` is an alias of 1535 arrays around `Wide`.
+  // A name check has no way to tell `Deep` from its body, so both fit each
+  // other. Only the name walk can tell them apart.
+  const x = named("type:m#X");
+  const wide = named("type:m#Wide");
+  const deep = wrapArrays(1535, wide);
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([
+      ["type:m#Wide", x],
+      ["type:m#Deep", deep],
+    ]),
+  };
+  // X is at depth 1535 + 1 = 1536 through `Wide`, which is still inside MAX_DEPTH.
+  assertEquals(same(env, wrapArrays(1535, wide), wrapArrays(1535, x)), true);
+  // The alias `Deep` moves X one level deeper, to 1537, where the walk stops.
+  assertEquals(same(env, named("type:m#Deep"), deep), false);
+});
+
+Deno.test("containsRefinement finds a refined name through aliases, errors, and children", () => {
+  const record = (...types: Type[]): Type => ({
+    kind: "record",
+    fields: types.map((type, i) => ({
+      name: `f${i}`,
+      type,
+      optional: false,
+    })),
+  });
+  const refined = named("type:m#R");
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([
+      ["type:m#ToRefined", refined],
+      ["type:m#ToInt", INT],
+    ]),
+    errors: new Map<string, readonly Field[]>([
+      [
+        "error:m#Bad",
+        [{ name: "r", type: refined, optional: false }],
+      ],
+      ["error:m#Plain", [{ name: "n", type: INT, optional: false }]],
+    ]),
+    refined: new Set(["type:m#R"]),
+  };
+  const table: readonly (readonly [string, Type, boolean])[] = [
+    ["a refined name", refined, true],
+    ["an alias of a refined name", named("type:m#ToRefined"), true],
+    ["an alias of int", named("type:m#ToInt"), false],
+    ["a name without a body", named("type:m#Missing"), false],
+    ["an error with a refined field", named("error:m#Bad"), true],
+    ["an error with a plain field", named("error:m#Plain"), false],
+    ["an array of a refined name", { kind: "array", element: refined }, true],
+    ["a record that holds one type object twice", record(INT, INT), false],
+  ];
+  for (const [label, type, expected] of table) {
+    assertEquals(containsRefinement(env, type), expected, label);
+  }
+});
+
+Deno.test("containsUnknown reads transparent aliases, owned identities, and children", () => {
+  const record = (...types: Type[]): Type => ({
+    kind: "record",
+    fields: types.map((type, i) => ({
+      name: `f${i}`,
+      type,
+      optional: false,
+    })),
+  });
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([
+      ["type:m#ToUnknown", UNKNOWN],
+      ["type:m#IdUnknown", UNKNOWN],
+      ["type:m#IdInt", INT],
+      ["type:other#Foreign", UNKNOWN],
+    ]),
+    identities: new Set([
+      "type:m#IdUnknown",
+      "type:m#IdInt",
+      "type:other#Foreign",
+    ]),
+    taggedRecords: new Map([
+      ["type:m#Tag", {
+        kind: "record",
+        fields: [{ name: "x", type: UNKNOWN, optional: false }],
+      }],
+    ]),
+    sealed: new Set(["type:other#Foreign"]),
+  };
+  const table: readonly (readonly [string, Type, boolean])[] = [
+    ["unknown", UNKNOWN, true],
+    ["int", INT, false],
+    ["a record with an unknown field", record(INT, UNKNOWN), true],
+    ["a record of int fields", record(INT, STRING), false],
+    ["a record that holds one type object twice", record(INT, INT), false],
+    ["a transparent alias of unknown", named("type:m#ToUnknown"), true],
+    ["an owned identity over unknown", named("type:m#IdUnknown"), true],
+    ["an owned identity over int", named("type:m#IdInt"), false],
+    ["a name without a body", named("type:m#Missing"), false],
+    ["a sealed identity of another module", named("type:other#Foreign"), false],
+    ["a tagged record with an unknown field", named("type:m#Tag"), true],
+  ];
+  for (const [label, type, expected] of table) {
+    assertEquals(containsUnknown(env, type), expected, label);
+  }
+});
+
+Deno.test("comparisonClass names a primitive identity and stops past MAX_DEPTH", () => {
+  const env: TypeEnv = {
+    ...ENV,
+    aliases: new Map<string, Type>([
+      ["type:m#IdInt", INT],
+      ["type:m#IdRecord", { kind: "record", fields: [] }],
+    ]),
+    identities: new Set(["type:m#IdInt", "type:m#IdRecord"]),
+  };
+  const table:
+    readonly (readonly [string, Type, number, string | undefined])[] = [
+      ["int at depth 0", INT, 0, "number"],
+      ["int at MAX_DEPTH", INT, 1536, "number"],
+      ["int past MAX_DEPTH", INT, 1537, undefined],
+      [
+        "an identity over int",
+        named("type:m#IdInt"),
+        0,
+        "identity:type:m#IdInt",
+      ],
+      ["an identity over a record", named("type:m#IdRecord"), 0, undefined],
+      ["a name without a body", named("type:m#Missing"), 0, undefined],
+    ];
+  for (const [label, type, depth, expected] of table) {
+    assertEquals(comparisonClass(env, type, depth), expected, label);
+  }
+});
+
+Deno.test("show wraps the element of an array in parentheses only for a union or a function", () => {
+  const union: Type = { kind: "union", members: [STRING, INT] };
+  const fn: Type = {
+    kind: "function",
+    execution: "pure",
+    parameters: [],
+    result: INT,
+    effects: { failures: [], requirements: [] },
+  };
+  const array = (element: Type): Type => ({ kind: "array", element });
+  assertEquals(show(array(INT)), "int[]");
+  assertEquals(show(array(union)), "(string | int)[]");
+  assertEquals(show(array(fn)), "(() => int [pure])[]");
 });
