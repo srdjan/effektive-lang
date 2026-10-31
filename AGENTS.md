@@ -14,7 +14,7 @@ Follow the formatter and linter selected for the implementation language, and co
 
 ## Testing Guidelines
 
-Tests use `Deno.test` and `@std/assert`. A fast test runs in under one second. A test that starts a subprocess goes in a file named `*_slow_test.ts`. Error fixtures follow the marker convention in `docs/development.md`. Do not claim a coverage target until the project adopts one.
+Tests use `Deno.test` and `@std/assert`. A fast test runs in under one second. A test that starts a subprocess goes in a file named `*_slow_test.ts`. Error fixtures follow the marker convention in `docs/development.md`. [docs/testing.md](docs/testing.md) describes the test layers, each oracle, the coverage floors, and the mutation register.
 
 ## Commit & Pull Request Guidelines
 

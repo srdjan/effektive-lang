@@ -44,6 +44,7 @@ lower-level checker call. The temporary hooks embed their destination path, so
 child processes need write permission but no environment permission. A recording
 failure fails the capture visibly.
 
+[testing.md](testing.md) describes the test layers, each oracle, the coverage floors, and the mutation register.
 
 ## Layout
 

@@ -461,15 +461,15 @@ Goal: one command gives coverage, and one command gives fault detection. Finding
 | --- | --- | --- | --- | --- |
 | 1. Add `deno task coverage`. It runs the fast suite and the slow suite with coverage and `DENO_COVERAGE_DIR` in a temporary directory. It merges them with `deno coverage`, includes `src/` and `playground/src/`, prints a table by directory and the 20 lowest files, and removes the temporary directory. Under FND3 (a), floors start at line 96, branch 94, function 99. `deno.json` holds them under `coverage.thresholds`. | Sonnet | `scripts/coverage.ts`, `deno.json`, `tests/coverage_test.ts`, `docs/development.md`, `docs/api.md` | Floor checks below pass | 25 turns |
 | 2. Make `rules:unfired` exit 1 when its list is not empty. Update its header comment and its row in `docs/development.md`. | Sonnet | `scripts/rules_unfired.ts`, its test, `docs/development.md` | Exit 0 on the current tree, and exit 1 with a forged uncovered site in a unit test | 10 turns |
-| 3. Add `deno task mutate`. Base it on the sample tool of FNF5. Options: `--seed`, `--sample <n or all>`, `--workers`, `--tests <file>`, `--only <path:line>`, and module paths. It works in `git archive` copies and never edits the working tree. It follows the mutation contract below. Parse sources with the existing `typescript` import. | Sonnet | `scripts/mutate.ts`, `tests/mutate_test.ts`, `fixtures/mutation/survivors.json`, `deno.json`, `docs/development.md`, `docs/api.md` | Mutate checks below pass | 35 turns |
+| 3. Add `deno task mutate`. Base it on the sample tool of FNF5. Options: `--seed`, `--sample <n or all>`, `--workers`, `--tests <file>`, `--only <path:line>`, and module paths. It works in `git archive` copies and never edits the working tree. It follows the mutation contract below. Parse sources with the existing `typescript` import. | Sonnet | `scripts/mutate.ts`, `tests/mutate_slow_test.ts`, `fixtures/mutation/survivors.json`, `deno.json`, `docs/development.md`, `docs/api.md` | Mutate checks below pass | 35 turns |
 | 4. Add `docs/testing.md`: test layers, each oracle with what it proves and what it can miss, the floors, the mutation commands, and the register rule. Move the "Reset regression checks" text of `docs/development.md` into it. Replace the coverage sentence of `AGENTS.md`. | Opus | `docs/testing.md`, `docs/development.md`, `AGENTS.md` | `tests/docs_test.ts` passes | 15 turns |
 | 5. Under FND3 (a), make `deno task release` run `deno task coverage` after the gate. On failure, the task restores both files and exits 1. | Sonnet | `scripts/release.ts`, `tests/release_test.ts` | Release floor check below passes | 10 turns |
 
-Mutation contract. The tool first runs the test set on a clean copy with type checks, and it exits 2 when that run fails. Each mutant run uses `--no-check`, because a mutant that only breaks a type proves nothing. Each mutant run uses `--fail-fast` and a limit of 60 s. The tool gives each result one class: killed (a test ran and failed), survived (tests ran, and all passed), timeout, or infrastructure error (no test ran). A timeout counts as killed, and the report lists it. An infrastructure error gives exit 2.
+Mutation contract. The tool first runs the test set on a clean copy with type checks, and it exits 2 when that run fails. Each mutant run uses `--no-check`, because a mutant that only breaks a type proves nothing. Each mutant run uses `--fail-fast` and a limit of 60 s. The tool gives each result one class: killed (a test ran and failed), survived (tests ran, and all passed), timeout, or infrastructure error (no test ran). A timeout counts as killed, and the report lists it. A crash after a test started also counts as killed. An infrastructure error gives exit 2.
 
 A register row holds `file`, `declaration` (the enclosing function or method), `offset` (the character offset of the expression in that declaration), `text` (the exact source text of the expression), `operator`, `class`, and `reason`. It holds no line number, so a change outside the declaration does not make it stale. A change inside the declaration can make it stale, and a reviewer must then check its reason again. Each row must match exactly one site. Two classes permit success: `equivalent` (no input can observe the change) and `slow-only` (the row names the slow test that kills the mutant). The tool exits 1 for a survivor with no row, or for a row that matches no site.
 
-`tests/mutate_test.ts` must cover two equal expressions in one file, and the deletion of a registered site while an equal expression remains.
+`tests/mutate_slow_test.ts` must cover two equal expressions in one file, and the deletion of a registered site while an equal expression remains.
 
 `docs/testing.md` must state these limits. Golden files cover six modules. Mutation fixtures cover the listed mutations. The surface snapshot covers 90 command-line records and 28 language server records, in memory. The IR snapshot reaches at most 50 of 123 expression kinds. The capture sees its record kinds and test inputs only. `rules:unfired` sees direct validator rejections only. Log replay skips `--tsc` and watch sessions. `tests/ir_site_slow_test.ts` is ignored in an export, because the sibling is absent.
 
@@ -488,7 +488,7 @@ deno task mutate --seed 1 --sample all --workers 4 src/core/paths.ts > /tmp/fn2-
 git status --short
 ```
 
-Expected: the report lists 17 sites, and `git status --short` prints nothing. Exit 1 is correct when survivors have no row, and the report then names each one. `tests/mutate_test.ts` must prove the operators and the four result classes with literal inputs.
+Expected: the report lists 17 sites, and `git status --short` prints nothing. Exit 1 is correct when survivors have no row, and the report then names each one. `tests/mutate_slow_test.ts` must prove the operators and the four result classes with literal inputs.
 
 Release floor check: in a `git clone` under `/tmp`, set the branch floor to 96, add an "Unreleased" entry, and commit both. Run `deno task release 0.11.2`. Expected: exit 1, and `CHANGELOG.md` and `deno.json` unchanged. Then run GATE, SCOPE, and NAMES against FN1.
 
@@ -817,7 +817,7 @@ Second pass. Astra checked the resolutions above and the revised units. Its verd
 | --- | --- | --- | --- |
 | B1 | High | The transitivity law of A1 was still false. A pure function fits its effect counterpart, and that type fits a union, but `nested` disables lifting inside a union. | FN3 unit 2 limits the law to primitives, literals, and arrays, tuples, and records of those kinds. It asserts both counterexamples as literals. |
 | B2 | High | A capture with a failed test also exits 1 and prints no record rows, so the FN6 and FN11 checks passed on a capture that never finished. | Section 11 adds CAPTURE-RAN, and FN6 and FN11 use it. The main session tried its commands on one sample good log and one sample failed log. |
-| B3 | Medium | Register rows did not identify one site: `src/core/predicates.ts:571,580` hold the same `return true;`. | FN2 adds `declaration` and `offset`. Each row must match exactly one site, and `tests/mutate_test.ts` covers duplicates. |
+| B3 | Medium | Register rows did not identify one site: `src/core/predicates.ts:571,580` hold the same `return true;`. | FN2 adds `declaration` and `offset`. Each row must match exactly one site, and `tests/mutate_slow_test.ts` covers duplicates. |
 | B4 | Medium | FN9 unit 4 required a path check that only unit 5 can meet. | FN9 has one path command for each unit. |
 | B5 | Medium | FN9 omitted live documents. Astra named three files. The main session found more: 11 rows in `docs/language-rules.md`, and bare names at `docs/architecture.md:18,20`, `docs/builtin-changes.md:30`, `src/core/signatures.ts:4`, and two comments in the sites test. | FN9 units 4 and 5 list each file. |
 
@@ -830,8 +830,8 @@ No pass ran the phases, the full suites, coverage, mutation, capture, benchmarks
 | Phase | State | Entry SHA | Commits | Measurements and notes |
 | --- | --- | --- | --- | --- |
 | FN0 | Complete | `c2250852577f7ab31b4d11d21699e6c1f9082efb` | `33210d7`, `80dfbff` | Gate exit 0: 2,884 fast and 282 slow passed, none ignored. Three files changed, as planned. |
-| FN1 | Not started | | | |
-| FN2 | Not started | | | |
+| FN1 | Complete | `80dfbff` | `682cf52`, `1828afa`, `ad38702`, `18083c5` | Gate exit 0: 2,891 fast and 284 slow passed. Six slow suites ran in concurrent groups of three at load averages up to 106, with no failure. A first group failed `tests/repeat_slow_test.ts`, which `18083c5` fixed. Minimum fast-test time in three runs: below 1 s, at a load average of 23. All release checks passed, including the restore after a failed gate. Deviation: the rename of unit 3 landed in `682cf52`, because it was already staged. |
+| FN2 | In progress | `18083c5` | | |
 | FN3 | Not started | | | |
 | FN4 | Not started | | | |
 | FN5 | Not started | | | |

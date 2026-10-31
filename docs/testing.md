@@ -1,0 +1,81 @@
+# Testing
+
+This file describes the test system. It states what each oracle proves and what each oracle can miss. [development.md](development.md) lists the commands, and it describes the fixture conventions.
+
+## Test layers
+
+| Layer | Command | Rule |
+| --- | --- | --- |
+| Fast | `deno task test` | The suite runs with `--allow-read` only. A test starts no subprocess, and it runs in under one second. |
+| Slow | `deno task test:slow` | A test file is named `*_slow_test.ts`. A test can start a subprocess. |
+| Gate | `deno task check` | The task runs the format check, the lint, the type check, and both suites. Run it before each commit. |
+| Installation | `deno task test:installation` | The task checks reproducible packaging and offline installation. |
+| Editor | `deno task test:vscode` | The task runs installed VSIX acceptance in a local VS Code application. |
+| Browser | Playwright MCP | A person or an agent runs a real user flow against the running page. |
+
+A fast test time varies with machine load, so one run proves little. To check the one-second rule, run the fast suite three times, and keep the minimum of each test.
+
+## Time in tests
+
+A test must not assert wall-clock time. The result of such a test depends on machine load, and a failure then does not mean a defect. A test that measures a delay runs under `TestClock` from `effect/testing`, and it asserts the exact value. See `tests/retry_options_slow_test.ts` and `tests/repeat_slow_test.ts`.
+
+A real timer is acceptable in one case: two timers race, and they start together. Their order then stays the same under load. A lower bound on elapsed time is also acceptable, because a timer does not fire early.
+
+## Oracles
+
+Each oracle covers a limited set of inputs. A pass proves the result for those inputs only.
+
+| Oracle | Update task | What it proves | What it can miss |
+| --- | --- | --- | --- |
+| Golden files in `fixtures/golden/` | `deno task golden:update` | The exact TypeScript of six example modules and their host module | Each other program |
+| Mutation fixtures in `fixtures/validate/` | `deno task validate:update` | The validator rejects each forged IR in the fixture list | A forged form that the list does not hold |
+| Surface snapshot in `fixtures/surface/` | `deno task surface:update` | 90 command-line records and 28 language server records | The records run in memory, so process and file behavior stay outside |
+| IR snapshot in `fixtures/ir/` | The test file | The wire form of its example | It reaches at most 50 of the 123 expression kinds |
+| Lexer snapshot in `fixtures/lex/` | `deno task lex:update` | The tokens of a random corpus of 20,000 strings | Input that the corpus does not hold |
+| Behavior capture | None | Two revisions give equal records for the test inputs | A record holds hashes and a length, with no message and no test name. It sees only its record kinds and the test inputs. |
+| Unfired rejection sites | None | A fast test fires each direct validator rejection | The match is textual, so a rejection through another helper is not listed |
+| Log replay | None | A logged session gives equal results on the current build | It skips `--tsc` sessions and watch sessions |
+| Website IR in `tests/ir_site_slow_test.ts` | None | The sibling website IR stays current | A `git archive` export has no sibling, so the test is ignored there |
+
+An update task writes what the current code gives. So an update can hide a defect. The reviewer must read each fixture diff, and a change needs a reason in the commit.
+
+A capture exits 1 for a missing record, and also for a failed test. So read its summary lines before you read its exit status.
+
+## Retained revisions
+
+`tests/revision_isolation_test.ts` delays queries on retained revisions until after later definition edits. It compares independently validated IR, emitted text, mappings, and editor results with a fresh program. Its table census also checks cached-module reuse across rotating edits. The census bounds visible table identities. It does not measure retained bytes or garbage-collection timing.
+
+## Playground output
+
+`tests/playground_build_test.ts` checks the output-directory guard without deleting repository data. The guard compares complete parent components, so a repository child called `..scratch` stays protected. The slow build test checks supported external output.
+
+## Coverage
+
+`deno task coverage` runs both suites with coverage, and it includes child processes through `DENO_COVERAGE_DIR`. It prints a table by directory and the 20 lowest files. The task exits 1 when a floor fails. `deno.json` holds the floors under `coverage.thresholds`.
+
+The gate does not run this task, because it takes several minutes. `deno task release` runs it. A floor can rise. A change that lowers a floor needs a reason in the commit.
+
+Line coverage shows that a line ran. It does not show that a test detects a fault in that line. Use mutation for that.
+
+## Mutation
+
+`deno task mutate` makes small faults in the source, and it runs the tests against each fault. A mutant is one such fault. A survivor is a mutant that the tests do not detect. The tool works in `git archive` copies of the committed `HEAD`, so commit a test before you measure it.
+
+```sh
+deno task mutate --seed 1 --sample 6 src/core/types.ts
+deno task mutate --seed 1 --sample all --workers 4 src/core/paths.ts
+deno task mutate --seed 1 --sample all --tests tests/type_laws_property_test.ts --only src/core/types.ts:1380 src/core/types.ts
+```
+
+The tool has four operators: `comparison`, `logical`, `negate-if`, and `boolean-return`. The default test set is the fast suite. A mutant that only a slow test can kill therefore survives by default.
+
+A full run of `src/` is not practical. It has about 11,000 sites, and a run takes hours. So run the tool on the modules that a change touches. The tool does not fit `src/core/emit/` against the fast suite, because the slow suite proves the emitter.
+
+For each survivor, add a test. If no test can kill it, add a row to `fixtures/mutation/survivors.json`. A row holds `file`, `declaration`, `offset`, `text`, `operator`, `class`, and `reason`. Two classes are valid:
+
+- `equivalent`: no input can observe the change.
+- `slow-only`: the `reason` names the `*_slow_test.ts` file that kills the mutant.
+
+A row has no line number, so a change outside its declaration does not affect it. A change inside the declaration can make it stale. The tool then exits 1, and a reviewer must check the reason again.
+
+The tool exits 0 when each survivor has a row and each row matches one site. It exits 1 for a survivor with no row, or for a stale row. It exits 2 when the clean run fails, when no test runs, or when the register or the arguments are not valid.
