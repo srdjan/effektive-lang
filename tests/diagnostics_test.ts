@@ -11,7 +11,7 @@ import {
   normalizeDiagnostics,
   registeredCodes,
 } from "../src/core/frontend.ts";
-import { makeSpan } from "../src/core/source.ts";
+import { makeSpan } from "./helpers.ts";
 
 Deno.test("every code has the form category/NNN and matches its category", () => {
   for (const code of registeredCodes()) {

@@ -13,12 +13,12 @@ import {
   type SpanTable,
 } from "../src/core/typescript.ts";
 import { lineStarts, positionOf } from "../src/core/frontend.ts";
-import { spanText } from "../src/core/source.ts";
 import {
   emitFilesWithProject,
   EXAMPLE_ENTRIES,
   exampleFiles,
   projectFiles,
+  spanText,
 } from "./helpers.ts";
 
 const examples = emitFilesWithProject(exampleFiles(), EXAMPLE_ENTRIES);

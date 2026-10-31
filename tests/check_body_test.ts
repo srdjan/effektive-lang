@@ -20,7 +20,6 @@ import {
 import type { TypeGraph } from "../src/core/signatures.ts";
 import { type Solved, solveModeGroup } from "../src/core/modes.ts";
 import type { Execution, ValueId } from "../src/core/ir.ts";
-import { spanText } from "../src/core/source.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../src/core/syntax.ts";
 import type { NodeFact } from "../src/core/tables.ts";
 import {
@@ -28,6 +27,7 @@ import {
   EXAMPLE_ENTRIES,
   EXAMPLE_MODES,
   exampleFiles,
+  spanText,
 } from "./helpers.ts";
 import { showType } from "../src/core/type_show.ts";
 

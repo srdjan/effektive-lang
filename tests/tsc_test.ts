@@ -13,7 +13,6 @@ import {
   type TscDiagnostic,
 } from "../src/core/typescript.ts";
 import { categoryOf, lineStarts, positionOf } from "../src/core/frontend.ts";
-import { spanText } from "../src/core/source.ts";
 import {
   COMPANION_FILES,
   emitFilesWithProject,
@@ -21,6 +20,7 @@ import {
   exampleFiles,
   FIXTURES,
   hostBoundaryManifest,
+  spanText,
 } from "./helpers.ts";
 
 const ROOT = "/work/project";

@@ -1,14 +1,14 @@
 import { assertEquals, assertThrows } from "@std/assert";
+import { compareSpans } from "../src/core/source.ts";
+import { lineStarts, memoryHost, positionOf } from "../src/core/frontend.ts";
 import {
-  compareSpans,
   coverSpans,
   makeSpan,
   spanContains,
   spanLength,
   spansOverlap,
   spanText,
-} from "../src/core/source.ts";
-import { lineStarts, memoryHost, positionOf } from "../src/core/frontend.ts";
+} from "./helpers.ts";
 
 Deno.test("lineStarts treats LF, CRLF, and lone CR as one terminator each", () => {
   assertEquals([...lineStarts("a\nb\r\nc\rd")], [0, 2, 5, 7]);

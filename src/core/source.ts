@@ -86,41 +86,6 @@ export function positionOf(
   return { line: index + 1, column: clamped - starts[index] + 1 };
 }
 
-export function makeSpan(source: string, start: number, end: number): Span {
-  if (start < 0 || end < start) {
-    throw new Error(`invalid span ${start}..${end} in ${source}`);
-  }
-  return { source, start, end };
-}
-
-export function spanLength(span: Span): number {
-  return span.end - span.start;
-}
-
-export function spanText(text: string, span: Span): string {
-  return text.slice(span.start, span.end);
-}
-
-export function spanContains(span: Span, offset: number): boolean {
-  return offset >= span.start && offset < span.end;
-}
-
-export function spansOverlap(a: Span, b: Span): boolean {
-  return a.source === b.source && a.start < b.end && b.start < a.end;
-}
-
-/** The smallest span that covers both. The spans must belong to one source. */
-export function coverSpans(a: Span, b: Span): Span {
-  if (a.source !== b.source) {
-    throw new Error(`cannot cover spans of ${a.source} and ${b.source}`);
-  }
-  return {
-    source: a.source,
-    start: Math.min(a.start, b.start),
-    end: Math.max(a.end, b.end),
-  };
-}
-
 /** Orders by source, then start, then end. */
 export function compareSpans(a: Span, b: Span): number {
   if (a.source !== b.source) return a.source < b.source ? -1 : 1;

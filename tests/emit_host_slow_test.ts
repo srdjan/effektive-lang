@@ -18,12 +18,12 @@ import {
   mapTscDiagnostic,
   parseDenoCheck,
 } from "../src/core/typescript.ts";
-import { spanText } from "../src/core/source.ts";
 import {
   copyDirectory,
   EXAMPLE_ENTRIES,
   FIXTURES,
   hostBoundaryManifest,
+  spanText,
 } from "./helpers.ts";
 import { deno, runScript } from "./process_helpers.ts";
 import {
