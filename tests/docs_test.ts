@@ -122,7 +122,7 @@ Deno.test("each test that the layering table of docs/architecture.md cites exist
   )[0]!;
   const cited = [...section.matchAll(/`(tests\/[\w.-]+\.ts)`, "([^"]+)"/g)]
     .map((match) => ({ file: match[1]!, name: match[2]! }));
-  assertEquals(cited.length, 6);
+  assertEquals(cited.length, 7);
   for (const { file, name } of cited) {
     const text = await Deno.readTextFile(new URL(file, ROOT));
     assert(

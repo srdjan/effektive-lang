@@ -3,7 +3,8 @@
 This document describes the pipeline, the layering rules, the invariants, and
 the decision record of the Effektive compiler. [api.md](api.md#source-file-map) holds
 the source file map and the public interfaces. [language-rules.md](language-rules.md) holds
-the language rules. The original design discussion of 2026-10-16 is in
+the language rules. [testing.md](testing.md) holds the test layers and what each
+oracle proves. The original design discussion of 2026-10-16 is in
 [archive/transpiler-design.md](archive/transpiler-design.md). It is history.
 
 ## Pipeline
@@ -55,13 +56,14 @@ The independent validator and the IR version 7 contract remain unchanged.
 ## Layering rules
 
 Each layer depends only on the layers below it. The core has no I/O. It reads
-files through `SourceHost`. Six tests enforce the rules.
+files through `SourceHost`. Seven tests enforce the rules.
 
 | Rule | Test |
 | --- | --- |
 | `src/core` calls no Deno or global host API, and imports only relative files. | `tests/core_boundary_test.ts`, "src/core uses no host API, no global API, and no non-relative import" |
 | The frontend entry point and the editor queries cannot reach the emitter, `typescript.ts`, or `src/host/`. | `tests/core_boundary_test.ts`, "the frontend and source queries cannot reach TypeScript output or host adapters" |
 | `src/host/`, `src/cli/`, `src/lsp/`, and `playground/src/` import the core only through `frontend.ts`, `typescript.ts`, or `mod.ts`. | `tests/core_boundary_test.ts`, "host, CLI, LSP and playground adapters use public core entry points" |
+| A test imports a name of an entry point only from `frontend.ts`, `typescript.ts`, `mod.ts`, `ir.ts`, or `validate/index.ts`. | `tests/core_boundary_test.ts`, "no test imports an entry-point name from a private core module" |
 | The validator imports only `ir.ts`, `source.ts`, `diagnostics.ts`, `cron.ts`, and its own files, plus a type-only import of `predicates.ts`. | `tests/validate_test.ts`, "src/core/validate imports only ir.ts, source.ts, diagnostics.ts, cron.ts, and its own files" |
 | The emitter families never import `emit/expr.ts`, and no value import of the emitter reaches a checker module. | `tests/emit_families_test.ts`, "src/core/emit/families imports only ir.ts, ids.ts, and emit files other than expr.ts"; `tests/emit_families_test.ts`, "the value imports of src/core/emit reach no checker-phase module" |
 
@@ -71,7 +73,9 @@ files through `SourceHost`. Six tests enforce the rules.
    `src/cli`, `src/host`, or `src/lsp`.
 2. The independent validator shares only these modules with the checker: `ir.ts`,
    `source.ts`, `diagnostics.ts`, and `cron.ts`. The module `ir.ts` holds the IR
-   types and the shared rule data `CLOSED_UNIT_IDS` and `LOG_LEVELS`. The module
+   types and eight shared values: `SCOPE_CAPABILITY`, `SCHEMA_ERROR_ID`,
+   `SCHEMA_ISSUE_ID`, `TIMEOUT_ERROR_ID`, `DURATION_ID`, `INSTANT_ID`,
+   `CLOSED_UNIT_IDS`, and `LOG_LEVELS`. The module
    `cron.ts` holds the cron grammar. The validator also imports the types of
    `predicates.ts`. The checker and the validator duplicate all other rules on
    purpose, because the validator is a differential oracle. The emitter `ROWS`
@@ -107,7 +111,7 @@ Decided by the user on 2026-10-16 and 2026-10-17. Each entry took the recommende
 | D1 Deliverable shape | (b) Shared core library. CLI first, LSP second. |
 | D2 Real-time loop | (b) Diagnostics and hover per change. Generated files on save. `watch` and `build` modes. |
 | D3 Host language | (a) TypeScript on Deno. Zig behind WASM only after a measured need. |
-| D4 Incremental model | (b) Query-shaped core. Module-level cutoff in Phase A. Declaration-level tracking in Phase B after M2 and M3. |
+| D4 Incremental model | (b) Query-shaped core. Module-level cutoff in Phase A. Declaration-level tracking in Phase B after M2 and M3. Update, 2026-10-31: the project did not build Phase B. The declaration index holds no declaration hashes. D9 states when Phase B is needed. |
 | D5 Where `tsc` runs | (b) Emitter golden tests, `build --tsc`, and CI. Opt-in in `watch`. Never in the LSP. |
 | D6 Output location (Q7) | (a) `users.ts` next to `users.eff`. Import specifiers become `./users.ts`. A `.js` switch can come later. |
 | D7 Identity encoding | (b) Module-qualified strings such as `users#UserMissing`. The spec requires this: "A backend must encode resolved declaration identities in error tags, service keys, and brand tokens." |
