@@ -306,13 +306,17 @@ Deno.test("concurrent stream mapping bounds work and closes failed siblings", as
     const result = await runScript(
       dir,
       `
-import { Effect, Layer, Option } from "effect";
+import { Deferred, Effect, Layer, Option } from "effect";
 import { Source, Worker, Inner, Stop, mapMain, flatMain } from "./main.ts";
 
 const calls: number[] = [];
 let active = 0;
 let maximum = 0;
 let fail = false;
+// Worker 1 holds its slot until worker 2 lets it go. So the order does not
+// depend on timers: worker 3 starts only after a slot is free.
+let entered = Deferred.makeUnsafe<void>();
+let finished = Deferred.makeUnsafe<void>();
 const started: number[] = [];
 const released: number[] = [];
 const SourceLive = Layer.succeed(Source)({
@@ -327,9 +331,18 @@ const perform = (n: number) => Effect.acquireUseRelease(
     maximum = Math.max(maximum, active);
     started.push(n);
   }),
-  () => Effect.sleep(n === 1 ? "40 millis" : "10 millis").pipe(
-    Effect.flatMap(() => fail && n === 2 ? Effect.fail(new Stop({})) : Effect.succeed(n)),
-  ),
+  () => n === 1
+    ? Deferred.succeed(entered, undefined).pipe(
+      Effect.andThen(Deferred.await(finished)),
+      Effect.as(n),
+    )
+    : n === 2
+    ? Deferred.await(entered).pipe(
+      Effect.andThen(fail
+        ? Effect.fail(new Stop({}))
+        : Deferred.succeed(finished, undefined).pipe(Effect.as(n))),
+    )
+    : Effect.succeed(n),
   () => Effect.sync(() => { active--; released.push(n); }),
 );
 const WorkerLive = Layer.succeed(Worker)({
@@ -346,6 +359,8 @@ const reset = () => {
   released.length = 0;
   active = 0;
   maximum = 0;
+  entered = Deferred.makeUnsafe<void>();
+  finished = Deferred.makeUnsafe<void>();
 };
 const pendingMap = mapMain().pipe(Effect.provide(Live));
 const before = { calls: [...calls], started: [...started] };
