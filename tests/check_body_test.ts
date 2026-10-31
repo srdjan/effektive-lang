@@ -597,26 +597,21 @@ type Int = int
 
 Deno.test("traverse requires a positive bound or the unbounded literal", () => {
   for (
-    const option of [
-      "{ concurrency: 0 }",
-      "{ concurrency: -1 }",
-      "{ concurrency: 1.5 }",
-      "{ concurrency: 9007199254740992 }",
-      '{ concurrency: "infinite" }',
-      "{ concurrency: true }",
-      "{ other: 2 }",
-      "{ concurrency: 2, other: 3 }",
+    const [option, code] of [
+      ["{ concurrency: 0 }", "type-mismatch/010"],
+      ["{ concurrency: -1 }", "syntax/010"],
+      ["{ concurrency: 1.5 }", "type-mismatch/010"],
+      ["{ concurrency: 9007199254740992 }", "type-mismatch/010"],
+      ['{ concurrency: "infinite" }', "type-mismatch/010"],
+      ["{ concurrency: true }", "type-mismatch/010"],
+      ["{ other: 2 }", "type-mismatch/010"],
+      ["{ concurrency: 2, other: 3 }", "type-mismatch/010"],
     ]
   ) {
     const project = checkText(
       `const f = (): Int[] => traverse([1], (n) => n, ${option})\ntype Int = int`,
     );
-    assert(
-      codes(project).includes("type-mismatch/010") ||
-        (option === "{ concurrency: -1 }" &&
-          codes(project).includes("syntax/010")),
-      `${option}: ${messages(project)}`,
-    );
+    assertEquals(codes(project), [code], `${option}: ${messages(project)}`);
   }
 });
 

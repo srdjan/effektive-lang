@@ -268,7 +268,7 @@ Deno.test("the validator rejects a now with a wrong result type", () => {
     const found = validate(ir, SOURCE);
     assertEquals(found.length, 1, JSON.stringify(wrong));
     assertEquals(found[0].code, "validation/002");
-    assertEquals(found[0].path, `${pathOf(ir, "stamp")}.body.type`);
+    assertEquals(found[0].path, "declarations[3].body.type");
   }
 });
 

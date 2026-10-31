@@ -188,14 +188,17 @@ Deno.test("decoder recovery: a header block that never ends is an error", () => 
 Deno.test("decoder: the header limit includes CRLFCRLF and ignores chunk boundaries", () => {
   const prefix = "Content-Length: 2\r\nX-Padding: ";
   const suffix = "\r\n\r\n";
-  for (
-    const size of [
-      MAX_HEADER_BYTES - 1,
-      MAX_HEADER_BYTES,
-      MAX_HEADER_BYTES + 1,
-      MAX_HEADER_BYTES + 17,
-    ]
-  ) {
+  const TOO_LONG: Result<unknown, FrameError> = {
+    ok: false,
+    error: { tag: "bad-header", message: "no end of header within 8192 bytes" },
+  };
+  const table: readonly (readonly [number, Result<unknown, FrameError>])[] = [
+    [MAX_HEADER_BYTES - 1, { ok: true, value: {} }],
+    [MAX_HEADER_BYTES, { ok: true, value: {} }],
+    [MAX_HEADER_BYTES + 1, TOO_LONG],
+    [MAX_HEADER_BYTES + 17, TOO_LONG],
+  ];
+  for (const [size, first] of table) {
     const header = prefix + "x".repeat(size - prefix.length - suffix.length) +
       suffix;
     const bytes = join(encoder.encode(`${header}{}`), frame(SAMPLE));
@@ -217,11 +220,7 @@ Deno.test("decoder: the header limit includes CRLFCRLF and ignores chunk boundar
         ...decoder.push(bytes.subarray(cut)),
       ];
       assertEquals(out.length, 2, `header ${size}, cut ${cut}`);
-      if (size <= MAX_HEADER_BYTES) {
-        assertEquals(out[0], { ok: true, value: {} });
-      } else {
-        assert(!out[0].ok && out[0].error.tag === "bad-header");
-      }
+      assertEquals(out[0], first, `header ${size}, cut ${cut}`);
       assertEquals(out[1], { ok: true, value: SAMPLE_VALUE });
     }
   }

@@ -483,9 +483,15 @@ Deno.test("nesting up to 100 levels parses; deeper input is reported and never o
   parseClean("const a = " + "(".repeat(100) + "1" + ")".repeat(100));
   parseClean("type T = " + "Option<".repeat(100) + "int" + ">".repeat(100));
   for (
-    const open of ["(", "f(", "() => {", "-", "if (a) { 1 } else ", "Option<"]
+    const [prefix, open] of [
+      ["const a = ", "("],
+      ["const a = ", "f("],
+      ["const a = ", "() => {"],
+      ["const a = ", "-"],
+      ["const a = ", "if (a) { 1 } else "],
+      ["type T = ", "Option<"],
+    ]
   ) {
-    const prefix = open === "Option<" ? "type T = " : "const a = ";
     const result = parseChecked(prefix + open.repeat(10000));
     assertEquals(
       result.diagnostics.some((d) => d.message.includes("nesting is too deep")),

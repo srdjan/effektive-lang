@@ -360,10 +360,19 @@ Deno.test("semantic classifications retain UTF-16 spans and lexical fallback on 
 
 Deno.test("contract actions derive and validate missing effects while preserving existing entries", () => {
   for (
-    const text of [
-      "type Int = int\nerror Stop = {}\nexport const f = (): Int => fail(Stop({}))\n",
-      "type Int = int\nservice Clock { now(): Int }\nexport const f = (): Int => Clock.now()\n",
-      "type Int = int\nerror First = {}\nerror Second = {}\nservice Clock { now(): Int fails Second }\nconst f = (): Int fails First => Clock.now()\n",
+    const [text, expected] of [
+      [
+        "type Int = int\nerror Stop = {}\nexport const f = (): Int => fail(Stop({}))\n",
+        "type Int = int\nerror Stop = {}\nexport const f = (): Int fails Stop => fail(Stop({}))\n",
+      ],
+      [
+        "type Int = int\nservice Clock { now(): Int }\nexport const f = (): Int => Clock.now()\n",
+        "type Int = int\nservice Clock { now(): Int }\nexport const f = (): Int uses Clock.now => Clock.now()\n",
+      ],
+      [
+        "type Int = int\nerror First = {}\nerror Second = {}\nservice Clock { now(): Int fails Second }\nconst f = (): Int fails First => Clock.now()\n",
+        "type Int = int\nerror First = {}\nerror Second = {}\nservice Clock { now(): Int fails Second }\nconst f = (): Int fails First | Second => Clock.now()\n",
+      ],
     ]
   ) {
     const loaded = new Program("").update({
@@ -382,9 +391,7 @@ Deno.test("contract actions derive and validate missing effects while preserving
     });
     assert(checked.ok);
     assertEquals(checked.value.diagnostics, [], next);
-    if (text.includes("fails First")) {
-      assert(next.includes("fails First | Second"), next);
-    }
+    assertEquals(next, expected);
   }
   const broken = "type Int = int\nconst f = (): Int => unknownName()\n";
   const loaded = new Program("").update({

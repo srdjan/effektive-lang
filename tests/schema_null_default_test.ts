@@ -153,13 +153,14 @@ Deno.test("null defaults reject nullable wrapped channels, descriptors, bad call
     (source) => checked(source).diagnostics,
   );
   for (
-    const [decoded, encoded] of [["Nullable", "Text"], ["Text", "Nullable"]]
+    const [decoded, encoded, encodedSchema, decodedSchema] of [
+      ["Nullable", "Text", "text", "nullable"],
+      ["Text", "Nullable", "nullable", "text"],
+    ]
   ) {
     const source = prefix +
       `const wire: Schema<${decoded}, ${encoded}> = schemaTransform(
-  ${encoded === "Text" ? "text" : "nullable"}, ${
-        decoded === "Text" ? "text" : "nullable"
-      },
+  ${encodedSchema}, ${decodedSchema},
   (value: ${encoded}): Option<${decoded}> => Some("Ada"),
   (value: ${decoded}): Option<${encoded}> => Some("Ada"))
 const bad = schemaDefaultKey(wire, (): ${decoded} => "Ada", { on: "null" })`;

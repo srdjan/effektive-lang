@@ -58,7 +58,12 @@ Deno.test("generationSource retains query order and classifies emit, map and abs
     "emitted" | "spanTable" | "sourceMap"
   >;
   for (
-    const broken of ["emitted", "spanTable", "sourceMap", "absent"] as const
+    const [broken, kind] of [
+      ["emitted", "emit"],
+      ["spanTable", "emit"],
+      ["sourceMap", "map"],
+      ["absent", "skip"],
+    ] as const
   ) {
     const calls: string[] = [];
     const lower = new Program().update({
@@ -98,7 +103,7 @@ Deno.test("generationSource retains query order and classifies emit, map and abs
     };
     assertEquals(
       generationSource(lower.value, queries).generated("m").kind,
-      broken === "sourceMap" ? "map" : broken === "absent" ? "skip" : "emit",
+      kind,
     );
     assertEquals(calls, ["emit", "table", "map"]);
   }
@@ -231,9 +236,15 @@ Deno.test("writeGenerated dry runs and partial write failures retain output meta
 
 Deno.test("generationSource stops after a lowering failure and keeps diagnostics silent", () => {
   for (
-    const error of [
-      { tag: "diagnostics", module: "m", count: 1 },
-      { tag: "internal", module: "m", message: "broken" },
+    const [error, expected] of [
+      [{ tag: "diagnostics", module: "m", count: 1 }, { kind: "skip" }],
+      [
+        { tag: "internal", module: "m", message: "broken" },
+        {
+          kind: "lower",
+          error: { tag: "internal", module: "m", message: "broken" },
+        },
+      ],
     ] as const
   ) {
     const unexpected = (): never => {
@@ -247,10 +258,7 @@ Deno.test("generationSource stops after a lowering failure and keeps diagnostics
       spanTable: unexpected,
       sourceMap: unexpected,
     }).generated("m");
-    assertEquals(
-      result,
-      error.tag === "diagnostics" ? { kind: "skip" } : { kind: "lower", error },
-    );
+    assertEquals(result, expected);
   }
 });
 

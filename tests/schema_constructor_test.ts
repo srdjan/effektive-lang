@@ -131,15 +131,22 @@ Deno.test("independent validation recomputes constructor input and failure chann
   const result = [...lowerProject(project).values()][0];
   assert(result.ok);
   for (
-    const [mutation, path, fragment] of [
+    const [mutation, code, path, fragment] of [
       [
         "runner",
+        "validation/003",
         ".body.effects.failures",
         "expected [error:effect/SchemaError]",
       ],
-      ["input", ".body.input", "schemaMake input does not fit decoded type"],
+      [
+        "input",
+        "validation/002",
+        ".body.input",
+        "schemaMake input does not fit decoded type",
+      ],
       [
         "failure",
+        "validation/003",
         ".body.effects.failures",
         "expected [error:effect/SchemaIssue], recorded []",
       ],
@@ -167,7 +174,7 @@ Deno.test("independent validation recomputes constructor input and failure chann
     } else Object.assign(declaration.body.effects, { failures: [] });
     assertValidation(
       validateModule(module, new Map([["main.eff", source]])),
-      mutation === "input" ? "validation/002" : "validation/003",
+      code,
       `${declarationPath(module, "make")}${path}`,
       fragment,
       mutation,

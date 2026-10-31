@@ -37,18 +37,16 @@ Deno.test("service workflow validates and retains provider requirements while di
 });
 Deno.test("service workflow rejects erased result, failure and retained service contracts", () => {
   for (
-    const error of [
-      "SchemaError",
-      "InvalidOrder",
-      "CatalogFailure",
-      "StoreFailure",
+    const [error, remaining] of [
+      ["SchemaError", "InvalidOrder | CatalogFailure | StoreFailure"],
+      ["InvalidOrder", "SchemaError | CatalogFailure | StoreFailure"],
+      ["CatalogFailure", "SchemaError | InvalidOrder | StoreFailure"],
+      ["StoreFailure", "SchemaError | InvalidOrder | CatalogFailure"],
     ]
   ) {
     const source = files["workflow.eff"].replace(
       "fails SchemaError | InvalidOrder | CatalogFailure | StoreFailure",
-      "fails " +
-        ["SchemaError", "InvalidOrder", "CatalogFailure", "StoreFailure"]
-          .filter((name) => name !== error).join(" | "),
+      "fails " + remaining,
     );
     assert(
       checked(source).diagnostics.some((d) =>
