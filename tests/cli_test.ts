@@ -7,7 +7,7 @@ import { debounceBatches } from "../src/host/events.ts";
 import { formatDiagnostics } from "../src/cli/format.ts";
 import { main } from "../src/cli/main.ts";
 import { isSourcePath } from "../src/host/workspace.ts";
-import { makeDiagnostic } from "../src/core/diagnostics.ts";
+import { makeDiagnostic } from "../src/core/frontend.ts";
 import { exampleFiles, FIXTURES } from "./helpers.ts";
 import { memoryIo, under } from "./cli_helpers.ts";
 

@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert";
-import { lex, type Lexed, TokenKind, TriviaKind } from "../src/core/lex.ts";
+import type { Lexed } from "../src/core/lex.ts";
+import { lex, TokenKind, TriviaKind } from "../src/core/frontend.ts";
 
 function kindsOf(text: string): TokenKind[] {
   const lexed = lex("t.eff", text);

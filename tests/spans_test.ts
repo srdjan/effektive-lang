@@ -2,7 +2,7 @@
 // src/core/emit/spans.ts on the emitted examples and forms.
 
 import { assert, assertEquals } from "@std/assert";
-import type { EmittedModule } from "../src/core/emit/emit.ts";
+import type { EmittedModule } from "../src/core/typescript.ts";
 import {
   buildSpanTable,
   hostImportSpans,
@@ -11,8 +11,9 @@ import {
   offsetOfGenerated,
   recordAtOffset,
   type SpanTable,
-} from "../src/core/emit/spans.ts";
-import { lineStarts, positionOf, spanText } from "../src/core/source.ts";
+} from "../src/core/typescript.ts";
+import { lineStarts, positionOf } from "../src/core/frontend.ts";
+import { spanText } from "../src/core/source.ts";
 import {
   emitFilesWithProject,
   EXAMPLE_ENTRIES,

@@ -5,9 +5,9 @@ import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import {
   type CheckedProject,
   checkProject,
-} from "../src/core/check_project.ts";
+  memoryHost,
+} from "../src/core/frontend.ts";
 import type { ValueId } from "../src/core/ir.ts";
-import { memoryHost } from "../src/core/source.ts";
 import { emitFiles } from "./helpers.ts";
 
 const PRELUDE = `

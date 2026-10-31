@@ -2,8 +2,7 @@
 // error declaration. Each test runs through the public entry `checkProject`.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
-import { memoryHost } from "../src/core/source.ts";
+import { checkProject, memoryHost } from "../src/core/frontend.ts";
 
 /** Checks one module `m.eff` and returns its diagnostics as `code message` lines. */
 function diagnosticsOf(text: string): string[] {

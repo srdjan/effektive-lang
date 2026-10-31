@@ -3,9 +3,7 @@ const outputs = new TypeScriptOutputs();
 // Tests for a type alias of errors in a `fails` clause.
 
 import { assert, assertEquals } from "@std/assert";
-import { Program } from "../src/core/db.ts";
-import { hoverAt } from "../src/core/mod.ts";
-import { referencesAt } from "../src/core/editor_index.ts";
+import { hoverAt, Program, referencesAt } from "../src/core/mod.ts";
 import { checkModule } from "./helpers.ts";
 
 const HEAD = `error NotFound = { id: Text }

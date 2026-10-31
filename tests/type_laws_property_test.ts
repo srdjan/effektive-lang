@@ -22,7 +22,7 @@ import type {
 } from "../src/core/ir.ts";
 import { type ModuleIR, Program, type Result } from "../src/core/frontend.ts";
 import { DURATION_ID, INSTANT_ID } from "../src/core/ir.ts";
-import type { LowerError } from "../src/core/lower.ts";
+import type { LowerError } from "../src/core/frontend.ts";
 import type { Predicate } from "../src/core/predicates.ts";
 import { typeFromIr } from "../src/core/type_ir.ts";
 import { TypeTable } from "../src/core/types.ts";

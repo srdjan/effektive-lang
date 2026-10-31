@@ -5,10 +5,12 @@
 // validator lowers an accepted seed source and forges the rejected shape.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
+import {
+  checkProject,
+  lowerProject,
+  memoryHost,
+} from "../src/core/frontend.ts";
 import type { Field, ModuleIR, Type } from "../src/core/ir.ts";
-import { lowerProject } from "../src/core/lower.ts";
-import { memoryHost } from "../src/core/source.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 
 /** Replaces one value inside a type declaration of the seed module. */

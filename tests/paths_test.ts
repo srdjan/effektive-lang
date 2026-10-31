@@ -1,7 +1,7 @@
 // Tests for the generated-file header helpers.
 
 import { assertEquals } from "@std/assert";
-import { generatedHeader, generatedSourceOf } from "../src/core/paths.ts";
+import { generatedHeader, generatedSourceOf } from "../src/core/frontend.ts";
 
 Deno.test("generatedSourceOf reads the source of an exact header", () => {
   assertEquals(

@@ -2,33 +2,33 @@
 
 import { assert, assertEquals } from "@std/assert";
 
-import {
-  type Diagnostic,
-  DIAGNOSTIC_CODES,
-  type DiagnosticCode,
-} from "../src/core/diagnostics.ts";
+import { DIAGNOSTIC_CODES } from "../src/core/diagnostics.ts";
+import type {
+  Diagnostic,
+  DiagnosticCode,
+  Project,
+} from "../src/core/frontend.ts";
 import { parse } from "../src/core/parse.ts";
-import {
-  lineStarts,
-  memoryHost,
-  positionOf,
-  type SourceHost,
-} from "../src/core/source.ts";
 import { analyzeProject } from "../src/core/analyze.ts";
-import {
-  checkAnalysis,
-  type CheckedProject,
-  checkProject,
-} from "../src/core/check_project.ts";
+import { checkAnalysis } from "../src/core/check_project.ts";
 import {
   emitProject,
   type EmittedModule,
   serializeSourceMap,
   TypeScriptOutputs,
 } from "../src/core/typescript.ts";
-import { Program, serializeModule } from "../src/core/frontend.ts";
-import { lowerProject } from "../src/core/lower.ts";
-import type { Project } from "../src/core/project.ts";
+import {
+  type CheckedProject,
+  checkProject,
+  lineStarts,
+  lowerProject,
+  memoryHost,
+  positionOf,
+  Program,
+  serializeModule,
+  type SourceHost,
+  TokenKind,
+} from "../src/core/frontend.ts";
 import type { ModeMap } from "../src/core/signatures.ts";
 import type { Execution, Expr, ModuleIR, ValueId } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
@@ -42,7 +42,6 @@ import {
   SyntaxKind,
   type SyntaxTree,
 } from "../src/core/syntax.ts";
-import { TokenKind } from "../src/core/lex.ts";
 
 export const FIXTURES = new URL("../fixtures/", import.meta.url);
 

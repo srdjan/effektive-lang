@@ -8,14 +8,13 @@ import { DIAGNOSTIC_CODES } from "../src/core/diagnostics.ts";
 import {
   buildSpanTable,
   hostImportSpans,
-  type SpanTable,
-} from "../src/core/emit/spans.ts";
-import {
   mapTscDiagnostic,
   parseDenoCheck,
+  type SpanTable,
   type TscDiagnostic,
-} from "../src/core/emit/tsc.ts";
-import { lineStarts, positionOf, spanText } from "../src/core/source.ts";
+} from "../src/core/typescript.ts";
+import { lineStarts, positionOf } from "../src/core/frontend.ts";
+import { spanText } from "../src/core/source.ts";
 import {
   COMPANION_FILES,
   emitFilesWithProject,

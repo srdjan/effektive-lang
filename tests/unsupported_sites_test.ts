@@ -9,13 +9,14 @@ import { assert, assertEquals, assertThrows } from "@std/assert";
 import {
   type CheckedProject,
   checkProject,
-} from "../src/core/check_project.ts";
+  lowerModule,
+  lowerProject,
+  memoryHost,
+} from "../src/core/frontend.ts";
+import { type EmitContext, emitModule } from "../src/core/typescript.ts";
+import type { ProjectConfig } from "../src/core/frontend.ts";
 import type { Expr, ModuleIR, Type } from "../src/core/ir.ts";
-import { lowerModule, lowerProject } from "../src/core/lower.ts";
-import { type EmitContext, emitModule } from "../src/core/emit/emit.ts";
 import { walkExpr } from "../src/core/emit/walk.ts";
-import type { ProjectConfig } from "../src/core/project.ts";
-import { memoryHost } from "../src/core/source.ts";
 
 type Obj = Record<string, unknown>;
 

@@ -13,9 +13,12 @@ import {
 } from "../src/core/signatures.ts";
 import { checkModuleDeclarations } from "../src/core/check.ts";
 import {
+  checkProject,
   type Diagnostic,
+  memoryHost,
   normalizeDiagnostics,
-} from "../src/core/diagnostics.ts";
+  type Result,
+} from "../src/core/frontend.ts";
 import type { Execution, ValueId } from "../src/core/ir.ts";
 import {
   buildInterface,
@@ -24,8 +27,7 @@ import {
   type ModuleInterface,
   reachableModules,
 } from "../src/core/interface.ts";
-import { checkAnalysis, checkProject } from "../src/core/check_project.ts";
-import { memoryHost, type Result } from "../src/core/source.ts";
+import { checkAnalysis } from "../src/core/check_project.ts";
 import { stripSpans } from "../src/core/interface.ts";
 import { TypeTable } from "../src/core/types.ts";
 import { functionTypeToIr } from "../src/core/type_ir.ts";

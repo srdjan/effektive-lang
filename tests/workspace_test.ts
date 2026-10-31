@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import type { ReadError, Result } from "../src/core/source.ts";
+import type { ReadError, Result } from "../src/core/frontend.ts";
 import type { DirectoryEntry, FileFailure, HostFs } from "../src/host/io.ts";
 import { readTargetInputs, readWorkspace } from "../src/host/workspace.ts";
 import { memoryIo } from "./cli_helpers.ts";

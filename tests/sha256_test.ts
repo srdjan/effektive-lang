@@ -2,7 +2,7 @@
 // `shasum -a 256` for the longer and non-ASCII inputs.
 
 import { assertEquals } from "@std/assert";
-import { sha256Hex } from "../src/core/sha256.ts";
+import { sha256Hex } from "../src/core/frontend.ts";
 
 Deno.test("sha256 of the empty string", () => {
   assertEquals(

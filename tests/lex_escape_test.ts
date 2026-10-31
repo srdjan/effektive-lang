@@ -3,7 +3,7 @@
 // and the diagnostic must cover both code units, never a lone surrogate.
 
 import { assertEquals } from "@std/assert";
-import { lex, TokenKind } from "../src/core/lex.ts";
+import { lex, TokenKind } from "../src/core/frontend.ts";
 
 function reports(text: string) {
   return lex("t.eff", text).diagnostics.map((

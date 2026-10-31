@@ -6,16 +6,14 @@ import { assert, assertEquals, assertNotEquals } from "@std/assert";
 import {
   type CheckedProject,
   checkProject,
-} from "../src/core/check_project.ts";
-import type { Expr, ModuleIR, Span } from "../src/core/ir.ts";
-import { walkExpr } from "../src/core/emit/walk.ts";
-import {
   type LowerError,
   lowerModule,
   lowerProject,
-} from "../src/core/lower.ts";
-import { serializeModule } from "../src/core/serialize.ts";
-import { memoryHost } from "../src/core/source.ts";
+  memoryHost,
+  serializeModule,
+} from "../src/core/frontend.ts";
+import type { Expr, ModuleIR, Span } from "../src/core/ir.ts";
+import { walkExpr } from "../src/core/emit/walk.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import { diskHost, EXAMPLE_ENTRIES, FIXTURES } from "./helpers.ts";
 

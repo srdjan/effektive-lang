@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { diffFiles } from "../src/core/file_diff.ts";
+import { diffFiles } from "../src/core/frontend.ts";
 
 Deno.test("diffFiles lists changed and new files in set and gone files in remove", () => {
   const known = new Map([["a.eff", "1"], ["b.eff", "2"], ["c.eff", "3"]]);

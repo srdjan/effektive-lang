@@ -6,10 +6,12 @@
 // the public entries `checkProject`, `lowerProject`, and `validateModule`.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
+import {
+  checkProject,
+  lowerProject,
+  memoryHost,
+} from "../src/core/frontend.ts";
 import type { Effects, Expr } from "../src/core/ir.ts";
-import { lowerProject } from "../src/core/lower.ts";
-import { memoryHost } from "../src/core/source.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 
 const CFG_LIMIT: Effects = { failures: [], requirements: ["cap:m#Cfg.limit"] };

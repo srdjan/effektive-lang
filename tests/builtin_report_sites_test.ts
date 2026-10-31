@@ -6,8 +6,7 @@
 // Every test runs through the public entry `checkProject`.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
-import { memoryHost } from "../src/core/source.ts";
+import { checkProject, memoryHost } from "../src/core/frontend.ts";
 
 interface SiteRow {
   /** The prelude builtin, or the checker feature, that owns the site. */

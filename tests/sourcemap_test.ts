@@ -4,19 +4,17 @@
 import { assert, assertEquals } from "@std/assert";
 import {
   buildSourceMap,
+  buildSpanTable,
   decodeMappings,
   decodeVlqList,
   encodeVlq,
-  lookupMapping,
-  serializeSourceMap,
-} from "../src/core/emit/sourcemap.ts";
-import {
-  buildSpanTable,
   hostImportSpans,
+  lookupMapping,
   mapOffset,
+  serializeSourceMap,
   type SpanTable,
-} from "../src/core/emit/spans.ts";
-import { lineStarts, positionOf } from "../src/core/source.ts";
+} from "../src/core/typescript.ts";
+import { lineStarts, positionOf } from "../src/core/frontend.ts";
 import {
   emitFilesWithProject,
   EXAMPLE_ENTRIES,

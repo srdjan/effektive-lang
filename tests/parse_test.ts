@@ -1,5 +1,5 @@
 import { assertEquals, assertNotEquals } from "@std/assert";
-import type { Diagnostic } from "../src/core/diagnostics.ts";
+import type { Diagnostic } from "../src/core/frontend.ts";
 import { fileModeOf, parse } from "../src/core/parse.ts";
 import {
   childrenOf,

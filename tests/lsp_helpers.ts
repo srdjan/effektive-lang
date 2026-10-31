@@ -4,7 +4,7 @@
 // the server as the stdio loop does.
 
 import type { HostFs } from "../src/host/io.ts";
-import type { ReadError, Result } from "../src/core/source.ts";
+import type { ReadError, Result } from "../src/core/frontend.ts";
 import {
   FrameDecoder,
   type OutgoingMessage,

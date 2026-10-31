@@ -1,18 +1,14 @@
 // Tests for the project file, module identity, the module graph, and cycles.
 
 import { assert, assertEquals } from "@std/assert";
-import { memoryHost } from "../src/core/source.ts";
 import {
   describeConfigError,
-  loadProject,
-  parseConfig,
-  type Project,
-} from "../src/core/project.ts";
-import {
   joinPath,
-  moduleNameOf,
-  normalizeRelative,
-} from "../src/core/paths.ts";
+  memoryHost,
+  type Project,
+} from "../src/core/frontend.ts";
+import { loadProject, parseConfig } from "../src/core/project.ts";
+import { moduleNameOf, normalizeRelative } from "../src/core/paths.ts";
 import { diskHost, listEffFiles } from "./helpers.ts";
 
 function load(

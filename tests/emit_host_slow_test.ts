@@ -4,16 +4,21 @@
 // under fixtures/.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
-import { buildSpanTable, hostImportSpans } from "../src/core/emit/spans.ts";
 import {
+  checkProject,
+  lineStarts,
+  lowerProject,
+  positionOf,
+  validateProject,
+} from "../src/core/frontend.ts";
+import {
+  buildSpanTable,
+  hostImportSpans,
   hostModulePaths,
   mapTscDiagnostic,
   parseDenoCheck,
-} from "../src/core/emit/tsc.ts";
-import { lowerProject } from "../src/core/lower.ts";
-import { validateProject } from "../src/core/validate_project.ts";
-import { lineStarts, positionOf, spanText } from "../src/core/source.ts";
+} from "../src/core/typescript.ts";
+import { spanText } from "../src/core/source.ts";
 import {
   copyDirectory,
   EXAMPLE_ENTRIES,

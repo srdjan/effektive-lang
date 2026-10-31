@@ -5,9 +5,14 @@ const outputs = new TypeScriptOutputs();
 // in memory.
 
 import { assert, assertEquals } from "@std/assert";
-import { Program, type Revision } from "../src/core/db.ts";
-import { definitionAt, documentSymbols, hoverAt } from "../src/core/mod.ts";
-import type { Span } from "../src/core/source.ts";
+import type { Span } from "../src/core/frontend.ts";
+import {
+  definitionAt,
+  documentSymbols,
+  hoverAt,
+  Program,
+  type Revision,
+} from "../src/core/mod.ts";
 import { exampleFiles, FIXTURES } from "./helpers.ts";
 import { showType } from "../src/core/type_show.ts";
 

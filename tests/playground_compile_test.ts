@@ -4,7 +4,7 @@
 
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 import { assert, assertEquals, assertNotEquals } from "@std/assert";
-import { Program } from "../src/core/db.ts";
+import { Program } from "../src/core/frontend.ts";
 import {
   BACKEND_UNAVAILABLE,
   createPlayground,

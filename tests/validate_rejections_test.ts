@@ -9,7 +9,11 @@
 // Add a program to PROGRAMS when the existing programs lack the construct.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
+import {
+  checkProject,
+  lowerProject,
+  memoryHost,
+} from "../src/core/frontend.ts";
 import type {
   ConstantDecl,
   Declaration,
@@ -18,8 +22,6 @@ import type {
   ModuleIR,
   Type,
 } from "../src/core/ir.ts";
-import { lowerProject } from "../src/core/lower.ts";
-import { memoryHost } from "../src/core/source.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 
 // ------------------------------------------------------------------ programs

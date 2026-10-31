@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { lineStarts } from "../src/core/source.ts";
+import { lineStarts } from "../src/core/frontend.ts";
 import {
   applyContentChanges,
   offsetToPosition,

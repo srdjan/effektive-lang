@@ -2,7 +2,7 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { type Analysis, analyzeProject } from "../src/core/analyze.ts";
-import { memoryHost } from "../src/core/source.ts";
+import { memoryHost } from "../src/core/frontend.ts";
 import {
   kindOf,
   type NodeId,

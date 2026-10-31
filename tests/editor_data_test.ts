@@ -5,11 +5,17 @@ const outputs = new TypeScriptOutputs();
 // constructor patterns.
 
 import { assert, assertEquals } from "@std/assert";
-import { Program, type Revision } from "../src/core/db.ts";
-import { definitionAt, documentSymbols, hoverAt } from "../src/core/mod.ts";
-import { completionsAt } from "../src/core/editor_completion.ts";
-import { applySourceEdits, renameAt } from "../src/core/editor_rename.ts";
-import { semanticClassifications } from "../src/core/editor_tokens.ts";
+import {
+  applySourceEdits,
+  completionsAt,
+  definitionAt,
+  documentSymbols,
+  hoverAt,
+  Program,
+  renameAt,
+  type Revision,
+  semanticClassifications,
+} from "../src/core/mod.ts";
 
 const TEXT = `type Text = string
 export type Circle = { radius: Text }

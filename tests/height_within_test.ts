@@ -5,8 +5,7 @@
 // type of exactly 128 levels passes, and a type of 129 levels fails.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
-import { memoryHost } from "../src/core/source.ts";
+import { checkProject, memoryHost } from "../src/core/frontend.ts";
 
 /** The limit of `declaration/012`, in levels. */
 const LIMIT = 128;

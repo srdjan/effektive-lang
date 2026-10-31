@@ -4,7 +4,7 @@ import { modesAsSolved, signatureType } from "../src/core/signatures.ts";
 import { checkModuleDeclarations } from "../src/core/check.ts";
 import type { TypeId } from "../src/core/ir.ts";
 import { parse } from "../src/core/parse.ts";
-import { memoryHost } from "../src/core/source.ts";
+import { memoryHost } from "../src/core/frontend.ts";
 import { childrenOf, kindName } from "../src/core/syntax.ts";
 import { functionTypeFromIr, functionTypeToIr } from "../src/core/type_ir.ts";
 import { TypeTable } from "../src/core/types.ts";

@@ -1,14 +1,13 @@
 import { assert, assertEquals } from "@std/assert";
 import { analyzeProject } from "../src/core/analyze.ts";
+import { checkModuleStep, reachedModules } from "../src/core/check_project.ts";
 import {
   type CheckedProject,
-  checkModuleStep,
   checkProject,
-  reachedModules,
-} from "../src/core/check_project.ts";
+  lowerProject,
+  memoryHost,
+} from "../src/core/frontend.ts";
 import type { ValueId } from "../src/core/ir.ts";
-import { lowerProject } from "../src/core/lower.ts";
-import { memoryHost } from "../src/core/source.ts";
 import { nodeSpan } from "../src/core/syntax.ts";
 import { TypeTable } from "../src/core/types.ts";
 

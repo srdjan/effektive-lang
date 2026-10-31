@@ -2,11 +2,8 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { analyzeProject } from "../src/core/analyze.ts";
-import {
-  PRELUDE_NAMES,
-  SHADOWABLE_PRELUDE_NAMES,
-} from "../src/core/resolve.ts";
-import { memoryHost } from "../src/core/source.ts";
+import { SHADOWABLE_PRELUDE_NAMES } from "../src/core/resolve.ts";
+import { memoryHost, PRELUDE_NAMES } from "../src/core/frontend.ts";
 
 function codes(source: string): string[] {
   const result = analyzeProject(

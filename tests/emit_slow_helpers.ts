@@ -3,11 +3,9 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
-import { checkProject } from "../src/core/check_project.ts";
+import { checkProject, lowerProject } from "../src/core/frontend.ts";
+import type { Project, SourceHost } from "../src/core/frontend.ts";
 import { emitProject, type EmittedModule } from "../src/core/typescript.ts";
-import { lowerProject } from "../src/core/lower.ts";
-import type { Project } from "../src/core/project.ts";
-import type { SourceHost } from "../src/core/source.ts";
 import { copyDirectory, EXAMPLE_ENTRIES, FIXTURES } from "./helpers.ts";
 import { deno, withTemporaryDirectory } from "./process_helpers.ts";
 

@@ -5,9 +5,11 @@
 // public entry `checkProject`.
 
 import { assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
-import { memoryHost } from "../src/core/source.ts";
-import { PRELUDE_NAMES } from "../src/core/resolve.ts";
+import {
+  checkProject,
+  memoryHost,
+  PRELUDE_NAMES,
+} from "../src/core/frontend.ts";
 
 interface ArityRow {
   readonly builtin: string;

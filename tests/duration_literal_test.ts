@@ -2,7 +2,7 @@
 // whose value is in milliseconds.
 
 import { assert, assertEquals } from "@std/assert";
-import { lex, TokenKind } from "../src/core/lex.ts";
+import { lex, TokenKind } from "../src/core/frontend.ts";
 import { literalOf } from "../src/core/syntax_queries.ts";
 import { parse } from "../src/core/parse.ts";
 import { checkModule, emitFiles } from "./helpers.ts";

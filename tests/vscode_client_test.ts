@@ -6,8 +6,11 @@ import {
   releaseVersion,
   REQUIRED_DENO_VERSION,
 } from "../scripts/package.ts";
-import { KEYWORDS } from "../src/core/lex.ts";
-import { BUILTIN_TYPE_NAMES, PRELUDE_NAMES } from "../src/core/resolve.ts";
+import {
+  BUILTIN_TYPE_NAMES,
+  KEYWORDS,
+  PRELUDE_NAMES,
+} from "../src/core/frontend.ts";
 import {
   GENERATED_CHANGED_METHOD,
   GENERATED_SCHEME,

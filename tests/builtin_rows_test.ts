@@ -8,7 +8,7 @@ import {
   CORE_ROW_NAMES,
   FAMILY_ROW_TABLES,
 } from "../src/core/check_builtins/registry.ts";
-import { PRELUDE_NAMES } from "../src/core/resolve.ts";
+import { PRELUDE_NAMES } from "../src/core/frontend.ts";
 
 const owners = new Map<string, string[]>();
 function own(name: string, owner: string): void {

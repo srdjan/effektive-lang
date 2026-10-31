@@ -22,9 +22,9 @@ import {
   containsUnknownPredicateInput,
   dataOnly,
   guardedRecord,
-  type TypeRef,
   TypeTable,
 } from "../src/core/types.ts";
+import type { TypeRef } from "../src/core/frontend.ts";
 import { canonicalJson } from "../src/core/util.ts";
 import { typeFromIr, typeToIr } from "../src/core/type_ir.ts";
 import { showType, showTypes } from "../src/core/type_show.ts";

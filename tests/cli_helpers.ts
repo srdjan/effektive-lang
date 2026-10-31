@@ -8,7 +8,7 @@ import type {
   FileFailure,
   HostIo,
 } from "../src/host/io.ts";
-import type { ReadError, Result } from "../src/core/source.ts";
+import type { ReadError, Result } from "../src/core/frontend.ts";
 import { memoryLog } from "../src/host/log.ts";
 
 export interface MemoryIo {

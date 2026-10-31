@@ -24,7 +24,7 @@
 //        channels". The cases below remove one member of a set of two.
 
 import { assert, assertEquals } from "@std/assert";
-import type { Diagnostic } from "../src/core/diagnostics.ts";
+import type { Diagnostic } from "../src/core/frontend.ts";
 import type { ModuleIR } from "../src/core/ir.ts";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import { validateModule } from "../src/core/validate/index.ts";

@@ -10,7 +10,7 @@ import {
   notificationMessage,
   successResponse,
 } from "../src/lsp/jsonrpc.ts";
-import type { Result } from "../src/core/source.ts";
+import type { Result } from "../src/core/frontend.ts";
 
 const encoder = new TextEncoder();
 

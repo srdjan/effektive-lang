@@ -1,6 +1,5 @@
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
-import { checkProject, Program } from "../src/core/mod.ts";
-import { memoryHost } from "../src/core/source.ts";
+import { checkProject, memoryHost, Program } from "../src/core/mod.ts";
 import {
   didChangeFull,
   didOpen,

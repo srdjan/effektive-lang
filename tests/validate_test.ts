@@ -4,15 +4,18 @@
 // change one fact of a lowered IR and require the diagnostic of its area.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
-import { describeCode, registeredCodes } from "../src/core/diagnostics.ts";
+import {
+  checkProject,
+  describeCode,
+  lowerProject,
+  memoryHost,
+  registeredCodes,
+  validateProject,
+} from "../src/core/frontend.ts";
 import type { Execution, Field, ModuleIR, Type } from "../src/core/ir.ts";
 import { SCHEMA_ERROR_ID } from "../src/core/ir.ts";
-import { lowerProject } from "../src/core/lower.ts";
-import { memoryHost } from "../src/core/source.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import { fits, same, show, type TypeEnv } from "../src/core/validate/typing.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import { buildFixtures } from "../scripts/validate_fixtures.ts";
 import {
   diskHost,

@@ -6,8 +6,7 @@
 // of the node that carries the span, and the message.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
-import { memoryHost } from "../src/core/source.ts";
+import { checkProject, memoryHost } from "../src/core/frontend.ts";
 
 const PRELUDE = "type Int = int\nerror E = {}\nerror F = {}\n";
 

@@ -1,14 +1,16 @@
 import { assertEquals } from "@std/assert";
 import {
-  categoryOf,
   dedupeDiagnostics,
-  describeCode,
   DIAGNOSTIC_CODES,
+  sortDiagnostics,
+} from "../src/core/diagnostics.ts";
+import {
+  categoryOf,
+  describeCode,
   makeDiagnostic,
   normalizeDiagnostics,
   registeredCodes,
-  sortDiagnostics,
-} from "../src/core/diagnostics.ts";
+} from "../src/core/frontend.ts";
 import { makeSpan } from "../src/core/source.ts";
 
 Deno.test("every code has the form category/NNN and matches its category", () => {

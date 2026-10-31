@@ -1,11 +1,8 @@
 // Tests driven by the files under fixtures/.
 
 import { assert, assertEquals } from "@std/assert";
-import {
-  DIAGNOSTIC_CODES,
-  type DiagnosticCode,
-  registeredCodes,
-} from "../src/core/diagnostics.ts";
+import { DIAGNOSTIC_CODES } from "../src/core/diagnostics.ts";
+import { type DiagnosticCode, registeredCodes } from "../src/core/frontend.ts";
 import { parse } from "../src/core/parse.ts";
 import { printTree } from "../src/core/syntax.ts";
 import {

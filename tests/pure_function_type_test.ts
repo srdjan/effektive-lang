@@ -1,13 +1,13 @@
 import { assert, assertEquals } from "@std/assert";
 import {
   checkProject,
+  completionsAt,
   lowerProject,
   memoryHost,
+  Program,
+  semanticClassifications,
   validateProject,
 } from "../src/core/mod.ts";
-import { Program } from "../src/core/db.ts";
-import { completionsAt } from "../src/core/editor_completion.ts";
-import { semanticClassifications } from "../src/core/editor_tokens.ts";
 import type { FunctionDecl } from "../src/core/ir.ts";
 import { showType } from "../src/core/type_show.ts";
 

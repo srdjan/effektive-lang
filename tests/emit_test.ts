@@ -2,11 +2,13 @@
 // entries `emitModule` and `emitProject` and compare the emitted text.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
+import {
+  checkProject,
+  lowerProject,
+  memoryHost,
+} from "../src/core/frontend.ts";
 import { emitModule, emitProject } from "../src/core/typescript.ts";
 import { relativeSpecifier } from "../src/core/emit/scope.ts";
-import { lowerProject } from "../src/core/lower.ts";
-import { memoryHost } from "../src/core/source.ts";
 import {
   COMPANION_FILES,
   emitExamples,

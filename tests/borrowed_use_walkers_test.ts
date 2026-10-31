@@ -6,8 +6,7 @@
 // through the public entry `checkProject`.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
-import { memoryHost } from "../src/core/source.ts";
+import { checkProject, memoryHost } from "../src/core/frontend.ts";
 
 const FIBER = "a borrowed fiber may only be joined or interrupted directly";
 const RECORD =

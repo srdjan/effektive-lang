@@ -1,4 +1,10 @@
-import { TypeScriptOutputs } from "../src/core/typescript.ts";
+import {
+  buildSourceMap,
+  buildSpanTable,
+  hostImportSpans,
+  serializeSourceMap,
+  TypeScriptOutputs,
+} from "../src/core/typescript.ts";
 const outputs = new TypeScriptOutputs();
 // Tests for the program of part A7: the memo, the module cutoff, and the
 // differential check against a run from scratch.
@@ -9,18 +15,17 @@ import {
   assertNotEquals,
   assertThrows,
 } from "@std/assert";
-import { checkProject } from "../src/core/check_project.ts";
-import { Program, type Revision, revisionDelta } from "../src/core/db.ts";
-import { emitProject } from "../src/core/typescript.ts";
 import {
-  buildSourceMap,
-  serializeSourceMap,
-} from "../src/core/emit/sourcemap.ts";
-import { buildSpanTable, hostImportSpans } from "../src/core/emit/spans.ts";
-import { serializeModule } from "../src/core/serialize.ts";
-import { memoryHost } from "../src/core/source.ts";
+  checkProject,
+  lowerProject,
+  memoryHost,
+  Program,
+  type Revision,
+  revisionDelta,
+  serializeModule,
+} from "../src/core/frontend.ts";
+import { emitProject } from "../src/core/typescript.ts";
 import { TypeTable } from "../src/core/types.ts";
-import { lowerProject } from "../src/core/lower.ts";
 import { exampleFiles } from "./helpers.ts";
 
 type Files = Record<string, string>;

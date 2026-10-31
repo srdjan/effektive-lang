@@ -1,20 +1,18 @@
-import { contractActionsAt } from "../src/core/editor_actions.ts";
-import { completionsAt } from "../src/core/editor_completion.ts";
-import { inlayHintsAt } from "../src/core/editor_hints.ts";
-import { semanticClassifications } from "../src/core/editor_tokens.ts";
 import {
   applySourceEdits,
-  prepareRenameAt,
-  renameAt,
-} from "../src/core/editor_rename.ts";
-import { assert, assertEquals } from "@std/assert";
-import { Program } from "../src/core/db.ts";
-import { diagnosticDelta } from "../src/core/diagnostic_delta.ts";
-import {
+  completionsAt,
+  contractActionsAt,
+  inlayHintsAt,
   occurrenceAt,
+  prepareRenameAt,
+  Program,
   referencesAt,
+  renameAt,
+  semanticClassifications,
   symbolIndex,
-} from "../src/core/editor_index.ts";
+} from "../src/core/frontend.ts";
+import { assert, assertEquals } from "@std/assert";
+import { diagnosticDelta } from "../src/core/diagnostic_delta.ts";
 
 const library = `export type Int = int
 export error Stop = {}

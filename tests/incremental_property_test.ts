@@ -28,7 +28,7 @@ import {
   type Revision,
   serializeModule,
 } from "../src/core/frontend.ts";
-import type { LowerError } from "../src/core/lower.ts";
+import type { LowerError } from "../src/core/frontend.ts";
 import {
   serializeSourceMap,
   TypeScriptOutputs,

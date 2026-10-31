@@ -10,7 +10,7 @@
 import { assertEquals } from "@std/assert";
 import { formatDiagnostics } from "../src/cli/format.ts";
 import { main } from "../src/cli/main.ts";
-import { type Diagnostic, makeDiagnostic } from "../src/core/diagnostics.ts";
+import { type Diagnostic, makeDiagnostic } from "../src/core/frontend.ts";
 import { memoryIo } from "./cli_helpers.ts";
 
 const ROOT = "/proj";

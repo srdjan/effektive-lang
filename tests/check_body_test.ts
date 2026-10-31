@@ -8,9 +8,10 @@ import { assert, assertEquals } from "@std/assert";
 import {
   type CheckedProject,
   checkProject,
-} from "../src/core/check_project.ts";
-import { Program } from "../src/core/db.ts";
-import { hoverAt } from "../src/core/mod.ts";
+  hoverAt,
+  memoryHost,
+  Program,
+} from "../src/core/mod.ts";
 import {
   buildInterface,
   buildTypeGraph,
@@ -19,7 +20,7 @@ import {
 import type { TypeGraph } from "../src/core/signatures.ts";
 import { type Solved, solveModeGroup } from "../src/core/modes.ts";
 import type { Execution, ValueId } from "../src/core/ir.ts";
-import { memoryHost, spanText } from "../src/core/source.ts";
+import { spanText } from "../src/core/source.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../src/core/syntax.ts";
 import type { NodeFact } from "../src/core/tables.ts";
 import {

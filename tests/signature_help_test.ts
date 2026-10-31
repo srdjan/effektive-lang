@@ -1,6 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
-import { Program, signatureHelpAt } from "../src/core/frontend.ts";
-import { lineStarts } from "../src/core/source.ts";
+import { lineStarts, Program, signatureHelpAt } from "../src/core/frontend.ts";
 import { offsetToPosition } from "../src/lsp/positions.ts";
 import { SERVER_CAPABILITIES } from "../src/lsp/protocol.ts";
 import { makeHarness, uriOf } from "./lsp_helpers.ts";
