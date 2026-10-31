@@ -59,8 +59,25 @@ export function needsFieldAdapter(
       return type.elements.some((t) => needsFieldAdapter(scope, t, seen));
     case "union":
       return type.members.some((t) => needsFieldAdapter(scope, t, seen));
-    default:
+    case "primitive":
+    case "literal":
+    case "ref":
+    case "closeable-scope":
+    case "retry-schedule":
+    case "codec":
+    case "schema":
+    case "fiber":
+    case "effect":
+    case "stream":
+    case "schedule":
+    case "sink":
+    case "function":
+    case "provider":
       return false;
+    default: {
+      const unreachable: never = type;
+      return unreachable;
+    }
   }
 }
 

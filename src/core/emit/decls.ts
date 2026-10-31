@@ -490,8 +490,26 @@ export class DeclarationEmitter {
         return type.fields.some((field) => this.containsNamed(field.type, id));
       case "union":
         return type.members.some((member) => this.containsNamed(member, id));
-      default:
+      case "tuple":
+      case "primitive":
+      case "literal":
+      case "ref":
+      case "closeable-scope":
+      case "retry-schedule":
+      case "codec":
+      case "schema":
+      case "fiber":
+      case "effect":
+      case "stream":
+      case "schedule":
+      case "sink":
+      case "function":
+      case "provider":
         return false;
+      default: {
+        const unreachable: never = type;
+        return unreachable;
+      }
     }
   }
 
