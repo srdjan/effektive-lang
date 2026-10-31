@@ -5,6 +5,7 @@
 import type {
   ErrorDecl,
   Field,
+  FunctionType,
   Import,
   MethodDecl,
   ModuleIR,
@@ -261,26 +262,18 @@ export function checkTypeIds(
       }
     });
   };
-  const walk = (t: Type, at: string, depth: number): void => {
-    if (depth > MAX_DEPTH) {
-      report.addDepth(at, MAX_DEPTH, span);
-      return;
-    }
-    // A function checks its borrow flags before its children.
-    if (
-      t.kind === "function" && t.borrows !== undefined &&
-      t.borrows.length !== t.parameters.length
-    ) {
+  const functionFlags = (t: FunctionType, at: string): void => {
+    if (t.borrows !== undefined && t.borrows.length !== t.parameters.length) {
       fail(at, "borrow flags must match function parameters");
     }
     if (
-      t.kind === "function" && t.checked !== undefined &&
+      t.checked !== undefined &&
       (t.checked.length !== t.parameters.length ||
         t.checked.some((checked) => typeof checked !== "boolean"))
     ) {
       fail(at, "checked flags must be booleans and match function parameters");
     }
-    if (t.kind === "function" && t.checked?.some(Boolean)) {
+    if (t.checked?.some(Boolean)) {
       const invalid = (message: string): void => {
         ok = false;
         report.add(AREA.contracts, `${at}.checked`, message, span);
@@ -299,6 +292,53 @@ export function checkTypeIds(
         }
       });
     }
+  };
+  const schemaShape = (
+    t: Extract<Type, { readonly kind: "schema" }>,
+    at: string,
+  ): void => {
+    // The IR allows each flag to be absent or exactly true.
+    for (
+      const flag of [
+        "optionalKey",
+        "encodedOptionalKey",
+        "decodedOptionalKey",
+        "constructorDefault",
+      ] as const
+    ) {
+      const value: unknown = t[flag];
+      if (value !== undefined && value !== true) {
+        fail(at, `the Schema flag ${flag} must be absent or true`);
+      }
+    }
+    if (
+      Number(t.optionalKey === true) +
+          Number(t.encodedOptionalKey === true) +
+          Number(t.decodedOptionalKey === true) > 1
+    ) fail(at, "Schema field optionality flags are mutually exclusive");
+    if (
+      !dataOnly(world.env, t.decoded, "schema") ||
+      !dataOnly(world.env, t.encoded, "schema") ||
+      !dataOnly(world.env, t.makeInput ?? t.decoded, "schema")
+    ) {
+      fail(at, "Schema decoded and encoded types must be data only");
+    }
+    effects(`${at}.decodeRequirements`, {
+      failures: [],
+      requirements: t.decodeRequirements,
+    });
+    effects(`${at}.encodeRequirements`, {
+      failures: [],
+      requirements: t.encodeRequirements,
+    });
+  };
+  const walk = (t: Type, at: string, depth: number): void => {
+    if (depth > MAX_DEPTH) {
+      report.addDepth(at, MAX_DEPTH, span);
+      return;
+    }
+    // A function checks its flags before its children.
+    if (t.kind === "function") functionFlags(t, at);
     for (const c of typeChildren(t)) {
       walk(c.type, `${at}${c.suffix}`, depth + 1);
     }
@@ -336,40 +376,7 @@ export function checkTypeIds(
         }
         return;
       case "schema":
-        // The IR allows each flag to be absent or exactly true.
-        for (
-          const flag of [
-            "optionalKey",
-            "encodedOptionalKey",
-            "decodedOptionalKey",
-            "constructorDefault",
-          ] as const
-        ) {
-          const value: unknown = t[flag];
-          if (value !== undefined && value !== true) {
-            fail(at, `the Schema flag ${flag} must be absent or true`);
-          }
-        }
-        if (
-          Number(t.optionalKey === true) +
-              Number(t.encodedOptionalKey === true) +
-              Number(t.decodedOptionalKey === true) > 1
-        ) fail(at, "Schema field optionality flags are mutually exclusive");
-        if (
-          !dataOnly(world.env, t.decoded, "schema") ||
-          !dataOnly(world.env, t.encoded, "schema") ||
-          !dataOnly(world.env, t.makeInput ?? t.decoded, "schema")
-        ) {
-          fail(at, "Schema decoded and encoded types must be data only");
-        }
-        effects(`${at}.decodeRequirements`, {
-          failures: [],
-          requirements: t.decodeRequirements,
-        });
-        effects(`${at}.encodeRequirements`, {
-          failures: [],
-          requirements: t.encodeRequirements,
-        });
+        schemaShape(t, at);
         return;
       case "fiber":
         effects(`${at}.effects`, { failures: t.failures, requirements: [] });
@@ -1151,50 +1158,69 @@ function checkBuiltinShape(
   }
   const wrong = (what: string): void =>
     report.add(AREA.types, path, `the builtin ${name} ${what}`, span);
+  if (name === "all") checkAllShape(env, type, wrong);
+  else checkCallbackShape(ctx, name, type, path, span, wrong);
+}
+
+function checkAllShape(
+  env: World["env"],
+  type: FunctionType,
+  wrong: (what: string) => void,
+): void {
   const count = type.parameters.length;
-  if (name === "all") {
-    if (count !== 1 && count !== 2) {
-      wrong(`has an invalid parameter count ${count}`);
-      return;
-    }
-    if (count === 2) {
-      if (!isConcurrencyType(env, type.parameters[1])) {
-        wrong("requires a concurrency options record");
-      }
-    }
-    const input = unfold(env, type.parameters[0]);
-    const container = containerEntries(input);
-    if (container === undefined) {
-      wrong("takes a tuple, record, or array of Effects");
-      return;
-    }
-    if (
-      input.kind === "record" && input.fields.some((field) => field.optional)
-    ) {
-      wrong("requires every record field to be present");
-    }
-    const effects = container.entries.map((entry) => unfold(env, entry));
-    if (effects.some((entry) => entry.kind !== "effect")) {
-      wrong("requires an Effect at every position");
-      return;
-    }
-    const effectEntries = effects.filter((entry) => entry.kind === "effect");
-    const results = effectEntries.map((entry) => entry.result);
-    const result = rebuildContainer(container, results);
-    if (!same(env, type.result, result)) wrong("must preserve input shape");
-    if (
-      type.execution !== "effect" ||
-      !sameSet(
-        type.effects.failures,
-        effectEntries.flatMap((entry) => entry.effects.failures),
-      ) ||
-      !sameSet(
-        type.effects.requirements,
-        effectEntries.flatMap((entry) => entry.effects.requirements),
-      )
-    ) wrong("must carry the failures and requirements of every Effect");
+  if (count !== 1 && count !== 2) {
+    wrong(`has an invalid parameter count ${count}`);
     return;
   }
+  if (count === 2) {
+    if (!isConcurrencyType(env, type.parameters[1])) {
+      wrong("requires a concurrency options record");
+    }
+  }
+  const input = unfold(env, type.parameters[0]);
+  const container = containerEntries(input);
+  if (container === undefined) {
+    wrong("takes a tuple, record, or array of Effects");
+    return;
+  }
+  if (
+    input.kind === "record" && input.fields.some((field) => field.optional)
+  ) {
+    wrong("requires every record field to be present");
+  }
+  const effects = container.entries.map((entry) => unfold(env, entry));
+  if (effects.some((entry) => entry.kind !== "effect")) {
+    wrong("requires an Effect at every position");
+    return;
+  }
+  const effectEntries = effects.filter((entry) => entry.kind === "effect");
+  const results = effectEntries.map((entry) => entry.result);
+  const result = rebuildContainer(container, results);
+  if (!same(env, type.result, result)) wrong("must preserve input shape");
+  if (
+    type.execution !== "effect" ||
+    !sameSet(
+      type.effects.failures,
+      effectEntries.flatMap((entry) => entry.effects.failures),
+    ) ||
+    !sameSet(
+      type.effects.requirements,
+      effectEntries.flatMap((entry) => entry.effects.requirements),
+    )
+  ) wrong("must carry the failures and requirements of every Effect");
+}
+
+function checkCallbackShape(
+  ctx: Ctx,
+  name: Exclude<BuiltinName, "all">,
+  type: FunctionType,
+  path: string,
+  span: Span,
+  wrong: (what: string) => void,
+): void {
+  const { report } = ctx;
+  const env = ctx.world.env;
+  const count = type.parameters.length;
   const validCount = name === "fold"
     ? count === 3
     : name === "traverse"
