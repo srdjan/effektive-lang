@@ -159,7 +159,7 @@ scripts/       Scripts that the tasks run.
                test_slow.ts runs the slow tests with a fresh DENO_DIR.
                validate_fixtures.ts writes the mutation fixtures.
                behavior_capture.ts records the hashed compiler behavior of a git revision.
-               lex_snapshot.ts writes the lexer snapshot of the tracked .eff and .effi files in fixtures/lex.
+               lex_snapshot.ts writes the lexer snapshot of a random corpus in fixtures/lex.
                logs_report.ts prints a Markdown report of the session logs: sessions, broken behavior, latency, friction, and outcomes.
                logs_replay.ts runs a logged session again on the current build and prints the first difference.
                rules_unfired.ts runs the fast suite with coverage and prints each validator rejection site that no fast test fires. It exits 1 when the list has a site.

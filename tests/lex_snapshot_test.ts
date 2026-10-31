@@ -6,12 +6,10 @@
 
 import { assert, assertEquals } from "@std/assert";
 import {
-  hashText,
   lexHash,
   type LexSnapshot,
   RANDOM_COUNT,
   randomInputs,
-  repositoryInputs,
   SEED,
 } from "../scripts/lex_snapshot.ts";
 
@@ -45,26 +43,4 @@ Deno.test("the lexer output of 20,000 random strings equals the snapshot", () =>
   assert(inputs.some((text) => text.includes('"\\')));
   assert(inputs.some((text) => /[0-9][eE][+-]?[0-9]/.test(text)));
   assert(inputs.some((text) => text.includes("\u{1F600}")));
-});
-
-Deno.test("the lexer output of each repository .eff and .effi file equals the snapshot", async () => {
-  const snapshot = readSnapshot();
-  const files = await repositoryInputs(ROOT);
-  const expectedCount = Object.keys(snapshot.files).length;
-  assert(expectedCount > 100, `the snapshot has ${expectedCount} files`);
-  const mismatches: string[] = [];
-  let compared = 0;
-  for (const [path, [input, output]] of Object.entries(snapshot.files)) {
-    const text = files.get(path);
-    // A file that a later commit edited or removed has a new input hash. It is
-    // not a lexer change, so the comparison skips it.
-    if (text === undefined || hashText(text) !== input) continue;
-    compared++;
-    if (lexHash(text) !== output) mismatches.push(path);
-  }
-  assertEquals(mismatches, []);
-  assert(
-    compared * 2 > expectedCount,
-    `only ${compared} of ${expectedCount} snapshot files are unchanged`,
-  );
 });

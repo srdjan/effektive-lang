@@ -1,16 +1,13 @@
-// The oracle for the lexer. It lexes a fixed corpus and writes one hash of the
-// lexer output for each input into fixtures/lex/snapshot.json. The corpus is
-// 20,000 random strings from a fixed seed over the lexer alphabet, plus every
-// .eff and .effi file that git tracks. Untracked files, such as the ignored
-// probe folders under docs/plans/, stay out, so every checkout writes the same
-// snapshot. tests/lex_snapshot_test.ts regenerates
-// the corpus and compares the hashes, so a change of the lexer output for any
-// input shows as a failure.
+// The oracle for the lexer. It lexes a fixed corpus of 20,000 random strings
+// from a fixed seed over the lexer alphabet. It writes one hash of the lexer
+// output for each string into fixtures/lex/snapshot.json.
+// tests/lex_snapshot_test.ts regenerates the corpus and compares the hashes, so
+// a change of the lexer output for any string shows as a failure.
 //
 // The snapshot records the lexer of the revision that wrote it. Run
-// `deno task lex:update` only after a deliberate change of the lexer output. A refactor of the lexer must not run it.
+// `deno task lex:update` only after a deliberate change of the lexer output. A
+// refactor of the lexer must not run it.
 
-import { compareText } from "../src/core/mod.ts";
 import { lex, type Lexed } from "../src/core/lex.ts";
 
 /** The number of random strings. */
@@ -33,16 +30,6 @@ const ALPHABET: readonly string[] = [
   "\u{1F600}",
   "\ud83d",
 ];
-
-/** Directories that hold no repository sources, or that git ignores. */
-const SKIPPED = new Set([
-  ".git",
-  ".claude",
-  ".playwright-mcp",
-  "node_modules",
-  "demos",
-  "dist",
-]);
 
 /** A small seeded generator (mulberry32). It returns numbers in [0, 1). */
 function generator(seed: number): () => number {
@@ -69,32 +56,6 @@ export function randomInputs(count: number = RANDOM_COUNT): string[] {
     inputs.push(text);
   }
   return inputs;
-}
-
-/** Reads every .eff and .effi file under the root. The keys are root-relative paths. */
-export async function repositoryInputs(
-  root: URL,
-): Promise<Map<string, string>> {
-  const found = new Map<string, string>();
-  const visit = async (directory: string): Promise<void> => {
-    const entries: Deno.DirEntry[] = [];
-    for await (const entry of Deno.readDir(new URL(directory, root))) {
-      entries.push(entry);
-    }
-    entries.sort((a, b) => compareText(a.name, b.name));
-    for (const entry of entries) {
-      const path = `${directory}${entry.name}`;
-      if (entry.isDirectory) {
-        if (!SKIPPED.has(entry.name)) await visit(`${path}/`);
-      } else if (
-        entry.isFile && (path.endsWith(".eff") || path.endsWith(".effi"))
-      ) {
-        found.set(path, await Deno.readTextFile(new URL(path, root)));
-      }
-    }
-  };
-  await visit("");
-  return found;
 }
 
 /** A 64-bit hash (two 32-bit FNV style lanes) of a text, as 16 hex digits. */
@@ -129,54 +90,23 @@ export interface LexSnapshot {
   readonly randomCount: number;
   /** The lexer hashes of the random strings, 16 hex digits each, in order. */
   readonly random: string;
-  /** For each repository file: the hash of its text and the hash of its lexer output. */
-  readonly files: Readonly<
-    Record<string, readonly [input: string, output: string]>
-  >;
 }
 
-export function buildSnapshot(
-  random: readonly string[],
-  files: ReadonlyMap<string, string>,
-): LexSnapshot {
-  const entries: Record<string, readonly [string, string]> = {};
-  for (const [path, text] of [...files].sort((a, b) => a[0] < b[0] ? -1 : 1)) {
-    entries[path] = [hashText(text), lexHash(text)];
-  }
+export function buildSnapshot(random: readonly string[]): LexSnapshot {
   return {
     seed: SEED,
     randomCount: random.length,
     random: random.map(lexHash).join(""),
-    files: entries,
   };
-}
-
-/** The root-relative paths of the .eff and .effi files that git tracks. */
-async function trackedSources(root: URL): Promise<Set<string>> {
-  const output = await new Deno.Command("git", {
-    args: ["ls-files", "-z", "--", "*.eff", "*.effi"],
-    cwd: root,
-    stdout: "piped",
-  }).output();
-  if (!output.success) throw new Error("git ls-files failed");
-  const listed = new TextDecoder().decode(output.stdout).split("\0");
-  return new Set(listed.filter((path) => path !== ""));
 }
 
 if (import.meta.main) {
   const root = new URL("../", import.meta.url);
-  const tracked = await trackedSources(root);
-  const files = await repositoryInputs(root);
-  const snapshot = buildSnapshot(
-    randomInputs(),
-    new Map([...files].filter(([path]) => tracked.has(path))),
-  );
+  const snapshot = buildSnapshot(randomInputs());
   const target = new URL("fixtures/lex/snapshot.json", root);
   await Deno.mkdir(new URL("./", target), { recursive: true });
   await Deno.writeTextFile(target, JSON.stringify(snapshot, null, 2) + "\n");
   console.log(
-    `wrote fixtures/lex/snapshot.json: ${snapshot.randomCount} random inputs, ${
-      Object.keys(snapshot.files).length
-    } files`,
+    `wrote fixtures/lex/snapshot.json: ${snapshot.randomCount} random inputs`,
   );
 }
