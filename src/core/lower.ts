@@ -845,17 +845,7 @@ class BodyLowerer {
   ): Expr {
     const fact = this.required(this.fact(node), "the call fact", node);
     if (fact.kind === "layer") {
-      if (pre !== undefined) {
-        throw internal("layer does not accept a pipeline input");
-      }
-      return {
-        kind: "layer",
-        service: this.required(fact.service, "the supplied service", node),
-        acquire: this.expr(
-          this.required(argNodes[1], "the layer acquisition", node),
-        ),
-        ...this.annotation(node),
-      };
+      return this.invokeLayer(fact, node, argNodes, pre);
     }
     const callee: Expr | undefined = fact.kind === "call"
       ? this.calleeExpr(calleeNode)
@@ -901,23 +891,8 @@ class BodyLowerer {
           ...annotation,
         };
       }
-      case "error-construction": {
-        const record = argNodes[0];
-        if (
-          pre !== undefined || argNodes.length !== 1 || record === undefined ||
-          kindOf(this.ctx.tree, record) !== SyntaxKind.RecordExpr
-        ) {
-          throw internal(
-            "an error is constructed from a record literal; this argument is not one",
-          );
-        }
-        return {
-          kind: "error",
-          error: fact.error,
-          fields: this.recordFields(this.kids(record)),
-          ...annotation,
-        };
-      }
+      case "error-construction":
+        return this.invokeErrorConstruction(fact, argNodes, pre, annotation);
       case "identity-construction":
         return {
           kind: "nominal",
@@ -933,101 +908,15 @@ class BodyLowerer {
           ...annotation,
         };
       case "schema":
-        return fact.op === "decode" || fact.op === "encode" ||
-            fact.op === "make"
-          ? {
-            kind: fact.op === "decode"
-              ? "schema-decode"
-              : fact.op === "encode"
-              ? "schema-encode"
-              : "schema-make",
-            schema: arg(0),
-            input: arg(1),
-            ...annotation,
-          }
-          : {
-            kind: "schema",
-            op: fact.op,
-            arguments: this.schemaArguments(
-              fact.op,
-              args.map((_, i) => arg(i)),
-            ),
-            ...annotation,
-          };
-      case "with-fiber": {
-        const job = arg(0);
-        const use = arg(1);
-        if (use.kind !== "closure" || use.parameters[0] === undefined) {
-          throw internal("withFiber needs an inline use callback");
-        }
-        return {
-          kind: "with-fiber",
-          job,
-          use,
-          ...annotation,
-        };
-      }
-      case "with-resource": {
-        const acquire = arg(0);
-        const use = arg(1);
-        const release = arg(2);
-        if (
-          acquire.kind !== "closure" || use.kind !== "closure" ||
-          release.kind !== "closure" ||
-          use.parameters[0] === undefined || release.parameters[0] === undefined
-        ) {
-          throw internal("withResource needs inline scoped closures");
-        }
-        return {
-          kind: "with-resource",
-          acquire,
-          use,
-          release,
-          ...annotation,
-        };
-      }
-      case "map-groups": {
-        const stream = arg(0);
-        const key = arg(1);
-        const use = arg(2);
-        if (
-          key.kind !== "closure" || use.kind !== "closure" ||
-          use.parameters[1] === undefined
-        ) {
-          throw internal("mapGroups needs an inline use callback");
-        }
-        return {
-          kind: "map-groups",
-          stream,
-          key,
-          use,
-          bufferSize: this.required(
-            fact.bufferSize,
-            "the group capacity",
-            node,
-          ),
-          ...annotation,
-        };
-      }
-      case "log": {
-        // The checker proved a literal options record; `fields` is one of its values.
-        const options = args[1];
-        const fields = options === undefined
-          ? undefined
-          : options.kind === "record"
-          ? options.fields.find((f) => f.name === "fields")?.value
-          : undefined;
-        if (options !== undefined && options.kind !== "record") {
-          throw internal("log needs a literal options record");
-        }
-        return {
-          kind: "log",
-          message: arg(0),
-          level: this.required(fact.level, "the log level", node),
-          fields: fields ?? null,
-          ...annotation,
-        };
-      }
+        return this.invokeSchema(fact, args, arg, annotation);
+      case "with-fiber":
+        return this.invokeWithFiber(arg, annotation);
+      case "with-resource":
+        return this.invokeWithResource(arg, annotation);
+      case "map-groups":
+        return this.invokeMapGroups(fact, node, arg, annotation);
+      case "log":
+        return this.invokeLog(fact, node, args, arg, annotation);
       case "debounce-stream":
         return {
           kind: "debounce-stream",
@@ -1093,6 +982,166 @@ class BodyLowerer {
           ...annotation,
         };
     }
+  }
+
+  private invokeLayer(
+    fact: FactOf<"layer">,
+    node: NodeId,
+    argNodes: readonly NodeId[],
+    pre: Expr | undefined,
+  ): Expr {
+    if (pre !== undefined) {
+      throw internal("layer does not accept a pipeline input");
+    }
+    return {
+      kind: "layer",
+      service: this.required(fact.service, "the supplied service", node),
+      acquire: this.expr(
+        this.required(argNodes[1], "the layer acquisition", node),
+      ),
+      ...this.annotation(node),
+    };
+  }
+
+  private invokeErrorConstruction(
+    fact: FactOf<"error-construction">,
+    argNodes: readonly NodeId[],
+    pre: Expr | undefined,
+    annotation: Annotation,
+  ): Expr {
+    const record = argNodes[0];
+    if (
+      pre !== undefined || argNodes.length !== 1 || record === undefined ||
+      kindOf(this.ctx.tree, record) !== SyntaxKind.RecordExpr
+    ) {
+      throw internal(
+        "an error is constructed from a record literal; this argument is not one",
+      );
+    }
+    return {
+      kind: "error",
+      error: fact.error,
+      fields: this.recordFields(this.kids(record)),
+      ...annotation,
+    };
+  }
+
+  private invokeSchema(
+    fact: FactOf<"schema">,
+    args: readonly Expr[],
+    arg: ArgumentAt,
+    annotation: Annotation,
+  ): Expr {
+    return fact.op === "decode" || fact.op === "encode" ||
+        fact.op === "make"
+      ? {
+        kind: fact.op === "decode"
+          ? "schema-decode"
+          : fact.op === "encode"
+          ? "schema-encode"
+          : "schema-make",
+        schema: arg(0),
+        input: arg(1),
+        ...annotation,
+      }
+      : {
+        kind: "schema",
+        op: fact.op,
+        arguments: this.schemaArguments(
+          fact.op,
+          args.map((_, i) => arg(i)),
+        ),
+        ...annotation,
+      };
+  }
+
+  private invokeWithFiber(arg: ArgumentAt, annotation: Annotation): Expr {
+    const job = arg(0);
+    const use = arg(1);
+    if (use.kind !== "closure" || use.parameters[0] === undefined) {
+      throw internal("withFiber needs an inline use callback");
+    }
+    return {
+      kind: "with-fiber",
+      job,
+      use,
+      ...annotation,
+    };
+  }
+
+  private invokeWithResource(arg: ArgumentAt, annotation: Annotation): Expr {
+    const acquire = arg(0);
+    const use = arg(1);
+    const release = arg(2);
+    if (
+      acquire.kind !== "closure" || use.kind !== "closure" ||
+      release.kind !== "closure" ||
+      use.parameters[0] === undefined || release.parameters[0] === undefined
+    ) {
+      throw internal("withResource needs inline scoped closures");
+    }
+    return {
+      kind: "with-resource",
+      acquire,
+      use,
+      release,
+      ...annotation,
+    };
+  }
+
+  private invokeMapGroups(
+    fact: FactOf<"map-groups">,
+    node: NodeId,
+    arg: ArgumentAt,
+    annotation: Annotation,
+  ): Expr {
+    const stream = arg(0);
+    const key = arg(1);
+    const use = arg(2);
+    if (
+      key.kind !== "closure" || use.kind !== "closure" ||
+      use.parameters[1] === undefined
+    ) {
+      throw internal("mapGroups needs an inline use callback");
+    }
+    return {
+      kind: "map-groups",
+      stream,
+      key,
+      use,
+      bufferSize: this.required(
+        fact.bufferSize,
+        "the group capacity",
+        node,
+      ),
+      ...annotation,
+    };
+  }
+
+  private invokeLog(
+    fact: FactOf<"log">,
+    node: NodeId,
+    args: readonly Expr[],
+    arg: ArgumentAt,
+    annotation: Annotation,
+  ): Expr {
+    // The checker proved a literal options record; `fields` is one of its values.
+    const options = args[1];
+    const fields = options === undefined
+      ? undefined
+      : options.kind === "record"
+      ? options.fields.find((f) => f.name === "fields")?.value
+      : undefined;
+    if (options !== undefined && options.kind !== "record") {
+      throw internal("log needs a literal options record");
+    }
+    return {
+      kind: "log",
+      message: arg(0),
+      level: this.required(fact.level, "the log level", node),
+      fields: fields ?? null,
+      ...annotation,
+    };
   }
 
   /** A callee expression, or the qualified name of a pipeline stage. */
