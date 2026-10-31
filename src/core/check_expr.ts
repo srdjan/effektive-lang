@@ -1840,18 +1840,18 @@ class BodyChecker
     return type === undefined || type === this.table.error ? undefined : type;
   }
 
-  private recordConstruction(
-    node: NodeId,
-    fields: readonly NodeId[],
-    expected: TypeRef | undefined,
-  ): NodeInfo {
-    const parsed = fields.map((f) => ({ node: f, parts: this.fieldParts(f) }));
-    const labels = parsed.flatMap((p) =>
-      p.parts === undefined ? [] : [p.parts.label]
-    );
+  /** The labels, literal values, and known name types that pick a record target. */
+  private prescanRecordFields(
+    partsList: readonly (ReturnType<BodyChecker["fieldParts"]>)[],
+  ): {
+    readonly labels: readonly string[];
+    readonly literals: ReadonlyMap<string, LiteralValue>;
+    readonly known: ReadonlyMap<string, TypeRef>;
+  } {
+    const labels = partsList.flatMap((p) => p === undefined ? [] : [p.label]);
     const literals = new Map<string, LiteralValue>();
     const known = new Map<string, TypeRef>();
-    for (const { parts } of parsed) {
+    for (const parts of partsList) {
       if (parts === undefined) continue;
       if (parts.value === undefined) {
         const type = this.knownNameType(parts.labelNode);
@@ -1868,6 +1868,18 @@ class BodyChecker
       const value = literalOf(this.tree, valueNode);
       if (value !== undefined) literals.set(parts.label, value);
     }
+    return { labels, literals, known };
+  }
+
+  private recordConstruction(
+    node: NodeId,
+    fields: readonly NodeId[],
+    expected: TypeRef | undefined,
+  ): NodeInfo {
+    const parsed = fields.map((f) => ({ node: f, parts: this.fieldParts(f) }));
+    const { labels, literals, known } = this.prescanRecordFields(
+      parsed.map((p) => p.parts),
+    );
     const picked = this.recordTarget(expected, labels, literals, known);
     // A record literal does not pick a tagged variant, so it has no target.
     let target: Exclude<RecordTarget, { kind: "variants" }> | undefined;

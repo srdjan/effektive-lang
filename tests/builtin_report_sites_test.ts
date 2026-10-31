@@ -736,3 +736,11 @@ Deno.test("SchemaError, SchemaIssue and TimeoutError are type names only, so no 
     }]);
   }
 });
+
+Deno.test("a record spread after a field reports the parser and the checker codes in order", () => {
+  const found = diagnosticsOf(
+    `${INT}const a = (b: { x: Int }) => ({ x: 1, ...b })\n`,
+    false,
+  );
+  assertEquals(found.map((d) => d.code), ["syntax/014", "type-mismatch/005"]);
+});
