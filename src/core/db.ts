@@ -118,7 +118,7 @@ interface Entry {
 
 function configKey(config: ProjectConfig): string {
   return JSON.stringify([
-    [...config.host].sort((a, b) => compareText(a[0], b[0])).map((
+    [...config.host].map((
       [key, host],
     ) => [key, host.interfacePath, host.modulePath]),
     config.imports?.map((rule) => [rule.from, ...rule.allow]) ?? null,

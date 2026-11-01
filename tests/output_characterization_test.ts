@@ -1,7 +1,12 @@
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 const outputs = new TypeScriptOutputs();
 import { assert, assertEquals, assertNotEquals } from "@std/assert";
-import { hoverAt, Program, sourceHoverAt } from "../src/core/mod.ts";
+import {
+  hoverAt,
+  Program,
+  type Revision,
+  sourceHoverAt,
+} from "../src/core/mod.ts";
 
 const source = "type Int = int\nexport const value = (): Int => 1\n";
 
@@ -115,4 +120,72 @@ Deno.test("host configuration changes replace the lowering key and keep old outp
   assert(after?.ok);
   assert(after.value.text.includes("new-clock.ts"));
   assert(outputs.emitted(first.value, "main") === before);
+});
+
+Deno.test("host order selects companion imports across warm and retained revisions", () => {
+  const config = (order: readonly string[]) =>
+    JSON.stringify({
+      host: Object.fromEntries(order.map((key) => [key, {
+        interface: "./host.effi",
+        module: `./${key}.ts`,
+      }])),
+    });
+  const validation = (revision: Revision) => {
+    const lowered = new Map(
+      revision.moduleNames().map((name) => {
+        const result = revision.lowered(name);
+        assert(result?.ok);
+        return [name, result] as const;
+      }),
+    );
+    const result = revision.validate(lowered);
+    for (const diagnostics of result.values()) assertEquals(diagnostics, []);
+    return result;
+  };
+  const files = {
+    "host.effi":
+      "export opaque type Handle\nexport type Box = { value: Handle }\n",
+    "main.eff":
+      'import { Box } from "host:a"\nexport const keep = (box: Box): Box => box\n',
+  };
+  const program = new Program();
+  const delayed = new Program();
+  const warmOutputs = new TypeScriptOutputs();
+  const delayedOutputs = new TypeScriptOutputs();
+  const retained = [];
+  let previous;
+  let previousFirst: string | undefined;
+  for (const order of [["a", "b"], ["b", "a"], ["b", "a"], ["a", "b"]]) {
+    const set = { ...files, "effektive.json": config(order) };
+    const warm = program.update({ set });
+    const late = delayed.update({ set });
+    const fresh = new Program().update({ set });
+    assert(warm.ok && late.ok && fresh.ok);
+    assertEquals(warm.value.diagnostics, []);
+    assertEquals(late.value.diagnostics, []);
+    assertEquals(fresh.value.diagnostics, []);
+    const freshOutputs = new TypeScriptOutputs();
+    const expected = freshOutputs.emitted(fresh.value, "host");
+    assert(expected?.ok);
+    assert(expected.value.text.includes(`from "./${order[0]}.ts"`));
+    const actual = warmOutputs.emitted(warm.value, "host");
+    assertEquals(actual, expected);
+    assertEquals(
+      warmOutputs.sourceMap(warm.value, "host"),
+      freshOutputs.sourceMap(fresh.value, "host"),
+    );
+    assertEquals(
+      warmOutputs.spanTable(warm.value, "host"),
+      freshOutputs.spanTable(fresh.value, "host"),
+    );
+    assertEquals(validation(warm.value), validation(fresh.value));
+    if (previousFirst === order[0]) assert(actual === previous);
+    previous = actual;
+    previousFirst = order[0];
+    retained.push({ warm: warm.value, late: late.value, expected });
+  }
+  for (const { warm, late, expected } of retained) {
+    assertEquals(warmOutputs.emitted(warm, "host"), expected);
+    assertEquals(delayedOutputs.emitted(late, "host"), expected);
+  }
 });

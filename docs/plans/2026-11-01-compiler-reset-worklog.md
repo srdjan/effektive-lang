@@ -22,6 +22,16 @@ Public `checkProject` reproduces `type-mismatch/003` for the annotated local arr
 The preservation executor reviewed the plan and reported no implementation blocker.
 No Compound Engineering packs apply.
 
+## Host invalidation
+
+CR2 (host invalidation): the new regression failed before the production edit.
+The failure showed incremental `a.ts` against fresh `b.ts` after reversal.
+The cache key now preserves host insertion order. The emitter keeps first-configured selection.
+The main agent reviewed the one-line production change and the full regression.
+The targeted command passed 46 tests with exit 0.
+The CR2 gate passed with exit 0: 3,119 fast tests and 301 slow tests.
+The regression covers warm output, maps, spans, validation, unchanged configuration, restoration, and delayed retained output.
+
 ## Current work
 
 CR1 (preservation evidence): the main agent reviewed every changed line.
@@ -33,7 +43,7 @@ The directed incremental command passed 45 tests with exit 0.
 The baseline `deno task check` passed 3,118 fast tests and 301 slow tests with exit 0.
 A public `Program` and `TypeScriptOutputs` reproduction confirms stale `a.ts` after host reversal; fresh output imports `b.ts`.
 The CR1 gate passed with exit 0: 3,118 fast tests and 301 slow tests.
-The main agent will next repair host invalidation.
+The CR1 commit is `a21acd4`.
 
 ## Unresolved questions
 
@@ -42,4 +52,4 @@ No unresolved scope question remains.
 
 ## Next action
 
-The main agent will review preservation tests and complete the first gate.
+The main agent will complete the host gate, commit the repair, and run its mutation sample.
