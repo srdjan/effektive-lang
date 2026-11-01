@@ -6208,6 +6208,14 @@ const MAKE_INPUT_CASES: readonly SchemaCase[] = [
     ],
   },
   {
+    name: "identity with a make input that fits in one direction",
+    tail:
+      "type Wide = Int | Text\nconst forged: Schema<Int, Int, never, never, Wide> = schema()",
+    expected: [
+      "type-mismatch/010 | schema does not yet preserve constructor make-input metadata | schema()",
+    ],
+  },
+  {
     name: "array",
     tail:
       "type Pair = { score: Int }\ntype PairMake = { score?: Int }\nconst pair: Schema<Pair, Pair, never, never, PairMake> = schemaStruct({ score: schemaConstructorDefault(integer, (): Int => 4) })\nconst bad = schemaArray(pair)",

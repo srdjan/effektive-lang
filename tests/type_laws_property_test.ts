@@ -1080,13 +1080,39 @@ export const s: S = schema()
   });
 });
 
-// Known difference, older than FNF28. The checker lets the owner pass `schema()`
-// a make input of its sealed type. The validator compares the names of the
-// make input and the decoded type with `same`, and rejects it. HEAD before the
-// FNF28 repair gives the same result.
-Deno.test("known difference: schema in the owner with its sealed make input", () => {
-  const main = "export sealed type Positive = int\n" +
-    "type S = Schema<int, int, never, never, Positive>\nexport const s: S = schema()\n";
+// Known difference, older than the reset: `171b212` gives the same results. The
+// checker accepts `schema()` when the make input is equivalent to the decoded
+// type. The validator rejects it, with one `validation/002`. The rule "Equivalent
+// aliases for M and D stay compatible" makes the validator the probable wrong
+// side. docs/status.md holds the open decision. A repair must change this test.
+Deno.test("known difference: schema with a sealed make input of the owner", () => {
+  const main = `export sealed type Positive = int
+type S = Schema<int, int, never, never, Positive>
+export const s: S = schema()
+`;
+  assertEquals(sourceCodes("", main), {
+    checker: [],
+    validator: ["validation/002"],
+  });
+});
+
+Deno.test("known difference: schema with an open identity make input", () => {
+  const main = `export type Cents = int
+type S = Schema<int, int, never, never, Cents>
+export const s: S = schema()
+`;
+  assertEquals(sourceCodes("", main), {
+    checker: [],
+    validator: ["validation/002"],
+  });
+});
+
+Deno.test("known difference: schema with a transparent alias make input", () => {
+  const main = `type Rec = { a: int }
+type A = Rec
+type S = Schema<Rec, Rec, never, never, A>
+export const s: S = schema()
+`;
   assertEquals(sourceCodes("", main), {
     checker: [],
     validator: ["validation/002"],
