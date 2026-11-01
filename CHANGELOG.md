@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.12.0 - 2026-11-01
 
 This reset changes no source form, no wire format, and no emitted text.
 
