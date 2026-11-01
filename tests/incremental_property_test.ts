@@ -44,6 +44,8 @@ const EDIT_KINDS = [
   "signature",
   "alias",
   "flip",
+  "config",
+  "host",
   "span",
   "syntax",
   "type",
@@ -186,6 +188,22 @@ function applySpanEdit(text: string, revision: number): string {
   return `// revision ${revision}\n${text}`;
 }
 
+/** Adds or removes a permissive import policy. */
+function applyConfigImportsEdit(text: string): string {
+  const policy =
+    '  "imports": [{ "from": "**", "allow": ["**", "host:*"] }],\n';
+  return text.includes(policy)
+    ? text.replace(policy, "")
+    : text.replace("{\n", `{\n${policy}`);
+}
+
+/** Adds or removes an unused service from the provider contract. */
+function applyHostSignatureEdit(text: string): string {
+  return text.includes("provides Store | Gate")
+    ? text.replace("provides Store | Gate", "provides Store")
+    : text.replace("provides Store\n", "provides Store | Gate\n");
+}
+
 /**
  * Generates the edits. `clean` holds the text that the edits build on. An error
  * step, a restore, and a removal change only `files`, so the next edit of the
@@ -254,6 +272,14 @@ class EditSequence {
         ])();
       case "flip":
         return this.edit(kind, main, applyModeFlipEdit);
+      case "config":
+        return this.edit(kind, "effektive.json", applyConfigImportsEdit);
+      case "host":
+        return this.edit(
+          kind,
+          "host/providers.effi",
+          applyHostSignatureEdit,
+        );
       case "span":
         return this.edit(
           kind,
@@ -438,15 +464,16 @@ function runSequence(seed: number): Tally {
 
 /** Every sequence has the same shape, whatever its seed. */
 const SHAPE = {
-  steps: 19,
-  retained: 19,
-  categories: ["module", "syntax", "type-mismatch"],
+  steps: 23,
+  retained: 23,
   byKind: {
     start: 1,
     body: 2,
     signature: 2,
     alias: 2,
     flip: 2,
+    config: 2,
+    host: 2,
     span: 2,
     syntax: 2,
     type: 2,
@@ -457,68 +484,106 @@ const SHAPE = {
 
 const CASES = [
   {
-    seed: 1,
-    clean: 4,
-    withDiagnostics: 15,
-    lowered: 54,
-    failed: 20,
-    emitted: 54,
+    "seed": 1,
+    "clean": 3,
+    "withDiagnostics": 20,
+    "lowered": 51,
+    "failed": 39,
+    "emitted": 51,
+    "categories": [
+      "module",
+      "syntax",
+      "type-mismatch",
+    ],
   },
   {
-    seed: 2,
-    clean: 13,
-    withDiagnostics: 6,
-    lowered: 63,
-    failed: 7,
-    emitted: 63,
+    "seed": 2,
+    "clean": 10,
+    "withDiagnostics": 13,
+    "lowered": 69,
+    "failed": 20,
+    "emitted": 69,
+    "categories": [
+      "module",
+      "syntax",
+      "type-mismatch",
+    ],
   },
   {
-    seed: 3,
-    clean: 2,
-    withDiagnostics: 17,
-    lowered: 33,
-    failed: 37,
-    emitted: 33,
+    "seed": 3,
+    "clean": 2,
+    "withDiagnostics": 21,
+    "lowered": 56,
+    "failed": 34,
+    "emitted": 56,
+    "categories": [
+      "module",
+      "syntax",
+      "type-mismatch",
+    ],
   },
   {
-    seed: 4,
-    clean: 4,
-    withDiagnostics: 15,
-    lowered: 44,
-    failed: 30,
-    emitted: 44,
+    "seed": 4,
+    "clean": 14,
+    "withDiagnostics": 9,
+    "lowered": 78,
+    "failed": 10,
+    "emitted": 78,
+    "categories": [
+      "syntax",
+      "type-mismatch",
+    ],
   },
   {
-    seed: 5,
-    clean: 4,
-    withDiagnostics: 15,
-    lowered: 51,
-    failed: 23,
-    emitted: 51,
+    "seed": 5,
+    "clean": 4,
+    "withDiagnostics": 19,
+    "lowered": 64,
+    "failed": 26,
+    "emitted": 64,
+    "categories": [
+      "module",
+      "syntax",
+      "type-mismatch",
+    ],
   },
   {
-    seed: 6,
-    clean: 4,
-    withDiagnostics: 15,
-    lowered: 47,
-    failed: 27,
-    emitted: 47,
+    "seed": 6,
+    "clean": 8,
+    "withDiagnostics": 15,
+    "lowered": 54,
+    "failed": 35,
+    "emitted": 54,
+    "categories": [
+      "module",
+      "syntax",
+      "type-mismatch",
+    ],
   },
   {
-    seed: 7,
-    clean: 7,
-    withDiagnostics: 12,
-    lowered: 55,
-    failed: 19,
-    emitted: 55,
+    "seed": 7,
+    "clean": 11,
+    "withDiagnostics": 12,
+    "lowered": 75,
+    "failed": 15,
+    "emitted": 75,
+    "categories": [
+      "syntax",
+      "type-mismatch",
+    ],
   },
   {
-    seed: 8,
-    clean: 7,
-    withDiagnostics: 12,
-    lowered: 61,
-    failed: 13,
-    emitted: 61,
+    "seed": 8,
+    "clean": 3,
+    "withDiagnostics": 20,
+    "lowered": 61,
+    "failed": 26,
+    "emitted": 61,
+    "categories": [
+      "module",
+      "syntax",
+      "type-mismatch",
+    ],
   },
 ];
 

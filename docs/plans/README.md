@@ -42,3 +42,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | NB (phases), NBF (findings), NBD (decisions) | [`docs/archive/plans/2026-10-30-reset-base.md`](../archive/plans/2026-10-30-reset-base.md) | Revision definitions and playground output paths |
 | FN (phases), FNF (findings), FND (decisions) | [`docs/archive/plans/2026-10-31-foundation-reset.md`](../archive/plans/2026-10-31-foundation-reset.md) | Foundation reset |
 | MU (batches), MUS (survivors), MUF (findings) | [`docs/archive/plans/2026-11-01-mutation-survivors.md`](../archive/plans/2026-11-01-mutation-survivors.md) | Mutation survivors in three modules of the validator and the checker |
+| CR (phases) | [`docs/plans/2026-11-01-compiler-reset.md`](2026-11-01-compiler-reset.md) | Compiler reset |
