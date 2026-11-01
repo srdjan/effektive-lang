@@ -9,7 +9,7 @@
     "operator": "logical",
     "text": "found.optionalKey !== true &&\n        found.encodedOptionalKey !== true",
     "mutant": "found.optionalKey !== true && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS2",
@@ -21,7 +21,7 @@
     "operator": "logical",
     "text": "found.optionalKey !== true &&\n        found.encodedOptionalKey !== true &&\n        found.decodedOptionalKey !== true",
     "mutant": "found.optionalKey !== true && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS3",
@@ -33,7 +33,7 @@
     "operator": "logical",
     "text": "found.kind === \"schema\" && found.optionalKey === true",
     "mutant": "found.kind === \"schema\" && found.optionalKey === true -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS4",
@@ -45,7 +45,7 @@
     "operator": "logical",
     "text": "call.args.length !== 0 || hint === undefined ||\n    !same(c.env, hint.decoded, hint.encoded) ||\n    hint.decodeRequirements.length || hint.encodeRequirements.length ||\n    !dataOnly(c.env, hint.decoded, \"value\")",
     "mutant": "call.args.length !== 0 || hint === undefined || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS5",
@@ -57,7 +57,7 @@
     "operator": "logical",
     "text": "call.args.length !== 0 || hint === undefined ||\n    !same(c.env, hint.decoded, hint.encoded) ||\n    hint.decodeRequirements.length || hint.encodeRequirements.length",
     "mutant": "call.args.length !== 0 || hint === undefined || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS6",
@@ -69,7 +69,7 @@
     "operator": "logical",
     "text": "call.args.length !== 2 || source === undefined || fn === undefined ||\n    !closureArg(call, 1) ||\n    fn.parameters.length !== 0",
     "mutant": "call.args.length !== 2 || source === undefined || fn === ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS7",
@@ -81,7 +81,7 @@
     "operator": "logical",
     "text": "call.args.length !== 2 || source === undefined || fn === undefined ||\n    !closureArg(call, 1) ||\n    fn.parameters.length !== 0 || fn.effects.requirements.length !== 0",
     "mutant": "call.args.length !== 2 || source === undefined || fn === ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS8",
@@ -93,7 +93,7 @@
     "operator": "logical",
     "text": "call.args.length !== 2 || source === undefined || fn === undefined ||\n    !closureArg(call, 1) ||\n    fn.parameters.length !== 0 || fn.effects.requirements.length !== 0 ||\n    !failsOnly(fn, [SCHEMA_ISSUE_ID]) ||\n    (fn.execution === \"pure\" && fn.effects.failures.length !== 0) ||\n    !fits(c.env, fn.result, source.makeInput ?? source.decoded)",
     "mutant": "call.args.length !== 2 || source === undefined || fn === ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS9",
@@ -105,7 +105,7 @@
     "operator": "logical",
     "text": "call.args.length !== 1 || input === undefined ||\n    fits(c.env, nil, input.decoded) || fits(c.env, nil, input.encoded)",
     "mutant": "call.args.length !== 1 || input === undefined || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS10",
@@ -117,7 +117,7 @@
     "operator": "logical",
     "text": "options.kind === \"record\" && options.fields.length === 1",
     "mutant": "options.kind === \"record\" && options.fields.length === 1 -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS11",
@@ -129,7 +129,7 @@
     "operator": "logical",
     "text": "field?.name !== \"encodingStrategy\" ||\n      field.value.kind !== \"literal\"",
     "mutant": "field?.name !== \"encodingStrategy\" || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS12",
@@ -141,7 +141,7 @@
     "operator": "logical",
     "text": "(call.args.length !== 2 && call.args.length !== 3) ||\n    input === undefined || fallback === undefined ||\n    !closureArg(call, 1)",
     "mutant": "(call.args.length !== 2 && call.args.length !== 3) || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS13",
@@ -153,7 +153,7 @@
     "operator": "logical",
     "text": "(call.args.length !== 2 && call.args.length !== 3) ||\n    input === undefined || fallback === undefined ||\n    !closureArg(call, 1) ||\n    fallback.parameters.length !== 0",
     "mutant": "(call.args.length !== 2 && call.args.length !== 3) || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS14",
@@ -165,7 +165,7 @@
     "operator": "logical",
     "text": "fallback.effects.failures.length !== 0 ||\n        fallback.effects.requirements.length !== 0",
     "mutant": "fallback.effects.failures.length !== 0 || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS15",
@@ -177,7 +177,7 @@
     "operator": "logical",
     "text": "fits(c.env, nil, input.decoded) ||\n      fits(c.env, nil, input.encoded)",
     "mutant": "fits(c.env, nil, input.decoded) || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS16",
@@ -189,7 +189,7 @@
     "operator": "logical",
     "text": "call.args.length !== 1 || list?.kind !== \"tuple\" ||\n    tuple?.kind !== \"tuple\"",
     "mutant": "call.args.length !== 1 || list?.kind !== \"tuple\" || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS17",
@@ -201,7 +201,7 @@
     "operator": "logical",
     "text": "call.args.length !== 1 || list?.kind !== \"tuple\"",
     "mutant": "call.args.length !== 1 || list?.kind !== \"tuple\" -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_constructor_guards_test.ts"
   },
   {
     "id": "MUS18",
@@ -213,7 +213,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(c.env, source.decoded, decode.parameters[0])",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS19",
@@ -225,7 +225,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS20",
@@ -237,7 +237,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(c.env, source.decoded, decode.parameters[0]) ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: target.encoded },\n      encode.parameters[0],\n    )",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS21",
@@ -249,7 +249,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(c.env, source.decoded, decode.parameters[0]) ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: target.encoded },\n      encode.parameters[0],\n    ) ||\n    !fits(c.env, decode.result, {\n      kind: \"option\",\n      element: target.encoded,\n    })",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS22",
@@ -261,7 +261,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(c.env, source.decoded, decode.parameters[0]) ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: target.encoded },\n      encode.parameters[0],\n    ) ||\n    !fits(c.env, decode.result, {\n      kind: \"option\",\n      element: target.encoded,\n    }) ||\n    !fits(c.env, encode.result, source.decoded)",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS23",
@@ -273,7 +273,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(c.env, source.decoded, decode.parameters[0]) ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: target.encoded },\n      encode.parameters[0],\n    ) ||\n    !fits(c.env, decode.result, {\n      kind: \"option\",\n      element: target.encoded,\n    }) ||\n    !fits(c.env, encode.result, source.decoded) ||\n    !closureArg(call, 2)",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS24",
@@ -285,7 +285,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(c.env, source.decoded, decode.parameters[0]) ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: target.encoded },\n      encode.parameters[0],\n    ) ||\n    !fits(c.env, decode.result, {\n      kind: \"option\",\n      element: target.encoded,\n    }) ||\n    !fits(c.env, encode.result, source.decoded) ||\n    !closureArg(call, 2) ||\n    !closureArg(call, 3)",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS25",
@@ -297,7 +297,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: source.decoded },\n      decode.parameters[0],\n    )",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS26",
@@ -309,7 +309,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS27",
@@ -321,7 +321,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: source.decoded },\n      decode.parameters[0],\n    ) ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: target.encoded },\n      encode.parameters[0],\n    )",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS28",
@@ -333,7 +333,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: source.decoded },\n      decode.parameters[0],\n    ) ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: target.encoded },\n      encode.parameters[0],\n    ) ||\n    !fits(c.env, decode.result, {\n      kind: \"option\",\n      element: target.encoded,\n    })",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS29",
@@ -345,7 +345,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: source.decoded },\n      decode.parameters[0],\n    ) ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: target.encoded },\n      encode.parameters[0],\n    ) ||\n    !fits(c.env, decode.result, {\n      kind: \"option\",\n      element: target.encoded,\n    }) ||\n    !fits(c.env, encode.result, {\n      kind: \"option\",\n      element: source.decoded,\n    })",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS30",
@@ -357,7 +357,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: source.decoded },\n      decode.parameters[0],\n    ) ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: target.encoded },\n      encode.parameters[0],\n    ) ||\n    !fits(c.env, decode.result, {\n      kind: \"option\",\n      element: target.encoded,\n    }) ||\n    !fits(c.env, encode.result, {\n      kind: \"option\",\n      element: source.decoded,\n    }) ||\n    !closureArg(call, 2)",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS31",
@@ -369,7 +369,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    !validSchemaCallback(decode) || !validSchemaCallback(encode) ||\n    decode?.parameters.length !== 1 || encode?.parameters.length !== 1 ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: source.decoded },\n      decode.parameters[0],\n    ) ||\n    !fits(\n      c.env,\n      { kind: \"option\", element: target.encoded },\n      encode.parameters[0],\n    ) ||\n    !fits(c.env, decode.result, {\n      kind: \"option\",\n      element: target.encoded,\n    }) ||\n    !fits(c.env, encode.result, {\n      kind: \"option\",\n      element: source.decoded,\n    }) ||\n    !closureArg(call, 2) ||\n    !closureArg(call, 3)",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS32",
@@ -381,7 +381,7 @@
     "operator": "logical",
     "text": "call.args.length !== 1 || hint === undefined",
     "mutant": "call.args.length !== 1 || hint === undefined -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS33",
@@ -393,7 +393,7 @@
     "operator": "logical",
     "text": "call.args.length !== 1 || hint === undefined || fn === undefined ||\n    fn.parameters.length !== 1 ||\n    !fits(c.env, expected, fn.parameters[0])",
     "mutant": "call.args.length !== 1 || hint === undefined || fn === un... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS34",
@@ -405,7 +405,7 @@
     "operator": "logical",
     "text": "call.args.length !== 1 || hint === undefined || fn === undefined ||\n    fn.parameters.length !== 1 ||\n    !fits(c.env, expected, fn.parameters[0]) ||\n    !fits(c.env, fn.result, expected) || !isQuiet(invocationOf(fn)) ||\n    !dataOnly(c.env, hint.decoded, \"value\") ||\n    !dataOnly(c.env, hint.encoded, \"value\")",
     "mutant": "call.args.length !== 1 || hint === undefined || fn === un... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS35",
@@ -417,7 +417,7 @@
     "operator": "logical",
     "text": "call.args.length !== 1 || hint === undefined || fn === undefined ||\n    fn.parameters.length !== 1 ||\n    !fits(c.env, expected, fn.parameters[0]) ||\n    !fits(c.env, fn.result, expected) || !isQuiet(invocationOf(fn)) ||\n    !dataOnly(c.env, hint.decoded, \"value\") ||\n    !dataOnly(c.env, hint.encoded, \"value\") ||\n    !dataOnly(c.env, hint.makeInput ?? hint.decoded, \"value\")",
     "mutant": "call.args.length !== 1 || hint === undefined || fn === un... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS36",
@@ -429,7 +429,7 @@
     "operator": "boolean-return",
     "text": "return false;",
     "mutant": "return false; -> true",
-    "disposition": "open"
+    "disposition": "equivalent: see fixtures/mutation/survivors.json"
   },
   {
     "id": "MUS37",
@@ -441,7 +441,7 @@
     "operator": "logical",
     "text": "fn.effects.failures.length === 1 &&\n      fn.effects.failures[0] === SCHEMA_ISSUE_ID &&\n      fits(c.env, fn.result, value)",
     "mutant": "fn.effects.failures.length === 1 && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_optional_guards_test.ts"
   },
   {
     "id": "MUS38",
@@ -453,7 +453,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    decode === undefined || encode === undefined ||\n    decode.parameters.length !== 1",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS39",
@@ -465,7 +465,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    decode === undefined || encode === undefined",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS40",
@@ -477,7 +477,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    decode === undefined || encode === undefined ||\n    decode.parameters.length !== 1 || encode.parameters.length !== 1 ||\n    !fits(c.env, source.decoded, decode.parameters[0])",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS41",
@@ -489,7 +489,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    decode === undefined || encode === undefined ||\n    decode.parameters.length !== 1 || encode.parameters.length !== 1",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS42",
@@ -501,7 +501,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    decode === undefined || encode === undefined ||\n    decode.parameters.length !== 1 || encode.parameters.length !== 1 ||\n    !fits(c.env, source.decoded, decode.parameters[0]) ||\n    !fits(c.env, target.encoded, encode.parameters[0])",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS43",
@@ -513,7 +513,7 @@
     "operator": "logical",
     "text": "call.args.length !== 4 || source === undefined || target === undefined ||\n    decode === undefined || encode === undefined ||\n    decode.parameters.length !== 1 || encode.parameters.length !== 1 ||\n    !fits(c.env, source.decoded, decode.parameters[0]) ||\n    !fits(c.env, target.encoded, encode.parameters[0]) ||\n    !callbackResult(decode, target.encoded) ||\n    !callbackResult(encode, source.decoded) ||\n    !closureArg(call, 2) ||\n    !closureArg(call, 3)",
     "mutant": "call.args.length !== 4 || source === undefined || target ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS44",
@@ -525,7 +525,7 @@
     "operator": "logical",
     "text": "callback?.kind !== \"closure\" || callback.parameters.length !== 1 ||\n    callback.body.kind !== \"schema\"",
     "mutant": "callback?.kind !== \"closure\" || callback.parameters.lengt... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS45",
@@ -537,7 +537,7 @@
     "operator": "logical",
     "text": "callback?.kind !== \"closure\" || callback.parameters.length !== 1",
     "mutant": "callback?.kind !== \"closure\" || callback.parameters.lengt... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS46",
@@ -549,7 +549,7 @@
     "operator": "logical",
     "text": "callback?.kind !== \"closure\" || callback.parameters.length !== 1 ||\n    callback.body.kind !== \"schema\" ||\n    (callback.body.op !== \"struct\" && callback.body.op !== \"union\")",
     "mutant": "callback?.kind !== \"closure\" || callback.parameters.lengt... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS47",
@@ -561,7 +561,7 @@
     "operator": "boolean-return",
     "text": "return false;",
     "mutant": "return false; -> true",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS48",
@@ -573,7 +573,7 @@
     "operator": "logical",
     "text": "callback.body.op === \"union\" &&\n      callback.body.arguments[0]?.kind === \"tuple\"",
     "mutant": "callback.body.op === \"union\" && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS49",
@@ -585,7 +585,7 @@
     "operator": "logical",
     "text": "decoded?.kind !== \"record\" || encoded?.kind !== \"record\"",
     "mutant": "decoded?.kind !== \"record\" || encoded?.kind !== \"record\" -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS50",
@@ -597,7 +597,7 @@
     "operator": "logical",
     "text": "other === undefined || other.optional",
     "mutant": "other === undefined || other.optional -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS51",
@@ -609,7 +609,7 @@
     "operator": "logical",
     "text": "left.kind === \"literal\" && right.kind === \"literal\" &&\n        typeof left.value === \"string\"",
     "mutant": "left.kind === \"literal\" && right.kind === \"literal\" && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS52",
@@ -621,7 +621,7 @@
     "operator": "logical",
     "text": "left.kind === \"literal\" && right.kind === \"literal\"",
     "mutant": "left.kind === \"literal\" && right.kind === \"literal\" -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS53",
@@ -633,7 +633,7 @@
     "operator": "logical",
     "text": "left.kind === \"literal\" && right.kind === \"literal\" &&\n        typeof left.value === \"string\" && left.value === right.value",
     "mutant": "left.kind === \"literal\" && right.kind === \"literal\" && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS54",
@@ -645,7 +645,7 @@
     "operator": "logical",
     "text": "values.every((value) => value !== undefined) &&\n        new Set(values).size === values.length",
     "mutant": "values.every((value) => value !== undefined) && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS55",
@@ -657,7 +657,7 @@
     "operator": "boolean-return",
     "text": "return true;",
     "mutant": "return true; -> false",
-    "disposition": "open"
+    "disposition": "equivalent: see fixtures/mutation/survivors.json"
   },
   {
     "id": "MUS56",
@@ -669,7 +669,7 @@
     "operator": "boolean-return",
     "text": "return false;",
     "mutant": "return false; -> true",
-    "disposition": "open"
+    "disposition": "test: tests/validate_schema_transform_guards_test.ts"
   },
   {
     "id": "MUS57",
@@ -681,7 +681,7 @@
     "operator": "logical",
     "text": "name !== undefined && isSchemaBuiltinName(name)",
     "mutant": "name !== undefined && isSchemaBuiltinName(name) -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS58",
@@ -693,7 +693,7 @@
     "operator": "logical",
     "text": "value !== undefined &&\n      kindOf(c.tree, value) === SyntaxKind.LiteralExpr",
     "mutant": "value !== undefined && -> ||",
-    "disposition": "open"
+    "disposition": "equivalent: see fixtures/mutation/survivors.json"
   },
   {
     "id": "MUS59",
@@ -705,7 +705,7 @@
     "operator": "logical",
     "text": "!dataOnly(c.table, hint.decoded, \"value\", true) ||\n    !dataOnly(c.table, hint.encoded, \"value\", true)",
     "mutant": "!dataOnly(c.table, hint.decoded, \"value\", true) || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS60",
@@ -717,7 +717,7 @@
     "operator": "logical",
     "text": "!dataOnly(c.table, hint.decoded, \"value\", true) ||\n    !dataOnly(c.table, hint.encoded, \"value\", true) ||\n    !dataOnly(c.table, hint.makeInput ?? hint.decoded, \"value\", true)",
     "mutant": "!dataOnly(c.table, hint.decoded, \"value\", true) || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS61",
@@ -729,7 +729,7 @@
     "operator": "comparison",
     "text": "op === \"decode\"",
     "mutant": "op === \"decode\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS62",
@@ -741,7 +741,7 @@
     "operator": "boolean-return",
     "text": "return false;",
     "mutant": "return false; -> true",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS63",
@@ -753,7 +753,7 @@
     "operator": "logical",
     "text": "self?.kind !== \"local\" || body === undefined ||\n    kindOf(c.tree, body) !== SyntaxKind.CallExpr",
     "mutant": "self?.kind !== \"local\" || body === undefined || -> &&",
-    "disposition": "open"
+    "disposition": "equivalent: see fixtures/mutation/survivors.json"
   },
   {
     "id": "MUS64",
@@ -765,7 +765,7 @@
     "operator": "logical",
     "text": "self?.kind !== \"local\" || body === undefined",
     "mutant": "self?.kind !== \"local\" || body === undefined -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS65",
@@ -777,7 +777,7 @@
     "operator": "logical",
     "text": "self?.kind !== \"local\" || body === undefined ||\n    kindOf(c.tree, body) !== SyntaxKind.CallExpr ||\n    recursionRoleOf(builtin(body)) !== \"container\"",
     "mutant": "self?.kind !== \"local\" || body === undefined || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS66",
@@ -789,7 +789,7 @@
     "operator": "logical",
     "text": "decoded?.kind !== \"record\" || encoded?.kind !== \"record\"",
     "mutant": "decoded?.kind !== \"record\" || encoded?.kind !== \"record\" -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS67",
@@ -801,7 +801,7 @@
     "operator": "logical",
     "text": "other === undefined || other.optional",
     "mutant": "other === undefined || other.optional -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS68",
@@ -813,7 +813,7 @@
     "operator": "logical",
     "text": "left.kind === \"literal\" && right.kind === \"literal\" &&\n        typeof left.value === \"string\"",
     "mutant": "left.kind === \"literal\" && right.kind === \"literal\" && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS69",
@@ -825,7 +825,7 @@
     "operator": "logical",
     "text": "left.kind === \"literal\" && right.kind === \"literal\"",
     "mutant": "left.kind === \"literal\" && right.kind === \"literal\" -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS70",
@@ -837,7 +837,7 @@
     "operator": "logical",
     "text": "left.kind === \"literal\" && right.kind === \"literal\" &&\n        typeof left.value === \"string\" && left.value === right.value",
     "mutant": "left.kind === \"literal\" && right.kind === \"literal\" && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS71",
@@ -849,7 +849,7 @@
     "operator": "boolean-return",
     "text": "return false;",
     "mutant": "return false; -> true",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS72",
@@ -861,7 +861,7 @@
     "operator": "logical",
     "text": "type.kind !== \"schema\" || type.constructorDefault === true ||\n    (e.kind === \"schema-make\" &&\n      (type.optionalKey === true || type.encodedOptionalKey === true ||\n        type.decodedOptionalKey === true))",
     "mutant": "type.kind !== \"schema\" || type.constructorDefault === tru... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS73",
@@ -873,7 +873,7 @@
     "operator": "comparison",
     "text": "e.kind === \"schema-make\"",
     "mutant": "e.kind === \"schema-make\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS74",
@@ -885,7 +885,7 @@
     "operator": "logical",
     "text": "type.optionalKey === true || type.encodedOptionalKey === true ||\n        type.decodedOptionalKey === true",
     "mutant": "type.optionalKey === true || type.encodedOptionalKey === ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS75",
@@ -897,7 +897,7 @@
     "operator": "logical",
     "text": "type.optionalKey === true || type.encodedOptionalKey === true",
     "mutant": "type.optionalKey === true || type.encodedOptionalKey === ... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/check_schema_guards_test.ts"
   },
   {
     "id": "MUS76",
@@ -909,7 +909,7 @@
     "operator": "logical",
     "text": "seen.has(type) || seen.size >= MAX_DEPTH",
     "mutant": "seen.has(type) || seen.size >= MAX_DEPTH -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS77",
@@ -921,7 +921,7 @@
     "operator": "comparison",
     "text": "seen.size >= MAX_DEPTH",
     "mutant": "seen.size >= MAX_DEPTH -> >",
-    "disposition": "open"
+    "disposition": "open: waits for the decision on MUF1"
   },
   {
     "id": "MUS78",
@@ -933,7 +933,7 @@
     "operator": "boolean-return",
     "text": "return true;",
     "mutant": "return true; -> false",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS79",
@@ -945,7 +945,7 @@
     "operator": "logical",
     "text": "base !== undefined && tagMayEqual(env, base, value, next)",
     "mutant": "base !== undefined && tagMayEqual(env, base, value, next) -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS80",
@@ -957,7 +957,7 @@
     "operator": "logical",
     "text": "type.kind === \"primitive\" && type.name === \"unknown\"",
     "mutant": "type.kind === \"primitive\" && type.name === \"unknown\" -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS81",
@@ -969,7 +969,7 @@
     "operator": "comparison",
     "text": "named?.kind === \"named\"",
     "mutant": "named?.kind === \"named\" -> !==",
-    "disposition": "open"
+    "disposition": "equivalent: see fixtures/mutation/survivors.json"
   },
   {
     "id": "MUS82",
@@ -981,7 +981,7 @@
     "operator": "negate-if",
     "text": "expression.execution === \"effect\"",
     "mutant": "expression.execution === \"effect\" -> !(expression.execution === \"effect\")",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS83",
@@ -993,7 +993,7 @@
     "operator": "comparison",
     "text": "expression.execution === \"effect\"",
     "mutant": "expression.execution === \"effect\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS84",
@@ -1005,7 +1005,7 @@
     "operator": "logical",
     "text": "!entrySchemaDerivable(env, parameter.type) ||\n          foreignSealedOf(env, parameter.type) !== undefined",
     "mutant": "!entrySchemaDerivable(env, parameter.type) || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS85",
@@ -1017,7 +1017,7 @@
     "operator": "logical",
     "text": "type.kind !== \"named\" ||\n          this.ctx.world.types.get(type.id)?.opaque !== true",
     "mutant": "type.kind !== \"named\" || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS86",
@@ -1029,7 +1029,7 @@
     "operator": "comparison",
     "text": "fields === undefined",
     "mutant": "fields === undefined -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS87",
@@ -1041,7 +1041,7 @@
     "operator": "logical",
     "text": "sealed !== undefined && !ownsSealed(this.env, sealed)",
     "mutant": "sealed !== undefined && !ownsSealed(this.env, sealed) -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS88",
@@ -1053,7 +1053,7 @@
     "operator": "logical",
     "text": "e.error === SCHEMA_ERROR_ID || e.error === SCHEMA_ISSUE_ID",
     "mutant": "e.error === SCHEMA_ERROR_ID || e.error === SCHEMA_ISSUE_ID -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS89",
@@ -1065,7 +1065,7 @@
     "operator": "comparison",
     "text": "e.callee.kind === \"reference\"",
     "mutant": "e.callee.kind === \"reference\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS90",
@@ -1077,7 +1077,7 @@
     "operator": "logical",
     "text": "builtin === \"fold\" && outs.length === 3",
     "mutant": "builtin === \"fold\" && outs.length === 3 -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS91",
@@ -1089,7 +1089,7 @@
     "operator": "logical",
     "text": "fn.execution !== (effectful ? \"effect\" : \"pure\") ||\n        callback === undefined ||\n        !sameSet(fn.effects.failures, callback.effects.failures)",
     "mutant": "fn.execution !== (effectful ? \"effect\" : \"pure\") || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS92",
@@ -1101,7 +1101,7 @@
     "operator": "logical",
     "text": "fn.execution !== (effectful ? \"effect\" : \"pure\") ||\n        callback === undefined ||\n        !sameSet(fn.effects.failures, callback.effects.failures) ||\n        !sameSet(fn.effects.requirements, callback.effects.requirements)",
     "mutant": "fn.execution !== (effectful ? \"effect\" : \"pure\") || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS93",
@@ -1113,7 +1113,7 @@
     "operator": "comparison",
     "text": "step.value.kind !== \"match\"",
     "mutant": "step.value.kind !== \"match\" -> ===",
-    "disposition": "open"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS94",
@@ -1125,7 +1125,7 @@
     "operator": "negate-if",
     "text": "cond.execution === \"effect\"",
     "mutant": "cond.execution === \"effect\" -> !(cond.execution === \"effect\")",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS95",
@@ -1137,7 +1137,7 @@
     "operator": "comparison",
     "text": "cond.execution === \"effect\"",
     "mutant": "cond.execution === \"effect\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS96",
@@ -1149,7 +1149,7 @@
     "operator": "comparison",
     "text": "index === 0",
     "mutant": "index === 0 -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS97",
@@ -1161,7 +1161,7 @@
     "operator": "negate-if",
     "text": "subject.execution === \"effect\"",
     "mutant": "subject.execution === \"effect\" -> !(subject.execution === \"effect\")",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS98",
@@ -1173,7 +1173,7 @@
     "operator": "comparison",
     "text": "subject.execution === \"effect\"",
     "mutant": "subject.execution === \"effect\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS99",
@@ -1185,7 +1185,7 @@
     "operator": "comparison",
     "text": "arm.pattern.kind === \"duration\"",
     "mutant": "arm.pattern.kind === \"duration\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS100",
@@ -1197,7 +1197,7 @@
     "operator": "negate-if",
     "text": "!isNever(unfold(this.env, body.type))",
     "mutant": "!isNever(unfold(this.env, body.type)) -> !(!isNever(unfold(this.env, body.type)))",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS101",
@@ -1209,7 +1209,7 @@
     "operator": "logical",
     "text": "typeof p.value === \"number\" &&\n            all.some((m) => isDurationType(env, m))",
     "mutant": "typeof p.value === \"number\" && -> ||",
-    "disposition": "open"
+    "disposition": "open: waits for the decision on MUF1"
   },
   {
     "id": "MUS102",
@@ -1221,7 +1221,7 @@
     "operator": "comparison",
     "text": "ms.length > 0",
     "mutant": "ms.length > 0 -> >=",
-    "disposition": "open"
+    "disposition": "equivalent: see fixtures/mutation/survivors.json"
   },
   {
     "id": "MUS103",
@@ -1233,7 +1233,7 @@
     "operator": "logical",
     "text": "m.kind === \"named\" &&\n            (env.errors.has(m.id) || env.taggedRecords.has(m.id))",
     "mutant": "m.kind === \"named\" && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS104",
@@ -1245,7 +1245,7 @@
     "operator": "logical",
     "text": "ms.length > 0 &&\n          ms.every((m) =>\n            m.kind === \"named\" &&\n            (env.errors.has(m.id) || env.taggedRecords.has(m.id))\n          ) &&\n          ms.some((m) => m.kind === \"named\" && m.id === id)",
     "mutant": "ms.length > 0 && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS105",
@@ -1257,7 +1257,7 @@
     "operator": "logical",
     "text": "ms.length > 0 &&\n          ms.every((m) =>\n            m.kind === \"named\" &&\n            (env.errors.has(m.id) || env.taggedRecords.has(m.id))\n          ) &&\n          ms.some((m) => m.kind === \"named\" && m.id === id) &&\n          (p.kind === \"error\" ? env.errors.has(id) : env.taggedRecords.has(id))",
     "mutant": "ms.length > 0 && -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS106",
@@ -1269,7 +1269,7 @@
     "operator": "logical",
     "text": "m.kind === \"named\" && m.id === id",
     "mutant": "m.kind === \"named\" && m.id === id -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS107",
@@ -1281,7 +1281,7 @@
     "operator": "comparison",
     "text": "m.id === id",
     "mutant": "m.id === id -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS108",
@@ -1293,7 +1293,7 @@
     "operator": "comparison",
     "text": "p.kind === \"error\"",
     "mutant": "p.kind === \"error\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS109",
@@ -1305,7 +1305,7 @@
     "operator": "boolean-return",
     "text": "return false;",
     "mutant": "return false; -> true",
-    "disposition": "open"
+    "disposition": "equivalent: see fixtures/mutation/survivors.json"
   },
   {
     "id": "MUS110",
@@ -1317,7 +1317,7 @@
     "operator": "comparison",
     "text": "narrowed.length > 0",
     "mutant": "narrowed.length > 0 -> >=",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS111",
@@ -1329,7 +1329,7 @@
     "operator": "logical",
     "text": "unfolded.kind === \"named\" && this.env.errors.has(unfolded.id)",
     "mutant": "unfolded.kind === \"named\" && this.env.errors.has(unfolded... -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_control_guards_test.ts"
   },
   {
     "id": "MUS112",
@@ -1341,7 +1341,7 @@
     "operator": "comparison",
     "text": "e.operator === \"||\"",
     "mutant": "e.operator === \"||\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS113",
@@ -1353,7 +1353,7 @@
     "operator": "logical",
     "text": "e.operator === \"+\" || e.operator === \"-\" || e.operator === \"*\" ||\n        e.operator === \"/\"",
     "mutant": "e.operator === \"+\" || e.operator === \"-\" || e.operator ==... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS114",
@@ -1365,7 +1365,7 @@
     "operator": "logical",
     "text": "e.operator === \"+\" || e.operator === \"-\" || e.operator === \"*\"",
     "mutant": "e.operator === \"+\" || e.operator === \"-\" || e.operator ==... -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS115",
@@ -1377,7 +1377,7 @@
     "operator": "logical",
     "text": "foreignSealedOf(env, left.type) !== undefined ||\n        foreignSealedOf(env, right.type) !== undefined",
     "mutant": "foreignSealedOf(env, left.type) !== undefined || -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS116",
@@ -1389,7 +1389,7 @@
     "operator": "logical",
     "text": "isBooleanLike(env, left.type) && isBooleanLike(env, right.type)",
     "mutant": "isBooleanLike(env, left.type) && isBooleanLike(env, right... -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS117",
@@ -1401,7 +1401,7 @@
     "operator": "logical",
     "text": "value.kind === \"literal\" && value.value === null",
     "mutant": "value.kind === \"literal\" && value.value === null -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS118",
@@ -1413,7 +1413,7 @@
     "operator": "logical",
     "text": "isNumericClass(env, l) && isNumericClass(env, r)",
     "mutant": "isNumericClass(env, l) && isNumericClass(env, r) -> ||",
-    "disposition": "open"
+    "disposition": "equivalent: see fixtures/mutation/survivors.json"
   },
   {
     "id": "MUS119",
@@ -1425,7 +1425,7 @@
     "operator": "logical",
     "text": "e.operator === \"+\" && isStringClass(env, l) && isStringClass(env, r)",
     "mutant": "e.operator === \"+\" && isStringClass(env, l) && isStringCl... -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS120",
@@ -1437,7 +1437,7 @@
     "operator": "logical",
     "text": "e.operator === \"+\" && isStringClass(env, l)",
     "mutant": "e.operator === \"+\" && isStringClass(env, l) -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS121",
@@ -1449,7 +1449,7 @@
     "operator": "logical",
     "text": "operator === \"-\" && l && duration",
     "mutant": "operator === \"-\" && l && duration -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS122",
@@ -1461,7 +1461,7 @@
     "operator": "logical",
     "text": "operator === \"-\" && l",
     "mutant": "operator === \"-\" && l -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS123",
@@ -1473,7 +1473,7 @@
     "operator": "comparison",
     "text": "operator === \"-\"",
     "mutant": "operator === \"-\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS124",
@@ -1485,7 +1485,7 @@
     "operator": "comparison",
     "text": "operator === \"*\"",
     "mutant": "operator === \"*\" -> !==",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS125",
@@ -1497,7 +1497,7 @@
     "operator": "logical",
     "text": "integral || fits(env, l ? right : left, NUMBER)",
     "mutant": "integral || fits(env, l ? right : left, NUMBER) -> &&",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   },
   {
     "id": "MUS126",
@@ -1509,6 +1509,6 @@
     "operator": "logical",
     "text": "l && integral",
     "mutant": "l && integral -> ||",
-    "disposition": "open"
+    "disposition": "test: tests/validate_operator_guards_test.ts"
   }
 ]
