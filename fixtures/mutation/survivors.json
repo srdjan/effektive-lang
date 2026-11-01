@@ -198,6 +198,15 @@
     "reason": "The code checks that both functions have the same parameter count first. The extra iteration at index length compares undefined with undefined, and assignable returns true at once when s === t."
   },
   {
+    "file": "src/core/validate/families/schema.ts",
+    "declaration": "schemaTransform.callbackResult",
+    "offset": 64,
+    "text": "return false;",
+    "operator": "boolean-return",
+    "class": "equivalent",
+    "reason": "The only two calls of callbackResult follow the test decode === undefined || encode === undefined in the same || chain, which short-circuits and returns before either call. So fn is never undefined in callbackResult, and the line fn === undefined: return false cannot run."
+  },
+  {
     "file": "src/core/validate/predicates.ts",
     "declaration": "verifyCertificate",
     "offset": 906,
