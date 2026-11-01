@@ -426,8 +426,8 @@ function schemaCall(
 
 function changedMakeInput(c: SchemaContext, type: SchemaNode): boolean {
   return type.makeInput !== undefined &&
-    !(c.table.isAssignable(type.makeInput, type.decoded) &&
-      c.table.isAssignable(type.decoded, type.makeInput));
+    !(c.table.isAssignableIn(c.module, type.makeInput, type.decoded) &&
+      c.table.isAssignableIn(c.module, type.decoded, type.makeInput));
 }
 
 /** The Schema type of a checked argument, or undefined after a report. */

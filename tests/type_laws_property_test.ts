@@ -1007,17 +1007,13 @@ Deno.test("a sealed type widens and adopts only in its own module", () => {
   assertEquals(bothAnswers(LITERAL_SIDES, INT, FOREIGN_SEALED), NO);
 });
 
-// FNF28, open. `TypeTable.schema` drops `makeInput` when `isAssignable` holds
-// both ways (types.ts:644-646). That call has no module, so it ignores sealed
-// authority, and the Schema with a foreign sealed `makeInput` interns as the
-// plain Schema. The validator keeps `makeInput` and needs authority
-// (typing.ts:377-382). This test pins the two answers. It is not a law. The
-// repair must change it. docs/status.md holds the open decision.
-Deno.test("known difference: Schema makeInput over a foreign sealed type", () => {
-  const disagree = { checker: true, validator: false };
+Deno.test("a Schema make input keeps its sealed authority", () => {
   const wide = schemaWith(FOREIGN_SEALED);
-  assertEquals(bothAnswers(LITERAL_SIDES, wide, schemaWith()), disagree);
-  assertEquals(bothAnswers(LITERAL_SIDES, schemaWith(), wide), disagree);
+  assertEquals(bothAnswers(LITERAL_SIDES, wide, schemaWith()), NO);
+  assertEquals(bothAnswers(LITERAL_SIDES, schemaWith(), wide), NO);
+  const own = schemaWith(OWN_SEALED);
+  assertEquals(bothAnswers(LITERAL_SIDES, own, schemaWith()), YES);
+  assertEquals(bothAnswers(LITERAL_SIDES, schemaWith(), own), YES);
 });
 
 /** The diagnostic codes of each side for the module `main` of a project. */
@@ -1042,19 +1038,79 @@ function sourceCodes(lib: string, main: string) {
   };
 }
 
-// The rule gives `checker: ["type-mismatch/003"]`, because a sealed value widens
-// only in its own module. The test pins the current wrong result.
-Deno.test("known difference: source reaches the Schema makeInput difference", () => {
-  const lib = "export sealed type Positive = int\n";
-  const main = `import { Positive } from "./lib.eff"
-type R = { s: Schema<int, int, never, never, Positive> }
+const POSITIVE_LIB = "export sealed type Positive = int\n";
+const POSITIVE_IMPORT =
+  `import { Positive } from "./lib.eff"\ntype Whole = int\n`;
+const POSITIVE_TYPES = `type R = { s: Schema<int, int, never, never, Positive> }
 type Q = { s: Schema<int> }
+`;
+
+Deno.test("a Schema with a foreign sealed make input does not widen", () => {
+  const main = POSITIVE_IMPORT + POSITIVE_TYPES +
+    "export const f = (r: R): Q => ({ s: r.s })\n";
+  assertEquals(sourceCodes(POSITIVE_LIB, main), {
+    checker: ["type-mismatch/003"],
+    validator: undefined,
+  });
+});
+
+Deno.test("the owner widens a Schema with its own sealed make input", () => {
+  const main = "export sealed type Positive = int\n" + POSITIVE_TYPES +
+    "export const f = (r: R): Q => ({ s: r.s })\n";
+  assertEquals(sourceCodes("", main), { checker: [], validator: [] });
+});
+
+Deno.test("equal Schemas with a foreign sealed make input match", () => {
+  const main = POSITIVE_IMPORT +
+    `type R = { s: Schema<int, int, never, never, Positive> }
+type Q = { s: Schema<int, int, never, never, Positive> }
 export const f = (r: R): Q => ({ s: r.s })
 `;
-  assertEquals(sourceCodes(lib, main), {
-    checker: [],
-    validator: ["validation/002", "validation/002"],
+  assertEquals(sourceCodes(POSITIVE_LIB, main), { checker: [], validator: [] });
+});
+
+Deno.test("schema rejects a foreign sealed make input", () => {
+  const main = POSITIVE_IMPORT +
+    `type S = Schema<int, int, never, never, Positive>
+export const s: S = schema()
+`;
+  assertEquals(sourceCodes(POSITIVE_LIB, main), {
+    checker: ["type-mismatch/010"],
+    validator: undefined,
   });
+});
+
+// Known difference, older than FNF28. The checker lets the owner pass `schema()`
+// a make input of its sealed type. The validator compares the names of the
+// make input and the decoded type with `same`, and rejects it. HEAD before the
+// FNF28 repair gives the same result.
+Deno.test("known difference: schema in the owner with its sealed make input", () => {
+  const main = "export sealed type Positive = int\n" +
+    "type S = Schema<int, int, never, never, Positive>\nexport const s: S = schema()\n";
+  assertEquals(sourceCodes("", main), {
+    checker: [],
+    validator: ["validation/002"],
+  });
+});
+
+Deno.test("schemaMake with a literal and a foreign sealed make input", () => {
+  const main = POSITIVE_IMPORT +
+    `type R = { s: Schema<int, int, never, never, Positive> }
+export const f = (r: R): Whole fails SchemaIssue => schemaMake(r.s, 1)
+`;
+  assertEquals(sourceCodes(POSITIVE_LIB, main), {
+    checker: ["type-mismatch/003"],
+    validator: undefined,
+  });
+});
+
+Deno.test("schemaMake with a foreign sealed value and make input", () => {
+  const main = POSITIVE_IMPORT +
+    `type R = { s: Schema<int, int, never, never, Positive> }
+export const f = (r: R, p: Positive): Whole fails SchemaIssue =>
+  schemaMake(r.s, p)
+`;
+  assertEquals(sourceCodes(POSITIVE_LIB, main), { checker: [], validator: [] });
 });
 
 // The rule lets another module compare primitive values. A comparison with

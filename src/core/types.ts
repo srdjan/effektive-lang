@@ -321,6 +321,9 @@ interface DefinitionSource {
 // about 1280 frames. 1536 leaves room above that.
 export const MAX_DEPTH = 1536;
 
+// No module has this name, so it owns no sealed type.
+const NO_MODULE = "";
+
 /**
  * The definition of a type id. `transparent` unfolds. `identity` has identity by
  * name and widens to its body. `tagged` is an identity record that carries a
@@ -695,8 +698,9 @@ export class TypeTable {
       encodeRequirements: sortedUnique(encodeRequirements),
       presence,
       ...(makeInput === decoded ||
-          (this.isAssignable(makeInput, decoded) &&
-            this.isAssignable(decoded, makeInput))
+          // The interned type serves every module, so the test needs no authority.
+          (this.isAssignableIn(NO_MODULE, makeInput, decoded) &&
+            this.isAssignableIn(NO_MODULE, decoded, makeInput))
         ? {}
         : { makeInput }),
       ...(constructorDefault ? { constructorDefault: true as const } : {}),

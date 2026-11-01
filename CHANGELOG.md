@@ -21,6 +21,8 @@ This reset changes no source form, no wire format, and no emitted text.
   `5dfef94` holds them.
 - `build --validate` accepts a `null` comparison of a foreign sealed type that
   holds `null`, as `check` does.
+- `check` rejects a Schema with a foreign sealed make input where the Schema
+  does not match, as `build --validate` does.
 
 ## 0.11.1 - 2026-10-30
 
