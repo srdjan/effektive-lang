@@ -167,6 +167,23 @@ _Avoid: fuzz test_
 The finalized type that a function body requires from a parameter.
 Omitted parameter types and explicit `unknown` infer the same contract.
 
+### Callable evidence
+
+Partial internal evidence that an expression can be called.
+It holds known parameter types, optional result information, and checked flags.
+It does not claim a complete function type or execution contract.
+
+### Input demand
+
+A type requirement for an inferred parameter or one of its field paths.
+The demand retains its source node for diagnostics.
+
+### Deferred input call
+
+A call whose inferred callee has no usable callable contract yet.
+The resolver processes each distinct recovered contract once through a finite worklist.
+An unresolved call requires a concrete annotation.
+
 ### Checked entry
 
 An exported function that accepts raw input and validates its inferred contract when its Effect executes.

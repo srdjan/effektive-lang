@@ -53,8 +53,8 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   predicates.ts  The predicate model of refinements: terms, builders, normalization, solver limits, and proof certificates.
   cron.ts        cronExpressionProblem, cronZoneProblem: the grammar of a cron expression and the zone rules of `scheduleCron`, shared by the checker and the validator.
   predicate_source.ts predicateFromSource: the predicate of a refinement written in source.
-  infer_inputs.ts inferFunctionInputs, inferArrowInputs, withInferredInputs: traversal and diagnostics for inferred input contracts.
-  infer_contracts.ts InputContractResolver: demands, deferred calls, and resolution of input contracts.
+  infer_inputs.ts inferFunctionInputs, inferArrowInputs, withInferredInputs: syntax traversal, partial callable evidence, callbacks, and source diagnostics for inferred input contracts.
+  infer_contracts.ts InputContractResolver: origins, demands, deferred calls, tagged issues, and finite worklist resolution with an explicit TypeTable.
   modes.ts       The mode fixed point of recursive groups.
   graph.ts       Strongly connected components of an integer graph.
   initialization.ts Eager dependency graph of module constants.
@@ -235,6 +235,10 @@ Patterns match normalized module names without `.eff` or `.effi`. A standalone `
 The first matching `from` rule controls the module. An unmatched module remains unrestricted.
 Host targets use exact `host:` specifiers or `host:*`. A forbidden edge reports `module/005` on the import specifier.
 Configuration and import edits update these diagnostics through the existing `Program` and language server paths.
+
+The `Program` configuration key preserves host registry order.
+Opaque companion emission selects the first configured host that matches an interface file.
+Therefore, host reordering changes the configuration key.
 
 The result holds the project, one resolution table for each module, and the
 sorted diagnostics. The project holds the parse trees, the module graph, and the

@@ -19,7 +19,7 @@ below are under `src/core/` unless a path starts with another directory.
 | Project, index, and resolve | `project.ts`, `declaration_index.ts`, `resolve.ts`, `analyze.ts` | The module graph from `effektive.json`, the declaration index of each file, and names resolved to identities. |
 | Types | `types.ts`, `type_ir.ts`, `type_show.ts` | The interned type table, compatibility rules, and readable type text. |
 | Declaration check | `signatures.ts`, `type_lower.ts`, `check_declarations.ts` | The signature model, the lowering of type nodes to interned types, and `ModuleChecker` for types, errors, services, providers, and constants. |
-| Body check | `check_expr.ts`, `check_patterns.ts`, `check_binary.ts`, `check_builtins/`, `infer_inputs.ts`, `modes.ts` | Types, effects, execution modes, contracts, and match coverage of each body. |
+| Body check | `check_expr.ts`, `check_patterns.ts`, `check_binary.ts`, `check_builtins/`, `infer_inputs.ts`, `infer_contracts.ts`, `modes.ts` | Types, effects, execution modes, contracts, and match coverage of each body. |
 | Project check | `check_project.ts`, `interface.ts`, `initialization.ts` | Paired declaration and body results, module interfaces with hashes, and the module initialization graph. `checkModuleStep` is the one per-module step. |
 | Refinements | `check_refinements.ts`, `predicates.ts`, `predicate_source.ts` | The refinement facts of a body, the bounded proof search, and proof certificates. |
 | Lowering | `lower.ts`, `serialize.ts` | Checked modules become typed IR, which `serialize.ts` writes as canonical JSON. `ir.ts` defines the IR. |
@@ -32,6 +32,24 @@ The host adapters are in `src/host/`. They read and write files and run
 `deno check` for the command-line tool and the language server. The
 command-line tool is in `src/cli/`, the language server in `src/lsp/`, and the
 browser playground in `playground/`. The VS Code client is in `editors/vscode/`.
+
+## Input contract inference
+
+`infer_inputs.ts` collects demands and partial callable evidence during syntax traversal. It reports source diagnostics after resolution.
+Callable evidence holds annotated or contextual parameter types, optional result information, and checked flags.
+Local aliases, parentheses, and record fields retain this evidence.
+
+`infer_contracts.ts` owns demands, origins, deferred calls, and the finite worklist.
+The resolver receives the `TypeTable` and can intern record types, so the resolver is not pure.
+The resolver returns tagged issues instead of source diagnostics.
+
+The driver gives each deferred call a callback. The resolver applies each distinct recovered contract to the argument syntax once.
+Later callback annotations can add requirements to other inferred arguments.
+Complete field origins retain unresolved sibling fields.
+
+Invocation arguments do not create callable signatures. An unconstrained callback still needs an annotation.
+The ordinary checker owns complete function types, execution modes, failures, and requirements.
+Inference does not repeat whole-body traversal and has no arbitrary iteration limit.
 
 ## Revision ownership
 

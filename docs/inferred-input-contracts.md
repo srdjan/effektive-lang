@@ -25,6 +25,30 @@ Host interfaces cannot declare refinements or expose types whose reachable contr
 This rule includes imported types, errors, deferred results, callbacks, and services supplied by host providers.
 Host adapters return unrefined data to checked source entries.
 
+An annotated local arrow retains callable evidence for an inferred argument.
+
+```effektive
+type Int = int
+const read = (input): Int => {
+  const fn = (n: Int): Int => n
+  fn(input)
+}
+```
+
+A local binding annotation establishes a callback contract even when the annotation follows the call.
+
+```effektive
+type Int = int
+const read = (input): Int => {
+  const fn: (n: Int) => Int = input
+  input(1)
+}
+```
+
+A recovered callback contract can add requirements to another inferred argument.
+Parentheses, local aliases, and record fields retain partial callable evidence.
+Invocation arguments cannot invent a callback signature.
+
 Local functions use inferred contracts statically and generate no entry checks.
 Exported results remain explicit. Exported failure and service contracts remain closed.
 An inferred exported input with a concrete contract requires `fails SchemaError`.

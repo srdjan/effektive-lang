@@ -67,6 +67,9 @@ layering rules. The file-level map of `src/` is in
 | `fixtures/`       | Input files for the tests.                                                                                                                                                                                                                                             |
 | `docs/`           | [Architecture](architecture.md), rules, status, API, measurements, and the archive of finished plans.                                                                                                                                                                 |
 
+Within `src/core/`, `infer_inputs.ts` drives syntax traversal and source diagnostics.
+The adjacent `infer_contracts.ts` resolves demands and deferred calls with a finite worklist.
+
 The file `.gitignore` ignores `fixtures/**/*.ts` and `fixtures/**/*.ts.map`, with a list of exceptions. A new hand-written `.ts` fixture that no exception covers stays untracked without any message. The tests pass in your working copy and fail under `git archive`. Add an exception to `.gitignore`, or force the file with `git add -f`. Run `git ls-files -ci --exclude-standard` to list tracked files that the ignore rules match. Today it lists three files, which are tracked on purpose.
 
 The directories of `fixtures/` are these.

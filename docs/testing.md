@@ -55,12 +55,15 @@ A property test generates its inputs from a literal table of seeds, with `makeRa
 
 | File | What it proves | What it can miss |
 | --- | --- | --- |
-| `tests/incremental_property_test.ts` | After each edit, a long-lived `Program` equals a new `Program` and the older driver. A revision that gets its first query after later edits gives the recorded result. | The projects have one feature module at this size. `effektive.json` and host declarations do not change. |
-| `tests/type_laws_property_test.ts` | Each generated type fits itself. Assignment of plain types is transitive. `isAssignableIn` and `fits` agree on generated pairs. | A rare shape can stay outside the generated pairs. The test names that start with "known difference" pin open defects of this kind. |
+| `tests/incremental_property_test.ts` | Eight seeds each compare 23 incremental revisions with fresh compilation and the older driver. Delayed queries preserve recorded results. | Each generated project has one feature module. Edits cover import policies and compatible host declarations, but exclude arbitrary configuration changes. |
+| `tests/type_laws_property_test.ts` | Each generated type fits itself in the checker and validator. Plain assignment is transitive. Checker and validator results agree on generated pairs. | Generated pairs can omit rare shapes. Directed tests cover selected nominal, function, fiber, sealed, schema, and null boundaries. |
 | `tests/predicates_property_test.ts` | Brute force confirms each `proved` and `disproved` result on a bounded domain. `verifyCertificate` accepts each certificate. `and` and `or` obey the identity and absorption laws. | The test does not judge an `unknown` result. |
 | `tests/acceptance_property_slow_test.ts` | After seeded token edits, a program that the checker accepts lowers, validates, and emits. | The edits stay near the input programs. Only `.eff` files change. |
 
 A property that fails is a finding about the compiler until the evidence shows otherwise. Do not weaken the property, and do not filter out the input.
+
+`tests/output_characterization_test.ts` checks host reordering with warm, delayed, fresh, and retained revisions.
+It compares emitted companion text, maps, span tables, and independent validation.
 
 ## Coverage
 
