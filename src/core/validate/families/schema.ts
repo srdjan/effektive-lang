@@ -288,8 +288,11 @@ function schemaOf(
         found.decodedOptionalKey !== true)) &&
       (schemaRows[e.op].acceptsDefault ||
         found.constructorDefault !== true) &&
+      // An equivalent make input is not a change. The checker has the same test
+      // in `changedMakeInput`.
       (found.makeInput === undefined ||
-        same(c.env, found.makeInput, found.decoded) ||
+        (fits(c.env, found.makeInput, found.decoded) &&
+          fits(c.env, found.decoded, found.makeInput)) ||
         // "invalid" and "at" return before any Schema is read, so only
         // "identity" is left out of the make-input operations.
         e.op !== "identity")
@@ -409,7 +412,9 @@ function schemaIdentity(c: ValidatorCore, call: SchemaCall): Comp {
       "schema() needs an identity data Schema with no services",
     );
   }
-  return derivedResult(hint, QUIET);
+  // `hint` is the unfolded type. The recorded type keeps the name of a named
+  // Schema, as the checker does.
+  return derivedResult(call.e.type, QUIET);
 }
 
 function schemaConstructorDefault(c: ValidatorCore, call: SchemaCall): Comp {

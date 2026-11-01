@@ -1080,38 +1080,60 @@ export const s: S = schema()
   });
 });
 
-// Known difference, older than the reset: `171b212` gives the same results. The
-// checker accepts `schema()` when the make input is equivalent to the decoded
-// type. The validator rejects it, with one `validation/002`. The rule "Equivalent
-// aliases for M and D stay compatible" makes the validator the probable wrong
-// side. docs/status.md holds the open decision. A repair must change this test.
-Deno.test("known difference: schema with a sealed make input of the owner", () => {
+// An equivalent make input is not a changed make input, and the rule keeps
+// equivalent aliases compatible. The result keeps the name of a named Schema.
+Deno.test("schema accepts a named Schema type", () => {
+  const main = `type S = Schema<int>
+export const s: S = schema()
+`;
+  assertEquals(sourceCodes("", main), { checker: [], validator: [] });
+});
+
+Deno.test("schema accepts a sealed make input of the owner", () => {
   const main = `export sealed type Positive = int
 type S = Schema<int, int, never, never, Positive>
 export const s: S = schema()
 `;
-  assertEquals(sourceCodes("", main), {
-    checker: [],
-    validator: ["validation/002"],
-  });
+  assertEquals(sourceCodes("", main), { checker: [], validator: [] });
 });
 
-Deno.test("known difference: schema with an open identity make input", () => {
+Deno.test("schema accepts an open identity make input", () => {
   const main = `export type Cents = int
 type S = Schema<int, int, never, never, Cents>
 export const s: S = schema()
 `;
-  assertEquals(sourceCodes("", main), {
-    checker: [],
-    validator: ["validation/002"],
-  });
+  assertEquals(sourceCodes("", main), { checker: [], validator: [] });
 });
 
-Deno.test("known difference: schema with a transparent alias make input", () => {
+Deno.test("schema accepts a transparent alias make input", () => {
   const main = `type Rec = { a: int }
 type A = Rec
 type S = Schema<Rec, Rec, never, never, A>
 export const s: S = schema()
+`;
+  assertEquals(sourceCodes("", main), { checker: [], validator: [] });
+});
+
+Deno.test("schema accepts an owned make input without a named Schema", () => {
+  const main = `type Int = int
+export sealed type Rec = { a: Int }
+export const s: Schema<{ a: Int }, { a: Int }, never, never, Rec> = schema()
+`;
+  assertEquals(sourceCodes("", main), { checker: [], validator: [] });
+});
+
+// Known difference, open. The checker accepts `schemaRecursive` under a named
+// Schema type. The validator compares the callback parameter with the unfolded
+// Schema, so the name differs. docs/status.md holds the open decision. A repair
+// must change this test.
+Deno.test("known difference: schemaRecursive under a named Schema type", () => {
+  const main = `type Int = int
+type Tree = { value: Int, children: Tree[] }
+type S = Schema<Tree>
+const integer: Schema<Int> = schema()
+export const s: S = schemaRecursive((self: S): S =>
+  schemaStruct({ value: integer, children: schemaArray(self) })
+)
 `;
   assertEquals(sourceCodes("", main), {
     checker: [],
