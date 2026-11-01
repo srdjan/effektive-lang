@@ -25,6 +25,8 @@ This reset changes no source form, no wire format, and no emitted text.
   does not match, as `build --validate` does.
 - `build --validate` accepts `schema()` for a named Schema type and for a make
   input that is equivalent to the decoded type, as `check` does.
+- `build --validate` accepts `schemaRecursive` under a named Schema type, as
+  `check` does.
 
 ## 0.11.1 - 2026-10-30
 

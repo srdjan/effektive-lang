@@ -1122,23 +1122,78 @@ export const s: Schema<{ a: Int }, { a: Int }, never, never, Rec> = schema()
   assertEquals(sourceCodes("", main), { checker: [], validator: [] });
 });
 
-// Known difference, open. The checker accepts `schemaRecursive` under a named
-// Schema type. The validator compares the callback parameter with the unfolded
-// Schema, so the name differs. docs/status.md holds the open decision. A repair
-// must change this test.
-Deno.test("known difference: schemaRecursive under a named Schema type", () => {
-  const main = `type Int = int
+/** A recursive Schema with the given annotations and body. */
+function recursiveProgram(
+  annotation: string,
+  self: string,
+  result: string,
+  body: string,
+): string {
+  return `type Int = int
 type Tree = { value: Int, children: Tree[] }
 type S = Schema<Tree>
 const integer: Schema<Int> = schema()
-export const s: S = schemaRecursive((self: S): S =>
-  schemaStruct({ value: integer, children: schemaArray(self) })
+export const s: ${annotation} = schemaRecursive((self: ${self}): ${result} =>
+  ${body}
 )
 `;
-  assertEquals(sourceCodes("", main), {
-    checker: [],
-    validator: ["validation/002"],
-  });
+}
+
+const RECURSIVE_BODY =
+  "schemaStruct({ value: integer, children: schemaArray(self) })";
+
+// The checker tests that the expected type fits the parameter, and that the
+// result fits the expected type. A named Schema and its body fit each other.
+Deno.test("schemaRecursive accepts a named Schema type in each position", () => {
+  const passes = { checker: [], validator: [] };
+  assertEquals(
+    sourceCodes("", recursiveProgram("S", "S", "S", RECURSIVE_BODY)),
+    passes,
+  );
+  assertEquals(
+    sourceCodes(
+      "",
+      recursiveProgram("S", "Schema<Tree>", "Schema<Tree>", RECURSIVE_BODY),
+    ),
+    passes,
+  );
+  assertEquals(
+    sourceCodes("", recursiveProgram("S", "S", "Schema<Tree>", RECURSIVE_BODY)),
+    passes,
+  );
+  assertEquals(
+    sourceCodes("", recursiveProgram("S", "Schema<Tree>", "S", RECURSIVE_BODY)),
+    passes,
+  );
+  assertEquals(
+    sourceCodes("", recursiveProgram("Schema<Tree>", "S", "S", RECURSIVE_BODY)),
+    passes,
+  );
+  assertEquals(
+    sourceCodes(
+      "",
+      recursiveProgram(
+        "Schema<Tree>",
+        "Schema<Tree>",
+        "Schema<Tree>",
+        RECURSIVE_BODY,
+      ),
+    ),
+    passes,
+  );
+});
+
+Deno.test("schemaRecursive rejects a parameter that the Schema does not fit", () => {
+  assertEquals(
+    sourceCodes(
+      "",
+      recursiveProgram("S", "Schema<Int>", "S", RECURSIVE_BODY),
+    ),
+    {
+      checker: ["type-mismatch/003", "type-mismatch/003"],
+      validator: undefined,
+    },
+  );
 });
 
 Deno.test("schemaMake with a literal and a foreign sealed make input", () => {

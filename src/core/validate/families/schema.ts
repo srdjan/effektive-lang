@@ -761,13 +761,16 @@ function schemaOptionalTransform(c: ValidatorCore, call: SchemaCall): Comp {
 }
 
 function schemaRecursive(c: ValidatorCore, call: SchemaCall): Comp {
-  const hint = schemaOf(c, call, call.e.type);
+  // `hint` is the unfolded type. The callback and the result use the recorded
+  // type, which keeps the name of a named Schema, as the checker does.
+  const expected = call.e.type;
+  const hint = schemaOf(c, call, expected);
   const fn = functionArg(c, call, 0);
   if (
     call.args.length !== 1 || hint === undefined || fn === undefined ||
     fn.parameters.length !== 1 ||
-    !same(c.env, fn.parameters[0], hint) ||
-    !fits(c.env, fn.result, hint) || !isQuiet(invocationOf(fn)) ||
+    !fits(c.env, expected, fn.parameters[0]) ||
+    !fits(c.env, fn.result, expected) || !isQuiet(invocationOf(fn)) ||
     !dataOnly(c.env, hint.decoded, "value") ||
     !dataOnly(c.env, hint.encoded, "value") ||
     !dataOnly(c.env, hint.makeInput ?? hint.decoded, "value") ||
@@ -779,7 +782,7 @@ function schemaRecursive(c: ValidatorCore, call: SchemaCall): Comp {
       "schemaRecursive needs a pure body from self to the expected data Schema",
     );
   }
-  return schemaResult(call, hint);
+  return schemaResult(call, expected);
 }
 
 function schemaTransform(c: ValidatorCore, call: SchemaCall): Comp {
