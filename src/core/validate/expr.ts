@@ -61,6 +61,7 @@ import {
   fieldsOf,
   fits,
   fitsCheckedInput,
+  fitsNullComparison,
   foreignSealedOf,
   identityBody,
   identityMembers,
@@ -2059,9 +2060,10 @@ export class BodyValidator implements ValidatorCore {
           const value = unfold(env, type);
           return value.kind === "literal" && value.value === null;
         };
-        const nullable =
-          (isNull(left.type) && fits(env, left.type, right.type)) ||
-          (isNull(right.type) && fits(env, right.type, left.type));
+        const nullable = (isNull(left.type) &&
+          fitsNullComparison(env, left.type, right.type)) ||
+          (isNull(right.type) &&
+            fitsNullComparison(env, right.type, left.type));
         return nullable ||
             l !== undefined && r !== undefined &&
               compatibleClasses(env, l, r) && !closedUnitsDiffer(l, r)

@@ -5,7 +5,8 @@
 //   - A transparent alias unfolds structurally. An alias with identity, an opaque
 //     type, and an error are nominal. Two different identities never mix. An
 //     identity widens to its body, and an unnamed value fits an identity whose
-//     body it fits. A sealed identity keeps both steps in its own module.
+//     body it fits. A sealed identity keeps both steps in its own module. A
+//     comparison with `null` needs no sealed authority (`fitsNullComparison`).
 //   - int fits number. A literal fits its primitive. never fits every type.
 //   - A union fits a target when each member fits. A source fits a union
 //     target when it fits one member.
@@ -504,6 +505,20 @@ function guardedAlias(env: TypeEnv, id: string): boolean {
 /** A value of type `source` fits a value position of type `target`. The lift applies at the top. */
 export function fits(env: TypeEnv, source: Type, target: Type): boolean {
   return assignable(env, source, target, true, 0);
+}
+
+const NO_SEALED_TYPES: ReadonlySet<string> = new Set();
+
+/**
+ * A comparison reads the value, so it needs no sealed authority. The checker
+ * has the same result through `isAssignable`.
+ */
+export function fitsNullComparison(
+  env: TypeEnv,
+  source: Type,
+  target: Type,
+): boolean {
+  return fits({ ...env, sealed: NO_SEALED_TYPES }, source, target);
 }
 
 /**

@@ -1057,19 +1057,42 @@ export const f = (r: R): Q => ({ s: r.s })
   });
 });
 
-// FNF29, open. check_binary.ts:285 compares `null` through `isAssignable`, which
-// has every sealed authority. The validator needs authority for the same
-// comparison. A comparison with another literal passes on both sides. The rule
-// lets another module compare primitive values, so the result should be empty
-// on both sides. The test pins the current wrong result.
-Deno.test("known difference: a null comparison of a foreign sealed type", () => {
+// The rule lets another module compare primitive values. A comparison with
+// `null` reads the value and needs no sealed authority, on both sides.
+Deno.test("a null comparison of a foreign sealed type passes on both sides", () => {
   const lib =
     "export sealed type Code = null | 1\nexport type Flag = boolean\n";
   const main = `import { Code, Flag } from "./lib.eff"
 export const f = (c: Code): Flag => c === null
 `;
+  assertEquals(sourceCodes(lib, main), { checker: [], validator: [] });
+});
+
+Deno.test("a not-equal null comparison of a foreign sealed type passes on both sides", () => {
+  const lib =
+    "export sealed type Code = null | 1\nexport type Flag = boolean\n";
+  const main = `import { Code, Flag } from "./lib.eff"
+export const f = (c: Code): Flag => c !== null
+`;
+  assertEquals(sourceCodes(lib, main), { checker: [], validator: [] });
+});
+
+Deno.test("a null comparison with null on the left passes on both sides", () => {
+  const lib =
+    "export sealed type Code = null | 1\nexport type Flag = boolean\n";
+  const main = `import { Code, Flag } from "./lib.eff"
+export const f = (c: Code): Flag => null === c
+`;
+  assertEquals(sourceCodes(lib, main), { checker: [], validator: [] });
+});
+
+Deno.test("a null comparison of a foreign sealed type without null stays rejected", () => {
+  const lib = "export sealed type Small = 1 | 2\nexport type Flag = boolean\n";
+  const main = `import { Small, Flag } from "./lib.eff"
+export const f = (c: Small): Flag => c === null
+`;
   assertEquals(sourceCodes(lib, main), {
-    checker: [],
-    validator: ["validation/002"],
+    checker: ["type-mismatch/007"],
+    validator: undefined,
   });
 });
