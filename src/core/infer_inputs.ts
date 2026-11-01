@@ -263,8 +263,8 @@ class InputEngine {
     if (kind !== SyntaxKind.FieldExpr) return undefined;
     const parts = kidsOf(this.tree, node);
     const base = parts[0];
-    const member = parts.find((part, index) =>
-      index > 0 && kindOf(this.tree, part) === SyntaxKind.Name
+    const member = parts.find((part) =>
+      kindOf(this.tree, part) === SyntaxKind.Name
     );
     const name = member === undefined
       ? undefined

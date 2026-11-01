@@ -112,3 +112,27 @@ No unresolved scope question remains.
 ## Next action
 
 The main agent will finish callback verification, then separate contract resolution from traversal.
+
+## Refactor mutation follow-up
+
+An additional mutation run tested committed `793597f` in both inference modules.
+The sample killed eight faults and left four survivors, without timeouts. The command exited 1.
+Three survivors affected field lookup in the driver. One survivor affected named error records in the resolver.
+Two new public-API tests cover typed callback fields and compatible field demands on an error identity.
+Both accepted cases lower and independently validate. The inference suite passed 35 tests with exit 0.
+The parser wraps an expression receiver before the member Name in every FieldExpr.
+The evidence lookup therefore needs no receiver-index guard. The main agent removed that redundant guard.
+The full follow-up gate passed 3,127 fast tests and 301 slow tests with exit 0.
+The next mutation run will check every variant at the three remaining surviving comparison sites.
+
+The new tests require capture with equal tests on both sides.
+The main agent will create a temporary comparison commit with `e5fad97` source and the final tests.
+This temporary object will not move main or create a branch.
+
+## Documentation preparation
+
+The executor updated architecture, API, development, testing, input-contract reference, and shared terms.
+The broad link audit stopped on archive references. The main agent inspected all touched references and corrected the traversal wording.
+The main agent checked all three Effektive examples through checking, lowering, and independent validation; all passed.
+The canonical website remains accurate: its existing annotation and unresolved-callback rules still apply.
+No source form or project status changed, so no sibling website edit is required.

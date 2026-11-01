@@ -579,3 +579,29 @@ export const entry = (job): Int fails SchemaError => use(job)
 `);
   assert(codes(project).includes("type-mismatch/010"));
 });
+
+Deno.test("typed callback fields supply requirements to inferred arguments", () => {
+  const project = checkText(`
+type Int = int
+type Callbacks = { run: (value: Int) => Int }
+const read = (callbacks: Callbacks, input): Int => callbacks.run(input)
+`);
+  assertEquals(codes(project), []);
+  assertEquals(parameterTypes(project, "m", "read"), ["Callbacks", "Int"]);
+  assertLoweredValid(project);
+});
+
+Deno.test("compatible error fields retain a demanded error identity", () => {
+  const project = checkText(`
+type Int = int
+error Issue = { value: Int }
+const read = (input): Int => {
+  const issue: Issue = input
+  input.value
+  1
+}
+`);
+  assertEquals(codes(project), []);
+  assertEquals(parameterTypes(project, "m", "read"), ["Issue"]);
+  assertLoweredValid(project);
+});
