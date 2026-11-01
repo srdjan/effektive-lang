@@ -47,19 +47,24 @@ The CR3 gate passed with exit 0: 3,121 fast tests and 301 slow tests.
 Accepted cases lower and pass independent validation. The negative argument still reports `type-mismatch/003`.
 The effect case retains `effect`, `error:m#LocalFailure`, and `cap:m#LocalService.read`.
 Before inference changes, measurement reported 726 lines and 240 AST branches.
+The CR3 commit is `ec35d42`.
+Mutation tested committed `ec35d42`: 250 sites, six sampled, six killed, zero survivors, zero timeouts; exit 0.
+
+## Deferred callbacks
+
+CR4 (deferred calls): the new cases failed before production changes with six `/011` diagnostics and one `/003` diagnostic.
+Deferred calls retain complete origins, argument nodes, source nodes, and processed contracts.
+A demand enqueues calls for its root. Each call processes each distinct contract once.
+Propagation visits call arguments with recovered parameter contracts and preserves checked flags.
+No invocation argument creates a callback signature. No whole-body iteration or arbitrary iteration limit exists.
+The main agent strengthened dependency ordering, nested aliases, sibling diagnostics, and shadowed-contract coverage.
+The main agent reviewed every changed line and repeated the targeted command: 53 passed, exit 0.
+Accepted cases lower and independently validate. Unsupported callbacks still report `/011`.
 
 ## Current work
 
-CR1 (preservation evidence): the main agent reviewed every changed line.
-The generator now edits import policies and provider service contracts.
-All eight seeds compare 23 revisions with fresh compilation and delayed retained queries.
-The initial host edit introduced a new failure category. The main agent replaced that edit with a compatible service change.
-The main agent measured each seed again and updated the literal tallies.
-The directed incremental command passed 45 tests with exit 0.
-The baseline `deno task check` passed 3,118 fast tests and 301 slow tests with exit 0.
-A public `Program` and `TypeScriptOutputs` reproduction confirms stale `a.ts` after host reversal; fresh output imports `b.ts`.
-The CR1 gate passed with exit 0: 3,118 fast tests and 301 slow tests.
-The CR1 commit is `a21acd4`.
+CR4 (deferred calls): the full gate passed with exit 0: 3,125 fast tests and 301 slow tests.
+The main agent will commit, then run mutation against that commit.
 
 ## Unresolved questions
 
@@ -68,4 +73,4 @@ No unresolved scope question remains.
 
 ## Next action
 
-The main agent will complete the arrow gate, commit the repair, and run its mutation sample.
+The main agent will finish callback verification, then separate contract resolution from traversal.

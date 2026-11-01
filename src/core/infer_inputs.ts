@@ -39,6 +39,14 @@ interface Demand {
   readonly node: NodeId;
 }
 
+interface DeferredCall {
+  readonly origin: Origin;
+  readonly callee: NodeId;
+  readonly arguments: readonly NodeId[];
+  readonly processed: Set<TypeRef>;
+  resolved: boolean;
+}
+
 interface DemandNode {
   readonly direct: Demand[];
   readonly fields: Map<string, DemandNode>;
@@ -135,7 +143,10 @@ class InputEngine {
   private readonly expressionEvidence = new Map<NodeId, ExpressionEvidence>();
   private readonly localEvidence = new Map<LocalId, ExpressionEvidence>();
   private readonly demands = new Map<LocalId, Demand[]>();
-  private readonly unresolvedCallbacks = new Map<LocalId, NodeId[]>();
+  private readonly deferredCalls = new Map<LocalId, DeferredCall[]>();
+  private readonly deferredCallsByCallee = new Map<NodeId, DeferredCall>();
+  private readonly pendingCalls: DeferredCall[] = [];
+  private readonly queuedCalls = new Set<DeferredCall>();
   private readonly diagnostics: Diagnostic[] = [];
   private readonly lowerer: TypeLowerer;
 
@@ -176,6 +187,7 @@ class InputEngine {
       readonly inferred: boolean;
     }[],
   ): InputInference {
+    this.propagateDeferredCalls();
     const types = parameters.map((parameter) => {
       if (!parameter.inferred || parameter.id === undefined) {
         return parameter.type;
@@ -189,13 +201,17 @@ class InputEngine {
             ...bodyDemands,
           ]
           : bodyDemands;
-      for (const node of this.unresolvedCallbacks.get(parameter.id) ?? []) {
+      for (
+        const call of (this.deferredCalls.get(parameter.id) ?? []).filter(
+          (candidate) => !candidate.resolved,
+        )
+      ) {
         this.diagnostics.push(makeDiagnostic(
           "type-mismatch/011",
           `the parameter \`${
             root?.name ?? "input"
           }\` needs a type annotation because its callback type cannot be inferred`,
-          nodeSpan(this.tree, node),
+          nodeSpan(this.tree, call.callee),
         ));
       }
       if (root === undefined || demands.length === 0) {
@@ -344,12 +360,92 @@ class InputEngine {
       (!this.concrete(type) && origin.path.length === 0)
     ) return;
     const list = this.demands.get(origin.root.id) ?? [];
-    list.push({
+    const demand = {
       path: origin.path,
       type: this.concrete(type) ? type : this.table.unknown,
       node,
-    });
+    };
+    if (
+      list.some((candidate) =>
+        candidate.type === demand.type && candidate.node === demand.node &&
+        candidate.path.length === demand.path.length &&
+        candidate.path.every((field, index) => field === demand.path[index])
+      )
+    ) return;
+    list.push(demand);
     this.demands.set(origin.root.id, list);
+    for (const call of this.deferredCalls.get(origin.root.id) ?? []) {
+      this.enqueue(call);
+    }
+  }
+
+  private defer(
+    origin: Origin,
+    callee: NodeId,
+    args: readonly NodeId[],
+  ): void {
+    const existing = this.deferredCallsByCallee.get(callee);
+    if (existing !== undefined) {
+      this.enqueue(existing);
+      return;
+    }
+    const call: DeferredCall = {
+      origin,
+      callee,
+      arguments: args,
+      processed: new Set(),
+      resolved: false,
+    };
+    const calls = this.deferredCalls.get(origin.root.id) ?? [];
+    calls.push(call);
+    this.deferredCalls.set(origin.root.id, calls);
+    this.deferredCallsByCallee.set(callee, call);
+    this.enqueue(call);
+  }
+
+  private enqueue(call: DeferredCall): void {
+    if (this.queuedCalls.has(call)) return;
+    this.queuedCalls.add(call);
+    this.pendingCalls.push(call);
+  }
+
+  private propagateDeferredCalls(): void {
+    let call: DeferredCall | undefined;
+    while ((call = this.pendingCalls.shift()) !== undefined) {
+      this.queuedCalls.delete(call);
+      for (const contract of this.contractsFor(call.origin)) {
+        if (call.processed.has(contract)) continue;
+        call.processed.add(contract);
+        const evidence = this.evidenceFromType(contract);
+        if (evidence?.kind !== "callable") continue;
+        call.resolved = true;
+        call.arguments.forEach((argument, index) =>
+          this.visit(
+            argument,
+            evidence.checked?.[index]
+              ? this.table.unknown
+              : evidence.parameters[index],
+          )
+        );
+      }
+    }
+  }
+
+  private contractsFor(origin: Origin): TypeRef[] {
+    const contracts = new Set<TypeRef>();
+    for (const demand of this.demands.get(origin.root.id) ?? []) {
+      if (
+        demand.path.length > origin.path.length ||
+        !demand.path.every((field, index) => field === origin.path[index])
+      ) continue;
+      let contract: TypeRef | undefined = demand.type;
+      for (const field of origin.path.slice(demand.path.length)) {
+        contract = this.fieldType(contract, field);
+        if (contract === undefined) break;
+      }
+      if (contract !== undefined) contracts.add(contract);
+    }
+    return [...contracts];
   }
 
   private originOf(node: NodeId): Origin | undefined {
@@ -564,11 +660,7 @@ class InputEngine {
     const fn = this.callableEvidence(callee, calleeType);
     if (fn === undefined) {
       const origin = this.originOf(callee);
-      if (origin !== undefined) {
-        const uses = this.unresolvedCallbacks.get(origin.root.id) ?? [];
-        uses.push(callee);
-        this.unresolvedCallbacks.set(origin.root.id, uses);
-      }
+      if (origin !== undefined) this.defer(origin, callee, args);
       args.forEach((argument) => this.visit(argument));
       return undefined;
     }

@@ -425,6 +425,120 @@ const call = (callback): Int => callback(1)
   assert(codes(project).includes("type-mismatch/011"));
 });
 
+Deno.test("resolves deferred inferred callbacks from later and nested contracts", () => {
+  const project = checkText(`
+type Int = int
+type Fn = (value: Int) => Int
+type Callbacks = { run: Fn }
+const direct = (input): Int => { const fn: Fn = input; input(1) }
+const before = (input): Int => { input(1); const fn: Fn = input; 1 }
+const aliased = (input): Int => { const alias = input; const fn: Fn = input; alias(1) }
+const whole = (input): Int => { const callbacks: Callbacks = input; input.run(1) }
+const field = (input): Int => { const fn: Fn = input.run; input.run(1) }
+const nested = (input): Int => {
+  const alias = input.callbacks.run
+  const fn: Fn = alias
+  input.callbacks.run(1)
+}
+const pair = (callback, value): Int => {
+  const fn: Fn = callback
+  callback(value)
+}
+`);
+  assertEquals(codes(project), []);
+  assertEquals(parameterTypes(project, "m", "direct"), ["Fn"]);
+  assertEquals(parameterTypes(project, "m", "before"), ["Fn"]);
+  assertEquals(parameterTypes(project, "m", "aliased"), ["Fn"]);
+  assertEquals(parameterTypes(project, "m", "whole"), ["Callbacks"]);
+  assertEquals(parameterTypes(project, "m", "field"), ["{ run: Fn }"]);
+  assertEquals(parameterTypes(project, "m", "nested"), [
+    "{ callbacks: { run: Fn } }",
+  ]);
+  assertEquals(parameterTypes(project, "m", "pair"), ["Fn", "Int"]);
+  assertLoweredValid(project);
+});
+
+Deno.test("propagates deferred callback contracts through dependent calls", () => {
+  const project = checkText(`
+type Int = int
+type Fn = (value: Int) => Int
+type Higher = (callback: Fn) => Int
+const chained = (higher, callback, value): Int => {
+  callback(value)
+  higher(callback)
+  const annotated: Higher = higher
+  1
+}
+`);
+  assertEquals(codes(project), []);
+  assertEquals(parameterTypes(project, "m", "chained"), [
+    "Higher",
+    "Fn",
+    "Int",
+  ]);
+  assertLoweredValid(project);
+});
+
+Deno.test("keeps deferred callback diagnostics and local identities independent", () => {
+  const unresolved = checkText(`
+type Int = int
+type Fn = (value: Int) => Int
+const read = (input): Int => {
+  const typed: Fn = input.known
+  input.known(1)
+  input.missing(1)
+  1
+}
+`);
+  assertEquals(
+    codes(unresolved).filter((code) => code === "type-mismatch/011"),
+    ["type-mismatch/011"],
+  );
+
+  const conflict = checkText(`
+type Int = int
+type Text = string
+type IntFn = (value: Int) => Int
+type TextFn = (value: Text) => Int
+const read = (input): Int => {
+  const first: IntFn = input
+  const second: TextFn = input
+  input(1)
+}
+`);
+  assert(codes(conflict).includes("type-mismatch/014"));
+
+  const shadowed = checkText(`
+type Int = int
+type Fn = (value: Int) => Int
+type Text = string
+const read = (input): Int => {
+  const local = (input): Text => { const value: Text = input; value }
+  const fn: Fn = input
+  local("text")
+  input(1)
+}
+`);
+  assertEquals(codes(shadowed), []);
+  assertEquals(parameterTypes(shadowed, "m", "read"), ["Fn"]);
+  assertLoweredValid(shadowed);
+});
+
+Deno.test("omitted and explicit unknown callbacks resolve equally", () => {
+  const project = checkText(`
+type Int = int
+type Fn = (value: Int) => Int
+const omitted = (input): Int => { const fn: Fn = input; input(1) }
+const explicit = (input: unknown): Int => { const fn: Fn = input; input(1) }
+`);
+  assertEquals(codes(project), []);
+  assertEquals(
+    parameterTypes(project, "m", "omitted"),
+    parameterTypes(project, "m", "explicit"),
+  );
+  assertLoweredValid(project);
+});
+
 Deno.test("infers through pipelines and expected shorthand fields", () => {
   const project = checkText(`
 type Text = string
