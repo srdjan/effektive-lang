@@ -225,6 +225,24 @@
     "reason": "The guard skips a Duration or Instant operand, but no such operand reaches it. numericIdentityOf returns only a named type, so named is never undefined. instantArithmetic returns before this call for every Instant operand. For a Duration operand, durationArithmetic returns before this call whenever the other operand fits int, and the world table fixes the body of Duration at int, so the test fits(unnamed, body) here is the same as the integral test there. Without the guard the function still returns undefined for every input that reaches it."
   },
   {
+    "file": "src/core/validate/expr.ts",
+    "declaration": "BodyValidator.pattern",
+    "offset": 2441,
+    "text": "ms.length > 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The condition is the first term of a conjunction that ends in ms.some(...). Array.prototype.some on an empty array is false, so for ms.length == 0 the whole conjunction is false in both forms. For a non-empty array both comparisons are true."
+  },
+  {
+    "file": "src/core/validate/expr.ts",
+    "declaration": "BodyValidator.pattern",
+    "offset": 3199,
+    "text": "return false;",
+    "operator": "boolean-return",
+    "class": "equivalent",
+    "reason": "The callback runs only in the branch where records is true, that is, where ms.every(m => m.kind === \"record\") holds. No member has a kind other than record there, so the guard m.kind !== \"record\" never fires and its return value is never read."
+  },
+  {
     "file": "src/core/validate/families/schema.ts",
     "declaration": "schemaTransform.callbackResult",
     "offset": 64,
