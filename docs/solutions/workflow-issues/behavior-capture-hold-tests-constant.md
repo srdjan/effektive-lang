@@ -13,6 +13,7 @@ applies_when:
   - "A capture shows one new or one missing program record and nothing else"
   - "A refactor changes the CLI or the language server output, which the capture does not record"
   - "A capture spans many phases, and the head tests do not load on the base source"
+  - "A change is meant to alter behavior, so its new tests fail on the base source"
 tags: [behavior-capture, oracle, refactor, git-commit-tree, byte-identity, rederive, run-variance, characterization-test]
 last_updated: 2026-10-31
 ---
@@ -103,6 +104,40 @@ This proof is weaker than a held-tests capture. It gives the cause of each
 missing row, but an input that left the test set has no record at the head. So
 this proof says nothing about the head behavior for that input. Step 4 also
 needs the phase logs, so keep each capture log until the work closes.
+
+## A change that is meant to alter behavior
+
+A capture stops when a test fails on a compared revision
+(`scripts/behavior_capture.ts:311-314`). So the method above cannot run when a
+change alters behavior on purpose: the new expectations fail on the base source,
+and the old expectations fail on the head source.
+
+Use one test set on both sides, and leave out the tests that changed:
+
+1. Run the held-tests capture once. Its failure list names the tests to leave
+   out.
+2. Copy the test file, and change each of these tests to `Deno.test.ignore`.
+3. Build two temporary commits that share the edited file. Then capture one
+   against the other.
+
+```bash
+B=$(git hash-object -w <edited copy>)
+export GIT_INDEX_FILE=<scratch>/tmpindex
+git read-tree <base>
+git rm -r -q -f --cached tests
+git read-tree --prefix=tests/ HEAD:tests
+git update-index --cacheinfo "100644,$B,tests/<file>"
+OLD=$(git commit-tree "$(git write-tree)" -p <base> -m "temp: old source")
+git read-tree HEAD
+git update-index --cacheinfo "100644,$B,tests/<file>"
+NEW=$(git commit-tree "$(git write-tree)" -p HEAD -m "temp: new source")
+unset GIT_INDEX_FILE
+deno task behavior:capture "$OLD" "$NEW"
+```
+
+"new 0, missing 0" shows that no other recorded program changed. The ignored
+tests hold the evidence for the intended change, so they must pass at the head.
+The capture says nothing about an input that only the ignored tests run.
 
 ## Run variance and blind spots
 
@@ -216,3 +251,8 @@ stayed outside the expected `emit-error` and `lower-error` kinds: 12 `check` and
 of that span held 11 of the 15 rows. The plain capture of FN6 unit 4 held the
 other 4 rows, and its held-tests capture held none of them. So test edits caused
 all 15 rows.
+
+The repairs of FNF28 and FNF29 (`14e027c` and `6359f27`) changed checker and
+validator results on purpose. The held-tests capture from `2bae0c4` stopped with
+10 failed tests, and all 10 held new expectations. With those 10 tests ignored
+on both sides, each side gave 32485 records, with new 0 and missing 0.
