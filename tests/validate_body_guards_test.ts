@@ -125,6 +125,49 @@ Deno.test("a literal pattern does not match a named type without a base", () => 
   );
 });
 
+/** Make `A` the head of a chain of `length` aliases `N0`, `N1`, ... that ends in `last`. */
+function forgeAliasChain(ir: ModuleIR, length: number, last: Type): void {
+  const template = typeOf(ir, "B");
+  const links = Array.from({ length }, (_, index): TypeDecl => ({
+    ...structuredClone(template),
+    id: `type:m#N${index}`,
+    name: `N${index}`,
+    definition: {
+      kind: "alias",
+      type: index === length - 1 ? last : named(`N${index + 1}`),
+    },
+  }));
+  Object.assign(typeOf(ir, "A"), {
+    definition: { kind: "alias", type: named("N0") },
+  });
+  Object.assign(ir, { declarations: [...ir.declarations, ...links] });
+}
+
+const INT: Type = { kind: "primitive", name: "int" };
+const STRING: Type = { kind: "primitive", name: "string" };
+
+Deno.test("a literal pattern reads an alias chain at the last level inside the depth bound", () => {
+  assertEquals(
+    forgedModule(ALIASES, (ir) => forgeAliasChain(ir, 1534, INT)),
+    [],
+  );
+});
+
+Deno.test("a literal pattern fails on an alias chain past the depth bound", () => {
+  assertEquals(forgedModule(ALIASES, (ir) => forgeAliasChain(ir, 1535, INT)), [
+    "validation/002 declarations[4].body.arms[0].pattern: the literal 1 does not belong to the subject of type type:m#A",
+  ]);
+});
+
+Deno.test("a wrong literal pattern fails on an alias chain past the depth bound", () => {
+  assertEquals(
+    forgedModule(ALIASES, (ir) => forgeAliasChain(ir, 1535, STRING)),
+    [
+      "validation/002 declarations[4].body.arms[0].pattern: the literal 1 does not belong to the subject of type type:m#A",
+    ],
+  );
+});
+
 const PAIR = `type Pair = { n: int }
 type Int = int
 const f = (p: Pair): Int => p.n

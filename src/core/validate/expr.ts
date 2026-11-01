@@ -187,7 +187,9 @@ function tagMayEqual(
   value: string | number | boolean | null,
   seen = new Set<Type>(),
 ): boolean {
-  if (seen.has(type) || seen.size >= MAX_DEPTH) return true;
+  if (seen.has(type)) return true;
+  // A type past the depth bound fails, as it does in `fits`.
+  if (seen.size >= MAX_DEPTH) return false;
   const next = new Set(seen).add(type);
   if (type.kind === "named") {
     const base = env.aliases.get(type.id) ?? env.opaqueBases.get(type.id);
