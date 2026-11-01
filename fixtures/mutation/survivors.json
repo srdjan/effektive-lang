@@ -243,6 +243,15 @@
     "reason": "The callback runs only in the branch where records is true, that is, where ms.every(m => m.kind === \"record\") holds. No member has a kind other than record there, so the guard m.kind !== \"record\" never fires and its return value is never read."
   },
   {
+    "file": "src/core/validate/expr.ts",
+    "declaration": "BodyValidator.binary",
+    "offset": 4162,
+    "text": "isNumericClass(env, l) && isNumericClass(env, r)",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The compatibleClasses check earlier in this method returns mismatch unless the class chain of one class contains the other class. The chain of l then ends with the chain of r, or the reverse. A chain contains number only as its last entry, because number has no base. So l and r are both numeric or both not numeric, and && and || give the same value."
+  },
+  {
     "file": "src/core/validate/families/schema.ts",
     "declaration": "schemaTransform.callbackResult",
     "offset": 64,
