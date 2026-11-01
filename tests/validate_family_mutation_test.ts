@@ -1129,6 +1129,25 @@ Deno.test("a Schema identity descriptor with a non-Schema type is rejected", () 
   );
 });
 
+Deno.test("a Schema identity descriptor with a make input that fits one way is rejected", () => {
+  const ir = SCHEMA_PROGRAM.forge();
+  const root = rootOf(ir, "text");
+  assertEquals(root.node.op, "identity");
+  const schema = objectAt(root.node, "type");
+  assertEquals(schema.kind, "schema");
+  setAt(root.node, "type.makeInput", {
+    kind: "union",
+    members: [schema.decoded, INT_TYPE],
+  });
+  assertValidation(
+    validateModule(ir, SCHEMA_PROGRAM.sources),
+    "validation/002",
+    root.path,
+    "schema() needs an identity data Schema",
+    "one-way make input",
+  );
+});
+
 /** Declaration, op, index of the callback argument, message fragment. */
 type CallbackRow = readonly [
   declaration: string,
