@@ -1038,6 +1038,11 @@ function sourceCodes(lib: string, main: string) {
   };
 }
 
+Deno.test("an open identity make input interns as the plain Schema", () => {
+  const plain = typeFromIr(LITERAL_SIDES.table, schemaWith());
+  assertEquals(typeFromIr(LITERAL_SIDES.table, schemaWith(IDENTITY_A)), plain);
+});
+
 const POSITIVE_LIB = "export sealed type Positive = int\n";
 const POSITIVE_IMPORT =
   `import { Positive } from "./lib.eff"\ntype Whole = int\n`;
