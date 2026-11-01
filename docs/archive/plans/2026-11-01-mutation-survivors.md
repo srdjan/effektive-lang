@@ -1,12 +1,14 @@
 # Mutation survivors plan
 
-Prefix: MU (batches), MUS (survivors), MUF (findings). Status: all seven batches are complete. Two survivors wait for the decision on MUF1.
+Prefix: MU (batches), MUS (survivors), MUF (findings). Status: complete.
 
 This plan is the authority for the work on the 126 mutation survivors in three modules. A survivor is a mutant that the fast tests do not detect. The ledger is [`2026-11-01-mutation-survivors-ledger.json`](2026-11-01-mutation-survivors-ledger.json). It gives each survivor its ID, batch, site, and disposition.
 
 ## Authority
 
 The user approved option (a) of Decision 5 on 2026-11-01. That approval authorizes this plan, seven Sonnet batches of at most 20 survivors, long mutation runs, new tests, register rows, and commits on local `main`. It does not authorize a change in `src/` or `scripts/`, a push, a release, a version change, or a website commit.
+
+The user then approved option (a) of Decision 6 on 2026-11-01. That approval authorizes one change in `src/core/validate/expr.ts`, the tests for MUS77 and MUS101, a behavior capture, the archive move of this plan, and commits on local `main`. It does not authorize a push or a release.
 
 ## Starting evidence
 
@@ -71,35 +73,35 @@ deno task mutate --seed 1 --sample all src/core/validate/expr.ts
 git diff --stat 22f6efa HEAD -- src scripts
 ```
 
-Expected: each command exits 0, each mutation run prints `unregistered survivors 0, stale rows 0`, and the last command prints nothing.
+Expected: each command exits 0, each mutation run prints `unregistered survivors 0, stale rows 0`, and the last command prints only the repair of MUF1.
 
 ## Result
 
-All seven batches are committed: `18791f8`, `713e79c`, `1aa3339`, `96ccfa7`, `9f33717`, `5361439`, and `99fcb01`. Of the 126 survivors, 116 have a test, 8 have a register row of class `equivalent`, and 2 stay open. No batch needed the class `slow-only`. No file changed in `src/` or `scripts/`.
+All seven batches are committed: `18791f8`, `713e79c`, `1aa3339`, `96ccfa7`, `9f33717`, `5361439`, and `99fcb01`. The repair of MUF1 is `fdadb8d`. Of the 126 survivors, 117 have a test and 8 have a register row of class `equivalent`. The site of 1 survivor, MUS76, is gone, because the repair split its condition. No batch needed the class `slow-only`. The only change in `src/` or `scripts/` is the repair, in `src/core/validate/expr.ts`.
 
-The final runs at `99fcb01` used seed 1, sample all, and the fast suite.
+The final runs used seed 1, sample all, and the fast suite. The first two rows are from `99fcb01`, and the third row is from `fdadb8d`. The repair changed no line of the first two modules.
 
 | Module | Sites | Killed | Survived | Timeouts | Unregistered | Exit |
 | --- | --- | --- | --- | --- | --- | --- |
 | `src/core/validate/families/schema.ts` | 362 | 357 | 2 | 3 | 0 | 0 |
 | `src/core/check_builtins/schema.ts` | 291 | 289 | 2 | 0 | 0 | 0 |
-| `src/core/validate/expr.ts` | 410 | 404 | 6 | 0 | 2 | 1 |
+| `src/core/validate/expr.ts` | 411 | 407 | 4 | 0 | 0 | 0 |
 
 The three timeouts are on line 488 of the first module. The tool counts a timeout as a kill. They did not repeat: `--only src/core/validate/families/schema.ts:488` killed all 4 mutants of that line, with 0 timeouts, in 21 s. Their cause is not known.
 
-The gate at `99fcb01` exited 0, with 3,115 fast tests and 301 slow tests. `deno task coverage` exited 0: lines 97.50%, branches 95.38%, functions 99.30%. `deno task rules:unfired` reported 0 sites.
+The gate at `fdadb8d` exited 0, with 3,118 fast tests and 301 slow tests. `deno task coverage` exited 0 there: lines 97.50%, branches 95.38%, functions 99.30%. `deno task rules:unfired` reported 0 sites. A behavior capture compared the old source with the new source and ignored the two tests of the changed behavior on both sides. It gave 32,945 records on each side, with 0 new and 0 missing.
 
 The review of the batches changed four results. MUS101 had a row that a probe disproved, so that row is removed. MU5 had a test that pinned MUF1, so that test is removed. One row now states that a syntax error stops the check, and one row no longer names a line number.
 
 ## Findings
 
-MUF1 (low, confirmed). The rule for a literal pattern accepts a wrong literal at the depth bound. `tagMayEqual` in `src/core/validate/expr.ts` returns `true` when `seen.size >= MAX_DEPTH`. Other comparisons fail at the bound: `fits` returns `false`, and `comparisonClass` returns `undefined`. No document states that this rule must accept at the bound.
+MUF1 (low, confirmed, repaired in `fdadb8d`). The rule for a literal pattern accepted a wrong literal at the depth bound. `tagMayEqual` in `src/core/validate/expr.ts` returned `true` when `seen.size >= MAX_DEPTH`. Other comparisons fail at the bound: `fits` returns `false`, and `comparisonClass` returns `undefined`. No document states that this rule must accept at the bound.
 
-Reproduction: lower `const f = (x: A): Text => match x { "a" => "a", _ => "b" }`, where `A` is an alias of `Text`. Forge `A` into a chain of aliases that ends in `string`, and forge the pattern value to the number `1`. With 1,534 aliases, `validateModule` reports "the literal 1 does not belong to the subject". With 1,535 aliases or more, up to the 3,000 tested, it reports nothing.
+Reproduction: lower `const f = (x: A): Text => match x { "a" => "a", _ => "b" }`, where `A` is an alias of `Text`. Forge `A` into a chain of aliases that ends in `string`, and forge the pattern value to the number `1`. With 1,534 aliases, `validateModule` reported "the literal 1 does not belong to the subject". With 1,535 aliases or more, up to the 3,000 tested, it reported nothing.
 
 Reach: `declaration/012` limits an alias to 128 levels in the checker, and the validator does not repeat that limit. So only a forged IR reaches the bound. A program from the checker cannot. The effect is a match arm that can never run. This needs no change for a valid program.
 
-MUS77 and MUS101 wait for this decision. MUS77 is the comparison at the bound. MUS101 differs from the source only at the bound. Each is killable by a test, but with the present source such a test pins MUF1, and the stop rule forbids that.
+The repair returns `false` at the bound and keeps `true` for a cycle, as option (a) of Decision 6 states. MUS77 is the comparison at the bound. MUS101 differs from the source only at the bound. A test that pinned the old result was forbidden by the stop rule, so both stayed open until the repair. The test "a literal pattern fails on an alias chain past the depth bound" now kills both.
 
 ## Completion
 

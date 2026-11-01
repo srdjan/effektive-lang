@@ -909,7 +909,7 @@
     "operator": "logical",
     "text": "seen.has(type) || seen.size >= MAX_DEPTH",
     "mutant": "seen.has(type) || seen.size >= MAX_DEPTH -> &&",
-    "disposition": "test: tests/validate_body_guards_test.ts"
+    "disposition": "site removed: the repair of MUF1 split this condition, and the cycle test in tests/validate_body_guards_test.ts still covers it"
   },
   {
     "id": "MUS77",
@@ -921,7 +921,7 @@
     "operator": "comparison",
     "text": "seen.size >= MAX_DEPTH",
     "mutant": "seen.size >= MAX_DEPTH -> >",
-    "disposition": "open: waits for the decision on MUF1"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS78",
@@ -1209,7 +1209,7 @@
     "operator": "logical",
     "text": "typeof p.value === \"number\" &&\n            all.some((m) => isDurationType(env, m))",
     "mutant": "typeof p.value === \"number\" && -> ||",
-    "disposition": "open: waits for the decision on MUF1"
+    "disposition": "test: tests/validate_body_guards_test.ts"
   },
   {
     "id": "MUS102",
