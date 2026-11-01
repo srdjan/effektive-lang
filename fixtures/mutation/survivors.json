@@ -18,6 +18,24 @@
     "reason": "The earlier compatibleClasses check passes only when one class is in the base chain of the other. A chain that contains number ends at number, so the two classes are both numeric or both not."
   },
   {
+    "file": "src/core/check_builtins/schema.ts",
+    "declaration": "defaultKeyOp",
+    "offset": 309,
+    "text": "value !== undefined &&\n      kindOf(c.tree, value) === SyntaxKind.LiteralExpr",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The mutant sends a value that is not a literal expression to literalOf. literalOf returns a value only for a node that holds a direct string, number, true, false, or null token. The parser gives such a token directly only to LiteralExpr and to an import path, so an options value of any other kind gives undefined, as the guard does. An absent value (the shorthand field { on }) makes kindOf return undefined, which is not LiteralExpr, so literal is undefined again and the report is the same. A syntax error stops the check before this rule, so an error recovery node cannot reach it."
+  },
+  {
+    "file": "src/core/check_builtins/schema.ts",
+    "declaration": "guardedSchemaCallback",
+    "offset": 910,
+    "text": "self?.kind !== \"local\" || body === undefined ||\n    kindOf(c.tree, body) !== SyntaxKind.CallExpr",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The mutant is A || (B && C) || D, where A is that self is not local, B is that the body is undefined, C is that the body is not a call, and D is that the role of the builtin of the body is not container. The builtin helper returns undefined for a body that is undefined or not a call, so recursionRoleOf gives reject and D is true. B and C each imply D, so the swap never changes the result."
+  },
+  {
     "file": "src/core/db.ts",
     "declaration": "sameModes",
     "offset": 84,
