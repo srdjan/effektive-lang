@@ -136,3 +136,16 @@ The broad link audit stopped on archive references. The main agent inspected all
 The main agent checked all three Effektive examples through checking, lowering, and independent validation; all passed.
 The canonical website remains accurate: its existing annotation and unresolved-callback rules still apply.
 No source form or project status changed, so no sibling website edit is required.
+
+### Directed mutation evidence
+
+The follow-up commit is `ee0c9ed`.
+The directed resolver run killed both variants of its former surviving comparison, with zero timeouts; exit 0.
+The directed driver run killed three of four variants at its field guard, with zero timeouts; exit 1.
+Its remaining logical variant changed `||` to `&&`.
+A differential public-API probe compared nine sources and found six differences between original and mutant.
+The differences affect inferred parameter contracts during incomplete field recovery. One case also changes a diagnostic.
+This survivor is not equivalent. The main agent added a public regression for missing and keyword member names.
+The inference suite passed 36 tests. The full gate passed 3,128 fast tests and 301 slow tests with exit 0.
+No register exception or coverage threshold change was added.
+The main agent will repeat the directed driver mutation after the recovery test commit.

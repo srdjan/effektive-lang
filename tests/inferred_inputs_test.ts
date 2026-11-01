@@ -605,3 +605,20 @@ const read = (input): Int => {
   assertEquals(parameterTypes(project, "m", "read"), ["Issue"]);
   assertLoweredValid(project);
 });
+
+Deno.test("incomplete field recovery preserves inferred input contracts", () => {
+  for (
+    const [expression, expectedCodes] of [
+      ["consume(input).", ["syntax/008"]],
+      ["consume(input).if", ["type-mismatch/003", "syntax/008"]],
+    ] as const
+  ) {
+    const project = checkText(`
+type Int = int
+const consume = (value: Int): Int => value
+const read = (input): Int => ${expression}
+`);
+    assertEquals(codes(project), [...expectedCodes]);
+    assertEquals(parameterTypes(project, "m", "read"), ["unknown"]);
+  }
+});
