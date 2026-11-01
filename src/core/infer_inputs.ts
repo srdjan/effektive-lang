@@ -49,6 +49,20 @@ interface InputInference {
   readonly diagnostics: readonly Diagnostic[];
 }
 
+interface CallableEvidence {
+  readonly kind: "callable";
+  readonly parameters: readonly (TypeRef | undefined)[];
+  readonly result: TypeRef | undefined;
+  readonly checked: readonly boolean[] | undefined;
+}
+
+interface RecordEvidence {
+  readonly kind: "record";
+  readonly fields: ReadonlyMap<string, ExpressionEvidence>;
+}
+
+type ExpressionEvidence = CallableEvidence | RecordEvidence;
+
 function emptyDemandNode(): DemandNode {
   return { direct: [], fields: new Map() };
 }
@@ -118,6 +132,8 @@ class InputEngine {
   private readonly targets: TypeEnv["targets"];
   private readonly origins = new Map<LocalId, Origin>();
   private readonly localTypes = new Map<LocalId, TypeRef>();
+  private readonly expressionEvidence = new Map<NodeId, ExpressionEvidence>();
+  private readonly localEvidence = new Map<LocalId, ExpressionEvidence>();
   private readonly demands = new Map<LocalId, Demand[]>();
   private readonly unresolvedCallbacks = new Map<LocalId, NodeId[]>();
   private readonly diagnostics: Diagnostic[] = [];
@@ -415,6 +431,58 @@ class InputEngine {
     return node.kind === "function" ? node : undefined;
   }
 
+  private evidenceFromType(
+    type: TypeRef | undefined,
+  ): ExpressionEvidence | undefined {
+    const fn = this.functionOf(type);
+    return fn === undefined ? undefined : {
+      kind: "callable",
+      parameters: fn.parameters,
+      result: fn.result,
+      checked: fn.checked,
+    };
+  }
+
+  private evidenceOf(node: NodeId): ExpressionEvidence | undefined {
+    const recorded = this.expressionEvidence.get(node);
+    if (recorded !== undefined) return recorded;
+    const kind = kindOf(this.tree, node);
+    if (kind === SyntaxKind.ParenExpr) {
+      const inner = kidsOf(this.tree, node)[0];
+      return inner === undefined ? undefined : this.evidenceOf(inner);
+    }
+    if (
+      kind === SyntaxKind.NameExpr || kind === SyntaxKind.Name ||
+      kind === SyntaxKind.QualifiedName
+    ) {
+      const target = this.targets.get(node);
+      return target?.kind === "local"
+        ? this.localEvidence.get(target.id)
+        : undefined;
+    }
+    if (kind !== SyntaxKind.FieldExpr) return undefined;
+    const parts = kidsOf(this.tree, node);
+    const base = parts[0];
+    const member = parts.find((part, index) =>
+      index > 0 && kindOf(this.tree, part) === SyntaxKind.Name
+    );
+    const name = member === undefined
+      ? undefined
+      : nameTextOf(this.tree, member);
+    const evidence = base === undefined ? undefined : this.evidenceOf(base);
+    return evidence?.kind === "record" && name !== undefined
+      ? evidence.fields.get(name)
+      : undefined;
+  }
+
+  private callableEvidence(
+    node: NodeId,
+    type: TypeRef | undefined,
+  ): CallableEvidence | undefined {
+    const evidence = this.evidenceFromType(type) ?? this.evidenceOf(node);
+    return evidence?.kind === "callable" ? evidence : undefined;
+  }
+
   private optionElement(type: TypeRef | undefined): TypeRef | undefined {
     if (type === undefined) return undefined;
     const options = flattenMembers(this.table, type).map((member) =>
@@ -493,7 +561,7 @@ class InputEngine {
     const calleeType = target === undefined
       ? this.visit(callee)
       : this.nameType(target);
-    const fn = this.functionOf(calleeType);
+    const fn = this.callableEvidence(callee, calleeType);
     if (fn === undefined) {
       const origin = this.originOf(callee);
       if (origin !== undefined) {
@@ -549,13 +617,19 @@ class InputEngine {
       args.forEach((argument) => this.visit(argument));
       return this.table.option(element ?? inferred ?? this.table.unknown);
     }
-    const fn = this.functionOf(this.nameType(target));
+    const calleeType = this.nameType(target);
+    const fn = callee === undefined
+      ? undefined
+      : this.callableEvidence(callee, calleeType);
     if (fn === undefined) {
       this.visit(left);
       args.forEach((argument) => this.visit(argument));
       return undefined;
     }
-    this.visit(left, fn.checked?.[0] ? this.table.unknown : fn.parameters[0]);
+    this.visit(
+      left,
+      fn.checked?.[0] ? this.table.unknown : fn.parameters[0],
+    );
     args.forEach((argument, index) =>
       this.visit(
         argument,
@@ -619,6 +693,9 @@ class InputEngine {
     const type = annotation ?? inferred;
     if (id === undefined) return;
     if (type !== undefined) this.localTypes.set(id, type);
+    const evidence = this.evidenceFromType(annotation) ??
+      (init === undefined ? undefined : this.evidenceOf(init));
+    if (evidence !== undefined) this.localEvidence.set(id, evidence);
     if (init !== undefined) {
       const origin = this.originOf(init);
       if (origin !== undefined) this.origins.set(id, origin);
@@ -673,6 +750,7 @@ class InputEngine {
       : kidsOf(this.tree, paramList).filter((part) =>
         kindOf(this.tree, part) === SyntaxKind.Param
       );
+    const parameterEvidence: (TypeRef | undefined)[] = [];
     params.forEach((param, index) => {
       const pieces = kidsOf(this.tree, param);
       const nameNode = pieces.find((piece) =>
@@ -686,6 +764,9 @@ class InputEngine {
       const type = typeNode === undefined
         ? fn?.parameters[index] ?? this.table.unknown
         : this.lowerer.lower(typeNode).ref;
+      parameterEvidence.push(
+        typeNode === undefined ? fn?.parameters[index] : type,
+      );
       if (id !== undefined) this.localTypes.set(id, type);
     });
     const resultNode = parts.find((part) =>
@@ -694,6 +775,12 @@ class InputEngine {
     const result = resultNode === undefined
       ? fn?.result
       : this.lowerer.lower(resultNode).ref;
+    this.expressionEvidence.set(node, {
+      kind: "callable",
+      parameters: parameterEvidence,
+      result,
+      checked: fn?.checked,
+    });
     const body = arrowBody(this.tree, node);
     if (body !== undefined) this.visit(body, result);
     return expected;
@@ -706,6 +793,7 @@ class InputEngine {
     const target = this.concrete(expected)
       ? this.table.node(this.table.unfold(expected))
       : undefined;
+    const evidence = new Map<string, ExpressionEvidence>();
     for (const field of kidsOf(this.tree, node)) {
       const pieces = kidsOf(this.tree, field);
       const labelNode = pieces.find((piece) =>
@@ -719,7 +807,15 @@ class InputEngine {
       const fieldType = target?.kind === "record" && label !== undefined
         ? target.fields.find((entry) => entry.name === label)?.type
         : undefined;
-      this.visit(value, fieldType);
+      const valueType = this.visit(value, fieldType);
+      const fieldEvidence = this.evidenceFromType(fieldType ?? valueType) ??
+        this.evidenceOf(value);
+      if (label !== undefined && fieldEvidence !== undefined) {
+        evidence.set(label, fieldEvidence);
+      }
+    }
+    if (evidence.size > 0) {
+      this.expressionEvidence.set(node, { kind: "record", fields: evidence });
     }
     return expected;
   }

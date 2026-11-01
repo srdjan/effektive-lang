@@ -31,6 +31,22 @@ The main agent reviewed the one-line production change and the full regression.
 The targeted command passed 46 tests with exit 0.
 The CR2 gate passed with exit 0: 3,119 fast tests and 301 slow tests.
 The regression covers warm output, maps, spans, validation, unchanged configuration, restoration, and delayed retained output.
+The CR2 commit is `d264c86`.
+Mutation tested committed `d264c86`: 55 sites, six sampled, six killed, zero survivors, zero timeouts; exit 0.
+
+## Arrow evidence
+
+CR3 (arrow evidence): public regressions first reported four `type-mismatch/003` diagnostics.
+Partial callable evidence now retains annotated parameters, explicit results, and contextual checked flags.
+Bindings, parentheses, aliases, local records, and record aliases retain that evidence.
+Known complete callable contracts take precedence over partial evidence.
+The driver creates no complete function type from arrow evidence.
+The main agent corrected syntax in the effect fixture and reviewed every production change.
+The targeted command passed 64 tests with exit 0.
+The CR3 gate passed with exit 0: 3,121 fast tests and 301 slow tests.
+Accepted cases lower and pass independent validation. The negative argument still reports `type-mismatch/003`.
+The effect case retains `effect`, `error:m#LocalFailure`, and `cap:m#LocalService.read`.
+Before inference changes, measurement reported 726 lines and 240 AST branches.
 
 ## Current work
 
@@ -52,4 +68,4 @@ No unresolved scope question remains.
 
 ## Next action
 
-The main agent will complete the host gate, commit the repair, and run its mutation sample.
+The main agent will complete the arrow gate, commit the repair, and run its mutation sample.

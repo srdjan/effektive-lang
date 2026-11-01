@@ -277,6 +277,69 @@ const outer = (): Int => { const local = (input) => consume(input); local(1) }
   assertEquals(codes(project), []);
 });
 
+Deno.test("uses annotated local arrow evidence through aliases and records", () => {
+  const project = checkText(`
+type Int = int
+const direct = (input): Int => {
+  const fn = (n: Int): Int => n
+  fn(input)
+}
+const aliased = (input): Int => {
+  const fn = (n: Int): Int => n
+  const alias = (fn)
+  alias(input)
+}
+const field = (input): Int => {
+  const record = { fn: (n: Int): Int => n }
+  record.fn(input)
+}
+const fieldAlias = (input): Int => {
+  const record = { fn: (n: Int): Int => n }
+  const alias = record
+  alias.fn(input)
+}
+`);
+  assertEquals(codes(project), []);
+  assertEquals(parameterTypes(project, "m", "direct"), ["Int"]);
+  assertEquals(parameterTypes(project, "m", "aliased"), ["Int"]);
+  assertEquals(parameterTypes(project, "m", "field"), ["Int"]);
+  assertEquals(parameterTypes(project, "m", "fieldAlias"), ["Int"]);
+  assertLoweredValid(project);
+});
+
+Deno.test("keeps arrow contracts separate from callable inference evidence", () => {
+  const effectful = checkText(`
+type Int = int
+error LocalFailure = { value: Int }
+service LocalService { read(): Int }
+const effectful = (input): Int fails LocalFailure uses LocalService.read => {
+  const fn = (n: Int): Int fails LocalFailure uses LocalService.read => {
+    if (n > 0) { LocalService.read() } else { fail(LocalFailure({ value: n })) }
+  }
+  fn(input)
+}
+`);
+  assertEquals(codes(effectful), []);
+  assertEquals(parameterTypes(effectful, "m", "effectful"), ["Int"]);
+  const body = effectful.modules.get("m")?.functions.get(
+    "value:m#effectful" as ValueId,
+  );
+  assert(body !== undefined);
+  assertEquals(body.mode, "effect");
+  assertEquals(body.failures, ["error:m#LocalFailure"]);
+  assertEquals(body.requirements, ["cap:m#LocalService.read"]);
+  assertLoweredValid(effectful);
+
+  const invalid = checkText(`
+type Int = int
+const invalid = (): Int => {
+  const fn = (n: Int): Int => n
+  fn("wrong")
+}
+`);
+  assert(codes(invalid).includes("type-mismatch/003"));
+});
+
 Deno.test("marks exported inferred inputs as checked effect entries", () => {
   const project = checkText(`
 type Text = string
