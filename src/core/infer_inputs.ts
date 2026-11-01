@@ -6,8 +6,12 @@ import type {
 import { TypeLowerer } from "./type_lower.ts";
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import type { BodyEnv } from "./check_expr.ts";
-import { isErrorId } from "./ids.ts";
 import type { LocalId } from "./ir.ts";
+import {
+  type CallableEvidence,
+  InputContractResolver,
+  type Origin,
+} from "./infer_contracts.ts";
 import { flattenMembers } from "./patterns.ts";
 import type { Target } from "./resolve.ts";
 import {
@@ -17,51 +21,16 @@ import {
   kidsOf,
   nameTextOf,
   operatorOf,
+  unparen,
 } from "./syntax_queries.ts";
 import { kindOf, type NodeId, nodeSpan, SyntaxKind } from "./syntax.ts";
 import { showType } from "./type_show.ts";
 import { typeToIr } from "./type_ir.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 
-interface Root {
-  readonly id: LocalId;
-  readonly name: string;
-}
-
-interface Origin {
-  readonly root: Root;
-  readonly path: readonly string[];
-}
-
-interface Demand {
-  readonly path: readonly string[];
-  readonly type: TypeRef;
-  readonly node: NodeId;
-}
-
-interface DeferredCall {
-  readonly origin: Origin;
-  readonly callee: NodeId;
-  readonly arguments: readonly NodeId[];
-  readonly processed: Set<TypeRef>;
-  resolved: boolean;
-}
-
-interface DemandNode {
-  readonly direct: Demand[];
-  readonly fields: Map<string, DemandNode>;
-}
-
 interface InputInference {
   readonly types: readonly TypeRef[];
   readonly diagnostics: readonly Diagnostic[];
-}
-
-interface CallableEvidence {
-  readonly kind: "callable";
-  readonly parameters: readonly (TypeRef | undefined)[];
-  readonly result: TypeRef | undefined;
-  readonly checked: readonly boolean[] | undefined;
 }
 
 interface RecordEvidence {
@@ -70,10 +39,6 @@ interface RecordEvidence {
 }
 
 type ExpressionEvidence = CallableEvidence | RecordEvidence;
-
-function emptyDemandNode(): DemandNode {
-  return { direct: [], fields: new Map() };
-}
 
 /** Infers the body-driven types of one function's inferred parameters. */
 export function inferFunctionInputs(
@@ -138,16 +103,10 @@ class InputEngine {
   private readonly tree: TypeEnv["tree"];
   private readonly table: TypeTable;
   private readonly targets: TypeEnv["targets"];
-  private readonly origins = new Map<LocalId, Origin>();
+  private readonly resolver: InputContractResolver;
   private readonly localTypes = new Map<LocalId, TypeRef>();
   private readonly expressionEvidence = new Map<NodeId, ExpressionEvidence>();
   private readonly localEvidence = new Map<LocalId, ExpressionEvidence>();
-  private readonly demands = new Map<LocalId, Demand[]>();
-  private readonly deferredCalls = new Map<LocalId, DeferredCall[]>();
-  private readonly deferredCallsByCallee = new Map<NodeId, DeferredCall>();
-  private readonly pendingCalls: DeferredCall[] = [];
-  private readonly queuedCalls = new Set<DeferredCall>();
-  private readonly diagnostics: Diagnostic[] = [];
   private readonly lowerer: TypeLowerer;
 
   constructor(
@@ -164,19 +123,18 @@ class InputEngine {
     this.table = benv.env.table;
     this.targets = benv.env.targets;
     this.lowerer = new TypeLowerer(benv.env, []);
+    this.resolver = new InputContractResolver(
+      this.table,
+      parameters.flatMap((parameter) =>
+        parameter.inferred && parameter.id !== undefined
+          ? [{ id: parameter.id, name: parameter.name }]
+          : []
+      ),
+    );
     for (const [id, type] of outerLocals) this.localTypes.set(id, type);
     for (const parameter of parameters) {
       if (parameter.id === undefined) continue;
       this.localTypes.set(parameter.id, parameter.type);
-      if (parameter.inferred) {
-        this.origins.set(parameter.id, {
-          root: {
-            id: parameter.id,
-            name: parameter.name,
-          },
-          path: [],
-        });
-      }
     }
   }
 
@@ -187,265 +145,29 @@ class InputEngine {
       readonly inferred: boolean;
     }[],
   ): InputInference {
-    this.propagateDeferredCalls();
-    const types = parameters.map((parameter) => {
-      if (!parameter.inferred || parameter.id === undefined) {
-        return parameter.type;
-      }
-      const root = this.origins.get(parameter.id)?.root;
-      const bodyDemands = this.demands.get(parameter.id) ?? [];
-      const demands =
-        parameter.type !== this.table.unknown && bodyDemands.length > 0
-          ? [
-            { path: [], type: parameter.type, node: bodyDemands[0].node },
-            ...bodyDemands,
-          ]
-          : bodyDemands;
-      for (
-        const call of (this.deferredCalls.get(parameter.id) ?? []).filter(
-          (candidate) => !candidate.resolved,
-        )
-      ) {
-        this.diagnostics.push(makeDiagnostic(
+    const resolution = this.resolver.finish(parameters);
+    const diagnostics = resolution.issues.map((issue) => {
+      if (issue.kind === "unresolved-call") {
+        return makeDiagnostic(
           "type-mismatch/011",
-          `the parameter \`${
-            root?.name ?? "input"
-          }\` needs a type annotation because its callback type cannot be inferred`,
-          nodeSpan(this.tree, call.callee),
-        ));
-      }
-      if (root === undefined || demands.length === 0) {
-        return parameter.type;
-      }
-      const demandTree = emptyDemandNode();
-      for (const demand of demands) this.insert(demandTree, demand, 0);
-      return this.resolve(root, demandTree, []);
-    });
-    return { types, diagnostics: this.diagnostics };
-  }
-
-  private insert(tree: DemandNode, demand: Demand, depth: number): void {
-    const field = demand.path[depth];
-    if (field === undefined) {
-      tree.direct.push(demand);
-      return;
-    }
-    let child = tree.fields.get(field);
-    if (child === undefined) {
-      child = emptyDemandNode();
-      tree.fields.set(field, child);
-    }
-    this.insert(child, demand, depth + 1);
-  }
-
-  private resolve(
-    root: Root,
-    tree: DemandNode,
-    path: readonly string[],
-  ): TypeRef {
-    let fields: TypeRef | undefined;
-    if (tree.fields.size > 0) {
-      fields = this.table.record([...tree.fields].map(([name, child]) => ({
-        name,
-        type: this.resolve(root, child, [...path, name]),
-        optional: false,
-      })));
-    }
-    let candidates = [...tree.direct.map((demand) => demand.type)];
-    if (
-      fields !== undefined ||
-      candidates.some((candidate) => candidate !== this.table.unknown)
-    ) {
-      candidates = candidates.filter((candidate) =>
-        candidate !== this.table.unknown
-      );
-    }
-    if (
-      fields !== undefined &&
-      (candidates.length === 0 ||
-        !this.satisfiesFields(candidates[0], tree.fields))
-    ) {
-      candidates.push(fields);
-    }
-    const chosen = candidates[0] ?? this.table.unknown;
-    const canonical = this.table.unfoldTransparent(chosen);
-    if (
-      candidates.some((candidate) =>
-        this.table.unfoldTransparent(candidate) !== canonical
-      )
-    ) {
-      const uses = this.leafDemands(tree);
-      const texts = [
-        ...new Set(
-          candidates.map((candidate) => showType(this.table, candidate)),
-        ),
-      ];
-      for (const use of uses) {
-        this.diagnostics.push(makeDiagnostic(
-          "type-mismatch/014",
-          `the inferred input \`${root.name}\` has conflicting requirements at \`${
-            [root.name, ...path].join(".")
-          }\`: ${texts.join(" and ")}`,
-          nodeSpan(this.tree, use.node),
-        ));
-      }
-    }
-    return chosen;
-  }
-
-  private satisfiesFields(
-    type: TypeRef,
-    requirements: ReadonlyMap<string, DemandNode>,
-  ): boolean {
-    const shape = this.table.node(this.table.unfold(type));
-    if (shape.kind === "union") {
-      return shape.members.every((member) =>
-        this.satisfiesFields(member, requirements)
-      );
-    }
-    const fields = this.recordFields(type);
-    if (fields === undefined) return false;
-    for (const [name, requirement] of requirements) {
-      const field = fields.find((candidate) => candidate.name === name);
-      if (field === undefined) return false;
-      const direct = requirement.direct.map((demand) => demand.type).filter(
-        (candidate) => candidate !== this.table.unknown,
-      );
-      if (
-        direct.some((candidate) =>
-          this.table.unfoldTransparent(candidate) !==
-            this.table.unfoldTransparent(field.type)
-        )
-      ) return false;
-      if (
-        requirement.fields.size > 0 &&
-        !this.satisfiesFields(field.type, requirement.fields)
-      ) return false;
-    }
-    return true;
-  }
-
-  private recordFields(type: TypeRef) {
-    let node = this.table.node(this.table.unfold(type));
-    if (node.kind === "named") {
-      const record = isErrorId(node.id)
-        ? this.table.errorRecordOf(node.id)
-        : this.table.taggedRecordOf(node.id) ??
-          this.table.identityBaseOf(node.id);
-      if (record === undefined) return undefined;
-      node = this.table.node(this.table.unfold(record));
-    }
-    return node.kind === "record" ? node.fields : undefined;
-  }
-
-  private leafDemands(tree: DemandNode): Demand[] {
-    return [
-      ...tree.direct,
-      ...[...tree.fields.values()].flatMap((child) => this.leafDemands(child)),
-    ];
-  }
-
-  private concrete(type: TypeRef | undefined): type is TypeRef {
-    if (type === undefined || type === this.table.unknown) return false;
-    return this.table.node(type).kind !== "error";
-  }
-
-  private demand(
-    origin: Origin | undefined,
-    type: TypeRef | undefined,
-    node: NodeId,
-  ): void {
-    if (
-      origin === undefined ||
-      (!this.concrete(type) && origin.path.length === 0)
-    ) return;
-    const list = this.demands.get(origin.root.id) ?? [];
-    const demand = {
-      path: origin.path,
-      type: this.concrete(type) ? type : this.table.unknown,
-      node,
-    };
-    if (
-      list.some((candidate) =>
-        candidate.type === demand.type && candidate.node === demand.node &&
-        candidate.path.length === demand.path.length &&
-        candidate.path.every((field, index) => field === demand.path[index])
-      )
-    ) return;
-    list.push(demand);
-    this.demands.set(origin.root.id, list);
-    for (const call of this.deferredCalls.get(origin.root.id) ?? []) {
-      this.enqueue(call);
-    }
-  }
-
-  private defer(
-    origin: Origin,
-    callee: NodeId,
-    args: readonly NodeId[],
-  ): void {
-    const existing = this.deferredCallsByCallee.get(callee);
-    if (existing !== undefined) {
-      this.enqueue(existing);
-      return;
-    }
-    const call: DeferredCall = {
-      origin,
-      callee,
-      arguments: args,
-      processed: new Set(),
-      resolved: false,
-    };
-    const calls = this.deferredCalls.get(origin.root.id) ?? [];
-    calls.push(call);
-    this.deferredCalls.set(origin.root.id, calls);
-    this.deferredCallsByCallee.set(callee, call);
-    this.enqueue(call);
-  }
-
-  private enqueue(call: DeferredCall): void {
-    if (this.queuedCalls.has(call)) return;
-    this.queuedCalls.add(call);
-    this.pendingCalls.push(call);
-  }
-
-  private propagateDeferredCalls(): void {
-    let call: DeferredCall | undefined;
-    while ((call = this.pendingCalls.shift()) !== undefined) {
-      this.queuedCalls.delete(call);
-      for (const contract of this.contractsFor(call.origin)) {
-        if (call.processed.has(contract)) continue;
-        call.processed.add(contract);
-        const evidence = this.evidenceFromType(contract);
-        if (evidence?.kind !== "callable") continue;
-        call.resolved = true;
-        call.arguments.forEach((argument, index) =>
-          this.visit(
-            argument,
-            evidence.checked?.[index]
-              ? this.table.unknown
-              : evidence.parameters[index],
-          )
+          `the parameter \`${issue.rootName}\` needs a type annotation because its callback type cannot be inferred`,
+          nodeSpan(this.tree, issue.node),
         );
       }
-    }
-  }
-
-  private contractsFor(origin: Origin): TypeRef[] {
-    const contracts = new Set<TypeRef>();
-    for (const demand of this.demands.get(origin.root.id) ?? []) {
-      if (
-        demand.path.length > origin.path.length ||
-        !demand.path.every((field, index) => field === origin.path[index])
-      ) continue;
-      let contract: TypeRef | undefined = demand.type;
-      for (const field of origin.path.slice(demand.path.length)) {
-        contract = this.fieldType(contract, field);
-        if (contract === undefined) break;
-      }
-      if (contract !== undefined) contracts.add(contract);
-    }
-    return [...contracts];
+      const texts = [
+        ...new Set(
+          issue.candidates.map((candidate) => showType(this.table, candidate)),
+        ),
+      ];
+      return makeDiagnostic(
+        "type-mismatch/014",
+        `the inferred input \`${issue.rootName}\` has conflicting requirements at \`${
+          [issue.rootName, ...issue.path].join(".")
+        }\`: ${texts.join(" and ")}`,
+        nodeSpan(this.tree, issue.node),
+      );
+    });
+    return { types: resolution.types, diagnostics };
   }
 
   private originOf(node: NodeId): Origin | undefined {
@@ -456,7 +178,9 @@ class InputEngine {
     }
     if (kind === SyntaxKind.NameExpr || kind === SyntaxKind.Name) {
       const target = this.targets.get(node);
-      return target?.kind === "local" ? this.origins.get(target.id) : undefined;
+      return target?.kind === "local"
+        ? this.resolver.origin(target.id)
+        : undefined;
     }
     if (kind !== SyntaxKind.FieldExpr) return undefined;
     const kids = kidsOf(this.tree, node);
@@ -475,7 +199,7 @@ class InputEngine {
 
   visit(node: NodeId, expected?: TypeRef): TypeRef | undefined {
     const origin = this.originOf(node);
-    if (origin !== undefined) this.demand(origin, expected, node);
+    if (origin !== undefined) this.resolver.demand(origin, expected, node);
     switch (kindOf(this.tree, node)) {
       case SyntaxKind.NameExpr:
       case SyntaxKind.Name:
@@ -521,32 +245,12 @@ class InputEngine {
     return undefined;
   }
 
-  private functionOf(type: TypeRef | undefined) {
-    if (type === undefined) return undefined;
-    const node = this.table.node(this.table.unfold(type));
-    return node.kind === "function" ? node : undefined;
-  }
-
-  private evidenceFromType(
-    type: TypeRef | undefined,
-  ): ExpressionEvidence | undefined {
-    const fn = this.functionOf(type);
-    return fn === undefined ? undefined : {
-      kind: "callable",
-      parameters: fn.parameters,
-      result: fn.result,
-      checked: fn.checked,
-    };
-  }
-
   private evidenceOf(node: NodeId): ExpressionEvidence | undefined {
     const recorded = this.expressionEvidence.get(node);
     if (recorded !== undefined) return recorded;
+    const bare = unparen(this.tree, node);
+    if (bare !== node) return this.evidenceOf(bare);
     const kind = kindOf(this.tree, node);
-    if (kind === SyntaxKind.ParenExpr) {
-      const inner = kidsOf(this.tree, node)[0];
-      return inner === undefined ? undefined : this.evidenceOf(inner);
-    }
     if (
       kind === SyntaxKind.NameExpr || kind === SyntaxKind.Name ||
       kind === SyntaxKind.QualifiedName
@@ -575,7 +279,8 @@ class InputEngine {
     node: NodeId,
     type: TypeRef | undefined,
   ): CallableEvidence | undefined {
-    const evidence = this.evidenceFromType(type) ?? this.evidenceOf(node);
+    const evidence = this.resolver.callableEvidence(type) ??
+      this.evidenceOf(node);
     return evidence?.kind === "callable" ? evidence : undefined;
   }
 
@@ -602,15 +307,7 @@ class InputEngine {
       : nameTextOf(this.tree, member);
     if (base === undefined || name === undefined) return expected;
     const baseType = this.visit(base);
-    return this.fieldType(baseType, name) ?? expected;
-  }
-
-  private fieldType(
-    type: TypeRef | undefined,
-    name: string,
-  ): TypeRef | undefined {
-    if (!this.concrete(type)) return undefined;
-    return this.recordFields(type)?.find((field) => field.name === name)?.type;
+    return this.resolver.fieldType(baseType, name) ?? expected;
   }
 
   private call(
@@ -660,7 +357,18 @@ class InputEngine {
     const fn = this.callableEvidence(callee, calleeType);
     if (fn === undefined) {
       const origin = this.originOf(callee);
-      if (origin !== undefined) this.defer(origin, callee, args);
+      if (origin !== undefined) {
+        this.resolver.defer(origin, callee, (evidence) => {
+          args.forEach((argument, index) =>
+            this.visit(
+              argument,
+              evidence.checked?.[index]
+                ? this.table.unknown
+                : evidence.parameters[index],
+            )
+          );
+        });
+      }
       args.forEach((argument) => this.visit(argument));
       return undefined;
     }
@@ -739,7 +447,7 @@ class InputEngine {
     const operator = operatorOf(this.tree, node);
     const contextual =
       operator !== undefined && ["+", "-", "*", "/"].includes(operator) &&
-        this.concrete(expected)
+        this.resolver.isConcrete(expected)
         ? expected
         : undefined;
     operands.forEach((operand) => this.visit(operand, contextual));
@@ -785,12 +493,12 @@ class InputEngine {
     const type = annotation ?? inferred;
     if (id === undefined) return;
     if (type !== undefined) this.localTypes.set(id, type);
-    const evidence = this.evidenceFromType(annotation) ??
+    const evidence = this.resolver.callableEvidence(annotation) ??
       (init === undefined ? undefined : this.evidenceOf(init));
     if (evidence !== undefined) this.localEvidence.set(id, evidence);
     if (init !== undefined) {
       const origin = this.originOf(init);
-      if (origin !== undefined) this.origins.set(id, origin);
+      if (origin !== undefined) this.resolver.setOrigin(id, origin);
     }
   }
 
@@ -832,7 +540,7 @@ class InputEngine {
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const fn = this.functionOf(expected);
+    const fn = this.resolver.callableEvidence(expected);
     const parts = kidsOf(this.tree, node);
     const paramList = parts.find((part) =>
       kindOf(this.tree, part) === SyntaxKind.ParamList
@@ -882,7 +590,7 @@ class InputEngine {
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const target = this.concrete(expected)
+    const target = this.resolver.isConcrete(expected)
       ? this.table.node(this.table.unfold(expected))
       : undefined;
     const evidence = new Map<string, ExpressionEvidence>();
@@ -900,7 +608,9 @@ class InputEngine {
         ? target.fields.find((entry) => entry.name === label)?.type
         : undefined;
       const valueType = this.visit(value, fieldType);
-      const fieldEvidence = this.evidenceFromType(fieldType ?? valueType) ??
+      const fieldEvidence = this.resolver.callableEvidence(
+        fieldType ?? valueType,
+      ) ??
         this.evidenceOf(value);
       if (label !== undefined && fieldEvidence !== undefined) {
         evidence.set(label, fieldEvidence);
@@ -916,7 +626,7 @@ class InputEngine {
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const target = this.concrete(expected)
+    const target = this.resolver.isConcrete(expected)
       ? this.table.node(this.table.unfold(expected))
       : undefined;
     kidsOf(this.tree, node).forEach((element, index) => {

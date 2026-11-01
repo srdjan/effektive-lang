@@ -61,10 +61,48 @@ The main agent strengthened dependency ordering, nested aliases, sibling diagnos
 The main agent reviewed every changed line and repeated the targeted command: 53 passed, exit 0.
 Accepted cases lower and independently validate. Unsupported callbacks still report `/011`.
 
+## Resolution boundary
+
+CR5 (resolution boundary): `infer_contracts.ts` owns demands, origins, deferred calls, and final contract resolution.
+`infer_inputs.ts` owns syntax traversal, expression evidence, and diagnostic construction.
+The resolver returns tagged issues. Its explicit `TypeTable` dependency can intern types.
+A driver callback applies each recovered contract to call arguments. The resolver imports no expression checker or emitter.
+Tests remain byte-identical to `e5fad97` for behavior capture.
+The main agent reviewed both complete source changes and repeated the targeted suite: 49 passed, exit 0.
+The first full gate rejected a missing source-map entry in `docs/api.md`.
+That required entry moved from documentation closure into this phase. The gate now runs again.
+
+### Simplification review
+
+The five review lenses covered reuse, quality, efficiency, tests, and comments.
+The main agent reused `unparen`, removed two unused exports, consumed the queue with a cursor, and deleted one redundant comment.
+The main agent retained the driver callback because the plan forbids whole-body iterations, not bounded contextual argument traversal.
+The main agent retained table queries on the resolver because they share its explicit table dependency.
+No measured bottleneck justifies a second demand index or per-call contract queue in this reset.
+Protected proof tests and their two helper comments remain unchanged.
+The test review found no defect in the protected tests.
+
+### Measurements
+
+The existing line method excludes blank lines and lines that start with `//`.
+It does not count executable statements. AST branches are the measure script's count.
+
+| Revision or file | Lines | AST branches | Import declarations |
+| --- | ---: | ---: | ---: |
+| Original driver at `c580de8` | 726 | 240 | 13 |
+| Driver after fixes at `e5fad97` | 903 | 300 | 13 |
+| Extracted driver | 634 | 216 | 13 |
+| New resolver | 332 | 85 | 4 |
+
+Both measurement commands passed. The combined modules contain 966 measured lines and 301 AST branches.
+The extraction separates responsibilities; it does not reduce the combined line count.
+
 ## Current work
 
-CR4 (deferred calls): the full gate passed with exit 0: 3,125 fast tests and 301 slow tests.
-The main agent will commit, then run mutation against that commit.
+CR5 (resolution boundary): the full gate passed after the API map correction.
+It passed 3,125 fast tests and 301 slow tests with exit 0.
+The main agent will commit, then capture behavior against `e5fad97`.
+The independent code review runs against the complete reset diff.
 
 ## Unresolved questions
 
