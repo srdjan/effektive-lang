@@ -8,7 +8,7 @@ type NullableOptional = { name?: Nullable }
 
 service Read { normalize(value: Text): Text }
 service Write { restore(value: Text): Text fails SchemaIssue }
-service Defaults { make(): Text }
+service Defaults { make(): Text fails SchemaIssue }
 
 const text: Schema<Text> = schema()
 const nullable: Schema<Nullable> = schema()
@@ -18,10 +18,7 @@ const transformed: Schema<Text, Text, Read.normalize, Write.restore> = schemaTra
   (value: Text): Option<Text> uses Read.normalize => Some(Read.normalize(value)),
   (value: Text): Text fails SchemaIssue uses Write.restore => Write.restore(value)
 )
-const makeDefault = (): Text fails SchemaIssue uses Defaults.make => {
-  const value = Defaults.make()
-  if (value === "blocked") { fail(schemaInvalid("default blocked")) } else { value }
-}
+const makeDefault = (): Text fails SchemaIssue uses Defaults.make => Defaults.make()
 
 export const omitField: SchemaEncodedOptional<Text, Text, Read.normalize | Defaults.make, Write.restore> =
   schemaDefaultKey(transformed,

@@ -88,7 +88,7 @@ const SHAPE =
   `${INT}type Num = number\ntype Shape = { kind: "circle", radius: Num } | { kind: "square", side: Num }\n`;
 
 const ROWS: readonly SiteRow[] = [
-  // ---- brand, retry, retrySchedule, codec
+  // ---- brand, retry, retrySchedule
   {
     builtin: "brand constructor",
     change: "give the brand a second argument",
@@ -158,34 +158,6 @@ const ROWS: readonly SiteRow[] = [
       `${INT}error Stop = {}\nservice Probe { n(): Int }\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Duration> uses Probe.n => Some(Probe.n() * 1ms))\n`,
     code: "execution-mode/001",
     fragment: "the retry schedule callback must be pure",
-  },
-  {
-    builtin: "codec",
-    change: "replace both functions with ints",
-    valid:
-      `${INT}const shift: Codec<Int, Int> = codec((n: Int): Int => n + 1, (n: Int): Int => n - 1)\n`,
-    invalid: `${INT}const shift = codec(1, 2)\n`,
-    code: "type-mismatch/010",
-    fragment: "`codec` needs two single-argument functions",
-  },
-  {
-    builtin: "decode",
-    change: "replace the codec with an int",
-    valid:
-      `${INT}const shift: Codec<Int, Int> = codec((n: Int): Int => n + 1, (n: Int): Int => n - 1)\nconst a = (input: unknown): Option<Int> => decode(shift, input)\n`,
-    invalid:
-      `${INT}const a = (input: unknown): Option<Int> => decode(1, input)\n`,
-    code: "type-mismatch/010",
-    fragment: "`decode` needs a Codec value",
-  },
-  {
-    builtin: "encode",
-    change: "replace the codec with an int",
-    valid:
-      `${INT}const shift: Codec<Int, Int> = codec((n: Int): Int => n + 1, (n: Int): Int => n - 1)\nconst a = (n: Int): Option<Int> => encode(shift, n)\n`,
-    invalid: `${INT}const a = (n: Int): Option<Int> => encode(1, n)\n`,
-    code: "type-mismatch/010",
-    fragment: "`encode` needs a Codec value",
   },
   // ---- fibers and scopes
   {

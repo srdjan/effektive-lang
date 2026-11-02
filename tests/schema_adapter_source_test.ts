@@ -177,11 +177,11 @@ const record = schemaStruct({ option, defaulted, normalized })`,
   );
   accepted(
     optionalTransformPrefix +
-      `const failingDefault = schemaDefaultKey(integer, (): Int fails SchemaIssue => fail(schemaInvalid("x")))
+      `const failingDefault = schemaDefaultKey(integer, (): Int fails SchemaIssue => 1)
 const effectfulDefault = schemaDefaultKey(integer, (): Int uses Need.next => Need.next(1))
 const existingError = schemaDefaultKey(integer, (): Int fails SchemaError => schemaDecode(integer, 1))
 const failingOptional = schemaOptionalTransform(optional, optional,
-  (value: Option<Int>): Option<Int> fails SchemaIssue => fail(schemaInvalid("x")),
+  (value: Option<Int>): Option<Int> fails SchemaIssue => None,
   (value: Option<Int>): Option<Int> => value)
 const effectfulOptional = schemaOptionalTransform(optional, optional,
   (value: Option<Int>): Option<Int> uses Need.next => { const tick = Need.next(1)
@@ -319,12 +319,11 @@ const optional: SchemaOptional<Int> = schemaOptionalKey(integer)
 const record = schemaStruct({ value: optional })
 const union = schemaUnion([left, right])
 const primitives = schemaUnion([integer, text])
-const overlapping = schemaUnion([left, left])
-const issue = schemaAt("value", schemaBoth(integer, schemaInvalid("a"), schemaInvalid("b")))`,
+const overlapping = schemaUnion([left, left])`,
   );
 });
 
-Deno.test("malformed union inputs, descriptor use, issue construction, and unguarded recursion are rejected", () => {
+Deno.test("malformed union inputs, descriptor use, and unguarded recursion are rejected", () => {
   const ordinaryBranches =
     "`schemaUnion` needs at least two ordinary Schema branches";
   rejected(unionPrefix, [
@@ -381,15 +380,6 @@ Deno.test("malformed union inputs, descriptor use, issue construction, and ungua
           "schemaOptionalKey(integer)",
         ],
       ],
-    },
-    {
-      name: "issue key",
-      initializer: 'schemaAt(true, schemaInvalid("x"))',
-      expected: [[
-        "type-mismatch/003",
-        "schema issue key has type boolean, but int | string is expected",
-        "true",
-      ]],
     },
     {
       name: "SchemaIssue is not a constructor",

@@ -107,10 +107,6 @@ export const stop: Schema<Stop> = schema()
 export const wrapper: Schema<Wrapper> = schema()
 export const tree: Schema<Tree> = schema()
 export const node: Schema<Node> = schema()
-export const nodeCodec: Codec<Node, Node> = codec(
-  (value: Node): Node => value,
-  (value: Node): Node => value
-)
 
 export const readUserId = (input: unknown): UserId fails SchemaError => schemaDecode(userId, input)
 export const writeUserId = (value: UserId): UserId fails SchemaError => schemaEncode(userId, value)
@@ -127,7 +123,7 @@ Deno.test("identity Schemas over brands, errors, and recursive aliases pass stri
     identitySource,
     `import { Cause, Effect, Exit, Option, Schema } from "effect";
 import {
-  nodeCodec, readNode, readStop, readTree, readUserId, readWrapper, Stop,
+  readNode, readStop, readTree, readUserId, readWrapper, Stop,
   writeStop, writeTree, writeUserId,
 } from "./main.ts";
 const run = <A>(effect: Effect.Effect<A, Schema.SchemaError>) => Effect.runPromiseExit(effect);
@@ -157,7 +153,6 @@ const treeWritten = Exit.isSuccess(treeRead) ? await Effect.runPromise(writeTree
 
 const nodeRead = await run(readNode({ error: instance, kids: [{ error: instance, kids: [] }] }));
 const nodeWire = await run(readNode({ error: { _tag: "main#Stop", reason: "x" }, kids: [] }));
-const codecWire = nodeCodec.decode({ error: { _tag: "main#Stop", reason: "x" }, kids: [{ error: { _tag: "main#Stop", reason: "y" }, kids: [] }] });
 
 console.log(JSON.stringify({
   brand: Exit.isSuccess(brand) ? brand.value : "failure",
@@ -175,7 +170,6 @@ console.log(JSON.stringify({
   treeWritten: JSON.stringify(treeWritten) === JSON.stringify(sample),
   nodeRead: Exit.isSuccess(nodeRead) && nodeRead.value.kids[0]?.error === instance,
   nodeWire: failed(nodeWire),
-  codecWire: Option.isSome(codecWire),
 }));
 `,
   );
@@ -195,6 +189,5 @@ console.log(JSON.stringify({
     treeWritten: true,
     nodeRead: true,
     nodeWire: true,
-    codecWire: true,
   });
 });

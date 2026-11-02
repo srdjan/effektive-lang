@@ -20,7 +20,6 @@ const SAMPLES: { readonly [K in Type["kind"]]: Extract<Type, { kind: K }> } = {
   "option": { kind: "option", element: STRING },
   "ref": { kind: "ref", element: STRING },
   "retry-schedule": { kind: "retry-schedule", error: STRING },
-  "codec": { kind: "codec", decoded: STRING, encoded: STRING },
   "schema": {
     kind: "schema",
     decoded: STRING,
@@ -46,12 +45,11 @@ const SAMPLES: { readonly [K in Type["kind"]]: Extract<Type, { kind: K }> } = {
   },
 };
 
-Deno.test("isDeferredType holds for exactly the eleven deferred kinds", () => {
+Deno.test("isDeferredType holds for exactly the nine deferred kinds", () => {
   const deferred = Object.values(SAMPLES).filter(isDeferredType).map((t) =>
     t.kind
   ).sort();
   assertEquals(deferred, [
-    "codec",
     "effect",
     "fiber",
     "function",

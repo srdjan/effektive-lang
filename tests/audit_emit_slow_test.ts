@@ -14,8 +14,6 @@ import { runStrictTarget } from "./target_helpers.ts";
 const signatures = [
   ["Ref element", "type B = { n: Int }", "Ref<B>"],
   ["RetrySchedule error", "error E = {}", "RetrySchedule<E>"],
-  ["Codec decoded type", "type B = { n: Int }", "Codec<B, Int>"],
-  ["Codec encoded type", "type B = { n: Int }", "Codec<Int, B>"],
   ["Fiber result", "type B = { n: Int }", "Fiber<B, never>"],
   ["Fiber failure", "error E = {}", "Fiber<Int, E>"],
 ] as const;

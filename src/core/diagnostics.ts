@@ -256,7 +256,7 @@ export const DIAGNOSTIC_CODES = {
   },
   "declaration/015": {
     description:
-      "A tagged record or an error declaration has a field whose type contains a function or deferred type (Effect, Fiber, Stream, Sink, RetrySchedule, Ref, Codec, Schema, provider, or scope), directly or through an alias. The emitter has no schema for such a type.",
+      "A tagged record or an error declaration has a field whose type contains a function or deferred type (Effect, Fiber, Stream, Sink, RetrySchedule, Ref, Schema, provider, or scope), directly or through an alias. The emitter has no schema for such a type.",
   },
   "declaration/016": {
     description:
@@ -302,7 +302,7 @@ export const DIAGNOSTIC_CODES = {
   },
   "sealed/004": {
     description:
-      "A module derives or executes a Schema or Codec that produces a foreign sealed type.",
+      "A module derives or executes a Schema that produces a foreign sealed type.",
   },
   "host-boundary/001": {
     description:

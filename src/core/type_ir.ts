@@ -32,11 +32,6 @@ export function typeFromIr(table: TypeTable, type: Type): TypeRef {
       return table.ref(typeFromIr(table, type.element));
     case "retry-schedule":
       return table.retrySchedule(typeFromIr(table, type.error));
-    case "codec":
-      return table.codec(
-        typeFromIr(table, type.decoded),
-        typeFromIr(table, type.encoded),
-      );
     case "schema":
       return table.schema(
         typeFromIr(table, type.decoded),
@@ -150,12 +145,6 @@ export function typeToIr(table: TypeTable, ref: TypeRef): Type {
       return { kind: "ref", element: typeToIr(table, node.element) };
     case "retry-schedule":
       return { kind: "retry-schedule", error: typeToIr(table, node.error) };
-    case "codec":
-      return {
-        kind: "codec",
-        decoded: typeToIr(table, node.decoded),
-        encoded: typeToIr(table, node.encoded),
-      };
     case "schema":
       return {
         kind: "schema",

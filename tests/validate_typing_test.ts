@@ -1,6 +1,6 @@
 // Unit tests for `fits` and `same` of the independent validator, for the
 // compound types that carry variance rules: Schema, Sink,
-// RetrySchedule, Codec, Fiber, and null against unit. Each test
+// RetrySchedule, Fiber, and null against unit. Each test
 // builds Type values by hand and checks both directions of `fits`, and `same`.
 
 import { assert, assertEquals } from "@std/assert";
@@ -244,11 +244,7 @@ Deno.test("Schema: requirement sets are subsets under fits and equal under same"
 });
 
 Deno.test("Schema: a Schema is not another kind of type", () => {
-  relate("against Codec", schema(), {
-    kind: "codec",
-    decoded: INT,
-    encoded: STRING,
-  }, UNRELATED);
+  relate("against Ref", schema(), { kind: "ref", element: INT }, UNRELATED);
   relate("against its decoded type", schema(), INT, UNRELATED);
 });
 
@@ -338,7 +334,7 @@ Deno.test("Sink: failure and requirement sets are subsets", () => {
   );
 });
 
-// ------------------------------------------------- RetrySchedule and Codec
+// ------------------------------------------------------------ RetrySchedule
 
 Deno.test("RetrySchedule: the error type is invariant", () => {
   const retry = (error: Type): Type => ({ kind: "retry-schedule", error });
@@ -356,33 +352,6 @@ Deno.test("RetrySchedule: the error type is invariant", () => {
   );
   relate("int against number", retry(INT), retry(NUMBER), UNRELATED);
   relate("an alias equals its target", retry(ALIAS), retry(STRING), EQUAL);
-});
-
-Deno.test("Codec: decoded and encoded types are invariant", () => {
-  const codec = (decoded: Type, encoded: Type): Type => ({
-    kind: "codec",
-    decoded,
-    encoded,
-  });
-  relate("equal", codec(INT, STRING), codec(INT, STRING), EQUAL);
-  relate(
-    "decoded int against number",
-    codec(INT, STRING),
-    codec(NUMBER, STRING),
-    UNRELATED,
-  );
-  relate(
-    "encoded string against unknown",
-    codec(INT, STRING),
-    codec(INT, UNKNOWN),
-    UNRELATED,
-  );
-  relate(
-    "an alias equals its target",
-    codec(INT, ALIAS),
-    codec(INT, STRING),
-    EQUAL,
-  );
 });
 
 // -------------------------------------------- Fiber

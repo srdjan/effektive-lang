@@ -283,14 +283,6 @@ export class TypeLowerer {
         };
       },
     },
-    Codec: {
-      kind: "generic",
-      arity: 2,
-      build: (lowerer, [decoded, encoded]) => ({
-        ref: lowerer.env.table.codec(decoded.ref, encoded.ref),
-        ir: { kind: "codec", decoded: decoded.ir, encoded: encoded.ir },
-      }),
-    },
     Fiber: {
       kind: "generic",
       arity: 2,

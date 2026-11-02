@@ -135,7 +135,6 @@ export type R = { __proto__?: Text, constructor?: Text, toString?: Text }
 export type Tree = { data: R, kids: Tree[] }
 const text: Schema<Text> = schema()
 export const record: Schema<R> = schemaStruct({ __proto__: schemaOptionalKey(text), constructor: schemaOptionalKey(text), toString: schemaOptionalKey(text) })
-export const roundtrip: Codec<R, R> = codec((r: R): R => r, (r: R): R => r)
 const tree: Schema<Tree> = schema()
 export const readSchema = (input: unknown): R fails SchemaError => schemaDecode(record, input)
 export const writeSchema = (input: R): R fails SchemaError => schemaEncode(record, input)
@@ -146,10 +145,9 @@ export const encodeTree = (input: Tree): Tree fails SchemaError => schemaEncode(
     },
     ["m.eff"],
     `
-import { Effect, Option } from "effect";
-import { readSchema, writeSchema, make, decodeTree, encodeTree, roundtrip } from "./m.ts";
+import { Effect } from "effect";
+import { readSchema, writeSchema, make, decodeTree, encodeTree } from "./m.ts";
 const present = JSON.parse('{"__proto__":"p","constructor":"c","toString":"t"}');
-if (Option.isNone(roundtrip.decode({})) || Option.isNone(roundtrip.encode(await Effect.runPromise(make())))) throw new Error("codec absence");
 const extra = Object.defineProperty({}, "ignored", { enumerable: true, get() { throw new Error("ignored field was evaluated"); } });
 const absent = await Effect.runPromise(readSchema(extra));
 const value = await Effect.runPromise(readSchema(present));

@@ -124,17 +124,12 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return [e.step];
     case "retry-with-schedule":
       return [e.job, e.options];
-    case "codec":
-      return [e.decode, e.encode];
     case "schema":
       return [...e.arguments];
     case "schema-make":
     case "schema-decode":
     case "schema-encode":
       return [e.schema, e.input];
-    case "decode":
-    case "encode":
-      return [e.codec, e.input];
     case "with-fiber":
       return [e.job, e.use];
     case "join-fiber":

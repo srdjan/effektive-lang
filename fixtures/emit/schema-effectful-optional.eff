@@ -2,9 +2,9 @@ type Int = int
 type Optional = { score?: Int }
 type Required = { score: Int }
 
-service Read { next(value: Int): Int }
-service Write { previous(value: Int): Int }
-service Default { make(): Int }
+service Read { next(value: Int): Int fails SchemaIssue }
+service Write { previous(value: Int): Int fails SchemaIssue }
+service Default { make(): Int fails SchemaIssue }
 
 const integer: Schema<Int> = schema()
 const exact: SchemaOptional<Int> = schemaOptionalKey(integer)
@@ -15,22 +15,12 @@ export const transformedField: SchemaOptional<Int, Int, Read.next, Write.previou
     exact,
     (value: Option<Int>): Option<Int> fails SchemaIssue uses Read.next =>
       match value {
-        Some(score) => {
-          const next = Read.next(score)
-          if (next > 0) { Some(next) } else {
-            fail(schemaAt("decode", schemaInvalid("read blocked")))
-          }
-        },
+        Some(score) => Some(Read.next(score)),
         None => Some(Read.next(0))
       },
     (value: Option<Int>): Option<Int> fails SchemaIssue uses Write.previous =>
       match value {
-        Some(score) => {
-          const previous = Write.previous(score)
-          if (previous >= 0) { Some(previous) } else {
-            fail(schemaAt("encode", schemaInvalid("write blocked")))
-          }
-        },
+        Some(score) => Some(Write.previous(score)),
         None => Some(Write.previous(1))
       }
   )
@@ -39,12 +29,7 @@ export const transformed: Schema<Optional, Optional, Read.next, Write.previous> 
 
 export const defaultField: SchemaEncodedOptional<Int, Int, Default.make> =
   schemaDefaultKey(integer,
-    (): Int fails SchemaIssue uses Default.make => {
-      const value = Default.make()
-      if (value > 0) { value } else {
-        fail(schemaAt("missing", schemaInvalid("no default")))
-      }
-    })
+    (): Int fails SchemaIssue uses Default.make => Default.make())
 export const defaulted: Schema<Required, Optional, Default.make> =
   schemaStruct({ score: defaultField })
 

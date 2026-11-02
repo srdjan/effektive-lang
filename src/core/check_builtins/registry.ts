@@ -3,7 +3,6 @@
 // body checker adds the rows of the builtins that call its private members.
 
 import type { BuiltinContext } from "./context.ts";
-import { CODEC_ROWS } from "./codec.ts";
 import { COLLECTION_ROWS, type CollectionContext } from "./collections.ts";
 import { EFFECT_ROWS, type EffectContext } from "./effect.ts";
 import { FIBER_ROWS, type FiberContext } from "./fiber.ts";
@@ -35,7 +34,6 @@ type FamilyContext =
 
 /** The family row tables by family name, for the test of the key sets. */
 export const FAMILY_ROW_TABLES = {
-  codec: CODEC_ROWS,
   collections: COLLECTION_ROWS,
   effect: EFFECT_ROWS,
   fiber: FIBER_ROWS,
@@ -52,7 +50,6 @@ export const FAMILY_ROWS: Rows<
   Exclude<PreludeCallName, CoreRowName>,
   FamilyContext
 > = {
-  ...CODEC_ROWS,
   ...COLLECTION_ROWS,
   ...EFFECT_ROWS,
   ...FIBER_ROWS,

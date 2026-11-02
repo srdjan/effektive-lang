@@ -54,20 +54,6 @@ Deno.test("a private error reached only through a RetrySchedule error is exporte
   assertExported(text, "E");
 });
 
-Deno.test("a private type reached only through a Codec decoded type is exported", () => {
-  const text = emitted(
-    "type Int = int\ntype B = { n: Int }\nexport const c: Codec<B, Int> = codec((n: Int): B => ({ n: n }), (b: B): Int => b.n)\n",
-  );
-  assertExported(text, "B");
-});
-
-Deno.test("a private type reached only through a Codec encoded type is exported", () => {
-  const text = emitted(
-    "type Int = int\ntype B = { n: Int }\nexport const c: Codec<Int, B> = codec((b: B): Int => b.n, (n: Int): B => ({ n: n }))\n",
-  );
-  assertExported(text, "B");
-});
-
 Deno.test("a private type reached only through a Schema make input is exported", () => {
   const text = emitted([
     "type Int = int",

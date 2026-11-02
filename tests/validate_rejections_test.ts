@@ -90,9 +90,6 @@ const one = (): Int => 1
 const FAMILIES_SOURCE = `type Int = int
 type Text = string
 const integer: Schema<Int> = schema()
-const shift: Codec<Int, Int> = codec((n: Int): Int => 1, (n: Int): Int => 2)
-const decoded = (input: unknown): Option<Int> => decode(shift, input)
-const encoded = (n: Int): Option<Int> => encode(shift, n)
 const word = (): Text => "x"
 const fibered = (): Int => withFiber(defer(() => 1), (fiber) => 1)
 const read = (ref: Ref<Int>): Int => getRef(ref)
@@ -871,58 +868,6 @@ const ROWS: readonly Row[] = [
   },
   // ---------------------------------------------------------------- families
   {
-    site: "codec.ts:28",
-    name: "a codec over values that are not functions",
-    program: "families",
-    change: (ir) => {
-      find(constant(ir, "shift").value, "codec").decode = intLiteral(
-        ir,
-        "word",
-      );
-    },
-    expected: [
-      "validation/002 declarations[3].value: codec needs two single-argument functions",
-    ],
-  },
-  {
-    site: "codec.ts:48",
-    name: "a codec whose encode input does not fit the decode result",
-    program: "families",
-    change: (ir) => {
-      const encode = find(
-        find(constant(ir, "shift").value, "codec").encode,
-        "closure",
-      );
-      encode.parameters[0].type = STRING;
-      closureType(encode).parameters[0] = STRING;
-    },
-    expected: [
-      "validation/002 declarations[3].value: codec encode transformation must reverse decode types",
-    ],
-  },
-  {
-    site: "codec.ts:93",
-    name: "a decode over a value that is not a Codec",
-    program: "families",
-    change: (ir) => {
-      find(fn(ir, "decoded").body, "decode").codec = intLiteral(ir, "word");
-    },
-    expected: [
-      "validation/002 declarations[4].body.codec: decode needs a Codec value",
-    ],
-  },
-  {
-    site: "codec.ts:102",
-    name: "an encode of an input that does not fit the decoded type",
-    program: "families",
-    change: (ir) => {
-      find(fn(ir, "encoded").body, "encode").input = intLiteral(ir, "word");
-    },
-    expected: [
-      "validation/002 declarations[5].body.input: encode input does not fit decoded type",
-    ],
-  },
-  {
     site: "fiber.ts:29",
     name: "a withFiber over a job that is not an Effect",
     program: "families",
@@ -930,7 +875,7 @@ const ROWS: readonly Row[] = [
       find(fn(ir, "fibered").body, "with-fiber").job = intLiteral(ir, "word");
     },
     expected: [
-      "validation/006 declarations[7].body: with-fiber needs an Effect and one inline use callback",
+      "validation/006 declarations[4].body: with-fiber needs an Effect and one inline use callback",
     ],
   },
   {
@@ -943,7 +888,7 @@ const ROWS: readonly Row[] = [
       closureType(use).parameters[0] = INT;
     },
     expected: [
-      "validation/002 declarations[7].body.use: fiber use parameter does not match child type",
+      "validation/002 declarations[4].body.use: fiber use parameter does not match child type",
     ],
   },
   {
@@ -961,7 +906,7 @@ const ROWS: readonly Row[] = [
       closureType(use).parameters[0] = forged;
     },
     expected: [
-      "validation/002 declarations[16].body.use: fiber use parameter does not match child type",
+      "validation/002 declarations[13].body.use: fiber use parameter does not match child type",
     ],
   },
   {
@@ -979,7 +924,7 @@ const ROWS: readonly Row[] = [
       closureType(use).parameters[0] = forged;
     },
     expected: [
-      "validation/002 declarations[7].body.use: fiber use parameter does not match child type",
+      "validation/002 declarations[4].body.use: fiber use parameter does not match child type",
     ],
   },
   {
@@ -997,7 +942,7 @@ const ROWS: readonly Row[] = [
       closureType(use).parameters[0] = forged;
     },
     expected: [
-      "validation/002 declarations[7].body.use: fiber use parameter does not match child type",
+      "validation/002 declarations[4].body.use: fiber use parameter does not match child type",
     ],
   },
   {
@@ -1009,10 +954,10 @@ const ROWS: readonly Row[] = [
         UNKNOWN;
     },
     expected: [
-      "validation/002 declarations[7].body.type: expected unknown, recorded int",
-      "validation/002 declarations[7].body: the body type unknown does not fit the declared result type:m#Int",
-      "validation/002 declarations[7].body.use: fiber use result must be data only",
-      "validation/002 declarations[7].body.use.body: the body type int does not fit the closure result unknown",
+      "validation/002 declarations[4].body.type: expected unknown, recorded int",
+      "validation/002 declarations[4].body: the body type unknown does not fit the declared result type:m#Int",
+      "validation/002 declarations[4].body.use: fiber use result must be data only",
+      "validation/002 declarations[4].body.use.body: the body type int does not fit the closure result unknown",
     ],
   },
   {
@@ -1023,7 +968,7 @@ const ROWS: readonly Row[] = [
       find(fn(ir, "read").body, "get-ref").ref = intLiteral(ir, "word");
     },
     expected: [
-      "validation/002 declarations[8].body: get-ref needs a Ref value",
+      "validation/002 declarations[5].body: get-ref needs a Ref value",
     ],
   },
   {
@@ -1034,7 +979,7 @@ const ROWS: readonly Row[] = [
       find(fn(ir, "write").body, "set-ref").value = intLiteral(ir, "word");
     },
     expected: [
-      "validation/002 declarations[9].body.value: the new value must fit the Ref element",
+      "validation/002 declarations[6].body.value: the new value must fit the Ref element",
     ],
   },
   {
@@ -1048,7 +993,7 @@ const ROWS: readonly Row[] = [
       );
     },
     expected: [
-      "validation/004 declarations[10].body.transform: updateRef needs an element-to-element callback",
+      "validation/004 declarations[7].body.transform: updateRef needs an element-to-element callback",
     ],
   },
   {
@@ -1062,7 +1007,7 @@ const ROWS: readonly Row[] = [
       );
     },
     expected: [
-      "validation/002 declarations[11].body: schema runner needs an ordinary Schema value",
+      "validation/002 declarations[8].body: schema runner needs an ordinary Schema value",
     ],
   },
   {
@@ -1081,7 +1026,7 @@ const ROWS: readonly Row[] = [
       find(f.body, "merge-streams").right.type = text;
     },
     expected: [
-      "validation/002 declarations[12].body: mergeStreams needs compatible element types",
+      "validation/002 declarations[9].body: mergeStreams needs compatible element types",
     ],
   },
   // ---------------------------------------------------------------- serialization.ts

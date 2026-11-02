@@ -31,8 +31,6 @@ export function typeChildren(t: Type): readonly TypeChild[] {
       return [child(t.element, ".element")];
     case "retry-schedule":
       return [child(t.error, ".error")];
-    case "codec":
-      return [child(t.decoded, ".decoded"), child(t.encoded, ".encoded")];
     case "schema":
       return t.makeInput === undefined
         ? [child(t.decoded, ".decoded"), child(t.encoded, ".encoded")]

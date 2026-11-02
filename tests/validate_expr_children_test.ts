@@ -495,7 +495,6 @@ function syntheticNodes(): Record<Expr["kind"], Expr> {
       job: leaf(),
       options: leaf(),
     },
-    codec: { ...a, kind: "codec", decode: leaf(), encode: leaf() },
     schema: {
       ...a,
       kind: "schema",
@@ -520,8 +519,6 @@ function syntheticNodes(): Record<Expr["kind"], Expr> {
       schema: leaf(),
       input: leaf(),
     },
-    decode: { ...a, kind: "decode", codec: leaf(), input: leaf() },
-    encode: { ...a, kind: "encode", codec: leaf(), input: leaf() },
     "with-fiber": {
       ...a,
       kind: "with-fiber",
@@ -621,8 +618,8 @@ Deno.test("exprChildren equals a reflective walk on every node of every fixture 
 Deno.test("exprChildren equals a reflective walk on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
   const kinds = Object.keys(synthetic);
-  // The Expr union of src/core/ir.ts has 94 kinds.
-  assertEquals(kinds.length, 94);
+  // The Expr union of src/core/ir.ts has 91 kinds.
+  assertEquals(kinds.length, 91);
   for (const [kind, node] of Object.entries(synthetic)) {
     assertEquals(node.kind, kind);
     assertSameChildren(node, "synthetic");
@@ -650,7 +647,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
     for (const node of all) reached.add(node.kind);
   }
   const synthetic = new Set(Object.keys(syntheticNodes()));
-  assertEquals(new Set([...reached, ...synthetic]).size, 94);
+  assertEquals(new Set([...reached, ...synthetic]).size, 91);
   for (const kind of reached) assert(synthetic.has(kind), kind);
 });
 
@@ -663,7 +660,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
 // [job, durationMs].
 Deno.test("childrenOf and exprChildren give the same child multiset on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
-  assertEquals(Object.keys(synthetic).length, 94);
+  assertEquals(Object.keys(synthetic).length, 91);
   const differentOrder: string[] = [];
   for (const [kind, node] of Object.entries(synthetic)) {
     const emitted = childrenOf(node);

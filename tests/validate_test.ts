@@ -1680,23 +1680,6 @@ type Int = int
   assertEquals(codesOf(wrong, sources), ["validation/003"]);
 });
 
-Deno.test("codec validator rejects an effectful transformation in IR", () => {
-  const { ir, sources } = lowerText(`
-type Int = int
-export const shift: Codec<Int, Int> = codec((n: Int): Int => n + 1, (n: Int): Int => n - 1)
-`);
-  assertEquals(validateModule(ir, sources), []);
-  const wrong = copy(ir);
-  const shift = wrong.declarations[decl(wrong, "shift")];
-  assert(shift.kind === "constant" && shift.value.kind === "codec");
-  setAt(
-    wrong,
-    `declarations[${decl(wrong, "shift")}].value.decode.type.execution`,
-    "effect",
-  );
-  assert(codesOf(wrong, sources).includes("validation/006"));
-});
-
 Deno.test("scoped fiber validator checks join failures and handle identity", () => {
   const { ir, sources } = lowerText(`
 error Stop = {}

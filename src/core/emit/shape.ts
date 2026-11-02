@@ -196,13 +196,10 @@ const ROWS = {
     deferred: (e) => [e.job, e.options],
     leaf: "leaf",
   },
-  codec: { children: (e) => [e.decode, e.encode], leaf: "structural" },
   schema: { children: (e) => e.arguments, leaf: "structural" },
   "schema-decode": { children: (e) => [e.schema, e.input], leaf: "leaf" },
   "schema-encode": { children: (e) => [e.schema, e.input], leaf: "leaf" },
   "schema-make": { children: (e) => [e.schema, e.input], leaf: "leaf" },
-  decode: { children: (e) => [e.codec, e.input], leaf: "structural" },
-  encode: { children: (e) => [e.codec, e.input], leaf: "structural" },
   "with-fiber": {
     children: (e) => [e.job],
     deferred: (e) => [e.use],

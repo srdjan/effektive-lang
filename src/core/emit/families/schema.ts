@@ -270,36 +270,6 @@ export function schemaStructural(
         emitted([`${schema}.Union`, callArguments([kid(args[0])])]),
       );
     }
-    case "invalid": {
-      const issue = c.scope.effect("SchemaIssue");
-      return emitted([
-        `new ${issue}.InvalidValue({ message: `,
-        free(kid(args[0])),
-        " })",
-      ]);
-    }
-    case "at": {
-      const issue = c.scope.effect("SchemaIssue");
-      return emitted([
-        `new ${issue}.Pointer([`,
-        free(kid(args[0])),
-        "], ",
-        free(kid(args[1])),
-        ")",
-      ]);
-    }
-    case "both": {
-      const issue = c.scope.effect("SchemaIssue");
-      return emitted([
-        `new ${issue}.Composite(`,
-        at(kid(args[0]), PREC.member),
-        ".ast, [",
-        free(kid(args[1])),
-        ", ",
-        free(kid(args[2])),
-        "])",
-      ]);
-    }
     case "recursive": {
       const body = c.scope.temp();
       const self = c.scope.temp();

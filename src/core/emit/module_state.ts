@@ -66,7 +66,6 @@ type DeferredKind =
   | "provider"
   | "ref"
   | "retry-schedule"
-  | "codec"
   | "schema"
   | "fiber";
 
@@ -80,7 +79,6 @@ const DEFERRED_KINDS = {
   "provider": true,
   "ref": true,
   "retry-schedule": true,
-  "codec": true,
   "schema": true,
   "fiber": true,
 } as const satisfies Record<DeferredKind, true>;

@@ -217,27 +217,6 @@ const SCHEMA_BUILTINS = {
     preservesMakeInput: true,
     recursion: "reject",
   },
-  schemaInvalid: {
-    op: "invalid",
-    arity: 1,
-    acceptsDefault: false,
-    preservesMakeInput: false,
-    recursion: "reject",
-  },
-  schemaAt: {
-    op: "at",
-    arity: 2,
-    acceptsDefault: false,
-    preservesMakeInput: false,
-    recursion: "reject",
-  },
-  schemaBoth: {
-    op: "both",
-    arity: 3,
-    acceptsDefault: false,
-    preservesMakeInput: true,
-    recursion: "reject",
-  },
 } as const satisfies Record<string, SchemaBuiltin>;
 
 /** The values of the `on` option of `schemaDefaultKey`. */
@@ -304,9 +283,6 @@ const SCHEMA_HANDLERS: SchemaHandlers = {
   decode: (c, call) => schemaOperationCall(c, call, "decode"),
   encode: (c, call) => schemaOperationCall(c, call, "encode"),
   make: (c, call) => schemaOperationCall(c, call, "make"),
-  invalid: (c, call) => schemaInvalidCall(c, call),
-  at: (c, call) => schemaAtCall(c, call),
-  both: (c, call) => schemaBothCall(c, call),
 };
 
 /** The Schema operation that the prologue recorded for a Schema builtin call. */
@@ -487,47 +463,6 @@ function firstSchema(c: SchemaContext, call: SchemaCall): {
 } {
   const first = c.argInfo(call.args[0]);
   return { first, schema: schemaOf(c, call, first, call.args[0].node) };
-}
-
-/** The result of `schemaInvalid`, `schemaAt`, and `schemaBoth`: a SchemaIssue. */
-function schemaIssue(
-  c: SchemaContext,
-  call: SchemaCall,
-  check: (infos: NodeInfo[], issue: TypeRef) => void,
-): NodeInfo {
-  const infos = call.args.map((arg) => c.argInfo(arg));
-  const issue = c.table.named(SCHEMA_ISSUE_ID);
-  check(infos, issue);
-  return c.finish(call.node, issue, combine(infos));
-}
-
-function schemaInvalidCall(c: SchemaContext, call: SchemaCall): NodeInfo {
-  const { args } = call;
-  return schemaIssue(c, call, (infos) => {
-    c.fits(args[0].node, infos[0].type, c.table.string, "schema issue message");
-  });
-}
-
-function schemaAtCall(c: SchemaContext, call: SchemaCall): NodeInfo {
-  const { args } = call;
-  return schemaIssue(c, call, (infos, issue) => {
-    c.fits(
-      args[0].node,
-      infos[0].type,
-      c.table.union([c.table.string, c.table.int]),
-      "schema issue key",
-    );
-    c.fits(args[1].node, infos[1].type, issue, "nested schema issue");
-  });
-}
-
-function schemaBothCall(c: SchemaContext, call: SchemaCall): NodeInfo {
-  const { args } = call;
-  return schemaIssue(c, call, (infos, issue) => {
-    schemaOf(c, call, infos[0], args[0].node);
-    c.fits(args[1].node, infos[1].type, issue, "left schema issue");
-    c.fits(args[2].node, infos[2].type, issue, "right schema issue");
-  });
 }
 
 /**
@@ -1409,7 +1344,4 @@ export const SCHEMA_ROWS = {
   schemaDecode: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
   schemaEncode: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
   schemaMake: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaInvalid: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaAt: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaBoth: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
 } satisfies Partial<Rows<PreludeCallName, SchemaContext>>;

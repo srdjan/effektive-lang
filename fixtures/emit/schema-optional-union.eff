@@ -41,24 +41,6 @@ export const taggedNode: Schema<TaggedNode> = schemaRecursive(
   ])
 )
 
-export const positive: Schema<Int> = schemaTransform(
-  integer,
-  integer,
-  (value: Int): Int fails SchemaIssue =>
-    if (value > 0) { value } else {
-      fail(schemaAt("value", schemaBoth(integer,
-        schemaInvalid("not positive"), schemaInvalid("try another value"))))
-    },
-  (value: Int): Option<Int> => Some(value)
-)
-export const positiveEncode: Schema<Int> = schemaTransform(
-  integer,
-  integer,
-  (value: Int): Option<Int> => Some(value),
-  (value: Int): Int fails SchemaIssue =>
-    if (value > 0) { value } else { fail(schemaAt("encode", schemaInvalid("cannot encode zero"))) }
-)
-
 export const readChoice = (input: unknown): Choice fails SchemaError uses Read.next =>
   schemaDecode(choice, input)
 export const writeChoice = (value: Choice): Choice fails SchemaError uses Write.previous =>
@@ -67,7 +49,3 @@ export const readOptional = (input: unknown): Optional fails SchemaError uses Re
   schemaDecode(optional, input)
 export const writeOptional = (value: Optional): Optional fails SchemaError uses Write.previous =>
   schemaEncode(optional, value)
-export const readPositive = (input: unknown): Int fails SchemaError =>
-  schemaDecode(positive, input)
-export const writePositive = (value: Int): Int fails SchemaError =>
-  schemaEncode(positiveEncode, value)

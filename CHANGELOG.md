@@ -26,6 +26,12 @@
 - `partitionAll`, `validateAll`, and `allResults` are gone. No application
   used them. `all`, `traverse`, `map`, `filter`, and `fold` stay. The IR
   loses three expression kinds.
+- `codec`, `decode`, `encode`, the type `Codec`, and the issue constructors
+  `schemaInvalid`, `schemaAt`, and `schemaBoth` are gone. No application used
+  them. The Schema builders stay, and `SchemaIssue` stays as a reserved
+  error: `schemaMake` and host services still fail with it. A source
+  factory can no longer add a parent path to an issue. The IR loses the type
+  kind `codec` and three expression kinds.
 - `build --validate` and `Revision.validate` are gone, and `frontend.ts` no
   longer exports `validateProject`. The independent IR validator is a test
   oracle: tests import it from `src/core/validate_project.ts`. The command-line

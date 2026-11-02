@@ -39,8 +39,8 @@ export const recursive: Schema<Tree, Tree, never, never, TreeInput> = schemaRecu
 export const shifted: Schema<Int, Text> = schemaTransform(
   text,
   integer,
-  (value: Text): Int fails SchemaIssue => fail(schemaInvalid("x")),
-  (value: Int): Text fails SchemaIssue => fail(schemaInvalid("x"))
+  (value: Text): Int fails SchemaIssue => schemaMake(integer, 1),
+  (value: Int): Text fails SchemaIssue => schemaMake(text, "x")
 )
 export const keep = (value: Option<Text>): Option<Text> => value
 export const widen = (value: Text): Option<Text> => Some(value)

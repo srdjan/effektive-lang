@@ -1,4 +1,4 @@
-// Slow tests of the emitter: codecs, data values, and running the emitted
+// Slow tests of the emitter: data values, and running the emitted
 // examples. Each test copies a fixture project to a temporary directory, builds
 // there, and runs `deno check`, `deno fmt`, or `deno run` on the result.
 // Nothing is written under fixtures/.
@@ -13,36 +13,7 @@ import {
   withTemporary,
 } from "./emit_slow_helpers.ts";
 
-Deno.test("pure codecs validate both directions and preserve None", async () => {
-  await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
-      [
-        "type Int = int",
-        "export const shift: Codec<Int, Int> = codec((n: Int): Int => n + 1, (n: Int): Int => n - 1)",
-        "export const parse = (input: unknown): Option<Int> => decode(shift, input)",
-        "export const print = (n: Int): Option<Int> => encode(shift, n)",
-        "",
-      ].join("\n"),
-    );
-    build(dir, ["main.eff"]);
-    const result = await runScript(
-      dir,
-      `
-import { Option } from "effect";
-import { parse, print } from "./main.ts";
-const good = parse(4);
-const bad = parse("bad");
-const encoded = print(5);
-console.log(JSON.stringify({ good: Option.getOrUndefined(good), bad: Option.isNone(bad), encoded: Option.getOrUndefined(encoded) }));
-`,
-    );
-    assertEquals(result, { good: 5, bad: true, encoded: 4 });
-  });
-});
-
-Deno.test("data values carry a tag, keep it when widened, and round trip through a schema and a codec", async () => {
+Deno.test("data values carry a tag, keep it when widened, and round trip through a schema", async () => {
   await withTemporary(async (dir) => {
     copyDirectory(new URL("emit/forms/", FIXTURES), dir);
     build(dir, ["data-types.eff"]);
@@ -332,41 +303,6 @@ console.log(JSON.stringify({
       },
       forestBack: "recursive-data#Forest",
       badTag: "Failure",
-    });
-  });
-});
-
-Deno.test("a pure codec over a data type decodes into data and encodes back", async () => {
-  await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
-      [
-        "type Text = string",
-        "export type Name = { text: Text }",
-        "type Other = { count: Text }",
-        "type Records = Name | Other",
-        "export const names: Codec<Name, Text> = codec((text: Text): Name => Name({ text }), (name: Name): Text => name.text)",
-        "export const parse = (input: unknown): Option<Name> => decode(names, input)",
-        "export const print = (name: Name): Option<Text> => encode(names, name)",
-        "",
-      ].join("\n"),
-    );
-    build(dir, ["main.eff"]);
-    const result = await runScript(
-      dir,
-      `
-import { Option } from "effect";
-import { Name, parse, print } from "./main.ts";
-console.log(JSON.stringify({
-  parsed: Option.getOrUndefined(parse("Zed")),
-  printed: Option.getOrUndefined(print(Name.make({ text: "Amy" }))),
-}));
-`,
-    );
-    assertEquals(result, {
-      parsed: { _tag: "main#Name", text: "Zed" },
-      printed: "Amy",
     });
   });
 });

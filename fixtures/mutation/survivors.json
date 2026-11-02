@@ -137,7 +137,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.keyOf",
-    "offset": 1032,
+    "offset": 960,
     "text": "node.presence === \"optional\"",
     "operator": "comparison",
     "class": "equivalent",
@@ -146,7 +146,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.keyOf",
-    "offset": 1074,
+    "offset": 1002,
     "text": "node.presence === \"encoded-optional\"",
     "operator": "comparison",
     "class": "equivalent",
@@ -155,7 +155,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.keyOf",
-    "offset": 1124,
+    "offset": 1052,
     "text": "node.presence === \"decoded-optional\"",
     "operator": "comparison",
     "class": "equivalent",
@@ -164,7 +164,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "guardedRecord",
-    "offset": 1230,
+    "offset": 1210,
     "text": "!field.optional && tagOf(field.type) !== undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -173,7 +173,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.keyOf",
-    "offset": 1218,
+    "offset": 1146,
     "text": "node.constructorDefault === true",
     "operator": "comparison",
     "class": "equivalent",
@@ -182,7 +182,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "guardedRecord",
-    "offset": 1866,
+    "offset": 1846,
     "text": "tagged && hasDistinctTag",
     "operator": "logical",
     "class": "equivalent",
@@ -191,7 +191,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.assignable",
-    "offset": 5824,
+    "offset": 5592,
     "text": "i < sn.elements.length",
     "operator": "comparison",
     "class": "equivalent",
@@ -200,7 +200,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.assignable",
-    "offset": 6739,
+    "offset": 6507,
     "text": "i < tn.parameters.length",
     "operator": "comparison",
     "class": "equivalent",

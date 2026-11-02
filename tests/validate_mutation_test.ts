@@ -67,25 +67,6 @@ function setAt(root: unknown, path: string, value: unknown): void {
 }
 
 const NONE = { failures: [], requirements: [] };
-const INT = { kind: "primitive", name: "int" };
-const STRING = { kind: "primitive", name: "string" };
-
-/** A valid literal expression of the wrong type, at the span of the node it replaces. */
-function literalAt(old: unknown, value: string | number | boolean): unknown {
-  const type = typeof value === "string"
-    ? STRING
-    : typeof value === "number"
-    ? INT
-    : { kind: "primitive", name: "boolean" };
-  return {
-    kind: "literal",
-    value,
-    type,
-    execution: "pure",
-    effects: NONE,
-    span: child(old, "span"),
-  };
-}
 
 interface Lowered {
   readonly ir: ModuleIR;
@@ -171,11 +152,6 @@ function runMutations(
   }
 }
 
-function asArray(value: unknown): unknown[] {
-  assert(Array.isArray(value), "not an array");
-  return value;
-}
-
 // ---------------------------------------------------------- channel erasure
 
 Deno.test("channel erasure: mapGroups loses one failure or requirement and keeps the callback evidence", () => {
@@ -215,101 +191,6 @@ const used = (source: Stream<Int, Stop, Work.value>): Stream<Int, Stop | Other, 
 });
 
 // ------------------------------------------------------------------- Schema
-
-Deno.test("Schema issue operations reject a wrong argument expression", () => {
-  const lowered = lowerText(`
-type Int = int
-const integer: Schema<Int> = schema()
-const invalid = schemaInvalid("x")
-const keyed = schemaAt("k", schemaInvalid("x"))
-const both = schemaBoth(integer, schemaInvalid("a"), schemaInvalid("b"))
-`);
-  runMutations(lowered, [
-    {
-      label: "schemaInvalid with an int message",
-      declaration: "invalid",
-      edits: [[
-        "value.arguments[0]",
-        (d) => literalAt(at(d, "value.arguments[0]"), 1),
-      ]],
-      expected: [{
-        code: "validation/002",
-        path: "value",
-        fragment: "schemaInvalid needs a string message",
-      }],
-    },
-    {
-      label: "schemaInvalid with a second argument",
-      declaration: "invalid",
-      edits: [[
-        "value.arguments",
-        (d) => [
-          ...asArray(at(d, "value.arguments")),
-          literalAt(at(d, "value.arguments[0]"), "extra"),
-        ],
-      ]],
-      expected: [{
-        code: "validation/002",
-        path: "value",
-        fragment: "schemaInvalid needs a string message",
-      }],
-    },
-    {
-      label: "schemaAt with a boolean key",
-      declaration: "keyed",
-      edits: [[
-        "value.arguments[0]",
-        (d) => literalAt(at(d, "value.arguments[0]"), true),
-      ]],
-      expected: [{
-        code: "validation/002",
-        path: "value",
-        fragment: "schemaAt needs a key and a SchemaIssue",
-      }],
-    },
-    {
-      label: "schemaAt with a string in place of the issue",
-      declaration: "keyed",
-      edits: [[
-        "value.arguments[1]",
-        (d) => literalAt(at(d, "value.arguments[1]"), "issue"),
-      ]],
-      expected: [{
-        code: "validation/002",
-        path: "value",
-        fragment: "schemaAt needs a key and a SchemaIssue",
-      }],
-    },
-    {
-      label: "schemaBoth with a string in place of the Schema",
-      declaration: "both",
-      edits: [[
-        "value.arguments[0]",
-        (d) => literalAt(at(d, "value.arguments[0]"), "integer"),
-      ]],
-      expected: [{
-        code: "validation/002",
-        path: "value",
-        fragment: "schemaBoth needs a Schema and two issues",
-      }],
-    },
-    {
-      label: "schemaBoth with a string in place of the second issue",
-      declaration: "both",
-      edits: [[
-        "value.arguments[2]",
-        (d) => literalAt(at(d, "value.arguments[2]"), "issue"),
-      ]],
-      expected: [{
-        code: "validation/002",
-        path: "value",
-        fragment: "schemaBoth needs a Schema and two issues",
-      }],
-    },
-  ]);
-});
-
-// ----------------------------------------------------------- null equality
 
 Deno.test("equality of two nullable operands without a null operand is rejected", () => {
   const lowered = lowerText(`

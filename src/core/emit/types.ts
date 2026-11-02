@@ -200,19 +200,6 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
         typeDoc(scope, type.error),
         ">",
       ];
-    case "codec": {
-      const option = scope.effect("Option");
-      return [
-        "{ readonly decode: (input: unknown) => ",
-        `${option}.Option<`,
-        typeDoc(scope, type.decoded),
-        ">; readonly encode: (input: ",
-        typeDoc(scope, type.decoded),
-        `) => ${option}.Option<`,
-        typeDoc(scope, type.encoded),
-        "> }",
-      ];
-    }
     case "schema": {
       const codec: Doc = [
         `${scope.effect("Schema")}.Codec`,

@@ -257,7 +257,6 @@ const COMPOSITE_KINDS = [
   "sink",
   "ref",
   "retry-schedule",
-  "codec",
   "schema",
   "provider",
 ] as const;
@@ -296,8 +295,6 @@ function anyType(g: Generator, depth: number): Type {
       };
     case "retry-schedule":
       return { kind, error: inner() };
-    case "codec":
-      return { kind, decoded: inner(), encoded: inner() };
     case "schema":
       return {
         kind,
@@ -808,7 +805,7 @@ Deno.test("assignment of plain types is transitive on both implementations", () 
     validator += check("validator", validatorTable);
   }
   assertEquals(failures.length, 0, report(failures));
-  assertEquals({ checker, validator }, { checker: 12250, validator: 12250 });
+  assertEquals({ checker, validator }, { checker: 17554, validator: 17554 });
 });
 
 Deno.test("the checker and the validator agree on generated pairs", () => {
@@ -863,28 +860,27 @@ Deno.test("the checker and the validator agree on generated pairs", () => {
     }
   }
   assertEquals(disagreements.length, 0, report(disagreements));
-  assertEquals(answers, { fit: 33029, rejected: 46971 });
-  assertEquals(fibers, { fit: 1768, rejected: 7594, failuresDiffer: 7376 });
-  assertEquals(authorityDecided, 870);
+  assertEquals(answers, { fit: 32448, rejected: 47552 });
+  assertEquals(fibers, { fit: 1883, rejected: 7787, failuresDiffer: 7526 });
+  assertEquals(authorityDecided, 907);
   assertEquals(Object.fromEntries([...kinds].sort()), {
-    "retry-schedule": 1384,
-    array: 2198,
-    codec: 1285,
-    effect: 1373,
-    fiber: 5389,
-    function: 4913,
-    literal: 903,
-    named: 5331,
-    option: 2130,
-    primitive: 1433,
-    provider: 1350,
-    record: 1419,
-    ref: 1308,
-    schema: 1294,
-    sink: 3381,
-    stream: 1398,
-    tuple: 1334,
-    union: 2177,
+    "retry-schedule": 1474,
+    array: 2227,
+    effect: 1460,
+    fiber: 5569,
+    function: 5095,
+    literal: 964,
+    named: 5110,
+    option: 2251,
+    primitive: 1461,
+    provider: 1480,
+    record: 1438,
+    ref: 1445,
+    schema: 1443,
+    sink: 3458,
+    stream: 1451,
+    tuple: 1414,
+    union: 2260,
   });
 });
 

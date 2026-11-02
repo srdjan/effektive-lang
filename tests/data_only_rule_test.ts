@@ -1,13 +1,11 @@
-// The three data-only rules ("value", "codec", and "schema") on both sides.
+// The data-only rules ("value" and "schema") on both sides.
 // They differ in two decisions: whether `void` is data, and whether the
 // reserved Schema errors are data.
 //
 //   value:  void is data, reserved errors are data.
-//   codec:  void is data, reserved errors are not data.
 //   schema: void is not data, reserved errors are not data.
 //
-// The codec rule has its own tests in codec_reserved_error_test.ts. This file
-// pins the schema rule against the value rule: a `Schema<...>` annotation
+// This file pins the schema rule against the value rule: a `Schema<...>` annotation
 // over `void` or a reserved error is rejected by the schema rule, and the
 // value rule at the `schema()` site must not add a second report. Each test
 // runs once through the checker (`checkProject`) and once through the

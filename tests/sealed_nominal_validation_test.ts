@@ -93,7 +93,6 @@ Deno.test("validator rejects forged sealed authority operations", () => {
     "export const bad: Schema<Positive[]> = schemaArray(positiveSchema)",
     "export const bad = (input: Input): Positive fails SchemaError => schemaDecode(positiveSchema, input)",
     "export const bad = (input: Positive): Positive fails SchemaIssue => schemaMake(positiveSchema, input)",
-    "export const bad = (read: pure (value: Positive) => Positive, write: pure (value: Positive) => Positive): Codec<Positive, Positive> => codec(read, write)",
   ];
   for (const source of cases) {
     const diagnostics = forgedDiagnostics(source);

@@ -132,26 +132,8 @@ const probe = () => makeLayer() |> provide(() => First.one())
   });
 });
 
-const CODEC_PRELUDE = `type Int = int
-const shift: Codec<Int, Int> = codec((n: Int): Int => n + 1, (n: Int): Int => n - 1)
-`;
-
-Deno.test("codec, decode, encode, and schema builtins reject a pipeline stage, so the lowering arm for them is dead", () => {
+Deno.test("schema builtins reject a pipeline stage, so the lowering arm for them is dead", () => {
   const programs = [
-    {
-      builtin: "codec",
-      text:
-        `type Int = int\nconst probe = (n: Int) => ((n: Int): Int => n + 1) |> codec((n: Int): Int => n - 1)\n`,
-    },
-    {
-      builtin: "decode",
-      text:
-        `${CODEC_PRELUDE}const probe = (input: unknown) => shift |> decode(input)\n`,
-    },
-    {
-      builtin: "encode",
-      text: `${CODEC_PRELUDE}const probe = (n: Int) => shift |> encode(n)\n`,
-    },
     {
       builtin: "schemaArray",
       text:

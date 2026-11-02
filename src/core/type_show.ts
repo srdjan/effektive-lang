@@ -84,10 +84,6 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
       return `Ref<${print(table, names, node.element)}>`;
     case "retry-schedule":
       return `RetrySchedule<${print(table, names, node.error)}>`;
-    case "codec":
-      return `Codec<${print(table, names, node.decoded)}, ${
-        print(table, names, node.encoded)
-      }>`;
     case "schema":
       return `${
         node.presence === "optional"

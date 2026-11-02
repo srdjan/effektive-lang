@@ -173,10 +173,6 @@ Deno.test("foreign sealed operations report their dedicated diagnostics", () => 
       "sealed/004",
       "export const bad = (input: Positive): Positive fails SchemaIssue => schemaMake(positiveSchema, input)",
     ],
-    [
-      "sealed/004",
-      "export const bad = (read: pure (value: Positive) => Positive, write: pure (value: Positive) => Positive): Codec<Positive, Positive> => codec(read, write)",
-    ],
   ] as const;
   for (const [code, source] of cases) {
     const project = consumer(source);

@@ -23,7 +23,6 @@ import {
   fits,
   foreignSealedOf,
   same,
-  STRING,
   unfold,
 } from "../typing.ts";
 import {
@@ -72,10 +71,6 @@ interface SchemaRow {
   /** The input Schema may carry a constructor default. */
   readonly acceptsDefault: boolean;
   readonly recursion: SchemaRecursion;
-}
-
-function schemaIssueType(): Type {
-  return { kind: "named", id: SCHEMA_ISSUE_ID };
 }
 
 /** The function has no failure outside `allowed`, and at most one failure. */
@@ -224,21 +219,6 @@ const schemaRows: Record<SchemaOp, SchemaRow> = {
     acceptsDefault: false,
     recursion: "none",
   },
-  "invalid": {
-    run: (c, call) => schemaInvalid(c, call),
-    acceptsDefault: false,
-    recursion: "none",
-  },
-  "at": {
-    run: (c, call) => schemaAt(c, call),
-    acceptsDefault: false,
-    recursion: "none",
-  },
-  "both": {
-    run: (c, call) => schemaBoth(c, call),
-    acceptsDefault: false,
-    recursion: "none",
-  },
 };
 
 /**
@@ -293,8 +273,7 @@ function schemaOf(
       (found.makeInput === undefined ||
         (fits(c.env, found.makeInput, found.decoded) &&
           fits(c.env, found.decoded, found.makeInput)) ||
-        // "invalid" and "at" return before any Schema is read, so only
-        // "identity" is left out of the make-input operations.
+        // Only "identity" is left out of the make-input operations.
         e.op !== "identity")
     ? found
     : undefined;
@@ -361,41 +340,6 @@ function schemaBad(c: ValidatorCore, call: SchemaCall, message: string): Comp {
 
 function schemaResult(call: SchemaCall, type: Type): Comp {
   return derivedResult(type, combine(call.args));
-}
-
-function schemaInvalid(c: ValidatorCore, call: SchemaCall): Comp {
-  const { args } = call;
-  if (args.length !== 1 || !fits(c.env, args[0].type, STRING)) {
-    return schemaBad(c, call, "schemaInvalid needs a string message");
-  }
-  return schemaResult(call, schemaIssueType());
-}
-
-function schemaAt(c: ValidatorCore, call: SchemaCall): Comp {
-  const { args } = call;
-  if (
-    args.length !== 2 ||
-    !fits(c.env, args[0].type, {
-      kind: "union",
-      members: [
-        { kind: "primitive", name: "string" },
-        { kind: "primitive", name: "int" },
-      ],
-    }) || !fits(c.env, args[1].type, schemaIssueType())
-  ) return schemaBad(c, call, "schemaAt needs a key and a SchemaIssue");
-  return schemaResult(call, schemaIssueType());
-}
-
-function schemaBoth(c: ValidatorCore, call: SchemaCall): Comp {
-  const { args } = call;
-  if (
-    args.length !== 3 || schemaArg(c, call, 0) === undefined ||
-    !fits(c.env, args[1].type, schemaIssueType()) ||
-    !fits(c.env, args[2].type, schemaIssueType())
-  ) {
-    return schemaBad(c, call, "schemaBoth needs a Schema and two issues");
-  }
-  return schemaResult(call, schemaIssueType());
 }
 
 function schemaIdentity(c: ValidatorCore, call: SchemaCall): Comp {

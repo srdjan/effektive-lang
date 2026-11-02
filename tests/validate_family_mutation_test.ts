@@ -116,10 +116,6 @@ const long: Schema<Long> = schema()
 const exact: SchemaOptional<Text> = schemaOptionalKey(text)
 const exactInt: SchemaOptional<Int> = schemaOptionalKey(integer)
 
-const message: SchemaIssue = schemaInvalid("blocked")
-const located: SchemaIssue = schemaAt("name", schemaInvalid("blocked"))
-const both: SchemaIssue = schemaBoth(text, schemaInvalid("left"), schemaInvalid("right"))
-
 const listed: Schema<Int[]> = schemaArray(integer)
 const nulls: SchemaOptional<Text, Nullable> = schemaNullToMissingKey(text)
 const optionFrom: SchemaEncodedOptional<Option<Text>, Text> = schemaOptionFromOptionalKey(text)
@@ -941,27 +937,6 @@ type SchemaArgRow = readonly [
   retype?: string,
 ];
 const SCHEMA_ARGUMENT_ROWS: readonly SchemaArgRow[] = [
-  [
-    "message",
-    "invalid",
-    "arguments[0]",
-    "int",
-    "schemaInvalid needs a string message",
-  ],
-  [
-    "located",
-    "at",
-    "arguments[1]",
-    "int",
-    "schemaAt needs a key and a SchemaIssue",
-  ],
-  [
-    "both",
-    "both",
-    "arguments[0]",
-    "int",
-    "schemaBoth needs a Schema and two issues",
-  ],
   ["listed", "array", "arguments[0]", "int", "schemaArray needs one Schema"],
   [
     "exact",

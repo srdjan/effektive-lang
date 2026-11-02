@@ -2,7 +2,7 @@ type Text = string
 type Optional = { name?: Text }
 type Required = { name: Text }
 
-service Read { normalize(value: Text): Option<Text> }
+service Read { normalize(value: Text): Option<Text> fails SchemaIssue }
 service Write { restore(value: Option<Text>): Text }
 
 const text: Schema<Text> = schema()
@@ -12,12 +12,7 @@ export const guardedField: SchemaDecodedOptional<Text, Text, Read.normalize, Wri
   schemaOptionalFromRequired(
     text,
     exact,
-    (value: Text): Option<Text> fails SchemaIssue uses Read.normalize =>
-      if (value === "blocked") {
-        fail(schemaAt("name", schemaInvalid("blocked name")))
-      } else {
-        Read.normalize(value)
-      },
+    (value: Text): Option<Text> fails SchemaIssue uses Read.normalize => Read.normalize(value),
     (value: Option<Text>): Text uses Write.restore => Write.restore(value)
   )
 

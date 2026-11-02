@@ -83,7 +83,6 @@ export function guardedRecord(
       case "tuple":
       case "ref":
       case "retry-schedule":
-      case "codec":
       case "schema":
       case "fiber":
       case "effect":
@@ -143,7 +142,6 @@ export function guardedRecord(
       case "option":
       case "ref":
       case "retry-schedule":
-      case "codec":
       case "schema":
       case "fiber":
       case "effect":
@@ -176,11 +174,6 @@ export type TypeNode =
   | { readonly kind: "option"; readonly element: TypeRef }
   | { readonly kind: "ref"; readonly element: TypeRef }
   | { readonly kind: "retry-schedule"; readonly error: TypeRef }
-  | {
-    readonly kind: "codec";
-    readonly decoded: TypeRef;
-    readonly encoded: TypeRef;
-  }
   | {
     readonly kind: "schema";
     readonly decoded: TypeRef;
@@ -385,8 +378,6 @@ function structuralChildren(
       return node.members;
     case "retry-schedule":
       return [node.error];
-    case "codec":
-      return [node.decoded, node.encoded];
     case "schema":
       return node.makeInput === undefined
         ? [node.decoded, node.encoded]
@@ -502,8 +493,6 @@ export class TypeTable {
         return `q:${node.element}`;
       case "retry-schedule":
         return `z:${node.error}`;
-      case "codec":
-        return `c:${node.decoded}:${node.encoded}`;
       case "schema":
         return `h:${
           JSON.stringify([
@@ -618,10 +607,6 @@ export class TypeTable {
 
   retrySchedule(error: TypeRef): TypeRef {
     return this.intern({ kind: "retry-schedule", error });
-  }
-
-  codec(decoded: TypeRef, encoded: TypeRef): TypeRef {
-    return this.intern({ kind: "codec", decoded, encoded });
   }
 
   schema(
@@ -1197,12 +1182,6 @@ export class TypeTable {
         return sn.kind === "retry-schedule" &&
           nested(sn.error, tn.error) &&
           nested(tn.error, sn.error);
-      case "codec":
-        return sn.kind === "codec" &&
-          nested(sn.decoded, tn.decoded) &&
-          nested(tn.decoded, sn.decoded) &&
-          nested(sn.encoded, tn.encoded) &&
-          nested(tn.encoded, sn.encoded);
       case "schema":
         return sn.kind === "schema" &&
           sn.presence === tn.presence &&
@@ -1291,12 +1270,10 @@ export class TypeTable {
  *
  * - "value": a value or an operation type. Accepts `unit` and the reserved
  *   Schema errors.
- * - "codec": a codec type. Accepts `unit` and rejects the reserved Schema
- *   errors, which have no compiler-derived schema.
  * - "schema": a `Schema<...>` type. Rejects `unit` and the reserved Schema
  *   errors.
  */
-type DataRule = "value" | "codec" | "schema" | "entry";
+type DataRule = "value" | "schema" | "entry";
 
 /**
  * What each rule rejects. A `Record` over the closed union makes a new rule a
@@ -1313,7 +1290,6 @@ const DATA_RULES: Readonly<
   >
 > = {
   value: { unit: false, reserved: false, unknown: true },
-  codec: { unit: false, reserved: true, unknown: true },
   schema: { unit: true, reserved: true, unknown: true },
   entry: { unit: false, reserved: true, unknown: false },
 };
@@ -1367,7 +1343,6 @@ export function dataOnly(
       return acceptPoisoned;
     case "retry-schedule":
     case "ref":
-    case "codec":
     case "schema":
     case "fiber":
     case "effect":
@@ -1447,7 +1422,6 @@ export function containsDeferredType(
     case "sink":
     case "retry-schedule":
     case "ref":
-    case "codec":
     case "schema":
     case "provider":
       return true;

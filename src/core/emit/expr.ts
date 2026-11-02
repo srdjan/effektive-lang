@@ -50,7 +50,6 @@ import {
   spanned,
   through,
 } from "./doc.ts";
-import { codecStructural } from "./families/codec.ts";
 import type { ExprCore } from "./families/context.ts";
 import { effectLeaf, effectStructural } from "./families/effect.ts";
 import { fiberLeaf } from "./families/fiber.ts";
@@ -822,10 +821,6 @@ export class ExprEmitter implements ExprCore {
         return streamStructural(this, e, kid);
       case "layer":
         return layerStructural(this, e);
-      case "codec":
-      case "decode":
-      case "encode":
-        return codecStructural(this, e, kid);
       case "schema":
         return schemaStructural(this, e, kid);
       case "call":

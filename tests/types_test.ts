@@ -688,7 +688,7 @@ Deno.test("an alias with identity fits its body, takes unnamed values, and never
   assert(t.isAssignable(t.array(a), t.array(t.int)));
   assert(t.isAssignable(t.array(t.int), t.array(a)));
   assert(!t.isAssignable(t.array(a), t.array(b)));
-  // Ref, Codec, and Schema positions fit in both directions.
+  // Ref and Schema positions fit in both directions.
   assert(t.isAssignable(t.ref(t.int), t.ref(a)));
   assert(t.isAssignable(t.ref(a), t.ref(t.int)));
   assert(!t.isAssignable(t.ref(a), t.ref(b)));
@@ -751,7 +751,6 @@ Deno.test("widening leaves invariant positions and parameters as they are", () =
   const a = t.named(ID_A);
   assert(!t.isAssignable(t.ref(a), t.ref(record)));
   assert(!t.isAssignable(t.ref(record), t.ref(a)));
-  assert(!t.isAssignable(t.codec(a, record), t.codec(record, record)));
   const fn = (parameter: TypeRef, result: TypeRef) =>
     pureFn(t, [parameter], result);
   assert(t.isAssignable(fn(record, record), fn(a, record)));

@@ -218,7 +218,6 @@ export type NodeFact =
   | { readonly kind: "layer"; readonly service: ServiceId | undefined }
   | { readonly kind: "merge-layers" }
   | { readonly kind: "retry-schedule" | "retry-with-schedule" }
-  | { readonly kind: "codec" | "decode" | "encode" }
   | {
     readonly kind: "schema";
     readonly op:
@@ -239,10 +238,7 @@ export type NodeFact =
       | "recursive"
       | "decode"
       | "encode"
-      | "make"
-      | "invalid"
-      | "at"
-      | "both";
+      | "make";
   }
   | { readonly kind: "with-fiber" | "join-fiber" | "interrupt-fiber" }
   /** A bracket literal, classified by its checked contextual type. */

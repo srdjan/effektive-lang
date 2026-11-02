@@ -334,10 +334,6 @@ export function referencedIds(type: Type, ids: Set<string>): void {
     case "retry-schedule":
       referencedIds(type.error, ids);
       return;
-    case "codec":
-      referencedIds(type.decoded, ids);
-      referencedIds(type.encoded, ids);
-      return;
     case "schema":
       referencedIds(type.decoded, ids);
       referencedIds(type.encoded, ids);

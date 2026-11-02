@@ -36,7 +36,6 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     context.ts     Shared argument, function, literal-field and local-use shapes, invocation effects, the shared views, and the checker operations.
     rows.ts        The row shape of a builtin: its prologue and its handler, and the prologue helpers.
     registry.ts    FAMILY_ROWS: the rows of all families, composed once.
-    codec.ts       Codec construction, decode and encode, including pure transformations and derived-schema checks.
     collections.ts Collection callbacks, traversal and grouped effects through a family-specific context.
     effect.ts      Effect construction, execution, failures and retry options through EffectContext.
     fiber.ts       Fiber operations and inline borrow lifetimes through FiberContext.

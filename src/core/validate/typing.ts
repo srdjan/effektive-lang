@@ -120,12 +120,10 @@ function follow(env: TypeEnv, type: Type, stopAtIdentity: boolean): Type {
  *
  * - "value": a value or an operation type. Accepts `unit` and the reserved
  *   Schema errors.
- * - "codec": a codec type. Accepts `unit` and rejects the reserved Schema
- *   errors, which have no compiler-derived schema.
  * - "schema": a `Schema<...>` type. Rejects `unit` and the reserved Schema
  *   errors.
  */
-type DataRule = "value" | "codec" | "schema";
+type DataRule = "value" | "schema";
 
 /**
  * What each rule rejects. A `Record` over the closed union makes a new rule a
@@ -135,7 +133,6 @@ const DATA_RULES: Readonly<
   Record<DataRule, { readonly unit: boolean; readonly reserved: boolean }>
 > = {
   value: { unit: false, reserved: false },
-  codec: { unit: false, reserved: true },
   schema: { unit: true, reserved: true },
 };
 
@@ -182,7 +179,6 @@ export function dataOnly(
     }
     case "ref":
     case "retry-schedule":
-    case "codec":
     case "schema":
     case "fiber":
     case "effect":
@@ -351,10 +347,6 @@ function assignable(
     case "retry-schedule":
       return s.kind === "retry-schedule" &&
         invariant(env, s.error, t.error, depth);
-    case "codec":
-      return s.kind === "codec" &&
-        invariant(env, s.decoded, t.decoded, depth) &&
-        invariant(env, s.encoded, t.encoded, depth);
     case "schema":
       return s.kind === "schema" &&
         s.optionalKey === t.optionalKey &&
@@ -460,7 +452,6 @@ function guardedAlias(env: TypeEnv, id: string): boolean {
       case "ref":
       case "tuple":
       case "retry-schedule":
-      case "codec":
       case "schema":
       case "fiber":
       case "effect":
@@ -647,7 +638,6 @@ export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
         return current.members.every(visit);
       case "ref":
       case "retry-schedule":
-      case "codec":
       case "schema":
       case "fiber":
       case "effect":
@@ -958,8 +948,6 @@ export function show(type: Type): string {
       return `Ref<${show(type.element)}>`;
     case "retry-schedule":
       return `RetrySchedule<${show(type.error)}>`;
-    case "codec":
-      return `Codec<${show(type.decoded)}, ${show(type.encoded)}>`;
     case "schema":
       return `${
         type.optionalKey === true

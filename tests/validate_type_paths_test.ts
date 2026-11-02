@@ -77,14 +77,6 @@ const SLOTS: readonly Slot[] = [
     suffix: ".error",
     build: (p) => ({ kind: "retry-schedule", error: p }),
   },
-  {
-    suffix: ".decoded",
-    build: (p) => ({ kind: "codec", decoded: p, encoded: INT }),
-  },
-  {
-    suffix: ".encoded",
-    build: (p) => ({ kind: "codec", decoded: INT, encoded: p }),
-  },
   { suffix: ".decoded", build: (p) => schema(p, INT) },
   { suffix: ".encoded", build: (p) => schema(INT, p) },
   { suffix: ".makeInput", build: (p) => schema(INT, INT, p) },

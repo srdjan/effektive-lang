@@ -278,7 +278,6 @@ class ModuleChecker {
       case "Option":
       case "Ref":
       case "RetrySchedule":
-      case "Codec":
       case "Fiber":
       case "Duration":
       case "Instant":

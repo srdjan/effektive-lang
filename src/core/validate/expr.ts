@@ -97,7 +97,6 @@ import {
   type Out,
   type ValidatorCore,
 } from "./families/context.ts";
-import { codec, codecOperation } from "./families/codec.ts";
 import {
   defer,
   log,
@@ -827,17 +826,12 @@ export class BodyValidator implements ValidatorCore {
         return retrySchedule(this, e, path);
       case "retry-with-schedule":
         return retryWithSchedule(this, e, path);
-      case "codec":
-        return codec(this, e, path);
       case "schema":
         return schema(this, e, path);
       case "schema-make":
       case "schema-decode":
       case "schema-encode":
         return schemaOperation(this, e, path);
-      case "decode":
-      case "encode":
-        return codecOperation(this, e, path);
       case "with-fiber":
         return withFiber(this, e, path);
       case "join-fiber":

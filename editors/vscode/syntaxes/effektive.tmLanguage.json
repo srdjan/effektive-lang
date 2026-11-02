@@ -113,13 +113,13 @@
     },
     "builtin-types": {
       "name": "support.type.builtin.effektive",
-      "match": "\\b(?:string|boolean|int|number|void|never|unknown|Option|Effect|Stream|Sink|Schema|SchemaOptional|SchemaEncodedOptional|SchemaDecodedOptional|SchemaConstructorDefault|SchemaOptionalConstructorDefault|SchemaEncodedOptionalConstructorDefault|SchemaDecodedOptionalConstructorDefault|SchemaIssue|SchemaError|Duration|Instant|Ref|RetrySchedule|Codec|Fiber)\\b"
+      "match": "\\b(?:string|boolean|int|number|void|never|unknown|Option|Effect|Stream|Sink|Schema|SchemaOptional|SchemaEncodedOptional|SchemaDecodedOptional|SchemaConstructorDefault|SchemaOptionalConstructorDefault|SchemaEncodedOptionalConstructorDefault|SchemaDecodedOptionalConstructorDefault|SchemaIssue|SchemaError|Duration|Instant|Ref|RetrySchedule|Fiber)\\b"
     },
     "builtin-functions": {
       "patterns": [
         {
           "name": "support.function.builtin.effektive",
-          "match": "\\b(?:map|filter|fold|traverse|all|retry|repeat|timeout|sleep|now|log|random|randomInt|uninterruptible|retrySchedule|codec|schema|schemaArray|schemaStruct|schemaOptionalKey|schemaNullToMissingKey|schemaOptionFromOptionalKey|schemaDefaultKey|schemaConstructorDefault|schemaOptionalTransform|schemaOptionalFromRequired|schemaUnion|schemaTransform|schemaRecursive|schemaDecode|schemaEncode|schemaMake|schemaInvalid|schemaAt|schemaBoth|decode|encode|withFiber|joinFiber|interruptFiber|forkScoped|scoped|provide|defer|run|withResource|unfold|mapEffect|mapGroups|scanStream|mapAccumStream|foldStream|foldEffectStream|collectStream|headStream|lastStream|drainStream|flatMapStreams|switchMapStreams|catchStream|retryStream|debounceStream|throttleStream|filterEffectStream|takeWhileEffectStream|takeUntilEffectStream|dropWhileEffectStream|takeStream|dropStream|sinkForEach|takeSink|transduceStream|aggregateStream|runStream|bufferStream|mergeStreams|zipStreams|concatStreams|race|makeRef|getRef|setRef|updateRef|layer|mergeLayers|fail)\\b"
+          "match": "\\b(?:map|filter|fold|traverse|all|retry|repeat|timeout|sleep|now|log|random|randomInt|uninterruptible|retrySchedule|schema|schemaArray|schemaStruct|schemaOptionalKey|schemaNullToMissingKey|schemaOptionFromOptionalKey|schemaDefaultKey|schemaConstructorDefault|schemaOptionalTransform|schemaOptionalFromRequired|schemaUnion|schemaTransform|schemaRecursive|schemaDecode|schemaEncode|schemaMake|withFiber|joinFiber|interruptFiber|forkScoped|scoped|provide|defer|run|withResource|unfold|mapEffect|mapGroups|scanStream|mapAccumStream|foldStream|foldEffectStream|collectStream|headStream|lastStream|drainStream|flatMapStreams|switchMapStreams|catchStream|retryStream|debounceStream|throttleStream|filterEffectStream|takeWhileEffectStream|takeUntilEffectStream|dropWhileEffectStream|takeStream|dropStream|sinkForEach|takeSink|transduceStream|aggregateStream|runStream|bufferStream|mergeStreams|zipStreams|concatStreams|race|makeRef|getRef|setRef|updateRef|layer|mergeLayers|fail)\\b"
         },
         {
           "name": "support.constant.builtin.effektive",

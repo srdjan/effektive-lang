@@ -350,7 +350,6 @@ export function checkTypeIds(
       case "array":
       case "option":
       case "ref":
-      case "codec":
       case "tuple":
       case "union":
         return;
@@ -455,7 +454,6 @@ const DEFERRED_KINDS: ReadonlySet<Type["kind"]> = new Set([
   "sink",
   "retry-schedule",
   "ref",
-  "codec",
   "schema",
   "provider",
 ]);
@@ -803,7 +801,6 @@ function guardedRecord(
       case "ref":
       case "tuple":
       case "retry-schedule":
-      case "codec":
       case "schema":
       case "fiber":
       case "effect":
@@ -863,7 +860,6 @@ function guardedRecord(
       case "ref":
       case "tuple":
       case "retry-schedule":
-      case "codec":
       case "schema":
       case "fiber":
       case "effect":

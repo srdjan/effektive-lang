@@ -128,8 +128,9 @@ const expect = (actual: unknown, expected: unknown) => {
 const operation: Effect.Effect<{ readonly score: number }, SchemaIssue.Issue> = makeRecord({});
 expect(classify(new SchemaIssue.InvalidValue({ message: "x" })), 1);
 expect(classify(new Other({})), 2);
-expect(await Effect.runPromise(catchMixed(false)), 2);
-const rethrown = await Effect.runPromiseExit(catchMixed(true));
+const authored = new SchemaIssue.InvalidValue({ message: "blocked" });
+expect(await Effect.runPromise(catchMixed(false, authored)), 2);
+const rethrown = await Effect.runPromiseExit(catchMixed(true, authored));
 if (!Exit.isFailure(rethrown) || !(Option.getOrUndefined(Cause.findErrorOption(rethrown.cause)) instanceof Other)) throw new Error("another handler recaught a handler's failure");
 expect(await Effect.runPromise(operation), { score: 4 });
 expect(await Effect.runPromise(operation), { score: 4 });
@@ -143,7 +144,6 @@ const explicitUndefined = makeRecord({ score: undefined });
 expect(await Effect.runPromise(explicitUndefined), { score: 4 });
 const NativeInt = Schema.Finite.check(Schema.makeFilter((value) => Number.isSafeInteger(value) || "expected a safe integer"));
 const native = Schema.Struct({ score: NativeInt.pipe(Schema.withConstructorDefault(Effect.succeed(4))) });
-const nativeNested = Schema.Struct({ settings: native.pipe(Schema.withConstructorDefault(native.makeEffect({}))) });
 for (const input of [{ score: 0.5 }, { score: null }]) {
   // Run the unknown host boundary without weakening the published input type.
   const makeUnknown = makeRecord as (input: unknown) => Effect.Effect<unknown, SchemaIssue.Issue>;
@@ -158,15 +158,9 @@ for (const input of [{ score: 0.5 }, { score: null }]) {
   }
   expect(failures[0], failures[1]);
 }
-const nestedFailures = [];
-for (const effect of [makeNested({ settings: { score: 0.5 } }), nativeNested.makeEffect({ settings: { score: 0.5 } })]) {
-  const exit = await Effect.runPromiseExit(effect);
-  if (!Exit.isFailure(exit)) throw new Error("invalid nested constructor input accepted");
-  const issue = Option.getOrUndefined(Cause.findErrorOption(exit.cause));
-  if (!SchemaIssue.isIssue(issue)) throw new Error("nested issue lost");
-  nestedFailures.push(SchemaIssue.makeFormatterDefault()(issue));
-}
-expect(nestedFailures[0], nestedFailures[1]);
+const nestedExit = await Effect.runPromiseExit(makeNested({ settings: { score: 0.5 } }));
+if (!Exit.isFailure(nestedExit)) throw new Error("invalid nested constructor input accepted");
+if (!SchemaIssue.isIssue(Option.getOrUndefined(Cause.findErrorOption(nestedExit.cause)))) throw new Error("nested issue lost");
 const calls: string[] = [];
 const read = Layer.succeed(Read)({ parse: (value) => Effect.sync(() => { calls.push("read:" + value); return Number(value); }) });
 const write = Layer.succeed(Write)({ print: (value) => Effect.sync(() => { calls.push("write:" + value); return String(value); }) });
@@ -334,7 +328,8 @@ expect(await Effect.runPromise(writeWire({ score: 8 }).pipe(Effect.provide(write
 const missing = await Effect.runPromiseExit(readWire({}).pipe(Effect.provide(read)));
 if (!Exit.isFailure(missing)) throw new Error("constructor default ran during wire decoding");
 expect(calls, ["read:8", "write:8"]);
-for (const effect of [failingNested.makeEffect({}), nested.makeEffect({ settings: { score: 0.5 } })]) {
+const blockedDefault = failingNested(Effect.fail(new SchemaIssue.InvalidValue({ message: "default blocked" })));
+for (const effect of [blockedDefault.makeEffect({}), nested.makeEffect({ settings: { score: 0.5 } })]) {
   const exit = await Effect.runPromiseExit(effect);
   if (!Exit.isFailure(exit)) throw new Error("constructor validation/failure lost");
   const issue = Option.getOrUndefined(Cause.findErrorOption(exit.cause));
@@ -660,7 +655,7 @@ const defective = Layer.succeed(Write)({ restore: () => Effect.die("boom") });
 expect(await Effect.runPromise(writeOmitted({ name: "Ada" }).pipe(Effect.provide(defective))), {});
 const died = await Effect.runPromiseExit(Schema.encodeEffect(passed)({ name: "Ada" }).pipe(Effect.provide(defective)));
 if (!Exit.isFailure(died) || !Cause.hasDies(died.cause)) throw new Error("passthrough defect changed channel");
-const blockedDefault = Layer.succeed(Defaults)({ make: () => Effect.succeed("blocked") });
+const blockedDefault = Layer.succeed(Defaults)({ make: () => Effect.fail(new SchemaIssue.InvalidValue({ message: "default blocked" })) });
 const decodeFailure = await Effect.runPromiseExit(readOmitted({}).pipe(Effect.provide(Layer.merge(read, blockedDefault))));
 if (!Exit.isFailure(decodeFailure)) throw new Error("authored default issue lost");
 const defaultError = Option.getOrUndefined(Cause.findErrorOption(decodeFailure.cause));
@@ -682,7 +677,8 @@ void missingDecoded;
     name: "effectful optional Schema getters and defaults compile and run",
     files: { "main.eff": emitFixture("schema-effectful-optional") },
     entries: ["main.eff"],
-    run: `import { Cause, Effect, Exit, Layer, Option, Schema } from "effect";
+    run:
+      `import { Cause, Effect, Exit, Layer, Option, Schema, SchemaIssue } from "effect";
 import { Read, Write, Default, readOptional, writeOptional, readDefault, writeDefault, readExistingError } from "./main.ts";
 
 const events: string[] = [];
@@ -702,9 +698,9 @@ if (JSON.stringify(await Effect.runPromise(absent)) !== '{"score":2}') throw new
 if (JSON.stringify(await Effect.runPromise(writeDefault({ score: 9 }))) !== '{"score":9}' || Number(count.value) !== 2) throw new Error("encode default service");
 if (JSON.stringify(await Effect.runPromise(readExistingError({}))) !== '{"score":4}') throw new Error("existing SchemaError callback");
 
-const blockedRead = Layer.succeed(Read)({ next: () => Effect.succeed(-1) });
-const blockedWrite = Layer.succeed(Write)({ previous: () => Effect.succeed(-1) });
-const blockedDefault = Layer.succeed(Default)({ make: () => Effect.succeed(0) });
+const blockedRead = Layer.succeed(Read)({ next: () => Effect.fail(new SchemaIssue.InvalidValue({ message: "read blocked" })) });
+const blockedWrite = Layer.succeed(Write)({ previous: () => Effect.fail(new SchemaIssue.InvalidValue({ message: "write blocked" })) });
+const blockedDefault = Layer.succeed(Default)({ make: () => Effect.fail(new SchemaIssue.InvalidValue({ message: "no default" })) });
 for (const [operation, text] of [
   [readOptional({ score: 1 }).pipe(Effect.provide(blockedRead)), "read blocked"],
   [writeOptional({ score: 1 }).pipe(Effect.provide(blockedWrite)), "write blocked"],
@@ -1073,13 +1069,12 @@ if (!Exit.isFailure(exit) || !Cause.hasDies(exit.cause)) throw new Error("defect
     prefix: "effektive-schema-nullable-",
   },
   {
-    name:
-      "optional fields, tagged union, authored issues, and finite recursion compile and run",
+    name: "optional fields, tagged union, and finite recursion compile and run",
     files: { "main.eff": emitFixture("schema-optional-union") },
     entries: ["main.eff"],
     run:
       `import { Cause, Effect, Exit, Fiber, Layer, Option, Schema } from "effect";
-import { Read, Write, choice, optional, optionalNode, taggedNode, readChoice, readOptional, readPositive, writeChoice, writeOptional, writePositive } from "./main.ts";
+import { Read, Write, choice, optional, optionalNode, taggedNode, readChoice, readOptional, writeChoice, writeOptional } from "./main.ts";
 
 const events: string[] = [];
 const read = Layer.succeed(Read)({ next: (value) => Effect.sync(() => {
@@ -1105,14 +1100,6 @@ if (JSON.stringify(right) !== '{"kind":"right","value":7}' || JSON.stringify(lef
 if (JSON.stringify(again) !== '{"value":2}' || events.join(",") !== "read:1,write:2,read:1,write:2,read:1") throw new Error("wrong field effects or replay: " + events.join(","));
 const invalid = await Effect.runPromiseExit(readOptional({ value: undefined }).pipe(Effect.provide(read)));
 if (!Exit.isFailure(invalid) || !(Option.getOrUndefined(Cause.findErrorOption(invalid.cause)) instanceof Schema.SchemaError)) throw new Error("present undefined accepted");
-const issueExit = await Effect.runPromiseExit(readPositive(0));
-if (!Exit.isFailure(issueExit)) throw new Error("positive schema accepted zero");
-const issue = Option.getOrUndefined(Cause.findErrorOption(issueExit.cause));
-if (!(issue instanceof Schema.SchemaError) || !issue.message.includes("not positive") || !issue.message.includes("try another value") || !JSON.stringify(issue.issue).includes('"path":["value"]')) throw new Error("lost authored issue tree");
-const encodeIssueExit = await Effect.runPromiseExit(writePositive(0));
-if (!Exit.isFailure(encodeIssueExit)) throw new Error("encode issue accepted zero");
-const encodeIssue = Option.getOrUndefined(Cause.findErrorOption(encodeIssueExit.cause));
-if (!(encodeIssue instanceof Schema.SchemaError) || !encodeIssue.message.includes("cannot encode zero") || !JSON.stringify(encodeIssue.issue).includes('"path":["encode"]')) throw new Error("lost encode issue");
 const optionalValue = { next: { next: {} } };
 const taggedValue = { kind: "more", next: { kind: "end" } } as const;
 if (JSON.stringify(await Effect.runPromise(Schema.decodeUnknownEffect(optionalNode)(optionalValue))) !== JSON.stringify(optionalValue)) throw new Error("optional recursion decode");
@@ -1268,11 +1255,11 @@ for (const direction of ["read", "write"] as const) {
     files: { "main.eff": emitFixture("schema-required-optional") },
     entries: ["main.eff"],
     run:
-      `import { Cause, Effect, Exit, Fiber, Layer, Option, Schema } from "effect";
+      `import { Cause, Effect, Exit, Fiber, Layer, Option, Schema, SchemaIssue } from "effect";
 import { Read, Write, guarded, pure, readRequired, writeRequired } from "./main.ts";
 
 const events: string[] = [];
-const read = Layer.succeed(Read)({ normalize: (value) => Effect.sync(() => {
+const read = Layer.succeed(Read)({ normalize: (value) => value === "blocked" ? Effect.fail(new SchemaIssue.InvalidValue({ message: "blocked name" })) : Effect.sync(() => {
   events.push("read:" + value);
   return value === "" ? Option.none() : Option.some(value.toUpperCase());
 }) });

@@ -199,7 +199,6 @@ Deno.test("type completion offers every type word and the Effect error names", (
   );
   for (
     const word of [
-      "Codec",
       "Effect",
       "Stream",
       "Sink",

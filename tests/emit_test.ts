@@ -573,18 +573,6 @@ type Int = int
   assertStringIncludes(output, "Effect.retry(");
 });
 
-Deno.test("source codecs emit schema-guarded pure transformations", () => {
-  const output = oneModule(`
-type Int = int
-export const shift: Codec<Int, Int> = codec((n: Int): Int => n + 1, (n: Int): Int => n - 1)
-export const parse = (input: unknown): Option<Int> => decode(shift, input)
-export const print = (n: Int): Option<Int> => encode(shift, n)
-`);
-  assertStringIncludes(output, "Schema.decodeUnknownOption(");
-  assertStringIncludes(output, ".decode(");
-  assertStringIncludes(output, ".encode(");
-});
-
 Deno.test("withFiber emits a supervised child and join", () => {
   const output = oneModule(`
 error Stop = {}

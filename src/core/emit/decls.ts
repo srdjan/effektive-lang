@@ -86,10 +86,6 @@ function namedIn(type: Type, out: Set<DeclarationId>): void {
     case "retry-schedule":
       namedIn(type.error, out);
       return;
-    case "codec":
-      namedIn(type.decoded, out);
-      namedIn(type.encoded, out);
-      return;
     case "fiber":
       namedIn(type.result, out);
       effectsIn(type.failures, [], out);
@@ -480,7 +476,6 @@ export class DeclarationEmitter {
       case "literal":
       case "ref":
       case "retry-schedule":
-      case "codec":
       case "schema":
       case "fiber":
       case "effect":
