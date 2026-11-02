@@ -27,7 +27,6 @@ import {
   type ImportGroup,
   ModuleState,
 } from "./module_state.ts";
-import { scopeRuntimeDeclaration } from "./explicit_scope.ts";
 import { outcomeDeclaration } from "./outcome.ts";
 
 export interface EmitContext {
@@ -148,7 +147,6 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
     ["unmatched", () => emitter.unmatchedDeclaration()],
     ["hostCheck", () => emitter.hostCheckDeclaration()],
     ["outcome", () => outcomeDeclaration(scope)],
-    ["scopeRuntime", () => scopeRuntimeDeclaration(scope)],
   ];
   const helpers: Doc[][] = [];
   for (const [key, declaration] of helperDeclarations) {

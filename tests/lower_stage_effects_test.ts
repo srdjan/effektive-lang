@@ -240,48 +240,6 @@ const probe = () => makeJob() |> retry({ times: 3 })
   });
 });
 
-Deno.test("a closeScope stage keeps only the effect marker", () => {
-  const { stage } = lowerProbe(`type Int = int
-service Cfg { limit(): Int }
-const makeOwner = (): CloseableScope uses Cfg.limit => { Cfg.limit(); makeScope() }
-const probe = () => makeOwner() |> closeScope
-`);
-  assertEquals(stage.kind, "close-scope");
-  assertEquals(stage.execution, "effect");
-  assertEquals(stage.effects, { failures: [], requirements: [] });
-});
-
-Deno.test("a provideScope stage adds the job sets and excludes the left value", () => {
-  const { stage } = lowerProbe(`type Int = int
-error Stop = {}
-service Cfg { limit(): Int }
-service Jobs { next(): Int fails Stop }
-const makeOwner = (): CloseableScope uses Cfg.limit => { Cfg.limit(); makeScope() }
-const probe = () => makeOwner() |> provideScope(defer(() => Jobs.next()))
-`);
-  assertEquals(stage.kind, "provide-scope");
-  assertEquals(stage.execution, "effect");
-  assertEquals(stage.effects, {
-    failures: ["error:m#Stop"],
-    requirements: ["cap:m#Jobs.next"],
-  });
-});
-
-Deno.test("an addScopeFinalizer stage adds the finalizer requirements and no failures", () => {
-  const { stage } = lowerProbe(`type Int = int
-service Cfg { limit(): Int }
-service Audit { release(): void }
-const makeOwner = (): CloseableScope uses Cfg.limit => { Cfg.limit(); makeScope() }
-const probe = () => makeOwner() |> addScopeFinalizer(defer(() => Audit.release()))
-`);
-  assertEquals(stage.kind, "add-scope-finalizer");
-  assertEquals(stage.execution, "effect");
-  assertEquals(stage.effects, {
-    failures: [],
-    requirements: ["cap:m#Audit.release"],
-  });
-});
-
 Deno.test("a builtin stage adds the argument sets and excludes the left value", () => {
   const { stage } = lowerProbe(`type Int = int
 error Stop = {}

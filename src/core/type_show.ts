@@ -44,8 +44,6 @@ function idName(id: string): string {
 function print(table: TypeReader, names: Names, ref: TypeRef): string {
   const node = table.node(ref);
   switch (node.kind) {
-    case "closeable-scope":
-      return "CloseableScope";
     case "primitive":
       return node.name === "unit" ? "void" : node.name;
     case "literal":

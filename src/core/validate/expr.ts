@@ -123,7 +123,6 @@ import { layer, mergeLayers, provide } from "./families/layer.ts";
 import {
   borrowedReferences,
   ensure,
-  explicitScope,
   forkScoped,
   scoped,
   withResource,
@@ -763,12 +762,6 @@ export class BodyValidator implements ValidatorCore {
         return scoped(this, e, path);
       case "fork-scoped":
         return forkScoped(this, e, path);
-      case "make-scope":
-        return derivedResult({ kind: "closeable-scope" }, EFFECT_ONLY);
-      case "provide-scope":
-      case "add-scope-finalizer":
-      case "close-scope":
-        return explicitScope(this, e, path);
       case "with-resource":
         return withResource(this, e, path);
       case "unfold":

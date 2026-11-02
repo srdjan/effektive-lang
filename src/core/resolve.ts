@@ -67,10 +67,6 @@ const PRELUDE = {
   run: { shadowable: true },
   scoped: { shadowable: true },
   forkScoped: { shadowable: true },
-  makeScope: { shadowable: true },
-  provideScope: { shadowable: true },
-  addScopeFinalizer: { shadowable: true },
-  closeScope: { shadowable: true },
   withResource: { shadowable: false },
   unfold: { shadowable: false },
   mapEffect: { shadowable: false },
@@ -168,7 +164,6 @@ const BUILTIN_TYPES = [
   "RetrySchedule",
   "Codec",
   "Fiber",
-  "CloseableScope",
   "Duration",
   "Instant",
 ] as const;

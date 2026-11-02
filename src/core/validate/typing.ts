@@ -181,7 +181,6 @@ export function dataOnly(
       return base !== undefined && nested(base);
     }
     case "ref":
-    case "closeable-scope":
     case "retry-schedule":
     case "codec":
     case "schema":
@@ -320,8 +319,6 @@ function assignable(
     return false;
   }
   switch (t.kind) {
-    case "closeable-scope":
-      return s.kind === "closeable-scope";
     case "primitive":
       if (s.kind === "primitive") {
         return s.name === t.name || (s.name === "int" && t.name === "number");
@@ -462,7 +459,6 @@ function guardedAlias(env: TypeEnv, id: string): boolean {
       case "option":
       case "ref":
       case "tuple":
-      case "closeable-scope":
       case "retry-schedule":
       case "codec":
       case "schema":
@@ -650,7 +646,6 @@ export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
       case "union":
         return current.members.every(visit);
       case "ref":
-      case "closeable-scope":
       case "retry-schedule":
       case "codec":
       case "schema":
@@ -931,8 +926,6 @@ function orNever(items: readonly string[]): string {
 /** A readable form for messages. */
 export function show(type: Type): string {
   switch (type.kind) {
-    case "closeable-scope":
-      return "CloseableScope";
     case "primitive":
       return type.name === "unit" ? "void" : type.name;
     case "literal":

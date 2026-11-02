@@ -250,13 +250,6 @@ export class TypeLowerer {
         ir: { kind: "named", id: INSTANT_ID },
       }),
     },
-    CloseableScope: {
-      kind: "plain",
-      build: (lowerer) => ({
-        ref: lowerer.env.table.closeableScope,
-        ir: { kind: "closeable-scope" },
-      }),
-    },
     Option: {
       kind: "generic",
       arity: 1,

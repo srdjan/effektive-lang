@@ -65,12 +65,6 @@ const useRecord = (): Int => withResource(() => ({ get: () => 1 }), (ops) => ops
 const outcome = (): Int => try { 1 } finally (o) { }
 const sc = (): Int => scoped(defer(() => 1))
 const fk = (): void => scoped(defer(() => forkScoped(defer(() => 1))))
-const owner = (): void => {
-  const o = makeScope()
-  addScopeFinalizer(o, defer(() => {}))
-  provideScope(o, defer(() => 1))
-  closeScope(o)
-}
 const mapped = (): Int[] => map([1], (n) => n + 1)
 `;
 
@@ -264,7 +258,7 @@ interface Row {
 const ROWS: readonly Row[] = [
   // ---------------------------------------------------------------- expr.ts
   {
-    site: "expr.ts:266",
+    site: "expr.ts:265",
     name: "a parameter identity that is not local",
     program: "core",
     change: (ir) => {
@@ -276,7 +270,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:475",
+    site: "expr.ts:474",
     name: "more borrow flags than parameters",
     program: "core",
     change: (ir) => {
@@ -289,7 +283,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:484",
+    site: "expr.ts:483",
     name: "a borrow flag in the type that the parameter lacks",
     program: "core",
     change: (ir) => {
@@ -300,7 +294,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:497",
+    site: "expr.ts:496",
     name: "a borrow parameter of a type that is not opaque",
     program: "core",
     change: (ir) => {
@@ -317,7 +311,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:505",
+    site: "expr.ts:504",
     name: "a borrow parameter whose type flag is false",
     program: "core",
     change: (ir) => {
@@ -330,7 +324,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:513",
+    site: "expr.ts:512",
     name: "a borrow function that returns a value that is not data",
     program: "core",
     change: (ir) => {
@@ -345,7 +339,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:557",
+    site: "expr.ts:556",
     name: "an inferred contract that omits a body failure",
     program: "core",
     change: (ir) => {
@@ -356,7 +350,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:737",
+    site: "expr.ts:736",
     name: "a Some value that does not fit the option element",
     program: "core",
     change: (ir) => {
@@ -371,7 +365,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:1139",
+    site: "expr.ts:1132",
     name: "a tuple element that does not fit the tuple type",
     program: "core",
     change: (ir) => {
@@ -386,7 +380,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:1313",
+    site: "expr.ts:1306",
     name: "an error construction of an undeclared error",
     program: "core",
     change: (ir) => {
@@ -397,7 +391,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:1616",
+    site: "expr.ts:1609",
     name: "a generated capture marker that is false",
     program: "core",
     change: (ir) => {
@@ -444,17 +438,6 @@ const ROWS: readonly Row[] = [
     },
     expected: [
       "validation/006 declarations[16].body.value.job.body: forkScoped needs an Effect value without typed failures",
-    ],
-  },
-  {
-    site: "scope.ts:104",
-    name: "an explicit scope operation over a job that is not an Effect",
-    program: "core",
-    change: (ir) => {
-      find(fn(ir, "owner").body, "provide-scope").job = intLiteral(ir);
-    },
-    expected: [
-      "validation/006 declarations[17].body.steps[2].value: provide-scope needs an Effect value",
     ],
   },
   {
@@ -550,7 +533,7 @@ const ROWS: readonly Row[] = [
   },
   // ---------------------------------------------------------------- world.ts
   {
-    site: "world.ts:542",
+    site: "world.ts:540",
     name: "a host interface method that exposes a refined type",
     program: "core",
     change: (ir) => {
@@ -561,7 +544,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:575",
+    site: "world.ts:573",
     name: "a service method with a wrong capability identity",
     program: "core",
     change: (ir) => {
@@ -572,7 +555,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:583",
+    site: "world.ts:581",
     name: "a service that declares a capability twice",
     program: "core",
     change: (ir) => {
@@ -586,7 +569,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:593",
+    site: "world.ts:591",
     name: "a service method that claims checked entry validation",
     program: "core",
     change: (ir) => {
@@ -599,7 +582,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:602",
+    site: "world.ts:600",
     name: "a service method with the wrong number of borrow flags",
     program: "core",
     change: (ir) => {
@@ -610,7 +593,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:612",
+    site: "world.ts:610",
     name: "a service borrow parameter outside a host interface",
     program: "core",
     change: (ir) => {
@@ -621,7 +604,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:624",
+    site: "world.ts:622",
     name: "a service borrow parameter of a type that is not opaque",
     program: "core",
     change: (ir) => {
@@ -632,7 +615,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:729",
+    site: "world.ts:727",
     name: "a declaration with a wrong identity",
     program: "core",
     change: (ir) => {
@@ -643,7 +626,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:776",
+    site: "world.ts:774",
     name: "an export that appears twice",
     program: "core",
     change: (ir) => {
@@ -654,7 +637,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:1146",
+    site: "world.ts:1142",
     name: "a builtin whose type is not a function",
     program: "core",
     change: (ir) => {
@@ -662,12 +645,12 @@ const ROWS: readonly Row[] = [
     },
     expected: [
       "validation/002 imports[1].values[0].type: a builtin has a function type, recorded primitive",
-      "validation/002 declarations[18].body.callee.type: expected int, recorded (int[], (int) => int [pure]) => int[] [pure]",
-      "validation/002 declarations[18].body.callee: the callee has type int, which is not a function",
+      "validation/002 declarations[17].body.callee.type: expected int, recorded (int[], (int) => int [pure]) => int[] [pure]",
+      "validation/002 declarations[17].body.callee: the callee has type int, which is not a function",
     ],
   },
   {
-    site: "world.ts:1312",
+    site: "world.ts:1308",
     name: "an import payload that declares an identity twice",
     program: "core",
     change: (ir) => {
@@ -679,7 +662,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:1315",
+    site: "world.ts:1311",
     name: "a prelude payload that declares an identity of the module",
     program: "core",
     change: (ir) => {
@@ -690,11 +673,11 @@ const ROWS: readonly Row[] = [
       "validation/001 imports[1].exports[0]: the module effektive:prelude exports value:m#$builtin/map/a648b6255b2f, which its payload does not declare",
       "validation/001 imports[1].values[0].id: a builtin identity has the form value:m#$builtin/<name>/<hash>, recorded value:m#mapped",
       "validation/001 imports[1].values[0].id: the payload declares value:m#mapped, which this module declares itself",
-      "validation/001 declarations[18].body.callee.target: the target value:m#$builtin/map/a648b6255b2f is not a parameter, a binding, or a declaration in scope",
+      "validation/001 declarations[17].body.callee.target: the target value:m#$builtin/map/a648b6255b2f is not a parameter, a binding, or a declaration in scope",
     ],
   },
   {
-    site: "world.ts:1367",
+    site: "world.ts:1363",
     name: "a prelude import with a type",
     program: "core",
     change: (ir) => {
@@ -705,7 +688,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:1375",
+    site: "world.ts:1371",
     name: "a prelude import that exports no builtin",
     program: "core",
     change: (ir) => {
@@ -716,7 +699,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:1395",
+    site: "world.ts:1391",
     name: "a builtin name that differs from its identity",
     program: "core",
     change: (ir) => {

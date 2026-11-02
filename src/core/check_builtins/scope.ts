@@ -100,56 +100,6 @@ function forkScopedCall(
   );
 }
 
-function scopeCall(
-  c: ScopeContext,
-  node: NodeId,
-  name: "makeScope" | "provideScope" | "addScopeFinalizer" | "closeScope",
-  args: readonly Arg[],
-): NodeInfo {
-  if (name === "makeScope") {
-    return c.finish(node, c.table.closeableScope, EFFECT_ONLY);
-  }
-  const owner = c.argInfo(args[0]);
-  c.fits(args[0].node, owner.type, c.table.closeableScope, "scope owner");
-  if (name === "closeScope") {
-    return c.finish(node, c.table.unit, combine([owner, EFFECT_ONLY]));
-  }
-  const job = c.argInfo(args[1]);
-  const effect = c.table.node(c.table.unfold(job.type));
-  if (effect.kind !== "effect") {
-    c.report(
-      "type-mismatch/010",
-      `\`${name}\` needs an Effect value`,
-      args[1].node,
-    );
-    return c.finish(node, c.table.error, combine([owner, job, EFFECT_ONLY]));
-  }
-  if (name === "addScopeFinalizer") {
-    c.fits(args[1].node, effect.result, c.table.unit, "scope finalizer result");
-    if (
-      effect.failures.length > 0 ||
-      effect.requirements.includes(SCOPE_CAPABILITY)
-    ) {
-      c.report(
-        "type-mismatch/010",
-        "`addScopeFinalizer` needs an Effect without typed failures or the reserved Scope requirement",
-        args[1].node,
-      );
-    }
-  }
-  return c.finish(
-    node,
-    name === "provideScope" ? effect.result : c.table.unit,
-    combine([owner, job, {
-      failures: name === "provideScope" ? effect.failures : [],
-      requirements: name === "provideScope"
-        ? without(effect.requirements, [SCOPE_CAPABILITY])
-        : effect.requirements,
-      mode: "effect",
-    }]),
-  );
-}
-
 /**
  * The type of an outcome binding: a structural tagged union, like the result
  * of `allResults`. The Failure member is absent when no failure remains.
@@ -404,22 +354,6 @@ export const SCOPE_ROWS = {
   forkScoped: {
     prologue: piped(1, "effect", { fact: { kind: "fork-scoped" } }),
     handle: (c, node, _name, args) => forkScopedCall(c, node, args),
-  },
-  makeScope: {
-    prologue: piped(0, "effect", { fact: { kind: "make-scope" } }),
-    handle: (c, node, name, args) => scopeCall(c, node, name, args),
-  },
-  provideScope: {
-    prologue: piped(2, "effect", { fact: { kind: "provide-scope" } }),
-    handle: (c, node, name, args) => scopeCall(c, node, name, args),
-  },
-  addScopeFinalizer: {
-    prologue: piped(2, "effect", { fact: { kind: "add-scope-finalizer" } }),
-    handle: (c, node, name, args) => scopeCall(c, node, name, args),
-  },
-  closeScope: {
-    prologue: piped(1, "effect", { fact: { kind: "close-scope" } }),
-    handle: (c, node, name, args) => scopeCall(c, node, name, args),
   },
   withResource: {
     prologue: piped(3, "pure", { fact: { kind: "with-resource" } }),

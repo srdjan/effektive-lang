@@ -8,8 +8,6 @@ import { canonicalJson, compareText } from "./util.ts";
 /** Interns an IR type tree. Unions flatten and sort, records sort. */
 export function typeFromIr(table: TypeTable, type: Type): TypeRef {
   switch (type.kind) {
-    case "closeable-scope":
-      return table.closeableScope;
     case "primitive":
       return table.primitive(type.name);
     case "literal":
@@ -116,8 +114,6 @@ export function functionTypeFromIr(
 export function typeToIr(table: TypeTable, ref: TypeRef): Type {
   const node = table.node(ref);
   switch (node.kind) {
-    case "closeable-scope":
-      return { kind: "closeable-scope" };
     case "primitive":
       return { kind: "primitive", name: node.name };
     case "literal":

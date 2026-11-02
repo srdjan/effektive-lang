@@ -5,7 +5,7 @@ export type TypeId = `type:${string}`;
 export type ErrorId = `error:${string}`;
 export type ServiceId = `service:${string}`;
 export type CapabilityId = `cap:${string}`;
-/** A reserved Effect runtime requirement, discharged by `scoped` or `provideScope`. */
+/** A reserved Effect runtime requirement, discharged by `scoped`. */
 export const SCOPE_CAPABILITY: CapabilityId = "cap:effect/Scope";
 /** The target Schema parser failure; source code may handle but not construct it. */
 export const SCHEMA_ERROR_ID: ErrorId = "error:effect/SchemaError";
@@ -82,7 +82,6 @@ export type Type =
   | { readonly kind: "union"; readonly members: readonly Type[] }
   | { readonly kind: "option"; readonly element: Type }
   | { readonly kind: "ref"; readonly element: Type }
-  | { readonly kind: "closeable-scope" }
   | { readonly kind: "retry-schedule"; readonly error: Type }
   | { readonly kind: "codec"; readonly decoded: Type; readonly encoded: Type }
   // Constructor defaults may coexist with one field-presence flag.
@@ -183,10 +182,6 @@ export type Expr =
   | Node<{ kind: "run"; value: Expr }>
   | Node<{ kind: "scoped"; value: Expr }>
   | Node<{ kind: "fork-scoped"; job: Expr }>
-  | Node<{ kind: "make-scope" }>
-  | Node<{ kind: "provide-scope"; owner: Expr; job: Expr }>
-  | Node<{ kind: "add-scope-finalizer"; owner: Expr; job: Expr }>
-  | Node<{ kind: "close-scope"; owner: Expr }>
   | Node<{ kind: "with-resource"; acquire: ClosureExpr; use: ClosureExpr; release: ClosureExpr }>
   | Node<{ kind: "unfold"; seed: Expr; next: Expr }>
   | Node<{ kind: "map-effect"; stream: Expr; transform: Expr; concurrency: number | "unbounded" | undefined }>

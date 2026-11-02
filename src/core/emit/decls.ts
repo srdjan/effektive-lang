@@ -71,7 +71,6 @@ function namedIn(type: Type, out: Set<DeclarationId>): void {
   switch (type.kind) {
     case "primitive":
     case "literal":
-    case "closeable-scope":
       return;
     case "named":
       out.add(type.id);
@@ -480,7 +479,6 @@ export class DeclarationEmitter {
       case "primitive":
       case "literal":
       case "ref":
-      case "closeable-scope":
       case "retry-schedule":
       case "codec":
       case "schema":

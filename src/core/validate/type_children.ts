@@ -21,7 +21,6 @@ export function typeChildren(t: Type): readonly TypeChild[] {
     case "primitive":
     case "literal":
     case "named":
-    case "closeable-scope":
     case "provider":
       return [];
     case "record":

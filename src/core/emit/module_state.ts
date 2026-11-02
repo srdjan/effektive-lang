@@ -48,17 +48,8 @@ export type EffectModule =
   | "Clock"
   | "Random"
   | "Fiber"
-  | "Deferred"
   | "Exit"
   | "Scope";
-
-interface ScopeRuntimeNames {
-  readonly type: string;
-  readonly make: string;
-  readonly provide: string;
-  readonly register: string;
-  readonly close: string;
-}
 
 // ------------------------------------------------------------------ deferred types
 
@@ -77,7 +68,6 @@ type DeferredKind =
   | "retry-schedule"
   | "codec"
   | "schema"
-  | "closeable-scope"
   | "fiber";
 
 type DeferredType = Extract<Type, { readonly kind: DeferredKind }>;
@@ -92,7 +82,6 @@ const DEFERRED_KINDS = {
   "retry-schedule": true,
   "codec": true,
   "schema": true,
-  "closeable-scope": true,
   "fiber": true,
 } as const satisfies Record<DeferredKind, true>;
 
@@ -243,7 +232,6 @@ interface HelperNames {
   unmatched?: string;
   hostCheck?: string;
   outcome?: OutcomeNames;
-  scopeRuntime?: ScopeRuntimeNames;
 }
 
 export type HelperKey = keyof HelperNames;
@@ -258,7 +246,6 @@ export interface EmitNames {
   unmatched(): string;
   outcome(): OutcomeNames;
   hostCheck(): string;
-  scopeRuntime(): ScopeRuntimeNames;
   serviceParameter(): string;
   fieldHelper(key: string): string;
 }
@@ -561,16 +548,6 @@ export class ModuleState
   serviceParameter(): string {
     this.serviceName ??= this.fresh("$s");
     return this.serviceName;
-  }
-
-  scopeRuntime(): ScopeRuntimeNames {
-    return this.helpers.scopeRuntime ??= {
-      type: this.fresh("$CloseableScope"),
-      make: this.fresh("$makeScope"),
-      provide: this.fresh("$provideScope"),
-      register: this.fresh("$addScopeFinalizer"),
-      close: this.fresh("$closeScope"),
-    };
   }
 
   // -------------------------------------------------------------- declarations

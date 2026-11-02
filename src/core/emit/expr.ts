@@ -872,12 +872,7 @@ export class ExprEmitter implements ExprCore {
   }
 
   private calleeText(callee: Callee): string {
-    switch (callee.kind) {
-      case "method":
-        return `${this.scope.effect(callee.module)}.${callee.method}`;
-      case "scope":
-        return this.scope.scopeRuntime()[callee.operation];
-    }
+    return `${this.scope.effect(callee.module)}.${callee.method}`;
   }
 
   /** True when `type` is a literal type or a union with a literal member. */

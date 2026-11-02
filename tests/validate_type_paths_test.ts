@@ -217,7 +217,6 @@ Deno.test("leaf kinds have no child for any walker", () => {
   const leaves: Type[] = [
     INT,
     { kind: "literal", value: "x" },
-    { kind: "closeable-scope" },
     {
       kind: "provider",
       provides: [],
@@ -311,7 +310,6 @@ Deno.test("typeChildren gives no child for a leaf kind", () => {
     INT,
     { kind: "literal", value: "x" },
     MISSING,
-    { kind: "closeable-scope" },
     {
       kind: "provider",
       provides: [],

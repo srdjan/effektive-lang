@@ -1,2 +1,0 @@
-import { Owner } from "./owner.eff"
-export service Boundary { accept(owner: Owner): Owner }

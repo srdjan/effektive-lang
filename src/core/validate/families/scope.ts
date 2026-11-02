@@ -78,58 +78,6 @@ export function forkScoped(
   );
 }
 
-export function explicitScope(
-  c: ValidatorCore,
-  e: Extract<
-    Expr,
-    { kind: "provide-scope" | "add-scope-finalizer" | "close-scope" }
-  >,
-  path: string,
-): Comp {
-  const owner = c.check(e.owner, `${path}.owner`);
-  if (!fits(c.env, owner.type, { kind: "closeable-scope" })) {
-    c.add(
-      AREA.control,
-      path,
-      `${e.kind} needs a CloseableScope owner`,
-      e.span,
-    );
-  }
-  if (e.kind === "close-scope") {
-    return derivedResult(UNIT, combine([owner, EFFECT_ONLY]));
-  }
-  const job = c.check(e.job, `${path}.job`);
-  const effect = unfold(c.env, job.type);
-  if (effect.kind !== "effect") {
-    c.add(AREA.control, path, `${e.kind} needs an Effect value`, e.span);
-    return c.poison();
-  }
-  if (
-    e.kind === "add-scope-finalizer" && (
-      !fits(c.env, effect.result, UNIT) ||
-      effect.effects.failures.length > 0 ||
-      effect.effects.requirements.includes(SCOPE_CAPABILITY)
-    )
-  ) {
-    c.add(
-      AREA.control,
-      path,
-      "a scope finalizer must return void without typed failures or the reserved Scope requirement",
-      e.span,
-    );
-  }
-  return derivedResult(
-    e.kind === "provide-scope" ? effect.result : UNIT,
-    combine([owner, job, {
-      failures: e.kind === "provide-scope" ? effect.effects.failures : [],
-      requirements: e.kind === "provide-scope"
-        ? minus(effect.effects.requirements, [SCOPE_CAPABILITY])
-        : effect.effects.requirements,
-      execution: "effect",
-    }]),
-  );
-}
-
 function checkOperationRecord(
   c: ValidatorCore,
   type: Type,

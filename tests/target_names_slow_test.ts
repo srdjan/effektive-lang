@@ -109,8 +109,6 @@ const EMITTED: readonly string[] = [
   "$hostCheck",
   "$outcome",
   "$Outcome",
-  "$makeScope",
-  "$CloseableScope",
   "_tag",
   "value",
   "key",
@@ -334,7 +332,7 @@ Deno.test("no accepted binding name captures a name that the generated TypeScrip
     await check(dir, built.paths);
   });
   // Literal counts: a reservation of every name cannot make the test vacuous.
-  assertEquals(accepted.length, 2180);
+  assertEquals(accepted.length, 2128);
   assertEquals(reservedVariants, 394);
   assertEquals(reserved.size, 18);
   assertEquals(parserReserved.size, 2);

@@ -1,6 +1,6 @@
 // Unit tests for `fits` and `same` of the independent validator, for the
 // compound types that carry variance rules: Schema, Sink,
-// RetrySchedule, Codec, Fiber, CloseableScope, and null against unit. Each test
+// RetrySchedule, Codec, Fiber, and null against unit. Each test
 // builds Type values by hand and checks both directions of `fits`, and `same`.
 
 import { assert, assertEquals } from "@std/assert";
@@ -385,7 +385,7 @@ Deno.test("Codec: decoded and encoded types are invariant", () => {
   );
 });
 
-// -------------------------------------------- Fiber and CloseableScope
+// -------------------------------------------- Fiber
 
 Deno.test("Fiber: result is covariant and failure sets must be equal even under fits", () => {
   const fiber = (
@@ -429,14 +429,6 @@ Deno.test("Fiber: result is covariant and failure sets must be equal even under 
     fiber(NUMBER, [E]),
     UNRELATED,
   );
-});
-
-Deno.test("CloseableScope: it fits only itself", () => {
-  const scope: Type = { kind: "closeable-scope" };
-  relate("equal", scope, { kind: "closeable-scope" }, EQUAL);
-  relate("against unit", scope, UNIT, UNRELATED);
-  relate("against unknown", scope, UNKNOWN, UNRELATED);
-  assert(fits(ENV, NEVER, scope), "never fits a CloseableScope");
 });
 
 // ------------------------------------------------------------ null and unit
@@ -781,11 +773,11 @@ Deno.test("entrySchemaDerivable rejects the schema, issue, and timeout errors an
 });
 
 Deno.test("entrySchemaDerivable follows the body of a name, ends on a repeated name, and checks the body", () => {
-  const scope: Type = { kind: "closeable-scope" };
+  const ref: Type = { kind: "ref", element: INT };
   const env: TypeEnv = {
     ...ENV,
     aliases: new Map<string, Type>([
-      ["type:m#Bad", { kind: "array", element: scope }],
+      ["type:m#Bad", { kind: "array", element: ref }],
       ["type:m#Good", { kind: "array", element: STRING }],
       ["type:m#Loop", {
         kind: "record",
@@ -795,7 +787,7 @@ Deno.test("entrySchemaDerivable follows the body of a name, ends on a repeated n
   };
   const table: readonly (readonly [string, Type, boolean])[] = [
     ["a name with a derivable body", named("type:m#Good"), true],
-    ["a name with a body that holds a scope", named("type:m#Bad"), false],
+    ["a name with a body that holds a ref", named("type:m#Bad"), false],
     ["a name without a body", named("type:m#Missing"), false],
     ["a name that refers to itself", named("type:m#Loop"), true],
   ];

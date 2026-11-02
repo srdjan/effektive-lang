@@ -164,13 +164,6 @@ export type NodeFact =
   | { readonly kind: "uninterruptible" }
   | { readonly kind: "run" }
   | { readonly kind: "scoped" | "fork-scoped" }
-  | {
-    readonly kind:
-      | "make-scope"
-      | "provide-scope"
-      | "add-scope-finalizer"
-      | "close-scope";
-  }
   | { readonly kind: "with-resource" }
   | { readonly kind: "unfold" }
   | {

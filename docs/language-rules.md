@@ -151,70 +151,13 @@ The rules for collection literals, `traverse`, and the callbacks of `map`, `filt
 | forkScoped job channels | The job of `forkScoped` must have no typed failures. The checker rejects a job with typed failures. `forkScoped` returns no join handle and no child-result channel. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
 | scoped | `scoped(job)` provides a local scope. The runtime closes that scope after the job completes. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
 | Child lifetime | A child that `forkScoped` starts can outlive its spawning fiber. It lives until its scope closes. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Reserved Scope requirement | A job can have the reserved requirement `cap:effect/Scope`. The program discharges it through `scoped`, `provideScope`, or a builtin that runs its callback in a scope, such as the `mapGroups` use callback. `CloseableScope` is a different type from this requirement. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-
-### CloseableScope value
-
-| Rule | Choice | Evidence |
-| --- | --- | --- |
-| CloseableScope type | `CloseableScope` takes no type arguments. It is an abstract runtime handle with shared close authority. It exposes no fields or methods. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Builtin signatures | These are builtin contracts, not user-defined generic functions: `makeScope(): CloseableScope`, `provideScope(owner: CloseableScope, job: Effect<A,E,R>): A`, `addScopeFinalizer(owner: CloseableScope, job: Effect<void,never,R>): void`, `closeScope(owner: CloseableScope): void`. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Effect mode and shadowing | All four builtins force effect mode. Builtin names follow the existing shadowing rules. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Value transfer | A program may assign, return, pass, or capture a `CloseableScope`. It may also store it in arrays, tuples, records, Options, Effects, and Refs. These operations share one identity. They do not clone the scope or reset its state. Earlier aliases stay usable. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| No equality or Schema | `CloseableScope` supports no equality and no ordering. It has no derived Schema and is not data only, also when nested in another type. A type alias can name it without a Schema. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Codec and callback-result checks | The checker rejects `CloseableScope` in Codec schema checks and in the data-only callback-result checks for resources and Fibers. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Not supported | The language has no getter for the current lexical scope. It has no cast from an ordinary or borrowed handle to `CloseableScope`. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Host signatures | `CloseableScope` can appear in `.effi` signatures with the same shared-authority meaning. Strict host assertions distinguish the wrapper from a raw target `Scope.Closeable`. The host implementation is a trusted boundary. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-
-### Creation and provision
-
-| Rule | Choice | Evidence |
-| --- | --- | --- |
-| makeScope | `makeScope()` creates an independent sequential scope with a fresh shared close state. It needs no ambient Scope and joins none. It has result `CloseableScope`, no failures, and no requirements. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Explicit cleanup | The runtime does not close a scope when its creating fiber ends, fails, or is interrupted. Dropping every alias does not run finalizers. The caller must close the scope explicitly. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Returned live scope | The owner can survive its creating root execution. A later root execution can close it through an alias. Cleanup completes before `closeScope` returns. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md), [owner.eff](../fixtures/emit/scopes/owner.eff), [emit_host_slow_test.ts](../tests/emit_host_slow_test.ts) |
-| provideScope | `provideScope(owner, job)` runs the job with only the selected scope capability. It returns the job success type `A`. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| provideScope does not close | `provideScope` does not close the owner when the job returns. It does not interrupt ordinary work when the owner closes. Only a child that `forkScoped` starts gets interrupted. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Provision after close | After close, `provideScope` still runs ordinary work. A newly scoped child cannot stay live in the closed scope. The handle does not prove open or closed state. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Provider lifetime | A scope does not extend the lifetime of a service provider. A child that must outlive the creating root must acquire its resource-backed Layer inside the child Effect. The provider then lives until close interrupts the child. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-
-### Finalizer registration
-
-| Rule | Choice | Evidence |
-| --- | --- | --- |
-| addScopeFinalizer job type | The job of `addScopeFinalizer` must have result `void` and no typed failures. It must not require the reserved Scope capability. The caller handles a typed failure before registration. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Service capture | `addScopeFinalizer` evaluates owner and job once, from left to right. It captures the current service bindings at registration. Ordinary service requirements are allowed. Close needs no service requirement from earlier jobs. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Captured services | The captured context keeps service references. It does not own their provider resources. Registration does not extend the lifetime of a scoped Layer. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Registration on open scope | Registration on an open scope does not run the finalizer. The runtime stores it. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Late registration | If the scope is already closed, registration runs the finalizer at once and waits for its cleanup. Earlier or concurrent closes are not barriers for it. Its defect does not change the cached close outcome. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Finalizer order | Finalizers registered before close begins run in reverse order of registration. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-
-### Close completion and interruption
-
-| Rule | Choice | Evidence |
-| --- | --- | --- |
-| closeScope result | `closeScope(owner)` returns `void`. The first slice closes with `Exit.void`. It accepts no supplied Exit, no success value, and no exit-aware finalizer callback. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| One physical close | The first caller claims close atomically and runs the finalizers once. Every later or concurrent call waits for the same completion. A successful `closeScope` always waits for the original close to finish. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Cached outcome | The runtime caches the close outcome as `Exit<void,never>`. Every later `closeScope` on any alias observes that outcome. Close consumes no alias. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Uninterruptible close | Closing and waiting are uninterruptible. Interrupting the first caller or an alias cannot leave the shared completion pending. The runtime reports caller interruption after the uninterruptible region. It does not replace the cached outcome. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Defects | `closeScope` has no typed failure channel. The runtime attempts all earlier finalizers in sequence. A defect stays a defect, and the cached outcome replays it to later callers. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Pending close | A finalizer that never finishes keeps close pending. There is no cleanup timeout. A finalizer that waits for `closeScope` on its own owner also stays pending. The language has no static cycle detection. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| Not supported | The slice does not support arbitrary Exits, exit-aware finalizer callbacks, parallel finalizer strategies, scope trees, mandatory cleanup, or static leak prevention. It is not full raw Scope parity. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-
-### Scope channel equations
-
-| Rule | Choice | Evidence |
-| --- | --- | --- |
-| provideScope channels | Active failures are the argument failures plus the latent job failures. Active requirements are the argument requirements plus the latent job requirements minus `cap:effect/Scope`. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| addScopeFinalizer channels | The result is `void`. Active failures are the argument failures. Active requirements are the argument requirements plus the latent job requirements. Active argument construction may still fail. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| closeScope channels | The result is `void`. Active failures and requirements are those of the owner expression. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
+| Reserved Scope requirement | A job can have the reserved requirement `cap:effect/Scope`. The program discharges it through `scoped` or a builtin that runs its callback in a scope, such as the `mapGroups` use callback. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
 
 ### Borrowed resources and Fibers
 
 | Rule | Choice | Evidence |
 | --- | --- | --- |
-| Borrow rules unchanged | Borrow qualifiers still apply to opaque resource parameters. `CloseableScope` is not a borrowed opaque resource type. Its parameter contract permits retention. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
-| No borrowed escape through a scope | A registered finalizer cannot capture a `withResource` handle or a borrowed Fiber. A program cannot store them through the owner or return them in an aggregate with it. A new host method cannot receive them through a forbidden path. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
+| Borrow rules unchanged | Borrow qualifiers still apply to opaque resource parameters. | [2026-10-18-scope-ownership-contract.md](archive/plans/2026-10-18-scope-ownership-contract.md) |
 
 ### withResource
 
@@ -761,7 +704,7 @@ These rules concern the stages after checking. They do not change what a program
 | --- | --- | --- |
 | Error construction | The argument must be a record literal without a spread (`type-mismatch/010`), because the IR `error` node lists its fields. A piped value is never a literal, so `x |> E` is also `type-mismatch/010` | [check_expr.ts](../src/core/check_expr.ts) |
 | Pipeline stage sets | A stage call carries its arguments and its invocation only; the left value's sets sit on its `$p` binding | [lower_stage_effects_test.ts](../tests/lower_stage_effects_test.ts) |
-| Control pipeline stages | `retry` with or without a schedule, `retrySchedule`, `provide`, `timeout`, `uninterruptible`, `repeat`, `provideScope`, `addScopeFinalizer`, `closeScope`, `defer`, and `run` record their own active effects locally; the left value's evaluation stays on its binding | [lower_stage_effects_test.ts](../tests/lower_stage_effects_test.ts) |
+| Control pipeline stages | `retry` with or without a schedule, `retrySchedule`, `provide`, `timeout`, `uninterruptible`, `repeat`, `defer`, and `run` record their own active effects locally; the left value's evaluation stays on its binding | [lower_stage_effects_test.ts](../tests/lower_stage_effects_test.ts) |
 | Pipeline binding names | `$p<n>` skips every `<n>` whose name an identifier of the module uses, so a source local `$p1` is not captured | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
 | Prelude value names | `$builtin/<name>/<hash>`, the text after `#` in the id | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
 | Declaration order in IR | Source order by span start | [api.md, Using the lowering](api.md#using-the-lowering) |

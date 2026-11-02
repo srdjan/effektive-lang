@@ -82,7 +82,6 @@ export function guardedRecord(
       case "literal":
       case "tuple":
       case "ref":
-      case "closeable-scope":
       case "retry-schedule":
       case "codec":
       case "schema":
@@ -143,7 +142,6 @@ export function guardedRecord(
       case "tuple":
       case "option":
       case "ref":
-      case "closeable-scope":
       case "retry-schedule":
       case "codec":
       case "schema":
@@ -177,7 +175,6 @@ export type TypeNode =
   | { readonly kind: "union"; readonly members: readonly TypeRef[] }
   | { readonly kind: "option"; readonly element: TypeRef }
   | { readonly kind: "ref"; readonly element: TypeRef }
-  | { readonly kind: "closeable-scope" }
   | { readonly kind: "retry-schedule"; readonly error: TypeRef }
   | {
     readonly kind: "codec";
@@ -403,7 +400,6 @@ function structuralChildren(
       return [...node.parameters, node.result];
     case "primitive":
     case "literal":
-    case "closeable-scope":
     case "provider":
     case "error":
       return [];
@@ -428,7 +424,6 @@ export class TypeTable {
   readonly unit: TypeRef;
   readonly never: TypeRef;
   readonly unknown: TypeRef;
-  readonly closeableScope: TypeRef;
 
   constructor(state?: TypeTableState) {
     this.storage = state?.storage ?? {
@@ -446,7 +441,6 @@ export class TypeTable {
     this.unit = this.primitive("unit");
     this.never = this.primitive("never");
     this.unknown = this.primitive("unknown");
-    this.closeableScope = this.intern({ kind: "closeable-scope" });
     if (state !== undefined) return;
     this.defineError(
       "error:effect/SchemaError",
@@ -486,8 +480,6 @@ export class TypeTable {
   /** The intern key of a node. Each kind has its own prefix, so keys of different kinds never collide. */
   private keyOf(node: TypeNode): string {
     switch (node.kind) {
-      case "closeable-scope":
-        return "closeable-scope";
       case "primitive":
         return `p:${node.name}`;
       case "literal":
@@ -1168,8 +1160,6 @@ export class TypeTable {
       return false;
     }
     switch (tn.kind) {
-      case "closeable-scope":
-        return sn.kind === "closeable-scope";
       case "primitive":
         if (sn.kind === "primitive") {
           return sn.name === tn.name ||
@@ -1375,7 +1365,6 @@ export function dataOnly(
     }
     case "error":
       return acceptPoisoned;
-    case "closeable-scope":
     case "retry-schedule":
     case "ref":
     case "codec":
@@ -1461,7 +1450,6 @@ export function containsDeferredType(
     case "codec":
     case "schema":
     case "provider":
-    case "closeable-scope":
       return true;
     case "named": {
       // A tagged record stops the walk: its own declaration is checked on its own.

@@ -90,10 +90,6 @@ const ARITY_ROWS: readonly ArityRow[] = [
   ...fixed("run", 1),
   ...fixed("scoped", 1),
   ...fixed("forkScoped", 1),
-  ...fixed("makeScope", 0),
-  ...fixed("provideScope", 2),
-  ...fixed("addScopeFinalizer", 2),
-  ...fixed("closeScope", 1),
   ...fixed("withResource", 3),
   ...fixed("unfold", 2),
   ...bounded(
@@ -237,8 +233,8 @@ Deno.test("the wrong-count messages keep their exact wording", () => {
   assertEquals(arityMessages("retry(1)"), [
     "`retry` takes 2 arguments, but 1 is given",
   ]);
-  assertEquals(arityMessages("makeScope(1)"), [
-    "`makeScope` takes 0 arguments, but 1 is given",
+  assertEquals(arityMessages("now(1)"), [
+    "`now` takes 0 arguments, but 1 is given",
   ]);
 });
 

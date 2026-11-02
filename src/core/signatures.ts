@@ -317,7 +317,6 @@ export function loweredFunction(
 /** Adds the type and error identities that an IR type mentions, and the services of its capabilities. */
 export function referencedIds(type: Type, ids: Set<string>): void {
   switch (type.kind) {
-    case "closeable-scope":
     case "primitive":
     case "literal":
       return;

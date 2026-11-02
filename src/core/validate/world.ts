@@ -346,7 +346,6 @@ export function checkTypeIds(
     switch (t.kind) {
       case "primitive":
       case "literal":
-      case "closeable-scope":
       case "record":
       case "array":
       case "option":
@@ -459,7 +458,6 @@ const DEFERRED_KINDS: ReadonlySet<Type["kind"]> = new Set([
   "codec",
   "schema",
   "provider",
-  "closeable-scope",
 ]);
 
 /**
@@ -804,7 +802,6 @@ function guardedRecord(
       case "literal":
       case "ref":
       case "tuple":
-      case "closeable-scope":
       case "retry-schedule":
       case "codec":
       case "schema":
@@ -865,7 +862,6 @@ function guardedRecord(
       case "option":
       case "ref":
       case "tuple":
-      case "closeable-scope":
       case "retry-schedule":
       case "codec":
       case "schema":

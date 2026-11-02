@@ -242,8 +242,6 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
         '" })',
       ];
     }
-    case "closeable-scope":
-      return scope.scopeRuntime().type;
     case "fiber":
       return [
         `${scope.effect("Fiber")}.Fiber<`,

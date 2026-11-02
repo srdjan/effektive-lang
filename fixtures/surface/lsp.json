@@ -1495,7 +1495,7 @@
               "pay"
             ]
           },
-          "typeTableSize": 75,
+          "typeTableSize": 74,
           "memory": {
             "rss": 123456,
             "heapUsed": 78901

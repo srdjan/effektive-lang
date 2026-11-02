@@ -111,7 +111,6 @@ interface Unit {
  */
 const BUNDLES = new Set([
   "emit/groups",
-  "emit/scopes",
   "emit/sinks",
 ]);
 
@@ -268,20 +267,6 @@ function syntheticNodes(): Record<Expr["kind"], Expr> {
     run: { ...a, kind: "run", value: leaf() },
     scoped: { ...a, kind: "scoped", value: leaf() },
     "fork-scoped": { ...a, kind: "fork-scoped", job: leaf() },
-    "make-scope": { ...a, kind: "make-scope" },
-    "provide-scope": {
-      ...a,
-      kind: "provide-scope",
-      owner: leaf(),
-      job: leaf(),
-    },
-    "add-scope-finalizer": {
-      ...a,
-      kind: "add-scope-finalizer",
-      owner: leaf(),
-      job: leaf(),
-    },
-    "close-scope": { ...a, kind: "close-scope", owner: leaf() },
     "with-resource": {
       ...a,
       kind: "with-resource",
@@ -655,8 +640,8 @@ Deno.test("exprChildren equals a reflective walk on every node of every fixture 
 Deno.test("exprChildren equals a reflective walk on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
   const kinds = Object.keys(synthetic);
-  // The Expr union of src/core/ir.ts has 101 kinds.
-  assertEquals(kinds.length, 101);
+  // The Expr union of src/core/ir.ts has 97 kinds.
+  assertEquals(kinds.length, 97);
   for (const [kind, node] of Object.entries(synthetic)) {
     assertEquals(node.kind, kind);
     assertSameChildren(node, "synthetic");
@@ -667,7 +652,6 @@ Deno.test("exprChildren equals a reflective walk on a synthetic node of every Ex
     "null",
     "reference",
     "none",
-    "make-scope",
     "now",
     "random",
     "take-sink",
@@ -685,7 +669,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
     for (const node of all) reached.add(node.kind);
   }
   const synthetic = new Set(Object.keys(syntheticNodes()));
-  assertEquals(new Set([...reached, ...synthetic]).size, 101);
+  assertEquals(new Set([...reached, ...synthetic]).size, 97);
   for (const kind of reached) assert(synthetic.has(kind), kind);
 });
 
@@ -698,7 +682,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
 // [job, durationMs].
 Deno.test("childrenOf and exprChildren give the same child multiset on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
-  assertEquals(Object.keys(synthetic).length, 101);
+  assertEquals(Object.keys(synthetic).length, 97);
   const differentOrder: string[] = [];
   for (const [kind, node] of Object.entries(synthetic)) {
     const emitted = childrenOf(node);

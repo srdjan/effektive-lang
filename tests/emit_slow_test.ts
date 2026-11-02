@@ -4,7 +4,7 @@
 // fixtures/.
 
 import { assert, assertEquals } from "@std/assert";
-import { copyDirectory, FIXTURES, listFixtures } from "./helpers.ts";
+import { FIXTURES, listFixtures } from "./helpers.ts";
 import { deno, runScript } from "./process_helpers.ts";
 import {
   build,
@@ -14,49 +14,6 @@ import {
   LONG_NAMES,
   withTemporary,
 } from "./emit_slow_helpers.ts";
-
-Deno.test("host providers preserve shared scope handles and reject raw target scopes", async () => {
-  await withTemporary(async (dir) => {
-    copyDirectory(new URL("emit/scopes/", FIXTURES), dir);
-    Deno.writeTextFileSync(
-      `${dir}/effektive.json`,
-      JSON.stringify({
-        host: {
-          boundary: { interface: "./host.effi", module: "./host.ts" },
-        },
-      }),
-    );
-    build(dir, ["host-main.eff"]);
-    const result = await runScript(
-      dir,
-      `
-import { Effect } from "effect";
-import { create, close } from "./owner.ts";
-import { pass } from "./host-main.ts";
-const owner = await Effect.runPromise(create());
-const received = await Effect.runPromise(pass(owner));
-await Effect.runPromise(close(received));
-console.log(JSON.stringify({ same: received === owner }));
-`,
-    );
-    assertEquals(result, { same: true });
-    Deno.writeTextFileSync(
-      `${dir}/host.ts`,
-      `
-import { Layer, Scope } from "effect";
-import { Boundary } from "./boundary.ts";
-import type { Owner } from "./owner.ts";
-export const BoundaryLive = Layer.succeed(Boundary)({ accept: (_owner: Owner) => Scope.make() });
-`,
-    );
-    const wrong = await deno(dir, ["check", "host-main.ts"]);
-    assert(wrong.code !== 0, wrong.stdout + wrong.stderr);
-    assert(
-      wrong.stderr.includes("Closeable") && wrong.stderr.includes("done"),
-      wrong.stderr,
-    );
-  });
-});
 
 // ------------------------------------------------------------------ type check
 

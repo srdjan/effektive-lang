@@ -52,7 +52,6 @@ Deno.test("forks share interned nodes and preserve builtin references", () => {
     "unit",
     "never",
     "unknown",
-    "closeableScope",
   ] as const;
   for (const table of [fork, sibling]) {
     assertEquals(table.size, original.size);
@@ -266,19 +265,6 @@ Deno.test("each writer replaces the whole earlier definition of a type", () => {
   t.defineOpaque(USER);
   assert(t.isOpaque(USER));
   assertEquals(t.aliasOf(USER), undefined);
-});
-
-Deno.test("CloseableScope is an abstract leaf through aliases and IR conversion", () => {
-  const t = fresh();
-  const owner = typeFromIr(t, { kind: "closeable-scope" });
-  assertEquals(owner, t.closeableScope);
-  assertEquals(showType(t, owner), "CloseableScope");
-  assertEquals(typeToIr(t, owner), { kind: "closeable-scope" });
-  t.defineAlias(USER, owner);
-  assert(t.isAssignable(t.named(USER), owner));
-  assert(t.isAssignable(owner, t.named(USER)));
-  assert(!t.isAssignable(t.record([]), owner));
-  assert(!t.isAssignable(owner, t.record([])));
 });
 
 function field(name: string, type: TypeRef, optional = false) {

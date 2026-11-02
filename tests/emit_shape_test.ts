@@ -66,7 +66,7 @@ function lowerOk(files: Record<string, string>, entries: readonly string[]) {
 
 function irOfExamplesAndEmitFixtures(): ModuleIR[] {
   const modules = lowerOk(exampleFiles(), EXAMPLE_ENTRIES);
-  for (const dir of ["emit/groups", "emit/scopes"]) {
+  for (const dir of ["emit/groups"]) {
     const files = projectFiles(dir);
     const entries = Object.keys(files).filter((f) => f.endsWith(".eff"));
     const host = "host.effi" in files
@@ -102,7 +102,7 @@ Deno.test("childrenOf finds the nodes that a reflective walk finds", () => {
       });
     }
   }
-  assert(nodes > 250, `${nodes} nodes compared`);
+  assert(nodes > 150, `${nodes} nodes compared`);
 });
 
 // ------------------------------------------------------------------ forged nodes
@@ -199,7 +199,7 @@ Deno.test("a structural node has no evaluated children, and a call has all", () 
   assertEquals(evaluatedChildren(call), [a, b]);
 });
 
-Deno.test("the table marks the 34 leaf kinds", () => {
+Deno.test("the table marks the 39 leaf kinds", () => {
   const kinds = new Set<string>();
   for (const ir of irOfExamplesAndEmitFixtures()) {
     for (const declaration of ir.declarations) {
@@ -214,7 +214,7 @@ Deno.test("the table marks the 34 leaf kinds", () => {
       });
     }
   }
-  // The fixtures reach part of the 34 kinds. Each reached kind is in the list.
+  // The fixtures reach part of the 39 kinds. Each reached kind is in the list.
   const LEAVES = {
     "schema-make": true,
     "schema-decode": true,
@@ -233,10 +233,6 @@ Deno.test("the table marks the 34 leaf kinds", () => {
     "all-results": true,
     "scoped": true,
     "fork-scoped": true,
-    "make-scope": true,
-    "provide-scope": true,
-    "add-scope-finalizer": true,
-    "close-scope": true,
     "catch": true,
     "with-resource": true,
     "run-stream": true,
@@ -262,6 +258,6 @@ Deno.test("the table marks the 34 leaf kinds", () => {
   } satisfies Record<LeafKind, true>;
 
   assert(kinds.size > 5, `${kinds.size} leaf kinds reached`);
-  assertEquals(Object.keys(LEAVES).length, 43);
+  assertEquals(Object.keys(LEAVES).length, 39);
   for (const kind of kinds) assert(Object.hasOwn(LEAVES, kind), kind);
 });

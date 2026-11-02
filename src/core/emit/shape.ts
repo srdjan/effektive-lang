@@ -73,10 +73,6 @@ const ROWS = {
   run: { children: (e) => [e.value], leaf: "leaf" },
   scoped: { children: (e) => [e.value], leaf: "leaf" },
   "fork-scoped": { children: (e) => [e.job], leaf: "leaf" },
-  "make-scope": { children: () => [], leaf: "leaf" },
-  "provide-scope": { children: (e) => [e.owner, e.job], leaf: "leaf" },
-  "add-scope-finalizer": { children: (e) => [e.owner, e.job], leaf: "leaf" },
-  "close-scope": { children: (e) => [e.owner], leaf: "leaf" },
   "with-resource": {
     children: () => [],
     deferred: (e) => [e.acquire, e.use, e.release],

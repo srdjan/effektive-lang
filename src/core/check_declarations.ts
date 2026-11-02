@@ -280,7 +280,6 @@ class ModuleChecker {
       case "RetrySchedule":
       case "Codec":
       case "Fiber":
-      case "CloseableScope":
       case "Duration":
       case "Instant":
         return false;

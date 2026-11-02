@@ -19,6 +19,10 @@
   `retry` takes only a `RetrySchedule`, and another value gives
   `type-mismatch/010`. The IR loses the type kind `schedule` and eleven
   expression kinds.
+- The scope handles are gone: `makeScope`, `provideScope`,
+  `addScopeFinalizer`, `closeScope`, and the type `CloseableScope`. No
+  application used them. `scoped`, `forkScoped`, and `withResource` stay. The
+  IR loses the type kind `closeable-scope` and four expression kinds.
 - `build --validate` and `Revision.validate` are gone, and `frontend.ts` no
   longer exports `validateProject`. The independent IR validator is a test
   oracle: tests import it from `src/core/validate_project.ts`. The command-line

@@ -208,7 +208,7 @@ function leaf(g: Generator): Type {
   if (roll < 0.35) return pick(g, PRIMITIVES);
   if (roll < 0.6) return pick(g, LITERALS);
   if (roll < 0.95 && g.names.length > 0) return pick(g, g.names);
-  return { kind: "closeable-scope" };
+  return STRING;
 }
 
 function record(g: Generator, inner: () => Type): Type {
@@ -863,29 +863,28 @@ Deno.test("the checker and the validator agree on generated pairs", () => {
     }
   }
   assertEquals(disagreements.length, 0, report(disagreements));
-  assertEquals(answers, { fit: 33057, rejected: 46943 });
-  assertEquals(fibers, { fit: 1787, rejected: 7597, failuresDiffer: 7378 });
-  assertEquals(authorityDecided, 866);
+  assertEquals(answers, { fit: 33029, rejected: 46971 });
+  assertEquals(fibers, { fit: 1768, rejected: 7594, failuresDiffer: 7376 });
+  assertEquals(authorityDecided, 870);
   assertEquals(Object.fromEntries([...kinds].sort()), {
-    "closeable-scope": 174,
     "retry-schedule": 1384,
-    array: 2207,
-    codec: 1287,
-    effect: 1374,
-    fiber: 5400,
-    function: 4901,
-    literal: 907,
-    named: 5334,
-    option: 2132,
-    primitive: 1247,
-    provider: 1346,
-    record: 1410,
-    ref: 1310,
-    schema: 1285,
-    sink: 3383,
-    stream: 1400,
+    array: 2198,
+    codec: 1285,
+    effect: 1373,
+    fiber: 5389,
+    function: 4913,
+    literal: 903,
+    named: 5331,
+    option: 2130,
+    primitive: 1433,
+    provider: 1350,
+    record: 1419,
+    ref: 1308,
+    schema: 1294,
+    sink: 3381,
+    stream: 1398,
     tuple: 1334,
-    union: 2185,
+    union: 2177,
   });
 });
 

@@ -214,41 +214,6 @@ const used = (source: Stream<Int, Stop, Work.value>): Stream<Int, Stop | Other, 
   ]);
 });
 
-// ------------------------------------------------------------ add finalizer
-
-Deno.test("addScopeFinalizer validation recomputes its requirements from the finalizer job", () => {
-  const lowered = lowerText(`
-service Audit { release(): void }
-const register = (owner: CloseableScope): void uses Audit.release =>
-  addScopeFinalizer(owner, defer(() => Audit.release()))
-`);
-  // The call effects and the function contract lose the release requirement
-  // together. The job type and the callback evidence stay. Only the
-  // recomputation from the job finds the loss: it reports the call effects,
-  // and it reports the body requirement that the function contract omits.
-  runMutations(lowered, [{
-    label: "finalizer requirement removed from the call and the contract",
-    declaration: "register",
-    edits: [
-      ["body.effects.requirements", () => []],
-      ["type.effects.requirements", () => []],
-    ],
-    expected: [
-      {
-        code: "validation/003",
-        path: "body.effects.requirements",
-        fragment: "expected [cap:m#Audit.release], recorded []",
-      },
-      {
-        code: "validation/003",
-        path: "body",
-        fragment:
-          "the body requires [cap:m#Audit.release], which the declared requirements [] do not list",
-      },
-    ],
-  }]);
-});
-
 // ------------------------------------------------------------------- Schema
 
 Deno.test("Schema issue operations reject a wrong argument expression", () => {

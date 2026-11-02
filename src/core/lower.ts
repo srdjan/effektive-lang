@@ -245,18 +245,6 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
   "run": (arg) => ({ kind: "run", value: arg(0) }),
   "scoped": (arg) => ({ kind: "scoped", value: arg(0) }),
   "fork-scoped": (arg) => ({ kind: "fork-scoped", job: arg(0) }),
-  "make-scope": () => ({ kind: "make-scope" }),
-  "provide-scope": (arg) => ({
-    kind: "provide-scope",
-    owner: arg(0),
-    job: arg(1),
-  }),
-  "add-scope-finalizer": (arg) => ({
-    kind: "add-scope-finalizer",
-    owner: arg(0),
-    job: arg(1),
-  }),
-  "close-scope": (arg) => ({ kind: "close-scope", owner: arg(0) }),
   "unfold": (arg) => ({ kind: "unfold", seed: arg(0), next: arg(1) }),
   "map-effect": (arg, fact) => ({
     kind: "map-effect",

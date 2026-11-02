@@ -58,7 +58,6 @@ export function needsFieldAdapter(
     case "primitive":
     case "literal":
     case "ref":
-    case "closeable-scope":
     case "retry-schedule":
     case "codec":
     case "schema":

@@ -10,7 +10,6 @@ import type { Expr } from "../ir.ts";
 export function exprChildren(e: Expr): readonly Expr[] {
   switch (e.kind) {
     case "take-sink":
-    case "make-scope":
     case "now":
     case "random":
     case "null":
@@ -43,11 +42,6 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return [e.body];
     case "call":
       return [e.callee, ...e.arguments];
-    case "provide-scope":
-    case "add-scope-finalizer":
-      return [e.owner, e.job];
-    case "close-scope":
-      return [e.owner];
     case "with-resource":
       return [e.acquire, e.use, e.release];
     case "unfold":

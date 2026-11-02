@@ -8,24 +8,15 @@ import type { Expr } from "../ir.ts";
 import type { EffectModule } from "./module_state.ts";
 import type { ExprOf } from "./shape.ts";
 
-/** The runtime helpers that the emitter writes for a closeable scope. */
-type ScopeOperation = "make" | "provide" | "register" | "close";
-
 /** The function that a simple call invokes. */
-export type Callee =
-  | {
-    readonly kind: "method";
-    readonly module: EffectModule;
-    readonly method: string;
-  }
-  | { readonly kind: "scope"; readonly operation: ScopeOperation };
+export interface Callee {
+  readonly kind: "method";
+  readonly module: EffectModule;
+  readonly method: string;
+}
 
 function method(module: EffectModule, name: string): Callee {
   return { kind: "method", module, method: name };
-}
-
-function scopeOperation(operation: ScopeOperation): Callee {
-  return { kind: "scope", operation };
 }
 
 /**
@@ -167,11 +158,7 @@ type LeafCallKind =
   | "make-ref"
   | "get-ref"
   | "set-ref"
-  | "update-ref"
-  | "make-scope"
-  | "provide-scope"
-  | "add-scope-finalizer"
-  | "close-scope";
+  | "update-ref";
 
 /** `updateRef` with an effectful callback. */
 export const UPDATE_REF_EFFECT: Callee = method(
@@ -191,8 +178,4 @@ export const LEAF_CALLS: { readonly [K in LeafCallKind]: Callee } = {
   "get-ref": method("SynchronizedRef", "get"),
   "set-ref": method("SynchronizedRef", "set"),
   "update-ref": method("SynchronizedRef", "update"),
-  "make-scope": scopeOperation("make"),
-  "provide-scope": scopeOperation("provide"),
-  "add-scope-finalizer": scopeOperation("register"),
-  "close-scope": scopeOperation("close"),
 };
