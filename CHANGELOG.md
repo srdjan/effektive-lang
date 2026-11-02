@@ -6,6 +6,9 @@
   `globalThis` now gives `declaration/002`. Before, such a program passed
   `check` and then failed the strict target check, because the emitted
   TypeScript uses these names as globals.
+- The emitted fallback of a `match` takes `never`. So the strict target check
+  reports TS2345 for a match that lacks a variant, also when the checker
+  misses it. Emitted text changes in this one signature.
 - `deno task site:ir` writes the website `typed-ir.ts` from `src/core/ir.ts`
   and the predicate types that it needs. A slow test compares the two files
   byte for byte.

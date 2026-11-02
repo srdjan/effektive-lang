@@ -786,7 +786,7 @@ export class DeclarationEmitter {
   unmatchedDeclaration(): Doc {
     const name = this.scope.unmatched();
     return [
-      `const ${name} = (_value: unknown): never => `,
+      `const ${name} = (_value: never): never => `,
       braces([
         'throw new TypeError("a match received a value outside its type");',
       ]),

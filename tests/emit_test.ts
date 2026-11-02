@@ -809,7 +809,7 @@ Deno.test("a match over data and error types tests the tag of each arm and throw
   assertEquals(text.split("const $unmatched = ").length - 1, 1);
   assertStringIncludes(
     text,
-    'const $unmatched = (_value: unknown): never => {\n  throw new TypeError("a match received a value outside its type");\n};',
+    'const $unmatched = (_value: never): never => {\n  throw new TypeError("a match received a value outside its type");\n};',
   );
   // An error and a data type share one chain, and an empty variant has a tag test.
   assertStringIncludes(text, "((r) => r.reason)($t0)");
