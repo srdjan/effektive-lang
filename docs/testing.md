@@ -42,6 +42,26 @@ An update task writes what the current code gives. So an update can hide a defec
 
 A capture exits 1 for a missing record, and also for a failed test. So read its summary lines before you read its exit status.
 
+## What the strict target check catches
+
+The strict target check is `deno task effektive build --tsc`. It runs `deno check` on the emitted code with strict mode. The table below states, for each defect class, whether this check catches the defect and which other kept oracle can catch it.
+
+The evidence is the fault injections of the validation of the simplification rebase, in [the plan](plans/2026-11-02-simplification-rebase.md), Section 6, decision SRD2. Fable injected faults into the checker. Astra injected faults into the IR.
+
+| Defect | Strict target check | Other kept oracle |
+| --- | --- | --- |
+| A contract narrower than the body (a dropped failure or requirement) | Caught: TS2375 at the source line | - |
+| A captured global | Caught | - |
+| A contract wider than the body | Missed | Golden files, fixtures |
+| A false rejection | Missed: the build stops before the check | Fixtures that must compile |
+| A non-exhaustive `match` | Caught: the emitted guard takes `never`, so the unmatched variant gives TS2345 | - |
+| A wrong execution mode | Missed | The emitter guard in `src/core/emit/expr.ts` |
+| A wrong refinement proof | Missed: the type is `number` | Only the validator |
+| An `int` literal `1.5` in IR | Missed | Only the validator |
+| An extra failure in an inferred contract | Missed | Only the validator |
+
+The check cannot see a wrong value that has a correct type. Do not use a pass of the check as proof of source semantics.
+
 ## Retained revisions
 
 `tests/revision_isolation_test.ts` delays queries on retained revisions until after later definition edits. It compares independently validated IR, emitted text, mappings, and editor results with a fresh program. Its table census also checks cached-module reuse across rotating edits. The census bounds visible table identities. It does not measure retained bytes or garbage-collection timing.
