@@ -1,6 +1,6 @@
 // The reference walkers of the validator (src/core/validate/expr.ts). Four
 // checks follow a binding through a closure body and report each use that the
-// rules forbid: a borrowed fiber (`withFiber`), a borrowed handle (`withResource`
+// rules forbid: a borrowed handle (`withResource`
 // over an opaque type), a borrowed group (`mapGroups`), and a self reference
 // in a recursive Schema body (`schemaRecursive`). A missed child expression
 // hides a use, so each test puts a reference at many places of a body and
@@ -149,124 +149,6 @@ function bodiesWith(
   }
   return { ...bodies, ...extra };
 }
-
-// ------------------------------------------------------------------ fiber
-
-/** The starts of the reported uses of the fiber, for each body. */
-const EXPECTED_FIBER: Record<string, number[]> = {
-  "alone": [1000],
-  "tuple": [1000],
-  "array": [1000],
-  "record": [1000],
-  "update": [1000],
-  "get": [1000],
-  "if-condition": [1000],
-  "if-then": [1000],
-  "if-else": [1000],
-  "match-subject": [1000],
-  "match-arm": [1000],
-  "block-bind": [1000],
-  "block-evaluate": [1000],
-  "block-result": [1000],
-  "closure": [1000],
-  "catch-body": [1000],
-  "catch-handler": [1000],
-  "call-callee": [1000],
-  "call-argument": [1000],
-  "binary": [1000],
-  "fail": [1000],
-  "map-stream": [1000],
-  "take-stream": [1000],
-  "perform-first": [1000],
-  "join": [],
-  "interrupt": [],
-  "join in tuple": [],
-  "join in match arm": [],
-  "join in block bind": [],
-  "join in closure": [1000],
-  "join of join": [],
-  "two joins": [],
-  "join and bare": [1001],
-  "join of copy": [1000, 1001],
-};
-
-Deno.test("fiber references: only a direct join or interrupt may use the fiber", () => {
-  const text = `
-error Stop = {}
-service Jobs { next(): Int fails Stop }
-export const run = (): Int fails Stop uses Jobs.next =>
-  withFiber(defer(() => Jobs.next()), (fiber) => joinFiber(fiber))
-type Int = int
-`;
-  const base = lower({ "effektive.json": "{}", "m.eff": text }, "m.eff");
-  const run = base.ir.declarations.find((d) => d.name === "run");
-  assert(run?.kind === "function" && run.body.kind === "with-fiber");
-  const use = run.body.use;
-  assert(use.kind === "closure" && use.body.kind === "join-fiber");
-  const join = use.body;
-  const index = base.ir.declarations.indexOf(run);
-  const found = probe(
-    base,
-    "borrowed fiber may only be joined or interrupted directly",
-    join,
-    run.body.use.parameters[0].id,
-    (ir, body) => {
-      const declaration = ir.declarations[index];
-      assert(declaration.kind === "function");
-      assert(declaration.body.kind === "with-fiber");
-      assert(declaration.body.use.kind === "closure");
-      (declaration.body.use as { body: Expr }).body = body;
-    },
-    bodiesWith({
-      join: ([r], l) => make(l, "join-fiber", { fiber: r }),
-      interrupt: ([r], l) => make(l, "interrupt-fiber", { fiber: r }),
-      "join in tuple": ([r], l) =>
-        make(l, "tuple", { elements: [make(l, "join-fiber", { fiber: r })] }),
-      "join in match arm": ([r], l) =>
-        make(l, "match", {
-          subject: l,
-          arms: [{
-            pattern: { kind: "wildcard", span: l.span },
-            body: make(l, "join-fiber", { fiber: r }),
-          }],
-        }),
-      "join in block bind": ([r], l) =>
-        make(l, "block", {
-          steps: [{
-            kind: "bind",
-            binding: PARAMETER,
-            value: make(l, "join-fiber", { fiber: r }),
-          }],
-          result: l,
-        }),
-      "join in closure": ([r], l) =>
-        make(l, "closure", {
-          parameters: [],
-          body: make(l, "join-fiber", { fiber: r }),
-        }),
-      "join of join": ([r], l) =>
-        make(l, "join-fiber", {
-          fiber: make(l, "join-fiber", { fiber: r }),
-        }),
-      "two joins": ([r, s], l) =>
-        make(l, "tuple", {
-          elements: [
-            make(l, "join-fiber", { fiber: r }),
-            make(l, "join-fiber", { fiber: s }),
-          ],
-        }),
-      "join and bare": ([r, s], l) =>
-        make(l, "tuple", {
-          elements: [make(l, "join-fiber", { fiber: r }), s],
-        }),
-      "join of copy": ([r, s], l) =>
-        make(l, "join-fiber", {
-          fiber: make(l, "tuple", { elements: [r, s] }),
-        }),
-    }),
-  );
-  assertEquals(found, EXPECTED_FIBER);
-});
 
 // ------------------------------------------------------------------ borrowed handle
 

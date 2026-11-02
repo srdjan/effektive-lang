@@ -47,7 +47,6 @@ export type EffectModule =
   | "Cause"
   | "Clock"
   | "Random"
-  | "Fiber"
   | "Exit"
   | "Scope";
 
@@ -66,8 +65,7 @@ type DeferredKind =
   | "provider"
   | "ref"
   | "retry-schedule"
-  | "schema"
-  | "fiber";
+  | "schema";
 
 type DeferredType = Extract<Type, { readonly kind: DeferredKind }>;
 
@@ -80,7 +78,6 @@ const DEFERRED_KINDS = {
   "ref": true,
   "retry-schedule": true,
   "schema": true,
-  "fiber": true,
 } as const satisfies Record<DeferredKind, true>;
 
 /**

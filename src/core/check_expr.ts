@@ -109,7 +109,6 @@ import {
 } from "./check_builtins/context.ts";
 import type { CollectionContext } from "./check_builtins/collections.ts";
 import type { EffectContext } from "./check_builtins/effect.ts";
-import type { FiberContext } from "./check_builtins/fiber.ts";
 import type { LayerContext } from "./check_builtins/layer.ts";
 import { type CoreRowName, FAMILY_ROWS } from "./check_builtins/registry.ts";
 import type {
@@ -216,7 +215,6 @@ class BodyChecker
     CollectionContext,
     EffectContext,
     LayerContext,
-    FiberContext,
     ScopeContext,
     StreamContext,
     SchemaContext,

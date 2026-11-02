@@ -33,20 +33,6 @@ Deno.test("a private type reached only through a Ref element is exported", () =>
   assertExported(text, "B");
 });
 
-Deno.test("a private type reached only through a Fiber result is exported", () => {
-  const text = emitted(
-    "type Int = int\ntype B = { n: Int }\nexport const f = (x: Fiber<B, never>): Int => 1\n",
-  );
-  assertExported(text, "B");
-});
-
-Deno.test("a private error reached only through a Fiber failure is exported", () => {
-  const text = emitted(
-    "type Int = int\nerror E = {}\nexport const f = (x: Fiber<Int, E>): Int => 1\n",
-  );
-  assertExported(text, "E");
-});
-
 Deno.test("a private error reached only through a RetrySchedule error is exported", () => {
   const text = emitted(
     "type Int = int\nerror E = {}\nexport const p: RetrySchedule<E> = retrySchedule((e: E, attempt: Int): Option<Duration> => None)\n",

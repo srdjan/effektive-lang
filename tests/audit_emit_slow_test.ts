@@ -14,8 +14,6 @@ import { runStrictTarget } from "./target_helpers.ts";
 const signatures = [
   ["Ref element", "type B = { n: Int }", "Ref<B>"],
   ["RetrySchedule error", "error E = {}", "RetrySchedule<E>"],
-  ["Fiber result", "type B = { n: Int }", "Fiber<B, never>"],
-  ["Fiber failure", "error E = {}", "Fiber<Int, E>"],
 ] as const;
 
 async function checkTwoModules(library: string, value: string): Promise<void> {

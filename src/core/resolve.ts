@@ -124,9 +124,6 @@ const PRELUDE = {
   schemaDecode: { shadowable: true },
   schemaEncode: { shadowable: true },
   schemaMake: { shadowable: true },
-  withFiber: { shadowable: false },
-  joinFiber: { shadowable: false },
-  interruptFiber: { shadowable: false },
   Some: { shadowable: false },
   None: { shadowable: false },
   map: { shadowable: false },
@@ -153,7 +150,6 @@ const BUILTIN_TYPES = [
   "Option",
   "Ref",
   "RetrySchedule",
-  "Fiber",
   "Duration",
   "Instant",
 ] as const;

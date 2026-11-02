@@ -1,9 +1,8 @@
 // Error paths of the built-in type names in the declaration checker
 // (`TypeLowerer.named` in src/core/type_lower.ts): a wrong number of type arguments
-// for Ref, RetrySchedule, and Fiber, a
-// RetrySchedule over a type that is not a declared error, and a Fiber failure
-// type that is not a declared error or never. Each case pins the code, the text
-// of the node that carries the span, and the message.
+// for Ref and RetrySchedule, and a RetrySchedule over a type that is not a
+// declared error. Each case pins the code, the text of the node that carries
+// the span, and the message.
 
 import { assert, assertEquals } from "@std/assert";
 import { checkProject, memoryHost } from "../src/core/frontend.ts";
@@ -40,8 +39,6 @@ Deno.test("a wrong number of type arguments names the type and the counts", () =
       "RetrySchedule<E, F>",
       "`RetrySchedule` takes 1 type argument, but 2 are given",
     ],
-    ["Fiber<Int>", "`Fiber` takes 2 type arguments, but 1 is given"],
-    ["Fiber<Int, E, F>", "`Fiber` takes 2 type arguments, but 3 are given"],
   ];
   for (const [body, message] of cases) {
     assertEquals(reportsFor(body), [[ARITY, body, message]], body);
@@ -56,28 +53,4 @@ Deno.test("a RetrySchedule needs a declared error type", () => {
   assertEquals(reportsFor("RetrySchedule<Option<E>>"), [
     [ARITY, "Option<E>", "RetrySchedule needs a declared error type"],
   ]);
-});
-
-Deno.test("a Fiber failure type is a declared error, a union of them, or never", () => {
-  for (const ok of ["E", "E | F", "F | E", "never", "E | never"]) {
-    assertEquals(reportsFor(`Fiber<Int, ${ok}>`), [], ok);
-  }
-  const message = "Fiber failure type needs declared errors or never";
-  // The report covers the whole failure type. A union with two bad members still
-  // gives one diagnostic: the checker drops a second report with the same code
-  // and span.
-  const bad: readonly (readonly [type: string, reports: number])[] = [
-    ["Int", 1],
-    ["string", 1],
-    ["Option<E>", 1],
-    ["E | Int", 1],
-    ["Int | string", 1],
-  ];
-  for (const [type, reports] of bad) {
-    assertEquals(
-      reportsFor(`Fiber<Int, ${type}>`),
-      Array.from({ length: reports }, () => [ARITY, type, message]),
-      type,
-    );
-  }
 });

@@ -1680,27 +1680,7 @@ type Int = int
   assertEquals(codesOf(wrong, sources), ["validation/003"]);
 });
 
-Deno.test("scoped fiber validator checks join failures and handle identity", () => {
-  const { ir, sources } = lowerText(`
-error Stop = {}
-service Jobs { next(): Int fails Stop }
-export const run = (): Int fails Stop uses Jobs.next =>
-  withFiber(defer(() => Jobs.next()), (fiber) => joinFiber(fiber))
-type Int = int
-`);
-  assertEquals(validateModule(ir, sources), []);
-  const wrong = copy(ir);
-  const run = wrong.declarations[decl(wrong, "run")];
-  assert(run.kind === "function" && run.body.kind === "with-fiber");
-  setAt(
-    wrong,
-    `declarations[${decl(wrong, "run")}].body.use.parameters[0].id`,
-    "local:m#unknown",
-  );
-  assert(codesOf(wrong, sources).includes("validation/001"));
-});
-
-Deno.test("scoped fiber validation checks the reserved scope requirement", () => {
+Deno.test("fork-scoped validation checks the reserved scope requirement", () => {
   const { ir, sources } = lowerText(`
 const job = defer(() => forkScoped(defer(() => 1)))
 export const main = (): void => scoped(job)
@@ -3245,20 +3225,4 @@ const run = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => j
     setAt(wrong, `declarations[${index}].body.${path}`, value);
     assert(codesOf(wrong, sources).includes(code), path);
   }
-});
-
-Deno.test("a withFiber parameter may name the type of its child", () => {
-  const { ir, sources } = lowerText(`type Int = int
-type Item = { id: Int }
-type Done = { id: Int }
-type Stopped = { code: Int }
-type State = Done | Stopped
-const item = (): Item => ({ id: 1 })
-const done = (): Done => Done({ id: 1 })
-const adopted = (): Int => withFiber(defer(() => 1), (fiber: Fiber<Int, never>) => 1)
-const widened = (): Int => withFiber(defer(() => item()), (fiber: Fiber<{ id: Int }, never>) => 1)
-const tagged = (): Int => withFiber(defer(() => done()), (fiber: Fiber<{ id: Int }, never>) => 1)
-const exact = (): Int => withFiber(defer(() => item()), (fiber: Fiber<Item, never>) => 1)
-`);
-  assertEquals(codesOf(ir, sources), []);
 });

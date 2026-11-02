@@ -88,7 +88,6 @@ const EMITTED: readonly string[] = [
   "Cause",
   "Clock",
   "Random",
-  "Fiber",
   "Deferred",
   "Exit",
   "Scope",
@@ -332,8 +331,8 @@ Deno.test("no accepted binding name captures a name that the generated TypeScrip
     await check(dir, built.paths);
   });
   // Literal counts: a reservation of every name cannot make the test vacuous.
-  assertEquals(accepted.length, 2128);
-  assertEquals(reservedVariants, 394);
-  assertEquals(reserved.size, 18);
+  assertEquals(accepted.length, 2113);
+  assertEquals(reservedVariants, 383);
+  assertEquals(reserved.size, 17);
   assertEquals(parserReserved.size, 2);
 });

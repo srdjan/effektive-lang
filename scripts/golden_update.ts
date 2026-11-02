@@ -27,7 +27,6 @@ const resourceCase = [
   "type Int = int",
   "service Jobs { open(): { read: () => Int, close: () => void }; next(): Int }",
   "export const resource = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => job.read(), (job) => job.close())",
-  "export const fiber = (): Int uses Jobs.next => withFiber(defer(() => Jobs.next()), (fiber) => joinFiber(fiber))",
   "const groups = (source: Stream<Int>) => mapGroups(source, (n) => n, (key, group) => collectStream(group), { bufferSize: 1 })",
   "const numberSchema: Schema<Int> = schema()",
   "export const decoded = (input: unknown): Int fails SchemaError => schemaDecode(numberSchema, input)",

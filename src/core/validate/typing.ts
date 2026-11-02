@@ -180,7 +180,6 @@ export function dataOnly(
     case "ref":
     case "retry-schedule":
     case "schema":
-    case "fiber":
     case "effect":
     case "stream":
     case "sink":
@@ -363,10 +362,6 @@ function assignable(
         invariant(env, s.encoded, t.encoded, depth) &&
         isSubset(s.decodeRequirements, t.decodeRequirements) &&
         isSubset(s.encodeRequirements, t.encodeRequirements);
-    case "fiber":
-      return s.kind === "fiber" &&
-        assignable(env, s.result, t.result, false, depth + 1) &&
-        sameSet(s.failures, t.failures);
     case "effect":
       return s.kind === "effect" &&
         assignable(env, s.result, t.result, false, depth + 1) &&
@@ -453,7 +448,6 @@ function guardedAlias(env: TypeEnv, id: string): boolean {
       case "tuple":
       case "retry-schedule":
       case "schema":
-      case "fiber":
       case "effect":
       case "stream":
       case "sink":
@@ -639,7 +633,6 @@ export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
       case "ref":
       case "retry-schedule":
       case "schema":
-      case "fiber":
       case "effect":
       case "stream":
       case "sink":
@@ -962,8 +955,6 @@ export function show(type: Type): string {
       }, ${show(type.encoded)}, ${orNever(type.decodeRequirements)}, ${
         orNever(type.encodeRequirements)
       }${type.makeInput === undefined ? "" : `, ${show(type.makeInput)}`}>`;
-    case "fiber":
-      return `Fiber<${show(type.result)}, ${orNever(type.failures)}>`;
     case "effect":
       return `Effect<${show(type.result)}, ${orNever(type.effects.failures)}, ${
         orNever(type.effects.requirements)

@@ -370,9 +370,6 @@ export function checkTypeIds(
       case "schema":
         schemaShape(t, at);
         return;
-      case "fiber":
-        effects(`${at}.effects`, { failures: t.failures, requirements: [] });
-        return;
       case "effect":
       case "stream":
       case "sink":
@@ -449,7 +446,6 @@ function checkFieldNames(
 const DEFERRED_KINDS: ReadonlySet<Type["kind"]> = new Set([
   "function",
   "effect",
-  "fiber",
   "stream",
   "sink",
   "retry-schedule",
@@ -802,7 +798,6 @@ function guardedRecord(
       case "tuple":
       case "retry-schedule":
       case "schema":
-      case "fiber":
       case "effect":
       case "stream":
       case "sink":
@@ -861,7 +856,6 @@ function guardedRecord(
       case "tuple":
       case "retry-schedule":
       case "schema":
-      case "fiber":
       case "effect":
       case "stream":
       case "sink":

@@ -84,20 +84,21 @@ Deno.test("a Schema over an unknown type reports only the unknown name", () => {
   );
 });
 
-Deno.test("a poisoned fiber use result keeps its data-only report", () => {
+Deno.test("a poisoned resource use result keeps its data-only report", () => {
   assertChecks(
     `export type Int = int
-export const f = (): Int => withFiber(defer(() => 1), (fiber) => Missing)
+service Jobs { open(): { read: () => Int, close: () => void } }
+export const f = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => Missing, (job) => job.close())
 `,
     [
       [
         "type-mismatch/010",
-        "the fiber use result must be data only",
-        "(fiber) => Missing",
+        "the use result must be data only",
+        "(job) => Missing",
       ],
       ["unknown-name/001", "unknown name `Missing`", "Missing"],
     ],
-    "fiber use result",
+    "resource use result",
   );
 });
 

@@ -1,6 +1,6 @@
 // Unit tests for `fits` and `same` of the independent validator, for the
 // compound types that carry variance rules: Schema, Sink,
-// RetrySchedule, Fiber, and null against unit. Each test
+// RetrySchedule, and null against unit. Each test
 // builds Type values by hand and checks both directions of `fits`, and `same`.
 
 import { assert, assertEquals } from "@std/assert";
@@ -352,52 +352,6 @@ Deno.test("RetrySchedule: the error type is invariant", () => {
   );
   relate("int against number", retry(INT), retry(NUMBER), UNRELATED);
   relate("an alias equals its target", retry(ALIAS), retry(STRING), EQUAL);
-});
-
-// -------------------------------------------- Fiber
-
-Deno.test("Fiber: result is covariant and failure sets must be equal even under fits", () => {
-  const fiber = (
-    result: Type,
-    failures: readonly (typeof E | typeof F)[],
-  ): Type => ({
-    kind: "fiber",
-    result,
-    failures,
-  });
-  relate("equal", fiber(INT, [E]), fiber(INT, [E]), EQUAL);
-  relate(
-    "result int against number",
-    fiber(INT, [E]),
-    fiber(NUMBER, [E]),
-    ONE_WAY,
-  );
-  relate(
-    "result string against int",
-    fiber(STRING, [E]),
-    fiber(INT, [E]),
-    UNRELATED,
-  );
-  relate("a smaller failure set", fiber(INT, []), fiber(INT, [E]), UNRELATED);
-  relate(
-    "a larger failure set",
-    fiber(INT, [E, F]),
-    fiber(INT, [E]),
-    UNRELATED,
-  );
-  relate("different failures", fiber(INT, [E]), fiber(INT, [F]), UNRELATED);
-  relate(
-    "failure order is irrelevant",
-    fiber(INT, [E, F]),
-    fiber(INT, [F, E]),
-    EQUAL,
-  );
-  relate(
-    "a covariant result does not relax the failure sets",
-    fiber(INT, []),
-    fiber(NUMBER, [E]),
-    UNRELATED,
-  );
 });
 
 // ------------------------------------------------------------ null and unit

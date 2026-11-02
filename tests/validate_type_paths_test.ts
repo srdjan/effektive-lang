@@ -82,10 +82,6 @@ const SLOTS: readonly Slot[] = [
   { suffix: ".makeInput", build: (p) => schema(INT, INT, p) },
   {
     suffix: ".result",
-    build: (p) => ({ kind: "fiber", result: p, failures: [] }),
-  },
-  {
-    suffix: ".result",
     build: (p) => ({ kind: "effect", result: p, effects: NONE }),
   },
   {
@@ -255,6 +251,18 @@ Deno.test("checkTypeIds orders a kind's own check against its children", () => {
     `validation/001 ${ROOT}.error: ${missing}`,
     `validation/001 ${ROOT}: a retry schedule needs a declared error type`,
   ]);
+  // An effect reports its child before its effect sets.
+  assertEquals(
+    lines({
+      kind: "effect",
+      result: MISSING,
+      effects: { failures: ["error:m#Gone"], requirements: [] },
+    }),
+    [
+      `validation/001 ${ROOT}.result: ${missing}`,
+      `validation/001 ${ROOT}.effects.failures[0]: the failure error:m#Gone is not a declared error`,
+    ],
+  );
   // A schema reports its children first, then data-only, then its requirements.
   assertEquals(
     lines({
@@ -268,14 +276,6 @@ Deno.test("checkTypeIds orders a kind's own check against its children", () => {
       `validation/001 ${ROOT}.decoded: ${missing}`,
       `validation/001 ${ROOT}: Schema decoded and encoded types must be data only`,
       `validation/001 ${ROOT}.decodeRequirements.requirements[0]: the requirement cap:m#Gone is not a declared service method`,
-    ],
-  );
-  // A fiber and an effect report their children before their effect sets.
-  assertEquals(
-    lines({ kind: "fiber", result: MISSING, failures: ["error:m#Gone"] }),
-    [
-      `validation/001 ${ROOT}.result: ${missing}`,
-      `validation/001 ${ROOT}.effects.failures[0]: the failure error:m#Gone is not a declared error`,
     ],
   );
 });

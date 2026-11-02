@@ -38,7 +38,6 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     registry.ts    FAMILY_ROWS: the rows of all families, composed once.
     collections.ts Collection callbacks, traversal and grouped effects through a family-specific context.
     effect.ts      Effect construction, execution, failures and retry options through EffectContext.
-    fiber.ts       Fiber operations and inline borrow lifetimes through FiberContext.
     layer.ts       Layer construction, merging and provision through LayerContext.
     ref.ts         Mutable reference construction, reads, writes and pure update callbacks.
     schema.ts      Schema metadata, exhaustive handlers, defaults, directional effects and recursion through SchemaContext.

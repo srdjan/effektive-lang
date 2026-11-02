@@ -85,7 +85,6 @@ export type Type =
   | { readonly kind: "retry-schedule"; readonly error: Type }
   // Constructor defaults may coexist with one field-presence flag.
   | { readonly kind: "schema"; readonly decoded: Type; readonly encoded: Type; readonly decodeRequirements: readonly CapabilityId[]; readonly encodeRequirements: readonly CapabilityId[]; readonly optionalKey?: true; readonly encodedOptionalKey?: true; readonly decodedOptionalKey?: true; readonly makeInput?: Type; readonly constructorDefault?: true }
-  | { readonly kind: "fiber"; readonly result: Type; readonly failures: readonly ErrorId[] }
   | { readonly kind: "effect"; readonly result: Type; readonly effects: Effects }
   | { readonly kind: "stream"; readonly element: Type; readonly effects: Effects }
   | { readonly kind: "sink"; readonly input: Type; readonly result: Type; readonly leftover?: Type; readonly effects: Effects }
@@ -233,9 +232,6 @@ export type Expr =
   | Node<{ kind: "schema-decode"; schema: Expr; input: Expr }>
   | Node<{ kind: "schema-encode"; schema: Expr; input: Expr }>
   | Node<{ kind: "schema-make"; schema: Expr; input: Expr }>
-  | Node<{ kind: "with-fiber"; job: Expr; use: ClosureExpr }>
-  | Node<{ kind: "join-fiber"; fiber: Expr }>
-  | Node<{ kind: "interrupt-fiber"; fiber: Expr }>
   | Node<{ kind: "perform"; capability: CapabilityId; arguments: readonly Expr[] }>
   | Node<{ kind: "block"; steps: readonly Step[]; result: Expr }>
   | Node<{ kind: "if"; condition: Expr; then: Expr; else: Expr }>

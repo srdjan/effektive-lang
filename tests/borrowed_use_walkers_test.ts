@@ -1,14 +1,12 @@
-// Tests for the four checks of a borrowed local in src/core/check_expr.ts: a
-// borrowed fiber (`withFiber`), a scoped operation record (`withResource` over a
-// record), a borrowed host handle (`withResource` over an opaque type or a
-// `borrow` parameter), and a borrowed group (`mapGroups`). Each row gives a
-// program and the number of reports of the check's message. Every test runs
-// through the public entry `checkProject`.
+// Tests for the three checks of a borrowed local in src/core/check_expr.ts: a
+// scoped operation record (`withResource` over a record), a borrowed host
+// handle (`withResource` over an opaque type or a `borrow` parameter), and a
+// borrowed group (`mapGroups`). Each row gives a program and the number of reports of the
+// check's message. Every test runs through the public entry `checkProject`.
 
 import { assert, assertEquals } from "@std/assert";
 import { checkProject, memoryHost } from "../src/core/frontend.ts";
 
-const FIBER = "a borrowed fiber may only be joined or interrupted directly";
 const RECORD =
   "a scoped operation record may only be used as the direct receiver of an operation call";
 const HANDLE = "a borrowed handle may only pass to a borrow-qualified method";
@@ -33,52 +31,6 @@ function reportsOf(
 
 function single(text: string): Record<string, string> {
   return { "effektive.json": "{}", "m.eff": text };
-}
-
-// ------------------------------------------------------------------ fiber
-
-const FIBER_ROWS: readonly Row[] = [
-  { name: "join directly", body: "joinFiber(fiber)", reports: 0 },
-  { name: "interrupt directly", body: "interruptFiber(fiber)", reports: 0 },
-  {
-    name: "join twice",
-    body: "{ joinFiber(fiber); joinFiber(fiber) }",
-    reports: 0,
-  },
-  { name: "return the fiber", body: "fiber", reports: 1 },
-  {
-    name: "copy the fiber",
-    body: "{ const copy = fiber; joinFiber(copy) }",
-    reports: 1,
-  },
-  {
-    name: "join inside an arrow",
-    body: "{ const later = () => joinFiber(fiber); 1 }",
-    reports: 1,
-  },
-  { name: "pass to a function", body: "keep(fiber)", reports: 1 },
-  {
-    name: "pass as the second argument",
-    body: "pair(1, fiber)",
-    reports: 1,
-  },
-  {
-    name: "one good use and one bad use",
-    body: "{ joinFiber(fiber); keep(fiber) }",
-    reports: 1,
-  },
-];
-
-for (const row of FIBER_ROWS) {
-  Deno.test(`borrowed fiber: ${row.name}`, () => {
-    const text = `
-type Int = int
-const keep = (fiber: Fiber<Int, never>): Int => 1
-const pair = (n: Int, fiber: Fiber<Int, never>): Int => 1
-const probe = (): Int => withFiber(defer(() => 1), (fiber) => ${row.body})
-`;
-    assertEquals(reportsOf(single(text), "m.eff", FIBER), row.reports);
-  });
 }
 
 // ------------------------------------------------------------------ scoped record

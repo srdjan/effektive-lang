@@ -32,6 +32,10 @@
   error: `schemaMake` and host services still fail with it. A source
   factory can no longer add a parent path to an issue. The IR loses the type
   kind `codec` and three expression kinds.
+- `withFiber`, `joinFiber`, `interruptFiber`, and the type `Fiber` are gone.
+  No application used them. `scoped`, `forkScoped`, `race`, and `all` stay;
+  `forkScoped` never returned a handle. The IR loses the type kind `fiber`
+  and three expression kinds.
 - `build --validate` and `Revision.validate` are gone, and `frontend.ts` no
   longer exports `validateProject`. The independent IR validator is a test
   oracle: tests import it from `src/core/validate_project.ts`. The command-line

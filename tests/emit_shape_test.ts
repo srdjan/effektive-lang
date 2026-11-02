@@ -135,10 +135,6 @@ Deno.test("evaluatedChildren omits the deferred children of a leaf", () => {
     body: lit(value),
   }));
   const cases: readonly [Expr, readonly Expr[], readonly Expr[]][] = [
-    [{ ...A, kind: "with-fiber", job: a, use: b }, [a], [
-      a,
-      b,
-    ]],
     [{ ...A, kind: "fold-effect-stream", stream: a, seed: b, update: c }, [
       a,
       b,
@@ -199,7 +195,7 @@ Deno.test("a structural node has no evaluated children, and a call has all", () 
   assertEquals(evaluatedChildren(call), [a, b]);
 });
 
-Deno.test("the table marks the 36 leaf kinds", () => {
+Deno.test("the table marks the 33 leaf kinds", () => {
   const kinds = new Set<string>();
   for (const ir of irOfExamplesAndEmitFixtures()) {
     for (const declaration of ir.declarations) {
@@ -214,7 +210,7 @@ Deno.test("the table marks the 36 leaf kinds", () => {
       });
     }
   }
-  // The fixtures reach part of the 36 kinds. Each reached kind is in the list.
+  // The fixtures reach part of the 33 kinds. Each reached kind is in the list.
   const LEAVES = {
     "schema-make": true,
     "schema-decode": true,
@@ -223,9 +219,6 @@ Deno.test("the table marks the 36 leaf kinds", () => {
     "fail": true,
     "retry": true,
     "retry-with-schedule": true,
-    "with-fiber": true,
-    "join-fiber": true,
-    "interrupt-fiber": true,
     "provide": true,
     "run": true,
     "scoped": true,
@@ -255,6 +248,6 @@ Deno.test("the table marks the 36 leaf kinds", () => {
   } satisfies Record<LeafKind, true>;
 
   assert(kinds.size > 5, `${kinds.size} leaf kinds reached`);
-  assertEquals(Object.keys(LEAVES).length, 36);
+  assertEquals(Object.keys(LEAVES).length, 33);
   for (const kind of kinds) assert(Object.hasOwn(LEAVES, kind), kind);
 });

@@ -114,7 +114,7 @@ export const record = (): { number: Int, text: Text } =>
   assertStringIncludes(output, "concurrency: 2");
 });
 
-Deno.test("scoped fiber emission provides a local scope", () => {
+Deno.test("scoped emission provides a local scope", () => {
   const output = oneModule(`
 type Int = int
 export const main = (): Int => scoped(defer(() => {
@@ -571,20 +571,6 @@ type Int = int
   assertStringIncludes(output, "Cause.done(");
   assertStringIncludes(output, "Duration.millis(");
   assertStringIncludes(output, "Effect.retry(");
-});
-
-Deno.test("withFiber emits a supervised child and join", () => {
-  const output = oneModule(`
-error Stop = {}
-service Jobs { next(): Int fails Stop }
-export const run = (): Int fails Stop uses Jobs.next =>
-  withFiber(defer(() => Jobs.next()), (fiber) => joinFiber(fiber))
-type Int = int
-`);
-  assertStringIncludes(output, "Effect.acquireUseRelease(");
-  assertStringIncludes(output, "Effect.forkChild(");
-  assertStringIncludes(output, "Fiber.join(");
-  assertStringIncludes(output, "Fiber.interrupt");
 });
 
 // ------------------------------------------------------------------ golden

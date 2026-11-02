@@ -159,47 +159,7 @@ const ROWS: readonly SiteRow[] = [
     code: "execution-mode/001",
     fragment: "the retry schedule callback must be pure",
   },
-  // ---- fibers and scopes
-  {
-    builtin: "withFiber",
-    change: "replace the job with an int",
-    valid:
-      `${INT}const a = (): Int => withFiber(defer(() => 1), (fiber: Fiber<Int, never>) => 1)\n`,
-    invalid:
-      `${INT}const a = (): Int => withFiber(1, (fiber: Fiber<Int, never>) => 1)\n`,
-    code: "type-mismatch/010",
-    fragment: "`withFiber` needs an Effect value",
-  },
-  {
-    builtin: "withFiber",
-    change: "pass the use callback as a named function",
-    valid:
-      `${INT}const a = (): Int => withFiber(defer(() => 1), (fiber: Fiber<Int, never>) => 1)\n`,
-    invalid:
-      `${INT}const use = (fiber: Fiber<Int, never>): Int => 1\nconst a = (): Int => withFiber(defer(() => 1), use)\n`,
-    code: "type-mismatch/010",
-    fragment: "`withFiber` needs an inline use callback",
-  },
-  {
-    builtin: "joinFiber",
-    change: "replace the fiber with an int",
-    valid:
-      `${INT}const a = (): Int => withFiber(defer(() => 1), (fiber: Fiber<Int, never>) => joinFiber(fiber))\n`,
-    invalid:
-      `${INT}const a = (): Int => withFiber(defer(() => 1), (fiber: Fiber<Int, never>) => joinFiber(1))\n`,
-    code: "type-mismatch/010",
-    fragment: "`joinFiber` needs a Fiber value",
-  },
-  {
-    builtin: "interruptFiber",
-    change: "replace the fiber with an int",
-    valid:
-      `${INT}const a = (): void => withFiber(defer(() => 1), (fiber: Fiber<Int, never>) => interruptFiber(fiber))\n`,
-    invalid:
-      `${INT}const a = (): void => withFiber(defer(() => 1), (fiber: Fiber<Int, never>) => interruptFiber(1))\n`,
-    code: "type-mismatch/010",
-    fragment: "`interruptFiber` needs a Fiber value",
-  },
+  // ---- scopes
   {
     builtin: "scoped",
     change: "replace the job with an int",

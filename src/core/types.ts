@@ -84,7 +84,6 @@ export function guardedRecord(
       case "ref":
       case "retry-schedule":
       case "schema":
-      case "fiber":
       case "effect":
       case "stream":
       case "sink":
@@ -143,7 +142,6 @@ export function guardedRecord(
       case "ref":
       case "retry-schedule":
       case "schema":
-      case "fiber":
       case "effect":
       case "stream":
       case "sink":
@@ -184,11 +182,6 @@ export type TypeNode =
     readonly makeInput?: TypeRef;
     /** Independent of field presence. */
     readonly constructorDefault?: true;
-  }
-  | {
-    readonly kind: "fiber";
-    readonly result: TypeRef;
-    readonly failures: readonly ErrorId[];
   }
   | {
     readonly kind: "effect";
@@ -382,7 +375,6 @@ function structuralChildren(
       return node.makeInput === undefined
         ? [node.decoded, node.encoded]
         : [node.decoded, node.encoded, node.makeInput];
-    case "fiber":
     case "effect":
       return [node.result];
     case "sink":
@@ -507,8 +499,6 @@ export class TypeTable {
             node.constructorDefault === true,
           ])
         }`;
-      case "fiber":
-        return `i:${node.result}:${JSON.stringify(node.failures)}`;
       case "effect":
         return `x:${
           JSON.stringify([node.result, node.failures, node.requirements])
@@ -635,14 +625,6 @@ export class TypeTable {
         ? {}
         : { makeInput }),
       ...(constructorDefault ? { constructorDefault: true as const } : {}),
-    });
-  }
-
-  fiber(result: TypeRef, failures: readonly ErrorId[]): TypeRef {
-    return this.intern({
-      kind: "fiber",
-      result,
-      failures: sortedUnique(failures),
     });
   }
 
@@ -1200,10 +1182,6 @@ export class TypeTable {
           nested(tn.encoded, sn.encoded) &&
           isSubset(sn.decodeRequirements, tn.decodeRequirements) &&
           isSubset(sn.encodeRequirements, tn.encodeRequirements);
-      case "fiber":
-        return sn.kind === "fiber" &&
-          nested(sn.result, tn.result) &&
-          sameList(sn.failures, tn.failures);
       case "effect":
         return sn.kind === "effect" &&
           nested(sn.result, tn.result) &&
@@ -1344,7 +1322,6 @@ export function dataOnly(
     case "retry-schedule":
     case "ref":
     case "schema":
-    case "fiber":
     case "effect":
     case "stream":
     case "sink":
@@ -1417,7 +1394,6 @@ export function containsDeferredType(
   switch (type.kind) {
     case "function":
     case "effect":
-    case "fiber":
     case "stream":
     case "sink":
     case "retry-schedule":

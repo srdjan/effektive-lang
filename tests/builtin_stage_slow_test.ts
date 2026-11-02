@@ -4,12 +4,6 @@ import { compileStrictTarget } from "./target_helpers.ts";
 // Each program uses one builtin as a pipeline stage. `compileStrictTarget`
 // checks the project, lowers it, validates the IR, emits the module, runs
 // `deno check` under the strict target configuration, and runs `run.ts`.
-//
-// `joinFiber` and `interruptFiber` have no program here. A Fiber exists only as
-// the borrowed handle of a `withFiber` callback, and the checker accepts that
-// handle only as the argument of a direct `joinFiber(fiber)` or
-// `interruptFiber(fiber)` call. The stage forms `fiber |> joinFiber` and
-// `fiber |> interruptFiber` give `type-mismatch/010`.
 
 async function stage(
   source: string,
@@ -102,7 +96,7 @@ console.log(JSON.stringify({ observed, active, released }));
 Deno.test("scoped runs as a pipeline stage and closes the child with its scope", async () => {
   const result = await stage(
     `${CHILD_SERVICE}const job = defer(() => {
-  withFiber(defer(() => { forkScoped(defer(() => Child.run())); 1 }), (fiber) => joinFiber(fiber))
+  forkScoped(defer(() => Child.run()))
   Child.wait()
   Child.alive()
 })
@@ -117,7 +111,7 @@ export const main = (): Bool uses Child.run | Child.wait | Child.alive => job |>
 Deno.test("forkScoped runs as a pipeline stage and the child closes with its scope", async () => {
   const result = await stage(
     `${CHILD_SERVICE}const job = defer(() => {
-  withFiber(defer(() => { defer(() => Child.run()) |> forkScoped; 1 }), (fiber) => joinFiber(fiber))
+  defer(() => Child.run()) |> forkScoped
   Child.wait()
   Child.alive()
 })

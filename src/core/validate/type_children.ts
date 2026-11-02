@@ -39,7 +39,6 @@ export function typeChildren(t: Type): readonly TypeChild[] {
           child(t.encoded, ".encoded"),
           child(t.makeInput, ".makeInput"),
         ];
-    case "fiber":
     case "effect":
       return [child(t.result, ".result")];
     case "stream":

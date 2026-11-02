@@ -388,11 +388,11 @@ Deno.test("takeSink rejects invalid counts, erased leftovers, pipelines, and bor
       ["type-mismatch/010"],
     ],
     [
-      "const bad = () => withFiber(defer(() => 1), (fiber) => takeSink(2))",
-      ["type-mismatch/010", "type-mismatch/010"],
+      "const bad = () => map([1], (n: Int) => takeSink(2))",
+      ["type-mismatch/010"],
     ],
     [
-      "const bad = (s: Stream<Int>) => withFiber(defer(() => 1), (fiber) => { collectStream(transduceStream(s, sinkForEach((n: Int) => interruptFiber(fiber)))) })",
+      "service Jobs { open(): { read: () => Int, close: () => void } }\nconst bad = (s: Stream<Int>) => withResource(() => Jobs.open(), (job) => { collectStream(transduceStream(s, sinkForEach((n: Int) => job.close()))) }, (job) => job.close())",
       ["type-mismatch/010"],
     ],
   ];
@@ -1547,7 +1547,7 @@ type Int = int
 type Bool = boolean
 const parent = (): Int uses Child.run | Child.wait | Child.alive =>
   scoped(defer(() => {
-    withFiber(defer(() => { forkScoped(defer(() => Child.run())); 1 }), (fiber) => joinFiber(fiber))
+    forkScoped(defer(() => Child.run()))
     Child.wait()
     if (Child.alive()) { 1 } else { 0 }
   }))
@@ -2956,23 +2956,6 @@ type Int = int
 `);
   assertEquals(messages(project), []);
   assertEquals(shortIds(fn(project, "m", "run").body!.failures), ["Stop"]);
-});
-
-Deno.test("withFiber joins a supervised child and rejects handle escape", () => {
-  const good = checkText(`
-error Stop = {}
-service Jobs { next(): Int fails Stop }
-const run = (): Int fails Stop uses Jobs.next =>
-  withFiber(defer(() => Jobs.next()), (fiber) => joinFiber(fiber))
-type Int = int
-`);
-  assertEquals(messages(good), []);
-  assertEquals(shortIds(fn(good, "m", "run").body!.failures), ["Stop"]);
-  const bad = checkText(`
-const escape = (): Fiber<Int, never> => withFiber(defer(() => 1), (fiber) => fiber)
-type Int = int
-`);
-  assert(codes(bad).includes("type-mismatch/010"));
 });
 
 Deno.test("opaque handles require borrowed host parameters and cannot escape", () => {

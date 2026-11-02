@@ -50,8 +50,6 @@ export function typeFromIr(table: TypeTable, type: Type): TypeRef {
           constructorDefault: type.constructorDefault === true,
         },
       );
-    case "fiber":
-      return table.fiber(typeFromIr(table, type.result), type.failures);
     case "effect":
       return table.effect(
         typeFromIr(table, type.result),
@@ -165,12 +163,6 @@ export function typeToIr(table: TypeTable, ref: TypeRef): Type {
         ...(node.constructorDefault === true
           ? { constructorDefault: true as const }
           : {}),
-      };
-    case "fiber":
-      return {
-        kind: "fiber",
-        result: typeToIr(table, node.result),
-        failures: node.failures,
       };
     case "effect":
       return {

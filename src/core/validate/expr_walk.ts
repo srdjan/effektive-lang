@@ -130,11 +130,6 @@ export function exprChildren(e: Expr): readonly Expr[] {
     case "schema-decode":
     case "schema-encode":
       return [e.schema, e.input];
-    case "with-fiber":
-      return [e.job, e.use];
-    case "join-fiber":
-    case "interrupt-fiber":
-      return [e.fiber];
     case "defer":
     case "retry":
     case "fork-scoped":

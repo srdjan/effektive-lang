@@ -229,14 +229,6 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
         '" })',
       ];
     }
-    case "fiber":
-      return [
-        `${scope.effect("Fiber")}.Fiber<`,
-        typeDoc(scope, type.result),
-        ", ",
-        failureUnion(scope, type.failures) ?? "never",
-        ">",
-      ];
     case "record": {
       if (type.fields.length === 0) return "{}";
       const fields = type.fields.map((f) => [

@@ -60,7 +60,6 @@ export function needsFieldAdapter(
     case "ref":
     case "retry-schedule":
     case "schema":
-    case "fiber":
     case "effect":
     case "stream":
     case "sink":

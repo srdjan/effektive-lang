@@ -86,10 +86,6 @@ function namedIn(type: Type, out: Set<DeclarationId>): void {
     case "retry-schedule":
       namedIn(type.error, out);
       return;
-    case "fiber":
-      namedIn(type.result, out);
-      effectsIn(type.failures, [], out);
-      return;
     case "effect":
       namedIn(type.result, out);
       effectsIn(type.effects.failures, type.effects.requirements, out);
@@ -477,7 +473,6 @@ export class DeclarationEmitter {
       case "ref":
       case "retry-schedule":
       case "schema":
-      case "fiber":
       case "effect":
       case "stream":
       case "sink":

@@ -200,13 +200,6 @@ const ROWS = {
   "schema-decode": { children: (e) => [e.schema, e.input], leaf: "leaf" },
   "schema-encode": { children: (e) => [e.schema, e.input], leaf: "leaf" },
   "schema-make": { children: (e) => [e.schema, e.input], leaf: "leaf" },
-  "with-fiber": {
-    children: (e) => [e.job],
-    deferred: (e) => [e.use],
-    leaf: "leaf",
-  },
-  "join-fiber": { children: (e) => [e.fiber], leaf: "leaf" },
-  "interrupt-fiber": { children: (e) => [e.fiber], leaf: "leaf" },
   perform: { children: (e) => e.arguments, leaf: "leaf" },
   block: {
     children: (e) => [...e.steps.map((s) => s.value), e.result],

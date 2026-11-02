@@ -341,10 +341,6 @@ export function referencedIds(type: Type, ids: Set<string>): void {
       effectIds([], type.decodeRequirements, ids);
       effectIds([], type.encodeRequirements, ids);
       return;
-    case "fiber":
-      referencedIds(type.result, ids);
-      effectIds(type.failures, [], ids);
-      return;
     case "effect":
       referencedIds(type.result, ids);
       effectIds(type.effects.failures, type.effects.requirements, ids);

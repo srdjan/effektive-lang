@@ -112,7 +112,6 @@ import {
   timeout,
   uninterruptible,
 } from "./families/effect.ts";
-import { fiberOperation, withFiber } from "./families/fiber.ts";
 import { layer, mergeLayers, provide } from "./families/layer.ts";
 import {
   borrowedReferences,
@@ -832,11 +831,6 @@ export class BodyValidator implements ValidatorCore {
       case "schema-decode":
       case "schema-encode":
         return schemaOperation(this, e, path);
-      case "with-fiber":
-        return withFiber(this, e, path);
-      case "join-fiber":
-      case "interrupt-fiber":
-        return fiberOperation(this, e, path);
       case "perform":
         return this.perform(e, path);
       case "block":

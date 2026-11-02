@@ -5,7 +5,6 @@
 import type { BuiltinContext } from "./context.ts";
 import { COLLECTION_ROWS, type CollectionContext } from "./collections.ts";
 import { EFFECT_ROWS, type EffectContext } from "./effect.ts";
-import { FIBER_ROWS, type FiberContext } from "./fiber.ts";
 import { LAYER_ROWS, type LayerContext } from "./layer.ts";
 import { REF_ROWS } from "./ref.ts";
 import type { PreludeCallName, Rows } from "./rows.ts";
@@ -27,7 +26,6 @@ type FamilyContext =
   & CollectionContext
   & EffectContext
   & LayerContext
-  & FiberContext
   & ScopeContext
   & StreamContext
   & SchemaContext;
@@ -36,7 +34,6 @@ type FamilyContext =
 export const FAMILY_ROW_TABLES = {
   collections: COLLECTION_ROWS,
   effect: EFFECT_ROWS,
-  fiber: FIBER_ROWS,
   layer: LAYER_ROWS,
   ref: REF_ROWS,
   schema: SCHEMA_ROWS,
@@ -52,7 +49,6 @@ export const FAMILY_ROWS: Rows<
 > = {
   ...COLLECTION_ROWS,
   ...EFFECT_ROWS,
-  ...FIBER_ROWS,
   ...LAYER_ROWS,
   ...REF_ROWS,
   ...SCHEMA_ROWS,

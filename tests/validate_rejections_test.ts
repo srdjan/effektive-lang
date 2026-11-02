@@ -91,7 +91,6 @@ const FAMILIES_SOURCE = `type Int = int
 type Text = string
 const integer: Schema<Int> = schema()
 const word = (): Text => "x"
-const fibered = (): Int => withFiber(defer(() => 1), (fiber) => 1)
 const read = (ref: Ref<Int>): Int => getRef(ref)
 const write = (ref: Ref<Int>): void => setRef(ref, 2)
 const update = (ref: Ref<Int>): void => updateRef(ref, (n) => n)
@@ -100,7 +99,6 @@ const merged = (s: Stream<Int>, t: Stream<Int>) => mergeStreams(s, t)
 type Cents = int
 type Score = int
 const scored = (): Score => 1
-const scoredFiber = (): Int => withFiber(defer(() => scored()), (fiber) => 1)
 `;
 
 const PROGRAMS = {
@@ -868,99 +866,6 @@ const ROWS: readonly Row[] = [
   },
   // ---------------------------------------------------------------- families
   {
-    site: "fiber.ts:29",
-    name: "a withFiber over a job that is not an Effect",
-    program: "families",
-    change: (ir) => {
-      find(fn(ir, "fibered").body, "with-fiber").job = intLiteral(ir, "word");
-    },
-    expected: [
-      "validation/006 declarations[4].body: with-fiber needs an Effect and one inline use callback",
-    ],
-  },
-  {
-    site: "fiber.ts:44",
-    name: "a withFiber callback whose parameter is not the child Fiber",
-    program: "families",
-    change: (ir) => {
-      const use = find(fn(ir, "fibered").body, "with-fiber").use;
-      use.parameters[0].type = INT;
-      closureType(use).parameters[0] = INT;
-    },
-    expected: [
-      "validation/002 declarations[4].body.use: fiber use parameter does not match child type",
-    ],
-  },
-  {
-    site: "fiber.ts:44",
-    name: "a withFiber parameter that gives a named child a second name",
-    program: "families",
-    change: (ir) => {
-      const use = find(fn(ir, "scoredFiber").body, "with-fiber").use;
-      const forged: Mutable<Type> = {
-        kind: "fiber",
-        result: { kind: "named", id: "type:m#Cents" },
-        failures: [],
-      };
-      use.parameters[0].type = forged;
-      closureType(use).parameters[0] = forged;
-    },
-    expected: [
-      "validation/002 declarations[13].body.use: fiber use parameter does not match child type",
-    ],
-  },
-  {
-    site: "fiber.ts:44",
-    name: "a withFiber parameter with other failures than the child",
-    program: "families",
-    change: (ir) => {
-      const use = find(fn(ir, "fibered").body, "with-fiber").use;
-      const forged: Mutable<Type> = {
-        kind: "fiber",
-        result: INT,
-        failures: ["error:effect/SchemaError"],
-      };
-      use.parameters[0].type = forged;
-      closureType(use).parameters[0] = forged;
-    },
-    expected: [
-      "validation/002 declarations[4].body.use: fiber use parameter does not match child type",
-    ],
-  },
-  {
-    site: "fiber.ts:44",
-    name: "a withFiber parameter that lifts the child Fiber into an Effect",
-    program: "families",
-    change: (ir) => {
-      const use = find(fn(ir, "fibered").body, "with-fiber").use;
-      const forged: Mutable<Type> = {
-        kind: "effect",
-        result: { kind: "fiber", result: INT, failures: [] },
-        effects: { failures: [], requirements: [] },
-      };
-      use.parameters[0].type = forged;
-      closureType(use).parameters[0] = forged;
-    },
-    expected: [
-      "validation/002 declarations[4].body.use: fiber use parameter does not match child type",
-    ],
-  },
-  {
-    site: "fiber.ts:52",
-    name: "a withFiber callback whose result is not data",
-    program: "families",
-    change: (ir) => {
-      closureType(find(fn(ir, "fibered").body, "with-fiber").use).result =
-        UNKNOWN;
-    },
-    expected: [
-      "validation/002 declarations[4].body.type: expected unknown, recorded int",
-      "validation/002 declarations[4].body: the body type unknown does not fit the declared result type:m#Int",
-      "validation/002 declarations[4].body.use: fiber use result must be data only",
-      "validation/002 declarations[4].body.use.body: the body type int does not fit the closure result unknown",
-    ],
-  },
-  {
     site: "ref.ts:33",
     name: "a getRef over a value that is not a Ref",
     program: "families",
@@ -968,7 +873,7 @@ const ROWS: readonly Row[] = [
       find(fn(ir, "read").body, "get-ref").ref = intLiteral(ir, "word");
     },
     expected: [
-      "validation/002 declarations[5].body: get-ref needs a Ref value",
+      "validation/002 declarations[4].body: get-ref needs a Ref value",
     ],
   },
   {
@@ -979,7 +884,7 @@ const ROWS: readonly Row[] = [
       find(fn(ir, "write").body, "set-ref").value = intLiteral(ir, "word");
     },
     expected: [
-      "validation/002 declarations[6].body.value: the new value must fit the Ref element",
+      "validation/002 declarations[5].body.value: the new value must fit the Ref element",
     ],
   },
   {
@@ -993,7 +898,7 @@ const ROWS: readonly Row[] = [
       );
     },
     expected: [
-      "validation/004 declarations[7].body.transform: updateRef needs an element-to-element callback",
+      "validation/004 declarations[6].body.transform: updateRef needs an element-to-element callback",
     ],
   },
   {
@@ -1007,7 +912,7 @@ const ROWS: readonly Row[] = [
       );
     },
     expected: [
-      "validation/002 declarations[8].body: schema runner needs an ordinary Schema value",
+      "validation/002 declarations[7].body: schema runner needs an ordinary Schema value",
     ],
   },
   {
@@ -1026,7 +931,7 @@ const ROWS: readonly Row[] = [
       find(f.body, "merge-streams").right.type = text;
     },
     expected: [
-      "validation/002 declarations[9].body: mergeStreams needs compatible element types",
+      "validation/002 declarations[8].body: mergeStreams needs compatible element types",
     ],
   },
   // ---------------------------------------------------------------- serialization.ts

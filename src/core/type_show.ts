@@ -102,10 +102,6 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
           ? ""
           : `, ${print(table, names, node.makeInput)}`
       }>`;
-    case "fiber":
-      return `Fiber<${print(table, names, node.result)}, ${
-        node.failures.map(idName).join(" | ") || "never"
-      }>`;
     case "effect":
       return `Effect<${print(table, names, node.result)}, ${
         node.failures.map(idName).join(" | ") || "never"

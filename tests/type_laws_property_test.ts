@@ -252,7 +252,6 @@ const COMPOSITE_KINDS = [
   "union",
   "function",
   "effect",
-  "fiber",
   "stream",
   "sink",
   "ref",
@@ -281,8 +280,6 @@ function anyType(g: Generator, depth: number): Type {
       return functionType(g, depth);
     case "effect":
       return { kind, result: inner(), effects: effects(g) };
-    case "fiber":
-      return { kind, result: inner(), failures: subset(g, ERRORS) };
     case "stream":
       return { kind, element: inner(), effects: effects(g) };
     case "sink":
@@ -342,12 +339,6 @@ function widen(g: Generator, type: Type, top = true): Type {
       };
     case "union":
       return { ...type, members: [...type.members, leaf(g)] };
-    case "fiber":
-      return {
-        ...type,
-        result: next(type.result),
-        failures: [...type.failures].reverse(),
-      };
     case "effect":
       return {
         ...type,
@@ -401,8 +392,6 @@ function perturb(g: Generator, type: Type): Type {
     }
     case "union":
       return unionOf(g, type.members.slice(1));
-    case "fiber":
-      return { ...type, failures: toggle(g, type.failures, ERRORS) };
     case "effect":
     case "stream":
       return {
@@ -502,8 +491,8 @@ function generatePair(g: Generator): readonly [Type, Type] {
     case 7: {
       const result = anyType(g, 1);
       return [
-        { kind: "fiber", result, failures: subset(g, ERRORS) },
-        { kind: "fiber", result, failures: subset(g, ERRORS) },
+        { kind: "effect", result, effects: effects(g) },
+        { kind: "effect", result, effects: effects(g) },
       ];
     }
     case 8: {
@@ -737,10 +726,6 @@ function pairText(
   }: ${detail}`;
 }
 
-function failureText(failures: readonly ErrorId[]): string {
-  return [...new Set(failures)].sort().join(" ");
-}
-
 // ------------------------------------------------------------------- the laws
 
 Deno.test("each generated type fits itself on both implementations", () => {
@@ -805,13 +790,12 @@ Deno.test("assignment of plain types is transitive on both implementations", () 
     validator += check("validator", validatorTable);
   }
   assertEquals(failures.length, 0, report(failures));
-  assertEquals({ checker, validator }, { checker: 17554, validator: 17554 });
+  assertEquals({ checker, validator }, { checker: 19846, validator: 19846 });
 });
 
 Deno.test("the checker and the validator agree on generated pairs", () => {
   const disagreements: string[] = [];
   const answers = { fit: 0, rejected: 0 };
-  const fibers = { fit: 0, rejected: 0, failuresDiffer: 0 };
   const kinds = new Map<string, number>();
   let authorityDecided = 0;
   for (const seed of SEEDS) {
@@ -841,46 +825,29 @@ Deno.test("the checker and the validator agree on generated pairs", () => {
           typeFromIr(world.table, target),
         );
         if (withoutModule !== checker) authorityDecided++;
-        if (source.kind === "fiber" && target.kind === "fiber") {
-          if (checker) fibers.fit++;
-          else fibers.rejected++;
-          if (
-            source.result === target.result &&
-            failureText(source.failures) !== failureText(target.failures)
-          ) {
-            fibers.failuresDiffer++;
-            if (checker) {
-              disagreements.push(
-                pairText(seed, source, target, "fits with other failures"),
-              );
-            }
-          }
-        }
       }
     }
   }
   assertEquals(disagreements.length, 0, report(disagreements));
-  assertEquals(answers, { fit: 32448, rejected: 47552 });
-  assertEquals(fibers, { fit: 1883, rejected: 7787, failuresDiffer: 7526 });
-  assertEquals(authorityDecided, 907);
+  assertEquals(answers, { fit: 33912, rejected: 46088 });
+  assertEquals(authorityDecided, 967);
   assertEquals(Object.fromEntries([...kinds].sort()), {
-    "retry-schedule": 1474,
-    array: 2227,
-    effect: 1460,
-    fiber: 5569,
-    function: 5095,
-    literal: 964,
-    named: 5110,
-    option: 2251,
-    primitive: 1461,
-    provider: 1480,
-    record: 1438,
-    ref: 1445,
-    schema: 1443,
-    sink: 3458,
-    stream: 1451,
-    tuple: 1414,
-    union: 2260,
+    "retry-schedule": 1530,
+    array: 2329,
+    effect: 5577,
+    function: 5178,
+    literal: 851,
+    named: 5354,
+    option: 2309,
+    primitive: 1363,
+    provider: 1542,
+    record: 1596,
+    ref: 1580,
+    schema: 1628,
+    sink: 3620,
+    stream: 1569,
+    tuple: 1577,
+    union: 2397,
   });
 });
 
@@ -922,10 +889,6 @@ function execution(mode: Execution): Type {
   };
 }
 
-function fiber(failures: readonly ErrorId[]): Type {
-  return { kind: "fiber", result: INT, failures };
-}
-
 function schemaWith(makeInput?: Type): Type {
   return {
     kind: "schema",
@@ -954,17 +917,6 @@ Deno.test("function lifting is not transitive", () => {
   );
   assertEquals(bothAnswers(LITERAL_SIDES, execution("effect"), union), YES);
   assertEquals(bothAnswers(LITERAL_SIDES, execution("pure"), union), NO);
-});
-
-Deno.test("a Fiber fits only with an equal failure set", () => {
-  assertEquals(
-    bothAnswers(LITERAL_SIDES, fiber([E0, E1]), fiber([E1, E0])),
-    YES,
-  );
-  assertEquals(bothAnswers(LITERAL_SIDES, fiber([E0]), fiber([E1])), NO);
-  assertEquals(bothAnswers(LITERAL_SIDES, fiber([E0]), fiber([E0, E1])), NO);
-  assertEquals(bothAnswers(LITERAL_SIDES, fiber([E0, E1]), fiber([E0])), NO);
-  assertEquals(bothAnswers(LITERAL_SIDES, fiber([]), fiber([E0])), NO);
 });
 
 Deno.test("a sealed type widens and adopts only in its own module", () => {

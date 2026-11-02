@@ -448,7 +448,7 @@ Deno.test("forkScoped outlives its spawning fiber and closes with its scope", as
         "type Bool = boolean",
         "export service Child { run(): void; wait(): void; alive(): Bool }",
         "const job = defer(() => {",
-        "    withFiber(defer(() => { forkScoped(defer(() => Child.run())); 1 }), (fiber) => joinFiber(fiber))",
+        '    all({ spawner: defer(() => { forkScoped(defer(() => Child.run())); 1 }), other: defer(() => 2) }, { concurrency: "unbounded" })',
         "    Child.wait()",
         "    Child.alive()",
         "})",
@@ -600,44 +600,6 @@ console.log(JSON.stringify({ attempts, tag: error._tag }));
 `,
     );
     assertEquals(result, { attempts: 3, tag: "main#Stop" });
-  });
-});
-
-Deno.test("withFiber interrupts its child and waits for finalizers", async () => {
-  await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
-      [
-        "export service Source { slow(): Int; wait(): void }",
-        "export const main = (): Int uses Source.slow | Source.wait =>",
-        "  withFiber(defer(() => Source.slow()), (fiber) => { Source.wait(); interruptFiber(fiber); 7 })",
-        "type Int = int",
-        "",
-      ].join("\n"),
-    );
-    build(dir, ["main.eff"]);
-    const result = await runScript(
-      dir,
-      `
-import { Deferred, Effect, Layer } from "effect";
-import { Source, main } from "./main.ts";
-let started = 0;
-let released = 0;
-const ready = Effect.runSync(Deferred.make<void>());
-const Live = Layer.succeed(Source)({
-  slow: () => Effect.sync(() => { started++; }).pipe(
-    Effect.andThen(Deferred.succeed(ready, undefined)),
-    Effect.andThen(Effect.never),
-    Effect.onInterrupt(() => Effect.sync(() => { released++; })),
-  ),
-  wait: () => Deferred.await(ready),
-});
-const value = await Effect.runPromise(main().pipe(Effect.provide(Live)));
-console.log(JSON.stringify({ value, started, released }));
-`,
-    );
-    assertEquals(result, { value: 7, started: 1, released: 1 });
   });
 });
 

@@ -283,33 +283,6 @@ export class TypeLowerer {
         };
       },
     },
-    Fiber: {
-      kind: "generic",
-      arity: 2,
-      build: (lowerer, [result, error], nodes) => {
-        const failures: ErrorId[] = [];
-        const collect = (type: Type): void => {
-          if (type.kind === "primitive" && type.name === "never") return;
-          if (type.kind === "union") {
-            type.members.forEach(collect);
-          } else if (type.kind === "named" && isErrorId(type.id)) {
-            failures.push(type.id);
-          } else {
-            lowerer.report(
-              "type-mismatch/001",
-              "Fiber failure type needs declared errors or never",
-              lowerer.span(nodes[1]),
-            );
-          }
-        };
-        collect(error.ir);
-        const unique = sortedUnique(failures);
-        return {
-          ref: lowerer.env.table.fiber(result.ref, unique),
-          ir: { kind: "fiber", result: result.ir, failures: unique },
-        };
-      },
-    },
   };
 
   private noArguments(

@@ -168,7 +168,6 @@ type SpecialKind =
   | "retry"
   | "log"
   | "schema"
-  | "with-fiber"
   | "with-resource"
   | "map-groups"
   | "debounce-stream"
@@ -224,8 +223,6 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
     job: arg(0),
     options: arg(1),
   }),
-  "join-fiber": (arg) => ({ kind: "join-fiber", fiber: arg(0) }),
-  "interrupt-fiber": (arg) => ({ kind: "interrupt-fiber", fiber: arg(0) }),
   "provide": (arg) => ({ kind: "provide", provider: arg(0), job: arg(1) }),
   "defer": (arg) => ({ kind: "defer", job: arg(0) }),
   "timeout": (arg) => ({ kind: "timeout", job: arg(0), durationMs: arg(1) }),
@@ -812,8 +809,6 @@ class BodyLowerer {
         };
       case "schema":
         return this.invokeSchema(fact, args, arg, annotation);
-      case "with-fiber":
-        return this.invokeWithFiber(arg, annotation);
       case "with-resource":
         return this.invokeWithResource(arg, annotation);
       case "map-groups":
@@ -945,20 +940,6 @@ class BodyLowerer {
         ),
         ...annotation,
       };
-  }
-
-  private invokeWithFiber(arg: ArgumentAt, annotation: Annotation): Expr {
-    const job = arg(0);
-    const use = arg(1);
-    if (use.kind !== "closure" || use.parameters[0] === undefined) {
-      throw internal("withFiber needs an inline use callback");
-    }
-    return {
-      kind: "with-fiber",
-      job,
-      use,
-      ...annotation,
-    };
   }
 
   private invokeWithResource(arg: ArgumentAt, annotation: Annotation): Expr {

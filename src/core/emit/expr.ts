@@ -52,7 +52,6 @@ import {
 } from "./doc.ts";
 import type { ExprCore } from "./families/context.ts";
 import { effectLeaf, effectStructural } from "./families/effect.ts";
-import { fiberLeaf } from "./families/fiber.ts";
 import { layerLeaf, layerStructural } from "./families/layer.ts";
 import { schemaLeaf, schemaStructural } from "./families/schema.ts";
 import { scopeLeaf } from "./families/scope.ts";
@@ -1735,10 +1734,6 @@ export class ExprEmitter implements ExprCore {
       case "fold-stream":
       case "fold-effect-stream":
         return streamLeaf(this, e, children);
-      case "with-fiber":
-      case "join-fiber":
-      case "interrupt-fiber":
-        return fiberLeaf(this, e, children);
       case "provide":
         return layerLeaf(this, e);
       case "catch":
