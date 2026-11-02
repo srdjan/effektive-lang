@@ -1,0 +1,4249 @@
+diff --git a/docs/api.md b/docs/api.md
+index c199dbb..38fc3e4 100644
+--- a/docs/api.md
++++ b/docs/api.md
+@@ -41,7 +41,6 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
+     effect.ts      Effect construction, execution, failures and retry options through EffectContext.
+     fiber.ts       Fiber operations and inline borrow lifetimes through FiberContext.
+     layer.ts       Layer construction, merging and provision through LayerContext.
+-    map_set.ts     Map and Set operations: mapOf, setOf, getMap, putMap, removeMap, hasMap, entriesMap, addSet, removeSet, hasSet and itemsSet.
+     ref.ts         Mutable reference construction, reads, writes and pure update callbacks.
+     schedule.ts    General Schedule construction, mapping and comparable-input composition.
+     schema.ts      Schema metadata, exhaustive handlers, defaults, directional effects and recursion through SchemaContext.
+diff --git a/docs/language-rules.md b/docs/language-rules.md
+index fc26516..a9cb5f9 100644
+--- a/docs/language-rules.md
++++ b/docs/language-rules.md
+@@ -20,10 +20,6 @@ The sections follow the language topics: core forms, modules and exports, effect
+ | Duration arithmetic | `Duration + Duration` and `Duration - Duration` give `Duration`. `Duration + int` and `Duration - int` give `type-mismatch/007`. `Duration * int` and `int * Duration` give `Duration`. `Duration / int` gives `Duration` and truncates toward zero. `Duration / Duration` gives `number`. A comparison (`<`, `<=`, `>`, `>=`, `===`, `!==`) needs two `Duration` values and gives `boolean`; a `Duration` compared with an `int`, a `number` or an `Instant` is `type-mismatch/007`. Every other arithmetic mix widens to the base type, so `5s * 2.5` is a `number`. The emitter keeps the `$int` guard on `Duration` results and prints `Math.trunc(a / b)` for `Duration / int`. The independent validator recomputes each rule | [check_binary.ts](../src/core/check_binary.ts), [expr.ts](../src/core/validate/expr.ts), [2026-10-27-effect-surface.md, ES1b](archive/plans/2026-10-27-effect-surface.md) |
+ | Instant type | `Instant` is a builtin type word with the identity `type:effect/Instant`, a closed untagged identity over `int`: a number of milliseconds since the Unix epoch. A module cannot declare a type named `Instant` (`declaration/002`). No unnamed value fits it, and no literal makes one. `now()`, `Instant` arithmetic, `ScheduleInput.start` and `ScheduleInput.now`, and a host service result or schema field of type `Instant` give one. An `Instant` widens to `int`. It emits as `number`, and its schema is the int schema. | [types.ts](../src/core/types.ts), [typing.ts](../src/core/validate/typing.ts), [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+ | Instant arithmetic | `Instant - Instant` gives `Duration`. `Instant + Duration`, `Duration + Instant` and `Instant - Duration` give `Instant`. Every other arithmetic mix with an `Instant` is `type-mismatch/007`, including `Instant + Instant`, `Duration - Instant`, and `+`, `-`, `*` and `/` with an `int` or a `number`. Two `Instant` values compare with `<`, `<=`, `>`, `>=`, `===` and `!==`; a comparison with any other type is `type-mismatch/007`. The rule runs before the `Duration` rules and before the shared-identity rule, in the checker and in the independent validator. | [check_binary.ts](../src/core/check_binary.ts), [expr.ts](../src/core/validate/expr.ts), [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| Map and Set types | `Map<K, V>` and `Set<T>` are builtin type applications, as `Option<T>` is. A wrong type-argument count is `type-mismatch/001`. A module cannot declare a type or a value named `Map` or `Set` (`declaration/002`). They emit as `HashMap.HashMap<K, V>` and `HashSet.HashSet<T>`. A value comes from `mapOf` or `setOf`, a host provider, a parameter, a record field or a schema decode. The Map and Set operations are in the rows below. `Map` keys are invariant, as `Ref` is, and `Map` values and `Set` elements are covariant. A `match` on a `Map` or a `Set` is `pattern/004`. `===` and `!==` on two of them are `type-mismatch/007`, as for records | [types.ts](../src/core/types.ts), [typing.ts](../src/core/validate/typing.ts), [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| Map key rule | `K` and `T` must be data by the `value` rule of `dataOnly`, because `Equal` compares a function, an Effect, a Ref and a Stream by reference. A key or an element that is not data is `declaration/019`. A record key is allowed, because `Equal` and `Hash` compare a record by structure. The check waits until every declaration of the module is defined, so a key may name a later type. `V` can be any type. A `Map` or `Set` of data is data, so it can be a record field, a tagged record field, an error field, an exported contract and a host interface type. A `Map` whose value holds a function type in a tagged record or an error field is `declaration/015`. The independent validator rejects a forged `map` or `set` type whose key is not data | [type_lower.ts](../src/core/type_lower.ts), [check_declarations.ts](../src/core/check_declarations.ts), [world.ts](../src/core/validate/world.ts), [diagnostics.ts](../src/core/diagnostics.ts) |
+-| Map and Set schema | The schema is `Schema.HashMap(key, value)` or `Schema.HashSet(element)`, at the sites where `Schema.Option` is used. The encoded side is a `HashMap` or a `HashSet` of encoded values, as the encoded side of `Schema.Option` is an `Option`. A JSON array does not decode into a `Map` or a `Set`: `decode` fails with `Expected HashMap` or `Expected HashSet`, and a host adapter must build the values. A conversion from entry arrays is out of scope. An inferred or checked entry reports the path of a bad entry, such as `["entries"][1][1]` for a `Map` value and `["values"][0]` for a `Set` element. An inferred input contract follows the `Option` cases | [types.ts](../src/core/emit/types.ts), [map_set_types_slow_test.ts](../tests/map_set_types_slow_test.ts) |
+-| Map and Set equality | `HashMap` and `HashSet` use `Equal` and `Hash`. A record key matches another record with the same fields, so two keys built separately find one entry. `Hash.hash` caches the hash of each object, and `Equal.equals` caches the result of each outermost pair. The emitter does not freeze a record, so host code must not change an object after it is a key. `Equal` compares the key sets, so `{ a: 1 }` and `{ a: 1, b: undefined }` are not equal. Source construction and schema decoding both leave an absent optional field absent, so a decoded key and a source key with the same fields are equal and hash alike. The iteration order follows the hash structure, not the insertion order | [map_set_types_slow_test.ts](../tests/map_set_types_slow_test.ts) |
+ | Union continuation | A newline before `\|` does not continue a type; a newline after `\|` does. Inside parentheses a newline is not significant, so `(int` newline `\| string)` continues | [parse.ts](../src/core/parse.ts) |
+ | `fails` and `uses` on a new line | Continue a clause only when an identifier follows | [parse.ts](../src/core/parse.ts) |
+ | `Some(_)` | Accepted; `_` is the binding name | [parse.ts](../src/core/parse.ts) |
+@@ -295,16 +291,6 @@ The rules for collection literals, `traverse`, and the callbacks of `map`, `filt
+ | log | `log(message)` and `log(message, options)` take a string message (a `string` or a string identity) and return `void`. They have effect mode, no failures and no requirements beyond those of the evaluated arguments. `options` is a literal record with the optional keys `level` and `fields`. `level` is one of the string literals `"trace"`, `"debug"`, `"info"`, `"warn"`, `"error"` and `"fatal"`, and the default is `"info"`. `fields` is a record literal whose values are data (the `value` data rule); each value is evaluated, in source order after the message. A non-literal or unknown level, an unknown key, a repeated key, an empty record and a non-data field are `type-mismatch/010`; a non-string message is a type mismatch. The pipeline form is rejected. The host sets the minimum level (`References.MinimumLogLevel`) and the logger, and source has no form for either. `log` is shadowable. It lowers to the IR kind `log` and emits `Effect.logWithLevel("Info")(message)`, wrapped in `Effect.annotateLogs(entry, fields)` when `fields` is present. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+ | random | `random()` takes no argument and returns a `number` in [0, 1). It has effect mode, no failures and no requirements. It reads the `Random` reference of the runtime, so `Random.withSeed` makes it deterministic. `random` is shadowable. It lowers to the IR kind `random` and emits `Random.next`. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+ | randomInt | `randomInt(min, max)` takes two `int` values and returns an `int` with `min <= n < max`. It has effect mode, no failures and no requirements. `randomInt` is shadowable. A call with `max <= min` is a runtime defect (`RangeError`), not a typed failure. It lowers to the IR kind `random-int` and emits `Random.nextIntBetween(min, max, { halfOpen: true })` after the check, because the Effect default range is inclusive and a reversed range returns a value with no error. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| mapOf | `mapOf(entries)` returns a `Map<K, V>`. It is pure and takes one argument. All eleven Map and Set operations are pure, shadowable and take a direct call only, so a pipeline left side is rejected. A list literal argument is a list of pairs: each inner two-element list literal is a pair, and the checker joins the key types and the value types separately, so `mapOf([["a", 1], ["b", 2]])` has type `Map<string, int>`. An expected `Map<K, V>` gives each pair the tuple type `[K, V]`. A non-literal argument must have type `[K, V][]`. `mapOf([])` needs an expected `Map` type (`type-mismatch/012`). An entry that is not a pair, or keys or values with no common type, are `type-mismatch/012`. A key that is not data is `declaration/019`. A later pair with an equal key replaces an earlier pair (`HashMap.fromIterable`). The call lowers to the IR kind `map-of`, whose argument is an array of tuples, and emits `HashMap.fromIterable(entries)`. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| getMap | `getMap(map, key)` returns `Option<V>`. It is pure. The key must fit `K` (`type-mismatch/003`), and the first argument must be a `Map` (`type-mismatch/010`). It lowers to `get-map` and emits `HashMap.get(map, key)`. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| putMap | `putMap(map, key, value)` returns a new `Map<K, V>` with the type of the first argument, and leaves the first argument unchanged. It is pure. The key must fit `K` and the value must fit `V`; a wider value is `type-mismatch/003`, not a wider `Map`. It lowers to `put-map` and emits `HashMap.set(map, key, value)`. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| removeMap | `removeMap(map, key)` returns a new `Map<K, V>` and leaves the first argument unchanged. It is pure. The key must fit `K`. It lowers to `remove-map` and emits `HashMap.remove(map, key)`. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| hasMap | `hasMap(map, key)` returns `boolean`. It is pure. The key must fit `K`. It lowers to `has-map` and emits `HashMap.has(map, key)`. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| entriesMap | `entriesMap(map)` returns the entries as `[K, V][]` in hash order. It is pure. An iteration order is the hash order of the structure: it is the same for equal contents, and it is not insertion order. Source must not depend on a particular order. It lowers to `entries-map` and emits `HashMap.toEntries(map)`. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| setOf | `setOf(items)` returns a `Set<T>` from a list. It is pure. An expected `Set<T>` gives the list the type `T[]`. Without an expected type the element type is the list element type, and it must be data (`declaration/019`). `setOf([])` needs an expected `Set` type (`type-mismatch/012`). It lowers to `set-of` and emits `HashSet.fromIterable(items)`. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| addSet and removeSet | `addSet(set, element)` and `removeSet(set, element)` return a new `Set<T>` and leave the first argument unchanged. They are pure. The element must fit `T` (`type-mismatch/003`), and the first argument must be a `Set` (`type-mismatch/010`). They lower to `add-set` and `remove-set` and emit `HashSet.add(set, element)` and `HashSet.remove(set, element)`. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| hasSet | `hasSet(set, element)` returns `boolean`. It is pure. The element must fit `T`. It lowers to `has-set` and emits `HashSet.has(set, element)`. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+-| itemsSet | `itemsSet(set)` returns the elements as `T[]` in hash order. It is pure. An iteration order is the hash order of the structure: it is the same for equal contents, and it is not insertion order. Source must not depend on a particular order. It lowers to `items-set` and emits the spread `[...set]`, because `Array` is not a reserved target name and a user binding could shadow it. | [2026-10-27-second-effect-selection.md](archive/plans/2026-10-27-second-effect-selection.md) |
+ | sleep | `sleep(durationMs)` takes a `Duration`, waits, and returns `void`. It has effect mode, no failures and no requirements. | [2026-10-27-effect-surface.md](archive/plans/2026-10-27-effect-surface.md) |
+ | Negative duration | A negative `Duration` in `timeout` or `sleep` is a runtime defect (`RangeError`), not a typed failure. | [2026-10-27-effect-surface.md](archive/plans/2026-10-27-effect-surface.md) |
+ | TimeoutError | `TimeoutError` is a reserved error that maps to `Cause.TimeoutError`. Source can name it in `fails` clauses and `catch` arms. Source cannot construct it. | [2026-10-27-effect-surface.md](archive/plans/2026-10-27-effect-surface.md) |
+@@ -812,7 +798,7 @@ The registry in `src/core/diagnostics.ts` describes every code. This table lists
+ | --- | --- | --- |
+ | Parser codes | The lexer and the parser report the `syntax` codes. The parser reads `.eff` source files and `.effi` host interface files | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
+ | Name and module codes | The project loader and module graph in `src/core/project.ts` report `module/001` to `module/003`. Optional import rules report `module/005` for a forbidden direct edge. The name resolver in `src/core/resolve.ts` reports `unknown-name/001` to `/004` and `declaration/001` to `/004`. The declaration index reports nothing; it marks a declaration broken | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md), [portable extensions plan](archive/plans/2026-10-23-portable-extensions.md) |
+-| Declaration checker codes | The declaration checker reports `type-mismatch/001`, `type-mismatch/002`, `type-mismatch/003`, `type-mismatch/010`, `declaration/005` to `declaration/007`, `declaration/009` to `declaration/013`, `declaration/015`, `declaration/016`, `declaration/017`, and `declaration/019`. Decisions D21 and D26 added `declaration/012` and `declaration/013` on 2026-10-17. The data type plan added `declaration/014` and `declaration/015` on 2026-10-23. The companion plan added `declaration/016` on 2026-10-23. The nominal keyword plan deleted `declaration/008` and does not reuse its number. It changed `declaration/014` to report a nominal body that holds a record. The type identity plan (2026-10-24) deleted `declaration/014` and does not reuse its number. It added `declaration/017`, which rejects `sealed` on a transparent alias | [2026-10-17-d21-d23.md](archive/plans/2026-10-17-d21-d23.md), [archive/plans/2026-10-23-nominal-data-types.md](archive/plans/2026-10-23-nominal-data-types.md), [plans/2026-10-23-nominal-keyword.md](archive/plans/2026-10-23-nominal-keyword.md), [plans/2026-10-24-type-identity.md](archive/plans/2026-10-24-type-identity.md), [architecture.md](architecture.md) |
++| Declaration checker codes | The declaration checker reports `type-mismatch/001`, `type-mismatch/002`, `type-mismatch/003`, `type-mismatch/010`, `declaration/005` to `declaration/007`, `declaration/009` to `declaration/013`, `declaration/015`, `declaration/016`, and `declaration/017`. Decisions D21 and D26 added `declaration/012` and `declaration/013` on 2026-10-17. The data type plan added `declaration/014` and `declaration/015` on 2026-10-23. The companion plan added `declaration/016` on 2026-10-23. The nominal keyword plan deleted `declaration/008` and does not reuse its number. It changed `declaration/014` to report a nominal body that holds a record. The type identity plan (2026-10-24) deleted `declaration/014` and does not reuse its number. It added `declaration/017`, which rejects `sealed` on a transparent alias | [2026-10-17-d21-d23.md](archive/plans/2026-10-17-d21-d23.md), [archive/plans/2026-10-23-nominal-data-types.md](archive/plans/2026-10-23-nominal-data-types.md), [plans/2026-10-23-nominal-keyword.md](archive/plans/2026-10-23-nominal-keyword.md), [plans/2026-10-24-type-identity.md](archive/plans/2026-10-24-type-identity.md), [architecture.md](architecture.md) |
+ | Body checker codes | The body checker reports `type-mismatch/003` to `type-mismatch/012`, `failure-contract/001` to `/003`, `requirement-contract/001`, `execution-mode/001` to `/003`, and `pattern/001` to `/004` | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
+ | Project checker codes | The project checker in `src/core/check_project.ts` reports `module/004`, `execution-mode/003` for a recursive module-level function without explicit annotations, and `execution-mode/004`. The body checker reports `execution-mode/003` for a local function that refers to itself | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
+ | Portable extension codes | `execution-mode/005` rejects nonempty rows on a pure function type. `sealed/001` rejects foreign construction, `002` updates, `003` arithmetic, and `004` schema authority violations. Widening uses existing type mismatch codes | [portable extensions plan](archive/plans/2026-10-23-portable-extensions.md) |
+diff --git a/docs/status.md b/docs/status.md
+index bb893c1..fbe9b1d 100644
+--- a/docs/status.md
++++ b/docs/status.md
+@@ -108,7 +108,7 @@ the verbosity of Effect. A source form exposes an Effect 4 feature only when the
+ feature carries user intent that the compiler cannot infer. The transpiler uses
+ the other features in the emitted TypeScript only.
+ 
+-Items 1 to 8, items 18 to 22, and the logging half of item 16 are done.
++Items 1 to 8, items 18 to 21, and the logging half of item 16 are done.
+ [language-rules.md](language-rules.md) holds their rules. The
+ [effect surface plan](archive/plans/2026-10-27-effect-surface.md), the
+ [effect surface leftovers plan](archive/plans/2026-10-27-effect-surface-leftovers.md),
+@@ -116,7 +116,7 @@ and the [second selection plan](archive/plans/2026-10-27-second-effect-selection
+ hold their history. Those source forms hide `Duration`, `Clock`, `Schedule`,
+ `Cron`, `Exit`, `Cause`, the interruption masks, `Logger`, `LogLevel`, `Random`,
+ `Effect.forEach`, `Effect.filter`, `Effect.reduce`, `SynchronizedRef`,
+-`Effect.raceAll`, `HashMap`, `HashSet`, `Equal`, and `Hash`.
++`Effect.raceAll`.
+ 
+ The table lists the open items. Each item keeps its first number. The open items
+ have no implementation commitment, and their forms are candidates, not accepted
+@@ -136,7 +136,7 @@ code.
+ | 16 Metrics | Metric names | Counters and histograms | `Metric` |
+ | 17 Configuration | Keys and secret status | A `config` declaration and `Secret<T>` | `Config`, `ConfigProvider`, `Redacted` |
+ | 23 Recursive types | Recursive Option data, mutual alias recursion | Ordinary type declarations | Schema recursion |
+-| 24 Sorting | Ordered output of arrays, and of `entriesMap` and `itemsSet`, which return hash order | A sort builtin over an array, with a key or an order | `Array.sort`, `Order` |
++| 24 Sorting | Ordered output of arrays | A sort builtin over an array, with a key or an order | `Array.sort`, `Order` |
+ 
+ The transpiler may use these modules without a source form: `Chunk`,
+ `Channel`, `Pull`, `Take`, `Cause` internals, `Scheduler`, `Runtime`,
+diff --git a/docs/testing.md b/docs/testing.md
+index a00862f..80a5861 100644
+--- a/docs/testing.md
++++ b/docs/testing.md
+@@ -29,8 +29,8 @@ Each oracle covers a limited set of inputs. A pass proves the result for those i
+ | --- | --- | --- | --- |
+ | Golden files in `fixtures/golden/` | `deno task golden:update` | The exact TypeScript of six example modules and their host module | Each other program |
+ | Mutation fixtures in `fixtures/validate/` | `deno task validate:update` | The validator rejects each forged IR in the fixture list | A forged form that the list does not hold |
+-| Surface snapshot in `fixtures/surface/` | `deno task surface:update` | 90 command-line records and 28 language server records | The records run in memory, so process and file behavior stay outside |
+-| IR snapshot in `fixtures/ir/` | The test file | The wire form of its example | It reaches at most 50 of the 123 expression kinds |
++| Surface snapshot in `fixtures/surface/` | `deno task surface:update` | 89 command-line records and 28 language server records | The records run in memory, so process and file behavior stay outside |
++| IR snapshot in `fixtures/ir/` | The test file | The wire form of its example | It reaches at most 50 of the 112 expression kinds |
+ | Lexer snapshot in `fixtures/lex/` | `deno task lex:update` | The tokens of a random corpus of 20,000 strings | Input that the corpus does not hold |
+ | Behavior capture | None | Two revisions give equal records for the test inputs | A record holds hashes and a length, with no message and no test name. It sees only its record kinds and the test inputs. |
+ | Unfired rejection sites | None | A fast test fires each direct validator rejection | The match is textual, so a rejection through another helper is not listed |
+diff --git a/fixtures/errors/declaration-map-key.eff b/fixtures/errors/declaration-map-key.eff
+deleted file mode 100644
+index 1cfbd73..0000000
+--- a/fixtures/errors/declaration-map-key.eff
++++ /dev/null
+@@ -1,7 +0,0 @@
+-type Int = int
+-
+-// error: declaration/019
+-type Lookup = Map<() => Int, Int>
+-
+-// error: declaration/019
+-type Members = Set<Ref<Int>>
+diff --git a/fixtures/mutation/survivors.json b/fixtures/mutation/survivors.json
+index 694fad5..5671a95 100644
+--- a/fixtures/mutation/survivors.json
++++ b/fixtures/mutation/survivors.json
+@@ -107,15 +107,6 @@
+     "class": "equivalent",
+     "reason": "Execution has only the values pure and effect, and source === target already covers equal pairs. For (pure, effect) both forms give true, and for (effect, pure) both give false."
+   },
+-  {
+-    "file": "src/core/types.ts",
+-    "declaration": "guardedRecord.containsSelf",
+-    "offset": 238,
+-    "text": "containsSelf(part.key) || containsSelf(part.value)",
+-    "operator": "logical",
+-    "class": "equivalent",
+-    "reason": "containsSelf only sets tagged for a union root. A map reachable from any member makes visit return false, so guardedRecord returns false either way."
+-  },
+   {
+     "file": "src/core/types.ts",
+     "declaration": "guardedRecord.visit",
+@@ -146,7 +137,7 @@
+   {
+     "file": "src/core/types.ts",
+     "declaration": "TypeTable.keyOf",
+-    "offset": 1214,
++    "offset": 1096,
+     "text": "node.presence === \"optional\"",
+     "operator": "comparison",
+     "class": "equivalent",
+@@ -155,7 +146,7 @@
+   {
+     "file": "src/core/types.ts",
+     "declaration": "TypeTable.keyOf",
+-    "offset": 1256,
++    "offset": 1138,
+     "text": "node.presence === \"encoded-optional\"",
+     "operator": "comparison",
+     "class": "equivalent",
+@@ -164,7 +155,7 @@
+   {
+     "file": "src/core/types.ts",
+     "declaration": "TypeTable.keyOf",
+-    "offset": 1306,
++    "offset": 1188,
+     "text": "node.presence === \"decoded-optional\"",
+     "operator": "comparison",
+     "class": "equivalent",
+@@ -173,7 +164,7 @@
+   {
+     "file": "src/core/types.ts",
+     "declaration": "guardedRecord",
+-    "offset": 1386,
++    "offset": 1283,
+     "text": "!field.optional && tagOf(field.type) !== undefined",
+     "operator": "logical",
+     "class": "equivalent",
+@@ -182,7 +173,7 @@
+   {
+     "file": "src/core/types.ts",
+     "declaration": "TypeTable.keyOf",
+-    "offset": 1400,
++    "offset": 1282,
+     "text": "node.constructorDefault === true",
+     "operator": "comparison",
+     "class": "equivalent",
+@@ -191,7 +182,7 @@
+   {
+     "file": "src/core/types.ts",
+     "declaration": "guardedRecord",
+-    "offset": 2022,
++    "offset": 1919,
+     "text": "tagged && hasDistinctTag",
+     "operator": "logical",
+     "class": "equivalent",
+@@ -200,7 +191,7 @@
+   {
+     "file": "src/core/types.ts",
+     "declaration": "TypeTable.assignable",
+-    "offset": 6464,
++    "offset": 6204,
+     "text": "i < sn.elements.length",
+     "operator": "comparison",
+     "class": "equivalent",
+@@ -209,7 +200,7 @@
+   {
+     "file": "src/core/types.ts",
+     "declaration": "TypeTable.assignable",
+-    "offset": 7379,
++    "offset": 7119,
+     "text": "i < tn.parameters.length",
+     "operator": "comparison",
+     "class": "equivalent",
+diff --git a/fixtures/surface/cli.json b/fixtures/surface/cli.json
+index 8ac7084..4e75f78 100644
+--- a/fixtures/surface/cli.json
++++ b/fixtures/surface/cli.json
+@@ -390,27 +390,6 @@
+       }
+     ]
+   },
+-  "errors-declaration-map-key": {
+-    "args": [
+-      "check",
+-      "/proj"
+-    ],
+-    "code": 1,
+-    "events": [
+-      {
+-        "kind": "stdout",
+-        "text": "declaration-map-key.eff:4:19: error declaration/019: A Map key must be data, found `() => Int`\n"
+-      },
+-      {
+-        "kind": "stdout",
+-        "text": "declaration-map-key.eff:7:20: error declaration/019: A Set element must be data, found `Ref<Int>`\n"
+-      },
+-      {
+-        "kind": "stderr",
+-        "text": "1 module, 2 diagnostics\n"
+-      }
+-    ]
+-  },
+   "errors-declaration-opaque-field": {
+     "args": [
+       "check",
+diff --git a/src/core/check_builtins/map_set.ts b/src/core/check_builtins/map_set.ts
+deleted file mode 100644
+index 1a09cb5..0000000
+--- a/src/core/check_builtins/map_set.ts
++++ /dev/null
+@@ -1,443 +0,0 @@
+-// The Map and Set operations. Every operation is pure. `mapOf` and `setOf`
+-// infer from list literals. Prelude dispatch checks arity and records facts
+-// first.
+-
+-import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
+-import { combine, type NodeInfo, PURE_EFFECTS } from "../tables.ts";
+-import { dataOnly, type TypeRef } from "../types.ts";
+-import { showType, showTypes } from "../type_show.ts";
+-import type { Arg, BuiltinContext, FactWriter, SyntaxView } from "./context.ts";
+-import { direct, type PreludeCallName, type Rows } from "./rows.ts";
+-
+-/** The checker operations that `mapOf` and `setOf` read. */
+-export interface MapSetContext extends BuiltinContext, SyntaxView, FactWriter {}
+-
+-type MapSetName =
+-  | "getMap"
+-  | "putMap"
+-  | "removeMap"
+-  | "hasMap"
+-  | "entriesMap"
+-  | "addSet"
+-  | "removeSet"
+-  | "hasSet"
+-  | "itemsSet";
+-
+-/** The key and value of a Map type, or the error type after a report. */
+-function mapParts(
+-  c: BuiltinContext,
+-  name: MapSetName,
+-  info: NodeInfo,
+-  arg: Arg,
+-): { readonly key: TypeRef; readonly value: TypeRef } {
+-  const type = c.table.node(c.table.unfold(info.type));
+-  if (type.kind === "map") return { key: type.key, value: type.value };
+-  if (!c.isError(info.type)) {
+-    c.report("type-mismatch/010", `\`${name}\` needs a Map value`, arg.node);
+-  }
+-  return { key: c.table.error, value: c.table.error };
+-}
+-
+-/** The element of a Set type, or the error type after a report. */
+-function setElement(
+-  c: BuiltinContext,
+-  name: MapSetName,
+-  info: NodeInfo,
+-  arg: Arg,
+-): TypeRef {
+-  const type = c.table.node(c.table.unfold(info.type));
+-  if (type.kind === "set") return type.element;
+-  if (!c.isError(info.type)) {
+-    c.report("type-mismatch/010", `\`${name}\` needs a Set value`, arg.node);
+-  }
+-  return c.table.error;
+-}
+-
+-/** An argument that must fit `expected`, given as a hint to the argument. */
+-function slot(
+-  c: BuiltinContext,
+-  arg: Arg,
+-  expected: TypeRef,
+-  what: string,
+-): NodeInfo {
+-  const hint = c.isError(expected) ? undefined : expected;
+-  const info = c.argInfo(arg, hint);
+-  c.fits(arg.node, info.type, hint, what);
+-  return info;
+-}
+-
+-function mapCall(
+-  c: BuiltinContext,
+-  node: NodeId,
+-  name: MapSetName,
+-  args: readonly Arg[],
+-): NodeInfo {
+-  const map = c.argInfo(args[0]);
+-  const { key: keyType, value: valueType } = mapParts(c, name, map, args[0]);
+-  const infos = [map];
+-  if (name !== "entriesMap") {
+-    infos.push(slot(c, args[1], keyType, "the Map key"));
+-  }
+-  if (name === "putMap") {
+-    infos.push(slot(c, args[2], valueType, "the Map value"));
+-  }
+-  const bad = c.isError(keyType);
+-  const type = name === "getMap"
+-    ? (bad ? c.table.error : c.table.option(valueType))
+-    : name === "hasMap"
+-    ? c.table.boolean
+-    : name === "entriesMap"
+-    ? (bad ? c.table.error : c.table.array(c.table.tuple([keyType, valueType])))
+-    : (bad ? c.table.error : c.table.map(keyType, valueType));
+-  return c.finish(node, type, combine(infos));
+-}
+-
+-function setCall(
+-  c: BuiltinContext,
+-  node: NodeId,
+-  name: MapSetName,
+-  args: readonly Arg[],
+-): NodeInfo {
+-  const set = c.argInfo(args[0]);
+-  const element = setElement(c, name, set, args[0]);
+-  const infos = [set];
+-  if (name !== "itemsSet") {
+-    infos.push(slot(c, args[1], element, "the Set element"));
+-  }
+-  const bad = c.isError(element);
+-  const type = name === "hasSet"
+-    ? c.table.boolean
+-    : name === "itemsSet"
+-    ? (bad ? c.table.error : c.table.array(element))
+-    : (bad ? c.table.error : c.table.set(element));
+-  return c.finish(node, type, combine(infos));
+-}
+-
+-/** The key and value of an expected Map type, when the expected type is one. */
+-function expectedMap(
+-  c: MapSetContext,
+-  expected: TypeRef | undefined,
+-): { readonly key: TypeRef; readonly value: TypeRef } | undefined {
+-  if (expected === undefined) return undefined;
+-  const node = c.table.node(c.table.unfold(expected));
+-  return node.kind === "map" ? { key: node.key, value: node.value } : undefined;
+-}
+-
+-/** The element of an expected Set type, when the expected type is one. */
+-function expectedSet(
+-  c: MapSetContext,
+-  expected: TypeRef | undefined,
+-): TypeRef | undefined {
+-  if (expected === undefined) return undefined;
+-  const node = c.table.node(c.table.unfold(expected));
+-  return node.kind === "set" ? node.element : undefined;
+-}
+-
+-/** The key and value of an array of two-element tuples, or undefined. */
+-function pairParts(
+-  c: MapSetContext,
+-  ref: TypeRef,
+-): { readonly key: TypeRef; readonly value: TypeRef } | undefined {
+-  const list = c.table.node(c.table.unfold(ref));
+-  if (list.kind !== "array") return undefined;
+-  const pair = c.table.node(c.table.unfold(list.element));
+-  return pair.kind === "tuple" && pair.elements.length === 2
+-    ? { key: pair.elements[0], value: pair.elements[1] }
+-    : undefined;
+-}
+-
+-function isListLiteral(c: MapSetContext, arg: Arg): boolean {
+-  return arg.pre === undefined &&
+-    kindOf(c.tree, arg.node) === SyntaxKind.ListExpr;
+-}
+-
+-/** The common type of the widened `types`, or the error type after a report. */
+-function joinTypes(
+-  c: MapSetContext,
+-  types: readonly TypeRef[],
+-  nodes: readonly NodeId[],
+-  what: string,
+-): TypeRef {
+-  let joined = c.widen(types[0]);
+-  for (let i = 1; i < types.length; i++) {
+-    const next = c.widen(types[i]);
+-    if (c.isError(joined) || c.isError(next)) {
+-      joined = c.table.error;
+-    } else if (c.assignable(next, joined)) {
+-      continue;
+-    } else if (c.assignable(joined, next)) {
+-      joined = next;
+-    } else {
+-      const [nextText, joinedText] = showTypes(c.table, next, joined);
+-      c.report(
+-        "type-mismatch/012",
+-        `${what} ${
+-          i + 1
+-        } has type ${nextText}, which has no common type with ${joinedText}`,
+-        nodes[i],
+-      );
+-      joined = c.table.error;
+-    }
+-  }
+-  return joined;
+-}
+-
+-/** Reports `declaration/019` when an inferred key or element is not data. */
+-function requireInferredData(
+-  c: MapSetContext,
+-  role: string,
+-  type: TypeRef,
+-  node: NodeId,
+-): void {
+-  if (c.isError(type) || dataOnly(c.table, type, "value", true)) return;
+-  c.report(
+-    "declaration/019",
+-    `A ${role} must be data, found \`${showType(c.table, type)}\``,
+-    node,
+-  );
+-}
+-
+-/**
+- * Infers the entries of `mapOf` from a list literal with no expected type.
+- * Each inner two-element list literal is a pair. The checker joins the key
+- * types and the value types separately.
+- */
+-function inferPairs(
+-  c: MapSetContext,
+-  list: NodeId,
+-): {
+-  readonly key: TypeRef;
+-  readonly value: TypeRef;
+-  readonly info: NodeInfo;
+-} {
+-  const table = c.table;
+-  const keys: TypeRef[] = [];
+-  const values: TypeRef[] = [];
+-  const keyNodes: NodeId[] = [];
+-  const valueNodes: NodeId[] = [];
+-  const infos: NodeInfo[] = [];
+-  let broken = false;
+-  c.kids(list).forEach((entry, i) => {
+-    const parts = c.kids(entry);
+-    if (
+-      kindOf(c.tree, entry) === SyntaxKind.ListExpr && parts.length === 2
+-    ) {
+-      c.fact(entry, { kind: "list", shape: "tuple" });
+-      const [k, v] = parts.map((part) => c.argInfo({ node: part }));
+-      const info = c.finish(
+-        entry,
+-        table.tuple([c.widen(k.type), c.widen(v.type)]),
+-        combine([k, v]),
+-      );
+-      infos.push(info);
+-      keys.push(k.type);
+-      values.push(v.type);
+-      keyNodes.push(parts[0]);
+-      valueNodes.push(parts[1]);
+-      return;
+-    }
+-    const info = c.argInfo({ node: entry });
+-    infos.push(info);
+-    const pair = pairParts(c, table.array(info.type));
+-    if (pair === undefined) {
+-      broken = true;
+-      if (!c.isError(info.type)) {
+-        c.report(
+-          "type-mismatch/012",
+-          `mapOf entry ${i + 1} must be a [key, value] pair`,
+-          entry,
+-        );
+-      }
+-      return;
+-    }
+-    keys.push(pair.key);
+-    values.push(pair.value);
+-    keyNodes.push(entry);
+-    valueNodes.push(entry);
+-  });
+-  c.fact(list, { kind: "list", shape: "array" });
+-  if (broken) {
+-    return {
+-      key: table.error,
+-      value: table.error,
+-      info: c.finish(list, table.array(table.error), combine(infos)),
+-    };
+-  }
+-  const key = joinTypes(c, keys, keyNodes, "map key");
+-  const value = joinTypes(c, values, valueNodes, "map value");
+-  const info = c.finish(
+-    list,
+-    table.array(table.tuple([key, value])),
+-    combine(infos),
+-  );
+-  return { key, value, info };
+-}
+-
+-function mapOfCall(
+-  c: MapSetContext,
+-  node: NodeId,
+-  arg: Arg,
+-  expected: TypeRef | undefined,
+-): NodeInfo {
+-  const table = c.table;
+-  const wanted = expectedMap(c, expected);
+-  if (wanted !== undefined) {
+-    const hint = table.array(table.tuple([wanted.key, wanted.value]));
+-    const info = c.argInfo(arg, hint);
+-    if (!c.fits(arg.node, info.type, hint, "the mapOf entries")) {
+-      return c.finish(node, table.error, info);
+-    }
+-    const given = pairParts(c, info.type);
+-    const sameKey = given !== undefined &&
+-      c.assignable(wanted.key, given.key) &&
+-      c.assignable(given.key, wanted.key);
+-    return c.finish(
+-      node,
+-      sameKey || given === undefined
+-        ? table.map(wanted.key, wanted.value)
+-        : table.map(given.key, given.value),
+-      info,
+-    );
+-  }
+-  if (isListLiteral(c, arg)) {
+-    if (c.kids(arg.node).length === 0) {
+-      c.fact(arg.node, { kind: "list", shape: "array" });
+-      c.report(
+-        "type-mismatch/012",
+-        "`mapOf([])` needs an expected Map type",
+-        arg.node,
+-      );
+-      const info = c.finish(
+-        arg.node,
+-        table.array(table.error),
+-        PURE_EFFECTS,
+-      );
+-      return c.finish(node, table.error, info);
+-    }
+-    const inferred = inferPairs(c, arg.node);
+-    if (c.isError(inferred.key) || c.isError(inferred.value)) {
+-      return c.finish(node, table.error, inferred.info);
+-    }
+-    requireInferredData(c, "Map key", inferred.key, arg.node);
+-    return c.finish(
+-      node,
+-      table.map(inferred.key, inferred.value),
+-      inferred.info,
+-    );
+-  }
+-  const info = c.argInfo(arg);
+-  const pair = pairParts(c, info.type);
+-  if (pair === undefined) {
+-    if (!c.isError(info.type)) {
+-      c.report(
+-        "type-mismatch/003",
+-        `the mapOf entries has type ${
+-          showType(c.table, info.type)
+-        }, but an array of [key, value] pairs is expected`,
+-        arg.node,
+-      );
+-    }
+-    return c.finish(node, table.error, info);
+-  }
+-  requireInferredData(c, "Map key", pair.key, arg.node);
+-  return c.finish(node, table.map(pair.key, pair.value), info);
+-}
+-
+-function setOfCall(
+-  c: MapSetContext,
+-  node: NodeId,
+-  arg: Arg,
+-  expected: TypeRef | undefined,
+-): NodeInfo {
+-  const table = c.table;
+-  const wanted = expectedSet(c, expected);
+-  if (wanted !== undefined) {
+-    const hint = table.array(wanted);
+-    const info = c.argInfo(arg, hint);
+-    if (!c.fits(arg.node, info.type, hint, "the setOf items")) {
+-      return c.finish(node, table.error, info);
+-    }
+-    return c.finish(node, table.set(wanted), info);
+-  }
+-  if (isListLiteral(c, arg) && c.kids(arg.node).length === 0) {
+-    c.fact(arg.node, { kind: "list", shape: "array" });
+-    c.report(
+-      "type-mismatch/012",
+-      "`setOf([])` needs an expected Set type",
+-      arg.node,
+-    );
+-    const info = c.finish(
+-      arg.node,
+-      table.array(table.error),
+-      PURE_EFFECTS,
+-    );
+-    return c.finish(node, table.error, info);
+-  }
+-  const info = c.argInfo(arg);
+-  const list = table.node(table.unfold(info.type));
+-  if (list.kind !== "array") {
+-    if (!c.isError(info.type)) {
+-      c.report(
+-        "type-mismatch/003",
+-        `the setOf items has type ${
+-          showType(c.table, info.type)
+-        }, but an array is expected`,
+-        arg.node,
+-      );
+-    }
+-    return c.finish(node, table.error, info);
+-  }
+-  if (c.isError(list.element)) return c.finish(node, table.error, info);
+-  requireInferredData(c, "Set element", list.element, arg.node);
+-  return c.finish(node, table.set(list.element), info);
+-}
+-
+-/** The rows of the Map and Set operations. */
+-export const MAP_SET_ROWS = {
+-  getMap: {
+-    prologue: direct(2, "pure", { fact: { kind: "get-map" } }),
+-    handle: (c, node, name, args) => mapCall(c, node, name, args),
+-  },
+-  putMap: {
+-    prologue: direct(3, "pure", { fact: { kind: "put-map" } }),
+-    handle: (c, node, name, args) => mapCall(c, node, name, args),
+-  },
+-  removeMap: {
+-    prologue: direct(2, "pure", { fact: { kind: "remove-map" } }),
+-    handle: (c, node, name, args) => mapCall(c, node, name, args),
+-  },
+-  hasMap: {
+-    prologue: direct(2, "pure", { fact: { kind: "has-map" } }),
+-    handle: (c, node, name, args) => mapCall(c, node, name, args),
+-  },
+-  entriesMap: {
+-    prologue: direct(1, "pure", { fact: { kind: "entries-map" } }),
+-    handle: (c, node, name, args) => mapCall(c, node, name, args),
+-  },
+-  addSet: {
+-    prologue: direct(2, "pure", { fact: { kind: "add-set" } }),
+-    handle: (c, node, name, args) => setCall(c, node, name, args),
+-  },
+-  removeSet: {
+-    prologue: direct(2, "pure", { fact: { kind: "remove-set" } }),
+-    handle: (c, node, name, args) => setCall(c, node, name, args),
+-  },
+-  hasSet: {
+-    prologue: direct(2, "pure", { fact: { kind: "has-set" } }),
+-    handle: (c, node, name, args) => setCall(c, node, name, args),
+-  },
+-  itemsSet: {
+-    prologue: direct(1, "pure", { fact: { kind: "items-set" } }),
+-    handle: (c, node, name, args) => setCall(c, node, name, args),
+-  },
+-  mapOf: {
+-    prologue: direct(1, "pure", { fact: { kind: "map-of" } }),
+-    handle: (c, node, _name, args, expected) =>
+-      mapOfCall(c, node, args[0], expected),
+-  },
+-  setOf: {
+-    prologue: direct(1, "pure", { fact: { kind: "set-of" } }),
+-    handle: (c, node, _name, args, expected) =>
+-      setOfCall(c, node, args[0], expected),
+-  },
+-} satisfies Partial<Rows<PreludeCallName, MapSetContext>>;
+diff --git a/src/core/check_builtins/registry.ts b/src/core/check_builtins/registry.ts
+index 5c3b6d8..12f1ab2 100644
+--- a/src/core/check_builtins/registry.ts
++++ b/src/core/check_builtins/registry.ts
+@@ -8,7 +8,6 @@ import { COLLECTION_ROWS, type CollectionContext } from "./collections.ts";
+ import { EFFECT_ROWS, type EffectContext } from "./effect.ts";
+ import { FIBER_ROWS, type FiberContext } from "./fiber.ts";
+ import { LAYER_ROWS, type LayerContext } from "./layer.ts";
+-import { MAP_SET_ROWS, type MapSetContext } from "./map_set.ts";
+ import { REF_ROWS } from "./ref.ts";
+ import type { PreludeCallName, Rows } from "./rows.ts";
+ import { SCHEDULE_ROWS } from "./schedule.ts";
+@@ -30,7 +29,6 @@ type FamilyContext =
+   & CollectionContext
+   & EffectContext
+   & LayerContext
+-  & MapSetContext
+   & FiberContext
+   & ScopeContext
+   & StreamContext
+@@ -43,7 +41,6 @@ export const FAMILY_ROW_TABLES = {
+   effect: EFFECT_ROWS,
+   fiber: FIBER_ROWS,
+   layer: LAYER_ROWS,
+-  mapSet: MAP_SET_ROWS,
+   ref: REF_ROWS,
+   schedule: SCHEDULE_ROWS,
+   schema: SCHEMA_ROWS,
+@@ -62,7 +59,6 @@ export const FAMILY_ROWS: Rows<
+   ...EFFECT_ROWS,
+   ...FIBER_ROWS,
+   ...LAYER_ROWS,
+-  ...MAP_SET_ROWS,
+   ...REF_ROWS,
+   ...SCHEDULE_ROWS,
+   ...SCHEMA_ROWS,
+diff --git a/src/core/check_declarations.ts b/src/core/check_declarations.ts
+index 37df39b..fde8faa 100644
+--- a/src/core/check_declarations.ts
++++ b/src/core/check_declarations.ts
+@@ -149,7 +149,6 @@ class ModuleChecker {
+   run(): ModuleDeclarations {
+     const entries = this.entries();
+     const infos: TypeNodeInfo[] = [];
+-    this.lowerer.pendingKeyChecks = [];
+     for (const entry of entries) {
+       if (entry.kind === "type") infos.push(this.checkType(entry));
+       else if (entry.kind === "error") infos.push(this.checkError(entry));
+@@ -159,8 +158,6 @@ class ModuleChecker {
+     this.inferTags(infos);
+     const guarded = this.checkCycles(infos);
+     this.checkDepths(infos, guarded);
+-    for (const check of this.lowerer.pendingKeyChecks) check();
+-    this.lowerer.pendingKeyChecks = undefined;
+     this.checkDeferredFields();
+     this.checkPrimitivePositions();
+     for (const entry of entries) {
+@@ -279,8 +276,6 @@ class ModuleChecker {
+       case "never":
+       case "unknown":
+       case "Option":
+-      case "Map":
+-      case "Set":
+       case "Ref":
+       case "RetrySchedule":
+       case "ScheduleInput":
+diff --git a/src/core/diagnostics.ts b/src/core/diagnostics.ts
+index 2177c81..b365932 100644
+--- a/src/core/diagnostics.ts
++++ b/src/core/diagnostics.ts
+@@ -266,10 +266,6 @@ export const DIAGNOSTIC_CODES = {
+     description:
+       "A refinement uses an unsupported predicate, applies to a type without identity, or enters a host interface contract.",
+   },
+-  "declaration/019": {
+-    description:
+-      "The key type of a Map or the element type of a Set is not data. Equal compares a function, an Effect, a Ref, a Stream, and similar types by reference, so they cannot serve as keys.",
+-  },
+   "module/001": {
+     description:
+       "A module reference is not valid: the import specifier or a project file entry breaks the module rules, or two files share one module name.",
+diff --git a/src/core/emit/calls.ts b/src/core/emit/calls.ts
+index bf1e63f..7753758 100644
+--- a/src/core/emit/calls.ts
++++ b/src/core/emit/calls.ts
+@@ -68,17 +68,7 @@ export type OperandCallKind =
+   | "zip-streams"
+   | "concat-streams"
+   | "merge-layers"
+-  | "race"
+-  | "map-of"
+-  | "get-map"
+-  | "put-map"
+-  | "remove-map"
+-  | "has-map"
+-  | "entries-map"
+-  | "set-of"
+-  | "add-set"
+-  | "remove-set"
+-  | "has-set";
++  | "race";
+ 
+ export const OPERAND_CALLS: {
+   readonly [K in OperandCallKind]: OperandCall<ExprOf<K>>;
+@@ -175,46 +165,6 @@ export const OPERAND_CALLS: {
+     callee: method("Effect", "race"),
+     operands: (e) => [[e.left, "value"], [e.right, "value"]],
+   },
+-  "map-of": {
+-    callee: method("HashMap", "fromIterable"),
+-    operands: (e) => [[e.entries, "value"]],
+-  },
+-  "get-map": {
+-    callee: method("HashMap", "get"),
+-    operands: (e) => [[e.map, "value"], [e.key, "value"]],
+-  },
+-  "put-map": {
+-    callee: method("HashMap", "set"),
+-    operands: (e) => [[e.map, "value"], [e.key, "value"], [e.value, "value"]],
+-  },
+-  "remove-map": {
+-    callee: method("HashMap", "remove"),
+-    operands: (e) => [[e.map, "value"], [e.key, "value"]],
+-  },
+-  "has-map": {
+-    callee: method("HashMap", "has"),
+-    operands: (e) => [[e.map, "value"], [e.key, "value"]],
+-  },
+-  "entries-map": {
+-    callee: method("HashMap", "toEntries"),
+-    operands: (e) => [[e.map, "value"]],
+-  },
+-  "set-of": {
+-    callee: method("HashSet", "fromIterable"),
+-    operands: (e) => [[e.items, "value"]],
+-  },
+-  "add-set": {
+-    callee: method("HashSet", "add"),
+-    operands: (e) => [[e.set, "value"], [e.element, "value"]],
+-  },
+-  "remove-set": {
+-    callee: method("HashSet", "remove"),
+-    operands: (e) => [[e.set, "value"], [e.element, "value"]],
+-  },
+-  "has-set": {
+-    callee: method("HashSet", "has"),
+-    operands: (e) => [[e.set, "value"], [e.element, "value"]],
+-  },
+ };
+ 
+ /**
+diff --git a/src/core/emit/decls.ts b/src/core/emit/decls.ts
+index ffa442b..d851c34 100644
+--- a/src/core/emit/decls.ts
++++ b/src/core/emit/decls.ts
+@@ -81,14 +81,9 @@ function namedIn(type: Type, out: Set<DeclarationId>): void {
+       return;
+     case "array":
+     case "option":
+-    case "set":
+     case "ref":
+       namedIn(type.element, out);
+       return;
+-    case "map":
+-      namedIn(type.key, out);
+-      namedIn(type.value, out);
+-      return;
+     case "retry-schedule":
+       namedIn(type.error, out);
+       return;
+@@ -481,11 +476,7 @@ export class DeclarationEmitter {
+         return type.id === id;
+       case "array":
+       case "option":
+-      case "set":
+         return this.containsNamed(type.element, id);
+-      case "map":
+-        return this.containsNamed(type.key, id) ||
+-          this.containsNamed(type.value, id);
+       case "record":
+         return type.fields.some((field) => this.containsNamed(field.type, id));
+       case "union":
+@@ -915,10 +906,7 @@ export class DeclarationEmitter {
+         return all(type.fields.map((f) => f.type));
+       case "array":
+       case "option":
+-      case "set":
+         return all([type.element]);
+-      case "map":
+-        return all([type.key, type.value]);
+       case "tuple":
+         return all(type.elements);
+       case "union":
+diff --git a/src/core/emit/expr.ts b/src/core/emit/expr.ts
+index e851c06..87c408c 100644
+--- a/src/core/emit/expr.ts
++++ b/src/core/emit/expr.ts
+@@ -839,13 +839,6 @@ export class ExprEmitter implements ExprCore {
+         return codecStructural(this, e, kid);
+       case "schema":
+         return schemaStructural(this, e, kid);
+-      case "items-set":
+-        // `Array` is not a reserved target name, so the spread prints.
+-        return emitted(
+-          bracketed("[", "]", [["...", at(kid(e.set), PREC.member)]], false),
+-          PREC.member,
+-          { huggable: true, bracket: true },
+-        );
+       case "call":
+         return this.nonLeafCall(e, kid);
+       case "block":
+diff --git a/src/core/emit/fields.ts b/src/core/emit/fields.ts
+index a4a86c2..b49d361 100644
+--- a/src/core/emit/fields.ts
++++ b/src/core/emit/fields.ts
+@@ -50,11 +50,7 @@ export function needsFieldAdapter(
+       );
+     case "option":
+     case "array":
+-    case "set":
+       return needsFieldAdapter(scope, type.element, seen);
+-    case "map":
+-      return needsFieldAdapter(scope, type.key, seen) ||
+-        needsFieldAdapter(scope, type.value, seen);
+     case "tuple":
+       return type.elements.some((t) => needsFieldAdapter(scope, t, seen));
+     case "union":
+@@ -119,16 +115,6 @@ function adapterBody(
+     return `return ${option}.isOption(value) ? ${option}.map(value, item => ${
+       apply(type.element, "item")
+     }) : value;`;
+-  } else if (type.kind === "map") {
+-    const map = scope.effect("HashMap");
+-    return `return ${map}.isHashMap(value) ? ${map}.fromIterable(${map}.toEntries(value).map(([entryKey, item]): readonly [unknown, unknown] => [${
+-      apply(type.key, "entryKey")
+-    }, ${apply(type.value, "item")}])) : value;`;
+-  } else if (type.kind === "set") {
+-    const set = scope.effect("HashSet");
+-    return `return ${set}.isHashSet(value) ? ${set}.fromIterable(globalThis.Array.from(value, item => ${
+-      apply(type.element, "item")
+-    })) : value;`;
+   } else if (type.kind === "array") {
+     return `return globalThis.Array.isArray(value) ? value.map(item => ${
+       apply(type.element, "item")
+diff --git a/src/core/emit/module_state.ts b/src/core/emit/module_state.ts
+index 041eb08..ad1aaf8 100644
+--- a/src/core/emit/module_state.ts
++++ b/src/core/emit/module_state.ts
+@@ -35,8 +35,6 @@ export type EffectModule =
+   | "Context"
+   | "Layer"
+   | "Option"
+-  | "HashMap"
+-  | "HashSet"
+   | "Schema"
+   | "SchemaIssue"
+   | "SchemaGetter"
+@@ -648,11 +646,7 @@ export class ModuleState
+         return type.fields.some((f) => this.containsFunction(f.type));
+       case "array":
+       case "option":
+-      case "set":
+         return this.containsFunction(type.element);
+-      case "map":
+-        return this.containsFunction(type.key) ||
+-          this.containsFunction(type.value);
+       case "tuple":
+         return type.elements.some((t) => this.containsFunction(t));
+       case "union":
+diff --git a/src/core/emit/shape.ts b/src/core/emit/shape.ts
+index 515231f..0276e25 100644
+--- a/src/core/emit/shape.ts
++++ b/src/core/emit/shape.ts
+@@ -211,17 +211,6 @@ const ROWS = {
+   "run-stream": { children: (e) => [e.stream, e.sink], leaf: "leaf" },
+   "buffer-stream": { children: (e) => [e.stream], leaf: "structural" },
+   "merge-streams": { children: (e) => [e.left, e.right], leaf: "structural" },
+-  "map-of": { children: (e) => [e.entries], leaf: "structural" },
+-  "get-map": { children: (e) => [e.map, e.key], leaf: "structural" },
+-  "put-map": { children: (e) => [e.map, e.key, e.value], leaf: "structural" },
+-  "remove-map": { children: (e) => [e.map, e.key], leaf: "structural" },
+-  "has-map": { children: (e) => [e.map, e.key], leaf: "structural" },
+-  "entries-map": { children: (e) => [e.map], leaf: "structural" },
+-  "set-of": { children: (e) => [e.items], leaf: "structural" },
+-  "add-set": { children: (e) => [e.set, e.element], leaf: "structural" },
+-  "remove-set": { children: (e) => [e.set, e.element], leaf: "structural" },
+-  "has-set": { children: (e) => [e.set, e.element], leaf: "structural" },
+-  "items-set": { children: (e) => [e.set], leaf: "structural" },
+   "zip-streams": { children: (e) => [e.left, e.right], leaf: "structural" },
+   "concat-streams": {
+     children: (e) => [e.left, e.right],
+diff --git a/src/core/emit/types.ts b/src/core/emit/types.ts
+index ac18d88..1f38cda 100644
+--- a/src/core/emit/types.ts
++++ b/src/core/emit/types.ts
+@@ -188,20 +188,6 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
+       const option = scope.effect("Option");
+       return [`${option}.Option<`, typeDoc(scope, type.element), ">"];
+     }
+-    case "map":
+-      return [
+-        `${scope.effect("HashMap")}.HashMap<`,
+-        typeDoc(scope, type.key),
+-        ", ",
+-        typeDoc(scope, type.value),
+-        ">",
+-      ];
+-    case "set":
+-      return [
+-        `${scope.effect("HashSet")}.HashSet<`,
+-        typeDoc(scope, type.element),
+-        ">",
+-      ];
+     case "ref":
+       return [
+         `${scope.effect("SynchronizedRef")}.SynchronizedRef<`,
+@@ -393,20 +379,6 @@ export function encodedTypeDoc(
+         encodedTypeDoc(scope, type.element, recursive),
+         ">",
+       ];
+-    case "map":
+-      return [
+-        `${scope.effect("HashMap")}.HashMap<`,
+-        encodedTypeDoc(scope, type.key, recursive),
+-        ", ",
+-        encodedTypeDoc(scope, type.value, recursive),
+-        ">",
+-      ];
+-    case "set":
+-      return [
+-        `${scope.effect("HashSet")}.HashSet<`,
+-        encodedTypeDoc(scope, type.element, recursive),
+-        ">",
+-      ];
+     case "record": {
+       if (type.fields.length === 0) return "{}";
+       const fields = type.fields.map((f) => [
+@@ -496,20 +468,6 @@ export function schemaDoc(
+         `${schema}.Option`,
+         schemaDoc(scope, type.element, recursive),
+       );
+-    case "map":
+-      return [
+-        `${schema}.HashMap(`,
+-        join(", ", [
+-          schemaDoc(scope, type.key, recursive),
+-          schemaDoc(scope, type.value, recursive),
+-        ]),
+-        ")",
+-      ];
+-    case "set":
+-      return callWith(
+-        `${schema}.HashSet`,
+-        schemaDoc(scope, type.element, recursive),
+-      );
+     case "record": {
+       const fields = type.fields.map((f) => {
+         const inner = schemaDoc(scope, f.type, recursive);
+diff --git a/src/core/ir.ts b/src/core/ir.ts
+index bd155f3..085746a 100644
+--- a/src/core/ir.ts
++++ b/src/core/ir.ts
+@@ -82,8 +82,6 @@ export type Type =
+   | { readonly kind: "union"; readonly members: readonly Type[] }
+   | { readonly kind: "option"; readonly element: Type }
+   | { readonly kind: "ref"; readonly element: Type }
+-  | { readonly kind: "map"; readonly key: Type; readonly value: Type }
+-  | { readonly kind: "set"; readonly element: Type }
+   | { readonly kind: "closeable-scope" }
+   | { readonly kind: "retry-schedule"; readonly error: Type }
+   | { readonly kind: "codec"; readonly decoded: Type; readonly encoded: Type }
+@@ -244,17 +242,6 @@ export type Expr =
+   | Node<{ kind: "concat-streams"; left: Expr; right: Expr }>
+   | Node<{ kind: "race"; left: Expr; right: Expr }>
+   | Node<{ kind: "race-all"; jobs: Expr }>
+-  | Node<{ kind: "map-of"; entries: Expr }>
+-  | Node<{ kind: "get-map"; map: Expr; key: Expr }>
+-  | Node<{ kind: "put-map"; map: Expr; key: Expr; value: Expr }>
+-  | Node<{ kind: "remove-map"; map: Expr; key: Expr }>
+-  | Node<{ kind: "has-map"; map: Expr; key: Expr }>
+-  | Node<{ kind: "entries-map"; map: Expr }>
+-  | Node<{ kind: "set-of"; items: Expr }>
+-  | Node<{ kind: "add-set"; set: Expr; element: Expr }>
+-  | Node<{ kind: "remove-set"; set: Expr; element: Expr }>
+-  | Node<{ kind: "has-set"; set: Expr; element: Expr }>
+-  | Node<{ kind: "items-set"; set: Expr }>
+   | Node<{ kind: "make-ref"; value: Expr }>
+   | Node<{ kind: "get-ref"; ref: Expr }>
+   | Node<{ kind: "set-ref"; ref: Expr; value: Expr }>
+diff --git a/src/core/lower.ts b/src/core/lower.ts
+index 1c362eb..03ed84e 100644
+--- a/src/core/lower.ts
++++ b/src/core/lower.ts
+@@ -459,26 +459,6 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
+   }),
+   "race-all": (arg) => ({ kind: "race-all", jobs: arg(0) }),
+   "race": (arg) => ({ kind: "race", left: arg(0), right: arg(1) }),
+-  "map-of": (arg) => ({ kind: "map-of", entries: arg(0) }),
+-  "get-map": (arg) => ({ kind: "get-map", map: arg(0), key: arg(1) }),
+-  "put-map": (arg) => ({
+-    kind: "put-map",
+-    map: arg(0),
+-    key: arg(1),
+-    value: arg(2),
+-  }),
+-  "remove-map": (arg) => ({ kind: "remove-map", map: arg(0), key: arg(1) }),
+-  "has-map": (arg) => ({ kind: "has-map", map: arg(0), key: arg(1) }),
+-  "entries-map": (arg) => ({ kind: "entries-map", map: arg(0) }),
+-  "set-of": (arg) => ({ kind: "set-of", items: arg(0) }),
+-  "add-set": (arg) => ({ kind: "add-set", set: arg(0), element: arg(1) }),
+-  "remove-set": (arg) => ({
+-    kind: "remove-set",
+-    set: arg(0),
+-    element: arg(1),
+-  }),
+-  "has-set": (arg) => ({ kind: "has-set", set: arg(0), element: arg(1) }),
+-  "items-set": (arg) => ({ kind: "items-set", set: arg(0) }),
+   "make-ref": (arg) => ({ kind: "make-ref", value: arg(0) }),
+   "get-ref": (arg) => ({ kind: "get-ref", ref: arg(0) }),
+   "set-ref": (arg) => ({ kind: "set-ref", ref: arg(0), value: arg(1) }),
+diff --git a/src/core/resolve.ts b/src/core/resolve.ts
+index 4a29eaf..33312bf 100644
+--- a/src/core/resolve.ts
++++ b/src/core/resolve.ts
+@@ -116,17 +116,6 @@ const PRELUDE = {
+   takeUntilEffectStream: { shadowable: true },
+   dropWhileEffectStream: { shadowable: true },
+   race: { shadowable: false },
+-  mapOf: { shadowable: true },
+-  getMap: { shadowable: true },
+-  putMap: { shadowable: true },
+-  removeMap: { shadowable: true },
+-  hasMap: { shadowable: true },
+-  entriesMap: { shadowable: true },
+-  setOf: { shadowable: true },
+-  addSet: { shadowable: true },
+-  removeSet: { shadowable: true },
+-  hasSet: { shadowable: true },
+-  itemsSet: { shadowable: true },
+   makeRef: { shadowable: false },
+   getRef: { shadowable: false },
+   setRef: { shadowable: false },
+@@ -186,8 +175,6 @@ const BUILTIN_TYPES = [
+   "never",
+   "unknown",
+   "Option",
+-  "Map",
+-  "Set",
+   "Ref",
+   "RetrySchedule",
+   "ScheduleInput",
+diff --git a/src/core/signatures.ts b/src/core/signatures.ts
+index 57802c3..3f93532 100644
+--- a/src/core/signatures.ts
++++ b/src/core/signatures.ts
+@@ -329,14 +329,9 @@ export function referencedIds(type: Type, ids: Set<string>): void {
+       return;
+     case "array":
+     case "option":
+-    case "set":
+     case "ref":
+       referencedIds(type.element, ids);
+       return;
+-    case "map":
+-      referencedIds(type.key, ids);
+-      referencedIds(type.value, ids);
+-      return;
+     case "retry-schedule":
+       referencedIds(type.error, ids);
+       return;
+diff --git a/src/core/tables.ts b/src/core/tables.ts
+index a6c81c6..befa5cc 100644
+--- a/src/core/tables.ts
++++ b/src/core/tables.ts
+@@ -246,20 +246,6 @@ export type NodeFact =
+   | { readonly kind: "zip-streams" }
+   | { readonly kind: "concat-streams" }
+   | { readonly kind: "race" | "race-all" }
+-  | {
+-    readonly kind:
+-      | "map-of"
+-      | "get-map"
+-      | "put-map"
+-      | "remove-map"
+-      | "has-map"
+-      | "entries-map"
+-      | "set-of"
+-      | "add-set"
+-      | "remove-set"
+-      | "has-set"
+-      | "items-set";
+-  }
+   | { readonly kind: "make-ref" | "get-ref" | "set-ref" | "update-ref" }
+   | { readonly kind: "layer"; readonly service: ServiceId | undefined }
+   | { readonly kind: "merge-layers" }
+diff --git a/src/core/type_ir.ts b/src/core/type_ir.ts
+index fd372c0..bb7e399 100644
+--- a/src/core/type_ir.ts
++++ b/src/core/type_ir.ts
+@@ -30,13 +30,6 @@ export function typeFromIr(table: TypeTable, type: Type): TypeRef {
+       return table.union(type.members.map((m) => typeFromIr(table, m)));
+     case "option":
+       return table.option(typeFromIr(table, type.element));
+-    case "map":
+-      return table.map(
+-        typeFromIr(table, type.key),
+-        typeFromIr(table, type.value),
+-      );
+-    case "set":
+-      return table.set(typeFromIr(table, type.element));
+     case "ref":
+       return table.ref(typeFromIr(table, type.element));
+     case "retry-schedule":
+@@ -164,14 +157,6 @@ export function typeToIr(table: TypeTable, ref: TypeRef): Type {
+     }
+     case "option":
+       return { kind: "option", element: typeToIr(table, node.element) };
+-    case "map":
+-      return {
+-        kind: "map",
+-        key: typeToIr(table, node.key),
+-        value: typeToIr(table, node.value),
+-      };
+-    case "set":
+-      return { kind: "set", element: typeToIr(table, node.element) };
+     case "ref":
+       return { kind: "ref", element: typeToIr(table, node.element) };
+     case "retry-schedule":
+diff --git a/src/core/type_lower.ts b/src/core/type_lower.ts
+index 9dbe6db..8bb9eff 100644
+--- a/src/core/type_lower.ts
++++ b/src/core/type_lower.ts
+@@ -267,28 +267,6 @@ export class TypeLowerer {
+         ir: { kind: "option", element: element.ir },
+       }),
+     },
+-    Map: {
+-      kind: "generic",
+-      arity: 2,
+-      build: (lowerer, [key, value], nodes) => {
+-        lowerer.requireKeyData("Map key", key, nodes[0]);
+-        return {
+-          ref: lowerer.env.table.map(key.ref, value.ref),
+-          ir: { kind: "map", key: key.ir, value: value.ir },
+-        };
+-      },
+-    },
+-    Set: {
+-      kind: "generic",
+-      arity: 1,
+-      build: (lowerer, [element], nodes) => {
+-        lowerer.requireKeyData("Set element", element, nodes[0]);
+-        return {
+-          ref: lowerer.env.table.set(element.ref),
+-          ir: { kind: "set", element: element.ir },
+-        };
+-      },
+-    },
+     Ref: {
+       kind: "generic",
+       arity: 1,
+@@ -375,29 +353,6 @@ export class TypeLowerer {
+     },
+   };
+ 
+-  /**
+-   * The key checks that wait until every declaration of the module is defined,
+-   * because a key may name a type that a later declaration defines. The module
+-   * checker sets this list, runs the checks, and then clears it.
+-   */
+-  pendingKeyChecks: (() => void)[] | undefined;
+-
+-  /** Reports `declaration/019` when a Map key or a Set element is not data. */
+-  requireKeyData(role: string, lowered: Lowered, node: NodeId): void {
+-    const check = (): void => {
+-      if (dataOnly(this.env.table, lowered.ref, "value", true)) return;
+-      this.report(
+-        "declaration/019",
+-        `A ${role} must be data, found \`${
+-          showType(this.env.table, lowered.ref)
+-        }\``,
+-        this.span(node),
+-      );
+-    };
+-    if (this.pendingKeyChecks === undefined) check();
+-    else this.pendingKeyChecks.push(check);
+-  }
+-
+   private noArguments(
+     name: string,
+     args: readonly NodeId[],
+@@ -925,13 +880,8 @@ export function recursionIsGuarded(
+           return;
+         case "option":
+         case "array":
+-        case "set":
+           visit(type.element, true);
+           return;
+-        case "map":
+-          visit(type.key, true);
+-          visit(type.value, true);
+-          return;
+         case "union": {
+           const outside = type.members.some((m) => !inGroup(m));
+           for (const member of type.members) visit(member, guarded || outside);
+diff --git a/src/core/type_show.ts b/src/core/type_show.ts
+index 52b0ab6..54ec6b5 100644
+--- a/src/core/type_show.ts
++++ b/src/core/type_show.ts
+@@ -82,12 +82,6 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
+       return node.members.map((m) => print(table, names, m)).join(" | ");
+     case "option":
+       return `Option<${print(table, names, node.element)}>`;
+-    case "map":
+-      return `Map<${print(table, names, node.key)}, ${
+-        print(table, names, node.value)
+-      }>`;
+-    case "set":
+-      return `Set<${print(table, names, node.element)}>`;
+     case "ref":
+       return `Ref<${print(table, names, node.element)}>`;
+     case "retry-schedule":
+diff --git a/src/core/types.ts b/src/core/types.ts
+index c761a33..9d595d5 100644
+--- a/src/core/types.ts
++++ b/src/core/types.ts
+@@ -73,10 +73,7 @@ export function guardedRecord(
+         return part.id === id;
+       case "array":
+       case "option":
+-      case "set":
+         return containsSelf(part.element);
+-      case "map":
+-        return containsSelf(part.key) || containsSelf(part.value);
+       case "record":
+         return part.fields.some((field) => containsSelf(field.type));
+       case "union":
+@@ -146,8 +143,6 @@ export function guardedRecord(
+         return true;
+       case "tuple":
+       case "option":
+-      case "map":
+-      case "set":
+       case "ref":
+       case "closeable-scope":
+       case "retry-schedule":
+@@ -184,12 +179,6 @@ export type TypeNode =
+   | { readonly kind: "union"; readonly members: readonly TypeRef[] }
+   | { readonly kind: "option"; readonly element: TypeRef }
+   | { readonly kind: "ref"; readonly element: TypeRef }
+-  | {
+-    readonly kind: "map";
+-    readonly key: TypeRef;
+-    readonly value: TypeRef;
+-  }
+-  | { readonly kind: "set"; readonly element: TypeRef }
+   | { readonly kind: "closeable-scope" }
+   | { readonly kind: "retry-schedule"; readonly error: TypeRef }
+   | {
+@@ -399,12 +388,9 @@ function structuralChildren(
+       return node.fields.map((field) => field.type);
+     case "array":
+     case "option":
+-    case "set":
+     case "ref":
+     case "stream":
+       return [node.element];
+-    case "map":
+-      return [node.key, node.value];
+     case "tuple":
+       return node.elements;
+     case "union":
+@@ -531,10 +517,6 @@ export class TypeTable {
+         return `u:${JSON.stringify(node.members)}`;
+       case "option":
+         return `o:${node.element}`;
+-      case "map":
+-        return `m:${node.key}:${node.value}`;
+-      case "set":
+-        return `s:${node.element}`;
+       case "ref":
+         return `q:${node.element}`;
+       case "retry-schedule":
+@@ -658,14 +640,6 @@ export class TypeTable {
+     return this.intern({ kind: "option", element });
+   }
+ 
+-  map(key: TypeRef, value: TypeRef): TypeRef {
+-    return this.intern({ kind: "map", key, value });
+-  }
+-
+-  set(element: TypeRef): TypeRef {
+-    return this.intern({ kind: "set", element });
+-  }
+-
+   ref(element: TypeRef): TypeRef {
+     return this.intern({ kind: "ref", element });
+   }
+@@ -1299,14 +1273,6 @@ export class TypeTable {
+       case "option":
+         return sn.kind === "option" &&
+           nested(sn.element, tn.element);
+-      case "set":
+-        return sn.kind === "set" &&
+-          nested(sn.element, tn.element);
+-      case "map":
+-        return sn.kind === "map" &&
+-          nested(sn.key, tn.key) &&
+-          nested(tn.key, sn.key) &&
+-          nested(sn.value, tn.value);
+       case "ref":
+         return sn.kind === "ref" &&
+           nested(sn.element, tn.element) &&
+@@ -1472,10 +1438,7 @@ export function dataOnly(
+       return type.fields.every((field) => nested(field.type));
+     case "array":
+     case "option":
+-    case "set":
+       return nested(type.element);
+-    case "map":
+-      return nested(type.key) && nested(type.value);
+     case "tuple":
+       return type.elements.every(nested);
+     case "union":
+@@ -1595,10 +1558,7 @@ export function containsDeferredType(
+       return any(type.fields.map((f) => f.type));
+     case "array":
+     case "option":
+-    case "set":
+       return any([type.element]);
+-    case "map":
+-      return any([type.key, type.value]);
+     case "tuple":
+       return any(type.elements);
+     case "union":
+@@ -1642,10 +1602,7 @@ export function containsOpaqueType(
+       return any(type.fields.map((f) => f.type));
+     case "array":
+     case "option":
+-    case "set":
+       return any([type.element]);
+-    case "map":
+-      return any([type.key, type.value]);
+     case "tuple":
+       return any(type.elements);
+     case "union":
+diff --git a/src/core/validate/expr.ts b/src/core/validate/expr.ts
+index a339147..c659f75 100644
+--- a/src/core/validate/expr.ts
++++ b/src/core/validate/expr.ts
+@@ -163,7 +163,6 @@ import {
+   zipStreams,
+ } from "./families/stream.ts";
+ import { schema, schemaOperation } from "./families/schema.ts";
+-import { mapSetOperation } from "./families/map_set.ts";
+ import { refOperation } from "./families/ref.ts";
+ import { negateRefinement, RefinementValidator } from "./refinements.ts";
+ 
+@@ -867,18 +866,6 @@ export class BodyValidator implements ValidatorCore {
+       case "set-ref":
+       case "update-ref":
+         return refOperation(this, e, path);
+-      case "map-of":
+-      case "get-map":
+-      case "put-map":
+-      case "remove-map":
+-      case "has-map":
+-      case "entries-map":
+-      case "set-of":
+-      case "add-set":
+-      case "remove-set":
+-      case "has-set":
+-      case "items-set":
+-        return mapSetOperation(this, e, path);
+       case "layer":
+         return layer(this, e, path);
+       case "merge-layers":
+diff --git a/src/core/validate/expr_walk.ts b/src/core/validate/expr_walk.ts
+index 9a7832a..8b3ebf6 100644
+--- a/src/core/validate/expr_walk.ts
++++ b/src/core/validate/expr_walk.ts
+@@ -124,24 +124,6 @@ export function exprChildren(e: Expr): readonly Expr[] {
+     case "zip-streams":
+     case "concat-streams":
+       return [e.left, e.right];
+-    case "map-of":
+-      return [e.entries];
+-    case "get-map":
+-    case "remove-map":
+-    case "has-map":
+-      return [e.map, e.key];
+-    case "put-map":
+-      return [e.map, e.key, e.value];
+-    case "entries-map":
+-      return [e.map];
+-    case "set-of":
+-      return [e.items];
+-    case "add-set":
+-    case "remove-set":
+-    case "has-set":
+-      return [e.set, e.element];
+-    case "items-set":
+-      return [e.set];
+     case "race":
+       return [e.left, e.right];
+     case "make-ref":
+diff --git a/src/core/validate/families/map_set.ts b/src/core/validate/families/map_set.ts
+deleted file mode 100644
+index aaeb9bd..0000000
+--- a/src/core/validate/families/map_set.ts
++++ /dev/null
+@@ -1,244 +0,0 @@
+-// Validation of the Map and Set operations. The validator recomputes each
+-// result type from the validated arguments and never imports the checker.
+-
+-import type { Expr, Type } from "../../ir.ts";
+-import { AREA } from "../report.ts";
+-import { combine } from "../sets.ts";
+-import { BOOLEAN, dataOnly, fits, show, unfold } from "../typing.ts";
+-import {
+-  type Comp,
+-  derivedResult,
+-  type Out,
+-  type ValidatorCore,
+-} from "./context.ts";
+-
+-type MapSetExpr = Extract<
+-  Expr,
+-  {
+-    kind:
+-      | "map-of"
+-      | "get-map"
+-      | "put-map"
+-      | "remove-map"
+-      | "has-map"
+-      | "entries-map"
+-      | "set-of"
+-      | "add-set"
+-      | "remove-set"
+-      | "has-set"
+-      | "items-set";
+-  }
+->;
+-
+-/** The key and value of a Map type, reported when the node is not one. */
+-function mapOf(
+-  c: ValidatorCore,
+-  e: MapSetExpr,
+-  out: Out,
+-  path: string,
+-  span: Expr,
+-): { readonly key: Type; readonly value: Type } | undefined {
+-  const type = unfold(c.env, out.type);
+-  if (type.kind === "map") return { key: type.key, value: type.value };
+-  c.add(
+-    AREA.types,
+-    path,
+-    `${e.kind} needs a Map value, found ${show(out.type)}`,
+-    span.span,
+-  );
+-  return undefined;
+-}
+-
+-function setOf(
+-  c: ValidatorCore,
+-  e: MapSetExpr,
+-  out: Out,
+-  path: string,
+-  span: Expr,
+-): Type | undefined {
+-  const type = unfold(c.env, out.type);
+-  if (type.kind === "set") return type.element;
+-  c.add(
+-    AREA.types,
+-    path,
+-    `${e.kind} needs a Set value, found ${show(out.type)}`,
+-    span.span,
+-  );
+-  return undefined;
+-}
+-
+-function argumentFits(
+-  c: ValidatorCore,
+-  e: MapSetExpr,
+-  operand: Out,
+-  expected: Type,
+-  path: string,
+-  child: Expr,
+-  what: string,
+-): void {
+-  if (fits(c.env, operand.type, expected)) return;
+-  c.add(
+-    AREA.types,
+-    path,
+-    `${e.kind} needs ${what} that fits ${show(expected)}, found ${
+-      show(operand.type)
+-    }`,
+-    child.span,
+-  );
+-}
+-
+-/** The element of a list of entries, when it is a pair. */
+-function pairOf(
+-  c: ValidatorCore,
+-  type: Type,
+-): { readonly key: Type; readonly value: Type } | undefined {
+-  const list = unfold(c.env, type);
+-  if (list.kind !== "array") return undefined;
+-  const pair = unfold(c.env, list.element);
+-  if (pair.kind !== "tuple" || pair.elements.length !== 2) return undefined;
+-  return { key: pair.elements[0], value: pair.elements[1] };
+-}
+-
+-export function mapSetOperation(
+-  c: ValidatorCore,
+-  e: MapSetExpr,
+-  path: string,
+-): Comp {
+-  switch (e.kind) {
+-    case "map-of": {
+-      const entries = c.check(e.entries, `${path}.entries`);
+-      const pair = pairOf(c, entries.type);
+-      if (pair === undefined) {
+-        c.add(
+-          AREA.types,
+-          `${path}.entries`,
+-          `map-of needs an array of [key, value] pairs, found ${
+-            show(entries.type)
+-          }`,
+-          e.entries.span,
+-        );
+-        return c.poison();
+-      }
+-      if (!dataOnly(c.env, pair.key, "value")) {
+-        c.add(
+-          AREA.types,
+-          `${path}.entries`,
+-          `a Map key must be data, found ${show(pair.key)}`,
+-          e.entries.span,
+-        );
+-      }
+-      return derivedResult(
+-        { kind: "map", key: pair.key, value: pair.value },
+-        combine([entries]),
+-        "fit",
+-      );
+-    }
+-    case "set-of": {
+-      const items = c.check(e.items, `${path}.items`);
+-      const list = unfold(c.env, items.type);
+-      if (list.kind !== "array") {
+-        c.add(
+-          AREA.types,
+-          `${path}.items`,
+-          `set-of needs an array, found ${show(items.type)}`,
+-          e.items.span,
+-        );
+-        return c.poison();
+-      }
+-      if (!dataOnly(c.env, list.element, "value")) {
+-        c.add(
+-          AREA.types,
+-          `${path}.items`,
+-          `a Set element must be data, found ${show(list.element)}`,
+-          e.items.span,
+-        );
+-      }
+-      return derivedResult(
+-        { kind: "set", element: list.element },
+-        combine([items]),
+-        "fit",
+-      );
+-    }
+-    case "get-map":
+-    case "remove-map":
+-    case "has-map":
+-    case "put-map": {
+-      const map = c.check(e.map, `${path}.map`);
+-      const key = c.check(e.key, `${path}.key`);
+-      const value = e.kind === "put-map"
+-        ? c.check(e.value, `${path}.value`)
+-        : undefined;
+-      const parts = mapOf(c, e, map, `${path}.map`, e.map);
+-      if (parts === undefined) return c.poison();
+-      argumentFits(c, e, key, parts.key, `${path}.key`, e.key, "a key");
+-      if (e.kind === "put-map" && value !== undefined) {
+-        argumentFits(
+-          c,
+-          e,
+-          value,
+-          parts.value,
+-          `${path}.value`,
+-          e.value,
+-          "a value",
+-        );
+-      }
+-      const active = combine(
+-        value === undefined ? [map, key] : [map, key, value],
+-      );
+-      switch (e.kind) {
+-        case "get-map":
+-          return derivedResult(
+-            { kind: "option", element: parts.value },
+-            active,
+-          );
+-        case "has-map":
+-          return derivedResult(BOOLEAN, active);
+-        default:
+-          return derivedResult(
+-            { kind: "map", key: parts.key, value: parts.value },
+-            active,
+-          );
+-      }
+-    }
+-    case "entries-map": {
+-      const map = c.check(e.map, `${path}.map`);
+-      const parts = mapOf(c, e, map, `${path}.map`, e.map);
+-      if (parts === undefined) return c.poison();
+-      return derivedResult({
+-        kind: "array",
+-        element: { kind: "tuple", elements: [parts.key, parts.value] },
+-      }, combine([map]));
+-    }
+-    case "add-set":
+-    case "remove-set":
+-    case "has-set": {
+-      const set = c.check(e.set, `${path}.set`);
+-      const element = c.check(e.element, `${path}.element`);
+-      const item = setOf(c, e, set, `${path}.set`, e.set);
+-      if (item === undefined) return c.poison();
+-      argumentFits(
+-        c,
+-        e,
+-        element,
+-        item,
+-        `${path}.element`,
+-        e.element,
+-        "an element",
+-      );
+-      const active = combine([set, element]);
+-      return e.kind === "has-set"
+-        ? derivedResult(BOOLEAN, active)
+-        : derivedResult({ kind: "set", element: item }, active);
+-    }
+-    case "items-set": {
+-      const set = c.check(e.set, `${path}.set`);
+-      const item = setOf(c, e, set, `${path}.set`, e.set);
+-      if (item === undefined) return c.poison();
+-      return derivedResult({ kind: "array", element: item }, combine([set]));
+-    }
+-    default: {
+-      const unreachable: never = e;
+-      return unreachable;
+-    }
+-  }
+-}
+diff --git a/src/core/validate/type_children.ts b/src/core/validate/type_children.ts
+index b560694..8b52a6d 100644
+--- a/src/core/validate/type_children.ts
++++ b/src/core/validate/type_children.ts
+@@ -28,11 +28,8 @@ export function typeChildren(t: Type): readonly TypeChild[] {
+       return t.fields.map((f, i) => child(f.type, `.fields[${i}].type`));
+     case "array":
+     case "option":
+-    case "set":
+     case "ref":
+       return [child(t.element, ".element")];
+-    case "map":
+-      return [child(t.key, ".key"), child(t.value, ".value")];
+     case "retry-schedule":
+       return [child(t.error, ".error")];
+     case "codec":
+diff --git a/src/core/validate/typing.ts b/src/core/validate/typing.ts
+index fd0ccd5..3244c50 100644
+--- a/src/core/validate/typing.ts
++++ b/src/core/validate/typing.ts
+@@ -161,10 +161,7 @@ export function dataOnly(
+       return value.fields.every((field) => nested(field.type));
+     case "array":
+     case "option":
+-    case "set":
+       return nested(value.element);
+-    case "map":
+-      return nested(value.key) && nested(value.value);
+     case "tuple":
+       return value.elements.every(nested);
+     case "union":
+@@ -352,13 +349,6 @@ function assignable(
+     case "option":
+       return s.kind === "option" &&
+         assignable(env, s.element, t.element, false, depth + 1);
+-    case "set":
+-      return s.kind === "set" &&
+-        assignable(env, s.element, t.element, false, depth + 1);
+-    case "map":
+-      return s.kind === "map" &&
+-        invariant(env, s.key, t.key, depth) &&
+-        assignable(env, s.value, t.value, false, depth + 1);
+     case "ref":
+       return s.kind === "ref" &&
+         invariant(env, s.element, t.element, depth);
+@@ -477,8 +467,6 @@ function guardedAlias(env: TypeEnv, id: string): boolean {
+       case "primitive":
+       case "literal":
+       case "option":
+-      case "map":
+-      case "set":
+       case "ref":
+       case "tuple":
+       case "closeable-scope":
+@@ -664,10 +652,7 @@ export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
+         return current.fields.every((field) => visit(field.type));
+       case "array":
+       case "option":
+-      case "set":
+         return visit(current.element);
+-      case "map":
+-        return visit(current.key) && visit(current.value);
+       case "tuple":
+         return current.elements.every(visit);
+       case "union":
+@@ -990,10 +975,6 @@ export function show(type: Type): string {
+       return type.members.map(show).join(" | ");
+     case "option":
+       return `Option<${show(type.element)}>`;
+-    case "map":
+-      return `Map<${show(type.key)}, ${show(type.value)}>`;
+-    case "set":
+-      return `Set<${show(type.element)}>`;
+     case "ref":
+       return `Ref<${show(type.element)}>`;
+     case "retry-schedule":
+diff --git a/src/core/validate/world.ts b/src/core/validate/world.ts
+index 092acfa..89de239 100644
+--- a/src/core/validate/world.ts
++++ b/src/core/validate/world.ts
+@@ -350,17 +350,11 @@ export function checkTypeIds(
+       case "record":
+       case "array":
+       case "option":
+-      case "set":
+       case "ref":
+       case "codec":
+       case "tuple":
+       case "union":
+         return;
+-      case "map":
+-        if (!dataOnly(world.env, t.key, "value")) {
+-          fail(`${at}.key`, "a Map key must be data");
+-        }
+-        return;
+       case "named": {
+         const found = t.id.startsWith("type:")
+           ? world.types.has(t.id)
+@@ -803,10 +797,7 @@ function guardedRecord(
+         return part.id === id;
+       case "array":
+       case "option":
+-      case "set":
+         return containsSelf(part.element);
+-      case "map":
+-        return containsSelf(part.key) || containsSelf(part.value);
+       case "record":
+         return part.fields.some((field) => containsSelf(field.type));
+       case "union":
+@@ -875,8 +866,6 @@ function guardedRecord(
+       case "literal":
+         return true;
+       case "option":
+-      case "map":
+-      case "set":
+       case "ref":
+       case "tuple":
+       case "closeable-scope":
+@@ -927,14 +916,10 @@ function guardedDataGroups(
+       if (depth > MAX_DEPTH) return;
+       if (type.kind === "named") return reach(type.id, guarded);
+       if (
+-        type.kind === "option" || type.kind === "array" || type.kind === "set"
++        type.kind === "option" || type.kind === "array"
+       ) {
+         return visit(type.element, true, depth + 1);
+       }
+-      if (type.kind === "map") {
+-        visit(type.key, true, depth + 1);
+-        return visit(type.value, true, depth + 1);
+-      }
+       if (type.kind === "union") {
+         const outside = type.members.some((m) => !mentions(m, depth + 1));
+         for (const m of type.members) visit(m, guarded || outside, depth + 1);
+diff --git a/tests/builtin_arity_test.ts b/tests/builtin_arity_test.ts
+index 5280a04..7d11ee6 100644
+--- a/tests/builtin_arity_test.ts
++++ b/tests/builtin_arity_test.ts
+@@ -79,17 +79,6 @@ const ARITY_ROWS: readonly ArityRow[] = [
+   ...bounded("log", 1, "`log` takes a message and optional options"),
+   ...fixed("random", 0),
+   ...fixed("randomInt", 2),
+-  ...fixed("mapOf", 1),
+-  ...fixed("getMap", 2),
+-  ...fixed("putMap", 3),
+-  ...fixed("removeMap", 2),
+-  ...fixed("hasMap", 2),
+-  ...fixed("entriesMap", 1),
+-  ...fixed("setOf", 1),
+-  ...fixed("addSet", 2),
+-  ...fixed("removeSet", 2),
+-  ...fixed("hasSet", 2),
+-  ...fixed("itemsSet", 1),
+   ...fixed("uninterruptible", 1),
+   ...bounded(
+     "repeat",
+diff --git a/tests/emit_deferred_type_test.ts b/tests/emit_deferred_type_test.ts
+index e58b39c..d022272 100644
+--- a/tests/emit_deferred_type_test.ts
++++ b/tests/emit_deferred_type_test.ts
+@@ -18,8 +18,6 @@ const SAMPLES: { readonly [K in Type["kind"]]: Extract<Type, { kind: K }> } = {
+   "tuple": { kind: "tuple", elements: [] },
+   "union": { kind: "union", members: [] },
+   "option": { kind: "option", element: STRING },
+-  "map": { kind: "map", key: STRING, value: STRING },
+-  "set": { kind: "set", element: STRING },
+   "ref": { kind: "ref", element: STRING },
+   "closeable-scope": { kind: "closeable-scope" },
+   "retry-schedule": { kind: "retry-schedule", error: STRING },
+diff --git a/tests/map_set_ops_slow_test.ts b/tests/map_set_ops_slow_test.ts
+deleted file mode 100644
+index 8c1b52e..0000000
+--- a/tests/map_set_ops_slow_test.ts
++++ /dev/null
+@@ -1,272 +0,0 @@
+-// Runtime behavior of the Map and Set operations. Each test compiles
+-// a project with independent validation, type-checks the emitted TypeScript
+-// under the strict target options, and runs a driver on the compiled functions.
+-
+-import { assertEquals } from "@std/assert";
+-import { compileStrictTarget } from "./target_helpers.ts";
+-
+-async function compileAndRun(
+-  source: string,
+-  run: string,
+-): Promise<unknown> {
+-  return JSON.parse(
+-    await compileStrictTarget(
+-      { "main.eff": source },
+-      ["main.eff"],
+-      run,
+-      "effektive-map-set-ops-",
+-    ),
+-  );
+-}
+-
+-const MAPS = `type Text = string
+-type Int = int
+-type Flag = boolean
+-export const inferred = (): [Text, Int][] => entriesMap(mapOf([["a", 1], ["b", 2]]))
+-export const typed = (): Map<Text, Int> => mapOf([["a", 1], ["b", 2]])
+-export const replaced = (): Map<Text, Int> => mapOf([["a", 1], ["b", 2], ["a", 3]])
+-export const fromList = (pairs: [Text, Int][]): Map<Text, Int> => mapOf(pairs)
+-export const get = (m: Map<Text, Int>, k: Text): Option<Int> => getMap(m, k)
+-export const put = (m: Map<Text, Int>, k: Text, v: Int): Map<Text, Int> => putMap(m, k, v)
+-export const del = (m: Map<Text, Int>, k: Text): Map<Text, Int> => removeMap(m, k)
+-export const has = (m: Map<Text, Int>, k: Text): Flag => hasMap(m, k)
+-export const entries = (m: Map<Text, Int>): [Text, Int][] => entriesMap(m)
+-`;
+-
+-Deno.test("each Map operation returns the literal values", async () => {
+-  const result = await compileAndRun(
+-    MAPS,
+-    `
+-import { HashMap, Option } from "effect";
+-import { del, entries, fromList, get, has, inferred, put, replaced, typed } from "./main.ts";
+-const base = typed();
+-const found = (o: Option.Option<number>): number => Option.getOrElse(o, () => -1);
+-console.log(JSON.stringify({
+-  inferred: Object.fromEntries(inferred()),
+-  typed: Object.fromEntries(entries(base)),
+-  replaced: Object.fromEntries(entries(replaced())),
+-  fromList: Object.fromEntries(entries(fromList([["x", 7], ["y", 8]]))),
+-  getA: found(get(base, "a")),
+-  getMissing: found(get(base, "z")),
+-  put: Object.fromEntries(entries(put(base, "c", 3))),
+-  putReplace: Object.fromEntries(entries(put(base, "a", 9))),
+-  putLeavesBase: HashMap.size(base),
+-  del: Object.fromEntries(entries(del(base, "a"))),
+-  delMissing: Object.fromEntries(entries(del(base, "z"))),
+-  delLeavesBase: HashMap.size(base),
+-  hasA: has(base, "a"),
+-  hasZ: has(base, "z"),
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    inferred: { a: 1, b: 2 },
+-    typed: { a: 1, b: 2 },
+-    replaced: { a: 3, b: 2 },
+-    fromList: { x: 7, y: 8 },
+-    getA: 1,
+-    getMissing: -1,
+-    put: { a: 1, b: 2, c: 3 },
+-    putReplace: { a: 9, b: 2 },
+-    putLeavesBase: 2,
+-    del: { b: 2 },
+-    delMissing: { a: 1, b: 2 },
+-    delLeavesBase: 2,
+-    hasA: true,
+-    hasZ: false,
+-  });
+-});
+-
+-const SETS = `type Text = string
+-type Int = int
+-type Flag = boolean
+-export const built = (xs: Int[]): Set<Int> => setOf(xs)
+-export const typed = (): Set<Int> => setOf([3, 1, 2, 3])
+-export const inferred = (): Text[] => itemsSet(setOf(["b", "a"]))
+-export const add = (s: Set<Int>, x: Int): Set<Int> => addSet(s, x)
+-export const del = (s: Set<Int>, x: Int): Set<Int> => removeSet(s, x)
+-export const has = (s: Set<Int>, x: Int): Flag => hasSet(s, x)
+-export const items = (s: Set<Int>): Int[] => itemsSet(s)
+-`;
+-
+-Deno.test("each Set operation returns the literal values", async () => {
+-  const result = await compileAndRun(
+-    SETS,
+-    `
+-import { HashSet } from "effect";
+-import { add, built, del, has, inferred, items, typed } from "./main.ts";
+-const base = typed();
+-console.log(JSON.stringify({
+-  inferred: [...inferred()].sort(),
+-  typed: [...items(base)].sort(),
+-  built: [...items(built([5, 5, 6]))].sort(),
+-  add: [...items(add(base, 4))].sort(),
+-  addExisting: [...items(add(base, 1))].sort(),
+-  addLeavesBase: HashSet.size(base),
+-  del: [...items(del(base, 1))].sort(),
+-  delMissing: [...items(del(base, 9))].sort(),
+-  delLeavesBase: HashSet.size(base),
+-  hasOne: has(base, 1),
+-  hasNine: has(base, 9),
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    inferred: ["a", "b"],
+-    typed: [1, 2, 3],
+-    built: [5, 6],
+-    add: [1, 2, 3, 4],
+-    addExisting: [1, 2, 3],
+-    addLeavesBase: 3,
+-    del: [2, 3],
+-    delMissing: [1, 2, 3],
+-    delLeavesBase: 3,
+-    hasOne: true,
+-    hasNine: false,
+-  });
+-});
+-
+-const KEYED = `type Text = string
+-type Int = int
+-type Flag = boolean
+-export type Key = { a: Text, b?: Int }
+-export const mk = (a: Text): Key => ({ a })
+-export const mkb = (a: Text, b: Int): Key => ({ a, b })
+-export const table = (): Map<Key, Int> => mapOf([[mk("x"), 1], [mkb("x", 5), 2], [mk("x"), 9]])
+-export const find = (m: Map<Key, Int>, k: Key): Option<Int> => getMap(m, k)
+-export const put = (m: Map<Key, Int>, k: Key, v: Int): Map<Key, Int> => putMap(m, k, v)
+-export const has = (m: Map<Key, Int>, k: Key): Flag => hasMap(m, k)
+-export const del = (m: Map<Key, Int>, k: Key): Map<Key, Int> => removeMap(m, k)
+-export const members = (): Set<Key> => setOf([mk("x"), mk("x"), mkb("x", 5)])
+-export const member = (s: Set<Key>, k: Key): Flag => hasSet(s, k)
+-export const grow = (s: Set<Key>, k: Key): Set<Key> => addSet(s, k)
+-`;
+-
+-Deno.test("two separately built equal record keys find one entry", async () => {
+-  const result = await compileAndRun(
+-    KEYED,
+-    `
+-import { HashMap, HashSet, Option } from "effect";
+-import { del, find, grow, has, member, members, mk, mkb, put, table } from "./main.ts";
+-const m = table();
+-const s = members();
+-const found = (o: Option.Option<number>): number => Option.getOrElse(o, () => -1);
+-console.log(JSON.stringify({
+-  size: HashMap.size(m),
+-  foundX: found(find(m, mk("x"))),
+-  foundXB: found(find(m, mkb("x", 5))),
+-  missing: found(find(m, mk("y"))),
+-  hasX: has(m, mk("x")),
+-  putSize: HashMap.size(put(m, mk("x"), 4)),
+-  putValue: found(find(put(m, mk("x"), 4), mk("x"))),
+-  delSize: HashMap.size(del(m, mk("x"))),
+-  setSize: HashSet.size(s),
+-  member: member(s, mk("x")),
+-  memberB: member(s, mkb("x", 5)),
+-  notMember: member(s, mkb("x", 6)),
+-  growSize: HashSet.size(grow(s, mk("x"))),
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    size: 2,
+-    foundX: 9,
+-    foundXB: 2,
+-    missing: -1,
+-    hasX: true,
+-    putSize: 2,
+-    putValue: 4,
+-    delSize: 1,
+-    setSize: 2,
+-    member: true,
+-    memberB: true,
+-    notMember: false,
+-    growSize: 2,
+-  });
+-});
+-
+-const ORDER = `type Text = string
+-type Int = int
+-export const forward = (): Map<Text, Int> => mapOf([["a", 1], ["b", 2], ["c", 3], ["d", 4]])
+-export const backward = (): Map<Text, Int> => mapOf([["d", 4], ["c", 3], ["b", 2], ["a", 1]])
+-export const grown = (m: Map<Text, Int>): Map<Text, Int> => putMap(putMap(m, "d", 4), "a", 1)
+-export const entries = (m: Map<Text, Int>): [Text, Int][] => entriesMap(m)
+-export const setForward = (): Set<Text> => setOf(["a", "b", "c", "d"])
+-export const setBackward = (): Set<Text> => setOf(["d", "c", "b", "a"])
+-export const items = (s: Set<Text>): Text[] => itemsSet(s)
+-`;
+-
+-Deno.test("entriesMap and itemsSet give equal lists for equal contents built in another order", async () => {
+-  const result = await compileAndRun(
+-    ORDER,
+-    `
+-import { HashMap } from "effect";
+-import { backward, entries, forward, grown, items, setBackward, setForward } from "./main.ts";
+-console.log(JSON.stringify({
+-  forward: entries(forward()),
+-  backward: entries(backward()),
+-  grown: entries(grown(HashMap.make(["c", 3], ["b", 2]))),
+-  setForward: items(setForward()),
+-  setBackward: items(setBackward()),
+-}));
+-`,
+-  ) as {
+-    forward: [string, number][];
+-    backward: [string, number][];
+-    grown: [string, number][];
+-    setForward: string[];
+-    setBackward: string[];
+-  };
+-  // The hash order depends on Effect, so the test compares the lists with
+-  // each other and the contents without order.
+-  assertEquals(result.backward, result.forward);
+-  assertEquals(result.grown, result.forward);
+-  assertEquals(result.setBackward, result.setForward);
+-  assertEquals(Object.fromEntries(result.forward), { a: 1, b: 2, c: 3, d: 4 });
+-  assertEquals(
+-    new Set(result.setForward),
+-    new Set(["a", "b", "c", "d"]),
+-  );
+-});
+-
+-const WIDE = `type Text = string
+-type Int = int
+-type A = { id: Int }
+-type B = { name: Text }
+-type AB = A | B
+-type Role = "admin" | "guest"
+-export const byRole = (): Map<Role, Int> => mapOf([["admin", 1], ["guest", 2]])
+-export const widened = (a: A): Map<Text, AB> => mapOf([["x", a]])
+-export const widenedPut = (m: Map<Text, AB>, a: A): Map<Text, AB> => putMap(m, "y", a)
+-export const roles = (): Set<Role> => setOf(["admin"])
+-export const empty = (): Map<Text, Int> => mapOf([])
+-export const emptySet = (): Set<Int> => setOf([])
+-export const sizeOf = (m: Map<Text, AB>): [Text, AB][] => entriesMap(m)
+-`;
+-
+-Deno.test("expected types that widen the entries still pass the strict target check", async () => {
+-  const result = await compileAndRun(
+-    WIDE,
+-    `
+-import { HashMap, HashSet } from "effect";
+-import { byRole, empty, emptySet, roles, widened, widenedPut } from "./main.ts";
+-console.log(JSON.stringify({
+-  byRole: HashMap.toEntries(byRole()),
+-  widened: HashMap.toEntries(widenedPut(widened({ _tag: "main#A", id: 1 }), { _tag: "main#A", id: 2 })),
+-  roles: [...roles()],
+-  empty: HashMap.size(empty()),
+-  emptySet: HashSet.size(emptySet()),
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    byRole: [["admin", 1], ["guest", 2]],
+-    widened: [["y", { _tag: "main#A", id: 2 }], ["x", {
+-      _tag: "main#A",
+-      id: 1,
+-    }]],
+-    roles: ["admin"],
+-    empty: 0,
+-    emptySet: 0,
+-  });
+-});
+diff --git a/tests/map_set_ops_test.ts b/tests/map_set_ops_test.ts
+deleted file mode 100644
+index c298ade..0000000
+--- a/tests/map_set_ops_test.ts
++++ /dev/null
+@@ -1,1047 +0,0 @@
+-// The Map and Set operations: mapOf, getMap, putMap, removeMap,
+-// hasMap, entriesMap, setOf, addSet, removeSet, hasSet and itemsSet. Checking
+-// runs through checkProject, emission through emitFiles, and forged IR through
+-// validateModule. Runtime behavior is in map_set_ops_slow_test.ts.
+-
+-import { assert, assertEquals } from "@std/assert";
+-import type { ModuleIR, Type } from "../src/core/ir.ts";
+-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+-import { validateModule } from "../src/core/validate/index.ts";
+-import { diagnosticsOf, emitFiles } from "./helpers.ts";
+-
+-const TYPES = `type Text = string
+-type Int = int
+-type Flag = boolean
+-type A = { id: Int }
+-type B = { name: Text }
+-type AB = A | B
+-`;
+-
+-/** The diagnostics of one function with the parameters `m`, `s` and `es` and the body `body`. */
+-function body(result: string, body: string): string[] {
+-  return diagnosticsOf(
+-    `${TYPES}export const f = (m: Map<Text, Int>, s: Set<Int>, es: [Text, Int][], texts: Text[], a: A): ${result} => ${body}\n`,
+-  );
+-}
+-
+-// ------------------------------------------------------------------ result types
+-
+-interface TypeRow {
+-  readonly call: string;
+-  readonly message: string;
+-}
+-
+-// Each call has a result type that is not Flag, so the diagnostic names it.
+-const RESULT_TYPES: readonly TypeRow[] = [
+-  {
+-    call: `getMap(m, "a")`,
+-    message:
+-      "type-mismatch/003 the function body has type Option<Int>, but Flag is expected",
+-  },
+-  {
+-    call: `putMap(m, "a", 1)`,
+-    message:
+-      "type-mismatch/003 the function body has type Map<Text, Int>, but Flag is expected",
+-  },
+-  {
+-    call: `removeMap(m, "a")`,
+-    message:
+-      "type-mismatch/003 the function body has type Map<Text, Int>, but Flag is expected",
+-  },
+-  {
+-    call: `entriesMap(m)`,
+-    message:
+-      "type-mismatch/003 the function body has type [Text, Int][], but Flag is expected",
+-  },
+-  {
+-    call: `addSet(s, 1)`,
+-    message:
+-      "type-mismatch/003 the function body has type Set<Int>, but Flag is expected",
+-  },
+-  {
+-    call: `removeSet(s, 1)`,
+-    message:
+-      "type-mismatch/003 the function body has type Set<Int>, but Flag is expected",
+-  },
+-  {
+-    call: `itemsSet(s)`,
+-    message:
+-      "type-mismatch/003 the function body has type Int[], but Flag is expected",
+-  },
+-  {
+-    call: `mapOf(es)`,
+-    message:
+-      "type-mismatch/003 the function body has type Map<Text, Int>, but Flag is expected",
+-  },
+-  {
+-    call: `setOf([1, 2])`,
+-    message:
+-      "type-mismatch/003 the function body has type Set<int>, but Flag is expected",
+-  },
+-];
+-
+-for (const row of RESULT_TYPES) {
+-  Deno.test(`the result type of ${row.call}`, () => {
+-    assertEquals(body("Flag", row.call), [row.message]);
+-  });
+-}
+-
+-Deno.test("hasMap and hasSet return boolean", () => {
+-  assertEquals(body("Flag", `hasMap(m, "a")`), []);
+-  assertEquals(body("Flag", `hasSet(s, 1)`), []);
+-  assertEquals(body("Text", `hasMap(m, "a")`), [
+-    "type-mismatch/003 the function body has type boolean, but Text is expected",
+-  ]);
+-  assertEquals(body("Text", `hasSet(s, 1)`), [
+-    "type-mismatch/003 the function body has type boolean, but Text is expected",
+-  ]);
+-});
+-
+-// ------------------------------------------------------------------ pair inference
+-
+-Deno.test("mapOf infers the key and value types of literal pairs without an expected type", () => {
+-  assertEquals(body("Flag", `mapOf([["a", 1], ["b", 2]])`), [
+-    "type-mismatch/003 the function body has type Map<string, int>, but Flag is expected",
+-  ]);
+-});
+-
+-Deno.test("mapOf joins the value types of the pairs separately from the key types", () => {
+-  assertEquals(body("Flag", `mapOf([["a", 1], ["b", 2.5]])`), [
+-    "type-mismatch/003 the function body has type Map<string, number>, but Flag is expected",
+-  ]);
+-  assertEquals(body("Flag", `mapOf([["a", { id: 1 }], ["b", { id: 2 }]])`), [
+-    "type-mismatch/003 the function body has type Map<string, { id: int }>, but Flag is expected",
+-  ]);
+-});
+-
+-Deno.test("mapOf with an expected Map gives each pair the expected tuple type", () => {
+-  assertEquals(body("Map<Text, Int>", `mapOf([["a", 1], ["b", 2]])`), []);
+-  assertEquals(body("Map<Text, AB>", `mapOf([["x", a]])`), []);
+-  assertEquals(body("Map<Text, Int>", `mapOf([["a", "x"]])`), [
+-    "type-mismatch/003 tuple element 2 has type string, but Int is expected",
+-  ]);
+-  assertEquals(body("Map<Text, Int>", `mapOf([[1, 1]])`), [
+-    "type-mismatch/003 tuple element 1 has type int, but Text is expected",
+-  ]);
+-  assertEquals(body("Map<Text, Int>", `mapOf([["a", 1, 2]])`), [
+-    "type-mismatch/012 the tuple needs 2 elements, but 3 are given",
+-  ]);
+-});
+-
+-Deno.test("mapOf takes a non-literal argument of type [K, V][]", () => {
+-  assertEquals(body("Map<Text, Int>", `mapOf(es)`), []);
+-  assertEquals(body("Flag", `mapOf(texts)`), [
+-    "type-mismatch/003 the mapOf entries has type Text[], but an array of [key, value] pairs is expected",
+-  ]);
+-  assertEquals(body("Map<Text, Int>", `mapOf(texts)`), [
+-    "type-mismatch/003 the mapOf entries has type Text[], but [Text, Int][] is expected",
+-  ]);
+-});
+-
+-Deno.test("mapOf([]) needs an expected Map type", () => {
+-  assertEquals(body("Flag", `mapOf([])`), [
+-    "type-mismatch/012 `mapOf([])` needs an expected Map type",
+-  ]);
+-  assertEquals(body("Map<Text, Int>", `mapOf([])`), []);
+-});
+-
+-Deno.test("a mapOf entry that is not a pair, and keys with no common type, are diagnostics", () => {
+-  assertEquals(body("Flag", `mapOf([["a", 1], 5])`), [
+-    "type-mismatch/012 mapOf entry 2 must be a [key, value] pair",
+-  ]);
+-  assertEquals(body("Flag", `mapOf([1, 2])`), [
+-    "type-mismatch/012 mapOf entry 1 must be a [key, value] pair",
+-    "type-mismatch/012 mapOf entry 2 must be a [key, value] pair",
+-  ]);
+-  assertEquals(body("Flag", `mapOf([["a", 1], [1, 2]])`), [
+-    "type-mismatch/012 map key 2 has type int, which has no common type with string",
+-  ]);
+-  assertEquals(body("Flag", `mapOf([["a", 1], ["b", "x"]])`), [
+-    "type-mismatch/012 map value 2 has type string, which has no common type with int",
+-  ]);
+-});
+-
+-Deno.test("mapOf with an argument that is not a list is a diagnostic", () => {
+-  assertEquals(body("Flag", `mapOf(5)`), [
+-    "type-mismatch/003 the mapOf entries has type int, but an array of [key, value] pairs is expected",
+-  ]);
+-});
+-
+-Deno.test("an inferred Map key that is not data is declaration/019", () => {
+-  assertEquals(body("Flag", `mapOf([[() => 1, 1]])`), [
+-    "type-mismatch/003 the function body has type Map<pure () => int, int>, but Flag is expected",
+-    "declaration/019 A Map key must be data, found `pure () => int`",
+-  ]);
+-});
+-
+-Deno.test("setOf infers the element type and checks the expected Set", () => {
+-  assertEquals(body("Set<Int>", `setOf([1, 2])`), []);
+-  assertEquals(body("Set<Int>", `setOf(["a"])`), [
+-    "type-mismatch/003 array element 1 has type string, but Int is expected",
+-  ]);
+-  assertEquals(body("Flag", `setOf([])`), [
+-    "type-mismatch/012 `setOf([])` needs an expected Set type",
+-  ]);
+-  assertEquals(body("Set<Int>", `setOf([])`), []);
+-  assertEquals(body("Flag", `setOf(5)`), [
+-    "type-mismatch/003 the setOf items has type int, but an array is expected",
+-  ]);
+-  assertEquals(body("Flag", `setOf([() => 1])`), [
+-    "type-mismatch/003 the function body has type Set<pure () => int>, but Flag is expected",
+-    "declaration/019 A Set element must be data, found `pure () => int`",
+-  ]);
+-});
+-
+-// ------------------------------------------------------------------ argument fit
+-
+-Deno.test("a key or element that does not fit is type-mismatch/003", () => {
+-  assertEquals(body("Flag", `hasMap(m, 1)`), [
+-    "type-mismatch/003 the Map key has type int, but Text is expected",
+-  ]);
+-  assertEquals(body("Map<Text, Int>", `removeMap(m, 1)`), [
+-    "type-mismatch/003 the Map key has type int, but Text is expected",
+-  ]);
+-  assertEquals(body("Flag", `hasSet(s, "a")`), [
+-    "type-mismatch/003 the Set element has type string, but Int is expected",
+-  ]);
+-  assertEquals(body("Set<Int>", `addSet(s, "a")`), [
+-    "type-mismatch/003 the Set element has type string, but Int is expected",
+-  ]);
+-  assertEquals(body("Set<Int>", `removeSet(s, "a")`), [
+-    "type-mismatch/003 the Set element has type string, but Int is expected",
+-  ]);
+-  assertEquals(body("Option<Int>", `getMap(m, 1)`), [
+-    "type-mismatch/003 the Map key has type int, but Text is expected",
+-  ]);
+-});
+-
+-Deno.test("putMap fits its key and value to K and V and does not widen", () => {
+-  assertEquals(body("Map<Text, Int>", `putMap(m, "a", 1)`), []);
+-  assertEquals(body("Map<Text, Int>", `putMap(m, 1, 1)`), [
+-    "type-mismatch/003 the Map key has type int, but Text is expected",
+-  ]);
+-  assertEquals(body("Map<Text, Int>", `putMap(m, "a", "x")`), [
+-    "type-mismatch/003 the Map value has type string, but Int is expected",
+-  ]);
+-  assertEquals(body("Map<Text, Int>", `putMap(m, "a", a)`), [
+-    "type-mismatch/003 the Map value has type A, but Int is expected",
+-  ]);
+-});
+-
+-Deno.test("a receiver that is not a Map or a Set is type-mismatch/010", () => {
+-  assertEquals(body("Flag", `getMap(s, "a")`), [
+-    "type-mismatch/010 `getMap` needs a Map value",
+-  ]);
+-  assertEquals(body("Flag", `entriesMap(5)`), [
+-    "type-mismatch/010 `entriesMap` needs a Map value",
+-  ]);
+-  assertEquals(body("Set<Int>", `addSet(m, 1)`), [
+-    "type-mismatch/010 `addSet` needs a Set value",
+-  ]);
+-  assertEquals(body("Flag", `itemsSet(m)`), [
+-    "type-mismatch/010 `itemsSet` needs a Set value",
+-  ]);
+-});
+-
+-Deno.test("a pipeline form is rejected", () => {
+-  assertEquals(body("Option<Int>", `m |> getMap("a")`), [
+-    "type-mismatch/010 `getMap` requires direct call syntax",
+-  ]);
+-});
+-
+-Deno.test("the Map and Set names are shadowable", () => {
+-  assertEquals(
+-    diagnosticsOf(
+-      `${TYPES}export const getMap = (x: Text): Text => x\nexport const f = (mapOf: Text, setOf: Text): Text => getMap(mapOf)\n`,
+-    ),
+-    [],
+-  );
+-});
+-
+-// ------------------------------------------------------------------ emission
+-
+-interface EmitRow {
+-  readonly name: string;
+-  readonly source: string;
+-  readonly text: string;
+-}
+-
+-const EMIT_ROWS: readonly EmitRow[] = [
+-  {
+-    name: "mapOf",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (k: Text, v: Text): Map<Text, Text> => mapOf([[k, v]])
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashMap, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-const Flag = Schema.Boolean;
+-type Flag = typeof Flag.Type;
+-
+-export const f = (k: Text, v: Text): HashMap.HashMap<Text, Text> =>
+-  HashMap.fromIterable([[k, v]]);
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-  {
+-    name: "getMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Option<Text> => getMap(m, k)
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashMap, Option, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-const Flag = Schema.Boolean;
+-type Flag = typeof Flag.Type;
+-
+-export const f = (
+-  m: HashMap.HashMap<Text, Text>,
+-  k: Text,
+-): Option.Option<Text> => HashMap.get(m, k);
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-  {
+-    name: "putMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text, v: Text): Map<Text, Text> => putMap(m, k, v)
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashMap, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-const Flag = Schema.Boolean;
+-type Flag = typeof Flag.Type;
+-
+-export const f = (
+-  m: HashMap.HashMap<Text, Text>,
+-  k: Text,
+-  v: Text,
+-): HashMap.HashMap<Text, Text> => HashMap.set(m, k, v);
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-  {
+-    name: "removeMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Map<Text, Text> => removeMap(m, k)
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashMap, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-const Flag = Schema.Boolean;
+-type Flag = typeof Flag.Type;
+-
+-export const f = (
+-  m: HashMap.HashMap<Text, Text>,
+-  k: Text,
+-): HashMap.HashMap<Text, Text> => HashMap.remove(m, k);
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-  {
+-    name: "hasMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Flag => hasMap(m, k)
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashMap, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-export const Flag = Schema.Boolean;
+-export type Flag = typeof Flag.Type;
+-
+-export const f = (m: HashMap.HashMap<Text, Text>, k: Text): Flag =>
+-  HashMap.has(m, k);
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-  {
+-    name: "entriesMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): [Text, Text][] => entriesMap(m)
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashMap, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-const Flag = Schema.Boolean;
+-type Flag = typeof Flag.Type;
+-
+-export const f = (
+-  m: HashMap.HashMap<Text, Text>,
+-  k: Text,
+-): ReadonlyArray<readonly [Text, Text]> => HashMap.toEntries(m);
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-  {
+-    name: "setOf",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (k: Text): Set<Text> => setOf([k])
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashSet, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-const Flag = Schema.Boolean;
+-type Flag = typeof Flag.Type;
+-
+-export const f = (k: Text): HashSet.HashSet<Text> => HashSet.fromIterable([k]);
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-  {
+-    name: "addSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Set<Text> => addSet(s, k)
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashSet, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-const Flag = Schema.Boolean;
+-type Flag = typeof Flag.Type;
+-
+-export const f = (s: HashSet.HashSet<Text>, k: Text): HashSet.HashSet<Text> =>
+-  HashSet.add(s, k);
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-  {
+-    name: "removeSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Set<Text> => removeSet(s, k)
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashSet, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-const Flag = Schema.Boolean;
+-type Flag = typeof Flag.Type;
+-
+-export const f = (s: HashSet.HashSet<Text>, k: Text): HashSet.HashSet<Text> =>
+-  HashSet.remove(s, k);
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-  {
+-    name: "hasSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Flag => hasSet(s, k)
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashSet, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-export const Flag = Schema.Boolean;
+-export type Flag = typeof Flag.Type;
+-
+-export const f = (s: HashSet.HashSet<Text>, k: Text): Flag => HashSet.has(s, k);
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-  {
+-    name: "itemsSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Text[] => itemsSet(s)
+-`,
+-    text: `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashSet, Schema } from "effect";
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-const Flag = Schema.Boolean;
+-type Flag = typeof Flag.Type;
+-
+-export const f = (s: HashSet.HashSet<Text>, k: Text): ReadonlyArray<Text> => [
+-  ...s,
+-];
+-//# sourceMappingURL=m.ts.map
+-`,
+-  },
+-];
+-
+-for (const row of EMIT_ROWS) {
+-  Deno.test(`${row.name} emits its Effect call`, () => {
+-    assertEquals(
+-      emitFiles({ "effektive.json": "{}", "m.eff": row.source }, ["m.eff"]).get(
+-        "m",
+-      )?.text,
+-      row.text,
+-    );
+-  });
+-}
+-
+-Deno.test("a typed const binding of mapOf, getMap, entriesMap and itemsSet emits Effect calls", () => {
+-  const emitted = emitFiles({
+-    "effektive.json": "{}",
+-    "m.eff": `type Text = string
+-type Int = int
+-export const f = (m: Map<Text, Int>, s: Set<Int>): Int => {
+-  const made = mapOf([["a", 1], ["b", 2]])
+-  const found = getMap(made, "a")
+-  const entries = entriesMap(m)
+-  const items = itemsSet(s)
+-  1
+-}
+-`,
+-  }, ["m.eff"]);
+-  assertEquals(
+-    emitted.get("m")?.text,
+-    `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashMap, HashSet, Option, Schema } from "effect";
+-
+-const $Int = Schema.Finite.check(
+-  Schema.makeFilter(
+-    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+-  ),
+-);
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-export const Int = $Int;
+-export type Int = typeof Int.Type;
+-
+-export const f = (
+-  m: HashMap.HashMap<Text, Int>,
+-  s: HashSet.HashSet<Int>,
+-): Int => {
+-  const made: HashMap.HashMap<string, number> = HashMap.fromIterable([
+-    ["a", 1],
+-    ["b", 2],
+-  ]);
+-  const found: Option.Option<number> = HashMap.get(made, "a");
+-  const entries: ReadonlyArray<readonly [Text, Int]> = HashMap.toEntries(m);
+-  const items: ReadonlyArray<Int> = [...s];
+-  return 1;
+-};
+-//# sourceMappingURL=m.ts.map
+-`,
+-  );
+-});
+-
+-// ------------------------------------------------------------------ validator
+-
+-const TEXT: Type = { kind: "named", id: "type:m#Text" };
+-
+-/** An IR node with its fields set by name, for forging. */
+-type Forged = { [field: string]: unknown };
+-
+-function forgedModule(source: string): { ir: ModuleIR; body: Forged } {
+-  const checked = checkProject(
+-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
+-    "",
+-    ["m.eff"],
+-  );
+-  assert(checked.ok);
+-  assertEquals(checked.value.diagnostics, []);
+-  const module = lowerProject(checked.value).get("m");
+-  assert(module?.ok, JSON.stringify(module));
+-  assertEquals(validateModule(module.value, new Map([["m.eff", source]])), []);
+-  const ir = structuredClone(module.value);
+-  const declaration = ir.declarations.find((d) => d.name === "f");
+-  assert(declaration?.kind === "function");
+-  return { ir, body: declaration.body as unknown as Forged };
+-}
+-
+-function messages(ir: ModuleIR, source: string): string[] {
+-  return validateModule(ir, new Map([["m.eff", source]])).map((d) =>
+-    `${d.code} ${d.message}`
+-  );
+-}
+-
+-interface ForgeRow {
+-  readonly name: string;
+-  readonly source: string;
+-  /** The field to forge: set to a Text reference, or to a copy of `from`. */
+-  readonly field: string;
+-  readonly from: string;
+-  readonly messages: readonly string[];
+-}
+-
+-const RECEIVER_ROWS: readonly ForgeRow[] = [
+-  {
+-    name: "mapOf",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (k: Text, v: Text): Map<Text, Text> => mapOf([[k, v]])
+-`,
+-    field: "entries",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.entries: map-of needs an array of [key, value] pairs, found type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "getMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Option<Text> => getMap(m, k)
+-`,
+-    field: "map",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.map: get-map needs a Map value, found type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "putMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text, v: Text): Map<Text, Text> => putMap(m, k, v)
+-`,
+-    field: "map",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.map: put-map needs a Map value, found type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "removeMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Map<Text, Text> => removeMap(m, k)
+-`,
+-    field: "map",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.map: remove-map needs a Map value, found type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "hasMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Flag => hasMap(m, k)
+-`,
+-    field: "map",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.map: has-map needs a Map value, found type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "entriesMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): [Text, Text][] => entriesMap(m)
+-`,
+-    field: "map",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.map: entries-map needs a Map value, found type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "setOf",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (k: Text): Set<Text> => setOf([k])
+-`,
+-    field: "items",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.items: set-of needs an array, found type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "addSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Set<Text> => addSet(s, k)
+-`,
+-    field: "set",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.set: add-set needs a Set value, found type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "removeSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Set<Text> => removeSet(s, k)
+-`,
+-    field: "set",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.set: remove-set needs a Set value, found type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "hasSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Flag => hasSet(s, k)
+-`,
+-    field: "set",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.set: has-set needs a Set value, found type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "itemsSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Text[] => itemsSet(s)
+-`,
+-    field: "set",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.set: items-set needs a Set value, found type:m#Text",
+-    ],
+-  },
+-];
+-
+-for (const row of RECEIVER_ROWS) {
+-  Deno.test(`the validator rejects a forged receiver of ${row.name}`, () => {
+-    const { ir, body } = forgedModule(row.source);
+-    body[row.field] = {
+-      ...(body[row.field] as Forged),
+-      kind: "reference",
+-      target: "local:m#f/k",
+-      type: TEXT,
+-    };
+-    assertEquals(messages(ir, row.source), row.messages);
+-  });
+-}
+-
+-const RESULT_ROWS: readonly ForgeRow[] = [
+-  {
+-    name: "mapOf",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (k: Text, v: Text): Map<Text, Text> => mapOf([[k, v]])
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: the recomputed type Map<type:m#Text, type:m#Text> does not fit the recorded type type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "getMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Option<Text> => getMap(m, k)
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: expected Option<type:m#Text>, recorded type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "putMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text, v: Text): Map<Text, Text> => putMap(m, k, v)
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: expected Map<type:m#Text, type:m#Text>, recorded type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "removeMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Map<Text, Text> => removeMap(m, k)
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: expected Map<type:m#Text, type:m#Text>, recorded type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "hasMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Flag => hasMap(m, k)
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: expected boolean, recorded type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "entriesMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): [Text, Text][] => entriesMap(m)
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: expected [type:m#Text, type:m#Text][], recorded type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "setOf",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (k: Text): Set<Text> => setOf([k])
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: the recomputed type Set<type:m#Text> does not fit the recorded type type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "addSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Set<Text> => addSet(s, k)
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: expected Set<type:m#Text>, recorded type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "removeSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Set<Text> => removeSet(s, k)
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: expected Set<type:m#Text>, recorded type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "hasSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Flag => hasSet(s, k)
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: expected boolean, recorded type:m#Text",
+-    ],
+-  },
+-  {
+-    name: "itemsSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Text[] => itemsSet(s)
+-`,
+-    field: "type",
+-    from: "",
+-    messages: [
+-      "validation/002 declarations[2].body.type: expected type:m#Text[], recorded type:m#Text",
+-    ],
+-  },
+-];
+-
+-for (const row of RESULT_ROWS) {
+-  Deno.test(`the validator rejects a forged result type of ${row.name}`, () => {
+-    const { ir, body } = forgedModule(row.source);
+-    body.type = TEXT;
+-    assertEquals(messages(ir, row.source), row.messages);
+-  });
+-}
+-
+-const ARGUMENT_ROWS: readonly ForgeRow[] = [
+-  {
+-    name: "getMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Option<Text> => getMap(m, k)
+-`,
+-    field: "key",
+-    from: "map",
+-    messages: [
+-      "validation/002 declarations[2].body.key: get-map needs a key that fits type:m#Text, found Map<type:m#Text, type:m#Text>",
+-    ],
+-  },
+-  {
+-    name: "putMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text, v: Text): Map<Text, Text> => putMap(m, k, v)
+-`,
+-    field: "key",
+-    from: "map",
+-    messages: [
+-      "validation/002 declarations[2].body.key: put-map needs a key that fits type:m#Text, found Map<type:m#Text, type:m#Text>",
+-    ],
+-  },
+-  {
+-    name: "removeMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Map<Text, Text> => removeMap(m, k)
+-`,
+-    field: "key",
+-    from: "map",
+-    messages: [
+-      "validation/002 declarations[2].body.key: remove-map needs a key that fits type:m#Text, found Map<type:m#Text, type:m#Text>",
+-    ],
+-  },
+-  {
+-    name: "hasMap",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text): Flag => hasMap(m, k)
+-`,
+-    field: "key",
+-    from: "map",
+-    messages: [
+-      "validation/002 declarations[2].body.key: has-map needs a key that fits type:m#Text, found Map<type:m#Text, type:m#Text>",
+-    ],
+-  },
+-  {
+-    name: "addSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Set<Text> => addSet(s, k)
+-`,
+-    field: "element",
+-    from: "set",
+-    messages: [
+-      "validation/002 declarations[2].body.element: add-set needs an element that fits type:m#Text, found Set<type:m#Text>",
+-    ],
+-  },
+-  {
+-    name: "removeSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Set<Text> => removeSet(s, k)
+-`,
+-    field: "element",
+-    from: "set",
+-    messages: [
+-      "validation/002 declarations[2].body.element: remove-set needs an element that fits type:m#Text, found Set<type:m#Text>",
+-    ],
+-  },
+-  {
+-    name: "hasSet",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (s: Set<Text>, k: Text): Flag => hasSet(s, k)
+-`,
+-    field: "element",
+-    from: "set",
+-    messages: [
+-      "validation/002 declarations[2].body.element: has-set needs an element that fits type:m#Text, found Set<type:m#Text>",
+-    ],
+-  },
+-  {
+-    name: "putMap value",
+-    source: `type Text = string
+-type Flag = boolean
+-export const f = (m: Map<Text, Text>, k: Text, v: Text): Map<Text, Text> => putMap(m, k, v)
+-`,
+-    field: "value",
+-    from: "map",
+-    messages: [
+-      "validation/002 declarations[2].body.value: put-map needs a value that fits type:m#Text, found Map<type:m#Text, type:m#Text>",
+-    ],
+-  },
+-];
+-
+-for (const row of ARGUMENT_ROWS) {
+-  Deno.test(`the validator rejects a forged argument of ${row.name}`, () => {
+-    const { ir, body } = forgedModule(row.source);
+-    body[row.field] = structuredClone(body[row.from]);
+-    assertEquals(messages(ir, row.source), row.messages);
+-  });
+-}
+-
+-const MAP_OF_SOURCE =
+-  "type Text = string\ntype Flag = boolean\nexport const f = (k: Text, v: Text): Map<Text, Text> => mapOf([[k, v]])\n";
+-const SET_OF_SOURCE =
+-  "type Text = string\ntype Flag = boolean\nexport const f = (k: Text): Set<Text> => setOf([k])\n";
+-
+-const FUNCTION_TYPE: Type = {
+-  kind: "function",
+-  execution: "pure",
+-  parameters: [],
+-  result: { kind: "primitive", name: "int" },
+-  effects: { failures: [], requirements: [] },
+-};
+-
+-Deno.test("the validator rejects a forged mapOf entries type with a function key", () => {
+-  const source = MAP_OF_SOURCE;
+-  const { ir, body } = forgedModule(source);
+-  (body.entries as Forged).type = {
+-    kind: "array",
+-    element: { kind: "tuple", elements: [FUNCTION_TYPE, TEXT] },
+-  };
+-  assertEquals(messages(ir, source), [
+-    "validation/002 declarations[2].body.type: the recomputed type Map<() => int [pure], type:m#Text> does not fit the recorded type Map<type:m#Text, type:m#Text>",
+-    "validation/002 declarations[2].body: the body type Map<() => int [pure], type:m#Text> does not fit the declared result Map<type:m#Text, type:m#Text>",
+-    "validation/002 declarations[2].body.entries: a Map key must be data, found () => int [pure]",
+-    "validation/002 declarations[2].body.entries.elements[0]: the element has type [type:m#Text, type:m#Text], which does not fit [() => int [pure], type:m#Text]",
+-  ]);
+-});
+-
+-Deno.test("the validator rejects a forged setOf items type with a function element", () => {
+-  const source = SET_OF_SOURCE;
+-  const { ir, body } = forgedModule(source);
+-  (body.items as Forged).type = { kind: "array", element: FUNCTION_TYPE };
+-  assertEquals(messages(ir, source), [
+-    "validation/002 declarations[2].body.type: the recomputed type Set<() => int [pure]> does not fit the recorded type Set<type:m#Text>",
+-    "validation/002 declarations[2].body: the body type Set<() => int [pure]> does not fit the declared result Set<type:m#Text>",
+-    "validation/002 declarations[2].body.items: a Set element must be data, found () => int [pure]",
+-    "validation/002 declarations[2].body.items.elements[0]: the element has type type:m#Text, which does not fit () => int [pure]",
+-  ]);
+-});
+diff --git a/tests/map_set_types_slow_test.ts b/tests/map_set_types_slow_test.ts
+deleted file mode 100644
+index 8b53ac1..0000000
+--- a/tests/map_set_types_slow_test.ts
++++ /dev/null
+@@ -1,292 +0,0 @@
+-// Runtime behavior of the `Map` and `Set` types. Each test compiles
+-// a project with independent validation, type-checks the emitted TypeScript
+-// under the strict target options, and runs a driver that builds `HashMap` and
+-// `HashSet` values, as a host adapter must.
+-
+-import { assertEquals } from "@std/assert";
+-import { compileStrictTarget } from "./target_helpers.ts";
+-
+-async function compileAndRun(
+-  files: Record<string, string>,
+-  extraFiles: Record<string, string>,
+-  run: string,
+-): Promise<unknown> {
+-  return JSON.parse(
+-    await compileStrictTarget(
+-      { "main.eff": "", ...files },
+-      ["main.eff"],
+-      run,
+-      "effektive-map-set-",
+-      extraFiles,
+-    ),
+-  );
+-}
+-
+-const ROW = `type Text = string
+-type Int = int
+-export type Row = { tags: Set<Text>, counts: Map<Text, Int> }
+-export const id = (r: Row): Row => r
+-`;
+-
+-Deno.test("a record with a Set field and a Map field decodes and encodes HashSet and HashMap", async () => {
+-  const result = await compileAndRun(
+-    { "main.eff": ROW },
+-    {},
+-    `
+-import { HashMap, HashSet, Schema } from "effect";
+-import { Row } from "./main.ts";
+-const decoded = Schema.decodeUnknownSync(Row)({
+-  tags: HashSet.make("b", "a"),
+-  counts: HashMap.make(["x", 1], ["y", 2]),
+-});
+-const encoded = Schema.encodeSync(Row)(decoded);
+-console.log(JSON.stringify({
+-  tags: [...decoded.tags].sort(),
+-  counts: HashMap.toEntries(decoded.counts).sort(),
+-  encodedTags: [...encoded.tags].sort(),
+-  encodedCounts: HashMap.toEntries(encoded.counts).sort(),
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    tags: ["a", "b"],
+-    counts: [["x", 1], ["y", 2]],
+-    encodedTags: ["a", "b"],
+-    encodedCounts: [["x", 1], ["y", 2]],
+-  });
+-});
+-
+-Deno.test("decoding a JSON array into a Map or a Set fails", async () => {
+-  const result = await compileAndRun(
+-    { "main.eff": ROW },
+-    {},
+-    `
+-import { HashMap, HashSet, Schema } from "effect";
+-import { Row } from "./main.ts";
+-const message = (input: unknown): string => {
+-  try {
+-    Schema.decodeUnknownSync(Row)(input);
+-    return "decoded";
+-  } catch (error) {
+-    return error instanceof Error ? error.message : String(error);
+-  }
+-};
+-console.log(JSON.stringify({
+-  map: message({ tags: HashSet.make("a"), counts: [["x", 1]] }),
+-  set: message({ tags: ["a"], counts: HashMap.make(["x", 1]) }),
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    map: 'Expected HashMap\n  at ["counts"]',
+-    set: 'Expected HashSet\n  at ["tags"]',
+-  });
+-});
+-
+-const KEYED = `type Text = string
+-type Int = int
+-export type Key = { a: Text, b?: Int }
+-export type Index = { byKey: Map<Key, Int> }
+-export const mk = (a: Text): Key => ({ a })
+-export const mkb = (a: Text, b: Int): Key => ({ a, b })
+-export const id = (i: Index): Index => i
+-`;
+-
+-Deno.test("two equal record keys built separately find one entry", async () => {
+-  const result = await compileAndRun(
+-    { "main.eff": KEYED },
+-    {},
+-    `
+-import { HashMap } from "effect";
+-import { mk, mkb } from "./main.ts";
+-const map = HashMap.make([mk("x"), 1], [mkb("x", 5), 2]);
+-const replaced = HashMap.set(map, mk("x"), 9);
+-console.log(JSON.stringify({
+-  size: HashMap.size(map),
+-  found: HashMap.get(map, mk("x")),
+-  foundWithB: HashMap.get(map, mkb("x", 5)),
+-  missing: HashMap.get(map, mk("y")),
+-  replacedSize: HashMap.size(replaced),
+-  replaced: HashMap.get(replaced, mk("x")),
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    size: 2,
+-    found: { _id: "Option", _tag: "Some", value: 1 },
+-    foundWithB: { _id: "Option", _tag: "Some", value: 2 },
+-    missing: { _id: "Option", _tag: "None" },
+-    replacedSize: 2,
+-    replaced: { _id: "Option", _tag: "Some", value: 9 },
+-  });
+-});
+-
+-Deno.test("an absent optional field stays absent in a decoded key and in a source key", async () => {
+-  const result = await compileAndRun(
+-    { "main.eff": KEYED },
+-    {},
+-    `
+-import { Equal, Hash, Schema } from "effect";
+-import { Key, mk, mkb } from "./main.ts";
+-const decoded = Schema.decodeUnknownSync(Key)({ a: "x" });
+-const decodedWithB = Schema.decodeUnknownSync(Key)({ a: "x", b: 5 });
+-console.log(JSON.stringify({
+-  decodedKeys: Object.keys(decoded),
+-  builtKeys: Object.keys(mk("x")),
+-  absentEqual: Equal.equals(decoded, mk("x")),
+-  absentHash: Hash.hash(decoded) === Hash.hash(mk("x")),
+-  presentEqual: Equal.equals(decodedWithB, mkb("x", 5)),
+-  presentHash: Hash.hash(decodedWithB) === Hash.hash(mkb("x", 5)),
+-  undefinedEqual: Equal.equals(mk("x"), { a: "x", b: undefined }),
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    decodedKeys: ["a"],
+-    builtKeys: ["a"],
+-    absentEqual: true,
+-    absentHash: true,
+-    presentEqual: true,
+-    presentHash: true,
+-    undefinedEqual: false,
+-  });
+-});
+-
+-const ENTRY = `type Text = string
+-type Int = int
+-const take = (m: Map<Text, Int>): Int => 1
+-const takeKeys = (s: Set<Text>): Int => 2
+-export const f = (input): Int fails SchemaError => take(input)
+-export const g = (input): Int fails SchemaError => takeKeys(input)
+-`;
+-
+-Deno.test("an inferred Map entry accepts a HashMap and reports a bad value at its path", async () => {
+-  const result = await compileAndRun(
+-    { "main.eff": ENTRY },
+-    {},
+-    `
+-import { Effect, HashMap, HashSet } from "effect";
+-import { f, g } from "./main.ts";
+-const outcome = <A>(effect: Effect.Effect<A, { readonly message: string }>) =>
+-  Effect.runPromise(effect.pipe(Effect.match({
+-    onSuccess: (value) => ({ ok: value }),
+-    onFailure: (error) => ({ error: error.message }),
+-  })));
+-console.log(JSON.stringify({
+-  valid: await outcome(f(HashMap.make(["a", 1]))),
+-  badValue: await outcome(f(HashMap.make(["a", 1], ["b", "bad"]))),
+-  badKey: await outcome(f(HashMap.make([7, 1]))),
+-  array: await outcome(f([["a", 1]])),
+-  validSet: await outcome(g(HashSet.make("a"))),
+-  badElement: await outcome(g(HashSet.make("a", 3))),
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    valid: { ok: 1 },
+-    badValue: { error: 'Expected number\n  at ["entries"][1][1]' },
+-    badKey: { error: 'Expected string\n  at ["entries"][0][0]' },
+-    array: { error: "Expected HashMap" },
+-    validSet: { ok: 2 },
+-    badElement: { error: 'Expected string\n  at ["values"][0]' },
+-  });
+-});
+-
+-const HOST_EFFI = `export type Text = string
+-export type Int = int
+-export type Key = { id: Text }
+-export service Store {
+-  tags(): Set<Text>
+-  counts(): Map<Key, Int>
+-}
+-export provider StoreLive provides Store
+-`;
+-
+-const HOST_MODULE = `import { Effect, HashMap, HashSet, Layer } from "effect";
+-import { Key, Store } from "./store.effi.ts";
+-export const StoreLive = Layer.succeed(Store)({
+-  tags: () => Effect.succeed(HashSet.make("a", "b")),
+-  counts: () => Effect.succeed(HashMap.make([Key.make({ id: "k" }), 3])),
+-});
+-`;
+-
+-const HOST_MAIN = `import { Int, Key, StoreLive, Store, Text } from "host:store"
+-export const tags = (): Set<Text> => provide(StoreLive, () => Store.tags())
+-export const counts = (): Map<Key, Int> => provide(StoreLive, () => Store.counts())
+-export const echoTags = (s: Set<Text>): Set<Text> => s
+-export const echoCounts = (m: Map<Key, Int>): Map<Key, Int> => m
+-`;
+-
+-Deno.test("a host provider returns a Set and a Map with a record key, and source passes them through", async () => {
+-  const result = await compileAndRun(
+-    {
+-      "effektive.json":
+-        '{ "host": { "store": { "interface": "./store.effi", "module": "./store.ts" } } }',
+-      "store.effi": HOST_EFFI,
+-      "main.eff": HOST_MAIN,
+-    },
+-    { "store.ts": HOST_MODULE },
+-    `
+-import { Effect, HashMap, HashSet } from "effect";
+-import { Key } from "./store.effi.ts";
+-import { counts, echoCounts, echoTags, tags } from "./main.ts";
+-const set = await Effect.runPromise(tags());
+-const map = await Effect.runPromise(counts());
+-const echoedSet = echoTags(set);
+-const echoedMap = echoCounts(map);
+-console.log(JSON.stringify({
+-  tags: [...set].sort(),
+-  hasA: HashSet.has(echoedSet, "a"),
+-  size: HashMap.size(echoedMap),
+-  found: HashMap.get(echoedMap, Key.make({ id: "k" })),
+-  missing: HashMap.get(echoedMap, Key.make({ id: "z" })),
+-  same: echoedMap === map,
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    tags: ["a", "b"],
+-    hasA: true,
+-    size: 1,
+-    found: { _id: "Option", _tag: "Some", value: 3 },
+-    missing: { _id: "Option", _tag: "None" },
+-    same: true,
+-  });
+-});
+-
+-const PROTOTYPE_FIELD = `type Text = string
+-type Tok = { label: Text, toString?: Text }
+-type Bag = { kind: "bag", m: Map<Text, Tok>, s: Set<Tok>, k: Map<Tok, Text> }
+-type Other = { kind: "other" }
+-type Any = Bag | Other
+-export const mk = (m: Map<Text, Tok>, s: Set<Tok>, k: Map<Tok, Text>): Bag =>
+-  Bag({ kind: "bag", m, s, k })
+-`;
+-
+-Deno.test("a Map and a Set that hold a record with a prototype-named field keep their entries", async () => {
+-  const result = await compileAndRun(
+-    { "main.eff": PROTOTYPE_FIELD },
+-    {},
+-    `
+-import { HashMap, HashSet } from "effect";
+-import { mk, type Tok } from "./main.ts";
+-const make = (label: string): Tok => Object.assign(Object.create(null), { label });
+-const tok = make("a");
+-const bag = mk(HashMap.make(["x", tok]), HashSet.make(tok), HashMap.make([tok, "v"]));
+-console.log(JSON.stringify({
+-  kind: bag._tag,
+-  mapSize: HashMap.size(bag.m),
+-  mapValue: HashMap.get(bag.m, "x"),
+-  hasMember: HashSet.has(bag.s, make("a")),
+-  keyed: HashMap.get(bag.k, make("a")),
+-}));
+-`,
+-  );
+-  assertEquals(result, {
+-    kind: "main#Bag",
+-    mapSize: 1,
+-    mapValue: { _id: "Option", _tag: "Some", value: { label: "a" } },
+-    hasMember: true,
+-    keyed: { _id: "Option", _tag: "Some", value: "v" },
+-  });
+-});
+diff --git a/tests/map_set_types_test.ts b/tests/map_set_types_test.ts
+deleted file mode 100644
+index 2316642..0000000
+--- a/tests/map_set_types_test.ts
++++ /dev/null
+@@ -1,375 +0,0 @@
+-// The `Map` and `Set` types: builtin type applications over
+-// `HashMap` and `HashSet`. Checking runs through checkProject, emission through
+-// emitFiles, and forged IR through validateModule. The type has no operation
+-// yet, so each test reaches a value through a parameter. Runtime behavior is in
+-// map_set_types_slow_test.ts.
+-
+-import { assert, assertEquals } from "@std/assert";
+-import type { ModuleIR, Type } from "../src/core/ir.ts";
+-import { showType } from "../src/core/type_show.ts";
+-import { TypeTable } from "../src/core/types.ts";
+-import { validateModule } from "../src/core/validate/index.ts";
+-import { diagnosticsOf, emitFiles, loweredModule } from "./helpers.ts";
+-
+-const TYPES = `type Text = string
+-type Int = int
+-type Flag = boolean
+-type A = { id: Int }
+-type B = { name: Text }
+-type AB = A | B
+-`;
+-
+-/** The diagnostics of `export const f = (m: <from>): <to> => m`. */
+-function convert(from: string, to: string): string[] {
+-  return diagnosticsOf(`${TYPES}export const f = (m: ${from}): ${to} => m\n`);
+-}
+-
+-// ------------------------------------------------------------------ assignability
+-
+-Deno.test("a Map fits a Map with the same key and a wider value", () => {
+-  assertEquals(convert("Map<Text, A>", "Map<Text, AB>"), []);
+-});
+-
+-Deno.test("a Map does not fit a Map with a narrower value", () => {
+-  assertEquals(convert("Map<Text, AB>", "Map<Text, A>"), [
+-    "type-mismatch/003 the function body has type Map<Text, AB>, but Map<Text, A> is expected",
+-  ]);
+-});
+-
+-Deno.test("a Map key is invariant when the target key is wider", () => {
+-  assertEquals(convert("Map<A, Int>", "Map<AB, Int>"), [
+-    "type-mismatch/003 the function body has type Map<A, Int>, but Map<AB, Int> is expected",
+-  ]);
+-});
+-
+-Deno.test("a Map key is invariant when the target key is narrower", () => {
+-  assertEquals(convert("Map<AB, Int>", "Map<A, Int>"), [
+-    "type-mismatch/003 the function body has type Map<AB, Int>, but Map<A, Int> is expected",
+-  ]);
+-});
+-
+-Deno.test("a Map fits itself", () => {
+-  assertEquals(convert("Map<A, Set<Text>>", "Map<A, Set<Text>>"), []);
+-});
+-
+-Deno.test("a Set fits a Set with a wider element", () => {
+-  assertEquals(convert("Set<A>", "Set<AB>"), []);
+-});
+-
+-Deno.test("a Set does not fit a Set with a narrower element", () => {
+-  assertEquals(convert("Set<AB>", "Set<A>"), [
+-    "type-mismatch/003 the function body has type Set<AB>, but Set<A> is expected",
+-  ]);
+-});
+-
+-Deno.test("a Map does not fit a Set, a record, or an array", () => {
+-  assertEquals(convert("Map<Text, Int>", "Set<Text>"), [
+-    "type-mismatch/003 the function body has type Map<Text, Int>, but Set<Text> is expected",
+-  ]);
+-  assertEquals(convert("Set<Text>", "Text[]"), [
+-    "type-mismatch/003 the function body has type Set<Text>, but Text[] is expected",
+-  ]);
+-});
+-
+-// ------------------------------------------------------------------ type syntax
+-
+-Deno.test("a wrong type-argument count gives the Option diagnostic", () => {
+-  assertEquals(
+-    diagnosticsOf(`${TYPES}type One = Map<Text>\ntype Two = Set<Text, Int>\n`),
+-    [
+-      "type-mismatch/001 `Map` takes 2 type arguments, but 1 is given",
+-      "type-mismatch/001 `Set` takes 1 type argument, but 2 are given",
+-    ],
+-  );
+-});
+-
+-Deno.test("a user declaration named Map or Set is declaration/002", () => {
+-  assertEquals(diagnosticsOf("type Map = { a: string }\ntype Set = string\n"), [
+-    "declaration/002 `Map` is a reserved prelude or builtin name and cannot be declared",
+-    "declaration/002 `Set` is a reserved prelude or builtin name and cannot be declared",
+-  ]);
+-});
+-
+-Deno.test("showType prints Map and Set in the source form", () => {
+-  const t = new TypeTable();
+-  assertEquals(showType(t, t.map(t.string, t.int)), "Map<string, int>");
+-  assertEquals(showType(t, t.set(t.string)), "Set<string>");
+-  assertEquals(
+-    showType(t, t.map(t.string, t.set(t.int))),
+-    "Map<string, Set<int>>",
+-  );
+-});
+-
+-// ------------------------------------------------------------------ key rule
+-
+-Deno.test("a function key is declaration/019", () => {
+-  assertEquals(
+-    diagnosticsOf(`${TYPES}type Lookup = Map<() => Int, Int>\n`),
+-    ["declaration/019 A Map key must be data, found `() => Int`"],
+-  );
+-});
+-
+-Deno.test("a Ref element in a Set is declaration/019", () => {
+-  assertEquals(
+-    diagnosticsOf(`${TYPES}type Members = Set<Ref<Int>>\n`),
+-    ["declaration/019 A Set element must be data, found `Ref<Int>`"],
+-  );
+-});
+-
+-Deno.test("a key in a function signature is checked", () => {
+-  assertEquals(
+-    diagnosticsOf(
+-      `${TYPES}export const f = (m: Map<Effect<Int>, Int>): Int => 1\n`,
+-    ),
+-    ["declaration/019 A Map key must be data, found `Effect<Int, never, never>`"],
+-  );
+-});
+-
+-Deno.test("record, union and Set keys are data", () => {
+-  assertEquals(
+-    diagnosticsOf(
+-      `${TYPES}export const f = (a: Map<A, Int>, b: Map<AB, Int>, c: Map<Set<Text>, Int>, d: Set<Map<Text, Int>>): Int => 1\n`,
+-    ),
+-    [],
+-  );
+-});
+-
+-Deno.test("a key may name a type that a later declaration defines", () => {
+-  assertEquals(
+-    diagnosticsOf(
+-      `type Int = int\ntype Row = { m: Map<Key, Int>, s: Set<Alias> }\ntype Key = { a: string }\ntype Alias = Key\n`,
+-    ),
+-    [],
+-  );
+-});
+-
+-Deno.test("a Map value with a function type is allowed in a function signature", () => {
+-  assertEquals(
+-    diagnosticsOf(
+-      `${TYPES}export const f = (m: Map<Text, () => Int>): Int => 1\n`,
+-    ),
+-    [],
+-  );
+-});
+-
+-Deno.test("a Map value with a function type in an error field is declaration/015", () => {
+-  assertEquals(
+-    diagnosticsOf(`${TYPES}error E = { m: Map<Text, () => Int> }\n`),
+-    [
+-      "declaration/015 the field `m` has a function or deferred type, which a tagged record or error declaration cannot hold",
+-    ],
+-  );
+-});
+-
+-Deno.test("a Set of Refs in an error field is declaration/015 and declaration/019", () => {
+-  assertEquals(
+-    diagnosticsOf(`${TYPES}error E = { m: Set<Ref<Int>> }\n`),
+-    [
+-      "declaration/015 the field `m` has a function or deferred type, which a tagged record or error declaration cannot hold",
+-      "declaration/019 A Set element must be data, found `Ref<Int>`",
+-    ],
+-  );
+-});
+-
+-// ------------------------------------------------------------------ patterns and equality
+-
+-Deno.test("a match on a Map is pattern/004", () => {
+-  assertEquals(
+-    diagnosticsOf(
+-      `${TYPES}export const f = (m: Map<Text, Int>): Int => match m { _ => 1 }\n`,
+-    ),
+-    [
+-      "pattern/004 a match cannot take a value of type Map<Text, Int>; version 0 matches options, errors, tagged records, records with a literal discriminator field, literals, and primitives",
+-    ],
+-  );
+-});
+-
+-Deno.test("a match on a Set is pattern/004", () => {
+-  assertEquals(
+-    diagnosticsOf(
+-      `${TYPES}export const f = (s: Set<Text>): Int => match s { _ => 1 }\n`,
+-    ),
+-    [
+-      "pattern/004 a match cannot take a value of type Set<Text>; version 0 matches options, errors, tagged records, records with a literal discriminator field, literals, and primitives",
+-    ],
+-  );
+-});
+-
+-Deno.test("=== on two Maps is type-mismatch/007, as for records", () => {
+-  assertEquals(
+-    diagnosticsOf(
+-      `${TYPES}export const f = (a: Map<Text, Int>, b: Map<Text, Int>): Flag => a === b\n`,
+-    ),
+-    [
+-      "type-mismatch/007 the operator `===` does not accept operands of type Map<Text, Int> and Map<Text, Int>",
+-    ],
+-  );
+-  assertEquals(
+-    diagnosticsOf(`${TYPES}export const g = (a: A, b: A): Flag => a === b\n`),
+-    [
+-      "type-mismatch/007 the operator `===` does not accept operands of type A and A",
+-    ],
+-  );
+-});
+-
+-Deno.test("!== on two Sets is type-mismatch/007", () => {
+-  assertEquals(
+-    diagnosticsOf(
+-      `${TYPES}export const f = (a: Set<Text>, b: Set<Text>): Flag => a !== b\n`,
+-    ),
+-    [
+-      "type-mismatch/007 the operator `!==` does not accept operands of type Set<Text> and Set<Text>",
+-    ],
+-  );
+-});
+-
+-// ------------------------------------------------------------------ emission
+-
+-Deno.test("a record with a Set field and a Map field emits HashSet and HashMap", () => {
+-  const emitted = emitFiles({
+-    "effektive.json": "{}",
+-    "m.eff":
+-      "type Text = string\ntype Int = int\ntype Row = { tags: Set<Text>, counts: Map<Text, Int> }\nexport const id = (r: Row): Row => r\n",
+-  }, ["m.eff"]);
+-  assertEquals(
+-    emitted.get("m")?.text,
+-    `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { Schema } from "effect";
+-
+-const $Int = Schema.Finite.check(
+-  Schema.makeFilter(
+-    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+-  ),
+-);
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-export const Int = $Int;
+-export type Int = typeof Int.Type;
+-
+-export const Row = Schema.Struct({
+-  tags: Schema.HashSet(Text),
+-  counts: Schema.HashMap(Text, Int),
+-});
+-export type Row = typeof Row.Type;
+-
+-export const id = (r: Row): Row => r;
+-//# sourceMappingURL=m.ts.map
+-`,
+-  );
+-});
+-
+-Deno.test("a Map and a Set in a signature emit HashMap and HashSet types", () => {
+-  const emitted = emitFiles({
+-    "effektive.json": "{}",
+-    "m.eff":
+-      "type Text = string\ntype Int = int\nexport const f = (m: Map<Text, Int>, s: Set<Text>): Map<Text, Int> => m\n",
+-  }, ["m.eff"]);
+-  assertEquals(
+-    emitted.get("m")?.text,
+-    `// Generated from m.eff by the Effektive compiler. Do not edit.
+-
+-import { HashMap, HashSet, Schema } from "effect";
+-
+-const $Int = Schema.Finite.check(
+-  Schema.makeFilter(
+-    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+-  ),
+-);
+-
+-export const Text = Schema.String;
+-export type Text = typeof Text.Type;
+-
+-export const Int = $Int;
+-export type Int = typeof Int.Type;
+-
+-export const f = (
+-  m: HashMap.HashMap<Text, Int>,
+-  s: HashSet.HashSet<Text>,
+-): HashMap.HashMap<Text, Int> => m;
+-//# sourceMappingURL=m.ts.map
+-`,
+-  );
+-});
+-
+-// ------------------------------------------------------------------ validator
+-
+-const SOURCE = `${TYPES}export type Lookup = Map<Text, Int>
+-export const f = (m: Map<Text, Int>): Map<Text, Int> => m
+-export const g = (s: Set<Text>): Set<Text> => s
+-`;
+-
+-const lowered = () => loweredModule(SOURCE);
+-
+-function messages(ir: ModuleIR): string[] {
+-  return validateModule(ir, new Map([["m.eff", SOURCE]])).map((d) =>
+-    `${d.code} ${d.message}`
+-  );
+-}
+-
+-const FUNCTION_KEY: Type = {
+-  kind: "function",
+-  execution: "pure",
+-  parameters: [],
+-  result: { kind: "primitive", name: "int" },
+-  effects: { failures: [], requirements: [] },
+-};
+-
+-function declaration(ir: ModuleIR, name: string) {
+-  const found = ir.declarations.find((d) => d.name === name);
+-  assert(found !== undefined);
+-  return found;
+-}
+-
+-Deno.test("the validator rejects a forged Map type with a function key", () => {
+-  const ir = lowered();
+-  const lookup = declaration(ir, "Lookup");
+-  assert(lookup.kind === "type" && lookup.definition.kind === "nominal");
+-  const base = lookup.definition.base;
+-  assert(base.kind === "map");
+-  (base as { key: Type }).key = FUNCTION_KEY;
+-  assertEquals(messages(ir), [
+-    "validation/001 declarations[6].definition.base.key: a Map key must be data",
+-  ]);
+-});
+-
+-Deno.test("the validator rejects a forged Map type whose value does not fit", () => {
+-  const ir = lowered();
+-  const f = declaration(ir, "f");
+-  assert(f.kind === "function");
+-  assert(f.type.kind === "function" && f.type.result.kind === "map");
+-  (f.type.result as { value: Type }).value = {
+-    kind: "named",
+-    id: "type:m#Text",
+-  };
+-  assertEquals(messages(ir), [
+-    "validation/002 declarations[7].body: the body type Map<type:m#Text, type:m#Int> does not fit the declared result Map<type:m#Text, type:m#Text>",
+-  ]);
+-});
+-
+-Deno.test("the validator rejects a forged Map type whose key does not fit", () => {
+-  const ir = lowered();
+-  const f = declaration(ir, "f");
+-  assert(f.kind === "function");
+-  assert(f.type.kind === "function" && f.type.result.kind === "map");
+-  (f.type.result as { key: Type }).key = { kind: "named", id: "type:m#Int" };
+-  assertEquals(messages(ir), [
+-    "validation/002 declarations[7].body: the body type Map<type:m#Text, type:m#Int> does not fit the declared result Map<type:m#Int, type:m#Int>",
+-  ]);
+-});
+-
+-Deno.test("the validator rejects a forged Set type whose element does not fit", () => {
+-  const ir = lowered();
+-  const g = declaration(ir, "g");
+-  assert(g.kind === "function");
+-  assert(g.type.kind === "function" && g.type.result.kind === "set");
+-  (g.type.result as { element: Type }).element = {
+-    kind: "named",
+-    id: "type:m#Int",
+-  };
+-  assertEquals(messages(ir), [
+-    "validation/002 declarations[8].body: the body type Set<type:m#Text> does not fit the declared result Set<type:m#Int>",
+-  ]);
+-});
+diff --git a/tests/sensitive_fields_slow_test.ts b/tests/sensitive_fields_slow_test.ts
+index 8804a81..7103662 100644
+--- a/tests/sensitive_fields_slow_test.ts
++++ b/tests/sensitive_fields_slow_test.ts
+@@ -222,3 +222,40 @@ Deno.test("present optional sensitive unknown fields retain undefined", async ()
+   );
+   assertEquals(JSON.parse(result), [true, true]);
+ });
++
++Deno.test("absent optional fields stay absent in decoded and source records", async () => {
++  const output = await compileStrictTarget(
++    {
++      "main.eff": `type Text = string
++type Int = int
++export type Key = { a: Text, b?: Int }
++export const mk = (a: Text): Key => ({ a })
++export const mkb = (a: Text, b: Int): Key => ({ a, b })
++`,
++    },
++    ["main.eff"],
++    `import { Equal, Hash, Schema } from "effect";
++import { Key, mk, mkb } from "./main.ts";
++const decoded = Schema.decodeUnknownSync(Key)({ a: "x" });
++const decodedWithB = Schema.decodeUnknownSync(Key)({ a: "x", b: 5 });
++console.log(JSON.stringify({
++  decodedKeys: Object.keys(decoded),
++  builtKeys: Object.keys(mk("x")),
++  absentEqual: Equal.equals(decoded, mk("x")),
++  absentHash: Hash.hash(decoded) === Hash.hash(mk("x")),
++  presentEqual: Equal.equals(decodedWithB, mkb("x", 5)),
++  presentHash: Hash.hash(decodedWithB) === Hash.hash(mkb("x", 5)),
++  undefinedEqual: Equal.equals(mk("x"), { a: "x", b: undefined }),
++}));`,
++    "effektive-record-presence-",
++  );
++  assertEquals(JSON.parse(output), {
++    decodedKeys: ["a"],
++    builtKeys: ["a"],
++    absentEqual: true,
++    absentHash: true,
++    presentEqual: true,
++    presentHash: true,
++    undefinedEqual: false,
++  });
++});
+diff --git a/tests/type_laws_property_test.ts b/tests/type_laws_property_test.ts
+index 8a13009..ed4976b 100644
+--- a/tests/type_laws_property_test.ts
++++ b/tests/type_laws_property_test.ts
+@@ -248,8 +248,6 @@ const COMPOSITE_KINDS = [
+   "tuple",
+   "record",
+   "option",
+-  "set",
+-  "map",
+   "union",
+   "function",
+   "effect",
+@@ -272,15 +270,12 @@ function anyType(g: Generator, depth: number): Type {
+   switch (kind) {
+     case "array":
+     case "option":
+-    case "set":
+     case "ref":
+       return { kind, element: inner() };
+     case "tuple":
+       return tuple(g, inner);
+     case "record":
+       return record(g, inner);
+-    case "map":
+-      return { kind, key: inner(), value: inner() };
+     case "union":
+       return unionOf(g, [inner(), inner()]);
+     case "function":
+@@ -339,7 +334,6 @@ function widen(g: Generator, type: Type, top = true): Type {
+       return g.bodies.get(type.id) ?? type;
+     case "array":
+     case "option":
+-    case "set":
+       return { ...type, element: next(type.element) };
+     case "tuple":
+       return { ...type, elements: type.elements.map(next) };
+@@ -353,8 +347,6 @@ function widen(g: Generator, type: Type, top = true): Type {
+       };
+     case "union":
+       return { ...type, members: [...type.members, leaf(g)] };
+-    case "map":
+-      return { ...type, value: next(type.value) };
+     case "fiber":
+       return {
+         ...type,
+@@ -395,7 +387,6 @@ function perturb(g: Generator, type: Type): Type {
+       return pick(g, g.names);
+     case "array":
+     case "option":
+-    case "set":
+       return { ...type, element: perturb(g, type.element) };
+     case "tuple":
+       return type.elements.length === 0
+@@ -415,8 +406,6 @@ function perturb(g: Generator, type: Type): Type {
+     }
+     case "union":
+       return unionOf(g, type.members.slice(1));
+-    case "map":
+-      return { ...type, key: perturb(g, type.key) };
+     case "fiber":
+       return { ...type, failures: toggle(g, type.failures, ERRORS) };
+     case "effect":
+@@ -833,7 +822,7 @@ Deno.test("assignment of plain types is transitive on both implementations", ()
+     validator += check("validator", validatorTable);
+   }
+   assertEquals(failures.length, 0, report(failures));
+-  assertEquals({ checker, validator }, { checker: 21028, validator: 21028 });
++  assertEquals({ checker, validator }, { checker: 14651, validator: 14651 });
+ });
+ 
+ Deno.test("the checker and the validator agree on generated pairs", () => {
+@@ -888,32 +877,30 @@ Deno.test("the checker and the validator agree on generated pairs", () => {
+     }
+   }
+   assertEquals(disagreements.length, 0, report(disagreements));
+-  assertEquals(answers, { fit: 32964, rejected: 47036 });
+-  assertEquals(fibers, { fit: 1748, rejected: 7308, failuresDiffer: 7150 });
+-  assertEquals(authorityDecided, 940);
++  assertEquals(answers, { fit: 33089, rejected: 46911 });
++  assertEquals(fibers, { fit: 1800, rejected: 7524, failuresDiffer: 7336 });
++  assertEquals(authorityDecided, 879);
+   assertEquals(Object.fromEntries([...kinds].sort()), {
+-    "closeable-scope": 175,
+-    "retry-schedule": 1141,
+-    array: 1933,
+-    codec: 1143,
+-    effect: 1157,
+-    fiber: 5074,
+-    function: 3964,
+-    literal: 930,
+-    map: 1111,
+-    named: 5403,
+-    option: 1963,
+-    primitive: 1260,
+-    provider: 1144,
+-    record: 1105,
+-    ref: 1153,
+-    schedule: 2481,
+-    schema: 1104,
+-    set: 1144,
+-    sink: 2433,
+-    stream: 1122,
+-    tuple: 1083,
+-    union: 1977,
++    "closeable-scope": 173,
++    "retry-schedule": 1288,
++    array: 2085,
++    codec: 1173,
++    effect: 1302,
++    fiber: 5235,
++    function: 4199,
++    literal: 949,
++    named: 5214,
++    option: 2035,
++    primitive: 1247,
++    provider: 1295,
++    record: 1277,
++    ref: 1323,
++    schedule: 2637,
++    schema: 1272,
++    sink: 2647,
++    stream: 1261,
++    tuple: 1297,
++    union: 2091,
+   });
+ });
+ 
+diff --git a/tests/types_test.ts b/tests/types_test.ts
+index 36c496a..c7eb710 100644
+--- a/tests/types_test.ts
++++ b/tests/types_test.ts
+@@ -20,7 +20,6 @@ import type { Predicate } from "../src/core/predicates.ts";
+ import {
+   containsDeferredType,
+   containsUnknownPredicateInput,
+-  dataOnly,
+   guardedRecord,
+   TypeTable,
+ } from "../src/core/types.ts";
+@@ -1248,13 +1247,6 @@ Deno.test("a literal fits the primitive that holds its value and no other", () =
+   assertEquals(t.isAssignable(t.array(t.string), t.string), false);
+ });
+ 
+-Deno.test("dataOnly on a map needs data in both the key and the value", () => {
+-  const t = fresh();
+-  assertEquals(dataOnly(t, t.map(t.string, t.string), "value"), true);
+-  assertEquals(dataOnly(t, t.map(t.unknown, t.string), "value"), false);
+-  assertEquals(dataOnly(t, t.map(t.string, t.unknown), "value"), false);
+-});
+-
+ Deno.test("an unknown predicate input is found at the depth limit and not past it", () => {
+   const t = fresh();
+   assertEquals(
+@@ -1417,11 +1409,3 @@ Deno.test("an opaque type is no tag alias, even when its declared base is a lite
+   });
+   assertEquals(t.exceedsDepth(t.named(SELF), 3, new Map()), true);
+ });
+-
+-Deno.test("a map type does not fit a number literal that equals the ref of its value type", () => {
+-  const t = fresh();
+-  assertEquals(
+-    t.isAssignable(t.map(t.string, t.int), t.literal(t.int)),
+-    false,
+-  );
+-});
+diff --git a/tests/validate_expr_children_test.ts b/tests/validate_expr_children_test.ts
+index 47f2db1..300eb52 100644
+--- a/tests/validate_expr_children_test.ts
++++ b/tests/validate_expr_children_test.ts
+@@ -671,23 +671,6 @@ function syntheticNodes(): Record<Expr["kind"], Expr> {
+     log: { ...a, kind: "log", message: leaf(), level: "info", fields: leaf() },
+     random: { ...a, kind: "random" },
+     "random-int": { ...a, kind: "random-int", min: leaf(), max: leaf() },
+-    "map-of": { ...a, kind: "map-of", entries: leaf() },
+-    "get-map": { ...a, kind: "get-map", map: leaf(), key: leaf() },
+-    "put-map": {
+-      ...a,
+-      kind: "put-map",
+-      map: leaf(),
+-      key: leaf(),
+-      value: leaf(),
+-    },
+-    "remove-map": { ...a, kind: "remove-map", map: leaf(), key: leaf() },
+-    "has-map": { ...a, kind: "has-map", map: leaf(), key: leaf() },
+-    "entries-map": { ...a, kind: "entries-map", map: leaf() },
+-    "set-of": { ...a, kind: "set-of", items: leaf() },
+-    "add-set": { ...a, kind: "add-set", set: leaf(), element: leaf() },
+-    "remove-set": { ...a, kind: "remove-set", set: leaf(), element: leaf() },
+-    "has-set": { ...a, kind: "has-set", set: leaf(), element: leaf() },
+-    "items-set": { ...a, kind: "items-set", set: leaf() },
+     provide: { ...a, kind: "provide", provider: leaf(), job: leaf() },
+     binary: {
+       ...a,
+@@ -725,8 +708,8 @@ Deno.test("exprChildren equals a reflective walk on every node of every fixture
+ Deno.test("exprChildren equals a reflective walk on a synthetic node of every Expr kind", () => {
+   const synthetic = syntheticNodes();
+   const kinds = Object.keys(synthetic);
+-  // The plan counts 123 kinds in the Expr union of src/core/ir.ts.
+-  assertEquals(kinds.length, 123);
++  // The reduced Expr union has 112 kinds after Map and Set removal.
++  assertEquals(kinds.length, 112);
+   for (const [kind, node] of Object.entries(synthetic)) {
+     assertEquals(node.kind, kind);
+     assertSameChildren(node, "synthetic");
+@@ -756,7 +739,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
+     for (const node of all) reached.add(node.kind);
+   }
+   const synthetic = new Set(Object.keys(syntheticNodes()));
+-  assertEquals(new Set([...reached, ...synthetic]).size, 123);
++  assertEquals(new Set([...reached, ...synthetic]).size, 112);
+   for (const kind of reached) assert(synthetic.has(kind), kind);
+ });
+ 
+@@ -769,7 +752,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
+ // [job, durationMs].
+ Deno.test("childrenOf and exprChildren give the same child multiset on a synthetic node of every Expr kind", () => {
+   const synthetic = syntheticNodes();
+-  assertEquals(Object.keys(synthetic).length, 123);
++  assertEquals(Object.keys(synthetic).length, 112);
+   const differentOrder: string[] = [];
+   for (const [kind, node] of Object.entries(synthetic)) {
+     const emitted = childrenOf(node);
+diff --git a/tests/validate_type_paths_test.ts b/tests/validate_type_paths_test.ts
+index 0141a30..b411d15 100644
+--- a/tests/validate_type_paths_test.ts
++++ b/tests/validate_type_paths_test.ts
+@@ -72,9 +72,6 @@ const SLOTS: readonly Slot[] = [
+   },
+   { suffix: ".element", build: (p) => ({ kind: "array", element: p }) },
+   { suffix: ".element", build: (p) => ({ kind: "option", element: p }) },
+-  { suffix: ".element", build: (p) => ({ kind: "set", element: p }) },
+-  { suffix: ".key", build: (p) => ({ kind: "map", key: p, value: INT }) },
+-  { suffix: ".value", build: (p) => ({ kind: "map", key: INT, value: p }) },
+   { suffix: ".element", build: (p) => ({ kind: "ref", element: p }) },
+   {
+     suffix: ".error",
+diff --git a/tests/validate_typing_test.ts b/tests/validate_typing_test.ts
+index eb93e75..28d1d6a 100644
+--- a/tests/validate_typing_test.ts
++++ b/tests/validate_typing_test.ts
+@@ -10,7 +10,6 @@ import {
+   comparisonClass,
+   containsRefinement,
+   containsUnknown,
+-  dataOnly,
+   entrySchemaDerivable,
+   fits,
+   fitsCheckedInput,
+@@ -647,13 +646,6 @@ Deno.test("unfold follows exactly MAX_DEPTH aliases of a chain", () => {
+   assertEquals(unfold(env, named("type:c1535")), named("type:c1537"));
+ });
+ 
+-Deno.test("dataOnly on a map needs data in both the key and the value", () => {
+-  const map = (key: Type, value: Type): Type => ({ kind: "map", key, value });
+-  assertEquals(dataOnly(ENV, map(STRING, STRING), "value"), true);
+-  assertEquals(dataOnly(ENV, map(STRING, UNKNOWN), "value"), false);
+-  assertEquals(dataOnly(ENV, map(UNKNOWN, STRING), "value"), false);
+-});
+-
+ Deno.test("entrySchemaDerivable reads the fields of an error and rejects an unknown name", () => {
+   const env: TypeEnv = {
+     ...ENV,
+@@ -875,9 +867,8 @@ Deno.test("entrySchemaDerivable rejects the schema, issue, and timeout errors an
+   assertEquals(entrySchemaDerivable(env, named("type:m#Opaque")), false);
+ });
+ 
+-Deno.test("entrySchemaDerivable follows the body of a name, ends on a repeated name, and needs both sides of a map", () => {
++Deno.test("entrySchemaDerivable follows the body of a name, ends on a repeated name, and checks the body", () => {
+   const scope: Type = { kind: "closeable-scope" };
+-  const map = (key: Type, value: Type): Type => ({ kind: "map", key, value });
+   const env: TypeEnv = {
+     ...ENV,
+     aliases: new Map<string, Type>([
+@@ -894,9 +885,6 @@ Deno.test("entrySchemaDerivable follows the body of a name, ends on a repeated n
+     ["a name with a body that holds a scope", named("type:m#Bad"), false],
+     ["a name without a body", named("type:m#Missing"), false],
+     ["a name that refers to itself", named("type:m#Loop"), true],
+-    ["a map of string to string", map(STRING, STRING), true],
+-    ["a map with a scope as key", map(scope, STRING), false],
+-    ["a map with a scope as value", map(STRING, scope), false],
+   ];
+   for (const [label, type, expected] of table) {
+     assertEquals(entrySchemaDerivable(env, type), expected, label);
