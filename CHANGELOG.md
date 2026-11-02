@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- A source declaration or binding named `Math`, `Error`, `String`, or
-  `globalThis` now gives `declaration/002`. Before, such a program passed
+- A source declaration or binding named `Math`, `Error`, `String`,
+  `globalThis`, or `TypeError` now gives `declaration/002`. Before, such a program passed
   `check` and then failed the strict target check, because the emitted
   TypeScript uses these names as globals.
 - The emitted fallback of a `match` takes `never`. So the strict target check

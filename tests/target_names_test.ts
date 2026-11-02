@@ -76,6 +76,21 @@ const CASES: readonly (readonly [string, string, string])[] = [
     "type Int = int\nconst f = (): Int => {\n  const globalThis = 2\n  globalThis\n}\n",
     "declaration/002: `globalThis` is reserved because the generated TypeScript needs it",
   ],
+  [
+    "a module declaration named TypeError",
+    "type Int = int\nexport const TypeError: Int = 0\n",
+    "declaration/002: `TypeError` is reserved because the generated TypeScript needs it",
+  ],
+  [
+    "a parameter named TypeError",
+    "type Int = int\nconst f = (TypeError: Int): Int => TypeError\n",
+    "declaration/002: `TypeError` is reserved because the generated TypeScript needs it",
+  ],
+  [
+    "a local named TypeError",
+    "type Int = int\nconst f = (): Int => {\n  const TypeError = 2\n  TypeError\n}\n",
+    "declaration/002: `TypeError` is reserved because the generated TypeScript needs it",
+  ],
 ];
 
 for (const [name, source, expected] of CASES) {
