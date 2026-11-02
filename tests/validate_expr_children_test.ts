@@ -150,7 +150,7 @@ function fixtureUnits(): Unit[] {
       const files = readTree(dir);
       const host = "host.effi" in files
         ? {
-          host: { boundary: { interface: "./host.effi", module: "./host.ts" } },
+          host: { sinks: { interface: "./host.effi", module: "./host.ts" } },
         }
         : {};
       units.push({
@@ -190,6 +190,12 @@ function fixtureModules(): { label: string; ir: ModuleIR }[] {
     for (const [name, result] of lowerProject(checked.value)) {
       if (result.ok) {
         modules.push({ label: `${unit.label}:${name}`, ir: result.value });
+      } else {
+        // A bundle is a valid project. Only error fixtures may fail to lower.
+        assert(
+          !BUNDLES.has(unit.label),
+          `${unit.label}:${name} does not lower`,
+        );
       }
     }
   }
