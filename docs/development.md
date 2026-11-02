@@ -89,6 +89,7 @@ The directories of `fixtures/` are these.
 | `parse/`              | Valid syntax forms (`ok-*`) and recovery inputs (`recovery-*`).                                                                                                                                            |
 | `errors/`             | One file or one project directory for each error case, with markers.                                                                                                                                       |
 | `logs/`               | Small hand-written session logs (`*.jsonl`), one or more for each surface, for the tests of `logs:report`.                                                                                                |
+| `website-examples.json` | The manifest of `tests/website_examples_slow_test.ts`. Each unit names a project directory or a single file of `../effektive/public/effektive-examples/`, its configuration, its companion files, and its expected `check` diagnostics. A new website example needs a unit. |
 
 ## Error fixture convention
 

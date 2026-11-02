@@ -36,6 +36,7 @@ Each oracle covers a limited set of inputs. A pass proves the result for those i
 | Unfired rejection sites | None | A fast test fires each direct validator rejection | The match is textual, so a rejection through another helper is not listed |
 | Log replay | None | A logged session gives equal results on the current build | It skips `--tsc` sessions and watch sessions |
 | Website IR in `tests/ir_site_slow_test.ts` | None | The sibling website IR stays current | A `git archive` export has no sibling, so the test is ignored there |
+| Website examples in `tests/website_examples_slow_test.ts` | `fixtures/website-examples.json` | Each website example gives its listed diagnostics, and it builds with `--tsc` | A snippet in an HTML page is not checked. A `git archive` export has no sibling, so the test is ignored there |
 
 An update task writes what the current code gives. So an update can hide a defect. The reviewer must read each fixture diff, and a change needs a reason in the commit.
 

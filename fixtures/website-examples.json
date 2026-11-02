@@ -1,0 +1,83 @@
+{
+  "units": [
+    { "path": "order-lifecycle", "kind": "project", "diagnostics": [] },
+    { "path": "portable-types", "kind": "project", "diagnostics": [] },
+    { "path": "scheduled-worker", "kind": "project", "diagnostics": [] },
+    { "path": "service-workflow", "kind": "project", "diagnostics": [] },
+    { "path": "stream-processor", "kind": "project", "diagnostics": [] },
+    {
+      "path": "activation-label.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
+      "path": "activation.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
+      "path": "active-names.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
+      "path": "collections.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
+      "path": "core1.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
+      "path": "log.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
+      "path": "main.eff",
+      "kind": "file",
+      "configuration": {
+        "host": {
+          "providers": {
+            "interface": "./host/providers.effi",
+            "module": "./users-live.ts"
+          }
+        }
+      },
+      "companions": ["users.eff", "host/providers.effi", "users-live.ts"],
+      "diagnostics": []
+    },
+    {
+      "path": "pay.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
+      "path": "refined-entry.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
+      "path": "retry-lookup.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
+      "path": "users.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    }
+  ]
+}
