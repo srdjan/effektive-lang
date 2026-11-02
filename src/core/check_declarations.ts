@@ -149,7 +149,6 @@ class ModuleChecker {
   run(): ModuleDeclarations {
     const entries = this.entries();
     const infos: TypeNodeInfo[] = [];
-    this.lowerer.pendingKeyChecks = [];
     for (const entry of entries) {
       if (entry.kind === "type") infos.push(this.checkType(entry));
       else if (entry.kind === "error") infos.push(this.checkError(entry));
@@ -159,8 +158,6 @@ class ModuleChecker {
     this.inferTags(infos);
     const guarded = this.checkCycles(infos);
     this.checkDepths(infos, guarded);
-    for (const check of this.lowerer.pendingKeyChecks) check();
-    this.lowerer.pendingKeyChecks = undefined;
     this.checkDeferredFields();
     this.checkPrimitivePositions();
     for (const entry of entries) {
@@ -279,8 +276,6 @@ class ModuleChecker {
       case "never":
       case "unknown":
       case "Option":
-      case "Map":
-      case "Set":
       case "Ref":
       case "RetrySchedule":
       case "ScheduleInput":

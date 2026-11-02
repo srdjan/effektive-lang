@@ -330,27 +330,6 @@
       }
     ]
   },
-  "errors-declaration-map-key": {
-    "args": [
-      "check",
-      "/proj"
-    ],
-    "code": 1,
-    "events": [
-      {
-        "kind": "stdout",
-        "text": "declaration-map-key.eff:4:19: error declaration/019: A Map key must be data, found `() => Int`\n"
-      },
-      {
-        "kind": "stdout",
-        "text": "declaration-map-key.eff:7:20: error declaration/019: A Set element must be data, found `Ref<Int>`\n"
-      },
-      {
-        "kind": "stderr",
-        "text": "1 module, 2 diagnostics\n"
-      }
-    ]
-  },
   "errors-declaration-opaque-field": {
     "args": [
       "check",

@@ -20,7 +20,6 @@ import type { Predicate } from "../src/core/predicates.ts";
 import {
   containsDeferredType,
   containsUnknownPredicateInput,
-  dataOnly,
   guardedRecord,
   TypeTable,
 } from "../src/core/types.ts";
@@ -1248,13 +1247,6 @@ Deno.test("a literal fits the primitive that holds its value and no other", () =
   assertEquals(t.isAssignable(t.array(t.string), t.string), false);
 });
 
-Deno.test("dataOnly on a map needs data in both the key and the value", () => {
-  const t = fresh();
-  assertEquals(dataOnly(t, t.map(t.string, t.string), "value"), true);
-  assertEquals(dataOnly(t, t.map(t.unknown, t.string), "value"), false);
-  assertEquals(dataOnly(t, t.map(t.string, t.unknown), "value"), false);
-});
-
 Deno.test("an unknown predicate input is found at the depth limit and not past it", () => {
   const t = fresh();
   assertEquals(
@@ -1416,12 +1408,4 @@ Deno.test("an opaque type is no tag alias, even when its declared base is a lite
     errors: [],
   });
   assertEquals(t.exceedsDepth(t.named(SELF), 3, new Map()), true);
-});
-
-Deno.test("a map type does not fit a number literal that equals the ref of its value type", () => {
-  const t = fresh();
-  assertEquals(
-    t.isAssignable(t.map(t.string, t.int), t.literal(t.int)),
-    false,
-  );
 });

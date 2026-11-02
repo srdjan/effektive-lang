@@ -222,3 +222,40 @@ Deno.test("present optional sensitive unknown fields retain undefined", async ()
   );
   assertEquals(JSON.parse(result), [true, true]);
 });
+
+Deno.test("absent optional fields stay absent in decoded and source records", async () => {
+  const output = await compileStrictTarget(
+    {
+      "main.eff": `type Text = string
+type Int = int
+export type Key = { a: Text, b?: Int }
+export const mk = (a: Text): Key => ({ a })
+export const mkb = (a: Text, b: Int): Key => ({ a, b })
+`,
+    },
+    ["main.eff"],
+    `import { Equal, Hash, Schema } from "effect";
+import { Key, mk, mkb } from "./main.ts";
+const decoded = Schema.decodeUnknownSync(Key)({ a: "x" });
+const decodedWithB = Schema.decodeUnknownSync(Key)({ a: "x", b: 5 });
+console.log(JSON.stringify({
+  decodedKeys: Object.keys(decoded),
+  builtKeys: Object.keys(mk("x")),
+  absentEqual: Equal.equals(decoded, mk("x")),
+  absentHash: Hash.hash(decoded) === Hash.hash(mk("x")),
+  presentEqual: Equal.equals(decodedWithB, mkb("x", 5)),
+  presentHash: Hash.hash(decodedWithB) === Hash.hash(mkb("x", 5)),
+  undefinedEqual: Equal.equals(mk("x"), { a: "x", b: undefined }),
+}));`,
+    "effektive-record-presence-",
+  );
+  assertEquals(JSON.parse(output), {
+    decodedKeys: ["a"],
+    builtKeys: ["a"],
+    absentEqual: true,
+    absentHash: true,
+    presentEqual: true,
+    presentHash: true,
+    undefinedEqual: false,
+  });
+});

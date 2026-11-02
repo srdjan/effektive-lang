@@ -82,8 +82,6 @@ export type Type =
   | { readonly kind: "union"; readonly members: readonly Type[] }
   | { readonly kind: "option"; readonly element: Type }
   | { readonly kind: "ref"; readonly element: Type }
-  | { readonly kind: "map"; readonly key: Type; readonly value: Type }
-  | { readonly kind: "set"; readonly element: Type }
   | { readonly kind: "closeable-scope" }
   | { readonly kind: "retry-schedule"; readonly error: Type }
   | { readonly kind: "codec"; readonly decoded: Type; readonly encoded: Type }
@@ -244,17 +242,6 @@ export type Expr =
   | Node<{ kind: "concat-streams"; left: Expr; right: Expr }>
   | Node<{ kind: "race"; left: Expr; right: Expr }>
   | Node<{ kind: "race-all"; jobs: Expr }>
-  | Node<{ kind: "map-of"; entries: Expr }>
-  | Node<{ kind: "get-map"; map: Expr; key: Expr }>
-  | Node<{ kind: "put-map"; map: Expr; key: Expr; value: Expr }>
-  | Node<{ kind: "remove-map"; map: Expr; key: Expr }>
-  | Node<{ kind: "has-map"; map: Expr; key: Expr }>
-  | Node<{ kind: "entries-map"; map: Expr }>
-  | Node<{ kind: "set-of"; items: Expr }>
-  | Node<{ kind: "add-set"; set: Expr; element: Expr }>
-  | Node<{ kind: "remove-set"; set: Expr; element: Expr }>
-  | Node<{ kind: "has-set"; set: Expr; element: Expr }>
-  | Node<{ kind: "items-set"; set: Expr }>
   | Node<{ kind: "make-ref"; value: Expr }>
   | Node<{ kind: "get-ref"; ref: Expr }>
   | Node<{ kind: "set-ref"; ref: Expr; value: Expr }>

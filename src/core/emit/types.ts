@@ -188,20 +188,6 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
       const option = scope.effect("Option");
       return [`${option}.Option<`, typeDoc(scope, type.element), ">"];
     }
-    case "map":
-      return [
-        `${scope.effect("HashMap")}.HashMap<`,
-        typeDoc(scope, type.key),
-        ", ",
-        typeDoc(scope, type.value),
-        ">",
-      ];
-    case "set":
-      return [
-        `${scope.effect("HashSet")}.HashSet<`,
-        typeDoc(scope, type.element),
-        ">",
-      ];
     case "ref":
       return [
         `${scope.effect("SynchronizedRef")}.SynchronizedRef<`,
@@ -393,20 +379,6 @@ export function encodedTypeDoc(
         encodedTypeDoc(scope, type.element, recursive),
         ">",
       ];
-    case "map":
-      return [
-        `${scope.effect("HashMap")}.HashMap<`,
-        encodedTypeDoc(scope, type.key, recursive),
-        ", ",
-        encodedTypeDoc(scope, type.value, recursive),
-        ">",
-      ];
-    case "set":
-      return [
-        `${scope.effect("HashSet")}.HashSet<`,
-        encodedTypeDoc(scope, type.element, recursive),
-        ">",
-      ];
     case "record": {
       if (type.fields.length === 0) return "{}";
       const fields = type.fields.map((f) => [
@@ -494,20 +466,6 @@ export function schemaDoc(
     case "option":
       return callWith(
         `${schema}.Option`,
-        schemaDoc(scope, type.element, recursive),
-      );
-    case "map":
-      return [
-        `${schema}.HashMap(`,
-        join(", ", [
-          schemaDoc(scope, type.key, recursive),
-          schemaDoc(scope, type.value, recursive),
-        ]),
-        ")",
-      ];
-    case "set":
-      return callWith(
-        `${schema}.HashSet`,
         schemaDoc(scope, type.element, recursive),
       );
     case "record": {

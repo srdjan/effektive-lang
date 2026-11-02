@@ -108,15 +108,18 @@ the verbosity of Effect. A source form exposes an Effect 4 feature only when the
 feature carries user intent that the compiler cannot infer. The transpiler uses
 the other features in the emitted TypeScript only.
 
-Items 1 to 8, items 18 to 22, and the logging half of item 16 are done.
+Items 1 to 8, items 18 to 21, and the logging half of item 16 are done.
 [language-rules.md](language-rules.md) holds their rules. The
 [effect surface plan](archive/plans/2026-10-27-effect-surface.md), the
 [effect surface leftovers plan](archive/plans/2026-10-27-effect-surface-leftovers.md),
 and the [second selection plan](archive/plans/2026-10-27-second-effect-selection.md)
 hold their history. Those source forms hide `Duration`, `Clock`, `Schedule`,
 `Cron`, `Exit`, `Cause`, the interruption masks, `Logger`, `LogLevel`, `Random`,
-`Effect.forEach`, `Effect.filter`, `Effect.reduce`, `SynchronizedRef`,
-`Effect.raceAll`, `HashMap`, `HashSet`, `Equal`, and `Hash`.
+`Effect.forEach`, `Effect.filter`, `Effect.reduce`, `SynchronizedRef`, and
+`Effect.raceAll`.
+Item 22, the Map and Set types, was done and then removed on 2026-11-02 by the
+[simplification rebase](plans/2026-11-02-simplification-rebase.md), because no
+application used it.
 
 The table lists the open items. Each item keeps its first number. The open items
 have no implementation commitment, and their forms are candidates, not accepted
@@ -136,7 +139,7 @@ code.
 | 16 Metrics | Metric names | Counters and histograms | `Metric` |
 | 17 Configuration | Keys and secret status | A `config` declaration and `Secret<T>` | `Config`, `ConfigProvider`, `Redacted` |
 | 23 Recursive types | Recursive Option data, mutual alias recursion | Ordinary type declarations | Schema recursion |
-| 24 Sorting | Ordered output of arrays, and of `entriesMap` and `itemsSet`, which return hash order | A sort builtin over an array, with a key or an order | `Array.sort`, `Order` |
+| 24 Sorting | Ordered output of arrays | A sort builtin over an array, with a key or an order | `Array.sort`, `Order` |
 
 The transpiler may use these modules without a source form: `Chunk`,
 `Channel`, `Pull`, `Take`, `Cause` internals, `Scheduler`, `Runtime`,

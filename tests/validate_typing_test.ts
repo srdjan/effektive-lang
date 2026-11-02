@@ -10,7 +10,6 @@ import {
   comparisonClass,
   containsRefinement,
   containsUnknown,
-  dataOnly,
   entrySchemaDerivable,
   fits,
   fitsCheckedInput,
@@ -647,13 +646,6 @@ Deno.test("unfold follows exactly MAX_DEPTH aliases of a chain", () => {
   assertEquals(unfold(env, named("type:c1535")), named("type:c1537"));
 });
 
-Deno.test("dataOnly on a map needs data in both the key and the value", () => {
-  const map = (key: Type, value: Type): Type => ({ kind: "map", key, value });
-  assertEquals(dataOnly(ENV, map(STRING, STRING), "value"), true);
-  assertEquals(dataOnly(ENV, map(STRING, UNKNOWN), "value"), false);
-  assertEquals(dataOnly(ENV, map(UNKNOWN, STRING), "value"), false);
-});
-
 Deno.test("entrySchemaDerivable reads the fields of an error and rejects an unknown name", () => {
   const env: TypeEnv = {
     ...ENV,
@@ -875,9 +867,8 @@ Deno.test("entrySchemaDerivable rejects the schema, issue, and timeout errors an
   assertEquals(entrySchemaDerivable(env, named("type:m#Opaque")), false);
 });
 
-Deno.test("entrySchemaDerivable follows the body of a name, ends on a repeated name, and needs both sides of a map", () => {
+Deno.test("entrySchemaDerivable follows the body of a name, ends on a repeated name, and checks the body", () => {
   const scope: Type = { kind: "closeable-scope" };
-  const map = (key: Type, value: Type): Type => ({ kind: "map", key, value });
   const env: TypeEnv = {
     ...ENV,
     aliases: new Map<string, Type>([
@@ -894,9 +885,6 @@ Deno.test("entrySchemaDerivable follows the body of a name, ends on a repeated n
     ["a name with a body that holds a scope", named("type:m#Bad"), false],
     ["a name without a body", named("type:m#Missing"), false],
     ["a name that refers to itself", named("type:m#Loop"), true],
-    ["a map of string to string", map(STRING, STRING), true],
-    ["a map with a scope as key", map(scope, STRING), false],
-    ["a map with a scope as value", map(STRING, scope), false],
   ];
   for (const [label, type, expected] of table) {
     assertEquals(entrySchemaDerivable(env, type), expected, label);

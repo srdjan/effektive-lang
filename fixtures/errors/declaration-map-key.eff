@@ -1,7 +1,0 @@
-type Int = int
-
-// error: declaration/019
-type Lookup = Map<() => Int, Int>
-
-// error: declaration/019
-type Members = Set<Ref<Int>>

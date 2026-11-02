@@ -5,6 +5,11 @@
 - The IR wire version is 8, and the validator rejects version 7. This
   release removes IR kinds, so it raises the version once. A later removal in
   the same release keeps version 8.
+- The `Map` and `Set` types and their eleven operations are gone: `mapOf`,
+  `getMap`, `putMap`, `removeMap`, `hasMap`, `entriesMap`, `setOf`, `addSet`,
+  `removeSet`, `hasSet`, and `itemsSet`. No application used them. `Map` and
+  `Set` are ordinary names again, and `declaration/019` is gone. The IR loses
+  the type kinds `map` and `set` and eleven expression kinds.
 - `build --validate` and `Revision.validate` are gone, and `frontend.ts` no
   longer exports `validateProject`. The independent IR validator is a test
   oracle: tests import it from `src/core/validate_project.ts`. The command-line

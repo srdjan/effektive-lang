@@ -109,15 +109,6 @@
   },
   {
     "file": "src/core/types.ts",
-    "declaration": "guardedRecord.containsSelf",
-    "offset": 238,
-    "text": "containsSelf(part.key) || containsSelf(part.value)",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "containsSelf only sets tagged for a union root. A map reachable from any member makes visit return false, so guardedRecord returns false either way."
-  },
-  {
-    "file": "src/core/types.ts",
     "declaration": "guardedRecord.visit",
     "offset": 418,
     "text": "part === type && tagged",
@@ -146,7 +137,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.keyOf",
-    "offset": 1214,
+    "offset": 1096,
     "text": "node.presence === \"optional\"",
     "operator": "comparison",
     "class": "equivalent",
@@ -155,7 +146,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.keyOf",
-    "offset": 1256,
+    "offset": 1138,
     "text": "node.presence === \"encoded-optional\"",
     "operator": "comparison",
     "class": "equivalent",
@@ -164,7 +155,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.keyOf",
-    "offset": 1306,
+    "offset": 1188,
     "text": "node.presence === \"decoded-optional\"",
     "operator": "comparison",
     "class": "equivalent",
@@ -173,7 +164,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "guardedRecord",
-    "offset": 1386,
+    "offset": 1283,
     "text": "!field.optional && tagOf(field.type) !== undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -182,7 +173,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.keyOf",
-    "offset": 1400,
+    "offset": 1282,
     "text": "node.constructorDefault === true",
     "operator": "comparison",
     "class": "equivalent",
@@ -191,7 +182,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "guardedRecord",
-    "offset": 2022,
+    "offset": 1919,
     "text": "tagged && hasDistinctTag",
     "operator": "logical",
     "class": "equivalent",
@@ -200,7 +191,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.assignable",
-    "offset": 6464,
+    "offset": 6204,
     "text": "i < sn.elements.length",
     "operator": "comparison",
     "class": "equivalent",
@@ -209,7 +200,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.assignable",
-    "offset": 7379,
+    "offset": 7119,
     "text": "i < tn.parameters.length",
     "operator": "comparison",
     "class": "equivalent",

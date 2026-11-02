@@ -270,10 +270,6 @@ export const DIAGNOSTIC_CODES = {
     description:
       "A refinement uses an unsupported predicate, applies to a type without identity, or enters a host interface contract.",
   },
-  "declaration/019": {
-    description:
-      "The key type of a Map or the element type of a Set is not data. Equal compares a function, an Effect, a Ref, a Stream, and similar types by reference, so they cannot serve as keys.",
-  },
   "module/001": {
     description:
       "A module reference is not valid: the import specifier or a project file entry breaks the module rules, or two files share one module name.",

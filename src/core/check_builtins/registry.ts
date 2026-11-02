@@ -8,7 +8,6 @@ import { COLLECTION_ROWS, type CollectionContext } from "./collections.ts";
 import { EFFECT_ROWS, type EffectContext } from "./effect.ts";
 import { FIBER_ROWS, type FiberContext } from "./fiber.ts";
 import { LAYER_ROWS, type LayerContext } from "./layer.ts";
-import { MAP_SET_ROWS, type MapSetContext } from "./map_set.ts";
 import { REF_ROWS } from "./ref.ts";
 import type { PreludeCallName, Rows } from "./rows.ts";
 import { SCHEDULE_ROWS } from "./schedule.ts";
@@ -30,7 +29,6 @@ type FamilyContext =
   & CollectionContext
   & EffectContext
   & LayerContext
-  & MapSetContext
   & FiberContext
   & ScopeContext
   & StreamContext
@@ -43,7 +41,6 @@ export const FAMILY_ROW_TABLES = {
   effect: EFFECT_ROWS,
   fiber: FIBER_ROWS,
   layer: LAYER_ROWS,
-  mapSet: MAP_SET_ROWS,
   ref: REF_ROWS,
   schedule: SCHEDULE_ROWS,
   schema: SCHEMA_ROWS,
@@ -62,7 +59,6 @@ export const FAMILY_ROWS: Rows<
   ...EFFECT_ROWS,
   ...FIBER_ROWS,
   ...LAYER_ROWS,
-  ...MAP_SET_ROWS,
   ...REF_ROWS,
   ...SCHEDULE_ROWS,
   ...SCHEMA_ROWS,

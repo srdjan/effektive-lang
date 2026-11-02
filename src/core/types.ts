@@ -73,10 +73,7 @@ export function guardedRecord(
         return part.id === id;
       case "array":
       case "option":
-      case "set":
         return containsSelf(part.element);
-      case "map":
-        return containsSelf(part.key) || containsSelf(part.value);
       case "record":
         return part.fields.some((field) => containsSelf(field.type));
       case "union":
@@ -146,8 +143,6 @@ export function guardedRecord(
         return true;
       case "tuple":
       case "option":
-      case "map":
-      case "set":
       case "ref":
       case "closeable-scope":
       case "retry-schedule":
@@ -184,12 +179,6 @@ export type TypeNode =
   | { readonly kind: "union"; readonly members: readonly TypeRef[] }
   | { readonly kind: "option"; readonly element: TypeRef }
   | { readonly kind: "ref"; readonly element: TypeRef }
-  | {
-    readonly kind: "map";
-    readonly key: TypeRef;
-    readonly value: TypeRef;
-  }
-  | { readonly kind: "set"; readonly element: TypeRef }
   | { readonly kind: "closeable-scope" }
   | { readonly kind: "retry-schedule"; readonly error: TypeRef }
   | {
@@ -399,12 +388,9 @@ function structuralChildren(
       return node.fields.map((field) => field.type);
     case "array":
     case "option":
-    case "set":
     case "ref":
     case "stream":
       return [node.element];
-    case "map":
-      return [node.key, node.value];
     case "tuple":
       return node.elements;
     case "union":
@@ -531,10 +517,6 @@ export class TypeTable {
         return `u:${JSON.stringify(node.members)}`;
       case "option":
         return `o:${node.element}`;
-      case "map":
-        return `m:${node.key}:${node.value}`;
-      case "set":
-        return `s:${node.element}`;
       case "ref":
         return `q:${node.element}`;
       case "retry-schedule":
@@ -656,14 +638,6 @@ export class TypeTable {
 
   option(element: TypeRef): TypeRef {
     return this.intern({ kind: "option", element });
-  }
-
-  map(key: TypeRef, value: TypeRef): TypeRef {
-    return this.intern({ kind: "map", key, value });
-  }
-
-  set(element: TypeRef): TypeRef {
-    return this.intern({ kind: "set", element });
   }
 
   ref(element: TypeRef): TypeRef {
@@ -1299,14 +1273,6 @@ export class TypeTable {
       case "option":
         return sn.kind === "option" &&
           nested(sn.element, tn.element);
-      case "set":
-        return sn.kind === "set" &&
-          nested(sn.element, tn.element);
-      case "map":
-        return sn.kind === "map" &&
-          nested(sn.key, tn.key) &&
-          nested(tn.key, sn.key) &&
-          nested(sn.value, tn.value);
       case "ref":
         return sn.kind === "ref" &&
           nested(sn.element, tn.element) &&
@@ -1472,10 +1438,7 @@ export function dataOnly(
       return type.fields.every((field) => nested(field.type));
     case "array":
     case "option":
-    case "set":
       return nested(type.element);
-    case "map":
-      return nested(type.key) && nested(type.value);
     case "tuple":
       return type.elements.every(nested);
     case "union":
@@ -1595,10 +1558,7 @@ export function containsDeferredType(
       return any(type.fields.map((f) => f.type));
     case "array":
     case "option":
-    case "set":
       return any([type.element]);
-    case "map":
-      return any([type.key, type.value]);
     case "tuple":
       return any(type.elements);
     case "union":
@@ -1642,10 +1602,7 @@ export function containsOpaqueType(
       return any(type.fields.map((f) => f.type));
     case "array":
     case "option":
-    case "set":
       return any([type.element]);
-    case "map":
-      return any([type.key, type.value]);
     case "tuple":
       return any(type.elements);
     case "union":

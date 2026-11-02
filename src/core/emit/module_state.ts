@@ -35,8 +35,6 @@ export type EffectModule =
   | "Context"
   | "Layer"
   | "Option"
-  | "HashMap"
-  | "HashSet"
   | "Schema"
   | "SchemaIssue"
   | "SchemaGetter"
@@ -648,11 +646,7 @@ export class ModuleState
         return type.fields.some((f) => this.containsFunction(f.type));
       case "array":
       case "option":
-      case "set":
         return this.containsFunction(type.element);
-      case "map":
-        return this.containsFunction(type.key) ||
-          this.containsFunction(type.value);
       case "tuple":
         return type.elements.some((t) => this.containsFunction(t));
       case "union":

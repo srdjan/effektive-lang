@@ -335,8 +335,8 @@ Deno.test("no accepted binding name captures a name that the generated TypeScrip
     await check(dir, built.paths);
   });
   // Literal counts: a reservation of every name cannot make the test vacuous.
-  assertEquals(accepted.length, 2184);
-  assertEquals(reservedVariants, 416);
-  assertEquals(reserved.size, 20);
+  assertEquals(accepted.length, 2206);
+  assertEquals(reservedVariants, 394);
+  assertEquals(reserved.size, 18);
   assertEquals(parserReserved.size, 2);
 });

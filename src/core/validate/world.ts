@@ -350,16 +350,10 @@ export function checkTypeIds(
       case "record":
       case "array":
       case "option":
-      case "set":
       case "ref":
       case "codec":
       case "tuple":
       case "union":
-        return;
-      case "map":
-        if (!dataOnly(world.env, t.key, "value")) {
-          fail(`${at}.key`, "a Map key must be data");
-        }
         return;
       case "named": {
         const found = t.id.startsWith("type:")
@@ -803,10 +797,7 @@ function guardedRecord(
         return part.id === id;
       case "array":
       case "option":
-      case "set":
         return containsSelf(part.element);
-      case "map":
-        return containsSelf(part.key) || containsSelf(part.value);
       case "record":
         return part.fields.some((field) => containsSelf(field.type));
       case "union":
@@ -875,8 +866,6 @@ function guardedRecord(
       case "literal":
         return true;
       case "option":
-      case "map":
-      case "set":
       case "ref":
       case "tuple":
       case "closeable-scope":
@@ -927,13 +916,9 @@ function guardedDataGroups(
       if (depth > MAX_DEPTH) return;
       if (type.kind === "named") return reach(type.id, guarded);
       if (
-        type.kind === "option" || type.kind === "array" || type.kind === "set"
+        type.kind === "option" || type.kind === "array"
       ) {
         return visit(type.element, true, depth + 1);
-      }
-      if (type.kind === "map") {
-        visit(type.key, true, depth + 1);
-        return visit(type.value, true, depth + 1);
       }
       if (type.kind === "union") {
         const outside = type.members.some((m) => !mentions(m, depth + 1));

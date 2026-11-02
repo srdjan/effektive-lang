@@ -249,8 +249,6 @@ const COMPOSITE_KINDS = [
   "tuple",
   "record",
   "option",
-  "set",
-  "map",
   "union",
   "function",
   "effect",
@@ -273,15 +271,12 @@ function anyType(g: Generator, depth: number): Type {
   switch (kind) {
     case "array":
     case "option":
-    case "set":
     case "ref":
       return { kind, element: inner() };
     case "tuple":
       return tuple(g, inner);
     case "record":
       return record(g, inner);
-    case "map":
-      return { kind, key: inner(), value: inner() };
     case "union":
       return unionOf(g, [inner(), inner()]);
     case "function":
@@ -340,7 +335,6 @@ function widen(g: Generator, type: Type, top = true): Type {
       return g.bodies.get(type.id) ?? type;
     case "array":
     case "option":
-    case "set":
       return { ...type, element: next(type.element) };
     case "tuple":
       return { ...type, elements: type.elements.map(next) };
@@ -354,8 +348,6 @@ function widen(g: Generator, type: Type, top = true): Type {
       };
     case "union":
       return { ...type, members: [...type.members, leaf(g)] };
-    case "map":
-      return { ...type, value: next(type.value) };
     case "fiber":
       return {
         ...type,
@@ -396,7 +388,6 @@ function perturb(g: Generator, type: Type): Type {
       return pick(g, g.names);
     case "array":
     case "option":
-    case "set":
       return { ...type, element: perturb(g, type.element) };
     case "tuple":
       return type.elements.length === 0
@@ -416,8 +407,6 @@ function perturb(g: Generator, type: Type): Type {
     }
     case "union":
       return unionOf(g, type.members.slice(1));
-    case "map":
-      return { ...type, key: perturb(g, type.key) };
     case "fiber":
       return { ...type, failures: toggle(g, type.failures, ERRORS) };
     case "effect":
@@ -834,7 +823,7 @@ Deno.test("assignment of plain types is transitive on both implementations", () 
     validator += check("validator", validatorTable);
   }
   assertEquals(failures.length, 0, report(failures));
-  assertEquals({ checker, validator }, { checker: 21028, validator: 21028 });
+  assertEquals({ checker, validator }, { checker: 14651, validator: 14651 });
 });
 
 Deno.test("the checker and the validator agree on generated pairs", () => {
@@ -889,32 +878,30 @@ Deno.test("the checker and the validator agree on generated pairs", () => {
     }
   }
   assertEquals(disagreements.length, 0, report(disagreements));
-  assertEquals(answers, { fit: 32964, rejected: 47036 });
-  assertEquals(fibers, { fit: 1748, rejected: 7308, failuresDiffer: 7150 });
-  assertEquals(authorityDecided, 940);
+  assertEquals(answers, { fit: 33089, rejected: 46911 });
+  assertEquals(fibers, { fit: 1800, rejected: 7524, failuresDiffer: 7336 });
+  assertEquals(authorityDecided, 879);
   assertEquals(Object.fromEntries([...kinds].sort()), {
-    "closeable-scope": 175,
-    "retry-schedule": 1141,
-    array: 1933,
-    codec: 1143,
-    effect: 1157,
-    fiber: 5074,
-    function: 3964,
-    literal: 930,
-    map: 1111,
-    named: 5403,
-    option: 1963,
-    primitive: 1260,
-    provider: 1144,
-    record: 1105,
-    ref: 1153,
-    schedule: 2481,
-    schema: 1104,
-    set: 1144,
-    sink: 2433,
-    stream: 1122,
-    tuple: 1083,
-    union: 1977,
+    "closeable-scope": 173,
+    "retry-schedule": 1288,
+    array: 2085,
+    codec: 1173,
+    effect: 1302,
+    fiber: 5235,
+    function: 4199,
+    literal: 949,
+    named: 5214,
+    option: 2035,
+    primitive: 1247,
+    provider: 1295,
+    record: 1277,
+    ref: 1323,
+    schedule: 2637,
+    schema: 1272,
+    sink: 2647,
+    stream: 1261,
+    tuple: 1297,
+    union: 2091,
   });
 });
 
