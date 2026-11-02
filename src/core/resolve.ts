@@ -214,7 +214,8 @@ export const EFFECT_ERROR_IDS: ReadonlyMap<string, ErrorId> = new Map([
 /**
  * Names that the generated TypeScript needs, so no declaration or binding may
  * take them. The emitter prints the globals `undefined`, `Number`, `RangeError`,
- * `ReadonlyArray`, `Math`, `Error`, `String`, `globalThis`, and `TypeError`.
+ * `ReadonlyArray`, `Math`, `Error`, `String`, `globalThis`, `TypeError`, and
+ * `BigInt`.
  * TypeScript rejects `any`, `bigint`, `object`, and `symbol` as the name of a
  * type or a class.
  */
@@ -232,6 +233,7 @@ const TARGET_NAMES: ReadonlySet<string> = new Set([
   "String",
   "globalThis",
   "TypeError",
+  "BigInt",
   "any",
   "bigint",
   "object",

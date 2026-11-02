@@ -91,6 +91,21 @@ const CASES: readonly (readonly [string, string, string])[] = [
     "type Int = int\nconst f = (): Int => {\n  const TypeError = 2\n  TypeError\n}\n",
     "declaration/002: `TypeError` is reserved because the generated TypeScript needs it",
   ],
+  [
+    "a module declaration named BigInt",
+    "type Int = int\nexport const BigInt: Int = 0\n",
+    "declaration/002: `BigInt` is reserved because the generated TypeScript needs it",
+  ],
+  [
+    "a parameter named BigInt",
+    "type Int = int\nconst f = (BigInt: Int): Int => BigInt\n",
+    "declaration/002: `BigInt` is reserved because the generated TypeScript needs it",
+  ],
+  [
+    "a local named BigInt",
+    "type Int = int\nconst f = (): Int => {\n  const BigInt = 2\n  BigInt\n}\n",
+    "declaration/002: `BigInt` is reserved because the generated TypeScript needs it",
+  ],
 ];
 
 for (const [name, source, expected] of CASES) {
