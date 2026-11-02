@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.12.3 - 2026-11-02
+
 - The command `effektive check [root] --fix` adds the missing `fails` and
   `uses` entries to the exported functions. It works in rounds over all `.eff`
   files, writes each changed file once, and then prints the remaining
