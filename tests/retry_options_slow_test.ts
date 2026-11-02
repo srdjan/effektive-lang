@@ -1,9 +1,8 @@
-// Runtime behavior of the general `retry` options, `scheduleExponential`, and
-// `scheduleJittered`. Each test compiles one module with
-// independent validation, type-checks the emitted TypeScript under the strict
+// Runtime behavior of the general `retry` options. Each test compiles one
+// module with independent validation, type-checks the emitted TypeScript under the strict
 // target options, and runs it. A test clock drives the delays, so the gaps are exact.
 
-import { assert, assertEquals } from "@std/assert";
+import { assertEquals } from "@std/assert";
 import { compileAndRun } from "./target_helpers.ts";
 
 const SOURCE = `type Int = int
@@ -12,6 +11,8 @@ export error Stop = {}
 export error Other = {}
 export service Jobs { next(): Int fails Stop }
 export service Gate { allow(e: Stop): Bool fails Other }
+const limited: RetrySchedule<Stop> = retrySchedule((e: Stop, attempt: Int): Option<Duration> =>
+  if (attempt < 3) { Some(attempt * 10ms) } else { None })
 export const timesWhile = (): Int fails Stop uses Jobs.next =>
   retry(() => Jobs.next(), { times: 2, while: (e) => true })
 export const whileFalse = (): Int fails Stop uses Jobs.next =>
@@ -19,21 +20,9 @@ export const whileFalse = (): Int fails Stop uses Jobs.next =>
 export const untilGate = (): Int fails Stop | Other uses Jobs.next | Gate.allow =>
   retry(() => Jobs.next(), { until: (e) => Gate.allow(e) })
 export const recurring = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleRecurs(3) })
+  retry(() => Jobs.next(), { schedule: limited })
 export const timesOnly = (): Int fails Stop uses Jobs.next =>
   retry(() => Jobs.next(), { times: 2 })
-export const exponential = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleMax(scheduleExponential(30ms), scheduleRecurs(3)) })
-export const factored = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleMax(scheduleExponential(10ms, 3), scheduleRecurs(3)) })
-export const minimum = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleMin(scheduleExponential(10ms), scheduleRecurs(2)) })
-export const maximum = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleMax(scheduleExponential(100ms), scheduleRecurs(2)) })
-export const jittered = (): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleJittered(scheduleMax(scheduleExponential(20ms), scheduleRecurs(2))) })
-export const backoff = (ms: Int): Int fails Stop uses Jobs.next =>
-  retry(() => Jobs.next(), { schedule: scheduleExponential(ms * 1ms) })
 `;
 
 // The host runs a program with a job that fails \`failures\` times, then succeeds.
@@ -119,21 +108,21 @@ console.log(JSON.stringify({
   });
 });
 
-Deno.test("a general Schedule in schedule limits the retries", async () => {
+Deno.test("a RetrySchedule in schedule limits the retries", async () => {
   const result = await compileAndRun(
     SOURCE,
     `${HARNESS}
 const failing = await run(M.recurring(), 100);
 const recovers = await run(M.recurring(), 2);
 console.log(JSON.stringify({
-  failing: [failing.attempts, outcome(failing.exit)],
-  recovers: [recovers.attempts, outcome(recovers.exit)],
+  failing: [failing.attempts, failing.gaps, outcome(failing.exit)],
+  recovers: [recovers.attempts, recovers.gaps, outcome(recovers.exit)],
 }));
 `,
   );
   assertEquals(result, {
-    failing: [4, { failed: true }],
-    recovers: [3, { ok: 3 }],
+    failing: [3, [10, 20], { failed: true }],
+    recovers: [3, [10, 20], { ok: 3 }],
   });
 });
 
@@ -151,78 +140,4 @@ console.log(JSON.stringify({ attempts, outcome: outcome(exit) }));
 `,
   );
   assertEquals(result, { attempts: 1, outcome: { defect: true } });
-});
-
-Deno.test("scheduleExponential delays grow by the factor", async () => {
-  const result = await compileAndRun(
-    SOURCE,
-    `${HARNESS}
-const doubling = await run(M.exponential(), 100);
-const tripling = await run(M.factored(), 100);
-console.log(JSON.stringify({ doubling: [doubling.attempts, doubling.gaps], tripling: [tripling.attempts, tripling.gaps] }));
-`,
-  ) as {
-    doubling: [number, number[]];
-    tripling: [number, number[]];
-  };
-  assertEquals(result.doubling[0], 4);
-  assertEquals(result.tripling[0], 4);
-  assertEquals(result.doubling[1], [30, 60, 120]);
-  assertEquals(result.tripling[1], [10, 30, 90]);
-});
-
-Deno.test("scheduleMax limits an exponential schedule by count and scheduleMin does not", async () => {
-  const result = await compileAndRun(
-    SOURCE,
-    `${HARNESS}
-const max = await run(M.maximum(), 100);
-const min = await run(M.minimum(), 4);
-console.log(JSON.stringify({
-  max: [max.attempts, max.total, outcome(max.exit)],
-  min: [min.attempts, min.gaps, outcome(min.exit)],
-}));
-`,
-  ) as {
-    max: [number, number, unknown];
-    min: [number, number[], unknown];
-  };
-  // The max stops after two retries and keeps the 100 ms and 200 ms backoff.
-  assertEquals(result.max[0], 3);
-  assertEquals(result.max[2], { failed: true });
-  assertEquals(result.max[1], 300);
-  // The min recurs while any schedule recurs, so the exponential schedule keeps
-  // it going after the count ends. While the count lasts, the zero delay of
-  // scheduleRecurs wins, so the first two gaps have no backoff.
-  assertEquals(result.min[0], 5);
-  assertEquals(result.min[2], { ok: 5 });
-  assertEquals(result.min[1], [0, 0, 40, 80]);
-});
-
-Deno.test("scheduleJittered compiles, runs, and keeps the retry limit", async () => {
-  const result = await compileAndRun(
-    SOURCE,
-    `${HARNESS}
-const jittered = await run(M.jittered(), 100);
-console.log(JSON.stringify({ attempts: jittered.attempts, gaps: jittered.gaps }));
-`,
-  ) as { attempts: number; gaps: number[] };
-  assertEquals(result.attempts, 3);
-  // Jitter scales each delay (20 ms and 40 ms) by a factor in [0.8, 1.2).
-  assert(result.gaps[0] >= 16 && result.gaps[0] < 24, `${result.gaps}`);
-  assert(result.gaps[1] >= 32 && result.gaps[1] < 48, `${result.gaps}`);
-});
-
-Deno.test("a negative exponential base is a defect", async () => {
-  const result = await compileAndRun(
-    SOURCE,
-    `${HARNESS}
-const negative = await run(M.backoff(-1), 100);
-const exit = negative.exit;
-console.log(JSON.stringify({
-  attempts: negative.attempts,
-  defect: Exit.isFailure(exit) && Cause.hasDies(exit.cause) && Cause.pretty(exit.cause).includes("negative duration"),
-}));
-`,
-  );
-  assertEquals(result, { attempts: 1, defect: true });
 });

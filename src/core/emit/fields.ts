@@ -65,7 +65,6 @@ export function needsFieldAdapter(
     case "fiber":
     case "effect":
     case "stream":
-    case "schedule":
     case "sink":
     case "function":
     case "provider":

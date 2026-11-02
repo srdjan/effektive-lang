@@ -44,8 +44,6 @@ Deno.test("Instant is closed: no unnamed value fits it, and it widens to int", (
     "type-mismatch/003 the function body has type Duration, but Instant is expected",
   ]);
   assertEquals(body("i", "Instant"), []);
-  // `scheduleRecurs` takes an `int`, which an Instant fits.
-  assertEquals(body("scheduleRecurs(i)", "Schedule<Int>"), []);
 });
 
 Deno.test("a user declaration named Instant is declaration/002", () => {
@@ -165,26 +163,6 @@ Deno.test("now is shadowable, so a local may reuse the name", () => {
     ),
     [],
   );
-});
-
-Deno.test("ScheduleInput start and now are Instants", () => {
-  const source = (value: string) =>
-    `${TYPES}export const s: Schedule<Int> = scheduleFromStep(
-  (): Int => 0,
-  (state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Int> =>
-    ({ kind: "Continue", state: state + 1, output: state, delay: ${value} })
-)\n`;
-  assertEquals(diagnosticsOf(source("meta.now - meta.start")), []);
-  assertEquals(diagnosticsOf(source("meta.now - meta.now")), []);
-  assertEquals(diagnosticsOf(source("meta.now")), [
-    "type-mismatch/003 the field `delay` has type Instant, but Duration is expected",
-  ]);
-  const reader = `${TYPES}export const s: Schedule<Instant> = scheduleFromStep(
-  (): Int => 0,
-  (state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Instant> =>
-    ({ kind: "Continue", state: state + 1, output: meta.now, delay: 1s })
-)\n`;
-  assertEquals(diagnosticsOf(reader), []);
 });
 
 // ------------------------------------------------------------------- emission

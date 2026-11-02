@@ -1,6 +1,6 @@
 // Error paths of the built-in type names in the declaration checker
 // (`TypeLowerer.named` in src/core/type_lower.ts): a wrong number of type arguments
-// for Ref, RetrySchedule, the three Schedule helper types, Codec, and Fiber, a
+// for Ref, RetrySchedule, Codec, and Fiber, a
 // RetrySchedule over a type that is not a declared error, and a Fiber failure
 // type that is not a declared error or never. Each case pins the code, the text
 // of the node that carries the span, and the message.
@@ -39,26 +39,6 @@ Deno.test("a wrong number of type arguments names the type and the counts", () =
     [
       "RetrySchedule<E, F>",
       "`RetrySchedule` takes 1 type argument, but 2 are given",
-    ],
-    [
-      "ScheduleInput<>",
-      "`ScheduleInput` takes 1 type argument, but 0 are given",
-    ],
-    [
-      "ScheduleInput<Int, Int>",
-      "`ScheduleInput` takes 1 type argument, but 2 are given",
-    ],
-    [
-      "ScheduleMetadata<Int>",
-      "`ScheduleMetadata` takes 2 type arguments, but 1 is given",
-    ],
-    [
-      "ScheduleMetadata<Int, Int, Int>",
-      "`ScheduleMetadata` takes 2 type arguments, but 3 are given",
-    ],
-    [
-      "ScheduleDecision<Int>",
-      "`ScheduleDecision` takes 2 type arguments, but 1 is given",
     ],
     ["Codec<Int>", "`Codec` takes 2 type arguments, but 1 is given"],
     [

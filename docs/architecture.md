@@ -84,7 +84,7 @@ files through `SourceHost`. Seven tests enforce the rules.
 | `src/host/`, `src/cli/`, `src/lsp/`, and `playground/src/` import the core only through `frontend.ts`, `typescript.ts`, or `mod.ts`. | `tests/core_boundary_test.ts`, "host, CLI, LSP and playground adapters use public core entry points" |
 | A test imports a name of an entry point only from `frontend.ts`, `typescript.ts`, `mod.ts`, `ir.ts`, `validate/index.ts`, or `validate_project.ts`. | `tests/core_boundary_test.ts`, "no test imports an entry-point name from a private core module" |
 | No module that the CLI, the language server, or the playground loads reaches `validate/` or `validate_project.ts`. | `tests/core_boundary_slow_test.ts`, one test for each product entry point, read from `deno info --json` |
-| The validator imports only `ir.ts`, `source.ts`, `diagnostics.ts`, `cron.ts`, and its own files, plus a type-only import of `predicates.ts`. | `tests/validate_test.ts`, "src/core/validate imports only ir.ts, source.ts, diagnostics.ts, cron.ts, and its own files" |
+| The validator imports only `ir.ts`, `source.ts`, `diagnostics.ts`, and its own files, plus a type-only import of `predicates.ts`. | `tests/validate_test.ts`, "src/core/validate imports only ir.ts, source.ts, diagnostics.ts, and its own files" |
 | The emitter families never import `emit/expr.ts`, and no value import of the emitter reaches a checker module. | `tests/emit_families_test.ts`, "src/core/emit/families imports only ir.ts, ids.ts, and emit files other than expr.ts"; `tests/emit_families_test.ts`, "the value imports of src/core/emit reach no checker-phase module" |
 
 ## Invariants
@@ -92,11 +92,10 @@ files through `SourceHost`. Seven tests enforce the rules.
 1. The layers depend only downward. The core has no Deno call and no import from
    `src/cli`, `src/host`, or `src/lsp`.
 2. The independent validator shares only these modules with the checker: `ir.ts`,
-   `source.ts`, `diagnostics.ts`, and `cron.ts`. The module `ir.ts` holds the IR
+   `source.ts`, and `diagnostics.ts`. The module `ir.ts` holds the IR
    types and eight shared values: `SCOPE_CAPABILITY`, `SCHEMA_ERROR_ID`,
    `SCHEMA_ISSUE_ID`, `TIMEOUT_ERROR_ID`, `DURATION_ID`, `INSTANT_ID`,
-   `CLOSED_UNIT_IDS`, and `LOG_LEVELS`. The module
-   `cron.ts` holds the cron grammar. The validator also imports the types of
+   `CLOSED_UNIT_IDS`, and `LOG_LEVELS`. The validator also imports the types of
    `predicates.ts`. The checker and the validator duplicate all other rules on
    purpose, because the validator is a differential oracle. The emitter `ROWS`
    table in `emit/shape.ts` and the validator `exprChildren` in

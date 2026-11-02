@@ -246,20 +246,17 @@ export function retrySchedule(
   );
 }
 
-const OPTION_KEYS: ReadonlySet<string> = new Set([
-  "times",
-  "schedule",
-  "while",
-  "until",
-]);
+/** The option keys of each call. Only `retry` takes a `schedule`. */
+const OPTION_KEYS: Readonly<Record<"retry" | "repeat", readonly string[]>> = {
+  retry: ["times", "schedule", "while", "until"],
+  repeat: ["times", "while", "until"],
+};
 
 /** What `optionExtras` needs to know about a retry or a repeat call. */
 interface OptionsSpec {
   readonly name: "retry" | "repeat";
   /** The values that a schedule and a predicate must accept, with display labels. */
   readonly inputs: readonly { readonly label: string; readonly type: Type }[];
-  /** True when a RetrySchedule is allowed in `schedule`. */
-  readonly retrySchedule: boolean;
 }
 
 /**
@@ -299,7 +296,7 @@ function optionExtras(
   const seen = new Set<string>();
   expr.fields.forEach((field, i) => {
     const at = `${path}.options.fields[${i}]`;
-    if (!OPTION_KEYS.has(field.name)) {
+    if (!OPTION_KEYS[call].includes(field.name)) {
       bad(at, `${call} has no option ${field.name}`);
       return;
     }
@@ -322,26 +319,10 @@ function optionExtras(
       }
     } else if (field.name === "schedule") {
       const policy = type === undefined ? undefined : unfold(c.env, type);
-      if (policy?.kind === "retry-schedule" && spec.retrySchedule) {
+      if (policy?.kind === "retry-schedule") {
         accepts(policy.error, at, `${call} schedule`);
-      } else if (policy?.kind === "retry-schedule") {
-        bad(
-          at,
-          `${call} needs a schedule in schedule; a retry schedule takes failures as input`,
-        );
-      } else if (policy?.kind === "schedule") {
-        const open = unfold(c.env, policy.input);
-        if (open.kind !== "primitive" || open.name !== "unknown") {
-          accepts(policy.input, at, `${call} schedule`);
-        }
-        extras.push({ ...policy.effects, execution: "effect" });
       } else {
-        bad(
-          at,
-          spec.retrySchedule
-            ? `${call} needs a retry schedule or a schedule in schedule`
-            : `${call} needs a schedule in schedule`,
-        );
+        bad(at, `${call} needs a retry schedule in schedule`);
       }
     } else {
       const cb = type === undefined ? undefined : asFunction(c.env, type);
@@ -373,7 +354,6 @@ export function retryWithSchedule(
       label: id,
       type: { kind: "named", id },
     })),
-    retrySchedule: true,
   });
   if (fn === undefined) return c.poison();
   return derivedResult(
@@ -397,7 +377,6 @@ export function repeat(
     : optionExtras(c, options, e.options, path, {
       name: "repeat",
       inputs: [{ label: show(fn.result), type: fn.result }],
-      retrySchedule: false,
     });
   if (fn === undefined) return c.poison();
   return derivedResult(

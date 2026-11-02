@@ -10,7 +10,6 @@ import { FIBER_ROWS, type FiberContext } from "./fiber.ts";
 import { LAYER_ROWS, type LayerContext } from "./layer.ts";
 import { REF_ROWS } from "./ref.ts";
 import type { PreludeCallName, Rows } from "./rows.ts";
-import { SCHEDULE_ROWS } from "./schedule.ts";
 import { SCHEMA_ROWS, type SchemaContext } from "./schema.ts";
 import { SCOPE_ROWS, type ScopeContext } from "./scope.ts";
 import { STREAM_ROWS, type StreamContext } from "./stream.ts";
@@ -42,7 +41,6 @@ export const FAMILY_ROW_TABLES = {
   fiber: FIBER_ROWS,
   layer: LAYER_ROWS,
   ref: REF_ROWS,
-  schedule: SCHEDULE_ROWS,
   schema: SCHEMA_ROWS,
   scope: SCOPE_ROWS,
   stream: STREAM_ROWS,
@@ -60,7 +58,6 @@ export const FAMILY_ROWS: Rows<
   ...FIBER_ROWS,
   ...LAYER_ROWS,
   ...REF_ROWS,
-  ...SCHEDULE_ROWS,
   ...SCHEMA_ROWS,
   ...SCOPE_ROWS,
   ...STREAM_ROWS,

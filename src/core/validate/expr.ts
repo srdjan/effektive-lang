@@ -121,15 +121,6 @@ import {
 import { fiberOperation, withFiber } from "./families/fiber.ts";
 import { layer, mergeLayers, provide } from "./families/layer.ts";
 import {
-  scheduleCompose,
-  scheduleCron,
-  scheduleExponential,
-  scheduleFromStep,
-  scheduleJittered,
-  scheduleMap,
-  simpleSchedule,
-} from "./families/schedule.ts";
-import {
   borrowedReferences,
   ensure,
   explicitScope,
@@ -140,7 +131,6 @@ import {
 import {
   accumulateStream,
   aggregateStream,
-  aggregateWithinStream,
   bufferStream,
   catchStream,
   concatStreams,
@@ -830,25 +820,6 @@ export class BodyValidator implements ValidatorCore {
         return transduceStream(this, e, path);
       case "aggregate-stream":
         return aggregateStream(this, e, path);
-      case "aggregate-within-stream":
-        return aggregateWithinStream(this, e, path);
-      case "schedule-from-step":
-        return scheduleFromStep(this, e, path);
-      case "schedule-recurs":
-      case "schedule-spaced":
-        return simpleSchedule(this, e, path);
-      case "schedule-cron":
-        return scheduleCron(this, e, path);
-      case "schedule-exponential":
-        return scheduleExponential(this, e, path);
-      case "schedule-jittered":
-        return scheduleJittered(this, e, path);
-      case "schedule-map":
-        return scheduleMap(this, e, path);
-      case "schedule-max":
-      case "schedule-min":
-      case "schedule-concat":
-        return scheduleCompose(this, e, path);
       case "run-stream":
         return runStream(this, e, path);
       case "buffer-stream":

@@ -56,8 +56,6 @@ Deno.test("a duration over the safe integer range is reported", () => {
 
 Deno.test("a duration literal is a Duration and emits milliseconds", () => {
   const source = `export const d: Duration = 5s
-export const s: Schedule<Int> = scheduleSpaced(5s)
-type Int = int
 `;
   assertEquals(checkModule(source, "m.eff").diagnostics, []);
   const module = emitFiles({ "effektive.json": "{}", "m.eff": source }, [

@@ -174,7 +174,6 @@ type SpecialKind =
   | "debounce-stream"
   | "throttle-stream"
   | "take-sink"
-  | "schedule-cron"
   | "buffer-stream"
   | "layer"
   | "none"
@@ -395,51 +394,6 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
     kind: "aggregate-stream",
     stream: arg(0),
     sink: arg(1),
-  }),
-  "aggregate-within-stream": (arg) => ({
-    kind: "aggregate-within-stream",
-    stream: arg(0),
-    sink: arg(1),
-    schedule: arg(2),
-  }),
-  "schedule-from-step": (arg) => ({
-    kind: "schedule-from-step",
-    initial: arg(0),
-    decide: arg(1),
-  }),
-  "schedule-recurs": (arg) => ({ kind: "schedule-recurs", times: arg(0) }),
-  "schedule-spaced": (arg) => ({
-    kind: "schedule-spaced",
-    delayMillis: arg(0),
-  }),
-  "schedule-exponential": (arg, fact) => ({
-    kind: "schedule-exponential",
-    baseMs: arg(0),
-    factor: fact.factor ? arg(1) : null,
-  }),
-  "schedule-jittered": (arg) => ({
-    kind: "schedule-jittered",
-    schedule: arg(0),
-  }),
-  "schedule-map": (arg) => ({
-    kind: "schedule-map",
-    schedule: arg(0),
-    transform: arg(1),
-  }),
-  "schedule-max": (arg) => ({
-    kind: "schedule-max",
-    left: arg(0),
-    right: arg(1),
-  }),
-  "schedule-min": (arg) => ({
-    kind: "schedule-min",
-    left: arg(0),
-    right: arg(1),
-  }),
-  "schedule-concat": (arg) => ({
-    kind: "schedule-concat",
-    left: arg(0),
-    right: arg(1),
   }),
   "run-stream": (arg) => ({ kind: "run-stream", stream: arg(0), sink: arg(1) }),
   "merge-streams": (arg) => ({
@@ -911,17 +865,6 @@ class BodyLowerer {
           units: this.required(fact.units, "throttle units", node),
           durationMs: this.required(fact.durationMs, "throttle duration", node),
           strategy: this.required(fact.strategy, "throttle strategy", node),
-          ...annotation,
-        };
-      case "schedule-cron":
-        return {
-          kind: "schedule-cron",
-          expression: this.required(
-            fact.expression,
-            "the cron expression",
-            node,
-          ),
-          zone: this.required(fact.zone, "the cron time zone", node),
           ...annotation,
         };
       case "take-sink":

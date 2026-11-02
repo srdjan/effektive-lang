@@ -151,11 +151,9 @@ Deno.test("stream transformations keep a sink chosen between named sinks unhinte
   transduceStream(s, if (flag) { a } else { b })
 export const aggregated = (s: Stream<Int>, flag: Flag, a: Chunk, b: Chunk): Stream<Text, Stop, Count.tick> =>
   aggregateStream(s, match (flag) { true => a, false => b })
-export const within = (s: Stream<Int>, flag: Flag, a: Chunk, b: Chunk): Stream<Text, Stop, Count.tick> =>
-  aggregateWithinStream(s, if (flag) { a } else { b }, scheduleSpaced(10ms))
 `,
   );
-  for (const name of ["transduced", "aggregated", "within"]) {
+  for (const name of ["transduced", "aggregated"]) {
     assertEquals(
       channels(project, name).result,
       "Stream<Text, Stop, Count.tick>",

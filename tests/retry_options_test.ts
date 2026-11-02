@@ -1,6 +1,5 @@
-// General `retry` options and the Schedule builtins `scheduleExponential` and
-// `scheduleJittered`: checking, lowering, and forged IR through
-// validateModule. Runtime behavior is in retry_options_slow_test.ts.
+// General `retry` options with a RetrySchedule: checking, lowering, and forged
+// IR through validateModule. Runtime behavior is in retry_options_slow_test.ts.
 
 import { assert, assertEquals } from "@std/assert";
 import type { Expr, ModuleIR } from "../src/core/ir.ts";
@@ -23,6 +22,9 @@ export service Gate { open(e: Stop): Bool fails Other }
 const diagnosticsOf = (source: string): string[] =>
   sharedDiagnosticsOf(HEAD + source);
 
+const POLICY =
+  "(e: Stop, attempt: Int): Option<Duration> => if (attempt < 3) { Some(100ms) } else { None }";
+
 const RETRY = "retry(() => Jobs.next(), ";
 const SIG = "(): Int fails Stop uses Jobs.next";
 
@@ -38,12 +40,10 @@ Deno.test("each retry option is accepted alone", () => {
   for (
     const options of [
       "{ times: 3 }",
-      "{ schedule: scheduleRecurs(3) }",
+      "{ schedule: retrySchedule(" + POLICY + ") }",
       "{ while: (e) => true }",
       "{ until: (e) => false }",
       "{ while: (e: Stop) => true }",
-      "{ schedule: scheduleExponential(100ms) }",
-      "{ schedule: scheduleJittered(scheduleRecurs(2)) }",
     ]
   ) assertEquals(retryWith(options), [], options);
 });
@@ -51,7 +51,8 @@ Deno.test("each retry option is accepted alone", () => {
 Deno.test("retry options combine", () => {
   assertEquals(
     retryWith(
-      "{ times: 2, schedule: scheduleExponential(100ms, 2), until: (e) => false, while: (e) => true }",
+      "{ times: 2, schedule: retrySchedule(" + POLICY +
+        "), until: (e) => false, while: (e) => true }",
     ),
     [],
   );
@@ -84,25 +85,14 @@ Deno.test("an effectful while callback adds its failures and requirements", () =
   ]);
 });
 
-Deno.test("a Schedule in schedule adds its own failures and requirements", () => {
-  const options =
-    "{ schedule: scheduleMap(scheduleRecurs(2), (m) => Gate.open(Stop({})) ) }";
-  assertEquals(retryWith(options), [
-    "failure-contract/001 the body can fail with Other, which the `fails` clause does not list",
-    "requirement-contract/001 the body requires Gate.open, which the `uses` clause does not list",
-  ]);
-});
-
-Deno.test("a Schedule whose input does not accept a job failure is a diagnostic", () => {
-  const rejected = `const s: Schedule<Int, Other> = scheduleRecurs(2)
+Deno.test("a RetrySchedule whose error type does not accept a job failure is a diagnostic", () => {
+  const source = (error: string) =>
+    `const s: RetrySchedule<${error}> = retrySchedule((e: ${error}, attempt: Int): Option<Duration> => None)
 export const a = ${SIG} => ${RETRY}{ schedule: s })\n`;
-  assertEquals(diagnosticsOf(rejected), [
+  assertEquals(diagnosticsOf(source("Other")), [
     "type-mismatch/003 the retry schedule does not accept error:m#Stop",
   ]);
-  assertEquals(
-    diagnosticsOf(rejected.replace("Other", "Stop")),
-    [],
-  );
+  assertEquals(diagnosticsOf(source("Stop")), []);
 });
 
 Deno.test("an unknown key, a duplicate key, and an empty record are diagnostics", () => {
@@ -135,50 +125,15 @@ Deno.test("times stays a nonnegative safe integer literal in a combined record",
   }
 });
 
-Deno.test("schedule needs a RetrySchedule or a Schedule", () => {
+Deno.test("schedule needs a RetrySchedule", () => {
   assertEquals(retryWith("{ schedule: 3 }"), [
-    "type-mismatch/010 `retry` needs a RetrySchedule or a Schedule in `schedule`",
+    "type-mismatch/010 `retry` needs a RetrySchedule in `schedule`",
   ]);
-});
-
-Deno.test("scheduleExponential and scheduleJittered check their arguments", () => {
   assertEquals(
     diagnosticsOf(
-      `export const a = (): Schedule<Duration> => scheduleExponential("x")\n`,
+      `const s: Int = 3\nexport const a = ${SIG} => ${RETRY}{ schedule: s })\n`,
     ),
-    [
-      "type-mismatch/003 the exponential base has type string, but Duration is expected",
-    ],
-  );
-  assertEquals(
-    diagnosticsOf(
-      `export const a = (): Schedule<Duration> => scheduleExponential(1ms, "x")\n`,
-    ),
-    [
-      "type-mismatch/003 the exponential factor has type string, but number is expected",
-    ],
-  );
-  assertEquals(
-    diagnosticsOf(
-      `export const a = (): Schedule<Int> => scheduleExponential()\n`,
-    ),
-    [
-      "type-mismatch/004 `scheduleExponential` takes a base and an optional factor",
-    ],
-  );
-  assertEquals(
-    diagnosticsOf(
-      `export const a = (): Schedule<Int> => scheduleJittered(1)\n`,
-    ),
-    [
-      "type-mismatch/010 `scheduleJittered` needs a Schedule",
-    ],
-  );
-  assertEquals(
-    diagnosticsOf(
-      `export const a = (): Schedule<Duration> => scheduleJittered(scheduleExponential(5ms))\n`,
-    ),
-    [],
+    ["type-mismatch/010 `retry` needs a RetrySchedule in `schedule`"],
   );
 });
 
@@ -192,10 +147,9 @@ Deno.test("while is a record label but not a name", () => {
 
 const SOURCE = `${HEAD}export const times = ${SIG} => ${RETRY}{ times: 3 })
 export const both = ${SIG} => ${RETRY}{ times: 3, until: (e) => false })
-export const sched = ${SIG} => ${RETRY}{ schedule: scheduleJittered(scheduleExponential(100ms, 2)) })
-export const plain = (): Schedule<Duration> => scheduleExponential(100ms)
-const stopOnly: Schedule<Int, Stop> = scheduleRecurs(1)
-export const gated = ${SIG} => ${RETRY}{ schedule: stopOnly })
+const policy: RetrySchedule<Stop> = retrySchedule(${POLICY})
+export const sched = ${SIG} => ${RETRY}{ schedule: policy })
+export const gated = ${SIG} => ${RETRY}{ schedule: policy })
 `;
 
 const lowered = () => loweredModule(SOURCE);
@@ -207,15 +161,6 @@ Deno.test("a times-only record keeps the retry kind and every other record lower
   const [both] = allExprs(ir, "retry-with-schedule");
   assert(both.options.kind === "record");
   assertEquals(both.options.fields.map((f) => f.name), ["times", "until"]);
-});
-
-Deno.test("scheduleExponential lowers a missing factor to null", () => {
-  const ir = lowered();
-  assertEquals(
-    allExprs(ir, "schedule-exponential").map((e) => e.factor === null),
-    [false, true],
-  );
-  assertEquals(allExprs(ir, "schedule-jittered").length, 1);
 });
 
 // ------------------------------------------------------------------ validator
@@ -230,7 +175,6 @@ function options(ir: ModuleIR): Extract<Expr, { kind: "record" }> {
 
 const REC = "{ times: int, until: (error:m#Stop) => boolean [pure] }";
 const OPTS = "declarations[8].body.options";
-const EXP = "declarations[9].body.options.fields[0].value.schedule";
 
 const FORGES: readonly (readonly [
   name: string,
@@ -275,44 +219,13 @@ const FORGES: readonly (readonly [
   }, [
     `validation/002 ${OPTS}.fields[1]: the record type ${REC} has no field schedule`,
     `validation/002 ${OPTS}: the construction is missing the required fields [until]`,
-    `validation/006 ${OPTS}.fields[1]: retry needs a retry schedule or a schedule in schedule`,
+    `validation/006 ${OPTS}.fields[1]: retry needs a retry schedule in schedule`,
   ]],
   ["retry options that are not a record", (ir) => {
     (allExprs(ir, "retry-with-schedule")[0] as { options: unknown }).options =
       allExprs(ir, "literal")[0];
   }, [
     `validation/006 ${OPTS}: retry needs an options record`,
-  ]],
-  ["a string base in scheduleExponential", (ir) => {
-    const base = allExprs(ir, "schedule-exponential")[0].baseMs;
-    assert(base.kind === "nominal");
-    (base.value as { value: unknown }).value = "x";
-  }, [
-    `validation/002 ${EXP}.baseMs.value.type: the recomputed type "x" does not fit the recorded type int`,
-    `validation/002 ${EXP}.baseMs.value: the value has type "x", which does not fit the base int`,
-  ]],
-  ["a string factor in scheduleExponential", (ir) => {
-    (allExprs(ir, "schedule-exponential")[0].factor as { value: unknown })
-      .value = "x";
-  }, [
-    `validation/002 ${EXP}.factor: scheduleExponential needs a number factor, found "x"`,
-    `validation/002 ${EXP}.factor.type: the recomputed type "x" does not fit the recorded type number`,
-  ]],
-  ["a scheduleJittered of an int", (ir) => {
-    (allExprs(ir, "schedule-jittered")[0] as { schedule: unknown }).schedule =
-      allExprs(ir, "literal")[0];
-  }, [
-    `validation/002 ${EXP}: scheduleJittered needs a Schedule, found int`,
-  ]],
-  ["a scheduleExponential that records a string output", (ir) => {
-    (allExprs(ir, "schedule-exponential")[1] as { type: unknown }).type = {
-      kind: "schedule",
-      output: { kind: "primitive", name: "string" },
-      input: { kind: "primitive", name: "unknown" },
-      effects: { failures: [], requirements: [] },
-    };
-  }, [
-    "validation/002 declarations[10].body.type: expected Schedule<Duration, unknown, never, never>, recorded Schedule<string, unknown, never, never>",
   ]],
 ];
 
@@ -327,9 +240,9 @@ Deno.test("the validator rejects a schedule whose input does not accept a job fa
     ];
   });
   assertEquals(found, [
-    "validation/003 declarations[12].body.effects.failures: expected [error:m#Other, error:m#Stop], recorded [error:m#Stop]",
-    "validation/003 declarations[12].body: the body can fail with [error:m#Other], which the declared failures [error:m#Stop] do not list",
-    "validation/006 declarations[12].body.options.fields[0]: retry schedule does not accept error:m#Other",
+    "validation/003 declarations[11].body.effects.failures: expected [error:m#Other, error:m#Stop], recorded [error:m#Stop]",
+    "validation/003 declarations[11].body: the body can fail with [error:m#Other], which the declared failures [error:m#Stop] do not list",
+    "validation/006 declarations[11].body.options.fields[0]: retry schedule does not accept error:m#Other",
   ]);
 });
 

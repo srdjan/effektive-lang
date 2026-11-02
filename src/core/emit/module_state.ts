@@ -47,7 +47,6 @@ export type EffectModule =
   | "Cause"
   | "Clock"
   | "Random"
-  | "Cron"
   | "Fiber"
   | "Deferred"
   | "Exit"
@@ -73,7 +72,6 @@ type DeferredKind =
   | "effect"
   | "stream"
   | "sink"
-  | "schedule"
   | "provider"
   | "ref"
   | "retry-schedule"
@@ -89,7 +87,6 @@ const DEFERRED_KINDS = {
   "effect": true,
   "stream": true,
   "sink": true,
-  "schedule": true,
   "provider": true,
   "ref": true,
   "retry-schedule": true,

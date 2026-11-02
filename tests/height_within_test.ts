@@ -39,8 +39,6 @@ const POSITIONS: readonly (readonly [
   ["Fiber result", (d) => `Fiber<${d}, never>`],
   ["Codec decoded", (d) => `Codec<${d}, int>`],
   ["Codec encoded", (d) => `Codec<int, ${d}>`],
-  ["Schedule output", (d) => `Schedule<${d}, int>`],
-  ["Schedule input", (d) => `Schedule<int, ${d}>`],
   ["Sink input", (d) => `Sink<${d}, int>`],
   ["Sink result", (d) => `Sink<int, ${d}>`],
   ["Sink leftover", (d) => `Sink<int, int, never, never, ${d}>`],
@@ -67,7 +65,6 @@ Deno.test("a nested chain of each wrapped form is measured through every level",
     ["Stream", "Stream<", ">"],
     ["Fiber", "Fiber<", ", never>"],
     ["Codec", "Codec<", ", string>"],
-    ["Schedule", "Schedule<", ", int>"],
     ["Sink", "Sink<int, ", ">"],
   ];
   for (const [name, open, close] of chains) {

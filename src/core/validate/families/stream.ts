@@ -20,7 +20,6 @@ import {
   identityBody,
   identityMembers,
   INT,
-  isUnknown,
   NEVER,
   same,
   unfold,
@@ -869,48 +868,6 @@ export function aggregateStream(
   path: string,
 ): Comp {
   return sinkTransformStream(c, e, path, "aggregateStream");
-}
-
-export function aggregateWithinStream(
-  c: ValidatorCore,
-  e: Extract<Expr, { kind: "aggregate-within-stream" }>,
-  path: string,
-): Comp {
-  const stream = c.check(e.stream, `${path}.stream`);
-  const sink = c.check(e.sink, `${path}.sink`);
-  const schedule = c.check(e.schedule, `${path}.schedule`);
-  const source = unfold(c.env, stream.type);
-  const consumer = unfold(c.env, sink.type);
-  const policy = unfold(c.env, schedule.type);
-  const unknownInput = policy.kind === "schedule" &&
-    isUnknown(c.env, policy.input);
-  if (
-    source.kind !== "stream" || consumer.kind !== "sink" ||
-    policy.kind !== "schedule" ||
-    !fits(c.env, source.element, consumer.input) ||
-    !fits(c.env, consumer.leftover ?? NEVER, consumer.input) ||
-    !(unknownInput ||
-      fits(
-        c.env,
-        { kind: "option", element: consumer.result },
-        policy.input,
-      ))
-  ) {
-    c.add(
-      AREA.types,
-      path,
-      "aggregateWithinStream needs compatible Stream, Sink, and Schedule inputs",
-      e.span,
-    );
-    return c.poison();
-  }
-  return derivedResult({
-    kind: "stream",
-    element: consumer.result,
-    effects: {
-      ...unionEffects(source.effects, consumer.effects, policy.effects),
-    },
-  }, combine([stream, sink, schedule]));
 }
 
 function sinkTransformStream(

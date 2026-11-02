@@ -15,8 +15,6 @@ export const whileSmall = (): Int fails Stop uses Jobs.next =>
   repeat(() => Jobs.next(), { while: (n) => n < 3 })
 export const untilBig = (): Int fails Stop uses Jobs.next =>
   repeat(() => Jobs.next(), { until: (n) => n >= 4 })
-export const recurring = (): Int fails Stop uses Jobs.next =>
-  repeat(() => Jobs.next(), { schedule: scheduleRecurs(3) })
 export const piped = (): Int fails Stop uses Jobs.next =>
   (() => Jobs.next()) |> repeat({ times: 1 })
 export const forever = (): never fails Stop uses Jobs.next =>
@@ -86,16 +84,6 @@ console.log(JSON.stringify({
     whileSmall: { runs: 3, outcome: { ok: 3 } },
     untilBig: { runs: 4, outcome: { ok: 4 } },
   });
-});
-
-Deno.test("a schedule limits the repetitions", async () => {
-  const result = await compileAndRun(
-    SOURCE,
-    `${HARNESS}
-console.log(JSON.stringify({ recurring: await run(M.recurring()) }));
-`,
-  );
-  assertEquals(result, { recurring: { runs: 4, outcome: { ok: 4 } } });
 });
 
 Deno.test("a typed failure stops the repetition and propagates", async () => {

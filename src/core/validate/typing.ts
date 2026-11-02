@@ -188,7 +188,6 @@ export function dataOnly(
     case "fiber":
     case "effect":
     case "stream":
-    case "schedule":
     case "sink":
     case "function":
     case "provider":
@@ -387,12 +386,6 @@ function assignable(
       return s.kind === "stream" &&
         assignable(env, s.element, t.element, false, depth + 1) &&
         effectsFit(s.effects, t.effects);
-    case "schedule":
-      return s.kind === "schedule" &&
-        assignable(env, s.output, t.output, false, depth + 1) &&
-        (isUnknown(env, s.input) ||
-          assignable(env, t.input, s.input, false, depth + 1)) &&
-        effectsFit(s.effects, t.effects);
     case "sink":
       return s.kind === "sink" &&
         assignable(env, t.input, s.input, false, depth + 1) &&
@@ -476,7 +469,6 @@ function guardedAlias(env: TypeEnv, id: string): boolean {
       case "fiber":
       case "effect":
       case "stream":
-      case "schedule":
       case "sink":
       case "function":
       case "provider":
@@ -665,7 +657,6 @@ export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
       case "fiber":
       case "effect":
       case "stream":
-      case "schedule":
       case "sink":
       case "function":
       case "provider":
@@ -772,11 +763,6 @@ export function foreignSealedOf(
 export function asFunction(env: TypeEnv, type: Type): FunctionType | undefined {
   const unfolded = unfold(env, type);
   return unfolded.kind === "function" ? unfolded : undefined;
-}
-
-export function isUnknown(env: TypeEnv, type: Type): boolean {
-  const unfolded = unfold(env, type);
-  return unfolded.kind === "primitive" && unfolded.name === "unknown";
 }
 
 /** True when a structural input contains an unknown component. */
@@ -1003,10 +989,6 @@ export function show(type: Type): string {
       }>`;
     case "stream":
       return `Stream<${show(type.element)}, ${
-        orNever(type.effects.failures)
-      }, ${orNever(type.effects.requirements)}>`;
-    case "schedule":
-      return `Schedule<${show(type.output)}, ${show(type.input)}, ${
         orNever(type.effects.failures)
       }, ${orNever(type.effects.requirements)}>`;
     case "sink":

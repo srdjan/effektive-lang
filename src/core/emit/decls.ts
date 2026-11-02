@@ -103,11 +103,6 @@ function namedIn(type: Type, out: Set<DeclarationId>): void {
       namedIn(type.element, out);
       effectsIn(type.effects.failures, type.effects.requirements, out);
       return;
-    case "schedule":
-      namedIn(type.output, out);
-      namedIn(type.input, out);
-      effectsIn(type.effects.failures, type.effects.requirements, out);
-      return;
     case "sink":
       namedIn(type.input, out);
       namedIn(type.result, out);
@@ -492,7 +487,6 @@ export class DeclarationEmitter {
       case "fiber":
       case "effect":
       case "stream":
-      case "schedule":
       case "sink":
       case "function":
       case "provider":

@@ -101,14 +101,6 @@ const SLOTS: readonly Slot[] = [
     build: (p) => ({ kind: "stream", element: p, effects: NONE }),
   },
   {
-    suffix: ".output",
-    build: (p) => ({ kind: "schedule", output: p, input: INT, effects: NONE }),
-  },
-  {
-    suffix: ".input",
-    build: (p) => ({ kind: "schedule", output: INT, input: p, effects: NONE }),
-  },
-  {
     suffix: ".input",
     build: (p) => ({ kind: "sink", input: p, result: INT, effects: NONE }),
   },

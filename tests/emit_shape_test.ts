@@ -66,7 +66,7 @@ function lowerOk(files: Record<string, string>, entries: readonly string[]) {
 
 function irOfExamplesAndEmitFixtures(): ModuleIR[] {
   const modules = lowerOk(exampleFiles(), EXAMPLE_ENTRIES);
-  for (const dir of ["emit/groups", "emit/schedules", "emit/scopes"]) {
+  for (const dir of ["emit/groups", "emit/scopes"]) {
     const files = projectFiles(dir);
     const entries = Object.keys(files).filter((f) => f.endsWith(".eff"));
     const host = "host.effi" in files
@@ -102,7 +102,7 @@ Deno.test("childrenOf finds the nodes that a reflective walk finds", () => {
       });
     }
   }
-  assert(nodes > 300, `${nodes} nodes compared`);
+  assert(nodes > 250, `${nodes} nodes compared`);
 });
 
 // ------------------------------------------------------------------ forged nodes

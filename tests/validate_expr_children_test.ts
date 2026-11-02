@@ -111,7 +111,6 @@ interface Unit {
  */
 const BUNDLES = new Set([
   "emit/groups",
-  "emit/schedules",
   "emit/scopes",
   "emit/sinks",
 ]);
@@ -476,58 +475,6 @@ function syntheticNodes(): Record<Expr["kind"], Expr> {
       stream: leaf(),
       sink: leaf(),
     },
-    "aggregate-within-stream": {
-      ...a,
-      kind: "aggregate-within-stream",
-      stream: leaf(),
-      sink: leaf(),
-      schedule: leaf(),
-    },
-    "schedule-from-step": {
-      ...a,
-      kind: "schedule-from-step",
-      initial: leaf(),
-      decide: leaf(),
-    },
-    "schedule-recurs": { ...a, kind: "schedule-recurs", times: leaf() },
-    "schedule-spaced": { ...a, kind: "schedule-spaced", delayMillis: leaf() },
-    "schedule-exponential": {
-      ...a,
-      kind: "schedule-exponential",
-      baseMs: leaf(),
-      factor: leaf(),
-    },
-    "schedule-cron": {
-      ...a,
-      kind: "schedule-cron",
-      expression: "* * * * *",
-      zone: "UTC",
-    },
-    "schedule-jittered": { ...a, kind: "schedule-jittered", schedule: leaf() },
-    "schedule-map": {
-      ...a,
-      kind: "schedule-map",
-      schedule: leaf(),
-      transform: leaf(),
-    },
-    "schedule-max": {
-      ...a,
-      kind: "schedule-max",
-      left: leaf(),
-      right: leaf(),
-    },
-    "schedule-min": {
-      ...a,
-      kind: "schedule-min",
-      left: leaf(),
-      right: leaf(),
-    },
-    "schedule-concat": {
-      ...a,
-      kind: "schedule-concat",
-      left: leaf(),
-      right: leaf(),
-    },
     "run-stream": {
       ...a,
       kind: "run-stream",
@@ -708,8 +655,8 @@ Deno.test("exprChildren equals a reflective walk on every node of every fixture 
 Deno.test("exprChildren equals a reflective walk on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
   const kinds = Object.keys(synthetic);
-  // The Expr union of src/core/ir.ts has 112 kinds.
-  assertEquals(kinds.length, 112);
+  // The Expr union of src/core/ir.ts has 101 kinds.
+  assertEquals(kinds.length, 101);
   for (const [kind, node] of Object.entries(synthetic)) {
     assertEquals(node.kind, kind);
     assertSameChildren(node, "synthetic");
@@ -724,7 +671,6 @@ Deno.test("exprChildren equals a reflective walk on a synthetic node of every Ex
     "now",
     "random",
     "take-sink",
-    "schedule-cron",
   ]);
   for (const [kind, node] of Object.entries(synthetic)) {
     assertEquals(exprChildren(node).length === 0, leaves.has(kind), kind);
@@ -739,7 +685,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
     for (const node of all) reached.add(node.kind);
   }
   const synthetic = new Set(Object.keys(syntheticNodes()));
-  assertEquals(new Set([...reached, ...synthetic]).size, 112);
+  assertEquals(new Set([...reached, ...synthetic]).size, 101);
   for (const kind of reached) assert(synthetic.has(kind), kind);
 });
 
@@ -752,7 +698,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
 // [job, durationMs].
 Deno.test("childrenOf and exprChildren give the same child multiset on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
-  assertEquals(Object.keys(synthetic).length, 112);
+  assertEquals(Object.keys(synthetic).length, 101);
   const differentOrder: string[] = [];
   for (const [kind, node] of Object.entries(synthetic)) {
     const emitted = childrenOf(node);

@@ -18,6 +18,8 @@ tags: [cron, schedule-cron, effect-target, compile-time-check, differential-test
 
 # A compile-time check of an Effect parser mirrors the parser and proves agreement with a differential test
 
+Status: `scheduleCron` and `src/core/cron.ts` were removed on 2026-11-02 by the simplification rebase (G2). The pattern stays valid.
+
 ## Context
 
 Paths that start with `dist/` are inside the pinned `effect@4.0.5` package, not in this repository.

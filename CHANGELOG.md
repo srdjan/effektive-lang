@@ -10,6 +10,15 @@
   `removeSet`, `hasSet`, and `itemsSet`. No application used them. `Map` and
   `Set` are ordinary names again, and `declaration/019` is gone. The IR loses
   the type kinds `map` and `set` and eleven expression kinds.
+- The general `Schedule` forms are gone: `scheduleFromStep`,
+  `scheduleRecurs`, `scheduleSpaced`, `scheduleExponential`, `scheduleCron`,
+  `scheduleJittered`, `scheduleMap`, `scheduleMax`, `scheduleMin`,
+  `scheduleConcat`, `aggregateWithinStream`, and the types `Schedule`,
+  `ScheduleInput`, `ScheduleMetadata`, and `ScheduleDecision`. No application
+  used them. `repeat` has no `schedule` option. The `schedule` option of
+  `retry` takes only a `RetrySchedule`, and another value gives
+  `type-mismatch/010`. The IR loses the type kind `schedule` and eleven
+  expression kinds.
 - `build --validate` and `Revision.validate` are gone, and `frontend.ts` no
   longer exports `validateProject`. The independent IR validator is a test
   oracle: tests import it from `src/core/validate_project.ts`. The command-line

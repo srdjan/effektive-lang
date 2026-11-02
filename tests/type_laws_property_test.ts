@@ -254,7 +254,6 @@ const COMPOSITE_KINDS = [
   "effect",
   "fiber",
   "stream",
-  "schedule",
   "sink",
   "ref",
   "retry-schedule",
@@ -287,8 +286,6 @@ function anyType(g: Generator, depth: number): Type {
       return { kind, result: inner(), failures: subset(g, ERRORS) };
     case "stream":
       return { kind, element: inner(), effects: effects(g) };
-    case "schedule":
-      return { kind, output: inner(), input: inner(), effects: effects(g) };
     case "sink":
       return {
         kind,
@@ -469,24 +466,12 @@ function contravariantPair(g: Generator): readonly [Type, Type] {
   const wider = widen(g, input, false);
   const { borrows: _borrows, checked: _checked, ...plain } = functionType(g, 1);
   const shared = { effects: effects(g) };
-  switch (Math.floor(g.random() * 3)) {
+  switch (Math.floor(g.random() * 2)) {
     case 0:
       return [
         { ...plain, parameters: [wider] },
         { ...plain, parameters: [input] },
       ];
-    case 1: {
-      const output = anyType(g, 1);
-      return [
-        {
-          kind: "schedule",
-          output,
-          input: g.random() < 0.3 ? UNKNOWN : wider,
-          ...shared,
-        },
-        { kind: "schedule", output, input, ...shared },
-      ];
-    }
     default: {
       const result = anyType(g, 1);
       return [
@@ -823,7 +808,7 @@ Deno.test("assignment of plain types is transitive on both implementations", () 
     validator += check("validator", validatorTable);
   }
   assertEquals(failures.length, 0, report(failures));
-  assertEquals({ checker, validator }, { checker: 14651, validator: 14651 });
+  assertEquals({ checker, validator }, { checker: 12250, validator: 12250 });
 });
 
 Deno.test("the checker and the validator agree on generated pairs", () => {
@@ -878,30 +863,29 @@ Deno.test("the checker and the validator agree on generated pairs", () => {
     }
   }
   assertEquals(disagreements.length, 0, report(disagreements));
-  assertEquals(answers, { fit: 33089, rejected: 46911 });
-  assertEquals(fibers, { fit: 1800, rejected: 7524, failuresDiffer: 7336 });
-  assertEquals(authorityDecided, 879);
+  assertEquals(answers, { fit: 33057, rejected: 46943 });
+  assertEquals(fibers, { fit: 1787, rejected: 7597, failuresDiffer: 7378 });
+  assertEquals(authorityDecided, 866);
   assertEquals(Object.fromEntries([...kinds].sort()), {
-    "closeable-scope": 173,
-    "retry-schedule": 1288,
-    array: 2085,
-    codec: 1173,
-    effect: 1302,
-    fiber: 5235,
-    function: 4199,
-    literal: 949,
-    named: 5214,
-    option: 2035,
+    "closeable-scope": 174,
+    "retry-schedule": 1384,
+    array: 2207,
+    codec: 1287,
+    effect: 1374,
+    fiber: 5400,
+    function: 4901,
+    literal: 907,
+    named: 5334,
+    option: 2132,
     primitive: 1247,
-    provider: 1295,
-    record: 1277,
-    ref: 1323,
-    schedule: 2637,
-    schema: 1272,
-    sink: 2647,
-    stream: 1261,
-    tuple: 1297,
-    union: 2091,
+    provider: 1346,
+    record: 1410,
+    ref: 1310,
+    schema: 1285,
+    sink: 3383,
+    stream: 1400,
+    tuple: 1334,
+    union: 2185,
   });
 });
 

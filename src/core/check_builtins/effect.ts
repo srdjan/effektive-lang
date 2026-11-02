@@ -105,7 +105,6 @@ function retryCall(
       name: "retry",
       inputs: failures.map((f) => ({ label: f, type: c.table.named(f) })),
       element: c.table.union(failures.map((f) => c.table.named(f))),
-      retrySchedule: true,
     });
     c.fact(node, { kind: "retry-with-schedule" });
     return c.finish(
@@ -124,12 +123,17 @@ function retryCall(
   );
 }
 
-const RETRY_KEYS: ReadonlySet<string> = new Set([
-  "times",
-  "schedule",
-  "while",
-  "until",
-]);
+/** The option keys of each call. Only `retry` takes a `schedule`. */
+const OPTION_KEYS: Readonly<Record<"retry" | "repeat", readonly string[]>> = {
+  retry: ["times", "schedule", "while", "until"],
+  repeat: ["times", "while", "until"],
+};
+
+/** The option keys of a call as source text, for example "`times`, `while`, or `until`". */
+function keyList(call: "retry" | "repeat"): string {
+  const keys = OPTION_KEYS[call].map((key) => `\`${key}\``);
+  return `${keys.slice(0, -1).join(", ")}, or ${keys[keys.length - 1]}`;
+}
 
 /** True for a literal record of the one field `times`: the form that lowers to `retry`. */
 function timesOnlyOption(c: EffectContext, arg: Arg): boolean {
@@ -153,15 +157,13 @@ function timesOnlyOption(c: EffectContext, arg: Arg): boolean {
 interface OptionsSpec {
   /** The builtin name, used in messages. */
   readonly name: "retry" | "repeat";
-  /** The values that a `schedule` input must accept, each with its display label. */
+  /** The values that a `schedule` input must accept, each with its display label. Empty for `repeat`. */
   readonly inputs: readonly {
     readonly label: string;
     readonly type: TypeRef;
   }[];
   /** The one type that `while` and `until` receive. */
   readonly element: TypeRef;
-  /** True when a RetrySchedule is allowed in `schedule`; it takes failures as input. */
-  readonly retrySchedule: boolean;
 }
 
 /** The label, name, and value of a `name: value` option field, or undefined after a diagnostic. */
@@ -192,7 +194,7 @@ function optionField(
 
 /**
  * Checks a general options record of `retry` or `repeat`: each key is `times`,
- * `schedule`, `while`, or `until`, at most once. The result carries the effects
+ * `while`, or `until`, at most once. A `retry` record also takes `schedule`. The result carries the effects
  * that the callbacks and the schedule add to the call.
  */
 function callOptions(
@@ -207,7 +209,7 @@ function callOptions(
   ) {
     c.report(
       "type-mismatch/010",
-      `\`${call}\` needs an options record with \`times\`, \`schedule\`, \`while\`, or \`until\``,
+      `\`${call}\` needs an options record with ${keyList(call)}`,
       arg.node,
     );
     return { info: c.argInfo(arg), own: [] };
@@ -216,7 +218,7 @@ function callOptions(
   if (fields.length === 0) {
     c.report(
       "type-mismatch/010",
-      `\`${call}\` needs at least one of \`times\`, \`schedule\`, \`while\`, or \`until\``,
+      `\`${call}\` needs at least one of ${keyList(call)}`,
       arg.node,
     );
   }
@@ -248,17 +250,19 @@ function callOptions(
         );
         own.push(invocationOf(cb));
       }
-    } else if (name === "schedule") {
+    } else if (name === "schedule" && call === "retry") {
       info = c.argInfo(valueArg);
       own.push(schedulePolicy(c, value, info, spec));
     } else {
       info = c.argInfo(valueArg);
       if (name === "times") timesValue(c, value, call);
     }
-    if (!RETRY_KEYS.has(name)) {
+    if (!OPTION_KEYS[call].includes(name)) {
       c.report(
         "type-mismatch/010",
-        `\`${call}\` has no option \`${name}\`; the options are times, schedule, while, until`,
+        `\`${call}\` has no option \`${name}\`; the options are ${
+          OPTION_KEYS[call].join(", ")
+        }`,
         label,
       );
     } else if (seen.has(name)) {
@@ -294,7 +298,7 @@ function timesValue(c: EffectContext, value: NodeId, call: string): void {
   }
 }
 
-/** The effects that a `schedule` option adds, after checking that it accepts every input of the call. */
+/** The effects that a `retry` `schedule` option adds, after checking that its RetrySchedule accepts every failure of the call. */
 function schedulePolicy(
   c: EffectContext,
   value: NodeId,
@@ -302,9 +306,9 @@ function schedulePolicy(
   spec: OptionsSpec,
 ): EffectSet {
   const policy = c.table.node(c.table.unfold(info.type));
-  const accepts = (input: TypeRef): void => {
+  if (policy.kind === "retry-schedule") {
     for (const { label, type } of spec.inputs) {
-      if (!c.assignable(type, input)) {
+      if (!c.assignable(type, policy.error)) {
         c.report(
           "type-mismatch/003",
           `the ${spec.name} schedule does not accept ${label}`,
@@ -312,37 +316,16 @@ function schedulePolicy(
         );
       }
     }
-  };
-  if (policy.kind === "retry-schedule" && spec.retrySchedule) {
-    accepts(policy.error);
     return PURE_EFFECTS;
   }
-  if (policy.kind === "retry-schedule") {
+  if (!c.isError(info.type)) {
     c.report(
       "type-mismatch/010",
-      `\`${spec.name}\` needs a Schedule in \`schedule\`; a RetrySchedule takes failures as input`,
+      `\`${spec.name}\` needs a RetrySchedule in \`schedule\``,
       value,
     );
-    return PURE_EFFECTS;
   }
-  if (policy.kind !== "schedule") {
-    if (!c.isError(info.type)) {
-      c.report(
-        "type-mismatch/010",
-        spec.retrySchedule
-          ? `\`${spec.name}\` needs a RetrySchedule or a Schedule in \`schedule\``
-          : `\`${spec.name}\` needs a Schedule in \`schedule\``,
-        value,
-      );
-    }
-    return PURE_EFFECTS;
-  }
-  if (c.table.unfold(policy.input) !== c.table.unknown) accepts(policy.input);
-  return {
-    failures: policy.failures,
-    requirements: policy.requirements,
-    mode: "effect",
-  };
+  return PURE_EFFECTS;
 }
 
 /** `repeat(job)` runs without end; `repeat(job, options)` returns the last success. */
@@ -364,9 +347,8 @@ function repeatCall(
   }
   const { info, own } = callOptions(c, args[1], {
     name: "repeat",
-    inputs: [{ label: showType(c.table, success), type: success }],
+    inputs: [],
     element: success,
-    retrySchedule: false,
   });
   return c.finish(
     node,

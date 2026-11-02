@@ -42,7 +42,6 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     fiber.ts       Fiber operations and inline borrow lifetimes through FiberContext.
     layer.ts       Layer construction, merging and provision through LayerContext.
     ref.ts         Mutable reference construction, reads, writes and pure update callbacks.
-    schedule.ts    General Schedule construction, mapping and comparable-input composition.
     schema.ts      Schema metadata, exhaustive handlers, defaults, directional effects and recursion through SchemaContext.
     scope.ts       Scope operations, resource lifetimes and borrowed parameters through ScopeContext.
     stream.ts      Stream/Sink callbacks, grouping lifetimes, aggregation hints and execution through StreamContext.
@@ -50,7 +49,6 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   tables.ts      Side tables of a body: node info and lowering facts.
   patterns.ts    Pattern domains of match subjects.
   predicates.ts  The predicate model of refinements: terms, builders, normalization, solver limits, and proof certificates.
-  cron.ts        cronExpressionProblem, cronZoneProblem: the grammar of a cron expression and the zone rules of `scheduleCron`, shared by the checker and the validator.
   predicate_source.ts predicateFromSource: the predicate of a refinement written in source.
   infer_inputs.ts inferFunctionInputs, inferArrowInputs, withInferredInputs: syntax traversal, partial callable evidence, callbacks, and source diagnostics for inferred input contracts.
   infer_contracts.ts InputContractResolver: origins, demands, deferred calls, tagged issues, and finite worklist resolution with an explicit TypeTable.
@@ -77,7 +75,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   sha256.ts      Synchronous SHA-256 over the UTF-8 bytes of a string.
   lower.ts       Checked modules to typed IR: pipelines, builtin specialization, imports.
   serialize.ts   Canonical JSON of a module IR, with the set and number checks.
-  validate/      The independent IR validator. It imports only ir.ts, source.ts, diagnostics.ts, and cron.ts.
+  validate/      The independent IR validator. It imports only ir.ts, source.ts, and diagnostics.ts.
     index.ts       validateModule: the public entry.
     world.ts       Identities in scope, imports, declaration headers, recursive types.
     expr.ts        Bottom-up recomputation of types, sets, and modes of each body.
@@ -393,7 +391,7 @@ compares the result with the recorded annotation. After a disagreement it
 continues with the recomputed value, so one fault gives one diagnostic. It
 reimplements type compatibility and does not call the checker. A test checks
 that `src/core/validate/` imports only `ir.ts`, `source.ts`,
-`diagnostics.ts`, and `cron.ts`.
+and `diagnostics.ts`.
 
 Each code names a validation area. `validation/001` is Identity, `002` is Types,
 `003` is Contracts, `004` is Execution, `005` is Recovery, `006` is Control,

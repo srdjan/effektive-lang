@@ -226,19 +226,6 @@ export type NodeFact =
   | { readonly kind: "take-sink"; readonly count: number | undefined }
   | { readonly kind: "transduce-stream" }
   | { readonly kind: "aggregate-stream" }
-  | { readonly kind: "aggregate-within-stream" }
-  | { readonly kind: "schedule-from-step" }
-  | { readonly kind: "schedule-recurs" }
-  | { readonly kind: "schedule-spaced" }
-  | { readonly kind: "schedule-exponential"; readonly factor: boolean }
-  | {
-    readonly kind: "schedule-cron";
-    readonly expression: string | undefined;
-    readonly zone: string | undefined;
-  }
-  | { readonly kind: "schedule-jittered" }
-  | { readonly kind: "schedule-map" }
-  | { readonly kind: "schedule-max" | "schedule-min" | "schedule-concat" }
   | { readonly kind: "map-groups"; readonly bufferSize: number | undefined }
   | { readonly kind: "run-stream" }
   | { readonly kind: "buffer-stream"; readonly capacity: number | undefined }

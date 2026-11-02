@@ -90,7 +90,6 @@ export type Type =
   | { readonly kind: "fiber"; readonly result: Type; readonly failures: readonly ErrorId[] }
   | { readonly kind: "effect"; readonly result: Type; readonly effects: Effects }
   | { readonly kind: "stream"; readonly element: Type; readonly effects: Effects }
-  | { readonly kind: "schedule"; readonly output: Type; readonly input: Type; readonly effects: Effects }
   | { readonly kind: "sink"; readonly input: Type; readonly result: Type; readonly leftover?: Type; readonly effects: Effects }
   | FunctionType
   | {
@@ -224,17 +223,6 @@ export type Expr =
   | Node<{ kind: "take-sink"; count: number }>
   | Node<{ kind: "transduce-stream"; stream: Expr; sink: Expr }>
   | Node<{ kind: "aggregate-stream"; stream: Expr; sink: Expr }>
-  | Node<{ kind: "aggregate-within-stream"; stream: Expr; sink: Expr; schedule: Expr }>
-  | Node<{ kind: "schedule-from-step"; initial: Expr; decide: Expr }>
-  | Node<{ kind: "schedule-recurs"; times: Expr }>
-  | Node<{ kind: "schedule-spaced"; delayMillis: Expr }>
-  | Node<{ kind: "schedule-exponential"; baseMs: Expr; factor: Expr | null }>
-  | Node<{ kind: "schedule-cron"; expression: string; zone: string }>
-  | Node<{ kind: "schedule-jittered"; schedule: Expr }>
-  | Node<{ kind: "schedule-map"; schedule: Expr; transform: Expr }>
-  | Node<{ kind: "schedule-max"; left: Expr; right: Expr }>
-  | Node<{ kind: "schedule-min"; left: Expr; right: Expr }>
-  | Node<{ kind: "schedule-concat"; left: Expr; right: Expr }>
   | Node<{ kind: "run-stream"; stream: Expr; sink: Expr }>
   | Node<{ kind: "buffer-stream"; stream: Expr; capacity: number }>
   | Node<{ kind: "merge-streams"; left: Expr; right: Expr }>

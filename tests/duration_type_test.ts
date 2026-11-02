@@ -34,29 +34,14 @@ Deno.test("a bare int never fits Duration, but a Duration widens to int", () => 
     "type-mismatch/003 the function body has type Int, but Duration is expected",
   ]);
   assertEquals(body("5s"), []);
-  // `scheduleRecurs` takes an `int`, which a Duration fits.
-  assertEquals(body("scheduleRecurs(d)", "Schedule<Int>"), []);
-  assertEquals(body("scheduleRecurs(2s)", "Schedule<Int>"), []);
 });
 
-Deno.test("timeout, sleep and the schedule constructors reject an int", () => {
+Deno.test("timeout and sleep reject an int", () => {
   assertEquals(
     diagnosticsOf(
       `${TYPES}export const a = (): Int fails TimeoutError => timeout(() => 1, 5)\n`,
     ),
     ["type-mismatch/003 the timeout duration has type int, but Duration is expected"],
-  );
-  assertEquals(
-    diagnosticsOf(
-      `${TYPES}export const a = (retries: Int): Schedule<Int> => scheduleSpaced(retries)\n`,
-    ),
-    ["type-mismatch/003 the schedule argument has type Int, but Duration is expected"],
-  );
-  assertEquals(
-    diagnosticsOf(
-      `${TYPES}export const a = (): Schedule<Duration> => scheduleExponential(100)\n`,
-    ),
-    ["type-mismatch/003 the exponential base has type int, but Duration is expected"],
   );
 });
 
@@ -141,71 +126,6 @@ const p: RetrySchedule<Stop> = retrySchedule((e: Stop, attempt: Int): ${result} 
   assertEquals(diagnosticsOf(source("Option<Int>", "attempt")), [
     "type-mismatch/003 the retry delay has type Option<Int>, but Option<Duration> is expected",
   ]);
-});
-
-const CUSTOM = (decision: string, extra = "") =>
-  `${TYPES}export const s: Schedule<Int> = scheduleFromStep(
-  (): Int => 0,
-  (state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Int> =>
-    ${extra}(${decision})
-)\n`;
-
-Deno.test("scheduleFromStep decisions use a delay field of type Duration", () => {
-  assertEquals(
-    diagnosticsOf(
-      CUSTOM(
-        '{ kind: "Continue", state: state + 1, output: state, delay: 10ms }',
-      ),
-    ),
-    [],
-  );
-  // The old field name and a bare number are rejected.
-  assert(
-    diagnosticsOf(
-      CUSTOM(
-        '{ kind: "Continue", state: state + 1, output: state, delayMillis: 10ms }',
-      ),
-    ).length > 0,
-  );
-  assert(
-    diagnosticsOf(
-      CUSTOM(
-        '{ kind: "Continue", state: state + 1, output: state, delay: 10 }',
-      ),
-    ).length > 0,
-  );
-});
-
-Deno.test("ScheduleInput elapsed fields are Durations and start and now are Instants", () => {
-  const source = (field: string) =>
-    CUSTOM(
-      `{ kind: "Continue", state: state + 1, output: state, delay: ${field} }`,
-    );
-  // `elapsed` and `elapsedSincePrevious` feed `delay` directly.
-  assertEquals(diagnosticsOf(source("meta.elapsed")), []);
-  assertEquals(diagnosticsOf(source("meta.elapsedSincePrevious")), []);
-  // `start` and `now` are Instants, not Durations.
-  assertEquals(diagnosticsOf(source("meta.now")), [
-    "type-mismatch/003 the field `delay` has type Instant, but Duration is expected",
-  ]);
-  assertEquals(diagnosticsOf(source("meta.start")), [
-    "type-mismatch/003 the field `delay` has type Instant, but Duration is expected",
-  ]);
-  // The difference of two Instants is a Duration.
-  assertEquals(diagnosticsOf(source("meta.now - meta.start")), []);
-});
-
-Deno.test("ScheduleMetadata has a duration field of type Duration", () => {
-  const source = (field: string) =>
-    `${TYPES}export const m: Schedule<Duration> = scheduleMap(
-  scheduleSpaced(1s),
-  (meta: ScheduleMetadata<Int, unknown>): Duration => ${field}
-)\n`;
-  assertEquals(diagnosticsOf(source("meta.duration")), []);
-  const old = diagnosticsOf(source("meta.durationMillis"));
-  assertEquals(old.length, 1);
-  assertStringIncludes(old[0], "type-mismatch/006 the type { attempt: int,");
-  assertStringIncludes(old[0], "has no field `durationMillis`");
 });
 
 Deno.test("the throttleStream option is duration and takes a Duration literal", () => {

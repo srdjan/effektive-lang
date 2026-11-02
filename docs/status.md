@@ -84,7 +84,6 @@ They are a record of gaps, not an implementation queue.
 | General Effect and concurrency APIs | Other first-class combinators and coordination primitives lack general source forms.                                                                                                                                                 | Effect values, collections, racing, timeout, repetition, defect recovery, outcome-aware cleanup, supervised fibers and scope-bound children cover the selected subset. See the [coverage map](archive/effect-4-gap-audit.md#coverage-map).                                                                                          |
 | Full Scope parity                   | Supplied close Exits, exit-aware scope finalizers, parallel finalization strategies, mandatory closure and static dependency-cycle detection remain outside the selected contract.                                                                                     | Shared CloseableScope authority closes once with Exit.void and caches cleanup completion. See the [ownership contract](archive/plans/2026-10-18-scope-ownership-contract.md).                                                                                          |
 | General Stream and Sink APIs        | Other operators, arbitrary source Sink constructors, chunk-cost throttling and unrestricted nested group streams need additional source and lifetime rules.                                                                                                     | Leftovers, transduction, aggregation and callback-owned keyed groups are implemented. Selected external interruption has a source composition. See the [investigation](archive/plans/2026-10-18-general-stream-schedule-design.md).                                    |
-| General Schedule APIs               | Composition with incomparable input types and other combinators remain uncovered.                                                                                                                           | `retry` and `repeat` consume general Schedules, and `scheduleExponential`, `scheduleJittered`, and `scheduleCron` exist. RetrySchedule and a concrete source repetition policy meet the worker gate. General schedules support aggregation and selected comparable-input composition. See the [worker limits](archive/plans/2026-10-19-scheduled-worker-application.md#disposition-and-limits). |
 | Time control                        | `now()` reads the runtime clock (SL1). A source API that controls time, such as a test clock, remains a candidate without a demonstrated application blocker.                                                                                                                                                     | Primitive clock services and native virtual-time checks cover the selected applications. See the [accepted rule](plans/2026-10-19-application-acceptance-rule.md#feature-selection).                                                                                   |
 | Schema and recursion                | Recursive Option data in an alias, mutual recursion of aliases, arbitrary self-bearing transformations and general Schema AST construction remain unsupported. Tagged records support guarded and mutual recursion (see [Tagged record recursion](language-rules.md#declarations-and-types)). | Guarded recursion preserves separate decoded, encoded and make-input types through selected adapters. See the [recursive field contract](archive/plans/2026-10-19-schema-recursive-adapters-contract.md).                                                              |
 | General language extensions         | User-defined generics, effect-row polymorphism, source purity assertions, macros and early returns remain deferred language extensions.                                                                                                                         | Builtin generic types and concrete source compositions cover the accepted applications. The [specification](../../effektive/public/effektive-spec.html#examples) retains the broader language boundary.                                                                |
@@ -114,12 +113,18 @@ Items 1 to 8, items 18 to 21, and the logging half of item 16 are done.
 [effect surface leftovers plan](archive/plans/2026-10-27-effect-surface-leftovers.md),
 and the [second selection plan](archive/plans/2026-10-27-second-effect-selection.md)
 hold their history. Those source forms hide `Duration`, `Clock`, `Schedule`,
-`Cron`, `Exit`, `Cause`, the interruption masks, `Logger`, `LogLevel`, `Random`,
+`Exit`, `Cause`, the interruption masks, `Logger`, `LogLevel`, `Random`,
 `Effect.forEach`, `Effect.filter`, `Effect.reduce`, `SynchronizedRef`, and
 `Effect.raceAll`.
 Item 22, the Map and Set types, was done and then removed on 2026-11-02 by the
 [simplification rebase](plans/2026-11-02-simplification-rebase.md), because no
 application used it.
+The general Schedule forms were done and then removed on 2026-11-02 by the
+[simplification rebase](plans/2026-11-02-simplification-rebase.md), because no
+application used them. They were `scheduleCron`, `scheduleExponential`,
+`scheduleJittered`, the other seven `schedule` names, `aggregateWithinStream`,
+and the `schedule` option of `repeat`. `RetrySchedule` and the `schedule`
+option of `retry` stay.
 
 The table lists the open items. Each item keeps its first number. The open items
 have no implementation commitment, and their forms are candidates, not accepted

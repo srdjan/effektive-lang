@@ -358,11 +358,6 @@ export function referencedIds(type: Type, ids: Set<string>): void {
       referencedIds(type.element, ids);
       effectIds(type.effects.failures, type.effects.requirements, ids);
       return;
-    case "schedule":
-      referencedIds(type.output, ids);
-      referencedIds(type.input, ids);
-      effectIds(type.effects.failures, type.effects.requirements, ids);
-      return;
     case "sink":
       referencedIds(type.input, ids);
       referencedIds(type.result, ids);

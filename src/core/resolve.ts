@@ -87,17 +87,6 @@ const PRELUDE = {
   takeSink: { shadowable: true },
   transduceStream: { shadowable: true },
   aggregateStream: { shadowable: true },
-  aggregateWithinStream: { shadowable: true },
-  scheduleFromStep: { shadowable: true },
-  scheduleRecurs: { shadowable: true },
-  scheduleSpaced: { shadowable: true },
-  scheduleExponential: { shadowable: true },
-  scheduleCron: { shadowable: true },
-  scheduleJittered: { shadowable: true },
-  scheduleMap: { shadowable: true },
-  scheduleMax: { shadowable: true },
-  scheduleMin: { shadowable: true },
-  scheduleConcat: { shadowable: true },
   runStream: { shadowable: false },
   bufferStream: { shadowable: false },
   mergeStreams: { shadowable: false },
@@ -177,9 +166,6 @@ const BUILTIN_TYPES = [
   "Option",
   "Ref",
   "RetrySchedule",
-  "ScheduleInput",
-  "ScheduleMetadata",
-  "ScheduleDecision",
   "Codec",
   "Fiber",
   "CloseableScope",
@@ -961,7 +947,6 @@ class Resolver {
       case SyntaxKind.EffectType:
       case SyntaxKind.StreamType:
       case SyntaxKind.SinkType:
-      case SyntaxKind.ScheduleType:
       case SyntaxKind.SchemaType:
       case SyntaxKind.LayerType:
         for (const kid of kidsOf(this.tree, node)) {

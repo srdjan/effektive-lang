@@ -256,7 +256,7 @@ export const DIAGNOSTIC_CODES = {
   },
   "declaration/015": {
     description:
-      "A tagged record or an error declaration has a field whose type contains a function or deferred type (Effect, Fiber, Stream, Sink, Schedule, RetrySchedule, Ref, Codec, Schema, provider, or scope), directly or through an alias. The emitter has no schema for such a type.",
+      "A tagged record or an error declaration has a field whose type contains a function or deferred type (Effect, Fiber, Stream, Sink, RetrySchedule, Ref, Codec, Schema, provider, or scope), directly or through an alias. The emitter has no schema for such a type.",
   },
   "declaration/016": {
     description:

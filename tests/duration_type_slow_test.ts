@@ -18,24 +18,6 @@ export const hang = (): Int fails TimeoutError =>
   timeout(() => { sleep(5s)
  1 }, 10ms)
 export const nap = (n: Int): void => sleep(n * 1ms)
-export const metadata: Schedule<Duration> = scheduleMap(
-  scheduleSpaced(20ms),
-  (meta: ScheduleMetadata<Int, unknown>): Duration => meta.duration
-)
-export const elapsed: Schedule<Duration> = scheduleMap(
-  scheduleSpaced(20ms),
-  (meta: ScheduleMetadata<Int, unknown>): Duration => meta.elapsed
-)
-export const exponential: Schedule<Duration> = scheduleExponential(100ms, 2)
-export const stepped: Schedule<Int> = scheduleFromStep(
-  (): Int => 0,
-  (state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Int> =>
-    if (state < 2) {
-      ({ kind: "Continue", state: state + 1, output: state, delay: 5ms })
-    } else {
-      ({ kind: "Done", output: state })
-    }
-)
 `;
 
 Deno.test("Duration arithmetic runs on milliseconds, truncating a quotient toward zero", async () => {
@@ -90,56 +72,6 @@ console.log(JSON.stringify({
     negativeTimeout: true,
     negativeSleep: true,
   });
-});
-
-Deno.test("scheduleMap sees duration and elapsed as milliseconds", async () => {
-  const result = await compileAndRun(
-    SOURCE,
-    `import { Effect, Schedule } from "effect";
-import { elapsed, metadata } from "./main.ts";
-const first = (schedule: Schedule.Schedule<number>) =>
-  Effect.runPromise(Effect.gen(function* () {
-    const step = yield* Schedule.toStep(schedule);
-    const [output] = yield* step(0, undefined);
-    return output;
-  }));
-const duration = await first(metadata);
-console.log(JSON.stringify({
-  duration,
-  durationIsNumber: typeof duration === "number",
-  elapsed: typeof (await first(elapsed)) === "number",
-}));
-`,
-  );
-  assertEquals(result, {
-    duration: 20,
-    durationIsNumber: true,
-    elapsed: true,
-  });
-});
-
-Deno.test("scheduleExponential outputs delays as milliseconds and scheduleFromStep reads delay", async () => {
-  const result = await compileAndRun(
-    SOURCE,
-    `import { Effect, Schedule } from "effect";
-import { exponential, stepped } from "./main.ts";
-const outputs = (schedule: Schedule.Schedule<number>, count: number) =>
-  Effect.runPromise(Effect.gen(function* () {
-    const step = yield* Schedule.toStep(schedule);
-    const seen: number[] = [];
-    for (let i = 0; i < count; i++) {
-      const [output] = yield* step(i, undefined);
-      seen.push(output);
-    }
-    return seen;
-  }));
-console.log(JSON.stringify({
-  exponential: await outputs(exponential, 3),
-  stepped: await outputs(stepped, 2),
-}));
-`,
-  );
-  assertEquals(result, { exponential: [100, 200, 400], stepped: [0, 1] });
 });
 
 Deno.test("an int identity constructor converts a Duration, and a count times 1ms converts back", async () => {

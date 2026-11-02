@@ -207,7 +207,6 @@ Deno.test("type completion offers every type word and the Effect error names", (
       "Schema",
       "SchemaError",
       "SchemaIssue",
-      "Schedule",
       "SchemaOptional",
       "SchemaEncodedOptional",
       "SchemaDecodedOptional",

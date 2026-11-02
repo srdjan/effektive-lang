@@ -348,91 +348,6 @@ const broad = (source: Stream<Text>, sink: Sink<Item, Item[], never, never, Item
   );
 });
 
-Deno.test("Schedule validation rederives state, deferred channels, and aggregation input", () => {
-  const source = Deno.readTextFileSync(
-    new URL("../fixtures/emit/schedules/main.eff", import.meta.url),
-  );
-  const { ir, sources } = lowerText(source);
-  assertEquals(validateModule(ir, sources), []);
-  for (
-    const [name, path, value, code] of [
-      [
-        "custom",
-        "value.type.output",
-        { kind: "primitive", name: "string" },
-        "validation/002",
-      ],
-      ["custom", "value.type.effects.failures", [], "validation/002"],
-      ["custom", "value.type.effects.requirements", [], "validation/002"],
-      ["custom", "value.execution", "effect", "validation/004"],
-      ["controlled", "body.type.effects.failures", [], "validation/002"],
-    ] as const
-  ) {
-    const wrong = copy(ir);
-    setAt(wrong.declarations[decl(wrong, name)], path, value);
-    assert(codesOf(wrong, sources).includes(code), `${name}.${path}`);
-  }
-  const wrongInput = copy(ir);
-  setAt(wrongInput.declarations[decl(wrongInput, "mapped")], "type.input", {
-    kind: "primitive",
-    name: "string",
-  });
-  assert(
-    validateModule(wrongInput, sources).some((diagnostic) =>
-      diagnostic.message.includes("aggregateWithinStream needs compatible")
-    ),
-    JSON.stringify(validateModule(wrongInput, sources)),
-  );
-});
-
-Deno.test("Schedule composition validation rederives input, output, and channels", () => {
-  const source = Deno.readTextFileSync(
-    new URL("../fixtures/emit/schedules/composition.eff", import.meta.url),
-  );
-  const { ir, sources } = lowerText(source);
-  assertEquals(validateModule(ir, sources), []);
-  for (
-    const [name, path, value, code] of [
-      [
-        "slowest",
-        "value.type.output",
-        { kind: "primitive", name: "int" },
-        "validation/002",
-      ],
-      [
-        "sequential",
-        "value.type.effects.failures",
-        [],
-        "validation/002",
-      ],
-      [
-        "combined",
-        "value.type.effects.requirements",
-        [],
-        "validation/002",
-      ],
-      ["fastest", "value.execution", "effect", "validation/004"],
-      ["assembled", "body.effects.failures", [], "validation/003"],
-      ["assembled", "body.effects.requirements", [], "validation/003"],
-    ] as const
-  ) {
-    const wrong = copy(ir);
-    setAt(wrong.declarations[decl(wrong, name)], path, value);
-    assert(codesOf(wrong, sources).includes(code), `${name}.${path}`);
-  }
-  const incompatible = copy(ir);
-  setAt(incompatible.declarations[decl(incompatible, "right")], "type.input", {
-    kind: "primitive",
-    name: "string",
-  });
-  assert(
-    validateModule(incompatible, sources).some((diagnostic) =>
-      diagnostic.message.includes("schedule composition needs comparable input")
-    ),
-    JSON.stringify(validateModule(incompatible, sources)),
-  );
-});
-
 Deno.test("Effect construction and execution validate independently", () => {
   const lowered = lowerText(`
 error Stop = {}
@@ -1615,7 +1530,7 @@ Deno.test("the validation category registers one code for each of the nine areas
 
 // ------------------------------------------------------------------ independence
 
-Deno.test("src/core/validate imports only ir.ts, source.ts, diagnostics.ts, cron.ts, and its own files", () => {
+Deno.test("src/core/validate imports only ir.ts, source.ts, diagnostics.ts, and its own files", () => {
   const directory = new URL("../src/core/validate/", import.meta.url);
   const files: URL[] = [];
   const collect = (dir: URL): void => {
@@ -1631,7 +1546,7 @@ Deno.test("src/core/validate imports only ir.ts, source.ts, diagnostics.ts, cron
   collect(directory);
   const own = new Set(files.map((file) => file.href));
   const allowed = new Set(
-    ["ir.ts", "source.ts", "diagnostics.ts", "cron.ts"].map((name) =>
+    ["ir.ts", "source.ts", "diagnostics.ts"].map((name) =>
       new URL(`../${name}`, directory).href
     ),
   );

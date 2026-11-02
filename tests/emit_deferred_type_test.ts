@@ -32,12 +32,6 @@ const SAMPLES: { readonly [K in Type["kind"]]: Extract<Type, { kind: K }> } = {
   "fiber": { kind: "fiber", result: STRING, failures: [] },
   "effect": { kind: "effect", result: STRING, effects: NONE },
   "stream": { kind: "stream", element: STRING, effects: NONE },
-  "schedule": {
-    kind: "schedule",
-    output: STRING,
-    input: STRING,
-    effects: NONE,
-  },
   "sink": { kind: "sink", input: STRING, result: STRING, effects: NONE },
   "function": {
     kind: "function",
@@ -66,7 +60,6 @@ Deno.test("isDeferredType holds for exactly the twelve deferred kinds", () => {
     "provider",
     "ref",
     "retry-schedule",
-    "schedule",
     "schema",
     "sink",
     "stream",

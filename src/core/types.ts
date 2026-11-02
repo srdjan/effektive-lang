@@ -89,7 +89,6 @@ export function guardedRecord(
       case "fiber":
       case "effect":
       case "stream":
-      case "schedule":
       case "sink":
       case "function":
       case "provider":
@@ -151,7 +150,6 @@ export function guardedRecord(
       case "fiber":
       case "effect":
       case "stream":
-      case "schedule":
       case "sink":
       case "function":
       case "provider":
@@ -211,13 +209,6 @@ export type TypeNode =
   | {
     readonly kind: "stream";
     readonly element: TypeRef;
-    readonly failures: readonly ErrorId[];
-    readonly requirements: readonly CapabilityId[];
-  }
-  | {
-    readonly kind: "schedule";
-    readonly output: TypeRef;
-    readonly input: TypeRef;
     readonly failures: readonly ErrorId[];
     readonly requirements: readonly CapabilityId[];
   }
@@ -406,8 +397,6 @@ function structuralChildren(
     case "fiber":
     case "effect":
       return [node.result];
-    case "schedule":
-      return [node.output, node.input];
     case "sink":
       return [node.input, node.result, node.leftover];
     case "function":
@@ -546,15 +535,6 @@ export class TypeTable {
       case "stream":
         return `s:${
           JSON.stringify([node.element, node.failures, node.requirements])
-        }`;
-      case "schedule":
-        return `d:${
-          JSON.stringify([
-            node.output,
-            node.input,
-            node.failures,
-            node.requirements,
-          ])
         }`;
       case "sink":
         return `k:${
@@ -713,60 +693,6 @@ export class TypeTable {
       failures: sortedUnique(failures),
       requirements: sortedUnique(requirements),
     });
-  }
-
-  schedule(
-    output: TypeRef,
-    input: TypeRef,
-    failures: readonly ErrorId[],
-    requirements: readonly CapabilityId[],
-  ): TypeRef {
-    return this.intern({
-      kind: "schedule",
-      output,
-      input,
-      failures: sortedUnique(failures),
-      requirements: sortedUnique(requirements),
-    });
-  }
-
-  scheduleInput(input: TypeRef): TypeRef {
-    return this.record([
-      { name: "input", type: input, optional: false },
-      { name: "attempt", type: this.int, optional: false },
-      ...["start", "now", "elapsed", "elapsedSincePrevious"].map((name) => ({
-        name,
-        type: name === "start" || name === "now"
-          ? this.named(INSTANT_ID)
-          : this.named(DURATION_ID),
-        optional: false,
-      })),
-    ]);
-  }
-
-  scheduleMetadata(output: TypeRef, input: TypeRef): TypeRef {
-    const base = this.node(this.scheduleInput(input));
-    if (base.kind !== "record") throw new Error("invalid schedule input");
-    return this.record([
-      ...base.fields,
-      { name: "output", type: output, optional: false },
-      { name: "duration", type: this.named(DURATION_ID), optional: false },
-    ]);
-  }
-
-  scheduleDecision(state: TypeRef, output: TypeRef): TypeRef {
-    return this.union([
-      this.record([
-        { name: "kind", type: this.literal("Continue"), optional: false },
-        { name: "state", type: state, optional: false },
-        { name: "output", type: output, optional: false },
-        { name: "delay", type: this.named(DURATION_ID), optional: false },
-      ]),
-      this.record([
-        { name: "kind", type: this.literal("Done"), optional: false },
-        { name: "output", type: output, optional: false },
-      ]),
-    ]);
   }
 
   sink(
@@ -1319,13 +1245,6 @@ export class TypeTable {
           nested(sn.element, tn.element) &&
           isSubset(sn.failures, tn.failures) &&
           isSubset(sn.requirements, tn.requirements);
-      case "schedule":
-        return sn.kind === "schedule" &&
-          nested(sn.output, tn.output) &&
-          (this.unfold(sn.input) === this.unknown ||
-            nested(tn.input, sn.input)) &&
-          isSubset(sn.failures, tn.failures) &&
-          isSubset(sn.requirements, tn.requirements);
       case "sink":
         return sn.kind === "sink" &&
           nested(tn.input, sn.input) &&
@@ -1464,7 +1383,6 @@ export function dataOnly(
     case "fiber":
     case "effect":
     case "stream":
-    case "schedule":
     case "sink":
     case "function":
     case "provider":
@@ -1538,7 +1456,6 @@ export function containsDeferredType(
     case "fiber":
     case "stream":
     case "sink":
-    case "schedule":
     case "retry-schedule":
     case "ref":
     case "codec":

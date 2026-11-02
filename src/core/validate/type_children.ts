@@ -47,8 +47,6 @@ export function typeChildren(t: Type): readonly TypeChild[] {
       return [child(t.result, ".result")];
     case "stream":
       return [child(t.element, ".element")];
-    case "schedule":
-      return [child(t.output, ".output"), child(t.input, ".input")];
     case "sink":
       return t.leftover === undefined
         ? [child(t.input, ".input"), child(t.result, ".result")]

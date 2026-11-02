@@ -278,9 +278,6 @@ class ModuleChecker {
       case "Option":
       case "Ref":
       case "RetrySchedule":
-      case "ScheduleInput":
-      case "ScheduleMetadata":
-      case "ScheduleDecision":
       case "Codec":
       case "Fiber":
       case "CloseableScope":

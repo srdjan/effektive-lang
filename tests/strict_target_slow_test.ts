@@ -116,26 +116,6 @@ void storeLive;
   },
   {
     name:
-      "a Schedule annotated wider than its decision output validates and passes strict tsc",
-    files: {
-      "main.eff": `type Int = int
-type Text = string
-export const wide: Schedule<Int | Text> = scheduleFromStep(
-  (): Int => 0,
-  (state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Int> => ({ kind: "Done", output: state })
-)
-`,
-    },
-    entries: ["main.eff"],
-    run: `import { Schedule } from "effect";
-import { wide } from "./main.ts";
-const widest: Schedule.Schedule<number | string, unknown> = wide;
-void widest;
-`,
-    prefix: "effektive-schedule-output-",
-  },
-  {
-    name:
       "type-side constructors validate without wire services and compose explicit defaults",
     files: { "main.eff": emitFixture("schema-constructor") },
     entries: ["main.eff"],

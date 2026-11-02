@@ -164,7 +164,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "guardedRecord",
-    "offset": 1283,
+    "offset": 1260,
     "text": "!field.optional && tagOf(field.type) !== undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -182,7 +182,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "guardedRecord",
-    "offset": 1919,
+    "offset": 1896,
     "text": "tagged && hasDistinctTag",
     "operator": "logical",
     "class": "equivalent",
@@ -191,7 +191,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.assignable",
-    "offset": 6204,
+    "offset": 5900,
     "text": "i < sn.elements.length",
     "operator": "comparison",
     "class": "equivalent",
@@ -200,7 +200,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.assignable",
-    "offset": 7119,
+    "offset": 6815,
     "text": "i < tn.parameters.length",
     "operator": "comparison",
     "class": "equivalent",

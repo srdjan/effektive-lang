@@ -377,7 +377,6 @@ export function checkTypeIds(
         return;
       case "effect":
       case "stream":
-      case "schedule":
       case "sink":
         effects(`${at}.effects`, t.effects);
         return;
@@ -455,7 +454,6 @@ const DEFERRED_KINDS: ReadonlySet<Type["kind"]> = new Set([
   "fiber",
   "stream",
   "sink",
-  "schedule",
   "retry-schedule",
   "ref",
   "codec",
@@ -813,7 +811,6 @@ function guardedRecord(
       case "fiber":
       case "effect":
       case "stream":
-      case "schedule":
       case "sink":
       case "function":
       case "provider":
@@ -875,7 +872,6 @@ function guardedRecord(
       case "fiber":
       case "effect":
       case "stream":
-      case "schedule":
       case "sink":
       case "function":
       case "provider":

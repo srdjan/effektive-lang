@@ -10,8 +10,8 @@ import type { Expr } from "../ir.ts";
 type ExprKind = Expr["kind"];
 
 /**
- * The members of Expr that have the kind `K`. A member that has several kinds,
- * such as `schedule-max` with `schedule-min`, belongs to each of its kinds.
+ * The members of Expr that have the kind `K`. A member that has several kinds
+ * belongs to each of its kinds.
  */
 export type ExprOf<K extends ExprKind> = Expr extends infer E
   ? E extends Expr ? K extends E["kind"] ? E : never : never
@@ -180,32 +180,6 @@ const ROWS = {
   },
   "aggregate-stream": {
     children: (e) => [e.stream, e.sink],
-    leaf: "structural",
-  },
-  "aggregate-within-stream": {
-    children: (e) => [e.stream, e.sink, e.schedule],
-    leaf: "structural",
-  },
-  "schedule-from-step": {
-    children: (e) => [e.initial, e.decide],
-    leaf: "structural",
-  },
-  "schedule-recurs": { children: (e) => [e.times], leaf: "structural" },
-  "schedule-spaced": { children: (e) => [e.delayMillis], leaf: "structural" },
-  "schedule-exponential": {
-    children: (e) => e.factor === null ? [e.baseMs] : [e.baseMs, e.factor],
-    leaf: "structural",
-  },
-  "schedule-cron": { children: () => [], leaf: "structural" },
-  "schedule-jittered": { children: (e) => [e.schedule], leaf: "structural" },
-  "schedule-map": {
-    children: (e) => [e.schedule, e.transform],
-    leaf: "structural",
-  },
-  "schedule-max": { children: (e) => [e.left, e.right], leaf: "structural" },
-  "schedule-min": { children: (e) => [e.left, e.right], leaf: "structural" },
-  "schedule-concat": {
-    children: (e) => [e.left, e.right],
     leaf: "structural",
   },
   "run-stream": { children: (e) => [e.stream, e.sink], leaf: "leaf" },

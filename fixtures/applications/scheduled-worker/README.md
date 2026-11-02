@@ -34,9 +34,7 @@ progress and retry budgets; the driver can still retain its own resource IDs.
 
 runtime_test.ts runs ten application checks, including a virtual-time comparison
 with reference.ts. The native reference uses Effect.repeat, Effect.retry and
-Schedule composition for valid policies. It compares job times and results;
-it does not establish equivalence for every opaque Schedule value.
-The two source probes retain the general Schedule consumer gap separately.
+Schedule composition for valid policies. It compares job times and results.
 
 The driver performs no network or database I/O. These checks establish the
 scheduled-worker application gate, not external driver integration or full

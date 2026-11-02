@@ -710,58 +710,6 @@ function takeSinkCall(
   );
 }
 
-function aggregateWithinStreamCall(
-  c: StreamContext,
-  node: NodeId,
-  args: readonly Arg[],
-): NodeInfo {
-  const stream = c.argInfo(args[0]);
-  const producer = c.table.node(c.table.unfold(stream.type));
-  const sink = c.argInfo(args[1], sinkHint(c, stream.type, args[1]));
-  const schedule = c.argInfo(args[2]);
-  const consumer = c.table.node(c.table.unfold(sink.type));
-  const policy = c.table.node(c.table.unfold(schedule.type));
-  if (
-    producer.kind !== "stream" || consumer.kind !== "sink" ||
-    policy.kind !== "schedule"
-  ) {
-    c.report(
-      "type-mismatch/010",
-      "`aggregateWithinStream` needs Stream, Sink, and Schedule values",
-      node,
-    );
-    return c.finish(node, c.table.error, combine([stream, sink, schedule]));
-  }
-  c.fits(args[0].node, producer.element, consumer.input, "the sink input");
-  c.fits(
-    args[1].node,
-    consumer.leftover,
-    consumer.input,
-    "the replayed sink leftovers",
-  );
-  if (c.table.unfold(policy.input) !== c.table.unknown) {
-    c.fits(
-      args[2].node,
-      c.table.option(consumer.result),
-      policy.input,
-      "the schedule input",
-    );
-  }
-  return c.finish(
-    node,
-    c.table.stream(consumer.result, [
-      ...producer.failures,
-      ...consumer.failures,
-      ...policy.failures,
-    ], [
-      ...producer.requirements,
-      ...consumer.requirements,
-      ...policy.requirements,
-    ]),
-    combine([stream, sink, schedule]),
-  );
-}
-
 function sinkTransformStreamCall(
   c: StreamContext,
   node: NodeId,
@@ -1375,12 +1323,6 @@ export const STREAM_ROWS = {
     prologue: direct(2, "pure", { fact: { kind: "aggregate-stream" } }),
     handle: (c, node, name, args) =>
       sinkTransformStreamCall(c, node, args, name),
-  },
-  aggregateWithinStream: {
-    prologue: direct(3, "pure", {
-      fact: { kind: "aggregate-within-stream" },
-    }),
-    handle: (c, node, _name, args) => aggregateWithinStreamCall(c, node, args),
   },
   runStream: {
     prologue: direct(2, "effect", { fact: { kind: "run-stream" } }),

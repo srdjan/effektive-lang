@@ -71,13 +71,6 @@ export function typeFromIr(table: TypeTable, type: Type): TypeRef {
         type.effects.failures,
         type.effects.requirements,
       );
-    case "schedule":
-      return table.schedule(
-        typeFromIr(table, type.output),
-        typeFromIr(table, type.input),
-        type.effects.failures,
-        type.effects.requirements,
-      );
     case "sink":
       return table.sink(
         typeFromIr(table, type.input),
@@ -207,13 +200,6 @@ export function typeToIr(table: TypeTable, ref: TypeRef): Type {
       return {
         kind: "stream",
         element: typeToIr(table, node.element),
-        effects: { failures: node.failures, requirements: node.requirements },
-      };
-    case "schedule":
-      return {
-        kind: "schedule",
-        output: typeToIr(table, node.output),
-        input: typeToIr(table, node.input),
         effects: { failures: node.failures, requirements: node.requirements },
       };
     case "sink":

@@ -27,7 +27,6 @@ type StreamStructuralKind =
   | "take-sink"
   | "transduce-stream"
   | "aggregate-stream"
-  | "aggregate-within-stream"
   | "buffer-stream";
 
 type StreamLeafKind = "fold-stream" | "fold-effect-stream";
@@ -220,32 +219,6 @@ export function streamStructural(
           ...channelTypeArguments(c.scope, sink.effects),
         ]),
         callArguments([kid(e.stream), kid(e.sink)]),
-      ]);
-    }
-    case "aggregate-within-stream": {
-      const message = "scheduled aggregation has invalid operands";
-      const source = resolvedAs(c.scope, e.stream.type, "stream", message);
-      const sink = resolvedAs(c.scope, e.sink.type, "sink", message);
-      const schedule = resolvedAs(
-        c.scope,
-        e.schedule.type,
-        "schedule",
-        message,
-      );
-      return emitted([
-        `${c.scope.effect("Stream")}.aggregateWithin`,
-        typeArguments([
-          typeDoc(c.scope, source.element),
-          ...channelTypeArguments(c.scope, source.effects),
-          typeDoc(c.scope, sink.result),
-          sink.leftover === undefined
-            ? "never"
-            : typeDoc(c.scope, sink.leftover),
-          ...channelTypeArguments(c.scope, sink.effects),
-          typeDoc(c.scope, schedule.output),
-          ...channelTypeArguments(c.scope, schedule.effects),
-        ]),
-        callArguments([kid(e.stream), kid(e.sink), kid(e.schedule)]),
       ]);
     }
     case "buffer-stream": {

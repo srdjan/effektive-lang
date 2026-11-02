@@ -56,7 +56,6 @@ import type { ExprCore } from "./families/context.ts";
 import { effectLeaf, effectStructural } from "./families/effect.ts";
 import { fiberLeaf } from "./families/fiber.ts";
 import { layerLeaf, layerStructural } from "./families/layer.ts";
-import { scheduleStructural } from "./families/schedule.ts";
 import { schemaLeaf, schemaStructural } from "./families/schema.ts";
 import { scopeLeaf } from "./families/scope.ts";
 import { streamLeaf, streamStructural } from "./families/stream.ts";
@@ -820,17 +819,8 @@ export class ExprEmitter implements ExprCore {
       case "take-sink":
       case "transduce-stream":
       case "aggregate-stream":
-      case "aggregate-within-stream":
       case "buffer-stream":
         return streamStructural(this, e, kid);
-      case "schedule-spaced":
-      case "schedule-exponential":
-      case "schedule-cron":
-      case "schedule-map":
-      case "schedule-max":
-      case "schedule-min":
-      case "schedule-from-step":
-        return scheduleStructural(this, e, kid);
       case "layer":
         return layerStructural(this, e);
       case "codec":

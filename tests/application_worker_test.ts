@@ -35,7 +35,7 @@ Deno.test("scheduled worker composes retry, repetition and resource lifetimes in
   ) assertEquals(diagnostics, []);
 });
 
-Deno.test("scheduled worker contracts reject lost channels and preserve the general Schedule boundary", () => {
+Deno.test("scheduled worker contracts reject lost channels", () => {
   const cases: readonly (readonly [string, string, readonly Expected[]])[] = [
     [
       "lost JobFailure",
@@ -80,31 +80,4 @@ Deno.test("scheduled worker contracts reject lost channels and preserve the gene
       label,
     );
   }
-  const probe = checked(
-    files["worker.eff"] + `
-error Other = {}
-const opaque: Schedule<Int, Other> = scheduleRecurs(2)
-const unsupported = (): Int fails JobFailure uses Jobs.open | Jobs.execute | Jobs.close =>
-  retry(() => attempt(), { schedule: opaque })`,
-  );
-  assert(
-    probe.diagnostics.some((d) =>
-      d.message.includes("the retry schedule does not accept")
-    ),
-    JSON.stringify(probe.diagnostics),
-  );
-});
-
-Deno.test("scheduled worker repeats with an opaque Schedule in the options record", () => {
-  const project = checked(
-    files["worker.eff"] + `
-const opaque: Schedule<Int> = scheduleRecurs(2)
-const repeated = () => repeat(() => attempt(), { schedule: opaque })
-const positional = () => repeat(() => attempt(), opaque)`,
-  );
-  const repeatErrors = project.diagnostics.filter((d) =>
-    d.message.includes("`repeat`")
-  );
-  assertEquals(repeatErrors.length, 1, JSON.stringify(project.diagnostics));
-  assertEquals(repeatErrors[0].code, "type-mismatch/010");
 });

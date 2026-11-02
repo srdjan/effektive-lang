@@ -56,8 +56,6 @@ Deno.test("each repeat option is accepted alone", () => {
   for (
     const options of [
       "{ times: 3 }",
-      "{ schedule: scheduleRecurs(3) }",
-      "{ schedule: scheduleExponential(100ms) }",
       "{ while: (n) => true }",
       "{ until: (n: Int) => false }",
       "{ times: 2, until: (n) => n > 1, while: (n) => true }",
@@ -92,42 +90,36 @@ Deno.test("an effectful while callback adds its failures and requirements", () =
   ]);
 });
 
-Deno.test("a RetrySchedule in schedule is a diagnostic", () => {
+Deno.test("schedule is no option of repeat", () => {
   assertEquals(
     diagnosticsOf(
       `const r: RetrySchedule<Stop> = retrySchedule((e: Stop, n: Int): Option<Duration> => None)
 export const a = ${SIG} => ${REPEAT}{ schedule: r })\n`,
     ),
     [
-      "type-mismatch/010 `repeat` needs a Schedule in `schedule`; a RetrySchedule takes failures as input",
+      "type-mismatch/010 `repeat` has no option `schedule`; the options are times, while, until",
     ],
   );
   assertEquals(repeatWith("{ schedule: 3 }"), [
-    "type-mismatch/010 `repeat` needs a Schedule in `schedule`",
+    "type-mismatch/010 `repeat` has no option `schedule`; the options are times, while, until",
   ]);
-});
-
-Deno.test("a Schedule whose input does not accept the success type is a diagnostic", () => {
-  const rejected = `const s: Schedule<Int, Text> = scheduleRecurs(2)
-export const a = ${SIG} => ${REPEAT}{ schedule: s })\n`;
-  assertEquals(diagnosticsOf(rejected), [
-    "type-mismatch/003 the repeat schedule does not accept Int",
+  assertEquals(repeatWith("{ times: 2, schedule: 3 }"), [
+    "type-mismatch/010 `repeat` has no option `schedule`; the options are times, while, until",
   ]);
-  assertEquals(diagnosticsOf(rejected.replace("Text>", "Int>")), []);
 });
 
 Deno.test("an unknown key, a duplicate key, and an empty record are diagnostics", () => {
   assertEquals(repeatWith("{ count: 1 }"), [
-    "type-mismatch/010 `repeat` has no option `count`; the options are times, schedule, while, until",
+    "type-mismatch/010 `repeat` has no option `count`; the options are times, while, until",
   ]);
   assertEquals(repeatWith("{ times: 1, times: 2 }"), [
     "type-mismatch/010 `repeat` option `times` appears twice",
   ]);
   assertEquals(repeatWith("{ }"), [
-    "type-mismatch/010 `repeat` needs at least one of `times`, `schedule`, `while`, or `until`",
+    "type-mismatch/010 `repeat` needs at least one of `times`, `while`, or `until`",
   ]);
   assertEquals(repeatWith("3"), [
-    "type-mismatch/010 `repeat` needs an options record with `times`, `schedule`, `while`, or `until`",
+    "type-mismatch/010 `repeat` needs an options record with `times`, `while`, or `until`",
   ]);
   assertEquals(repeatWith("{ times: 0 - 1 }"), [
     "type-mismatch/010 `repeat` needs `times` to be a finite nonnegative safe integer literal",
@@ -218,7 +210,7 @@ Deno.test("the validator rejects a negative times option in repeat", () => {
   ]);
 });
 
-Deno.test("the validator rejects a RetrySchedule in a repeat schedule", () => {
+Deno.test("the validator rejects a schedule option in a repeat record", () => {
   const found = forged((ir) => {
     const options = limitedOptions(ir);
     // A type also has the kind retry-schedule; only the expression has a step.
@@ -231,7 +223,7 @@ Deno.test("the validator rejects a RetrySchedule in a repeat schedule", () => {
   });
   assert(
     found.includes(
-      `validation/006 ${LIMITED}.options.fields[0]: repeat needs a schedule in schedule; a retry schedule takes failures as input`,
+      `validation/006 ${LIMITED}.options.fields[0]: repeat has no option schedule`,
     ),
     found.join("\n"),
   );

@@ -17,7 +17,6 @@ const TYPE_KINDS: ReadonlySet<SyntaxKind> = new Set([
   SyntaxKind.EffectType,
   SyntaxKind.StreamType,
   SyntaxKind.SinkType,
-  SyntaxKind.ScheduleType,
   SyntaxKind.SchemaType,
   SyntaxKind.LayerType,
   SyntaxKind.LiteralType,

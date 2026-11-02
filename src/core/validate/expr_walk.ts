@@ -98,26 +98,6 @@ export function exprChildren(e: Expr): readonly Expr[] {
     case "aggregate-stream":
     case "run-stream":
       return [e.stream, e.sink];
-    case "aggregate-within-stream":
-      return [e.stream, e.sink, e.schedule];
-    case "schedule-from-step":
-      return [e.initial, e.decide];
-    case "schedule-recurs":
-      return [e.times];
-    case "schedule-spaced":
-      return [e.delayMillis];
-    case "schedule-exponential":
-      return e.factor === null ? [e.baseMs] : [e.baseMs, e.factor];
-    case "schedule-cron":
-      return [];
-    case "schedule-jittered":
-      return [e.schedule];
-    case "schedule-map":
-      return [e.schedule, e.transform];
-    case "schedule-max":
-    case "schedule-min":
-    case "schedule-concat":
-      return [e.left, e.right];
     case "buffer-stream":
       return [e.stream];
     case "merge-streams":

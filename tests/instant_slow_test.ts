@@ -5,23 +5,13 @@
 import { assertEquals } from "@std/assert";
 import { compileAndRun } from "./target_helpers.ts";
 
-const SOURCE = `type Int = int
-type Flag = boolean
+const SOURCE = `type Flag = boolean
 export const stamp = (): Instant => now()
 export const since = (start: Instant): Duration => now() - start
 export const later = (a: Instant, d: Duration): Instant => a + d
 export const earlier = (a: Instant, d: Duration): Instant => a - d
 export const gap = (a: Instant, b: Instant): Duration => a - b
 export const before = (a: Instant, b: Instant): Flag => a < b
-export const seen: Schedule<Instant> = scheduleFromStep(
-  (): Int => 0,
-  (state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Instant> =>
-    if (state < 2) {
-      ({ kind: "Continue", state: state + 1, output: meta.now, delay: 5ms })
-    } else {
-      ({ kind: "Done", output: meta.now })
-    }
-)
 `;
 
 Deno.test("now() reads the virtual clock after TestClock.adjust", async () => {
@@ -62,21 +52,4 @@ console.log(JSON.stringify({
     gap: 600,
     before: [true, false],
   });
-});
-
-Deno.test("a schedule step reads meta.now as an Instant under TestClock", async () => {
-  const result = await compileAndRun(
-    SOURCE,
-    `import { Effect, Option, Schedule } from "effect";
-import { seen } from "./main.ts";
-const program = Effect.gen(function* () {
-  const step = yield* Schedule.toStep(seen);
-  const [first] = yield* step(1000, Option.none());
-  return { first };
-});
-const out = await Effect.runPromise(program);
-console.log(JSON.stringify(out));
-`,
-  );
-  assertEquals(result, { first: 1000 });
 });

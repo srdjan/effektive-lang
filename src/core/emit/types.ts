@@ -285,15 +285,6 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
         `${scope.effect("Stream")}.Stream`,
         deferredArguments(scope, [typeDoc(scope, type.element)], type.effects),
       ];
-    case "schedule":
-      return [
-        `${scope.effect("Schedule")}.Schedule`,
-        typeArguments([
-          typeDoc(scope, type.output),
-          typeDoc(scope, type.input),
-          ...channelTypeArguments(scope, type.effects),
-        ]),
-      ];
     case "sink":
       return [
         `${scope.effect("Sink")}.Sink`,

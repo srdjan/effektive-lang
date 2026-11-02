@@ -41,7 +41,6 @@ export enum SyntaxKind {
   EffectType,
   StreamType,
   SinkType,
-  ScheduleType,
   SchemaType,
   LayerType,
   TypeArgs,
@@ -180,13 +179,6 @@ export const TYPE_WORDS: ReadonlyMap<string, TypeWord> = new Map([
         slot("uses"),
         slot("type"),
       ],
-    },
-  ],
-  [
-    "Schedule",
-    {
-      kind: SyntaxKind.ScheduleType,
-      slots: [slot("type"), slot("type"), slot("fails"), slot("uses")],
     },
   ],
   [

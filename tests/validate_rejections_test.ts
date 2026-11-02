@@ -90,9 +90,6 @@ const needy = layer(Clock, () => {
   ({ now: () => 1 })
 })
 const both = mergeLayers(clockLive, logLive)
-const exponential = scheduleExponential(1ms, 2)
-const mapped = scheduleMap(scheduleRecurs(1), (meta: ScheduleMetadata<Int, unknown>): Int => 1)
-const longest = scheduleMax(scheduleRecurs(1), scheduleSpaced(2ms))
 const one = (): Int => 1
 `;
 
@@ -890,60 +887,6 @@ const ROWS: readonly Row[] = [
     },
     expected: [
       "validation/002 declarations[12].value: mergeLayers needs two Layer values",
-    ],
-  },
-  // ---------------------------------------------------------------- schedule.ts
-  {
-    site: "schedule.ts:105",
-    name: "a scheduleExponential base that is not a Duration",
-    program: "effects",
-    change: (ir) => {
-      const s = find(constant(ir, "exponential").value, "schedule-exponential");
-      s.baseMs = illegal(find(s.baseMs, "literal"));
-    },
-    expected: [
-      "validation/002 declarations[13].value.baseMs: scheduleExponential needs a Duration base, found int",
-    ],
-  },
-  {
-    site: "schedule.ts:252",
-    name: "a scheduleMap over a value that is not a Schedule",
-    program: "effects",
-    change: (ir) => {
-      find(constant(ir, "mapped").value, "schedule-map").schedule = intLiteral(
-        ir,
-        "one",
-      );
-    },
-    expected: [
-      "validation/002 declarations[14].value: scheduleMap needs a Schedule and inline callback",
-    ],
-  },
-  {
-    site: "schedule.ts:270",
-    name: "a scheduleMap callback without ScheduleMetadata",
-    program: "effects",
-    change: (ir) => {
-      const callback = find(constant(ir, "mapped").value, "closure");
-      callback.parameters[0].type = INT;
-      closureType(callback).parameters[0] = INT;
-    },
-    expected: [
-      "validation/002 declarations[14].value: scheduleMap callback needs ScheduleMetadata<Output, Input>",
-    ],
-  },
-  {
-    site: "schedule.ts:300",
-    name: "a schedule composition over a value that is not a Schedule",
-    program: "effects",
-    change: (ir) => {
-      find(constant(ir, "longest").value, "schedule-max").left = intLiteral(
-        ir,
-        "one",
-      );
-    },
-    expected: [
-      "validation/002 declarations[15].value: schedule composition needs two Schedules",
     ],
   },
   // ---------------------------------------------------------------- families

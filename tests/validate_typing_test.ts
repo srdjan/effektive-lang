@@ -1,5 +1,5 @@
 // Unit tests for `fits` and `same` of the independent validator, for the
-// compound types that carry variance rules: Schema, Schedule, Sink,
+// compound types that carry variance rules: Schema, Sink,
 // RetrySchedule, Codec, Fiber, CloseableScope, and null against unit. Each test
 // builds Type values by hand and checks both directions of `fits`, and `same`.
 
@@ -250,93 +250,6 @@ Deno.test("Schema: a Schema is not another kind of type", () => {
     encoded: STRING,
   }, UNRELATED);
   relate("against its decoded type", schema(), INT, UNRELATED);
-});
-
-// ----------------------------------------------------------------- Schedule
-
-type ScheduleType = Extract<Type, { kind: "schedule" }>;
-
-function schedule(over: Partial<Omit<ScheduleType, "kind">> = {}): Type {
-  return {
-    kind: "schedule",
-    output: INT,
-    input: INT,
-    effects: { failures: [], requirements: [] },
-    ...over,
-  };
-}
-
-Deno.test("Schedule: output is covariant", () => {
-  relate(
-    "output int against number",
-    schedule(),
-    schedule({ output: NUMBER }),
-    ONE_WAY,
-  );
-  relate(
-    "output string against int",
-    schedule({ output: STRING }),
-    schedule(),
-    UNRELATED,
-  );
-});
-
-Deno.test("Schedule: input is contravariant", () => {
-  relate(
-    "input number against int",
-    schedule({ input: NUMBER }),
-    schedule(),
-    ONE_WAY,
-  );
-  relate(
-    "input string against int",
-    schedule({ input: STRING }),
-    schedule(),
-    UNRELATED,
-  );
-});
-
-Deno.test("Schedule: a source with unknown input fits every input, but unknown is not a top type as a target", () => {
-  relate(
-    "unknown against int",
-    schedule({ input: UNKNOWN }),
-    schedule(),
-    ONE_WAY,
-  );
-  relate(
-    "unknown against string",
-    schedule({ input: UNKNOWN }),
-    schedule({ input: STRING }),
-    ONE_WAY,
-  );
-  relate(
-    "unknown against unknown",
-    schedule({ input: UNKNOWN }),
-    schedule({ input: UNKNOWN }),
-    EQUAL,
-  );
-});
-
-Deno.test("Schedule: failure and requirement sets are subsets", () => {
-  const none = { failures: [], requirements: [] };
-  relate(
-    "failures",
-    schedule(),
-    schedule({ effects: { failures: [E], requirements: [] } }),
-    ONE_WAY,
-  );
-  relate(
-    "requirements",
-    schedule({ effects: none }),
-    schedule({ effects: { failures: [], requirements: [A] } }),
-    ONE_WAY,
-  );
-  relate(
-    "disjoint failures",
-    schedule({ effects: { failures: [E], requirements: [] } }),
-    schedule({ effects: { failures: [F], requirements: [] } }),
-    UNRELATED,
-  );
 });
 
 // --------------------------------------------------------------------- Sink

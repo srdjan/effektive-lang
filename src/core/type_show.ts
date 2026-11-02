@@ -120,12 +120,6 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
       return `Stream<${print(table, names, node.element)}, ${
         node.failures.map(idName).join(" | ") || "never"
       }, ${node.requirements.map(idName).join(" | ") || "never"}>`;
-    case "schedule":
-      return `Schedule<${print(table, names, node.output)}, ${
-        print(table, names, node.input)
-      }, ${node.failures.map(idName).join(" | ") || "never"}, ${
-        node.requirements.map(idName).join(" | ") || "never"
-      }>`;
     case "sink":
       return `Sink<${print(table, names, node.input)}, ${
         print(table, names, node.result)

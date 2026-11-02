@@ -21,7 +21,6 @@ import {
 } from "./syntax.ts";
 import { dataOnly, type TypeRef } from "./types.ts";
 import { sortedUnique } from "./util.ts";
-import { typeToIr } from "./type_ir.ts";
 import { showType } from "./type_show.ts";
 import { isErrorId } from "./ids.ts";
 import { isTypeKind, kidsOf, literalOf, nameTextOf } from "./syntax_queries.ts";
@@ -124,7 +123,6 @@ export class TypeLowerer {
       case SyntaxKind.EffectType:
       case SyntaxKind.StreamType:
       case SyntaxKind.SinkType:
-      case SyntaxKind.ScheduleType:
       case SyntaxKind.SchemaType:
       case SyntaxKind.LayerType:
         return this.deferredType(node);
@@ -290,30 +288,6 @@ export class TypeLowerer {
           ref: lowerer.env.table.retrySchedule(error.ref),
           ir: { kind: "retry-schedule", error: error.ir },
         };
-      },
-    },
-    ScheduleInput: {
-      kind: "generic",
-      arity: 1,
-      build: (lowerer, [input]) => {
-        const ref = lowerer.env.table.scheduleInput(input.ref);
-        return { ref, ir: typeToIr(lowerer.env.table, ref) };
-      },
-    },
-    ScheduleMetadata: {
-      kind: "generic",
-      arity: 2,
-      build: (lowerer, [input, output]) => {
-        const ref = lowerer.env.table.scheduleMetadata(input.ref, output.ref);
-        return { ref, ir: typeToIr(lowerer.env.table, ref) };
-      },
-    },
-    ScheduleDecision: {
-      kind: "generic",
-      arity: 2,
-      build: (lowerer, [state, input]) => {
-        const ref = lowerer.env.table.scheduleDecision(state.ref, input.ref);
-        return { ref, ir: typeToIr(lowerer.env.table, ref) };
       },
     },
     Codec: {
@@ -630,23 +604,6 @@ export class TypeLowerer {
       return {
         ref: this.env.table.stream(first.ref, failures, requirements),
         ir: { kind: "stream", element: first.ir, effects },
-      };
-    }
-    if (kind === SyntaxKind.ScheduleType) {
-      const input = typeNodes[1] === undefined
-        ? {
-          ref: this.env.table.unknown,
-          ir: { kind: "primitive" as const, name: "unknown" as const },
-        }
-        : this.lower(typeNodes[1]);
-      return {
-        ref: this.env.table.schedule(
-          first.ref,
-          input.ref,
-          failures,
-          requirements,
-        ),
-        ir: { kind: "schedule", output: first.ir, input: input.ir, effects },
       };
     }
     if (kind === SyntaxKind.SinkType) {

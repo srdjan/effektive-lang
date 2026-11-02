@@ -84,9 +84,6 @@ const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Optio
 const LAYER_SERVICE = `${INT}service First { one(): Int }
 `;
 
-const SCHEDULE_STEP =
-  '(state: Int, meta: ScheduleInput<unknown>): ScheduleDecision<Int, Int> => ({ kind: "Done", output: state })';
-
 const SHAPE =
   `${INT}type Num = number\ntype Shape = { kind: "circle", radius: Num } | { kind: "square", side: Num }\n`;
 
@@ -446,7 +443,7 @@ const ROWS: readonly SiteRow[] = [
     code: "execution-mode/001",
     fragment: "`retryStream` policy must be pure",
   },
-  // ---- sinks, schedules, merges, races, refs
+  // ---- sinks, merges, races, refs
   {
     builtin: "sinkForEach",
     change: "take no input parameter",
@@ -465,37 +462,6 @@ const ROWS: readonly SiteRow[] = [
       `${INT}const probe = (s: Stream<Int>, k: Sink<Int, Int[], never, never, Int>) => runStream(s, 1)\n`,
     code: "type-mismatch/010",
     fragment: "`runStream` needs a Sink as its second argument",
-  },
-  {
-    builtin: "scheduleFromStep",
-    change: "give the decision callback one parameter",
-    valid:
-      `${INT}const probe = () => scheduleFromStep((): Int => 0, ${SCHEDULE_STEP})\n`,
-    invalid:
-      `${INT}const probe = () => scheduleFromStep((): Int => 0, (state: Int): Int => state)\n`,
-    code: "type-mismatch/010",
-    fragment:
-      "`scheduleFromStep` needs a nullary state factory and a two-parameter decision callback",
-  },
-  {
-    builtin: "scheduleFromStep",
-    change: "type the metadata parameter as an int",
-    valid:
-      `${INT}const probe = () => scheduleFromStep((): Int => 0, ${SCHEDULE_STEP})\n`,
-    invalid:
-      `${INT}const probe = () => scheduleFromStep((): Int => 0, (state: Int, meta: Int): ScheduleDecision<Int, Int> => ({ kind: "Done", output: state }))\n`,
-    code: "type-mismatch/010",
-    fragment: "the decision callback needs ScheduleInput<Input>",
-  },
-  {
-    builtin: "scheduleMap",
-    change: "replace the schedule with an int",
-    valid:
-      `${INT}const probe = (sch: Schedule<Int>) => scheduleMap(sch, (meta: ScheduleMetadata<Int, unknown>): Int => 1)\n`,
-    invalid:
-      `${INT}const probe = (sch: Schedule<Int>) => scheduleMap(1, (meta: ScheduleMetadata<Int, unknown>): Int => 1)\n`,
-    code: "type-mismatch/010",
-    fragment: "`scheduleMap` needs a Schedule",
   },
   {
     builtin: "mergeStreams",
