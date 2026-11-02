@@ -86,6 +86,22 @@ A pure update costs about 150 ns more with `SynchronizedRef`. The effect on an a
 
 Run it again with `deno bench --no-lock --allow-read --allow-env bench/ref_update.ts`.
 
+## Type-table growth (SR13)
+
+`bench/type_growth.ts` gives one module a record type with a new field name in each edit, so each edit interns one new type shape. The type table appends and never frees a node. Item SR13 of the [simplification rebase](plans/2026-11-02-simplification-rebase.md) asks whether that growth needs a lifecycle policy in long language server sessions. M4 cannot answer this, because its edit script cycles a fixed set of type shapes (174 to 176 nodes over 10,000 edits).
+
+Recorded on 2026-11-02 with Deno 2.9.8 on one Mac, in one run for each scale. The heap is measured after two forced garbage collections, with the last revision alive.
+
+| Edits | Type nodes | Heap after GC | Heap for each edit | Time for each edit |
+| ----: | ---------: | ------------: | -----------------: | -----------------: |
+| 1,000 | 14 to 1,014 | 4.58 to 6.23 MiB | 1,726 bytes | 0.060 ms |
+| 10,000 | 14 to 10,014 | 4.58 to 9.70 MiB | 536 bytes | 0.038 ms |
+| 50,000 | 14 to 50,014 | 4.58 to 24.82 MiB | 424 bytes | 0.033 ms |
+
+Each new type shape keeps about 420 bytes. The edit time does not grow with the table. M4 samples a server RSS of about 200 MiB, so 50,000 new shapes add about 10% to it. Decision: SR13 needs no lifecycle policy now. The language server also keeps each project root that it found; the count of roots in a session is not measured.
+
+Run it again with `deno run --v8-flags=--expose-gc --allow-read bench/type_growth.ts <edits>`.
+
 ## Protocol
 
 Each M2 run ends with a checksum of the emitted text. Every run must give the same checksum, or the run stops with an error and prints no time. The first runs of each size are warm-ups, and the report drops them. Each row is a distribution: `n`, `min`, `p10`, `median`, `p90`, and `max`. The harness never reports a best of N. The rows of M2 pool the runs of both sides.

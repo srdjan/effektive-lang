@@ -341,3 +341,12 @@ U1 to U4 run at the same time. U5 starts after U1 lands. U6 runs when no executo
 | Item | Commit | Result |
 | --- | --- | --- |
 | SR0 | `5bb3f71` | The gate passes at `HEAD`. |
+| SR5 | `448de13` | The `--tsc` row matches the code. Three duplicates in `docs/api.md` link to `docs/development.md`. The Schedule rows wait for G2. |
+| SR3 | `51be1df`, sibling `304df02` | A slow test compiles 16 website units from `fixtures/website-examples.json` and runs `build --tsc` on each. `main.eff` gained its host files on the website. |
+| SR6 | `7c3d400`, sibling `b6f036f` | `deno task site:ir` generates the website `typed-ir.ts`. Each change of `ir.ts` now needs a sibling commit. |
+| SR1 | `cc531c0` | `Math`, `Error`, `String`, and `globalThis` give `declaration/002`. |
+| SR14 | `6a7a1b8` | `$unmatched` takes `never`. A forged IR without one arm gives TS2345. |
+| SR15 | `6628cf8` | The relay removes only the advice to add `undefined`. The executor's first-sentence cut also dropped useful second sentences. |
+| SR16 | `e0d9852` | `docs/testing.md` holds the oracle map. |
+| SR4 | `827d513` | A record literal body gives one `syntax/016`. |
+| SR13 | this commit | 424 bytes for each new type shape at 50,000 edits. No lifecycle policy now. See `docs/measurements.md`. |

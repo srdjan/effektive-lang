@@ -192,6 +192,7 @@ bench/         The measurement harnesses of parts A8 and L5. They are not part o
   m7.ts          M7: the time of a save round through the real language server.
   refinement_limits.ts The cost of a refinement entailment query at each solver step limit.
   ref_update.ts  The cost of Ref.update, SynchronizedRef.update, and SynchronizedRef.updateEffect (ES-D3).
+  type_growth.ts The heap and time cost of new type shapes in one Program (SR13).
   stats.ts       Quantiles, the noise floor, the checksum, and plain text tables.
 docs/          Design, plans, and rejected.md, the ledger of rejected ideas.
 ```
