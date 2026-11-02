@@ -97,6 +97,10 @@ export const DIAGNOSTIC_CODES = {
     description:
       "Logical operands mixed with Option fallback need parentheses.",
   },
+  "syntax/016": {
+    description:
+      "A record literal is the body of an arrow, a match arm, a handler, or a using acquisition without parentheses.",
+  },
   "type-mismatch/001": {
     description:
       "A type has the wrong number of type arguments, or a name that takes no type arguments has some.",

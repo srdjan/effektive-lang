@@ -12,6 +12,9 @@
 - A relayed TypeScript message no longer ends with the advice "Consider
   adding 'undefined' to the types of the target's properties". The
   generated code is not the user's to edit.
+- A record literal used directly as a body after `=>` gives one diagnostic,
+  `syntax/016`, that asks for `({ ... })`. Before, it gave `unknown-name/001`
+  and `syntax/008`.
 - `deno task site:ir` writes the website `typed-ir.ts` from `src/core/ir.ts`
   and the predicate types that it needs. A slow test compares the two files
   byte for byte.

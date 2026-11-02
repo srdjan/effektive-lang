@@ -576,3 +576,45 @@ Deno.test("unparen strips nested parenthesis expressions and keeps a malformed o
   assertEquals(kindsAfterUnparen("const x = ((a))\n"), "NameExpr");
   assertEquals(kindsAfterUnparen("const x = (\n"), "ParenExpr");
 });
+
+Deno.test("a record literal arrow body gets one diagnostic and parses as a record", () => {
+  const cases: ReadonlyArray<string> = [
+    "const f = (): P => { a: 1, b: 2 }",
+    "const f = (): P => {\n  a: 1,\n  b: 2\n}",
+    "const f = (p: P): P => { ...p, a: 1 }",
+    "const f = (): P => { a: 1 }",
+    "const f = (x: int) => match (x) { _ => { a: 1 } }",
+  ];
+  for (const text of cases) {
+    const result = parseChecked(text);
+    assertEquals(result.diagnostics.map((d) => d.code), ["syntax/016"], text);
+    assertEquals(countKind(result.tree, SyntaxKind.RecordExpr), 1, text);
+    assertEquals(countKind(result.tree, SyntaxKind.Block), 0, text);
+  }
+});
+
+Deno.test("the record body diagnostic starts at the opening brace", () => {
+  const result = parseChecked("const f = (): P => { a: 1 }");
+  assertEquals(
+    result.diagnostics.map((d) => [d.code, d.span.start, d.span.end]),
+    [["syntax/016", 19, 20]],
+  );
+});
+
+Deno.test("a block arrow body without a record start parses as before", () => {
+  const cases: ReadonlyArray<string> = [
+    "const f = (a: int) => { a }",
+    "const f = (a: int, b: int) => { a; b }",
+    "const f = (a: int, b: int) => {\n  a\n  b\n}",
+    "const f = () => {}",
+    "const f = (): P => ({ a: 1, b: 2 })",
+  ];
+  for (const text of cases) {
+    assertEquals(parseChecked(text).diagnostics, [], text);
+  }
+  const shorthand = parseChecked("const f = (a: int) => { a }");
+  assertEquals(countKind(shorthand.tree, SyntaxKind.Block), 1);
+  assertEquals(countKind(shorthand.tree, SyntaxKind.RecordExpr), 0);
+  const empty = parseChecked("const f = () => {}");
+  assertEquals(countKind(empty.tree, SyntaxKind.Block), 1);
+});

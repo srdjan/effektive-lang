@@ -1494,10 +1494,34 @@ class Parser {
     this.end(SyntaxKind.ArrowExpr);
   }
 
-  /** After `=>`: a brace opens a block. Anything else is an expression. */
+  /**
+   * After `=>`: a brace opens a block. Anything else is an expression. A block
+   * statement never starts with `name :` or `...`, so those tokens show a record
+   * literal without parentheses. It gets one diagnostic and parses as a record.
+   */
   private parseBody(): void {
-    if (this.kind() === TokenKind.LBrace) this.parseBlock();
-    else this.parseExpr();
+    if (this.kind() !== TokenKind.LBrace) {
+      this.parseExpr();
+    } else if (this.startsRecordLiteral()) {
+      this.report(
+        "syntax/016",
+        "a record literal body needs parentheses: `({ ... })`",
+        this.starts[this.pos],
+        this.ends[this.pos],
+      );
+      this.parseRecordExpr();
+    } else {
+      this.parseBlock();
+    }
+  }
+
+  /** True when the `{` at the current token is followed by `name :` or `...`. */
+  private startsRecordLiteral(): boolean {
+    let p = this.pos + 1;
+    while (this.kinds[p] === TokenKind.Newline) p++;
+    return this.kinds[p] === TokenKind.DotDotDot ||
+      (this.kinds[p] === TokenKind.Ident &&
+        this.kinds[p + 1] === TokenKind.Colon);
   }
 
   private parseBlock(): void {

@@ -28,6 +28,7 @@ The sections follow the language topics: core forms, modules and exports, effect
 | `fails` and `uses` on a new line | Continue a clause only when an identifier follows | [parse.ts](../src/core/parse.ts) |
 | `Some(_)` | Accepted; `_` is the binding name | [parse.ts](../src/core/parse.ts) |
 | Nesting depth | 512 levels of expressions and types. An expression parenthesis counts two levels; a type parenthesis counts one. Deeper input is `syntax/009`, and the parser skips only the one group at the limit | [parse.ts](../src/core/parse.ts) |
+| Record literal body | A `{` after `=>` opens a block. If `name :` or `...` follows the `{`, the text is a record literal, because no block statement starts that way. The parser reports `syntax/016` once and parses the braces as a record. Parentheses mark a returned record: `() => ({ a: 1 })`. This holds for an arrow, a match arm, a handler, and a `using` acquisition | [parse.ts](../src/core/parse.ts), [syntax-record-body-checked](../fixtures/errors/syntax-record-body-checked/main.eff) |
 | Parenthesized types | `(A \| B)[]` and the empty tuple type are accepted | [parse.ts](../src/core/parse.ts) |
 
 ### Declarations and types

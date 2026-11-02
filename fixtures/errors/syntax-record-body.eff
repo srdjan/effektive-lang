@@ -1,0 +1,4 @@
+export type Int = int
+export type P = { a: Int, b: Int }
+// error: syntax/016
+export const p = (): P => { a: 1, b: 2 }

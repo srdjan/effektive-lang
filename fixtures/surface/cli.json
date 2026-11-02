@@ -1495,6 +1495,40 @@
       }
     ]
   },
+  "errors-syntax-record-body-checked": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "main.eff:4:27: error syntax/016: a record literal body needs parentheses: `({ ... })`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
+  "errors-syntax-record-body": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-record-body.eff:4:27: error syntax/016: a record literal body needs parentheses: `({ ... })`\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
   "errors-syntax-record-spread": {
     "args": [
       "check",
