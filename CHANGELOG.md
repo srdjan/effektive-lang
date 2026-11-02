@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.12.1 - 2026-11-01
+
+This reset repairs three defects. It changes no source form, no wire format,
+and no IR version.
+
+- A direct call of a parameter no longer reports `type-mismatch/011` when a
+  local annotation gives that parameter a function type.
+- An annotated local arrow keeps its callable evidence through bindings,
+  aliases, and local record fields, so it no longer reports
+  `type-mismatch/003`.
+- A change of host order in `effektive.json` now updates the companion
+  imports after an incremental compilation, as a fresh compilation does.
+- Input contract inference resolves deferred callback contracts before it
+  reports input diagnostics. Contract resolution is separate from syntax
+  traversal.
+
 ## 0.12.0 - 2026-11-01
 
 This reset changes no source form, no wire format, and no emitted text.
