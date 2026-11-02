@@ -1,0 +1,24 @@
+BASELINE examples | {"emit":"ok","check":"exit 0"}
+BASELINE ir | {"emit":"ok","check":"exit 0"}
+identity-unknown-reference.json | {"emit":"log: {\"tag\":\"internal\",\"module\":\"log\",\"message\":\"unbound local local:log#log/missing\"}","check":"exit 0"}
+identity-unknown-capability.json | {"emit":"ok","check":"exit 1 TS2551 [ERROR]: Property 'println' does not exist on type '{ readonly print: (a: string) => Effect<void, ConsoleUnavailable, never>; }'. Did you mean 'print'? / error: Type checking failed."}
+identity-undeclared-export.json | {"emit":"ok","check":"exit 0"}
+identity-duplicate-declaration.json | {"emit":"ok","check":"exit 0"}
+types-recorded-string.json | {"emit":"ok","check":"exit 0"}
+types-literal-as-int.json | {"emit":"ok","check":"exit 0"}
+types-identity-mismatch.json | {"emit":"ok","check":"exit 0"}
+types-binary-identity-result.json | {"emit":"ok","check":"exit 0"}
+types-sealed-literal-foreign.json | {"emit":"ok","check":"exit 0"}
+types-record-into-tagged.json | {"emit":"ok","check":"exit 1 TS2741 [ERROR]: Property '_tag' is missing in type '{ amount: number; }' but required in type '{ readonly _tag: \"tagged#Fixed\"; readonly amount: number; }'. / error: Type checking failed."}
+types-untagged-name-pattern.json | {"emit":"ok","check":"exit 1 TS2339 [ERROR]: Property '_tag' does not exist on type '{ readonly amount: number; } | { readonly _tag: \"tagged#Times\"; readonly factor: number; }'. / TS2339 [ERROR]: Property 'amount' does not exist on type '{ readonly amount: number; } | { readonly _tag: \"tagged#Times\"; readonly factor: number; }'. / TS2339 [ERROR]: Property '_tag' does not exist on type '{ readonly amount: number; } | { "}
+contracts-dropped-failure.json | {"emit":"ok","check":"exit 0"}
+contracts-body-exceeds-declaration.json | {"emit":"ok","check":"exit 1 TS2375 [ERROR]: Type 'Effect<void, ConsoleUnavailable, Console>' is not assignable to type 'Effect<void, never, Console>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. / error: Type checking failed."}
+execution-node-pure.json | {"emit":"log: {\"tag\":\"internal\",\"module\":\"log\",\"message\":\"perform node in a structural position\"}","check":"exit 0"}
+execution-function-pure.json | {"emit":"empty-effect: {\"tag\":\"internal\",\"module\":\"empty-effect\",\"message\":\"pure() received an effect-mode run node\"}","check":"exit 0"}
+recovery-absent-handler.json | {"emit":"ok","check":"exit 1 TS2375 [ERROR]: Type 'Effect<string | undefined, StoreUnavailable | undefined, Users | undefined>' is not assignable to type 'Effect<string, StoreUnavailable, Users>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. / TS2322 [ERROR]: Type '(absent: any) => Effect<string, never, never>' is not assignable to type 'never'. / TS7006 ["}
+control-retry-negative.json | {"emit":"ok","check":"exit 0"}
+control-provide-job-with-parameter.json | {"emit":"ok","check":"exit 1 TS2345 [ERROR]: Argument of type '(extra: string) => Effect.Effect<string, StoreUnavailable, Users>' is not assignable to parameter of type 'LazyArg<Effect<string, StoreUnavailable, Users>>'. / error: Type checking failed."}
+initialization-constant-perform.json | {"emit":"log: {\"tag\":\"internal\",\"module\":\"log\",\"message\":\"pure() received an effect-mode perform node\"}","check":"exit 0"}
+serialization-unsorted-set.json | {"emit":"ok","check":"exit 0"}
+serialization-span-past-end.json | {"emit":"ok","check":"exit 0"}
+serialization-unknown-source.json | {"emit":"ok","check":"exit 0"}
