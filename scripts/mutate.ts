@@ -1,9 +1,10 @@
 // Measures which faults the fast tests detect. Run
 // `deno task mutate [--seed N] [--sample <n|all>] [--workers N] [--tests <file>]
-// [--only <path:line>] <module>...`. The defaults are seed 1, sample all, and
-// workers 4. The tool never edits the working tree. It makes one `git archive
-// HEAD` copy for each worker under a temporary directory, so it tests the
-// committed HEAD, and it removes the copies when it ends.
+// [--only <path:line>]... <module>...`. Each `--only` adds one site. The
+// defaults are seed 1, sample all, and workers 4. The tool never edits the
+// working tree. It makes one `git archive HEAD` copy for each worker under a
+// temporary directory, so it tests the committed HEAD, and it removes the
+// copies when it ends.
 //
 // A mutant is one small change of one source site: a comparison flip (`===`
 // and `!==`, `<` and `<=`, `>` and `>=`), a swap of `&&` and `||`, a negated
@@ -424,7 +425,8 @@ export interface Options {
   readonly sample: number | "all";
   readonly workers: number;
   readonly tests: string | undefined;
-  readonly only: { file: string; line: number } | undefined;
+  /** The sites to mutate. Empty means every site of the modules. */
+  readonly only: readonly { readonly file: string; readonly line: number }[];
   readonly modules: readonly string[];
 }
 
@@ -438,7 +440,7 @@ export function parseOptions(args: readonly string[]): Result<Options, string> {
   let sample: number | "all" = "all";
   let workers = 4;
   let tests: string | undefined;
-  let only: Options["only"];
+  const only: { file: string; line: number }[] = [];
   const modules: string[] = [];
   const list = [...args];
   while (list.length > 0) {
@@ -481,7 +483,7 @@ export function parseOptions(args: readonly string[]): Result<Options, string> {
       if (line === undefined) {
         return { ok: false, error: "--only must be <path:line>" };
       }
-      only = { file: value.slice(0, colon).replace(/^\.\//, ""), line };
+      only.push({ file: value.slice(0, colon).replace(/^\.\//, ""), line });
     } else {
       return { ok: false, error: `unknown flag ${flag}` };
     }
@@ -701,10 +703,10 @@ async function main(args: string[]): Promise<number> {
     }
     const sampled = new Map<string, Mutant[]>();
     for (const [module, sites] of sitesByModule) {
-      const kept = options.only === undefined
+      const kept = options.only.length === 0
         ? sites
         : sites.filter((site) =>
-          site.file === options.only!.file && site.line === options.only!.line
+          options.only.some((o) => site.file === o.file && site.line === o.line)
         );
       sampled.set(module, selectSample(kept, options.sample, options.seed));
     }

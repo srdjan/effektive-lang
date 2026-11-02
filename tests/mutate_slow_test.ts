@@ -321,7 +321,7 @@ Deno.test("parseOptions reads the defaults and the flags", () => {
       sample: "all",
       workers: 4,
       tests: undefined,
-      only: undefined,
+      only: [],
       modules: ["src/core/paths.ts"],
     },
   });
@@ -346,7 +346,30 @@ Deno.test("parseOptions reads the defaults and the flags", () => {
         sample: 2,
         workers: 3,
         tests: "tests/a_test.ts",
-        only: { file: "src/a.ts", line: 12 },
+        only: [{ file: "src/a.ts", line: 12 }],
+        modules: ["src/a.ts", "src/b.ts"],
+      },
+    },
+  );
+});
+
+Deno.test("parseOptions keeps every --only site", () => {
+  assertEquals(
+    parseOptions([
+      "--only",
+      "src/a.ts:12",
+      "--only=./src/b.ts:30",
+      "src/a.ts",
+      "src/b.ts",
+    ]),
+    {
+      ok: true,
+      value: {
+        seed: 1,
+        sample: "all",
+        workers: 4,
+        tests: undefined,
+        only: [{ file: "src/a.ts", line: 12 }, { file: "src/b.ts", line: 30 }],
         modules: ["src/a.ts", "src/b.ts"],
       },
     },

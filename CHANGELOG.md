@@ -40,6 +40,8 @@
 - A record literal used directly as a body after `=>` gives one diagnostic,
   `syntax/016`, that asks for `({ ... })`. Before, it gave `unknown-name/001`
   and `syntax/008`.
+- `deno task mutate` keeps each `--only` site. Before, a second `--only`
+  replaced the first without a message, so the run tested fewer sites.
 - `deno task site:ir` writes the website `typed-ir.ts` from `src/core/ir.ts`
   and the predicate types that it needs. A slow test compares the two files
   byte for byte.
