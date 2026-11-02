@@ -183,6 +183,13 @@ scope is integration with the existing compiler and language server. No
 experiment or adoption is authorized. Resume only when the user explicitly
 reopens the work. Broader package interoperability remains deferred separately.
 
+### Deferred imports in `check --fix`
+
+Deferred by the user on 2026-11-02, decision XCD5 of the
+[contract review](archive/plans/2026-11-02-inferred-export-contracts-review.md#decision-xcd5-imports-in-the-fix).
+`effektive check --fix` writes only the names that a module can see, and it adds
+no import. A demonstrated application blocker reopens the work.
+
 ### Runtime behavior and evidence limits
 
 These are limits of the selected witnesses, not automatically selected features.

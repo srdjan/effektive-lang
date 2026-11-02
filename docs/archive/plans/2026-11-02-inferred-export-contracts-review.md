@@ -1,6 +1,6 @@
 # Review: inferred `fails` and `uses` on exported functions
 
-Status: review complete on 2026-11-02. On 2026-11-02 the user chose option 2 of XCD1, option 1 of XCD2, XCD3, and XCD4, and approved the plan. The plan is complete: XCU1 to XCU4 are committed, and each acceptance check passed. Prefix: XC (findings), XCD (decisions), XCU (units).
+Status: review complete on 2026-11-02. On 2026-11-02 the user chose option 2 of XCD1, option 1 of XCD2, XCD3, and XCD4, and approved the plan. The plan is complete: XCU1 to XCU4 are committed, and each acceptance check passed. On 2026-11-02 the user chose option 1 of XCD5. Prefix: XC (findings), XCD (decisions), XCU (units).
 
 ## Result
 
@@ -114,6 +114,17 @@ Acceptance: in-process tests with literal expected text. One test has an export 
 Result: committed as `93d9129`. The plan had a gap. `contractActionsAt` rejects an action that adds a diagnostic, and a fix adds `failure-contract/001` to each closed caller of the fixed function. So the rounds could not fix a chain. The executor added the opt-in flag `allowCallerGaps`: with it, an action may add only contract diagnostics. The editor keeps the strict default. Each action now carries the id of the function that it edits.
 
 Limit: the fix writes only names that the module can see, and it adds no import. On a copy of `portable-publisher` without its exported clauses, one run took about 0.1 s, fixed 5 functions in 3 files, and left 2 `failure-contract/001` diagnostics in `publisher.eff`. That module imports none of the missing error names.
+
+### Decision XCD5: imports in the fix
+
+The limit of XCU3 raised a question: should `check --fix` add the missing imports? The options were:
+
+1. Defer the change until an application needs it. Recommended.
+2. Plan an extension that adds the missing imports, or uses an imported error-set alias.
+
+Option 1 was recommended for three reasons. The accepted applications keep their written contracts, so no application needs the change now. An added import changes the import graph, and the import graph rejects cycles. The diagnostics that stay after a fix name each missing entry, so the author can add the import.
+
+On 2026-11-02 the user chose option 1. A demonstrated application blocker reopens the decision. [Project status](../../status.md#deferred-imports-in-check---fix) records the deferral.
 
 ### XCU4: the survivors of the changed modules
 
