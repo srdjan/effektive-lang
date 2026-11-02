@@ -38,9 +38,10 @@ comments, strings, numbers, keywords and operators during parser recovery.
 There is no delta-token support.
 
 Contract actions apply to explicit inline function contracts whose checked
-bodies and parsed headers are reliable. They preserve existing entries, resolve
-effect identities through visible names, and check the edited project before
-returning an action. An action must remove at least one diagnostic and must
+bodies and parsed headers are reliable. They preserve existing entries and
+resolve effect identities through visible names. When every method of a service
+is missing, an action adds the service name. Each action checks the edited
+project before it is returned. An action must remove at least one diagnostic and must
 add none, by the same comparison. Diagnostic messages are not parsed to generate
 edits.
 

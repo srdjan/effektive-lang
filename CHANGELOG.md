@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The quick fix "Add missing fails/uses entries" now adds a service name to
+  the `uses` clause when the function needs every method of the service. It
+  adds method names when the function needs only some methods.
+
 ## 0.12.2 - 2026-11-02
 
 - The IR wire version is 8, and the validator rejects version 7. This

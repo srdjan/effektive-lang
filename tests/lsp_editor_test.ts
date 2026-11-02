@@ -220,7 +220,7 @@ Deno.test("LSP missing-effect actions return validated versioned source edits", 
   assertEquals(record(changes[0].textDocument), { uri, version: 8 });
   assert(
     list(changes[0].edits).every((e) =>
-      record(e).newText === "fails Failed uses Clock.now "
+      record(e).newText === "fails Failed uses Clock "
     ),
   );
 });

@@ -34,6 +34,38 @@ function effectName(
   return undefined;
 }
 
+/**
+ * Names for missing requirements. A service name replaces its methods when
+ * every method is missing. It takes the place of the first of those methods.
+ */
+function requirementNames(
+  revision: Revision,
+  module: string,
+  ids: readonly string[],
+): (string | undefined)[] {
+  const missing = new Set(ids);
+  const whole = new Map<string, string>();
+  const covered = new Set<string>();
+  for (const [name, binding] of revision.resolution(module)?.namespace ?? []) {
+    if (binding.target.kind !== "service") continue;
+    const prefix = `cap:${binding.target.id.slice("service:".length)}.`;
+    const methods = (binding.service?.entry.methodList ?? []).map((m) =>
+      prefix + m.name
+    );
+    if (
+      methods.length === 0 || !methods.every((m) => missing.has(m)) ||
+      methods.some((m) => covered.has(m))
+    ) continue;
+    whole.set(ids.find((id) => methods.includes(id)) ?? "", name);
+    for (const m of methods) covered.add(m);
+  }
+  return ids.flatMap((id) => {
+    const service = whole.get(id);
+    if (service !== undefined) return [service];
+    return covered.has(id) ? [] : [effectName(revision, module, id)];
+  });
+}
+
 /** Missing fails/uses only, for written clauses of inline contracts with reliable bodies. */
 export function contractActionsAt(
   revision: Revision,
@@ -76,9 +108,7 @@ export function contractActionsAt(
     const failureNames = missingFailures.map((id) =>
       effectName(revision, module.module, id)
     );
-    const useNames = missingUses.map((id) =>
-      effectName(revision, module.module, id)
-    );
+    const useNames = requirementNames(revision, module.module, missingUses);
     if ([...failureNames, ...useNames].some((n) => n === undefined)) continue;
     const { tree } = module;
     let arrow = -1;

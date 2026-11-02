@@ -363,7 +363,23 @@ Deno.test("contract actions derive and validate missing effects while preserving
       ],
       [
         "type Int = int\nservice Clock { now(): Int }\nexport const f = (): Int => Clock.now()\n",
-        "type Int = int\nservice Clock { now(): Int }\nexport const f = (): Int uses Clock.now => Clock.now()\n",
+        "type Int = int\nservice Clock { now(): Int }\nexport const f = (): Int uses Clock => Clock.now()\n",
+      ],
+      [
+        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int => Svc.one() + Svc.two()\n",
+        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int uses Svc => Svc.one() + Svc.two()\n",
+      ],
+      [
+        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int => Svc.one()\n",
+        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int uses Svc.one => Svc.one()\n",
+      ],
+      [
+        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int uses Svc.one => Svc.one() + Svc.two()\n",
+        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int uses Svc.one | Svc.two => Svc.one() + Svc.two()\n",
+      ],
+      [
+        "type Int = int\nservice Alpha { a(): Int; b(): Int }\nservice Beta { c(): Int; d(): Int }\nexport const f = (): Int => Alpha.a() + Alpha.b() + Beta.c()\n",
+        "type Int = int\nservice Alpha { a(): Int; b(): Int }\nservice Beta { c(): Int; d(): Int }\nexport const f = (): Int uses Alpha | Beta.c => Alpha.a() + Alpha.b() + Beta.c()\n",
       ],
       [
         "type Int = int\nerror First = {}\nerror Second = {}\nservice Clock { now(): Int fails Second }\nconst f = (): Int fails First => Clock.now()\n",
