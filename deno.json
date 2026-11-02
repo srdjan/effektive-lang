@@ -22,6 +22,7 @@
     "golden:update": "deno run --allow-read --allow-write scripts/golden_update.ts",
     "surface:update": "deno run --allow-read --allow-write scripts/surface_update.ts",
     "validate:update": "deno run --allow-read --allow-write scripts/validate_fixtures.ts",
+    "site:ir": "deno run --allow-read --allow-write scripts/site_ir.ts",
     "lex:update": "deno run --allow-read --allow-write scripts/lex_snapshot.ts",
     "behavior:capture": "deno run --allow-all scripts/behavior_capture.ts",
     "logs:report": "deno run --allow-read scripts/logs_report.ts",

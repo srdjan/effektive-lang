@@ -17,6 +17,7 @@ Run every command from the repository root.
 | `deno task surface:update`    | Writes `fixtures/surface/cli.json` and `fixtures/surface/lsp.json` again from the current build: the command-line output and the language server replies that `tests/surface_test.ts` compares. Run it only after a deliberate change of that output. |
 | `deno task validate:update`   | Writes the mutation fixtures in `fixtures/validate/` again from the current lowering.                                                                   |
 | `deno task lex:update`        | Writes `fixtures/lex/snapshot.json` again from the current lexer. Run it only after a deliberate change of the lexer output.                            |
+| `deno task site:ir`           | Writes `../effektive/public/typed-ir.ts` from `src/core/ir.ts` and the type declarations of `src/core/predicates.ts` that it needs. Give a path to write to another file. Run it after a change of `ir.ts`. |
 | `deno task behavior:capture`  | Compares two revisions using instrumented compiler entry points during tests, including subprocesses. See the capture note below. Use it for refactors. |
 | `deno task logs:report`        | Prints a Markdown report of the session logs: `[--since <N>(m|h|d)] [folder ...]`. The default window is 24h and the default folder is `playground/.effektive/logs/`. |
 | `deno task logs:replay`        | Runs a logged session again on the current build: `<session.jsonl>`. Exit 0 when the outcomes match, 1 at the first difference, 2 for a usage error or an unsupported session. It skips `--tsc`, and it does not replay watch sessions. |
@@ -193,8 +194,8 @@ needs a change of the lockfile. To change a dependency on purpose, run
 
 `deno fmt` skips `docs/`, `src/core/ir.ts`, `editors/vscode/node_modules/`, and
 every `.eff` and `.effi` file. The file `ir.ts` keeps the layout of its
-published copy. `tests/ir_site_slow_test.ts` guards assignment compatibility of
-`ModuleIR` in both directions. It cannot see an extra optional property.
+published copy. `tests/ir_site_slow_test.ts` compares the output of `site:ir`
+with `typed-ir.ts` byte for byte, and checks that file alone.
 `deno fmt` checks `fixtures/golden/`. `deno lint` skips `docs/` and
 `fixtures/golden/`, because generated code keeps unused handler parameters. It
 also skips `editors/vscode/`, which holds plain JavaScript. Both tools skip

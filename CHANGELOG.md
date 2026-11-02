@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `deno task site:ir` writes the website `typed-ir.ts` from `src/core/ir.ts`
+  and the predicate types that it needs. A slow test compares the two files
+  byte for byte.
+
 ## 0.12.1 - 2026-11-01
 
 This reset repairs three defects. It changes no source form, no wire format,
