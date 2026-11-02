@@ -1550,7 +1550,7 @@ for (const version of [1, 2, 3, 4]) {
     assert(
       diagnostics.some((diagnostic) =>
         diagnostic.code === "validation/008" &&
-        diagnostic.message.includes("light-functional-ir version 7") &&
+        diagnostic.message.includes("light-functional-ir version 8") &&
         diagnostic.message.includes(`version ${version}`)
       ),
     );

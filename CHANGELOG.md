@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The IR wire version is 8, and the validator rejects version 7. This
+  release removes IR kinds, so it raises the version once. A later removal in
+  the same release keeps version 8.
 - `build --validate` and `Revision.validate` are gone, and `frontend.ts` no
   longer exports `validateProject`. The independent IR validator is a test
   oracle: tests import it from `src/core/validate_project.ts`. The command-line

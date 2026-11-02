@@ -2034,7 +2034,7 @@ export function lowerModule(
       ok: true,
       value: {
         format: "light-functional-ir",
-        version: 7,
+        version: 8,
         module,
         sources: [checkedModule.path],
         imports: prelude === undefined
