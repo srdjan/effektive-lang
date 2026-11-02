@@ -100,7 +100,10 @@ interface Definitions {
   }[];
 }
 
-/** The validator's view of the definitions. It follows world.ts:165-191. */
+/**
+ * The validator's view of the definitions. It follows the definition loop of
+ * `buildWorld` in src/core/validate/world.ts.
+ */
 function envOf(definitions: Definitions): TypeEnv {
   const aliases = new Map<string, Type>();
   const identities = new Set<string>();
@@ -192,10 +195,11 @@ function effects(g: Generator): Effects {
 
 /**
  * A union in the form that the compiler emits. A union with one distinct member
- * is that member: type_lower.ts:504-509, types.ts:780, and typing.ts:716 all
- * collapse it. So the IR never holds that union, and the checker, which interns
- * it to the member, would keep the top-level lift that the validator drops at a
- * union (typing.ts:295-298).
+ * is that member: `TypeLowerer.union` (src/core/type_lower.ts), `TypeTable.union`
+ * (src/core/types.ts), and `unionOf` (src/core/validate/typing.ts) all collapse
+ * it. So the IR never holds that union, and the checker, which interns it to the
+ * member, would keep the top-level lift that the validator drops at a union (the
+ * union case of `assignable` in src/core/validate/typing.ts).
  */
 function unionOf(g: Generator, members: readonly Type[]): Type {
   const union: Type = { kind: "union", members };
