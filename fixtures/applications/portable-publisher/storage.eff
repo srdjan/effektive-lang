@@ -117,7 +117,7 @@ const write = (store: KeyValue, serializer: ArticleCodec, plan: PublishPlan, tok
     }
   }
 
-export const articleStoreLive: Layer<ArticleStore, PlatformUnavailable, Platform.acquire | ArticleJson.acquire | TextRules.acquire> = layer(ArticleStore, () => {
+export const articleStoreLive: Layer<ArticleStore, PlatformUnavailable, Platform | ArticleJson | TextRules> = layer(ArticleStore, () => {
   const store = Platform.acquire()
   const serializer = ArticleJson.acquire()
   const lexical = TextRules.acquire()

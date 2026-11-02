@@ -108,10 +108,10 @@ Deno.test("portable publisher rejects erased failures, services, and result cont
   );
   for (
     const capability of [
-      "Platform.acquire",
-      "ArticleJson.acquire",
-      "TextRules.acquire",
-      "Time.acquire",
+      "Platform",
+      "ArticleJson",
+      "TextRules",
+      "Time",
     ]
   ) rejected(without("uses", capability), "requirement-contract");
   rejected(

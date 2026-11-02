@@ -51,11 +51,11 @@ Deno.test("service workflow rejects erased result, failure and retained service 
       error,
     );
   }
-  for (const service of ["Catalog.price", "Runtime.database"]) {
+  for (const service of ["Catalog", "Runtime"]) {
     const source = files["workflow.eff"].replace(
-      "uses Catalog.price | Runtime.database",
+      "uses Catalog | Runtime",
       "uses " +
-        (service === "Catalog.price" ? "Runtime.database" : "Catalog.price"),
+        (service === "Catalog" ? "Runtime" : "Catalog"),
     );
     assert(
       checked(source).diagnostics.some((d) =>

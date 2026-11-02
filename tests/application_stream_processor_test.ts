@@ -11,15 +11,7 @@ const files = Object.fromEntries(
   ) => [name, Deno.readTextFileSync(new URL(name, base))]),
 );
 const failures = ["InputFailure", "TransformFailure", "OutputFailure"];
-const services = [
-  "Input.open",
-  "Input.next",
-  "Input.close",
-  "Transform.apply",
-  "Output.open",
-  "Output.write",
-  "Output.close",
-];
+const services = ["Input", "Transform", "Output"];
 function checked(source = files["processor.eff"]) {
   const result = checkProject(
     memoryHost({ ...files, "processor.eff": source }),

@@ -1,6 +1,6 @@
 # Review: inferred `fails` and `uses` on exported functions
 
-Status: review complete on 2026-11-02. The user chose option 2 of XCD1 on 2026-11-02. The plan for option 2 waits for approval. Prefix: XC (findings), XCD (decisions), XCU (units).
+Status: review complete on 2026-11-02. On 2026-11-02 the user chose option 2 of XCD1, option 1 of XCD2, XCD3, and XCD4, and approved the plan. XCU1 is done. XCU2 and XCU3 are open. Prefix: XC (findings), XCD (decisions), XCU (units).
 
 ## Result
 
@@ -75,7 +75,7 @@ The user chose option 2 of XCD1 on 2026-11-02. Exported contracts stay written. 
 
 A service name in a `uses` clause stands for every method of the service (`capabilitiesOf` in `src/core/type_lower.ts`). So a service name and a list of all its methods give the same requirement set in the IR.
 
-Every gate run fails on XC14 until `CHANGELOG.md` has a 0.12.2 heading. Decision XCD4 settles it. Until then, a unit passes when the only failing test is the CHANGELOG test.
+XCD4 option 1 fixed XC14 in commit `6eb9a04`: the Unreleased entries moved under `## 0.12.2 - 2026-11-02`.
 
 ### XCU1: service names in the corpus
 
@@ -87,7 +87,9 @@ Tests that quote an old list by text change with it: `tests/application_worker_t
 
 The website copies in `../effektive/public/effektive-examples/` of `scheduled-worker`, `service-workflow`, and `stream-processor` equal the fixtures today. Copy the changed files there, and commit them in that repository separately.
 
-Acceptance: each application builds with `--tsc` and 0 diagnostics. Each emitted `.ts` file is byte-identical to its copy from before the change. `cmp` finds the website copies equal to the fixtures. `deno task check` passes, except for XC14.
+Acceptance: each application builds with `--tsc` and 0 diagnostics. Each emitted `.ts` file is byte-identical to its copy from before the change. `cmp` finds the website copies equal to the fixtures. `deno task check` passes.
+
+Result: done. The 9 replacements compiled, including the `Layer` type. The 4 application tests now remove a service name. All 15 emitted modules are byte-identical to a build of the previous commit. The 6 website `.eff` files equal the fixtures. `deno task check` exits 0. No `portable-publisher` copy exists on the website.
 
 ### XCU2: service names in the contract writer
 

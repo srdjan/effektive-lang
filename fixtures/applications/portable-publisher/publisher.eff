@@ -21,10 +21,10 @@ const applicationLive = mergeLayers(articleStoreLive, mergeLayers(clockLive, lex
 
 export const publishArticle = (rawId: Text): PublishReceipt
   fails PublishFailure | PlatformUnavailable
-  uses Platform.acquire | ArticleJson.acquire | TextRules.acquire | Time.acquire =>
+  uses Platform | ArticleJson | TextRules | Time =>
   provide(applicationLive, () => publishArticleFeature(rawId))
 
 export const publishAll = (rawIds: Text[]): PublishReceipt[]
   fails PublishFailure | PlatformUnavailable
-  uses Platform.acquire | ArticleJson.acquire | TextRules.acquire | Time.acquire =>
+  uses Platform | ArticleJson | TextRules | Time =>
   provide(applicationLive, () => publishAllFeature(rawIds))
