@@ -145,7 +145,7 @@ Decided by the user on 2026-10-16 and 2026-10-17. Each entry took the recommende
 | D17 JSON-RPC transport (2026-10-16) | Hand-written Content-Length framing over stdio. No npm dependency in the server. |
 | D18 Editor client (2026-10-16) | A thin VS Code client in `editors/vscode/`, plain JavaScript, with `vscode-languageclient`. npm is used only inside that directory. |
 | D19 Measurements (2026-10-16) | This phase adds the M1, M3, and M4 harness. It replays an edit script against the real server process. |
-| D20 Target names (2026-10-17) | No declaration or binding may take `undefined`, `Number`, `RangeError`, `ReadonlyArray`, `any`, `bigint`, `object`, or `symbol` (`declaration/002`). |
+| D20 Target names (2026-10-17) | No declaration or binding may take `undefined`, `Number`, `RangeError`, `ReadonlyArray`, `any`, `bigint`, `object`, or `symbol` (`declaration/002`). On 2026-11-02 the set gained `Math`, `Error`, `String`, and `globalThis`, because the emitter prints them as bare globals. |
 | D21 Type depth (2026-10-17) | A type deeper than the comparison cap gets a named diagnostic, as section 4.6 asks. |
 | D22 Package export (2026-10-17) | `deno.json` exports `./src/core/mod.ts`, the documented public API. |
 | D23 Long selector tests (2026-10-17) | The printer breaks a long selector test after `===`, as `deno fmt` does. In a later arm, it joins the earlier links on the first line when `deno fmt` does. |

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A source declaration or binding named `Math`, `Error`, `String`, or
+  `globalThis` now gives `declaration/002`. Before, such a program passed
+  `check` and then failed the strict target check, because the emitted
+  TypeScript uses these names as globals.
 - `deno task site:ir` writes the website `typed-ir.ts` from `src/core/ir.ts`
   and the predicate types that it needs. A slow test compares the two files
   byte for byte.
