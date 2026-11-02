@@ -1,6 +1,6 @@
 # Review: inferred `fails` and `uses` on exported functions
 
-Status: review complete on 2026-11-02. Decision XCD1 is open. Prefix: XC (findings), XCD (decisions).
+Status: review complete on 2026-11-02. The user chose option 2 of XCD1 on 2026-11-02. The plan for option 2 waits for approval. Prefix: XC (findings), XCD (decisions), XCU (units).
 
 ## Result
 
@@ -68,3 +68,45 @@ Options 3, 4, and 5 need the `AGENTS.md` condition "keep explicit exported contr
 ## Limits of this review
 
 The interface-hash cost of XC12 is not measured. The runtime behavior under inference is not tested, because the emitted code was byte-identical. The prototype used `as never` casts and is not kept. Its four changed sites are named in XC8.
+
+## Plan for option 2
+
+The user chose option 2 of XCD1 on 2026-11-02. Exported contracts stay written. The work makes them cheaper to write in three units. A Sonnet subagent does each unit on local `main`, one unit at a time. The orchestrator reviews each diff, runs the checks, and commits each unit.
+
+A service name in a `uses` clause stands for every method of the service (`capabilitiesOf` in `src/core/type_lower.ts`). So a service name and a list of all its methods give the same requirement set in the IR.
+
+Every gate run fails on XC14 until `CHANGELOG.md` has a 0.12.2 heading. Decision XCD4 settles it. Until then, a unit passes when the only failing test is the CHANGELOG test.
+
+### XCU1: service names in the corpus
+
+Model: Sonnet. Turn budget: 25.
+
+Replace a `uses` method list with the service name only where the list holds every method of that service. Do not change `fixtures/examples/users.eff`: its `Users.find` states least authority. The sites are the exported headers in `stream-processor/processor.eff`, `scheduled-worker/worker.eff`, `portable-publisher/feature.eff` (two headers), `portable-publisher/publisher.eff` (two headers), and `service-workflow/workflow.eff`. One more site is the `Layer` requirement type in `portable-publisher/storage.eff:120`.
+
+Tests that quote an old list by text change with it: `tests/application_worker_test.ts`, `tests/application_service_workflow_test.ts`, and any other file that `grep` finds. Each "lost channel" test still removes one entry and still expects its diagnostic code.
+
+The website copies in `../effektive/public/effektive-examples/` of `scheduled-worker`, `service-workflow`, and `stream-processor` equal the fixtures today. Copy the changed files there, and commit them in that repository separately.
+
+Acceptance: each application builds with `--tsc` and 0 diagnostics. Each emitted `.ts` file is byte-identical to its copy from before the change. `cmp` finds the website copies equal to the fixtures. `deno task check` passes, except for XC14.
+
+### XCU2: service names in the contract writer
+
+Model: Sonnet. Turn budget: 35. Files: `src/core/editor_actions.ts`, its tests, and `docs/editor.md`.
+
+This unit follows XCD2. With option 1 of XCD2, the quick fix inserts a service name when two conditions hold. Every method of the service is missing, and the clause names no method of that service. Otherwise the fix inserts method names as today. Existing entries stay unchanged, and each edit stays an insertion.
+
+Acceptance: literal tests for three cases. A service of two methods with both missing gives `uses Svc`. One of two methods missing gives `uses Svc.m`. A clause that names one method of the service gets only the missing method name. `deno task mutate src/core/editor_actions.ts` ends with each survivor killed or in the register.
+
+### XCU3: the command-line write-back
+
+Model: Sonnet. Turn budget: 50. Files: `src/cli/args.ts`, `src/cli/main.ts`, a new module in `src/cli/` if needed, `tests/cli_test.ts`, `scripts/logs_replay.ts`, `docs/api.md`, `docs/logging.md`, `CHANGELOG.md`, and `fixtures/surface/cli.json` through `deno task surface:update`.
+
+This unit follows XCD3. With option 1 of XCD3, the command is `effektive check [root] --fix`. It works in rounds. Each round collects the contract actions of every `.eff` module over the whole file, applies them, and checks the project again. The command stops after a round with no action. The rounds end, because each action only adds entries to finite sets. A fix in one module can make a closed caller in another module miss a failure, and the next round fixes that caller.
+
+The command writes each changed `.eff` file once, at the end, and writes no `.ts` output. Standard output gets the remaining diagnostics. The summary on standard error gets `, fixed K functions in M files`. The exit code follows the remaining diagnostics. `build --fix` and `watch --fix` are usage errors (exit 2). `logs:replay` rejects a `--fix` session as unsupported (exit 2), as it does a watch session.
+
+Acceptance: in-process tests with literal expected text. One test has an export that misses a failure and a requirement. One test has a chain of two modules, which one run fixes. One test has nothing to fix and writes no file. One test has an unrelated error, which stays, with exit 1. One test checks the usage error. `deno task mutate` on the new and changed modules ends with each survivor killed or in the register.
+
+### Completion
+
+The commit of the last unit moves this file to `docs/archive/plans/`, updates the registry path, and updates the links.

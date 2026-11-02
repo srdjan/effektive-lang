@@ -44,4 +44,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | MU (batches), MUS (survivors), MUF (findings) | [`docs/archive/plans/2026-11-01-mutation-survivors.md`](../archive/plans/2026-11-01-mutation-survivors.md) | Mutation survivors in three modules of the validator and the checker |
 | CR (phases) | [`docs/archive/plans/2026-11-01-compiler-reset.md`](../archive/plans/2026-11-01-compiler-reset.md) | Compiler reset |
 | SR (items), SRD (decisions), FB and AS (analysis findings), VF and VA (validation findings) | [`docs/archive/plans/2026-11-02-simplification-rebase.md`](../archive/plans/2026-11-02-simplification-rebase.md) | Simplification rebase proposal, with its analysis and validation evidence |
-| XC (findings), XCD (decisions) | [`docs/plans/2026-11-02-inferred-export-contracts-review.md`](2026-11-02-inferred-export-contracts-review.md) | Review of inferred `fails` and `uses` on exported functions |
+| XC (findings), XCD (decisions), XCU (units) | [`docs/plans/2026-11-02-inferred-export-contracts-review.md`](2026-11-02-inferred-export-contracts-review.md) | Review of inferred `fails` and `uses` on exported functions |
