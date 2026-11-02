@@ -357,3 +357,6 @@ U1 to U4 run at the same time. U5 starts after U1 lands. U6 runs when no executo
 | Phase 2 coverage | - | Lines 97.51%, branches 95.38%, functions 99.31%. |
 | SR17 | `9a097a0`, sibling `84e8a3b` | The IR wire version is 8. Later groups keep 8. |
 | G1 | `5c72430`, sibling `478ee45` | 117 to 106 prelude names, 123 to 112 expression kinds. Net lines: src -1,089, tests -2,023. Website draft 0.71 records the removal; later groups extend that note. |
+| G2 | `92ec013`, sibling `62d13cd`, `24f0b39` | 106 to 95 prelude names, 112 to 101 expression kinds, 19 to 18 type kinds. Net lines: src -1,542, tests -2,012. Correction: the plan said that only `core1.eff` used G2 names. The spec example `spec-control-time` also used `scheduleMax`, `scheduleExponential`, and `scheduleSpaced`. It now uses `retry` with `times` and `while`. |
+| Mutate `--only` | `d20bde1` | A second `--only` replaced the first, so executor runs with several sites tested only the last one. The fix keeps every site. Rerun results: see the next row. |
+| Mutation rerun | - | SR4 `parse.ts` 1503 to 1524: 9 mutants, 8 killed, 1 timeout (an endless newline loop), 0 survivors. SR15 `tsc.ts:63`: the tool makes no mutant at this line. SR11 `validate_project.ts`, whole module: 44 mutants, 44 killed. G2 ran one site per command, so its runs were complete. |
