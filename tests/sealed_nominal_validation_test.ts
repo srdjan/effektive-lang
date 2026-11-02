@@ -73,8 +73,9 @@ function forgedDiagnostics(source: string) {
   assert(result?.ok);
   const forged = structuredClone(result.value);
   sealImportedTypes(forged);
-  const modules = new Map(base.modules);
-  modules.set("main", { ok: true, value: forged });
+  // The call holds the forged consumer alone: with the producer, the forged
+  // payload also gives `validation/009`.
+  const modules = new Map([["main", { ok: true as const, value: forged }]]);
   return validateProject(base.project.analysis.project, modules).get("main") ??
     [];
 }
@@ -128,8 +129,7 @@ Deno.test("validator rejects a sealed flag on an alias", () => {
   const definition: unknown = alias.definition;
   assertMutable(definition);
   definition.sealed = true;
-  const modules = new Map(base.modules);
-  modules.set("main", { ok: true, value: forged });
+  const modules = new Map([["main", { ok: true as const, value: forged }]]);
   const diagnostics = validateProject(base.project.analysis.project, modules)
     .get("main") ?? [];
   assertEquals(diagnostics.map((diagnostic) => diagnostic.code), [

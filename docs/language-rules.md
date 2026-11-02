@@ -818,8 +818,8 @@ The registry in `src/core/diagnostics.ts` describes every code. This table lists
 | Project checker codes | The project checker in `src/core/check_project.ts` reports `module/004`, `execution-mode/003` for a recursive module-level function without explicit annotations, and `execution-mode/004`. The body checker reports `execution-mode/003` for a local function that refers to itself | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
 | Portable extension codes | `execution-mode/005` rejects nonempty rows on a pure function type. `sealed/001` rejects foreign construction, `002` updates, `003` arithmetic, and `004` schema authority violations. Widening uses existing type mismatch codes | [portable extensions plan](archive/plans/2026-10-23-portable-extensions.md) |
 | Host boundary code | The `deno check` mapping reports `host-boundary/001` | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
-| Validator codes | The independent IR validator reports the category `validation` with the codes `validation/001` to `validation/008`. See the next section for the area of each code | [report.ts](../src/core/validate/report.ts) |
-| Validation areas | `validation/001` is Identity, `002` Types, `003` Contracts, `004` Execution, `005` Recovery, `006` Control, `007` Initialization, and `008` Serialization | [report.ts](../src/core/validate/report.ts) |
+| Validator codes | The independent IR validator reports the category `validation` with the codes `validation/001` to `validation/009`. See the next section for the area of each code | [report.ts](../src/core/validate/report.ts) |
+| Validation areas | `validation/001` is Identity, `002` Types, `003` Contracts, `004` Execution, `005` Recovery, `006` Control, `007` Initialization, `008` Serialization, and `009` Import binding. Only `validateProject` reports `009`: it compares an import payload with the producer IR of the same call, skips `host:` and prelude imports and an absent producer, and ignores spans | [report.ts](../src/core/validate/report.ts), [validate_project.ts](../src/core/validate_project.ts) |
 
 ### Independent validator
 

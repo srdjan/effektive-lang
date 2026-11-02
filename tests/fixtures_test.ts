@@ -133,6 +133,9 @@ Deno.test("every registered code has at least one error fixture", () => {
   // A host-boundary code has a wrong host module in fixtures/host-boundary/,
   // because only `deno check` finds the error.
   for (const f of hostBoundaryManifest()) marked.add(f.code);
+  // validation/009 compares two modules, and a mutation fixture holds one
+  // module. tests/validate_import_binding_test.ts covers the code instead.
+  marked.add("validation/009");
   for (const code of registeredCodes()) {
     assert(marked.has(code), `${code} has no error fixture`);
   }

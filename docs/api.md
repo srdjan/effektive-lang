@@ -379,6 +379,13 @@ run it. The test `tests/core_boundary_slow_test.ts` checks this with the module
 graph of each product entry point.
 
 Each lowered map key must equal the recorded IR module name. A mismatch reports `validation/001`.
+For each import, `validateProject` also compares the import payload with the
+producer module in the same call. It compares the exports, the bindings, the
+type definitions, the errors, the services, the value types, and the flags
+inside them. It ignores spans. A difference reports `validation/009` with the
+import, the producer, and the first differing part. A `host:` import, the
+prelude import, and an import whose producer is not in the call are skipped.
+The comparison does not call the checker.
 Non-prelude import payloads cannot declare identities owned by the consumer module. Payloads can retain supporting types from other modules.
 
 The validator recomputes types, failure sets, requirement sets, and execution
@@ -391,7 +398,8 @@ that `src/core/validate/` imports only `ir.ts`, `source.ts`,
 
 Each code names a validation area. `validation/001` is Identity, `002` is Types,
 `003` is Contracts, `004` is Execution, `005` is Recovery, `006` is Control,
-`007` is Initialization, and `008` is Serialization. The registry in
+`007` is Initialization, `008` is Serialization, and `009` is Import binding.
+Only `validateProject` reports `009`. The registry in
 `src/core/diagnostics.ts` describes each code.
 
 A mutation fixture in `fixtures/validate/` is a lowered example IR with one

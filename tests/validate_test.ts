@@ -1584,7 +1584,7 @@ function mutated(
 
 // ------------------------------------------------------------------ registry
 
-Deno.test("the validation category registers one code for each of the eight areas", () => {
+Deno.test("the validation category registers one code for each of the nine areas", () => {
   const codes = registeredCodes().filter((c) => c.startsWith("validation/"));
   assertEquals(codes, [
     "validation/001",
@@ -1595,6 +1595,7 @@ Deno.test("the validation category registers one code for each of the eight area
     "validation/006",
     "validation/007",
     "validation/008",
+    "validation/009",
   ]);
   const names = [
     "Identity",
@@ -1605,6 +1606,7 @@ Deno.test("the validation category registers one code for each of the eight area
     "Control",
     "Initialization",
     "Serialization",
+    "Import binding",
   ];
   codes.forEach((code, i) => {
     assert(describeCode(code).startsWith(`${names[i]}:`), code);
@@ -2199,8 +2201,12 @@ Deno.test("validateProject skips a module whose lowering gave an error value", (
 Deno.test("the manifest lists at least eight mutation fixtures and every area", () => {
   const manifest = validationManifest();
   assert(manifest.length >= 8, `only ${manifest.length} fixtures`);
+  // `validation/009` compares two modules. A mutation fixture holds one
+  // module, so `tests/validate_import_binding_test.ts` covers that code.
   for (
-    const code of registeredCodes().filter((c) => c.startsWith("validation/"))
+    const code of registeredCodes().filter((c) =>
+      c.startsWith("validation/") && c !== "validation/009"
+    )
   ) {
     assert(manifest.some((f) => f.code === code), `no fixture for ${code}`);
   }

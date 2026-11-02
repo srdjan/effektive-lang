@@ -344,6 +344,10 @@ export const DIAGNOSTIC_CODES = {
     description:
       "Serialization: an effect set is not sorted and unique, a literal is not finite, a span names a source that is not supplied or lies outside its text, or the IR has an unexpected shape.",
   },
+  "validation/009": {
+    description:
+      "Import binding: an import payload differs from the export of its producer module in the same validation call, in an identity, a type definition, an effect set, a predicate, an execution mode, a flag, or a service contract.",
+  },
 } as const satisfies Readonly<Record<`${Category}/${string}`, CodeInfo>>;
 
 export type DiagnosticCode = keyof typeof DIAGNOSTIC_CODES;

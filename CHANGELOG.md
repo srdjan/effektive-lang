@@ -7,6 +7,9 @@
   oracle: tests import it from `src/core/validate_project.ts`. The command-line
   tool, the language server, and the playground no longer load it, and the
   playground bundle is 148 KB smaller (13.8%).
+- `validateProject` reports `validation/009` when an import payload differs
+  from the export of its producer module in the same call, so a consumer IR
+  from a stale build no longer passes.
 - A source declaration or binding named `Math`, `Error`, `String`,
   `globalThis`, `TypeError`, or `BigInt` now gives `declaration/002`. Before, such a program passed
   `check` and then failed the strict target check, because the emitted
