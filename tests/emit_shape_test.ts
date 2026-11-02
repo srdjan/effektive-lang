@@ -199,7 +199,7 @@ Deno.test("a structural node has no evaluated children, and a call has all", () 
   assertEquals(evaluatedChildren(call), [a, b]);
 });
 
-Deno.test("the table marks the 39 leaf kinds", () => {
+Deno.test("the table marks the 36 leaf kinds", () => {
   const kinds = new Set<string>();
   for (const ir of irOfExamplesAndEmitFixtures()) {
     for (const declaration of ir.declarations) {
@@ -214,7 +214,7 @@ Deno.test("the table marks the 39 leaf kinds", () => {
       });
     }
   }
-  // The fixtures reach part of the 39 kinds. Each reached kind is in the list.
+  // The fixtures reach part of the 36 kinds. Each reached kind is in the list.
   const LEAVES = {
     "schema-make": true,
     "schema-decode": true,
@@ -228,9 +228,6 @@ Deno.test("the table marks the 39 leaf kinds", () => {
     "interrupt-fiber": true,
     "provide": true,
     "run": true,
-    "partition-all": true,
-    "validate-all": true,
-    "all-results": true,
     "scoped": true,
     "fork-scoped": true,
     "catch": true,
@@ -258,6 +255,6 @@ Deno.test("the table marks the 39 leaf kinds", () => {
   } satisfies Record<LeafKind, true>;
 
   assert(kinds.size > 5, `${kinds.size} leaf kinds reached`);
-  assertEquals(Object.keys(LEAVES).length, 39);
+  assertEquals(Object.keys(LEAVES).length, 36);
   for (const kind of kinds) assert(Object.hasOwn(LEAVES, kind), kind);
 });

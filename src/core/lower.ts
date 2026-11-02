@@ -356,22 +356,6 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
     stream: arg(0),
     predicate: arg(1),
   }),
-  "partition-all": (arg, fact) => ({
-    kind: "partition-all",
-    jobs: arg(0),
-    concurrency: fact.concurrency,
-  }),
-  "validate-all": (arg, fact) => ({
-    kind: "validate-all",
-    jobs: arg(0),
-    onErrors: arg(1),
-    concurrency: fact.concurrency,
-  }),
-  "all-results": (arg, fact) => ({
-    kind: "all-results",
-    jobs: arg(0),
-    concurrency: fact.concurrency,
-  }),
   "sink-for-each": (arg) => ({ kind: "sink-for-each", consume: arg(0) }),
   "transduce-stream": (arg) => ({
     kind: "transduce-stream",

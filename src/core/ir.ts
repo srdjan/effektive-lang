@@ -211,9 +211,6 @@ export type Expr =
   | Node<{ kind: "drop-while-effect-stream"; stream: Expr; predicate: Expr }>
   | Node<{ kind: "take-while-stream"; stream: Expr; predicate: Expr }>
   | Node<{ kind: "take-until-stream"; stream: Expr; predicate: Expr }>
-  | Node<{ kind: "partition-all"; jobs: Expr; concurrency: number | "unbounded" | undefined }>
-  | Node<{ kind: "validate-all"; jobs: Expr; onErrors: Expr; concurrency: number | "unbounded" | undefined }>
-  | Node<{ kind: "all-results"; jobs: Expr; concurrency: number | "unbounded" | undefined }>
   | Node<{ kind: "sink-for-each"; consume: Expr }>
   | Node<{ kind: "take-sink"; count: number }>
   | Node<{ kind: "transduce-stream"; stream: Expr; sink: Expr }>

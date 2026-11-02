@@ -114,47 +114,6 @@ export const record = (): { number: Int, text: Text } =>
   assertStringIncludes(output, "concurrency: 2");
 });
 
-Deno.test("partitionAll emits Effect.partition with a concurrency bound", () => {
-  const output = oneModule(`
-error Stop = { n: Int }
-service Jobs { run(n: Int): Int fails Stop }
-type Int = int
-export const main = (): [Int[], Stop[]] uses Jobs.run =>
-  partitionAll([defer(() => Jobs.run(0)), defer(() => Jobs.run(1))], { concurrency: 2 })
-`);
-  assertStringIncludes(output, "Effect.partition(");
-  assertStringIncludes(output, "(job) => job");
-  assertStringIncludes(output, "concurrency: 2");
-});
-
-Deno.test("validateAll emits Effect.validate and maps errors", () => {
-  const output = oneModule(`
-error Stop = { n: Int }
-error Problems = { errors: Stop[] }
-service Jobs { run(n: Int): Int fails Stop }
-type Int = int
-export const main = (): Int[] fails Problems uses Jobs.run =>
-  validateAll([defer(() => Jobs.run(0)), defer(() => Jobs.run(1))], (errors) => Problems({ errors }), { concurrency: 2 })
-`);
-  assertStringIncludes(output, "Effect.validate(");
-  assertStringIncludes(output, "Effect.mapError(");
-  assertStringIncludes(output, "concurrency: 2");
-});
-
-Deno.test("allResults emits Effect.all in result mode", () => {
-  const output = oneModule(`
-type Int = int
-error Stop = { n: Int }
-service Jobs { run(n: Int): Int fails Stop }
-type Outcome = { _tag: "Success", success: Int } | { _tag: "Failure", failure: Stop }
-export const main = (): Outcome[] uses Jobs.run =>
-  allResults([defer(() => Jobs.run(0)), defer(() => Jobs.run(1))], { concurrency: 2 })
-`);
-  assertStringIncludes(output, "Effect.all(");
-  assertStringIncludes(output, 'mode: "result"');
-  assertStringIncludes(output, "concurrency: 2");
-});
-
 Deno.test("scoped fiber emission provides a local scope", () => {
   const output = oneModule(`
 type Int = int

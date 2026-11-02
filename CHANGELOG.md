@@ -23,6 +23,9 @@
   `addScopeFinalizer`, `closeScope`, and the type `CloseableScope`. No
   application used them. `scoped`, `forkScoped`, and `withResource` stay. The
   IR loses the type kind `closeable-scope` and four expression kinds.
+- `partitionAll`, `validateAll`, and `allResults` are gone. No application
+  used them. `all`, `traverse`, `map`, `filter`, and `fold` stay. The IR
+  loses three expression kinds.
 - `build --validate` and `Revision.validate` are gone, and `frontend.ts` no
   longer exports `validateProject`. The independent IR validator is a test
   oracle: tests import it from `src/core/validate_project.ts`. The command-line

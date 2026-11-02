@@ -178,21 +178,6 @@ const ARITY_ROWS: readonly ArityRow[] = [
     "`all` takes an Effect collection and an optional concurrency record",
   ),
   ...bounded(
-    "partitionAll",
-    1,
-    "`partitionAll` takes an Effect array and an optional concurrency record",
-  ),
-  ...bounded(
-    "validateAll",
-    2,
-    "`validateAll` takes an Effect array, an error wrapper, and an optional concurrency record",
-  ),
-  ...bounded(
-    "allResults",
-    1,
-    "`allResults` takes an Effect collection and an optional concurrency record",
-  ),
-  ...bounded(
     "traverse",
     2,
     "`traverse` takes two arguments and an optional concurrency record",
@@ -241,9 +226,6 @@ Deno.test("the wrong-count messages keep their exact wording", () => {
 Deno.test("the optional concurrency record accepts both of its counts", () => {
   const counts: Record<string, readonly number[]> = {
     all: [1, 2],
-    allResults: [1, 2],
-    partitionAll: [1, 2],
-    validateAll: [2, 3],
     traverse: [2, 3],
     mapEffect: [2, 3],
     flatMapStreams: [2, 3],

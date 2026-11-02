@@ -32,12 +32,6 @@ export function exprChildren(e: Expr): readonly Expr[] {
     case "run":
     case "scoped":
       return [e.value];
-    case "partition-all":
-      return [e.jobs];
-    case "validate-all":
-      return [e.jobs, e.onErrors];
-    case "all-results":
-      return [e.jobs];
     case "closure":
       return [e.body];
     case "call":

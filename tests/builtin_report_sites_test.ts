@@ -559,35 +559,6 @@ const ROWS: readonly SiteRow[] = [
     code: "type-mismatch/010",
     fragment: "`all` requires every record field to be present",
   },
-  {
-    builtin: "allResults",
-    change: "replace the collection with an int",
-    valid:
-      `${INT}const probe = () => allResults({ a: defer(() => 1), b: defer(() => 2) })\n`,
-    invalid: `${INT}const probe = () => allResults(1)\n`,
-    code: "type-mismatch/010",
-    fragment: "`allResults` needs a tuple, record, or array of Effect values",
-  },
-  {
-    builtin: "allResults",
-    change: "make a record field optional",
-    valid:
-      `${INT}type Jobs = { a: Effect<Int> }\nconst probe = (jobs: Jobs) => allResults(jobs)\n`,
-    invalid:
-      `${INT}type Jobs = { a?: Effect<Int> }\nconst probe = (jobs: Jobs) => allResults(jobs)\n`,
-    code: "type-mismatch/010",
-    fragment: "`allResults` requires every record field to be present",
-  },
-  {
-    builtin: "validateAll",
-    change: "replace the effect array with an int",
-    valid:
-      `${INT}error Stop = {}\nerror Problems = { errors: Stop[] }\nconst probe = () => validateAll([defer(() => fail(Stop({})))], (errors) => Problems({ errors }))\n`,
-    invalid:
-      `${INT}error Stop = {}\nerror Problems = { errors: Stop[] }\nconst probe = () => validateAll(1, (errors) => Problems({ errors }))\n`,
-    code: "type-mismatch/010",
-    fragment: "`validateAll` needs an array of Effect values",
-  },
   // ---- records and patterns
   {
     builtin: "record construction",

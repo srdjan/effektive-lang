@@ -1,6 +1,5 @@
 // Collection checking. Prelude dispatch retains arity and lowering-fact policy.
 import type { NodeId } from "../syntax.ts";
-import { isErrorId } from "../ids.ts";
 import { combine, type NodeInfo } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
 import { functionTypeToIr } from "../type_ir.ts";
@@ -38,7 +37,7 @@ export interface CollectionContext extends
     arg: Arg,
     operation?: Extract<
       ConcurrencyOperation,
-      "traverse" | "all" | "partitionAll" | "validateAll" | "allResults"
+      "traverse" | "all"
     >,
   ): number | "unbounded" | undefined;
 }
@@ -138,8 +137,7 @@ function allCall(
 
 /**
  * The Effect element type of an array of Effect values, or undefined after a
- * diagnostic (`name` needs an array of Effect values). Shared by `partitionAll`
- * and `race`.
+ * diagnostic (`name` needs an array of Effect values). Used by `race`.
  */
 export function effectArrayMember(
   c: Pick<CollectionContext, "table" | "isError" | "report">,
@@ -160,185 +158,6 @@ export function effectArrayMember(
     );
   }
   return undefined;
-}
-
-function partitionAllCall(
-  c: CollectionContext,
-  node: NodeId,
-  args: readonly Arg[],
-): NodeInfo {
-  c.noPipeline("partitionAll", args);
-  const jobs = c.argInfo(args[0]);
-  const option = args[1] === undefined ? undefined : c.argInfo(args[1]);
-  const concurrency = args[1] === undefined
-    ? undefined
-    : c.concurrencyBound(args[1], "partitionAll");
-  c.fact(node, { kind: "partition-all", concurrency });
-  const member = effectArrayMember(c, "partitionAll", jobs, args[0].node);
-  if (member === undefined) {
-    return c.finish(
-      node,
-      c.table.error,
-      combine([jobs, ...(option === undefined ? [] : [option])]),
-    );
-  }
-  const errors = c.table.union(member.failures.map((id) => c.table.named(id)));
-  const result = c.table.tuple([
-    c.table.array(member.result),
-    c.table.array(errors),
-  ]);
-  return c.finish(
-    node,
-    result,
-    combine([jobs, ...(option === undefined ? [] : [option]), {
-      failures: [],
-      requirements: member.requirements,
-      mode: "effect",
-    }]),
-  );
-}
-
-function validateAllCall(
-  c: CollectionContext,
-  node: NodeId,
-  args: readonly Arg[],
-): NodeInfo {
-  c.noPipeline("validateAll", args);
-  const jobs = c.argInfo(args[0]);
-  const shape = c.table.node(c.table.unfold(jobs.type));
-  const member = shape.kind === "array"
-    ? c.table.node(c.table.unfold(shape.element))
-    : undefined;
-  if (member?.kind !== "effect" && !c.isError(jobs.type)) {
-    c.report(
-      "type-mismatch/010",
-      "`validateAll` needs an array of Effect values",
-      args[0].node,
-    );
-  }
-  const errors = member?.kind === "effect"
-    ? c.table.union(member.failures.map((id) => c.table.named(id)))
-    : c.table.error;
-  const wrapped = c.callback(
-    "validateAll",
-    args[1],
-    [c.table.array(errors)],
-    undefined,
-  );
-  const wrapper = c.table.node(c.table.unfold(wrapped.result));
-  if (wrapper.kind !== "named" || !isErrorId(wrapper.id)) {
-    if (!c.isError(wrapped.result)) {
-      c.report(
-        "type-mismatch/010",
-        "`validateAll` error wrapper must return a declared error",
-        args[1].node,
-      );
-    }
-  }
-  const option = args[2] === undefined ? undefined : c.argInfo(args[2]);
-  const concurrency = args[2] === undefined
-    ? undefined
-    : c.concurrencyBound(args[2], "validateAll");
-  c.fact(node, { kind: "validate-all", concurrency });
-  return c.finish(
-    node,
-    member?.kind === "effect" ? c.table.array(member.result) : c.table.error,
-    combine([jobs, wrapped.info, ...(option === undefined ? [] : [option]), {
-      failures: wrapper.kind === "named" &&
-          isErrorId(wrapper.id)
-        ? [wrapper.id]
-        : [],
-      requirements: member?.kind === "effect" ? member.requirements : [],
-      mode: "effect",
-    }]),
-  );
-}
-
-function allResultsCall(
-  c: CollectionContext,
-  node: NodeId,
-  args: readonly Arg[],
-): NodeInfo {
-  c.noPipeline("allResults", args);
-  const jobs = c.argInfo(args[0]);
-  const option = args[1] === undefined ? undefined : c.argInfo(args[1]);
-  const concurrency = args[1] === undefined
-    ? undefined
-    : c.concurrencyBound(args[1], "allResults");
-  c.fact(node, { kind: "all-results", concurrency });
-  const table = c.table;
-  const shape = table.node(table.unfold(jobs.type));
-  const members = shape.kind === "tuple"
-    ? shape.elements
-    : shape.kind === "record"
-    ? shape.fields.map((field) => field.type)
-    : shape.kind === "array"
-    ? [shape.element]
-    : undefined;
-  if (members === undefined) {
-    if (!c.isError(jobs.type)) {
-      c.report(
-        "type-mismatch/010",
-        "`allResults` needs a tuple, record, or array of Effect values",
-        args[0].node,
-      );
-    }
-    return c.finish(
-      node,
-      table.error,
-      combine([jobs, ...(option === undefined ? [] : [option])]),
-    );
-  }
-  if (shape.kind === "record" && shape.fields.some((field) => field.optional)) {
-    c.report(
-      "type-mismatch/010",
-      "`allResults` requires every record field to be present",
-      args[0].node,
-    );
-  }
-  const outcomes = members.map((type) => {
-    const member = table.node(table.unfold(type));
-    if (member.kind !== "effect") {
-      c.report(
-        "type-mismatch/010",
-        "`allResults` requires an Effect value at every position",
-        args[0].node,
-      );
-      return { result: table.error, requirements: [] };
-    }
-    const error = table.union(member.failures.map((id) => table.named(id)));
-    return {
-      result: table.union([
-        table.record([
-          { name: "_tag", type: table.literal("Success"), optional: false },
-          { name: "success", type: member.result, optional: false },
-        ]),
-        table.record([
-          { name: "_tag", type: table.literal("Failure"), optional: false },
-          { name: "failure", type: error, optional: false },
-        ]),
-      ]),
-      requirements: member.requirements,
-    };
-  });
-  const result = shape.kind === "tuple"
-    ? table.tuple(outcomes.map((outcome) => outcome.result))
-    : shape.kind === "record"
-    ? table.record(shape.fields.map((field, i) => ({
-      name: field.name,
-      type: outcomes[i].result,
-      optional: false,
-    })))
-    : table.array(outcomes[0].result);
-  return c.finish(
-    node,
-    result,
-    combine([jobs, ...(option === undefined ? [] : [option]), {
-      failures: [],
-      requirements: outcomes.flatMap((outcome) => outcome.requirements),
-      mode: "effect",
-    }]),
-  );
 }
 
 function collectionCall(
@@ -525,27 +344,6 @@ export const COLLECTION_ROWS = {
       "`all` takes an Effect collection and an optional concurrency record",
     ),
     handle: (c, node, _name, args) => allCall(c, node, args),
-  },
-  partitionAll: {
-    prologue: optionalLast(
-      1,
-      "`partitionAll` takes an Effect array and an optional concurrency record",
-    ),
-    handle: (c, node, _name, args) => partitionAllCall(c, node, args),
-  },
-  validateAll: {
-    prologue: optionalLast(
-      2,
-      "`validateAll` takes an Effect array, an error wrapper, and an optional concurrency record",
-    ),
-    handle: (c, node, _name, args) => validateAllCall(c, node, args),
-  },
-  allResults: {
-    prologue: optionalLast(
-      1,
-      "`allResults` takes an Effect collection and an optional concurrency record",
-    ),
-    handle: (c, node, _name, args) => allResultsCall(c, node, args),
   },
   traverse: {
     prologue: optionalLast(

@@ -203,18 +203,6 @@ export type NodeFact =
   | { readonly kind: "drop-while-effect-stream" }
   | { readonly kind: "take-while-stream" }
   | { readonly kind: "take-until-stream" }
-  | {
-    readonly kind: "partition-all";
-    readonly concurrency: number | "unbounded" | undefined;
-  }
-  | {
-    readonly kind: "validate-all";
-    readonly concurrency: number | "unbounded" | undefined;
-  }
-  | {
-    readonly kind: "all-results";
-    readonly concurrency: number | "unbounded" | undefined;
-  }
   | { readonly kind: "sink-for-each" }
   | { readonly kind: "take-sink"; readonly count: number | undefined }
   | { readonly kind: "transduce-stream" }

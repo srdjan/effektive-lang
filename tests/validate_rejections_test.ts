@@ -94,15 +94,12 @@ const shift: Codec<Int, Int> = codec((n: Int): Int => 1, (n: Int): Int => 2)
 const decoded = (input: unknown): Option<Int> => decode(shift, input)
 const encoded = (n: Int): Option<Int> => encode(shift, n)
 const word = (): Text => "x"
-const parted = () => partitionAll([defer(() => 1)])
-const results = () => allResults([defer(() => 1)])
 const fibered = (): Int => withFiber(defer(() => 1), (fiber) => 1)
 const read = (ref: Ref<Int>): Int => getRef(ref)
 const write = (ref: Ref<Int>): void => setRef(ref, 2)
 const update = (ref: Ref<Int>): void => updateRef(ref, (n) => n)
 const decodeInt = (input: unknown): Int fails SchemaError => schemaDecode(integer, input)
 const merged = (s: Stream<Int>, t: Stream<Int>) => mergeStreams(s, t)
-const mixed = (jobs: Effect<Int>[]) => allResults(jobs)
 type Cents = int
 type Score = int
 const scored = (): Score => 1
@@ -258,7 +255,7 @@ interface Row {
 const ROWS: readonly Row[] = [
   // ---------------------------------------------------------------- expr.ts
   {
-    site: "expr.ts:265",
+    site: "expr.ts:260",
     name: "a parameter identity that is not local",
     program: "core",
     change: (ir) => {
@@ -270,7 +267,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:474",
+    site: "expr.ts:469",
     name: "more borrow flags than parameters",
     program: "core",
     change: (ir) => {
@@ -283,7 +280,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:483",
+    site: "expr.ts:478",
     name: "a borrow flag in the type that the parameter lacks",
     program: "core",
     change: (ir) => {
@@ -294,7 +291,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:496",
+    site: "expr.ts:491",
     name: "a borrow parameter of a type that is not opaque",
     program: "core",
     change: (ir) => {
@@ -311,7 +308,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:504",
+    site: "expr.ts:499",
     name: "a borrow parameter whose type flag is false",
     program: "core",
     change: (ir) => {
@@ -324,7 +321,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:512",
+    site: "expr.ts:507",
     name: "a borrow function that returns a value that is not data",
     program: "core",
     change: (ir) => {
@@ -339,7 +336,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:556",
+    site: "expr.ts:551",
     name: "an inferred contract that omits a body failure",
     program: "core",
     change: (ir) => {
@@ -350,7 +347,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:736",
+    site: "expr.ts:731",
     name: "a Some value that does not fit the option element",
     program: "core",
     change: (ir) => {
@@ -365,7 +362,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:1132",
+    site: "expr.ts:1121",
     name: "a tuple element that does not fit the tuple type",
     program: "core",
     change: (ir) => {
@@ -380,7 +377,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:1306",
+    site: "expr.ts:1295",
     name: "an error construction of an undeclared error",
     program: "core",
     change: (ir) => {
@@ -391,7 +388,7 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:1609",
+    site: "expr.ts:1598",
     name: "a generated capture marker that is false",
     program: "core",
     change: (ir) => {
@@ -926,49 +923,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "collections.ts:19",
-    name: "a partitionAll over a value that is not an array of Effects",
-    program: "families",
-    change: (ir) => {
-      find(fn(ir, "parted").body, "partition-all").jobs = intLiteral(
-        ir,
-        "word",
-      );
-    },
-    expected: [
-      "validation/002 declarations[7].body: partitionAll needs an array of Effect values",
-    ],
-  },
-  {
-    site: "collections.ts:109",
-    name: "an allResults over a value that is not a collection",
-    program: "families",
-    change: (ir) => {
-      find(fn(ir, "results").body, "all-results").jobs = intLiteral(
-        ir,
-        "word",
-      );
-    },
-    expected: [
-      "validation/002 declarations[8].body: allResults needs a tuple, record, or array of Effect values with required fields",
-    ],
-  },
-  {
-    site: "collections.ts:122",
-    name: "an allResults over a collection with a member that is not an Effect",
-    program: "families",
-    change: (ir) => {
-      const array: Mutable<Type> = { kind: "array", element: INT };
-      const f = fn(ir, "mixed");
-      f.parameters[0].type = array;
-      f.type.parameters[0] = array;
-      find(f.body, "reference").type = array;
-    },
-    expected: [
-      "validation/002 declarations[15].body: allResults requires an Effect value at every position",
-    ],
-  },
-  {
     site: "fiber.ts:29",
     name: "a withFiber over a job that is not an Effect",
     program: "families",
@@ -976,7 +930,7 @@ const ROWS: readonly Row[] = [
       find(fn(ir, "fibered").body, "with-fiber").job = intLiteral(ir, "word");
     },
     expected: [
-      "validation/006 declarations[9].body: with-fiber needs an Effect and one inline use callback",
+      "validation/006 declarations[7].body: with-fiber needs an Effect and one inline use callback",
     ],
   },
   {
@@ -989,7 +943,7 @@ const ROWS: readonly Row[] = [
       closureType(use).parameters[0] = INT;
     },
     expected: [
-      "validation/002 declarations[9].body.use: fiber use parameter does not match child type",
+      "validation/002 declarations[7].body.use: fiber use parameter does not match child type",
     ],
   },
   {
@@ -1007,7 +961,7 @@ const ROWS: readonly Row[] = [
       closureType(use).parameters[0] = forged;
     },
     expected: [
-      "validation/002 declarations[19].body.use: fiber use parameter does not match child type",
+      "validation/002 declarations[16].body.use: fiber use parameter does not match child type",
     ],
   },
   {
@@ -1025,7 +979,7 @@ const ROWS: readonly Row[] = [
       closureType(use).parameters[0] = forged;
     },
     expected: [
-      "validation/002 declarations[9].body.use: fiber use parameter does not match child type",
+      "validation/002 declarations[7].body.use: fiber use parameter does not match child type",
     ],
   },
   {
@@ -1043,7 +997,7 @@ const ROWS: readonly Row[] = [
       closureType(use).parameters[0] = forged;
     },
     expected: [
-      "validation/002 declarations[9].body.use: fiber use parameter does not match child type",
+      "validation/002 declarations[7].body.use: fiber use parameter does not match child type",
     ],
   },
   {
@@ -1055,10 +1009,10 @@ const ROWS: readonly Row[] = [
         UNKNOWN;
     },
     expected: [
-      "validation/002 declarations[9].body.type: expected unknown, recorded int",
-      "validation/002 declarations[9].body: the body type unknown does not fit the declared result type:m#Int",
-      "validation/002 declarations[9].body.use: fiber use result must be data only",
-      "validation/002 declarations[9].body.use.body: the body type int does not fit the closure result unknown",
+      "validation/002 declarations[7].body.type: expected unknown, recorded int",
+      "validation/002 declarations[7].body: the body type unknown does not fit the declared result type:m#Int",
+      "validation/002 declarations[7].body.use: fiber use result must be data only",
+      "validation/002 declarations[7].body.use.body: the body type int does not fit the closure result unknown",
     ],
   },
   {
@@ -1069,7 +1023,7 @@ const ROWS: readonly Row[] = [
       find(fn(ir, "read").body, "get-ref").ref = intLiteral(ir, "word");
     },
     expected: [
-      "validation/002 declarations[10].body: get-ref needs a Ref value",
+      "validation/002 declarations[8].body: get-ref needs a Ref value",
     ],
   },
   {
@@ -1080,7 +1034,7 @@ const ROWS: readonly Row[] = [
       find(fn(ir, "write").body, "set-ref").value = intLiteral(ir, "word");
     },
     expected: [
-      "validation/002 declarations[11].body.value: the new value must fit the Ref element",
+      "validation/002 declarations[9].body.value: the new value must fit the Ref element",
     ],
   },
   {
@@ -1094,7 +1048,7 @@ const ROWS: readonly Row[] = [
       );
     },
     expected: [
-      "validation/004 declarations[12].body.transform: updateRef needs an element-to-element callback",
+      "validation/004 declarations[10].body.transform: updateRef needs an element-to-element callback",
     ],
   },
   {
@@ -1108,7 +1062,7 @@ const ROWS: readonly Row[] = [
       );
     },
     expected: [
-      "validation/002 declarations[13].body: schema runner needs an ordinary Schema value",
+      "validation/002 declarations[11].body: schema runner needs an ordinary Schema value",
     ],
   },
   {
@@ -1127,7 +1081,7 @@ const ROWS: readonly Row[] = [
       find(f.body, "merge-streams").right.type = text;
     },
     expected: [
-      "validation/002 declarations[14].body: mergeStreams needs compatible element types",
+      "validation/002 declarations[12].body: mergeStreams needs compatible element types",
     ],
   },
   // ---------------------------------------------------------------- serialization.ts

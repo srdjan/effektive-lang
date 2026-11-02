@@ -99,11 +99,6 @@ import {
 } from "./families/context.ts";
 import { codec, codecOperation } from "./families/codec.ts";
 import {
-  allResults,
-  partitionAll,
-  validateAll,
-} from "./families/collections.ts";
-import {
   defer,
   log,
   race,
@@ -752,12 +747,6 @@ export class BodyValidator implements ValidatorCore {
         return defer(this, e, path);
       case "run":
         return run(this, e, path);
-      case "partition-all":
-        return partitionAll(this, e, path);
-      case "validate-all":
-        return validateAll(this, e, path);
-      case "all-results":
-        return allResults(this, e, path);
       case "scoped":
         return scoped(this, e, path);
       case "fork-scoped":

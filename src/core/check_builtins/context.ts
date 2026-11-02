@@ -25,9 +25,6 @@ export interface Arg {
 export type ConcurrencyOperation =
   | "traverse"
   | "all"
-  | "partitionAll"
-  | "validateAll"
-  | "allResults"
   | "mapEffect"
   | "flatMapStreams";
 

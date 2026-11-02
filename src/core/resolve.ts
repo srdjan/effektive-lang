@@ -139,9 +139,6 @@ const PRELUDE = {
   filter: { shadowable: false },
   fold: { shadowable: false },
   all: { shadowable: true },
-  partitionAll: { shadowable: true },
-  validateAll: { shadowable: true },
-  allResults: { shadowable: true },
   traverse: { shadowable: false },
 } as const satisfies Record<string, { readonly shadowable: boolean }>;
 

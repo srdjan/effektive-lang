@@ -427,25 +427,6 @@ function syntheticNodes(): Record<Expr["kind"], Expr> {
       stream: leaf(),
       predicate: leaf(),
     },
-    "partition-all": {
-      ...a,
-      kind: "partition-all",
-      jobs: leaf(),
-      concurrency: undefined,
-    },
-    "validate-all": {
-      ...a,
-      kind: "validate-all",
-      jobs: leaf(),
-      onErrors: leaf(),
-      concurrency: undefined,
-    },
-    "all-results": {
-      ...a,
-      kind: "all-results",
-      jobs: leaf(),
-      concurrency: "unbounded",
-    },
     "sink-for-each": { ...a, kind: "sink-for-each", consume: leaf() },
     "take-sink": { ...a, kind: "take-sink", count: 1 },
     "transduce-stream": {
@@ -640,8 +621,8 @@ Deno.test("exprChildren equals a reflective walk on every node of every fixture 
 Deno.test("exprChildren equals a reflective walk on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
   const kinds = Object.keys(synthetic);
-  // The Expr union of src/core/ir.ts has 97 kinds.
-  assertEquals(kinds.length, 97);
+  // The Expr union of src/core/ir.ts has 94 kinds.
+  assertEquals(kinds.length, 94);
   for (const [kind, node] of Object.entries(synthetic)) {
     assertEquals(node.kind, kind);
     assertSameChildren(node, "synthetic");
@@ -669,7 +650,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
     for (const node of all) reached.add(node.kind);
   }
   const synthetic = new Set(Object.keys(syntheticNodes()));
-  assertEquals(new Set([...reached, ...synthetic]).size, 97);
+  assertEquals(new Set([...reached, ...synthetic]).size, 94);
   for (const kind of reached) assert(synthetic.has(kind), kind);
 });
 
@@ -682,7 +663,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
 // [job, durationMs].
 Deno.test("childrenOf and exprChildren give the same child multiset on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
-  assertEquals(Object.keys(synthetic).length, 97);
+  assertEquals(Object.keys(synthetic).length, 94);
   const differentOrder: string[] = [];
   for (const [kind, node] of Object.entries(synthetic)) {
     const emitted = childrenOf(node);

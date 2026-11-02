@@ -51,7 +51,6 @@ import {
   through,
 } from "./doc.ts";
 import { codecStructural } from "./families/codec.ts";
-import { collectionsLeaf } from "./families/collections.ts";
 import type { ExprCore } from "./families/context.ts";
 import { effectLeaf, effectStructural } from "./families/effect.ts";
 import { fiberLeaf } from "./families/fiber.ts";
@@ -1735,10 +1734,6 @@ export class ExprEmitter implements ExprCore {
       case "uninterruptible":
       case "run":
         return effectLeaf(this, e, children);
-      case "partition-all":
-      case "validate-all":
-      case "all-results":
-        return collectionsLeaf(this, e, children);
       case "fork-scoped":
       case "with-resource":
         return scopeLeaf(this, e, children);

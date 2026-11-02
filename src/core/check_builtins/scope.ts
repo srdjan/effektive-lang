@@ -101,8 +101,8 @@ function forkScopedCall(
 }
 
 /**
- * The type of an outcome binding: a structural tagged union, like the result
- * of `allResults`. The Failure member is absent when no failure remains.
+ * The type of an outcome binding: a structural tagged union. The Failure
+ * member is absent when no failure remains.
  */
 export function outcomeType(
   table: ScopeContext["table"],
