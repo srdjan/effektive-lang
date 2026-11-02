@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.12.2 - 2026-11-02
+
 - The IR wire version is 8, and the validator rejects version 7. This
   release removes IR kinds, so it raises the version once. A later removal in
   the same release keeps version 8.
