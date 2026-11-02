@@ -351,3 +351,9 @@ U1 to U4 run at the same time. U5 starts after U1 lands. U6 runs when no executo
 | SR4 | `827d513` | A record literal body gives one `syntax/016`. |
 | SR13 | `2886e4b` | 424 bytes for each new type shape at 50,000 edits. No lifecycle policy now. See `docs/measurements.md`. |
 | SR2 | `ebeaf76`, `8aae21a`, this commit | A census places 102 names in 8 templates and type-checks 2,184 accepted programs in one `deno check` (about 4 s). It found two more captures: `TypeError` (the match fallback) and `BigInt` (refinement checks). Both are reserved. |
+| Phase 1 coverage | - | Lines 97.51%, branches 95.36%, functions 99.31%. The floors are 97, 95, and 99. |
+| SR7 | `500d15d` | No product path loads the validator. A slow test reads the module graph of the CLI, the LSP, and the playground. The playground bundle is 148 KB (13.8%) smaller. |
+| SR11 | `566fb5a` | `validation/009` reports an import payload that differs from its producer export. 18 tests; no mutation fixture, because a fixture holds one module. |
+| Phase 2 coverage | - | Lines 97.51%, branches 95.38%, functions 99.31%. |
+| SR17 | `9a097a0`, sibling `84e8a3b` | The IR wire version is 8. Later groups keep 8. |
+| G1 | `5c72430`, sibling `478ee45` | 117 to 106 prelude names, 123 to 112 expression kinds. Net lines: src -1,089, tests -2,023. Website draft 0.71 records the removal; later groups extend that note. |
