@@ -34,11 +34,11 @@ function errorFixture(name: string): string {
 Deno.test("parseArgs reads the commands, the root, and the flags", () => {
   assertEquals(parseArgs(["check"]), {
     ok: true,
-    value: { kind: "check", root: ".", log: true },
+    value: { kind: "check", root: ".", fix: false, log: true },
   });
   assertEquals(parseArgs(["check", "p"]), {
     ok: true,
-    value: { kind: "check", root: "p", log: true },
+    value: { kind: "check", root: "p", fix: false, log: true },
   });
   assertEquals(parseArgs(["build", "--tsc", "p"]), {
     ok: true,

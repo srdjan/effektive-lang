@@ -8,6 +8,8 @@ import { childrenOf, kindOf, SyntaxKind } from "./syntax.ts";
 
 export interface ContractAction {
   readonly title: string;
+  /** The value id of the function that the action edits. */
+  readonly function: string;
   readonly edits: readonly SourceEdit[];
 }
 
@@ -66,12 +68,22 @@ function requirementNames(
   });
 }
 
-/** Missing fails/uses only, for written clauses of inline contracts with reliable bodies. */
+const CONTRACT_CODES: readonly string[] = [
+  "failure-contract/001",
+  "requirement-contract/001",
+];
+
+/**
+ * Missing fails/uses only, for written clauses of inline contracts with reliable bodies.
+ * An action adds no diagnostic. With `allowCallerGaps`, it may add contract diagnostics:
+ * a closed caller can miss the entries that the action gives to its callee.
+ */
 export function contractActionsAt(
   revision: Revision,
   path: string,
   start: number,
   end = start,
+  allowCallerGaps = false,
 ): readonly ContractAction[] {
   const module = revision.checkedModuleAt(path);
   if (module === undefined || !path.endsWith(".eff")) return [];
@@ -183,7 +195,10 @@ export function contractActionsAt(
       checked.value.diagnostics,
       merged,
     );
-    if (delta.added.length > 0 || delta.removed.length === 0) {
+    const harmful = allowCallerGaps
+      ? delta.added.some((d) => !CONTRACT_CODES.includes(d.code))
+      : delta.added.length > 0;
+    if (harmful || delta.removed.length === 0) {
       continue;
     }
     output.push({
@@ -194,6 +209,7 @@ export function contractActionsAt(
           ? "fails"
           : "uses"
       } entries`,
+      function: signature.id,
       edits: merged,
     });
   }

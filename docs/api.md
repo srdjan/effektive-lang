@@ -115,6 +115,7 @@ src/cli/       The command-line tool. The Layout section of development.md says 
   tsc.ts         The generated deno check configuration and the mapping of its output.
   format.ts      The output line of a diagnostic.
   report.ts      Printing of a build outcome: diagnostics on stdout, the rest on stderr.
+  fix.ts         The rounds of `check --fix`: the contract quick fix applied to all modules.
 src/host/      The host adapters that the command-line tool and the language server share.
   generation.ts  A tagged generation result over the revision's four lazy queries; the narrow source port of file writing.
   io.ts          The ports: file system, deno check runner, and watch source.
@@ -598,6 +599,7 @@ task runs in the repository directory, so pass an explicit root, for example
 | Command                                       | What it does                                                                                              |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `deno task effektive check [root]`            | Prints the diagnostics of the project.                                                                    |
+| `deno task effektive check [root] --fix`      | Adds the missing `fails` and `uses` entries to the exported functions, writes the changed `.eff` files, then prints the remaining diagnostics. It writes no `.ts` file. It writes only names that the module can see, and it adds no import. |
 | `deno task effektive build [root]`            | Also writes `<module>.ts` and `<module>.ts.map` next to each source for each module that no error blocks, and `<name>.effi.ts` for each imported `.effi` file. |
 | `deno task effektive build [root] --tsc`      | Also runs `deno check` over the written files and the host modules, and maps each error to the source.    |
 | `deno task effektive watch [root] [--tsc]`    | Builds once, then builds again after each change of a source file. It prints the modules that it checked. |

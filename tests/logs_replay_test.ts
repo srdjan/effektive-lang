@@ -137,6 +137,15 @@ Deno.test("cli: a watch session is unsupported", async () => {
   assertEquals(outcome.tag, "unsupported");
 });
 
+Deno.test("cli: a check --fix session is unsupported", async () => {
+  const recorded = await recordCli(OK_PROJECT, ["check", CLI_ROOT, "--fix"]);
+  const outcome = await replay(recorded);
+  assertEquals(outcome, {
+    tag: "unsupported",
+    reason: "`check --fix` sessions are not supported",
+  });
+});
+
 Deno.test("cli: a session that used the removed --validate flag is unsupported", async () => {
   const recorded = await recordCli(OK_PROJECT, ["check", CLI_ROOT]);
   const index = recorded.events.findIndex((e) => e.kind === "cli.start");

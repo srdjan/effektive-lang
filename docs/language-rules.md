@@ -644,7 +644,7 @@ These rules concern the stages after checking. They do not change what a program
 | Help | `--help`, `-h`, or `help` prints the usage on stdout and exits 0 | [api.md, Using the command line](api.md#using-the-command-line) |
 | Output line | `path:line:column: error code: message`. A message with several lines prints as one line. Related spans are not printed | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
 | Sort order | Path, then line, then column, then code, then message. With `--tsc`, the `deno check` lines follow these lines as a separate group | [format.ts](../src/cli/format.ts) |
-| Summary line | The tool prints `N modules, M diagnostics` to stderr, with singular nouns for 1. N counts `.eff` modules. A build that changed files on disk adds `, wrote K files` | [report.ts](../src/cli/report.ts) |
+| Summary line | The tool prints `N modules, M diagnostics` to stderr, with singular nouns for 1. N counts `.eff` modules. A build that changed files on disk adds `, wrote K files`. A `check --fix` run that fixed a function adds `, fixed K functions in M files` | [report.ts](../src/cli/report.ts) |
 | Written files | The tool writes a file only when its text differs from the file on disk | [api.md, Using the command line](api.md#using-the-command-line) |
 | Lowering or emit failure | A failure that is not a diagnostic of the module prints `error: ...` on stderr and gives exit code 1 | [outputs.ts](../src/host/outputs.ts) |
 | `--tsc` after an error | The tool skips `deno check` when the build has a diagnostic or a failure, because the set of written files is incomplete | [api.md, Using the command line](api.md#using-the-command-line) |

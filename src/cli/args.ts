@@ -4,7 +4,12 @@ import type { Result } from "../core/mod.ts";
 
 /** A command that works on a project directory. */
 export type ProjectCommand =
-  | { readonly kind: "check"; readonly root: string; readonly log: boolean }
+  | {
+    readonly kind: "check";
+    readonly root: string;
+    readonly fix: boolean;
+    readonly log: boolean;
+  }
   | {
     readonly kind: "build";
     readonly root: string;
@@ -24,7 +29,7 @@ export const USAGE = [
   "usage: effektive <command> [root] [flags]",
   "",
   "commands:",
-  "  check [root]                          print diagnostics",
+  "  check [root] [--fix]                  print diagnostics; --fix first writes the missing fails and uses entries",
   "  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map",
   "  watch [root] [--tsc]                  build, then rebuild when a source changes",
   "",
@@ -37,7 +42,7 @@ export const USAGE = [
 ].join("\n");
 
 const FLAGS: Readonly<Record<string, readonly string[]>> = {
-  check: ["--no-log"],
+  check: ["--fix", "--no-log"],
   build: ["--tsc", "--no-log"],
   watch: ["--tsc", "--no-log"],
 };
@@ -76,7 +81,10 @@ export function parseArgs(args: readonly string[]): Result<Command, string> {
   const log = !flags.has("--no-log");
   switch (name) {
     case "check":
-      return { ok: true, value: { kind: "check", root, log } };
+      return {
+        ok: true,
+        value: { kind: "check", root, fix: flags.has("--fix"), log },
+      };
     case "build":
       return {
         ok: true,

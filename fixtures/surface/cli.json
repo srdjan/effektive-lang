@@ -95,7 +95,7 @@
     "events": [
       {
         "kind": "stderr",
-        "text": "effektive: unknown flag `--validate` for `build`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+        "text": "effektive: unknown flag `--validate` for `build`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root] [--fix]                  print diagnostics; --fix first writes the missing fails and uses entries\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
       }
     ]
   },
@@ -105,7 +105,7 @@
     "events": [
       {
         "kind": "stderr",
-        "text": "effektive: missing command\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+        "text": "effektive: missing command\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root] [--fix]                  print diagnostics; --fix first writes the missing fails and uses entries\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
       }
     ]
   },
@@ -117,7 +117,7 @@
     "events": [
       {
         "kind": "stdout",
-        "text": "usage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+        "text": "usage: effektive <command> [root] [flags]\n\ncommands:\n  check [root] [--fix]                  print diagnostics; --fix first writes the missing fails and uses entries\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
       }
     ]
   },
@@ -129,7 +129,7 @@
     "events": [
       {
         "kind": "stderr",
-        "text": "effektive: unknown command `nope`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+        "text": "effektive: unknown command `nope`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root] [--fix]                  print diagnostics; --fix first writes the missing fails and uses entries\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
       }
     ]
   },
@@ -156,7 +156,7 @@
     "events": [
       {
         "kind": "stderr",
-        "text": "effektive: unknown flag `--nope` for `check`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+        "text": "effektive: unknown flag `--nope` for `check`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root] [--fix]                  print diagnostics; --fix first writes the missing fails and uses entries\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
       }
     ]
   },

@@ -92,7 +92,7 @@ each outcome is the same, 1 at the first difference, and 2 for a usage error, a
 missing blob, or a session that it does not support.
 
 - Command line: it compares the diagnostics and the output hashes. It skips
-  `--tsc`. It does not replay watch sessions.
+  `--tsc`. It does not replay watch sessions or `check --fix` sessions.
 - Language server: it answers each disk call from the log, and compares each
   message out, disk call, flush, and exit in order.
 - Playground: it applies each edit and compares each compile result. The

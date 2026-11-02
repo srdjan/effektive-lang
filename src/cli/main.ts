@@ -10,13 +10,14 @@
 // error is an unexpected throw. It gets its own code so that it never reads as
 // a diagnostic.
 
-import { errorMessage } from "../core/mod.ts";
+import { errorMessage, joinPath } from "../core/mod.ts";
 import { parseArgs, type ProjectCommand, USAGE } from "./args.ts";
 import type { BuildOptions, BuildOutcome } from "./build.ts";
 import { denoIo } from "../host/deno_io.ts";
 import type { HostIo } from "../host/io.ts";
 import { type EventLog, noLog } from "../host/log.ts";
-import { printOutcome, rechecked } from "./report.ts";
+import { fixContracts, type FixOutcome } from "./fix.ts";
+import { type FixSummary, printOutcome, rechecked } from "./report.ts";
 import { Session, type SyncResult } from "./session.ts";
 
 const EXIT_OK = 0;
@@ -191,9 +192,42 @@ async function runProject(
     return EXIT_OK;
   }
   if (synced.tag === "unchanged") return EXIT_OK;
-  const outcome = await session.build(synced.revision, options, []);
-  printOutcome(io, outcome, synced.revision.moduleNames().length);
-  return outcome.failed ? EXIT_DIAGNOSTICS : EXIT_OK;
+  const fixed = command.kind === "check" && command.fix
+    ? writeFixes(io, root, fixContracts(synced.revision))
+    : undefined;
+  // After a write-back, the second sync reads the files again, so that the
+  // diagnostics print the lines and columns of the fixed text.
+  const again = fixed === undefined ? synced : session.sync();
+  if (isSyncFailure(again)) {
+    log.append("cli.error", { message: again.message });
+    io.stderr(`effektive: ${again.message}\n`);
+    return EXIT_USAGE;
+  }
+  const revision = "revision" in again ? again.revision : synced.revision;
+  const outcome = await session.build(revision, options, []);
+  printOutcome(io, outcome, revision.moduleNames().length, fixed?.summary);
+  return outcome.failed || fixed?.failed === true ? EXIT_DIAGNOSTICS : EXIT_OK;
+}
+
+/** Writes each fixed file once. A failed write prints a message and counts as a failure. */
+function writeFixes(
+  io: HostIo,
+  root: string,
+  fixed: FixOutcome,
+): { readonly summary: FixSummary; readonly failed: boolean } {
+  let files = 0;
+  for (const [path, text] of fixed.texts) {
+    const written = io.fs.writeText(joinPath(root, path), text);
+    if (!written.ok) {
+      io.stderr(`effektive: cannot write ${path}: ${written.error.message}\n`);
+      continue;
+    }
+    files += 1;
+  }
+  return {
+    summary: { functions: fixed.functions, files },
+    failed: files < fixed.texts.size,
+  };
 }
 
 if (import.meta.main) {

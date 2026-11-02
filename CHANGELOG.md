@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- The command `effektive check [root] --fix` adds the missing `fails` and
+  `uses` entries to the exported functions. It works in rounds over all `.eff`
+  files, writes each changed file once, and then prints the remaining
+  diagnostics. The summary ends with `fixed K functions in M files`. The flag
+  is not valid for `build` and `watch`, and `logs:replay` does not support a
+  `--fix` session.
 - The quick fix "Add missing fails/uses entries" now adds a service name to
   the `uses` clause when the function needs every method of the service. It
   adds method names when the function needs only some methods.

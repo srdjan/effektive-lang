@@ -198,6 +198,10 @@ async function replayCli(
   if (parsed.value.kind === "watch") {
     return unsupported("watch sessions (cli.change) are not supported yet");
   }
+  // The replay does not model the writes of `check --fix`, which change the inputs.
+  if (parsed.value.kind === "check" && parsed.value.fix) {
+    return unsupported("`check --fix` sessions are not supported");
+  }
   const root = parsed.value.root;
   const files = new Map<string, string>();
   for (const event of events) {

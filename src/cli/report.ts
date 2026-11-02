@@ -12,20 +12,32 @@ function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
+/** The contract fixes of a `check --fix` run: distinct functions and written files. */
+export interface FixSummary {
+  readonly functions: number;
+  readonly files: number;
+}
+
 /** Writes the diagnostics to stdout, then the notes and a summary line to stderr. */
 export function printOutcome(
   io: HostIo,
   outcome: BuildOutcome,
   moduleCount: number,
+  fixed?: FixSummary,
 ): void {
   for (const line of outcome.lines) io.stdout(`${line}\n`);
   for (const note of outcome.notes) io.stderr(`${note}\n`);
   const wrote = outcome.written.length === 0
     ? ""
     : `, wrote ${plural(outcome.written.length, "file")}`;
+  const fixes = fixed === undefined || fixed.functions === 0
+    ? ""
+    : `, fixed ${plural(fixed.functions, "function")} in ${
+      plural(fixed.files, "file")
+    }`;
   io.stderr(
     `${plural(moduleCount, "module")}, ${
       plural(outcome.diagnosticCount, "diagnostic")
-    }${wrote}\n`,
+    }${wrote}${fixes}\n`,
   );
 }
