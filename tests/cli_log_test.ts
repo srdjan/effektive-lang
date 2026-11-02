@@ -148,6 +148,19 @@ Deno.test("watch logs the changed paths of each batch and the changed inputs", a
   assertEquals(events.at(-1)?.kind, "cli.end");
 });
 
+Deno.test("watch logs no cli.change for an empty batch", async () => {
+  const m = memoryIo({
+    [`${ROOT}/effektive.json`]: "{}",
+    [`${ROOT}/ok.eff`]: "type Cents = int\n",
+  });
+  m.script = [() => []];
+  assertEquals(await main(["watch", ROOT], m.io), 0);
+  assertEquals(
+    m.logs[0].events.filter((e) => e.kind === "cli.change").length,
+    0,
+  );
+});
+
 Deno.test("build --tsc logs the exit code of deno check", async () => {
   const m = memoryIo({
     [`${ROOT}/effektive.json`]: "{}",

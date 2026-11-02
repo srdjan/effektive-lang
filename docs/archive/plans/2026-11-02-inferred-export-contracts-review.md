@@ -1,6 +1,6 @@
 # Review: inferred `fails` and `uses` on exported functions
 
-Status: review complete on 2026-11-02. On 2026-11-02 the user chose option 2 of XCD1, option 1 of XCD2, XCD3, and XCD4, and approved the plan. XCU1 is done. XCU2 and XCU3 are open. Prefix: XC (findings), XCD (decisions), XCU (units).
+Status: review complete on 2026-11-02. On 2026-11-02 the user chose option 2 of XCD1, option 1 of XCD2, XCD3, and XCD4, and approved the plan. The plan is complete: XCU1 to XCU4 are committed, and each acceptance check passed. Prefix: XC (findings), XCD (decisions), XCU (units).
 
 ## Result
 
@@ -16,9 +16,9 @@ This review reads the proposal as "omit the `fails` and `uses` clauses on export
 
 ## Rules today
 
-A non-exported function infers each omitted `fails` or `uses` clause from its body. A written clause closes its own set and acts as an upper bound. An exported function closes both sets, so an omitted clause means an empty set. Sources: the row "Open local contracts" in [language-rules.md](../language-rules.md), `src/core/check_declarations.ts:998`, and line 355 of the canonical specification.
+A non-exported function infers each omitted `fails` or `uses` clause from its body. A written clause closes its own set and acts as an upper bound. An exported function closes both sets, so an omitted clause means an empty set. Sources: the row "Open local contracts" in [language-rules.md](../../language-rules.md), `src/core/check_declarations.ts:998`, and line 355 of the canonical specification.
 
-This split is decision D1 "annotate exports, infer locals" of the [terse source plan](../archive/plans/2026-10-24-terse-source.md), accepted on 2026-10-24. The terse-syntax exception in `AGENTS.md` has the condition "keep explicit exported contracts". The proposal reverses D1 and needs a change to that condition.
+This split is decision D1 "annotate exports, infer locals" of the [terse source plan](2026-10-24-terse-source.md), accepted on 2026-10-24. The terse-syntax exception in `AGENTS.md` has the condition "keep explicit exported contracts". The proposal reverses D1 and needs a change to that condition.
 
 ## Method
 
@@ -99,6 +99,8 @@ This unit follows XCD2. With option 1 of XCD2, the quick fix inserts a service n
 
 Acceptance: literal tests for three cases. A service of two methods with both missing gives `uses Svc`. One of two methods missing gives `uses Svc.m`. A clause that names one method of the service gets only the missing method name. `deno task mutate src/core/editor_actions.ts` ends with each survivor killed or in the register.
 
+Result: committed as `e9bb8ed`, with four literal table cases and the changed `Clock` literals in the LSP test and `fixtures/surface/lsp.json`. The new helper `requirementNames` has no mutation survivor. The mutation run found 18 survivors in older code of `contractActionsAt`, which no earlier run had registered.
+
 ### XCU3: the command-line write-back
 
 Model: Sonnet. Turn budget: 50. Files: `src/cli/args.ts`, `src/cli/main.ts`, a new module in `src/cli/` if needed, `tests/cli_test.ts`, `scripts/logs_replay.ts`, `docs/api.md`, `docs/logging.md`, `CHANGELOG.md`, and `fixtures/surface/cli.json` through `deno task surface:update`.
@@ -109,6 +111,20 @@ The command writes each changed `.eff` file once, at the end, and writes no `.ts
 
 Acceptance: in-process tests with literal expected text. One test has an export that misses a failure and a requirement. One test has a chain of two modules, which one run fixes. One test has nothing to fix and writes no file. One test has an unrelated error, which stays, with exit 1. One test checks the usage error. `deno task mutate` on the new and changed modules ends with each survivor killed or in the register.
 
+Result: committed as `93d9129`. The plan had a gap. `contractActionsAt` rejects an action that adds a diagnostic, and a fix adds `failure-contract/001` to each closed caller of the fixed function. So the rounds could not fix a chain. The executor added the opt-in flag `allowCallerGaps`: with it, an action may add only contract diagnostics. The editor keeps the strict default. Each action now carries the id of the function that it edits.
+
+Limit: the fix writes only names that the module can see, and it adds no import. On a copy of `portable-publisher` without its exported clauses, one run took about 0.1 s, fixed 5 functions in 3 files, and left 2 `failure-contract/001` diagnostics in `publisher.eff`. That module imports none of the missing error names.
+
+### XCU4: the survivors of the changed modules
+
+Model: Sonnet. Turn budget: 45. Workspace: a detached worktree at `93d9129` under `~/.claude/scratch/xcu4`, because `deno task mutate` tests only committed code.
+
+The mutation run of XCU3 found 21 survivors in older code of three changed modules: 18 in `contractActionsAt`, 2 in `parseArgs`, and 1 in the watch loop of `src/cli/main.ts`. The new code of XCU2 and XCU3 has no survivor. The unit gives each survivor a fast literal test, or a register row whose reason names the code fact.
+
+Acceptance: `deno task mutate src/core/editor_actions.ts src/cli/args.ts src/cli/main.ts` exits 0, and `deno task check` exits 0.
+
+Result: done. New literal tests kill 13 survivors: 3 in the command line and 10 in `contractActionsAt`. The other 8 are `equivalent` rows in `fixtures/mutation/survivors.json`. The orchestrator checked each reason against the code and rewrote five of them to name their code fact. Row reasons that rest on a code fact: node 0 is never an arrow, the publish step drops the diagnostics of a broken declaration, one diagnostic starts at a function span and its code is excluded, and the inserted names resolve to the missing ids.
+
 ### Completion
 
-The commit of the last unit moves this file to `docs/archive/plans/`, updates the registry path, and updates the links.
+The commit of XCU4 moved this file to `docs/archive/plans/` and updated the registry path and the links.

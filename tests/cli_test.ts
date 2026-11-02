@@ -627,3 +627,16 @@ Deno.test("build does not write the outputs of a module that a nested effektive.
   assert(r.m.files.has(`${ROOT}/a.ts`));
   assert(r.m.files.has(`${ROOT}/a.ts.map`));
 });
+
+Deno.test("parseArgs reads help from each of its three spellings", () => {
+  assertEquals(parseArgs(["-h"]), { ok: true, value: { kind: "help" } });
+  assertEquals(parseArgs(["help"]), { ok: true, value: { kind: "help" } });
+  assertEquals(parseArgs(["--help"]), { ok: true, value: { kind: "help" } });
+});
+
+Deno.test("parseArgs reads a lone dash as the root", () => {
+  assertEquals(parseArgs(["check", "-"]), {
+    ok: true,
+    value: { kind: "check", root: "-", fix: false, log: true },
+  });
+});

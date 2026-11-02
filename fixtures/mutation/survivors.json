@@ -81,6 +81,78 @@
     "reason": "resolveProject fills resolutions with one entry for each name of project.order, and that name has an entry in project.modules. The two values are defined together, so && and || give one result."
   },
   {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 415,
+    "text": "signature.annotation !== \"arrow\" || !signature.written.result ||\n      body === undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "Three inputs separate the mutant. A binding function reaches the edit, but its binding type closes its sets, so the check after the edit rejects it. A function with no written result has a declaration/005 diagnostic in its span when exported, and an open set with no missing entry when not exported. An arrow with no body is a broken declaration, which the broken guard rejects."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 415,
+    "text": "signature.annotation !== \"arrow\" || !signature.written.result",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "Only an annotation of the kind binding separates the mutant. A binding function takes its effects from the binding type and ignores the written clauses, so the edit leaves the missing entries in place and the check after the edit rejects it. The binding test in tests/editor_actions_test.ts passes under the mutant (checked by hand)."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 696,
+    "text": "entry === undefined || entry.broken",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The publish step in check_project.ts drops every body diagnostic of a broken declaration, so such a function has no contract diagnostic. The edit then removes no diagnostic, and the delta.removed.length === 0 guard rejects the action."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 867,
+    "text": "d.span.start >= signature.span.start",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The checker anchors one function diagnostic at the start of the function span: the SchemaError rule for inferred inputs in check_expr.ts. Its code is failure-contract/001, which this condition excludes. Every other function diagnostic starts at the name or later."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 1986,
+    "text": "arrow < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The parser numbers nodes in post-order: newNode runs when a leaf or a finished node is added. Node 0 is the first leaf of the file. An ArrowExpr child of a declaration always follows its own => leaf and the const keyword, so its id is never 0."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 3905,
+    "text": "changedFunction === undefined || changedFunction.body === undefined ||\n      (changedFunction.signature.written.fails &&\n        [...changedFunction.body.failures, ...changedFunction.failures].some((\n          id,\n        ) => !changedFunction.signature.failures.includes(id))) ||\n      (changedFunction.signature.written.uses &&\n        changedFunction.body.requirements.some((id) =>\n          !changedFunction.signature.requirements.includes(id)\n        ))",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "effectName and requirementNames return a name only when the module namespace binds it to the missing id. The edited clause resolves through the same namespace, so the rechecked function holds every inserted id, and this part of the guard is never true."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 3905,
+    "text": "changedFunction === undefined || changedFunction.body === undefined ||\n      (changedFunction.signature.written.fails &&\n        [...changedFunction.body.failures, ...changedFunction.failures].some((\n          id,\n        ) => !changedFunction.signature.failures.includes(id)))",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "effectName and requirementNames return a name only when the module namespace binds it to the missing id. The edited clause resolves through the same namespace, so the rechecked function holds every inserted id, and this part of the guard is never true."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 3905,
+    "text": "changedFunction === undefined || changedFunction.body === undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The edit inserts entries into a parsed arrow and keeps the declaration name, so the rechecked module keeps the function id with its parsed body. The function is never undefined here, and the body is undefined only for a broken declaration, which the broken guard rejects earlier."
+  },
+  {
     "file": "src/core/predicates.ts",
     "declaration": "spendMany",
     "offset": 67,
