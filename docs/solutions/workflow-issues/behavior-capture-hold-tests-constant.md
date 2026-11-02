@@ -20,6 +20,8 @@ last_updated: 2026-10-31
 
 # Hold the test set constant to read behavior:capture when a change also moves tests
 
+Status: the behavior capture was replaced on 2026-11-02 by `deno task behavior:compare` (SR10). The comparison does not run the tests, so this workaround is no longer needed.
+
 ## Context
 
 `deno task behavior:capture <base> <head>` is the refactor oracle of this

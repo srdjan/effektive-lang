@@ -2,13 +2,10 @@
 // Deno or global host APIs, and it may import only relative files. Without this
 // test, a regression of the boundary shows up only when a consumer breaks.
 //
-// The test walks src/core with Deno.readDir, not with git, because
-// `deno task behavior:capture` runs the tests in an exported tree that has no
-// .git directory. It skips the capture hook files (HOOK_PATHS) that the capture
-// writes into that temporary tree: the hooks write their records on purpose.
+// The test walks src/core with Deno.readDir, not with git, because the tests
+// can run in an exported tree that has no .git directory.
 
 import { assertEquals } from "@std/assert";
-import { HOOK_PATHS } from "../scripts/behavior_capture.ts";
 
 /** The forbidden names. Each pattern runs on code with comments and literals blanked. */
 const FORBIDDEN: readonly (readonly [name: string, pattern: RegExp])[] = [
@@ -179,11 +176,10 @@ Deno.test("src/core uses no host API, no global API, and no non-relative import"
   const files: string[] = [];
   await sourceFiles("src/core/", files);
   files.sort();
-  const checked = files.filter((path) => !HOOK_PATHS.includes(path));
   // Guard against a walk that finds nothing and so proves nothing.
-  assertEquals(checked.length > 20, true, `only ${checked.length} files`);
+  assertEquals(files.length > 20, true, `only ${files.length} files`);
   const violations: string[] = [];
-  for (const path of checked) {
+  for (const path of files) {
     const text = await Deno.readTextFile(new URL(path, ROOT));
     violations.push(...violationsOf(path, text));
   }
@@ -253,9 +249,7 @@ Deno.test("the boundary scan skips comments, string literals, templates, and reg
 Deno.test("the frontend and source queries cannot reach TypeScript output or host adapters", async () => {
   const visited = new Set<string>();
   async function visit(file: URL): Promise<void> {
-    if (
-      visited.has(file.href) || HOOK_PATHS.some((p) => file.href.endsWith(p))
-    ) return;
+    if (visited.has(file.href)) return;
     visited.add(file.href);
     assertEquals(
       /\/(?:emit|host)\/|\/typescript\.ts$/.test(file.pathname),

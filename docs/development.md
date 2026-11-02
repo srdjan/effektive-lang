@@ -18,7 +18,7 @@ Run every command from the repository root.
 | `deno task validate:update`   | Writes the mutation fixtures in `fixtures/validate/` again from the current lowering.                                                                   |
 | `deno task lex:update`        | Writes `fixtures/lex/snapshot.json` again from the current lexer. Run it only after a deliberate change of the lexer output.                            |
 | `deno task site:ir`           | Writes `../effektive/public/typed-ir.ts` from `src/core/ir.ts` and the type declarations of `src/core/predicates.ts` that it needs. Give a path to write to another file. Run it after a change of `ir.ts`. |
-| `deno task behavior:capture`  | Compares two revisions using instrumented compiler entry points during tests, including subprocesses. See the capture note below. Use it for refactors. |
+| `deno task behavior:compare`  | Runs the named corpus through the public entry points of two revisions: `<base> <head> [--out <dir>] [--only <prefix>]`. Exit 0 for no change, 1 for a change or a missing record, 2 for a usage error or a failed run. See the comparison note below. Use it for refactors. |
 | `deno task logs:report`        | Prints a Markdown report of the session logs: `[--since <N>(m|h|d)] [folder ...]`. The default window is 24h and the default folder is `playground/.effektive/logs/`. |
 | `deno task logs:replay`        | Runs a logged session again on the current build: `<session.jsonl>`. Exit 0 when the outcomes match, 1 at the first difference, 2 for a usage error or an unsupported session. It skips `--tsc`, and it does not replay watch sessions. |
 | `deno task rules:unfired`      | Runs the fast suite with coverage and prints `path:line: text` for each validator rejection site in `src/core/validate/` that no fast test fires, then the count. Exit 1 when the list has a site, and exit 0 when the count is 0. |
@@ -38,12 +38,20 @@ Run every command from the repository root.
 | `deno task fmt`               | Formats the source files.                                                                                                                               |
 | `deno task lint`              | Runs the linter.                                                                                                                                        |
 
-The capture records completed calls to `checkAnalysis`, `Program.update`,
-`lowerModule`, `emitModule`, and `validateModule`, including returned error
-results where present. It excludes its own tests and does not record every
-lower-level checker call. The temporary hooks embed their destination path, so
-child processes need write permission but no environment permission. A recording
-failure fails the capture visibly.
+The comparison runs one named corpus through the public entry points of two
+revisions. The corpus holds the fixture projects of the head tree, the forged IR
+files of `fixtures/validate/`, and four edit sequences of `Program.update`. The
+forged IR goes to `validateModule` in `src/core/validate/index.ts`, because no
+public entry point validates one IR module. It records the full canonical result
+of eight kinds: check, program, program-error, lower, lower-error, emit,
+emit-error, and validate. It names each changed or missing record, and it writes
+the base and head text of each difference to the output directory. On 2026-11-02
+it gave 454 records, and a full comparison of two revisions took 0.78 s wall
+time.
+The corpus sees only fixture inputs. Inline test programs and command-line or
+language server output are outside it, and the surface snapshot covers that
+output. The comparison does not depend on the test suite, so moving or rewriting
+tests does not change its records.
 
 [testing.md](testing.md) describes the test layers, each oracle, the coverage floors, and the mutation register.
 
@@ -62,7 +70,7 @@ layering rules. The file-level map of `src/` is in
 | `src/lsp/`        | The language server.                                                                                                                                                                                                                                                   |
 | `editors/vscode/` | The VS Code client. It is plain JavaScript with no build step.                                                                                                                                                                                                         |
 | `playground/`     | The browser playground. The page is in `src/`, the build in `build.ts`.                                                                                                                                                                                                |
-| `scripts/`        | The scripts that the tasks run: golden files, mutation fixtures, behavior capture, the lexer snapshot, the measure scripts, packaging, and the VS Code smoke test.                                                                                                     |
+| `scripts/`        | The scripts that the tasks run: golden files, mutation fixtures, behavior comparison, the lexer snapshot, the measure scripts, packaging, and the VS Code smoke test.                                                                                                     |
 | `tests/`          | Deno tests and test helpers.                                                                                                                                                                                                                                           |
 | `bench/`          | The measurement harnesses. They are not part of the core.                                                                                                                                                                                           |
 | `fixtures/`       | Input files for the tests.                                                                                                                                                                                                                                             |

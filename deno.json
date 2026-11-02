@@ -25,7 +25,6 @@
     "site:ir": "deno run --allow-read --allow-write scripts/site_ir.ts",
     "lex:update": "deno run --allow-read --allow-write scripts/lex_snapshot.ts",
     "behavior:compare": "deno run --allow-read --allow-write --allow-run=git,tar,deno scripts/behavior_compare.ts",
-    "behavior:capture": "deno run --allow-all scripts/behavior_capture.ts",
     "logs:report": "deno run --allow-read scripts/logs_report.ts",
     "logs:replay": "deno run --allow-read scripts/logs_replay.ts",
     "rules:unfired": "deno run --allow-read --allow-write --allow-run=deno scripts/rules_unfired.ts",

@@ -72,6 +72,12 @@
 - `deno task site:ir` writes the website `typed-ir.ts` from `src/core/ir.ts`
   and the predicate types that it needs. A slow test compares the two files
   byte for byte.
+- `deno task behavior:compare <base> <head>` replaces
+  `deno task behavior:capture`. It runs one named corpus through the public
+  entry points of both revisions: the fixture projects, the forged IR files,
+  and four edit sequences. It names each changed or missing record and writes
+  both result texts. The capture patched private call sites and recorded only
+  hashes, so a moved test changed its records.
 
 ## 0.12.1 - 2026-11-01
 

@@ -52,9 +52,9 @@ is a worked example, not a fixed count of sites for every builtin.
   checking, then execute success, typed failure, cancellation and cleanup cases
   where relevant. Subprocess tests belong in `*_slow_test.ts`.
 - Run `deno task check` before each commit. A behavior-preserving refactor also
-  runs `deno task behavior:capture <base> <head>` with zero missing records.
-  Hold the test inputs constant when judging parity; see the
-  [capture guidance](solutions/workflow-issues/behavior-capture-hold-tests-constant.md).
+  runs `deno task behavior:compare <base> <head>` with zero changed and zero
+  missing records. The comparison does not run the tests, so moving tests does
+  not change its records.
 - Run `deno task rules:unfired` before a builtin plan closes. Each new validator
   rejection site must fire in a fast test, or the plan records the reason.
 - Inspect expected output manually. Do not run `golden:update` or

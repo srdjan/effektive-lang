@@ -34,7 +34,7 @@ The independent validator is a test oracle. No product path runs it, and no entr
 | Surface snapshot in `fixtures/surface/` | `deno task surface:update` | 91 command-line records and 28 language server records | The records run in memory, so process and file behavior stay outside |
 | IR snapshot in `fixtures/ir/` | The test file | The wire form of its example | It reaches 27 of the 59 expression kinds |
 | Lexer snapshot in `fixtures/lex/` | `deno task lex:update` | The tokens of a random corpus of 20,000 strings | Input that the corpus does not hold |
-| Behavior capture | None | Two revisions give equal records for the test inputs | A record holds hashes and a length, with no message and no test name. It sees only its record kinds and the test inputs. |
+| Behavior comparison | `deno task behavior:compare` | Two revisions give equal full results of eight kinds for the named corpus: the fixture projects, the forged IR files, and four edit sequences | It sees only fixture inputs. Inline test programs and command-line or language server output are outside it. |
 | Unfired rejection sites | None | A fast test fires each direct validator rejection | The match is textual, so a rejection through another helper is not listed |
 | Log replay | None | A logged session gives equal results on the current build | It skips `--tsc` sessions and watch sessions |
 | Website IR in `tests/ir_site_slow_test.ts` | `scripts/site_ir.ts` | The sibling `typed-ir.ts` equals the generated text byte for byte, and passes `deno check` alone | A `git archive` export has no sibling, so the test is ignored there |
@@ -42,7 +42,7 @@ The independent validator is a test oracle. No product path runs it, and no entr
 
 An update task writes what the current code gives. So an update can hide a defect. The reviewer must read each fixture diff, and a change needs a reason in the commit.
 
-A capture exits 1 for a missing record, and also for a failed test. So read its summary lines before you read its exit status.
+A comparison exits 0 when no record changed and none is missing. It exits 1 for a change or a missing record, and 2 for a usage error or a failed run.
 
 ## What the strict target check catches
 

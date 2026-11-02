@@ -125,12 +125,12 @@ _Avoid: interface module, host types module_
 
 ## Verification
 
-### Behavior capture
+### Behavior comparison
 
-The refactor oracle that records a hash of each checker, program, lowering, emission, and validation result that the test suites produce on two revisions, and compares the two record sets.
+The refactor oracle that runs one named corpus through the public entry points of two revisions and compares the full canonical results.
 
-A base record that is missing from the head means a behavior change, and a new head record usually comes from an added test. The checker, program, and validation records also hash their input, so a change that moves or rewrites tests changes the record set without any change in behavior. To judge such a change, compare revisions that run the same tests. Two runs of one revision can differ by one clean program record, so one such record alone is not a behavior change. The capture records only results of the core library, so it does not cover command-line or language server output. The surface snapshot covers that output.
-_Avoid: snapshot, golden run_
+The corpus holds the fixture projects of the head tree, the forged IR files of `fixtures/validate/`, and four edit sequences of `Program.update`. It records results of eight kinds: check, program, program-error, lower, lower-error, emit, emit-error, and validate. The command names each changed or missing record. It does not depend on the test suite, so moving or rewriting tests does not change its records. The corpus sees only fixture inputs, so it does not cover inline test programs or command-line or language server output. The surface snapshot covers that output.
+_Avoid: behavior capture, snapshot, golden run_
 
 ### Surface snapshot
 
