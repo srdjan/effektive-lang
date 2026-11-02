@@ -2,7 +2,7 @@
 
 Prefixes: SR (items), SRD (decisions for the user). The evidence files use FB and AS (analysis findings of Fable and astra), and VF and VA (validation findings of Fable and astra).
 
-Date: 2026-11-02. Base: `cb4abd3` (v0.12.1) on local `main`. Status: accepted on 2026-11-02 with SRD1, SRD2, and SRD3 at option a. Execution follows Section 7 and stops at SRD4. Section 11 holds the execution plan and the progress ledger.
+Date: 2026-11-02. Base: `cb4abd3` (v0.12.1) on local `main`. Status: accepted on 2026-11-02 with SRD1, SRD2, and SRD3 at option a. SRD4 and SRD5 are decided at option a. Execution follows Section 7. Section 11 holds the execution plan and the progress ledger.
 
 ## 1. Result
 
@@ -251,6 +251,8 @@ SRD4 comes later, after SR8 step 3: delete the validator families, or keep them.
 
 The user accepted SRD1, SRD2, and SRD3 at option a on 2026-11-02 ("as recommended"). The acceptance authorizes Section 7 up to SRD4. It does not authorize a push, a release, or a version change.
 
+The user decided SRD4 and SRD5 at option a on 2026-11-02 ("a"). SRD4 (a) keeps the validator as a test oracle, so SR8 step 3 does not run. SRD5 (a) authorizes Phase 5: SR12, then SR10. The decision does not authorize a push, a release, or a version change.
+
 ## 7. Order
 
 1. Phase 1: SR1, SR3, SR4, SR5, SR6, SR14, SR15, SR16, and the SR13 measurement. These units are independent. SR2 follows SR1.
@@ -367,3 +369,4 @@ U1 to U4 run at the same time. U5 starts after U1 lands. U6 runs when no executo
 | G5 | `c9e358a`, sibling `cd005c5` | 82 to 79 prelude names, 91 to 88 expression kinds, 16 to 15 type kinds. Net lines: src -499, tests -528. The rule that a `forkScoped` child outlives its spawning fiber kept its test: the spawner is now a member of a concurrent `all` record, and the test fails with a fiber-bound child. The orchestrator ran `check` and `build --tsc` on all seven corpus projects: 0 diagnostics. |
 | G7 | `2b28b7d`, sibling `8bc51fa` | 79 to 54 prelude names, 88 to 59 expression kinds, type kinds stay 15. Net lines: src -2349, tests -5829, fixtures -224, docs -126. The four pure predicate kinds `filter-stream`, `take-while-stream`, `take-until-stream`, and `drop-while-stream` went with their `...EffectStream` names. No other kind, fact kind, or `ConcurrencyOperation` entry became unreachable. The runtime test of `bufferStream` was rebuilt from the deleted `mergeStreams` test, and a new test pins every invalid `bufferStream` capacity. One equivalent mutant in `streamBufferCapacity` is registered. The first executor stopped at its budget; a second executor finished the compiler part, and a third did the website prose. The orchestrator fixed a stale "Codecs" mention from G4 in `docs/language-rules.md` and two "merged streams" status sentences on the website. |
 | Phase 3 coverage | - | Lines 97.27%, branches 95.04%, functions 99.19%. The floors are 97, 95, and 99. All three totals fell, because the removed code was well tested. The branch margin is 0.04 points. |
+| SRD4 and SRD5 | - | The user chose option a for both. The validator stays at 8,293 code lines (measured after Phase 3; the SR8 projection was 8,416, because G4 and G5 also removed the codec and fiber type cases). SR8 step 3 does not run. Phase 5 starts. |
