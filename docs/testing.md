@@ -48,7 +48,7 @@ A comparison exits 0 when no record changed and none is missing. It exits 1 for 
 
 The strict target check is `deno task effektive build --tsc`. It runs `deno check` on the emitted code with strict mode. The table below states, for each defect class, whether this check catches the defect and which other kept oracle can catch it.
 
-The evidence is the fault injections of the validation of the simplification rebase, in [the plan](plans/2026-11-02-simplification-rebase.md), Section 6, decision SRD2. Fable injected faults into the checker. Astra injected faults into the IR.
+The evidence is the fault injections of the validation of the simplification rebase, in [the plan](archive/plans/2026-11-02-simplification-rebase.md), Section 6, decision SRD2. Fable injected faults into the checker. Astra injected faults into the IR.
 
 | Defect | Strict target check | Other kept oracle |
 | --- | --- | --- |

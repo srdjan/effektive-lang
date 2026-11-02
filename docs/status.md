@@ -117,16 +117,16 @@ hold their history. Those source forms hide `Duration`, `Clock`, `Schedule`,
 `Effect.forEach`, `Effect.filter`, `Effect.reduce`, `SynchronizedRef`, and
 `Effect.raceAll`.
 Item 22, the Map and Set types, was done and then removed on 2026-11-02 by the
-[simplification rebase](plans/2026-11-02-simplification-rebase.md), because no
+[simplification rebase](archive/plans/2026-11-02-simplification-rebase.md), because no
 application used it.
 The general Schedule forms were done and then removed on 2026-11-02 by the
-[simplification rebase](plans/2026-11-02-simplification-rebase.md), because no
+[simplification rebase](archive/plans/2026-11-02-simplification-rebase.md), because no
 application used them. They were `scheduleCron`, `scheduleExponential`,
 `scheduleJittered`, the other seven `schedule` names, `aggregateWithinStream`,
 and the `schedule` option of `repeat`. `RetrySchedule` and the `schedule`
 option of `retry` stay.
 The explicit scope handles were done and then removed on 2026-11-02 by the
-[simplification rebase](plans/2026-11-02-simplification-rebase.md), because no
+[simplification rebase](archive/plans/2026-11-02-simplification-rebase.md), because no
 application used them. They were `makeScope`, `provideScope`,
 `addScopeFinalizer`, `closeScope`, and the `CloseableScope` type. `scoped`,
 `forkScoped`, and `withResource` stay.
@@ -224,4 +224,3 @@ The list gives the items that still need a person.
 | --- | --- | --- |
 | Hand test of the VS Code client | The installed VSIX passed automated references, rename, completion, semantic tokens, contract quick fixes, generated output, save, error recovery and restart on 2026-10-21; [installation evidence](installation.md). User acceptance check 5 of the [language server plan](archive/plans/2026-10-16-lsp.md) remains pending.                                                                                           | User  |
 | Playground acceptance           | The user has not accepted the page (acceptance check 5 of the [playground plan](archive/plans/2026-10-16-playground.md)). An [automated browser review on 2026-10-21](archive/playground-review-2026-10-21.md) passed at 375, 720 and 1280 pixels, including keyboard navigation, type/syntax error recovery and screenshot inspection. It does not replace the user’s manual acceptance.                                        | User  |
-| Simplification rebase | The user accepted the [simplification rebase](plans/2026-11-02-simplification-rebase.md) on 2026-11-02 with SRD1, SRD2, and SRD3 at option a. Execution is in progress. The user kept the validator as a test oracle (SRD4 at option a), with the measured numbers of the [SR8 inventory](plans/2026-11-02-simplification-rebase-evidence/sr8-inventory.md). Phase 5 (SR12, then SR10) is next. | Orchestrator |

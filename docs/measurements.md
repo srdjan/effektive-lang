@@ -88,7 +88,7 @@ Run it again with `deno bench --no-lock --allow-read --allow-env bench/ref_updat
 
 ## Type-table growth (SR13)
 
-`bench/type_growth.ts` gives one module a record type with a new field name in each edit, so each edit interns one new type shape. The type table appends and never frees a node. Item SR13 of the [simplification rebase](plans/2026-11-02-simplification-rebase.md) asks whether that growth needs a lifecycle policy in long language server sessions. M4 cannot answer this, because its edit script cycles a fixed set of type shapes (174 to 176 nodes over 10,000 edits).
+`bench/type_growth.ts` gives one module a record type with a new field name in each edit, so each edit interns one new type shape. The type table appends and never frees a node. Item SR13 of the [simplification rebase](archive/plans/2026-11-02-simplification-rebase.md) asks whether that growth needs a lifecycle policy in long language server sessions. M4 cannot answer this, because its edit script cycles a fixed set of type shapes (174 to 176 nodes over 10,000 edits).
 
 Recorded on 2026-11-02 with Deno 2.9.8 on one Mac, in one run for each scale. The heap is measured after two forced garbage collections, with the last revision alive.
 
