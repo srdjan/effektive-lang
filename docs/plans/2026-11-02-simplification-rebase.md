@@ -349,4 +349,5 @@ U1 to U4 run at the same time. U5 starts after U1 lands. U6 runs when no executo
 | SR15 | `6628cf8` | The relay removes only the advice to add `undefined`. The executor's first-sentence cut also dropped useful second sentences. |
 | SR16 | `e0d9852` | `docs/testing.md` holds the oracle map. |
 | SR4 | `827d513` | A record literal body gives one `syntax/016`. |
-| SR13 | this commit | 424 bytes for each new type shape at 50,000 edits. No lifecycle policy now. See `docs/measurements.md`. |
+| SR13 | `2886e4b` | 424 bytes for each new type shape at 50,000 edits. No lifecycle policy now. See `docs/measurements.md`. |
+| SR2 | `ebeaf76`, `8aae21a`, this commit | A census places 102 names in 8 templates and type-checks 2,184 accepted programs in one `deno check` (about 4 s). It found two more captures: `TypeError` (the match fallback) and `BigInt` (refinement checks). Both are reserved. |
