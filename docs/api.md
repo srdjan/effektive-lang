@@ -154,6 +154,8 @@ scripts/       Scripts that the tasks run.
                test_slow.ts runs the slow tests with a fresh DENO_DIR.
                validate_fixtures.ts writes the mutation fixtures.
                behavior_capture.ts records the hashed compiler behavior of a git revision.
+               behavior_corpus.ts runs the named corpus of compiler behavior in one source tree and writes its records.
+               behavior_compare.ts compares the corpus records of two git revisions.
                lex_snapshot.ts writes the lexer snapshot of a random corpus in fixtures/lex.
                site_ir.ts writes the standalone typed IR for the website from ir.ts and predicates.ts.
                logs_report.ts prints a Markdown report of the session logs: sessions, broken behavior, latency, friction, and outcomes.

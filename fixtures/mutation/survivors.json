@@ -295,5 +295,77 @@
     "operator": "comparison",
     "class": "equivalent",
     "reason": "The extra iteration at index == path.length only looks up path[index], which is undefined and never equals a string field name, so it adds nothing to next. The loop then ends and candidates is not read again. The unknown check before that line runs in both versions."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "run",
+    "offset": 288,
+    "text": "result.success",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The negated test swaps the success and failure paths of a subprocess. tests/behavior_compare_slow_test.ts kills it: the run of HEAD against HEAD fails. Checked by hand on a copy, because mutate copies are not git repositories and the slow test needs one."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "exportRevision",
+    "offset": 414,
+    "text": "unpacked.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The negated test returns the failure of a good export. tests/behavior_compare_slow_test.ts kills it, and the test for a missing revision kills the other direction. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "treeOf",
+    "offset": 98,
+    "text": "tree === undefined",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant skips or repeats the export of a revision. tests/behavior_compare_slow_test.ts kills it: the run of HEAD against HEAD uses one export for both sides. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "treeOf",
+    "offset": 98,
+    "text": "tree === undefined",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "The mutant skips or repeats the export of a revision. tests/behavior_compare_slow_test.ts kills it: the run of HEAD against HEAD uses one export for both sides. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "records",
+    "offset": 144,
+    "text": "!tree.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant reverses the check of an export or of a corpus run. tests/behavior_compare_slow_test.ts kills it: the run of HEAD against HEAD and the missing revision test fail. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "records",
+    "offset": 175,
+    "text": "!fixtures.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant reverses the check of an export or of a corpus run. tests/behavior_compare_slow_test.ts kills it: the run of HEAD against HEAD and the missing revision test fail. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "records",
+    "offset": 840,
+    "text": "!ran.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant reverses the check of an export or of a corpus run. tests/behavior_compare_slow_test.ts kills it: the run of HEAD against HEAD and the missing revision test fail. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "<module>",
+    "offset": 12727,
+    "text": "done.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant keeps the exported trees after the command. tests/behavior_compare_slow_test.ts kills it: it sets TMPDIR and asserts that no exported tree remains. Checked by hand on a copy."
   }
 ]
