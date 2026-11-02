@@ -95,7 +95,6 @@ const read = (ref: Ref<Int>): Int => getRef(ref)
 const write = (ref: Ref<Int>): void => setRef(ref, 2)
 const update = (ref: Ref<Int>): void => updateRef(ref, (n) => n)
 const decodeInt = (input: unknown): Int fails SchemaError => schemaDecode(integer, input)
-const merged = (s: Stream<Int>, t: Stream<Int>) => mergeStreams(s, t)
 type Cents = int
 type Score = int
 const scored = (): Score => 1
@@ -913,25 +912,6 @@ const ROWS: readonly Row[] = [
     },
     expected: [
       "validation/002 declarations[7].body: schema runner needs an ordinary Schema value",
-    ],
-  },
-  {
-    site: "stream.ts:1021",
-    name: "a mergeStreams over streams of unrelated element types",
-    program: "families",
-    change: (ir) => {
-      const text: Mutable<Type> = {
-        kind: "stream",
-        element: STRING,
-        effects: { failures: [], requirements: [] },
-      };
-      const f = fn(ir, "merged");
-      f.parameters[1].type = text;
-      f.type.parameters[1] = text;
-      find(f.body, "merge-streams").right.type = text;
-    },
-    expected: [
-      "validation/002 declarations[8].body: mergeStreams needs compatible element types",
     ],
   },
   // ---------------------------------------------------------------- serialization.ts

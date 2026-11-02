@@ -76,11 +76,6 @@ const STOP_JOBS = `${INT}error Stop = {}
 service Jobs { next(): Int fails Stop }
 `;
 
-const RETRY_POLICY = `${INT}error Stop = {}
-service Source { next(n: Int): Option<[Int, Int]> fails Stop }
-const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Duration> => None)
-`;
-
 const LAYER_SERVICE = `${INT}service First { one(): Int }
 `;
 
@@ -307,75 +302,8 @@ const ROWS: readonly SiteRow[] = [
     fragment: "`unfold` callback must return Option<[Element, State]>",
   },
   streamRow("mapEffect", "mapEffect($S, (n) => n + 1)"),
-  streamRow(
-    "mapGroups",
-    "mapGroups($S, (n) => n, (key, group) => collectStream(group), { bufferSize: 1 })",
-  ),
-  streamRow(
-    "mapAccumStream",
-    "mapAccumStream($S, 0, (total, n): [Int, Int[]] => [total + n, [n]])",
-  ),
-  streamRow("foldStream", "foldStream($S, 0, (total, n) => total + n)"),
-  streamRow(
-    "foldEffectStream",
-    "foldEffectStream($S, 0, (total, n) => total + n)",
-  ),
-  streamRow("flatMapStreams", "flatMapStreams($S, (n) => s)"),
-  streamRow("switchMapStreams", "switchMapStreams($S, (n) => s)"),
-  streamRow("catchStream", "catchStream($S, (e) => s)"),
-  streamRow("takeStream", "takeStream($S, 2)"),
-  streamRow("dropStream", "dropStream($S, 2)"),
-  streamRow(
-    "filterEffectStream",
-    "filterEffectStream($S, (n) => n > 0)",
-    "filterEffectStream needs a Stream value",
-  ),
-  streamRow(
-    "takeWhileEffectStream",
-    "takeWhileEffectStream($S, (n) => n > 0)",
-    "takeWhileEffectStream needs a Stream value",
-  ),
-  streamRow(
-    "takeUntilEffectStream",
-    "takeUntilEffectStream($S, (n) => n > 0)",
-    "takeUntilEffectStream needs a Stream value",
-  ),
-  streamRow(
-    "dropWhileEffectStream",
-    "dropWhileEffectStream($S, (n) => n > 0)",
-    "dropWhileEffectStream needs a Stream value",
-  ),
   streamRow("bufferStream", "bufferStream($S, { capacity: 2 })"),
-  {
-    builtin: "retryStream",
-    change: "replace the first argument with an int",
-    valid:
-      `${RETRY_POLICY}const probe = () => retryStream(unfold(0, (n) => Source.next(n)), policy)\n`,
-    invalid: `${RETRY_POLICY}const probe = () => retryStream(1, policy)\n`,
-    code: "type-mismatch/010",
-    fragment: "`retryStream` needs a Stream value",
-  },
-  {
-    builtin: "retryStream",
-    change: "replace the schedule with an int",
-    valid:
-      `${RETRY_POLICY}const probe = () => retryStream(unfold(0, (n) => Source.next(n)), policy)\n`,
-    invalid:
-      `${RETRY_POLICY}const probe = () => retryStream(unfold(0, (n) => Source.next(n)), 1)\n`,
-    code: "type-mismatch/010",
-    fragment: "`retryStream` needs a RetrySchedule value",
-  },
-  {
-    builtin: "retryStream",
-    change: "build the schedule with an effectful function",
-    valid:
-      `${RETRY_POLICY}const probe = () => retryStream(unfold(0, (n) => Source.next(n)), policy)\n`,
-    invalid:
-      `${RETRY_POLICY}service Clock { pick(): Int }\nconst choose = (): RetrySchedule<Stop> uses Clock.pick => { Clock.pick(); policy }\nconst probe = (): Stream<Int, Stop, Source.next> uses Clock.pick => retryStream(unfold(0, (n) => Source.next(n)), choose())\n`,
-    code: "execution-mode/001",
-    fragment: "`retryStream` policy must be pure",
-  },
-  // ---- sinks, merges, races, refs
+  // ---- sinks, races, refs
   {
     builtin: "sinkForEach",
     change: "take no input parameter",
@@ -394,39 +322,6 @@ const ROWS: readonly SiteRow[] = [
       `${INT}const probe = (s: Stream<Int>, k: Sink<Int, Int[], never, never, Int>) => runStream(s, 1)\n`,
     code: "type-mismatch/010",
     fragment: "`runStream` needs a Sink as its second argument",
-  },
-  {
-    builtin: "mergeStreams",
-    change: "replace the first stream with an int",
-    valid: `${INT}const probe = (s: Stream<Int>) => mergeStreams(s, s)\n`,
-    invalid: `${INT}const probe = (s: Stream<Int>) => mergeStreams(1, s)\n`,
-    code: "type-mismatch/010",
-    fragment: "`mergeStreams` needs two Stream values",
-  },
-  {
-    builtin: "mergeStreams",
-    change: "merge a text stream into an int stream",
-    valid: `${INT}const probe = (s: Stream<Int>) => mergeStreams(s, s)\n`,
-    invalid:
-      `${INT}type Text = string\nconst probe = (s: Stream<Int>, t: Stream<Text>) => mergeStreams(s, t)\n`,
-    code: "type-mismatch/010",
-    fragment: "`mergeStreams` needs compatible element types",
-  },
-  {
-    builtin: "zipStreams",
-    change: "replace the first stream with an int",
-    valid: `${INT}const probe = (s: Stream<Int>) => zipStreams(s, s)\n`,
-    invalid: `${INT}const probe = (s: Stream<Int>) => zipStreams(1, s)\n`,
-    code: "type-mismatch/010",
-    fragment: "`zipStreams` needs two Stream values",
-  },
-  {
-    builtin: "concatStreams",
-    change: "replace the first stream with an int",
-    valid: `${INT}const probe = (s: Stream<Int>) => concatStreams(s, s)\n`,
-    invalid: `${INT}const probe = (s: Stream<Int>) => concatStreams(1, s)\n`,
-    code: "type-mismatch/010",
-    fragment: "`concatStreams` needs two Stream values",
   },
   {
     builtin: "race",

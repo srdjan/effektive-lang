@@ -87,83 +87,6 @@ const ROWS = {
     children: (e) => [e.stream, e.transform],
     leaf: "structural",
   },
-  "map-groups": {
-    children: (e) => [e.stream, e.key, e.use],
-    leaf: "structural",
-  },
-  "scan-stream": {
-    children: (e) => [e.stream, e.seed, e.update],
-    leaf: "structural",
-  },
-  "map-accum-stream": {
-    children: (e) => [e.stream, e.seed, e.update],
-    leaf: "structural",
-  },
-  "fold-stream": {
-    children: (e) => [e.stream, e.seed, e.update],
-    leaf: "leaf",
-  },
-  "fold-effect-stream": {
-    children: (e) => [e.stream, e.seed],
-    deferred: (e) => [e.update],
-    leaf: "leaf",
-  },
-  "collect-stream": { children: (e) => [e.stream], leaf: "leaf" },
-  "head-stream": { children: (e) => [e.stream], leaf: "leaf" },
-  "last-stream": { children: (e) => [e.stream], leaf: "leaf" },
-  "drain-stream": { children: (e) => [e.stream], leaf: "leaf" },
-  "flat-map-streams": {
-    children: (e) => [e.stream, e.transform],
-    leaf: "structural",
-  },
-  "switch-map-streams": {
-    children: (e) => [e.stream, e.transform],
-    leaf: "structural",
-  },
-  "catch-stream": {
-    children: (e) => [e.stream, e.recover],
-    leaf: "structural",
-  },
-  "retry-stream": {
-    children: (e) => [e.stream, e.policy],
-    leaf: "structural",
-  },
-  "debounce-stream": { children: (e) => [e.stream], leaf: "structural" },
-  "throttle-stream": { children: (e) => [e.stream], leaf: "structural" },
-  "take-stream": { children: (e) => [e.stream, e.count], leaf: "structural" },
-  "drop-stream": { children: (e) => [e.stream, e.count], leaf: "structural" },
-  "drop-while-stream": {
-    children: (e) => [e.stream, e.predicate],
-    leaf: "structural",
-  },
-  "filter-stream": {
-    children: (e) => [e.stream, e.predicate],
-    leaf: "structural",
-  },
-  "filter-effect-stream": {
-    children: (e) => [e.stream, e.predicate],
-    leaf: "structural",
-  },
-  "take-while-effect-stream": {
-    children: (e) => [e.stream, e.predicate],
-    leaf: "structural",
-  },
-  "take-until-effect-stream": {
-    children: (e) => [e.stream, e.predicate],
-    leaf: "structural",
-  },
-  "drop-while-effect-stream": {
-    children: (e) => [e.stream, e.predicate],
-    leaf: "structural",
-  },
-  "take-while-stream": {
-    children: (e) => [e.stream, e.predicate],
-    leaf: "structural",
-  },
-  "take-until-stream": {
-    children: (e) => [e.stream, e.predicate],
-    leaf: "structural",
-  },
   "race-all": { children: (e) => [e.jobs], leaf: "structural" },
   "sink-for-each": { children: (e) => [e.consume], leaf: "structural" },
   "take-sink": { children: () => [], leaf: "structural" },
@@ -171,18 +94,8 @@ const ROWS = {
     children: (e) => [e.stream, e.sink],
     leaf: "structural",
   },
-  "aggregate-stream": {
-    children: (e) => [e.stream, e.sink],
-    leaf: "structural",
-  },
   "run-stream": { children: (e) => [e.stream, e.sink], leaf: "leaf" },
   "buffer-stream": { children: (e) => [e.stream], leaf: "structural" },
-  "merge-streams": { children: (e) => [e.left, e.right], leaf: "structural" },
-  "zip-streams": { children: (e) => [e.left, e.right], leaf: "structural" },
-  "concat-streams": {
-    children: (e) => [e.left, e.right],
-    leaf: "structural",
-  },
   race: { children: (e) => [e.left, e.right], leaf: "structural" },
   "make-ref": { children: (e) => [e.value], leaf: "leaf" },
   "get-ref": { children: (e) => [e.ref], leaf: "leaf" },

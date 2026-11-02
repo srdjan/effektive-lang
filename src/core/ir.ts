@@ -184,40 +184,11 @@ export type Expr =
   | Node<{ kind: "unfold"; seed: Expr; next: Expr }>
   | Node<{ kind: "map-effect"; stream: Expr; transform: Expr; concurrency: number | "unbounded" | undefined }>
   | Node<{ kind: "map-stream"; stream: Expr; transform: Expr }>
-  | Node<{ kind: "map-groups"; stream: Expr; key: ClosureExpr; use: ClosureExpr; bufferSize: number }>
-  | Node<{ kind: "scan-stream"; stream: Expr; seed: Expr; update: Expr }>
-  | Node<{ kind: "map-accum-stream"; stream: Expr; seed: Expr; update: Expr }>
-  | Node<{ kind: "fold-stream"; stream: Expr; seed: Expr; update: Expr }>
-  | Node<{ kind: "fold-effect-stream"; stream: Expr; seed: Expr; update: Expr }>
-  | Node<{ kind: "collect-stream"; stream: Expr }>
-  | Node<{ kind: "head-stream"; stream: Expr }>
-  | Node<{ kind: "last-stream"; stream: Expr }>
-  | Node<{ kind: "drain-stream"; stream: Expr }>
-  | Node<{ kind: "flat-map-streams"; stream: Expr; transform: Expr; concurrency: number | "unbounded" | undefined }>
-  | Node<{ kind: "switch-map-streams"; stream: Expr; transform: Expr }>
-  | Node<{ kind: "catch-stream"; stream: Expr; recover: Expr }>
-  | Node<{ kind: "retry-stream"; stream: Expr; policy: Expr }>
-  | Node<{ kind: "debounce-stream"; stream: Expr; delayMs: number }>
-  | Node<{ kind: "throttle-stream"; stream: Expr; units: number; durationMs: number; strategy: "shape" | "enforce" }>
-  | Node<{ kind: "take-stream"; stream: Expr; count: Expr }>
-  | Node<{ kind: "drop-stream"; stream: Expr; count: Expr }>
-  | Node<{ kind: "drop-while-stream"; stream: Expr; predicate: Expr }>
-  | Node<{ kind: "filter-stream"; stream: Expr; predicate: Expr }>
-  | Node<{ kind: "filter-effect-stream"; stream: Expr; predicate: Expr }>
-  | Node<{ kind: "take-while-effect-stream"; stream: Expr; predicate: Expr }>
-  | Node<{ kind: "take-until-effect-stream"; stream: Expr; predicate: Expr }>
-  | Node<{ kind: "drop-while-effect-stream"; stream: Expr; predicate: Expr }>
-  | Node<{ kind: "take-while-stream"; stream: Expr; predicate: Expr }>
-  | Node<{ kind: "take-until-stream"; stream: Expr; predicate: Expr }>
   | Node<{ kind: "sink-for-each"; consume: Expr }>
   | Node<{ kind: "take-sink"; count: number }>
   | Node<{ kind: "transduce-stream"; stream: Expr; sink: Expr }>
-  | Node<{ kind: "aggregate-stream"; stream: Expr; sink: Expr }>
   | Node<{ kind: "run-stream"; stream: Expr; sink: Expr }>
   | Node<{ kind: "buffer-stream"; stream: Expr; capacity: number }>
-  | Node<{ kind: "merge-streams"; left: Expr; right: Expr }>
-  | Node<{ kind: "zip-streams"; left: Expr; right: Expr }>
-  | Node<{ kind: "concat-streams"; left: Expr; right: Expr }>
   | Node<{ kind: "race"; left: Expr; right: Expr }>
   | Node<{ kind: "race-all"; jobs: Expr }>
   | Node<{ kind: "make-ref"; value: Expr }>

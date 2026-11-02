@@ -26,75 +26,25 @@ const STREAMS = `type Int = int
 type Bool = boolean
 error Stop = {}
 service Source { next(n: Int): Option<[Int, Int]> fails Stop }
-service Inner { next(n: Int): Option<[Int, Int]> fails Stop }
-service Recovery { next(n: Int): Option<[Int, Int]> fails Stop }
 service Accum { add(total: Int, n: Int): Int fails Stop }
-service Gate { allow(n: Int): Bool fails Stop }
 service Consumer { accept(n: Int): void fails Stop }
 
 const source = unfold(0, (n) => Source.next(n))
-const other = unfold(0, (n) => Source.next(n))
-const policy: RetrySchedule<Stop> = retrySchedule((_: Stop, attempt: Int): Option<Duration> => None)
 
 const pull = (n: Int): Option<[Int, Int]> fails Stop uses Source.next => Source.next(n)
-const isSmall = (n: Int): Bool => n < 3
 const plusOne = (n: Int): Int => n + 1
-const addUp = (total: Int, n: Int): Int => total + n
-const addEffect = (total: Int, n: Int): Int fails Stop uses Accum.add => Accum.add(total, n)
 const bump = (n: Int): Int fails Stop uses Accum.add => Accum.add(n, 1)
-const accumulate = (total: Int, n: Int): [Int, Bool[]] => [total + n, [n < 3]]
-const expand = (n: Int): Stream<Int, Stop, Inner.next> => unfold(n, (m) => Inner.next(m))
-const recover = (_: Stop): Stream<Int, Stop, Recovery.next> => unfold(9, (n) => Recovery.next(n))
-const allowed = (n: Int): Bool fails Stop uses Gate.allow => Gate.allow(n)
 const accept = (value: Int): void fails Stop uses Consumer.accept => Consumer.accept(value)
 
 const mapped: Stream<Int, Stop, Source.next> = mapEffect(source, (n) => n + 1)
 const mappedEffect: Stream<Int, Stop, Source.next | Accum.add> = mapEffect(source, (n) => Accum.add(n, 1))
-const scanned: Stream<Int, Stop, Source.next> = scanStream(source, 0, (total, n) => total + n)
-const accumulated: Stream<Bool, Stop, Source.next> =
-  mapAccumStream(source, 0, (total, n): [Int, Bool[]] => [total + n, [n < 3]])
-const flatMapped: Stream<Int, Stop, Source.next | Inner.next> =
-  flatMapStreams(source, (n) => unfold(n, (m) => Inner.next(m)))
-const switched: Stream<Int, Stop, Source.next | Inner.next> =
-  switchMapStreams(source, (n) => unfold(n, (m) => Inner.next(m)))
-const recovered: Stream<Int, Stop, Source.next | Recovery.next> =
-  catchStream(source, (_) => unfold(9, (n) => Recovery.next(n)))
-const dropped: Stream<Int, Stop, Source.next> = dropWhileEffectStream(source, (n) => n < 3)
-const filtered: Stream<Int, Stop, Source.next> = filterEffectStream(source, (n) => n < 3)
-const takenWhile: Stream<Int, Stop, Source.next> = takeWhileEffectStream(source, (n) => n < 3)
-const takenUntil: Stream<Int, Stop, Source.next> = takeUntilEffectStream(source, (n) => n === 3)
-const filteredEffect: Stream<Int, Stop, Source.next | Gate.allow> =
-  filterEffectStream(source, (n) => Gate.allow(n))
-const takenWhileEffect: Stream<Int, Stop, Source.next | Gate.allow> =
-  takeWhileEffectStream(source, (n) => Gate.allow(n))
-const takenUntilEffect: Stream<Int, Stop, Source.next | Gate.allow> =
-  takeUntilEffectStream(source, (n) => Gate.allow(n))
-const droppedEffect: Stream<Int, Stop, Source.next | Gate.allow> =
-  dropWhileEffectStream(source, (n) => Gate.allow(n))
-const taken = (count: Int): Stream<Int, Stop, Source.next> => takeStream(source, count)
-const skipped = (count: Int): Stream<Int, Stop, Source.next> => dropStream(source, count)
-const retried = retryStream(source, policy)
-const debounced = debounceStream(source, 0ms)
-const throttled = throttleStream(source, { units: 1, duration: 100ms, strategy: "enforce" })
 const buffered = bufferStream(source, { capacity: 2 })
-const merged = mergeStreams(source, other)
-const zipped = zipStreams(source, other)
-const concatenated = concatStreams(source, other)
 const consumer = sinkForEach((value: Int) => Consumer.accept(value))
 
 type Pairs = Sink<Int, Int[], never, never, Int>
 const pairs: Pairs = takeSink(2)
 const batches: Stream<Int[], Stop, Source.next> = transduceStream(source, pairs)
-const aggregated: Stream<Int[], Stop, Source.next> = aggregateStream(source, pairs)
 
-const folded = (): Int fails Stop uses Source.next =>
-  foldStream(source, 0, (total, n) => total + n)
-const foldedEffect = (): Int fails Stop uses Source.next | Accum.add =>
-  foldEffectStream(source, 0, (total, n) => Accum.add(total, n))
-const collected = (): Int[] fails Stop uses Source.next => collectStream(source)
-const headed = (): Option<Int> fails Stop uses Source.next => headStream(source)
-const lasted = (): Option<Int> fails Stop uses Source.next => lastStream(source)
-const drained = (): void fails Stop uses Source.next => drainStream(source)
 const ran = (): void fails Stop uses Source.next | Consumer.accept => runStream(source, consumer)
 `;
 
@@ -288,33 +238,6 @@ function referenceTo(ir: ModuleIR, helper: string, span: unknown): Obj {
   };
 }
 
-/**
- * The same value, evaluated after an effect. The result keeps its type, and
- * the block records the execution mode "effect".
- */
-function impure(value: Obj): Obj {
-  const span = value.span;
-  return {
-    kind: "block",
-    steps: [{
-      kind: "evaluate",
-      value: {
-        kind: "make-ref",
-        value: literal(0, INT_TYPE, span),
-        type: { kind: "ref", element: INT_TYPE },
-        execution: "effect",
-        effects: NO_EFFECTS,
-        span,
-      },
-    }],
-    result: value,
-    type: value.type,
-    execution: "effect",
-    effects: value.effects,
-    span,
-  };
-}
-
 // ------------------------------------------------------------------ Stream families
 
 /** An operator, the IR kind at the root of its declaration, and its operands. */
@@ -342,111 +265,6 @@ const CLOSURE_ROWS: readonly ClosureRow[] = [
     "transform",
     "bump",
     "mapEffect requires an inline closure",
-  ],
-  [
-    "scanned",
-    "scan-stream",
-    "update",
-    "addUp",
-    "scanStream requires an inline closure",
-  ],
-  [
-    "accumulated",
-    "map-accum-stream",
-    "update",
-    "accumulate",
-    "mapAccumStream requires an inline closure",
-  ],
-  [
-    "folded",
-    "fold-stream",
-    "update",
-    "addUp",
-    "foldStream requires an inline closure",
-  ],
-  [
-    "foldedEffect",
-    "fold-effect-stream",
-    "update",
-    "addEffect",
-    "foldEffectStream requires an inline closure",
-  ],
-  [
-    "flatMapped",
-    "flat-map-streams",
-    "transform",
-    "expand",
-    "flatMapStreams requires an inline closure",
-  ],
-  [
-    "switched",
-    "switch-map-streams",
-    "transform",
-    "expand",
-    "switchMapStreams requires an inline closure",
-  ],
-  [
-    "recovered",
-    "catch-stream",
-    "recover",
-    "recover",
-    "catchStream requires an inline closure",
-  ],
-  [
-    "dropped",
-    "drop-while-stream",
-    "predicate",
-    "isSmall",
-    "dropWhileStream requires an inline closure",
-  ],
-  [
-    "filtered",
-    "filter-stream",
-    "predicate",
-    "isSmall",
-    "filterStream requires an inline closure",
-  ],
-  [
-    "takenWhile",
-    "take-while-stream",
-    "predicate",
-    "isSmall",
-    "takeWhileStream requires an inline closure",
-  ],
-  [
-    "takenUntil",
-    "take-until-stream",
-    "predicate",
-    "isSmall",
-    "takeUntilStream requires an inline closure",
-  ],
-  [
-    "filteredEffect",
-    "filter-effect-stream",
-    "predicate",
-    "allowed",
-    "effectful stream predicate requires an inline closure",
-  ],
-  [
-    "takenWhileEffect",
-    "take-while-effect-stream",
-    "predicate",
-    "allowed",
-    "effectful stream predicate requires an inline closure",
-  ],
-  [
-    "takenUntilEffect",
-    "take-until-effect-stream",
-    "predicate",
-    "allowed",
-    "effectful stream predicate requires an inline closure",
-  ],
-  [
-    "droppedEffect",
-    "drop-while-effect-stream",
-    "predicate",
-    "allowed",
-    "effectful stream predicate requires an inline closure",
   ],
   [
     "consumer",
@@ -519,183 +337,6 @@ const OPERAND_ROWS: readonly OperandRow[] = [
     "mapEffect needs a Stream and an element callback",
   ],
   [
-    "scanned",
-    "scan-stream",
-    "stream",
-    "int",
-    "scanStream needs a Stream and a pure state update callback",
-  ],
-  [
-    "accumulated",
-    "map-accum-stream",
-    "stream",
-    "int",
-    "mapAccumStream needs a Stream and a pure callback returning [State, Output[]]",
-  ],
-  [
-    "folded",
-    "fold-stream",
-    "stream",
-    "int",
-    "foldStream needs a Stream and a pure state update callback",
-  ],
-  [
-    "foldedEffect",
-    "fold-effect-stream",
-    "stream",
-    "int",
-    "foldEffectStream needs a Stream and a compatible state update callback",
-  ],
-  [
-    "collected",
-    "collect-stream",
-    "stream",
-    "int",
-    "collectStream needs a Stream value",
-  ],
-  ["headed", "head-stream", "stream", "int", "headStream needs a Stream value"],
-  ["lasted", "last-stream", "stream", "int", "lastStream needs a Stream value"],
-  [
-    "drained",
-    "drain-stream",
-    "stream",
-    "int",
-    "drainStream needs a Stream value",
-  ],
-  [
-    "flatMapped",
-    "flat-map-streams",
-    "stream",
-    "int",
-    "flatMapStreams needs a Stream and a pure callback returning a Stream",
-  ],
-  [
-    "switched",
-    "switch-map-streams",
-    "stream",
-    "int",
-    "switchMapStreams needs a Stream and a pure callback returning a Stream",
-  ],
-  [
-    "recovered",
-    "catch-stream",
-    "stream",
-    "int",
-    "catchStream needs a Stream and a pure error callback returning a Stream",
-  ],
-  [
-    "retried",
-    "retry-stream",
-    "stream",
-    "int",
-    "retryStream needs a Stream and a RetrySchedule",
-  ],
-  [
-    "retried",
-    "retry-stream",
-    "policy",
-    "int",
-    "retryStream needs a Stream and a RetrySchedule",
-  ],
-  [
-    "debounced",
-    "debounce-stream",
-    "stream",
-    "int",
-    "debounceStream needs a Stream",
-  ],
-  [
-    "throttled",
-    "throttle-stream",
-    "stream",
-    "int",
-    "throttleStream needs a Stream",
-  ],
-  [
-    "taken",
-    "take-stream",
-    "stream",
-    "int",
-    "takeStream needs a Stream value and an Int count",
-  ],
-  [
-    "taken",
-    "take-stream",
-    "count",
-    "string",
-    "takeStream needs a Stream value and an Int count",
-  ],
-  [
-    "skipped",
-    "drop-stream",
-    "stream",
-    "int",
-    "dropStream needs a Stream value and an Int count",
-  ],
-  [
-    "skipped",
-    "drop-stream",
-    "count",
-    "string",
-    "dropStream needs a Stream value and an Int count",
-  ],
-  [
-    "dropped",
-    "drop-while-stream",
-    "stream",
-    "int",
-    "dropWhileStream needs a Stream and a pure boolean predicate",
-  ],
-  [
-    "filtered",
-    "filter-stream",
-    "stream",
-    "int",
-    "filterStream needs a Stream and a pure boolean predicate",
-  ],
-  [
-    "takenWhile",
-    "take-while-stream",
-    "stream",
-    "int",
-    "takeWhileStream needs a Stream and a pure boolean predicate",
-  ],
-  [
-    "takenUntil",
-    "take-until-stream",
-    "stream",
-    "int",
-    "takeUntilStream needs a Stream and a pure boolean predicate",
-  ],
-  [
-    "filteredEffect",
-    "filter-effect-stream",
-    "stream",
-    "int",
-    "effectful stream predicate needs a Stream and a boolean callback",
-  ],
-  [
-    "takenWhileEffect",
-    "take-while-effect-stream",
-    "stream",
-    "int",
-    "effectful stream predicate needs a Stream and a boolean callback",
-  ],
-  [
-    "takenUntilEffect",
-    "take-until-effect-stream",
-    "stream",
-    "int",
-    "effectful stream predicate needs a Stream and a boolean callback",
-  ],
-  [
-    "droppedEffect",
-    "drop-while-effect-stream",
-    "stream",
-    "int",
-    "effectful stream predicate needs a Stream and a boolean callback",
-  ],
-  [
     "consumer",
     "sink-for-each",
     "consume",
@@ -711,48 +352,6 @@ const OPERAND_ROWS: readonly OperandRow[] = [
     "bufferStream needs a Stream value",
   ],
   [
-    "merged",
-    "merge-streams",
-    "left",
-    "int",
-    "mergeStreams needs two Stream values",
-  ],
-  [
-    "merged",
-    "merge-streams",
-    "right",
-    "int",
-    "mergeStreams needs two Stream values",
-  ],
-  [
-    "zipped",
-    "zip-streams",
-    "left",
-    "int",
-    "zipStreams needs two Stream values",
-  ],
-  [
-    "zipped",
-    "zip-streams",
-    "right",
-    "int",
-    "zipStreams needs two Stream values",
-  ],
-  [
-    "concatenated",
-    "concat-streams",
-    "left",
-    "int",
-    "concatStreams needs two Stream values",
-  ],
-  [
-    "concatenated",
-    "concat-streams",
-    "right",
-    "int",
-    "concatStreams needs two Stream values",
-  ],
-  [
     "batches",
     "transduce-stream",
     "stream",
@@ -765,20 +364,6 @@ const OPERAND_ROWS: readonly OperandRow[] = [
     "sink",
     "int",
     "transduceStream needs compatible input and replayable Sink leftovers",
-  ],
-  [
-    "aggregated",
-    "aggregate-stream",
-    "stream",
-    "int",
-    "aggregateStream needs compatible input and replayable Sink leftovers",
-  ],
-  [
-    "aggregated",
-    "aggregate-stream",
-    "sink",
-    "int",
-    "aggregateStream needs compatible input and replayable Sink leftovers",
   ],
   [
     "ran",
@@ -835,44 +420,6 @@ Deno.test("an unfold callback that does not return an Option pair is rejected", 
   );
 });
 
-/** Declaration, IR kind, field of the seed, count, or policy, message fragment. */
-type ImpureRow = readonly [...Case, field: string, fragment: string];
-const IMPURE_ROWS: readonly ImpureRow[] = [
-  ["scanned", "scan-stream", "seed", "scanStream seed must be pure"],
-  [
-    "accumulated",
-    "map-accum-stream",
-    "seed",
-    "mapAccumStream seed must be pure",
-  ],
-  ["folded", "fold-stream", "seed", "foldStream seed must be pure"],
-  [
-    "foldedEffect",
-    "fold-effect-stream",
-    "seed",
-    "foldEffectStream seed must be pure",
-  ],
-  ["taken", "take-stream", "count", "takeStream count must be pure"],
-  ["skipped", "drop-stream", "count", "dropStream count must be pure"],
-  ["retried", "retry-stream", "policy", "retryStream policy must be pure"],
-];
-
-Deno.test("a stream seed, count, or policy that is not pure is rejected", () => {
-  for (const [declaration, kind, field, fragment] of IMPURE_ROWS) {
-    const ir = STREAM_PROGRAM.forge();
-    const root = rootOf(ir, declaration);
-    assertEquals(root.node.kind, kind, declaration);
-    root.node[field] = impure(objectAt(root.node, field));
-    assertValidation(
-      validateModule(ir, STREAM_PROGRAM.sources),
-      "validation/004",
-      `${root.path}.${field}`,
-      fragment,
-      `${declaration}.${field}`,
-    );
-  }
-});
-
 /** Declaration, IR kind, callback field, message fragment. */
 type EffectfulRow = readonly [...Case, field: string, fragment: string];
 const EFFECTFUL_ROWS: readonly EffectfulRow[] = [
@@ -881,24 +428,6 @@ const EFFECTFUL_ROWS: readonly EffectfulRow[] = [
     "map-stream",
     "transform",
     "mapStream needs a Stream and a pure element callback",
-  ],
-  [
-    "scanned",
-    "scan-stream",
-    "update",
-    "scanStream needs a Stream and a pure state update callback",
-  ],
-  [
-    "accumulated",
-    "map-accum-stream",
-    "update",
-    "mapAccumStream needs a Stream and a pure callback returning [State, Output[]]",
-  ],
-  [
-    "folded",
-    "fold-stream",
-    "update",
-    "foldStream needs a Stream and a pure state update callback",
   ],
 ];
 

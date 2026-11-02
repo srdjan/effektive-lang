@@ -36,6 +36,15 @@
     "reason": "The mutant is A || (B && C) || D, where A is that self is not local, B is that the body is undefined, C is that the body is not a call, and D is that the role of the builtin of the body is not container. The builtin helper returns undefined for a body that is undefined or not a call, so recursionRoleOf gives reject and D is true. B and C each imply D, so the swap never changes the result."
   },
   {
+    "file": "src/core/check_builtins/stream.ts",
+    "declaration": "streamBufferCapacity",
+    "offset": 246,
+    "text": "capacity === undefined || typeof value !== \"number\"",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The wider guard already rejects every case that the mutant drops. When capacity is undefined, value is undefined, so the second operand is true and the next operand, !Number.isSafeInteger(value), is true too. When value is not a number, Number.isSafeInteger(value) is false, so the third operand rejects it. Only a safe positive integer reaches the accept path, in both forms."
+  },
+  {
     "file": "src/core/db.ts",
     "declaration": "sameModes",
     "offset": 84,

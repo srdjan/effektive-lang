@@ -121,28 +121,13 @@ import {
   withResource,
 } from "./families/scope.ts";
 import {
-  accumulateStream,
-  aggregateStream,
   bufferStream,
-  catchStream,
-  concatStreams,
-  debounceStream,
-  effectStreamPredicate,
   mapElements,
-  mapGroups,
-  mapStreams,
-  mergeStreams,
-  pureStreamPredicate,
-  retryStream,
   runStream,
   sinkForEach,
-  streamCount,
-  streamTerminal,
   takeSink,
-  throttleStream,
   transduceStream,
   unfoldStream,
-  zipStreams,
 } from "./families/stream.ts";
 import { schema, schemaOperation } from "./families/schema.ts";
 import { refOperation } from "./families/ref.ts";
@@ -756,60 +741,16 @@ export class BodyValidator implements ValidatorCore {
       case "map-effect":
       case "map-stream":
         return mapElements(this, e, path);
-      case "map-groups":
-        return mapGroups(this, e, path);
-      case "scan-stream":
-      case "map-accum-stream":
-      case "fold-stream":
-      case "fold-effect-stream":
-        return accumulateStream(this, e, path);
-      case "collect-stream":
-      case "head-stream":
-      case "last-stream":
-      case "drain-stream":
-        return streamTerminal(this, e, path);
-      case "flat-map-streams":
-      case "switch-map-streams":
-        return mapStreams(this, e, path);
-      case "catch-stream":
-        return catchStream(this, e, path);
-      case "retry-stream":
-        return retryStream(this, e, path);
-      case "debounce-stream":
-        return debounceStream(this, e, path);
-      case "throttle-stream":
-        return throttleStream(this, e, path);
-      case "take-stream":
-      case "drop-stream":
-        return streamCount(this, e, path);
-      case "drop-while-stream":
-      case "filter-stream":
-      case "take-while-stream":
-      case "take-until-stream":
-        return pureStreamPredicate(this, e, path);
-      case "filter-effect-stream":
-      case "take-while-effect-stream":
-      case "take-until-effect-stream":
-      case "drop-while-effect-stream":
-        return effectStreamPredicate(this, e, path);
       case "sink-for-each":
         return sinkForEach(this, e, path);
       case "take-sink":
         return takeSink(this, e, path);
       case "transduce-stream":
         return transduceStream(this, e, path);
-      case "aggregate-stream":
-        return aggregateStream(this, e, path);
       case "run-stream":
         return runStream(this, e, path);
       case "buffer-stream":
         return bufferStream(this, e, path);
-      case "merge-streams":
-        return mergeStreams(this, e, path);
-      case "zip-streams":
-        return zipStreams(this, e, path);
-      case "concat-streams":
-        return concatStreams(this, e, path);
       case "race":
         return race(this, e, path);
       case "make-ref":

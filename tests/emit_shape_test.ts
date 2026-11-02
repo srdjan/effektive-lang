@@ -66,12 +66,12 @@ function lowerOk(files: Record<string, string>, entries: readonly string[]) {
 
 function irOfExamplesAndEmitFixtures(): ModuleIR[] {
   const modules = lowerOk(exampleFiles(), EXAMPLE_ENTRIES);
-  for (const dir of ["emit/groups"]) {
+  for (const dir of ["emit/sinks"]) {
     const files = projectFiles(dir);
     const entries = Object.keys(files).filter((f) => f.endsWith(".eff"));
     const host = "host.effi" in files
       ? {
-        host: { boundary: { interface: "./host.effi", module: "./host.ts" } },
+        host: { sinks: { interface: "./host.effi", module: "./host.ts" } },
       }
       : {};
     modules.push(
@@ -102,7 +102,7 @@ Deno.test("childrenOf finds the nodes that a reflective walk finds", () => {
       });
     }
   }
-  assert(nodes > 150, `${nodes} nodes compared`);
+  assert(nodes > 100, `${nodes} nodes compared`);
 });
 
 // ------------------------------------------------------------------ forged nodes
@@ -135,10 +135,6 @@ Deno.test("evaluatedChildren omits the deferred children of a leaf", () => {
     body: lit(value),
   }));
   const cases: readonly [Expr, readonly Expr[], readonly Expr[]][] = [
-    [{ ...A, kind: "fold-effect-stream", stream: a, seed: b, update: c }, [
-      a,
-      b,
-    ], [a, b, c]],
     [{ ...A, kind: "retry", job: a, times: 1 }, [], [a]],
     [{ ...A, kind: "provide", provider: a, job: b }, [], [a, b]],
     [{ ...A, kind: "retry-with-schedule", job: a, options: b }, [], [a, b]],
@@ -195,7 +191,7 @@ Deno.test("a structural node has no evaluated children, and a call has all", () 
   assertEquals(evaluatedChildren(call), [a, b]);
 });
 
-Deno.test("the table marks the 33 leaf kinds", () => {
+Deno.test("the table marks the 27 leaf kinds", () => {
   const kinds = new Set<string>();
   for (const ir of irOfExamplesAndEmitFixtures()) {
     for (const declaration of ir.declarations) {
@@ -210,7 +206,7 @@ Deno.test("the table marks the 33 leaf kinds", () => {
       });
     }
   }
-  // The fixtures reach part of the 33 kinds. Each reached kind is in the list.
+  // The fixtures reach part of the 27 kinds. Each reached kind is in the list.
   const LEAVES = {
     "schema-make": true,
     "schema-decode": true,
@@ -226,12 +222,6 @@ Deno.test("the table marks the 33 leaf kinds", () => {
     "catch": true,
     "with-resource": true,
     "run-stream": true,
-    "fold-stream": true,
-    "fold-effect-stream": true,
-    "collect-stream": true,
-    "head-stream": true,
-    "last-stream": true,
-    "drain-stream": true,
     "make-ref": true,
     "get-ref": true,
     "set-ref": true,
@@ -248,6 +238,6 @@ Deno.test("the table marks the 33 leaf kinds", () => {
   } satisfies Record<LeafKind, true>;
 
   assert(kinds.size > 5, `${kinds.size} leaf kinds reached`);
-  assertEquals(Object.keys(LEAVES).length, 33);
+  assertEquals(Object.keys(LEAVES).length, 27);
   for (const kind of kinds) assert(Object.hasOwn(LEAVES, kind), kind);
 });

@@ -110,7 +110,6 @@ interface Unit {
  * emit tests add a configuration for them, and so does this test.
  */
 const BUNDLES = new Set([
-  "emit/groups",
   "emit/sinks",
 ]);
 
@@ -288,156 +287,11 @@ function syntheticNodes(): Record<Expr["kind"], Expr> {
       stream: leaf(),
       transform: leaf(),
     },
-    "map-groups": {
-      ...a,
-      kind: "map-groups",
-      stream: leaf(),
-      key: closureLeaf(),
-      use: closureLeaf(),
-      bufferSize: 1,
-    },
-    "scan-stream": {
-      ...a,
-      kind: "scan-stream",
-      stream: leaf(),
-      seed: leaf(),
-      update: leaf(),
-    },
-    "map-accum-stream": {
-      ...a,
-      kind: "map-accum-stream",
-      stream: leaf(),
-      seed: leaf(),
-      update: leaf(),
-    },
-    "fold-stream": {
-      ...a,
-      kind: "fold-stream",
-      stream: leaf(),
-      seed: leaf(),
-      update: leaf(),
-    },
-    "fold-effect-stream": {
-      ...a,
-      kind: "fold-effect-stream",
-      stream: leaf(),
-      seed: leaf(),
-      update: leaf(),
-    },
-    "collect-stream": { ...a, kind: "collect-stream", stream: leaf() },
-    "head-stream": { ...a, kind: "head-stream", stream: leaf() },
-    "last-stream": { ...a, kind: "last-stream", stream: leaf() },
-    "drain-stream": { ...a, kind: "drain-stream", stream: leaf() },
-    "flat-map-streams": {
-      ...a,
-      kind: "flat-map-streams",
-      stream: leaf(),
-      transform: leaf(),
-      concurrency: 2,
-    },
-    "switch-map-streams": {
-      ...a,
-      kind: "switch-map-streams",
-      stream: leaf(),
-      transform: leaf(),
-    },
-    "catch-stream": {
-      ...a,
-      kind: "catch-stream",
-      stream: leaf(),
-      recover: leaf(),
-    },
-    "retry-stream": {
-      ...a,
-      kind: "retry-stream",
-      stream: leaf(),
-      policy: leaf(),
-    },
-    "debounce-stream": {
-      ...a,
-      kind: "debounce-stream",
-      stream: leaf(),
-      delayMs: 1,
-    },
-    "throttle-stream": {
-      ...a,
-      kind: "throttle-stream",
-      stream: leaf(),
-      units: 1,
-      durationMs: 1,
-      strategy: "shape",
-    },
-    "take-stream": {
-      ...a,
-      kind: "take-stream",
-      stream: leaf(),
-      count: leaf(),
-    },
-    "drop-stream": {
-      ...a,
-      kind: "drop-stream",
-      stream: leaf(),
-      count: leaf(),
-    },
-    "drop-while-stream": {
-      ...a,
-      kind: "drop-while-stream",
-      stream: leaf(),
-      predicate: leaf(),
-    },
-    "filter-stream": {
-      ...a,
-      kind: "filter-stream",
-      stream: leaf(),
-      predicate: leaf(),
-    },
-    "filter-effect-stream": {
-      ...a,
-      kind: "filter-effect-stream",
-      stream: leaf(),
-      predicate: leaf(),
-    },
-    "take-while-effect-stream": {
-      ...a,
-      kind: "take-while-effect-stream",
-      stream: leaf(),
-      predicate: leaf(),
-    },
-    "take-until-effect-stream": {
-      ...a,
-      kind: "take-until-effect-stream",
-      stream: leaf(),
-      predicate: leaf(),
-    },
-    "drop-while-effect-stream": {
-      ...a,
-      kind: "drop-while-effect-stream",
-      stream: leaf(),
-      predicate: leaf(),
-    },
-    "take-while-stream": {
-      ...a,
-      kind: "take-while-stream",
-      stream: leaf(),
-      predicate: leaf(),
-    },
-    "take-until-stream": {
-      ...a,
-      kind: "take-until-stream",
-      stream: leaf(),
-      predicate: leaf(),
-    },
     "sink-for-each": { ...a, kind: "sink-for-each", consume: leaf() },
     "take-sink": { ...a, kind: "take-sink", count: 1 },
     "transduce-stream": {
       ...a,
       kind: "transduce-stream",
-      stream: leaf(),
-      sink: leaf(),
-    },
-    "aggregate-stream": {
-      ...a,
-      kind: "aggregate-stream",
       stream: leaf(),
       sink: leaf(),
     },
@@ -452,24 +306,6 @@ function syntheticNodes(): Record<Expr["kind"], Expr> {
       kind: "buffer-stream",
       stream: leaf(),
       capacity: 1,
-    },
-    "merge-streams": {
-      ...a,
-      kind: "merge-streams",
-      left: leaf(),
-      right: leaf(),
-    },
-    "zip-streams": {
-      ...a,
-      kind: "zip-streams",
-      left: leaf(),
-      right: leaf(),
-    },
-    "concat-streams": {
-      ...a,
-      kind: "concat-streams",
-      left: leaf(),
-      right: leaf(),
     },
     race: { ...a, kind: "race", left: leaf(), right: leaf() },
     "make-ref": { ...a, kind: "make-ref", value: leaf() },
@@ -610,8 +446,8 @@ Deno.test("exprChildren equals a reflective walk on every node of every fixture 
 Deno.test("exprChildren equals a reflective walk on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
   const kinds = Object.keys(synthetic);
-  // The Expr union of src/core/ir.ts has 88 kinds.
-  assertEquals(kinds.length, 88);
+  // The Expr union of src/core/ir.ts has 59 kinds.
+  assertEquals(kinds.length, 59);
   for (const [kind, node] of Object.entries(synthetic)) {
     assertEquals(node.kind, kind);
     assertSameChildren(node, "synthetic");
@@ -639,7 +475,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
     for (const node of all) reached.add(node.kind);
   }
   const synthetic = new Set(Object.keys(syntheticNodes()));
-  assertEquals(new Set([...reached, ...synthetic]).size, 88);
+  assertEquals(new Set([...reached, ...synthetic]).size, 59);
   for (const kind of reached) assert(synthetic.has(kind), kind);
 });
 
@@ -652,7 +488,7 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
 // [job, durationMs].
 Deno.test("childrenOf and exprChildren give the same child multiset on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
-  assertEquals(Object.keys(synthetic).length, 88);
+  assertEquals(Object.keys(synthetic).length, 59);
   const differentOrder: string[] = [];
   for (const [kind, node] of Object.entries(synthetic)) {
     const emitted = childrenOf(node);

@@ -768,34 +768,6 @@ Deno.test("stream builtin names retain callback-dependent lowering kinds", () =>
     ["mapEffect", "(n) => n + 1", "", "map-stream"],
     ["mapEffect", "(n) => Probe.next(n)", "", "map-effect"],
     ["mapEffect", "(n) => n + 1", ", { concurrency: 1 }", "map-effect"],
-    ["filterEffectStream", "(n) => n < 3", "", "filter-stream"],
-    [
-      "filterEffectStream",
-      "(n) => Probe.accept(n)",
-      "",
-      "filter-effect-stream",
-    ],
-    ["takeWhileEffectStream", "(n) => n < 3", "", "take-while-stream"],
-    [
-      "takeWhileEffectStream",
-      "(n) => Probe.accept(n)",
-      "",
-      "take-while-effect-stream",
-    ],
-    ["takeUntilEffectStream", "(n) => n < 3", "", "take-until-stream"],
-    [
-      "takeUntilEffectStream",
-      "(n) => Probe.accept(n)",
-      "",
-      "take-until-effect-stream",
-    ],
-    ["dropWhileEffectStream", "(n) => n < 3", "", "drop-while-stream"],
-    [
-      "dropWhileEffectStream",
-      "(n) => Probe.accept(n)",
-      "",
-      "drop-while-effect-stream",
-    ],
   ] as const;
   for (const [name, callback, options, kind] of cases) {
     const text = `type Int = int

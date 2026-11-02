@@ -169,9 +169,6 @@ type SpecialKind =
   | "log"
   | "schema"
   | "with-resource"
-  | "map-groups"
-  | "debounce-stream"
-  | "throttle-stream"
   | "take-sink"
   | "buffer-stream"
   | "layer"
@@ -251,132 +248,13 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
     stream: arg(0),
     transform: arg(1),
   }),
-  "scan-stream": (arg) => ({
-    kind: "scan-stream",
-    stream: arg(0),
-    seed: arg(1),
-    update: arg(2),
-  }),
-  "map-accum-stream": (arg) => ({
-    kind: "map-accum-stream",
-    stream: arg(0),
-    seed: arg(1),
-    update: arg(2),
-  }),
-  "fold-stream": (arg) => ({
-    kind: "fold-stream",
-    stream: arg(0),
-    seed: arg(1),
-    update: arg(2),
-  }),
-  "fold-effect-stream": (arg) => ({
-    kind: "fold-effect-stream",
-    stream: arg(0),
-    seed: arg(1),
-    update: arg(2),
-  }),
-  "collect-stream": (arg) => ({ kind: "collect-stream", stream: arg(0) }),
-  "head-stream": (arg) => ({ kind: "head-stream", stream: arg(0) }),
-  "last-stream": (arg) => ({ kind: "last-stream", stream: arg(0) }),
-  "drain-stream": (arg) => ({ kind: "drain-stream", stream: arg(0) }),
-  "flat-map-streams": (arg, fact) => ({
-    kind: "flat-map-streams",
-    stream: arg(0),
-    transform: arg(1),
-    concurrency: fact.concurrency,
-  }),
-  "switch-map-streams": (arg) => ({
-    kind: "switch-map-streams",
-    stream: arg(0),
-    transform: arg(1),
-  }),
-  "catch-stream": (arg) => ({
-    kind: "catch-stream",
-    stream: arg(0),
-    recover: arg(1),
-  }),
-  "retry-stream": (arg) => ({
-    kind: "retry-stream",
-    stream: arg(0),
-    policy: arg(1),
-  }),
-  "take-stream": (arg) => ({
-    kind: "take-stream",
-    stream: arg(0),
-    count: arg(1),
-  }),
-  "drop-stream": (arg) => ({
-    kind: "drop-stream",
-    stream: arg(0),
-    count: arg(1),
-  }),
-  "drop-while-stream": (arg) => ({
-    kind: "drop-while-stream",
-    stream: arg(0),
-    predicate: arg(1),
-  }),
-  "filter-stream": (arg) => ({
-    kind: "filter-stream",
-    stream: arg(0),
-    predicate: arg(1),
-  }),
-  "filter-effect-stream": (arg) => ({
-    kind: "filter-effect-stream",
-    stream: arg(0),
-    predicate: arg(1),
-  }),
-  "take-while-effect-stream": (arg) => ({
-    kind: "take-while-effect-stream",
-    stream: arg(0),
-    predicate: arg(1),
-  }),
-  "take-until-effect-stream": (arg) => ({
-    kind: "take-until-effect-stream",
-    stream: arg(0),
-    predicate: arg(1),
-  }),
-  "drop-while-effect-stream": (arg) => ({
-    kind: "drop-while-effect-stream",
-    stream: arg(0),
-    predicate: arg(1),
-  }),
-  "take-while-stream": (arg) => ({
-    kind: "take-while-stream",
-    stream: arg(0),
-    predicate: arg(1),
-  }),
-  "take-until-stream": (arg) => ({
-    kind: "take-until-stream",
-    stream: arg(0),
-    predicate: arg(1),
-  }),
   "sink-for-each": (arg) => ({ kind: "sink-for-each", consume: arg(0) }),
   "transduce-stream": (arg) => ({
     kind: "transduce-stream",
     stream: arg(0),
     sink: arg(1),
   }),
-  "aggregate-stream": (arg) => ({
-    kind: "aggregate-stream",
-    stream: arg(0),
-    sink: arg(1),
-  }),
   "run-stream": (arg) => ({ kind: "run-stream", stream: arg(0), sink: arg(1) }),
-  "merge-streams": (arg) => ({
-    kind: "merge-streams",
-    left: arg(0),
-    right: arg(1),
-  }),
-  "zip-streams": (arg) => ({
-    kind: "zip-streams",
-    left: arg(0),
-    right: arg(1),
-  }),
-  "concat-streams": (arg) => ({
-    kind: "concat-streams",
-    left: arg(0),
-    right: arg(1),
-  }),
   "race-all": (arg) => ({ kind: "race-all", jobs: arg(0) }),
   "race": (arg) => ({ kind: "race", left: arg(0), right: arg(1) }),
   "make-ref": (arg) => ({ kind: "make-ref", value: arg(0) }),
@@ -811,26 +689,8 @@ class BodyLowerer {
         return this.invokeSchema(fact, args, arg, annotation);
       case "with-resource":
         return this.invokeWithResource(arg, annotation);
-      case "map-groups":
-        return this.invokeMapGroups(fact, node, arg, annotation);
       case "log":
         return this.invokeLog(fact, node, args, arg, annotation);
-      case "debounce-stream":
-        return {
-          kind: "debounce-stream",
-          stream: arg(0),
-          delayMs: this.required(fact.delayMs, "debounce delay", node),
-          ...annotation,
-        };
-      case "throttle-stream":
-        return {
-          kind: "throttle-stream",
-          stream: arg(0),
-          units: this.required(fact.units, "throttle units", node),
-          durationMs: this.required(fact.durationMs, "throttle duration", node),
-          strategy: this.required(fact.strategy, "throttle strategy", node),
-          ...annotation,
-        };
       case "take-sink":
         return {
           kind: "take-sink",
@@ -958,35 +818,6 @@ class BodyLowerer {
       acquire,
       use,
       release,
-      ...annotation,
-    };
-  }
-
-  private invokeMapGroups(
-    fact: FactOf<"map-groups">,
-    node: NodeId,
-    arg: ArgumentAt,
-    annotation: Annotation,
-  ): Expr {
-    const stream = arg(0);
-    const key = arg(1);
-    const use = arg(2);
-    if (
-      key.kind !== "closure" || use.kind !== "closure" ||
-      use.parameters[1] === undefined
-    ) {
-      throw internal("mapGroups needs an inline use callback");
-    }
-    return {
-      kind: "map-groups",
-      stream,
-      key,
-      use,
-      bufferSize: this.required(
-        fact.bufferSize,
-        "the group capacity",
-        node,
-      ),
       ...annotation,
     };
   }

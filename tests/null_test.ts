@@ -30,7 +30,7 @@ const justNull = (value: Nil): Nil => match value { null => null }`);
   ) assertEquals(diagnostics, []);
 });
 
-Deno.test("null does not fit nonnullable values, arithmetic, unit, or group keys", () => {
+Deno.test("null does not fit nonnullable values, arithmetic, or unit", () => {
   for (
     const source of [
       "const bad: Text = null",
@@ -39,7 +39,6 @@ Deno.test("null does not fit nonnullable values, arithmetic, unit, or group keys
       "const bad = null === 1",
       "const bad: Option<Text> = Some(null)",
       "const bad = (value: Nil): Int => match value { true => 1 }",
-      "const bad = (source: Stream<Int>) => mapGroups(source, (value: Int): Nil => null, (key, group) => key, { bufferSize: 1 })",
     ]
   ) {
     const project = checked(

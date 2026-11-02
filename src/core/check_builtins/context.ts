@@ -22,11 +22,7 @@ export interface Arg {
 }
 
 /** The builtins that take a concurrency option record. */
-export type ConcurrencyOperation =
-  | "traverse"
-  | "all"
-  | "mapEffect"
-  | "flatMapStreams";
+export type ConcurrencyOperation = "traverse" | "all" | "mapEffect";
 
 /** Shared operations needed by the extracted builtin families. */
 export interface BuiltinContext {

@@ -149,17 +149,12 @@ Deno.test("stream transformations keep a sink chosen between named sinks unhinte
   const project = clean(
     `${PRELUDE}export const transduced = (s: Stream<Int>, flag: Flag, a: Chunk, b: Chunk): Stream<Text, Stop, Count.tick> =>
   transduceStream(s, if (flag) { a } else { b })
-export const aggregated = (s: Stream<Int>, flag: Flag, a: Chunk, b: Chunk): Stream<Text, Stop, Count.tick> =>
-  aggregateStream(s, match (flag) { true => a, false => b })
 `,
   );
-  for (const name of ["transduced", "aggregated"]) {
-    assertEquals(
-      channels(project, name).result,
-      "Stream<Text, Stop, Count.tick>",
-      name,
-    );
-  }
+  assertEquals(
+    channels(project, "transduced").result,
+    "Stream<Text, Stop, Count.tick>",
+  );
 });
 
 Deno.test("a takeSink in an if or match branch gets the stream element", () => {
@@ -202,14 +197,11 @@ export const wrapped = (s: Stream<Int[]>): void =>
   runStream(s, (sinkForEach((batch) => {})))
 export const batches = (s: Stream<Int>): void =>
   runStream(transduceStream(s, takeSink(2)), sinkForEach((batch) => {}))
-export const aggregated = (s: Stream<Int>): Stream<void> =>
-  aggregateStream(s, sinkForEach((item) => {}))
 `,
   );
   assertEquals(arrowParameters(project, "direct"), [["Int"]]);
   assertEquals(arrowParameters(project, "wrapped"), [["Int[]"]]);
   assertEquals(arrowParameters(project, "batches"), [["Int[]"]]);
-  assertEquals(arrowParameters(project, "aggregated"), [["Int"]]);
 });
 
 Deno.test("an annotated sinkForEach behaves as before, also inline", () => {

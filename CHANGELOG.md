@@ -36,6 +36,16 @@
   No application used them. `scoped`, `forkScoped`, `race`, and `all` stay;
   `forkScoped` never returned a handle. The IR loses the type kind `fiber`
   and three expression kinds.
+- 25 stream operators are gone: `mapGroups`, `scanStream`,
+  `mapAccumStream`, `foldStream`, `foldEffectStream`, `collectStream`,
+  `headStream`, `lastStream`, `drainStream`, `aggregateStream`,
+  `mergeStreams`, `zipStreams`, `concatStreams`, `flatMapStreams`,
+  `switchMapStreams`, `catchStream`, `retryStream`, `debounceStream`,
+  `throttleStream`, `takeStream`, `dropStream`, `filterEffectStream`,
+  `takeWhileEffectStream`, `takeUntilEffectStream`, and
+  `dropWhileEffectStream`. No application used them. `unfold`, `mapEffect`,
+  `sinkForEach`, `takeSink`, `transduceStream`, `runStream`, and
+  `bufferStream` stay. The IR loses 29 expression kinds.
 - `build --validate` and `Revision.validate` are gone, and `frontend.ts` no
   longer exports `validateProject`. The independent IR validator is a test
   oracle: tests import it from `src/core/validate_project.ts`. The command-line

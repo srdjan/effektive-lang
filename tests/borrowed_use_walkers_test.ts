@@ -1,8 +1,7 @@
-// Tests for the three checks of a borrowed local in src/core/check_expr.ts: a
-// scoped operation record (`withResource` over a record), a borrowed host
-// handle (`withResource` over an opaque type or a `borrow` parameter), and a
-// borrowed group (`mapGroups`). Each row gives a program and the number of reports of the
-// check's message. Every test runs through the public entry `checkProject`.
+// Tests for the two checks of a borrowed local in src/core/check_expr.ts: a
+// scoped operation record (`withResource` over a record) and a borrowed host
+// handle (`withResource` over an opaque type or a `borrow` parameter). Each row
+// gives a program and the number of reports of the check's message. Every test runs through the public entry `checkProject`.
 
 import { assert, assertEquals } from "@std/assert";
 import { checkProject, memoryHost } from "../src/core/frontend.ts";
@@ -10,8 +9,6 @@ import { checkProject, memoryHost } from "../src/core/frontend.ts";
 const RECORD =
   "a scoped operation record may only be used as the direct receiver of an operation call";
 const HANDLE = "a borrowed handle may only pass to a borrow-qualified method";
-const GROUP =
-  "a borrowed group permits at most one direct terminal use and cannot escape or be captured";
 
 interface Row {
   readonly name: string;
@@ -174,65 +171,5 @@ for (const row of PARAMETER_ROWS) {
       reportsOf(handleProject(main), "main.eff", HANDLE),
       row.reports,
     );
-  });
-}
-
-// ------------------------------------------------------------------ borrowed group
-
-const GROUP_ROWS: readonly Row[] = [
-  { name: "collect directly", body: "collectStream(group)", reports: 0 },
-  { name: "head directly", body: "headStream(group)", reports: 0 },
-  {
-    name: "fold directly",
-    body: "foldStream(group, 0, (sum, n) => sum + n)",
-    reports: 0,
-  },
-  { name: "return the group", body: "group", reports: 1 },
-  {
-    name: "two terminal uses",
-    body: "{ collectStream(group); drainStream(group) }",
-    reports: 1,
-  },
-  {
-    name: "three terminal uses",
-    body: "{ collectStream(group); drainStream(group); headStream(group) }",
-    reports: 2,
-  },
-  {
-    name: "non-terminal use",
-    body: "collectStream(mapEffect(group, (n) => n))",
-    reports: 1,
-  },
-  {
-    name: "terminal inside an arrow",
-    body: "{ const later = () => collectStream(group); 1 }",
-    reports: 1,
-  },
-  {
-    name: "group is not the first argument",
-    body: "foldStream(source, group, (sum, n) => sum)",
-    reports: 1,
-  },
-  {
-    name: "group in a shorthand field",
-    body: "keep({ group })",
-    reports: 1,
-  },
-  {
-    name: "group in a shorthand field before a terminal",
-    body: "{ keep({ group }); collectStream(group) }",
-    reports: 2,
-  },
-];
-
-for (const row of GROUP_ROWS) {
-  Deno.test(`borrowed group: ${row.name}`, () => {
-    const text = `
-type Int = int
-const keep = (wrapped: { group: Stream<Int> }): Int => 1
-const probe = (source: Stream<Int>) =>
-  mapGroups(source, (n) => n, (key, group) => ${row.body}, { bufferSize: 1 })
-`;
-    assertEquals(reportsOf(single(text), "m.eff", GROUP), row.reports);
   });
 }

@@ -128,33 +128,6 @@ const p: RetrySchedule<Stop> = retrySchedule((e: Stop, attempt: Int): ${result} 
   ]);
 });
 
-Deno.test("the throttleStream option is duration and takes a Duration literal", () => {
-  const prefix = `${TYPES}service Source { next(n: Int): Option<[Int, Int]> }
-const source = unfold(0, (n) => Source.next(n))\n`;
-  assertEquals(
-    diagnosticsOf(
-      `${prefix}const s = throttleStream(source, { units: 1, duration: 1s, strategy: "shape" })\n`,
-    ),
-    [],
-  );
-  assertEquals(
-    diagnosticsOf(
-      `${prefix}const s = throttleStream(source, { units: 1, duration: 1000, strategy: "shape" })\n`,
-    ).map((m) => m.slice(0, 18)),
-    ["type-mismatch/010 "],
-  );
-  assertEquals(
-    diagnosticsOf(`${prefix}const s = debounceStream(source, 200)\n`).map((
-      m,
-    ) => m.slice(0, 18)),
-    ["type-mismatch/010 "],
-  );
-  assertEquals(
-    diagnosticsOf(`${prefix}const s = debounceStream(source, 200ms)\n`),
-    [],
-  );
-});
-
 // ------------------------------------------------------------------ patterns
 
 Deno.test("a duration literal pattern on a Duration subject emits the number of milliseconds", () => {

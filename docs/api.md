@@ -42,7 +42,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     ref.ts         Mutable reference construction, reads, writes and pure update callbacks.
     schema.ts      Schema metadata, exhaustive handlers, defaults, directional effects and recursion through SchemaContext.
     scope.ts       Scope operations, resource lifetimes and borrowed parameters through ScopeContext.
-    stream.ts      Stream/Sink callbacks, grouping lifetimes, aggregation hints and execution through StreamContext.
+    stream.ts      Stream/Sink callbacks and execution through StreamContext.
   check_project.ts Project driver: paired declaration entries and body results, modes, interfaces, and the shared per-module step.
   tables.ts      Side tables of a body: node info and lowering facts.
   patterns.ts    Pattern domains of match subjects.

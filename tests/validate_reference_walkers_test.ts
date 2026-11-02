@@ -1,8 +1,7 @@
-// The reference walkers of the validator (src/core/validate/expr.ts). Four
+// The reference walkers of the validator (src/core/validate/expr.ts). Two
 // checks follow a binding through a closure body and report each use that the
-// rules forbid: a borrowed handle (`withResource`
-// over an opaque type), a borrowed group (`mapGroups`), and a self reference
-// in a recursive Schema body (`schemaRecursive`). A missed child expression
+// rules forbid: a borrowed handle (`withResource` over an opaque type) and a
+// self reference in a recursive Schema body (`schemaRecursive`). A missed child expression
 // hides a use, so each test puts a reference at many places of a body and
 // pins which uses the validator reports. A use is named by the start offset
 // of its span.
@@ -99,7 +98,7 @@ const WRAPPERS: Readonly<Record<string, Wrapper>> = {
   binary: (l, [r]) => make(l, "binary", { operator: "+", left: l, right: r }),
   fail: (l, [r]) => make(l, "fail", { error: r }),
   "map-stream": (l, [r]) => make(l, "map-stream", { stream: r, transform: l }),
-  "take-stream": (l, [r]) => make(l, "take-stream", { stream: r, count: l }),
+  "run-stream": (l, [r]) => make(l, "run-stream", { stream: r, sink: l }),
   "perform-first": (l, [r]) =>
     make(l, "perform", { capability: "cap:m#S.m", arguments: [r] }),
 };
@@ -176,7 +175,7 @@ const EXPECTED_BORROWED: Record<string, number[]> = {
   "binary": [1000],
   "fail": [1000],
   "map-stream": [1000],
-  "take-stream": [1000],
+  "run-stream": [1000],
   "perform-first": [1000],
   "borrowed call": [],
   "borrowed perform": [],
@@ -280,199 +279,6 @@ export const load = (): Text uses Files.open | Files.read | Files.close =>
   assertEquals(found, EXPECTED_BORROWED);
 });
 
-// ------------------------------------------------------------------ borrowed group
-
-/** The starts of the reported uses of the group, for each body. */
-const EXPECTED_GROUP: Record<string, number[]> = {
-  "alone": [1000],
-  "tuple": [1000],
-  "array": [1000],
-  "record": [1000],
-  "update": [1000],
-  "get": [1000],
-  "if-condition": [1000],
-  "if-then": [1000],
-  "if-else": [1000],
-  "match-subject": [1000],
-  "match-arm": [1000],
-  "block-bind": [1000],
-  "block-evaluate": [1000],
-  "block-result": [1000],
-  "closure": [1000],
-  "catch-body": [1000],
-  "catch-handler": [1000],
-  "call-callee": [1000],
-  "call-argument": [1000],
-  "binary": [1000],
-  "fail": [1000],
-  "map-stream": [1000],
-  "take-stream": [1000],
-  "perform-first": [1000],
-  "collect-stream": [],
-  "run-stream": [],
-  "fold-stream": [],
-  "fold-effect-stream": [],
-  "head-stream": [],
-  "last-stream": [],
-  "drain-stream": [],
-  "terminal in tuple": [],
-  "terminal in closure": [1000],
-  "terminal in match arm": [],
-  "terminal in block bind": [],
-  "terminal in catch handler": [],
-  "group as the seed of a fold": [1001],
-  "terminal over a tuple": [1000, 1001],
-  "two terminals in a tuple": [1001],
-  "two terminals in a record": [1001],
-  "two terminals in an update": [1001],
-  "two terminals in a block": [1001],
-  "two terminals in a call": [1001],
-  "two terminals in a binary": [1001],
-  "three terminals in an if": [1001, 1002],
-  "two terminals in a match": [1001],
-  "bare then terminal": [1000, 1001],
-};
-
-Deno.test("group references: one direct terminal use is the only permitted use", () => {
-  const text = `
-type Int = int
-error Stop = {}
-service Work { run(): void; value(key: Int): Int fails Stop }
-const grouped = (source: Stream<Int, Stop, Work.value>): Stream<Int[], Stop, Work.value> =>
- mapGroups(source, (n) => n, (key, group) => collectStream(group), { bufferSize: 1 })
-`;
-  const base = lower({ "effektive.json": "{}", "m.eff": text }, "m.eff");
-  const grouped = base.ir.declarations.find((d) => d.name === "grouped");
-  assert(grouped?.kind === "function" && grouped.body.kind === "map-groups");
-  const use = grouped.body.use;
-  assert(use.kind === "closure" && use.body.kind === "collect-stream");
-  const collect = use.body;
-  const index = base.ir.declarations.indexOf(grouped);
-  const terminal = (kind: string, r: Expr, l: Expr): Expr =>
-    make(l, kind, { stream: r, seed: l, update: l, sink: l });
-  const terminals = [
-    "collect-stream",
-    "run-stream",
-    "fold-stream",
-    "fold-effect-stream",
-    "head-stream",
-    "last-stream",
-    "drain-stream",
-  ];
-  const extra: Record<string, (r: readonly Expr[], l: Expr) => Expr> = {};
-  for (const kind of terminals) {
-    extra[kind] = ([r], l) => terminal(kind, r, l);
-  }
-  const arm = (body: Expr, l: Expr) => ({
-    pattern: { kind: "wildcard", span: l.span },
-    body,
-  });
-  const found = probe(
-    base,
-    "a borrowed group permits at most one direct terminal use",
-    collect,
-    grouped.body.use.parameters[1].id,
-    (ir, body) => {
-      const declaration = ir.declarations[index];
-      assert(declaration.kind === "function");
-      assert(declaration.body.kind === "map-groups");
-      assert(declaration.body.use.kind === "closure");
-      (declaration.body.use as { body: Expr }).body = body;
-    },
-    bodiesWith({
-      ...extra,
-      "terminal in tuple": ([r], l) =>
-        make(l, "tuple", { elements: [terminal("collect-stream", r, l)] }),
-      "terminal in closure": ([r], l) =>
-        make(l, "closure", {
-          parameters: [],
-          body: terminal("collect-stream", r, l),
-        }),
-      "terminal in match arm": ([r], l) =>
-        make(l, "match", {
-          subject: l,
-          arms: [arm(terminal("collect-stream", r, l), l)],
-        }),
-      "terminal in block bind": ([r], l) =>
-        make(l, "block", {
-          steps: [{
-            kind: "bind",
-            binding: PARAMETER,
-            value: terminal("collect-stream", r, l),
-          }],
-          result: l,
-        }),
-      "terminal in catch handler": ([r], l) =>
-        make(l, "catch", {
-          body: l,
-          handlers: [{
-            error: "error:m#Stop",
-            binding: PARAMETER,
-            body: terminal("collect-stream", r, l),
-            span: l.span,
-          }],
-        }),
-      "group as the seed of a fold": ([r, s], l) =>
-        make(l, "fold-stream", { stream: r, seed: s, update: l }),
-      "terminal over a tuple": ([r, s], l) =>
-        make(l, "collect-stream", {
-          stream: make(l, "tuple", { elements: [r, s] }),
-        }),
-      "two terminals in a tuple": ([r, s], l) =>
-        make(l, "tuple", {
-          elements: [
-            terminal("collect-stream", r, l),
-            terminal("head-stream", s, l),
-          ],
-        }),
-      "two terminals in a record": ([r, s], l) =>
-        make(l, "record", {
-          fields: [
-            { name: "a", value: terminal("collect-stream", r, l) },
-            { name: "b", value: terminal("head-stream", s, l) },
-          ],
-        }),
-      "two terminals in an update": ([r, s], l) =>
-        make(l, "update", {
-          record: terminal("collect-stream", r, l),
-          fields: [{ name: "f", value: terminal("head-stream", s, l) }],
-        }),
-      "two terminals in a block": ([r, s], l) =>
-        make(l, "block", {
-          steps: [{ kind: "evaluate", value: terminal("drain-stream", r, l) }],
-          result: terminal("collect-stream", s, l),
-        }),
-      "two terminals in a call": ([r, s], l) =>
-        make(l, "call", {
-          callee: terminal("collect-stream", r, l),
-          arguments: [terminal("head-stream", s, l)],
-        }),
-      "two terminals in a binary": ([r, s], l) =>
-        make(l, "binary", {
-          operator: "+",
-          left: terminal("collect-stream", r, l),
-          right: terminal("head-stream", s, l),
-        }),
-      "three terminals in an if": ([r, s, t], l) =>
-        make(l, "if", {
-          condition: terminal("collect-stream", r, l),
-          then: terminal("head-stream", s, l),
-          else: terminal("last-stream", t, l),
-        }),
-      "two terminals in a match": ([r, s], l) =>
-        make(l, "match", {
-          subject: terminal("collect-stream", r, l),
-          arms: [arm(terminal("head-stream", s, l), l)],
-        }),
-      "bare then terminal": ([r, s], l) =>
-        make(l, "tuple", {
-          elements: [r, terminal("collect-stream", s, l)],
-        }),
-    }),
-  );
-  assertEquals(found, EXPECTED_GROUP);
-});
-
 // ------------------------------------------------------------------ recursive Schema
 
 /** The start of the reported recursion error, or none, for each body. */
@@ -537,8 +343,8 @@ const EXPECTED_SCHEMA: Record<string, number[]> = {
   "unrelated beside fail": [],
   "beside map-stream": [1647],
   "unrelated beside map-stream": [],
-  "beside take-stream": [1647],
-  "unrelated beside take-stream": [],
+  "beside run-stream": [1647],
+  "unrelated beside run-stream": [],
   "beside perform-first": [1647],
   "unrelated beside perform-first": [],
 };

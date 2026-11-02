@@ -6774,7 +6774,7 @@
   {
     "files": {
       "effektive.json": "{}",
-      "m.eff": "type Int = int\nservice Jobs { open(): { read: () => Int, close: () => void }; next(): Int }\nexport const resource = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => job.read(), (job) => job.close())\nconst groups = (source: Stream<Int>) => mapGroups(source, (n) => n, (key, group) => collectStream(group), { bufferSize: 1 })\nconst numberSchema: Schema<Int> = schema()\nexport const decoded = (input: unknown): Int fails SchemaError => schemaDecode(numberSchema, input)\nexport const encoded = (input: Int): Int fails SchemaError => schemaEncode(numberSchema, input)\nexport const made = (input: Int): Int fails SchemaIssue => schemaMake(numberSchema, input)\n"
+      "m.eff": "type Int = int\nservice Jobs { open(): { read: () => Int, close: () => void }; next(): Int }\nexport const resource = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => job.read(), (job) => job.close())\nconst batches = (source: Stream<Int>) => transduceStream(source, takeSink(2))\nconst numberSchema: Schema<Int> = schema()\nexport const decoded = (input: unknown): Int fails SchemaError => schemaDecode(numberSchema, input)\nexport const encoded = (input: Int): Int fails SchemaError => schemaEncode(numberSchema, input)\nexport const made = (input: Int): Int fails SchemaIssue => schemaMake(numberSchema, input)\n"
     },
     "modules": [
       {
@@ -7489,81 +7489,52 @@
             },
             {
               "body": {
-                "bufferSize": 1,
                 "effects": {
                   "failures": [],
                   "requirements": []
                 },
                 "execution": "pure",
-                "key": {
-                  "body": {
-                    "effects": {
-                      "failures": [],
-                      "requirements": []
-                    },
-                    "execution": "pure",
-                    "kind": "reference",
-                    "span": {
-                      "end": 283,
-                      "source": "m.eff",
-                      "start": 282
-                    },
-                    "target": "local:m#groups/n",
-                    "type": {
-                      "id": "type:m#Int",
-                      "kind": "named"
-                    }
-                  },
+                "kind": "transduce-stream",
+                "sink": {
+                  "count": 2,
                   "effects": {
                     "failures": [],
                     "requirements": []
                   },
                   "execution": "pure",
-                  "kind": "closure",
-                  "parameters": [
-                    {
-                      "id": "local:m#groups/n",
-                      "name": "n",
-                      "span": {
-                        "end": 277,
-                        "source": "m.eff",
-                        "start": 276
-                      },
-                      "type": {
-                        "id": "type:m#Int",
-                        "kind": "named"
-                      }
-                    }
-                  ],
+                  "kind": "take-sink",
                   "span": {
-                    "end": 283,
+                    "end": 293,
                     "source": "m.eff",
-                    "start": 275
+                    "start": 282
                   },
                   "type": {
                     "effects": {
                       "failures": [],
                       "requirements": []
                     },
-                    "execution": "pure",
-                    "kind": "function",
-                    "parameters": [
-                      {
-                        "id": "type:m#Int",
-                        "kind": "named"
-                      }
-                    ],
-                    "result": {
+                    "input": {
                       "id": "type:m#Int",
                       "kind": "named"
+                    },
+                    "kind": "sink",
+                    "leftover": {
+                      "id": "type:m#Int",
+                      "kind": "named"
+                    },
+                    "result": {
+                      "element": {
+                        "id": "type:m#Int",
+                        "kind": "named"
+                      },
+                      "kind": "array"
                     }
                   }
                 },
-                "kind": "map-groups",
                 "span": {
-                  "end": 341,
+                  "end": 294,
                   "source": "m.eff",
-                  "start": 257
+                  "start": 258
                 },
                 "stream": {
                   "effects": {
@@ -7573,11 +7544,11 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 273,
+                    "end": 280,
                     "source": "m.eff",
-                    "start": 267
+                    "start": 274
                   },
-                  "target": "local:m#groups/source",
+                  "target": "local:m#batches/source",
                   "type": {
                     "effects": {
                       "failures": [],
@@ -7603,144 +7574,19 @@
                     "kind": "array"
                   },
                   "kind": "stream"
-                },
-                "use": {
-                  "body": {
-                    "effects": {
-                      "failures": [],
-                      "requirements": []
-                    },
-                    "execution": "effect",
-                    "kind": "collect-stream",
-                    "span": {
-                      "end": 321,
-                      "source": "m.eff",
-                      "start": 301
-                    },
-                    "stream": {
-                      "effects": {
-                        "failures": [],
-                        "requirements": []
-                      },
-                      "execution": "pure",
-                      "kind": "reference",
-                      "span": {
-                        "end": 320,
-                        "source": "m.eff",
-                        "start": 315
-                      },
-                      "target": "local:m#groups/group",
-                      "type": {
-                        "effects": {
-                          "failures": [],
-                          "requirements": []
-                        },
-                        "element": {
-                          "id": "type:m#Int",
-                          "kind": "named"
-                        },
-                        "kind": "stream"
-                      }
-                    },
-                    "type": {
-                      "element": {
-                        "id": "type:m#Int",
-                        "kind": "named"
-                      },
-                      "kind": "array"
-                    }
-                  },
-                  "effects": {
-                    "failures": [],
-                    "requirements": []
-                  },
-                  "execution": "pure",
-                  "kind": "closure",
-                  "parameters": [
-                    {
-                      "id": "local:m#groups/key",
-                      "name": "key",
-                      "span": {
-                        "end": 289,
-                        "source": "m.eff",
-                        "start": 286
-                      },
-                      "type": {
-                        "id": "type:m#Int",
-                        "kind": "named"
-                      }
-                    },
-                    {
-                      "id": "local:m#groups/group",
-                      "name": "group",
-                      "span": {
-                        "end": 296,
-                        "source": "m.eff",
-                        "start": 291
-                      },
-                      "type": {
-                        "effects": {
-                          "failures": [],
-                          "requirements": []
-                        },
-                        "element": {
-                          "id": "type:m#Int",
-                          "kind": "named"
-                        },
-                        "kind": "stream"
-                      }
-                    }
-                  ],
-                  "span": {
-                    "end": 321,
-                    "source": "m.eff",
-                    "start": 285
-                  },
-                  "type": {
-                    "effects": {
-                      "failures": [],
-                      "requirements": []
-                    },
-                    "execution": "effect",
-                    "kind": "function",
-                    "parameters": [
-                      {
-                        "id": "type:m#Int",
-                        "kind": "named"
-                      },
-                      {
-                        "effects": {
-                          "failures": [],
-                          "requirements": []
-                        },
-                        "element": {
-                          "id": "type:m#Int",
-                          "kind": "named"
-                        },
-                        "kind": "stream"
-                      }
-                    ],
-                    "result": {
-                      "element": {
-                        "id": "type:m#Int",
-                        "kind": "named"
-                      },
-                      "kind": "array"
-                    }
-                  }
                 }
               },
-              "id": "value:m#groups",
+              "id": "value:m#batches",
               "kind": "function",
-              "name": "groups",
+              "name": "batches",
               "parameters": [
                 {
-                  "id": "local:m#groups/source",
+                  "id": "local:m#batches/source",
                   "name": "source",
                   "span": {
-                    "end": 252,
+                    "end": 253,
                     "source": "m.eff",
-                    "start": 233
+                    "start": 234
                   },
                   "type": {
                     "effects": {
@@ -7756,7 +7602,7 @@
                 }
               ],
               "span": {
-                "end": 341,
+                "end": 294,
                 "source": "m.eff",
                 "start": 217
               },
@@ -7806,9 +7652,9 @@
               "kind": "constant",
               "name": "numberSchema",
               "span": {
-                "end": 384,
+                "end": 337,
                 "source": "m.eff",
-                "start": 342
+                "start": 295
               },
               "type": {
                 "decodeRequirements": [],
@@ -7833,9 +7679,9 @@
                 "kind": "schema",
                 "op": "identity",
                 "span": {
-                  "end": 384,
+                  "end": 337,
                   "source": "m.eff",
-                  "start": 376
+                  "start": 329
                 },
                 "type": {
                   "decodeRequirements": [],
@@ -7869,9 +7715,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 483,
+                    "end": 436,
                     "source": "m.eff",
-                    "start": 478
+                    "start": 431
                   },
                   "target": "local:m#decoded/input",
                   "type": {
@@ -7888,9 +7734,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 476,
+                    "end": 429,
                     "source": "m.eff",
-                    "start": 464
+                    "start": 417
                   },
                   "target": "value:m#numberSchema",
                   "type": {
@@ -7908,9 +7754,9 @@
                   }
                 },
                 "span": {
-                  "end": 484,
+                  "end": 437,
                   "source": "m.eff",
-                  "start": 451
+                  "start": 404
                 },
                 "type": {
                   "id": "type:m#Int",
@@ -7925,9 +7771,9 @@
                   "id": "local:m#decoded/input",
                   "name": "input",
                   "span": {
-                    "end": 423,
+                    "end": 376,
                     "source": "m.eff",
-                    "start": 409
+                    "start": 362
                   },
                   "type": {
                     "kind": "primitive",
@@ -7936,9 +7782,9 @@
                 }
               ],
               "span": {
-                "end": 484,
+                "end": 437,
                 "source": "m.eff",
-                "start": 385
+                "start": 338
               },
               "type": {
                 "effects": {
@@ -7983,9 +7829,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 579,
+                    "end": 532,
                     "source": "m.eff",
-                    "start": 574
+                    "start": 527
                   },
                   "target": "local:m#encoded/input",
                   "type": {
@@ -8002,9 +7848,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 572,
+                    "end": 525,
                     "source": "m.eff",
-                    "start": 560
+                    "start": 513
                   },
                   "target": "value:m#numberSchema",
                   "type": {
@@ -8022,9 +7868,9 @@
                   }
                 },
                 "span": {
-                  "end": 580,
+                  "end": 533,
                   "source": "m.eff",
-                  "start": 547
+                  "start": 500
                 },
                 "type": {
                   "id": "type:m#Int",
@@ -8039,9 +7885,9 @@
                   "id": "local:m#encoded/input",
                   "name": "input",
                   "span": {
-                    "end": 519,
+                    "end": 472,
                     "source": "m.eff",
-                    "start": 509
+                    "start": 462
                   },
                   "type": {
                     "id": "type:m#Int",
@@ -8050,9 +7896,9 @@
                 }
               ],
               "span": {
-                "end": 580,
+                "end": 533,
                 "source": "m.eff",
-                "start": 485
+                "start": 438
               },
               "type": {
                 "effects": {
@@ -8097,9 +7943,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 670,
+                    "end": 623,
                     "source": "m.eff",
-                    "start": 665
+                    "start": 618
                   },
                   "target": "local:m#made/input",
                   "type": {
@@ -8116,9 +7962,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 663,
+                    "end": 616,
                     "source": "m.eff",
-                    "start": 651
+                    "start": 604
                   },
                   "target": "value:m#numberSchema",
                   "type": {
@@ -8136,9 +7982,9 @@
                   }
                 },
                 "span": {
-                  "end": 671,
+                  "end": 624,
                   "source": "m.eff",
-                  "start": 640
+                  "start": 593
                 },
                 "type": {
                   "id": "type:m#Int",
@@ -8153,9 +7999,9 @@
                   "id": "local:m#made/input",
                   "name": "input",
                   "span": {
-                    "end": 612,
+                    "end": 565,
                     "source": "m.eff",
-                    "start": 602
+                    "start": 555
                   },
                   "type": {
                     "id": "type:m#Int",
@@ -8164,9 +8010,9 @@
                 }
               ],
               "span": {
-                "end": 671,
+                "end": 624,
                 "source": "m.eff",
-                "start": 581
+                "start": 534
               },
               "type": {
                 "effects": {
@@ -8212,11 +8058,11 @@
         "emitted": {
           "module": "m",
           "path": "m.ts",
-          "text": "// Generated from m.eff by the Effektive compiler. Do not edit.\n\nimport { Context, Effect, Schema, SchemaIssue, Stream } from \"effect\";\n\nconst $Int = Schema.Finite.check(\n  Schema.makeFilter(\n    (value) => Number.isSafeInteger(value) || \"expected a safe integer\",\n  ),\n);\n\nexport const Int = $Int;\nexport type Int = typeof Int.Type;\n\nexport class Jobs extends Context.Service<Jobs, {\n  readonly open: () => Effect.Effect<\n    {\n      readonly read: () => Effect.Effect<Int>;\n      readonly close: () => Effect.Effect<void>;\n    }\n  >;\n  readonly next: () => Effect.Effect<Int>;\n}>()(\"m#Jobs\") {}\n\nexport const resource = (): Effect.Effect<Int, never, Jobs> =>\n  Effect.acquireUseRelease(\n    Effect.suspend(() => Jobs.use(($s) => $s.open())),\n    (job) => job.read(),\n    (job) => job.close(),\n  );\n\nconst groups = (source: Stream.Stream<Int>) =>\n  Stream.flatMap(\n    Stream.groupByKey(source, (n) => n, { bufferSize: 1 }),\n    ([$key, $group]) =>\n      Stream.fromEffect(Effect.scoped(Effect.gen(function* () {\n        const $pull = yield* Stream.toPull($group);\n        return yield* ((key: Int, group: Stream.Stream<Int>) =>\n          Stream.runCollect(\n            group,\n          ))($key, Stream.fromPull(Effect.succeed($pull)));\n      }))),\n    { concurrency: \"unbounded\", bufferSize: 1 },\n  );\n\nexport const decoded = (input: unknown): Effect.Effect<\n  Int,\n  Schema.SchemaError\n> => Schema.decodeUnknownEffect(numberSchema)(input);\n\nexport const encoded = (input: Int): Effect.Effect<Int, Schema.SchemaError> =>\n  Schema.encodeEffect(numberSchema)(input);\n\nexport const made = (input: Int): Effect.Effect<Int, SchemaIssue.Issue> =>\n  numberSchema.makeEffect(input);\n\nconst numberSchema: Schema.Codec<Int, Int, never, never> = Schema.toType(Int);\n//# sourceMappingURL=m.ts.map\n",
+          "text": "// Generated from m.eff by the Effektive compiler. Do not edit.\n\nimport { Context, Effect, Schema, SchemaIssue, Sink, Stream } from \"effect\";\n\nconst $Int = Schema.Finite.check(\n  Schema.makeFilter(\n    (value) => Number.isSafeInteger(value) || \"expected a safe integer\",\n  ),\n);\n\nexport const Int = $Int;\nexport type Int = typeof Int.Type;\n\nexport class Jobs extends Context.Service<Jobs, {\n  readonly open: () => Effect.Effect<\n    {\n      readonly read: () => Effect.Effect<Int>;\n      readonly close: () => Effect.Effect<void>;\n    }\n  >;\n  readonly next: () => Effect.Effect<Int>;\n}>()(\"m#Jobs\") {}\n\nexport const resource = (): Effect.Effect<Int, never, Jobs> =>\n  Effect.acquireUseRelease(\n    Effect.suspend(() => Jobs.use(($s) => $s.open())),\n    (job) => job.read(),\n    (job) => job.close(),\n  );\n\nconst batches = (source: Stream.Stream<Int>) =>\n  Stream.transduce<Int, never, never, ReadonlyArray<Int>, never, never>(\n    source,\n    Sink.take<Int>(2),\n  );\n\nexport const decoded = (input: unknown): Effect.Effect<\n  Int,\n  Schema.SchemaError\n> => Schema.decodeUnknownEffect(numberSchema)(input);\n\nexport const encoded = (input: Int): Effect.Effect<Int, Schema.SchemaError> =>\n  Schema.encodeEffect(numberSchema)(input);\n\nexport const made = (input: Int): Effect.Effect<Int, SchemaIssue.Issue> =>\n  numberSchema.makeEffect(input);\n\nconst numberSchema: Schema.Codec<Int, Int, never, never> = Schema.toType(Int);\n//# sourceMappingURL=m.ts.map\n",
           "spans": [
             {
-              "start": 274,
-              "end": 333,
+              "start": 280,
+              "end": 339,
               "span": {
                 "source": "m.eff",
                 "start": 0,
@@ -8224,8 +8070,8 @@
               }
             },
             {
-              "start": 335,
-              "end": 596,
+              "start": 341,
+              "end": 602,
               "span": {
                 "source": "m.eff",
                 "start": 15,
@@ -8233,8 +8079,8 @@
               }
             },
             {
-              "start": 714,
-              "end": 741,
+              "start": 720,
+              "end": 747,
               "span": {
                 "source": "m.eff",
                 "start": 161,
@@ -8242,8 +8088,8 @@
               }
             },
             {
-              "start": 757,
-              "end": 760,
+              "start": 763,
+              "end": 766,
               "span": {
                 "source": "m.eff",
                 "start": 183,
@@ -8251,8 +8097,8 @@
               }
             },
             {
-              "start": 757,
-              "end": 765,
+              "start": 763,
+              "end": 771,
               "span": {
                 "source": "m.eff",
                 "start": 183,
@@ -8260,8 +8106,8 @@
               }
             },
             {
-              "start": 757,
-              "end": 767,
+              "start": 763,
+              "end": 773,
               "span": {
                 "source": "m.eff",
                 "start": 183,
@@ -8269,8 +8115,8 @@
               }
             },
             {
-              "start": 782,
-              "end": 785,
+              "start": 788,
+              "end": 791,
               "span": {
                 "source": "m.eff",
                 "start": 204,
@@ -8278,8 +8124,8 @@
               }
             },
             {
-              "start": 782,
-              "end": 791,
+              "start": 788,
+              "end": 797,
               "span": {
                 "source": "m.eff",
                 "start": 204,
@@ -8287,8 +8133,8 @@
               }
             },
             {
-              "start": 782,
-              "end": 793,
+              "start": 788,
+              "end": 799,
               "span": {
                 "source": "m.eff",
                 "start": 204,
@@ -8296,8 +8142,8 @@
               }
             },
             {
-              "start": 663,
-              "end": 798,
+              "start": 669,
+              "end": 804,
               "span": {
                 "source": "m.eff",
                 "start": 142,
@@ -8305,8 +8151,8 @@
               }
             },
             {
-              "start": 598,
-              "end": 799,
+              "start": 604,
+              "end": 805,
               "span": {
                 "source": "m.eff",
                 "start": 92,
@@ -8314,207 +8160,171 @@
               }
             },
             {
-              "start": 888,
-              "end": 894,
+              "start": 932,
+              "end": 938,
               "span": {
                 "source": "m.eff",
-                "start": 267,
-                "end": 273
+                "start": 274,
+                "end": 280
               }
             },
             {
-              "start": 903,
-              "end": 904,
+              "start": 944,
+              "end": 961,
               "span": {
                 "source": "m.eff",
                 "start": 282,
-                "end": 283
+                "end": 293
               }
             },
             {
-              "start": 896,
-              "end": 904,
+              "start": 857,
+              "end": 966,
               "span": {
                 "source": "m.eff",
-                "start": 275,
-                "end": 283
+                "start": 258,
+                "end": 294
               }
             },
             {
-              "start": 1171,
-              "end": 1176,
-              "span": {
-                "source": "m.eff",
-                "start": 315,
-                "end": 320
-              }
-            },
-            {
-              "start": 1140,
-              "end": 1189,
-              "span": {
-                "source": "m.eff",
-                "start": 301,
-                "end": 321
-              }
-            },
-            {
-              "start": 1089,
-              "end": 1189,
-              "span": {
-                "source": "m.eff",
-                "start": 285,
-                "end": 321
-              }
-            },
-            {
-              "start": 850,
-              "end": 1302,
-              "span": {
-                "source": "m.eff",
-                "start": 257,
-                "end": 341
-              }
-            },
-            {
-              "start": 801,
-              "end": 1303,
+              "start": 807,
+              "end": 967,
               "span": {
                 "source": "m.eff",
                 "start": 217,
-                "end": 341
+                "end": 294
               }
             },
             {
-              "start": 1421,
-              "end": 1433,
+              "start": 1085,
+              "end": 1097,
               "span": {
                 "source": "m.eff",
-                "start": 464,
-                "end": 476
+                "start": 417,
+                "end": 429
               }
             },
             {
-              "start": 1435,
-              "end": 1440,
+              "start": 1099,
+              "end": 1104,
               "span": {
                 "source": "m.eff",
-                "start": 478,
-                "end": 483
+                "start": 431,
+                "end": 436
               }
             },
             {
-              "start": 1394,
-              "end": 1441,
+              "start": 1058,
+              "end": 1105,
               "span": {
                 "source": "m.eff",
-                "start": 451,
-                "end": 484
+                "start": 404,
+                "end": 437
               }
             },
             {
-              "start": 1305,
-              "end": 1442,
+              "start": 969,
+              "end": 1106,
               "span": {
                 "source": "m.eff",
-                "start": 385,
-                "end": 484
+                "start": 338,
+                "end": 437
               }
             },
             {
-              "start": 1545,
-              "end": 1557,
+              "start": 1209,
+              "end": 1221,
               "span": {
                 "source": "m.eff",
-                "start": 560,
-                "end": 572
+                "start": 513,
+                "end": 525
               }
             },
             {
-              "start": 1559,
-              "end": 1564,
+              "start": 1223,
+              "end": 1228,
               "span": {
                 "source": "m.eff",
-                "start": 574,
-                "end": 579
+                "start": 527,
+                "end": 532
               }
             },
             {
-              "start": 1525,
-              "end": 1565,
+              "start": 1189,
+              "end": 1229,
               "span": {
                 "source": "m.eff",
-                "start": 547,
-                "end": 580
+                "start": 500,
+                "end": 533
               }
             },
             {
-              "start": 1444,
-              "end": 1566,
+              "start": 1108,
+              "end": 1230,
               "span": {
                 "source": "m.eff",
-                "start": 485,
-                "end": 580
+                "start": 438,
+                "end": 533
               }
             },
             {
-              "start": 1645,
-              "end": 1657,
+              "start": 1309,
+              "end": 1321,
               "span": {
                 "source": "m.eff",
-                "start": 651,
-                "end": 663
+                "start": 604,
+                "end": 616
               }
             },
             {
-              "start": 1669,
-              "end": 1674,
+              "start": 1333,
+              "end": 1338,
               "span": {
                 "source": "m.eff",
-                "start": 665,
-                "end": 670
+                "start": 618,
+                "end": 623
               }
             },
             {
-              "start": 1645,
-              "end": 1675,
+              "start": 1309,
+              "end": 1339,
               "span": {
                 "source": "m.eff",
-                "start": 640,
-                "end": 671
+                "start": 593,
+                "end": 624
               }
             },
             {
-              "start": 1568,
-              "end": 1676,
+              "start": 1232,
+              "end": 1340,
               "span": {
                 "source": "m.eff",
-                "start": 581,
-                "end": 671
+                "start": 534,
+                "end": 624
               }
             },
             {
-              "start": 1737,
-              "end": 1755,
+              "start": 1401,
+              "end": 1419,
               "span": {
                 "source": "m.eff",
-                "start": 376,
-                "end": 384
+                "start": 329,
+                "end": 337
               }
             },
             {
-              "start": 1678,
-              "end": 1756,
+              "start": 1342,
+              "end": 1420,
               "span": {
                 "source": "m.eff",
-                "start": 342,
-                "end": 384
+                "start": 295,
+                "end": 337
               }
             }
           ],
           "hostAssertions": []
         },
-        "map": "{\n  \"version\": 3,\n  \"file\": \"m.ts\",\n  \"sources\": [\n    \"m.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;;;;;;;AAAA;AAAA,kC;;AACA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,iB;;AACA;AAAA,EAAkD;AAAA,yBAAmB,2BAAnB;AAAA,aAAyC,UAAzC;AAAA,aAA8D,WAA9D;AAAA,GAAlD,C;;AACA;AAAA,EAAwC;AAAA,sBAAU,MAAV,EAAkB,OAAO,CAAzB;AAAA;AAAA;AAAA;AAAA,uBAA4B;AAAA,UAAgB;AAAA,YAAc,KAAd;AAAA,WAA5C;AAAA;AAAA;AAAA,GAAxC,C;;AAEA;AAAA;AAAA;AAAA,KAAkE,2BAAa,YAAb,EAA2B,KAA3B,CAAlE,C;;AACA;AAAA,EAA8D,oBAAa,YAAb,EAA2B,KAA3B,CAA9D,C;;AACA;AAAA,EAAsE,YAAX,YAAyB,KAAzB,CAA3D,C;;AAHA,2DAAkC,kBAAlC,C;;\"\n}\n",
+        "map": "{\n  \"version\": 3,\n  \"file\": \"m.ts\",\n  \"sources\": [\n    \"m.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;;;;;;;AAAA;AAAA,kC;;AACA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,iB;;AACA;AAAA,EAAkD;AAAA,yBAAmB,2BAAnB;AAAA,aAAyC,UAAzC;AAAA,aAA8D,WAA9D;AAAA,GAAlD,C;;AACA;AAAA,EAAyC;AAAA,IAAgB,MAAhB;AAAA,IAAwB,iBAAxB;AAAA,GAAzC,C;;AAEA;AAAA;AAAA;AAAA,KAAkE,2BAAa,YAAb,EAA2B,KAA3B,CAAlE,C;;AACA;AAAA,EAA8D,oBAAa,YAAb,EAA2B,KAA3B,CAA9D,C;;AACA;AAAA,EAAsE,YAAX,YAAyB,KAAzB,CAA3D,C;;AAHA,2DAAkC,kBAAlC,C;;\"\n}\n",
         "hash": "a7bef3fe5449eada"
       }
     ]

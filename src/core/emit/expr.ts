@@ -55,7 +55,7 @@ import { effectLeaf, effectStructural } from "./families/effect.ts";
 import { layerLeaf, layerStructural } from "./families/layer.ts";
 import { schemaLeaf, schemaStructural } from "./families/schema.ts";
 import { scopeLeaf } from "./families/scope.ts";
-import { streamLeaf, streamStructural } from "./families/stream.ts";
+import { streamStructural } from "./families/stream.ts";
 import {
   at,
   callArguments,
@@ -807,15 +807,8 @@ export class ExprEmitter implements ExprCore {
         return effectStructural(this, e, kid, mode);
       case "unfold":
       case "map-effect":
-      case "map-groups":
-      case "scan-stream":
-      case "map-accum-stream":
-      case "flat-map-streams":
-      case "debounce-stream":
-      case "throttle-stream":
       case "take-sink":
       case "transduce-stream":
-      case "aggregate-stream":
       case "buffer-stream":
         return streamStructural(this, e, kid);
       case "layer":
@@ -1731,9 +1724,6 @@ export class ExprEmitter implements ExprCore {
       case "fork-scoped":
       case "with-resource":
         return scopeLeaf(this, e, children);
-      case "fold-stream":
-      case "fold-effect-stream":
-        return streamLeaf(this, e, children);
       case "provide":
         return layerLeaf(this, e);
       case "catch":

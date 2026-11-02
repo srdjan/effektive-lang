@@ -40,58 +40,16 @@ export function exprChildren(e: Expr): readonly Expr[] {
       return [e.acquire, e.use, e.release];
     case "unfold":
       return [e.seed, e.next];
-    case "map-groups":
-      return [e.stream, e.key, e.use];
     case "map-effect":
     case "map-stream":
-    case "flat-map-streams":
-    case "switch-map-streams":
       return [e.stream, e.transform];
-    case "catch-stream":
-      return [e.stream, e.recover];
-    case "retry-stream":
-      return [e.stream, e.policy];
-    case "debounce-stream":
-    case "throttle-stream":
-      return [e.stream];
-    case "scan-stream":
-    case "map-accum-stream":
-    case "fold-stream":
-    case "fold-effect-stream":
-      return [e.stream, e.seed, e.update];
-    case "collect-stream":
-    case "head-stream":
-    case "last-stream":
-    case "drain-stream":
-      return [e.stream];
-    case "take-stream":
-      return [e.stream, e.count];
-    case "drop-stream":
-      return [e.stream, e.count];
-    case "drop-while-stream":
-      return [e.stream, e.predicate];
-    case "filter-stream":
-    case "filter-effect-stream":
-    case "take-while-effect-stream":
-    case "take-until-effect-stream":
-    case "drop-while-effect-stream":
-      return [e.stream, e.predicate];
-    case "take-while-stream":
-      return [e.stream, e.predicate];
-    case "take-until-stream":
-      return [e.stream, e.predicate];
     case "sink-for-each":
       return [e.consume];
     case "transduce-stream":
-    case "aggregate-stream":
     case "run-stream":
       return [e.stream, e.sink];
     case "buffer-stream":
       return [e.stream];
-    case "merge-streams":
-    case "zip-streams":
-    case "concat-streams":
-      return [e.left, e.right];
     case "race":
       return [e.left, e.right];
     case "make-ref":

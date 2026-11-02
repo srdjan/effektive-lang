@@ -27,7 +27,7 @@ const resourceCase = [
   "type Int = int",
   "service Jobs { open(): { read: () => Int, close: () => void }; next(): Int }",
   "export const resource = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => job.read(), (job) => job.close())",
-  "const groups = (source: Stream<Int>) => mapGroups(source, (n) => n, (key, group) => collectStream(group), { bufferSize: 1 })",
+  "const batches = (source: Stream<Int>) => transduceStream(source, takeSink(2))",
   "const numberSchema: Schema<Int> = schema()",
   "export const decoded = (input: unknown): Int fails SchemaError => schemaDecode(numberSchema, input)",
   "export const encoded = (input: Int): Int fails SchemaError => schemaEncode(numberSchema, input)",

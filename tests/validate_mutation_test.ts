@@ -13,9 +13,6 @@
 //   an encodingStrategy literal outside the accepted set
 //     -> schema_validator_forged_test.ts "validator rejects malformed default
 //        strategies and erased static encoder services"
-//   mapGroups with a whole channel set emptied -> validate_test.ts "mapGroups
-//   validation recomputes bounds, binding identity, key types, and channels".
-//   The cases below remove one member of a set of two.
 
 import { assert, assertEquals } from "@std/assert";
 import type { Diagnostic } from "../src/core/frontend.ts";
@@ -154,18 +151,18 @@ function runMutations(
 
 // ---------------------------------------------------------- channel erasure
 
-Deno.test("channel erasure: mapGroups loses one failure or requirement and keeps the callback evidence", () => {
+Deno.test("channel erasure: mapEffect loses one failure or requirement and keeps the callback evidence", () => {
   const lowered = lowerText(`
 type Int = int
 error Stop = {}
 error Other = {}
 service Work { run(): void fails Other; value(key: Int): Int fails Stop }
 const used = (source: Stream<Int, Stop, Work.value>): Stream<Int, Stop | Other, Work.value | Work.run> =>
- mapGroups(source, (n) => n, (key, group) => { Work.run(); headStream(group); Work.value(key) }, { bufferSize: 1 })
+ mapEffect(source, (n) => { Work.run(); Work.value(n) })
 `);
   runMutations(lowered, [
     {
-      label: "mapGroups loses Other",
+      label: "mapEffect loses Other",
       declaration: "used",
       edits: [["body.type.effects.failures", () => ["error:m#Stop"]]],
       expected: [{
@@ -175,7 +172,7 @@ const used = (source: Stream<Int, Stop, Work.value>): Stream<Int, Stop | Other, 
       }],
     },
     {
-      label: "mapGroups loses Work.run",
+      label: "mapEffect loses Work.run",
       declaration: "used",
       edits: [[
         "body.type.effects.requirements",

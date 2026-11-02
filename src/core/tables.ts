@@ -171,48 +171,11 @@ export type NodeFact =
     readonly concurrency: number | "unbounded" | undefined;
   }
   | { readonly kind: "map-stream" }
-  | { readonly kind: "scan-stream" }
-  | { readonly kind: "map-accum-stream" }
-  | { readonly kind: "fold-stream" }
-  | { readonly kind: "fold-effect-stream" }
-  | { readonly kind: "collect-stream" }
-  | { readonly kind: "head-stream" }
-  | { readonly kind: "last-stream" }
-  | { readonly kind: "drain-stream" }
-  | {
-    readonly kind: "flat-map-streams";
-    readonly concurrency: number | "unbounded" | undefined;
-  }
-  | { readonly kind: "switch-map-streams" }
-  | { readonly kind: "catch-stream" }
-  | { readonly kind: "retry-stream" }
-  | { readonly kind: "debounce-stream"; readonly delayMs: number | undefined }
-  | {
-    readonly kind: "throttle-stream";
-    readonly units: number | undefined;
-    readonly durationMs: number | undefined;
-    readonly strategy: "shape" | "enforce" | undefined;
-  }
-  | { readonly kind: "take-stream" }
-  | { readonly kind: "drop-stream" }
-  | { readonly kind: "drop-while-stream" }
-  | { readonly kind: "filter-stream" }
-  | { readonly kind: "filter-effect-stream" }
-  | { readonly kind: "take-while-effect-stream" }
-  | { readonly kind: "take-until-effect-stream" }
-  | { readonly kind: "drop-while-effect-stream" }
-  | { readonly kind: "take-while-stream" }
-  | { readonly kind: "take-until-stream" }
   | { readonly kind: "sink-for-each" }
   | { readonly kind: "take-sink"; readonly count: number | undefined }
   | { readonly kind: "transduce-stream" }
-  | { readonly kind: "aggregate-stream" }
-  | { readonly kind: "map-groups"; readonly bufferSize: number | undefined }
   | { readonly kind: "run-stream" }
   | { readonly kind: "buffer-stream"; readonly capacity: number | undefined }
-  | { readonly kind: "merge-streams" }
-  | { readonly kind: "zip-streams" }
-  | { readonly kind: "concat-streams" }
   | { readonly kind: "race" | "race-all" }
   | { readonly kind: "make-ref" | "get-ref" | "set-ref" | "update-ref" }
   | { readonly kind: "layer"; readonly service: ServiceId | undefined }
