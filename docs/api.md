@@ -92,7 +92,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     report.ts      The eight area codes and the diagnostic collector.
     predicates.ts  verifyCertificate: the independent check of a proof certificate.
     refinements.ts RefinementValidator: the refinement obligations of a body, reconstructed from the IR. checkRefinementDeclaration checks one declared predicate.
-  validate_project.ts validateProject: validates the output of lowerProject.
+  validate_project.ts validateProject: validates the output of lowerProject. No entry point exports it.
   emit/          The Effect-TS emitter.
     emit.ts        emitModule: the emitter of one module. emitProject is in typescript.ts.
     emitted.ts     The printed-expression values that expr.ts and the builtin families share: precedence levels, Emitted, and its helpers.
@@ -117,7 +117,7 @@ src/cli/       The command-line tool. The Layout section of development.md says 
   main.ts        main(args, io) returns the exit code, and the watch loop over an injected event source. The last lines wire the real io.
   args.ts        The command line: commands, root, and flags.
   session.ts     One project directory and one program: sync, then build.
-  build.ts       One build: validate, write the files, run deno check.
+  build.ts       One build: write the files, run deno check.
   tsc.ts         The generated deno check configuration and the mapping of its output.
   format.ts      The output line of a diagnostic.
   report.ts      Printing of a build outcome: diagnostics on stdout, the rest on stderr.
@@ -370,9 +370,13 @@ the node, for example `declarations[2].body.arguments[0]`.
 
 `validateProject(project, lowered)` validates each module in the map that
 `lowerProject` returns. It reads the source texts from the parse trees of the
-project. A module that did not lower has no entry in the result. The command
-`build --validate` calls this function. Only that command runs the validator.
-The `check` and `watch` commands, the language server, and the playground do not.
+project. A module that did not lower has no entry in the result. The validator
+is a test oracle. No entry point (`frontend.ts`, `typescript.ts`, or `mod.ts`)
+exports `validateProject`, and no product path loads it. Tests and
+`bench/m2.ts` import it from `src/core/validate_project.ts`. The commands
+`check`, `build`, and `watch`, the language server, and the playground do not
+run it. The test `tests/core_boundary_slow_test.ts` checks this with the module
+graph of each product entry point.
 
 Each lowered map key must equal the recorded IR module name. A mismatch reports `validation/001`.
 Non-prelude import payloads cannot declare identities owned by the consumer module. Payloads can retain supporting types from other modules.
@@ -541,7 +545,6 @@ diagnostics of the analysis. `moduleInfos()` lists the module infos in discovery
 order, and `moduleNames()` lists the names in topological order.
 `moduleInfo(name)`, `moduleInfoAt(path)`, `checkedModuleAt(path)`,
 `resolution(name)`, `imports(name)`, and `declEntry(id)` look up one item.
-`validate(lowered)` runs `validateProject` with the project of the revision.
 
 The IR, the emitted text, the span table, and the source map are computed on
 first use. A module that is not checked again and not lowered again returns the
@@ -593,7 +596,6 @@ task runs in the repository directory, so pass an explicit root, for example
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `deno task effektive check [root]`            | Prints the diagnostics of the project.                                                                    |
 | `deno task effektive build [root]`            | Also writes `<module>.ts` and `<module>.ts.map` next to each source for each module that no error blocks, and `<name>.effi.ts` for each imported `.effi` file. |
-| `deno task effektive build [root] --validate` | Also runs the IR validator and prints its diagnostics.                                                    |
 | `deno task effektive build [root] --tsc`      | Also runs `deno check` over the written files and the host modules, and maps each error to the source.    |
 | `deno task effektive watch [root] [--tsc]`    | Builds once, then builds again after each change of a source file. It prints the modules that it checked. |
 | `deno task effektive <command> [root] --no-log` | Writes no session log. Every project command accepts it.                                                |
@@ -643,8 +645,7 @@ error is a missing or invalid `effektive.json`, or a read error in the root.
 
 `build` writes a module only when it has no error. A module with an error keeps
 its last good `.ts` and `.ts.map` files. The tool writes a file only when its
-text changes. `--validate` runs `validateProject` on the lowered IR. A module
-with a validation diagnostic is not written.
+text changes.
 
 `--tsc` runs `deno check` with a generated configuration. The configuration sets
 strict mode, `exactOptionalPropertyTypes`, and `noUncheckedIndexedAccess`. It
@@ -667,7 +668,7 @@ The `fixtures/host-adapter-files/` project shows a typed `host:` adapter for
 `effect/FileSystem`. `files.eff` declares the `Files.read` operation and the
 `FileReadError` error. `files-live.ts` validates the path, maps package failures to
 that error, and supplies the Node file system layer.
-`deno task effektive build fixtures/host-adapter-files --validate --tsc` checks
+`deno task effektive build fixtures/host-adapter-files --tsc` checks
 the boundary. The slow CLI test runs a successful read and both missing and
 invalid paths. Other ecosystem packages still need adapters with their own
 declared contracts.

@@ -33,6 +33,7 @@ import {
   serializeSourceMap,
   TypeScriptOutputs,
 } from "../src/core/typescript.ts";
+import { validateRevision } from "./validate_helpers.ts";
 
 type Files = ReadonlyMap<string, string>;
 type Random = () => number;
@@ -77,7 +78,7 @@ function observe(revision: Revision, outputs: TypeScriptOutputs): Observation {
     const result = revision.lowered(name);
     if (result !== undefined) lowered.set(name, result);
   }
-  const validation = revision.validate(lowered);
+  const validation = validateRevision(revision, lowered);
   const observation: Record<string, unknown> = {
     diagnostics: revision.diagnostics,
     modules: names,

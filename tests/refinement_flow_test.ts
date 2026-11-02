@@ -1,10 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  lowerProject,
-  memoryHost,
-  validateProject,
-} from "../src/core/mod.ts";
+import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 
 Deno.test("inference keeps a shared field requirement on an explicit union", () => {
   const checked = checkProject(

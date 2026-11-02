@@ -309,13 +309,14 @@ Deno.test("host, CLI, LSP and playground adapters use public core entry points",
 // Ratchet: a test imports a name from an entry point when an entry point exports
 // it. Only a name that no entry point exports may come from a private module.
 
-/** The modules whose imports are always allowed: the entry points and the two justified private ones. */
+/** The modules whose imports are always allowed: the entry points and the three justified private ones. */
 const ALLOWED_MODULES: ReadonlySet<string> = new Set([
   "frontend.ts",
   "typescript.ts",
   "mod.ts",
   "ir.ts",
   "validate/index.ts",
+  "validate_project.ts",
 ]);
 
 const NAME_START = "[A-Za-z_$][\\w$]*";

@@ -9,7 +9,6 @@ export type ProjectCommand =
     readonly kind: "build";
     readonly root: string;
     readonly tsc: boolean;
-    readonly validate: boolean;
     readonly log: boolean;
   }
   | {
@@ -26,7 +25,7 @@ export const USAGE = [
   "",
   "commands:",
   "  check [root]                          print diagnostics",
-  "  build [root] [--tsc] [--validate]     also write <module>.ts and <module>.ts.map",
+  "  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map",
   "  watch [root] [--tsc]                  build, then rebuild when a source changes",
   "",
   "flags:",
@@ -39,7 +38,7 @@ export const USAGE = [
 
 const FLAGS: Readonly<Record<string, readonly string[]>> = {
   check: ["--no-log"],
-  build: ["--tsc", "--validate", "--no-log"],
+  build: ["--tsc", "--no-log"],
   watch: ["--tsc", "--no-log"],
 };
 
@@ -85,7 +84,6 @@ export function parseArgs(args: readonly string[]): Result<Command, string> {
           kind: "build",
           root,
           tsc: flags.has("--tsc"),
-          validate: flags.has("--validate"),
           log,
         },
       };

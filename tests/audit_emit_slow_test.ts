@@ -7,8 +7,8 @@ import {
   emitProject,
   lowerProject,
   memoryHost,
-  validateProject,
 } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import { runStrictTarget } from "./target_helpers.ts";
 
 const signatures = [

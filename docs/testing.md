@@ -25,6 +25,8 @@ A real timer is acceptable in one case: two timers race, and they start together
 
 Each oracle covers a limited set of inputs. A pass proves the result for those inputs only.
 
+The independent validator is a test oracle. No product path runs it, and no entry point exports it. A test imports `validateProject` from `src/core/validate_project.ts`. A test that holds a revision calls `validateRevision` in `tests/validate_helpers.ts`. A test that builds a directory calls `validationProblems` in the same file.
+
 | Oracle | Update task | What it proves | What it can miss |
 | --- | --- | --- | --- |
 | Golden files in `fixtures/golden/` | `deno task golden:update` | The exact TypeScript of six example modules and their host module | Each other program |

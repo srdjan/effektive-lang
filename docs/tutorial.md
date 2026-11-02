@@ -244,10 +244,10 @@ export const checkout = (id: BookId): Book
 Build the project:
 
 ```sh
-deno task effektive build "$tutorial_dir" --validate --tsc
+deno task effektive build "$tutorial_dir" --tsc
 ```
 
-The build writes `library.ts` and `loans.ts` next to the sources, each with a source map. `--validate` checks the typed intermediate code with a second, independent validator. `--tsc` runs `deno check` on the generated TypeScript.
+The build writes `library.ts` and `loans.ts` next to the sources, each with a source map. `--tsc` runs `deno check` on the generated TypeScript.
 
 The generated code is ordinary Effect-TS. For example, `findBook` becomes a function that returns `Effect.Effect<Book, BookMissing | StoreDown, Shelf>`. The `fails` clause becomes the error channel, and the `uses` clause becomes the requirement channel. `Shelf` becomes a `Context.Service` class, and each error becomes a `Schema.TaggedError` class.
 

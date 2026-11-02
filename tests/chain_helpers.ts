@@ -3,6 +3,7 @@ const outputs = new TypeScriptOutputs();
 // Builds long left-deep chains and runs them through every compiler pass.
 
 import { Program } from "../src/core/mod.ts";
+import { validateRevision } from "./validate_helpers.ts";
 
 export type ChainForm = "binary" | "pipeline" | "call" | "field" | "array";
 
@@ -67,7 +68,10 @@ export function runAllPasses(source: string): string[] {
   if (lowered === undefined || !lowered.ok) {
     throw new Error(JSON.stringify(lowered));
   }
-  const validated = revision.value.validate(new Map([["main", lowered]]))
+  const validated = validateRevision(
+    revision.value,
+    new Map([["main", lowered]]),
+  )
     .get("main");
   if (validated === undefined || validated.length > 0) {
     throw new Error(JSON.stringify(validated));

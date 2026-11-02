@@ -9,6 +9,7 @@ import {
   type TypeReader,
 } from "../src/core/frontend.ts";
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
+import { validateRevision } from "./validate_helpers.ts";
 
 type Files = Record<string, string>;
 
@@ -38,7 +39,10 @@ function snapshot(revision: Revision, outputs = new TypeScriptOutputs()) {
   return revision.moduleNames().map((name) => {
     const lowered = revision.lowered(name);
     assert(lowered?.ok, JSON.stringify(lowered));
-    assertEquals(revision.validate(new Map([[name, lowered]])).get(name), []);
+    assertEquals(
+      validateRevision(revision, new Map([[name, lowered]])).get(name),
+      [],
+    );
     const emitted = outputs.emitted(revision, name);
     assert(emitted?.ok, JSON.stringify(emitted));
     return {

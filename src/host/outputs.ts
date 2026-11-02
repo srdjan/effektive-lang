@@ -3,7 +3,6 @@
 // generated file and the map when their text changed.
 
 import {
-  type Diagnostic,
   type EmitProjectError,
   generatedPathOf,
   generatedSourceOf,
@@ -53,21 +52,11 @@ function describeEmitError(error: EmitProjectError): string {
 
 /**
  * The modules that a build writes, in the order of `revision.moduleNames()`.
- * A module that lowered and failed validation is reported, and not written.
  * A module that imports a module that is not written is not written either,
  * because its generated import would not load.
  */
-export function writableModules(
-  revision: Revision,
-  validation: ReadonlyMap<string, readonly Diagnostic[]> = new Map(),
-): string[] {
-  const passed = new Set(
-    revision.moduleNames().filter((name) => {
-      const lowered = revision.lowered(name);
-      return lowered === undefined || !lowered.ok ||
-        (validation.get(name) ?? []).length === 0;
-    }),
-  );
+export function writableModules(revision: Revision): string[] {
+  const passed = new Set(revision.moduleNames());
   const writable = (name: string): boolean => {
     const lowered = revision.lowered(name);
     return lowered !== undefined && lowered.ok && passed.has(name);

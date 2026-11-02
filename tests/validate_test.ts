@@ -10,8 +10,8 @@ import {
   lowerProject,
   memoryHost,
   registeredCodes,
-  validateProject,
 } from "../src/core/frontend.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import type { Execution, Field, ModuleIR, Type } from "../src/core/ir.ts";
 import { SCHEMA_ERROR_ID } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";

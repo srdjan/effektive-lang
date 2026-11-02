@@ -7,8 +7,8 @@ import {
   lowerProject,
   mapOffset,
   memoryHost,
-  validateProject,
 } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import { deno, withTemporaryDirectory } from "./process_helpers.ts";
 
 const widths = [

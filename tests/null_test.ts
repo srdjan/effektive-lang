@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
-import { lowerProject, validateProject } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import { checkModule } from "./helpers.ts";
 
 const checked = (source: string) => checkModule(source, "main.eff");

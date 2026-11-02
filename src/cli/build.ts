@@ -1,15 +1,8 @@
 // One build of a revision: print the diagnostics, and for `build` and `watch`
-// also validate the IR, write the generated files, and run `deno check`.
+// also write the generated files and run `deno check`.
 
 import type { TypeScriptOutputs } from "../core/typescript.ts";
-import type {
-  Diagnostic,
-  LowerError,
-  ModuleIR,
-  Result,
-  Revision,
-  SpanTable,
-} from "../core/mod.ts";
+import type { Diagnostic, Revision, SpanTable } from "../core/mod.ts";
 import {
   formatDiagnostics,
   type LoggedDiagnostic,
@@ -28,8 +21,6 @@ import { runTsc } from "./tsc.ts";
 export interface BuildOptions {
   /** Write the generated file and its map for each module without an error whose imported modules are also written. */
   readonly write: boolean;
-  /** Run the IR validator and report its diagnostics. */
-  readonly validate: boolean;
   /** Run `deno check` over the written files and the host modules. */
   readonly tsc: boolean;
 }
@@ -39,7 +30,7 @@ export interface BuildOutcome {
   readonly lines: readonly string[];
   /** Other messages, for stderr. */
   readonly notes: readonly string[];
-  /** The number of diagnostics: Effektive, validation, and `deno check`. */
+  /** The number of diagnostics: Effektive and `deno check`. */
   readonly diagnosticCount: number;
   /** True when anything went wrong: a diagnostic, or a failure to emit or to write. */
   readonly failed: boolean;
@@ -77,31 +68,15 @@ export async function buildRevision(
   let removals: readonly ModuleRemoval[] = [];
 
   const names = revision.moduleNames();
-  const wanted = options.write || options.validate;
-
-  // Validation reads the lowered IR of each module that lowered.
-  const validation = new Map<string, readonly Diagnostic[]>();
   const items: LoggedDiagnostic[] = loggedDiagnostics(
     revision.diagnostics,
     textOf,
     "effektive",
   );
-  if (options.validate) {
-    const lowered = new Map<string, Result<ModuleIR, LowerError>>();
-    for (const name of names) {
-      const result = revision.lowered(name);
-      if (result !== undefined) lowered.set(name, result);
-    }
-    for (const [name, found] of revision.validate(lowered)) {
-      validation.set(name, found);
-      diagnostics.push(...found);
-      items.push(...loggedDiagnostics(found, textOf, "validate"));
-    }
-  }
 
   let generated: string[] = [];
   let tables = new Map<string, SpanTable>();
-  if (wanted) {
+  if (options.write) {
     const round = runSaveRound({
       fs: io.fs,
       root,
@@ -110,7 +85,6 @@ export async function buildRevision(
       previous,
       removal: "forget",
       owns: (name) => ownedByRoot(io.fs, root, name),
-      validation,
       write: options.write,
     });
     const outputs = round.outputs;

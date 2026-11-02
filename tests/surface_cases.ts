@@ -126,7 +126,7 @@ export function fixedCliCases(): readonly CliCase[] {
     { name: "examples-check", args: ["check", ROOT], files: examples },
     { name: "examples-build", args: ["build", ROOT], files: examples },
     {
-      name: "examples-build-validate",
+      name: "examples-build-validate-removed",
       args: ["build", ROOT, "--validate"],
       files: examples,
     },

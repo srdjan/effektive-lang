@@ -1,6 +1,8 @@
 // The project entry of the IR validator. It validates the IR that
 // `lowerProject` returns, reading source texts through the project.
-// `build --validate` calls this entry.
+// The validator is a test oracle. No entry point (`frontend.ts`,
+// `typescript.ts`, `mod.ts`) exports this file, so the CLI, the language
+// server, and the playground do not load it. Tests import it directly.
 //
 // This file sits outside `validate/` because it reads the project type. The
 // validator itself stays independent of the checker and the lowering.
@@ -15,8 +17,11 @@ import type { ModuleIR, Result } from "./ir.ts";
 import type { Project } from "./project.ts";
 import { validateModule } from "./validate/index.ts";
 
+/** The part of a project that the validator reads: its modules. */
+export type ProjectModules = Pick<Project, "modules">;
+
 /** The source texts of a project, keyed by the root-relative paths that spans use. */
-function projectSources(project: Project): ReadonlyMap<string, string> {
+function projectSources(project: ProjectModules): ReadonlyMap<string, string> {
   const sources = new Map<string, string>();
   for (const info of project.modules.values()) {
     sources.set(info.path, info.tree.text);
@@ -30,7 +35,7 @@ function projectSources(project: Project): ReadonlyMap<string, string> {
  * whose lowering gave an error value has no IR and has no entry.
  */
 export function validateProject(
-  project: Project,
+  project: ProjectModules,
   lowered: ReadonlyMap<string, Result<ModuleIR, LowerError>>,
 ): ReadonlyMap<string, readonly Diagnostic[]> {
   const sources = projectSources(project);

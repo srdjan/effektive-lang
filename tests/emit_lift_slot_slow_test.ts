@@ -7,6 +7,7 @@ import { assert, assertEquals } from "@std/assert";
 import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
 import { LIFT_PROGRAMS } from "./lift_slot_programs.ts";
 import { deno, runScript } from "./process_helpers.ts";
+import { validationProblems } from "./validate_helpers.ts";
 
 const CLI = new URL("../src/cli/main.ts", import.meta.url).pathname;
 
@@ -24,7 +25,7 @@ async function withProgram<T>(
   }
 }
 
-/** Builds the directory with `--validate --tsc`. The run must report no diagnostic. */
+/** Builds the directory with `--tsc`. The run must report no diagnostic. */
 async function build(dir: string): Promise<void> {
   const run = await deno(dir, [
     "run",
@@ -36,7 +37,6 @@ async function build(dir: string): Promise<void> {
     CLI,
     "build",
     dir,
-    "--validate",
     "--tsc",
   ]);
   assertEquals(run.code, 0, `build failed:\n${run.stdout}\n${run.stderr}`);
@@ -45,6 +45,7 @@ async function build(dir: string): Promise<void> {
     report.includes(", 0 diagnostics"),
     `the build reports diagnostics:\n${report}`,
   );
+  assertEquals(validationProblems(dir), []);
 }
 
 /** Writes the strict `deno.json` of the lift tests, and runs the script as `runScript` does. */

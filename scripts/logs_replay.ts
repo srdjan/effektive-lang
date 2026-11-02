@@ -183,6 +183,12 @@ async function replayCli(
   if (argv.length === 0 || argv.length !== logged.length) {
     return unsupported("cli.start holds no arguments");
   }
+  // Logs from before the validator left the product paths can hold `--validate`.
+  if (argv.includes("--validate")) {
+    return unsupported(
+      "the session used `--validate`, which the build command no longer has",
+    );
+  }
   const parsed = parseArgs(argv);
   if (!parsed.ok || parsed.value.kind === "help") {
     return unsupported("the logged arguments do not name a project command");

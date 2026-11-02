@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
-import { emitProject, lowerProject, validateProject } from "../src/core/mod.ts";
+import { emitProject, lowerProject } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import { checkModule } from "./helpers.ts";
 import { runStrictTarget } from "./target_helpers.ts";
 

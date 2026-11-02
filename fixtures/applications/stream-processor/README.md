@@ -8,7 +8,7 @@ primitive operations. It performs no network or file I/O.
 From the effektive-lang repository root:
 
 ```sh
-deno task effektive build fixtures/applications/stream-processor --validate --tsc
+deno task effektive build fixtures/applications/stream-processor --tsc
 deno run --config fixtures/applications/stream-processor/deno.json fixtures/applications/stream-processor/main.ts
 deno test --config fixtures/applications/stream-processor/deno.json fixtures/applications/stream-processor/runtime_test.ts
 ```

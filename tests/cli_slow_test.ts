@@ -5,6 +5,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { decodeMappings } from "../src/core/typescript.ts";
 import { tscConfig, tscLock } from "../src/cli/tsc.ts";
+import { validationProblems } from "./validate_helpers.ts";
 import { COMPANION_FILES, copyDirectory, FIXTURES } from "./helpers.ts";
 import {
   deno,
@@ -95,10 +96,11 @@ Deno.test("an invalid effektive.json exits 2", async () => {
   });
 });
 
-Deno.test("build --tsc --validate writes the golden files and the source maps, and exits 0", async () => {
+Deno.test("build --tsc writes the golden files and the source maps, and exits 0", async () => {
   await withTemporary(async (dir) => {
     copyDirectory(new URL("examples/", FIXTURES), dir);
-    const run = await effektive(["build", dir, "--tsc", "--validate"]);
+    const run = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(run.code, 0, run.stderr);
     assertEquals(run.stdout, "");
     for (const name of MODULES) {
@@ -238,7 +240,7 @@ Deno.test("build --tsc maps a wrong host module to the import in the .eff file",
   });
 });
 
-Deno.test("build --validate --tsc accepts an effectful retry pipeline", async () => {
+Deno.test("build --tsc accepts an effectful retry pipeline", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(
@@ -250,24 +252,26 @@ Deno.test("build --validate --tsc accepts an effectful retry pipeline", async ()
     const checked = await effektive(["check", dir]);
     assertEquals(checked.code, 0, checked.stdout);
     assertEquals(checked.stdout, "");
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, `${built.stdout}\n${built.stderr}`);
     assertEquals(built.stdout, "");
     assert(built.stderr.includes("1 module, 0 diagnostics"), built.stderr);
   });
 });
 
-Deno.test("build --validate --tsc accepts a nominal value widened to its base and compared with it", async () => {
+Deno.test("build --tsc accepts a nominal value widened to its base and compared with it", async () => {
   await withTemporary(async (dir) => {
     copyDirectory(new URL("emit/nominal-operators/", FIXTURES), dir);
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, `${built.stdout}\n${built.stderr}`);
     assertEquals(built.stdout, "");
     assert(built.stderr.includes("1 module, 0 diagnostics"), built.stderr);
   });
 });
 
-Deno.test("build --validate --tsc accepts a custom retry schedule", async () => {
+Deno.test("build --tsc accepts a custom retry schedule", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(
@@ -281,12 +285,13 @@ Deno.test("build --validate --tsc accepts a custom retry schedule", async () => 
         "type Int = int",
       ].join("\n"),
     );
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, built.stdout + built.stderr);
   });
 });
 
-Deno.test("build --validate --tsc accepts stored Effect values", async () => {
+Deno.test("build --tsc accepts stored Effect values", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(
@@ -301,12 +306,13 @@ Deno.test("build --validate --tsc accepts stored Effect values", async () => {
         "",
       ].join("\n"),
     );
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, built.stdout + built.stderr);
   });
 });
 
-Deno.test("build --validate --tsc accepts array and tuple literals", async () => {
+Deno.test("build --tsc accepts array and tuple literals", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(
@@ -317,7 +323,8 @@ Deno.test("build --validate --tsc accepts array and tuple literals", async () =>
         "export const loaded = (): Int[] uses S.read => [S.read(), 2]\n" +
         "\ntype Int = int\ntype Text = string\n",
     );
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, `${built.stdout}\n${built.stderr}`);
     assertEquals(built.stdout, "");
     const emitted = Deno.readTextFileSync(`${dir}/main.ts`);
@@ -327,10 +334,11 @@ Deno.test("build --validate --tsc accepts array and tuple literals", async () =>
   });
 });
 
-Deno.test("build --validate --tsc accepts sequential traverse", async () => {
+Deno.test("build --tsc accepts sequential traverse", async () => {
   await withTemporary(async (dir) => {
     copyDirectory(new URL("emit/traverse/", FIXTURES), dir);
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, `${built.stdout}\n${built.stderr}`);
     assertEquals(built.stdout, "");
     assert(
@@ -339,7 +347,7 @@ Deno.test("build --validate --tsc accepts sequential traverse", async () => {
   });
 });
 
-Deno.test("build --validate --tsc accepts scoped operation records", async () => {
+Deno.test("build --tsc accepts scoped operation records", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(
@@ -353,7 +361,8 @@ Deno.test("build --validate --tsc accepts scoped operation records", async () =>
         "",
       ].join("\n"),
     );
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, built.stderr);
     assert(
       Deno.readTextFileSync(`${dir}/main.ts`).includes(
@@ -363,7 +372,7 @@ Deno.test("build --validate --tsc accepts scoped operation records", async () =>
   });
 });
 
-Deno.test("build --validate --tsc accepts bounded traversal", async () => {
+Deno.test("build --tsc accepts bounded traversal", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(
@@ -371,13 +380,14 @@ Deno.test("build --validate --tsc accepts bounded traversal", async () => {
       "export const f = (): Int[] => traverse([1, 2], (n) => n + 1, { concurrency: 2 })\n" +
         "\ntype Int = int\n",
     );
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, built.stderr);
     assert(Deno.readTextFileSync(`${dir}/main.ts`).includes("concurrency: 2"));
   });
 });
 
-Deno.test("build --validate --tsc accepts an incremental stream and sink", async () => {
+Deno.test("build --tsc accepts an incremental stream and sink", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(
@@ -393,7 +403,8 @@ Deno.test("build --validate --tsc accepts an incremental stream and sink", async
         "",
       ].join("\n"),
     );
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, built.stderr);
     assert(Deno.readTextFileSync(`${dir}/main.ts`).includes("Stream.unfold"));
   });
@@ -402,7 +413,8 @@ Deno.test("build --validate --tsc accepts an incremental stream and sink", async
 Deno.test("a typed FileSystem host adapter builds and maps package failures", async () => {
   await withTemporary(async (dir) => {
     copyDirectory(new URL("host-adapter-files/", FIXTURES), dir);
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, built.stderr);
     Deno.writeTextFileSync(`${dir}/deno.json`, tscConfig());
     Deno.writeTextFileSync(`${dir}/deno.lock`, tscLock());
@@ -490,7 +502,8 @@ export class Files extends Context.Service<Files, {
 }>()("host#Files") {}
 `,
     );
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, built.stdout + built.stderr);
     Deno.writeTextFileSync(`${dir}/deno.json`, tscConfig());
     Deno.writeTextFileSync(
@@ -574,7 +587,7 @@ Deno.test("watch rebuilds when a source changes and prints the rechecked modules
   });
 });
 
-Deno.test("build --validate accepts an inline record type 100 levels deep", async () => {
+Deno.test("build accepts an inline record type 100 levels deep", async () => {
   await withTemporary(async (dir) => {
     const record = (leaf: string) =>
       "{ a: ".repeat(100) + leaf + " }".repeat(100);
@@ -585,7 +598,8 @@ Deno.test("build --validate accepts an inline record type 100 levels deep", asyn
         `export const g = (y: ${record("Same")}): Int => f(y)\n` +
         "\ntype Int = int\ntype Same = Int\n",
     );
-    const run = await effektive(["build", dir, "--validate"]);
+    const run = await effektive(["build", dir]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(run.code, 0, run.stderr);
     assert(!run.stderr.includes("validation/"), run.stderr);
   });
@@ -600,7 +614,8 @@ Deno.test("a host module that imports another npm package builds with --tsc unde
       `import ms from "npm:ms@2.1.3";\nexport const hostMs: unknown = ms;\n` +
         Deno.readTextFileSync(host),
     );
-    const built = await effektive(["build", dir, "--validate", "--tsc"]);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
     assertEquals(built.code, 0, built.stdout + built.stderr);
   });
 });

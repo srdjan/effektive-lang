@@ -7,6 +7,7 @@ import {
   type Revision,
   sourceHoverAt,
 } from "../src/core/mod.ts";
+import { validateRevision } from "./validate_helpers.ts";
 
 const source = "type Int = int\nexport const value = (): Int => 1\n";
 
@@ -138,7 +139,7 @@ Deno.test("host order selects companion imports across warm and retained revisio
         return [name, result] as const;
       }),
     );
-    const result = revision.validate(lowered);
+    const result = validateRevision(revision, lowered);
     for (const diagnostics of result.values()) assertEquals(diagnostics, []);
     return result;
   };

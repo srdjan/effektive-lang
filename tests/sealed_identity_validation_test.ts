@@ -4,8 +4,8 @@ import {
   lowerProject,
   memoryHost,
   type ModuleIR,
-  validateProject,
 } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 
 function lowered(files: Readonly<Record<string, string>>) {
   const checked = checkProject(

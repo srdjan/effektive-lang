@@ -64,10 +64,9 @@ Check the example project, then build its TypeScript:
 
 ```sh
 deno task effektive check fixtures/tutorial
-deno task effektive build fixtures/tutorial --validate --tsc
+deno task effektive build fixtures/tutorial --tsc
 ```
 
-`--validate` independently checks the typed intermediate representation.
 `--tsc` checks the generated TypeScript. The first target check needs network
 access to download dependencies.
 

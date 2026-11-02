@@ -66,7 +66,6 @@ import type { ModuleResolution } from "./resolve.ts";
 import { memoryHost, type Result } from "./source.ts";
 import { type TypeReader, TypeTable } from "./types.ts";
 import { canonicalJson, compareText } from "./util.ts";
-import { validateProject } from "./validate_project.ts";
 
 // ------------------------------------------------------------------ changes
 
@@ -225,13 +224,6 @@ export class Revision {
     const name = nameOfId(id);
     if (owner === undefined || name === undefined) return undefined;
     return this.project.modules.get(owner)?.index.byName.get(name);
-  }
-
-  /** Independent validation of the lowered modules, as `validateProject` with this project. */
-  validate(
-    lowered: ReadonlyMap<string, Result<ModuleIR, LowerError>>,
-  ): ReadonlyMap<string, readonly Diagnostic[]> {
-    return validateProject(this.project, lowered);
   }
 
   /** The module name of each root-relative path. Built on first use. */

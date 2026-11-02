@@ -11,6 +11,7 @@ import {
   sourceHoverAt,
 } from "../src/core/frontend.ts";
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
+import { validateRevision } from "./validate_helpers.ts";
 
 export function checked(text: string, clean = true) {
   const updated = new Program().update({
@@ -43,8 +44,14 @@ export function equivalent(short: string, explicit: string) {
   const first = checked(short), second = checked(explicit);
   const a = first.lowered("m"), b = second.lowered("m");
   assert(a?.ok && b?.ok);
-  assertEquals([...first.validate(new Map([["m", a]])).values()].flat(), []);
-  assertEquals([...second.validate(new Map([["m", b]])).values()].flat(), []);
+  assertEquals(
+    [...validateRevision(first, new Map([["m", a]])).values()].flat(),
+    [],
+  );
+  assertEquals(
+    [...validateRevision(second, new Map([["m", b]])).values()].flat(),
+    [],
+  );
   assertEquals(normalized(a.value), normalized(b.value));
   const outputs = new TypeScriptOutputs();
   assert(outputs.emitted(first, "m")?.ok && outputs.emitted(second, "m")?.ok);
@@ -196,7 +203,7 @@ export const run = (): Int uses Store.find | Store.fallback => Store.find() ?? S
   const lowered = revision.lowered("m");
   assert(lowered?.ok);
   assertEquals(
-    [...revision.validate(new Map([["m", lowered]])).values()].flat(),
+    [...validateRevision(revision, new Map([["m", lowered]])).values()].flat(),
     [],
   );
   const offset = text.lastIndexOf("fallback");
@@ -404,7 +411,7 @@ Deno.test("resource expressions share one source identity across two scopes and 
   const ir = revision.lowered("m");
   assert(ir?.ok);
   assertEquals(
-    [...revision.validate(new Map([["m", ir]])).values()].flat(),
+    [...validateRevision(revision, new Map([["m", ir]])).values()].flat(),
     [],
   );
   const fn = ir.value.declarations.find((d) => d.name === "run");

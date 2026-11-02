@@ -137,6 +137,22 @@ Deno.test("cli: a watch session is unsupported", async () => {
   assertEquals(outcome.tag, "unsupported");
 });
 
+Deno.test("cli: a session that used the removed --validate flag is unsupported", async () => {
+  const recorded = await recordCli(OK_PROJECT, ["check", CLI_ROOT]);
+  const index = recorded.events.findIndex((e) => e.kind === "cli.start");
+  const outcome = await replay({
+    blobs: recorded.blobs,
+    events: changed(recorded.events, index, {
+      args: ["build", CLI_ROOT, "--validate"],
+    }),
+  });
+  assertEquals(outcome, {
+    tag: "unsupported",
+    reason:
+      "the session used `--validate`, which the build command no longer has",
+  });
+});
+
 Deno.test("cli: a missing blob is unsupported", async () => {
   const recorded = await recordCli(OK_PROJECT, ["check", CLI_ROOT]);
   const outcome = await replaySession(recorded.events, () => undefined);

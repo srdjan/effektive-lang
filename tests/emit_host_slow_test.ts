@@ -9,8 +9,8 @@ import {
   lineStarts,
   lowerProject,
   positionOf,
-  validateProject,
 } from "../src/core/frontend.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import {
   buildSpanTable,
   hostImportSpans,

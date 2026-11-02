@@ -8,6 +8,7 @@ import { allFiles, generateProject, makeRandom } from "../bench/generate.ts";
 import { lex, Program, TokenKind } from "../src/core/frontend.ts";
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 import { exampleFiles } from "./helpers.ts";
+import { validateRevision } from "./validate_helpers.ts";
 
 type Files = Record<string, string>;
 type Random = () => number;
@@ -139,7 +140,8 @@ function runPath(
         );
         continue;
       }
-      const findings = revision.validate(new Map([[name, lowered]])).get(name);
+      const findings = validateRevision(revision, new Map([[name, lowered]]))
+        .get(name);
       if (findings === undefined || findings.length > 0) {
         tally.failures.push(
           `${context} module ${name}: validator findings: ${

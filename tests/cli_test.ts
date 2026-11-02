@@ -40,15 +40,9 @@ Deno.test("parseArgs reads the commands, the root, and the flags", () => {
     ok: true,
     value: { kind: "check", root: "p", log: true },
   });
-  assertEquals(parseArgs(["build", "--tsc", "p", "--validate"]), {
+  assertEquals(parseArgs(["build", "--tsc", "p"]), {
     ok: true,
-    value: {
-      kind: "build",
-      root: "p",
-      tsc: true,
-      validate: true,
-      log: true,
-    },
+    value: { kind: "build", root: "p", tsc: true, log: true },
   });
   assertEquals(parseArgs(["watch", "--tsc"]), {
     ok: true,
@@ -69,6 +63,7 @@ Deno.test("parseArgs rejects an unknown command, an unknown flag, and extra argu
       [],
       ["nope"],
       ["check", "--tsc"],
+      ["build", "--validate"],
       ["watch", "--validate"],
       ["build", "--nope"],
       ["build", "a", "b"],
@@ -315,18 +310,18 @@ Deno.test("a file that cannot be written gives a note and exit 1", async () => {
   );
 });
 
-// ------------------------------------------------------------------ build --validate
+// ------------------------------------------------------------------ build
 
-Deno.test("build --validate on the examples reports nothing", async () => {
+Deno.test("build on the examples reports nothing", async () => {
   const r = await run(
-    ["build", ROOT, "--validate"],
+    ["build", ROOT],
     under(ROOT, exampleFiles()),
   );
   assertEquals(r.code, 0, r.stderr);
   assertEquals(r.stdout, "");
 });
 
-Deno.test("build --validate accepts a retry pipeline with an effectful left value", async () => {
+Deno.test("build accepts a retry pipeline with an effectful left value", async () => {
   const files = {
     [`${ROOT}/effektive.json`]: "{}",
     [`${ROOT}/m.eff`]: [
@@ -338,9 +333,7 @@ Deno.test("build --validate accepts a retry pipeline with an effectful left valu
     ].join("\n"),
     [`${ROOT}/ok.eff`]: "export const one = (): Int => 1\n\ntype Int = int\n",
   };
-  const without = await run(["build", ROOT], files);
-  assertEquals(without.code, 0, without.stderr);
-  const r = await run(["build", ROOT, "--validate"], files);
+  const r = await run(["build", ROOT], files);
   assertEquals(r.code, 0, r.stdout);
   assertEquals(r.stdout, "");
   assert(r.m.files.has(`${ROOT}/m.ts`));

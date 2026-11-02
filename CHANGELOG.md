@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `build --validate` and `Revision.validate` are gone, and `frontend.ts` no
+  longer exports `validateProject`. The independent IR validator is a test
+  oracle: tests import it from `src/core/validate_project.ts`. The command-line
+  tool, the language server, and the playground no longer load it, and the
+  playground bundle is 148 KB smaller (13.8%).
 - A source declaration or binding named `Math`, `Error`, `String`,
   `globalThis`, `TypeError`, or `BigInt` now gives `declaration/002`. Before, such a program passed
   `check` and then failed the strict target check, because the emitted

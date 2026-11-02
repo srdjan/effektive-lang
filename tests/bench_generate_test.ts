@@ -11,8 +11,8 @@ import {
   Program,
   type Revision,
   revisionDelta,
-  validateProject,
 } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import {
   allFiles,
   applyAliasEdit,

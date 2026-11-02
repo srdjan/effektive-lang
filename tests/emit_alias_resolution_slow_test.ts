@@ -4,8 +4,8 @@ import {
   emitProject,
   lowerProject,
   memoryHost,
-  validateProject,
 } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import { runStrictTarget } from "./target_helpers.ts";
 
 Deno.test("pure functions lift through alias chains up to the accepted depth", async () => {

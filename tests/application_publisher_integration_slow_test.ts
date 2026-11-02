@@ -4,8 +4,8 @@ import {
   emitProject,
   lowerProject,
   memoryHost,
-  validateProject,
 } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import { deno, withTemporaryDirectory } from "./process_helpers.ts";
 
 Deno.test("portable publisher passes one KV contract on memory and file-backed SQLite", async () => {

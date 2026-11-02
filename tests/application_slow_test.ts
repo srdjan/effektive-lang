@@ -9,8 +9,8 @@ import {
   emitProject,
   lowerProject,
   memoryHost,
-  validateProject,
 } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 
 /** The fields of the JSON that `main.ts` prints. Each application prints its own subset. */
 interface Report {

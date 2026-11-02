@@ -4,8 +4,8 @@ import {
   checkProject,
   lowerProject,
   memoryHost,
-  validateProject,
 } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import type { ValueId } from "../src/core/ir.ts";
 import { showType } from "../src/core/type_show.ts";
 

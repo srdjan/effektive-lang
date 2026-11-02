@@ -9,8 +9,9 @@ oracle proves. The original design discussion of 2026-10-16 is in
 
 ## Pipeline
 
-The compiler turns Effektive source into checked, typed IR. An independent
-validator checks that IR. The emitter prints Effect-TS from the IR. All paths
+The compiler turns Effektive source into checked, typed IR. The emitter prints
+Effect-TS from the IR. An independent validator checks that IR in tests. No
+product path runs it. All paths
 below are under `src/core/` unless a path starts with another directory.
 
 | Stage | Main files | Result |
@@ -23,7 +24,7 @@ below are under `src/core/` unless a path starts with another directory.
 | Project check | `check_project.ts`, `interface.ts`, `initialization.ts` | Paired declaration and body results, module interfaces with hashes, and the module initialization graph. `checkModuleStep` is the one per-module step. |
 | Refinements | `check_refinements.ts`, `predicates.ts`, `predicate_source.ts` | The refinement facts of a body, the bounded proof search, and proof certificates. |
 | Lowering | `lower.ts`, `serialize.ts` | Checked modules become typed IR, which `serialize.ts` writes as canonical JSON. `ir.ts` defines the IR. |
-| Validation | `validate/`, `validate_project.ts` | The independent validator recomputes types, effects, and proofs from the IR alone. |
+| Validation | `validate/`, `validate_project.ts` | The independent validator recomputes types, effects, and proofs from the IR alone. It is a test oracle: no entry point exports it, and the CLI, the language server, and the playground do not load it. |
 | Emission | `emit/`, `typescript.ts` | Effect-TS text, source maps, and the mapping of `deno check` errors to Effektive spans. |
 | Editor queries | `editor.ts`, `editor_*.ts`, `diagnostic_delta.ts` | Hover, definition, symbols, references, rename, completion, tokens, hints, actions, and signature help. |
 | Program | `db.ts`, `frontend.ts`, `mod.ts` | `Program` memoizes the queries by revision, with a cutoff at the module interface hash. `frontend.ts` and `typescript.ts` are the two narrow entry points, and `mod.ts` is the whole API. |
@@ -81,7 +82,8 @@ files through `SourceHost`. Seven tests enforce the rules.
 | `src/core` calls no Deno or global host API, and imports only relative files. | `tests/core_boundary_test.ts`, "src/core uses no host API, no global API, and no non-relative import" |
 | The frontend entry point and the editor queries cannot reach the emitter, `typescript.ts`, or `src/host/`. | `tests/core_boundary_test.ts`, "the frontend and source queries cannot reach TypeScript output or host adapters" |
 | `src/host/`, `src/cli/`, `src/lsp/`, and `playground/src/` import the core only through `frontend.ts`, `typescript.ts`, or `mod.ts`. | `tests/core_boundary_test.ts`, "host, CLI, LSP and playground adapters use public core entry points" |
-| A test imports a name of an entry point only from `frontend.ts`, `typescript.ts`, `mod.ts`, `ir.ts`, or `validate/index.ts`. | `tests/core_boundary_test.ts`, "no test imports an entry-point name from a private core module" |
+| A test imports a name of an entry point only from `frontend.ts`, `typescript.ts`, `mod.ts`, `ir.ts`, `validate/index.ts`, or `validate_project.ts`. | `tests/core_boundary_test.ts`, "no test imports an entry-point name from a private core module" |
+| No module that the CLI, the language server, or the playground loads reaches `validate/` or `validate_project.ts`. | `tests/core_boundary_slow_test.ts`, one test for each product entry point, read from `deno info --json` |
 | The validator imports only `ir.ts`, `source.ts`, `diagnostics.ts`, `cron.ts`, and its own files, plus a type-only import of `predicates.ts`. | `tests/validate_test.ts`, "src/core/validate imports only ir.ts, source.ts, diagnostics.ts, cron.ts, and its own files" |
 | The emitter families never import `emit/expr.ts`, and no value import of the emitter reaches a checker module. | `tests/emit_families_test.ts`, "src/core/emit/families imports only ir.ts, ids.ts, and emit files other than expr.ts"; `tests/emit_families_test.ts`, "the value imports of src/core/emit reach no checker-phase module" |
 

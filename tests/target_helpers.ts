@@ -14,8 +14,8 @@ import {
   lowerProject,
   memoryHost,
   type Result,
-  validateProject,
 } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 
 /**
  * Checks the source project `files` with the entries `entries`, lowers it,

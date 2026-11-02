@@ -5,8 +5,8 @@ import {
   memoryHost,
   type ModuleIR,
   type TypeDecl,
-  validateProject,
 } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 
 const SEALED_LIBRARY = `
 export type Int = int

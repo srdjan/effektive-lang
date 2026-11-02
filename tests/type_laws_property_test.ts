@@ -27,6 +27,7 @@ import type { Predicate } from "../src/core/predicates.ts";
 import { typeFromIr } from "../src/core/type_ir.ts";
 import { TypeTable } from "../src/core/types.ts";
 import { fits, show, type TypeEnv } from "../src/core/validate/typing.ts";
+import { validateRevision } from "./validate_helpers.ts";
 
 const OWNER = "owner";
 
@@ -1034,7 +1035,9 @@ function sourceCodes(lib: string, main: string) {
   }
   return {
     checker: revision.diagnostics.map((item) => item.code),
-    validator: revision.validate(lowered).get("main")?.map((item) => item.code),
+    validator: validateRevision(revision, lowered).get("main")?.map((item) =>
+      item.code
+    ),
   };
 }
 

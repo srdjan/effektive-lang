@@ -9,7 +9,7 @@ receipt rows before commit.
 From the effektive-lang repository root:
 
 ```sh
-deno task effektive build fixtures/applications/service-workflow --validate --tsc
+deno task effektive build fixtures/applications/service-workflow --tsc
 deno run --config fixtures/applications/service-workflow/deno.json fixtures/applications/service-workflow/main.ts
 deno test --config fixtures/applications/service-workflow/deno.json fixtures/applications/service-workflow/runtime_test.ts
 ```

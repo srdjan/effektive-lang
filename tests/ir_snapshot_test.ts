@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 import { irSnapshot } from "./helpers.ts";
+import { validateRevision } from "./validate_helpers.ts";
 
 Deno.test("IR, emitted text, source maps, and interface hashes match the examples snapshot", () => {
   const corpus: {
@@ -17,7 +18,7 @@ Deno.test("IR, emitted text, source maps, and interface hashes match the example
       const ir = revision.lowered(name);
       assert(ir !== undefined);
       assertEquals(
-        [...revision.validate(new Map([[name, ir]])).values()].flat(),
+        [...validateRevision(revision, new Map([[name, ir]])).values()].flat(),
         [],
       );
     }

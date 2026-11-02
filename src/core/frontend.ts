@@ -32,7 +32,6 @@ export type { CheckedProject } from "./check_project.ts";
 export { lowerModule, lowerProject } from "./lower.ts";
 export type { LowerError } from "./lower.ts";
 export { serializeModule } from "./serialize.ts";
-export { validateProject } from "./validate_project.ts";
 // The project file and the source host.
 export { CONFIG_FILE, describeConfigError } from "./project.ts";
 export {

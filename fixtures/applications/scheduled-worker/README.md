@@ -8,7 +8,7 @@ The runtime entry point supplies drivers and runs the exported worker.
 From the effektive-lang repository root:
 
 ```sh
-deno task effektive build fixtures/applications/scheduled-worker --validate --tsc
+deno task effektive build fixtures/applications/scheduled-worker --tsc
 deno run --config fixtures/applications/scheduled-worker/deno.json fixtures/applications/scheduled-worker/main.ts
 deno test --config fixtures/applications/scheduled-worker/deno.json fixtures/applications/scheduled-worker/runtime_test.ts
 ```

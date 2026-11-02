@@ -19,7 +19,7 @@ Deno.test("a CLI build subprocess without environment permission writes records"
     );
     // The task `effektive` of the copied deno.json has no --allow-env.
     const output = await new Deno.Command(Deno.execPath(), {
-      args: ["task", "effektive", "build", project, "--validate"],
+      args: ["task", "effektive", "build", project],
       cwd: dir,
       env: { NO_COLOR: "1" },
       stdout: "piped",
@@ -28,7 +28,7 @@ Deno.test("a CLI build subprocess without environment permission writes records"
     const stderr = new TextDecoder().decode(output.stderr);
     assertEquals(output.code, 0, stderr);
     const kinds = countKinds(Deno.readTextFileSync(records));
-    for (const kind of ["program", "lower", "emit", "validate"]) {
+    for (const kind of ["program", "lower", "emit"]) {
       assert((kinds.get(kind) ?? 0) > 0, `no ${kind} record: ${stderr}`);
     }
   } finally {
@@ -37,6 +37,7 @@ Deno.test("a CLI build subprocess without environment permission writes records"
 });
 
 type Core = typeof import("../src/core/mod.ts");
+type Validator = typeof import("../src/core/validate_project.ts");
 
 const PROJECT = {
   "effektive.json": "{}",
@@ -46,14 +47,14 @@ const PROJECT = {
 };
 
 /** Runs every hooked entry point on the same sources, with a success and a failure for each. */
-function exercise(core: Core): void {
+function exercise(core: Core, validator: Validator): void {
   const host = core.memoryHost(PROJECT);
   const checked = core.checkProject(host, "", ["m.eff", "bad.eff"]);
   assert(checked.ok);
   const lowered = core.lowerProject(checked.value);
   const config = checked.value.analysis.project.config;
   core.emitProject(lowered, { config });
-  core.validateProject(checked.value.analysis.project, lowered);
+  validator.validateProject(checked.value.analysis.project, lowered);
   // A failed lowering: the module name is unknown.
   assert(!core.lowerModule(checked.value, "missing").ok);
   // A failed emission: the host module is not in the project file.
@@ -91,9 +92,12 @@ Deno.test("two captures of the same program give equal records of every kind", a
     const core: Core = await import(
       new URL(`file://${dir}/src/core/mod.ts`).href
     );
+    const validator: Validator = await import(
+      new URL(`file://${dir}/src/core/validate_project.ts`).href
+    );
     const captureOnce = (): string => {
       Deno.writeTextFileSync(records, "");
-      exercise(core);
+      exercise(core, validator);
       return Deno.readTextFileSync(records);
     };
     const first = captureOnce();
@@ -127,13 +131,16 @@ Deno.test("two different clean programs give different check, program, and valid
     const core: Core = await import(
       new URL(`file://${dir}/src/core/mod.ts`).href
     );
+    const validator: Validator = await import(
+      new URL(`file://${dir}/src/core/validate_project.ts`).href
+    );
     const captureOf = (text: string): Map<string, string> => {
       Deno.writeTextFileSync(records, "");
       const files = { "effektive.json": "{}", "m.eff": text };
       const checked = core.checkProject(core.memoryHost(files), "", ["m.eff"]);
       assert(checked.ok);
       assertEquals(checked.value.diagnostics, []);
-      core.validateProject(
+      validator.validateProject(
         checked.value.analysis.project,
         core.lowerProject(checked.value),
       );

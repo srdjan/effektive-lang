@@ -85,77 +85,17 @@
       }
     ]
   },
-  "examples-build-validate": {
+  "examples-build-validate-removed": {
     "args": [
       "build",
       "/proj",
       "--validate"
     ],
-    "code": 0,
+    "code": 2,
     "events": [
       {
-        "kind": "write",
-        "path": "/proj/collections.ts",
-        "sha256": "191780cb6a1f8cc77e85c3b8cd3073b347623b7d82ba741537b39fe8f6e0bb0e"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/collections.ts.map",
-        "sha256": "f7dbbce168c3070efae981dc50a095bda65b2557df846e4c348dc471a4113bfa"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/users.ts",
-        "sha256": "8eff1b5338f4e51b219102dc69bb7d7f14fb3936bdf1fc2707568f152f5aa110"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/users.ts.map",
-        "sha256": "0bcb7e9905edfa4f241d4ef26cbc86e7c186e959ba9750180397f143f9197a7d"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/host/providers.effi.ts",
-        "sha256": "b97a64eba2b59904eb7dce155f3a164d47147933b65ecc18d19b1735aadd8888"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/host/providers.effi.ts.map",
-        "sha256": "8ff1374bd855a3e0bc7f35b26b4abe8f9faf17fda62629d2625a324cd7af5861"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/log.ts",
-        "sha256": "9ee6082d3dbb6a0cda6d798e7daf94c99292c8f5eba7f8ea37c194a78312a859"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/log.ts.map",
-        "sha256": "5980d055033cfa48c3c3792b842a8c7d01415af7102750235096216d1754eeb3"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/main.ts",
-        "sha256": "8d3c36a2842531141d65a614496d2d4c933e538ab7db8c1e51afbd736e3cfa53"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/main.ts.map",
-        "sha256": "ef65c109bebd33dba985a41b58180dd1369dd33ec72cc619f76382c05f34807f"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/pay.ts",
-        "sha256": "d6ec49c65ccad1070a9123b8dd8a7382343781ab747130004f8f4db2bb84a73b"
-      },
-      {
-        "kind": "write",
-        "path": "/proj/pay.ts.map",
-        "sha256": "8b8e9c3fa99ef97152441bec4a624bf77d45ef11450c83493870ccc9f7a0ef02"
-      },
-      {
         "kind": "stderr",
-        "text": "6 modules, 0 diagnostics, wrote 12 files\n"
+        "text": "effektive: unknown flag `--validate` for `build`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
       }
     ]
   },
@@ -165,7 +105,7 @@
     "events": [
       {
         "kind": "stderr",
-        "text": "effektive: missing command\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc] [--validate]     also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+        "text": "effektive: missing command\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
       }
     ]
   },
@@ -177,7 +117,7 @@
     "events": [
       {
         "kind": "stdout",
-        "text": "usage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc] [--validate]     also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+        "text": "usage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
       }
     ]
   },
@@ -189,7 +129,7 @@
     "events": [
       {
         "kind": "stderr",
-        "text": "effektive: unknown command `nope`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc] [--validate]     also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+        "text": "effektive: unknown command `nope`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
       }
     ]
   },
@@ -216,7 +156,7 @@
     "events": [
       {
         "kind": "stderr",
-        "text": "effektive: unknown flag `--nope` for `check`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc] [--validate]     also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
+        "text": "effektive: unknown flag `--nope` for `check`\nusage: effektive <command> [root] [flags]\n\ncommands:\n  check [root]                          print diagnostics\n  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map\n  watch [root] [--tsc]                  build, then rebuild when a source changes\n\nflags:\n  --no-log                              write no session log to <root>/.effektive/logs/\n\nroot is the project directory with effektive.json. The default is the current directory.\nexit codes: 0 no diagnostics, 1 at least one diagnostic, 2 usage or configuration error, 3 internal error\n"
       }
     ]
   },

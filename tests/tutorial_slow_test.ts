@@ -1,10 +1,11 @@
 // Runs the tutorial commands on a copy of `fixtures/tutorial/`: build with
-// validation and target checking, type-check the entry point, and run it.
+// target checking, type-check the entry point, and run it.
 
 import { assertEquals, assertNotEquals } from "@std/assert";
 import { tscLock } from "../src/cli/tsc.ts";
 import { copyDirectory, FIXTURES } from "./helpers.ts";
 import { withTemporaryDirectory } from "./process_helpers.ts";
+import { validationProblems } from "./validate_helpers.ts";
 
 async function run(args: string[], cwd: string | URL): Promise<string> {
   const result = await new Deno.Command(Deno.execPath(), {
@@ -25,9 +26,10 @@ Deno.test("the tutorial project builds, type-checks, and prints the shown output
     copyDirectory(new URL("tutorial/", FIXTURES), dir);
     Deno.writeTextFileSync(`${dir}/deno.lock`, tscLock());
     await run(
-      ["task", "effektive", "build", dir, "--validate", "--tsc"],
+      ["task", "effektive", "build", dir, "--tsc"],
       new URL("../", import.meta.url),
     );
+    assertEquals(validationProblems(dir), []);
     const root = new URL("../", import.meta.url);
     const entry = [
       "--config",

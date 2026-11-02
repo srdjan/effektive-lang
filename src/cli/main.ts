@@ -27,11 +27,11 @@ const EXIT_INTERNAL = 3;
 function optionsOf(command: ProjectCommand): BuildOptions {
   switch (command.kind) {
     case "build":
-      return { write: true, validate: command.validate, tsc: command.tsc };
+      return { write: true, tsc: command.tsc };
     case "watch":
-      return { write: true, validate: false, tsc: command.tsc };
+      return { write: true, tsc: command.tsc };
     case "check":
-      return { write: false, validate: false, tsc: false };
+      return { write: false, tsc: false };
   }
 }
 

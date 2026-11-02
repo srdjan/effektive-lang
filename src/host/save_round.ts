@@ -6,12 +6,7 @@
 // record per module, so that each caller keeps its own messages and their order.
 
 import type { TypeScriptOutputs } from "../core/typescript.ts";
-import {
-  CONFIG_FILE,
-  type Diagnostic,
-  joinPath,
-  type Revision,
-} from "../core/mod.ts";
+import { CONFIG_FILE, joinPath, type Revision } from "../core/mod.ts";
 import type { HostFs } from "./io.ts";
 import { generationSource } from "./generation.ts";
 import {
@@ -38,7 +33,6 @@ export interface SaveRoundInput {
   readonly removal: RemovalRule;
   /** False for a module that a nested project owns. Callers pass `ownedByRoot`. */
   readonly owns: (name: string) => boolean;
-  readonly validation?: ReadonlyMap<string, readonly Diagnostic[]>;
   readonly write: boolean;
 }
 
@@ -85,7 +79,7 @@ export function runSaveRound(input: SaveRoundInput): SaveRound {
     removals.push({ name, removed, notes });
     if (input.removal === "retry" && notes.length > 0) kept.push(name);
   }
-  const writable = writableModules(revision, input.validation);
+  const writable = writableModules(revision);
   const outputs = writeGenerated(
     fs,
     root,

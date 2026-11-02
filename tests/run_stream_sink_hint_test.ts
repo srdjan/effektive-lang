@@ -3,11 +3,8 @@
 // inside an `if` or `match`. Every other sink argument keeps the unhinted check.
 
 import { assert, assertEquals } from "@std/assert";
-import {
-  type CheckedProject,
-  lowerProject,
-  validateProject,
-} from "../src/core/mod.ts";
+import { type CheckedProject, lowerProject } from "../src/core/mod.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import type { ValueId } from "../src/core/ir.ts";
 import { assertDiagnostics } from "./schema_diagnostics.ts";
 import { checkModule } from "./helpers.ts";
