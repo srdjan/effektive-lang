@@ -34,7 +34,7 @@ export interface TscDiagnostic {
   readonly column: number;
   /** The TypeScript code: 2375 for `TS2375`. */
   readonly code: number;
-  /** The first line of the TypeScript message. */
+  /** The first line of the TypeScript message, without the advice to add `undefined`. */
   readonly message: string;
   /** The other lines of the message, the source line, and its underline. */
   readonly detail: string;
@@ -51,6 +51,20 @@ interface DenoCheckOutput {
 }
 
 const HEADER = /^TS(\d+) \[(?:ERROR|WARN)\]: (.*)$/;
+/**
+ * TypeScript appends this advice when `exactOptionalPropertyTypes` rejects an
+ * assignment. The generated code is not the user's to edit, so the advice is
+ * removed from the relayed message.
+ */
+const UNDEFINED_ADVICE =
+  " Consider adding 'undefined' to the types of the target's properties.";
+
+function relayedMessage(line: string): string {
+  return line.endsWith(UNDEFINED_ADVICE)
+    ? line.slice(0, -UNDEFINED_ADVICE.length)
+    : line;
+}
+
 const LOCATION = /^\s+at (file:\/\/\S+):(\d+):(\d+)$/;
 const PROGRESS = /^(Check|Download|Resolving|Initialize) /;
 const SUMMARY = /^error: Type checking failed\.$|^Found \d+ errors?\.$/;
@@ -107,7 +121,7 @@ export function parseDenoCheck(text: string, root: string): DenoCheckOutput {
       close();
       open = {
         code: Number(header[1]),
-        message: header[2],
+        message: relayedMessage(header[2]),
         detail: [],
         location: undefined,
       };

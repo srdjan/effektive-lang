@@ -135,6 +135,57 @@ Deno.test("parseDenoCheck returns the lines it cannot read as other lines", () =
 
 // ------------------------------------------------------------------ mapping
 
+const ADVICE =
+  " Consider adding 'undefined' to the types of the target's properties.";
+
+function messageOf(header: string): string {
+  const output = parseDenoCheck(
+    `${header}\n  Type 'A' is not assignable to type 'B'.\n~~~~\n    at file://${ROOT}/main.ts:7:7\n\nerror: Type checking failed.\n`,
+    ROOT,
+  );
+  assertEquals(output.diagnostics.length, 1);
+  return output.diagnostics[0].message;
+}
+
+Deno.test("parseDenoCheck removes the undefined advice from a TS2375 message", () => {
+  assertEquals(
+    messageOf(
+      "TS2375 [ERROR]: Type 'Layer<WrongUsers, never, never>' is not assignable to type 'Layer<Users, never, never>' with 'exactOptionalPropertyTypes: true'." +
+        ADVICE,
+    ),
+    "Type 'Layer<WrongUsers, never, never>' is not assignable to type 'Layer<Users, never, never>' with 'exactOptionalPropertyTypes: true'.",
+  );
+});
+
+Deno.test("parseDenoCheck removes the undefined advice from a TS2322 message", () => {
+  assertEquals(
+    messageOf(
+      "TS2322 [ERROR]: Type 'undefined' is not assignable to type 'string' with 'exactOptionalPropertyTypes: true'." +
+        ADVICE,
+    ),
+    "Type 'undefined' is not assignable to type 'string' with 'exactOptionalPropertyTypes: true'.",
+  );
+});
+
+Deno.test("parseDenoCheck keeps a second sentence that is not the undefined advice", () => {
+  assertEquals(
+    messageOf(
+      "TS2322 [ERROR]: Type 'User' is not assignable to type 'User'. Two different types with this name exist, but they are unrelated.",
+    ),
+    "Type 'User' is not assignable to type 'User'. Two different types with this name exist, but they are unrelated.",
+  );
+});
+
+Deno.test("parseDenoCheck removes the undefined advice from a TS2379 message", () => {
+  assertEquals(
+    messageOf(
+      "TS2379 [ERROR]: Argument of type '{ a: undefined; }' is not assignable to parameter of type '{ a?: string; }' with 'exactOptionalPropertyTypes: true'." +
+        ADVICE,
+    ),
+    "Argument of type '{ a: undefined; }' is not assignable to parameter of type '{ a?: string; }' with 'exactOptionalPropertyTypes: true'.",
+  );
+});
+
 Deno.test("host-boundary/001 is registered in its category", () => {
   assertEquals(categoryOf("host-boundary/001"), "host-boundary");
 });
