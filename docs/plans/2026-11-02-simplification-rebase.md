@@ -2,7 +2,7 @@
 
 Prefixes: SR (items), SRD (decisions for the user). The evidence files use FB and AS (analysis findings of Fable and astra), and VF and VA (validation findings of Fable and astra).
 
-Date: 2026-11-02. Base: `cb4abd3` (v0.12.1) on local `main`. Status: proposal, validated. No edit is authorized beyond the changelog repair SR0.
+Date: 2026-11-02. Base: `cb4abd3` (v0.12.1) on local `main`. Status: accepted on 2026-11-02 with SRD1, SRD2, and SRD3 at option a. Execution follows Section 7 and stops at SRD4. Section 11 holds the execution plan and the progress ledger.
 
 ## 1. Result
 
@@ -249,6 +249,8 @@ SRD3. Tools that Fable proposed to remove: `bench/` (FB4), the logging loop (FB3
 
 SRD4 comes later, after SR8 step 3: delete the validator families, or keep them.
 
+The user accepted SRD1, SRD2, and SRD3 at option a on 2026-11-02 ("as recommended"). The acceptance authorizes Section 7 up to SRD4. It does not authorize a push, a release, or a version change.
+
 ## 7. Order
 
 1. Phase 1: SR1, SR3, SR4, SR5, SR6, SR14, SR15, SR16, and the SR13 measurement. These units are independent. SR2 follows SR1.
@@ -310,3 +312,32 @@ Run `deno task coverage` at the end of each phase. Reset a floor only with a wri
 - Removal of the 9 basic effect names.
 - A reduction to the 25 names that the applications resolve. It removes the website vocabulary and the basic effect names.
 - Routing every global through `globalThis` instead of reserving names (SR1). It changes all generated text, and source can still bind `globalThis`.
+
+## 11. Execution
+
+### Rules for each unit
+
+Opus orchestrates. A Sonnet executor implements each unit in its own copy of local `main` under `/tmp`, made with `git archive`. A copy of the sibling website `HEAD` is at `/tmp/effektive`, so the copies find it at `../effektive/public/`.
+The executor commits each item in its copy, one commit for each item, and runs `deno task mutate --only` on the changed logic sites there.
+The executor does not edit `CHANGELOG.md`. The orchestrator adds the "Unreleased" entries.
+The orchestrator reviews each commit line by line. It applies the commit to local `main`, runs `deno task check`, and commits. Website changes become separate commits in the sibling repository.
+A bug fix starts with a test that fails for the reason of the bug.
+
+### Phase 1 units
+
+| Unit | Items | Model | Main files | Acceptance | Turn budget |
+| --- | --- | --- | --- | --- | --- |
+| U1 | SR1, SR14, SR15 | Sonnet | `src/core/resolve.ts`, `src/core/emit/decls.ts`, `src/core/emit/tsc.ts`, error fixtures, emitter tests, golden files, D20 row | The SR1 and SR14 acceptance checks; the relayed TS2375 text ends after its first sentence | 80 tool calls |
+| U2 | SR4 | Sonnet | `src/core/parse.ts`, error fixtures, the diagnostic table of `docs/language-rules.md` | One diagnostic for a record body; no change for programs that compile today | 50 tool calls |
+| U3 | SR3, SR6 | Sonnet | a new slow test and manifest, a new generator script, `tests/ir_site_slow_test.ts`, the website `typed-ir.ts` and `effektive-examples/` | Both tests pass against the updated website copy; the generated IR checks alone | 80 tool calls |
+| U4 | SR5, SR16 | Sonnet | `docs/language-rules.md`, `docs/api.md`, `docs/development.md`, `docs/testing.md` | Both contradictions are gone; the oracle map is in `docs/testing.md`; the docs test passes | 50 tool calls |
+| U5 | SR2 | Sonnet | `tests/acceptance_property_slow_test.ts` or a new slow test | Fails without SR1 and passes with it; nonzero accepted target cases | 60 tool calls |
+| U6 | SR13 measurement | Opus | `docs/measurements.md` | One M4 result on a quiet machine | - |
+
+U1 to U4 run at the same time. U5 starts after U1 lands. U6 runs when no executor runs.
+
+### Progress ledger
+
+| Item | Commit | Result |
+| --- | --- | --- |
+| SR0 | `5bb3f71` | The gate passes at `HEAD`. |
