@@ -113,7 +113,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     decls.ts       Declarations, their order, and the export rule.
     predicates.ts  predicateDoc: exact integer comparisons that print a refinement predicate.
     walk.ts        Traversals of the IR.
-src/cli/       The command-line tool. Deno APIs stay here, in src/host/, src/lsp/main.ts, bench/, playground/build.ts, playground/serve.ts, scripts/, and tests/.
+src/cli/       The command-line tool. The Layout section of development.md says where Deno APIs may appear.
   main.ts        main(args, io) returns the exit code, and the watch loop over an injected event source. The last lines wire the real io.
   args.ts        The command line: commands, root, and flags.
   session.ts     One project directory and one program: sync, then build.
@@ -173,18 +173,7 @@ scripts/       Scripts that the tasks run.
                package.ts builds deterministic local CLI/server bundles and a complete VSIX.
                package_vscode_smoke.ts tests the installed VSIX in isolated editor directories.
 tests/         Deno tests and test helpers.
-fixtures/      Input files for the tests.
-  examples/      The five example programs, the host interface file, and users-live.ts.
-  golden/        The expected emitted TypeScript of each example.
-  emit/          Inputs of the emitter tests: schema-*.eff and contextual-options.eff files, and the project directories forms/, groups/, host-checks/, host-companion/, nominal-operators/, schedules/, scopes/, sinks/, traverse/, and unmatched/. Only traverse/ has a golden file.
-  host-boundary/ A wrong host module, captured deno check output, and manifest.json.
-  ir/example/    The log example and its IR fixture.
-  applications/  The five application witnesses: service-workflow, scheduled-worker, stream-processor, order-lifecycle, and portable-publisher. The first three are the gate applications. order-lifecycle is a witness for types with identity. portable-publisher is an exploratory portability witness.
-  host-adapter-files/ A project with a typed host adapter for effect/FileSystem.
-  lex/           snapshot.json: hashes of the lexer output for a fixed corpus.
-  validate/      Mutated copies of lowered IR and manifest.json, which names the expected code of each.
-  parse/         Valid syntax forms (ok-*) and recovery inputs (recovery-*).
-  errors/        One file or one project directory for each error case, with markers.
+fixtures/      Input files for the tests. The Layout section of development.md lists each directory.
 bench/         The measurement harnesses of parts A8 and L5. They are not part of the core.
   main.ts        The entry: arguments, profiles, and the report.
   profile.ts     The scale of --quick and --full.
@@ -206,8 +195,8 @@ bench/         The measurement harnesses of parts A8 and L5. They are not part o
 docs/          Design, plans, and rejected.md, the ledger of rejected ideas.
 ```
 
-The core reads files only through `SourceHost`. It calls no Deno API. Tests may
-use Deno APIs.
+[Development, Layout](development.md#layout) states the rule for file access
+and Deno APIs in the core.
 
 ## Using the parser
 

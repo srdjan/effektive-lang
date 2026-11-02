@@ -929,7 +929,7 @@ These rules concern the stages after checking. They do not change what a program
 | Lowering or emit failure | A failure that is not a diagnostic of the module prints `error: ...` on stderr and gives exit code 1 | [outputs.ts](../src/host/outputs.ts) |
 | `--tsc` after an error | The tool skips `deno check` when the build has a diagnostic or a failure, because the set of written files is incomplete | [api.md, Using the command line](api.md#using-the-command-line) |
 | `--tsc` files | The files that this build produced, written or unchanged, plus the host modules of `effektive.json` | [api.md, Using the command line](api.md#using-the-command-line) |
-| `--tsc` configuration | A temporary directory with `deno.json`, removed after the run. The command has `--no-lock`. The project directory gets no new file | [api.md, Using the command line](api.md#using-the-command-line) |
+| `--tsc` configuration | The tool writes a generated `deno.json` and the pinned lockfile to a temporary directory, passes `--lock=` with that lockfile, and removes both after the run. The project directory gets no new file. The configuration and the lockfile are in api.md | [api.md, Using the command line](api.md#using-the-command-line) |
 | `--tsc` without a parsed diagnostic | If `deno check` exits nonzero and prints no diagnostic, the tool prints a note and exits 1 | [api.md, Using the command line](api.md#using-the-command-line) |
 | Permissions of the task | `--allow-read --allow-write --allow-run=deno`. The tool needs no environment access | [deno.json](../deno.json) |
 | Task directory | `deno task` runs in the repository root, so the default root `.` is the repository. Users pass a root | [api.md, Using the command line](api.md#using-the-command-line) |
