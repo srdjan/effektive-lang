@@ -24,7 +24,7 @@ const record = (book: Book) =>
 
 export const checkout = (id: BookId): Book
   fails BookMissing | NoCopies | StoreDown
-  uses Shelf.find | Shelf.save | Ledger => {
+  with Shelf.find | Shelf.save | Ledger => {
   const book = lend(id)
   record(book)
   book

@@ -50,10 +50,10 @@ const publishWithStore = (id: ArticleId) =>
 
 export const publishArticleFeature = (rawId: Text): PublishReceipt
   fails PublishFailure
-  uses Lexical | Clock | ArticleStore =>
+  with Lexical | Clock | ArticleStore =>
   publishWithStore(checkedId(rawId))
 
 export const publishAllFeature = (rawIds: Text[]): PublishReceipt[]
   fails PublishFailure
-  uses Lexical | Clock | ArticleStore =>
+  with Lexical | Clock | ArticleStore =>
   traverse(rawIds, rawId => publishWithStore(checkedId(rawId)), { concurrency: 1 })

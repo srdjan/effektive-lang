@@ -8,19 +8,19 @@ import { compileAndRun } from "./target_helpers.ts";
 const SOURCE = `type Int = int
 type Name = string
 export service Log { seen(name: Name): void }
-export const guarded = (): Int fails TimeoutError uses Log.seen =>
+export const guarded = (): Int fails TimeoutError with Log.seen =>
   timeout(() => uninterruptible(() => { sleep(40ms)
  Log.seen("done")
  1 }), 10ms)
-export const piped = (): Int fails TimeoutError uses Log.seen =>
+export const piped = (): Int fails TimeoutError with Log.seen =>
   timeout(() => (() => { sleep(40ms)
  Log.seen("done")
  1 }) |> uninterruptible(), 10ms)
-export const open = (): Int fails TimeoutError uses Log.seen =>
+export const open = (): Int fails TimeoutError with Log.seen =>
   timeout(() => { sleep(40ms)
  Log.seen("done")
  1 }, 10ms)
-export const raced = (): Int uses Log.seen =>
+export const raced = (): Int with Log.seen =>
   run(race(
     defer(() => uninterruptible(() => { sleep(40ms)
  Log.seen("loser-done")

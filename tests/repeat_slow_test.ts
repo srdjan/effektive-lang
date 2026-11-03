@@ -9,17 +9,17 @@ import { compileAndRun } from "./target_helpers.ts";
 const SOURCE = `type Int = int
 export error Stop = {}
 export service Jobs { next(): Int fails Stop }
-export const times = (): Int fails Stop uses Jobs.next =>
+export const times = (): Int fails Stop with Jobs.next =>
   repeat(() => Jobs.next(), { times: 2 })
-export const whileSmall = (): Int fails Stop uses Jobs.next =>
+export const whileSmall = (): Int fails Stop with Jobs.next =>
   repeat(() => Jobs.next(), { while: (n) => n < 3 })
-export const untilBig = (): Int fails Stop uses Jobs.next =>
+export const untilBig = (): Int fails Stop with Jobs.next =>
   repeat(() => Jobs.next(), { until: (n) => n >= 4 })
-export const piped = (): Int fails Stop uses Jobs.next =>
+export const piped = (): Int fails Stop with Jobs.next =>
   (() => Jobs.next()) |> repeat({ times: 1 })
-export const forever = (): never fails Stop uses Jobs.next =>
+export const forever = (): never fails Stop with Jobs.next =>
   repeat(() => Jobs.next())
-export const limited = (): never fails TimeoutError | Stop uses Jobs.next =>
+export const limited = (): never fails TimeoutError | Stop with Jobs.next =>
   timeout(() => repeat(() => Jobs.next()), 50ms)
 `;
 

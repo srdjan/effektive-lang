@@ -293,7 +293,7 @@ error Stop = {}
 service Gate { pick(): Int fails Stop }
 const pure = (n: Int): Int => n + 1
 const other = (n: Int): Int => n + 2
-const choose = (): ((n: Int) => Int fails Stop) fails Stop uses Gate.pick =>
+const choose = (): ((n: Int) => Int fails Stop) fails Stop with Gate.pick =>
   if (Gate.pick() > 0) { Gate.pick(); pure } else { other }
 `;
   const { ir } = lowerOk(text);
@@ -493,7 +493,7 @@ Deno.test("an opaque host type without a host module for its interface gives an 
       "host.effi":
         "export opaque type Conn\nexport service Db { open(): Conn }\nexport provider DbLive provides Db\n",
       "lib.eff":
-        'import { Conn, Db } from "host:db"\nexport const openIt = (): Conn uses Db.open => Db.open()\n',
+        'import { Conn, Db } from "host:db"\nexport const openIt = (): Conn with Db.open => Db.open()\n',
       "main.eff":
         'import { openIt } from "./lib.eff"\nconst twice = () => {\n  const c = openIt()\n  c\n}\n',
     }),

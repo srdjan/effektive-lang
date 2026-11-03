@@ -312,8 +312,8 @@ Deno.test("keeps arrow contracts separate from callable inference evidence", () 
 type Int = int
 error LocalFailure = { value: Int }
 service LocalService { read(): Int }
-const effectful = (input): Int fails LocalFailure uses LocalService.read => {
-  const fn = (n: Int): Int fails LocalFailure uses LocalService.read => {
+const effectful = (input): Int fails LocalFailure with LocalService.read => {
+  const fn = (n: Int): Int fails LocalFailure with LocalService.read => {
     if (n > 0) { LocalService.read() } else { fail(LocalFailure({ value: n })) }
   }
   fn(input)
@@ -562,7 +562,7 @@ const forward = (input: unknown): Positive fails SchemaError => entry(input)
 const direct = (raw: unknown): Positive fails SchemaError => entry({ amount: raw })
 const invalid = (raw: unknown): Positive fails SchemaError => entry({ amount: 0 })
 service Host { raw(): unknown }
-const hidden = (): Positive fails SchemaError uses Host => entry({ amount: Positive(Host.raw()) })
+const hidden = (): Positive fails SchemaError with Host => entry({ amount: Positive(Host.raw()) })
 `);
   assertEquals(parameterTypes(project, "m", "forward"), ["unknown"]);
   assertEquals(parameterTypes(project, "m", "direct"), ["unknown"]);

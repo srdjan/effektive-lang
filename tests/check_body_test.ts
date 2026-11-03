@@ -110,10 +110,10 @@ service Factory {
   sink(): Sink<Int, Int, SinkStop, Add.add, Int>
 }
 const make = (): Stream<Int, SourceStop | SinkStop, Pull.next | Add.add>
-  fails BuildStop uses Factory.source | Factory.sink =>
+  fails BuildStop with Factory.source | Factory.sink =>
   transduceStream(Factory.source(), Factory.sink())
 const runIt = (): Int[] fails BuildStop | SourceStop | SinkStop
-  uses Factory.source | Factory.sink | Pull.next | Add.add => runStream(make(), takeSink(2))
+  with Factory.source | Factory.sink | Pull.next | Add.add => runStream(make(), takeSink(2))
 `);
   assertEquals(codes(project), [], messages(project).join("\n"));
 });
@@ -215,7 +215,7 @@ error CloseError = {}
 service Files {
   open(): { read: () => Text fails ReadError, close: () => void fails CloseError } fails OpenError
 }
-const load = (): Text fails OpenError | ReadError | CloseError uses Files.open =>
+const load = (): Text fails OpenError | ReadError | CloseError with Files.open =>
   withResource(() => Files.open(), (file) => file.read(), (file) => file.close())
 type Text = string
 `);
@@ -235,7 +235,7 @@ Deno.test("bounded traverse keeps callback failure and requirement channels", ()
   const project = checkText(`
 error Stop = {}
 service S { step(n: Int): Int fails Stop }
-const f = (): Int[] fails Stop uses S.step =>
+const f = (): Int[] fails Stop with S.step =>
   traverse([1, 2], (n) => S.step(n), { concurrency: 2 })
 type Int = int
 `);
@@ -253,7 +253,7 @@ service Source { next(state: Int): Option<[Int, Int]> fails Stop }
 service Consumer { accept(value: Int): void fails Stop }
 const numbers: Stream<Int, Stop, Source.next> = unfold(0, (state) => Source.next(state))
 const sink: Sink<Int, void, Stop, Consumer.accept> = sinkForEach((value: Int) => Consumer.accept(value))
-const main = (): void fails Stop uses Source.next | Consumer.accept => runStream(numbers, sink)
+const main = (): void fails Stop with Source.next | Consumer.accept => runStream(numbers, sink)
 type Int = int
 `);
   assertEquals(messages(project), []);
@@ -318,9 +318,9 @@ type Int = int
 type Text = string
 type Jobs = [Effect<Int, Stop, Probe.number>, Effect<Text, never, Probe.text>]
 const jobs: Jobs = [defer(() => Probe.number()), defer(() => Probe.text())]
-const tuple = (): [Int, Text] fails Stop uses Probe.number | Probe.text =>
+const tuple = (): [Int, Text] fails Stop with Probe.number | Probe.text =>
   all(jobs, { concurrency: "unbounded" })
-const record = (): { number: Int, text: Text } fails Stop uses Probe.number | Probe.text =>
+const record = (): { number: Int, text: Text } fails Stop with Probe.number | Probe.text =>
   all({ number: defer(() => Probe.number()), text: defer(() => Probe.text()) })
 const array = (): Int[] => all([defer(() => 1), defer(() => 2)])
 `);
@@ -368,8 +368,8 @@ service Source { next(n: Int): Option<[Int, Int]> }
 service Worker { inspect(n: Int): void }
 const source = unfold(0, (n) => Source.next(n))
 const tapped = mapEffect(source, (n) => { Worker.inspect(n); n })
-const each = (): void uses Source.next | Worker.inspect => runStream(source, sinkForEach((n: Int) => Worker.inspect(n)))
-const observed = (): Int[] uses Source.next | Worker.inspect => runStream(tapped, takeSink(2))
+const each = (): void with Source.next | Worker.inspect => runStream(source, sinkForEach((n: Int) => Worker.inspect(n)))
+const observed = (): Int[] with Source.next | Worker.inspect => runStream(tapped, takeSink(2))
 `);
   assertEquals(codes(project), [], messages(project).join("\n"));
 });
@@ -415,7 +415,7 @@ service Source { next(n: Int): Option<[Int, Int]> }
 service Worker { work(n: Int): Int }
 const source = unfold(0, (n) => Source.next(n))
 const mapped = mapEffect(source, (n) => Worker.work(n), { concurrency: 2 })
-const main = (): Int[] uses Source.next | Worker.work => runStream(mapped, takeSink(2))
+const main = (): Int[] with Source.next | Worker.work => runStream(mapped, takeSink(2))
 `);
   assertEquals(codes(valid), [], messages(valid).join("\n"));
   for (
@@ -469,7 +469,7 @@ Deno.test("scoped discharges a scope-bound fork after its parent finishes", () =
 service Child { run(): void; wait(): void; alive(): Bool }
 type Int = int
 type Bool = boolean
-const parent = (): Int uses Child.run | Child.wait | Child.alive =>
+const parent = (): Int with Child.run | Child.wait | Child.alive =>
   scoped(defer(() => {
     forkScoped(defer(() => Child.run()))
     Child.wait()
@@ -543,7 +543,7 @@ service Counter { next(): Int fails Stop }
 const make = (): Effect<Int, Stop, Counter.next> =>
   defer(() => Counter.next())
 const stored: Effect<Int, Stop, Counter.next> = make()
-const twice = (): Int fails Stop uses Counter.next => {
+const twice = (): Int fails Stop with Counter.next => {
   const first = run(stored)
   const second = run(stored)
   first + second
@@ -856,7 +856,7 @@ Deno.test("field reads and block bindings are recorded", () => {
 
 const USERS_BROKEN = `${exampleFiles()["users.eff"]}
 export const broken = (id: UserId): User
-  uses Users.find => getUser(id)
+  with Users.find => getUser(id)
 `;
 
 Deno.test("the invalid example of the spec gives exactly one failure-contract diagnostic", () => {
@@ -874,7 +874,7 @@ service S {
   a(): Int
   b(): Int
 }
-const f = (): Int uses S.a => S.a() + S.b()
+const f = (): Int with S.a => S.a() + S.b()
 type Int = int
 `);
   assertEquals(codes(project), ["requirement-contract/001"]);
@@ -885,8 +885,8 @@ Deno.test("a declared set may be wider than the body needs", () => {
   const project = checkText(`
 error E = { m: string }
 service S { a(): Int }
-const f = (): Int fails E uses S.a => 1
-const g = (): Int fails E uses S.a => f()
+const f = (): Int fails E with S.a => 1
+const g = (): Int fails E with S.a => f()
 type Int = int
 `);
   assertEquals(messages(project), []);
@@ -969,12 +969,12 @@ service S {
   step(n: Int): Int fails Stop
   keep(n: Int): Flag
 }
-const m = (xs: Int[]): Int[] fails Stop uses S.step => map(xs, (x) => S.step(x))
-const f = (xs: Int[]): Int[] uses S.keep => filter(xs, (x) => S.keep(x))
-const g = (xs: Int[]): Int fails Stop uses S.step => fold(xs, 0, (a, x) => a + S.step(x))
-const pm = (xs: Int[]): Int[] fails Stop uses S.step => xs |> map((x) => S.step(x))
-const pf = (xs: Int[]): Int[] uses S.keep => xs |> filter((x) => S.keep(x))
-const pg = (xs: Int[]): Int fails Stop uses S.step => xs |> fold(0, (a, x) => a + S.step(x))
+const m = (xs: Int[]): Int[] fails Stop with S.step => map(xs, (x) => S.step(x))
+const f = (xs: Int[]): Int[] with S.keep => filter(xs, (x) => S.keep(x))
+const g = (xs: Int[]): Int fails Stop with S.step => fold(xs, 0, (a, x) => a + S.step(x))
+const pm = (xs: Int[]): Int[] fails Stop with S.step => xs |> map((x) => S.step(x))
+const pf = (xs: Int[]): Int[] with S.keep => xs |> filter((x) => S.keep(x))
+const pg = (xs: Int[]): Int fails Stop with S.step => xs |> fold(0, (a, x) => a + S.step(x))
 type Int = int
 type Flag = boolean
 `);
@@ -1017,7 +1017,7 @@ Deno.test("updateRef carries the failures and requirements of an effectful callb
   const project = checkText(`
 error Stop = { at: int }
 service S { step(n: Int): Int fails Stop }
-const f = (r: Ref<Int>): void fails Stop uses S.step => updateRef(r, (n) => S.step(n))
+const f = (r: Ref<Int>): void fails Stop with S.step => updateRef(r, (n) => S.step(n))
 type Int = int
 `);
   assertEquals(messages(project), []);
@@ -1043,7 +1043,7 @@ Deno.test("traverse carries callback failures and requirements", () => {
   const project = checkText(`
 error Stop = { at: int }
 service S { step(n: Int): Int fails Stop }
-const good = (xs: Int[]): Int[] fails Stop uses S.step =>
+const good = (xs: Int[]): Int[] fails Stop with S.step =>
   traverse(xs, (n) => S.step(n))
 export const missing = (xs: Int[]): Int[] =>
   xs |> traverse((n) => S.step(n))
@@ -1081,8 +1081,8 @@ type Int = int
 Deno.test("an effectful module function may be a callback by reference", () => {
   const project = checkText(`
 service S { a(): Int }
-const bump = (n: Int): Int uses S.a => n + S.a()
-const f = (xs: Int[]): Int[] uses S.a => xs |> map(bump)
+const bump = (n: Int): Int with S.a => n + S.a()
+const f = (xs: Int[]): Int[] with S.a => xs |> map(bump)
 type Int = int
 `);
   assertEquals(messages(project), []);
@@ -1544,7 +1544,7 @@ type Bool = boolean
 Deno.test("short-circuit operators union the effects of both operands", () => {
   const project = checkText(`
 service S { ok(): Bool }
-const f = (x: Bool): Bool uses S.ok => x && S.ok()
+const f = (x: Bool): Bool with S.ok => x && S.ok()
 type Bool = boolean
 `);
   assertEquals(messages(project), []);
@@ -1779,7 +1779,7 @@ Deno.test("a pipeline evaluates the left value once and passes it first", () => 
 service S { all(): Int[] }
 const add = (a: Int, b: Int): Int => a + b
 const f = (): Int => 1 |> add(2)
-const g = (): Int[] uses S.all => S.all() |> map((n) => n + 1)
+const g = (): Int[] with S.all => S.all() |> map((n) => n + 1)
 const h = (x: Int): Int => x |> add
 type Int = int
 `);
@@ -1789,7 +1789,7 @@ type Int = int
 Deno.test("a service stage is a perform with the left value as the first argument", () => {
   const project = checkText(`
 service S { put(n: Int): void }
-const f = (n: Int): void uses S.put => n |> S.put
+const f = (n: Int): void with S.put => n |> S.put
 type Int = int
 `);
   assertEquals(messages(project), []);
@@ -1862,7 +1862,7 @@ Deno.test("retry unions the construction sets with the job's invocation sets", (
   const project = checkText(`
 error E = { m: string }
 service S { a(): Int fails E }
-const f = (): Int fails E uses S.a => retry(() => S.a(), { times: 0 })
+const f = (): Int fails E with S.a => retry(() => S.a(), { times: 0 })
 type Int = int
 `);
   assertEquals(messages(project), []);
@@ -1875,7 +1875,7 @@ error Stop = {}
 service Jobs { next(): Int fails Stop }
 const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Duration> =>
   if (attempt < 2) { Some(0ms) } else { None })
-const run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })
+const run = (): Int fails Stop with Jobs.next => retry(() => Jobs.next(), { schedule: policy })
 type Int = int
 `);
   assertEquals(messages(project), []);
@@ -1899,10 +1899,10 @@ export service Files {
 `,
     "main.eff": `
 import { Handle, Text, Files } from "host:files"
-const readBorrowed = (borrow handle: Handle): Text uses Files.read => Files.read(handle)
-const good = (): Text uses Files.open | Files.read | Files.close =>
+const readBorrowed = (borrow handle: Handle): Text with Files.read => Files.read(handle)
+const good = (): Text with Files.open | Files.read | Files.close =>
   withResource(() => Files.open(), (handle) => readBorrowed(handle), (handle) => Files.close(handle))
-const bad = (): Text uses Files.open | Files.plain | Files.close =>
+const bad = (): Text with Files.open | Files.plain | Files.close =>
   withResource(() => Files.open(), (handle) => Files.plain(handle), (handle) => Files.close(handle))
 `,
   };
@@ -1912,7 +1912,7 @@ const bad = (): Text uses Files.open | Files.plain | Files.close =>
     ...files,
     "main.eff": `
 import { Handle, Text, Files } from "host:files"
-const bad = (): Handle uses Files.open | Files.close =>
+const bad = (): Handle with Files.open | Files.close =>
   withResource(() => Files.open(), (handle) => handle, (handle) => Files.close(handle))
 `,
   }, ["main.eff"]);
@@ -1955,7 +1955,7 @@ import { Db, Down, Int } from "./svc.eff"
 import { DbLive } from "host:providers"
 export const run = (): Int fails Down =>
   provide(DbLive, () => Db.read())
-export const bad = (): Int fails Down uses Db.read =>
+export const bad = (): Int fails Down with Db.read =>
   provide(DbLive, () => Db.read())
 `,
   }, ["main.eff"]);
@@ -2168,7 +2168,7 @@ service S {
   find(): Option<Int>
   other(): Int
 }
-const f = (): Int uses S.find | S.other =>
+const f = (): Int with S.find | S.other =>
   match S.find() { Some(x) => x, None => S.other() }
 type Int = int
 `);
@@ -2252,7 +2252,7 @@ type Int = int
 Deno.test("a closure construction has pure mode and empty sets", () => {
   const project = checkText(`
 service S { a(): Int }
-const f = (): Int uses S.a => {
+const f = (): Int with S.a => {
   const g = () => S.a()
   g()
 }
@@ -2381,7 +2381,7 @@ Deno.test("a service stage with extra arguments and a brand stage are performs a
   const project = checkText(`
 type Id = string
 service S { put(a: Int, b: Int): void }
-const f = (n: Int): void uses S.put => n |> S.put(2)
+const f = (n: Int): void with S.put => n |> S.put(2)
 const g = (s: Text): Id => s |> Id
 type Int = int
 type Text = string
@@ -2957,7 +2957,7 @@ export service Rows { next(): Row }
 `,
     "main.eff": `
 import { Row, Rows } from "host:rows"
-export const first = (): Row uses Rows.next => Rows.next()
+export const first = (): Row with Rows.next => Rows.next()
 `,
   }, ["main.eff"]);
   assertEquals(messages(project), []);
@@ -3201,7 +3201,7 @@ const OPTIONAL_TRANSFORM_CASES: readonly SchemaCase[] = [
   {
     name: "service requirement is accepted",
     tail:
-      "const bad = schemaOptionalTransform(optional, optional, (value: Option<Int>): Option<Int> uses Need.next => { const tick = Need.next(1)\n value }, (value: Option<Int>): Option<Int> => value)",
+      "const bad = schemaOptionalTransform(optional, optional, (value: Option<Int>): Option<Int> with Need.next => { const tick = Need.next(1)\n value }, (value: Option<Int>): Option<Int> => value)",
     expected: [],
   },
   {
@@ -3231,9 +3231,9 @@ const OPTIONAL_TRANSFORM_CASES: readonly SchemaCase[] = [
   {
     name: "inferred type with services",
     tail:
-      "const shown: Int = schemaOptionalTransform(optional, optional, (value: Option<Int>): Option<Int> uses Need.next => { const tick = Need.next(1)\n value }, (value: Option<Int>): Option<Int> => value)",
+      "const shown: Int = schemaOptionalTransform(optional, optional, (value: Option<Int>): Option<Int> with Need.next => { const tick = Need.next(1)\n value }, (value: Option<Int>): Option<Int> => value)",
     expected: [
-      "type-mismatch/003 | the constant has type SchemaOptional<Int, Int, Need.next, never>, but Int is expected | schemaOptionalTransform(optional, optional, (value: Option<Int>): Option<Int> uses Need.next => { const tick = Need.next(1)\n value }, (value: Option<Int>): Option<Int> => value)",
+      "type-mismatch/003 | the constant has type SchemaOptional<Int, Int, Need.next, never>, but Int is expected | schemaOptionalTransform(optional, optional, (value: Option<Int>): Option<Int> with Need.next => { const tick = Need.next(1)\n value }, (value: Option<Int>): Option<Int> => value)",
     ],
   },
 ];
@@ -3435,7 +3435,7 @@ const OPTIONAL_FROM_REQUIRED_CASES: readonly SchemaCase[] = [
   {
     name: "service requirement is accepted",
     tail:
-      'const bad = schemaOptionalFromRequired(text, optionalText, (value: Text): Option<Text> uses Need.next => { const tick = Need.next(1)\n Some(value) }, (value: Option<Text>): Text => match value { Some(name) => name, None => "" })',
+      'const bad = schemaOptionalFromRequired(text, optionalText, (value: Text): Option<Text> with Need.next => { const tick = Need.next(1)\n Some(value) }, (value: Option<Text>): Text => match value { Some(name) => name, None => "" })',
     expected: [],
   },
   {
@@ -3465,9 +3465,9 @@ const OPTIONAL_FROM_REQUIRED_CASES: readonly SchemaCase[] = [
   {
     name: "inferred type with services",
     tail:
-      'const shown: Int = schemaOptionalFromRequired(text, optionalText, (value: Text): Option<Text> uses Need.next => { const tick = Need.next(1)\n Some(value) }, (value: Option<Text>): Text => match value { Some(name) => name, None => "" })',
+      'const shown: Int = schemaOptionalFromRequired(text, optionalText, (value: Text): Option<Text> with Need.next => { const tick = Need.next(1)\n Some(value) }, (value: Option<Text>): Text => match value { Some(name) => name, None => "" })',
     expected: [
-      'type-mismatch/003 | the constant has type SchemaDecodedOptional<Text, Text, Need.next, never>, but Int is expected | schemaOptionalFromRequired(text, optionalText, (value: Text): Option<Text> uses Need.next => { const tick = Need.next(1)\n Some(value) }, (value: Option<Text>): Text => match value { Some(name) => name, None => "" })',
+      'type-mismatch/003 | the constant has type SchemaDecodedOptional<Text, Text, Need.next, never>, but Int is expected | schemaOptionalFromRequired(text, optionalText, (value: Text): Option<Text> with Need.next => { const tick = Need.next(1)\n Some(value) }, (value: Option<Text>): Text => match value { Some(name) => name, None => "" })',
     ],
   },
 ];
@@ -4125,9 +4125,9 @@ const CONSTRUCTOR_DEFAULT_CASES: readonly SchemaCase[] = [
   {
     name: "rejects services",
     tail:
-      "const bad = schemaConstructorDefault(integer, (): Int uses Need.next => Need.next(1))",
+      "const bad = schemaConstructorDefault(integer, (): Int with Need.next => Need.next(1))",
     expected: [
-      "type-mismatch/010 | schemaConstructorDefault needs an inline make-input callback with no services and only SchemaIssue failure | (): Int uses Need.next => Need.next(1)",
+      "type-mismatch/010 | schemaConstructorDefault needs an inline make-input callback with no services and only SchemaIssue failure | (): Int with Need.next => Need.next(1)",
     ],
   },
   {
@@ -4401,7 +4401,7 @@ const TRANSFORM_CASES: readonly SchemaCase[] = [
   {
     name: "service requirement is accepted",
     tail:
-      "const bad = schemaTransform(text, integer, (value: Text): Option<Int> uses Need.next => Some(Need.next(1)), (value: Int): Option<Text> => None)",
+      "const bad = schemaTransform(text, integer, (value: Text): Option<Int> with Need.next => Some(Need.next(1)), (value: Int): Option<Text> => None)",
     expected: [],
   },
   {
@@ -4431,9 +4431,9 @@ const TRANSFORM_CASES: readonly SchemaCase[] = [
   {
     name: "inferred type with services",
     tail:
-      "const shown: Text = schemaTransform(text, integer, (value: Text): Option<Int> uses Need.next => Some(Need.next(1)), (value: Int): Option<Text> => None)",
+      "const shown: Text = schemaTransform(text, integer, (value: Text): Option<Int> with Need.next => Some(Need.next(1)), (value: Int): Option<Text> => None)",
     expected: [
-      "type-mismatch/003 | the constant has type Schema<Int, Text, Need.next, never>, but Text is expected | schemaTransform(text, integer, (value: Text): Option<Int> uses Need.next => Some(Need.next(1)), (value: Int): Option<Text> => None)",
+      "type-mismatch/003 | the constant has type Schema<Int, Text, Need.next, never>, but Text is expected | schemaTransform(text, integer, (value: Text): Option<Int> with Need.next => Some(Need.next(1)), (value: Int): Option<Text> => None)",
     ],
   },
 ];
@@ -4911,9 +4911,9 @@ const STRUCT_CASES: readonly SchemaCase[] = [
   {
     name: "inferred requirement type",
     tail:
-      "const shown: Text = schemaStruct({ a: schemaTransform(text, integer, (value: Text): Option<Int> uses Need.next => Some(Need.next(1)), (value: Int): Option<Text> => None) })",
+      "const shown: Text = schemaStruct({ a: schemaTransform(text, integer, (value: Text): Option<Int> with Need.next => Some(Need.next(1)), (value: Int): Option<Text> => None) })",
     expected: [
-      "type-mismatch/003 | the constant has type Schema<{ a: Int }, { a: Text }, Need.next, never>, but Text is expected | schemaStruct({ a: schemaTransform(text, integer, (value: Text): Option<Int> uses Need.next => Some(Need.next(1)), (value: Int): Option<Text> => None) })",
+      "type-mismatch/003 | the constant has type Schema<{ a: Int }, { a: Text }, Need.next, never>, but Text is expected | schemaStruct({ a: schemaTransform(text, integer, (value: Text): Option<Int> with Need.next => Some(Need.next(1)), (value: Int): Option<Text> => None) })",
     ],
   },
 ];

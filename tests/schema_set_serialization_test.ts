@@ -13,8 +13,8 @@ service Need { a(): Text
 const text: Schema<Text> = schema()
 const adapted = schemaTransform(
   text, text,
-  (x: Text): Option<Text> uses Need.a | Need.b => { Need.a(); Some(Need.b()) },
-  (x: Text): Option<Text> uses Need.a | Need.b => { Need.a(); Some(Need.b()) }
+  (x: Text): Option<Text> with Need.a | Need.b => { Need.a(); Some(Need.b()) },
+  (x: Text): Option<Text> with Need.a | Need.b => { Need.a(); Some(Need.b()) }
 )
 `;
 

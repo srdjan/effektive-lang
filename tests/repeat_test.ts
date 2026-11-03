@@ -23,7 +23,7 @@ const diagnosticsOf = (source: string): string[] =>
   sharedDiagnosticsOf(HEAD + source);
 
 const REPEAT = "repeat(() => Jobs.next(), ";
-const SIG = "(): Int fails Stop uses Jobs.next";
+const SIG = "(): Int fails Stop with Jobs.next";
 
 function repeatWith(options: string, signature = SIG): string[] {
   return diagnosticsOf(
@@ -34,13 +34,13 @@ function repeatWith(options: string, signature = SIG): string[] {
 Deno.test("repeat(job) has the result type never and the job failures", () => {
   assertEquals(
     diagnosticsOf(
-      `export const a = (): never fails Stop uses Jobs.next => repeat(() => Jobs.next())\n`,
+      `export const a = (): never fails Stop with Jobs.next => repeat(() => Jobs.next())\n`,
     ),
     [],
   );
   assertEquals(
     diagnosticsOf(
-      `export const a = (): never uses Jobs.next => repeat(() => Jobs.next())\n`,
+      `export const a = (): never with Jobs.next => repeat(() => Jobs.next())\n`,
     ),
     [
       "failure-contract/001 the body can fail with Stop, which the `fails` clause does not list",
@@ -80,13 +80,13 @@ Deno.test("an effectful while callback adds its failures and requirements", () =
   assertEquals(
     repeatWith(
       options,
-      "(): Int fails Stop | Other uses Jobs.next | Gate.open",
+      "(): Int fails Stop | Other with Jobs.next | Gate.open",
     ),
     [],
   );
   assertEquals(repeatWith(options), [
     "failure-contract/001 the body can fail with Other, which the `fails` clause does not list",
-    "requirement-contract/001 the body requires Gate.open, which the `uses` clause does not list",
+    "requirement-contract/001 the body requires Gate.open, which the `with` clause does not list",
   ]);
 });
 
@@ -135,7 +135,7 @@ Deno.test("the pipeline form takes options, or no argument for the forever form"
   );
   assertEquals(
     diagnosticsOf(
-      `export const a = (): never fails Stop uses Jobs.next => (() => Jobs.next()) |> repeat()\n`,
+      `export const a = (): never fails Stop with Jobs.next => (() => Jobs.next()) |> repeat()\n`,
     ),
     [],
   );
@@ -161,7 +161,7 @@ Deno.test("repeat checks its job and its argument count", () => {
 // ------------------------------------------------------------------ lowering
 
 const SOURCE =
-  `${HEAD}export const forever = (): never fails Stop uses Jobs.next => repeat(() => Jobs.next())
+  `${HEAD}export const forever = (): never fails Stop with Jobs.next => repeat(() => Jobs.next())
 export const limited = ${SIG} => ${REPEAT}{ times: 2, until: (n) => n > 2 })
 export const policy: RetrySchedule<Stop> = retrySchedule((e: Stop, n: Int): Option<Duration> => None)
 `;

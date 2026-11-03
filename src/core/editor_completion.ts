@@ -243,7 +243,7 @@ function startsDeclaration(tree: SyntaxTree, start: number): boolean {
       lexed.kinds[beforeOnLine[0]] === TokenKind.KwExport);
 }
 
-type NameContext = "value" | "type" | "fails" | "uses";
+type NameContext = "value" | "type" | "fails" | "with";
 
 /** The syntax context of the word, and whether a declaration word can start here. */
 function nameContextAt(
@@ -264,8 +264,8 @@ function nameContextAt(
       context = "fails";
       break;
     }
-    if (kind === SyntaxKind.UsesClause || kind === SyntaxKind.ProvidesClause) {
-      context = "uses";
+    if (kind === SyntaxKind.WithClause || kind === SyntaxKind.ProvidesClause) {
+      context = "with";
       break;
     }
     if (isTypeKind(kind)) {
@@ -289,7 +289,7 @@ function namespaceCompletions(
     const kind = binding.target.kind;
     if (context === "type" && kind !== "type" && kind !== "error") continue;
     if (context === "fails" && kind !== "error") continue;
-    if (context === "uses" && kind !== "service") continue;
+    if (context === "with" && kind !== "service") continue;
     if (context === "value" && kind === "service") continue;
     const origin = declarationOf(revision, site.module, binding.target);
     const declaration = origin === undefined

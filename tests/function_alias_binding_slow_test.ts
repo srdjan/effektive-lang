@@ -7,9 +7,9 @@ error Boom = { code: int }
 service Svc {
   m(x: Count): Count fails Boom
 }
-type F = (x: Count) => Count fails Boom uses Svc.m
+type F = (x: Count) => Count fails Boom with Svc.m
 type G = (x: Count) => Count
-export const f: F = (x: Count): Count fails Boom uses Svc.m => Svc.m(x)
+export const f: F = (x: Count): Count fails Boom with Svc.m => Svc.m(x)
 export const g: G = (x: Count): Count => x
 type CheckedG = (x: Count) => Count fails SchemaError
 export const h: CheckedG = (x) => x

@@ -197,7 +197,7 @@ Deno.test("Option fallback precedence is below logic, above pipelines, and requi
 Deno.test("Option fallback records effects and keeps synthesized bindings out of source editor symbols", () => {
   const text = `type Int = int
 service Store { find(): Option<Int>; fallback(): Int }
-export const run = (): Int uses Store.find | Store.fallback => Store.find() ?? Store.fallback()
+export const run = (): Int with Store.find | Store.fallback => Store.find() ?? Store.fallback()
 `;
   const revision = checked(text);
   const lowered = revision.lowered("m");
@@ -335,15 +335,15 @@ Deno.test("resource expressions match explicit callbacks, preserve empty-channel
     `type Int = int\nservice Jobs { open(): { read: () => Int, close: () => void } }\n`;
   equivalent(
     prefix +
-      "export const run = (): Int uses Jobs.open => using (job = Jobs.open()) { job.read() } finally { job.close() }",
+      "export const run = (): Int with Jobs.open => using (job = Jobs.open()) { job.read() } finally { job.close() }",
     prefix +
-      "export const run = (): Int uses Jobs.open => withResource(() => Jobs.open(), job => { job.read() }, job => { job.close() })",
+      "export const run = (): Int with Jobs.open => withResource(() => Jobs.open(), job => { job.read() }, job => { job.close() })",
   );
   const revision = equivalent(
     prefix +
-      "export const run = (): Int uses Jobs.open => using (job = { const temporary = 1; Jobs.open() }) { job.read() } finally { job.close() }",
+      "export const run = (): Int with Jobs.open => using (job = { const temporary = 1; Jobs.open() }) { job.read() } finally { job.close() }",
     prefix +
-      "export const run = (): Int uses Jobs.open => withResource(() => { const temporary = 1; Jobs.open() }, job => { job.read() }, job => { job.close() })",
+      "export const run = (): Int with Jobs.open => withResource(() => { const temporary = 1; Jobs.open() }, job => { job.read() }, job => { job.close() })",
   );
   assert(
     revision.checkedModule("m")?.functions.get("value:m#run")?.mode !== "pure",
@@ -390,7 +390,7 @@ Deno.test("resource expressions retain scopes, data-only results, finalizer cont
 
 Deno.test("resource expressions share one source identity across two scopes and distinct IR parameters", () => {
   const text =
-    "type Int = int\nservice Jobs { open(): { read: () => Int, close: () => void } }\nexport const run = (): Int uses Jobs.open => using (job = Jobs.open()) { job.read() } finally { job.close() }";
+    "type Int = int\nservice Jobs { open(): { read: () => Int, close: () => void } }\nexport const run = (): Int with Jobs.open => using (job = Jobs.open()) { job.read() } finally { job.close() }";
   const revision = checked(text);
   const binding = text.indexOf("job =");
   assertEquals(referencesAt(revision, "m.eff", binding).length, 3);

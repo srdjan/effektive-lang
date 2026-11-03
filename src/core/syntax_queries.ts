@@ -167,7 +167,7 @@ export function arrowBody(tree: SyntaxTree, node: NodeId): NodeId | undefined {
   return kidsOf(tree, node).filter((child) => {
     const kind = kindOf(tree, child);
     return kind !== SyntaxKind.ParamList && kind !== SyntaxKind.FailsClause &&
-      kind !== SyntaxKind.UsesClause && !isTypeKind(kind);
+      kind !== SyntaxKind.WithClause && !isTypeKind(kind);
   }).pop();
 }
 

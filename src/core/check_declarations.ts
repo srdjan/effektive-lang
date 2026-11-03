@@ -862,7 +862,7 @@ class ModuleChecker {
       parts.find((k) => kindOf(this.tree, k) === SyntaxKind.FailsClause),
     );
     const requirements = this.lowerer.requirements(
-      parts.find((k) => kindOf(this.tree, k) === SyntaxKind.UsesClause),
+      parts.find((k) => kindOf(this.tree, k) === SyntaxKind.WithClause),
     );
     const signature: ProviderSignature = {
       kind: "provider",
@@ -935,7 +935,7 @@ class ModuleChecker {
       kindOf(this.tree, k) === SyntaxKind.FailsClause
     );
     const usesNode = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.UsesClause
+      kindOf(this.tree, k) === SyntaxKind.WithClause
     );
     const written = paramList === undefined
       ? []

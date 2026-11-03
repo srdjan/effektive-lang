@@ -22,7 +22,7 @@ Deno.test("Option fallback evaluates the subject once and fallback lazily, inclu
     {
       "m.eff": `type Int = int
 service Store { find(): Option<Int>; fallback(): Int }
-export const run = (): Int uses Store.find | Store.fallback => Store.find() ?? Store.fallback()
+export const run = (): Int with Store.find | Store.fallback => Store.find() ?? Store.fallback()
 export const chain = (): Int => None ?? None ?? 7
 `,
     },
@@ -76,8 +76,8 @@ Deno.test("using/finally releases exactly once across success, failures, defects
     {
       "m.eff": `export error Stop = {}
 export service Jobs { open(): { run: () => Text fails Stop, wait: () => void, close: () => void fails Stop } fails Stop }
-export const run = (): Text fails Stop uses Jobs.open => using (job = Jobs.open()) { job.run() } finally { job.close() }
-export const wait = (): void fails Stop uses Jobs.open => using (job = Jobs.open()) { job.wait() } finally { job.close() }
+export const run = (): Text fails Stop with Jobs.open => using (job = Jobs.open()) { job.run() } finally { job.close() }
+export const wait = (): void fails Stop with Jobs.open => using (job = Jobs.open()) { job.wait() } finally { job.close() }
 type Text = string
 `,
     },

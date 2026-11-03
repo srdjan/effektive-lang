@@ -99,7 +99,7 @@ Deno.test("hover on a function name has the contract, the backend type, and the 
   assertEquals(
     contract,
     "```effektive\nrename(id: UserId, name: Name): User fails " +
-      "StoreUnavailable | UserMissing uses Users.find | Users.save\n```",
+      "StoreUnavailable | UserMissing with Users.find | Users.save\n```",
   );
   assert(backend.startsWith("```typescript\n(id: UserId, name: Name): "));
   assert(backend.endsWith("\n```"));

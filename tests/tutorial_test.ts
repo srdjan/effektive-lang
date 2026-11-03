@@ -50,8 +50,8 @@ Deno.test("Step 7 shows the diagnostic before the second module exists", async (
   ].map(([, body]) => body).join("\n");
   assertEquals(library, FILES["library.eff"]);
   const broken = library.replace(
-    "uses Shelf.find | Shelf.save => {",
-    "uses Shelf.find => {",
+    "with Shelf.find | Shelf.save => {",
+    "with Shelf.find => {",
   );
   assert(broken !== library);
   const io = memoryIo(under("/tutorial", {

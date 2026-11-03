@@ -381,9 +381,9 @@ service B {
   twice(x: Int): Int
 }
 const id = (x: Int): Int => x
-const viaPerform = (): Int uses A.num | B.twice => A.num() |> B.twice
-const viaFail = (): Int fails Boom uses A.boom => A.boom() |> fail
-const viaCall = (): Int uses A.num => A.num() |> id
+const viaPerform = (): Int with A.num | B.twice => A.num() |> B.twice
+const viaFail = (): Int fails Boom with A.boom => A.boom() |> fail
+const viaCall = (): Int with A.num => A.num() |> id
 type Int = int
 `);
   const stage = (name: string) => {

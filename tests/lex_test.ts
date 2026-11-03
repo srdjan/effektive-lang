@@ -258,3 +258,9 @@ Deno.test("tokens and trivia tile the whole text", () => {
   }
   assertEquals(rebuilt, text);
 });
+
+Deno.test("with is a keyword token and not a reserved-word diagnostic", () => {
+  assertEquals(kindsOf("with"), [TokenKind.KwWith, TokenKind.Eof]);
+  assertEquals(codes("with"), []);
+  assertEquals(kindsOf("uses"), [TokenKind.Ident, TokenKind.Eof]);
+});

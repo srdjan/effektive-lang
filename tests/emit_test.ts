@@ -45,7 +45,7 @@ export const d = (n: Cents): Cents => n * 2
 Deno.test("withResource emits acquireUseRelease with suspended callbacks", () => {
   const output = oneModule(`
 service Files { open(): { read: () => Text, close: () => void } }
-export const load = (): Text uses Files.open =>
+export const load = (): Text with Files.open =>
   withResource(() => Files.open(), (file) => file.read(), (file) => file.close())
 type Text = string
 `);
@@ -62,9 +62,9 @@ service Probe {
   step(n: Int): Int fails Stop
   keep(n: Int): Flag
 }
-export const m = (xs: Int[]): Int[] fails Stop uses Probe.step => map(xs, (n) => Probe.step(n))
-export const f = (xs: Int[]): Int[] uses Probe.keep => filter(xs, (n) => Probe.keep(n))
-export const g = (xs: Int[]): Int fails Stop uses Probe.step => fold(xs, 0, (a, n) => a + Probe.step(n))
+export const m = (xs: Int[]): Int[] fails Stop with Probe.step => map(xs, (n) => Probe.step(n))
+export const f = (xs: Int[]): Int[] with Probe.keep => filter(xs, (n) => Probe.keep(n))
+export const g = (xs: Int[]): Int fails Stop with Probe.step => fold(xs, 0, (a, n) => a + Probe.step(n))
 export const h = (xs: Int[]): Int[] => map(xs, (n) => n + 1)
 type Int = int
 type Flag = boolean
@@ -133,7 +133,7 @@ service Consumer { accept(value: Int): void }
 const source = unfold(0, (state) => Source.next(state))
 const mapped = mapEffect(source, (value) => value + 1, { concurrency: 2 })
 const sink = sinkForEach((value: Int) => Consumer.accept(value))
-export const main = (): void uses Source.next | Consumer.accept => runStream(mapped, sink)
+export const main = (): void with Source.next | Consumer.accept => runStream(mapped, sink)
 type Int = int
 `);
   assertStringIncludes(output, "Stream.unfold(");
@@ -176,7 +176,7 @@ service Consumer { accept(value: Int): void }
 const first = unfold(0, (state) => Source.next(state))
 const buffered = bufferStream(first, { capacity: 2 })
 const sink = sinkForEach((value: Int) => Consumer.accept(value))
-export const main = (): void uses Source.next | Consumer.accept => runStream(buffered, sink)
+export const main = (): void with Source.next | Consumer.accept => runStream(buffered, sink)
 type Int = int
 `);
   assertStringIncludes(output, "Stream.buffer(");
@@ -229,7 +229,7 @@ Deno.test("an effectful updateRef emits SynchronizedRef.updateEffect and the Ref
 type Int = int
 error Stop = { at: int }
 service S { step(n: Int): Int fails Stop }
-export const bump = (ref: Ref<Int>): void fails Stop uses S.step =>
+export const bump = (ref: Ref<Int>): void fails Stop with S.step =>
   updateRef(ref, (n) => S.step(n))
 `);
   assertStringIncludes(output, "SynchronizedRef.updateEffect(ref, ");
@@ -257,7 +257,7 @@ error Stop = {}
 service Counter { next(): Int fails Stop }
 export const make = (): Effect<Int, Stop, Counter.next> =>
   defer(() => Counter.next())
-export const twice = (stored: Effect<Int, Stop, Counter.next>): Int fails Stop uses Counter.next => {
+export const twice = (stored: Effect<Int, Stop, Counter.next>): Int fails Stop with Counter.next => {
   const first = run(stored)
   const second = run(stored)
   first + second
@@ -275,7 +275,7 @@ export error Stop = {}
 export service Jobs { next(): Int fails Stop }
 export const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Duration> =>
   if (attempt < 2) { Some(0ms) } else { None })
-export const run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })
+export const run = (): Int fails Stop with Jobs.next => retry(() => Jobs.next(), { schedule: policy })
 type Int = int
 `);
   assertStringIncludes(output, "Schedule.fromStepWithMetadata<");
@@ -747,7 +747,7 @@ Deno.test("an opaque type that a module names without importing it comes from th
     "host.effi":
       "export opaque type Conn\nexport service Db { open(): Conn }\nexport provider DbLive provides Db\n",
     "lib.eff":
-      'import { Conn, Db } from "host:db"\nexport const openIt = (): Conn uses Db.open => Db.open()\n',
+      'import { Conn, Db } from "host:db"\nexport const openIt = (): Conn with Db.open => Db.open()\n',
     "main.eff":
       'import { openIt } from "./lib.eff"\nconst twice = () => {\n  const c = openIt()\n  c\n}\n',
   }, ["main.eff"]).get("main")?.text ?? "";

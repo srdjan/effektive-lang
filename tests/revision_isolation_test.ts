@@ -321,7 +321,7 @@ Deno.test("span-only edits preserve interface cutoffs and unrelated edits preser
 
 Deno.test("retained finalizers can lazily intern function types after a later update", () => {
   const text =
-    "type N = int\nservice Jobs { close(): void }\nexport const run = (value: N): N uses Jobs.close => try { value } finally { Jobs.close() }\n";
+    "type N = int\nservice Jobs { close(): void }\nexport const run = (value: N): N with Jobs.close => try { value } finally { Jobs.close() }\n";
   const program = new Program();
   const first = update(program, { "effektive.json": "{}", "main.eff": text });
   const nextText = text.replace("type N = int", "type N = string");

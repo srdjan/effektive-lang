@@ -51,12 +51,12 @@ Deno.test("scheduled worker contracts reject lost channels", () => {
     [
       "lost Clock.wait",
       files["worker.eff"].replace(
-        "uses Jobs | Clock => {",
-        "uses Jobs => {",
+        "with Jobs | Clock => {",
+        "with Jobs => {",
       ),
       [[
         "requirement-contract/001",
-        "the body requires Clock.wait, which the `uses` clause does not list",
+        "the body requires Clock.wait, which the `with` clause does not list",
       ]],
     ],
     [

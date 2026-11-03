@@ -120,7 +120,7 @@ error Stop = {}
 service Cfg { limit(): Int }
 service Src { next(): Int fails Stop }
 service First { one(): Int }
-const makeLayer = (): Layer<First, Stop, Src.next> uses Cfg.limit => { Cfg.limit(); layer(First, () => { const v = Src.next(); ({ one: () => v }) }) }
+const makeLayer = (): Layer<First, Stop, Src.next> with Cfg.limit => { Cfg.limit(); layer(First, () => { const v = Src.next(); ({ one: () => v }) }) }
 const probe = () => makeLayer() |> provide(() => First.one())
 `);
   assertEquals(stage.kind, "provide");
@@ -163,8 +163,8 @@ Deno.test("a call stage adds the invocation of the function value", () => {
 error Stop = {}
 service Cfg { limit(): Int }
 service Jobs { next(): Int fails Stop }
-const makeValue = (): Int uses Cfg.limit => Cfg.limit()
-const step = (n: Int): Int fails Stop uses Jobs.next => Jobs.next()
+const makeValue = (): Int with Cfg.limit => Cfg.limit()
+const step = (n: Int): Int fails Stop with Jobs.next => Jobs.next()
 const probe = () => makeValue() |> step
 `);
   assertEquals(stage.kind, "call");
@@ -180,7 +180,7 @@ Deno.test("a perform stage adds the method capability", () => {
 error Stop = {}
 service Cfg { limit(): Int }
 service Jobs { next(n: Int): Int fails Stop }
-const makeValue = (): Int uses Cfg.limit => Cfg.limit()
+const makeValue = (): Int with Cfg.limit => Cfg.limit()
 const probe = () => makeValue() |> Jobs.next
 `);
   assertEquals(stage.kind, "perform");
@@ -195,7 +195,7 @@ Deno.test("a fail stage adds the failure of the error value", () => {
   const { stage } = lowerProbe(`type Int = int
 error Stop = {}
 service Cfg { limit(): Int }
-const makeError = (): Stop uses Cfg.limit => { Cfg.limit(); Stop({}) }
+const makeError = (): Stop with Cfg.limit => { Cfg.limit(); Stop({}) }
 const probe = () => makeError() |> fail
 `);
   assertEquals(stage.kind, "fail");
@@ -227,8 +227,8 @@ Deno.test("a builtin stage adds the argument sets and excludes the left value", 
 error Stop = {}
 service Cfg { limit(): Int }
 service Jobs { next(n: Int): Int fails Stop }
-const makeList = (): Int[] uses Cfg.limit => { Cfg.limit(); [1, 2] }
-const probe = (): Int[] fails Stop uses Cfg.limit | Jobs.next => makeList() |> traverse((n) => Jobs.next(n))
+const makeList = (): Int[] with Cfg.limit => { Cfg.limit(); [1, 2] }
+const probe = (): Int[] fails Stop with Cfg.limit | Jobs.next => makeList() |> traverse((n) => Jobs.next(n))
 `);
   assertEquals(stage.kind, "call");
   assertEquals(stage.execution, "effect");
@@ -243,7 +243,7 @@ const probe = (): Int[] fails Stop uses Cfg.limit | Jobs.next => makeList() |> t
 const SCOPED_PROBE = `type Bool = boolean
 service Child { alive(): Bool }
 service Cfg { limit(): Bool }
-const makeJob = (): Effect<Bool, never, Child.alive> uses Cfg.limit => {
+const makeJob = (): Effect<Bool, never, Child.alive> with Cfg.limit => {
   Cfg.limit()
   defer(() => Child.alive())
 }

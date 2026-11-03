@@ -154,7 +154,7 @@ Deno.test("the grammar names the scope and every lexer keyword", () => {
     "provider",
     "provides",
     "fails",
-    "uses",
+    "with",
     "from",
   ];
   const matchers = collectMatches(grammar).map((match) => new RegExp(match));

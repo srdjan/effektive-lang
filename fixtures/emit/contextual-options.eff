@@ -27,5 +27,5 @@ export const selected = (input: Option<Int>): Option<Pair> =>
 
 export error Stop = {}
 export service Probe { next(): Int fails Stop }
-export const effectful = (done: Bool): Option<Pair> fails Stop uses Probe.next =>
+export const effectful = (done: Bool): Option<Pair> fails Stop with Probe.next =>
   if (done) { None } else { Some([{ kind: "Value", value: Probe.next() }, true]) }

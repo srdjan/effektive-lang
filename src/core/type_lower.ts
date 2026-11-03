@@ -437,7 +437,7 @@ export class TypeLowerer {
     const resultNode = kids.find((k) => {
       const kind = kindOf(this.tree, k);
       return k !== paramList && kind !== SyntaxKind.FailsClause &&
-        kind !== SyntaxKind.UsesClause;
+        kind !== SyntaxKind.WithClause;
     });
     const result = resultNode === undefined
       ? this.errorLowered()
@@ -446,7 +446,7 @@ export class TypeLowerer {
       kids.find((k) => kindOf(this.tree, k) === SyntaxKind.FailsClause),
     );
     const requirements = this.requirements(
-      kids.find((k) => kindOf(this.tree, k) === SyntaxKind.UsesClause),
+      kids.find((k) => kindOf(this.tree, k) === SyntaxKind.WithClause),
     );
     if (
       execution === "pure" &&
@@ -500,7 +500,7 @@ export class TypeLowerer {
         );
       }
       const uses = kids.filter((k) =>
-        kindOf(this.tree, k) === SyntaxKind.UsesClause
+        kindOf(this.tree, k) === SyntaxKind.WithClause
       );
       const decodeRequirements = this.requirements(uses[0]);
       const encodeRequirements = this.requirements(uses[1]);
@@ -540,7 +540,7 @@ export class TypeLowerer {
       kids.find((k) => kindOf(this.tree, k) === SyntaxKind.FailsClause),
     );
     const requirements = this.requirements(
-      kids.find((k) => kindOf(this.tree, k) === SyntaxKind.UsesClause),
+      kids.find((k) => kindOf(this.tree, k) === SyntaxKind.WithClause),
     );
     const effects = { failures, requirements };
     const kind = kindOf(this.tree, node);
@@ -721,7 +721,7 @@ export class TypeLowerer {
   }
 
   /**
-   * The capabilities of a `uses` clause, sorted and unique. A whole service
+   * The capabilities of a `with` clause, sorted and unique. A whole service
    * expands to all its methods.
    */
   requirements(clause: NodeId | undefined): CapabilityId[] {

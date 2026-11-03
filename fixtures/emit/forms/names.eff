@@ -12,7 +12,7 @@ export type Schema = { n: int }
 
 service Env { get(x: Int): Int }
 
-export const Effect = ($s: Int): Int uses Env.get => Env.get($s)
+export const Effect = ($s: Int): Int with Env.get => Env.get($s)
 
 type Int = int
 type Text = string

@@ -26,8 +26,8 @@ export const h: G = (x: Count) => x
 
 Deno.test("a module constant accepts an arrow with fails and uses through an alias", () => {
   assertEquals(
-    messages(`type F = (x: Count) => Count fails Boom uses Svc.m
-export const f: F = (x: Count): Count fails Boom uses Svc.m => Svc.m(x)
+    messages(`type F = (x: Count) => Count fails Boom with Svc.m
+export const f: F = (x: Count): Count fails Boom with Svc.m => Svc.m(x)
 `),
     [],
   );

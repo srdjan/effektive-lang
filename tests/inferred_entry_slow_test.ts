@@ -10,7 +10,7 @@ const consume = (value: Count): Count => value
 export const read = (input): Count fails SchemaError => consume(input.amount)
 service Raw { next(): unknown }
 export const pair = (first, second): Count fails SchemaError => { consume(first.amount); consume(second.amount) }
-export const gather = (): Count fails SchemaError uses Raw => pair(Raw.next(), Raw.next())
+export const gather = (): Count fails SchemaError with Raw => pair(Raw.next(), Raw.next())
 export const readAny = (input): unknown fails SchemaError => input.field
 export const explicit = (input: unknown): Count fails SchemaError => consume(input.amount)
 `,

@@ -88,7 +88,7 @@ Deno.test("a poisoned resource use result keeps its data-only report", () => {
   assertChecks(
     `export type Int = int
 service Jobs { open(): { read: () => Int, close: () => void } }
-export const f = (): Int uses Jobs.open => withResource(() => Jobs.open(), (job) => Missing, (job) => job.close())
+export const f = (): Int with Jobs.open => withResource(() => Jobs.open(), (job) => Missing, (job) => job.close())
 `,
     [
       [

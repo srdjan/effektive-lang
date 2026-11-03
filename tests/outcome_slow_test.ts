@@ -17,47 +17,47 @@ export service Log {
   boom(which: Int): Int
 }
 export service Files { open(): { read: () => Int } }
-const report = (o: Outcome): void uses Log.seen | Log.defect => match o {
+const report = (o: Outcome): void with Log.seen | Log.defect => match o {
   { _tag: "Success", ...s } => Log.seen("Success", s.success),
   { _tag: "Failure", ...f } => Log.seen("Failure", f.failure.n),
   { _tag: "Defect", ...d } => Log.defect(d.message),
   { _tag: "Interrupted" } => Log.seen("Interrupted", 0)
 }
-const settle = (o: Settled): void uses Log.seen | Log.defect => match o {
+const settle = (o: Settled): void with Log.seen | Log.defect => match o {
   { _tag: "Success", ...s } => Log.seen("Success", s.success),
   { _tag: "Defect", ...d } => Log.defect(d.message),
   { _tag: "Interrupted" } => Log.seen("Interrupted", 0)
 }
-export const success = (): Int uses Log.seen | Log.defect =>
+export const success = (): Int with Log.seen | Log.defect =>
   try { 7 } finally (o) { settle(o) }
-export const failure = (): Int fails Stop uses Log.next | Log.seen | Log.defect =>
+export const failure = (): Int fails Stop with Log.next | Log.seen | Log.defect =>
   try { Log.next() } finally (o) { report(o) }
-export const defect = (which: Int): Int uses Log.boom | Log.seen | Log.defect =>
+export const defect = (which: Int): Int with Log.boom | Log.seen | Log.defect =>
   try { Log.boom(which) } finally (o) { settle(o) }
-export const interrupted = (): Int fails TimeoutError uses Log.seen | Log.defect =>
+export const interrupted = (): Int fails TimeoutError with Log.seen | Log.defect =>
   timeout(() => try { sleep(5s)
  1 } finally (o) { settle(o) }, 20ms)
-export const raced = (): Int uses Log.seen | Log.defect =>
+export const raced = (): Int with Log.seen | Log.defect =>
   run(race(defer(() => try { sleep(5s)
  1 } finally (o) { settle(o) }), defer(() => { sleep(30ms)
  2 })))
-export const onlyFinally = (): Int uses Log.seen =>
+export const onlyFinally = (): Int with Log.seen =>
   try { 5 } finally { Log.seen("plain", 1) }
-export const handled = (): Int uses Log.next | Log.seen | Log.defect =>
+export const handled = (): Int with Log.next | Log.seen | Log.defect =>
   try { Log.next() } catch { Stop(e) => 0 } finally (o) { settle(o) }
-export const afterCatch = (): Int uses Log.next | Log.seen | Log.defect =>
+export const afterCatch = (): Int with Log.next | Log.seen | Log.defect =>
   try { Log.next() } catch { Stop(e) => e.n } finally (o) { settle(o) }
-export const resource = (): Int fails Stop uses Files.open | Log.next | Log.seen | Log.defect =>
+export const resource = (): Int fails Stop with Files.open | Log.next | Log.seen | Log.defect =>
   using (f = Files.open()) { Log.next() } finally (o) { report(o) }
-export const resourceOk = (): Int uses Files.open | Log.seen | Log.defect =>
+export const resourceOk = (): Int with Files.open | Log.seen | Log.defect =>
   using (f = Files.open()) { f.read() } finally (o) { settle(o) }
-export const callForm = (): Int uses Files.open | Log.seen | Log.defect =>
+export const callForm = (): Int with Files.open | Log.seen | Log.defect =>
   withResource(() => Files.open(), (f) => f.read(), (f, o) => settle(o))
-export const maskedBound = (): Int fails TimeoutError uses Log.seen =>
+export const maskedBound = (): Int fails TimeoutError with Log.seen =>
   timeout(() => try { sleep(5s)
  1 } finally (o) { sleep(30ms)
  Log.seen("finalized", 1) }, 10ms)
-export const maskedPlain = (): Int fails TimeoutError uses Log.seen =>
+export const maskedPlain = (): Int fails TimeoutError with Log.seen =>
   timeout(() => try { sleep(5s)
  1 } finally { sleep(30ms)
  Log.seen("finalized", 2) }, 10ms)

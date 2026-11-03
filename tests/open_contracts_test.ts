@@ -57,7 +57,7 @@ function emitted(text: string): string {
 Deno.test("a local with a result annotation infers both effect sets", () => {
   const project = check(`
 const read = (): Int => Clock.now()
-export const main = (): Int fails Stop uses Clock.now => read()
+export const main = (): Int fails Stop with Clock.now => read()
 `);
   assertEquals(messages(project), []);
   const read = fn(project, "read");
@@ -74,21 +74,21 @@ export const main = (): Int fails Stop uses Clock.now => read()
 Deno.test("a written clause closes its set and the other set stays open", () => {
   const project = check(`
 const read = (): Int fails Stop => Clock.now()
-export const main = (): Int fails Stop uses Clock.now => read()
+export const main = (): Int fails Stop with Clock.now => read()
 `);
   assertEquals(messages(project), []);
   assertEquals(shortIds(fn(project, "read").requirements), ["Clock.now"]);
 
   const tooSmall = check(`
 const read = (): Int fails Other => Clock.now()
-export const main = (): Int fails Other | Stop uses Clock.now => read()
+export const main = (): Int fails Other | Stop with Clock.now => read()
 `);
   assertEquals(codes(tooSmall), ["failure-contract/001"]);
   assertEquals(shortIds(fn(tooSmall, "read").requirements), ["Clock.now"]);
 
   const onlyUses = check(`
-const read = (): Int uses Clock.now => Clock.now()
-export const main = (): Int fails Stop uses Clock.now => read()
+const read = (): Int with Clock.now => Clock.now()
+export const main = (): Int fails Stop with Clock.now => read()
 `);
   assertEquals(messages(onlyUses), []);
   assertEquals(shortIds(fn(onlyUses, "read").failures), ["Stop"]);
@@ -96,7 +96,7 @@ export const main = (): Int fails Stop uses Clock.now => read()
 
 Deno.test("an inline arrow with a result annotation infers its sets", () => {
   const project = check(`
-export const main = (): Int fails Stop uses Clock.now => {
+export const main = (): Int fails Stop with Clock.now => {
   const next = (k: Int): Int => Clock.now()
   next(1)
 }
@@ -125,7 +125,7 @@ const safe = (): Int =>
   try { raise() } catch {
     Stop(s) => 0
   }
-export const main = (): Int fails Other uses Clock.now => safe()
+export const main = (): Int fails Other with Clock.now => safe()
 `);
   assertEquals(messages(project), []);
   assertEquals(shortIds(fn(project, "raise").failures), ["Other", "Stop"]);
@@ -136,7 +136,7 @@ Deno.test("mutual recursion takes an effect that enters at the far end", () => {
   const text = `
 const ping = (n: Int): Int => if (n === 0) { 0 } else { pong(n - 1) }
 const pong = (n: Int): Int => if (n === 0) { Clock.now() } else { ping(n - 1) }
-export const main = (n: Int): Int fails Stop uses Clock.now => ping(n)
+export const main = (n: Int): Int fails Stop with Clock.now => ping(n)
 `;
   const project = check(text);
   assertEquals(messages(project), []);
@@ -177,7 +177,7 @@ Deno.test("recursion through a callback takes the effect of the far end", () => 
   const project = check(`
 const visit = (n: Int): Int =>
   if (n === 0) { Meter.read() } else { fold(traverse([n - 1], (k) => visit(k)), 0, (a, b) => a + b) }
-export const main = (n: Int): Int uses Meter.read => visit(n)
+export const main = (n: Int): Int with Meter.read => visit(n)
 `);
   assertEquals(messages(project), []);
   const visit = fn(project, "visit");

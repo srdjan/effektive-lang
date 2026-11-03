@@ -15,29 +15,29 @@ export service Log {
   next(): Int fails Stop
   boom(which: Int): Int
 }
-const settle = (o: Settled): void uses Log.seen | Log.defect => match o {
+const settle = (o: Settled): void with Log.seen | Log.defect => match o {
   { _tag: "Success", ...s } => Log.seen("Success", s.success),
   { _tag: "Defect", ...d } => Log.defect(d.message),
   { _tag: "Interrupted" } => Log.seen("Interrupted", 0)
 }
-export const hostDefect = (which: Int): Text uses Log.boom =>
+export const hostDefect = (which: Int): Text with Log.boom =>
   try { Log.boom(which)
  "fine" } catch { Defect(d) => d.message }
 export const arithmetic = (): Text =>
   try { sleep(0ms - 1ms)
  "fine" } catch { Defect(d) => d.message }
-export const inHandler = (): Text uses Log.next | Log.boom =>
+export const inHandler = (): Text with Log.next | Log.boom =>
   try { Log.next()
  "fine" } catch { Stop(e) => { Log.boom(0)
  "handler" }, Defect(d) => d.message }
-export const typedFailure = (): Int fails Stop uses Log.next =>
+export const typedFailure = (): Int fails Stop with Log.next =>
   try { Log.next() } catch { Defect(d) => 0 }
-export const typedAndDefect = (): Int uses Log.next | Log.boom =>
+export const typedAndDefect = (): Int with Log.next | Log.boom =>
   try { Log.next() } catch { Stop(e) => e.n, Defect(d) => 0 }
 export const interrupted = (): Int fails TimeoutError =>
   timeout(() => try { sleep(5s)
  1 } catch { Defect(d) => 2 }, 20ms)
-export const withFinally = (which: Int): Int uses Log.boom | Log.seen | Log.defect =>
+export const withFinally = (which: Int): Int with Log.boom | Log.seen | Log.defect =>
   try { Log.boom(which) } catch { Defect(d) => 5 } finally (o) { settle(o) }
 `;
 

@@ -112,7 +112,7 @@
         "result": {
           "contents": {
             "kind": "markdown",
-            "value": "```effektive\n(UserId) => Name fails StoreUnavailable uses Users.find\n```"
+            "value": "```effektive\n(UserId) => Name fails StoreUnavailable with Users.find\n```"
           },
           "range": {
             "start": {
@@ -330,7 +330,7 @@
         "result": {
           "signatures": [
             {
-              "label": "displayName(id: UserId): Name fails StoreUnavailable uses Users.find",
+              "label": "displayName(id: UserId): Name fails StoreUnavailable with Users.find",
               "parameters": [
                 {
                   "label": "id: UserId"
@@ -1544,7 +1544,7 @@
               "severity": 1,
               "code": "requirement-contract/001",
               "source": "effektive",
-              "message": "the body requires Clock.now, which the `uses` clause does not list"
+              "message": "the body requires Clock.now, which the `with` clause does not list"
             }
           ]
         }
@@ -1559,7 +1559,7 @@
         "id": 13,
         "result": [
           {
-            "title": "Add missing fails and uses entries",
+            "title": "Add missing fails and with entries",
             "kind": "quickfix",
             "edit": {
               "documentChanges": [
@@ -1580,7 +1580,7 @@
                           "character": 29
                         }
                       },
-                      "newText": "fails Failed uses Clock "
+                      "newText": "fails Failed with Clock "
                     }
                   ]
                 }
@@ -1617,7 +1617,7 @@
               "line": 3,
               "character": 15
             },
-            "label": " fails Failed uses Clock.now",
+            "label": " fails Failed with Clock.now",
             "kind": 1,
             "paddingLeft": false
           }

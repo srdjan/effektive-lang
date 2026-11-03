@@ -74,7 +74,7 @@ const CONTRACT_CODES: readonly string[] = [
 ];
 
 /**
- * Missing fails/uses only, for written clauses of inline contracts with reliable bodies.
+ * Missing fails/with only, for written clauses of inline contracts with reliable bodies.
  * An action adds no diagnostic. With `allowCallerGaps`, it may add contract diagnostics:
  * a closed caller can miss the entries that the action gives to its callee.
  */
@@ -133,7 +133,7 @@ export function contractActionsAt(
       kindOf(tree, n) === SyntaxKind.FailsClause
     );
     const uses = children.find((n) =>
-      kindOf(tree, n) === SyntaxKind.UsesClause
+      kindOf(tree, n) === SyntaxKind.WithClause
     );
     const text = tree.text;
     // Reuse the parsed clauses and arrow token, preserving all existing entries.
@@ -161,7 +161,7 @@ export function contractActionsAt(
         span: { source: path, start: at, end: at },
         text: uses !== undefined
           ? ` | ${useNames.join(" | ")}`
-          : `uses ${useNames.join(" | ")} `,
+          : `with ${useNames.join(" | ")} `,
       });
     }
     // Merge insertions at a shared offset in language clause order.
@@ -204,10 +204,10 @@ export function contractActionsAt(
     output.push({
       title: `Add missing ${
         missingFailures.length > 0 && missingUses.length > 0
-          ? "fails and uses"
+          ? "fails and with"
           : missingFailures.length > 0
           ? "fails"
-          : "uses"
+          : "with"
       } entries`,
       function: signature.id,
       edits: merged,

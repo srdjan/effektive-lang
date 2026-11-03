@@ -246,7 +246,7 @@ Deno.test("build --tsc accepts an effectful retry pipeline", async () => {
     Deno.writeTextFileSync(
       `${dir}/main.eff`,
       "service Jobs { next(): () => Int }\n" +
-        "export const run = (): Int uses Jobs.next => Jobs.next() |> retry({ times: 1 })\n" +
+        "export const run = (): Int with Jobs.next => Jobs.next() |> retry({ times: 1 })\n" +
         "\ntype Int = int\n",
     );
     const checked = await effektive(["check", dir]);
@@ -281,7 +281,7 @@ Deno.test("build --tsc accepts a custom retry schedule", async () => {
         "service Jobs { next(): Int fails Stop }",
         "export const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Duration> =>",
         "  if (attempt < 2) { Some(0ms) } else { None })",
-        "export const run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })",
+        "export const run = (): Int fails Stop with Jobs.next => retry(() => Jobs.next(), { schedule: policy })",
         "type Int = int",
       ].join("\n"),
     );
@@ -300,7 +300,7 @@ Deno.test("build --tsc accepts stored Effect values", async () => {
         "error Stop = {}",
         "service Counter { next(): Int fails Stop }",
         "export const make = (): Effect<Int, Stop, Counter.next> => defer(() => Counter.next())",
-        "export const use = (stored: Effect<Int, Stop, Counter.next>): Int fails Stop uses Counter.next => run(stored)",
+        "export const use = (stored: Effect<Int, Stop, Counter.next>): Int fails Stop with Counter.next => run(stored)",
         "",
         "type Int = int",
         "",
@@ -320,7 +320,7 @@ Deno.test("build --tsc accepts array and tuple literals", async () => {
       "service S { read(): Int }\n" +
         'export const pair = (): [Int, Text] => [1, "a"]\n' +
         "export const blank = (): Int[] => []\n" +
-        "export const loaded = (): Int[] uses S.read => [S.read(), 2]\n" +
+        "export const loaded = (): Int[] with S.read => [S.read(), 2]\n" +
         "\ntype Int = int\ntype Text = string\n",
     );
     const built = await effektive(["build", dir, "--tsc"]);
@@ -354,7 +354,7 @@ Deno.test("build --tsc accepts scoped operation records", async () => {
       `${dir}/main.eff`,
       [
         "service Files { open(): { read: () => Text, close: () => void } }",
-        "export const load = (): Text uses Files.open =>",
+        "export const load = (): Text with Files.open =>",
         "  withResource(() => Files.open(), (file) => file.read(), (file) => file.close())",
         "",
         "type Text = string",
@@ -397,7 +397,7 @@ Deno.test("build --tsc accepts an incremental stream and sink", async () => {
         "service Consumer { accept(value: Int): void }",
         "const stream = unfold(0, (state) => Source.next(state))",
         "const sink = sinkForEach((value: Int) => Consumer.accept(value))",
-        "export const main = (): void uses Source.next | Consumer.accept => runStream(stream, sink)",
+        "export const main = (): void with Source.next | Consumer.accept => runStream(stream, sink)",
         "",
         "type Int = int",
         "",
@@ -482,8 +482,8 @@ Deno.test("opaque host handles pass only through borrowed scoped methods", async
       `${dir}/main.eff`,
       [
         'import { Handle, Text, Files } from "host:files"',
-        "const readBorrowed = (borrow handle: Handle): Text uses Files.read => Files.read(handle)",
-        "export const load = (): Text uses Files.open | Files.read | Files.close =>",
+        "const readBorrowed = (borrow handle: Handle): Text with Files.read => Files.read(handle)",
+        "export const load = (): Text with Files.open | Files.read | Files.close =>",
         "  withResource(() => Files.open(), (handle) => readBorrowed(handle), (handle) => Files.close(handle))",
         "",
       ].join("\n"),

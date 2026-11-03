@@ -10,7 +10,7 @@ The core exports synchronous, protocol-neutral queries over a `Revision`:
 | `renameAt(revision, path, offset, newName)` | Validated source edits, or a reason the rename cannot preserve binding identities. |
 | `completionsAt(revision, path, offset)` | Visible names, prefix replacement spans, record fields and service methods. No automatic imports. |
 | `semanticClassifications(revision, path, text)` | Classified source spans with declaration/readonly modifiers. Stale or broken regions use lexical information. |
-| `contractActionsAt(revision, path, start, end)` | Validated missing `fails`/`uses` insertions from checked body effects. |
+| `contractActionsAt(revision, path, start, end)` | Validated missing `fails`/`with` insertions from checked body effects. |
 
 Paths are root-relative and offsets/spans count UTF-16 code units. Core queries
 have no filesystem or LSP dependency. The occurrence index is held in a weak

@@ -1,6 +1,6 @@
 import { Text, Boom, Clock, Rows, Pings } from "./contracts.eff"
 
-export provider RowsLive provides Rows | Pings fails Boom uses Clock.now
+export provider RowsLive provides Rows | Pings fails Boom with Clock.now
 
 // The companion module host.effi.ts holds the schema of this data type, so the
 // result of a provider of Auth is checked at the host boundary.

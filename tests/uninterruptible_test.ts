@@ -10,13 +10,13 @@ const TYPES = "type Int = int\n";
 Deno.test("uninterruptible keeps the job result, failures and requirements", () => {
   const source = `${TYPES}export error Stop = {}
 export service Jobs { next(): Int fails Stop }
-export const a = (): Int fails Stop uses Jobs.next =>
+export const a = (): Int fails Stop with Jobs.next =>
   uninterruptible(() => Jobs.next())
 export const missing = (): Int => uninterruptible(() => Jobs.next())
 `;
   assertEquals(diagnosticsOf(source), [
     "failure-contract/001 the body can fail with Stop, which the `fails` clause does not list",
-    "requirement-contract/001 the body requires Jobs.next, which the `uses` clause does not list",
+    "requirement-contract/001 the body requires Jobs.next, which the `with` clause does not list",
   ]);
 });
 

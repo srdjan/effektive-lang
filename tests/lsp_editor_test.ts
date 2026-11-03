@@ -215,12 +215,12 @@ Deno.test("LSP missing-effect actions return validated versioned source edits", 
   );
   assertEquals(actions.length, 1);
   const action = record(actions[0]);
-  assertEquals(action.title, "Add missing fails and uses entries");
+  assertEquals(action.title, "Add missing fails and with entries");
   const changes = list(record(action.edit).documentChanges).map(record);
   assertEquals(record(changes[0].textDocument), { uri, version: 8 });
   assert(
     list(changes[0].edits).every((e) =>
-      record(e).newText === "fails Failed uses Clock "
+      record(e).newText === "fails Failed with Clock "
     ),
   );
 });
@@ -274,7 +274,7 @@ Deno.test("editor edits are withheld while project configuration is invalid", ()
 
 Deno.test("LSP answers inlay hints with UTF-16 positions", () => {
   const text =
-    'import { Int, S } from "./lib.eff"\n// 😀\nconst open = (x: Int) => { S.read() + x }\nexport const shown = (x: Int): Int uses S.read => S.read() + x\n';
+    'import { Int, S } from "./lib.eff"\n// 😀\nconst open = (x: Int) => { S.read() + x }\nexport const shown = (x: Int): Int with S.read => S.read() + x\n';
   const h = makeHarness({
     files: {
       [`${root}/effektive.json`]: "{}",
@@ -301,7 +301,7 @@ Deno.test("LSP answers inlay hints with UTF-16 positions", () => {
     }),
   ).map(record);
   assertEquals(hints.length, 1);
-  assertEquals(hints[0].label, " fails Stop uses S.read");
+  assertEquals(hints[0].label, " fails Stop with S.read");
   assertEquals(hints[0].position, { line: 2, character: 21 });
   assertEquals(hints[0].paddingLeft, false);
 });

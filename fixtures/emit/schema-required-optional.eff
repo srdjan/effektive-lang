@@ -12,16 +12,16 @@ export const guardedField: SchemaDecodedOptional<Text, Text, Read.normalize, Wri
   schemaOptionalFromRequired(
     text,
     exact,
-    (value: Text): Option<Text> fails SchemaIssue uses Read.normalize => Read.normalize(value),
-    (value: Option<Text>): Text uses Write.restore => Write.restore(value)
+    (value: Text): Option<Text> fails SchemaIssue with Read.normalize => Read.normalize(value),
+    (value: Option<Text>): Text with Write.restore => Write.restore(value)
   )
 
 export const guarded: Schema<Optional, Required, Read.normalize, Write.restore> =
   schemaStruct({ name: guardedField })
 
-export const readRequired = (input: unknown): Optional fails SchemaError uses Read.normalize =>
+export const readRequired = (input: unknown): Optional fails SchemaError with Read.normalize =>
   schemaDecode(guarded, input)
-export const writeRequired = (input: Optional): Required fails SchemaError uses Write.restore =>
+export const writeRequired = (input: Optional): Required fails SchemaError with Write.restore =>
   schemaEncode(guarded, input)
 
 const pureField: SchemaDecodedOptional<Text> =

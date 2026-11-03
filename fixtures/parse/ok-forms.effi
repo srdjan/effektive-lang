@@ -11,7 +11,7 @@ service Clock {
 }
 
 export provider UsersLive provides Users
-provider Both provides Users | Orders fails Boom | UserMissing uses Clock.now
+provider Both provides Users | Orders fails Boom | UserMissing with Clock.now
 provider Split provides Users
   fails Boom
-  uses Clock
+  with Clock

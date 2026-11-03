@@ -16,8 +16,8 @@ const endTag: Schema<End> = schema()
 const moreTag: Schema<More> = schema()
 const shifted: Schema<Int, Int, Read.next, Write.previous> = schemaTransform(
   integer, integer,
-  (value: Int): Option<Int> uses Read.next => Some(Read.next(value)),
-  (value: Int): Option<Int> uses Write.previous => Some(Write.previous(value))
+  (value: Int): Option<Int> with Read.next => Some(Read.next(value)),
+  (value: Int): Option<Int> with Write.previous => Some(Write.previous(value))
 )
 export const tree: Schema<Tree, Tree, Read.next, Write.previous, TreeInput> = schemaRecursive(
   (self: Schema<Tree, Tree, Read.next, Write.previous, TreeInput>): Schema<Tree, Tree, Read.next, Write.previous, TreeInput> =>
@@ -46,5 +46,5 @@ export const waiting = (pending: Effect<Int, SchemaIssue>): Schema<Tree, Tree, n
 export const makeTree = (input: TreeInput): Tree fails SchemaIssue => schemaMake(tree, input)
 export const makeNode = (input: NodeInput): Node fails SchemaIssue => schemaMake(node, input)
 export const makeChoice = (input: ChoiceInput): Choice fails SchemaIssue => schemaMake(choice, input)
-export const readTree = (input: unknown): Tree fails SchemaError uses Read.next => schemaDecode(tree, input)
-export const writeTree = (input: Tree): Tree fails SchemaError uses Write.previous => schemaEncode(tree, input)
+export const readTree = (input: unknown): Tree fails SchemaError with Read.next => schemaDecode(tree, input)
+export const writeTree = (input: Tree): Tree fails SchemaError with Write.previous => schemaEncode(tree, input)

@@ -111,11 +111,11 @@ Add a function that finds a book or fails:
 ```eff
 export const findBook = (id: BookId): Book
   fails BookMissing | StoreDown
-  uses Shelf.find =>
+  with Shelf.find =>
   Shelf.find(id) ?? fail(BookMissing({ id }))
 ```
 
-The contract has three parts. The result is `Book`. The `fails` clause lists every error that the function can fail with. The `uses` clause lists every service operation that the function needs. An exported function must write each clause that is not empty. The compiler compares each clause with the body.
+The contract has three parts. The result is `Book`. The `fails` clause lists every error that the function can fail with. The `with` clause lists every service operation that the function needs. An exported function must write each clause that is not empty. The compiler compares each clause with the body.
 
 `Shelf.find` returns an `Option<Book>`. The `??` operator gives the value in `Some`. For `None`, it evaluates the expression on its right. Here, that expression is `fail(BookMissing({ id }))`, so the function fails with `BookMissing`. The right side runs only for `None`. `{ id }` is the short form of `{ id: id }`.
 
@@ -126,7 +126,7 @@ Add a function that gives a default title when the book is missing:
 ```eff
 export const titleOf = (id: BookId): Title
   fails StoreDown
-  uses Shelf.find =>
+  with Shelf.find =>
   try {
     findBook(id).title
   } catch {
@@ -149,14 +149,14 @@ const takeCopy = (book: Book) => {
 
 export const lend = (id: BookId): Book
   fails BookMissing | NoCopies | StoreDown
-  uses Shelf.find | Shelf.save => {
+  with Shelf.find | Shelf.save => {
   const lent = findBook(id) |> takeCopy
   Shelf.save(lent)
   lent
 }
 ```
 
-`takeCopy` is not exported, so it needs no result type, no `fails` clause, and no `uses` clause. The compiler infers that it returns a `Book` and can fail with `NoCopies`.
+`takeCopy` is not exported, so it needs no result type, no `fails` clause, and no `with` clause. The compiler infers that it returns a `Book` and can fail with `NoCopies`.
 
 `Count = int` permits negative values, so the guard rejects both zero and negative inventory.
 
@@ -166,7 +166,7 @@ export const lend = (id: BookId): Book
 
 ## Step 7: read a contract error
 
-The compiler compares each contract with its body. To see this check, remove `Shelf.save` from the `uses` clause of `lend`, and check the project:
+The compiler compares each contract with its body. To see this check, remove `Shelf.save` from the `with` clause of `lend`, and check the project:
 
 ```sh
 deno task effektive check "$tutorial_dir"
@@ -175,7 +175,7 @@ deno task effektive check "$tutorial_dir"
 The compiler reports the operation that the clause does not list:
 
 ```text
-library.eff:49:22: error requirement-contract/001: the body requires Shelf.save, which the `uses` clause does not list
+library.eff:49:22: error requirement-contract/001: the body requires Shelf.save, which the `with` clause does not list
 1 module, 1 diagnostic
 ```
 
@@ -230,14 +230,14 @@ Last, add the exported function:
 ```eff
 export const checkout = (id: BookId): Book
   fails BookMissing | NoCopies | StoreDown
-  uses Shelf.find | Shelf.save | Ledger => {
+  with Shelf.find | Shelf.save | Ledger => {
   const book = lend(id)
   record(book)
   book
 }
 ```
 
-`uses Ledger` lists all operations of `Ledger`. To list only some operations, write them one at a time, as in `Shelf.find | Shelf.save`.
+`with Ledger` lists all operations of `Ledger`. To list only some operations, write them one at a time, as in `Shelf.find | Shelf.save`.
 
 ## Step 9: build the project
 
@@ -249,7 +249,7 @@ deno task effektive build "$tutorial_dir" --tsc
 
 The build writes `library.ts` and `loans.ts` next to the sources, each with a source map. `--tsc` runs `deno check` on the generated TypeScript.
 
-The generated code is ordinary Effect-TS. For example, `findBook` becomes a function that returns `Effect.Effect<Book, BookMissing | StoreDown, Shelf>`. The `fails` clause becomes the error channel, and the `uses` clause becomes the requirement channel. `Shelf` becomes a `Context.Service` class, and each error becomes a `Schema.TaggedError` class.
+The generated code is ordinary Effect-TS. For example, `findBook` becomes a function that returns `Effect.Effect<Book, BookMissing | StoreDown, Shelf>`. The `fails` clause becomes the error channel, and the `with` clause becomes the requirement channel. `Shelf` becomes a `Context.Service` class, and each error becomes a `Schema.TaggedError` class.
 
 ## Step 10: supply the services and run
 

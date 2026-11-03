@@ -62,7 +62,7 @@ Deno.test("runStream infers the input of an inline takeSink from the stream", ()
 
 Deno.test("runStream still accepts named sinks with another result type", () => {
   const project = checked(
-    `${PRELUDE}export const named = (s: Stream<Int>, sink: Branch): Text fails Stop uses Count.tick =>
+    `${PRELUDE}export const named = (s: Stream<Int>, sink: Branch): Text fails Stop with Count.tick =>
   runStream(s, sink)
 `,
   );
@@ -79,9 +79,9 @@ Deno.test("runStream still accepts named sinks with another result type", () => 
 
 Deno.test("runStream keeps a sink chosen by if or match unhinted", () => {
   const project = checked(
-    `${PRELUDE}export const viaIf = (s: Stream<Int>, flag: Flag, a: Branch, b: Branch): Text fails Stop uses Count.tick =>
+    `${PRELUDE}export const viaIf = (s: Stream<Int>, flag: Flag, a: Branch, b: Branch): Text fails Stop with Count.tick =>
   runStream(s, if (flag) { a } else { b })
-export const viaMatch = (s: Stream<Int>, flag: Flag, a: Branch, b: Branch): Text fails Stop uses Count.tick =>
+export const viaMatch = (s: Stream<Int>, flag: Flag, a: Branch, b: Branch): Text fails Stop with Count.tick =>
   runStream(s, match (flag) { true => a, false => b })
 `,
   );
@@ -191,7 +191,7 @@ function arrowParameters(project: CheckedProject, name: string): string[][] {
 
 Deno.test("an inline sinkForEach gets its callback input from the stream element", () => {
   const project = clean(
-    `${PRELUDE}export const direct = (s: Stream<Int>): void fails Stop uses Count.tick =>
+    `${PRELUDE}export const direct = (s: Stream<Int>): void fails Stop with Count.tick =>
   runStream(s, sinkForEach((item) => if (Count.tick(item) > 0) {} else {}))
 export const wrapped = (s: Stream<Int[]>): void =>
   runStream(s, (sinkForEach((batch) => {})))

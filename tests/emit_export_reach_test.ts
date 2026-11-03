@@ -51,7 +51,7 @@ Deno.test("a private type reached only through a Schema make input is exported",
     "export service Write { print(value: Int): Text }",
     "const integer: Schema<Int> = schema()",
     "const text: Schema<Text> = schema()",
-    "const shifted: Schema<Int, Text, Read.parse, Write.print> = schemaTransform(text, integer, (value: Text): Option<Int> uses Read.parse => Some(Read.parse(value)), (value: Int): Option<Text> uses Write.print => Some(Write.print(value)))",
+    "const shifted: Schema<Int, Text, Read.parse, Write.print> = schemaTransform(text, integer, (value: Text): Option<Int> with Read.parse => Some(Read.parse(value)), (value: Int): Option<Text> with Write.print => Some(Write.print(value)))",
     "export const child: Schema<D, E, Read.parse, Write.print, M> = schemaStruct({ score: schemaConstructorDefault(shifted, (): Int => 4) })",
     "",
   ].join("\n"));

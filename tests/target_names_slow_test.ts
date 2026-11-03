@@ -207,11 +207,11 @@ const EFFECTFUL: Template = {
   id: "effectful",
   source: {
     param:
-      `${PRELUDE}${SERVICE}export const f = (N: Int): Int fails Oops uses Env.get => Env.get(N)\n`,
+      `${PRELUDE}${SERVICE}export const f = (N: Int): Int fails Oops with Env.get => Env.get(N)\n`,
     local:
-      `${PRELUDE}${SERVICE}export const f = (): Int fails Oops uses Env.get => {\n  const N = 1\n  Env.get(N)\n}\n`,
+      `${PRELUDE}${SERVICE}export const f = (): Int fails Oops with Env.get => {\n  const N = 1\n  Env.get(N)\n}\n`,
     module:
-      `${PRELUDE}${SERVICE}const N: Int = 1\nexport const f = (): Int fails Oops uses Env.get => Env.get(N)\n`,
+      `${PRELUDE}${SERVICE}const N: Int = 1\nexport const f = (): Int fails Oops with Env.get => Env.get(N)\n`,
   },
 };
 

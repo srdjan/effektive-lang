@@ -18,7 +18,7 @@ export service Users {
 
 export const getUser = (id: UserId): User
   fails UserMissing | StoreUnavailable
-  uses Users.find =>
+  with Users.find =>
   match Users.find(id) {
     Some(user) => user,
     None => fail(UserMissing({ id }))
@@ -26,7 +26,7 @@ export const getUser = (id: UserId): User
 
 export const rename = (id: UserId, name: Name): User
   fails UserMissing | StoreUnavailable
-  uses Users.find | Users.save => {
+  with Users.find | Users.save => {
   const user = getUser(id)
   const renamed = { ...user, name }
   Users.save(renamed)
@@ -35,7 +35,7 @@ export const rename = (id: UserId, name: Name): User
 
 export const displayName = (id: UserId): Name
   fails StoreUnavailable
-  uses Users.find =>
+  with Users.find =>
   try {
     getUser(id).name
   } catch {
@@ -44,7 +44,7 @@ export const displayName = (id: UserId): Name
 
 export const activeNames = (): Name[]
   fails StoreUnavailable
-  uses Users.all =>
+  with Users.all =>
   Users.all()
     |> filter(user => user.active)
     |> map(user => user.name)

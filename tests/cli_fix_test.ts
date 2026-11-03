@@ -34,7 +34,7 @@ Deno.test("check --fix adds a missing failure and a missing requirement", async 
   assertEquals(
     r.m.files.get(`${ROOT}/a.eff`),
     SERVICE +
-      "export const load = (id: Id): Id fails Missing uses Store => Store.find(id)\n",
+      "export const load = (id: Id): Id fails Missing with Store => Store.find(id)\n",
   );
   assertEquals(r.stdout, "");
   assertEquals(
@@ -105,7 +105,7 @@ Deno.test("check --fix keeps an unrelated error and still fixes a function", asy
   assertEquals(
     r.m.files.get(`${ROOT}/a.eff`),
     SERVICE +
-      "export const load = (id: Id): Id fails Missing uses Store => Store.find(id)\n" +
+      "export const load = (id: Id): Id fails Missing with Store => Store.find(id)\n" +
       "export const broken = (id: Id): Id => missing(id)\n",
   );
   assertEquals(
@@ -139,7 +139,7 @@ Deno.test("watch --fix is a usage error", async () => {
 Deno.test("check --fix restores the removed contract clauses of the examples", async () => {
   const files = exampleFiles();
   const stripped = files["users.eff"].replace(/\n {2}fails [^\n]*/g, "")
-    .replace(/\n {2}uses [^\n]*=>/g, " =>");
+    .replace(/\n {2}with [^\n]*=>/g, " =>");
   const r = await run(["check", ROOT, "--fix", "--no-log"], {
     ...files,
     "users.eff": stripped,
@@ -153,7 +153,7 @@ Deno.test("check --fix restores the removed contract clauses of the examples", a
   assertEquals(
     r.m.files.get(`${ROOT}/users.eff`)?.split("\n").slice(18, 19),
     [
-      "export const getUser = (id: UserId): User fails StoreUnavailable | UserMissing uses Users.find =>",
+      "export const getUser = (id: UserId): User fails StoreUnavailable | UserMissing with Users.find =>",
     ],
   );
 });

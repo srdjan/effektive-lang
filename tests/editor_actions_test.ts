@@ -73,18 +73,18 @@ Deno.test("contract actions: the title names the kinds of the missing entries", 
       500,
     ),
     [[
-      "Add missing uses entries",
-      PRELUDE + "export const f = (): Int uses Clock => Clock.now()\n",
+      "Add missing with entries",
+      PRELUDE + "export const f = (): Int with Clock => Clock.now()\n",
     ]],
   );
   const both = "type Int = int\nerror Stop = {}\n" +
     "service Clock { now(): Int fails Stop }\n" +
     "export const f = (): Int => Clock.now()\n";
   assertEquals(actionsAt(both, 0, 500), [[
-    "Add missing fails and uses entries",
+    "Add missing fails and with entries",
     "type Int = int\nerror Stop = {}\n" +
     "service Clock { now(): Int fails Stop }\n" +
-    "export const f = (): Int fails Stop uses Clock => Clock.now()\n",
+    "export const f = (): Int fails Stop with Clock => Clock.now()\n",
   ]]);
   assertEquals(actionsAt(FAILS_ONLY, 0, 500), [[
     "Add missing fails entries",

@@ -64,7 +64,7 @@ Deno.test("a private declaration is not exported", () => {
 
 Deno.test("a const arrow is flagged and its name span covers the name", () => {
   const text =
-    "export const f = (x: int): int\n  fails E\n  uses S.m => x + 1\n";
+    "export const f = (x: int): int\n  fails E\n  with S.m => x + 1\n";
   const d = decl(text, "f");
   assertEquals(d.isArrow, true);
   assertEquals(sliceOf(text, d.nameSpan), "f");

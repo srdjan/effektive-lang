@@ -19,8 +19,8 @@ service Write { print(value: Int): Text }
 const text: Schema<Text> = schema()
 const integer: Schema<Int> = schema()
 const field: Schema<Int, Text, Read.parse, Write.print> = schemaTransform(text, integer,
-  (value: Text): Option<Int> uses Read.parse => Some(Read.parse(value)),
-  (value: Int): Option<Text> uses Write.print => Some(Write.print(value)))
+  (value: Text): Option<Int> with Read.parse => Some(Read.parse(value)),
+  (value: Int): Option<Text> with Write.print => Some(Write.print(value)))
 const record: Schema<D, E, Read.parse, Write.print> = schemaStruct({ score: field })
 `;
 

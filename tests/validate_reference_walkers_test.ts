@@ -207,8 +207,8 @@ export service Files {
 `,
     "main.eff": `
 import { Handle, Text, Files } from "host:files"
-const readBorrowed = (borrow handle: Handle): Text uses Files.read => Files.read(handle)
-export const load = (): Text uses Files.open | Files.read | Files.close =>
+const readBorrowed = (borrow handle: Handle): Text with Files.read => Files.read(handle)
+export const load = (): Text with Files.open | Files.read | Files.close =>
   withResource(() => Files.open(), (handle) => readBorrowed(handle), (handle) => Files.close(handle))
 `,
   };

@@ -29,8 +29,8 @@ const checked: Schema<Text, Text, Check.accept, Write.accept> =
   schemaTransform(
     text,
     text,
-    (value: Text): Text fails SchemaIssue uses Check.accept => Check.accept(value),
-    (value: Text): Text fails SchemaIssue uses Write.accept => Write.accept(value)
+    (value: Text): Text fails SchemaIssue with Check.accept => Check.accept(value),
+    (value: Text): Text fails SchemaIssue with Write.accept => Write.accept(value)
   )
 
 export const fallback: Schema<Text, Text, Check.accept, Write.accept> =
@@ -38,5 +38,5 @@ export const fallback: Schema<Text, Text, Check.accept, Write.accept> =
 
 export const readScalar = (input: unknown): Scalar fails SchemaError =>
   schemaDecode(scalar, input)
-export const readFallback = (input: unknown): Text fails SchemaError uses Check.accept =>
+export const readFallback = (input: unknown): Text fails SchemaError with Check.accept =>
   schemaDecode(fallback, input)

@@ -827,10 +827,10 @@ class Resolver {
     return target;
   }
 
-  /** A qualified name in `uses`, `provides`, or a pipeline stage. */
+  /** A qualified name in `with`, `provides`, or a pipeline stage. */
   private qualified(
     qn: NodeId,
-    context: "uses" | "provides" | "stage",
+    context: "with" | "provides" | "stage",
   ): void {
     const names = this.kidsOfKind(qn, SyntaxKind.Name);
     if (names.length === 0) return;
@@ -894,7 +894,7 @@ class Resolver {
           const k = kindOf(this.tree, kid);
           if (k === SyntaxKind.ParamList) this.labelParams(kid);
           else if (
-            k === SyntaxKind.FailsClause || k === SyntaxKind.UsesClause
+            k === SyntaxKind.FailsClause || k === SyntaxKind.WithClause
           ) {
             this.clause(kid);
           } else this.resolveType(kid);
@@ -908,7 +908,7 @@ class Resolver {
         for (const kid of kidsOf(this.tree, node)) {
           const k = kindOf(this.tree, kid);
           if (
-            k === SyntaxKind.FailsClause || k === SyntaxKind.UsesClause ||
+            k === SyntaxKind.FailsClause || k === SyntaxKind.WithClause ||
             k === SyntaxKind.ProvidesClause
           ) {
             this.clause(kid);
@@ -949,10 +949,10 @@ class Resolver {
         if (nameTextOf(this.tree, name) === "never") continue;
         this.errorRef(name, true);
       }
-    } else if (kind === SyntaxKind.UsesClause) {
+    } else if (kind === SyntaxKind.WithClause) {
       for (const qn of this.kidsOfKind(node, SyntaxKind.QualifiedName)) {
         if (nodeText(this.tree, qn) === "never") continue;
-        this.qualified(qn, "uses");
+        this.qualified(qn, "with");
       }
     } else if (kind === SyntaxKind.ProvidesClause) {
       for (const qn of this.kidsOfKind(node, SyntaxKind.QualifiedName)) {
@@ -1215,7 +1215,7 @@ class Resolver {
           }
         }
       } else if (
-        kind === SyntaxKind.FailsClause || kind === SyntaxKind.UsesClause
+        kind === SyntaxKind.FailsClause || kind === SyntaxKind.WithClause
       ) {
         this.clause(kid);
       } else if (isTypeKind(kind)) {

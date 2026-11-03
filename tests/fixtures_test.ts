@@ -332,7 +332,7 @@ Deno.test("seeded random edits keep the parser total, lossless, and sound", () =
     "if ",
     "else ",
     "fails ",
-    "uses ",
+    "with ",
     "x",
     "1",
     '"s"',

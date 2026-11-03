@@ -29,10 +29,10 @@ export service Read { parse(value: Text): Int }
 export service Write { print(value: Int): Text }
 const text: Schema<Text> = schema()
 const integer: Schema<Int> = schema()
-const shifted: Schema<Int, Text, Read.parse, Write.print> = schemaTransform(text, integer, (value: Text): Option<Int> uses Read.parse => Some(Read.parse(value)), (value: Int): Option<Text> uses Write.print => Some(Write.print(value)))
+const shifted: Schema<Int, Text, Read.parse, Write.print> = schemaTransform(text, integer, (value: Text): Option<Int> with Read.parse => Some(Read.parse(value)), (value: Int): Option<Text> with Write.print => Some(Write.print(value)))
 const child: Schema<D, E, Read.parse, Write.print, M> = schemaStruct({ toString: schemaConstructorDefault(schemaDefaultKey(shifted, (): Int => 7), (): Int => 9) })
-export const readValue = (input: unknown): D fails SchemaError uses Read.parse => schemaDecode(child, input)
-export const writeValue = (input: D): E fails SchemaError uses Write.print => schemaEncode(child, input)
+export const readValue = (input: unknown): D fails SchemaError with Read.parse => schemaDecode(child, input)
+export const writeValue = (input: D): E fails SchemaError with Write.print => schemaEncode(child, input)
 export const makeValue = (): D fails SchemaIssue => schemaMake(child, {})
 `,
     },

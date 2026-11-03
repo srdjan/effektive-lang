@@ -51,7 +51,7 @@ type Int = int
 type Small = int where n => n > 0
 error Boom = { code: Int }
 export const exported = (): Int => 1
-const readBorrowed = (borrow handle: Handle): Text uses Files.read => Files.read(handle)
+const readBorrowed = (borrow handle: Handle): Text with Files.read => Files.read(handle)
 const pair = (): [Int, Int] => [1, 2]
 const some1 = (): Option<Int> => Some(1)
 const boom = (): Int fails Boom => fail(Boom({ code: 1 }))
@@ -59,7 +59,7 @@ const inferred = () => boom()
 const failing = (): Int fails Boom => scoped(defer(() => boom()))
 const inc = (n: Int): Int => n + 1
 const piped = (a: Int): Int => a |> inc
-const useHandle = (): Text uses Files.open | Files.read | Files.close =>
+const useHandle = (): Text with Files.open | Files.read | Files.close =>
   withResource(() => Files.open(), (handle) => readBorrowed(handle), (handle) => Files.close(handle))
 const useRecord = (): Int => withResource(() => ({ get: () => 1 }), (ops) => ops.get(), (ops) => {})
 const outcome = (): Int => try { 1 } finally (o) { }
@@ -270,7 +270,7 @@ const ROWS: readonly Row[] = [
     expected: [
       "validation/001 declarations[4].type: borrow flags must match function parameters",
       "validation/002 declarations[4].type.borrows: borrow flags must match function parameters",
-      "validation/002 declarations[12].body.use.body.callee.type: expected (type:host#Handle) => type:host#Text uses cap:host#Files.read [effect], recorded (type:host#Handle) => type:host#Text uses cap:host#Files.read [effect]",
+      "validation/002 declarations[12].body.use.body.callee.type: expected (type:host#Handle) => type:host#Text with cap:host#Files.read [effect], recorded (type:host#Handle) => type:host#Text with cap:host#Files.read [effect]",
     ],
   },
   {
@@ -297,7 +297,7 @@ const ROWS: readonly Row[] = [
       "validation/002 declarations[4].parameters[0]: a borrow parameter needs an opaque type",
       "validation/002 declarations[4].body.arguments[0].type: expected int, recorded type:host#Handle",
       "validation/002 declarations[4].body.arguments[0]: the argument has type int, which does not fit the parameter type:host#Handle",
-      "validation/002 declarations[12].body.use.body.callee.type: expected (int) => type:host#Text uses cap:host#Files.read [effect], recorded (type:host#Handle) => type:host#Text uses cap:host#Files.read [effect]",
+      "validation/002 declarations[12].body.use.body.callee.type: expected (int) => type:host#Text with cap:host#Files.read [effect], recorded (type:host#Handle) => type:host#Text with cap:host#Files.read [effect]",
       "validation/002 declarations[12].body.use.body.arguments[0]: the argument has type type:host#Handle, which does not fit the parameter int",
     ],
   },
@@ -310,7 +310,7 @@ const ROWS: readonly Row[] = [
     },
     expected: [
       "validation/002 declarations[4].type.borrows[0]: borrow flag missing from function type",
-      "validation/002 declarations[12].body.use.body.callee.type: expected (type:host#Handle) => type:host#Text uses cap:host#Files.read [effect], recorded (type:host#Handle) => type:host#Text uses cap:host#Files.read [effect]",
+      "validation/002 declarations[12].body.use.body.callee.type: expected (type:host#Handle) => type:host#Text with cap:host#Files.read [effect], recorded (type:host#Handle) => type:host#Text with cap:host#Files.read [effect]",
       "validation/006 declarations[12].body.use.body: borrowed handle may only pass to a borrow-qualified method",
     ],
   },
@@ -324,7 +324,7 @@ const ROWS: readonly Row[] = [
     expected: [
       "validation/002 declarations[4].type.result: a borrow function must return data only",
       "validation/002 declarations[4].body: the body type type:host#Text does not fit the declared result unknown",
-      "validation/002 declarations[12].body.use.body.callee.type: expected (type:host#Handle) => unknown uses cap:host#Files.read [effect], recorded (type:host#Handle) => type:host#Text uses cap:host#Files.read [effect]",
+      "validation/002 declarations[12].body.use.body.callee.type: expected (type:host#Handle) => unknown with cap:host#Files.read [effect], recorded (type:host#Handle) => type:host#Text with cap:host#Files.read [effect]",
       "validation/002 declarations[12].body.use.body.type: expected unknown, recorded type:host#Text",
       "validation/002 declarations[12].body.use.body: the body type unknown does not fit the closure result type:host#Text",
     ],

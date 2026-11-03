@@ -22,8 +22,8 @@ const moreTag: Schema<MoreTag> = schema()
 const shifted: Schema<Int, Int, Read.next, Write.previous> = schemaTransform(
   integer,
   integer,
-  (value: Int): Option<Int> uses Read.next => Read.next(value),
-  (value: Int): Option<Int> uses Write.previous => Write.previous(value)
+  (value: Int): Option<Int> with Read.next => Read.next(value),
+  (value: Int): Option<Int> with Write.previous => Write.previous(value)
 )
 const left: Schema<Left, Left, Read.next, Write.previous> = schemaStruct({ kind: leftTag, value: shifted })
 const right: Schema<Right> = schemaStruct({ kind: rightTag, value: integer })
@@ -41,11 +41,11 @@ export const taggedNode: Schema<TaggedNode> = schemaRecursive(
   ])
 )
 
-export const readChoice = (input: unknown): Choice fails SchemaError uses Read.next =>
+export const readChoice = (input: unknown): Choice fails SchemaError with Read.next =>
   schemaDecode(choice, input)
-export const writeChoice = (value: Choice): Choice fails SchemaError uses Write.previous =>
+export const writeChoice = (value: Choice): Choice fails SchemaError with Write.previous =>
   schemaEncode(choice, value)
-export const readOptional = (input: unknown): Optional fails SchemaError uses Read.next =>
+export const readOptional = (input: unknown): Optional fails SchemaError with Read.next =>
   schemaDecode(optional, input)
-export const writeOptional = (value: Optional): Optional fails SchemaError uses Write.previous =>
+export const writeOptional = (value: Optional): Optional fails SchemaError with Write.previous =>
   schemaEncode(optional, value)

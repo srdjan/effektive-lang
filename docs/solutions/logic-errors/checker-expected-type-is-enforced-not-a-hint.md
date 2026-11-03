@@ -37,7 +37,7 @@ A program of this shape is accepted without the hint:
 
 ```effektive
 type Branch = Sink<Int, Text, Stop, Count.tick, Text>
-const run = (s: Stream<Int>, flag: Bool, a: Branch, b: Branch): Text fails Stop uses Count.tick =>
+const run = (s: Stream<Int>, flag: Bool, a: Branch, b: Branch): Text fails Stop with Count.tick =>
   runStream(s, if (flag) { a } else { b })
 ```
 

@@ -126,13 +126,13 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
       const fails = node.failures.length === 0
         ? ""
         : ` fails ${node.failures.map(idName).join(" | ")}`;
-      const uses = node.requirements.length === 0
+      const withText = node.requirements.length === 0
         ? ""
-        : ` uses ${node.requirements.map(idName).join(" | ")}`;
+        : ` with ${node.requirements.map(idName).join(" | ")}`;
       const execution = node.execution === "pure" ? "pure " : "";
       return `${execution}(${parameters}) => ${
         print(table, names, node.result)
-      }${fails}${uses}`;
+      }${fails}${withText}`;
     }
     case "provider":
       return `provider provides ${node.provides.map(idName).join(" | ")}`;
@@ -141,7 +141,7 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
   }
 }
 
-/** The ` fails ...` and ` uses ...` text of two sets, as the hover contract prints it. */
+/** The ` fails ...` and ` with ...` text of two sets, as the hover contract prints it. */
 export function effectText(
   failures: readonly string[],
   requirements: readonly string[],
@@ -149,8 +149,8 @@ export function effectText(
   const fails = failures.length === 0
     ? ""
     : ` fails ${failures.map(shortName).join(" | ")}`;
-  const uses = requirements.length === 0
+  const withText = requirements.length === 0
     ? ""
-    : ` uses ${requirements.map(shortName).join(" | ")}`;
-  return fails + uses;
+    : ` with ${requirements.map(shortName).join(" | ")}`;
+  return fails + withText;
 }

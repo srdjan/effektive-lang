@@ -6,7 +6,7 @@ export type Shape = { kind: "a-very-long-tag-name-that-is-long-enough-to-break-t
 export service AVeryLongServiceNameThatKeepsGoingAndGoing {
   find(id: StrVal): StrVal fails AVeryLongErrorNameThatKeepsGoingAndGoing
 }
-export const look = (id: StrVal): StrVal uses AVeryLongServiceNameThatKeepsGoingAndGoing.find =>
+export const look = (id: StrVal): StrVal with AVeryLongServiceNameThatKeepsGoingAndGoing.find =>
   try { AVeryLongServiceNameThatKeepsGoingAndGoing.find(id) } catch { AVeryLongErrorNameThatKeepsGoingAndGoing(e) => "missing" }
 export const tag = (s: Status): IntVal => match s {
   "a-very-long-literal-member-one" => 1,
@@ -31,8 +31,8 @@ export const describe = (e: Failure): StrVal => match e {
 export service Plain {
   count(): IntVal
 }
-export const total = (): IntVal uses Plain.count => Plain.count()
-export const effLater = (s: StrVal): IntVal uses Plain.count => match s {
+export const total = (): IntVal with Plain.count => Plain.count()
+export const effLater = (s: StrVal): IntVal with Plain.count => match s {
   "short" => Plain.count(),
   "a very long string literal that pushes the selector test past eighty columns" => 2,
   _ => 4

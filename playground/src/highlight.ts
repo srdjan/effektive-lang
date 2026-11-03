@@ -3,7 +3,7 @@
 // table into one sorted list of ranges. Words and spaces that need no color give
 // no range.
 //
-// The lexer reads `type`, `error`, `service`, `provider`, `fails`, `uses`,
+// The lexer reads `type`, `error`, `service`, `provider`, `fails`,
 // `provides`, and `from` as names. This file gives them the keyword kind by
 // position, from the token stream.
 
@@ -43,7 +43,6 @@ const DECLARATION_WORDS: ReadonlySet<string> = new Set([
 /** Words that are keywords wherever they appear as a name. */
 const CLAUSE_WORDS: ReadonlySet<string> = new Set([
   "fails",
-  "uses",
   "provides",
   "from",
 ]);

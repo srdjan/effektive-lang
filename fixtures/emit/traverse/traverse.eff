@@ -4,7 +4,7 @@ service Counter {
   next(n: Count): Count
 }
 
-export const sequence = (xs: Count[]): Count[] uses Counter.next =>
+export const sequence = (xs: Count[]): Count[] with Counter.next =>
   xs |> traverse((n) => Counter.next(n))
 
 export const raised = (xs: Count[]): Count[] =>

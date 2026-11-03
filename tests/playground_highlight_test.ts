@@ -104,12 +104,11 @@ Deno.test("error is a name in a pattern, and type elsewhere is a name", () => {
   ]);
 });
 
-Deno.test("fails, uses, provides, and from are keywords anywhere", () => {
+Deno.test("fails, provides, and from are keywords anywhere", () => {
   assertEquals(
-    slices("f(fails uses provides from)"),
+    slices("f(fails provides from)"),
     [
       ["fails", "keyword"],
-      ["uses", "keyword"],
       ["provides", "keyword"],
       ["from", "keyword"],
     ],

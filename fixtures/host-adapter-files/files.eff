@@ -8,4 +8,4 @@ export service Files {
 
 export const load = (path: Path): Text
   fails FileReadError
-  uses Files.read => Files.read(path)
+  with Files.read => Files.read(path)

@@ -8,7 +8,7 @@ const storageRetry: RetrySchedule<StoreFailure> =
 
 export const submit = (input: unknown): Receipt
   fails SchemaError | InvalidOrder | CatalogFailure | StoreFailure
-  uses Catalog | Runtime => {
+  with Catalog | Runtime => {
     const request = schemaDecode(requestSchema, input)
     if (request.sku === "" || request.quantity < 1 || request.quantity > 100) {
       fail(InvalidOrder({ reason: "request" }))

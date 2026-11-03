@@ -26,7 +26,7 @@ const POLICY =
   "(e: Stop, attempt: Int): Option<Duration> => if (attempt < 3) { Some(100ms) } else { None }";
 
 const RETRY = "retry(() => Jobs.next(), ";
-const SIG = "(): Int fails Stop uses Jobs.next";
+const SIG = "(): Int fails Stop with Jobs.next";
 
 function retryWith(options: string, signature = SIG): string[] {
   return diagnosticsOf(
@@ -75,13 +75,13 @@ Deno.test("an effectful while callback adds its failures and requirements", () =
   assertEquals(
     retryWith(
       options,
-      "(): Int fails Stop | Other uses Jobs.next | Gate.open",
+      "(): Int fails Stop | Other with Jobs.next | Gate.open",
     ),
     [],
   );
   assertEquals(retryWith(options), [
     "failure-contract/001 the body can fail with Other, which the `fails` clause does not list",
-    "requirement-contract/001 the body requires Gate.open, which the `uses` clause does not list",
+    "requirement-contract/001 the body requires Gate.open, which the `with` clause does not list",
   ]);
 });
 
@@ -115,7 +115,7 @@ Deno.test("times stays a nonnegative safe integer literal in a combined record",
     assertEquals(
       retryWith(
         `{ times: ${times}, until: (e) => true }`,
-        "(n: Int): Int fails Stop uses Jobs.next",
+        "(n: Int): Int fails Stop with Jobs.next",
       ),
       [
         "type-mismatch/010 `retry` needs `times` to be a finite nonnegative safe integer literal",

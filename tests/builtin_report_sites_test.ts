@@ -97,9 +97,9 @@ const ROWS: readonly SiteRow[] = [
     builtin: "retry",
     change: "replace the job function with an int",
     valid:
-      `${STOP_JOBS}const run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { times: 3 })\n`,
+      `${STOP_JOBS}const run = (): Int fails Stop with Jobs.next => retry(() => Jobs.next(), { times: 3 })\n`,
     invalid:
-      `${STOP_JOBS}const run = (): Int fails Stop uses Jobs.next => retry(1, { times: 3 })\n`,
+      `${STOP_JOBS}const run = (): Int fails Stop with Jobs.next => retry(1, { times: 3 })\n`,
     code: "type-mismatch/010",
     fragment:
       "`retry` needs a function that takes no arguments, but the job has type",
@@ -108,9 +108,9 @@ const ROWS: readonly SiteRow[] = [
     builtin: "retry",
     change: "give the schedule an error type that the job does not fail with",
     valid:
-      `${STOP_JOBS}const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Duration> => None)\nconst run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })\n`,
+      `${STOP_JOBS}const policy: RetrySchedule<Stop> = retrySchedule((error: Stop, attempt: Int): Option<Duration> => None)\nconst run = (): Int fails Stop with Jobs.next => retry(() => Jobs.next(), { schedule: policy })\n`,
     invalid:
-      `${STOP_JOBS}error Other = {}\nconst policy: RetrySchedule<Other> = retrySchedule((error: Other, attempt: Int): Option<Duration> => None)\nconst run = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })\n`,
+      `${STOP_JOBS}error Other = {}\nconst policy: RetrySchedule<Other> = retrySchedule((error: Other, attempt: Int): Option<Duration> => None)\nconst run = (): Int fails Stop with Jobs.next => retry(() => Jobs.next(), { schedule: policy })\n`,
     code: "type-mismatch/003",
     fragment: "the retry schedule does not accept",
   },
@@ -150,7 +150,7 @@ const ROWS: readonly SiteRow[] = [
     valid:
       `${INT}error Stop = {}\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Duration> => Some(attempt * 1ms))\n`,
     invalid:
-      `${INT}error Stop = {}\nservice Probe { n(): Int }\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Duration> uses Probe.n => Some(Probe.n() * 1ms))\n`,
+      `${INT}error Stop = {}\nservice Probe { n(): Int }\nconst a = retrySchedule((e: Stop, attempt: Int): Option<Duration> with Probe.n => Some(Probe.n() * 1ms))\n`,
     code: "execution-mode/001",
     fragment: "the retry schedule callback must be pure",
   },
@@ -178,9 +178,9 @@ const ROWS: readonly SiteRow[] = [
     change: "acquire an int instead of a record of operations",
     host: true,
     valid:
-      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text uses Files.open | Files.read | Files.close =>\n  withResource(() => Files.open(), (handle) => Files.read(handle), (handle) => Files.close(handle))\n',
+      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text with Files.open | Files.read | Files.close =>\n  withResource(() => Files.open(), (handle) => Files.read(handle), (handle) => Files.close(handle))\n',
     invalid:
-      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text uses Files.close =>\n  withResource(() => 1, (handle) => "x", (handle) => {})\n',
+      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text with Files.close =>\n  withResource(() => 1, (handle) => "x", (handle) => {})\n',
     code: "type-mismatch/010",
     fragment:
       "acquisition must return a nonempty record of required operations",
@@ -190,9 +190,9 @@ const ROWS: readonly SiteRow[] = [
     change: "pass the use callback as a named function",
     host: true,
     valid:
-      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text uses Files.open | Files.read | Files.close =>\n  withResource(() => Files.open(), (handle) => Files.read(handle), (handle) => Files.close(handle))\n',
+      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text with Files.open | Files.read | Files.close =>\n  withResource(() => Files.open(), (handle) => Files.read(handle), (handle) => Files.close(handle))\n',
     invalid:
-      'import { Handle, Text, Files } from "host:files"\nconst use = (handle: Handle): Text => "x"\nconst a = (): Text uses Files.open | Files.close =>\n  withResource(() => Files.open(), use, (handle) => Files.close(handle))\n',
+      'import { Handle, Text, Files } from "host:files"\nconst use = (handle: Handle): Text => "x"\nconst a = (): Text with Files.open | Files.close =>\n  withResource(() => Files.open(), use, (handle) => Files.close(handle))\n',
     code: "type-mismatch/010",
     fragment: "withResource requires three inline arrow callbacks",
   },
@@ -201,7 +201,7 @@ const ROWS: readonly SiteRow[] = [
     change: "borrow an int instead of an opaque handle",
     host: true,
     valid:
-      'import { Handle, Text, Files } from "host:files"\nconst a = (borrow handle: Handle): Text uses Files.read => Files.read(handle)\n',
+      'import { Handle, Text, Files } from "host:files"\nconst a = (borrow handle: Handle): Text with Files.read => Files.read(handle)\n',
     invalid:
       'import { Handle, Text, Files } from "host:files"\ntype Int = int\nconst a = (borrow n: Int): Text => "x"\n',
     code: "type-mismatch/010",
@@ -212,7 +212,7 @@ const ROWS: readonly SiteRow[] = [
     change: "return the borrowed handle",
     host: true,
     valid:
-      'import { Handle, Text, Files } from "host:files"\nconst a = (borrow handle: Handle): Text uses Files.read => Files.read(handle)\n',
+      'import { Handle, Text, Files } from "host:files"\nconst a = (borrow handle: Handle): Text with Files.read => Files.read(handle)\n',
     invalid:
       'import { Handle, Text, Files } from "host:files"\nconst a = (borrow handle: Handle): Handle => handle\n',
     code: "type-mismatch/010",

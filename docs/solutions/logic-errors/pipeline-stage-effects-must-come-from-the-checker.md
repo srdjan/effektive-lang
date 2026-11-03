@@ -27,12 +27,12 @@ The reproduction, on revision `98df0ef`:
 ```effektive
 export service Child { run(): void; wait(): void; alive(): Bool }
 type Bool = boolean
-const makeJob = (): Effect<Bool, never, Child.alive> uses Child.run => {
+const makeJob = (): Effect<Bool, never, Child.alive> with Child.run => {
   Child.run()
   defer(() => Child.alive())
 }
-export const main = (): Bool uses Child.run | Child.alive => makeJob() |> scoped
-export const direct = (): Bool uses Child.run | Child.alive => scoped(makeJob())
+export const main = (): Bool with Child.run | Child.alive => makeJob() |> scoped
+export const direct = (): Bool with Child.run | Child.alive => scoped(makeJob())
 ```
 
 - The checker reported 0 diagnostics, and lowering succeeded.

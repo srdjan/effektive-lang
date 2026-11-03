@@ -3,9 +3,9 @@ service Store {
 }
 
 // error: unknown-name/003
-const a = (): Int uses Store.put => 1
+const a = (): Int with Store.put => 1
 
 // error: unknown-name/003
-const b = (): Int uses Store.get => Store.nope(1)
+const b = (): Int with Store.get => Store.nope(1)
 
 type Int = int

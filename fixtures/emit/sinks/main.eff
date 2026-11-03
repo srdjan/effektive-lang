@@ -10,4 +10,4 @@ export const broad = (source: Stream<Text>, sink: Sink<Item, Item[], never, neve
 export const discardForeign = (source: Stream<Int>, sink: Sink<Int, Text, never, never, Text>): Text => runStream(source, sink)
 export const discardBranded = (source: Stream<Int>, sink: Foreign): Text => runStream(source, sink)
 export const fromFactory = (): Stream<Int, SourceStop | SinkStop, Pull.next | Add.add>
-  fails BuildStop uses Factory.source | Factory.sink => transduceStream(Factory.source(), Factory.sink())
+  fails BuildStop with Factory.source | Factory.sink => transduceStream(Factory.source(), Factory.sink())

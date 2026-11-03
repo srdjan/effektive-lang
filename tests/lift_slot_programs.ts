@@ -11,13 +11,13 @@ const other = (n: Int): Int => n + 2
 
 /** Form 1: a branch of an `if` whose block result is a pure function. */
 export const BRANCH_PROGRAM = HEAD +
-  `export const choose = (): ((n: Int) => Int fails Stop) fails Stop uses Gate.pick =>
+  `export const choose = (): ((n: Int) => Int fails Stop) fails Stop with Gate.pick =>
   if (Gate.pick() > 0) { Gate.pick(); pure } else { other }
 `;
 
 /** Form 2: an arm of a `match` whose block result is a pure function. */
 export const ARM_PROGRAM = HEAD +
-  `export const choose = (): ((n: Int) => Int fails Stop) fails Stop uses Gate.pick =>
+  `export const choose = (): ((n: Int) => Int fails Stop) fails Stop with Gate.pick =>
   match (Gate.pick()) { 0 => { Gate.pick(); pure }, _ => other }
 `;
 
@@ -27,13 +27,13 @@ export const ARM_PROGRAM = HEAD +
  * function slot.
  */
 export const RESULT_PROGRAM = HEAD +
-  `const mk = (): ((n: Int) => Int) fails Stop uses Gate.pick => { Gate.pick(); pure }
-export const chosen = (): ((n: Int) => Int fails Stop) fails Stop uses Gate.pick => mk()
-export const viaConstant = (): ((n: Int) => Int fails Stop) fails Stop uses Gate.pick => {
+  `const mk = (): ((n: Int) => Int) fails Stop with Gate.pick => { Gate.pick(); pure }
+export const chosen = (): ((n: Int) => Int fails Stop) fails Stop with Gate.pick => mk()
+export const viaConstant = (): ((n: Int) => Int fails Stop) fails Stop with Gate.pick => {
   const f = mk()
   f
 }
-export const declared = (): ((n: Int) => Int) fails Stop uses Gate.pick => { Gate.pick(); pure }
+export const declared = (): ((n: Int) => Int) fails Stop with Gate.pick => { Gate.pick(); pure }
 `;
 
 /**
@@ -42,8 +42,8 @@ export const declared = (): ((n: Int) => Int) fails Stop uses Gate.pick => { Gat
  */
 export const INFERRED_PROGRAM = HEAD +
   `const mk = () => { Gate.pick(); pure }
-export const chosen = (): ((n: Int) => Int fails Stop) fails Stop uses Gate.pick => mk()
-export const viaConstant = (): ((n: Int) => Int fails Stop) fails Stop uses Gate.pick => {
+export const chosen = (): ((n: Int) => Int fails Stop) fails Stop with Gate.pick => mk()
+export const viaConstant = (): ((n: Int) => Int fails Stop) fails Stop with Gate.pick => {
   const f = mk()
   f
 }

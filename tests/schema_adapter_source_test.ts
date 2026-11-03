@@ -63,7 +63,7 @@ Deno.test("required-to-optional field forms and shadowing are accepted", () => {
     requiredOptionalPrefix +
       `const field: SchemaDecodedOptional<Text, Text, Read.next> =
   schemaOptionalFromRequired(text, optional,
-    (value: Text): Option<Text> uses Read.next => Some(Read.next(value)),
+    (value: Text): Option<Text> with Read.next => Some(Read.next(value)),
     (value: Option<Text>): Text => match value { Some(name) => name, None => "" })
 const record: Schema<{ name?: Text }, { name: Text }, Read.next> =
   schemaStruct({ name: field })`,
@@ -178,13 +178,13 @@ const record = schemaStruct({ option, defaulted, normalized })`,
   accepted(
     optionalTransformPrefix +
       `const failingDefault = schemaDefaultKey(integer, (): Int fails SchemaIssue => 1)
-const effectfulDefault = schemaDefaultKey(integer, (): Int uses Need.next => Need.next(1))
+const effectfulDefault = schemaDefaultKey(integer, (): Int with Need.next => Need.next(1))
 const existingError = schemaDefaultKey(integer, (): Int fails SchemaError => schemaDecode(integer, 1))
 const failingOptional = schemaOptionalTransform(optional, optional,
   (value: Option<Int>): Option<Int> fails SchemaIssue => None,
   (value: Option<Int>): Option<Int> => value)
 const effectfulOptional = schemaOptionalTransform(optional, optional,
-  (value: Option<Int>): Option<Int> uses Need.next => { const tick = Need.next(1)
+  (value: Option<Int>): Option<Int> with Need.next => { const tick = Need.next(1)
     value },
   (value: Option<Int>): Option<Int> => value)`,
   );

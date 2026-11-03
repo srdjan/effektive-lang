@@ -112,7 +112,7 @@ Deno.test("Users.find in users.eff resolves to the capability", () => {
   );
 });
 
-Deno.test("uses Orders in pay.eff resolves to the service", () => {
+Deno.test("with Orders in pay.eff resolves to the service", () => {
   assertEquals(
     targetsOf(examples, "pay", SyntaxKind.QualifiedName, "Orders"),
     ["service:pay#Orders"],
@@ -426,7 +426,7 @@ Deno.test("Brand is an unknown type name", () => {
 Deno.test("imports bind named exports of the imported module", () => {
   const analysis = analyzeText({
     "m.eff":
-      'import { T, E, S, f, k } from "./lib.eff"\nconst g = (x: T): E => f(x)\nconst h = (): int uses S.get => k\n',
+      'import { T, E, S, f, k } from "./lib.eff"\nconst g = (x: T): E => f(x)\nconst h = (): int with S.get => k\n',
     "lib.eff": [
       "export type T = { a: int }",
       "export error E = { b: string }",

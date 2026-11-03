@@ -48,7 +48,7 @@ Deno.test("an effectful match step keeps the branch facts", () => {
 type Pair = { n: int }
 type Int = int
 service Log { write(n: Int): Int }
-const f = (p: Pair): Positive uses Log.write => if (p.n > 1) { match (p.n) { 2 => Log.write(1), _ => Log.write(2) }; p.n - 1 } else { 1 }
+const f = (p: Pair): Positive with Log.write => if (p.n > 1) { match (p.n) { 2 => Log.write(1), _ => Log.write(2) }; p.n - 1 } else { 1 }
 `),
     [],
   );

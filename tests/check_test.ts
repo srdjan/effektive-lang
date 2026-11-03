@@ -366,7 +366,7 @@ service Store {
   get(id: Text): Text
   put(id: Text, value: Text): void
 }
-export const run = (id: Text): Text uses Store => Store.get(id)
+export const run = (id: Text): Text with Store => Store.get(id)
 type Text = string
 `);
   const run = signatureOf(project, "m", "value:m#run");
@@ -669,7 +669,7 @@ service Vault {
 }
 export const run = (w: Wrapper): Text
   fails Hidden
-  uses Vault.open => Vault.open(w)
+  with Vault.open => Vault.open(w)
 type Text = string
 `);
   assertEquals(project.diagnostics, []);
@@ -794,7 +794,7 @@ type Text = string
 `,
     "b.eff": `
 import { Store } from "./a.eff"
-export const copy = (id: Text): Text uses Store => Store.get(id)
+export const copy = (id: Text): Text with Store => Store.get(id)
 type Text = string
 `,
   };

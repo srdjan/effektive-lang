@@ -31,10 +31,10 @@ service Consumer { accept(n: Int): void fails Stop }
 
 const source = unfold(0, (n) => Source.next(n))
 
-const pull = (n: Int): Option<[Int, Int]> fails Stop uses Source.next => Source.next(n)
+const pull = (n: Int): Option<[Int, Int]> fails Stop with Source.next => Source.next(n)
 const plusOne = (n: Int): Int => n + 1
-const bump = (n: Int): Int fails Stop uses Accum.add => Accum.add(n, 1)
-const accept = (value: Int): void fails Stop uses Consumer.accept => Consumer.accept(value)
+const bump = (n: Int): Int fails Stop with Accum.add => Accum.add(n, 1)
+const accept = (value: Int): void fails Stop with Consumer.accept => Consumer.accept(value)
 
 const mapped: Stream<Int, Stop, Source.next> = mapEffect(source, (n) => n + 1)
 const mappedEffect: Stream<Int, Stop, Source.next | Accum.add> = mapEffect(source, (n) => Accum.add(n, 1))
@@ -45,7 +45,7 @@ type Pairs = Sink<Int, Int[], never, never, Int>
 const pairs: Pairs = takeSink(2)
 const batches: Stream<Int[], Stop, Source.next> = transduceStream(source, pairs)
 
-const ran = (): void fails Stop uses Source.next | Consumer.accept => runStream(source, consumer)
+const ran = (): void fails Stop with Source.next | Consumer.accept => runStream(source, consumer)
 `;
 
 const SCHEMAS = `type Text = string

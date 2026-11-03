@@ -29,7 +29,7 @@ export const USAGE = [
   "usage: effektive <command> [root] [flags]",
   "",
   "commands:",
-  "  check [root] [--fix]                  print diagnostics; --fix first writes the missing fails and uses entries",
+  "  check [root] [--fix]                  print diagnostics; --fix first writes the missing fails and with entries",
   "  build [root] [--tsc]                  also write <module>.ts and <module>.ts.map",
   "  watch [root] [--tsc]                  build, then rebuild when a source changes",
   "",

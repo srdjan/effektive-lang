@@ -17,8 +17,8 @@ const nil: Schema<Nil> = schema()
 const shifted: Schema<Text, Text, Read.normalize, Write.restore> = schemaTransform(
   text,
   text,
-  (value: Text): Option<Text> uses Read.normalize => Some(Read.normalize(value)),
-  (value: Text): Option<Text> uses Write.restore => Some(Write.restore(value))
+  (value: Text): Option<Text> with Read.normalize => Some(Read.normalize(value)),
+  (value: Text): Option<Text> with Write.restore => Some(Write.restore(value))
 )
 const nullable: Schema<Nullable, Nullable, Read.normalize, Write.restore> =
   schemaUnion([shifted, nil])
@@ -31,7 +31,7 @@ export const collapsed: Schema<PlainOptional, Optional, Read.normalize, Write.re
 export const option: Schema<OptionRecord, Optional, Read.normalize, Write.restore> =
   schemaStruct({ name: schemaOptionFromOptionalKey(nullable) })
 export const defaulted: Schema<Required, Optional, Read.normalize | Defaults.make, Write.restore> =
-  schemaStruct({ name: schemaDefaultKey(nullable, (): Nullable uses Defaults.make => Defaults.make()) })
+  schemaStruct({ name: schemaDefaultKey(nullable, (): Nullable with Defaults.make => Defaults.make()) })
 export const identity: Schema<Nullable> = schema()
 
 const inferred = null

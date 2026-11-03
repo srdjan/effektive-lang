@@ -13,7 +13,7 @@ const b = (): Int
   fails Nope => 1
 
 // error: unknown-name/001
-const c = (): Int uses Ghost => 1
+const c = (): Int with Ghost => 1
 
 const d = (): Int => {
   // error: unknown-name/001

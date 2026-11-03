@@ -95,7 +95,7 @@
         },
         {
           "name": "keyword.other.clause.effektive",
-          "match": "\\b(?:fails|uses|provides|from)\\b"
+          "match": "\\b(?:fails|with|provides|from)\\b"
         },
         {
           "name": "storage.modifier.effektive",

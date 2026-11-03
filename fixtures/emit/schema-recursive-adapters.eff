@@ -17,14 +17,14 @@ export service Defaults { children(): Tree[] fails SchemaIssue }
 const integer: Schema<Int> = schema()
 const text: Schema<Text> = schema()
 const score: Schema<Int,Text,Read.parse,Write.print> = schemaTransform(text, integer,
-  (value: Text): Int fails SchemaIssue uses Read.parse => Read.parse(value),
-  (value: Int): Text fails SchemaIssue uses Write.print => Write.print(value))
+  (value: Text): Int fails SchemaIssue with Read.parse => Read.parse(value),
+  (value: Int): Text fails SchemaIssue with Write.print => Write.print(value))
 export const tree: Schema<Tree,WireTree,Read.parse | Defaults.children,Write.print,Input> = schemaRecursive(
   (self: Schema<Tree,WireTree,Read.parse | Defaults.children,Write.print,Input>): Schema<Tree,WireTree,Read.parse | Defaults.children,Write.print,Input> =>
     schemaStruct({
       score: schemaConstructorDefault(score, (): Int => 4),
       children: schemaDefaultKey(schemaConstructorDefault(schemaArray(self), (): Input[] => []),
-        (): Tree[] fails SchemaIssue uses Defaults.children => Defaults.children())
+        (): Tree[] fails SchemaIssue with Defaults.children => Defaults.children())
     })
 )
 export const nullTree = (pending: Effect<Tree[],SchemaIssue>): Schema<Tree,NullableTree,Read.parse,Write.print,Input> => schemaRecursive(
@@ -64,5 +64,5 @@ export const requiredBridge: Schema<OptionalTree,RequiredTree,never,never,Bridge
       (value: Option<RequiredTree[]>): OptionalTree[] => []) })
 )
 export const makeTree = (input: Input): Tree fails SchemaIssue => schemaMake(tree, input)
-export const readTree = (input: unknown): Tree fails SchemaError uses Read.parse | Defaults.children => schemaDecode(tree, input)
-export const writeTree = (input: Tree): WireTree fails SchemaError uses Write.print => schemaEncode(tree, input)
+export const readTree = (input: unknown): Tree fails SchemaError with Read.parse | Defaults.children => schemaDecode(tree, input)
+export const writeTree = (input: Tree): WireTree fails SchemaError with Write.print => schemaEncode(tree, input)

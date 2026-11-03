@@ -58,7 +58,7 @@ const FIXED = [
   "export service Store {",
   "  find(id: Id): Id fails Missing",
   "}",
-  "export const load = (id: Id): Id fails Missing uses Store => Store.find(id)",
+  "export const load = (id: Id): Id fails Missing with Store => Store.find(id)",
   "",
 ].join("\n");
 

@@ -20,8 +20,8 @@ const endTag: Schema<End> = schema()
 const moreTag: Schema<More> = schema()
 const transformed: Schema<Int, Text, Read.parse, Write.print> = schemaTransform(
   text, integer,
-  (value: Text): Int fails SchemaIssue uses Read.parse => Read.parse(value),
-  (value: Int): Text fails SchemaIssue uses Write.print => Write.print(value)
+  (value: Text): Int fails SchemaIssue with Read.parse => Read.parse(value),
+  (value: Int): Text fails SchemaIssue with Write.print => Write.print(value)
 )
 export const tree: Schema<Tree, WireTree, Read.parse, Write.print, TreeInput> = schemaRecursive(
   (self: Schema<Tree, WireTree, Read.parse, Write.print, TreeInput>): Schema<Tree, WireTree, Read.parse, Write.print, TreeInput> =>
@@ -44,9 +44,9 @@ export const choice: Schema<Choice, WireChoice, Read.parse, Write.print, ChoiceI
 export const makeTree = (input: TreeInput): Tree fails SchemaIssue => schemaMake(tree, input)
 export const makeNode = (input: Node): Node fails SchemaIssue => schemaMake(node, input)
 export const makeChoice = (input: ChoiceInput): Choice fails SchemaIssue => schemaMake(choice, input)
-export const readTree = (input: unknown): Tree fails SchemaError uses Read.parse => schemaDecode(tree, input)
-export const writeTree = (input: Tree): WireTree fails SchemaError uses Write.print => schemaEncode(tree, input)
-export const readNode = (input: unknown): Node fails SchemaError uses Read.parse => schemaDecode(node, input)
-export const writeNode = (input: Node): WireNode fails SchemaError uses Write.print => schemaEncode(node, input)
-export const readChoice = (input: unknown): Choice fails SchemaError uses Read.parse => schemaDecode(choice, input)
-export const writeChoice = (input: Choice): WireChoice fails SchemaError uses Write.print => schemaEncode(choice, input)
+export const readTree = (input: unknown): Tree fails SchemaError with Read.parse => schemaDecode(tree, input)
+export const writeTree = (input: Tree): WireTree fails SchemaError with Write.print => schemaEncode(tree, input)
+export const readNode = (input: unknown): Node fails SchemaError with Read.parse => schemaDecode(node, input)
+export const writeNode = (input: Node): WireNode fails SchemaError with Write.print => schemaEncode(node, input)
+export const readChoice = (input: unknown): Choice fails SchemaError with Read.parse => schemaDecode(choice, input)
+export const writeChoice = (input: Choice): WireChoice fails SchemaError with Write.print => schemaEncode(choice, input)

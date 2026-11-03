@@ -64,7 +64,7 @@ export const mkBox = (): CbBox => ({ run: (n) => n + 1, label: "l" })
 
 export const lookup = (id: Id): Profile
   fails NotFound
-  uses Store.find =>
+  with Store.find =>
   match Store.find(id) {
     Some(p) => p,
     None => fail(NotFound({ id }))
@@ -72,12 +72,12 @@ export const lookup = (id: Id): Profile
 
 export const both = (id: Id, b: BoolVal): StrVal
   fails NotFound | Other
-  uses Store.find =>
+  with Store.find =>
   if (b) { fail(NotFound({ id })) } else { fail(Other({ why: "w" })) }
 
 export const lookup2 = (id: Id, b: BoolVal): StrVal
   fails Other
-  uses Store.find =>
+  with Store.find =>
   try {
     both(id, b)
   } catch {
@@ -87,39 +87,39 @@ export const lookup2 = (id: Id, b: BoolVal): StrVal
 
 export const hoist = (id: Id, n: IntVal): IntVal
   fails NotFound
-  uses Store.find | Store.count =>
+  with Store.find | Store.count =>
   Store.count() + n
 
 export const hoist2 = (id: Id): IntVal
   fails NotFound
-  uses Store.find | Store.count =>
+  with Store.find | Store.count =>
   add(lookup(id).tags |> map((t) => 1) |> fold(0, (a, b) => a + b), Store.count())
 
 export const add = (a: IntVal, b: IntVal): IntVal => a + b
 
 export const ifEff = (id: Id, b: BoolVal): StrVal
   fails NotFound
-  uses Store.find =>
+  with Store.find =>
   if (b) { lookup(id).name } else { "none" }
 
 export const andEff = (a: BoolVal): BoolVal
-  uses Store.count =>
+  with Store.count =>
   a && Store.count() > 1
 
 export const matchEff = (id: Id): IntVal
-  uses Store.count =>
+  with Store.count =>
   match Store.count() { 1 => 10, _ => 20 }
 
 export const nestedEff = (id: Id): IntVal
   fails NotFound
-  uses Store.find | Store.count => {
+  with Store.find | Store.count => {
   const n = Store.count()
   const p = lookup(id)
   n + 1
 }
 
 export const pureBlockEff = (id: Id): IntVal
-  uses Store.count => {
+  with Store.count => {
   const n = Store.count()
   const m = match Some(n) {
     Some(x) => { const q = x + 1
@@ -130,12 +130,12 @@ export const pureBlockEff = (id: Id): IntVal
 }
 
 export const unitF = (): void
-  uses Store.tick => {
+  with Store.tick => {
   Store.tick()
 }
 
 export const retried = (): IntVal
-  uses Store.count =>
+  with Store.count =>
   retry(() => Store.count(), { times: 3 })
 
 export const fnArg = (xs: IntVal[]): IntVal[] => xs |> map((x) => x * 2)
@@ -151,13 +151,13 @@ export const useLiftClosure = (x: IntVal): IntVal => applyTwice((n) => n * 2, x)
 
 export const mkEmpty = (): StrVal fails Empty => fail(Empty({}))
 export const withNick = (p: Profile): Profile => ({ ...p, nickname: "k" })
-const readCount = (): IntVal uses Store.count => Store.count()
-export const retryNamed = (): IntVal uses Store.count => retry(readCount, { times: 1 })
+const readCount = (): IntVal with Store.count => Store.count()
+export const retryNamed = (): IntVal with Store.count => retry(readCount, { times: 1 })
 const two = (): IntVal => 2
 export const retryPure = (): IntVal => retry(() => 2, { times: 1 })
 export const retryPureNamed = (): IntVal => retry(two, { times: 1 })
 export const caught = (id: Id): StrVal
-  uses Store.find =>
+  with Store.find =>
   try { lookup(id).name } catch { NotFound(e) => "missing" }
 export const pureEval = (x: IntVal): IntVal => {
   add(x, 1)
@@ -172,8 +172,8 @@ export const sumAll = (xs: IntVal[]): IntVal => xs |> fold(0, (a, b) => a + b)
 export const names = (ps: Profile[]): StrVal[] => ps |> map((p) => p.name)
 export const sumRec = (xs: IntVal[]): Acc =>
   xs |> fold({ n: 0, label: "x" }, (acc, x) => ({ n: acc.n + x, label: acc.label }))
-const pair = (a: IntVal, b: IntVal): IntVal uses Store.count => a + b + Store.count()
-export const hoistOrder = (x: IntVal): IntVal uses Store.count => pair(add(x, 1), Store.count())
+const pair = (a: IntVal, b: IntVal): IntVal with Store.count => a + b + Store.count()
+export const hoistOrder = (x: IntVal): IntVal with Store.count => pair(add(x, 1), Store.count())
 export const adderShort = (n: IntVal): (x: IntVal) => IntVal => (x) => x + n
 export const adderBlock = (n: IntVal): (x: IntVal) => IntVal => (x) => {
   const y = x + n
@@ -182,7 +182,7 @@ export const adderBlock = (n: IntVal): (x: IntVal) => IntVal => (x) => {
 export const statusLong = (s: Status, longerNameForTheSubject: StrVal): StrVal =>
   match s { "pending" => "pendingpendingpendingpending", "paid" => "paidpaidpaidpaidpaidpaid" }
 export const matchLongEff = (id: Id): IntVal
-  uses Store.count | Store.tick =>
+  with Store.count | Store.tick =>
   match Store.count() {
     1 => 1000000000,
     2 => 2000000000,
@@ -190,7 +190,7 @@ export const matchLongEff = (id: Id): IntVal
     _ => 4000000000
   }
 export const shapeEff = (s: Shape): IntVal
-  uses Store.count =>
+  with Store.count =>
   match s {
     { kind: "circle", ...c } => Store.count() + 1,
     { kind: "square", ...q } => Store.count() + 2
@@ -259,15 +259,15 @@ export const wideFold = (xs: IntVal[]): IntVal =>
   xs |> fold(0, (accumulatorValueNumberOne, currentValueNumberTwo) => accumulatorValueNumberOne + currentValueNumberTwo + accumulatorValueNumberOne + currentValueNumberTwo + 1)
 
 export const wideGenIf = (alphaValueNumberOne: IntVal, betaValueNumberTwo: IntVal, gammaValueNumberThree: IntVal): StrVal
-  uses Store.count =>
+  with Store.count =>
   if (alphaValueNumberOne > betaValueNumberTwo && betaValueNumberTwo > gammaValueNumberThree && gammaValueNumberThree > Store.count()) { "a" } else { "b" }
 
 export const wideGenAnd = (alphaValueNumberOne: IntVal, betaValueNumberTwo: IntVal, gammaValueNumberThree: IntVal): BoolVal
-  uses Store.count =>
+  with Store.count =>
   alphaValueNumberOne > betaValueNumberTwo && Store.count() > 1 && betaValueNumberTwo > gammaValueNumberThree && gammaValueNumberThree > Store.count() && alphaValueNumberOne < 1000
 
 export const wideGenSum = (alphaValueNumberOne: IntVal, betaValueNumberTwo: IntVal, gammaValueNumberThree: IntVal): IntVal
-  uses Store.count =>
+  with Store.count =>
   alphaValueNumberOne + betaValueNumberTwo + gammaValueNumberThree + Store.count() + alphaValueNumberOne + betaValueNumberTwo
 
 export const wideChain = (alphaValueNumberOne: IntVal, betaValueNumberTwo: IntVal, gammaValueNumberThree: IntVal): WideG => (gammaValueNumberThree, delta) => alphaValueNumberOne

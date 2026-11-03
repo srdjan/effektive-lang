@@ -61,9 +61,9 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   editor_rename.ts References, prepare-rename and re-resolved rename edits.
   diagnostic_delta.ts Diagnostics that an edit adds and removes, by code, source, and moved span.
   editor_completion.ts Visible names, record fields and service-method completion.
-  editor_hints.ts Inlay hints for the inferred fails and uses sets of non-exported functions.
+  editor_hints.ts Inlay hints for the inferred fails and with sets of non-exported functions.
   editor_tokens.ts Semantic classifications with lexical recovery.
-  editor_actions.ts Validated missing fails/uses actions from checked body effects.
+  editor_actions.ts Validated missing fails/with actions from checked body effects.
   editor_signature.ts signatureHelpAt: signature help for ordinary calls from checked callee types.
   ids.ts         Parts of a declaration identity: module, name, and method.
   util.ts        Small pure helpers of the front end and the edges: compareText, errorMessage, isRecord, canonicalJson, and sortedUnique.
@@ -250,7 +250,7 @@ diagnostics of the module. `checkProject` returns one shared type table and one
 entry for each module. Each entry holds the declarations, the interface, and the
 sorted diagnostics of the module.
 
-A function with a nonempty `fails` or `uses` set always has effect mode. A
+A function with a nonempty `fails` or `with` set always has effect mode. A
 function with empty sets needs an entry in the mode map, because its body
 decides the mode. The body checker supplies the map. Without an entry,
 `buildInterface` gives an error value. The declaration diagnostics do not depend
@@ -308,7 +308,7 @@ each constant and every dependency cycle.
 
 `sourceHoverAt(revision, path, offset)` returns source contract text for the innermost checked node at
 an offset. A function name gives its signature, for example
-`getUser(id: UserId): User fails StoreUnavailable | UserMissing uses Users.find`.
+`getUser(id: UserId): User fails StoreUnavailable | UserMissing with Users.find`.
 Any other node gives its type and its sets. Sets print in sorted identity order.
 
 The synchronous `signatureHelpAt(revision, path, offset)` query returns the innermost ordinary call contract and its active parameter.
@@ -599,7 +599,7 @@ task runs in the repository directory, so pass an explicit root, for example
 | Command                                       | What it does                                                                                              |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `deno task effektive check [root]`            | Prints the diagnostics of the project.                                                                    |
-| `deno task effektive check [root] --fix`      | Adds the missing `fails` and `uses` entries to the exported functions, writes the changed `.eff` files, then prints the remaining diagnostics. It writes no `.ts` file. It writes only names that the module can see, and it adds no import. |
+| `deno task effektive check [root] --fix`      | Adds the missing `fails` and `with` entries to the exported functions, writes the changed `.eff` files, then prints the remaining diagnostics. It writes no `.ts` file. It writes only names that the module can see, and it adds no import. |
 | `deno task effektive build [root]`            | Also writes `<module>.ts` and `<module>.ts.map` next to each source for each module that no error blocks, and `<name>.effi.ts` for each imported `.effi` file. |
 | `deno task effektive build [root] --tsc`      | Also runs `deno check` over the written files and the host modules, and maps each error to the source.    |
 | `deno task effektive watch [root] [--tsc]`    | Builds once, then builds again after each change of a source file. It prints the modules that it checked. |
@@ -772,10 +772,10 @@ The server announces `positionEncoding: "utf-16"`. It supports these features.
   partially typed names. There are no automatic imports.
 - Full semantic tokens. A fixed legend includes declaration and readonly
   modifiers; lexical fallback covers broken regions. There are no delta tokens.
-- Contract quick fixes. Missing `fails` and `uses` entries come from checked
+- Contract quick fixes. Missing `fails` and `with` entries come from checked
   body effects. Reliable explicit inline contracts receive validated source
   edits that preserve existing entries. Diagnostic prose is not parsed.
-- Inlay hints. A non-exported function with an open, non-empty `fails` or `uses`
+- Inlay hints. A non-exported function with an open, non-empty `fails` or `with`
   set shows the inferred part, as the hover prints it, before `=>`. Inline
   arrows and functions with errors have no hint.
 

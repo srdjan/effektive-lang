@@ -91,11 +91,11 @@ Deno.test("constructor metadata rejects erasure, duplicate defaults, services an
       ["type-mismatch/010", callback, "make"],
     ],
     [
-      "service Default { next(): Int }\nconst bad = schemaConstructorDefault(integer, (): Int uses Default.next => Default.next())",
+      "service Default { next(): Int }\nconst bad = schemaConstructorDefault(integer, (): Int with Default.next => Default.next())",
       [
         "type-mismatch/010",
         callback,
-        "(): Int uses Default.next => Default.next()",
+        "(): Int with Default.next => Default.next()",
       ],
     ],
     [

@@ -71,10 +71,10 @@ Deno.test("Sink appends leftovers after its existing effect channels", () => {
   ) assertNotEquals(parseChecked(text).diagnostics.length, 0, text);
 });
 
-Deno.test("a newline continues an item before fails, uses, =>, |>, else, and catch", () => {
+Deno.test("a newline continues an item before fails, with, =>, |>, else, and catch", () => {
   const cases: [string, string, SyntaxKind][] = [
     ["fails", "const f = (): int\n  fails E\n  => 1", SyntaxKind.FailsClause],
-    ["uses", "const f = (): int\n  uses S.m\n  => 1", SyntaxKind.UsesClause],
+    ["with", "const f = (): int\n  with S.m\n  => 1", SyntaxKind.WithClause],
     ["=>", "const f = (): int\n  => 1", SyntaxKind.ArrowExpr],
     ["|>", "const f = xs\n  |> g", SyntaxKind.PipeExpr],
     ["else", "const f = if (a) { 1 }\n  else { 2 }", SyntaxKind.IfExpr],
@@ -288,7 +288,7 @@ Deno.test("type forms", () => {
     "(A | B)[]",
     "1 | true",
     "(x: int) => string",
-    "() => int fails E uses S.m",
+    "() => int fails E with S.m",
     "(f: (x: int) => int, y: int) => int",
     "(x: int) => int[] fails E | F",
   ];
@@ -309,7 +309,7 @@ Deno.test("a service method named fails or uses does not continue the previous m
   );
   assertEquals(countKind(tree, SyntaxKind.ServiceMethod), 3);
   assertEquals(countKind(tree, SyntaxKind.FailsClause), 0);
-  assertEquals(countKind(tree, SyntaxKind.UsesClause), 0);
+  assertEquals(countKind(tree, SyntaxKind.WithClause), 0);
 });
 
 Deno.test("a service method clause on the next line continues the method", () => {
@@ -330,12 +330,12 @@ Deno.test("host interface files accept provider declarations", () => {
     "ProviderDecl",
   ]);
   const full = parseClean(
-    "provider P provides A | B fails E uses C.m",
+    "provider P provides A | B fails E with C.m",
     "effi",
   );
   assertEquals(countKind(full, SyntaxKind.ProvidesClause), 1);
   assertEquals(countKind(full, SyntaxKind.FailsClause), 1);
-  assertEquals(countKind(full, SyntaxKind.UsesClause), 1);
+  assertEquals(countKind(full, SyntaxKind.WithClause), 1);
 });
 
 Deno.test("host interface files reject const, and source files reject provider", () => {
@@ -617,4 +617,29 @@ Deno.test("a block arrow body without a record start parses as before", () => {
   assertEquals(countKind(shorthand.tree, SyntaxKind.RecordExpr), 0);
   const empty = parseChecked("const f = () => {}");
   assertEquals(countKind(empty.tree, SyntaxKind.Block), 1);
+});
+
+Deno.test("a with clause parses after an arrow header, in a function type, and in a provider", () => {
+  const arrow = parseClean("const f = (): int fails E with S.m => 1");
+  assertEquals(countKind(arrow, SyntaxKind.FailsClause), 1);
+  assertEquals(countKind(arrow, SyntaxKind.WithClause), 1);
+  const functionType = parseClean(
+    "type Callback = (id: Id) => string fails E with S.m | T",
+  );
+  assertEquals(countKind(functionType, SyntaxKind.FunctionType), 1);
+  assertEquals(countKind(functionType, SyntaxKind.WithClause), 1);
+  const provider = parseClean("provider P provides S with C.m", "effi");
+  assertEquals(countKind(provider, SyntaxKind.WithClause), 1);
+});
+
+Deno.test("uses is an ordinary name and starts no clause", () => {
+  const tree = parseClean("const uses = 1\nconst f = (): int => uses");
+  assertEquals(countKind(tree, SyntaxKind.WithClause), 0);
+});
+
+Deno.test("with is a keyword, so a name position rejects it", () => {
+  const result = parseChecked("const with = 1");
+  assertEquals(result.diagnostics.map(show), [
+    "6-10 syntax/008 expected a name, found `with`",
+  ]);
 });

@@ -9,17 +9,17 @@ const SOURCE = `type Int = int
 type Name = string
 export error Boom = {}
 export service Log { seen(name: Name): void }
-const slow = (): Int uses Log.seen => {
+const slow = (): Int with Log.seen => {
   try { sleep(200ms)
  3 } finally { Log.seen("slow-closed") }
 }
-const medium = (): Int uses Log.seen => {
+const medium = (): Int with Log.seen => {
   try { sleep(100ms)
  2 } finally { Log.seen("medium-closed") }
 }
 const fast = (): Int => { sleep(10ms)
  1 }
-export const firstWins = (): Int uses Log.seen =>
+export const firstWins = (): Int with Log.seen =>
   run(race([defer(() => slow()), defer(() => medium()), defer(() => fast())]))
 export const failSlow = (): Int fails Boom => { sleep(30ms)
  fail(Boom({})) }

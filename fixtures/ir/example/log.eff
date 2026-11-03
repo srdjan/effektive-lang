@@ -8,4 +8,4 @@ service Console {
 
 export const log = (message: Message): void
   fails ConsoleUnavailable
-  uses Console.print => Console.print(message)
+  with Console.print => Console.print(message)

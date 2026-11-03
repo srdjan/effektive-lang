@@ -54,6 +54,7 @@ export enum TokenKind {
   Unknown,
   QuestionQuestion,
   KwFinally,
+  KwWith,
 }
 
 export enum TriviaKind {
@@ -98,6 +99,7 @@ export const KEYWORDS: ReadonlyMap<string, TokenKind> = new Map([
   ["false", TokenKind.KwFalse],
   ["null", TokenKind.KwNull],
   ["finally", TokenKind.KwFinally],
+  ["with", TokenKind.KwWith],
 ]);
 
 /**
@@ -135,7 +137,6 @@ const RESERVED_WORDS: ReadonlySet<string> = new Set([
   "var",
   "void",
   "while",
-  "with",
   "implements",
   "interface",
   "let",
@@ -170,6 +171,7 @@ const TOKEN_NAMES: Readonly<Record<TokenKind, string>> = {
   [TokenKind.Question]: "`?`",
   [TokenKind.QuestionQuestion]: "`??`",
   [TokenKind.KwFinally]: "`finally`",
+  [TokenKind.KwWith]: "`with`",
   [TokenKind.Eq]: "`=`",
   [TokenKind.Arrow]: "`=>`",
   [TokenKind.EqEqEq]: "`===`",

@@ -7,7 +7,7 @@
 // service body, a newline token separates items and the parser leaves it in
 // place. Inside parentheses, brackets, record braces, match arms, and catch
 // handlers the flag is off and `kind()` consumes newline tokens on its own.
-// Before `fails`, `uses`, `=>`, `|>`, `else`, and `catch` the parser looks past
+// Before `fails`, `with`, `=>`, `|>`, `else`, and `catch` the parser looks past
 // newlines (`la()`) and continues the item.
 //
 // Recovery. At a declaration keyword at the start of a line, a construct whose
@@ -79,7 +79,7 @@ const DECL_WORDS: ReadonlySet<string> = new Set([
 
 function isKeywordKind(k: TokenKind): boolean {
   return k >= TokenKind.KwImport && k <= TokenKind.KwNull ||
-    k === TokenKind.KwFinally;
+    k === TokenKind.KwFinally || k === TokenKind.KwWith;
 }
 
 function binaryPrecedence(k: TokenKind): number {
@@ -394,10 +394,17 @@ class Parser {
       : undefined;
   }
 
-  /** True when `fails` or `uses` starts a clause here, possibly after newlines. */
+  /** True when `fails` starts a clause here, possibly after newlines. */
   private clauseAhead(word: string): boolean {
     const p = this.laPos();
     return this.isWordAt(p, word) && this.kinds[p + 1] === TokenKind.Ident;
+  }
+
+  /** True when `with` starts a clause here, possibly after newlines. */
+  private withClauseAhead(): boolean {
+    const p = this.laPos();
+    return this.kinds[p] === TokenKind.KwWith &&
+      this.kinds[p + 1] === TokenKind.Ident;
   }
 
   // ---------------------------------------------------------------- groups
@@ -934,7 +941,7 @@ class Parser {
 
   private parseEffects(): void {
     if (this.clauseAhead("fails")) this.parseFailsClause();
-    if (this.clauseAhead("uses")) this.parseUsesClause();
+    if (this.withClauseAhead()) this.parseWithClause();
   }
 
   private parseFailsClause(): void {
@@ -945,12 +952,12 @@ class Parser {
     this.end(SyntaxKind.FailsClause);
   }
 
-  private parseUsesClause(): void {
+  private parseWithClause(): void {
     this.skipNl();
     this.begin();
-    this.tok(); // uses
+    this.tok(); // with
     this.parseNameSet(true);
-    this.end(SyntaxKind.UsesClause);
+    this.end(SyntaxKind.WithClause);
   }
 
   /** `Name ("|" Name)*`. Names are qualified (`A.b`) when `qualified` is true. */
@@ -1173,8 +1180,8 @@ class Parser {
       case "fails":
         this.parseNameSetClause(SyntaxKind.FailsClause, false);
         return;
-      case "uses":
-        this.parseNameSetClause(SyntaxKind.UsesClause, true);
+      case "with":
+        this.parseNameSetClause(SyntaxKind.WithClause, true);
         return;
       default: {
         const unreachable: never = kind;

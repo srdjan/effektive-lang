@@ -13,12 +13,12 @@ export const transformedField: SchemaOptional<Int, Int, Read.next, Write.previou
   schemaOptionalTransform(
     exact,
     exact,
-    (value: Option<Int>): Option<Int> fails SchemaIssue uses Read.next =>
+    (value: Option<Int>): Option<Int> fails SchemaIssue with Read.next =>
       match value {
         Some(score) => Some(Read.next(score)),
         None => Some(Read.next(0))
       },
-    (value: Option<Int>): Option<Int> fails SchemaIssue uses Write.previous =>
+    (value: Option<Int>): Option<Int> fails SchemaIssue with Write.previous =>
       match value {
         Some(score) => Some(Write.previous(score)),
         None => Some(Write.previous(1))
@@ -29,7 +29,7 @@ export const transformed: Schema<Optional, Optional, Read.next, Write.previous> 
 
 export const defaultField: SchemaEncodedOptional<Int, Int, Default.make> =
   schemaDefaultKey(integer,
-    (): Int fails SchemaIssue uses Default.make => Default.make())
+    (): Int fails SchemaIssue with Default.make => Default.make())
 export const defaulted: Schema<Required, Optional, Default.make> =
   schemaStruct({ score: defaultField })
 
@@ -38,11 +38,11 @@ export const existingErrorField: SchemaEncodedOptional<Int> =
 export const existingError: Schema<Required, Optional> =
   schemaStruct({ score: existingErrorField })
 
-export const readOptional = (input: unknown): Optional fails SchemaError uses Read.next =>
+export const readOptional = (input: unknown): Optional fails SchemaError with Read.next =>
   schemaDecode(transformed, input)
-export const writeOptional = (value: Optional): Optional fails SchemaError uses Write.previous =>
+export const writeOptional = (value: Optional): Optional fails SchemaError with Write.previous =>
   schemaEncode(transformed, value)
-export const readDefault = (input: unknown): Required fails SchemaError uses Default.make =>
+export const readDefault = (input: unknown): Required fails SchemaError with Default.make =>
   schemaDecode(defaulted, input)
 export const writeDefault = (value: Required): Optional fails SchemaError =>
   schemaEncode(defaulted, value)

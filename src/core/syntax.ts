@@ -31,7 +31,7 @@ export enum SyntaxKind {
   ParamList,
   Param,
   FailsClause,
-  UsesClause,
+  WithClause,
   ProvidesClause,
   QualifiedName,
   Name,
@@ -106,9 +106,9 @@ interface SchemaFlags {
 
 /**
  * What one argument position of a type word holds: a type, a `provides` name
- * set, a `fails` name set, or a `uses` name set.
+ * set, a `fails` name set, or a `with` name set.
  */
-export type TypeSlotKind = "type" | "provides" | "fails" | "uses";
+export type TypeSlotKind = "type" | "provides" | "fails" | "with";
 
 /** One argument position of a type word. A required slot reports a missing comma before it. */
 interface TypeSlot {
@@ -135,14 +135,14 @@ interface TypeWord {
 const EFFECT_SLOTS: readonly TypeSlot[] = [
   slot("type"),
   slot("fails"),
-  slot("uses"),
+  slot("with"),
 ];
 
 const SCHEMA_SLOTS: readonly TypeSlot[] = [
   slot("type"),
   slot("type"),
-  slot("uses"),
-  slot("uses"),
+  slot("with"),
+  slot("with"),
   slot("type"),
 ];
 
@@ -176,7 +176,7 @@ export const TYPE_WORDS: ReadonlyMap<string, TypeWord> = new Map([
         slot("type"),
         slot("type", true),
         slot("fails"),
-        slot("uses"),
+        slot("with"),
         slot("type"),
       ],
     },
@@ -185,7 +185,7 @@ export const TYPE_WORDS: ReadonlyMap<string, TypeWord> = new Map([
     "Layer",
     {
       kind: SyntaxKind.LayerType,
-      slots: [slot("provides"), slot("fails"), slot("uses")],
+      slots: [slot("provides"), slot("fails"), slot("with")],
     },
   ],
   ["Schema", schemaWord(false, false, false, false)],

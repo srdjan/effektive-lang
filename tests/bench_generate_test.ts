@@ -101,7 +101,7 @@ Deno.test("the medium project uses the language features of the examples", () =>
     ["service", /^export service /m],
     ["provider", /^export provider /m],
     ["host import", /from "host:providers"/],
-    ["explicit contract", /\n {2}fails \w+\n {2}uses /],
+    ["explicit contract", /\n {2}fails \w+\n {2}with /],
     ["inferred contract", /^const \w+ = \(\w+: \w+(, \w+: \w+)*\) =>/m],
     ["match", /\bmatch /],
     ["try and catch", /\btry \{[\s\S]*?\} catch \{/],

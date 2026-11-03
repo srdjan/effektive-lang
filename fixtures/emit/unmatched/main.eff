@@ -25,16 +25,16 @@ export const figurePure = (f: Figure): Text =>
     { kind: "square", ...q } => q.side
   }
 
-export const shapeEffect = (s: Shape): Text uses Names.label =>
+export const shapeEffect = (s: Shape): Text with Names.label =>
   match s {
     Circle(c) => Names.label(),
     Square(q) => q.side
   }
 
-export const statusEffect = (s: Status): Text uses Names.label =>
+export const statusEffect = (s: Status): Text with Names.label =>
   match s { "pending" => Names.label(), "paid" => "q" }
 
-export const figureEffect = (f: Figure): Text uses Names.label =>
+export const figureEffect = (f: Figure): Text with Names.label =>
   match f {
     { kind: "circle", ...c } => Names.label(),
     { kind: "square", ...q } => q.side

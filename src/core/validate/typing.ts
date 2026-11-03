@@ -973,12 +973,12 @@ export function show(type: Type): string {
       const fails = type.effects.failures.length === 0
         ? ""
         : ` fails ${type.effects.failures.join(" | ")}`;
-      const uses = type.effects.requirements.length === 0
+      const withText = type.effects.requirements.length === 0
         ? ""
-        : ` uses ${type.effects.requirements.join(" | ")}`;
+        : ` with ${type.effects.requirements.join(" | ")}`;
       return `(${type.parameters.map(show).join(", ")}) => ${
         show(type.result)
-      }${fails}${uses} [${type.execution}]`;
+      }${fails}${withText} [${type.execution}]`;
     }
     case "provider":
       return `provider provides ${

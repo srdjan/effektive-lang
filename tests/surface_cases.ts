@@ -206,7 +206,7 @@ function positionOf(text: string, needle: string, shift = 0) {
   return { line, character: before[line].length };
 }
 
-/** A module that calls a service without a `fails` or `uses` entry. */
+/** A module that calls a service without a `fails` or `with` entry. */
 const SCRATCH_TEXT =
   "type Count = int\nerror Failed = {}\nservice Clock { now(): Count fails Failed }\nexport const run = (): Count => Clock.now()\n";
 

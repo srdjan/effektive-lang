@@ -151,7 +151,7 @@ export const GateLive: Layer.Layer<Gate> = Layer.succeed(Gate)({
 
 /** The names in a module that later declarations use. */
 interface ModuleNames {
-  /** An effectful lookup: `(id: Id): Item fails NotFound uses Store.find`. */
+  /** An effectful lookup: `(id: Id): Item fails NotFound with Store.find`. */
   readonly get: string;
   /** A pure function: `(item: Item): Item`. */
   readonly touch: string;
@@ -189,14 +189,14 @@ const TEMPLATES: readonly Template[] = [
     `const look${n} = (id: Id) => Store.find(id)`,
     `export const peek${n} = (id: Id): Option<Item>
   fails NotFound
-  uses Store.find =>
+  with Store.find =>
   look${n}(id)`,
   ],
   // A match on an option.
   ({ n }) => [
     `export const get${n} = (id: Id): Item
   fails NotFound
-  uses Store.find =>
+  with Store.find =>
   match Store.find(id) {
     Some(item) => item,
     None => fail(NotFound({ id }))
@@ -221,7 +221,7 @@ const TEMPLATES: readonly Template[] = [
   // try and catch around an effectful call.
   ({ n, names }) => [
     `export const safe${n} = (id: Id): Text
-  uses Store.find =>
+  with Store.find =>
   try {
     ${names.get}(id).name
   } catch {
@@ -232,7 +232,7 @@ const TEMPLATES: readonly Template[] = [
   ({ n, rng }) => [
     `export const charge${n} = (item: Item): Item
   fails Declined
-  uses Gate.charge => {
+  with Gate.charge => {
   retry(() => Gate.charge(item.qty), { times: ${pick(rng, 1, 4)} })
   item
 }`,
@@ -252,7 +252,7 @@ const TEMPLATES: readonly Template[] = [
   // An effectful pipeline from a service call.
   ({ n, rng }) => [
     `export const list${n} = (): Text[]
-  uses Store.list =>
+  with Store.list =>
   Store.list()
     |> filter((it) => it.qty > ${pick(rng, 1, 99)})
     |> map((it) => it.name)`,
@@ -261,7 +261,7 @@ const TEMPLATES: readonly Template[] = [
   ({ n, names }) => [
     `export const flow${n} = (id: Id): Item
   fails NotFound
-  uses Store.find =>
+  with Store.find =>
   id
     |> ${names.get}
     |> ${names.touch}`,
@@ -270,7 +270,7 @@ const TEMPLATES: readonly Template[] = [
   ({ n, names }) => [
     `export const upd${n} = (id: Id, name: Text): Item
   fails NotFound
-  uses Store.find | Store.save => {
+  with Store.find | Store.save => {
   const item = ${names.get}(id)
   const next: Item = { ...item, name }
   Store.save(next)
@@ -359,7 +359,7 @@ function prologue(
     `export const link${index} = (n: Int): Int => n + ${index + 1}`,
     `export const ${names.get} = (id: Id): Item
   fails NotFound
-  uses Store.find =>
+  with Store.find =>
   match Store.find(id) {
     Some(item) => item,
     None => fail(NotFound({ id }))

@@ -17,7 +17,7 @@ export interface FixOutcome {
 }
 
 /**
- * Adds the missing `fails` and `uses` entries of the exported functions. A
+ * Adds the missing `fails` and `with` entries of the exported functions. A
  * round applies the actions of all modules and checks the edited inputs again.
  * The loop ends after a round that changes no text. A fix in one module can
  * make a closed caller in another module miss an entry, and the next round

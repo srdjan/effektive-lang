@@ -23,7 +23,7 @@ export service Shelf {
 
 export const findBook = (id: BookId): Book
   fails BookMissing | StoreDown
-  uses Shelf.find =>
+  with Shelf.find =>
   Shelf.find(id) ?? fail(BookMissing({ id }))
 ```
 

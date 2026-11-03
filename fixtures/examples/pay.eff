@@ -38,7 +38,7 @@ const saveOrder = (order: Order) => {
 
 export const pay = (id: OrderId): Order
   fails OrderNotFound | PaymentDeclined
-  uses Orders | Payments.charge =>
+  with Orders | Payments.charge =>
   id
     |> findOrder
     |> chargeOrder

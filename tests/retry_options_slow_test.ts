@@ -13,15 +13,15 @@ export service Jobs { next(): Int fails Stop }
 export service Gate { allow(e: Stop): Bool fails Other }
 const limited: RetrySchedule<Stop> = retrySchedule((e: Stop, attempt: Int): Option<Duration> =>
   if (attempt < 3) { Some(attempt * 10ms) } else { None })
-export const timesWhile = (): Int fails Stop uses Jobs.next =>
+export const timesWhile = (): Int fails Stop with Jobs.next =>
   retry(() => Jobs.next(), { times: 2, while: (e) => true })
-export const whileFalse = (): Int fails Stop uses Jobs.next =>
+export const whileFalse = (): Int fails Stop with Jobs.next =>
   retry(() => Jobs.next(), { times: 5, while: (e) => false })
-export const untilGate = (): Int fails Stop | Other uses Jobs.next | Gate.allow =>
+export const untilGate = (): Int fails Stop | Other with Jobs.next | Gate.allow =>
   retry(() => Jobs.next(), { until: (e) => Gate.allow(e) })
-export const recurring = (): Int fails Stop uses Jobs.next =>
+export const recurring = (): Int fails Stop with Jobs.next =>
   retry(() => Jobs.next(), { schedule: limited })
-export const timesOnly = (): Int fails Stop uses Jobs.next =>
+export const timesOnly = (): Int fails Stop with Jobs.next =>
   retry(() => Jobs.next(), { times: 2 })
 `;
 

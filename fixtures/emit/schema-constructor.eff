@@ -16,8 +16,8 @@ const text: Schema<Text> = schema()
 const integer: Schema<Int> = schema()
 const field: Schema<Int, Text, Read.parse, Write.print> = schemaTransform(
   text, integer,
-  (value: Text): Option<Int> uses Read.parse => Some(Read.parse(value)),
-  (value: Int): Option<Text> uses Write.print => Some(Write.print(value))
+  (value: Text): Option<Int> with Read.parse => Some(Read.parse(value)),
+  (value: Int): Option<Text> with Write.print => Some(Write.print(value))
 )
 export const record: Schema<Decoded, Encoded, Read.parse, Write.print> = schemaStruct({ score: field })
 export const nested: Schema<Nested, { settings: Encoded }, Read.parse, Write.print> = schemaStruct({ settings: record })
@@ -33,9 +33,9 @@ export const makeNested = (input: NestedInput): Nested fails SchemaIssue => {
 }
 export const makeDirect = (input: Decoded): Decoded fails SchemaIssue => schemaMake(record, input)
 
-const choose = (): Schema<Decoded, Encoded, Read.parse, Write.print> uses Values.next =>
+const choose = (): Schema<Decoded, Encoded, Read.parse, Write.print> with Values.next =>
   if (Values.next() > 0) { record } else { record }
-export const makeObserved = (): Decoded fails SchemaIssue uses Values.next =>
+export const makeObserved = (): Decoded fails SchemaIssue with Values.next =>
   schemaMake(choose(), { score: Values.next() })
 
 export const classify = (issue: SchemaIssue | Other): Int => match issue {
@@ -48,5 +48,5 @@ export const catchMixed = (raise: Bool, issue: SchemaIssue): Int fails Other =>
     Other(value) => 2
   }
 
-export const readWire = (input: unknown): Decoded fails SchemaError uses Read.parse => schemaDecode(record, input)
-export const writeWire = (input: Decoded): Encoded fails SchemaError uses Write.print => schemaEncode(record, input)
+export const readWire = (input: unknown): Decoded fails SchemaError with Read.parse => schemaDecode(record, input)
+export const writeWire = (input: Decoded): Encoded fails SchemaError with Write.print => schemaEncode(record, input)

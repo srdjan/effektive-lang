@@ -82,7 +82,7 @@ Deno.test("using accepts an outcome binding in its finally clause", () => {
 
 Deno.test("the outcome binding has the structural union, with a Failure member for a remaining failure", () => {
   const text =
-    `${HEAD}export const a = (): Int fails Stop uses Log.next | Log.note =>
+    `${HEAD}export const a = (): Int fails Stop with Log.next | Log.note =>
   try { Log.next() } finally (out) { Log.note(1) }
 `;
   const program = new Program().update({
@@ -97,9 +97,9 @@ Deno.test("the outcome binding has the structural union, with a Failure member f
 });
 
 Deno.test("the outcome has no Failure member when no failure remains, also after a catch", () => {
-  const text = `${HEAD}export const a = (): Int uses Log.next | Log.note =>
+  const text = `${HEAD}export const a = (): Int with Log.next | Log.note =>
   try { Log.next() } catch { Stop(e) => 0 } finally (out) { Log.note(1) }
-export const b = (): Int uses Log.note => try { 1 } finally (done) { Log.note(1) }
+export const b = (): Int with Log.note => try { 1 } finally (done) { Log.note(1) }
 `;
   const program = new Program().update({
     set: { "effektive.json": "{}", "m.eff": text },
@@ -119,7 +119,7 @@ export const b = (): Int uses Log.note => try { 1 } finally (done) { Log.note(1)
 Deno.test("a using outcome binding has the union of the use block", () => {
   const text = `${HEAD}type Handle = { wait: () => Int }
 export service Pool { open(): Handle }
-export const a = (): Int fails Stop uses Pool.open | Log.note =>
+export const a = (): Int fails Stop with Pool.open | Log.note =>
   using (h = Pool.open()) { Log.next() } finally (z) { Log.note(1) }
 `;
   const program = new Program().update({
@@ -127,7 +127,7 @@ export const a = (): Int fails Stop uses Pool.open | Log.note =>
   });
   assert(program.ok);
   assertEquals(program.value.diagnostics.map((d) => d.code + " " + d.message), [
-    "requirement-contract/001 the body requires Log.next, which the `uses` clause does not list",
+    "requirement-contract/001 the body requires Log.next, which the `with` clause does not list",
   ]);
   assertEquals(
     sourceHoverAt(program.value, "m.eff", text.indexOf("(z)") + 1)?.contract,
@@ -142,11 +142,11 @@ Deno.test("the finalizer failures and requirements join the result", () => {
 `),
     [
       "failure-contract/001 the body can fail with Stop, which the `fails` clause does not list",
-      "requirement-contract/001 the body requires Log.check, which the `uses` clause does not list",
+      "requirement-contract/001 the body requires Log.check, which the `with` clause does not list",
     ],
   );
   assertEquals(
-    diagnosticsOf(`${HEAD}export const a = (): Int fails Stop uses Log.check =>
+    diagnosticsOf(`${HEAD}export const a = (): Int fails Stop with Log.check =>
   try { 1 } finally { Log.check() }
 `),
     [],
@@ -155,7 +155,7 @@ Deno.test("the finalizer failures and requirements join the result", () => {
 
 Deno.test("the finalizer must return void", () => {
   assertEquals(
-    diagnosticsOf(`${HEAD}export const a = (): Int uses Log.next =>
+    diagnosticsOf(`${HEAD}export const a = (): Int with Log.next =>
   try { 1 } finally (o) { 5 }
 `),
     ["type-mismatch/003 the finally result has type int, but void is expected"],
@@ -164,7 +164,7 @@ Deno.test("the finalizer must return void", () => {
 
 Deno.test("the outcome binding is visible only in the finally block", () => {
   const found = diagnosticsOf(
-    `${HEAD}export const b = (n: Int): Int uses Log.note =>
+    `${HEAD}export const b = (n: Int): Int with Log.note =>
   try { Log.note(1); out } finally (out) { Log.note(1) }
 `,
   );
@@ -185,7 +185,7 @@ export const a = (): Fn => try { () => 1 } finally ${binding}{ }
 Deno.test("a withResource release may take the outcome as a second parameter", () => {
   const text = `${HEAD}type Handle = { wait: () => Int }
 export service Pool { open(): Handle }
-export const a = (): Int uses Pool.open =>
+export const a = (): Int with Pool.open =>
   withResource(() => Pool.open(), (h) => h.wait(), (h, outcome) => { })
 `;
   assertEquals(diagnosticsOf(text), []);
@@ -199,10 +199,10 @@ export const a = (): Int uses Pool.open =>
 
 const SOURCE = `${HEAD}type Handle = { wait: () => Int }
 export service Pool { open(): Handle }
-export const guarded = (): Int fails Stop uses Log.next | Log.note =>
+export const guarded = (): Int fails Stop with Log.next | Log.note =>
   try { Log.next() } finally (out) { Log.note(1) }
-export const plain = (): Int uses Log.note => try { 1 } finally { Log.note(1) }
-export const resource = (): Int uses Pool.open =>
+export const plain = (): Int with Log.note => try { 1 } finally { Log.note(1) }
+export const resource = (): Int with Pool.open =>
   withResource(() => Pool.open(), (h) => h.wait(), (h, outcome) => { })
 `;
 

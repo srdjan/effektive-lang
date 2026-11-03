@@ -12,13 +12,13 @@ export service Jobs { next(): Int fails Stop }
 
 Deno.test("race over an array has the success, failures and requirements of its jobs", () => {
   const source = `${HEAD}export const jobs = (): Int[] => [1]
-export const a = (): Int fails Stop uses Jobs.next =>
+export const a = (): Int fails Stop with Jobs.next =>
   run(race([defer(() => Jobs.next()), defer(() => 1)]))
 export const missing = (): Int => run(race([defer(() => Jobs.next())]))
 `;
   assertEquals(diagnosticsOf(source), [
     "failure-contract/001 the body can fail with Stop, which the `fails` clause does not list",
-    "requirement-contract/001 the body requires Jobs.next, which the `uses` clause does not list",
+    "requirement-contract/001 the body requires Jobs.next, which the `with` clause does not list",
   ]);
 });
 

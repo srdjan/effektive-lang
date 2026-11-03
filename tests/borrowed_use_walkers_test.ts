@@ -95,7 +95,7 @@ export service Files {
 `,
     "main.eff": `
 import { Handle, Text, Files } from "host:files"
-const borrowed = (borrow handle: Handle): Text uses Files.read => Files.read(handle)
+const borrowed = (borrow handle: Handle): Text with Files.read => Files.read(handle)
 const unborrowed = (handle: Handle): Text => "x"
 ${main}
 `,
@@ -143,7 +143,7 @@ const HANDLE_ROWS: readonly Row[] = [
 for (const row of HANDLE_ROWS) {
   Deno.test(`borrowed handle in withResource: ${row.name}`, () => {
     const main =
-      `const probe = (): Text uses Files.open | Files.read | Files.plain | Files.both | Files.second | Files.close =>
+      `const probe = (): Text with Files.open | Files.read | Files.plain | Files.both | Files.second | Files.close =>
   withResource(() => Files.open(), (handle) => ${row.body}, (handle) => Files.close(handle))`;
     assertEquals(
       reportsOf(handleProject(main), "main.eff", HANDLE),
@@ -166,7 +166,7 @@ const PARAMETER_ROWS: readonly Row[] = [
 for (const row of PARAMETER_ROWS) {
   Deno.test(`borrow parameter: ${row.name}`, () => {
     const main =
-      `const probe = (borrow handle: Handle): Text uses Files.read | Files.plain => ${row.body}`;
+      `const probe = (borrow handle: Handle): Text with Files.read | Files.plain => ${row.body}`;
     assertEquals(
       reportsOf(handleProject(main), "main.eff", HANDLE),
       row.reports,

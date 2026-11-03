@@ -21,7 +21,7 @@ export service Log {
 
 Deno.test("a catch block with only a Defect arm is valid", () => {
   assertEquals(
-    diagnosticsOf(`${HEAD}export const a = (): Int uses Log.boom =>
+    diagnosticsOf(`${HEAD}export const a = (): Int with Log.boom =>
   try { Log.boom() } catch { Defect(d) => 0 }
 `),
     [],
@@ -30,7 +30,7 @@ Deno.test("a catch block with only a Defect arm is valid", () => {
 
 Deno.test("a Defect arm needs no failure in the protected block, and joins typed arms", () => {
   assertEquals(
-    diagnosticsOf(`${HEAD}export const a = (): Int uses Log.next =>
+    diagnosticsOf(`${HEAD}export const a = (): Int with Log.next =>
   try { Log.next() } catch { Stop(e) => e.n, Defect(d) => 0 }
 export const b = (): Int => try { 1 } catch { Defect(d) => 2 }
 `),
@@ -51,9 +51,9 @@ Deno.test("the Defect arm result joins the protected result", () => {
 
 Deno.test("the Defect arm body failures and requirements join the result", () => {
   const text =
-    `${HEAD}export const a = (): Int fails Stop uses Log.boom | Log.other =>
+    `${HEAD}export const a = (): Int fails Stop with Log.boom | Log.other =>
   try { Log.boom() } catch { Defect(d) => Log.other() }
-export const b = (): Int uses Log.boom | Log.other =>
+export const b = (): Int with Log.boom | Log.other =>
   try { Log.boom() } catch { Defect(d) => Log.other() }
 `;
   const found = diagnosticsOf(text);
@@ -62,7 +62,7 @@ export const b = (): Int uses Log.boom | Log.other =>
 });
 
 Deno.test("a typed failure is not handled by the Defect arm", () => {
-  const found = diagnosticsOf(`${HEAD}export const a = (): Int uses Log.next =>
+  const found = diagnosticsOf(`${HEAD}export const a = (): Int with Log.next =>
   try { Log.next() } catch { Defect(d) => 0 }
 `);
   assertEquals(found.length, 1);
@@ -71,7 +71,7 @@ Deno.test("a typed failure is not handled by the Defect arm", () => {
 
 Deno.test("two Defect arms are a duplicate handler", () => {
   assertEquals(
-    diagnosticsOf(`${HEAD}export const a = (): Int uses Log.boom =>
+    diagnosticsOf(`${HEAD}export const a = (): Int with Log.boom =>
   try { Log.boom() } catch { Defect(d) => 0, Defect(e) => 1 }
 `),
     ["failure-contract/003 the `Defect` arm already has a handler"],
@@ -102,7 +102,7 @@ Deno.test("fails Defect is rejected, because Defect is not an error", () => {
 
 Deno.test("the Defect binding is local to its arm", () => {
   const found = diagnosticsOf(
-    `${HEAD}export const a = (): Int uses Log.boom => {
+    `${HEAD}export const a = (): Int with Log.boom => {
   const x = try { Log.boom() } catch { Defect(d) => 0 }
   d
 }
@@ -113,7 +113,7 @@ Deno.test("the Defect binding is local to its arm", () => {
 });
 
 Deno.test("the Defect binding has the type { message: string }", () => {
-  const text = `${HEAD}export const a = (): Text uses Log.boom =>
+  const text = `${HEAD}export const a = (): Text with Log.boom =>
   try { Log.boom(); "x" } catch { Defect(failure) => failure.message }
 `;
   const program = new Program().update({
@@ -130,7 +130,7 @@ Deno.test("the Defect binding has the type { message: string }", () => {
 
 // ------------------------------------------------------------------ validator
 
-const SOURCE = `${HEAD}export const a = (): Int uses Log.boom =>
+const SOURCE = `${HEAD}export const a = (): Int with Log.boom =>
   try { Log.boom() } catch { Defect(d) => 0 }
 `;
 

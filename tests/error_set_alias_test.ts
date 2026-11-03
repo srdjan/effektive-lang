@@ -112,7 +112,7 @@ Deno.test("an alias works in a function type and a service method", () => {
 service Bank {
   charge(id: Text): Text fails PayFailure
 }
-export const run = (id: Text): Text fails Declined | NotFound uses Bank.charge => Bank.charge(id)
+export const run = (id: Text): Text fails Declined | NotFound with Bank.charge => Bank.charge(id)
 export const use = (f: Charge, id: Text): Text fails NotFound | Declined => f(id)
 `),
     [],
@@ -170,7 +170,7 @@ export service Bank {
 }
 `,
     "m.eff": `import { Bank, Declined, NotFound, Text } from "host:h"
-export const pay = (id: Text): Text fails Declined | NotFound uses Bank.charge => Bank.charge(id)
+export const pay = (id: Text): Text fails Declined | NotFound with Bank.charge => Bank.charge(id)
 `,
   };
   const result = new Program("").update({ set: files });

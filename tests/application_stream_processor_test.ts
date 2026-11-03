@@ -52,8 +52,8 @@ Deno.test("stream processor rejects erased exported failure, service and result 
   }
   for (const service of services) {
     const erased = exported.replace(
-      "uses " + services.join(" | "),
-      "uses " + services.filter((name) => name !== service).join(" | "),
+      "with " + services.join(" | "),
+      "with " + services.filter((name) => name !== service).join(" | "),
     );
     assert(
       checked(prefix + erased).diagnostics.some((d) =>

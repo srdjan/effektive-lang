@@ -113,9 +113,9 @@ keyword in the website: the example files, the code blocks of
 `site.js`. The orchestrator commits the website change in that repository
 separately. The prose of the website changes in EIU5.
 
-`with` is a reserved word of strict JavaScript. The lexer reports `syntax/007`
-for it today. Add it to the words that the parser checks (`void`, `while`), so
-that a name `with` still gives `syntax/007` with the same span and text. Rename
+`with` is a reserved word of strict JavaScript. The lexer reported `syntax/007`
+for it. `with` becomes a keyword token (`TokenKind.KwWith`), as `finally` is. A
+name `with` then gives `syntax/008`, as other keywords do (EIF9). Rename
 `SyntaxKind.UsesClause` to `WithClause`, and the slot kind `"uses"` to
 `"with"`. `uses` becomes an ordinary name.
 
@@ -219,3 +219,4 @@ checked EIF4 and EIF7 in the code and accepted each finding.
 | EIF6 | Recursive groups and importer rechecks need no change. | None. |
 | EIF7 | More tests drift: `tests/open_contracts_test.ts:207`, and after EIU3 `tests/check_test.ts:507` and `:538`, and `tests/check_body_test.ts:646`. | EIU2 and EIU3 update them. |
 | EIF8 | Two cases are not in the acceptance list: a body that stops failing makes an importer's `catch` arm unreachable (`failure-contract/002`), and a foreign error reached through an imported call. | EIU2 adds both as literal tests. |
+| EIF9 | The first EIU1 text added `with` to the words that the parser checks. That route reports `syntax/007` only in binding positions, so `with` would become a legal record label or type name. | `with` is a keyword token, and every name position rejects it with `syntax/008`. |

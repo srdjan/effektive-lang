@@ -174,7 +174,7 @@ export const DIAGNOSTIC_CODES = {
   },
   "requirement-contract/001": {
     description:
-      "The body of a function with a written uses clause needs service methods that the clause does not list. An exported function and a function with a binding type annotation have a written uses clause, empty when omitted.",
+      "The body of a function with a written `with` clause needs service methods that the clause does not list. An exported function and a function with a binding type annotation have a written `with` clause, empty when omitted.",
   },
   "execution-mode/001": {
     description:

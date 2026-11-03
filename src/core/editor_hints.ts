@@ -63,7 +63,7 @@ export function inlayHintsAt(
         const kind = kindOf(tree, part);
         if (
           kind === SyntaxKind.ParamList || kind === SyntaxKind.FailsClause ||
-          kind === SyntaxKind.UsesClause || isTypeKind(kind)
+          kind === SyntaxKind.WithClause || isTypeKind(kind)
         ) position = Math.max(position, tree.ends[part]);
       }
     }

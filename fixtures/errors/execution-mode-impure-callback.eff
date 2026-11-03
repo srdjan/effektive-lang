@@ -7,4 +7,4 @@ service Probe {
 }
 
 // error: execution-mode/001
-const bad = retrySchedule((e: Stop, attempt: Int): Option<Duration> uses Probe.n => Some(Probe.n() * 1ms))
+const bad = retrySchedule((e: Stop, attempt: Int): Option<Duration> with Probe.n => Some(Probe.n() * 1ms))

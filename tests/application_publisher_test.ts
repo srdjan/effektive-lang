@@ -68,7 +68,7 @@ Deno.test("portable publisher rejects erased failures, services, and result cont
       "fails PublishFailure | PlatformUnavailable",
       `fails ${members.join(" | ")} | PlatformUnavailable`,
     );
-  const without = (kind: "fails" | "uses", name: string) =>
+  const without = (kind: "fails" | "with", name: string) =>
     expanded.replaceAll(
       new RegExp(`${kind} ([^\\n]+?)(?= =>|\\n)`, "g"),
       (_clause, names: string) => {
@@ -113,7 +113,7 @@ Deno.test("portable publisher rejects erased failures, services, and result cont
       "TextRules",
       "Time",
     ]
-  ) rejected(without("uses", capability), "requirement-contract");
+  ) rejected(without("with", capability), "requirement-contract");
   rejected(
     original.replace("(rawId: Text): PublishReceipt", "(rawId: Text): Text"),
     "type-mismatch",

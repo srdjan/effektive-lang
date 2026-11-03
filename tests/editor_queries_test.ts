@@ -20,7 +20,7 @@ export service S { read(): Int fails Stop }
 export const value = (arg: Int): Int => arg
 `;
 const consumer = `import { Int, Stop, S, value } from "./lib.eff"
-export const use = (arg: Int): Int fails Stop uses S.read => { const other = value(arg); S.read() + other }
+export const use = (arg: Int): Int fails Stop with S.read => { const other = value(arg); S.read() + other }
 `;
 
 Deno.test("revision index shares declaration identities across imports, locals, types and capabilities", () => {
@@ -363,23 +363,23 @@ Deno.test("contract actions derive and validate missing effects while preserving
       ],
       [
         "type Int = int\nservice Clock { now(): Int }\nexport const f = (): Int => Clock.now()\n",
-        "type Int = int\nservice Clock { now(): Int }\nexport const f = (): Int uses Clock => Clock.now()\n",
+        "type Int = int\nservice Clock { now(): Int }\nexport const f = (): Int with Clock => Clock.now()\n",
       ],
       [
         "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int => Svc.one() + Svc.two()\n",
-        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int uses Svc => Svc.one() + Svc.two()\n",
+        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int with Svc => Svc.one() + Svc.two()\n",
       ],
       [
         "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int => Svc.one()\n",
-        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int uses Svc.one => Svc.one()\n",
+        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int with Svc.one => Svc.one()\n",
       ],
       [
-        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int uses Svc.one => Svc.one() + Svc.two()\n",
-        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int uses Svc.one | Svc.two => Svc.one() + Svc.two()\n",
+        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int with Svc.one => Svc.one() + Svc.two()\n",
+        "type Int = int\nservice Svc { one(): Int; two(): Int }\nexport const f = (): Int with Svc.one | Svc.two => Svc.one() + Svc.two()\n",
       ],
       [
         "type Int = int\nservice Alpha { a(): Int; b(): Int }\nservice Beta { c(): Int; d(): Int }\nexport const f = (): Int => Alpha.a() + Alpha.b() + Beta.c()\n",
-        "type Int = int\nservice Alpha { a(): Int; b(): Int }\nservice Beta { c(): Int; d(): Int }\nexport const f = (): Int uses Alpha | Beta.c => Alpha.a() + Alpha.b() + Beta.c()\n",
+        "type Int = int\nservice Alpha { a(): Int; b(): Int }\nservice Beta { c(): Int; d(): Int }\nexport const f = (): Int with Alpha | Beta.c => Alpha.a() + Alpha.b() + Beta.c()\n",
       ],
       [
         "type Int = int\nerror First = {}\nerror Second = {}\nservice Clock { now(): Int fails Second }\nconst f = (): Int fails First => Clock.now()\n",
@@ -418,7 +418,7 @@ Deno.test("references separate same-named local scopes and capability rename pre
  export service S { read(): Int }
  export const first = (x: Int): Int => x
  export const second = (x: Int): Int => x
- export const third = (): Int uses S.read => S.read()
+ export const third = (): Int with S.read => S.read()
  `;
   const loaded = new Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
@@ -466,8 +466,8 @@ const hintSource = `import { Int, Stop, S } from "./lib.eff"
 const plain = (x: Int) => x
 const open = (x: Int) => { S.read() + x }
 const result = (x: Int): Int => { S.read() + x }
-const oneWritten = (x: Int): Int uses S.read => { S.read() + x }
-export const shown = (x: Int): Int fails Stop uses S.read => { S.read() + x }
+const oneWritten = (x: Int): Int with S.read => { S.read() + x }
+export const shown = (x: Int): Int fails Stop with S.read => { S.read() + x }
 `;
 
 function hints(range?: { start: number; end: number }) {
@@ -492,9 +492,9 @@ Deno.test("inlay hints show the inferred parts of non-exported functions only", 
   assertEquals(
     found.map((h) => [h.position, h.label]),
     [
-      [after("const open = (x: Int)"), " fails Stop uses S.read"],
-      [after("const result = (x: Int): Int"), " fails Stop uses S.read"],
-      [after("const oneWritten = (x: Int): Int uses S.read"), " fails Stop"],
+      [after("const open = (x: Int)"), " fails Stop with S.read"],
+      [after("const result = (x: Int): Int"), " fails Stop with S.read"],
+      [after("const oneWritten = (x: Int): Int with S.read"), " fails Stop"],
     ],
   );
 });
@@ -504,4 +504,19 @@ Deno.test("inlay hints keep only the positions inside the range", () => {
   const end = hintSource.indexOf("export");
   assertEquals(hints({ start, end }).length, 2);
   assertEquals(hints({ start: 0, end: 1 }), []);
+});
+
+Deno.test("completion after a with keyword offers services and no values", () => {
+  const text =
+    "type Int = int\nservice Clock { now(): Int }\nconst other = (): Int => 1\nexport const f = (): Int with Cl => Clock.now()\n";
+  const loaded = new Program("").update({
+    set: { "effektive.json": "{}", "m.eff": text },
+  });
+  assert(loaded.ok);
+  assertEquals(
+    completionsAt(loaded.value, "m.eff", text.indexOf("Cl =>") + 2).map((c) =>
+      c.label
+    ),
+    ["Clock"],
+  );
 });

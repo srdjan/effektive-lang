@@ -125,8 +125,8 @@ Deno.test("constructor field defaults reject erased flags, duplicate defaults an
       ["type-mismatch/010", callback, "(): Option<M> => Some({})"],
     ],
     [
-      "service Extra { next(): M }\nconst bad = schemaConstructorDefault(schemaOptionalKey(child), (): M uses Extra.next => Extra.next())",
-      ["type-mismatch/010", callback, "(): M uses Extra.next => Extra.next()"],
+      "service Extra { next(): M }\nconst bad = schemaConstructorDefault(schemaOptionalKey(child), (): M with Extra.next => Extra.next())",
+      ["type-mismatch/010", callback, "(): M with Extra.next => Extra.next()"],
     ],
   ];
   assertRejected(

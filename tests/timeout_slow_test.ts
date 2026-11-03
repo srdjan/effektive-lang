@@ -12,7 +12,7 @@ export service Files {
 }
 export const fast = (): Int fails TimeoutError => timeout(() => 7, 1s)
 export const piped = (): Int fails TimeoutError => (() => 8) |> timeout(1s)
-export const slow = (): Int uses Files.open | Files.mark =>
+export const slow = (): Int with Files.open | Files.mark =>
   try {
     timeout(
       () => withResource(() => Files.open(), (file) => file.wait(), (file) => file.close()),

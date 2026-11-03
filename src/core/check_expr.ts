@@ -504,7 +504,7 @@ class BodyChecker
         "requirement-contract/001",
         `the body requires ${
           names(extraRequirements)
-        }, which the \`uses\` clause does not list`,
+        }, which the \`with\` clause does not list`,
         bodyNode,
       );
     }
@@ -2218,7 +2218,7 @@ class BodyChecker
       kindOf(this.tree, k) === SyntaxKind.FailsClause
     );
     const usesNode = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.UsesClause
+      kindOf(this.tree, k) === SyntaxKind.WithClause
     );
     const bodyNode = arrowBody(this.tree, node);
     const contract: Contract = {

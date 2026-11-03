@@ -54,7 +54,7 @@ export error Stop = {}
 export service Jobs { next(): Int fails Stop }
 const step = (error: Stop, attempt: Int): Option<Duration> => if (attempt < 3) { Some(0ms) } else { None }
 const policy: RetrySchedule<Stop> = step |> retrySchedule
-export const main = (): Int fails Stop uses Jobs.next => retry(() => Jobs.next(), { schedule: policy })
+export const main = (): Int fails Stop with Jobs.next => retry(() => Jobs.next(), { schedule: policy })
 `,
     `import { Effect, Layer } from "effect";
 import { Jobs, Stop, main } from "./main.ts";
@@ -100,7 +100,7 @@ Deno.test("scoped runs as a pipeline stage and closes the child with its scope",
   Child.wait()
   Child.alive()
 })
-export const main = (): Bool uses Child.run | Child.wait | Child.alive => job |> scoped
+export const main = (): Bool with Child.run | Child.wait | Child.alive => job |> scoped
 `,
     CHILD_RUN,
     "scoped",
@@ -115,7 +115,7 @@ Deno.test("forkScoped runs as a pipeline stage and the child closes with its sco
   Child.wait()
   Child.alive()
 })
-export const main = (): Bool uses Child.run | Child.wait | Child.alive => scoped(job)
+export const main = (): Bool with Child.run | Child.wait | Child.alive => scoped(job)
 `,
     CHILD_RUN,
     "fork",

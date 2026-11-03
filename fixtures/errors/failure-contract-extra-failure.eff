@@ -6,10 +6,10 @@ service Store {
 
 const lookup = (id: Text): Text
   fails Missing
-  uses Store.find => Store.find(id)
+  with Store.find => Store.find(id)
 
 export const broken = (id: Text): Text
-  uses Store.find =>
+  with Store.find =>
   // error: failure-contract/001
   lookup(id)
 

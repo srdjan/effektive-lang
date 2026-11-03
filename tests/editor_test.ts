@@ -66,7 +66,7 @@ Deno.test("hover on a function name prints parameter types, failures, and requir
   assert(hover !== undefined);
   assertEquals(
     hover.contract,
-    "rename(id: UserId, name: Name): User fails StoreUnavailable | UserMissing uses Users.find | Users.save",
+    "rename(id: UserId, name: Name): User fails StoreUnavailable | UserMissing with Users.find | Users.save",
   );
   assertEquals(hover.span, spanOf(USERS, "rename"));
   const getUser = hoverAt(
@@ -78,7 +78,7 @@ Deno.test("hover on a function name prints parameter types, failures, and requir
   assert(getUser !== undefined);
   assertEquals(
     getUser.contract,
-    "getUser(id: UserId): User fails StoreUnavailable | UserMissing uses Users.find",
+    "getUser(id: UserId): User fails StoreUnavailable | UserMissing with Users.find",
   );
   const pure = hoverAt(
     examples,
@@ -106,7 +106,7 @@ Deno.test("hover on an expression prints its type and sets, and has no backend",
   assert(callee !== undefined);
   assertEquals(
     callee.contract,
-    "(UserId) => User fails StoreUnavailable | UserMissing uses Users.find",
+    "(UserId) => User fails StoreUnavailable | UserMissing with Users.find",
   );
   assertEquals(callee.backend, undefined);
   assertEquals(callee.span, { source: USERS, start: call, end: call + 7 });
@@ -295,8 +295,8 @@ Deno.test("definition of an error goes to the error declaration", () => {
 Deno.test("definition of a service goes to the service declaration", () => {
   const at = offsetOf(
     USERS_TEXT,
-    "uses Users.find =>\n  match",
-    "uses ".length + 1,
+    "with Users.find =>\n  match",
+    "with ".length + 1,
   );
   assertEquals(definitionAt(examples, USERS, at), spanOf(USERS, "Users"));
 });
@@ -312,11 +312,11 @@ Deno.test("definition of a capability goes to the method of the service", () => 
     ...expected,
     end: expected.start + "find".length,
   });
-  // The same holds for a name in a uses clause.
+  // The same holds for a name in a with clause.
   const clause = offsetOf(
     USERS_TEXT,
-    "uses Users.find =>",
-    "uses Users.".length + 1,
+    "with Users.find =>",
+    "with Users.".length + 1,
   );
   assertEquals(definitionAt(examples, USERS, clause), {
     ...expected,

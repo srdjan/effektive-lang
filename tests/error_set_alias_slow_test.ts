@@ -15,7 +15,7 @@ type Charge = (id: Text) => Text fails PayFailure
 service Bank {
   charge(id: Text): Text fails PayFailure
 }
-export const pay = (id: Text): Text fails PayFailure uses Bank.charge => Bank.charge(id)
+export const pay = (id: Text): Text fails PayFailure with Bank.charge => Bank.charge(id)
 export const apply = (f: Charge, id: Text): Text fails PayFailure => f(id)
 `,
     },

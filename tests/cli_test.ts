@@ -326,7 +326,7 @@ Deno.test("build accepts a retry pipeline with an effectful left value", async (
     [`${ROOT}/effektive.json`]: "{}",
     [`${ROOT}/m.eff`]: [
       "service S { mk(): () => Int }",
-      "export const f = (): Int uses S.mk => S.mk() |> retry({ times: 2 })",
+      "export const f = (): Int with S.mk => S.mk() |> retry({ times: 2 })",
       "",
       "type Int = int",
       "",
@@ -492,8 +492,8 @@ Deno.test("watch builds once, then rebuilds for each event and prints the rechec
       m.files.set(
         users,
         original.replace(
-          "fails StoreUnavailable\n  uses Users.all",
-          "fails StoreUnavailable | UserMissing\n  uses Users.all",
+          "fails StoreUnavailable\n  with Users.all",
+          "fails StoreUnavailable | UserMissing\n  with Users.all",
         ),
       );
     },

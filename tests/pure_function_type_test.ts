@@ -84,9 +84,9 @@ Deno.test("pure function types reject effect functions and declared rows", () =>
     "main.eff": `
 type Int = int
 service Clock { now(): Int }
-const effectful = (): Int uses Clock.now => Clock.now()
+const effectful = (): Int with Clock.now => Clock.now()
 const apply = (callback: pure () => Int): Int => callback()
-export const bad = (): Int uses Clock.now => apply(effectful)
+export const bad = (): Int with Clock.now => apply(effectful)
 `,
   }, ["main.eff"]);
   assertEquals(effect.diagnostics.map((diagnostic) => diagnostic.code), [
@@ -123,7 +123,7 @@ type Int = int
 error Stop = {}
 service Clock { now(): Int }
 export type Failing = pure () => Int fails Stop
-export type Requiring = pure () => Int uses Clock.now
+export type Requiring = pure () => Int with Clock.now
 `,
   }, ["main.eff"]);
   assertEquals(rows.diagnostics.map((diagnostic) => diagnostic.code), [

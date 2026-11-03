@@ -269,7 +269,7 @@ Deno.test("an effectful callback specialization recorded pure is rejected for ma
     ]
   ) {
     const source =
-      `${head}const probe = (xs: Int[]): ${result} uses S.a | S.b => ${expression}\n`;
+      `${head}const probe = (xs: Int[]): ${result} with S.a | S.b => ${expression}\n`;
     const diagnostics = forgedSpecialization(source, pure);
     assert(
       diagnostics.some(([code, message]) =>
@@ -316,9 +316,9 @@ service S {
   a(n: Int): Int fails Stop
   b(n: Int): Flag
 }
-const m = (xs: Int[]): Int[] fails Stop uses S.a => map(xs, (n) => S.a(n))
-const f = (xs: Int[]): Int[] uses S.b => xs |> filter((n) => S.b(n))
-const g = (xs: Int[]): Int fails Stop uses S.a => fold(xs, 0, (t, n) => t + S.a(n))
+const m = (xs: Int[]): Int[] fails Stop with S.a => map(xs, (n) => S.a(n))
+const f = (xs: Int[]): Int[] with S.b => xs |> filter((n) => S.b(n))
+const g = (xs: Int[]): Int fails Stop with S.a => fold(xs, 0, (t, n) => t + S.a(n))
 `;
   lower(source);
 });
@@ -326,7 +326,7 @@ const g = (xs: Int[]): Int fails Stop uses S.a => fold(xs, 0, (t, n) => t + S.a(
 const UPDATE_REF_SOURCE = `type Int = int
 error Stop = { at: int }
 service S { step(n: Int): Int fails Stop }
-const probe = (r: Ref<Int>): void fails Stop uses S.step => updateRef(r, (n) => S.step(n))
+const probe = (r: Ref<Int>): void fails Stop with S.step => updateRef(r, (n) => S.step(n))
 `;
 
 function forgedUpdateRef(

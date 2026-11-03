@@ -30,13 +30,13 @@ Deno.test("an exported function that uses timeout must list TimeoutError in fail
 Deno.test("timeout adds the job failures and requirements to its own", () => {
   const source = `${TYPES}export error Stop = {}
 export service Jobs { next(): Int fails Stop }
-export const a = (): Int fails TimeoutError | Stop uses Jobs.next =>
+export const a = (): Int fails TimeoutError | Stop with Jobs.next =>
   timeout(() => Jobs.next(), 1s)
 export const missing = (): Int fails TimeoutError => timeout(() => Jobs.next(), 1s)
 `;
   assertEquals(diagnosticsOf(source), [
     "failure-contract/001 the body can fail with Stop, which the `fails` clause does not list",
-    "requirement-contract/001 the body requires Jobs.next, which the `uses` clause does not list",
+    "requirement-contract/001 the body requires Jobs.next, which the `with` clause does not list",
   ]);
 });
 

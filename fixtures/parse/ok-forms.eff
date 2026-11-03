@@ -12,7 +12,7 @@ type Pair = [int, string]
 type Pairs = Pair[]
 type Profile = { name: string, nickname?: string, tags: string[], }
 type Shape = { kind: "circle", radius: number } | { kind: "square", side: number }
-type Callback = (id: Id, n: int) => string fails E | F uses S.m | T
+type Callback = (id: Id, n: int) => string fails E | F with S.m | T
 type Grouped = (A | B)[]
 type Nested = Option<Option<int>>
 type Flag = true | false
@@ -59,7 +59,7 @@ const semi = (): int => { const a = 1; a }
 const emptyBlock = (): void => {}
 const multiline = (x: int): int
   fails NotFound
-  uses Store.find | Store.save
+  with Store.find | Store.save
   => x
 const arrowNl = (x: int): int =>
   x + 1
