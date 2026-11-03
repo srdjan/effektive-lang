@@ -50,8 +50,8 @@ Building the VS Code extension also requires Node 20 or later with npm.
 Clone the repository and enter the checkout:
 
 ```sh
-git clone https://github.com/srdjan/effective-lang.git
-cd effective-lang
+git clone https://github.com/srdjan/effektive-lang.git
+cd effektive-lang
 ```
 
 The commands below run directly from the checkout.
