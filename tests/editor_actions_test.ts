@@ -96,7 +96,8 @@ Deno.test("contract actions: the title names the kinds of the missing entries", 
 Deno.test("contract actions: a body error that ends the function blocks the action", () => {
   assertEquals(
     actionsAt(
-      PRELUDE + 'export const f = (): Int => fail(Stop({})) + "s"\n',
+      PRELUDE +
+        'export const f = (): Int fails Other => fail(Stop({})) + "s"\n',
       0,
       500,
     ),
