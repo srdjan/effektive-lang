@@ -35,9 +35,9 @@ The product source has no unnecessary sequential await. The compiler core is syn
 | Unit | Files | Change | Outcome |
 | --- | --- | --- | --- |
 | CA1 | `tests/target_helpers.ts` | `runStrictTarget` starts `deno check` and `deno run` at the same time. | Rejected. The slow suite got slower. A comment at the loop records the reason. |
-| CA2 | `scripts/package.ts` | `packageRelease` starts `npm ci` and the two `deno bundle` runs at the same time. It waits for all three, then reports the first failure in the old order. | Landed. |
+| CA2 | `scripts/package.ts` | `packageRelease` starts `npm ci` and the two `deno bundle` runs at the same time. It waits for all three, then reports the first failure in the old order. | Reverted. Concurrent `deno bundle` runs on an empty cache race in the slow suite. |
 | CA3 | `scripts/mutate.ts` | `makeCopies` extracts all worker copies at the same time. | Landed. |
-| CA4 | `tests/parse_chain_slow_test.ts` | The five cold probes run at the same time. | Landed. |
+| CA4 | `tests/parse_chain_slow_test.ts` | The five cold probes run at the same time. | Reverted. No gain for the suite, which shares one fresh cache. |
 | CA5 | `tests/application*_slow_test.ts` | `deno check` in parallel with `deno test`. | Rejected. No gain with a warm cache, and slower with a fresh cache. |
 | CA6 | `tests/docs_test.ts`, `tests/core_boundary_test.ts` | Concurrent file reads. | Rejected. The two files run 11 tests in 128 ms. |
 | CA7 | `tests/cli_slow_test.ts` | Move nine `build --tsc accepts` tests to a second file, so that two workers run them. | Rejected. No gain under the measured load. |
@@ -61,10 +61,14 @@ CA1 is faster for one file alone, but slower for the whole suite. With CA1, user
 
 The slow suite runs 58 files on 14 workers. The sum of the test times is 402 s, and the longest file, `tests/cli_slow_test.ts`, takes 36 s. Under the measured load, neither more concurrency in a file (CA1) nor a split of the longest file (CA7) made the suite faster.
 
-CA2 and CA4 do not change the time of `deno task check`, because their files take 4.0 s and 0.5 s of a 40-50 s suite. CA2 makes `deno task package` and `deno task test:vscode` faster. CA3 saves about 0.2 s at the start of each `deno task mutate` run with four workers.
+CA2 and CA4 do not change the time of `deno task check`, because their files take 4.0 s and 0.5 s of a 40-50 s suite. CA3 saves about 0.2 s at the start of each `deno task mutate` run with four workers.
+
+CA2 then failed the third gate. In `tests/installation_slow_test.ts`, one `deno bundle` stopped with "failed to copy esbuild binary", because the source file under the npm cache of the fresh `DENO_DIR` was missing. All slow test files share that one cache, and `tests/playground_build_slow_test.ts` also runs `deno bundle`. A stress loop ran several `deno bundle` processes at the same time on a new, empty `DENO_DIR` in each round. With two processes, 0 of 10 rounds failed. With four processes, 1 of 10 rounds failed with the same error. So concurrent bundles on a cold cache race inside Deno, and CA2 raised the number of such bundles in the suite. CA2 was reverted. CA4 was reverted too, because it gives the suite no gain and also starts concurrent processes on the shared cold cache.
+
+The race existed before this plan. After the reverts, the next gate failed in `tests/playground_build_slow_test.ts` with the same error, because its `deno bundle` ran at the same time as the bundle of `tests/installation_slow_test.ts`. That gate flake is open. One possible fix is a warm-up `deno bundle` in `scripts/test_slow.ts` before the tests start.
 
 ## Mutation
 
-`deno task mutate --only` ran on the two changed conditions. The fast suite does not kill the two mutants of the `settleInOrder` condition in `scripts/package.ts`. A run with `--tests tests/installation_slow_test.ts` kills both, so the register has two `slow-only` rows for them.
+`deno task mutate --only` ran on the two changed conditions. The fast suite did not kill the two mutants of the `settleInOrder` condition in `scripts/package.ts`, and a run with `--tests tests/installation_slow_test.ts` killed both. The revert of CA2 removed `settleInOrder` and its two `slow-only` register rows.
 
 The `makeCopies` condition in `scripts/mutate.ts` survives, and no test kills it. The old loop had the same unregistered condition. The module has no register rows, and all 12 sites of a `--sample 12` run survived the fast suite, because `tests/mutate_slow_test.ts` is a slow file. That gap is open and out of the scope of this plan.

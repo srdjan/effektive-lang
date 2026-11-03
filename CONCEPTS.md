@@ -139,6 +139,12 @@ The refactor oracle for command-line and language server output. `fixtures/surfa
 `tests/surface_test.ts` compares the current build with these files. Run `deno task surface:update` only after a deliberate change of that output.
 _Avoid: golden file, transcript_
 
+### Slow suite
+
+The test files that may start subprocesses, such as `deno check` and `deno run` of emitted code.
+
+The runner runs the files in parallel, one file for each worker, and runs the tests of one file in order. So the longest file sets a lower bound on the wall time. Each run starts with an empty dependency cache, and all files of the run share it. A change for speed counts only when it lowers the wall time of the whole suite.
+
 ### Mutant
 
 One small fault that `deno task mutate` makes in a copy of the source, such as a flipped comparison.
