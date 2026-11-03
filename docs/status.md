@@ -98,7 +98,7 @@ such changes: open contracts on local functions, named error sets, union joins o
 tagged records, expected types in builtin callbacks, and inlay hints. On
 2026-11-03 the user accepted a second terse change: an exported function infers
 its failure set and states its services with `with`. The
-[export failures plan](plans/2026-11-03-inferred-export-failures.md) records it.
+[export failures plan](archive/plans/2026-11-03-inferred-export-failures.md) records it.
 First check equivalent existing source compositions. Record a minimal witness, intended
 contract, observed diagnostic or behavior, and the required failure,
 cancellation, and cleanup semantics. No item has an automatic priority or

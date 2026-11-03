@@ -1,7 +1,7 @@
 # Plan: inferred export failures and the `with` clause
 
-Status: in progress. The user asked for the change on 2026-11-03. Prefix: EI.
-EID is a decision, EIU is a unit, and EIF is a finding.
+Status: complete on 2026-11-03. The user asked for the change on 2026-11-03.
+Prefix: EI. EID is a decision, EIU is a unit, and EIF is a finding.
 
 ## Goal
 
@@ -24,7 +24,7 @@ function is the only place where the sets are closed.
 ## Reversed decision
 
 This plan reverses decision XCD1 of the
-[export contract review](../archive/plans/2026-11-02-inferred-export-contracts-review.md),
+[export contract review](2026-11-02-inferred-export-contracts-review.md),
 which kept written contracts on exports. It also changes the condition "keep
 explicit exported contracts" in `AGENTS.md`. The user asked for this change on
 2026-11-03.
@@ -204,6 +204,17 @@ test or a register row that names its code fact.
 
 Acceptance: `deno task mutate` exits 0 for the changed modules.
 
+## Results
+
+| Unit | Commit | Result |
+| --- | --- | --- |
+| EIU1 | `055575f`, website `0f9c438` | `with` is a keyword token. The emitted TypeScript and `fixtures/golden` have no change. The seeded token-edit census of the examples moved from `[555, 1045]` to `[563, 1037]`, because the examples hold a keyword token where a name was. |
+| EIU2 | `f9b358f` | Exports infer their failure sets. The interface, the type graphs, and the `db.ts` rebuild carry a `solved` map. 13 new literal tests cover the cases of EIU2 and EIF8. 35 existing tests changed: a test of the upper bound got a written `fails` clause, and a test of the old export rule got the new rule. |
+| EIU3 | `3ce3c8c`, website `c180f28` | 23 exported `fails` clauses are gone: 7 in the examples, 12 in the applications, and 4 in the tutorial. No clause was a larger bound. `users.eff` reads `with Users`. The tutorial keeps `with Shelf.find` on `findBook` and `lend`, because its text and its Step 7 teach method names. The emitted TypeScript is byte-identical. |
+| EIU4 | `4066816` | The rules, the tutorial prose, the concepts, the status, `AGENTS.md`, and the changelog describe the new rules. |
+| EIU5 | website `a3b31e1` | Draft 0.73 of the specification and the mini book describe the new rules. The orchestrator checked the contract explorer in a browser: each function shows its terse header, its inferred failures, and `with Users`, with no console error. |
+| EIU6 | `0b58a89`, `8587f91` | Mutation of the changed lines exits 0. New tests kill a parser survivor and three token-classification survivors. One quick-fix test that EIU2 had weakened is strong again. Two `contractActionsAt` survivors are equivalent and have register rows. |
+
 ## Findings
 
 Fable reviewed the EIU2 design on 2026-11-03, read-only. The orchestrator
@@ -220,3 +231,4 @@ checked EIF4 and EIF7 in the code and accepted each finding.
 | EIF7 | More tests drift: `tests/open_contracts_test.ts:207`, and after EIU3 `tests/check_test.ts:507` and `:538`, and `tests/check_body_test.ts:646`. | EIU2 and EIU3 update them. |
 | EIF8 | Two cases are not in the acceptance list: a body that stops failing makes an importer's `catch` arm unreachable (`failure-contract/002`), and a foreign error reached through an imported call. | EIU2 adds both as literal tests. |
 | EIF9 | The first EIU1 text added `with` to the words that the parser checks. That route reports `syntax/007` only in binding positions, so `with` would become a legal record label or type name. | `with` is a keyword token, and every name position rejects it with `syntax/008`. |
+| EIF10 | Whole-module mutation runs show unregistered survivors in several changed modules. EIU2 weakened one test in `editor_actions.ts`, so a weakened test could hide elsewhere. | The EIU6 executor found equal counts before EIU1 and at the head for `editor_hints.ts`, `type_show.ts`, and `check_project.ts`. The orchestrator compared `check_declarations.ts` at `7d5adc2` and `8587f91`: the same 15 mutants survive. These survivors existed before this plan. No baseline exists for `editor_completion.ts`, `type_lower.ts`, `lex.ts`, `resolve.ts`, `validate/typing.ts`, and the whole of `parse.ts` and `check_expr.ts`. EIU1 only renamed names in those modules, and EIU2 does not touch them. |
