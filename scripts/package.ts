@@ -129,6 +129,35 @@ function xml(value: string): string {
   );
 }
 
+/** Bundles `entry` to `target` and prepends the Deno version guard. */
+async function bundle(entry: string, target: string): Promise<void> {
+  await command("deno", [
+    "bundle",
+    "--frozen-lockfile",
+    "--platform",
+    "deno",
+    "--format",
+    "esm",
+    "--packages",
+    "bundle",
+    "-o",
+    target,
+    entry,
+  ]);
+  const bundled = Deno.readTextFileSync(target);
+  const guard =
+    `if (Deno.version.deno !== "${REQUIRED_DENO_VERSION}") {\n  console.error("Effektive requires Deno ${REQUIRED_DENO_VERSION}; found " + Deno.version.deno + ".");\n  Deno.exit(2);\n}\n`;
+  Deno.writeTextFileSync(target, guard + bundled);
+}
+
+/** Waits for every step, then throws the reason of the first failed step in order. */
+async function settleInOrder(steps: readonly Promise<void>[]): Promise<void> {
+  const settled = await Promise.allSettled(steps);
+  for (const step of settled) {
+    if (step.status === "rejected") throw step.reason;
+  }
+}
+
 /** Build the standalone CLI and complete extension, without publishing either. */
 export async function packageRelease(
   outputDirectory: string,
@@ -140,38 +169,18 @@ export async function packageRelease(
   }
   const out = resolve(outputDirectory);
   const extension = join(ROOT, "editors", "vscode");
-  await command(
-    "npm",
-    ["ci", "--ignore-scripts", "--no-audit", "--no-fund"],
-    extension,
-  );
   Deno.mkdirSync(out, { recursive: true });
   const cli = join(out, "effektive.js");
   const server = join(out, "effektive-lsp.js");
-  for (
-    const [entry, target] of [["src/cli/main.ts", cli], [
-      "src/lsp/main.ts",
-      server,
-    ]]
-  ) {
-    await command("deno", [
-      "bundle",
-      "--frozen-lockfile",
-      "--platform",
-      "deno",
-      "--format",
-      "esm",
-      "--packages",
-      "bundle",
-      "-o",
-      target,
-      entry,
-    ]);
-    const bundled = Deno.readTextFileSync(target);
-    const guard =
-      `if (Deno.version.deno !== "${REQUIRED_DENO_VERSION}") {\n  console.error("Effektive requires Deno ${REQUIRED_DENO_VERSION}; found " + Deno.version.deno + ".");\n  Deno.exit(2);\n}\n`;
-    Deno.writeTextFileSync(target, guard + bundled);
-  }
+  await settleInOrder([
+    command(
+      "npm",
+      ["ci", "--ignore-scripts", "--no-audit", "--no-fund"],
+      extension,
+    ),
+    bundle("src/cli/main.ts", cli),
+    bundle("src/lsp/main.ts", server),
+  ]);
   const version = releaseVersion(
     Deno.readTextFileSync(join(ROOT, "deno.json")),
   );
