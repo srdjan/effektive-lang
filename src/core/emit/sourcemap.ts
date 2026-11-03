@@ -242,6 +242,7 @@ interface MapSegment {
 
 type MappingsError =
   | { readonly tag: "bad-vlq"; readonly line: number; readonly error: VlqError }
+  | { readonly tag: "overflow"; readonly line: number }
   | {
     readonly tag: "bad-segment";
     readonly line: number;
@@ -282,6 +283,9 @@ export function decodeMappings(
           };
         }
         generated += fields[0];
+        if (!Number.isSafeInteger(generated)) {
+          return { ok: false, error: { tag: "overflow", line: lineIndex } };
+        }
         if (fields.length === 1) {
           segments.push({
             generatedColumn: generated,
@@ -294,6 +298,12 @@ export function decodeMappings(
         source += fields[1];
         sourceLine += fields[2];
         sourceColumn += fields[3];
+        if (
+          !Number.isSafeInteger(source) || !Number.isSafeInteger(sourceLine) ||
+          !Number.isSafeInteger(sourceColumn)
+        ) {
+          return { ok: false, error: { tag: "overflow", line: lineIndex } };
+        }
         segments.push({
           generatedColumn: generated,
           source,

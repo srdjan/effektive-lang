@@ -112,3 +112,19 @@ The same three probe sizes then took 0.16 ms, 0.65 ms, and 2.80 ms.
 These are single probe measurements, not latency guarantees.
 All 16 source-map tests and the complete check passed after the bound.
 The complete check passed 2,739 fast tests and 263 slow tests.
+Commit: `a1e3ac1`. All four selected numeric mutations were killed.
+Independent test review then found overflow when `decodeMappings` accumulates individually valid deltas.
+The main agent reproduced unsafe generated columns after two large deltas.
+A new public regression covers all four accumulated coordinates and safe boundary controls.
+The regression fails against commit `a1e3ac1` in a temporary exported tree, with type checking disabled for the new error tag.
+The decoder now returns a tagged error for unsafe accumulated positions.
+
+### Simplification review
+
+Five Sol reviewers examined reuse, clarity, efficiency, test value, and comments without edits.
+The main agent accepted the accumulated-position defect and repaired it in the numeric phase.
+The main agent skipped the temporary-directory helper proposal because it rewrites a protected proof test.
+The main agent retained fresh containment checks rather than reuse earlier filesystem observations.
+The map serialization proposal has no measured application effect and remains outside this repair.
+The resolver comment stays because it explains the platform distinction between a missing path and a dangling link.
+The review applied one correctness repair and retained four low-value or constrained proposals without changes.

@@ -24,6 +24,7 @@ Do not push, publish, or change deferred language work.
 | FEF6: interface hash documentation | An inferred input edit changes the interface hash without changing execution mode. | Describe exported contract changes as hash inputs. |
 | FEF7: compiler target documentation | The active acceptance rule names Deno 2.9.7. Current instructions and packaging require 2.9.8. | Distinguish the historical baseline from the current requirement. |
 | FEF8: baseline command permissions | The complete gate exposed a Deno command mismatch after a symlinked executable starts a child process. | Use the `deno` command that the task explicitly permits. |
+| FEF9: accumulated map positions | Independent review found that valid VLQ deltas can accumulate into unsafe absolute positions. | Reject overflow in generated, source, line, and column positions. |
 
 ## Execution units
 
@@ -75,7 +76,7 @@ Run targeted mutation on changed logic, using relevant fast or slow tests.
 ### FE4: correct numeric encoding
 
 Owner: main agent. Budget: 20 turns.
-Files: `src/core/emit/sourcemap.ts` and `tests/sourcemap_test.ts`.
+Files: `src/core/emit/sourcemap.ts`, `tests/sourcemap_test.ts`, and `tests/sourcemap_overflow_test.ts`.
 Preserve the accepted domain of safe integer inputs.
 Use exact intermediate arithmetic for sign packing and decoding.
 Reject decoded values outside that domain through a tagged error.
