@@ -296,15 +296,27 @@ Deno.test("classify names the result class from the runner output", () => {
     },
     { timedOut: false, output: "", expected: "infrastructure" },
     {
+      timedOut: false,
+      output:
+        "a ... FAILED (3ms)\nerror: quoted\nok | 1 passed | 0 failed (1ms)\n" +
+        "\nFAILED | 0 passed | 1 failed (5ms)\n",
+      expected: "killed",
+    },
+    {
+      timedOut: false,
+      output: "a ... ok (3ms)\nFAILED | 0 passed | 1 failed (1ms)\n" +
+        "\nok | 1 passed | 0 failed (5ms)\n",
+      expected: "survived",
+    },
+    {
       timedOut: true,
       output: "running 3 tests\n",
       expected: "timeout",
     },
   ];
   for (const c of cases) {
-    // The message holds the output on one line. A line that starts with
-    // `ok | ` in the message would look like a summary to the outer tool when
-    // a mutant of classify fails this test.
+    // The message holds the output on one line, so the failure report stays
+    // short and names the case.
     assertEquals(classify(c), c.expected, JSON.stringify(c.output));
   }
 });
@@ -441,6 +453,7 @@ Deno.test("parseOptions rejects bad arguments", () => {
     [["--sample", "0", "a.ts"], "--sample must be a positive integer or all"],
     [["--workers", "0", "a.ts"], "--workers must be a positive integer"],
     [["--only", "a.ts", "a.ts"], "--only must be <path:line>"],
+    [["--only", ":12", "a.ts"], "--only must be <path:line>"],
     [["--other", "1", "a.ts"], "unknown flag --other"],
     [["--seed"], "--seed needs a value"],
     [["../a.ts"], "../a.ts must be a relative path of a .ts file"],

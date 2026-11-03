@@ -246,15 +246,18 @@ export interface RunOutput {
 }
 
 const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
-const SUMMARY = /^(ok|FAILED) \| (\d+) passed.*? \| (\d+) failed/m;
+const SUMMARY = /^(ok|FAILED) \| (\d+) passed.*? \| (\d+) failed/gm;
 const TEST_LINE = / \.\.\. (?:ok|FAILED)/;
 
-/** Classifies one test run from its Deno summary line. */
+/**
+ * Classifies one test run from its Deno summary line. A failure message can
+ * quote runner output, so only the last summary line counts.
+ */
 export function classify(run: RunOutput): MutantClass {
   if (run.timedOut) return "timeout";
   const text = run.output.replace(ANSI, "");
-  const match = SUMMARY.exec(text);
-  if (match === null) {
+  const match = [...text.matchAll(SUMMARY)].at(-1);
+  if (match === undefined) {
     return TEST_LINE.test(text) ? "killed" : "infrastructure";
   }
   const passed = Number(match[2]);
@@ -479,7 +482,7 @@ export function parseOptions(args: readonly string[]): Result<Options, string> {
       tests = value;
     } else if (flag === "--only") {
       const colon = value.lastIndexOf(":");
-      const line = colon < 0 ? undefined : positiveInt(value.slice(colon + 1));
+      const line = colon <= 0 ? undefined : positiveInt(value.slice(colon + 1));
       if (line === undefined) {
         return { ok: false, error: "--only must be <path:line>" };
       }

@@ -1,6 +1,6 @@
 # Mutation register of the mutation tool
 
-Date: 2026-11-03. Status: waiting for decisions MT-D1 and MT-D2. MT identifies the units of this plan.
+Date: 2026-11-03. Status: complete. MT identifies the units of this plan.
 
 ## Goal
 
@@ -27,10 +27,10 @@ MT1 added 3 tests and 3 table cases to `tests/mutate_slow_test.ts`. They kill 19
 
 MT2 added `tests/mutate_tool_slow_test.ts`, with 8 tests of the tool through its command line. Each test builds its own git repository with a copy of the tool. A mutation run with only that file as the test set kills all 29 shell survivors, so they are `slow-only` rows. In the gate, the file takes about 7.5 s.
 
-The measure run now gives 145 sites, 111 killed, 34 survivors, and 1 unregistered survivor. `deno task check` passed with 2,736 fast and 258 slow tests.
+After MT1 and MT2, the measure run gave 145 sites, 111 killed, 34 survivors, and 1 unregistered survivor. After the MT-D1 and MT-D2 fixes, it gives 145 sites, 112 killed, and 33 survivors, all registered. It exits 0, with 0 stale rows.
 
-## Open decisions
+## Decisions
 
-MT-D1 (`parseOptions` accepts `--only :12`). `lastIndexOf(":")` returns 0, so the tool accepts a site with an empty path. The open survivor is `colon < 0` to `<=`. The proposed fix rejects `colon <= 0` and adds a test that expects the message `--only must be <path:line>`. After that fix, the measure run exits 0.
+MT-D1 (`parseOptions` accepts `--only :12`). `lastIndexOf(":")` returns 0, so the tool accepts a site with an empty path. The open survivor is `colon < 0` to `<=`. The proposed fix rejects `colon <= 0` and adds a test that expects the message `--only must be <path:line>`. After that fix, the measure run exits 0. Accepted: the new table case kills the survivor.
 
-MT-D2 (`classify` reads the first summary line). `classify` takes the first line that looks like a test summary, not the last one. A failing test whose message quotes runner output can then read as `survived`. This masked 8 kills until MT1 changed one assertion message. The proposed fix takes the last summary line, with a test whose output holds a quoted summary before the real one.
+MT-D2 (`classify` reads the first summary line). `classify` takes the first line that looks like a test summary, not the last one. A failing test whose message quotes runner output can then read as `survived`. This masked 8 kills until MT1 changed one assertion message. The proposed fix takes the last summary line, with a test whose output holds a quoted summary before the real one. Accepted: two table cases cover a quoted summary of each kind.

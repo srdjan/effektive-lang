@@ -39,7 +39,7 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | SL | [`docs/archive/plans/2026-10-27-second-effect-selection.md`](../archive/plans/2026-10-27-second-effect-selection.md) | Second selection of Effect features: `now()`, `random()`, logging, `Map` and `Set` |
 | SB (phases), SBF (findings) | [`docs/archive/plans/2026-10-30-stable-base-reset.md`](../archive/plans/2026-10-30-stable-base-reset.md) | Stable base reset |
 | CA | [`docs/archive/plans/2026-11-03-concurrent-awaits.md`](../archive/plans/2026-11-03-concurrent-awaits.md) | Concurrent awaits on hot paths |
-| MT | [`docs/plans/2026-11-03-mutation-tool-register.md`](2026-11-03-mutation-tool-register.md) | Mutation register of the mutation tool |
+| MT | [`docs/archive/plans/2026-11-03-mutation-tool-register.md`](../archive/plans/2026-11-03-mutation-tool-register.md) | Mutation register of the mutation tool |
 | RST (phases), RSTF (findings), RSTD (decisions) | [`docs/archive/plans/2026-10-30-reset-implementation.md`](../archive/plans/2026-10-30-reset-implementation.md) | Parallel reset plan, not selected |
 | NB (phases), NBF (findings), NBD (decisions) | [`docs/archive/plans/2026-10-30-reset-base.md`](../archive/plans/2026-10-30-reset-base.md) | Revision definitions and playground output paths |
 | FN (phases), FNF (findings), FND (decisions) | [`docs/archive/plans/2026-10-31-foundation-reset.md`](../archive/plans/2026-10-31-foundation-reset.md) | Foundation reset |
