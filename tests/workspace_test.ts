@@ -97,6 +97,67 @@ function textsOf(links: Readonly<Record<string, string>>): string[] {
 
 const ONCE = ["a", "b", "{}"];
 
+Deno.test("readWorkspace accepts canonical Windows and POSIX root separators", () => {
+  const files = {
+    "/p/effektive.json": "{}",
+    "/p/main.eff": "type Int = int\n",
+    "/p/sub/other.eff": "type Text = string\n",
+  };
+  for (
+    const [canonicalRoot, separator] of [
+      ["C:\\project", "\\"],
+      ["C:\\", "\\"],
+      ["\\\\server\\share\\project", "\\"],
+      ["/project\\literal", "/"],
+    ]
+  ) {
+    const fs = memoryIo(files).io.fs;
+    const prefix = canonicalRoot.endsWith(separator)
+      ? canonicalRoot.slice(0, -separator.length)
+      : canonicalRoot;
+    const result = readWorkspace({
+      ...fs,
+      absolute: (path) =>
+        path === "/p"
+          ? canonicalRoot
+          : prefix + path.slice("/p".length).replaceAll("/", separator),
+    }, "/p");
+    assertEquals(result.ok && [...result.value.keys()], [
+      "effektive.json",
+      "main.eff",
+      "sub/other.eff",
+    ], canonicalRoot);
+  }
+});
+
+Deno.test("readWorkspace rejects sibling paths with native or literal backslashes", () => {
+  const fs = memoryIo({
+    "/p/effektive.json": "{}",
+    "/p/main.eff": "type Int = int\n",
+  }).io.fs;
+  for (
+    const [root, target, separator] of [
+      ["C:\\project", "C:\\project-other\\main.eff", "\\"],
+      ["/project", "/project\\other/main.eff", "/"],
+    ]
+  ) {
+    assertEquals(
+      readWorkspace({
+        ...fs,
+        absolute: (path) =>
+          path === "/p/main.eff"
+            ? target
+            : root + path.slice(2).replaceAll("/", separator),
+      }, "/p"),
+      {
+        ok: false,
+        error:
+          "main.eff cannot be read: path resolves outside the project root",
+      },
+    );
+  }
+});
+
 Deno.test("readWorkspace reads each file once when a link points to its own parent", () => {
   assertEquals(textsOf({ "/p/sub/up": "/p" }), ONCE);
 });

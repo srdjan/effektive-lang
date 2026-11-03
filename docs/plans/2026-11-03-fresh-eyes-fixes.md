@@ -25,6 +25,7 @@ Do not push, publish, or change deferred language work.
 | FEF7: compiler target documentation | The active acceptance rule names Deno 2.9.7. Current instructions and packaging require 2.9.8. | Distinguish the historical baseline from the current requirement. |
 | FEF8: baseline command permissions | The complete gate exposed a Deno command mismatch after a symlinked executable starts a child process. | Use the `deno` command that the task explicitly permits. |
 | FEF9: accumulated map positions | Independent review found that valid VLQ deltas can accumulate into unsafe absolute positions. | Reject overflow in generated, source, line, and column positions. |
+| FEF10: native path separators | Final review found that the new containment prefix rejected native Windows paths. | Share a separator-aware boundary check and preserve POSIX backslashes as literal characters. |
 
 ## Execution units
 

@@ -10,8 +10,8 @@ Constraints: separate local commits, no push, no deferred feature work, and no e
 Accepted decisions: phase order, rejection of external source links, and permission to record and execute the plan.
 Execution engine: native. Delegated implementation uses Sol (`gpt-5.6-sol`) with high reasoning effort.
 No Compound Pack applies to this checkout.
-Current work: correct source-map integer encoding and decoding.
-Remaining work: numeric encoding, documentation, and final review.
+Current work: verify the final review correction and complete documentation.
+Remaining work: correction checks, local commits, and plan archival.
 Open issues: none before implementation.
 Next action: the main agent obtains a plan critique, then runs the first phase's checks.
 
@@ -118,6 +118,8 @@ The main agent reproduced unsafe generated columns after two large deltas.
 A new public regression covers all four accumulated coordinates and safe boundary controls.
 The regression fails against commit `a1e3ac1` in a temporary exported tree, with type checking disabled for the new error tag.
 The decoder now returns a tagged error for unsafe accumulated positions.
+Correction commit: `c0f0b41`. The complete check passed 2,741 fast tests and 263 slow tests.
+The small mutation pipeline passed, then all four selected accumulated-position mutations were killed.
 
 ### Simplification review
 
@@ -128,3 +130,21 @@ The main agent retained fresh containment checks rather than reuse earlier files
 The map serialization proposal has no measured application effect and remains outside this repair.
 The resolver comment stays because it explains the platform distinction between a missing path and a dangling link.
 The review applied one correctness repair and retained four low-value or constrained proposals without changes.
+
+### Final review and correction
+
+The ce-code-review run `fresh-eyes-07z8_391` completed with eight Sol reviewers and an independent validator.
+The receipt is `/tmp/compound-engineering-501/ce-code-review/fresh-eyes-07z8_391/review.json`.
+The review required one correction: native Windows separators were rejected by the new containment prefix.
+The main agent reproduced that failure through `readWorkspace` with an in-memory filesystem.
+The validator confirmed the separator defect and rejected a proposal to change the intended output preflight order.
+The correction shares one separator-aware root check between the directory walk and individual path checks.
+POSIX absolute paths keep backslashes as literal characters.
+Root-relative module paths reject backslashes, consistent with `normalizeRelative` in the compiler.
+The new public tests failed before the correction and pass after it.
+A permission-error control also proves that a refused map inspection leaves both output files unchanged.
+The 24 focused host and output tests pass.
+The complete check passed 2,745 fast tests and 263 slow tests after the correction.
+A separate Sol critique found no blocker in the changed containment rule.
+That critique reran the four exact public regressions successfully and checked the diff.
+Actual Windows execution, concurrent filesystem replacement, and hard-link isolation remain unverified.

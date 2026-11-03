@@ -34,6 +34,12 @@ function realPath(fs: HostFs, path: string): string | undefined {
   }
 }
 
+function insideRoot(root: string, path: string): boolean {
+  const separator = root.includes("\\") && !root.startsWith("/") ? "\\" : "/";
+  const prefix = root.endsWith(separator) ? root : `${root}${separator}`;
+  return path === root || path.startsWith(prefix);
+}
+
 /**
  * Joins a project path after every existing component stays inside the
  * resolved root. A dangling symbolic link fails closed.
@@ -44,7 +50,10 @@ export function containedProjectPath(
   relative: string,
 ): Result<string, FileFailure> {
   const parts = relative.split("/");
-  if (parts.some((part) => part === "" || part === "." || part === "..")) {
+  if (
+    relative.includes("\\") ||
+    parts.some((part) => part === "" || part === "." || part === "..")
+  ) {
     return {
       ok: false,
       error: { message: "path is not relative to the project root" },
@@ -54,9 +63,6 @@ export function containedProjectPath(
   if (resolvedRoot === undefined) {
     return { ok: false, error: { message: "project root cannot be resolved" } };
   }
-  const rootPrefix = resolvedRoot.endsWith("/")
-    ? resolvedRoot
-    : `${resolvedRoot}/`;
   let path = root;
   for (const part of parts) {
     path = joinPath(path, part);
@@ -74,7 +80,7 @@ export function containedProjectPath(
         },
       };
     }
-    if (resolved !== resolvedRoot && !resolved.startsWith(rootPrefix)) {
+    if (!insideRoot(resolvedRoot, resolved)) {
       return {
         ok: false,
         error: { message: "path resolves outside the project root" },
@@ -100,7 +106,6 @@ export function readWorkspace(
   if (realRoot === undefined) {
     return { ok: false, error: `${root}: cannot be resolved` };
   }
-  const rootPrefix = realRoot.endsWith("/") ? realRoot : `${realRoot}/`;
   const visited = new Set<string>();
   const visit = (relative: string): void => {
     if (failure !== undefined) return;
@@ -109,7 +114,7 @@ export function readWorkspace(
     // which entry is a link.
     const real = relative === "" ? realRoot : realPath(fs, path);
     if (real === undefined || visited.has(real)) return;
-    if (relative !== "" && !real.startsWith(rootPrefix)) return;
+    if (relative !== "" && !insideRoot(realRoot, real)) return;
     visited.add(real);
     const listed = fs.list(path);
     if (!listed.ok) {

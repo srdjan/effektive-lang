@@ -33,6 +33,54 @@ function source(result: Generation): GeneratedSource {
   return { generated: () => result };
 }
 
+Deno.test("writeGenerated refuses failed inspections without changing files", () => {
+  const io = memoryIo({
+    "/project/m.ts": emitted.text + "// old output\n",
+    "/project/m.ts.map": "old map\n",
+  });
+  const before = new Map(io.files);
+  const output = writeGenerated(
+    {
+      ...io.io.fs,
+      entryKind: (path) =>
+        path.endsWith(".map")
+          ? { ok: false, error: { message: "permission denied" } }
+          : io.io.fs.entryKind(path),
+    },
+    "/project",
+    source(ready),
+    ["m"],
+    true,
+  );
+  assertEquals(output.failed, true);
+  assertEquals(output.written, []);
+  assertEquals(output.generated, []);
+  assertEquals(output.notes, [
+    "error: cannot write m.ts.map: permission denied",
+  ]);
+  assertEquals(io.files, before);
+});
+
+Deno.test("writeGenerated refuses paths outside the root-relative module contract", () => {
+  for (const path of ["../outside.ts", "..\\outside.ts", "/outside.ts"]) {
+    const io = memoryIo({ "/project/keep.ts": "keep\n" });
+    const before = new Map(io.files);
+    const output = writeGenerated(
+      io.io.fs,
+      "/project",
+      source({ kind: "ready", emitted: { ...emitted, path }, table, map }),
+      ["m"],
+      true,
+    );
+    assertEquals(output.failed, true, path);
+    assertEquals(output.written, [], path);
+    assertEquals(output.notes, [
+      `error: cannot write ${path}: path is not relative to the project root`,
+    ]);
+    assertEquals(io.files, before, path);
+  }
+});
+
 Deno.test("generationSource adapts real revisions, unknown modules and source errors", () => {
   const updated = new Program().update({
     set: {
