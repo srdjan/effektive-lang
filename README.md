@@ -1,6 +1,6 @@
 # Effektive
 
-**Plain code. Typed effects.**
+**Direct calls. Effect types.**
 
 Effektive is a small functional language that compiles to TypeScript for Effect 4.
 You write application logic with direct function calls. The compiler checks each
