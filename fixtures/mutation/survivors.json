@@ -439,5 +439,23 @@
     "operator": "negate-if",
     "class": "slow-only",
     "reason": "The mutant keeps the exported trees after the command. tests/behavior_compare_slow_test.ts kills it: it sets TMPDIR and asserts that no exported tree remains. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/package.ts",
+    "declaration": "settleInOrder",
+    "offset": 170,
+    "text": "step.status === \"rejected\"",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The changed test makes settleInOrder throw for a fulfilled step, so packageRelease throws. tests/installation_slow_test.ts kills it: a run with --tests tests/installation_slow_test.ts killed both mutants of this site."
+  },
+  {
+    "file": "scripts/package.ts",
+    "declaration": "settleInOrder",
+    "offset": 170,
+    "text": "step.status === \"rejected\"",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "The changed test makes settleInOrder throw for a fulfilled step, so packageRelease throws. tests/installation_slow_test.ts kills it: a run with --tests tests/installation_slow_test.ts killed both mutants of this site."
   }
 ]
