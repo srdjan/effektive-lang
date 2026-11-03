@@ -10,10 +10,11 @@
 // error is an unexpected throw. It gets its own code so that it never reads as
 // a diagnostic.
 
-import { errorMessage, joinPath } from "../core/mod.ts";
+import { errorMessage } from "../core/mod.ts";
 import { parseArgs, type ProjectCommand, USAGE } from "./args.ts";
 import type { BuildOptions, BuildOutcome } from "./build.ts";
 import { denoIo } from "../host/deno_io.ts";
+import { containedProjectPath } from "../host/workspace.ts";
 import type { HostIo } from "../host/io.ts";
 import { type EventLog, noLog } from "../host/log.ts";
 import { fixContracts, type FixOutcome } from "./fix.ts";
@@ -217,7 +218,12 @@ function writeFixes(
 ): { readonly summary: FixSummary; readonly failed: boolean } {
   let files = 0;
   for (const [path, text] of fixed.texts) {
-    const written = io.fs.writeText(joinPath(root, path), text);
+    const target = containedProjectPath(io.fs, root, path);
+    if (!target.ok) {
+      io.stderr(`effektive: cannot write ${path}: ${target.error.message}\n`);
+      continue;
+    }
+    const written = io.fs.writeText(target.value, text);
     if (!written.ok) {
       io.stderr(`effektive: cannot write ${path}: ${written.error.message}\n`);
       continue;

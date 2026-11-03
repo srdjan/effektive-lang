@@ -41,3 +41,71 @@ Deno.test("check ends on real symlink cycles and reads each module once", async 
     assert(stderr.includes("2 modules, 0 diagnostics"), stderr);
   });
 });
+
+const NEEDS_FIX = [
+  "export type Id = string",
+  "export error Missing = { id: Id }",
+  "export service Store {",
+  "  find(id: Id): Id fails Missing",
+  "}",
+  "export const load = (id: Id): Id => Store.find(id)",
+  "",
+].join("\n");
+
+const FIXED = [
+  "export type Id = string",
+  "export error Missing = { id: Id }",
+  "export service Store {",
+  "  find(id: Id): Id fails Missing",
+  "}",
+  "export const load = (id: Id): Id fails Missing uses Store => Store.find(id)",
+  "",
+].join("\n");
+
+async function checkFix(root: string): Promise<Deno.CommandOutput> {
+  return await new Deno.Command(Deno.execPath(), {
+    args: ["task", "effektive", "check", root, "--fix", "--no-log"],
+    cwd: REPOSITORY,
+    env: { NO_COLOR: "1" },
+    stdout: "piped",
+    stderr: "piped",
+    signal: AbortSignal.timeout(60_000),
+  }).output();
+}
+
+Deno.test("check --fix rejects a source link outside the project", async () => {
+  await withTemporaryDirectory("effektive-source-link-", async (dir) => {
+    const root = `${dir}/project`;
+    const outside = `${dir}/outside.eff`;
+    Deno.mkdirSync(root);
+    Deno.writeTextFileSync(`${root}/effektive.json`, "{}");
+    Deno.writeTextFileSync(outside, NEEDS_FIX);
+    Deno.symlinkSync(outside, `${root}/main.eff`);
+
+    const output = await checkFix(root);
+    const stderr = new TextDecoder().decode(output.stderr);
+    assertEquals(output.code, 2, stderr);
+    assert(
+      stderr.includes(
+        "main.eff cannot be read: path resolves outside the project root",
+      ),
+      stderr,
+    );
+    assertEquals(Deno.readTextFileSync(outside), NEEDS_FIX);
+  });
+});
+
+Deno.test("check --fix writes through a source link inside the project", async () => {
+  await withTemporaryDirectory("effektive-source-link-", async (dir) => {
+    const root = `${dir}/project`;
+    Deno.mkdirSync(`${root}/.sources`, { recursive: true });
+    Deno.writeTextFileSync(`${root}/effektive.json`, "{}");
+    Deno.writeTextFileSync(`${root}/.sources/main.eff`, NEEDS_FIX);
+    Deno.symlinkSync(".sources/main.eff", `${root}/main.eff`);
+
+    const output = await checkFix(root);
+    const stderr = new TextDecoder().decode(output.stderr);
+    assertEquals(output.code, 0, stderr);
+    assertEquals(Deno.readTextFileSync(`${root}/.sources/main.eff`), FIXED);
+  });
+});

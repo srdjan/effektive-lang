@@ -125,6 +125,14 @@ function compare(
 function memoryFs(files: Map<string, string>): HostIo["fs"] {
   const prefixOf = (dir: string): string =>
     dir === "." || dir === "" ? "" : dir.replace(/\/+$/, "") + "/";
+  const kind = (path: string): "file" | "directory" | "missing" => {
+    if (files.has(path)) return "file";
+    const prefix = prefixOf(path);
+    for (const key of files.keys()) {
+      if (key.startsWith(prefix) && key !== path) return "directory";
+    }
+    return "missing";
+  };
   return {
     readText(path): Result<string, ReadError> {
       const text = files.get(path);
@@ -140,14 +148,11 @@ function memoryFs(files: Map<string, string>): HostIo["fs"] {
       files.delete(path);
       return { ok: true, value: undefined };
     },
-    kind(path) {
-      if (files.has(path)) return "file";
-      const prefix = prefixOf(path);
-      for (const key of files.keys()) {
-        if (key.startsWith(prefix) && key !== path) return "directory";
-      }
-      return "missing";
-    },
+    entryKind: (path) => ({
+      ok: true,
+      value: kind(path) === "missing" ? "missing" : "other",
+    }),
+    kind,
     list(path): Result<readonly DirectoryEntry[], FileFailure> {
       const prefix = prefixOf(path);
       const found = new Map<string, boolean>();
@@ -351,6 +356,21 @@ function replayLsp(
         return data.ok === false ? failure() : ok();
       },
       remove: (path) => take("remove", path).ok === false ? failure() : ok(),
+      entryKind: (path) => {
+        const data = take("entryKind", path);
+        const kind = data.kind;
+        if (kind === "symlink" || kind === "other" || kind === "missing") {
+          return { ok: true, value: kind };
+        }
+        return {
+          ok: false,
+          error: {
+            message: isRecord(data.error)
+              ? str(data.error.message) ?? "replayed failure"
+              : "replayed failure",
+          },
+        };
+      },
       kind: (path) => {
         const kind = take("kind", path).kind;
         return KINDS.find((k) => k === kind) ?? "missing";

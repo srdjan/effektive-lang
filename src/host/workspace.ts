@@ -9,7 +9,7 @@ import {
   joinPath,
   type Result,
 } from "../core/mod.ts";
-import type { HostFs } from "./io.ts";
+import type { FileFailure, HostFs } from "./io.ts";
 
 function skippedDirectory(name: string): boolean {
   return name.startsWith(".") || name === "node_modules";
@@ -32,6 +32,56 @@ function realPath(fs: HostFs, path: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Joins a project path after every existing component stays inside the
+ * resolved root. A dangling symbolic link fails closed.
+ */
+export function containedProjectPath(
+  fs: HostFs,
+  root: string,
+  relative: string,
+): Result<string, FileFailure> {
+  const parts = relative.split("/");
+  if (parts.some((part) => part === "" || part === "." || part === "..")) {
+    return {
+      ok: false,
+      error: { message: "path is not relative to the project root" },
+    };
+  }
+  const resolvedRoot = realPath(fs, root);
+  if (resolvedRoot === undefined) {
+    return { ok: false, error: { message: "project root cannot be resolved" } };
+  }
+  const rootPrefix = resolvedRoot.endsWith("/")
+    ? resolvedRoot
+    : `${resolvedRoot}/`;
+  let path = root;
+  for (const part of parts) {
+    path = joinPath(path, part);
+    const entry = fs.entryKind(path);
+    if (!entry.ok) return entry;
+    if (entry.value === "missing") break;
+    const resolved = realPath(fs, path);
+    if (resolved === undefined) {
+      return {
+        ok: false,
+        error: {
+          message: entry.value === "symlink"
+            ? "symbolic link target cannot be resolved"
+            : "path cannot be resolved",
+        },
+      };
+    }
+    if (resolved !== resolvedRoot && !resolved.startsWith(rootPrefix)) {
+      return {
+        ok: false,
+        error: { message: "path resolves outside the project root" },
+      };
+    }
+  }
+  return { ok: true, value: joinPath(root, relative) };
 }
 
 /**
@@ -74,7 +124,12 @@ export function readWorkspace(
       if (entry.isDirectory) {
         if (!skippedDirectory(entry.name)) visit(child);
       } else if (accepts(child)) {
-        const read = fs.readText(joinPath(root, child));
+        const contained = containedProjectPath(fs, root, child);
+        if (!contained.ok) {
+          failure = `${child} cannot be read: ${contained.error.message}`;
+          return;
+        }
+        const read = fs.readText(contained.value);
         if (read.ok) files.set(child, read.value);
         else if (read.error.tag === "unreadable") {
           failure = `${child} cannot be read: ${read.error.message}`;

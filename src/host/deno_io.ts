@@ -8,6 +8,7 @@ import type {
   DenoCheckRequest,
   DenoCheckRun,
   DirectoryEntry,
+  EntryKind,
   FileFailure,
   HostFs,
   HostIo,
@@ -50,6 +51,19 @@ export const denoFs: HostFs = {
     } catch (e) {
       if (e instanceof Deno.errors.NotFound) {
         return { ok: true, value: undefined };
+      }
+      return { ok: false, error: { message: errorMessage(e) } };
+    }
+  },
+  entryKind(path: string): Result<EntryKind, FileFailure> {
+    try {
+      return {
+        ok: true,
+        value: Deno.lstatSync(path).isSymlink ? "symlink" : "other",
+      };
+    } catch (e) {
+      if (e instanceof Deno.errors.NotFound) {
+        return { ok: true, value: "missing" };
       }
       return { ok: false, error: { message: errorMessage(e) } };
     }

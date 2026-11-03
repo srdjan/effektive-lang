@@ -10,8 +10,8 @@ Constraints: separate local commits, no push, no deferred feature work, and no e
 Accepted decisions: phase order, rejection of external source links, and permission to record and execute the plan.
 Execution engine: native. Delegated implementation uses Sol (`gpt-5.6-sol`) with high reasoning effort.
 No Compound Pack applies to this checkout.
-Current work: verify playground cleanup against physical filesystem targets.
-Remaining work: playground cleanup, project writes, numeric encoding, and documentation.
+Current work: contain source fixes and generated writes through the shared host boundary.
+Remaining work: project writes, numeric encoding, and documentation.
 Open issues: none before implementation.
 Next action: the main agent obtains a plan critique, then runs the first phase's checks.
 
@@ -70,3 +70,20 @@ The one-site mutation pipeline passed.
 The selected five-site run killed four mutants and exposed a gap in the chosen slow-test file.
 That file tested aliased paths but omitted a direct protected path through `build`.
 The regression now covers a direct protected directory in the same disposable repository.
+Correction commit: `36b679f`. The complete check passed again.
+All five selected mutants at lines 119, 137, and 140 of `playground/build.ts` were killed after the correction.
+There were no unregistered survivors or stale rows in that selected run.
+The selection does not cover every mutation site in the build module.
+
+### Contain project writes
+
+Sol added the no-follow `HostFs.entryKind` port and one shared containment helper in `workspace.ts`.
+The helper checks each existing component and rejects unresolved links and external targets.
+Source discovery, source fixes, generated pairs, and stale removal use that helper.
+Both output paths pass containment before existing output is read.
+Sol observed failing external-source and external-output regressions before changing production code.
+The main agent reviewed all changed code and ran 31 focused host and filesystem tests successfully.
+The main agent found two missing replay port implementations through type checking and added them.
+All 15 replay tests then passed.
+`deno task check` passed formatting, lint, type checking, 2,736 fast tests, and 263 slow tests.
+Concurrent filesystem replacement remains unverified.

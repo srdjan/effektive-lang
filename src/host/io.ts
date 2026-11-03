@@ -15,12 +15,16 @@ export interface FileFailure {
   readonly message: string;
 }
 
+export type EntryKind = "symlink" | "other" | "missing";
+
 export interface HostFs {
   readText(path: string): Result<string, ReadError>;
   /** Writes the file and creates its directories. */
   writeText(path: string, text: string): Result<void, FileFailure>;
   /** Removes a file. A file that is already missing counts as removed. */
   remove(path: string): Result<void, FileFailure>;
+  /** Inspects one directory entry without following a symbolic link. */
+  entryKind(path: string): Result<EntryKind, FileFailure>;
   kind(path: string): "file" | "directory" | "missing";
   list(path: string): Result<readonly DirectoryEntry[], FileFailure>;
   /** The absolute form of a directory, with links resolved, as `deno check` prints it. */

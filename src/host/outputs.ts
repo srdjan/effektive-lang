@@ -6,7 +6,6 @@ import {
   type EmitProjectError,
   generatedPathOf,
   generatedSourceOf,
-  joinPath,
   type LowerError,
   type Revision,
   serializeSourceMap,
@@ -14,6 +13,7 @@ import {
 } from "../core/mod.ts";
 import type { HostFs } from "./io.ts";
 import type { GeneratedSource } from "./generation.ts";
+import { containedProjectPath } from "./workspace.ts";
 
 export interface GeneratedOutputs {
   /** The root-relative paths of the files that changed on disk. */
@@ -125,10 +125,27 @@ export function writeGenerated(
     }
     const { emitted, table, map } = output;
     if (write) {
+      const outputs: [string, string][] = [
+        [emitted.path, emitted.text],
+        [`${emitted.path}.map`, serializeSourceMap(map)],
+      ];
+      const targets: [string, string, string][] = [];
+      let blocked = false;
+      for (const [path, text] of outputs) {
+        const target = containedProjectPath(fs, root, path);
+        if (!target.ok) {
+          notes.push(`error: cannot write ${path}: ${target.error.message}`);
+          failed = true;
+          blocked = true;
+          break;
+        }
+        targets.push([path, text, target.value]);
+      }
+      if (blocked) continue;
       // The `.ts` file decides for the pair. A file that this source did not
       // generate stays, with its map unwritten and the module left out.
       const owner = generatedSourceOf(emitted.text);
-      const existing = fs.readText(joinPath(root, emitted.path));
+      const existing = fs.readText(targets[0][2]);
       if (!existing.ok && existing.error.tag === "unreadable") {
         notes.push(
           `error: cannot read ${emitted.path}: ${existing.error.message}`,
@@ -148,12 +165,7 @@ export function writeGenerated(
         failed = true;
         continue;
       }
-      const outputs: [string, string][] = [
-        [emitted.path, emitted.text],
-        [`${emitted.path}.map`, serializeSourceMap(map)],
-      ];
-      for (const [path, text] of outputs) {
-        const full = joinPath(root, path);
+      for (const [path, text, full] of targets) {
         const old = path === emitted.path ? existing : fs.readText(full);
         if (old.ok && old.value === text) continue;
         const result = fs.writeText(full, text);
@@ -190,7 +202,12 @@ export function removeStaleOutputs(
   for (const module of modules) {
     for (const source of [`${module}.eff`, `${module}.effi`]) {
       const path = generatedPathOf(source);
-      const read = fs.readText(joinPath(root, path));
+      const output = containedProjectPath(fs, root, path);
+      if (!output.ok) {
+        notes.push(`error: cannot remove ${path}: ${output.error.message}`);
+        continue;
+      }
+      const read = fs.readText(output.value);
       if (!read.ok) {
         if (read.error.tag === "unreadable") {
           notes.push(`error: cannot read ${path}: ${read.error.message}`);
@@ -200,8 +217,21 @@ export function removeStaleOutputs(
       if (generatedSourceOf(read.value) !== source) continue;
       // The map goes first. When it fails, the `.ts` file keeps the header that
       // proves ownership, so a later call can retry. A missing file counts as removed.
+      const targets: [string, string][] = [];
+      let blocked = false;
       for (const target of [`${path}.map`, path]) {
-        const full = joinPath(root, target);
+        const contained = containedProjectPath(fs, root, target);
+        if (!contained.ok) {
+          notes.push(
+            `error: cannot remove ${target}: ${contained.error.message}`,
+          );
+          blocked = true;
+          break;
+        }
+        targets.push([target, contained.value]);
+      }
+      if (blocked) continue;
+      for (const [target, full] of targets) {
         const existed = fs.kind(full) !== "missing";
         const result = fs.remove(full);
         if (result.ok) {

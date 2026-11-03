@@ -40,6 +40,15 @@ function linkedFs(
     },
     writeText: () => ({ ok: false, error: { message: "read only" } }),
     remove: () => ({ ok: false, error: { message: "read only" } }),
+    entryKind: (path) => ({
+      ok: true,
+      value: links[path] !== undefined
+        ? "symlink"
+        : files[path] !== undefined ||
+            Object.keys(files).some((key) => key.startsWith(`${path}/`))
+        ? "other"
+        : "missing",
+    }),
     kind: (path) => {
       const real = resolve(path);
       if (files[real] !== undefined) return "file";

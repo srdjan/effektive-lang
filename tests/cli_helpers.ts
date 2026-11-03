@@ -82,6 +82,14 @@ export function memoryIo(
         map.delete(path);
         return { ok: true, value: undefined };
       },
+      entryKind(path: string) {
+        return {
+          ok: true as const,
+          value: map.has(path) || io.fs.kind(path) !== "missing"
+            ? "other" as const
+            : "missing" as const,
+        };
+      },
       kind(path: string) {
         if (map.has(path)) return "file";
         const prefix = prefixOf(path);

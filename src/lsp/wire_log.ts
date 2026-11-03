@@ -153,6 +153,15 @@ export class WireLog {
         fs("remove", path, () => ({ ok: result.ok }));
         return result;
       },
+      entryKind: (path) => {
+        const result = real.entryKind(path);
+        fs(
+          "entryKind",
+          path,
+          () => result.ok ? { kind: result.value } : { error: result.error },
+        );
+        return result;
+      },
       kind: (path) => {
         const kind = real.kind(path);
         fs("kind", path, () => ({ kind }));
