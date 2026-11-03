@@ -37,8 +37,8 @@ cost.
 ## Decisions
 
 The user gave no answer within 60 seconds on 2026-11-03. The orchestrator
-selected the recommended option of each decision. The user can change any of
-them.
+selected the recommended option of each decision. After the work was complete,
+the user confirmed EID1 to EID4 as recommended on 2026-11-03.
 
 | ID | Decision | Selected option |
 | --- | --- | --- |
