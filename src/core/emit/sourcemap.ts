@@ -26,47 +26,54 @@ const BASE64_VALUES: ReadonlyMap<string, number> = new Map(
 );
 const CONTINUATION = 32;
 const DIGIT_MASK = 31;
+const MAX_VLQ_VALUE = BigInt(Number.MAX_SAFE_INTEGER) * 2n + 1n;
 
 /** Encodes one integer as base64 VLQ: the sign in the lowest bit, five bits for each digit. */
 export function encodeVlq(value: number): string {
   if (!Number.isSafeInteger(value)) {
     throw new Error(`cannot encode ${value} as VLQ`);
   }
-  let rest = value < 0 ? -value * 2 + 1 : value * 2;
+  const integer = BigInt(value);
+  let rest = value < 0 ? -integer * 2n + 1n : integer * 2n;
   let out = "";
   do {
-    let digit = rest % 32;
-    rest = Math.floor(rest / 32);
-    if (rest > 0) digit |= CONTINUATION;
+    let digit = Number(rest % 32n);
+    rest /= 32n;
+    if (rest > 0n) digit |= CONTINUATION;
     out += BASE64[digit];
-  } while (rest > 0);
+  } while (rest > 0n);
   return out;
 }
 
 type VlqError =
   | { readonly tag: "bad-character"; readonly index: number }
-  | { readonly tag: "truncated"; readonly index: number };
+  | { readonly tag: "truncated"; readonly index: number }
+  | { readonly tag: "overflow"; readonly index: number };
 
 /** Decodes the integers in `text`. The text holds only VLQ digits. */
 export function decodeVlqList(text: string): Result<number[], VlqError> {
   const values: number[] = [];
-  let acc = 0;
-  let scale = 1;
+  let acc = 0n;
+  let scale = 1n;
   let open = false;
   for (let i = 0; i < text.length; i++) {
     const digit = BASE64_VALUES.get(text[i]);
     if (digit === undefined) {
       return { ok: false, error: { tag: "bad-character", index: i } };
     }
-    acc += (digit & DIGIT_MASK) * scale;
+    acc += BigInt(digit & DIGIT_MASK) * scale;
+    if (acc > MAX_VLQ_VALUE) {
+      return { ok: false, error: { tag: "overflow", index: i } };
+    }
     if ((digit & CONTINUATION) !== 0) {
-      scale *= 32;
+      scale *= 32n;
+      if (scale > MAX_VLQ_VALUE) scale = MAX_VLQ_VALUE + 1n;
       open = true;
       continue;
     }
-    values.push(acc % 2 === 1 ? -(acc - 1) / 2 : acc / 2);
-    acc = 0;
-    scale = 1;
+    values.push(acc % 2n === 1n ? -Number((acc - 1n) / 2n) : Number(acc / 2n));
+    acc = 0n;
+    scale = 1n;
     open = false;
   }
   if (open) {

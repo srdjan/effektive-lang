@@ -10,8 +10,8 @@ Constraints: separate local commits, no push, no deferred feature work, and no e
 Accepted decisions: phase order, rejection of external source links, and permission to record and execute the plan.
 Execution engine: native. Delegated implementation uses Sol (`gpt-5.6-sol`) with high reasoning effort.
 No Compound Pack applies to this checkout.
-Current work: contain source fixes and generated writes through the shared host boundary.
-Remaining work: project writes, numeric encoding, and documentation.
+Current work: correct source-map integer encoding and decoding.
+Remaining work: numeric encoding, documentation, and final review.
 Open issues: none before implementation.
 Next action: the main agent obtains a plan critique, then runs the first phase's checks.
 
@@ -93,3 +93,22 @@ The selected full run killed 12 mutations across `deno_io.ts`, `workspace.ts`, a
 The selected mutation of the source-fix write check was also killed.
 The main agent added a public replay regression for a refused no-follow inspection; all 16 replay tests pass.
 An unrelated README edit appeared during execution. The main agent preserves it and excludes it from repair commits.
+That edit was committed independently as `baf7c3e` and remains outside this repair scope.
+Replay regression commit: `ac2c71d`. Its preceding complete check passed 2,737 fast tests and 263 slow tests.
+All six selected replay validation mutations were killed.
+The added forwarding expression in `wire_log.ts` has no mutation site under the tool's four operators.
+
+### Correct numeric encoding
+
+The new public API regressions failed before the repair.
+Large negative safe integers decoded with positive signs, and oversized input returned success.
+The codec now uses exact integer arithmetic for sign packing and digit accumulation.
+Decoded values above the safe integer domain return a tagged `overflow` error.
+The initial exact implementation passed all 16 source-map tests and the complete gate.
+A separate probe measured 0.45 ms, 3.72 ms, and 141.55 ms for 1,024, 8,192, and 65,536 zero digits.
+The decoder now saturates its scale above the accepted numeric domain.
+Higher nonzero digits still cause overflow, while zero continuation digits retain their existing meaning.
+The same three probe sizes then took 0.16 ms, 0.65 ms, and 2.80 ms.
+These are single probe measurements, not latency guarantees.
+All 16 source-map tests and the complete check passed after the bound.
+The complete check passed 2,739 fast tests and 263 slow tests.

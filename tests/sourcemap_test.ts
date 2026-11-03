@@ -56,6 +56,41 @@ Deno.test("VLQ round-trips integers, singly and in lists", () => {
   );
 });
 
+Deno.test("VLQ preserves signs at the safe integer boundaries", () => {
+  const values = [
+    Number.MIN_SAFE_INTEGER,
+    -(2 ** 52 + 1),
+    -(2 ** 52),
+    -(2 ** 52 - 1),
+    2 ** 52 - 1,
+    2 ** 52,
+    2 ** 52 + 1,
+    Number.MAX_SAFE_INTEGER,
+  ];
+  for (const value of values) {
+    assertEquals(decodeVlqList(encodeVlq(value)), { ok: true, value: [value] });
+  }
+  assertEquals(decodeVlqList(values.map(encodeVlq).join("")), {
+    ok: true,
+    value: values,
+  });
+});
+
+Deno.test("VLQ decoding rejects numeric overflow and retains exact zero", () => {
+  for (const text of ["ggggggggggQ", "/".repeat(220) + "A"]) {
+    const decoded = decodeVlqList(text);
+    assert(!decoded.ok);
+    assertEquals(decoded.error.tag, "overflow");
+    const mappings = decodeMappings(text);
+    assert(!mappings.ok && mappings.error.tag === "bad-vlq");
+    assertEquals(mappings.error.error.tag, "overflow");
+  }
+  assertEquals(decodeVlqList("g".repeat(220) + "A"), {
+    ok: true,
+    value: [0],
+  });
+});
+
 Deno.test("VLQ decoding rejects a bad character and a truncated digit", () => {
   assertEquals(decodeVlqList("A!"), {
     ok: false,
