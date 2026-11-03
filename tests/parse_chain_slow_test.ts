@@ -36,10 +36,7 @@ Deno.test("short chains pass every pass in a cold process", async () => {
     ["field", 250, '["type-mismatch/006"]'],
     ["array", 120, "[]"],
   ];
-  const results = await Promise.all(
-    cases.map(([form, links]) => coldRun(form, links)),
-  );
-  for (const [index, [form, , expected]] of cases.entries()) {
-    assertEquals(results[index], { code: 0, out: expected }, form);
+  for (const [form, links, expected] of cases) {
+    assertEquals(await coldRun(form, links), { code: 0, out: expected }, form);
   }
 });
