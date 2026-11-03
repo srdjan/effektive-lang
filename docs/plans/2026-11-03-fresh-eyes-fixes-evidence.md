@@ -65,3 +65,8 @@ The guard now checks both lexical and physical paths.
 A missing output resolves through its nearest existing parent.
 A dangling link fails resolution and is refused.
 The focused build and guard tests passed after repair, including normal external output.
+`deno task check` passed 2,736 fast tests and 259 slow tests before commit `417e993`.
+The one-site mutation pipeline passed.
+The selected five-site run killed four mutants and exposed a gap in the chosen slow-test file.
+That file tested aliased paths but omitted a direct protected path through `build`.
+The regression now covers a direct protected directory in the same disposable repository.

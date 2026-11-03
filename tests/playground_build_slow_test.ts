@@ -67,6 +67,7 @@ Deno.test("build refuses repository targets reached through symbolic links", asy
     Deno.symlinkSync(`${dir}/missing`, `${dir}/dangling`);
     for (
       const out of [
+        `${root}/src/core`,
         `${dir}/alias/src/core`,
         `${dir}/alias/src/new/output`,
         `${dir}/alias`,
