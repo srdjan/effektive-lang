@@ -106,6 +106,8 @@ export async function runStrictTarget(
     Deno.writeTextFileSync(`${dir}/deno.lock`, tscLock());
     const decoder = new TextDecoder();
     let stdout = "";
+    // The commands run in order on purpose. At the same time, they made the
+    // slow suite slower: see docs/archive/plans/2026-11-03-concurrent-awaits.md.
     for (const command of ["check", "run"]) {
       const result = await new Deno.Command(Deno.execPath(), {
         args: [command, "--lock=deno.lock", "run.ts"],
