@@ -206,4 +206,16 @@ Acceptance: `deno task mutate` exits 0 for the changed modules.
 
 ## Findings
 
-Findings from execution go here, with the prefix EIF.
+Fable reviewed the EIU2 design on 2026-11-03, read-only. The orchestrator
+checked EIF4 and EIF7 in the code and accepted each finding.
+
+| ID | Finding | Resolution |
+| --- | --- | --- |
+| EIF1 | `exportedValueIds`, `buildTypeGraph`, `foreignTypeGraph`, and `buildInterface` read only written sets. `modesAsSolved` gives empty sets. An importer then sees no inferred failure, and the validator gives `validation/009`, or `validation/001` for a private error. | These functions take the solved sets of the module. A written set wins over a solved set, as in `contractOf`. |
+| EIF2 | The span-only rebuild in `src/core/db.ts` near line 407 keeps the old hash and would publish empty sets. | The checked module stores its solved map, and the rebuild passes it. |
+| EIF3 | Many tests build a `ModeMap` by hand. | Keep `ModeMap`. The bodies and the checked module carry a second map `solved`, in source order. |
+| EIF4 | `checkFunctionBody` already adds `SchemaError` for a checked input and sets the mode to `effect` (`src/core/check_expr.ts:2961`). | Report `failure-contract/001` there only when `fails` is written. |
+| EIF5 | The inlay hint goes after the last clause, so ` fails E` would follow `with S`. | Put the failure hint before the `with` clause. |
+| EIF6 | Recursive groups and importer rechecks need no change. | None. |
+| EIF7 | More tests drift: `tests/open_contracts_test.ts:207`, and after EIU3 `tests/check_test.ts:507` and `:538`, and `tests/check_body_test.ts:646`. | EIU2 and EIU3 update them. |
+| EIF8 | Two cases are not in the acceptance list: a body that stops failing makes an importer's `catch` arm unreachable (`failure-contract/002`), and a foreign error reached through an imported call. | EIU2 adds both as literal tests. |
