@@ -6,6 +6,7 @@
 // `playground/dist` in the repository root.
 
 import {
+  basename,
   dirname,
   fromFileUrl,
   isAbsolute,
@@ -89,18 +90,54 @@ function copyDirectory(from: string, to: string): string[] {
  * True when removing `outDir` can delete repository files: the root, one of its
  * parents, or a directory inside the repository other than `playground/dist`.
  */
-export function isUnsafe(outDir: string): boolean {
-  const fromOutDir = relative(outDir, REPOSITORY_ROOT);
+function unsafeLocation(outDir: string, root: string): boolean {
+  const fromOutDir = relative(outDir, root);
   if (
     fromOutDir !== ".." && !fromOutDir.startsWith(".." + SEPARATOR)
   ) return true;
-  const fromRoot = relative(REPOSITORY_ROOT, outDir);
+  const fromRoot = relative(root, outDir);
   if (
     fromRoot === ".." || fromRoot.startsWith(".." + SEPARATOR) ||
     isAbsolute(fromRoot)
   ) return false;
   const dist = join("playground", "dist");
   return fromRoot !== dist && !fromRoot.startsWith(dist + SEPARATOR);
+}
+
+/** Resolves existing parents without treating a dangling link as a missing directory. */
+function physicalPath(path: string): Result<string, BuildError> {
+  const suffix: string[] = [];
+  let current = path;
+  const failure = (error: unknown): Result<string, BuildError> => ({
+    ok: false,
+    error: { tag: "io", message: String(error) },
+  });
+  for (;;) {
+    try {
+      Deno.lstatSync(current);
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) return failure(error);
+      const parent = dirname(current);
+      if (parent === current) return failure(error);
+      suffix.unshift(basename(current));
+      current = parent;
+      continue;
+    }
+    try {
+      return { ok: true, value: join(Deno.realPathSync(current), ...suffix) };
+    } catch (error) {
+      return failure(error);
+    }
+  }
+}
+
+/** Refuses protected lexical paths, resolved paths, and paths that cannot be resolved. */
+export function isUnsafe(outDir: string): boolean {
+  const out = resolve(outDir);
+  if (unsafeLocation(out, REPOSITORY_ROOT)) return true;
+  const root = physicalPath(REPOSITORY_ROOT);
+  const target = physicalPath(out);
+  return !root.ok || !target.ok || unsafeLocation(target.value, root.value);
 }
 
 /**

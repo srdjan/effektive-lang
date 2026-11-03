@@ -2,6 +2,7 @@
 // directory, which starts `deno bundle` as a subprocess.
 
 import { assert, assertEquals } from "@std/assert";
+import { fromFileUrl, toFileUrl } from "@std/path";
 import { build } from "../playground/build.ts";
 
 const OUTPUTS: readonly string[] = [
@@ -41,6 +42,44 @@ Deno.test("build writes the page files and the examples", async () => {
     assert(app.byteLength > 0);
     assertEquals(result.value.appBytes, app.byteLength);
     assert(result.value.appGzipBytes > 0);
+  } finally {
+    Deno.removeSync(dir, { recursive: true });
+  }
+});
+
+Deno.test("build refuses repository targets reached through symbolic links", async () => {
+  const dir = Deno.makeTempDirSync({ prefix: "effektive-playground-links-" });
+  try {
+    const root = `${dir}/repository`;
+    Deno.mkdirSync(`${root}/playground`, { recursive: true });
+    Deno.mkdirSync(`${root}/src/core`, { recursive: true });
+    const sentinel = `${root}/src/core/keep.txt`;
+    Deno.writeTextFileSync(sentinel, "keep");
+    Deno.copyFileSync(
+      fromFileUrl(new URL("../playground/build.ts", import.meta.url)),
+      `${root}/playground/build.ts`,
+    );
+    const copied: { build: typeof build } = await import(
+      toFileUrl(`${root}/playground/build.ts`).href
+    );
+    Deno.symlinkSync(root, `${dir}/alias`);
+    Deno.symlinkSync(`${root}/src`, `${root}/playground/dist`);
+    Deno.symlinkSync(`${dir}/missing`, `${dir}/dangling`);
+    for (
+      const out of [
+        `${dir}/alias/src/core`,
+        `${dir}/alias/src/new/output`,
+        `${dir}/alias`,
+        `${root}/playground/dist/core`,
+        `${dir}/dangling`,
+      ]
+    ) {
+      assertEquals(await copied.build(out), {
+        ok: false,
+        error: { tag: "unsafe-out-dir", outDir: out },
+      });
+      assertEquals(Deno.readTextFileSync(sentinel), "keep");
+    }
   } finally {
     Deno.removeSync(dir, { recursive: true });
   }

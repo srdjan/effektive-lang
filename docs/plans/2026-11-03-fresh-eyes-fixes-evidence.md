@@ -10,7 +10,7 @@ Constraints: separate local commits, no push, no deferred feature work, and no e
 Accepted decisions: phase order, rejection of external source links, and permission to record and execute the plan.
 Execution engine: native. Delegated implementation uses Sol (`gpt-5.6-sol`) with high reasoning effort.
 No Compound Pack applies to this checkout.
-Current work: refresh two mutation register offsets, then protect playground cleanup.
+Current work: verify playground cleanup against physical filesystem targets.
 Remaining work: playground cleanup, project writes, numeric encoding, and documentation.
 Open issues: none before implementation.
 Next action: the main agent obtains a plan critique, then runs the first phase's checks.
@@ -52,3 +52,16 @@ Commit: `5cd6e3c` records the restored baseline and the approved plan.
 The first one-site mutation sample killed its mutant but rejected two stale register offsets.
 Replacing the Deno command shifted the two sites by nine characters.
 The main agent checked the unchanged site text and slow-test reasons, then refreshed both measured offsets.
+Correction commit: `f13f4b4`.
+The repeated complete check passed, and the repeated one-site mutation sample killed its mutant with no stale rows.
+That mutation sample used `tests/behavior_corpus_test.ts`; it does not prove subprocess permissions.
+The focused slow tests and the complete gate prove the command repair.
+
+### Protect playground cleanup
+
+The new regression copied the build module into a disposable repository.
+Before repair, an alias to `src/core` passed the guard and produced `bundle-failed` after deletion.
+The guard now checks both lexical and physical paths.
+A missing output resolves through its nearest existing parent.
+A dangling link fails resolution and is refused.
+The focused build and guard tests passed after repair, including normal external output.
