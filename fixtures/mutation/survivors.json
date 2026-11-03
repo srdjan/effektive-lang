@@ -475,5 +475,266 @@
     "operator": "comparison",
     "class": "equivalent",
     "reason": "This code runs only for an argument that starts with two hyphens, so indexOf(\"=\") is -1 or at least 2 and never 0. A differential probe of 1323 argument lists, including \"--=\" and \"--=5\", found no difference."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "run",
+    "offset": 271,
+    "text": "!result.success",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts runs the tool in a directory that is not a git repository and in a repository, so a wrong failure test for a command breaks the exit code."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "makeCopies",
+    "offset": 279,
+    "text": "!made.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts runs the tool end to end, so a wrong check of the archive or extract result breaks the run or the exit code."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "makeCopies",
+    "offset": 579,
+    "text": "!result.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts runs the tool end to end, so a wrong check of the archive or extract result breaks the run or the exit code."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "runMutants.worker",
+    "offset": 37,
+    "text": "!aborted && next < mutants.length",
+    "operator": "logical",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts runs the tool with one and two workers and with a mutant that leaves no test to run, so a wrong loop or abort test breaks the output or the exit code."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "runMutants.worker",
+    "offset": 49,
+    "text": "next < mutants.length",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts runs the tool with one and two workers and with a mutant that leaves no test to run, so a wrong loop or abort test breaks the output or the exit code."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "runMutants.worker",
+    "offset": 551,
+    "text": "cls === \"infrastructure\"",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts runs the tool with one and two workers and with a mutant that leaves no test to run, so a wrong loop or abort test breaks the output or the exit code."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "runMutants.worker",
+    "offset": 551,
+    "text": "cls === \"infrastructure\"",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts runs the tool with one and two workers and with a mutant that leaves no test to run, so a wrong loop or abort test breaks the output or the exit code."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "runMutants",
+    "offset": 1117,
+    "text": "outcome !== undefined",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts runs the tool with a mutant that leaves no test to run, so a wrong filter of unrun mutants breaks the exit code and the message."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "shorten",
+    "offset": 88,
+    "text": "first.length > 60",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts prints survivors whose text is 57, 58, 60, and 61 characters long, so a wrong length limit changes the output."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 128,
+    "text": "!parsed.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 506,
+    "text": "!register.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 755,
+    "text": "!copies.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 970,
+    "text": "clean.timedOut || classify(clean) !== \"survived\"",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 970,
+    "text": "clean.timedOut || classify(clean) !== \"survived\"",
+    "operator": "logical",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 988,
+    "text": "classify(clean) !== \"survived\"",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 1679,
+    "text": "options.only.length === 0",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 1789,
+    "text": "site.file === o.file && site.line === o.line",
+    "operator": "logical",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 1789,
+    "text": "site.file === o.file",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 1813,
+    "text": "site.line === o.line",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 2100,
+    "text": "outcome.class === \"infrastructure\"",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 2150,
+    "text": "broken !== undefined",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 2150,
+    "text": "broken !== undefined",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 2352,
+    "text": "o.class === \"survived\"",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 2453,
+    "text": "o.class === \"timeout\"",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 2660,
+    "text": "o.mutant.file === module",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main.count",
+    "offset": 49,
+    "text": "o.class === cls",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the per-module counts of killed and surviving mutants for two modules."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 3820,
+    "text": "match.unregistered.length === 0 && match.stale.length === 0",
+    "operator": "logical",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 3820,
+    "text": "match.unregistered.length === 0",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "main",
+    "offset": 3855,
+    "text": "match.stale.length === 0",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
   }
 ]
