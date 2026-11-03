@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.13.5 - 2026-11-03
+
 ## 0.13.0 - 2026-11-03
 
 - The slow test runner installs esbuild once before the parallel tests start.
