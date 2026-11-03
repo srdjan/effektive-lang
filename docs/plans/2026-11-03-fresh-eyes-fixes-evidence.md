@@ -10,7 +10,7 @@ Constraints: separate local commits, no push, no deferred feature work, and no e
 Accepted decisions: phase order, rejection of external source links, and permission to record and execute the plan.
 Execution engine: native. Delegated implementation uses Sol (`gpt-5.6-sol`) with high reasoning effort.
 No Compound Pack applies to this checkout.
-Current work: commit the restored baseline, then protect playground cleanup.
+Current work: refresh two mutation register offsets, then protect playground cleanup.
 Remaining work: playground cleanup, project writes, numeric encoding, and documentation.
 Open issues: none before implementation.
 Next action: the main agent obtains a plan critique, then runs the first phase's checks.
@@ -48,3 +48,7 @@ The comparison now starts the permitted `deno` command, as the mutation tool alr
 This prerequisite stays in the baseline phase because that phase must restore the required complete check.
 The focused behavior-comparison suite then passed both tests.
 `deno task check` passed formatting, lint, type checks, 2,736 fast tests, and 258 slow tests.
+Commit: `5cd6e3c` records the restored baseline and the approved plan.
+The first one-site mutation sample killed its mutant but rejected two stale register offsets.
+Replacing the Deno command shifted the two sites by nine characters.
+The main agent checked the unchanged site text and slow-test reasons, then refreshed both measured offsets.
