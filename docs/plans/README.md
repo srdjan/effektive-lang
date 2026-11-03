@@ -47,3 +47,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | CR (phases) | [`docs/archive/plans/2026-11-01-compiler-reset.md`](../archive/plans/2026-11-01-compiler-reset.md) | Compiler reset |
 | SR (items), SRD (decisions), FB and AS (analysis findings), VF and VA (validation findings) | [`docs/archive/plans/2026-11-02-simplification-rebase.md`](../archive/plans/2026-11-02-simplification-rebase.md) | Simplification rebase proposal, with its analysis and validation evidence |
 | XC (findings), XCD (decisions), XCU (units) | [`docs/archive/plans/2026-11-02-inferred-export-contracts-review.md`](../archive/plans/2026-11-02-inferred-export-contracts-review.md) | Review of inferred `fails` and `uses` on exported functions |
+| FE (phases), FEF (findings) | [`docs/plans/2026-11-03-fresh-eyes-fixes.md`](2026-11-03-fresh-eyes-fixes.md) | Approved fixes from the fresh-eyes review; progress and checks are in its evidence file |

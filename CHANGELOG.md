@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.13.0 - 2026-11-03
+
+- The slow test runner installs esbuild once before the parallel tests start.
+  This prevents concurrent bundle commands from racing during installation.
+- The mutation tool extracts worker copies concurrently, reads the last test
+  summary, and rejects an empty path in `--only`.
+- Command-line tests cover the mutation tool and its survivor register.
+
 ## 0.12.3 - 2026-11-02
 
 - The command `effektive check [root] --fix` adds the missing `fails` and

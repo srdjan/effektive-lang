@@ -347,7 +347,7 @@ const realDeps: Deps = {
     await Deno.writeTextFile(copy, runner);
     const out = `${tree.value}/behavior.records.${runCount++}.json`;
     const ran = await run(
-      Deno.execPath(),
+      "deno",
       [
         "run",
         "--allow-read",
