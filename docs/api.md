@@ -61,7 +61,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   editor_rename.ts References, prepare-rename and re-resolved rename edits.
   diagnostic_delta.ts Diagnostics that an edit adds and removes, by code, source, and moved span.
   editor_completion.ts Visible names, record fields and service-method completion.
-  editor_hints.ts Inlay hints for the inferred fails and with sets of non-exported functions.
+  editor_hints.ts Inlay hints for the inferred fails and with sets of exported and local functions.
   editor_tokens.ts Semantic classifications with lexical recovery.
   editor_actions.ts Validated missing fails/with actions from checked body effects.
   editor_signature.ts signatureHelpAt: signature help for ordinary calls from checked callee types.
@@ -599,7 +599,7 @@ task runs in the repository directory, so pass an explicit root, for example
 | Command                                       | What it does                                                                                              |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `deno task effektive check [root]`            | Prints the diagnostics of the project.                                                                    |
-| `deno task effektive check [root] --fix`      | Adds the missing `fails` and `with` entries to the exported functions, writes the changed `.eff` files, then prints the remaining diagnostics. It writes no `.ts` file. It writes only names that the module can see, and it adds no import. |
+| `deno task effektive check [root] --fix`      | Adds the missing entries to the written `fails` and `with` clauses of functions, writes the changed `.eff` files, then prints the remaining diagnostics. It writes no `.ts` file. It writes only names that the module can see, and it adds no import. |
 | `deno task effektive build [root]`            | Also writes `<module>.ts` and `<module>.ts.map` next to each source for each module that no error blocks, and `<name>.effi.ts` for each imported `.effi` file. |
 | `deno task effektive build [root] --tsc`      | Also runs `deno check` over the written files and the host modules, and maps each error to the source.    |
 | `deno task effektive watch [root] [--tsc]`    | Builds once, then builds again after each change of a source file. It prints the modules that it checked. |
@@ -772,12 +772,15 @@ The server announces `positionEncoding: "utf-16"`. It supports these features.
   partially typed names. There are no automatic imports.
 - Full semantic tokens. A fixed legend includes declaration and readonly
   modifiers; lexical fallback covers broken regions. There are no delta tokens.
-- Contract quick fixes. Missing `fails` and `with` entries come from checked
-  body effects. Reliable explicit inline contracts receive validated source
-  edits that preserve existing entries. Diagnostic prose is not parsed.
-- Inlay hints. A non-exported function with an open, non-empty `fails` or `with`
-  set shows the inferred part, as the hover prints it, before `=>`. Inline
-  arrows and functions with errors have no hint.
+- Contract quick fixes. Missing entries of a written `fails` clause and of a
+  `with` clause come from checked body effects. An omitted `fails` clause is
+  inferred, so no fix adds one. A fix adds a missing service to the `with`
+  clause of an export. Reliable written inline contracts receive validated
+  source edits that preserve existing entries. Diagnostic prose is not parsed.
+- Inlay hints. A function with an inferred, non-empty `fails` or `with` set
+  shows the inferred part, as the hover prints it, before `=>`. For an export,
+  the hint shows the inferred failures after the result type and before a
+  written `with` clause. Inline arrows and functions with errors have no hint.
 
 Diagnostics follow a fixed order. The server publishes the open documents of the
 project first, sorted by path. An open document gets a message when the compile
@@ -891,7 +894,7 @@ text return `null`. Document symbols parse the file on its own, and
 - A generated `.ts` file has no go-to-definition into the `.eff` source.
 - Rename edits Effektive source/interface references only; it does not rename
   TypeScript host code. Completion does not add imports, semantic tokens have no
-  delta mode, and quick fixes target reliable explicit inline function contracts
+  delta mode, and quick fixes target reliable written inline function contracts
   only. See [editor queries](editor.md).
 
 ## VS Code client

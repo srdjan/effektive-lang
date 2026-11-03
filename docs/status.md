@@ -53,6 +53,7 @@ Each row gives the state of one area, with one link to its rule.
 | --- | --- | --- |
 | Compiler structure | The package has three entry points: the whole API, the frontend, and the TypeScript backend. `TypeScriptOutputs` owns lazy generated output, so source hover does not lower or emit. The IR has version 8, and the validator rejects other wire versions without conversion. The first release-cycle removal of IR kinds raises the version once. Later removals in the same cycle keep it. The validator is a test oracle: no entry point exports it, and no product path runs it. Each revision retains separate type definitions over shared interned storage, so later edits cannot change earlier lazy lowering or editor queries. | [architecture.md](architecture.md) |
 | Concise source forms | Bare single-parameter arrows, lazy Option `??`, flat block-local record bindings, and explicit `using` and `finally` expressions lower to existing IR operations. All five application witnesses pass independent validation, strict target checks, and their runtime checks. | [Concise source forms](language-rules.md#concise-source-forms) |
+| Function contracts | An exported function writes its result type and its services with `with`, and the compiler infers its failure set. A written `fails` clause is a checked upper bound. A local function infers every omitted clause. An export with a checked input infers `SchemaError`. A new failure in an export with an inferred set reaches host TypeScript with no diagnostic, so a `fails` clause is the opt-in guard. The inlay hint shows the inferred failures. | [Inferred contracts](language-rules.md#expressions-modes-and-contracts) |
 | Type identity | A `type` declaration has identity by name. The `nominal` declaration word, the `data` declaration, and `Brand<T>` are deleted. The editor, the TextMate grammar, and the playground highlighter do not know the word `nominal`. The website and the canonical specification describe type identity from draft 0.64. | [Declarations and types](language-rules.md#declarations-and-types) |
 | Host interfaces | Each `.effi` file has a generated companion module, so the compiler owns every tag string. A tagged record value from unsound host code fails loudly at run time. The table below gives the measured cost of these checks. | [Emission](language-rules.md#emission) |
 | Portable extensions | Sealed types, pure function types, and optional import rules are complete. The sibling website has paired source and TypeScript panels and a runnable project for all three controls. These changes do not expand the three-application stopping rule. Named platforms continue to use existing services and Layers. | [Declarations and types](language-rules.md#declarations-and-types) |
@@ -94,8 +95,11 @@ compiler or syntax change that makes source more terse and elegant needs no
 application blocker. The
 [terse source plan](archive/plans/2026-10-24-terse-source.md) records the first
 such changes: open contracts on local functions, named error sets, union joins of
-tagged records, expected types in builtin callbacks, and inlay hints. First check
-equivalent existing source compositions. Record a minimal witness, intended
+tagged records, expected types in builtin callbacks, and inlay hints. On
+2026-11-03 the user accepted a second terse change: an exported function infers
+its failure set and states its services with `with`. The
+[export failures plan](plans/2026-11-03-inferred-export-failures.md) records it.
+First check equivalent existing source compositions. Record a minimal witness, intended
 contract, observed diagnostic or behavior, and the required failure,
 cancellation, and cleanup semantics. No item has an automatic priority or
 implementation commitment.

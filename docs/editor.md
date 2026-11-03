@@ -10,7 +10,7 @@ The core exports synchronous, protocol-neutral queries over a `Revision`:
 | `renameAt(revision, path, offset, newName)` | Validated source edits, or a reason the rename cannot preserve binding identities. |
 | `completionsAt(revision, path, offset)` | Visible names, prefix replacement spans, record fields and service methods. No automatic imports. |
 | `semanticClassifications(revision, path, text)` | Classified source spans with declaration/readonly modifiers. Stale or broken regions use lexical information. |
-| `contractActionsAt(revision, path, start, end)` | Validated missing `fails`/`with` insertions from checked body effects. |
+| `contractActionsAt(revision, path, start, end)` | Validated missing entries for a written `fails` clause and for a `with` clause, from checked body effects. |
 
 Paths are root-relative and offsets/spans count UTF-16 code units. Core queries
 have no filesystem or LSP dependency. The occurrence index is held in a weak
@@ -37,13 +37,21 @@ and modifiers are fixed exports; full-document classification includes lexical
 comments, strings, numbers, keywords and operators during parser recovery.
 There is no delta-token support.
 
-Contract actions apply to explicit inline function contracts whose checked
-bodies and parsed headers are reliable. They preserve existing entries and
-resolve effect identities through visible names. When every method of a service
+Contract actions apply to written inline function contracts whose checked
+bodies and parsed headers are reliable. An action adds a failure only to a
+written `fails` clause, because the compiler infers an omitted `fails` clause.
+An action adds a missing service to the `with` clause of an export. It preserves
+existing entries and resolves effect identities through visible names. When every method of a service
 is missing, an action adds the service name. Each action checks the edited
 project before it is returned. An action must remove at least one diagnostic and must
 add none, by the same comparison. Diagnostic messages are not parsed to generate
 edits.
+
+An inlay hint shows the inferred part of a function contract. The hint covers
+an exported function and a local function. For an export it shows the inferred
+failures, such as ` fails UserMissing`, at the end of the result type and before
+a written `with` clause. A function with a diagnostic inside its span has no
+hint.
 
 Pure behavior regressions are in `tests/editor_queries_test.ts`.
 

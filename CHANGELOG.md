@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- The contract keyword `uses` is now `with`, as in `User with Users`. `with` is
+  a keyword, so a name cannot be `with` (`syntax/008`). The keyword applies to
+  arrow headers, function types, and `.effi` providers. The meaning, the IR, and
+  the emitted TypeScript do not change.
+- An exported function with a body infers an omitted `fails` clause from its
+  body, as a local function does. A written `fails` clause stays a checked upper
+  bound. An exported function still closes its `with` clause, so an omitted
+  `with` clause means no services.
+- An exported function with a checked input and no `fails` clause infers
+  `SchemaError`. A written `fails` clause must list `SchemaError`.
+- A new failure in an export with an inferred failure set reaches host
+  TypeScript with no diagnostic. Write a `fails` clause to guard against it.
+- The interface of a module carries the inferred failure set of each export.
+- The inlay hint shows the inferred failures of an export, before a written
+  `with` clause.
+- `check --fix` and the quick fix add failures only to a written `fails` clause.
+  They add a missing service to the `with` clause of an export.
+- The examples, the applications, and the tutorial drop the `fails` clause of
+  their exported functions.
+
 ## 0.13.5 - 2026-11-03
 
 ## 0.13.0 - 2026-11-03

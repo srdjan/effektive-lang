@@ -4,7 +4,7 @@
 
 Effektive is a small functional language that compiles to TypeScript for Effect 4.
 You write application logic with direct function calls. The compiler checks each
-exported function's result, expected failures, and required service operations.
+exported function's result and required service operations. It infers the expected failures.
 
 [Tutorial](docs/tutorial.md) · [Specification](https://effektive.timok.deno.net/effektive-spec.html) ·
 [Playground](#playground) · [Project status](docs/status.md)
@@ -21,24 +21,23 @@ export service Shelf {
   find(id: BookId): Option<Book> fails StoreDown
 }
 
-export const findBook = (id: BookId): Book
-  fails BookMissing | StoreDown
-  with Shelf.find =>
+export const findBook = (id: BookId): Book with Shelf.find =>
   Shelf.find(id) ?? fail(BookMissing({ id }))
 ```
 
-`findBook` returns a `Book`, can fail with either declared error, and requires
-only `Shelf.find`. The `??` operator evaluates the fallback only when the service
-returns `None`. The compiler rejects undeclared failures and service operations.
+`findBook` returns a `Book` and requires only `Shelf.find`. The compiler infers
+that it can fail with `BookMissing` or `StoreDown`. The `??` operator evaluates
+the fallback only when the service returns `None`. The compiler rejects
+undeclared service operations. A written `fails` clause rejects any other failure.
 
 ## Features
 
-| Capability         | What it gives you                                                                                                                    |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Explicit contracts | Exported functions name their result, failures, and service operations. The compiler infers contracts for private functions.         |
-| Domain types       | `BookId` and `Title` have separate identities even though both contain strings.                                                      |
-| Effect runtime     | Concurrency, streams, and resource management compile to Effect 4. Typed host adapters connect external packages.                    |
-| Editor support     | The language server supplies diagnostics, navigation, rename, completion, and contract fixes. VS Code previews generated TypeScript. |
+| Capability         | What it gives you                                                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Inferred contracts | Exported functions name their result and service operations. The compiler infers their failures and the contracts of private functions. |
+| Domain types       | `BookId` and `Title` have separate identities even though both contain strings.                                                         |
+| Effect runtime     | Concurrency, streams, and resource management compile to Effect 4. Typed host adapters connect external packages.                       |
+| Editor support     | The language server supplies diagnostics, navigation, rename, completion, and contract fixes. VS Code previews generated TypeScript.    |
 
 ## Requirements
 

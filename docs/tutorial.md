@@ -98,11 +98,11 @@ export const inStock = (books: Book[]): Title[] =>
     |> map(book => book.title)
 ```
 
-The `|>` operator gives the value on its left to the stage on its right. `filter`, `map`, and `fold` accept a pure callback or an effectful callback. An effectful callback runs once for each element, in order. The first typed failure stops the call, and the enclosing function must declare the failures and services of the callback.
+The `|>` operator gives the value on its left to the stage on its right. `filter`, `map`, and `fold` accept a pure callback or an effectful callback. An effectful callback runs once for each element, in order. The first typed failure stops the call, and the enclosing function takes the failures and services of the callback.
 
 The callback `book => book.copies > 0` has one parameter without parentheses. This form is correct for one parameter without a type annotation. The compiler gets the type of `book` from `filter`. A parameter with an annotation, or two or more parameters, needs parentheses, as in `(sum, amount) => sum + amount`.
 
-An exported function writes its parameter types and its result type. Other modules use this contract, so the compiler does not infer it.
+An exported function writes its parameter types and its result type. Other modules use these types, so the compiler does not infer them.
 
 ## Step 4: call a service
 
@@ -113,7 +113,7 @@ export const findBook = (id: BookId): Book with Shelf.find =>
   Shelf.find(id) ?? fail(BookMissing({ id }))
 ```
 
-The contract has three parts. The result is `Book`. The `fails` clause lists every error that the function can fail with. The `with` clause lists every service operation that the function needs. An exported function must write each clause that is not empty. The compiler compares each clause with the body.
+The contract has three parts. The result is `Book`. The failure set holds every error that the function can fail with. The `with` clause lists every service operation that the function needs. An exported function writes its `with` clause when it needs a service. The compiler infers the failure set from the body, so `findBook` has no `fails` clause. Here, the failure set is `BookMissing | StoreDown`. A `fails` clause is optional. When you write one, the compiler checks that the body fails with no other error.
 
 `Shelf.find` returns an `Option<Book>`. The `??` operator gives the value in `Some`. For `None`, it evaluates the expression on its right. Here, that expression is `fail(BookMissing({ id }))`, so the function fails with `BookMissing`. The right side runs only for `None`. `{ id }` is the short form of `{ id: id }`.
 
@@ -130,7 +130,7 @@ export const titleOf = (id: BookId): Title with Shelf =>
   }
 ```
 
-The `catch` block handles `BookMissing`, so `BookMissing` is not in the `fails` clause of `titleOf`. `StoreDown` has no handler, so it stays in the clause.
+The `catch` block handles `BookMissing`, so `BookMissing` is not in the failure set of `titleOf`. `StoreDown` has no handler, so it stays in the set.
 
 ## Step 6: use a local helper
 
@@ -150,7 +150,7 @@ export const lend = (id: BookId): Book with Shelf.find | Shelf.save => {
 }
 ```
 
-`takeCopy` is not exported, so it needs no result type, no `fails` clause, and no `with` clause. The compiler infers that it returns a `Book` and can fail with `NoCopies`.
+`takeCopy` is not exported, so it needs no result type and no `with` clause. The compiler infers that it returns a `Book` and can fail with `NoCopies`.
 
 `Count = int` permits negative values, so the guard rejects both zero and negative inventory.
 
@@ -160,7 +160,7 @@ export const lend = (id: BookId): Book with Shelf.find | Shelf.save => {
 
 ## Step 7: read a contract error
 
-The compiler compares each contract with its body. To see this check, remove `Shelf.save` from the `with` clause of `lend`, and check the project:
+The compiler compares each `with` clause with its body. To see this check, remove `Shelf.save` from the `with` clause of `lend`, and check the project:
 
 ```sh
 deno task effektive check "$tutorial_dir"
@@ -229,7 +229,7 @@ export const checkout = (id: BookId): Book with Shelf | Ledger => {
 }
 ```
 
-`with Ledger` lists all operations of `Ledger`. To list only some operations, write them one at a time, as in `Shelf.find | Shelf.save`.
+`with Ledger` lists all operations of `Ledger`. The failure set of `checkout` comes from `lend` and `record`. To list only some operations, write them one at a time, as in `Shelf.find | Shelf.save`.
 
 ## Step 9: build the project
 
@@ -241,7 +241,7 @@ deno task effektive build "$tutorial_dir" --tsc
 
 The build writes `library.ts` and `loans.ts` next to the sources, each with a source map. `--tsc` runs `deno check` on the generated TypeScript.
 
-The generated code is ordinary Effect-TS. For example, `findBook` becomes a function that returns `Effect.Effect<Book, BookMissing | StoreDown, Shelf>`. The `fails` clause becomes the error channel, and the `with` clause becomes the requirement channel. `Shelf` becomes a `Context.Service` class, and each error becomes a `Schema.TaggedError` class.
+The generated code is ordinary Effect-TS. For example, `findBook` becomes a function that returns `Effect.Effect<Book, BookMissing | StoreDown, Shelf>`. The failure set becomes the error channel, and the `with` clause becomes the requirement channel. `Shelf` becomes a `Context.Service` class, and each error becomes a `Schema.TaggedError` class.
 
 ## Step 10: supply the services and run
 

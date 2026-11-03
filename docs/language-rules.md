@@ -56,7 +56,7 @@ The sections follow the language topics: core forms, modules and exports, effect
 
 | Rule | Choice | Evidence |
 | --- | --- | --- |
-| Open local contracts | On a non-exported function, module-level or inline arrow, each omitted `fails` or `with` clause is inferred from the body. A written clause closes its own set. A result annotation alone does not close the sets. An exported function closes both sets, so an omitted clause is an empty set. A function type in a binding annotation closes every part. The IR records `written: { result, fails, uses }`; the validator reads a written set as an upper bound and an inferred set as equal to the body set | [check_declarations.ts](../src/core/check_declarations.ts), [check_project.ts](../src/core/check_project.ts), [archive/plans/2026-10-24-terse-source.md](archive/plans/2026-10-24-terse-source.md) |
+| Inferred contracts | A function with a body infers each omitted `fails` clause from the body. This holds for an exported function and for a local function. A written `fails` clause closes its set as a checked upper bound (`failure-contract/001`). A local function, module-level or inline arrow, also infers an omitted `with` clause. An exported function closes its `with` set, so an omitted `with` clause means no services (`requirement-contract/001`). An exported function with a checked input and no `fails` clause infers `SchemaError`; a written `fails` clause must list it. A result annotation alone does not close the sets. A function type in a binding annotation closes every part. Service methods, function types, and `.effi` providers state their sets, because they have no body. The interface carries the solved failure set of each export. The IR records `written: { result, fails, uses }`, and the field name `uses` stays; the validator reads a written set as an upper bound and an inferred set as equal to the body set | [check_declarations.ts](../src/core/check_declarations.ts), [check_project.ts](../src/core/check_project.ts), [2026-11-03-inferred-export-failures.md](plans/2026-11-03-inferred-export-failures.md), [archive/plans/2026-10-24-terse-source.md](archive/plans/2026-10-24-terse-source.md) |
 | Named error sets | A `fails` clause can name a type alias whose unfolded body is an error or a union of errors, also an alias of aliases. The checker expands it to error identities, so the IR keeps sets of errors. A member that is not an error gives `failure-contract/004`. The rule covers contracts, function types, service methods, and `.effi` files | [check_declarations.ts](../src/core/check_declarations.ts), [resolve.ts](../src/core/resolve.ts) |
 | Contract diagnostics | One diagnostic for each contract kind of a function: `failure-contract/001` lists every extra error, and `requirement-contract/001` lists every extra capability | [check_expr.ts](../src/core/check_expr.ts) |
 | Literal widening | Unannotated bindings, branch joins, inferred results, and the `fold` accumulator widen literals to primitives | [check_expr.ts](../src/core/check_expr.ts) |
@@ -552,7 +552,7 @@ The registry in `src/core/diagnostics.ts` describes every code. This table lists
 | Record fields | Field order does not matter. The checker compares fields in order, which is safe because the type table interns every record with its fields sorted by name | [validate/typing.ts](../src/core/validate/typing.ts), [types.ts](../src/core/types.ts) |
 | Effect sets | Comparison ignores order and duplicates; an unsorted or duplicated set gives only `validation/008`. This includes Schema decode and encode requirement sets | [validate/sets.ts](../src/core/validate/sets.ts), [validate/world.ts](../src/core/validate/world.ts) |
 | Closures | The type sets contain the body sets; the mode is effect when a set is nonempty or the body is effect | [validate/expr.ts](../src/core/validate/expr.ts) |
-| Function contracts | An inferred contract equals the body sets; an explicit contract contains them | [validate/expr.ts](../src/core/validate/expr.ts) |
+| Function contracts | An inferred contract equals the body sets; a written contract contains them, also on an exported function | [validate/expr.ts](../src/core/validate/expr.ts) |
 | Identities | `<kind>:<module>#<name>` for declarations and `cap:<module>#<Service>.<method>` for capabilities | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
 | Builtins | A builtin reference is valid only as a callee; the prelude import has a fixed shape | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
 | Area of a branch fault | A `catch` branch is Recovery; an `if` or `match` branch is Types | [validate/expr.ts](../src/core/validate/expr.ts) |
@@ -668,8 +668,8 @@ A single unannotated lambda parameter can omit parentheses: `user => user.name`.
 It is the same arrow as `(user) => user.name`, including contextual parameter
 inference, scope, effects and newline continuation before `=>`. Parameter
 annotations, multiple parameters, and explicit result contracts require the
-parenthesized form. Inference still needs an expected function type; exported
-contracts remain explicit. Both spellings support the same editor queries.
+parenthesized form. Inference still needs an expected function type; an export
+states its result type and its services. Both spellings support the same editor queries.
 
 `option ?? fallback` is lazy Option unwrapping: `Some` returns its payload;
 `None` evaluates the fallback. It evaluates the subject once, unfolds aliases,
@@ -707,8 +707,8 @@ calls named `using` remain valid; only the binding syntax selects this form.
 ## Inferred inputs and refinements
 
 [Input contracts](inferred-input-contracts.md) define the inference and validation rules.
-Exported results remain explicit. Exported failure and service sets remain closed.
-An exported inferred input with a concrete contract requires `fails SchemaError`.
+Exported results remain explicit. An export closes its service set, and the compiler infers its failure set.
+An exported inferred input with a concrete contract adds `SchemaError` to the inferred failure set. A written `fails` clause must list `SchemaError`.
 The entry checks raw input before the body when its Effect executes.
 Local functions enforce their inferred contracts statically.
 

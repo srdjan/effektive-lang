@@ -166,6 +166,27 @@ A test that generates its inputs from a literal table of seeds and asserts one l
 The test also asserts literal counts of each outcome, so it cannot pass with no effective input. `docs/testing.md` lists each property test and what it can miss.
 _Avoid: fuzz test_
 
+## Function contracts
+
+### `with` clause
+
+The part of a function header that lists the services that the body needs, such as `with Users.find | Users.save`.
+A name in the clause is a service or a service method.
+An exported function closes its `with` clause: an omitted clause means no services. A local function infers an omitted clause.
+_Avoid: uses clause_
+
+### `fails` clause
+
+The part of a function header that lists the errors that the body can raise.
+A written clause is a checked upper bound on the failure set of the body.
+_Avoid: error clause_
+
+### Inferred contract
+
+The failure set or service set that the compiler solves from a function body, when the header omits the clause.
+Every function with a body infers an omitted `fails` clause. Only a local function infers an omitted `with` clause.
+A new failure in an exported function with an inferred failure set reaches host TypeScript with no diagnostic. A written `fails` clause guards against this.
+
 ## Inferred inputs
 
 ### Input contract
@@ -193,6 +214,7 @@ An unresolved call requires a concrete annotation.
 ### Checked entry
 
 An exported function that accepts raw input and validates its inferred contract when its Effect executes.
+Without a `fails` clause, its inferred failure set includes `SchemaError`.
 Its function type carries checked flags. Its body uses finalized parameter types.
 
 ### Concrete refinement

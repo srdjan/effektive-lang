@@ -6,12 +6,13 @@ The compiler infers requirements from the function body, independently of caller
 ```effektive
 export type Positive = int where n => n > 0
 const charge = (amount: Positive): Positive => amount
-export const submit = (input): Positive fails SchemaError => charge(input.amount)
+export const submit = (input): Positive => charge(input.amount)
 ```
 
 The body contract of `input` is `{ amount: Positive }`.
 The exported function accepts raw input and validates that contract when its Effect executes.
 Application code needs no schema value or decoding call.
+The compiler adds `SchemaError` to the inferred failure set of `submit`.
 
 Known call parameters, constructors, local annotations, expected function types, and explicit results supply requirements.
 Required paths form nested closed records. Simple constant aliases retain their input paths.
@@ -50,8 +51,9 @@ Parentheses, local aliases, and record fields retain partial callable evidence.
 Invocation arguments cannot invent a callback signature.
 
 Local functions use inferred contracts statically and generate no entry checks.
-Exported results remain explicit. Exported failure and service contracts remain closed.
-An inferred exported input with a concrete contract requires `fails SchemaError`.
+Exported results remain explicit. An export closes its service set, and the compiler infers its failure set.
+An exported function with an inferred input and no `fails` clause infers `SchemaError`.
+A written `fails` clause on such a function must list `SchemaError`.
 Opaque types, deferred types, and foreign sealed types need concrete annotations or a source-owned decoder.
 
 Unknown components can enter checked parameters. Known components must remain statically compatible.
