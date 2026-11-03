@@ -587,15 +587,15 @@ async function makeCopies(
     cwd: ROOT,
   });
   if (!made.ok) return made;
-  const copies: string[] = [];
-  for (let i = 0; i < count; i++) {
-    const dir = join(base, `w${i}`);
+  const dirs = Array.from({ length: count }, (_, i) => join(base, `w${i}`));
+  const extracted = await Promise.all(dirs.map(async (dir) => {
     await Deno.mkdir(dir);
-    const extracted = await run("tar", ["-xf", archive, "-C", dir]);
-    if (!extracted.ok) return extracted;
-    copies.push(dir);
+    return await run("tar", ["-xf", archive, "-C", dir]);
+  }));
+  for (const result of extracted) {
+    if (!result.ok) return result;
   }
-  return { ok: true, value: copies };
+  return { ok: true, value: dirs };
 }
 
 interface Outcome {
