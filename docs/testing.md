@@ -44,6 +44,12 @@ An update task writes what the current code gives. So an update can hide a defec
 
 A comparison exits 0 when no record changed and none is missing. It exits 1 for a change or a missing record, and 2 for a usage error or a failed run.
 
+`tests/sourcemap_test.ts` exercises the public VLQ codec through
+`src/core/typescript.ts`. Its regressions cover both safe-integer boundaries,
+both signs, malformed overflow, and invalid encoder inputs.
+`tests/sourcemap_overflow_test.ts` covers safe and overflowing accumulated
+source-map positions. These tests cover only their listed inputs.
+
 ## What the strict target check catches
 
 The strict target check is `deno task effektive build --tsc`. It runs `deno check` on the emitted code with strict mode. The table below states, for each defect class, whether this check catches the defect and which other kept oracle can catch it.
@@ -70,7 +76,11 @@ The check cannot see a wrong value that has a correct type. Do not use a pass of
 
 ## Playground output
 
-`tests/playground_build_test.ts` checks the output-directory guard without deleting repository data. The guard compares complete parent components, so a repository child called `..scratch` stays protected. The slow build test checks supported external output.
+`tests/playground_build_test.ts` checks lexical parent components without
+deleting repository data. A repository child called `..scratch` stays
+protected. The slow test checks supported external output and physical path
+containment in a disposable repository. Its regressions cover selected root
+aliases, internal directory links, and dangling links.
 
 ## Property tests
 

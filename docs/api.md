@@ -612,6 +612,11 @@ directories whose names start with `.` and directories named `node_modules`. The
 skips a link to a directory that it already visited, and a link to a directory
 outside the root.
 
+The tool resolves the project root before it checks containment. A symbolic link
+that aliases the project root is supported. Source and configuration file links
+can resolve only inside that canonical root. An external or dangling file link
+causes a read error. Internal file links remain supported.
+
 The `build` command writes a module only when the module has no error and every
 module that it imports, directly or through other imports, is also written. A
 companion module counts as an import. The generated file of a module with an
@@ -624,6 +629,19 @@ file. It removes the `.ts` file only when
 the first line is the header that the emitter writes for that module. It removes
 the map only together with the `.ts` file. The `build` command never removes a
 file.
+
+The tool checks both `.ts` and `.ts.map` targets before it writes either file.
+Root-relative target paths use `/` separators and reject backslashes.
+Each target rejects empty, `.`, and `..` lexical components. Each existing
+component must resolve inside the canonical project root. A dangling symbolic
+link causes a refusal.
+
+The tool applies the same checks before it reads or
+removes a stale target. Internal directory links and a project-root alias remain
+supported.
+
+These checks do not isolate hard links. They cannot prevent concurrent filesystem
+replacement.
 
 A directory under the root that holds its own `effektive.json` is a nested
 project. The walk still reads its `.eff` files, so the outer project checks them

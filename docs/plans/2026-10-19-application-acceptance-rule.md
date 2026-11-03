@@ -1,7 +1,8 @@
 # Application acceptance rule
 
 Date: 2026-10-19. Status: accepted by the user; all three application gates complete.
-Compiler target: Deno 2.9.7 and `effect@4.0.5`.
+Historical application baseline: Deno 2.9.7 and `effect@4.0.5`.
+The current compiler and packaging require Deno 2.9.8.
 
 ## Decision
 

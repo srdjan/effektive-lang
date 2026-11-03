@@ -27,7 +27,7 @@ export interface HostFs {
   entryKind(path: string): Result<EntryKind, FileFailure>;
   kind(path: string): "file" | "directory" | "missing";
   list(path: string): Result<readonly DirectoryEntry[], FileFailure>;
-  /** The absolute form of a directory, with links resolved, as `deno check` prints it. */
+  /** The absolute form of an existing path, with links resolved, as `deno check` prints it. */
   absolute(path: string): string;
 }
 
