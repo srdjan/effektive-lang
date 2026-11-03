@@ -65,8 +65,9 @@ Deno.test("portable publisher rejects erased failures, services, and result cont
     'import { MissingArticle, PublishConflict } from "./feature.eff"',
   ].join("\n") + "\n" +
     original.replaceAll(
-      "fails PublishFailure | PlatformUnavailable",
-      `fails ${members.join(" | ")} | PlatformUnavailable`,
+      "  with Platform | ArticleJson | TextRules | Time =>",
+      `  fails ${members.join(" | ")} | PlatformUnavailable\n` +
+        "  with Platform | ArticleJson | TextRules | Time =>",
     );
   const without = (kind: "fails" | "with", name: string) =>
     expanded.replaceAll(
@@ -103,7 +104,11 @@ Deno.test("portable publisher rejects erased failures, services, and result cont
     ]
   ) rejected(without("fails", failure), "failure-contract");
   rejected(
-    original.replaceAll("PublishFailure | ", ""),
+    original.replaceAll(
+      "  with Platform | ArticleJson | TextRules | Time =>",
+      "  fails PlatformUnavailable\n" +
+        "  with Platform | ArticleJson | TextRules | Time =>",
+    ),
     "failure-contract",
   );
   for (

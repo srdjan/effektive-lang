@@ -263,8 +263,8 @@ Deno.test("an interface edit in users.eff rechecks main.eff", () => {
   const session = new Session(files);
   const first = session.apply(files);
   const edited = files[USERS].replace(
-    "fails StoreUnavailable\n  with Users.all",
-    "fails StoreUnavailable | UserMissing\n  with Users.all",
+    "(): Name[] with Users",
+    "(): Name[] fails StoreUnavailable | UserMissing with Users",
   );
   assertNotEquals(edited, files[USERS]);
   const second = session.apply({ [USERS]: edited });
@@ -310,8 +310,8 @@ Deno.test("differential: a sequence of edits equals a run from scratch after eac
 
   // An interface edit in users.eff.
   const iface = body.replace(
-    "fails StoreUnavailable\n  with Users.all",
-    "fails StoreUnavailable | UserMissing\n  with Users.all",
+    "(): Name[] with Users",
+    "(): Name[] fails StoreUnavailable | UserMissing with Users",
   );
   const edited = session.apply({ [USERS]: iface });
   assertEquals(edited.rechecked, ["users", "host/providers", "main"]);
@@ -447,8 +447,8 @@ Deno.test("counts: a body edit parses and checks one module, an interface edit c
     lowerings: 0,
   });
   const iface = body.replace(
-    "fails StoreUnavailable\n  with Users.all",
-    "fails StoreUnavailable | UserMissing\n  with Users.all",
+    "(): Name[] with Users",
+    "(): Name[] fails StoreUnavailable | UserMissing with Users",
   );
   updated(program, { [USERS]: iface });
   // users, host/providers, and main check again.
@@ -519,8 +519,8 @@ Deno.test("revisionDelta: no change and a body edit change nothing, an interface
     modeChanged: [],
   });
   const iface = body.replace(
-    "fails StoreUnavailable\n  with Users.all",
-    "fails StoreUnavailable | UserMissing\n  with Users.all",
+    "(): Name[] with Users",
+    "(): Name[] fails StoreUnavailable | UserMissing with Users",
   );
   const changed = updated(program, { [USERS]: iface });
   const delta = revisionDelta(edited, changed);

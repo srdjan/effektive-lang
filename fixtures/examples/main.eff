@@ -1,6 +1,5 @@
 import { displayName, Name, StoreUnavailable } from "./users.eff"
 import { UsersLive } from "host:providers"
 
-export const main = (): Name
-  fails StoreUnavailable =>
+export const main = (): Name =>
   provide(UsersLive, () => displayName("u1"))

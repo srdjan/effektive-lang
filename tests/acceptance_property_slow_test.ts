@@ -218,7 +218,7 @@ Deno.test("token edits of the examples keep accepted programs valid and emittabl
   const tally = newTally();
   for (const seed of SEEDS) exercise(exampleFiles(), seed, 40, tally);
   assertNoFailures(tally);
-  assertEquals([tally.accepted, tally.rejected], [563, 1037]);
+  assertEquals([tally.accepted, tally.rejected], [536, 1064]);
 });
 
 Deno.test("token edits of generated projects keep accepted programs valid and emittable", () => {

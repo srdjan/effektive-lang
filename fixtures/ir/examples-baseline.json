@@ -3,10 +3,10 @@
     "files": {
       "effektive.json": "{\n  \"host\": {\n    \"providers\": {\n      \"interface\": \"./host/providers.effi\",\n      \"module\": \"./users-live.ts\"\n    }\n  }\n}\n",
       "collections.eff": "type Name = string\ntype Amount = int\n\ntype User = { name: string, active: boolean }\n\nexport const activeNames = (users: User[]): Name[] =>\n  users\n    |> filter(user => user.active)\n    |> map(user => user.name)\n\nexport const total = (amounts: Amount[]): Amount =>\n  amounts |> fold(0, (sum, amount) => sum + amount)\n",
-      "log.eff": "type Message = string\n\nerror ConsoleUnavailable = { message: string }\n\nservice Console {\n  print(message: Message): void fails ConsoleUnavailable\n}\n\nexport const log = (message: Message): void\n  fails ConsoleUnavailable\n  with Console.print => Console.print(message)\n",
-      "main.eff": "import { displayName, Name, StoreUnavailable } from \"./users.eff\"\nimport { UsersLive } from \"host:providers\"\n\nexport const main = (): Name\n  fails StoreUnavailable =>\n  provide(UsersLive, () => displayName(\"u1\"))\n",
-      "pay.eff": "type Cents = int\ntype ChargeId = string\n\ntype OrderId = string\ntype Order = {\n  id: OrderId,\n  totalCents: int,\n  status: \"pending\" | \"paid\"\n}\n\nerror OrderNotFound = { id: OrderId }\nerror PaymentDeclined = { reason: string }\n\nservice Orders {\n  find(id: OrderId): Option<Order>\n  save(order: Order): void\n}\n\nservice Payments {\n  charge(amount: Cents): ChargeId fails PaymentDeclined\n}\n\nconst findOrder = (id: OrderId) =>\n  Orders.find(id) ?? fail(OrderNotFound({ id }))\n\nconst chargeOrder = (order: Order) => {\n  retry(() => Payments.charge(order.totalCents), { times: 2 })\n  order\n}\n\nconst markPaid = (order: Order) =>\n  ({ ...order, status: \"paid\" })\n\nconst saveOrder = (order: Order) => {\n  Orders.save(order)\n  order\n}\n\nexport const pay = (id: OrderId): Order\n  fails OrderNotFound | PaymentDeclined\n  with Orders | Payments.charge =>\n  id\n    |> findOrder\n    |> chargeOrder\n    |> markPaid\n    |> saveOrder\n",
-      "users.eff": "export type UserId = string\nexport type Name = string\n\nexport type User = {\n  id: string,\n  name: string,\n  active: boolean\n}\n\nexport error UserMissing = { id: string }\nexport error StoreUnavailable = { message: string }\n\nexport service Users {\n  find(id: UserId): Option<User> fails StoreUnavailable\n  save(user: User): void fails StoreUnavailable\n  all(): User[] fails StoreUnavailable\n}\n\nexport const getUser = (id: UserId): User\n  fails UserMissing | StoreUnavailable\n  with Users.find =>\n  match Users.find(id) {\n    Some(user) => user,\n    None => fail(UserMissing({ id }))\n  }\n\nexport const rename = (id: UserId, name: Name): User\n  fails UserMissing | StoreUnavailable\n  with Users.find | Users.save => {\n  const user = getUser(id)\n  const renamed = { ...user, name }\n  Users.save(renamed)\n  renamed\n}\n\nexport const displayName = (id: UserId): Name\n  fails StoreUnavailable\n  with Users.find =>\n  try {\n    getUser(id).name\n  } catch {\n    UserMissing(error) => \"Guest\"\n  }\n\nexport const activeNames = (): Name[]\n  fails StoreUnavailable\n  with Users.all =>\n  Users.all()\n    |> filter(user => user.active)\n    |> map(user => user.name)\n\n",
+      "log.eff": "type Message = string\n\nerror ConsoleUnavailable = { message: string }\n\nservice Console {\n  print(message: Message): void fails ConsoleUnavailable\n}\n\nexport const log = (message: Message): void with Console =>\n  Console.print(message)\n",
+      "main.eff": "import { displayName, Name, StoreUnavailable } from \"./users.eff\"\nimport { UsersLive } from \"host:providers\"\n\nexport const main = (): Name =>\n  provide(UsersLive, () => displayName(\"u1\"))\n",
+      "pay.eff": "type Cents = int\ntype ChargeId = string\n\ntype OrderId = string\ntype Order = {\n  id: OrderId,\n  totalCents: int,\n  status: \"pending\" | \"paid\"\n}\n\nerror OrderNotFound = { id: OrderId }\nerror PaymentDeclined = { reason: string }\n\nservice Orders {\n  find(id: OrderId): Option<Order>\n  save(order: Order): void\n}\n\nservice Payments {\n  charge(amount: Cents): ChargeId fails PaymentDeclined\n}\n\nconst findOrder = (id: OrderId) =>\n  Orders.find(id) ?? fail(OrderNotFound({ id }))\n\nconst chargeOrder = (order: Order) => {\n  retry(() => Payments.charge(order.totalCents), { times: 2 })\n  order\n}\n\nconst markPaid = (order: Order) =>\n  ({ ...order, status: \"paid\" })\n\nconst saveOrder = (order: Order) => {\n  Orders.save(order)\n  order\n}\n\nexport const pay = (id: OrderId): Order\n  with Orders | Payments =>\n  id\n    |> findOrder\n    |> chargeOrder\n    |> markPaid\n    |> saveOrder\n",
+      "users.eff": "export type UserId = string\nexport type Name = string\n\nexport type User = {\n  id: string,\n  name: string,\n  active: boolean\n}\n\nexport error UserMissing = { id: string }\nexport error StoreUnavailable = { message: string }\n\nexport service Users {\n  find(id: UserId): Option<User> fails StoreUnavailable\n  save(user: User): void fails StoreUnavailable\n  all(): User[] fails StoreUnavailable\n}\n\nexport const getUser = (id: UserId): User with Users =>\n  match Users.find(id) {\n    Some(user) => user,\n    None => fail(UserMissing({ id }))\n  }\n\nexport const rename = (id: UserId, name: Name): User with Users => {\n  const user = getUser(id)\n  const renamed = { ...user, name }\n  Users.save(renamed)\n  renamed\n}\n\nexport const displayName = (id: UserId): Name with Users =>\n  try {\n    getUser(id).name\n  } catch {\n    UserMissing(error) => \"Guest\"\n  }\n\nexport const activeNames = (): Name[] with Users =>\n  Users.all()\n    |> filter(user => user.active)\n    |> map(user => user.name)\n\n",
       "host/providers.effi": "import { Users } from \"../users.eff\"\nexport provider UsersLive provides Users\n"
     },
     "modules": [
@@ -1591,7 +1591,9 @@
                         "error:users#StoreUnavailable"
                       ],
                       "requirements": [
-                        "cap:users#Users.all"
+                        "cap:users#Users.all",
+                        "cap:users#Users.find",
+                        "cap:users#Users.save"
                       ]
                     },
                     "execution": "effect",
@@ -1615,7 +1617,9 @@
                         "error:users#StoreUnavailable"
                       ],
                       "requirements": [
-                        "cap:users#Users.find"
+                        "cap:users#Users.all",
+                        "cap:users#Users.find",
+                        "cap:users#Users.save"
                       ]
                     },
                     "execution": "effect",
@@ -1642,7 +1646,9 @@
                         "error:users#UserMissing"
                       ],
                       "requirements": [
-                        "cap:users#Users.find"
+                        "cap:users#Users.all",
+                        "cap:users#Users.find",
+                        "cap:users#Users.save"
                       ]
                     },
                     "execution": "effect",
@@ -1669,6 +1675,7 @@
                         "error:users#UserMissing"
                       ],
                       "requirements": [
+                        "cap:users#Users.all",
                         "cap:users#Users.find",
                         "cap:users#Users.save"
                       ]
@@ -1803,9 +1810,9 @@
                     "execution": "pure",
                     "kind": "reference",
                     "span": {
-                      "end": 265,
+                      "end": 232,
                       "source": "log.eff",
-                      "start": 258
+                      "start": 225
                     },
                     "target": "local:log#log/message",
                     "type": {
@@ -1826,9 +1833,9 @@
                 "execution": "effect",
                 "kind": "perform",
                 "span": {
-                  "end": 266,
+                  "end": 233,
                   "source": "log.eff",
-                  "start": 244
+                  "start": 211
                 },
                 "type": {
                   "kind": "primitive",
@@ -1854,7 +1861,7 @@
                 }
               ],
               "span": {
-                "end": 266,
+                "end": 233,
                 "source": "log.eff",
                 "start": 149
               },
@@ -1881,7 +1888,7 @@
                 }
               },
               "written": {
-                "fails": true,
+                "fails": false,
                 "result": true,
                 "uses": true
               }
@@ -1935,8 +1942,8 @@
               "end": 644,
               "span": {
                 "source": "log.eff",
-                "start": 258,
-                "end": 265
+                "start": 225,
+                "end": 232
               }
             },
             {
@@ -1944,8 +1951,8 @@
               "end": 646,
               "span": {
                 "source": "log.eff",
-                "start": 244,
-                "end": 266
+                "start": 211,
+                "end": 233
               }
             },
             {
@@ -1954,13 +1961,13 @@
               "span": {
                 "source": "log.eff",
                 "start": 149,
-                "end": 266
+                "end": 233
               }
             }
           ],
           "hostAssertions": []
         },
-        "map": "{\n  \"version\": 3,\n  \"file\": \"log.ts\",\n  \"sources\": [\n    \"log.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;AAAA;AAAA,0C;;AAEA;AAAA;AAAA;AAAA;AAAA,M;;AAEA;AAAA;AAAA,sB;;AAIA;AAAA;AAAA;AAAA;AAAA,KAEwB,6BAAc,OAAd,EAFxB,C;;\"\n}\n",
+        "map": "{\n  \"version\": 3,\n  \"file\": \"log.ts\",\n  \"sources\": [\n    \"log.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;AAAA;AAAA,0C;;AAEA;AAAA;AAAA;AAAA;AAAA,M;;AAEA;AAAA;AAAA,sB;;AAIA;AAAA;AAAA;AAAA;AAAA,KACE,6BAAc,OAAd,EADF,C;;\"\n}\n",
         "hash": "062d85203e971172"
       },
       {
@@ -1987,9 +1994,9 @@
                         "execution": "pure",
                         "kind": "literal",
                         "span": {
-                          "end": 210,
+                          "end": 185,
                           "source": "main.eff",
-                          "start": 206
+                          "start": 181
                         },
                         "type": {
                           "kind": "primitive",
@@ -2006,9 +2013,9 @@
                       "execution": "pure",
                       "kind": "reference",
                       "span": {
-                        "end": 205,
+                        "end": 180,
                         "source": "main.eff",
-                        "start": 194
+                        "start": 169
                       },
                       "target": "value:users#displayName",
                       "type": {
@@ -2017,7 +2024,9 @@
                             "error:users#StoreUnavailable"
                           ],
                           "requirements": [
-                            "cap:users#Users.find"
+                            "cap:users#Users.all",
+                            "cap:users#Users.find",
+                            "cap:users#Users.save"
                           ]
                         },
                         "execution": "effect",
@@ -2039,15 +2048,17 @@
                         "error:users#StoreUnavailable"
                       ],
                       "requirements": [
-                        "cap:users#Users.find"
+                        "cap:users#Users.all",
+                        "cap:users#Users.find",
+                        "cap:users#Users.save"
                       ]
                     },
                     "execution": "effect",
                     "kind": "call",
                     "span": {
-                      "end": 211,
+                      "end": 186,
                       "source": "main.eff",
-                      "start": 194
+                      "start": 169
                     },
                     "type": {
                       "id": "type:users#Name",
@@ -2062,9 +2073,9 @@
                   "kind": "closure",
                   "parameters": [],
                   "span": {
-                    "end": 211,
+                    "end": 186,
                     "source": "main.eff",
-                    "start": 188
+                    "start": 163
                   },
                   "type": {
                     "effects": {
@@ -2072,7 +2083,9 @@
                         "error:users#StoreUnavailable"
                       ],
                       "requirements": [
-                        "cap:users#Users.find"
+                        "cap:users#Users.all",
+                        "cap:users#Users.find",
+                        "cap:users#Users.save"
                       ]
                     },
                     "execution": "effect",
@@ -2093,9 +2106,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 186,
+                    "end": 161,
                     "source": "main.eff",
-                    "start": 177
+                    "start": 152
                   },
                   "target": "value:host/providers#UsersLive",
                   "type": {
@@ -2115,9 +2128,9 @@
                   }
                 },
                 "span": {
-                  "end": 212,
+                  "end": 187,
                   "source": "main.eff",
-                  "start": 169
+                  "start": 144
                 },
                 "type": {
                   "id": "type:users#Name",
@@ -2129,7 +2142,7 @@
               "name": "main",
               "parameters": [],
               "span": {
-                "end": 212,
+                "end": 187,
                 "source": "main.eff",
                 "start": 110
               },
@@ -2149,7 +2162,7 @@
                 }
               },
               "written": {
-                "fails": true,
+                "fails": false,
                 "result": true,
                 "uses": true
               }
@@ -2420,7 +2433,9 @@
                         "error:users#StoreUnavailable"
                       ],
                       "requirements": [
-                        "cap:users#Users.all"
+                        "cap:users#Users.all",
+                        "cap:users#Users.find",
+                        "cap:users#Users.save"
                       ]
                     },
                     "execution": "effect",
@@ -2444,7 +2459,9 @@
                         "error:users#StoreUnavailable"
                       ],
                       "requirements": [
-                        "cap:users#Users.find"
+                        "cap:users#Users.all",
+                        "cap:users#Users.find",
+                        "cap:users#Users.save"
                       ]
                     },
                     "execution": "effect",
@@ -2471,7 +2488,9 @@
                         "error:users#UserMissing"
                       ],
                       "requirements": [
-                        "cap:users#Users.find"
+                        "cap:users#Users.all",
+                        "cap:users#Users.find",
+                        "cap:users#Users.save"
                       ]
                     },
                     "execution": "effect",
@@ -2498,6 +2517,7 @@
                         "error:users#UserMissing"
                       ],
                       "requirements": [
+                        "cap:users#Users.all",
                         "cap:users#Users.find",
                         "cap:users#Users.save"
                       ]
@@ -2757,8 +2777,8 @@
               "end": 396,
               "span": {
                 "source": "main.eff",
-                "start": 194,
-                "end": 205
+                "start": 169,
+                "end": 180
               }
             },
             {
@@ -2766,8 +2786,8 @@
               "end": 401,
               "span": {
                 "source": "main.eff",
-                "start": 206,
-                "end": 210
+                "start": 181,
+                "end": 185
               }
             },
             {
@@ -2775,8 +2795,8 @@
               "end": 402,
               "span": {
                 "source": "main.eff",
-                "start": 194,
-                "end": 211
+                "start": 169,
+                "end": 186
               }
             },
             {
@@ -2784,8 +2804,8 @@
               "end": 402,
               "span": {
                 "source": "main.eff",
-                "start": 188,
-                "end": 211
+                "start": 163,
+                "end": 186
               }
             },
             {
@@ -2793,8 +2813,8 @@
               "end": 419,
               "span": {
                 "source": "main.eff",
-                "start": 177,
-                "end": 186
+                "start": 152,
+                "end": 161
               }
             },
             {
@@ -2802,8 +2822,8 @@
               "end": 420,
               "span": {
                 "source": "main.eff",
-                "start": 169,
-                "end": 212
+                "start": 144,
+                "end": 187
               }
             },
             {
@@ -2812,7 +2832,7 @@
               "span": {
                 "source": "main.eff",
                 "start": 110,
-                "end": 212
+                "end": 187
               }
             }
           ],
@@ -2827,7 +2847,7 @@
             }
           ]
         },
-        "map": "{\n  \"version\": 3,\n  \"file\": \"main.ts\",\n  \"sources\": [\n    \"main.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;;;;;AAGA;AAAA,EAEE,8BAAmB,MAAM,YAAY,IAAZ,CAAzB,GAAQ,cAAR,CAFF,C;;\"\n}\n",
+        "map": "{\n  \"version\": 3,\n  \"file\": \"main.ts\",\n  \"sources\": [\n    \"main.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;;;;;AAGA;AAAA,EACE,8BAAmB,MAAM,YAAY,IAAZ,CAAzB,GAAQ,cAAR,CADF,C;;\"\n}\n",
         "hash": "9c53f3b90f362942"
       },
       {
@@ -3787,9 +3807,9 @@
                       "execution": "pure",
                       "kind": "reference",
                       "span": {
-                        "end": 895,
+                        "end": 848,
                         "source": "pay.eff",
-                        "start": 841
+                        "start": 794
                       },
                       "target": "local:pay#pay/$p4",
                       "type": {
@@ -3806,9 +3826,9 @@
                     "execution": "pure",
                     "kind": "reference",
                     "span": {
-                      "end": 912,
+                      "end": 865,
                       "source": "pay.eff",
-                      "start": 903
+                      "start": 856
                     },
                     "target": "value:pay#saveOrder",
                     "type": {
@@ -3841,9 +3861,9 @@
                   "execution": "effect",
                   "kind": "call",
                   "span": {
-                    "end": 912,
+                    "end": 865,
                     "source": "pay.eff",
-                    "start": 903
+                    "start": 856
                   },
                   "type": {
                     "id": "type:pay#Order",
@@ -3851,9 +3871,9 @@
                   }
                 },
                 "span": {
-                  "end": 912,
+                  "end": 865,
                   "source": "pay.eff",
-                  "start": 841
+                  "start": 794
                 },
                 "steps": [
                   {
@@ -3861,9 +3881,9 @@
                       "id": "local:pay#pay/$p1",
                       "name": "$p1",
                       "span": {
-                        "end": 843,
+                        "end": 796,
                         "source": "pay.eff",
-                        "start": 841
+                        "start": 794
                       },
                       "type": {
                         "id": "type:pay#OrderId",
@@ -3880,9 +3900,9 @@
                       "execution": "pure",
                       "kind": "reference",
                       "span": {
-                        "end": 843,
+                        "end": 796,
                         "source": "pay.eff",
-                        "start": 841
+                        "start": 794
                       },
                       "target": "local:pay#pay/id",
                       "type": {
@@ -3896,9 +3916,9 @@
                       "id": "local:pay#pay/$p2",
                       "name": "$p2",
                       "span": {
-                        "end": 860,
+                        "end": 813,
                         "source": "pay.eff",
-                        "start": 841
+                        "start": 794
                       },
                       "type": {
                         "id": "type:pay#Order",
@@ -3917,9 +3937,9 @@
                           "execution": "pure",
                           "kind": "reference",
                           "span": {
-                            "end": 843,
+                            "end": 796,
                             "source": "pay.eff",
-                            "start": 841
+                            "start": 794
                           },
                           "target": "local:pay#pay/$p1",
                           "type": {
@@ -3936,9 +3956,9 @@
                         "execution": "pure",
                         "kind": "reference",
                         "span": {
-                          "end": 860,
+                          "end": 813,
                           "source": "pay.eff",
-                          "start": 851
+                          "start": 804
                         },
                         "target": "value:pay#findOrder",
                         "type": {
@@ -3975,9 +3995,9 @@
                       "execution": "effect",
                       "kind": "call",
                       "span": {
-                        "end": 860,
+                        "end": 813,
                         "source": "pay.eff",
-                        "start": 851
+                        "start": 804
                       },
                       "type": {
                         "id": "type:pay#Order",
@@ -3990,9 +4010,9 @@
                       "id": "local:pay#pay/$p3",
                       "name": "$p3",
                       "span": {
-                        "end": 879,
+                        "end": 832,
                         "source": "pay.eff",
-                        "start": 841
+                        "start": 794
                       },
                       "type": {
                         "id": "type:pay#Order",
@@ -4011,9 +4031,9 @@
                           "execution": "pure",
                           "kind": "reference",
                           "span": {
-                            "end": 860,
+                            "end": 813,
                             "source": "pay.eff",
-                            "start": 841
+                            "start": 794
                           },
                           "target": "local:pay#pay/$p2",
                           "type": {
@@ -4030,9 +4050,9 @@
                         "execution": "pure",
                         "kind": "reference",
                         "span": {
-                          "end": 879,
+                          "end": 832,
                           "source": "pay.eff",
-                          "start": 868
+                          "start": 821
                         },
                         "target": "value:pay#chargeOrder",
                         "type": {
@@ -4069,9 +4089,9 @@
                       "execution": "effect",
                       "kind": "call",
                       "span": {
-                        "end": 879,
+                        "end": 832,
                         "source": "pay.eff",
-                        "start": 868
+                        "start": 821
                       },
                       "type": {
                         "id": "type:pay#Order",
@@ -4084,9 +4104,9 @@
                       "id": "local:pay#pay/$p4",
                       "name": "$p4",
                       "span": {
-                        "end": 895,
+                        "end": 848,
                         "source": "pay.eff",
-                        "start": 841
+                        "start": 794
                       },
                       "type": {
                         "id": "type:pay#Order",
@@ -4105,9 +4125,9 @@
                           "execution": "pure",
                           "kind": "reference",
                           "span": {
-                            "end": 879,
+                            "end": 832,
                             "source": "pay.eff",
-                            "start": 841
+                            "start": 794
                           },
                           "target": "local:pay#pay/$p3",
                           "type": {
@@ -4124,9 +4144,9 @@
                         "execution": "pure",
                         "kind": "reference",
                         "span": {
-                          "end": 895,
+                          "end": 848,
                           "source": "pay.eff",
-                          "start": 887
+                          "start": 840
                         },
                         "target": "value:pay#markPaid",
                         "type": {
@@ -4155,9 +4175,9 @@
                       "execution": "pure",
                       "kind": "call",
                       "span": {
-                        "end": 895,
+                        "end": 848,
                         "source": "pay.eff",
-                        "start": 887
+                        "start": 840
                       },
                       "type": {
                         "id": "type:pay#Order",
@@ -4190,7 +4210,7 @@
                 }
               ],
               "span": {
-                "end": 912,
+                "end": 865,
                 "source": "pay.eff",
                 "start": 724
               },
@@ -4220,7 +4240,7 @@
                 }
               },
               "written": {
-                "fails": true,
+                "fails": false,
                 "result": true,
                 "uses": true
               }
@@ -4553,8 +4573,8 @@
               "end": 2151,
               "span": {
                 "source": "pay.eff",
-                "start": 841,
-                "end": 843
+                "start": 794,
+                "end": 796
               }
             },
             {
@@ -4562,8 +4582,8 @@
               "end": 2192,
               "span": {
                 "source": "pay.eff",
-                "start": 851,
-                "end": 860
+                "start": 804,
+                "end": 813
               }
             },
             {
@@ -4571,8 +4591,8 @@
               "end": 2196,
               "span": {
                 "source": "pay.eff",
-                "start": 841,
-                "end": 843
+                "start": 794,
+                "end": 796
               }
             },
             {
@@ -4580,8 +4600,8 @@
               "end": 2197,
               "span": {
                 "source": "pay.eff",
-                "start": 851,
-                "end": 860
+                "start": 804,
+                "end": 813
               }
             },
             {
@@ -4589,8 +4609,8 @@
               "end": 2240,
               "span": {
                 "source": "pay.eff",
-                "start": 868,
-                "end": 879
+                "start": 821,
+                "end": 832
               }
             },
             {
@@ -4598,8 +4618,8 @@
               "end": 2244,
               "span": {
                 "source": "pay.eff",
-                "start": 841,
-                "end": 860
+                "start": 794,
+                "end": 813
               }
             },
             {
@@ -4607,8 +4627,8 @@
               "end": 2245,
               "span": {
                 "source": "pay.eff",
-                "start": 868,
-                "end": 879
+                "start": 821,
+                "end": 832
               }
             },
             {
@@ -4616,8 +4636,8 @@
               "end": 2278,
               "span": {
                 "source": "pay.eff",
-                "start": 887,
-                "end": 895
+                "start": 840,
+                "end": 848
               }
             },
             {
@@ -4625,8 +4645,8 @@
               "end": 2282,
               "span": {
                 "source": "pay.eff",
-                "start": 841,
-                "end": 879
+                "start": 794,
+                "end": 832
               }
             },
             {
@@ -4634,8 +4654,8 @@
               "end": 2283,
               "span": {
                 "source": "pay.eff",
-                "start": 887,
-                "end": 895
+                "start": 840,
+                "end": 848
               }
             },
             {
@@ -4643,8 +4663,8 @@
               "end": 2312,
               "span": {
                 "source": "pay.eff",
-                "start": 903,
-                "end": 912
+                "start": 856,
+                "end": 865
               }
             },
             {
@@ -4652,8 +4672,8 @@
               "end": 2316,
               "span": {
                 "source": "pay.eff",
-                "start": 841,
-                "end": 895
+                "start": 794,
+                "end": 848
               }
             },
             {
@@ -4661,8 +4681,8 @@
               "end": 2317,
               "span": {
                 "source": "pay.eff",
-                "start": 903,
-                "end": 912
+                "start": 856,
+                "end": 865
               }
             },
             {
@@ -4670,8 +4690,8 @@
               "end": 2323,
               "span": {
                 "source": "pay.eff",
-                "start": 841,
-                "end": 912
+                "start": 794,
+                "end": 865
               }
             },
             {
@@ -4680,13 +4700,13 @@
               "span": {
                 "source": "pay.eff",
                 "start": 724,
-                "end": 912
+                "end": 865
               }
             }
           ],
           "hostAssertions": []
         },
-        "map": "{\n  \"version\": 3,\n  \"file\": \"pay.ts\",\n  \"sources\": [\n    \"pay.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;;;;;;;AAAA;AAAA,sC;;AACA;AAAA,4C;;AAEA;AAAA,0C;;AACA;AAAA;AAAA;AAAA;AAAA;AAAA,sC;;AAMA;AAAA;AAAA;AAAA,I;;AACA;AAAA;AAAA;AAAA,I;;AAEA;AAAA;AAAA;AAAA,qB;;AAKA;AAAA;AAAA,uB;;AAIA;AAAA,EACE;AAAA,iEAAY,EAAZ;AAAA,oBAAmB,YAAK,yBAAL,CAAnB;AAAA;AAAA;AAAA,IADF,C;;AAGA;AAAA,EAAsC;AAAA,IACpC;AAAA,qBAAM,MAAM,+BAAgB,gBAAhB,EAAZ;AAAA;AAAA,KADoC;AAAA,WAEpC,KAFoC;AAAA,IAAtC,C;;AAKA,oCACG,KAAK,KAAL,UAAoB,eAApB,EADH,E;;AAGA;AAAA,EAAoC;AAAA,IAClC,kCAAY,KAAZ,EADkC;AAAA,WAElC,KAFkC;AAAA,IAApC,C;;AAKA;AAAA;AAAA;AAAA;AAAA;AAAA,EAGE;AAAA;AAAA,uBACK,iBADL,GACK,CADL;AAAA,uBAEK,mBAFL,GAEK,CAFL;AAAA,uBAGK,SAHL,GAGK,CAHL;AAAA,WAIK,iBAJL,GAIK,CAJL;AAAA,IAHF,C;;\"\n}\n",
+        "map": "{\n  \"version\": 3,\n  \"file\": \"pay.ts\",\n  \"sources\": [\n    \"pay.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;;;;;;;AAAA;AAAA,sC;;AACA;AAAA,4C;;AAEA;AAAA,0C;;AACA;AAAA;AAAA;AAAA;AAAA;AAAA,sC;;AAMA;AAAA;AAAA;AAAA,I;;AACA;AAAA;AAAA;AAAA,I;;AAEA;AAAA;AAAA;AAAA,qB;;AAKA;AAAA;AAAA,uB;;AAIA;AAAA,EACE;AAAA,iEAAY,EAAZ;AAAA,oBAAmB,YAAK,yBAAL,CAAnB;AAAA;AAAA;AAAA,IADF,C;;AAGA;AAAA,EAAsC;AAAA,IACpC;AAAA,qBAAM,MAAM,+BAAgB,gBAAhB,EAAZ;AAAA;AAAA,KADoC;AAAA,WAEpC,KAFoC;AAAA,IAAtC,C;;AAKA,oCACG,KAAK,KAAL,UAAoB,eAApB,EADH,E;;AAGA;AAAA,EAAoC;AAAA,IAClC,kCAAY,KAAZ,EADkC;AAAA,WAElC,KAFkC;AAAA,IAApC,C;;AAKA;AAAA;AAAA;AAAA;AAAA;AAAA,EAEE;AAAA;AAAA,uBACK,iBADL,GACK,CADL;AAAA,uBAEK,mBAFL,GAEK,CAFL;AAAA,uBAGK,SAHL,GAGK,CAHL;AAAA,WAIK,iBAJL,GAIK,CAJL;AAAA,IAFF,C;;\"\n}\n",
         "hash": "b22ffdc871ea976f"
       },
       {
@@ -4921,9 +4941,9 @@
                       "execution": "pure",
                       "kind": "reference",
                       "span": {
-                        "end": 540,
+                        "end": 494,
                         "source": "users.eff",
-                        "start": 536
+                        "start": 490
                       },
                       "target": "local:users#getUser/user",
                       "type": {
@@ -4936,9 +4956,9 @@
                         "id": "local:users#getUser/user",
                         "name": "user",
                         "span": {
-                          "end": 531,
+                          "end": 485,
                           "source": "users.eff",
-                          "start": 527
+                          "start": 481
                         },
                         "type": {
                           "id": "type:users#User",
@@ -4947,9 +4967,9 @@
                       },
                       "kind": "some",
                       "span": {
-                        "end": 532,
+                        "end": 486,
                         "source": "users.eff",
-                        "start": 522
+                        "start": 476
                       }
                     }
                   },
@@ -4979,9 +4999,9 @@
                               "execution": "pure",
                               "kind": "reference",
                               "span": {
-                                "end": 575,
+                                "end": 529,
                                 "source": "users.eff",
-                                "start": 573
+                                "start": 527
                               },
                               "target": "local:users#getUser/id",
                               "type": {
@@ -4993,9 +5013,9 @@
                         ],
                         "kind": "error",
                         "span": {
-                          "end": 578,
+                          "end": 532,
                           "source": "users.eff",
-                          "start": 559
+                          "start": 513
                         },
                         "type": {
                           "id": "error:users#UserMissing",
@@ -5005,9 +5025,9 @@
                       "execution": "effect",
                       "kind": "fail",
                       "span": {
-                        "end": 579,
+                        "end": 533,
                         "source": "users.eff",
-                        "start": 554
+                        "start": 508
                       },
                       "type": {
                         "kind": "primitive",
@@ -5017,9 +5037,9 @@
                     "pattern": {
                       "kind": "none",
                       "span": {
-                        "end": 550,
+                        "end": 504,
                         "source": "users.eff",
-                        "start": 546
+                        "start": 500
                       }
                     }
                   }
@@ -5036,9 +5056,9 @@
                 "execution": "effect",
                 "kind": "match",
                 "span": {
-                  "end": 583,
+                  "end": 537,
                   "source": "users.eff",
-                  "start": 495
+                  "start": 449
                 },
                 "subject": {
                   "arguments": [
@@ -5050,9 +5070,9 @@
                       "execution": "pure",
                       "kind": "reference",
                       "span": {
-                        "end": 514,
+                        "end": 468,
                         "source": "users.eff",
-                        "start": 512
+                        "start": 466
                       },
                       "target": "local:users#getUser/id",
                       "type": {
@@ -5073,9 +5093,9 @@
                   "execution": "effect",
                   "kind": "perform",
                   "span": {
-                    "end": 515,
+                    "end": 469,
                     "source": "users.eff",
-                    "start": 501
+                    "start": 455
                   },
                   "type": {
                     "element": {
@@ -5109,7 +5129,7 @@
                 }
               ],
               "span": {
-                "end": 583,
+                "end": 537,
                 "source": "users.eff",
                 "start": 391
               },
@@ -5120,7 +5140,9 @@
                     "error:users#UserMissing"
                   ],
                   "requirements": [
-                    "cap:users#Users.find"
+                    "cap:users#Users.all",
+                    "cap:users#Users.find",
+                    "cap:users#Users.save"
                   ]
                 },
                 "execution": "effect",
@@ -5137,7 +5159,7 @@
                 }
               },
               "written": {
-                "fails": true,
+                "fails": false,
                 "result": true,
                 "uses": true
               }
@@ -5150,6 +5172,7 @@
                     "error:users#UserMissing"
                   ],
                   "requirements": [
+                    "cap:users#Users.all",
                     "cap:users#Users.find",
                     "cap:users#Users.save"
                   ]
@@ -5164,9 +5187,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 807,
+                    "end": 702,
                     "source": "users.eff",
-                    "start": 800
+                    "start": 695
                   },
                   "target": "local:users#rename/renamed",
                   "type": {
@@ -5175,9 +5198,9 @@
                   }
                 },
                 "span": {
-                  "end": 809,
+                  "end": 704,
                   "source": "users.eff",
-                  "start": 711
+                  "start": 606
                 },
                 "steps": [
                   {
@@ -5185,9 +5208,9 @@
                       "id": "local:users#rename/user",
                       "name": "user",
                       "span": {
-                        "end": 725,
+                        "end": 620,
                         "source": "users.eff",
-                        "start": 721
+                        "start": 616
                       },
                       "type": {
                         "id": "type:users#User",
@@ -5205,9 +5228,9 @@
                           "execution": "pure",
                           "kind": "reference",
                           "span": {
-                            "end": 738,
+                            "end": 633,
                             "source": "users.eff",
-                            "start": 736
+                            "start": 631
                           },
                           "target": "local:users#rename/id",
                           "type": {
@@ -5224,9 +5247,9 @@
                         "execution": "pure",
                         "kind": "reference",
                         "span": {
-                          "end": 735,
+                          "end": 630,
                           "source": "users.eff",
-                          "start": 728
+                          "start": 623
                         },
                         "target": "value:users#getUser",
                         "type": {
@@ -5236,7 +5259,9 @@
                               "error:users#UserMissing"
                             ],
                             "requirements": [
-                              "cap:users#Users.find"
+                              "cap:users#Users.all",
+                              "cap:users#Users.find",
+                              "cap:users#Users.save"
                             ]
                           },
                           "execution": "effect",
@@ -5259,15 +5284,17 @@
                           "error:users#UserMissing"
                         ],
                         "requirements": [
-                          "cap:users#Users.find"
+                          "cap:users#Users.all",
+                          "cap:users#Users.find",
+                          "cap:users#Users.save"
                         ]
                       },
                       "execution": "effect",
                       "kind": "call",
                       "span": {
-                        "end": 739,
+                        "end": 634,
                         "source": "users.eff",
-                        "start": 728
+                        "start": 623
                       },
                       "type": {
                         "id": "type:users#User",
@@ -5280,9 +5307,9 @@
                       "id": "local:users#rename/renamed",
                       "name": "renamed",
                       "span": {
-                        "end": 755,
+                        "end": 650,
                         "source": "users.eff",
-                        "start": 748
+                        "start": 643
                       },
                       "type": {
                         "id": "type:users#User",
@@ -5307,9 +5334,9 @@
                             "execution": "pure",
                             "kind": "reference",
                             "span": {
-                              "end": 773,
+                              "end": 668,
                               "source": "users.eff",
-                              "start": 769
+                              "start": 664
                             },
                             "target": "local:users#rename/name",
                             "type": {
@@ -5328,9 +5355,9 @@
                         "execution": "pure",
                         "kind": "reference",
                         "span": {
-                          "end": 767,
+                          "end": 662,
                           "source": "users.eff",
-                          "start": 763
+                          "start": 658
                         },
                         "target": "local:users#rename/user",
                         "type": {
@@ -5339,9 +5366,9 @@
                         }
                       },
                       "span": {
-                        "end": 775,
+                        "end": 670,
                         "source": "users.eff",
-                        "start": 758
+                        "start": 653
                       },
                       "type": {
                         "id": "type:users#User",
@@ -5361,9 +5388,9 @@
                           "execution": "pure",
                           "kind": "reference",
                           "span": {
-                            "end": 796,
+                            "end": 691,
                             "source": "users.eff",
-                            "start": 789
+                            "start": 684
                           },
                           "target": "local:users#rename/renamed",
                           "type": {
@@ -5384,9 +5411,9 @@
                       "execution": "effect",
                       "kind": "perform",
                       "span": {
-                        "end": 797,
+                        "end": 692,
                         "source": "users.eff",
-                        "start": 778
+                        "start": 673
                       },
                       "type": {
                         "kind": "primitive",
@@ -5408,9 +5435,9 @@
                   "id": "local:users#rename/id",
                   "name": "id",
                   "span": {
-                    "end": 618,
+                    "end": 572,
                     "source": "users.eff",
-                    "start": 608
+                    "start": 562
                   },
                   "type": {
                     "id": "type:users#UserId",
@@ -5421,9 +5448,9 @@
                   "id": "local:users#rename/name",
                   "name": "name",
                   "span": {
-                    "end": 630,
+                    "end": 584,
                     "source": "users.eff",
-                    "start": 620
+                    "start": 574
                   },
                   "type": {
                     "id": "type:users#Name",
@@ -5432,9 +5459,9 @@
                 }
               ],
               "span": {
-                "end": 809,
+                "end": 704,
                 "source": "users.eff",
-                "start": 585
+                "start": 539
               },
               "type": {
                 "effects": {
@@ -5443,6 +5470,7 @@
                     "error:users#UserMissing"
                   ],
                   "requirements": [
+                    "cap:users#Users.all",
                     "cap:users#Users.find",
                     "cap:users#Users.save"
                   ]
@@ -5465,7 +5493,7 @@
                 }
               },
               "written": {
-                "fails": true,
+                "fails": false,
                 "result": true,
                 "uses": true
               }
@@ -5479,7 +5507,9 @@
                       "error:users#UserMissing"
                     ],
                     "requirements": [
-                      "cap:users#Users.find"
+                      "cap:users#Users.all",
+                      "cap:users#Users.find",
+                      "cap:users#Users.save"
                     ]
                   },
                   "execution": "effect",
@@ -5491,7 +5521,9 @@
                         "error:users#UserMissing"
                       ],
                       "requirements": [
-                        "cap:users#Users.find"
+                        "cap:users#Users.all",
+                        "cap:users#Users.find",
+                        "cap:users#Users.save"
                       ]
                     },
                     "execution": "effect",
@@ -5507,9 +5539,9 @@
                           "execution": "pure",
                           "kind": "reference",
                           "span": {
-                            "end": 925,
+                            "end": 788,
                             "source": "users.eff",
-                            "start": 923
+                            "start": 786
                           },
                           "target": "local:users#displayName/id",
                           "type": {
@@ -5526,9 +5558,9 @@
                         "execution": "pure",
                         "kind": "reference",
                         "span": {
-                          "end": 922,
+                          "end": 785,
                           "source": "users.eff",
-                          "start": 915
+                          "start": 778
                         },
                         "target": "value:users#getUser",
                         "type": {
@@ -5538,7 +5570,9 @@
                               "error:users#UserMissing"
                             ],
                             "requirements": [
-                              "cap:users#Users.find"
+                              "cap:users#Users.all",
+                              "cap:users#Users.find",
+                              "cap:users#Users.save"
                             ]
                           },
                           "execution": "effect",
@@ -5561,15 +5595,17 @@
                           "error:users#UserMissing"
                         ],
                         "requirements": [
-                          "cap:users#Users.find"
+                          "cap:users#Users.all",
+                          "cap:users#Users.find",
+                          "cap:users#Users.save"
                         ]
                       },
                       "execution": "effect",
                       "kind": "call",
                       "span": {
-                        "end": 926,
+                        "end": 789,
                         "source": "users.eff",
-                        "start": 915
+                        "start": 778
                       },
                       "type": {
                         "id": "type:users#User",
@@ -5577,9 +5613,9 @@
                       }
                     },
                     "span": {
-                      "end": 931,
+                      "end": 794,
                       "source": "users.eff",
-                      "start": 915
+                      "start": 778
                     },
                     "type": {
                       "kind": "primitive",
@@ -5587,9 +5623,9 @@
                     }
                   },
                   "span": {
-                    "end": 935,
+                    "end": 798,
                     "source": "users.eff",
-                    "start": 909
+                    "start": 772
                   },
                   "steps": [],
                   "type": {
@@ -5602,7 +5638,9 @@
                     "error:users#StoreUnavailable"
                   ],
                   "requirements": [
-                    "cap:users#Users.find"
+                    "cap:users#Users.all",
+                    "cap:users#Users.find",
+                    "cap:users#Users.save"
                   ]
                 },
                 "execution": "effect",
@@ -5612,9 +5650,9 @@
                       "id": "local:users#displayName/error",
                       "name": "error",
                       "span": {
-                        "end": 965,
+                        "end": 828,
                         "source": "users.eff",
-                        "start": 960
+                        "start": 823
                       },
                       "type": {
                         "id": "error:users#UserMissing",
@@ -5629,9 +5667,9 @@
                       "execution": "pure",
                       "kind": "literal",
                       "span": {
-                        "end": 977,
+                        "end": 840,
                         "source": "users.eff",
-                        "start": 970
+                        "start": 833
                       },
                       "type": {
                         "kind": "primitive",
@@ -5641,17 +5679,17 @@
                     },
                     "error": "error:users#UserMissing",
                     "span": {
-                      "end": 977,
+                      "end": 840,
                       "source": "users.eff",
-                      "start": 948
+                      "start": 811
                     }
                   }
                 ],
                 "kind": "catch",
                 "span": {
-                  "end": 981,
+                  "end": 844,
                   "source": "users.eff",
-                  "start": 905
+                  "start": 768
                 },
                 "type": {
                   "id": "type:users#Name",
@@ -5666,9 +5704,9 @@
                   "id": "local:users#displayName/id",
                   "name": "id",
                   "span": {
-                    "end": 849,
+                    "end": 744,
                     "source": "users.eff",
-                    "start": 839
+                    "start": 734
                   },
                   "type": {
                     "id": "type:users#UserId",
@@ -5677,9 +5715,9 @@
                 }
               ],
               "span": {
-                "end": 981,
+                "end": 844,
                 "source": "users.eff",
-                "start": 811
+                "start": 706
               },
               "type": {
                 "effects": {
@@ -5687,7 +5725,9 @@
                     "error:users#StoreUnavailable"
                   ],
                   "requirements": [
-                    "cap:users#Users.find"
+                    "cap:users#Users.all",
+                    "cap:users#Users.find",
+                    "cap:users#Users.save"
                   ]
                 },
                 "execution": "effect",
@@ -5704,7 +5744,7 @@
                 }
               },
               "written": {
-                "fails": true,
+                "fails": false,
                 "result": true,
                 "uses": true
               }
@@ -5731,9 +5771,9 @@
                       "execution": "pure",
                       "kind": "reference",
                       "span": {
-                        "end": 1114,
+                        "end": 946,
                         "source": "users.eff",
-                        "start": 1068
+                        "start": 900
                       },
                       "target": "local:users#activeNames/$p2",
                       "type": {
@@ -5761,9 +5801,9 @@
                           "execution": "pure",
                           "kind": "reference",
                           "span": {
-                            "end": 1138,
+                            "end": 970,
                             "source": "users.eff",
-                            "start": 1134
+                            "start": 966
                           },
                           "target": "local:users#activeNames/user/2",
                           "type": {
@@ -5772,9 +5812,9 @@
                           }
                         },
                         "span": {
-                          "end": 1143,
+                          "end": 975,
                           "source": "users.eff",
-                          "start": 1134
+                          "start": 966
                         },
                         "type": {
                           "kind": "primitive",
@@ -5792,9 +5832,9 @@
                           "id": "local:users#activeNames/user/2",
                           "name": "user",
                           "span": {
-                            "end": 1130,
+                            "end": 962,
                             "source": "users.eff",
-                            "start": 1126
+                            "start": 958
                           },
                           "type": {
                             "id": "type:users#User",
@@ -5803,9 +5843,9 @@
                         }
                       ],
                       "span": {
-                        "end": 1143,
+                        "end": 975,
                         "source": "users.eff",
-                        "start": 1126
+                        "start": 958
                       },
                       "type": {
                         "effects": {
@@ -5835,9 +5875,9 @@
                     "execution": "pure",
                     "kind": "reference",
                     "span": {
-                      "end": 1125,
+                      "end": 957,
                       "source": "users.eff",
-                      "start": 1122
+                      "start": 954
                     },
                     "target": "value:users#$builtin/map/ddf01438b97c",
                     "type": {
@@ -5890,9 +5930,9 @@
                   "execution": "pure",
                   "kind": "call",
                   "span": {
-                    "end": 1144,
+                    "end": 976,
                     "source": "users.eff",
-                    "start": 1122
+                    "start": 954
                   },
                   "type": {
                     "element": {
@@ -5903,9 +5943,9 @@
                   }
                 },
                 "span": {
-                  "end": 1144,
+                  "end": 976,
                   "source": "users.eff",
-                  "start": 1068
+                  "start": 900
                 },
                 "steps": [
                   {
@@ -5913,9 +5953,9 @@
                       "id": "local:users#activeNames/$p1",
                       "name": "$p1",
                       "span": {
-                        "end": 1079,
+                        "end": 911,
                         "source": "users.eff",
-                        "start": 1068
+                        "start": 900
                       },
                       "type": {
                         "element": {
@@ -5941,9 +5981,9 @@
                       "execution": "effect",
                       "kind": "perform",
                       "span": {
-                        "end": 1079,
+                        "end": 911,
                         "source": "users.eff",
-                        "start": 1068
+                        "start": 900
                       },
                       "type": {
                         "element": {
@@ -5959,9 +5999,9 @@
                       "id": "local:users#activeNames/$p2",
                       "name": "$p2",
                       "span": {
-                        "end": 1114,
+                        "end": 946,
                         "source": "users.eff",
-                        "start": 1068
+                        "start": 900
                       },
                       "type": {
                         "element": {
@@ -5983,9 +6023,9 @@
                           "execution": "pure",
                           "kind": "reference",
                           "span": {
-                            "end": 1079,
+                            "end": 911,
                             "source": "users.eff",
-                            "start": 1068
+                            "start": 900
                           },
                           "target": "local:users#activeNames/$p1",
                           "type": {
@@ -6013,9 +6053,9 @@
                               "execution": "pure",
                               "kind": "reference",
                               "span": {
-                                "end": 1106,
+                                "end": 938,
                                 "source": "users.eff",
-                                "start": 1102
+                                "start": 934
                               },
                               "target": "local:users#activeNames/user",
                               "type": {
@@ -6024,9 +6064,9 @@
                               }
                             },
                             "span": {
-                              "end": 1113,
+                              "end": 945,
                               "source": "users.eff",
-                              "start": 1102
+                              "start": 934
                             },
                             "type": {
                               "kind": "primitive",
@@ -6044,9 +6084,9 @@
                               "id": "local:users#activeNames/user",
                               "name": "user",
                               "span": {
-                                "end": 1098,
+                                "end": 930,
                                 "source": "users.eff",
-                                "start": 1094
+                                "start": 926
                               },
                               "type": {
                                 "id": "type:users#User",
@@ -6055,9 +6095,9 @@
                             }
                           ],
                           "span": {
-                            "end": 1113,
+                            "end": 945,
                             "source": "users.eff",
-                            "start": 1094
+                            "start": 926
                           },
                           "type": {
                             "effects": {
@@ -6087,9 +6127,9 @@
                         "execution": "pure",
                         "kind": "reference",
                         "span": {
-                          "end": 1093,
+                          "end": 925,
                           "source": "users.eff",
-                          "start": 1087
+                          "start": 919
                         },
                         "target": "value:users#$builtin/filter/226f72cb20f0",
                         "type": {
@@ -6142,9 +6182,9 @@
                       "execution": "pure",
                       "kind": "call",
                       "span": {
-                        "end": 1114,
+                        "end": 946,
                         "source": "users.eff",
-                        "start": 1087
+                        "start": 919
                       },
                       "type": {
                         "element": {
@@ -6169,9 +6209,9 @@
               "name": "activeNames",
               "parameters": [],
               "span": {
-                "end": 1144,
+                "end": 976,
                 "source": "users.eff",
-                "start": 983
+                "start": 846
               },
               "type": {
                 "effects": {
@@ -6179,7 +6219,9 @@
                     "error:users#StoreUnavailable"
                   ],
                   "requirements": [
-                    "cap:users#Users.all"
+                    "cap:users#Users.all",
+                    "cap:users#Users.find",
+                    "cap:users#Users.save"
                   ]
                 },
                 "execution": "effect",
@@ -6194,7 +6236,7 @@
                 }
               },
               "written": {
-                "fails": true,
+                "fails": false,
                 "result": true,
                 "uses": true
               }
@@ -6390,8 +6432,8 @@
               "end": 1212,
               "span": {
                 "source": "users.eff",
-                "start": 512,
-                "end": 514
+                "start": 466,
+                "end": 468
               }
             },
             {
@@ -6399,8 +6441,8 @@
               "end": 1214,
               "span": {
                 "source": "users.eff",
-                "start": 501,
-                "end": 515
+                "start": 455,
+                "end": 469
               }
             },
             {
@@ -6408,8 +6450,8 @@
               "end": 1273,
               "span": {
                 "source": "users.eff",
-                "start": 559,
-                "end": 578
+                "start": 513,
+                "end": 532
               }
             },
             {
@@ -6417,8 +6459,8 @@
               "end": 1274,
               "span": {
                 "source": "users.eff",
-                "start": 554,
-                "end": 579
+                "start": 508,
+                "end": 533
               }
             },
             {
@@ -6426,8 +6468,8 @@
               "end": 1319,
               "span": {
                 "source": "users.eff",
-                "start": 536,
-                "end": 540
+                "start": 490,
+                "end": 494
               }
             },
             {
@@ -6435,8 +6477,8 @@
               "end": 1320,
               "span": {
                 "source": "users.eff",
-                "start": 536,
-                "end": 540
+                "start": 490,
+                "end": 494
               }
             },
             {
@@ -6444,8 +6486,8 @@
               "end": 1328,
               "span": {
                 "source": "users.eff",
-                "start": 495,
-                "end": 583
+                "start": 449,
+                "end": 537
               }
             },
             {
@@ -6453,8 +6495,8 @@
               "end": 1334,
               "span": {
                 "source": "users.eff",
-                "start": 495,
-                "end": 583
+                "start": 449,
+                "end": 537
               }
             },
             {
@@ -6463,7 +6505,7 @@
               "span": {
                 "source": "users.eff",
                 "start": 391,
-                "end": 583
+                "end": 537
               }
             },
             {
@@ -6471,8 +6513,8 @@
               "end": 1520,
               "span": {
                 "source": "users.eff",
-                "start": 728,
-                "end": 735
+                "start": 623,
+                "end": 630
               }
             },
             {
@@ -6480,8 +6522,8 @@
               "end": 1523,
               "span": {
                 "source": "users.eff",
-                "start": 736,
-                "end": 738
+                "start": 631,
+                "end": 633
               }
             },
             {
@@ -6489,8 +6531,8 @@
               "end": 1524,
               "span": {
                 "source": "users.eff",
-                "start": 728,
-                "end": 739
+                "start": 623,
+                "end": 634
               }
             },
             {
@@ -6498,8 +6540,8 @@
               "end": 1561,
               "span": {
                 "source": "users.eff",
-                "start": 763,
-                "end": 767
+                "start": 658,
+                "end": 662
               }
             },
             {
@@ -6507,8 +6549,8 @@
               "end": 1569,
               "span": {
                 "source": "users.eff",
-                "start": 758,
-                "end": 775
+                "start": 653,
+                "end": 670
               }
             },
             {
@@ -6516,8 +6558,8 @@
               "end": 1615,
               "span": {
                 "source": "users.eff",
-                "start": 789,
-                "end": 796
+                "start": 684,
+                "end": 691
               }
             },
             {
@@ -6525,8 +6567,8 @@
               "end": 1617,
               "span": {
                 "source": "users.eff",
-                "start": 778,
-                "end": 797
+                "start": 673,
+                "end": 692
               }
             },
             {
@@ -6534,8 +6576,8 @@
               "end": 1637,
               "span": {
                 "source": "users.eff",
-                "start": 800,
-                "end": 807
+                "start": 695,
+                "end": 702
               }
             },
             {
@@ -6543,8 +6585,8 @@
               "end": 1643,
               "span": {
                 "source": "users.eff",
-                "start": 711,
-                "end": 809
+                "start": 606,
+                "end": 704
               }
             },
             {
@@ -6552,8 +6594,8 @@
               "end": 1644,
               "span": {
                 "source": "users.eff",
-                "start": 585,
-                "end": 809
+                "start": 539,
+                "end": 704
               }
             },
             {
@@ -6561,8 +6603,8 @@
               "end": 1797,
               "span": {
                 "source": "users.eff",
-                "start": 915,
-                "end": 922
+                "start": 778,
+                "end": 785
               }
             },
             {
@@ -6570,8 +6612,8 @@
               "end": 1800,
               "span": {
                 "source": "users.eff",
-                "start": 923,
-                "end": 925
+                "start": 786,
+                "end": 788
               }
             },
             {
@@ -6579,8 +6621,8 @@
               "end": 1801,
               "span": {
                 "source": "users.eff",
-                "start": 915,
-                "end": 926
+                "start": 778,
+                "end": 789
               }
             },
             {
@@ -6588,8 +6630,8 @@
               "end": 1807,
               "span": {
                 "source": "users.eff",
-                "start": 915,
-                "end": 931
+                "start": 778,
+                "end": 794
               }
             },
             {
@@ -6597,8 +6639,8 @@
               "end": 1807,
               "span": {
                 "source": "users.eff",
-                "start": 909,
-                "end": 935
+                "start": 772,
+                "end": 798
               }
             },
             {
@@ -6606,8 +6648,8 @@
               "end": 1813,
               "span": {
                 "source": "users.eff",
-                "start": 909,
-                "end": 935
+                "start": 772,
+                "end": 798
               }
             },
             {
@@ -6615,8 +6657,8 @@
               "end": 1903,
               "span": {
                 "source": "users.eff",
-                "start": 970,
-                "end": 977
+                "start": 833,
+                "end": 840
               }
             },
             {
@@ -6624,8 +6666,8 @@
               "end": 1904,
               "span": {
                 "source": "users.eff",
-                "start": 970,
-                "end": 977
+                "start": 833,
+                "end": 840
               }
             },
             {
@@ -6633,8 +6675,8 @@
               "end": 1917,
               "span": {
                 "source": "users.eff",
-                "start": 905,
-                "end": 981
+                "start": 768,
+                "end": 844
               }
             },
             {
@@ -6642,8 +6684,8 @@
               "end": 1918,
               "span": {
                 "source": "users.eff",
-                "start": 811,
-                "end": 981
+                "start": 706,
+                "end": 844
               }
             },
             {
@@ -6651,8 +6693,8 @@
               "end": 2121,
               "span": {
                 "source": "users.eff",
-                "start": 1068,
-                "end": 1079
+                "start": 900,
+                "end": 911
               }
             },
             {
@@ -6660,8 +6702,8 @@
               "end": 2163,
               "span": {
                 "source": "users.eff",
-                "start": 1068,
-                "end": 1079
+                "start": 900,
+                "end": 911
               }
             },
             {
@@ -6669,8 +6711,8 @@
               "end": 2185,
               "span": {
                 "source": "users.eff",
-                "start": 1102,
-                "end": 1106
+                "start": 934,
+                "end": 938
               }
             },
             {
@@ -6678,8 +6720,8 @@
               "end": 2192,
               "span": {
                 "source": "users.eff",
-                "start": 1102,
-                "end": 1113
+                "start": 934,
+                "end": 945
               }
             },
             {
@@ -6687,8 +6729,8 @@
               "end": 2192,
               "span": {
                 "source": "users.eff",
-                "start": 1094,
-                "end": 1113
+                "start": 926,
+                "end": 945
               }
             },
             {
@@ -6696,8 +6738,8 @@
               "end": 2193,
               "span": {
                 "source": "users.eff",
-                "start": 1087,
-                "end": 1114
+                "start": 919,
+                "end": 946
               }
             },
             {
@@ -6705,8 +6747,8 @@
               "end": 2209,
               "span": {
                 "source": "users.eff",
-                "start": 1068,
-                "end": 1114
+                "start": 900,
+                "end": 946
               }
             },
             {
@@ -6714,8 +6756,8 @@
               "end": 2228,
               "span": {
                 "source": "users.eff",
-                "start": 1134,
-                "end": 1138
+                "start": 966,
+                "end": 970
               }
             },
             {
@@ -6723,8 +6765,8 @@
               "end": 2233,
               "span": {
                 "source": "users.eff",
-                "start": 1134,
-                "end": 1143
+                "start": 966,
+                "end": 975
               }
             },
             {
@@ -6732,8 +6774,8 @@
               "end": 2233,
               "span": {
                 "source": "users.eff",
-                "start": 1126,
-                "end": 1143
+                "start": 958,
+                "end": 975
               }
             },
             {
@@ -6741,8 +6783,8 @@
               "end": 2234,
               "span": {
                 "source": "users.eff",
-                "start": 1122,
-                "end": 1144
+                "start": 954,
+                "end": 976
               }
             },
             {
@@ -6750,8 +6792,8 @@
               "end": 2240,
               "span": {
                 "source": "users.eff",
-                "start": 1068,
-                "end": 1144
+                "start": 900,
+                "end": 976
               }
             },
             {
@@ -6759,15 +6801,15 @@
               "end": 2241,
               "span": {
                 "source": "users.eff",
-                "start": 983,
-                "end": 1144
+                "start": 846,
+                "end": 976
               }
             }
           ],
           "hostAssertions": []
         },
-        "map": "{\n  \"version\": 3,\n  \"file\": \"users.ts\",\n  \"sources\": [\n    \"users.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;AAAA;AAAA,wC;;AACA;AAAA,oC;;AAEA;AAAA;AAAA;AAAA;AAAA;AAAA,oC;;AAMA;AAAA;AAAA;AAAA,I;;AACA;AAAA;AAAA;AAAA,I;;AAEA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,sB;;AAMA;AAAA;AAAA;AAAA;AAAA;AAAA,EAGE;AAAA,+BAAM,iCAAW,EAAX,EAAN;AAAA,oBAEU,YAAK,uBAAL,CAFV;AAAA,wBACgB,oBADhB;AAAA;AAAA,IAHF,C;;AAQA;AAAA;AAAA;AAAA;AAAA;AAAA,EAEkC;AAAA,uBACnB,eAAQ,EAAR,CADmB;AAAA,0BAEhB,KAAK,IAAL,QAFgB;AAAA,IAGhC,iCAAW,OAAX,EAHgC;AAAA,WAIhC,OAJgC;AAAA,IAFlC,C;;AASA;AAAA;AAAA;AAAA;AAAA;AAAA,EAGM;AAAA,WACF,gBAAQ,EAAR,OADE;AAAA,IAAJ;AAAA;AAAA,sCAGwB,uBAHxB;AAAA;AAAA,GAHF,C;;AASA;AAAA;AAAA;AAAA;AAAA;AAAA,EAGE;AAAA;AAAA,wCACK,QAAO,UAAQ,WAAf,CADL;AAAA,cAEK,KAAI,UAAQ,SAAZ,CAFL;AAAA,IAHF,C;;\"\n}\n",
-        "hash": "2fe806d0c0e46554"
+        "map": "{\n  \"version\": 3,\n  \"file\": \"users.ts\",\n  \"sources\": [\n    \"users.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;AAAA;AAAA,wC;;AACA;AAAA,oC;;AAEA;AAAA;AAAA;AAAA;AAAA;AAAA,oC;;AAMA;AAAA;AAAA;AAAA,I;;AACA;AAAA;AAAA;AAAA,I;;AAEA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,sB;;AAMA;AAAA;AAAA;AAAA;AAAA;AAAA,EACE;AAAA,+BAAM,iCAAW,EAAX,EAAN;AAAA,oBAEU,YAAK,uBAAL,CAFV;AAAA,wBACgB,oBADhB;AAAA;AAAA,IADF,C;;AAMA;AAAA;AAAA;AAAA;AAAA;AAAA,EAAmE;AAAA,uBACpD,eAAQ,EAAR,CADoD;AAAA,0BAEjD,KAAK,IAAL,QAFiD;AAAA,IAGjE,iCAAW,OAAX,EAHiE;AAAA,WAIjE,OAJiE;AAAA,IAAnE,C;;AAOA;AAAA;AAAA;AAAA;AAAA;AAAA,EACM;AAAA,WACF,gBAAQ,EAAR,OADE;AAAA,IAAJ;AAAA;AAAA,sCAGwB,uBAHxB;AAAA;AAAA,GADF,C;;AAOA;AAAA;AAAA;AAAA;AAAA;AAAA,EACE;AAAA;AAAA,wCACK,QAAO,UAAQ,WAAf,CADL;AAAA,cAEK,KAAI,UAAQ,SAAZ,CAFL;AAAA,IADF,C;;\"\n}\n",
+        "hash": "e7552814104c4d32"
       }
     ]
   },

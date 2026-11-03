@@ -14,8 +14,7 @@ export type PublishGrant = {
   revoke: () => void
 }
 
-export const grantPublishOne = (publish: PublishOperation, id: Text, authorizedIds: Text[]): PublishGrant
-  fails GrantDenied => {
+export const grantPublishOne = (publish: PublishOperation, id: Text, authorizedIds: Text[]): PublishGrant => {
     const authorized = authorizedIds |> fold(false, (found, candidate) => found || candidate === id)
     if (authorized) {
       const live = makeRef(true)

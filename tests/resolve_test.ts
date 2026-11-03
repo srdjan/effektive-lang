@@ -105,10 +105,21 @@ Deno.test("Users.find in users.eff resolves to the capability", () => {
     targetsOf(examples, "users", SyntaxKind.FieldExpr, "Users.find"),
     ["cap:users#Users.find"],
   );
-  // The three uses clauses of getUser, rename, and displayName.
+  // The four with clauses of getUser, rename, displayName, and activeNames.
   assertEquals(
-    targetsOf(examples, "users", SyntaxKind.QualifiedName, "Users.find"),
-    Array(3).fill("cap:users#Users.find"),
+    targetsOf(examples, "users", SyntaxKind.QualifiedName, "Users"),
+    Array(4).fill("service:users#Users"),
+  );
+});
+
+Deno.test("Users.find in a with clause resolves to the capability", () => {
+  const analysis = single(`export type Id = string
+export service Users { find(id: Id): Id }
+export const get = (id: Id): Id with Users.find => Users.find(id)
+`);
+  assertEquals(
+    targetsOf(analysis, "m", SyntaxKind.QualifiedName, "Users.find"),
+    ["cap:m#Users.find"],
   );
 });
 
@@ -118,9 +129,8 @@ Deno.test("with Orders in pay.eff resolves to the service", () => {
     ["service:pay#Orders"],
   );
   assertEquals(
-    targetsOf(examples, "pay", SyntaxKind.QualifiedName, "Payments.charge")
-      .length,
-    1,
+    targetsOf(examples, "pay", SyntaxKind.QualifiedName, "Payments"),
+    ["service:pay#Payments"],
   );
 });
 

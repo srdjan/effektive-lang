@@ -40,8 +40,8 @@ Deno.test("scheduled worker contracts reject lost channels", () => {
     [
       "lost JobFailure",
       files["worker.eff"].replace(
-        "fails SchemaError | InvalidPolicy | JobFailure",
-        "fails SchemaError | InvalidPolicy",
+        "(input: unknown): Report\n  with Jobs | Clock => {",
+        "(input: unknown): Report\n  fails SchemaError | InvalidPolicy\n  with Jobs | Clock => {",
       ),
       [[
         "failure-contract/001",

@@ -20,11 +20,9 @@ const lexicalLive = layer(Lexical, () => {
 const applicationLive = mergeLayers(articleStoreLive, mergeLayers(clockLive, lexicalLive))
 
 export const publishArticle = (rawId: Text): PublishReceipt
-  fails PublishFailure | PlatformUnavailable
   with Platform | ArticleJson | TextRules | Time =>
   provide(applicationLive, () => publishArticleFeature(rawId))
 
 export const publishAll = (rawIds: Text[]): PublishReceipt[]
-  fails PublishFailure | PlatformUnavailable
   with Platform | ArticleJson | TextRules | Time =>
   provide(applicationLive, () => publishAllFeature(rawIds))

@@ -109,9 +109,7 @@ An exported function writes its parameter types and its result type. Other modul
 Add a function that finds a book or fails:
 
 ```eff
-export const findBook = (id: BookId): Book
-  fails BookMissing | StoreDown
-  with Shelf.find =>
+export const findBook = (id: BookId): Book with Shelf.find =>
   Shelf.find(id) ?? fail(BookMissing({ id }))
 ```
 
@@ -124,9 +122,7 @@ The contract has three parts. The result is `Book`. The `fails` clause lists eve
 Add a function that gives a default title when the book is missing:
 
 ```eff
-export const titleOf = (id: BookId): Title
-  fails StoreDown
-  with Shelf.find =>
+export const titleOf = (id: BookId): Title with Shelf =>
   try {
     findBook(id).title
   } catch {
@@ -147,9 +143,7 @@ const takeCopy = (book: Book) => {
   { ...book, copies: copies - 1 }
 }
 
-export const lend = (id: BookId): Book
-  fails BookMissing | NoCopies | StoreDown
-  with Shelf.find | Shelf.save => {
+export const lend = (id: BookId): Book with Shelf.find | Shelf.save => {
   const lent = findBook(id) |> takeCopy
   Shelf.save(lent)
   lent
@@ -175,7 +169,7 @@ deno task effektive check "$tutorial_dir"
 The compiler reports the operation that the clause does not list:
 
 ```text
-library.eff:49:22: error requirement-contract/001: the body requires Shelf.save, which the `with` clause does not list
+library.eff:43:59: error requirement-contract/001: the body requires Shelf.save, which the `with` clause does not list
 1 module, 1 diagnostic
 ```
 
@@ -228,9 +222,7 @@ The name `ledger` is visible only in the use block and in the `finally` block. T
 Last, add the exported function:
 
 ```eff
-export const checkout = (id: BookId): Book
-  fails BookMissing | NoCopies | StoreDown
-  with Shelf.find | Shelf.save | Ledger => {
+export const checkout = (id: BookId): Book with Shelf | Ledger => {
   const book = lend(id)
   record(book)
   book

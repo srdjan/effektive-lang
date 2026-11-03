@@ -89,9 +89,9 @@
             "execution": "pure",
             "kind": "reference",
             "span": {
-              "end": 265,
+              "end": 232,
               "source": "log.eff",
-              "start": 258
+              "start": 225
             },
             "target": "local:log#log/message",
             "type": {
@@ -112,9 +112,9 @@
         "execution": "effect",
         "kind": "perform",
         "span": {
-          "end": 266,
+          "end": 233,
           "source": "log.eff",
-          "start": 244
+          "start": 211
         },
         "type": {
           "kind": "primitive",
@@ -140,7 +140,7 @@
         }
       ],
       "span": {
-        "end": 266,
+        "end": 233,
         "source": "log.eff",
         "start": 149
       },
@@ -167,7 +167,7 @@
         }
       },
       "written": {
-        "fails": true,
+        "fails": false,
         "result": true,
         "uses": true
       }

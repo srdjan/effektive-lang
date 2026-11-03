@@ -953,9 +953,9 @@
               "execution": "pure",
               "kind": "reference",
               "span": {
-                "end": 895,
+                "end": 848,
                 "source": "pay.eff",
-                "start": 841
+                "start": 794
               },
               "target": "local:pay#pay/$p4",
               "type": {
@@ -972,9 +972,9 @@
             "execution": "pure",
             "kind": "reference",
             "span": {
-              "end": 912,
+              "end": 865,
               "source": "pay.eff",
-              "start": 903
+              "start": 856
             },
             "target": "value:pay#saveOrder",
             "type": {
@@ -1007,9 +1007,9 @@
           "execution": "effect",
           "kind": "call",
           "span": {
-            "end": 912,
+            "end": 865,
             "source": "pay.eff",
-            "start": 903
+            "start": 856
           },
           "type": {
             "id": "type:pay#Order",
@@ -1017,9 +1017,9 @@
           }
         },
         "span": {
-          "end": 912,
+          "end": 865,
           "source": "pay.eff",
-          "start": 841
+          "start": 794
         },
         "steps": [
           {
@@ -1027,9 +1027,9 @@
               "id": "local:pay#pay/$p1",
               "name": "$p1",
               "span": {
-                "end": 843,
+                "end": 796,
                 "source": "pay.eff",
-                "start": 841
+                "start": 794
               },
               "type": {
                 "id": "type:pay#OrderId",
@@ -1046,9 +1046,9 @@
               "execution": "pure",
               "kind": "reference",
               "span": {
-                "end": 843,
+                "end": 796,
                 "source": "pay.eff",
-                "start": 841
+                "start": 794
               },
               "target": "local:pay#pay/id",
               "type": {
@@ -1062,9 +1062,9 @@
               "id": "local:pay#pay/$p2",
               "name": "$p2",
               "span": {
-                "end": 860,
+                "end": 813,
                 "source": "pay.eff",
-                "start": 841
+                "start": 794
               },
               "type": {
                 "id": "type:pay#Order",
@@ -1083,9 +1083,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 843,
+                    "end": 796,
                     "source": "pay.eff",
-                    "start": 841
+                    "start": 794
                   },
                   "target": "local:pay#pay/$p1",
                   "type": {
@@ -1102,9 +1102,9 @@
                 "execution": "pure",
                 "kind": "reference",
                 "span": {
-                  "end": 860,
+                  "end": 813,
                   "source": "pay.eff",
-                  "start": 851
+                  "start": 804
                 },
                 "target": "value:pay#findOrder",
                 "type": {
@@ -1141,9 +1141,9 @@
               "execution": "effect",
               "kind": "call",
               "span": {
-                "end": 860,
+                "end": 813,
                 "source": "pay.eff",
-                "start": 851
+                "start": 804
               },
               "type": {
                 "id": "type:pay#Order",
@@ -1156,9 +1156,9 @@
               "id": "local:pay#pay/$p3",
               "name": "$p3",
               "span": {
-                "end": 879,
+                "end": 832,
                 "source": "pay.eff",
-                "start": 841
+                "start": 794
               },
               "type": {
                 "id": "type:pay#Order",
@@ -1177,9 +1177,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 860,
+                    "end": 813,
                     "source": "pay.eff",
-                    "start": 841
+                    "start": 794
                   },
                   "target": "local:pay#pay/$p2",
                   "type": {
@@ -1196,9 +1196,9 @@
                 "execution": "pure",
                 "kind": "reference",
                 "span": {
-                  "end": 879,
+                  "end": 832,
                   "source": "pay.eff",
-                  "start": 868
+                  "start": 821
                 },
                 "target": "value:pay#chargeOrder",
                 "type": {
@@ -1235,9 +1235,9 @@
               "execution": "effect",
               "kind": "call",
               "span": {
-                "end": 879,
+                "end": 832,
                 "source": "pay.eff",
-                "start": 868
+                "start": 821
               },
               "type": {
                 "id": "type:pay#Order",
@@ -1250,9 +1250,9 @@
               "id": "local:pay#pay/$p4",
               "name": "$p4",
               "span": {
-                "end": 895,
+                "end": 848,
                 "source": "pay.eff",
-                "start": 841
+                "start": 794
               },
               "type": {
                 "id": "type:pay#Order",
@@ -1271,9 +1271,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 879,
+                    "end": 832,
                     "source": "pay.eff",
-                    "start": 841
+                    "start": 794
                   },
                   "target": "local:pay#pay/$p3",
                   "type": {
@@ -1290,9 +1290,9 @@
                 "execution": "pure",
                 "kind": "reference",
                 "span": {
-                  "end": 895,
+                  "end": 848,
                   "source": "pay.eff",
-                  "start": 887
+                  "start": 840
                 },
                 "target": "value:pay#markPaid",
                 "type": {
@@ -1321,9 +1321,9 @@
               "execution": "pure",
               "kind": "call",
               "span": {
-                "end": 895,
+                "end": 848,
                 "source": "pay.eff",
-                "start": 887
+                "start": 840
               },
               "type": {
                 "id": "type:pay#Order",
@@ -1356,7 +1356,7 @@
         }
       ],
       "span": {
-        "end": 912,
+        "end": 865,
         "source": "pay.eff",
         "start": 724
       },
@@ -1386,7 +1386,7 @@
         }
       },
       "written": {
-        "fails": true,
+        "fails": false,
         "result": true,
         "uses": true
       }

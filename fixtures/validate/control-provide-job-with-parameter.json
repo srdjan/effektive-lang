@@ -20,9 +20,9 @@
                 "execution": "pure",
                 "kind": "literal",
                 "span": {
-                  "end": 210,
+                  "end": 185,
                   "source": "main.eff",
-                  "start": 206
+                  "start": 181
                 },
                 "type": {
                   "kind": "primitive",
@@ -39,9 +39,9 @@
               "execution": "pure",
               "kind": "reference",
               "span": {
-                "end": 205,
+                "end": 180,
                 "source": "main.eff",
-                "start": 194
+                "start": 169
               },
               "target": "value:users#displayName",
               "type": {
@@ -50,7 +50,9 @@
                     "error:users#StoreUnavailable"
                   ],
                   "requirements": [
-                    "cap:users#Users.find"
+                    "cap:users#Users.all",
+                    "cap:users#Users.find",
+                    "cap:users#Users.save"
                   ]
                 },
                 "execution": "effect",
@@ -72,15 +74,17 @@
                 "error:users#StoreUnavailable"
               ],
               "requirements": [
-                "cap:users#Users.find"
+                "cap:users#Users.all",
+                "cap:users#Users.find",
+                "cap:users#Users.save"
               ]
             },
             "execution": "effect",
             "kind": "call",
             "span": {
-              "end": 211,
+              "end": 186,
               "source": "main.eff",
-              "start": 194
+              "start": 169
             },
             "type": {
               "id": "type:users#Name",
@@ -109,9 +113,9 @@
             }
           ],
           "span": {
-            "end": 211,
+            "end": 186,
             "source": "main.eff",
-            "start": 188
+            "start": 163
           },
           "type": {
             "effects": {
@@ -119,7 +123,9 @@
                 "error:users#StoreUnavailable"
               ],
               "requirements": [
-                "cap:users#Users.find"
+                "cap:users#Users.all",
+                "cap:users#Users.find",
+                "cap:users#Users.save"
               ]
             },
             "execution": "effect",
@@ -145,9 +151,9 @@
           "execution": "pure",
           "kind": "reference",
           "span": {
-            "end": 186,
+            "end": 161,
             "source": "main.eff",
-            "start": 177
+            "start": 152
           },
           "target": "value:host/providers#UsersLive",
           "type": {
@@ -167,9 +173,9 @@
           }
         },
         "span": {
-          "end": 212,
+          "end": 187,
           "source": "main.eff",
-          "start": 169
+          "start": 144
         },
         "type": {
           "id": "type:users#Name",
@@ -181,7 +187,7 @@
       "name": "main",
       "parameters": [],
       "span": {
-        "end": 212,
+        "end": 187,
         "source": "main.eff",
         "start": 110
       },
@@ -201,7 +207,7 @@
         }
       },
       "written": {
-        "fails": true,
+        "fails": false,
         "result": true,
         "uses": true
       }
@@ -472,7 +478,9 @@
                 "error:users#StoreUnavailable"
               ],
               "requirements": [
-                "cap:users#Users.all"
+                "cap:users#Users.all",
+                "cap:users#Users.find",
+                "cap:users#Users.save"
               ]
             },
             "execution": "effect",
@@ -496,7 +504,9 @@
                 "error:users#StoreUnavailable"
               ],
               "requirements": [
-                "cap:users#Users.find"
+                "cap:users#Users.all",
+                "cap:users#Users.find",
+                "cap:users#Users.save"
               ]
             },
             "execution": "effect",
@@ -523,7 +533,9 @@
                 "error:users#UserMissing"
               ],
               "requirements": [
-                "cap:users#Users.find"
+                "cap:users#Users.all",
+                "cap:users#Users.find",
+                "cap:users#Users.save"
               ]
             },
             "execution": "effect",
@@ -550,6 +562,7 @@
                 "error:users#UserMissing"
               ],
               "requirements": [
+                "cap:users#Users.all",
                 "cap:users#Users.find",
                 "cap:users#Users.save"
               ]

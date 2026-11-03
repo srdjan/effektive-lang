@@ -29,7 +29,6 @@ const withOutput = (input: Int) =>
     }
 
 export const runProcessor = (): void
-  fails InputFailure | TransformFailure | OutputFailure
   with Input | Transform | Output =>
   using (source = {
       const input = Input.open()

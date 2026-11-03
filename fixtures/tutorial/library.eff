@@ -24,14 +24,10 @@ export const inStock = (books: Book[]): Title[] =>
     |> filter(book => book.copies > 0)
     |> map(book => book.title)
 
-export const findBook = (id: BookId): Book
-  fails BookMissing | StoreDown
-  with Shelf.find =>
+export const findBook = (id: BookId): Book with Shelf.find =>
   Shelf.find(id) ?? fail(BookMissing({ id }))
 
-export const titleOf = (id: BookId): Title
-  fails StoreDown
-  with Shelf.find =>
+export const titleOf = (id: BookId): Title with Shelf =>
   try {
     findBook(id).title
   } catch {
@@ -44,9 +40,7 @@ const takeCopy = (book: Book) => {
   { ...book, copies: copies - 1 }
 }
 
-export const lend = (id: BookId): Book
-  fails BookMissing | NoCopies | StoreDown
-  with Shelf.find | Shelf.save => {
+export const lend = (id: BookId): Book with Shelf.find | Shelf.save => {
   const lent = findBook(id) |> takeCopy
   Shelf.save(lent)
   lent

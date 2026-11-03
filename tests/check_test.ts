@@ -8,6 +8,7 @@ import {
   type ModeMap,
   type ModuleDeclarations,
   signatureType,
+  type SolvedLookup,
   type TypeGraph,
 } from "../src/core/signatures.ts";
 import { checkModuleDeclarations } from "../src/core/check_declarations.ts";
@@ -27,6 +28,7 @@ import {
   reachableModules,
 } from "../src/core/interface.ts";
 import { checkAnalysis } from "../src/core/check_project.ts";
+import type { Solved } from "../src/core/modes.ts";
 import { stripSpans } from "../src/core/interface.ts";
 import { TypeTable } from "../src/core/types.ts";
 import { functionTypeToIr } from "../src/core/type_ir.ts";
@@ -82,6 +84,7 @@ function declarationsOf(
 function checkDeclarations(
   analysis: Analysis,
   modes: ModeMap = new Map(),
+  solved: SolvedLookup = modesAsSolved(modes),
 ): ProjectCheck {
   const table = new TypeTable();
   const graphs = new Map<string, TypeGraph>();
@@ -94,11 +97,11 @@ function checkDeclarations(
       if (graph !== undefined) imported.set(other, graph);
     }
     const declarations = declarationsOf(analysis, name, table, imported);
-    graphs.set(name, buildTypeGraph(declarations, modesAsSolved(modes)));
+    graphs.set(name, buildTypeGraph(declarations, solved));
     modules.set(name, {
       module: name,
       declarations,
-      interface: buildInterface(declarations, modesAsSolved(modes), imported),
+      interface: buildInterface(declarations, solved, imported),
       diagnostics: declarations.diagnostics,
     });
     diagnostics.push(...declarations.diagnostics);
@@ -115,7 +118,16 @@ function computedModes(analysis: Analysis): ModeMap {
   return modes;
 }
 
-/** Checks the examples with the modes that the body checker computes, unless `modes` is given. */
+/** The mode and the effect sets that the body checker solves for every function of the project. */
+function computedSolved(analysis: Analysis): Map<ValueId, Solved> {
+  const solved = new Map<ValueId, Solved>();
+  for (const module of checkAnalysis(analysis).modules.values()) {
+    for (const [id, entry] of module.solved) solved.set(id, entry);
+  }
+  return solved;
+}
+
+/** Checks the examples with the solved sets that the body checker computes, unless `modes` is given. */
 function checkExamples(
   edit: (files: Record<string, string>) => void = () => {},
   modes?: ModeMap,
@@ -123,7 +135,9 @@ function checkExamples(
   const files = exampleFiles();
   edit(files);
   const analysis = analyzeFiles(files, EXAMPLE_ENTRIES);
-  return checkDeclarations(analysis, modes ?? computedModes(analysis));
+  return modes === undefined
+    ? checkDeclarations(analysis, new Map(), computedSolved(analysis))
+    : checkDeclarations(analysis, modes);
 }
 
 function checkText(
@@ -278,7 +292,7 @@ Deno.test("declaration spans equal the spans in log.ir.json apart from the sourc
   );
 });
 
-Deno.test("pay requires the sorted capabilities of Orders and Payments.charge", () => {
+Deno.test("pay requires the sorted capabilities of Orders and Payments and infers its failures", () => {
   const project = checkExamples();
   const pay = signatureOf(project, "pay", "value:pay#pay");
   assertEquals(pay.requirements, [
@@ -286,15 +300,16 @@ Deno.test("pay requires the sorted capabilities of Orders and Payments.charge", 
     "cap:pay#Orders.save",
     "cap:pay#Payments.charge",
   ]);
-  assertEquals(pay.failures, [
-    "error:pay#OrderNotFound",
-    "error:pay#PaymentDeclined",
-  ]);
+  assertEquals(pay.failures, []);
   const type = interfaceOf(project, "pay").payload.values.find((v) =>
     v.id === "value:pay#pay"
   );
   assert(type !== undefined && type.type.kind === "function");
   assertEquals(type.type.execution, "effect");
+  assertEquals(type.type.effects.failures, [
+    "error:pay#OrderNotFound",
+    "error:pay#PaymentDeclined",
+  ]);
 });
 
 Deno.test("a pure function with empty sets takes its mode from the map", () => {
@@ -493,6 +508,20 @@ Deno.test("declaration diagnostics do not depend on the mode map", () => {
 
 // ------------------------------------------------------------------ modes
 
+/** The log module with both clauses written, so that its function needs no mode entry. */
+const CLOSED_LOG = `type Message = string
+
+error ConsoleUnavailable = { message: string }
+
+service Console {
+  print(message: Message): void fails ConsoleUnavailable
+}
+
+export const log = (message: Message): void
+  fails ConsoleUnavailable
+  with Console.print => Console.print(message)
+`;
+
 Deno.test("a missing mode entry is a Result error that names every function", () => {
   const project = checkExamples(() => {}, new Map());
   const collections = project.modules.get("collections")!.interface;
@@ -501,11 +530,27 @@ Deno.test("a missing mode entry is a Result error that names every function", ()
     tag: "missing-modes",
     ids: ["value:collections#activeNames", "value:collections#total"],
   });
-  // Functions with nonempty sets need no entry.
-  assert(project.modules.get("users")!.interface.ok);
-  assert(project.modules.get("log")!.interface.ok);
+  // A function with an omitted `fails` clause has an open set and needs an entry.
+  const users = project.modules.get("users")!.interface;
+  assert(!users.ok);
+  assertEquals(users.error, {
+    tag: "missing-modes",
+    ids: [
+      "value:users#activeNames",
+      "value:users#displayName",
+      "value:users#getUser",
+      "value:users#rename",
+    ],
+  });
+  // Functions with written nonempty sets need no entry.
+  const closed = checkExamples((files) => {
+    files["log.eff"] = CLOSED_LOG;
+  }, new Map());
+  assert(closed.modules.get("log")!.interface.ok);
   // The local functions of pay carry no result annotation and need no entry.
-  assert(project.modules.get("pay")!.interface.ok);
+  const pay = project.modules.get("pay")!.interface;
+  assert(!pay.ok);
+  assertEquals(pay.error.ids, ["value:pay#pay"]);
   // A written result with open sets leaves part of the type to the body.
   const annotated = checkExamples((files) => {
     files["pay.eff"] = files["pay.eff"]
@@ -521,6 +566,7 @@ Deno.test("a missing mode entry is a Result error that names every function", ()
   assert(!annotated.ok);
   assertEquals(annotated.error.ids, [
     "value:pay#markPaid",
+    "value:pay#pay",
     "value:pay#saveOrder",
   ]);
 });
@@ -538,15 +584,17 @@ Deno.test("buildInterface can be called again after the modes arrive", () => {
 });
 
 Deno.test("nonempty sets force effect mode whatever the map says", () => {
-  const project = checkExamples();
-  const getUser = signatureOf(project, "users", "value:users#getUser");
+  const project = checkExamples((files) => {
+    files["log.eff"] = CLOSED_LOG;
+  });
+  const log = signatureOf(project, "log", "value:log#log");
   const forced = executionOf(
-    getUser,
-    modesAsSolved(new Map([["value:users#getUser", "pure"]])),
+    log,
+    modesAsSolved(new Map([["value:log#log", "pure"]])),
   );
   assert(forced.ok);
   assertEquals(forced.value, "effect");
-  const withoutEntry = executionOf(getUser, modesAsSolved(new Map()));
+  const withoutEntry = executionOf(log, modesAsSolved(new Map()));
   assert(withoutEntry.ok);
   assertEquals(withoutEntry.value, "effect");
 });
@@ -615,8 +663,8 @@ Deno.test("a header edit that adds a failure changes the users interface hash", 
   const after = checkExamples((files) => {
     const text = files["users.eff"];
     const edited = text.replace(
-      "export const displayName = (id: UserId): Name\n  fails StoreUnavailable",
-      "export const displayName = (id: UserId): Name\n  fails StoreUnavailable | UserMissing",
+      "export const displayName = (id: UserId): Name with Users",
+      "export const displayName = (id: UserId): Name\n  fails StoreUnavailable | UserMissing\n  with Users",
     );
     assertNotEquals(edited, text);
     files["users.eff"] = edited;
@@ -626,9 +674,11 @@ Deno.test("a header edit that adds a failure changes the users interface hash", 
 
 Deno.test("a mode change in the supplied map changes the interface hash", () => {
   const before = checkExamples();
-  const changed = new Map(EXAMPLE_MODES);
-  changed.set("value:collections#total", "effect");
-  const after = checkExamples(() => {}, changed);
+  const analysis = analyzeFiles(exampleFiles(), EXAMPLE_ENTRIES);
+  const changed = computedSolved(analysis);
+  const total = changed.get("value:collections#total")!;
+  changed.set("value:collections#total", { ...total, mode: "effect" });
+  const after = checkDeclarations(analysis, new Map(), changed);
   assertNotEquals(
     hashOf(after, "collections"),
     hashOf(before, "collections"),

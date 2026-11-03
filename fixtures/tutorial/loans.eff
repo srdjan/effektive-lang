@@ -22,9 +22,7 @@ const record = (book: Book) =>
     ledger.close()
   }
 
-export const checkout = (id: BookId): Book
-  fails BookMissing | NoCopies | StoreDown
-  with Shelf.find | Shelf.save | Ledger => {
+export const checkout = (id: BookId): Book with Shelf | Ledger => {
   const book = lend(id)
   record(book)
   book

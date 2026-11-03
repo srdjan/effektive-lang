@@ -41,8 +41,8 @@ Deno.test("service workflow rejects erased result, failure and retained service 
     ]
   ) {
     const source = files["workflow.eff"].replace(
-      "fails SchemaError | InvalidOrder | CatalogFailure | StoreFailure",
-      "fails " + remaining,
+      "with Catalog | Runtime",
+      "fails " + remaining + "\n  with Catalog | Runtime",
     );
     assert(
       checked(source).diagnostics.some((d) =>

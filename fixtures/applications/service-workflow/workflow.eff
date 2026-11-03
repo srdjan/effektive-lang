@@ -7,7 +7,6 @@ const storageRetry: RetrySchedule<StoreFailure> =
     if (error.kind === "Transient" && attempt <= 2) { Some(attempt * 5ms) } else { None })
 
 export const submit = (input: unknown): Receipt
-  fails SchemaError | InvalidOrder | CatalogFailure | StoreFailure
   with Catalog | Runtime => {
     const request = schemaDecode(requestSchema, input)
     if (request.sku === "" || request.quantity < 1 || request.quantity > 100) {

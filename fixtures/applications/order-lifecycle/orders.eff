@@ -3,15 +3,15 @@ import { OrderId, Cents, Text, Bool, StateName, Receipt, Tracking, Reason, Pendi
 const inputSchema: Schema<OrderInput> = schema()
 const orderSchema: Schema<Order> = schema()
 
-export const fromInput = (input: unknown): Pending fails SchemaError => {
+export const fromInput = (input: unknown): Pending => {
   const raw = schemaDecode(inputSchema, input)
   Pending({ id: OrderId(raw.id), total: Cents(raw.total) })
 }
 
-export const decodeOrder = (input: unknown): Order fails SchemaError =>
+export const decodeOrder = (input: unknown): Order =>
   schemaDecode(orderSchema, input)
 
-export const encodeOrder = (order: Order): Order fails SchemaError =>
+export const encodeOrder = (order: Order): Order =>
   schemaEncode(orderSchema, order)
 
 export const pay = (order: Pending, receipt: Receipt): Paid =>
@@ -50,7 +50,7 @@ export const describe = (order: Order): Text =>
     Cancelled(c) => c.reason.note
   }
 
-export const cancelAny = (order: Order, reason: Reason): Cancelled fails InvalidTransition =>
+export const cancelAny = (order: Order, reason: Reason): Cancelled =>
   match order {
     Pending(p) => Cancelled({ id: p.id, reason }),
     Paid(p) => Cancelled({ id: p.id, reason }),

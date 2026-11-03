@@ -140,7 +140,7 @@ Deno.test("hover on rename gives the contract and the backend text", () => {
   assertEquals(hit.to, offsetOf(text, "rename") + "rename".length);
   assertEquals(
     hit.contract,
-    "rename(id: UserId, name: Name): User fails StoreUnavailable | UserMissing with Users.find | Users.save",
+    "rename(id: UserId, name: Name): User fails StoreUnavailable | UserMissing with Users.all | Users.find | Users.save",
   );
   assertEquals(
     hit.backend,

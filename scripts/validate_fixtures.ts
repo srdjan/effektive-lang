@@ -346,6 +346,8 @@ const MUTATIONS: readonly Mutation[] = [
     sources: LOG,
     apply(ir) {
       const f = declIndex(ir, "log");
+      // The source omits `fails`, so the mutation records a written clause.
+      setAt(ir, `declarations[${f}].written.fails`, true);
       setAt(ir, `declarations[${f}].type.effects.failures`, []);
       return `declarations[${f}].body`;
     },

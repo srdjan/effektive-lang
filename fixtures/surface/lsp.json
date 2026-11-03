@@ -112,15 +112,15 @@
         "result": {
           "contents": {
             "kind": "markdown",
-            "value": "```effektive\n(UserId) => Name fails StoreUnavailable with Users.find\n```"
+            "value": "```effektive\n(UserId) => Name fails StoreUnavailable with Users.all | Users.find | Users.save\n```"
           },
           "range": {
             "start": {
-              "line": 5,
+              "line": 4,
               "character": 27
             },
             "end": {
-              "line": 5,
+              "line": 4,
               "character": 38
             }
           }
@@ -138,11 +138,11 @@
           "uri": "file:///work/examples/users.eff",
           "range": {
             "start": {
-              "line": 35,
+              "line": 31,
               "character": 13
             },
             "end": {
-              "line": 35,
+              "line": 31,
               "character": 24
             }
           }
@@ -174,11 +174,11 @@
             "uri": "file:///work/examples/main.eff",
             "range": {
               "start": {
-                "line": 5,
+                "line": 4,
                 "character": 27
               },
               "end": {
-                "line": 5,
+                "line": 4,
                 "character": 38
               }
             }
@@ -187,11 +187,11 @@
             "uri": "file:///work/examples/users.eff",
             "range": {
               "start": {
-                "line": 35,
+                "line": 31,
                 "character": 13
               },
               "end": {
-                "line": 35,
+                "line": 31,
                 "character": 24
               }
             }
@@ -209,11 +209,11 @@
         "result": {
           "range": {
             "start": {
-              "line": 5,
+              "line": 4,
               "character": 27
             },
             "end": {
-              "line": 5,
+              "line": 4,
               "character": 38
             }
           },
@@ -252,11 +252,11 @@
                 {
                   "range": {
                     "start": {
-                      "line": 5,
+                      "line": 4,
                       "character": 27
                     },
                     "end": {
-                      "line": 5,
+                      "line": 4,
                       "character": 38
                     }
                   },
@@ -273,11 +273,11 @@
                 {
                   "range": {
                     "start": {
-                      "line": 35,
+                      "line": 31,
                       "character": 13
                     },
                     "end": {
-                      "line": 35,
+                      "line": 31,
                       "character": 24
                     }
                   },
@@ -305,11 +305,11 @@
               "textEdit": {
                 "range": {
                   "start": {
-                    "line": 5,
+                    "line": 4,
                     "character": 27
                   },
                   "end": {
-                    "line": 5,
+                    "line": 4,
                     "character": 38
                   }
                 },
@@ -330,7 +330,7 @@
         "result": {
           "signatures": [
             {
-              "label": "displayName(id: UserId): Name fails StoreUnavailable with Users.find",
+              "label": "displayName(id: UserId): Name fails StoreUnavailable with Users.all | Users.find | Users.save",
               "parameters": [
                 {
                   "label": "id: UserId"
@@ -627,28 +627,8 @@
             4,
             0,
             2,
-            1,
-            2,
+            0,
             5,
-            8,
-            0,
-            0,
-            6,
-            11,
-            1,
-            2,
-            0,
-            12,
-            1,
-            12,
-            0,
-            0,
-            2,
-            16,
-            1,
-            2,
-            1,
-            2,
             4,
             8,
             0,
@@ -659,11 +639,6 @@
             2,
             0,
             6,
-            4,
-            7,
-            2,
-            0,
-            5,
             2,
             12,
             0,
@@ -772,28 +747,8 @@
             4,
             0,
             2,
-            1,
-            2,
+            0,
             5,
-            8,
-            0,
-            0,
-            6,
-            11,
-            1,
-            2,
-            0,
-            12,
-            1,
-            12,
-            0,
-            0,
-            2,
-            16,
-            1,
-            2,
-            1,
-            2,
             4,
             8,
             0,
@@ -804,26 +759,6 @@
             2,
             0,
             6,
-            4,
-            7,
-            2,
-            0,
-            5,
-            1,
-            12,
-            0,
-            0,
-            2,
-            5,
-            2,
-            2,
-            0,
-            6,
-            4,
-            7,
-            2,
-            0,
-            5,
             2,
             12,
             0,
@@ -917,18 +852,8 @@
             4,
             0,
             2,
-            1,
-            2,
+            0,
             5,
-            8,
-            0,
-            0,
-            6,
-            16,
-            1,
-            2,
-            1,
-            2,
             4,
             8,
             0,
@@ -939,11 +864,6 @@
             2,
             0,
             6,
-            4,
-            7,
-            2,
-            0,
-            5,
             2,
             12,
             0,
@@ -1012,33 +932,18 @@
             4,
             0,
             2,
-            1,
-            2,
-            5,
-            8,
             0,
-            0,
-            6,
-            16,
-            1,
-            2,
-            1,
-            2,
-            4,
-            8,
-            0,
-            0,
-            5,
-            5,
-            2,
-            2,
-            0,
-            6,
-            3,
             7,
+            4,
+            8,
+            0,
+            0,
+            5,
+            5,
+            2,
             2,
             0,
-            4,
+            6,
             2,
             12,
             0,
@@ -1351,7 +1256,7 @@
                 "character": 0
               },
               "end": {
-                "line": 24,
+                "line": 22,
                 "character": 3
               }
             },
@@ -1371,21 +1276,21 @@
             "kind": 12,
             "range": {
               "start": {
-                "line": 26,
+                "line": 24,
                 "character": 0
               },
               "end": {
-                "line": 33,
+                "line": 29,
                 "character": 1
               }
             },
             "selectionRange": {
               "start": {
-                "line": 26,
+                "line": 24,
                 "character": 13
               },
               "end": {
-                "line": 26,
+                "line": 24,
                 "character": 19
               }
             }
@@ -1395,21 +1300,21 @@
             "kind": 12,
             "range": {
               "start": {
-                "line": 35,
+                "line": 31,
                 "character": 0
               },
               "end": {
-                "line": 42,
+                "line": 36,
                 "character": 3
               }
             },
             "selectionRange": {
               "start": {
-                "line": 35,
+                "line": 31,
                 "character": 13
               },
               "end": {
-                "line": 35,
+                "line": 31,
                 "character": 24
               }
             }
@@ -1419,21 +1324,21 @@
             "kind": 12,
             "range": {
               "start": {
-                "line": 44,
+                "line": 38,
                 "character": 0
               },
               "end": {
-                "line": 49,
+                "line": 41,
                 "character": 29
               }
             },
             "selectionRange": {
               "start": {
-                "line": 44,
+                "line": 38,
                 "character": 13
               },
               "end": {
-                "line": 44,
+                "line": 38,
                 "character": 24
               }
             }
@@ -1622,11 +1527,11 @@
             {
               "range": {
                 "start": {
-                  "line": 5,
+                  "line": 4,
                   "character": 39
                 },
                 "end": {
-                  "line": 5,
+                  "line": 4,
                   "character": 40
                 }
               },
@@ -1686,11 +1591,11 @@
             {
               "range": {
                 "start": {
-                  "line": 52,
+                  "line": 44,
                   "character": 21
                 },
                 "end": {
-                  "line": 52,
+                  "line": 44,
                   "character": 24
                 }
               },
@@ -1702,11 +1607,11 @@
             {
               "range": {
                 "start": {
-                  "line": 52,
+                  "line": 44,
                   "character": 27
                 },
                 "end": {
-                  "line": 52,
+                  "line": 44,
                   "character": 31
                 }
               },

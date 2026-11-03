@@ -6,6 +6,5 @@ service Console {
   print(message: Message): void fails ConsoleUnavailable
 }
 
-export const log = (message: Message): void
-  fails ConsoleUnavailable
-  with Console.print => Console.print(message)
+export const log = (message: Message): void with Console =>
+  Console.print(message)

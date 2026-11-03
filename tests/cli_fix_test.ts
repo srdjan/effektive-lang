@@ -166,8 +166,7 @@ Deno.test("watch --fix is a usage error", async () => {
 
 Deno.test("check --fix restores the removed with clauses of the examples and keeps the failures inferred", async () => {
   const files = exampleFiles();
-  const stripped = files["users.eff"].replace(/\n {2}fails [^\n]*/g, "")
-    .replace(/\n {2}with [^\n]*=>/g, " =>");
+  const stripped = files["users.eff"].replace(/ with Users(?= =>)/g, "");
   const r = await run(["check", ROOT, "--fix", "--no-log"], {
     ...files,
     "users.eff": stripped,

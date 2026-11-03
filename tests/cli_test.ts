@@ -417,7 +417,7 @@ Deno.test("build --tsc prints a host-boundary diagnostic at the import and a hos
 
 Deno.test("build --tsc prints a source error at the .eff position and a generated error at the generated position", async () => {
   // Line 10, column 39 of main.ts is the call `displayName("u1")`, which comes
-  // from line 6, column 28 of main.eff. Line 1 is the header, outside every record.
+  // from line 5, column 28 of main.eff. Line 1 is the header, outside every record.
   const output = [
     "TS2322 [ERROR]: Type 'a' is not assignable to type 'b'.",
     '  displayName("u1")',
@@ -442,7 +442,7 @@ Deno.test("build --tsc prints a source error at the .eff position and a generate
   );
   assertEquals(r.code, 1);
   assertEquals(r.stdout.trim().split("\n"), [
-    "main.eff:6:28: error TS2322: Type 'a' is not assignable to type 'b'.",
+    "main.eff:5:28: error TS2322: Type 'a' is not assignable to type 'b'.",
     "main.ts:1:1: error TS2304: Cannot find name 'q'.",
   ]);
 });
@@ -492,8 +492,8 @@ Deno.test("watch builds once, then rebuilds for each event and prints the rechec
       m.files.set(
         users,
         original.replace(
-          "fails StoreUnavailable\n  with Users.all",
-          "fails StoreUnavailable | UserMissing\n  with Users.all",
+          "(): Name[] with Users",
+          "(): Name[] fails StoreUnavailable | UserMissing with Users",
         ),
       );
     },

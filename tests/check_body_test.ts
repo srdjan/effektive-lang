@@ -27,7 +27,6 @@ import {
   EXAMPLE_ENTRIES,
   EXAMPLE_MODES,
   exampleFiles,
-  modesAsSolved,
   spanText,
 } from "./helpers.ts";
 import { showType } from "../src/core/type_show.ts";
@@ -645,7 +644,7 @@ Deno.test("every example module has an interface with a hash", () => {
   }
 });
 
-Deno.test("the interface built from computed modes equals the interface from the plan's modes", () => {
+Deno.test("the interface rebuilt from the solved sets equals the interface of the checked module", () => {
   const project = examples();
   for (const module of project.modules.values()) {
     const imported = new Map<string, TypeGraph>();
@@ -654,16 +653,13 @@ Deno.test("the interface built from computed modes equals the interface from the
       if (found !== undefined) {
         imported.set(
           other,
-          buildTypeGraph(
-            found.declarations,
-            modesAsSolved(EXAMPLE_MODES),
-          ),
+          buildTypeGraph(found.declarations, found.solved),
         );
       }
     }
     const rebuilt = buildInterface(
       module.declarations,
-      modesAsSolved(EXAMPLE_MODES),
+      module.solved,
       imported,
     );
     assert(rebuilt.ok && module.interface.ok);
@@ -671,13 +667,14 @@ Deno.test("the interface built from computed modes equals the interface from the
   }
 });
 
-Deno.test("rename fails with UserMissing and StoreUnavailable and needs Users.find and Users.save", () => {
+Deno.test("rename fails with UserMissing and StoreUnavailable and requires every Users operation", () => {
   const rename = fn(examples(), "users", "rename");
   assertEquals(shortIds(rename.body!.failures), [
     "StoreUnavailable",
     "UserMissing",
   ]);
   assertEquals(shortIds(rename.body!.requirements), [
+    "Users.all",
     "Users.find",
     "Users.save",
   ]);
@@ -687,7 +684,11 @@ Deno.test("rename fails with UserMissing and StoreUnavailable and needs Users.fi
 Deno.test("displayName handles UserMissing and fails only with StoreUnavailable", () => {
   const display = fn(examples(), "users", "displayName");
   assertEquals(shortIds(display.body!.failures), ["StoreUnavailable"]);
-  assertEquals(shortIds(display.body!.requirements), ["Users.find"]);
+  assertEquals(shortIds(display.body!.requirements), [
+    "Users.all",
+    "Users.find",
+    "Users.save",
+  ]);
 });
 
 Deno.test("main has no requirements left after provide", () => {
@@ -865,7 +866,7 @@ Deno.test("field reads and block bindings are recorded", () => {
 const USERS_BROKEN = `${exampleFiles()["users.eff"]}
 export const broken = (id: UserId): User
   fails StoreUnavailable
-  with Users.find => getUser(id)
+  with Users => getUser(id)
 `;
 
 Deno.test("the invalid example of the spec gives exactly one failure-contract diagnostic", () => {

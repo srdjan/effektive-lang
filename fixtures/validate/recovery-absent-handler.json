@@ -239,9 +239,9 @@
               "execution": "pure",
               "kind": "reference",
               "span": {
-                "end": 540,
+                "end": 494,
                 "source": "users.eff",
-                "start": 536
+                "start": 490
               },
               "target": "local:users#getUser/user",
               "type": {
@@ -254,9 +254,9 @@
                 "id": "local:users#getUser/user",
                 "name": "user",
                 "span": {
-                  "end": 531,
+                  "end": 485,
                   "source": "users.eff",
-                  "start": 527
+                  "start": 481
                 },
                 "type": {
                   "id": "type:users#User",
@@ -265,9 +265,9 @@
               },
               "kind": "some",
               "span": {
-                "end": 532,
+                "end": 486,
                 "source": "users.eff",
-                "start": 522
+                "start": 476
               }
             }
           },
@@ -297,9 +297,9 @@
                       "execution": "pure",
                       "kind": "reference",
                       "span": {
-                        "end": 575,
+                        "end": 529,
                         "source": "users.eff",
-                        "start": 573
+                        "start": 527
                       },
                       "target": "local:users#getUser/id",
                       "type": {
@@ -311,9 +311,9 @@
                 ],
                 "kind": "error",
                 "span": {
-                  "end": 578,
+                  "end": 532,
                   "source": "users.eff",
-                  "start": 559
+                  "start": 513
                 },
                 "type": {
                   "id": "error:users#UserMissing",
@@ -323,9 +323,9 @@
               "execution": "effect",
               "kind": "fail",
               "span": {
-                "end": 579,
+                "end": 533,
                 "source": "users.eff",
-                "start": 554
+                "start": 508
               },
               "type": {
                 "kind": "primitive",
@@ -335,9 +335,9 @@
             "pattern": {
               "kind": "none",
               "span": {
-                "end": 550,
+                "end": 504,
                 "source": "users.eff",
-                "start": 546
+                "start": 500
               }
             }
           }
@@ -354,9 +354,9 @@
         "execution": "effect",
         "kind": "match",
         "span": {
-          "end": 583,
+          "end": 537,
           "source": "users.eff",
-          "start": 495
+          "start": 449
         },
         "subject": {
           "arguments": [
@@ -368,9 +368,9 @@
               "execution": "pure",
               "kind": "reference",
               "span": {
-                "end": 514,
+                "end": 468,
                 "source": "users.eff",
-                "start": 512
+                "start": 466
               },
               "target": "local:users#getUser/id",
               "type": {
@@ -391,9 +391,9 @@
           "execution": "effect",
           "kind": "perform",
           "span": {
-            "end": 515,
+            "end": 469,
             "source": "users.eff",
-            "start": 501
+            "start": 455
           },
           "type": {
             "element": {
@@ -427,7 +427,7 @@
         }
       ],
       "span": {
-        "end": 583,
+        "end": 537,
         "source": "users.eff",
         "start": 391
       },
@@ -438,7 +438,9 @@
             "error:users#UserMissing"
           ],
           "requirements": [
-            "cap:users#Users.find"
+            "cap:users#Users.all",
+            "cap:users#Users.find",
+            "cap:users#Users.save"
           ]
         },
         "execution": "effect",
@@ -455,7 +457,7 @@
         }
       },
       "written": {
-        "fails": true,
+        "fails": false,
         "result": true,
         "uses": true
       }
@@ -468,6 +470,7 @@
             "error:users#UserMissing"
           ],
           "requirements": [
+            "cap:users#Users.all",
             "cap:users#Users.find",
             "cap:users#Users.save"
           ]
@@ -482,9 +485,9 @@
           "execution": "pure",
           "kind": "reference",
           "span": {
-            "end": 807,
+            "end": 702,
             "source": "users.eff",
-            "start": 800
+            "start": 695
           },
           "target": "local:users#rename/renamed",
           "type": {
@@ -493,9 +496,9 @@
           }
         },
         "span": {
-          "end": 809,
+          "end": 704,
           "source": "users.eff",
-          "start": 711
+          "start": 606
         },
         "steps": [
           {
@@ -503,9 +506,9 @@
               "id": "local:users#rename/user",
               "name": "user",
               "span": {
-                "end": 725,
+                "end": 620,
                 "source": "users.eff",
-                "start": 721
+                "start": 616
               },
               "type": {
                 "id": "type:users#User",
@@ -523,9 +526,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 738,
+                    "end": 633,
                     "source": "users.eff",
-                    "start": 736
+                    "start": 631
                   },
                   "target": "local:users#rename/id",
                   "type": {
@@ -542,9 +545,9 @@
                 "execution": "pure",
                 "kind": "reference",
                 "span": {
-                  "end": 735,
+                  "end": 630,
                   "source": "users.eff",
-                  "start": 728
+                  "start": 623
                 },
                 "target": "value:users#getUser",
                 "type": {
@@ -554,7 +557,9 @@
                       "error:users#UserMissing"
                     ],
                     "requirements": [
-                      "cap:users#Users.find"
+                      "cap:users#Users.all",
+                      "cap:users#Users.find",
+                      "cap:users#Users.save"
                     ]
                   },
                   "execution": "effect",
@@ -577,15 +582,17 @@
                   "error:users#UserMissing"
                 ],
                 "requirements": [
-                  "cap:users#Users.find"
+                  "cap:users#Users.all",
+                  "cap:users#Users.find",
+                  "cap:users#Users.save"
                 ]
               },
               "execution": "effect",
               "kind": "call",
               "span": {
-                "end": 739,
+                "end": 634,
                 "source": "users.eff",
-                "start": 728
+                "start": 623
               },
               "type": {
                 "id": "type:users#User",
@@ -598,9 +605,9 @@
               "id": "local:users#rename/renamed",
               "name": "renamed",
               "span": {
-                "end": 755,
+                "end": 650,
                 "source": "users.eff",
-                "start": 748
+                "start": 643
               },
               "type": {
                 "id": "type:users#User",
@@ -625,9 +632,9 @@
                     "execution": "pure",
                     "kind": "reference",
                     "span": {
-                      "end": 773,
+                      "end": 668,
                       "source": "users.eff",
-                      "start": 769
+                      "start": 664
                     },
                     "target": "local:users#rename/name",
                     "type": {
@@ -646,9 +653,9 @@
                 "execution": "pure",
                 "kind": "reference",
                 "span": {
-                  "end": 767,
+                  "end": 662,
                   "source": "users.eff",
-                  "start": 763
+                  "start": 658
                 },
                 "target": "local:users#rename/user",
                 "type": {
@@ -657,9 +664,9 @@
                 }
               },
               "span": {
-                "end": 775,
+                "end": 670,
                 "source": "users.eff",
-                "start": 758
+                "start": 653
               },
               "type": {
                 "id": "type:users#User",
@@ -679,9 +686,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 796,
+                    "end": 691,
                     "source": "users.eff",
-                    "start": 789
+                    "start": 684
                   },
                   "target": "local:users#rename/renamed",
                   "type": {
@@ -702,9 +709,9 @@
               "execution": "effect",
               "kind": "perform",
               "span": {
-                "end": 797,
+                "end": 692,
                 "source": "users.eff",
-                "start": 778
+                "start": 673
               },
               "type": {
                 "kind": "primitive",
@@ -726,9 +733,9 @@
           "id": "local:users#rename/id",
           "name": "id",
           "span": {
-            "end": 618,
+            "end": 572,
             "source": "users.eff",
-            "start": 608
+            "start": 562
           },
           "type": {
             "id": "type:users#UserId",
@@ -739,9 +746,9 @@
           "id": "local:users#rename/name",
           "name": "name",
           "span": {
-            "end": 630,
+            "end": 584,
             "source": "users.eff",
-            "start": 620
+            "start": 574
           },
           "type": {
             "id": "type:users#Name",
@@ -750,9 +757,9 @@
         }
       ],
       "span": {
-        "end": 809,
+        "end": 704,
         "source": "users.eff",
-        "start": 585
+        "start": 539
       },
       "type": {
         "effects": {
@@ -761,6 +768,7 @@
             "error:users#UserMissing"
           ],
           "requirements": [
+            "cap:users#Users.all",
             "cap:users#Users.find",
             "cap:users#Users.save"
           ]
@@ -783,7 +791,7 @@
         }
       },
       "written": {
-        "fails": true,
+        "fails": false,
         "result": true,
         "uses": true
       }
@@ -797,7 +805,9 @@
               "error:users#UserMissing"
             ],
             "requirements": [
-              "cap:users#Users.find"
+              "cap:users#Users.all",
+              "cap:users#Users.find",
+              "cap:users#Users.save"
             ]
           },
           "execution": "effect",
@@ -809,7 +819,9 @@
                 "error:users#UserMissing"
               ],
               "requirements": [
-                "cap:users#Users.find"
+                "cap:users#Users.all",
+                "cap:users#Users.find",
+                "cap:users#Users.save"
               ]
             },
             "execution": "effect",
@@ -825,9 +837,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 925,
+                    "end": 788,
                     "source": "users.eff",
-                    "start": 923
+                    "start": 786
                   },
                   "target": "local:users#displayName/id",
                   "type": {
@@ -844,9 +856,9 @@
                 "execution": "pure",
                 "kind": "reference",
                 "span": {
-                  "end": 922,
+                  "end": 785,
                   "source": "users.eff",
-                  "start": 915
+                  "start": 778
                 },
                 "target": "value:users#getUser",
                 "type": {
@@ -856,7 +868,9 @@
                       "error:users#UserMissing"
                     ],
                     "requirements": [
-                      "cap:users#Users.find"
+                      "cap:users#Users.all",
+                      "cap:users#Users.find",
+                      "cap:users#Users.save"
                     ]
                   },
                   "execution": "effect",
@@ -879,15 +893,17 @@
                   "error:users#UserMissing"
                 ],
                 "requirements": [
-                  "cap:users#Users.find"
+                  "cap:users#Users.all",
+                  "cap:users#Users.find",
+                  "cap:users#Users.save"
                 ]
               },
               "execution": "effect",
               "kind": "call",
               "span": {
-                "end": 926,
+                "end": 789,
                 "source": "users.eff",
-                "start": 915
+                "start": 778
               },
               "type": {
                 "id": "type:users#User",
@@ -895,9 +911,9 @@
               }
             },
             "span": {
-              "end": 931,
+              "end": 794,
               "source": "users.eff",
-              "start": 915
+              "start": 778
             },
             "type": {
               "kind": "primitive",
@@ -905,9 +921,9 @@
             }
           },
           "span": {
-            "end": 935,
+            "end": 798,
             "source": "users.eff",
-            "start": 909
+            "start": 772
           },
           "steps": [],
           "type": {
@@ -920,7 +936,9 @@
             "error:users#StoreUnavailable"
           ],
           "requirements": [
-            "cap:users#Users.find"
+            "cap:users#Users.all",
+            "cap:users#Users.find",
+            "cap:users#Users.save"
           ]
         },
         "execution": "effect",
@@ -930,9 +948,9 @@
               "id": "local:users#displayName/error",
               "name": "error",
               "span": {
-                "end": 965,
+                "end": 828,
                 "source": "users.eff",
-                "start": 960
+                "start": 823
               },
               "type": {
                 "id": "error:users#UserMissing",
@@ -947,9 +965,9 @@
               "execution": "pure",
               "kind": "literal",
               "span": {
-                "end": 977,
+                "end": 840,
                 "source": "users.eff",
-                "start": 970
+                "start": 833
               },
               "type": {
                 "kind": "primitive",
@@ -959,9 +977,9 @@
             },
             "error": "error:users#UserMissing",
             "span": {
-              "end": 977,
+              "end": 840,
               "source": "users.eff",
-              "start": 948
+              "start": 811
             }
           },
           {
@@ -986,9 +1004,9 @@
               "execution": "pure",
               "kind": "literal",
               "span": {
-                "end": 977,
+                "end": 840,
                 "source": "users.eff",
-                "start": 970
+                "start": 833
               },
               "type": {
                 "kind": "primitive",
@@ -1006,9 +1024,9 @@
         ],
         "kind": "catch",
         "span": {
-          "end": 981,
+          "end": 844,
           "source": "users.eff",
-          "start": 905
+          "start": 768
         },
         "type": {
           "id": "type:users#Name",
@@ -1023,9 +1041,9 @@
           "id": "local:users#displayName/id",
           "name": "id",
           "span": {
-            "end": 849,
+            "end": 744,
             "source": "users.eff",
-            "start": 839
+            "start": 734
           },
           "type": {
             "id": "type:users#UserId",
@@ -1034,9 +1052,9 @@
         }
       ],
       "span": {
-        "end": 981,
+        "end": 844,
         "source": "users.eff",
-        "start": 811
+        "start": 706
       },
       "type": {
         "effects": {
@@ -1044,7 +1062,9 @@
             "error:users#StoreUnavailable"
           ],
           "requirements": [
-            "cap:users#Users.find"
+            "cap:users#Users.all",
+            "cap:users#Users.find",
+            "cap:users#Users.save"
           ]
         },
         "execution": "effect",
@@ -1061,7 +1081,7 @@
         }
       },
       "written": {
-        "fails": true,
+        "fails": false,
         "result": true,
         "uses": true
       }
@@ -1088,9 +1108,9 @@
               "execution": "pure",
               "kind": "reference",
               "span": {
-                "end": 1114,
+                "end": 946,
                 "source": "users.eff",
-                "start": 1068
+                "start": 900
               },
               "target": "local:users#activeNames/$p2",
               "type": {
@@ -1118,9 +1138,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 1138,
+                    "end": 970,
                     "source": "users.eff",
-                    "start": 1134
+                    "start": 966
                   },
                   "target": "local:users#activeNames/user/2",
                   "type": {
@@ -1129,9 +1149,9 @@
                   }
                 },
                 "span": {
-                  "end": 1143,
+                  "end": 975,
                   "source": "users.eff",
-                  "start": 1134
+                  "start": 966
                 },
                 "type": {
                   "kind": "primitive",
@@ -1149,9 +1169,9 @@
                   "id": "local:users#activeNames/user/2",
                   "name": "user",
                   "span": {
-                    "end": 1130,
+                    "end": 962,
                     "source": "users.eff",
-                    "start": 1126
+                    "start": 958
                   },
                   "type": {
                     "id": "type:users#User",
@@ -1160,9 +1180,9 @@
                 }
               ],
               "span": {
-                "end": 1143,
+                "end": 975,
                 "source": "users.eff",
-                "start": 1126
+                "start": 958
               },
               "type": {
                 "effects": {
@@ -1192,9 +1212,9 @@
             "execution": "pure",
             "kind": "reference",
             "span": {
-              "end": 1125,
+              "end": 957,
               "source": "users.eff",
-              "start": 1122
+              "start": 954
             },
             "target": "value:users#$builtin/map/ddf01438b97c",
             "type": {
@@ -1247,9 +1267,9 @@
           "execution": "pure",
           "kind": "call",
           "span": {
-            "end": 1144,
+            "end": 976,
             "source": "users.eff",
-            "start": 1122
+            "start": 954
           },
           "type": {
             "element": {
@@ -1260,9 +1280,9 @@
           }
         },
         "span": {
-          "end": 1144,
+          "end": 976,
           "source": "users.eff",
-          "start": 1068
+          "start": 900
         },
         "steps": [
           {
@@ -1270,9 +1290,9 @@
               "id": "local:users#activeNames/$p1",
               "name": "$p1",
               "span": {
-                "end": 1079,
+                "end": 911,
                 "source": "users.eff",
-                "start": 1068
+                "start": 900
               },
               "type": {
                 "element": {
@@ -1298,9 +1318,9 @@
               "execution": "effect",
               "kind": "perform",
               "span": {
-                "end": 1079,
+                "end": 911,
                 "source": "users.eff",
-                "start": 1068
+                "start": 900
               },
               "type": {
                 "element": {
@@ -1316,9 +1336,9 @@
               "id": "local:users#activeNames/$p2",
               "name": "$p2",
               "span": {
-                "end": 1114,
+                "end": 946,
                 "source": "users.eff",
-                "start": 1068
+                "start": 900
               },
               "type": {
                 "element": {
@@ -1340,9 +1360,9 @@
                   "execution": "pure",
                   "kind": "reference",
                   "span": {
-                    "end": 1079,
+                    "end": 911,
                     "source": "users.eff",
-                    "start": 1068
+                    "start": 900
                   },
                   "target": "local:users#activeNames/$p1",
                   "type": {
@@ -1370,9 +1390,9 @@
                       "execution": "pure",
                       "kind": "reference",
                       "span": {
-                        "end": 1106,
+                        "end": 938,
                         "source": "users.eff",
-                        "start": 1102
+                        "start": 934
                       },
                       "target": "local:users#activeNames/user",
                       "type": {
@@ -1381,9 +1401,9 @@
                       }
                     },
                     "span": {
-                      "end": 1113,
+                      "end": 945,
                       "source": "users.eff",
-                      "start": 1102
+                      "start": 934
                     },
                     "type": {
                       "kind": "primitive",
@@ -1401,9 +1421,9 @@
                       "id": "local:users#activeNames/user",
                       "name": "user",
                       "span": {
-                        "end": 1098,
+                        "end": 930,
                         "source": "users.eff",
-                        "start": 1094
+                        "start": 926
                       },
                       "type": {
                         "id": "type:users#User",
@@ -1412,9 +1432,9 @@
                     }
                   ],
                   "span": {
-                    "end": 1113,
+                    "end": 945,
                     "source": "users.eff",
-                    "start": 1094
+                    "start": 926
                   },
                   "type": {
                     "effects": {
@@ -1444,9 +1464,9 @@
                 "execution": "pure",
                 "kind": "reference",
                 "span": {
-                  "end": 1093,
+                  "end": 925,
                   "source": "users.eff",
-                  "start": 1087
+                  "start": 919
                 },
                 "target": "value:users#$builtin/filter/226f72cb20f0",
                 "type": {
@@ -1499,9 +1519,9 @@
               "execution": "pure",
               "kind": "call",
               "span": {
-                "end": 1114,
+                "end": 946,
                 "source": "users.eff",
-                "start": 1087
+                "start": 919
               },
               "type": {
                 "element": {
@@ -1526,9 +1546,9 @@
       "name": "activeNames",
       "parameters": [],
       "span": {
-        "end": 1144,
+        "end": 976,
         "source": "users.eff",
-        "start": 983
+        "start": 846
       },
       "type": {
         "effects": {
@@ -1536,7 +1556,9 @@
             "error:users#StoreUnavailable"
           ],
           "requirements": [
-            "cap:users#Users.all"
+            "cap:users#Users.all",
+            "cap:users#Users.find",
+            "cap:users#Users.save"
           ]
         },
         "execution": "effect",
@@ -1551,7 +1573,7 @@
         }
       },
       "written": {
-        "fails": true,
+        "fails": false,
         "result": true,
         "uses": true
       }
