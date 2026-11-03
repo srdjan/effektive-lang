@@ -24,7 +24,7 @@ const SERVICE = [
   "",
 ].join("\n");
 
-Deno.test("check --fix adds a missing failure and a missing requirement", async () => {
+Deno.test("check --fix adds a missing requirement and leaves the inferred failure open", async () => {
   const r = await run(["check", ROOT, "--fix", "--no-log"], {
     ...CONFIG,
     "a.eff": SERVICE +
@@ -34,7 +34,7 @@ Deno.test("check --fix adds a missing failure and a missing requirement", async 
   assertEquals(
     r.m.files.get(`${ROOT}/a.eff`),
     SERVICE +
-      "export const load = (id: Id): Id fails Missing with Store => Store.find(id)\n",
+      "export const load = (id: Id): Id with Store => Store.find(id)\n",
   );
   assertEquals(r.stdout, "");
   assertEquals(
@@ -43,16 +43,43 @@ Deno.test("check --fix adds a missing failure and a missing requirement", async 
   );
 });
 
+Deno.test("check --fix adds a missing failure to a written fails clause", async () => {
+  const r = await run(["check", ROOT, "--fix", "--no-log"], {
+    ...CONFIG,
+    "a.eff": SERVICE + "export error Other = { id: Id }\n" +
+      "export const load = (id: Id): Id fails Other with Store => Store.find(id)\n",
+  });
+  assertEquals(r.code, 0, r.stderr);
+  assertEquals(
+    r.m.files.get(`${ROOT}/a.eff`),
+    SERVICE + "export error Other = { id: Id }\n" +
+      "export const load = (id: Id): Id fails Other | Missing with Store => Store.find(id)\n",
+  );
+});
+
+Deno.test("check --fix writes no failure clause for an export that infers its failures", async () => {
+  const text = SERVICE +
+    "export const load = (id: Id): Id with Store => Store.find(id)\n";
+  const r = await run(["check", ROOT, "--fix", "--no-log"], {
+    ...CONFIG,
+    "a.eff": text,
+  });
+  assertEquals(r.code, 0, r.stderr);
+  assertEquals(r.m.files.get(`${ROOT}/a.eff`), text);
+  assertEquals(r.stderr, "1 module, 0 diagnostics\n");
+});
+
 Deno.test("check --fix fixes a closed caller in a second module in a later round", async () => {
   const a = [
     "export type Id = string",
     "export error Gone = { id: Id }",
-    "export const f = (id: Id): Id => fail(Gone({ id }))",
+    "export error Other = { id: Id }",
+    "export const f = (id: Id): Id fails Other => fail(Gone({ id }))",
     "",
   ].join("\n");
   const b = [
-    'import { f, Gone, Id } from "./a.eff"',
-    "export const g = (id: Id): Id => f(id)",
+    'import { f, Gone, Id, Other } from "./a.eff"',
+    "export const g = (id: Id): Id fails Other => f(id)",
     "",
   ].join("\n");
   const r = await run(["check", ROOT, "--fix", "--no-log"], {
@@ -66,15 +93,16 @@ Deno.test("check --fix fixes a closed caller in a second module in a later round
     [
       "export type Id = string",
       "export error Gone = { id: Id }",
-      "export const f = (id: Id): Id fails Gone => fail(Gone({ id }))",
+      "export error Other = { id: Id }",
+      "export const f = (id: Id): Id fails Other | Gone => fail(Gone({ id }))",
       "",
     ].join("\n"),
   );
   assertEquals(
     r.m.files.get(`${ROOT}/b.eff`),
     [
-      'import { f, Gone, Id } from "./a.eff"',
-      "export const g = (id: Id): Id fails Gone => f(id)",
+      'import { f, Gone, Id, Other } from "./a.eff"',
+      "export const g = (id: Id): Id fails Other | Gone => f(id)",
       "",
     ].join("\n"),
   );
@@ -105,7 +133,7 @@ Deno.test("check --fix keeps an unrelated error and still fixes a function", asy
   assertEquals(
     r.m.files.get(`${ROOT}/a.eff`),
     SERVICE +
-      "export const load = (id: Id): Id fails Missing with Store => Store.find(id)\n" +
+      "export const load = (id: Id): Id with Store => Store.find(id)\n" +
       "export const broken = (id: Id): Id => missing(id)\n",
   );
   assertEquals(
@@ -136,7 +164,7 @@ Deno.test("watch --fix is a usage error", async () => {
   );
 });
 
-Deno.test("check --fix restores the removed contract clauses of the examples", async () => {
+Deno.test("check --fix restores the removed with clauses of the examples and keeps the failures inferred", async () => {
   const files = exampleFiles();
   const stripped = files["users.eff"].replace(/\n {2}fails [^\n]*/g, "")
     .replace(/\n {2}with [^\n]*=>/g, " =>");
@@ -153,7 +181,7 @@ Deno.test("check --fix restores the removed contract clauses of the examples", a
   assertEquals(
     r.m.files.get(`${ROOT}/users.eff`)?.split("\n").slice(18, 19),
     [
-      "export const getUser = (id: UserId): User fails StoreUnavailable | UserMissing with Users.find =>",
+      "export const getUser = (id: UserId): User with Users.find =>",
     ],
   );
 });

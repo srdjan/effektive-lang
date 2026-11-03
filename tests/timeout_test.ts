@@ -20,7 +20,9 @@ Deno.test("timeout keeps the job result and adds TimeoutError to its failures", 
 
 Deno.test("an exported function that uses timeout must list TimeoutError in fails", () => {
   assertEquals(
-    diagnosticsOf(`${TYPES}export const a = (): Int => timeout(() => 1, 5s)\n`),
+    diagnosticsOf(
+      `${TYPES}export error Other = {}\nexport const a = (): Int fails Other => timeout(() => 1, 5s)\n`,
+    ),
     [
       "failure-contract/001 the body can fail with error:effect/TimeoutError, which the `fails` clause does not list",
     ],

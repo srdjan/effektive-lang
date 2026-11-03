@@ -17,7 +17,9 @@ export interface FixOutcome {
 }
 
 /**
- * Adds the missing `fails` and `with` entries of the exported functions. A
+ * Adds the missing entries to the written `fails` and `with` clauses of
+ * functions. An omitted `fails` clause is inferred, so it never misses an
+ * entry. An exported function with no `with` clause misses its services. A
  * round applies the actions of all modules and checks the edited inputs again.
  * The loop ends after a round that changes no text. A fix in one module can
  * make a closed caller in another module miss an entry, and the next round

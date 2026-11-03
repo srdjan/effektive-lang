@@ -50,7 +50,7 @@ export function inlayHintsAt(
           : `: ${showType(revision.types, parameter.type.ref)}`,
       });
     }
-    if (signature.exported || (written.fails && written.uses)) continue;
+    if (written.fails && written.uses) continue;
     const label = effectText(
       written.fails ? [] : fn.failures,
       written.uses ? [] : fn.requirements,
@@ -63,7 +63,7 @@ export function inlayHintsAt(
         const kind = kindOf(tree, part);
         if (
           kind === SyntaxKind.ParamList || kind === SyntaxKind.FailsClause ||
-          kind === SyntaxKind.WithClause || isTypeKind(kind)
+          isTypeKind(kind)
         ) position = Math.max(position, tree.ends[part]);
       }
     }

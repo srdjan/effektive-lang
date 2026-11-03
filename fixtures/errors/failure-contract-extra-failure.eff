@@ -1,5 +1,5 @@
 error Missing = { id: string }
-
+error Other = { id: string }
 service Store {
   find(id: Text): Text fails Missing
 }
@@ -9,7 +9,7 @@ const lookup = (id: Text): Text
   with Store.find => Store.find(id)
 
 export const broken = (id: Text): Text
-  with Store.find =>
+  fails Other with Store.find =>
   // error: failure-contract/001
   lookup(id)
 

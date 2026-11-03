@@ -69,7 +69,7 @@ Deno.test("type-side construction rejects encoded or partial inputs, descriptors
       ],
     ],
     [
-      "export const bad = (): D => schemaMake(record, { score: 4 })",
+      "export const bad = (): D fails SchemaError => schemaMake(record, { score: 4 })",
       [
         "failure-contract/001",
         missingIssue,

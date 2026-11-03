@@ -358,13 +358,29 @@ export const entry = (input): Text fails SchemaError => consume(input.name)
   assertEquals(type.checked, [true]);
 });
 
-Deno.test("requires SchemaError for an exported inferred input contract", () => {
+Deno.test("infers SchemaError for an exported inferred input with no fails clause", () => {
   const project = checkText(`
 type Text = string
 const consume = (value: Text): Text => value
 export const entry = (input): Text => consume(input.name)
 `);
-  assert(codes(project).includes("failure-contract/001"));
+  assertEquals(codes(project), []);
+  const body = project.modules.get("m")?.functions.get(
+    "value:m#entry" as ValueId,
+  );
+  assert(body !== undefined);
+  assertEquals(body.mode, "effect");
+  assertEquals(body.failures, ["error:effect/SchemaError"]);
+});
+
+Deno.test("requires SchemaError in a written fails clause of an exported inferred input", () => {
+  const project = checkText(`
+type Text = string
+error Other = {}
+const consume = (value: Text): Text => value
+export const entry = (input): Text fails Other => consume(input.name)
+`);
+  assertEquals(codes(project), ["failure-contract/001"]);
 });
 
 Deno.test("accepts raw unknown only at checked parameters", () => {

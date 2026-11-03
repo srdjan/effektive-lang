@@ -406,7 +406,7 @@ export class Program {
         // declarations, so it is built again; the IR is lowered again on demand.
         const built = buildInterface(
           entry.checked.declarations,
-          entry.checked.modes,
+          entry.checked.solved,
           seen.graphs,
         );
         const iface = built.ok ? built.value : undefined;

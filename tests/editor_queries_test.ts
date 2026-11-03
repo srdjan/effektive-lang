@@ -358,8 +358,8 @@ Deno.test("contract actions derive and validate missing effects while preserving
   for (
     const [text, expected] of [
       [
-        "type Int = int\nerror Stop = {}\nexport const f = (): Int => fail(Stop({}))\n",
-        "type Int = int\nerror Stop = {}\nexport const f = (): Int fails Stop => fail(Stop({}))\n",
+        "type Int = int\nerror Stop = {}\nerror Other = {}\nexport const f = (): Int fails Other => fail(Stop({}))\n",
+        "type Int = int\nerror Stop = {}\nerror Other = {}\nexport const f = (): Int fails Other | Stop => fail(Stop({}))\n",
       ],
       [
         "type Int = int\nservice Clock { now(): Int }\nexport const f = (): Int => Clock.now()\n",
@@ -468,6 +468,7 @@ const open = (x: Int) => { S.read() + x }
 const result = (x: Int): Int => { S.read() + x }
 const oneWritten = (x: Int): Int with S.read => { S.read() + x }
 export const shown = (x: Int): Int fails Stop with S.read => { S.read() + x }
+export const exported = (x: Int): Int with S.read => { S.read() + x }
 `;
 
 function hints(range?: { start: number; end: number }) {
@@ -486,7 +487,7 @@ function hints(range?: { start: number; end: number }) {
   );
 }
 
-Deno.test("inlay hints show the inferred parts of non-exported functions only", () => {
+Deno.test("inlay hints show the inferred parts of local and exported functions, before a with clause", () => {
   const found = hints();
   const after = (marker: string) => hintSource.indexOf(marker) + marker.length;
   assertEquals(
@@ -494,7 +495,8 @@ Deno.test("inlay hints show the inferred parts of non-exported functions only", 
     [
       [after("const open = (x: Int)"), " fails Stop with S.read"],
       [after("const result = (x: Int): Int"), " fails Stop with S.read"],
-      [after("const oneWritten = (x: Int): Int with S.read"), " fails Stop"],
+      [after("const oneWritten = (x: Int): Int"), " fails Stop"],
+      [after("export const exported = (x: Int): Int"), " fails Stop"],
     ],
   );
 });

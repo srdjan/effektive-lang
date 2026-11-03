@@ -54,8 +54,9 @@ Deno.test("editor queries show finalized inferred input contracts", () => {
 Deno.test("contract actions preserve inferred checked entry parameters", () => {
   for (const parameter of ["input", "input: unknown"]) {
     const text = `type Text = string
+error Other = {}
 const consume = (value: Text): Text => value
-export const entry = (${parameter}): Text => consume(input.name)
+export const entry = (${parameter}): Text fails Other => consume(input.name)
 `;
     const loaded = new Program().update({
       set: { "effektive.json": "{}", "m.eff": text },
@@ -68,7 +69,9 @@ export const entry = (${parameter}): Text => consume(input.name)
     )[0];
     assert(action !== undefined);
     const changed = applySourceEdits(text, action.edits);
-    assert(changed.includes(`(${parameter}): Text fails SchemaError`));
+    assert(
+      changed.includes(`(${parameter}): Text fails Other | SchemaError`),
+    );
 
     const checked = new Program().update({
       set: { "effektive.json": "{}", "m.eff": changed },

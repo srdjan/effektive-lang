@@ -8,7 +8,8 @@
 // - A function signature without a written result has no result and empty
 //   sets. A set whose clause is not written (`written.fails` or `written.uses`
 //   is false) is open: the body checker infers it, and the signature holds an
-//   empty set for it.
+//   empty set for it. An exported function leaves a `fails` clause open when it
+//   writes none, as a local function does; its `with` set stays closed.
 // - The execution mode and the open sets of a function come from a `Solved`
 //   lookup that the body checker supplies. `executionOf` and `signatureType`
 //   take the lookup and return a Result error when an entry is missing.
@@ -91,8 +92,9 @@ export interface FunctionSignature extends SignatureBase {
   readonly kind: "function";
   readonly id: ValueId;
   /**
-   * The parts that close the contract. A part that is not written is inferred.
-   * An exported function closes both sets: an omitted clause is an empty set.
+   * The parts that close the contract. A part that is not written is inferred,
+   * except that an exported function closes its `with` set: an omitted clause
+   * is an empty set. A binding function type closes every part.
    */
   readonly written: WrittenParts;
   /** Where a written result comes from: the arrow, or the binding type annotation. */
@@ -157,21 +159,6 @@ type SignatureError =
   | { readonly tag: "inferred-contract"; readonly id: ValueId };
 
 /**
- * The lookup of a mode map for a signature whose sets are closed. Exported
- * functions are closed, so their sets never come from the lookup.
- */
-export function modesAsSolved(modes: Pick<ModeMap, "get">): SolvedLookup {
-  return {
-    get: (id) => {
-      const mode = modes.get(id);
-      return mode === undefined
-        ? undefined
-        : { mode, failures: [], requirements: [] };
-    },
-  };
-}
-
-/**
  * True when the body decides part of the contract of a function with a written
  * result: the mode, because the closed sets are empty, or an open set.
  */
@@ -180,6 +167,26 @@ export function isPendingMode(signature: FunctionSignature): boolean {
   return written.result &&
     !(written.fails && written.uses &&
       signature.failures.length + signature.requirements.length > 0);
+}
+
+/**
+ * The failure and requirement sets of a signature: a written set, else the
+ * solved set. An open set with no entry in `solved` is empty.
+ */
+export function contractSets(
+  signature: FunctionSignature,
+  solved: SolvedLookup,
+): Pick<Solved, "failures" | "requirements"> {
+  const { written } = signature;
+  const entry = written.fails && written.uses
+    ? undefined
+    : solved.get(signature.id);
+  return {
+    failures: written.fails ? signature.failures : entry?.failures ?? [],
+    requirements: written.uses
+      ? signature.requirements
+      : entry?.requirements ?? [],
+  };
 }
 
 /**
@@ -194,7 +201,6 @@ function contractOf(
   if (!signature.written.result) {
     return { ok: false, error: { tag: "inferred-contract", id: signature.id } };
   }
-  const { written } = signature;
   if (!isPendingMode(signature)) {
     return {
       ok: true,
@@ -209,10 +215,7 @@ function contractOf(
   if (entry === undefined) {
     return { ok: false, error: { tag: "missing-mode", id: signature.id } };
   }
-  const failures = written.fails ? signature.failures : entry.failures;
-  const requirements = written.uses
-    ? signature.requirements
-    : entry.requirements;
+  const { failures, requirements } = contractSets(signature, solved);
   return {
     ok: true,
     value: {

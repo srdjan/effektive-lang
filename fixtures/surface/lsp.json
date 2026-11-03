@@ -1526,22 +1526,6 @@
                 }
               },
               "severity": 1,
-              "code": "failure-contract/001",
-              "source": "effektive",
-              "message": "the body can fail with Failed, which the `fails` clause does not list"
-            },
-            {
-              "range": {
-                "start": {
-                  "line": 3,
-                  "character": 32
-                },
-                "end": {
-                  "line": 3,
-                  "character": 43
-                }
-              },
-              "severity": 1,
               "code": "requirement-contract/001",
               "source": "effektive",
               "message": "the body requires Clock.now, which the `with` clause does not list"
@@ -1559,7 +1543,7 @@
         "id": 13,
         "result": [
           {
-            "title": "Add missing fails and with entries",
+            "title": "Add missing with entries",
             "kind": "quickfix",
             "edit": {
               "documentChanges": [
@@ -1580,7 +1564,7 @@
                           "character": 29
                         }
                       },
-                      "newText": "fails Failed with Clock "
+                      "newText": "with Clock "
                     }
                   ]
                 }

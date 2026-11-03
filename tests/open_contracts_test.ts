@@ -107,7 +107,7 @@ export const main = (): Int fails Stop with Clock.now => {
   assertEquals(shortIds(main.requirements), ["Clock.now"]);
 
   const closed = check(`
-export const main = (): Int => {
+export const main = (): Int fails Other => {
   const next = (k: Int): Int => Clock.now()
   next(1)
 }
@@ -204,9 +204,17 @@ Deno.test("the round cap bounds the solution of effect sets", () => {
   assertEquals(codes(check(chainOf(40))), ["execution-mode/004"]);
 });
 
-Deno.test("an exported function keeps its closed contract", () => {
+Deno.test("an exported function infers its fails clause and closes its with clause", () => {
   const omitted = check(`export const read = (): Int => Clock.now()`);
-  assertEquals(codes(omitted), [
+  assertEquals(codes(omitted), ["requirement-contract/001"]);
+  assertEquals(shortIds(fn(omitted, "read").failures), ["Stop"]);
+  assertEquals(
+    omitted.modules.get("m")!.functions.get("value:m#read" as ValueId)!
+      .signature.written,
+    { result: true, fails: false, uses: true },
+  );
+  const bound = check(`export const read = (): Int fails Other => Clock.now()`);
+  assertEquals(codes(bound), [
     "failure-contract/001",
     "requirement-contract/001",
   ]);
@@ -216,7 +224,7 @@ Deno.test("an exported function keeps its closed contract", () => {
     empty.modules.get("m")!.functions.get(
       "value:m#double" as ValueId,
     )!.signature.written,
-    { result: true, fails: true, uses: true },
+    { result: true, fails: false, uses: true },
   );
 });
 

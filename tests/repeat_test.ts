@@ -40,7 +40,7 @@ Deno.test("repeat(job) has the result type never and the job failures", () => {
   );
   assertEquals(
     diagnosticsOf(
-      `export const a = (): never with Jobs.next => repeat(() => Jobs.next())\n`,
+      `export const a = (): never fails Other with Jobs.next => repeat(() => Jobs.next())\n`,
     ),
     [
       "failure-contract/001 the body can fail with Stop, which the `fails` clause does not list",

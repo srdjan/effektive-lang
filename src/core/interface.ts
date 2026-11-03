@@ -15,14 +15,14 @@
 
 import type { Analysis } from "./analyze.ts";
 import {
+  contractSets,
   effectIds,
   type FunctionSignature,
   isPendingMode,
-  type ModeMap,
-  modesAsSolved,
   type ModuleDeclarations,
   referencedIds,
   signatureType,
+  type SolvedLookup,
   type TypeGraph,
 } from "./signatures.ts";
 import { fnv1a64 } from "./hash.ts";
@@ -52,7 +52,7 @@ export interface ModuleInterface {
 
 export type InterfaceError = {
   readonly tag: "missing-modes";
-  /** Explicit functions with empty sets and no entry in the mode map, sorted. */
+  /** Functions with a pending mode and no solved entry, sorted. */
   readonly ids: readonly ValueId[];
 };
 
@@ -78,8 +78,14 @@ function interfaceHash(payload: InterfacePayload): string {
   return fnv1a64(canonicalJson(stripSpans(payload)));
 }
 
-/** The identities that the exported values mention in their types and effect sets. */
-function exportedValueIds(declarations: ModuleDeclarations): Set<string> {
+/**
+ * The identities that the exported values mention in their types and effect
+ * sets. The effect sets are the written sets, else the solved sets.
+ */
+function exportedValueIds(
+  declarations: ModuleDeclarations,
+  solved: SolvedLookup,
+): Set<string> {
   const ids = new Set<string>();
   for (const signature of declarations.values.values()) {
     if (!signature.exported) continue;
@@ -92,7 +98,10 @@ function exportedValueIds(declarations: ModuleDeclarations): Set<string> {
         if (signature.result !== undefined) {
           referencedIds(signature.result.ir, ids);
         }
-        effectIds(signature.failures, signature.requirements, ids);
+        {
+          const sets = contractSets(signature, solved);
+          effectIds(sets.failures, sets.requirements, ids);
+        }
         break;
       case "constant":
         if (signature.type !== undefined) referencedIds(signature.type.ir, ids);
@@ -180,15 +189,22 @@ function graphOf(declarations: readonly GraphDecl[]): TypeGraph {
 /**
  * The type graph that the exports of a module reach: the exported types, errors,
  * and services, and every private declaration of this module that they reach
- * through types, failures, and capabilities. The graph does not depend on modes.
+ * through types, failures, and capabilities. The failures and capabilities of an
+ * exported function are its written sets, else its solved sets from `solved`.
  */
-export function buildTypeGraph(declarations: ModuleDeclarations): TypeGraph {
+export function buildTypeGraph(
+  declarations: ModuleDeclarations,
+  solved: SolvedLookup,
+): TypeGraph {
   const own = new Map<string, GraphDecl>(
     [...declarations.types, ...declarations.errors, ...declarations.services]
       .map((d) => [d.id, d]),
   );
   const graph = graphOf(
-    reach(own, [...declarations.exports, ...exportedValueIds(declarations)]),
+    reach(own, [
+      ...declarations.exports,
+      ...exportedValueIds(declarations, solved),
+    ]),
   );
   return {
     types: byId(graph.types),
@@ -204,6 +220,7 @@ export function buildTypeGraph(declarations: ModuleDeclarations): TypeGraph {
  */
 function foreignTypeGraph(
   declarations: ModuleDeclarations,
+  solved: SolvedLookup,
   own: TypeGraph,
   imported: ReadonlyMap<string, TypeGraph>,
 ): TypeGraph {
@@ -211,19 +228,20 @@ function foreignTypeGraph(
   for (const graph of imported.values()) {
     for (const d of declarationsOf(graph)) foreign.set(d.id, d);
   }
-  const seeds = exportedValueIds(declarations);
+  const seeds = exportedValueIds(declarations, solved);
   for (const d of declarationsOf(own)) declarationRefs(d, seeds);
   return graphOf(reach(foreign, seeds));
 }
 
 /**
- * Builds the interface of a module. Every explicit function whose sets are empty
- * needs an entry in `modes`. Without it the result is an error value, because the
- * hash would otherwise hide a pending mode.
+ * Builds the interface of a module. Every function with a pending mode needs an
+ * entry in `solved`. Without it the result is an error value, because the hash
+ * would otherwise hide a pending mode. An open set of an exported function comes
+ * from `solved`.
  */
 export function buildInterface(
   declarations: ModuleDeclarations,
-  modes: ModeMap,
+  solved: SolvedLookup,
   imported: ReadonlyMap<string, TypeGraph> = new Map(),
 ): Result<ModuleInterface, InterfaceError> {
   const functions: FunctionSignature[] = [];
@@ -231,7 +249,7 @@ export function buildInterface(
     if (signature.kind === "function") functions.push(signature);
   }
   const missing = functions
-    .filter((f) => isPendingMode(f) && !modes.has(f.id))
+    .filter((f) => isPendingMode(f) && solved.get(f.id) === undefined)
     .map((f) => f.id)
     .sort(compareText);
   if (missing.length > 0) {
@@ -247,7 +265,7 @@ export function buildInterface(
         const type = signatureType(
           declarations.env.table,
           signature,
-          modesAsSolved(modes),
+          solved,
         );
         // Every explicit function passed the check above, so this cannot fail.
         if (!type.ok) break;
@@ -276,8 +294,8 @@ export function buildInterface(
         break;
     }
   }
-  const graph = buildTypeGraph(declarations);
-  const foreign = foreignTypeGraph(declarations, graph, imported);
+  const graph = buildTypeGraph(declarations, solved);
+  const foreign = foreignTypeGraph(declarations, solved, graph, imported);
   const payload: InterfacePayload = {
     exports: declarations.exports as readonly DeclarationId[],
     values: byId(values),

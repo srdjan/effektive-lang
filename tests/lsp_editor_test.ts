@@ -196,7 +196,7 @@ Deno.test("LSP maps sealed completion to the keyword kind", () => {
   assertEquals(sealed?.kind, 14);
 });
 
-Deno.test("LSP missing-effect actions return validated versioned source edits", () => {
+Deno.test("LSP missing-service actions return validated versioned source edits", () => {
   const h = harness();
   const text =
     "type Count = int\nerror Failed = {}\nservice Clock { now(): Count fails Failed }\nexport const run = (): Count => Clock.now()\n";
@@ -215,13 +215,11 @@ Deno.test("LSP missing-effect actions return validated versioned source edits", 
   );
   assertEquals(actions.length, 1);
   const action = record(actions[0]);
-  assertEquals(action.title, "Add missing fails and with entries");
+  assertEquals(action.title, "Add missing with entries");
   const changes = list(record(action.edit).documentChanges).map(record);
   assertEquals(record(changes[0].textDocument), { uri, version: 8 });
   assert(
-    list(changes[0].edits).every((e) =>
-      record(e).newText === "fails Failed with Clock "
-    ),
+    list(changes[0].edits).every((e) => record(e).newText === "with Clock "),
   );
 });
 
@@ -300,8 +298,10 @@ Deno.test("LSP answers inlay hints with UTF-16 positions", () => {
       },
     }),
   ).map(record);
-  assertEquals(hints.length, 1);
+  assertEquals(hints.length, 2);
   assertEquals(hints[0].label, " fails Stop with S.read");
   assertEquals(hints[0].position, { line: 2, character: 21 });
   assertEquals(hints[0].paddingLeft, false);
+  assertEquals(hints[1].label, " fails Stop");
+  assertEquals(hints[1].position, { line: 3, character: 34 });
 });

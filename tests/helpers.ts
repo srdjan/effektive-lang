@@ -29,7 +29,7 @@ import {
   type SourceHost,
   TokenKind,
 } from "../src/core/frontend.ts";
-import type { ModeMap } from "../src/core/signatures.ts";
+import type { ModeMap, SolvedLookup } from "../src/core/signatures.ts";
 import type {
   Execution,
   Expr,
@@ -48,6 +48,21 @@ import {
   SyntaxKind,
   type SyntaxTree,
 } from "../src/core/syntax.ts";
+
+/**
+ * The lookup of a hand-built mode map, with empty open sets. It fits a module
+ * that writes every `fails` clause of its exported functions.
+ */
+export function modesAsSolved(modes: Pick<ModeMap, "get">): SolvedLookup {
+  return {
+    get: (id) => {
+      const mode = modes.get(id);
+      return mode === undefined
+        ? undefined
+        : { mode, failures: [], requirements: [] };
+    },
+  };
+}
 
 export function makeSpan(source: string, start: number, end: number): Span {
   if (start < 0 || end < start) {

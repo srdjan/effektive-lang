@@ -977,7 +977,8 @@ class ModuleChecker {
     let requirements: CapabilityId[] = [];
     let annotation: FunctionSignature["annotation"] = "none";
     // A binding type is a type, so it closes every part. An exported function
-    // closes both sets: an omitted clause is an empty set.
+    // closes its `with` set: an omitted clause is an empty set. It leaves an
+    // omitted `fails` clause open, as a local function does.
     let closedParts: WrittenParts = {
       result: false,
       fails: false,
@@ -995,11 +996,11 @@ class ModuleChecker {
       closedParts = { result: true, fails: true, uses: true };
     }
     if (annotation !== "binding") {
-      const closed = entry.exported || bindingFn !== undefined;
+      const bound = bindingFn !== undefined;
       closedParts = {
         ...closedParts,
-        fails: failsNode !== undefined || closed,
-        uses: usesNode !== undefined || closed,
+        fails: failsNode !== undefined || bound,
+        uses: usesNode !== undefined || bound || entry.exported,
       };
       if (closedParts.fails) failures = lowerer.failures(failsNode);
       if (closedParts.uses) requirements = lowerer.requirements(usesNode);

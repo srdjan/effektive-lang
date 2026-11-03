@@ -12,7 +12,8 @@ Deno.test("uninterruptible keeps the job result, failures and requirements", () 
 export service Jobs { next(): Int fails Stop }
 export const a = (): Int fails Stop with Jobs.next =>
   uninterruptible(() => Jobs.next())
-export const missing = (): Int => uninterruptible(() => Jobs.next())
+export error Other = {}
+export const missing = (): Int fails Other => uninterruptible(() => Jobs.next())
 `;
   assertEquals(diagnosticsOf(source), [
     "failure-contract/001 the body can fail with Stop, which the `fails` clause does not list",

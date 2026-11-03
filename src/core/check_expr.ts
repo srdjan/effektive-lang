@@ -2934,7 +2934,10 @@ export function checkFunctionBody(
       }
     }
   }
-  if (checkedInput && !signature.failures.includes(SCHEMA_ERROR_ID)) {
+  if (
+    checkedInput && signature.written.fails &&
+    !signature.failures.includes(SCHEMA_ERROR_ID)
+  ) {
     checker.sink.push(makeDiagnostic(
       "failure-contract/001",
       "an exported function with an inferred input contract must list SchemaError in its `fails` clause",

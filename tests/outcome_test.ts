@@ -137,7 +137,8 @@ export const a = (): Int fails Stop with Pool.open | Log.note =>
 
 Deno.test("the finalizer failures and requirements join the result", () => {
   assertEquals(
-    diagnosticsOf(`${HEAD}export const a = (): Int =>
+    diagnosticsOf(`${HEAD}export error Other = {}
+export const a = (): Int fails Other =>
   try { 1 } finally { Log.check() }
 `),
     [

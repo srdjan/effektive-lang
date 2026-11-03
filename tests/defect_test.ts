@@ -53,7 +53,8 @@ Deno.test("the Defect arm body failures and requirements join the result", () =>
   const text =
     `${HEAD}export const a = (): Int fails Stop with Log.boom | Log.other =>
   try { Log.boom() } catch { Defect(d) => Log.other() }
-export const b = (): Int with Log.boom | Log.other =>
+export error Other = { n: Int }
+export const b = (): Int fails Other with Log.boom | Log.other =>
   try { Log.boom() } catch { Defect(d) => Log.other() }
 `;
   const found = diagnosticsOf(text);
@@ -62,7 +63,8 @@ export const b = (): Int with Log.boom | Log.other =>
 });
 
 Deno.test("a typed failure is not handled by the Defect arm", () => {
-  const found = diagnosticsOf(`${HEAD}export const a = (): Int with Log.next =>
+  const found = diagnosticsOf(`${HEAD}export error Other = { n: Int }
+export const a = (): Int fails Other with Log.next =>
   try { Log.next() } catch { Defect(d) => 0 }
 `);
   assertEquals(found.length, 1);

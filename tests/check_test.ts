@@ -6,7 +6,6 @@ import {
   executionOf,
   type FunctionSignature,
   type ModeMap,
-  modesAsSolved,
   type ModuleDeclarations,
   signatureType,
   type TypeGraph,
@@ -36,6 +35,7 @@ import {
   EXAMPLE_ENTRIES,
   EXAMPLE_MODES,
   exampleFiles,
+  modesAsSolved,
 } from "./helpers.ts";
 
 function analyzeFiles(
@@ -94,11 +94,11 @@ function checkDeclarations(
       if (graph !== undefined) imported.set(other, graph);
     }
     const declarations = declarationsOf(analysis, name, table, imported);
-    graphs.set(name, buildTypeGraph(declarations));
+    graphs.set(name, buildTypeGraph(declarations, modesAsSolved(modes)));
     modules.set(name, {
       module: name,
       declarations,
-      interface: buildInterface(declarations, modes, imported),
+      interface: buildInterface(declarations, modesAsSolved(modes), imported),
       diagnostics: declarations.diagnostics,
     });
     diagnostics.push(...declarations.diagnostics);
@@ -528,9 +528,12 @@ Deno.test("a missing mode entry is a Result error that names every function", ()
 Deno.test("buildInterface can be called again after the modes arrive", () => {
   const project = checkExamples(() => {}, new Map());
   const declarations = project.modules.get("collections")!.declarations;
-  assert(!buildInterface(declarations, new Map()).ok);
+  assert(!buildInterface(declarations, modesAsSolved(new Map())).ok);
   const analysis = analyzeFiles(exampleFiles(), EXAMPLE_ENTRIES);
-  const built = buildInterface(declarations, computedModes(analysis));
+  const built = buildInterface(
+    declarations,
+    modesAsSolved(computedModes(analysis)),
+  );
   assert(built.ok);
 });
 

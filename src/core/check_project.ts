@@ -96,6 +96,8 @@ interface ModuleBodies {
   readonly constants: ReadonlyMap<ValueId, ConstantBody>;
   /** The invocation mode of every function. */
   readonly modes: ModeMap;
+  /** The mode and the effect sets of every function, in source order. */
+  readonly solved: ReadonlyMap<ValueId, Solved>;
   readonly initialization: InitializationGraph;
   /** Body, mode, and initialization diagnostics of the module, sorted. */
   readonly diagnostics: readonly Diagnostic[];
@@ -110,6 +112,8 @@ export interface CheckedModule {
   readonly functions: ReadonlyMap<ValueId, FunctionBody>;
   readonly constants: ReadonlyMap<ValueId, ConstantBody>;
   readonly modes: ModeMap;
+  /** The mode and the effect sets of every function, in source order. */
+  readonly solved: ReadonlyMap<ValueId, Solved>;
   readonly initialization: InitializationGraph;
   /** An error value only when the mode map lacks an entry, which cannot happen after body checking. */
   readonly interface: Result<ModuleInterface, InterfaceError>;
@@ -533,12 +537,18 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
   const orderedFunctions = new Map<ValueId, FunctionBody>();
   const orderedConstants = new Map<ValueId, ConstantBody>();
   const orderedModes = new Map<ValueId, Execution>();
+  const orderedSolved = new Map<ValueId, Solved>();
   for (const entry of entries) {
     const id = entry.signature.id;
     const fn = functions.get(id);
     if (fn !== undefined) {
       orderedFunctions.set(id, fn);
       orderedModes.set(id, fn.mode);
+      orderedSolved.set(id, {
+        mode: fn.mode,
+        failures: fn.failures,
+        requirements: fn.requirements,
+      });
     }
     const constant = constants.get(id);
     if (constant !== undefined) orderedConstants.set(id, constant);
@@ -547,6 +557,7 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
     functions: orderedFunctions,
     constants: orderedConstants,
     modes: orderedModes,
+    solved: orderedSolved,
     initialization: initialization.graph,
     diagnostics: normalizeDiagnostics(diagnostics),
   };
@@ -620,8 +631,8 @@ export function checkModuleStep(
     proofBudget,
     interfaces: seen.interfaces,
   });
-  const graph = buildTypeGraph(declarations);
-  const built = buildInterface(declarations, bodies.modes, seen.graphs);
+  const graph = buildTypeGraph(declarations, bodies.solved);
+  const built = buildInterface(declarations, bodies.solved, seen.graphs);
   return {
     graph,
     checked: {
@@ -632,6 +643,7 @@ export function checkModuleStep(
       functions: bodies.functions,
       constants: bodies.constants,
       modes: bodies.modes,
+      solved: bodies.solved,
       initialization: bodies.initialization,
       interface: built,
       hash: built.ok ? built.value.hash : undefined,

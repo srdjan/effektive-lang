@@ -14,7 +14,8 @@ Deno.test("race over an array has the success, failures and requirements of its 
   const source = `${HEAD}export const jobs = (): Int[] => [1]
 export const a = (): Int fails Stop with Jobs.next =>
   run(race([defer(() => Jobs.next()), defer(() => 1)]))
-export const missing = (): Int => run(race([defer(() => Jobs.next())]))
+export error Other = {}
+export const missing = (): Int fails Other => run(race([defer(() => Jobs.next())]))
 `;
   assertEquals(diagnosticsOf(source), [
     "failure-contract/001 the body can fail with Stop, which the `fails` clause does not list",

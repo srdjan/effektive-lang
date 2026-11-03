@@ -27,6 +27,7 @@ import {
   EXAMPLE_ENTRIES,
   EXAMPLE_MODES,
   exampleFiles,
+  modesAsSolved,
   spanText,
 } from "./helpers.ts";
 import { showType } from "../src/core/type_show.ts";
@@ -580,9 +581,10 @@ type Int = int
 Deno.test("run requires deferred failures and requirements in the caller contract", () => {
   const project = checkText(`
 error Stop = {}
+error Other = {}
 service Counter { next(): Int fails Stop }
 const make = (): Effect<Int, Stop, Counter.next> => defer(() => Counter.next())
-export const missing = (): Int => run(make())
+export const missing = (): Int fails Other => run(make())
 type Int = int
 `);
   assertEquals(codes(project), [
@@ -650,12 +652,18 @@ Deno.test("the interface built from computed modes equals the interface from the
     for (const other of reachableModules(project.analysis, module.module)) {
       const found = project.modules.get(other);
       if (found !== undefined) {
-        imported.set(other, buildTypeGraph(found.declarations));
+        imported.set(
+          other,
+          buildTypeGraph(
+            found.declarations,
+            modesAsSolved(EXAMPLE_MODES),
+          ),
+        );
       }
     }
     const rebuilt = buildInterface(
       module.declarations,
-      EXAMPLE_MODES,
+      modesAsSolved(EXAMPLE_MODES),
       imported,
     );
     assert(rebuilt.ok && module.interface.ok);
@@ -856,6 +864,7 @@ Deno.test("field reads and block bindings are recorded", () => {
 
 const USERS_BROKEN = `${exampleFiles()["users.eff"]}
 export const broken = (id: UserId): User
+  fails StoreUnavailable
   with Users.find => getUser(id)
 `;
 
@@ -865,7 +874,6 @@ Deno.test("the invalid example of the spec gives exactly one failure-contract di
   const project = checkFiles(files, ["users.eff"]);
   assertEquals(codes(project), ["failure-contract/001"]);
   assert(project.diagnostics[0].message.includes("UserMissing"));
-  assert(project.diagnostics[0].message.includes("StoreUnavailable"));
 });
 
 Deno.test("a body that needs more capabilities than uses lists is a requirement-contract error", () => {
@@ -920,8 +928,9 @@ type Int = int
   assertEquals(codes(open), []);
   const closed = checkText(`
 error E = { m: string }
+error Other = { m: string }
 const f = (n: Int): Int fails E => fail(E({ m: "x" }))
-export const g = (n: Int): Int => {
+export const g = (n: Int): Int fails Other => {
   const h = (k: Int): Int => f(k)
   h(n)
 }
@@ -993,8 +1002,9 @@ type Flag = boolean
 Deno.test("an exported function that uses an effectful map needs its contract", () => {
   const project = checkText(`
 error Stop = { at: int }
+error Other = { at: int }
 service S { step(n: Int): Int fails Stop }
-export const bad = (xs: Int[]): Int[] => map(xs, (x) => S.step(x))
+export const bad = (xs: Int[]): Int[] fails Other => map(xs, (x) => S.step(x))
 type Int = int
 `);
   assertEquals(codes(project), [
@@ -1029,8 +1039,9 @@ type Int = int
 Deno.test("an exported function that uses an effectful updateRef needs its contract", () => {
   const project = checkText(`
 error Stop = { at: int }
+error Other = { at: int }
 service S { step(n: Int): Int fails Stop }
-export const bad = (r: Ref<Int>): void => updateRef(r, (n) => S.step(n))
+export const bad = (r: Ref<Int>): void fails Other => updateRef(r, (n) => S.step(n))
 type Int = int
 `);
   assertEquals(codes(project), [
@@ -1042,10 +1053,11 @@ type Int = int
 Deno.test("traverse carries callback failures and requirements", () => {
   const project = checkText(`
 error Stop = { at: int }
+error Other = { at: int }
 service S { step(n: Int): Int fails Stop }
 const good = (xs: Int[]): Int[] fails Stop with S.step =>
   traverse(xs, (n) => S.step(n))
-export const missing = (xs: Int[]): Int[] =>
+export const missing = (xs: Int[]): Int[] fails Other =>
   xs |> traverse((n) => S.step(n))
 type Int = int
 `);
@@ -5084,7 +5096,7 @@ const ISSUE_AND_HINT_CASES: readonly SchemaCase[] = [
   },
   {
     name: "decode result type mismatch",
-    tail: "export const shown = (): Int => schemaDecode(text, 1)",
+    tail: "export const shown = (): Int fails Other => schemaDecode(text, 1)",
     expected: [
       "failure-contract/001 | the body can fail with error:effect/SchemaError, which the `fails` clause does not list | schemaDecode(text, 1)",
       "type-mismatch/003 | the function body has type Text, but Int is expected | schemaDecode(text, 1)",
@@ -5092,7 +5104,8 @@ const ISSUE_AND_HINT_CASES: readonly SchemaCase[] = [
   },
   {
     name: "decode rejects an optional descriptor",
-    tail: "export const bad = (): Text => schemaDecode(optionalText, 1)",
+    tail:
+      "export const bad = (): Text fails Other => schemaDecode(optionalText, 1)",
     expected: [
       "failure-contract/001 | the body can fail with error:effect/SchemaError, which the `fails` clause does not list | schemaDecode(optionalText, 1)",
       "type-mismatch/010 | `schemaDecode` needs a Schema value | optionalText",
@@ -5100,7 +5113,7 @@ const ISSUE_AND_HINT_CASES: readonly SchemaCase[] = [
   },
   {
     name: "encode input mismatch",
-    tail: "export const bad = (): Text => schemaEncode(text, 1)",
+    tail: "export const bad = (): Text fails Other => schemaEncode(text, 1)",
     expected: [
       "failure-contract/001 | the body can fail with error:effect/SchemaError, which the `fails` clause does not list | schemaEncode(text, 1)",
       "type-mismatch/003 | the schema encode input has type int, but Text is expected | 1",
@@ -5108,7 +5121,7 @@ const ISSUE_AND_HINT_CASES: readonly SchemaCase[] = [
   },
   {
     name: "make input mismatch",
-    tail: "export const bad = (): Text => schemaMake(text, 1)",
+    tail: "export const bad = (): Text fails Other => schemaMake(text, 1)",
     expected: [
       "failure-contract/001 | the body can fail with error:effect/SchemaIssue, which the `fails` clause does not list | schemaMake(text, 1)",
       "type-mismatch/003 | the schema make input has type int, but Text is expected | 1",
