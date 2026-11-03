@@ -5,6 +5,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { memoryLog } from "../src/host/log.ts";
 import type { Envelope } from "../src/host/log.ts";
+import type { HostFs } from "../src/host/io.ts";
 import { main } from "../src/cli/main.ts";
 import { FrameDecoder } from "../src/lsp/jsonrpc.ts";
 import { LanguageServer } from "../src/lsp/server.ts";
@@ -174,13 +175,14 @@ Deno.test("cli: a missing blob is unsupported", async () => {
 function recordLsp(
   initializationOptions: Record<string, unknown>,
   steps: (deliver: (...messages: readonly unknown[]) => void) => void,
+  fs: HostFs = memoryIo(exampleFilesAt(ROOT)).io.fs,
 ): Recorded {
   const log = memoryLog("lsp");
   const wire = new WireLog(() => log);
   const timers: { run: () => void; live: boolean }[] = [];
   const server = new LanguageServer(wire.ports({
     send: () => {},
-    fs: memoryIo(exampleFilesAt(ROOT)).io.fs,
+    fs,
     schedule: (callback) => {
       const timer = { run: callback, live: true };
       timers.push(timer);
@@ -237,6 +239,27 @@ Deno.test("lsp: a session replays with no difference", async () => {
   assert(recorded.events.some((e) => e.kind === "lsp.fs"));
   const outcome = await replay(recorded);
   assertEquals(outcome.tag, "same");
+});
+
+Deno.test("lsp: a refused no-follow inspection replays with no difference", async () => {
+  const fs = memoryIo(exampleFilesAt(ROOT)).io.fs;
+  const recorded = recordLsp({}, (deliver) => {
+    deliver(
+      didOpen(exampleUri("main.eff"), 1, exampleFilesAt("")["/main.eff"]),
+    );
+    deliver(request(1, "shutdown"), notification("exit"));
+  }, {
+    ...fs,
+    entryKind: () => ({ ok: false, error: { message: "permission denied" } }),
+  });
+  assert(
+    recorded.events.some((event) =>
+      event.kind === "lsp.fs" && typeof event.data === "object" &&
+      event.data !== null && "op" in event.data &&
+      event.data.op === "entryKind" && "error" in event.data
+    ),
+  );
+  assertEquals((await replay(recorded)).tag, "same");
 });
 
 Deno.test("lsp: a session with debounce replays its flush points", async () => {

@@ -87,3 +87,9 @@ The main agent found two missing replay port implementations through type checki
 All 15 replay tests then passed.
 `deno task check` passed formatting, lint, type checking, 2,736 fast tests, and 263 slow tests.
 Concurrent filesystem replacement remains unverified.
+Commit: `a5deeb6`.
+The small three-module mutation pipeline passed.
+The selected full run killed 12 mutations across `deno_io.ts`, `workspace.ts`, and `outputs.ts`.
+The selected mutation of the source-fix write check was also killed.
+The main agent added a public replay regression for a refused no-follow inspection; all 16 replay tests pass.
+An unrelated README edit appeared during execution. The main agent preserves it and excludes it from repair commits.
