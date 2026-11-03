@@ -439,5 +439,41 @@
     "operator": "negate-if",
     "class": "slow-only",
     "reason": "The mutant keeps the exported trees after the command. tests/behavior_compare_slow_test.ts kills it: it sets TMPDIR and asserts that no exported tree remains. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "selectSample",
+    "offset": 133,
+    "text": "sample >= items.length",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "When sample equals items.length, the shuffle path keeps every index and the sort restores source order, so it returns the same items as the early return. A sample above the length already takes the early return in both forms. A differential probe of 31200 cases (lengths 0 to 12, samples 1 to length + 2, 300 seeds) found no difference."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "selectSample",
+    "offset": 290,
+    "text": "i > 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The extra pass at i = 0 swaps index 0 with itself, because Math.floor(next() * 1) is 0. It then draws one more random number that nothing reads. A differential probe of 31200 cases (lengths 0 to 12, samples 1 to length + 2, 300 seeds) found no difference."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "parseOptions",
+    "offset": 508,
+    "text": "eq < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "This code runs only for an argument that starts with two hyphens, so indexOf(\"=\") is -1 or at least 2 and never 0. A differential probe of 1323 argument lists, including \"--=\" and \"--=5\", found no difference."
+  },
+  {
+    "file": "scripts/mutate.ts",
+    "declaration": "parseOptions",
+    "offset": 559,
+    "text": "eq < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "This code runs only for an argument that starts with two hyphens, so indexOf(\"=\") is -1 or at least 2 and never 0. A differential probe of 1323 argument lists, including \"--=\" and \"--=5\", found no difference."
   }
 ]

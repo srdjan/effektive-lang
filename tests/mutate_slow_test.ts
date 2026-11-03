@@ -131,6 +131,40 @@ Deno.test("a site records its declaration and offset", () => {
   );
 });
 
+Deno.test("a constructor, accessor, and member arrow name their declaration", () => {
+  const source = "class C {\n  constructor(a: boolean, b: boolean) {\n" +
+    "    this.v = a && b;\n  }\n  get g() {\n    return 1 < 2;\n  }\n" +
+    "  set s(x: number) {\n    this.w = x >= 1;\n  }\n" +
+    "  f = (x: number) => x > 1;\n}\n" +
+    "const o = { m: (x: number) => x <= 2 };\n";
+  assertEquals(
+    mutantsOf("a.ts", source).map((m) => [m.declaration, m.offset, m.text]),
+    [
+      ["C.constructor", 51, "a && b"],
+      ["C.g", 21, "1 < 2"],
+      ["C.s", 32, "x >= 1"],
+      ["C.f", 15, "x > 1"],
+      ["m", 15, "x <= 2"],
+    ],
+  );
+});
+
+Deno.test("an unnamed function belongs to the named function around it", () => {
+  const source =
+    "function f(xs: number[]) {\n  return xs.filter((x) => x > 1);\n}\n";
+  assertEquals(
+    mutantsOf("a.ts", source).map((m) => [m.declaration, m.offset, m.text]),
+    [["f", 53, "x > 1"]],
+  );
+});
+
+Deno.test("a bare return and a literal statement give no site", () => {
+  assertEquals(
+    view("function f(x: boolean) {\n  true;\n  if (x) return;\n  return;\n}"),
+    [{ operator: "negate-if", text: "x", replacement: "!(x)" }],
+  );
+});
+
 const TWO_RETURNS =
   "function f(x: number): boolean {\n  if (x > 0) {\n    return true;\n  }\n  return true;\n}";
 const ONE_RETURN = "function f(x: number): boolean {\n  return true;\n}";
@@ -250,6 +284,16 @@ Deno.test("classify names the result class from the runner output", () => {
       output: 'error: Module not found "file:///x.ts"\n',
       expected: "infrastructure",
     },
+    {
+      timedOut: false,
+      output: "ok | 0 passed | 1 failed (5ms)\n",
+      expected: "infrastructure",
+    },
+    {
+      timedOut: false,
+      output: "FAILED | 2 passed | 0 failed (5ms)\n",
+      expected: "infrastructure",
+    },
     { timedOut: false, output: "", expected: "infrastructure" },
     {
       timedOut: true,
@@ -258,7 +302,10 @@ Deno.test("classify names the result class from the runner output", () => {
     },
   ];
   for (const c of cases) {
-    assertEquals(classify(c), c.expected, c.output);
+    // The message holds the output on one line. A line that starts with
+    // `ok | ` in the message would look like a summary to the outer tool when
+    // a mutant of classify fails this test.
+    assertEquals(classify(c), c.expected, JSON.stringify(c.output));
   }
 });
 
@@ -280,9 +327,20 @@ Deno.test("parseRegister accepts valid rows and rejects bad ones", () => {
     ok: true,
     value: [good],
   });
+  const atZero: RegisterRow = { ...good, offset: 0 };
+  assertEquals(parseRegister(JSON.stringify([atZero])), {
+    ok: true,
+    value: [atZero],
+  });
   const bad: [string, string][] = [
     ["{}", "the register must be an array"],
     ["[1]", "row 0 must be an object"],
+    ["[null]", "row 0 must be an object"],
+    ["[[]]", "row 0 must be an object"],
+    [
+      JSON.stringify([{ ...good, offset: 1.5 }]),
+      'row 0: "offset" must be a non-negative integer',
+    ],
     [
       JSON.stringify([{ ...good, offset: -1 }]),
       'row 0: "offset" must be a non-negative integer',
