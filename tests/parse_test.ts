@@ -643,3 +643,25 @@ Deno.test("with is a keyword, so a name position rejects it", () => {
     "6-10 syntax/008 expected a name, found `with`",
   ]);
 });
+
+Deno.test("a rejected with or finally keyword still forms the method node", () => {
+  const withMethod = parseChecked("service S { with(): string }");
+  assertEquals(withMethod.diagnostics.map(show), [
+    "12-16 syntax/008 expected a name, found `with`",
+  ]);
+  assertEquals(
+    nodeText(
+      withMethod.tree,
+      findFirst(withMethod.tree, SyntaxKind.ServiceMethod)!,
+    ),
+    "with(): string",
+  );
+  const finallyMethod = parseChecked("service S { finally(): string }");
+  assertEquals(
+    nodeText(
+      finallyMethod.tree,
+      findFirst(finallyMethod.tree, SyntaxKind.ServiceMethod)!,
+    ),
+    "finally(): string",
+  );
+});
