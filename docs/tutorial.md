@@ -267,7 +267,7 @@ const ShelfInMemory = Layer.succeed(Shelf)({
 });
 ```
 
-`BookId.make` makes a `BookId` from a `string`. TypeScript rejects a plain `string` where the generated code needs a `BookId`.
+`BookId.make` makes a `BookId` from a `string`. The generated TypeScript gives a type with identity no brand, so TypeScript also accepts a plain `string` there. Only the Effektive checker keeps `BookId` apart from other strings.
 
 Next, add a ledger that keeps its lines in an array:
 
