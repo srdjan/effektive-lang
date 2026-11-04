@@ -1,7 +1,8 @@
 # Plan: contract provenance, phase 1 (PV)
 
-Date: 2026-11-04. Status: accepted. The user accepted option (a) of PVD1,
-PVD2, and PVD3 on 2026-11-04. Fable validated the plan on 2026-11-04
+Date: 2026-11-04. Status: complete on 2026-11-04 (see "Results"). The user
+accepted option (a) of PVD1, PVD2, and PVD3 on 2026-11-04. Fable validated
+the plan on 2026-11-04
 (PVF1 to PVF11). The orchestrator checked and accepted each finding, and this
 text includes the resolutions.
 
@@ -14,7 +15,7 @@ them (PVD1).
 
 ## Origin
 
-The [feature review of 2026-11-04](../archive/feature-review-2026-11-04.md)
+The [feature review of 2026-11-04](../feature-review-2026-11-04.md)
 ranked contract provenance (AD2) first. The user accepted Decision 1 (a) of
 that review: critique points K1 to K3. So phase 1 adds related locations only.
 A location is the call site in this function, not a place inside a callee. A
@@ -243,6 +244,25 @@ PVF1, PVF3, and the surface lines in the code before acceptance.
 | PVF9 | No source shape gives a wrong location. | None. |
 | PVF10 | M6, M7, M9, M12, and M13 needed concrete shapes; a block `const` arrow case was missing. | The matrix gives the shapes and adds M15. |
 | PVF11 | Each cited line is correct. | None. |
+
+## Results
+
+Each unit passed `deno task check` before its commit.
+
+| Unit | Commit | Result |
+| --- | --- | --- |
+| PVU1 | `f49eb22` | `src/core/contract_origins.ts` implements the search rule. The three report sites carry related locations. 17 new fast tests: M1 to M16 and the census, which covers 3 error fixtures. `lsp.json` gained one `relatedInformation` entry; `cli.json` did not change. `deno task behavior:compare 0520ffd f49eb22` changed 3 of 122 `check` records, the three contract fixtures, and only by added `related` entries. Every lowering, emission, and validation record stayed equal. |
+| PVU2 | `84f331c` | The command-line tool prints one note line for each related location. Two new fast tests assert exact stdout. `cli.json` gained 19 note lines (PVF12). The orchestrator added the note line to `tests/cli_sort_test.ts` and to the Step 7 output of `docs/tutorial.md`. |
+| PVU3 | `ab3e65b` | The rules, the editor guide, the concepts, the status, and the changelog describe the change. |
+| PVU4 | `9f1104d` | `contract_origins.ts`: 30 sites, 26 killed, 4 survivors registered as `equivalent`, exit 0. The changed lines of `check_expr.ts`: 1 site, killed, exit 0. `format.ts`: 9 sites, 9 killed at the base `1ef2bf2` and at the head. The orchestrator checked each `equivalent` reason against the code. |
+
+Execution finding:
+
+| ID | Finding | Resolution |
+| --- | --- | --- |
+| PVF12 | `cli.json` gained 19 note lines, not the 11 that PVU2 expected. The plan counted only `declaration/001`, `declaration/004`, and `declaration/010`. Cycle members ("also part of the cycle"), "first bound here", and "the earlier use" also carry related locations. `tests/cli_sort_test.ts` and the tutorial Step 7 output also print a note line now. | PVD1 (a) asks for a note line for each related location, so the orchestrator accepted the diff and updated the test and the tutorial. |
+
+Phase 2, the inlay hint tooltip that lists the origins of an inferred failure set, can now start from the passing fixture matrix. It is not selected.
 
 ## Out of scope
 

@@ -5,7 +5,7 @@ features and philosophy, the ranked candidates (AD0 to AD18), the fresh-eyes
 critique (K1 to K10), and the decisions of the user. The orchestrator wrote the
 list. Fable and Astra analysed it, and a fresh subagent critiqued the top three.
 The selected first item is planned in
-[the contract provenance plan](../plans/2026-11-04-contract-provenance.md).
+[the contract provenance plan](plans/2026-11-04-contract-provenance.md).
 
 Repository: `effektive-lang` at `928d1b0` (v0.14.0).
 Sources: the orchestrator's study, Fable (subagent, model `fable`), and Astra
