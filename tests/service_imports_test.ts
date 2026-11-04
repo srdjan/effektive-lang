@@ -456,6 +456,177 @@ export const accept = (job: Effect<Int, never, Users.find>): Int => 1
   assertEquals(functionRequirements(project, "main", "accept"), []);
 });
 
+Deno.test("deferred writes through input references obey module service bounds", () => {
+  const services = `
+export type Int = int
+export service Allowed { read(): Int }
+export service Users { read(): Int }
+`;
+  const body = `
+import { Int } from "./services.eff"
+export const store = (target: Ref<Effect<Int, never, Users.read>>): void =>
+  setRef(target, defer(() => Users.read()))
+`;
+  const undeclared = checked({
+    "services.eff": services,
+    "main.eff": `imports Allowed from "./services.eff"
+import { Users } from "./services.eff"
+${body}`,
+  });
+  assertEquals(undeclared.diagnostics.map((diagnostic) => diagnostic.code), [
+    "requirement-contract/002",
+  ]);
+  const declared = checked({
+    "services.eff": services,
+    "main.eff": `imports Users from "./services.eff"\n${body}`,
+  });
+  assertEquals(declared.diagnostics, []);
+  const inputOnly = checked({
+    "services.eff": services,
+    "main.eff": `imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const accept = (target: Ref<Effect<Int, never, Users.read>>): void => {}
+`,
+  });
+  assertEquals(inputOnly.diagnostics, []);
+});
+
+Deno.test("deferred argument transfers include aliases, callbacks, and pipelines", () => {
+  const services = `
+export type Int = int
+export service Users { read(): Int }
+export service Allowed { publish(job: Effect<Int, never, Users.read>): void }
+`;
+  for (
+    const expression of [
+      "setRef(target, job)",
+      "updateRef(target, previous => job)",
+      "updateRef(target, callbacks.make)",
+      "accept(job)",
+      "job |> accept",
+      "Allowed.publish(job)",
+      "job |> Allowed.publish",
+    ]
+  ) {
+    const project = checked({
+      "services.eff": services,
+      "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+const accept = (job: Effect<Int, never, Users.read>): void => {}
+export const store = (target: Ref<Effect<Int, never, Users.read>>): void => {
+  const job = defer(() => Users.read())
+  const callbacks = {
+    make: (previous: Effect<Int, never, Users.read>): Effect<Int, never, Users.read> => job
+  }
+  ${expression}
+}
+`,
+    });
+    assertEquals(project.diagnostics.map((diagnostic) => diagnostic.code), [
+      "requirement-contract/002",
+    ], expression);
+    assertStringIncludes(project.diagnostics[0].message, "`store`");
+  }
+});
+
+Deno.test("reference transfers preserve provision and input-only requirements", () => {
+  const project = checked({
+    "services.eff": `
+export type Int = int
+export service Allowed { read(): Int }
+export service Users { read(): Int }
+`,
+    "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+const live: Layer<Users> = layer(Users, () => ({ read: () => 1 }))
+const ignore = (target: Ref<Effect<Int, never, Users.read>>): void => {}
+const ignoreJob = (job: Effect<Int, never, Users.read>): void => {}
+export const forward = (target: Ref<Effect<Int, never, Users.read>>): void => {
+  const alias = target
+  ignore((alias))
+  ignoreJob(getRef(target))
+}
+export const field = (input: { target: Ref<Effect<Int, never, Users.read>> }): void => {
+  const { target } = input
+  ignore(input.target)
+  ignore(target)
+}
+export const unchanged = (target: Ref<Effect<Int, never, Users.read>>): void =>
+  updateRef(target, previous => previous)
+export const aliasedUpdate = (target: Ref<Effect<Int, never, Users.read>>): void => {
+  const unchanged = (previous: Effect<Int, never, Users.read>): Effect<Int, never, Users.read> => previous
+  updateRef(target, unchanged)
+}
+export const fieldUpdate = (target: Ref<Effect<Int, never, Users.read>>): void => {
+  const callbacks = {
+    unchanged: (previous: Effect<Int, never, Users.read>): Effect<Int, never, Users.read> => previous
+  }
+  updateRef(target, callbacks.unchanged)
+  const copied = { ...callbacks }
+  const { unchanged } = copied
+  updateRef(target, copied.unchanged)
+  updateRef(target, unchanged)
+}
+export const inspect = (target: Ref<Effect<Int, never, Users.read>>): void => {
+  const ignored = getRef(target)
+}
+export const store = (target: Ref<Int>): void =>
+  provide(live, () => setRef(target, Users.read()))
+export const update = (target: Ref<Int>): void =>
+  provide(live, () => updateRef(target, previous => Users.read()))
+export const storedProvided = (target: Ref<Effect<Int, never, Users.read>>): void =>
+  setRef(target, defer(() => provide(live, () => Users.read())))
+`,
+  });
+  assertEquals(project.diagnostics, []);
+});
+
+Deno.test("provision does not hide a stored deferred requirement", () => {
+  const project = checked({
+    "services.eff": `
+export type Int = int
+export service Allowed { read(): Int }
+export service Users { read(): Int }
+`,
+    "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+const live: Layer<Users> = layer(Users, () => ({ read: () => 1 }))
+export const store = (target: Ref<Effect<Int, never, Users.read>>): void =>
+  provide(live, () => setRef(target, defer(() => Users.read())))
+`,
+  });
+  assertEquals(project.diagnostics.map((diagnostic) => diagnostic.code), [
+    "requirement-contract/002",
+  ]);
+});
+
+Deno.test("constant callbacks cannot store undeclared deferred values", () => {
+  const project = checked({
+    "services.eff": `
+export type Int = int
+export service Allowed { read(): Int }
+export service Users { read(): Int }
+`,
+    "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const api: { store: (target: Ref<Effect<Int, never, Users.read>>) => void } = {
+  store: target => {
+    const payload = { job: defer(() => Users.read()) }
+    setRef(target, payload.job)
+  }
+}
+`,
+  });
+  assertEquals(project.diagnostics.map((diagnostic) => diagnostic.code), [
+    "requirement-contract/002",
+  ]);
+  assertStringIncludes(project.diagnostics[0].message, "`api`");
+});
+
 Deno.test("produced constant contracts obey module service bounds", () => {
   const services = `
 export type Int = int

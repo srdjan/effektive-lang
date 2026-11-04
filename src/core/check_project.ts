@@ -44,7 +44,13 @@ import {
 import { contractOrigins } from "./contract_origins.ts";
 import { stronglyConnectedComponents } from "./graph.ts";
 import { isTypeId, serviceOfCapability, shortName } from "./ids.ts";
-import { arrowBody, initOf } from "./syntax_queries.ts";
+import {
+  arrowBody,
+  initOf,
+  kidsOf,
+  nameTextOf,
+  unparen,
+} from "./syntax_queries.ts";
 import {
   buildInitializationGraph,
   type InitializationGraph,
@@ -56,7 +62,13 @@ import {
   type ModuleInterface,
   reachableModules,
 } from "./interface.ts";
-import type { CapabilityId, Execution, ServiceId, ValueId } from "./ir.ts";
+import type {
+  CapabilityId,
+  Execution,
+  LocalId,
+  ServiceId,
+  ValueId,
+} from "./ir.ts";
 import { type Solved, solveModeGroup } from "./modes.ts";
 import type { ConfigError, ModuleInfo } from "./project.ts";
 import type { Result, SourceHost } from "./source.ts";
@@ -640,6 +652,150 @@ function producedRequirements(
   }
 }
 
+/** Requirements of produced values passed to calls or stored through references. */
+function transferredRequirements(
+  table: TypeTable,
+  tree: SyntaxTree,
+  resolution: ModuleResolution,
+  body: BodyTable,
+  parameters: readonly (LocalId | undefined)[],
+  into: Set<CapabilityId>,
+): void {
+  const inputs = new Set(parameters.filter((id) => id !== undefined));
+  const initializers = new Map<LocalId, { node: NodeId; field?: string }>();
+  for (const [node, fact] of body.facts) {
+    if (fact.kind === "arrow") {
+      for (const parameter of fact.parameters) {
+        if (parameter.id !== undefined) inputs.add(parameter.id);
+      }
+    } else if (fact.kind === "binding" || fact.kind === "record-binding") {
+      const init = initOf(tree, node, undefined);
+      if (init === undefined) continue;
+      if (fact.kind === "binding") {
+        if (fact.id !== undefined) initializers.set(fact.id, { node: init });
+      } else {
+        for (const field of fact.fields) {
+          if (field.binding.id !== undefined) {
+            initializers.set(field.binding.id, {
+              node: init,
+              field: field.name,
+            });
+          }
+        }
+      }
+    }
+  }
+  const argsOf = (node: NodeId): NodeId[] => {
+    const list = kidsOf(tree, node).find((child) =>
+      kindOf(tree, child) === SyntaxKind.ArgList
+    );
+    const args = list === undefined ? [] : kidsOf(tree, list);
+    if (kindOf(tree, node) === SyntaxKind.PipeStage) {
+      const left = kidsOf(tree, tree.parents[node])[0];
+      if (left !== undefined) args.unshift(left);
+    }
+    return args;
+  };
+  const originOf = (start: NodeId): NodeId | undefined => {
+    let node: NodeId | undefined = start;
+    const seen = new Set<NodeId>();
+    const fields: string[] = [];
+    while (node !== undefined) {
+      node = unparen(tree, node);
+      if (seen.has(node)) return undefined;
+      seen.add(node);
+      const target = resolution.targets.get(node);
+      const init = target?.kind === "local"
+        ? initializers.get(target.id)
+        : undefined;
+      if (init !== undefined) {
+        if (init.field !== undefined) fields.push(init.field);
+        node = init.node;
+      } else if (kindOf(tree, node) === SyntaxKind.FieldExpr) {
+        const [base, label] = kidsOf(tree, node);
+        const name = label === undefined ? undefined : nameTextOf(tree, label);
+        if (name === undefined) return node;
+        fields.push(name);
+        node = base;
+      } else if (
+        fields.length > 0 && kindOf(tree, node) === SyntaxKind.RecordExpr
+      ) {
+        const entries = kidsOf(tree, node);
+        const name = fields[fields.length - 1];
+        const field = entries.find((entry) => {
+          const label = kidsOf(tree, entry)[0];
+          return label !== undefined && nameTextOf(tree, label) === name;
+        });
+        if (field !== undefined) {
+          fields.pop();
+          node = kidsOf(tree, field).at(-1);
+        } else {
+          const spread = entries.find((entry) =>
+            kindOf(tree, entry) === SyntaxKind.SpreadField
+          );
+          if (spread === undefined) return node;
+          node = kidsOf(tree, spread)[0];
+        }
+      } else {
+        return node;
+      }
+    }
+    return undefined;
+  };
+  // Input aliases and reads do not introduce a new deferred dependency.
+  const inputOnly = (start: NodeId): boolean => {
+    let node: NodeId | undefined = start;
+    const seen = new Set<NodeId>();
+    while (node !== undefined) {
+      node = originOf(node);
+      if (node === undefined || seen.has(node)) return false;
+      seen.add(node);
+      const target = resolution.targets.get(node);
+      if (target?.kind === "local" && inputs.has(target.id)) return true;
+      if (kindOf(tree, node) === SyntaxKind.FieldExpr) {
+        node = kidsOf(tree, node)[0];
+      } else if (kindOf(tree, node) === SyntaxKind.Block) {
+        node = kidsOf(tree, node).at(-1);
+      } else if (body.facts.get(node)?.kind === "get-ref") {
+        node = argsOf(node)[0];
+      } else {
+        return false;
+      }
+    }
+    return false;
+  };
+  const seenTypes = new Set<TypeRef>();
+  const add = (node: NodeId | undefined): void => {
+    if (node === undefined || inputOnly(node)) return;
+    const info = body.info.get(node);
+    if (info !== undefined) {
+      producedRequirements(table, info.type, into, seenTypes);
+    }
+  };
+  for (const [node, fact] of body.facts) {
+    if (fact.kind === "call" || fact.kind === "perform") {
+      for (const arg of argsOf(node)) add(arg);
+    } else if (fact.kind === "set-ref") {
+      add(argsOf(node)[1]);
+    } else if (fact.kind === "update-ref") {
+      const callback = argsOf(node)[1];
+      if (callback === undefined || inputOnly(callback)) continue;
+      const origin = originOf(callback);
+      if (origin === undefined) continue;
+      if (body.facts.get(origin)?.kind === "arrow") {
+        add(arrowBody(tree, origin));
+      } else {
+        const info = body.info.get(callback);
+        if (info === undefined) continue;
+        const type = table.node(table.unfold(info.type));
+        if (type.kind === "function") {
+          producedRequirements(table, type.result, into, seenTypes);
+        }
+      }
+    }
+  }
+}
+
 function allowedServiceIds(
   info: ModuleInfo,
   resolution: ModuleResolution,
@@ -682,6 +838,14 @@ function serviceBoundDiagnostics(
   for (const fn of bodies.functions.values()) {
     const requirements = new Set<CapabilityId>(fn.requirements);
     producedRequirements(table, fn.result, requirements);
+    transferredRequirements(
+      table,
+      info.tree,
+      resolution,
+      fn.table,
+      fn.signature.parameters.map((parameter) => parameter.id),
+      requirements,
+    );
     const extra = missing(requirements);
     if (extra.length === 0) continue;
     const related = extra.flatMap((capability) =>
@@ -707,6 +871,14 @@ function serviceBoundDiagnostics(
   for (const constant of bodies.constants.values()) {
     const requirements = new Set<CapabilityId>();
     producedRequirements(table, constant.type, requirements);
+    transferredRequirements(
+      table,
+      info.tree,
+      resolution,
+      constant.table,
+      [],
+      requirements,
+    );
     const extra = missing(requirements);
     if (extra.length === 0) continue;
     diagnostics.push(makeDiagnostic(

@@ -303,3 +303,43 @@ The next action belongs to the user: review the local commits.
 
 The final archive gate passes formatting, lint, type checks, 2,851 fast tests, and 264 slow tests.
 Its log is `/tmp/effektive-service-imports-archive-check.log`. Both plan documents now live under `docs/archive/plans/`.
+
+## Follow-up: deferred values in argument transfers
+
+A later review reports that `setRef` can store a new deferred value that requires an undeclared service.
+The main agent's public regression reproduces the gap: the expected `requirement-contract/002` is absent.
+The active requirement set and `void` result contain no evidence of the stored computation.
+The earlier completion checks did not cover this transfer through an input reference.
+
+The repair stays within the accepted bound. It checks produced values that calls transfer outside the current computation.
+Unused parameter types retain their exemption. Provided execution requirements must remain removed.
+The main agent owns `check_project.ts`, public tests in `service_imports_test.ts`, and this evidence file.
+A read-only Sol reviewer checks argument facts, pipelines, and the repair design, with a budget of 20 turns.
+Acceptance requires the reported negative case, a permitted-header control, unused inputs, reference updates, and provided computations.
+The main agent will run focused tests, the complete gate, and committed mutation checks before final completion.
+
+The design review found that scanning every argument type rejects a function that only forwards an input reference.
+The repair follows local aliases, parentheses, input fields, and input reference reads before checking a transferred value.
+Reference updates inspect callback results. Inline and aliased identity callbacks preserve the input-only exemption.
+Ordinary calls and service calls check locally produced arguments. Pipeline calls include their left value as the first argument.
+Reference builtins require direct syntax. The initial piped-reference test correctly produced an existing syntax-use diagnostic and was removed.
+
+The original write regression fails before the repair and passes afterward. The public transfer tests cover aliases, updates, calls, service calls, and pipelines.
+Positive controls preserve unused inputs, input forwarding, field reads, identity updates, provided scalar writes, and provision inside deferred computations.
+A separate negative case confirms that outer provision does not remove a stored computation's future requirement.
+A constant callback test covers a deferred value reached through a locally constructed record.
+The main agent passes all 23 focused compiler and output tests. The change adds no syntax, type field, or IR field.
+
+The independent repair check found one additional false positive in an identity callback held in a local record.
+The main agent reproduced that false positive, then resolved concrete record fields to their value origins.
+The origin walk also handles record spreads and destructured local bindings. It stays iterative and guards cycles.
+The positive controls now cover direct, aliased, field-held, copied, and destructured identity callbacks.
+A matching negative control stores a newly produced deferred value through a callback in a local record.
+All 23 focused tests pass after that correction. The full gate before that correction passed 2,856 fast and 264 slow tests.
+The final source requires a new full gate because the record-field origin logic changed.
+
+The final repair passes formatting, lint, type checks, 2,856 fast tests, and 264 slow tests.
+The log is `/tmp/effektive-service-transfer-final-check.log`.
+The main agent reviewed the complete diff, including the correction from the independent check.
+The reported escape now produces `requirement-contract/002`. The matching header permits the operation.
+The remaining action is mutation against the committed repair, followed by its evidence update.
