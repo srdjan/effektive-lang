@@ -1,6 +1,10 @@
 # Editor queries
 
-The core exports synchronous, protocol-neutral queries over a `Revision`:
+The core exports synchronous, protocol-neutral queries over a `Revision`. This
+page describes the queries in the table and `inlayHintsAt`. In `docs/api.md`,
+[Using the body checker](api.md#using-the-body-checker) describes
+`sourceHoverAt` and `signatureHelpAt`, and [Capabilities](api.md#capabilities)
+describes the definition and document symbol features.
 
 | Query | Result |
 | --- | --- |
@@ -74,8 +78,9 @@ Pure behavior regressions are in `tests/editor_queries_test.ts`.
 
 ## Language server
 
-The LSP adapter exposes `textDocument/references`, `prepareRename`, `rename`,
-`completion`, `semanticTokens/full` and `codeAction`. Requests flush pending
+The LSP adapter exposes `textDocument/hover`, `definition`, `documentSymbol`,
+`references`, `prepareRename`, `rename`, `completion`, `signatureHelp`,
+`semanticTokens/full`, `inlayHint` and `codeAction`. Requests flush pending
 changes first. Edit requests additionally check current overlays and closed
 files against the indexed revision and return versioned `documentChanges`.
 A stale request or changed disk source cannot produce an edit.

@@ -1,6 +1,6 @@
 # Release measurements — 2026-10-21
 
-The newest run is in [Reset run, 2026-10-30](#reset-run-2026-10-30).
+The newest run is in [Foundation reset run, 2026-10-31](#foundation-reset-run-2026-10-31).
 
 The full M1/M3/M4 run completed successfully. All four large-input diagnostics p90 values are below the accepted **100 ms** budget; the highest is **73.923 ms** for alias edits. The long session completed **10,000 distinct edits per server across three concurrently open documents**. These measurements do not establish a memory bound.
 

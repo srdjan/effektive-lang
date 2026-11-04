@@ -1,6 +1,6 @@
 # Measurements
 
-The harnesses in `bench/` follow the measurement protocol of the design (section 10). They run on this machine and print plain text tables on stdout. Run every command from the repository root.
+The harnesses in `bench/` follow the measurement protocol of the [design](archive/transpiler-design.md#10-what-must-be-measured-before-committing) (section 10). They run on this machine and print plain text tables on stdout. Run every command from the repository root.
 
 | Command                                                       | What it does                                                                                         |
 | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -53,7 +53,7 @@ Each preset has six rows. `cold` is the first round after the open, on a fresh s
 
 Two server processes, A and B, run each warm scenario with the order alternating, as in M1. The rows pool both sides, and the column `floor %` comes from the A/B pairs of the row. After each save the harness checks that the generated output of the edited module exists on disk. After a `body` save it also checks that the output holds the new literal. A failed check stops the run with an error.
 
-M7 decides the budget SV-D3 of the save plan: 100 ms at p90 for a `body` save on the large preset. The last line of the M7 report compares that row with the budget. M7 also shows how the time of `save all` grows with the number of modules, because each `didSave` runs a full round with a read of the whole workspace. If M7 misses the budget, the save plan requires a narrowing proposal before more work. The M7 numbers are not copied into any doc until the user decides what to record.
+M7 decides the budget SV-D3 of the [save plan](archive/plans/2026-10-21-save-transpilation.md): 100 ms at p90 for a `body` save on the large preset. The last line of the M7 report compares that row with the budget. M7 also shows how the time of `save all` grows with the number of modules, because each `didSave` runs a full round with a read of the whole workspace. If M7 misses the budget, the save plan requires a narrowing proposal before more work. The M7 numbers are not copied into any doc until the user decides what to record.
 
 ## The edit script
 

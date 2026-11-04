@@ -239,8 +239,9 @@ A diagnostic span names its file by the root-relative path, for example
 
 ## Using the declaration checker
 
-`checkModuleDeclarations(analysis, module, table, imported)` checks the
-declarations of one module. The `analysis` value comes from `analyzeProject`.
+`checkModuleDeclarations(info, resolution, module, table, imported)` checks the
+declarations of one module. The `info` and `resolution` values are the module
+information and the resolution table of that module, from `analyzeProject`.
 The `table` value is the shared type table. The `imported` value maps each
 reached module to its type graph. The project drivers `checkProject` and
 `Program` call it for each module in topological order, through
@@ -324,9 +325,8 @@ cascades from a half-parsed body.
 
 `lowerModule(checked, module)` returns the typed IR of one module, as a
 `Result`. The `checked` value comes from `checkProject`. The function returns an
-error value that names the module in five cases. The cases are an unknown
-module, a diagnostic, a missing imported interface, a form without IR, and an
-internal fault. A `.effi` module lowers to its type, error, and service
+error value that names the module in four cases. The cases are an unknown
+module, a diagnostic, a missing imported interface, and an internal fault. A `.effi` module lowers to its type, error, and service
 declarations, and its IR exports each of them. Its providers are not lowered.
 
 `lowerProject(checked)` does this for every `.eff` and `.effi` module. Pass the
@@ -459,7 +459,7 @@ service header. Two more forms are a `Service.use` arrow and a `catchTags` key.
 All seven reach the fixed point. The extreme-identifier regression also checks
 the six formerly excluded forms: error type arguments, struct fields, function
 names, member accesses, service bindings, and parameter annotations. It covers
-273 generated modules at wrapping boundaries, including optional fields and
+274 generated modules at wrapping boundaries, including optional fields and
 brand and Schema constructors. The checks verify formatting, strict TypeScript,
 execution, evaluation once, and source mappings. The ledger in
 `docs/language-rules.md` records the layout rules.
@@ -778,6 +778,9 @@ The server announces `positionEncoding: "utf-16"`. It supports these features.
 - Completion. Visible locals, module/imported names, applicable builtins/types,
   record fields and service methods respect scope, context, shadowing and
   partially typed names. There are no automatic imports.
+- Signature help. The server answers `textDocument/signatureHelp` for ordinary
+  calls, with the trigger characters `(` and `,`. The result has the checked
+  contract of the callee and the active parameter.
 - Full semantic tokens. A fixed legend includes declaration and readonly
   modifiers; lexical fallback covers broken regions. There are no delta tokens.
 - Contract quick fixes. Missing entries of a written `fails` clause and of a
@@ -785,6 +788,10 @@ The server announces `positionEncoding: "utf-16"`. It supports these features.
   inferred, so no fix adds one. A fix adds a missing service to the `with`
   clause of an export. Reliable written inline contracts receive validated
   source edits that preserve existing entries. Diagnostic prose is not parsed.
+- Fails clause action. A code action of the kind `refactor.rewrite` writes the
+  inferred failure set of a function as a `fails` clause. It writes
+  `fails never` for an empty set. Contract quick fixes have the kind
+  `quickfix`. A request with `context.only` gets only the kinds that it names.
 - Inlay hints. A function with an inferred, non-empty `fails` or `with` set
   shows the inferred part, as the hover prints it, before `=>`. For an export,
   the hint shows the inferred failures after the result type and before a
@@ -818,8 +825,8 @@ establishes a memory bound.
 
 ### Options
 
-The client passes `initializationOptions` with the `initialize` request. Both
-options are optional.
+The client passes `initializationOptions` with the `initialize` request. All
+three options are optional.
 
 | Option        | Default | Meaning                                                                                            |
 | ------------- | ------- | -------------------------------------------------------------------------------------------------- |
@@ -890,8 +897,8 @@ text return `null`. Document symbols parse the file on its own, and
 ### Known limits
 
 - The server has no cancellation inside the core. `Program.update` runs as one
-  synchronous call, and the server handles one message at a time. The plan,
-  section 3, explains the reason. Measurement M1 measures the stall.
+  synchronous call, and the server handles one message at a time. Section 3 of
+  the [language server plan](archive/plans/2026-10-16-lsp.md) explains the reason. Measurement M1 measures the stall.
 - Nested projects are not supported. The disk walk of an outer project also
   reads the files of an inner project, so one file can belong to two programs. A
   save round of the outer project does not write or remove the outputs of the

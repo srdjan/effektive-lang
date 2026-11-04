@@ -31,7 +31,7 @@ The independent validator is a test oracle. No product path runs it, and no entr
 | --- | --- | --- | --- |
 | Golden files in `fixtures/golden/` | `deno task golden:update` | The exact TypeScript of six example modules and their host module | Each other program |
 | Mutation fixtures in `fixtures/validate/` | `deno task validate:update` | The validator rejects each forged IR in the fixture list | A forged form that the list does not hold |
-| Surface snapshot in `fixtures/surface/` | `deno task surface:update` | 91 command-line records and 28 language server records | The records run in memory, so process and file behavior stay outside |
+| Surface snapshot in `fixtures/surface/` | `deno task surface:update` | 91 command-line records and 29 language server records | The records run in memory, so process and file behavior stay outside |
 | IR snapshot in `fixtures/ir/` | The test file | The wire form of its example | It reaches 27 of the 59 expression kinds |
 | Lexer snapshot in `fixtures/lex/` | `deno task lex:update` | The tokens of a random corpus of 20,000 strings | Input that the corpus does not hold |
 | Behavior comparison | `deno task behavior:compare` | Two revisions give equal full results of eight kinds for the named corpus: the fixture projects, the forged IR files, and four edit sequences | It sees only fixture inputs. Inline test programs and command-line or language server output are outside it. |
