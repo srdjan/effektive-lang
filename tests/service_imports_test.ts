@@ -104,6 +104,12 @@ export service Users { find(): User }
     }),
     ["unknown-name/004"],
   );
+  assert(
+    codes({
+      "services.eff": services,
+      "main.eff": `imports Users other "./services.eff"\n`,
+    }).includes("syntax/008"),
+  );
   assertEquals(
     codes({
       "main.eff": `imports Users from "./missing.eff"\n`,
@@ -265,16 +271,20 @@ import { Int } from "./services.eff"
 export const load = (): Int => Users.find()
 `,
   };
-  assertEquals(
-    codes({
-      ...files,
-      "main.eff": `
+  const directSource = `
 imports Allowed from "./services.eff"
 import { Int, Users } from "./services.eff"
 export const run = (): Int => Users.find()
-`,
-    }),
-    ["requirement-contract/002"],
+`;
+  const direct = checked({ ...files, "main.eff": directSource });
+  assertEquals(direct.diagnostics.map((diagnostic) => diagnostic.code), [
+    "requirement-contract/002",
+  ]);
+  assertEquals(
+    direct.diagnostics[0].related?.map((note) =>
+      directSource.slice(note.span.start, note.span.end)
+    ),
+    ["Users.find()"],
   );
   assertEquals(
     codes({
@@ -344,6 +354,21 @@ export const run = (): Int => provide(live, () => Users.find())
   ]);
 });
 
+Deno.test("a service header preserves diagnostics for an invalid layer key", () => {
+  assertEquals(
+    codes({
+      "service.eff":
+        `export type Int = int\nexport service Users { find(): Int }\n`,
+      "main.eff": `
+imports Users from "./service.eff"
+import { Int } from "./service.eff"
+const live = layer(1, () => ({ find: (): Int => 1 }))
+`,
+    }),
+    ["type-mismatch/010", "type-mismatch/010"],
+  );
+});
+
 Deno.test("written bounds and modules without headers keep closed requirements", () => {
   const services = `
 export type Int = int
@@ -396,15 +421,23 @@ export service Users { find(): Int }
     "main.eff": `
 imports Allowed from "./services.eff"
 import { Int, Users } from "./services.eff"
+type Job = () => Int with Users.find
 export const make = (): Effect<Int, never, Users.find> => defer(() => Users.find())
 export const callback = (): () => Int with Users.find => () => Users.find()
+export const aliased = (): Job => () => Users.find()
 export const accept = (job: Effect<Int, never, Users.find>): Int => 1
 `,
   });
   assertEquals(project.diagnostics.map((diagnostic) => diagnostic.code), [
     "requirement-contract/002",
     "requirement-contract/002",
+    "requirement-contract/002",
   ]);
+  assert(
+    project.diagnostics.some((diagnostic) =>
+      diagnostic.message.includes("`aliased`")
+    ),
+  );
   assert(
     project.diagnostics.some((diagnostic) =>
       diagnostic.message.includes("`make`")
@@ -431,6 +464,35 @@ export const spawn = (): void => forkScoped(defer(() => 1))
   assertEquals(functionRequirements(project, "main", "spawn"), [
     "cap:effect/Scope",
   ]);
+});
+
+Deno.test("module bounds retain active origins when a function bound is invalid", () => {
+  const source = `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const mixed = (): Effect<Int, never, Users.find> with Allowed.read => {
+  Users.find()
+  defer(() => Users.find())
+}
+`;
+  const project = checked({
+    "services.eff": `
+export type Int = int
+export service Allowed { read(): Int }
+export service Users { find(): Int }
+`,
+    "main.eff": source,
+  });
+  const diagnostic = project.diagnostics.find((entry) =>
+    entry.code === "requirement-contract/002"
+  );
+  assert(diagnostic !== undefined);
+  assertEquals(
+    diagnostic.related?.map((note) =>
+      source.slice(note.span.start, note.span.end)
+    ),
+    ["Users.find()"],
+  );
 });
 
 Deno.test("inferred foreign service closure changes hashes and importers", () => {

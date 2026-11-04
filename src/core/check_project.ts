@@ -661,14 +661,13 @@ function allowedServiceIds(
   return allowed;
 }
 
-/** Checks the closed external-service set after local effect solving finishes. */
 function serviceBoundDiagnostics(
   info: ModuleInfo,
   resolution: ModuleResolution,
   declarations: ModuleDeclarations,
   bodies: ModuleBodies,
-  table: TypeTable,
 ): Diagnostic[] {
+  const table = declarations.env.table;
   const allowed = allowedServiceIds(info, resolution, declarations);
   if (allowed === undefined) return [];
   const diagnostics: Diagnostic[] = [];
@@ -686,17 +685,15 @@ function serviceBoundDiagnostics(
     const extra = missing(requirements);
     if (extra.length === 0) continue;
     const related = extra.flatMap((capability) =>
-      fn.bodyNode === undefined || !fn.requirements.includes(capability)
-        ? []
-        : contractOrigins(
-          info.tree,
-          fn.table,
-          fn.bodyNode,
-          { kind: "requirement", capability },
-        ).map((span) => ({
-          span,
-          message: `requires \`${shortName(capability)}\` here`,
-        }))
+      fn.bodyNode === undefined ? [] : contractOrigins(
+        info.tree,
+        fn.table,
+        fn.bodyNode,
+        { kind: "requirement", capability },
+      ).map((span) => ({
+        span,
+        message: `requires \`${shortName(capability)}\` here`,
+      }))
     );
     diagnostics.push(makeDiagnostic(
       "requirement-contract/002",
@@ -796,7 +793,6 @@ export function checkModuleStep(
     resolution,
     declarations,
     bodies,
-    table,
   );
   const graph = buildTypeGraph(declarations, bodies.solved);
   const built = buildInterface(declarations, bodies.solved, seen.graphs);
