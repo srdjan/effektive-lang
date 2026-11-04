@@ -1,7 +1,13 @@
 // Inlay hints for inferred parameter and effect contracts. Inline arrows get
 // no hint: shortcut, callback hints would add noise at every call site.
 import type { Revision } from "./db.ts";
-import { childrenOf, kindOf, SyntaxKind } from "./syntax.ts";
+import {
+  childrenOf,
+  kindOf,
+  type NodeId,
+  SyntaxKind,
+  type SyntaxTree,
+} from "./syntax.ts";
 import { isTypeKind } from "./syntax_queries.ts";
 import { effectText, showType } from "./type_show.ts";
 
@@ -10,6 +16,26 @@ export interface InlayHint {
   readonly position: number;
   /** Holds only the inferred contract part. */
   readonly label: string;
+}
+
+/**
+ * The offset where an effect clause starts in the arrow header of the function
+ * node: the end of the result type, or of the last parameter list or `fails`
+ * clause. It is -1 when the header has none of these.
+ */
+export function resultEndOf(tree: SyntaxTree, functionNode: NodeId): number {
+  let position = -1;
+  for (const child of childrenOf(tree, functionNode)) {
+    if (kindOf(tree, child) !== SyntaxKind.ArrowExpr) continue;
+    for (const part of childrenOf(tree, child)) {
+      const kind = kindOf(tree, part);
+      if (
+        kind === SyntaxKind.ParamList || kind === SyntaxKind.FailsClause ||
+        isTypeKind(kind)
+      ) position = Math.max(position, tree.ends[part]);
+    }
+  }
+  return position;
 }
 
 /**
@@ -56,17 +82,7 @@ export function inlayHintsAt(
       written.uses ? [] : fn.requirements,
     );
     if (label === "") continue;
-    let position = -1;
-    for (const child of childrenOf(tree, signature.node)) {
-      if (kindOf(tree, child) !== SyntaxKind.ArrowExpr) continue;
-      for (const part of childrenOf(tree, child)) {
-        const kind = kindOf(tree, part);
-        if (
-          kind === SyntaxKind.ParamList || kind === SyntaxKind.FailsClause ||
-          isTypeKind(kind)
-        ) position = Math.max(position, tree.ends[part]);
-      }
-    }
+    const position = resultEndOf(tree, signature.node);
     if (position < range.start || position > range.end) continue;
     hints.push({ position, label });
   }

@@ -4,6 +4,7 @@ import { diagnosticDelta } from "./diagnostic_delta.ts";
 import type { SourceEdit } from "./source.ts";
 import { applySourceEdits } from "./editor_rename.ts";
 import { EFFECT_ERROR_IDS } from "./resolve.ts";
+import { resultEndOf } from "./editor_hints.ts";
 import { childrenOf, kindOf, SyntaxKind } from "./syntax.ts";
 
 export interface ContractAction {
@@ -142,27 +143,39 @@ export function contractActionsAt(
     );
     if (token === undefined) continue;
     const edits: SourceEdit[] = [];
+    const clauseEdit = (
+      clause: number | undefined,
+      keyword: string,
+      names: readonly (string | undefined)[],
+      fallback: number,
+    ): SourceEdit => {
+      const list = names.join(" | ");
+      if (clause === undefined) {
+        return {
+          span: { source: path, start: fallback, end: fallback },
+          text: `${keyword} ${list} `,
+        };
+      }
+      // A clause that holds only `never` has no entry to extend: replace it.
+      const end = tree.ends[clause];
+      if (/^\w+\s+never$/.test(text.slice(tree.starts[clause], end))) {
+        return {
+          span: { source: path, start: end - "never".length, end },
+          text: list,
+        };
+      }
+      return { span: { source: path, start: end, end }, text: ` | ${list}` };
+    };
     if (failureNames.length > 0) {
-      const at = fails !== undefined
-        ? tree.ends[fails]
-        : uses !== undefined
-        ? tree.starts[uses]
-        : tree.starts[token];
-      edits.push({
-        span: { source: path, start: at, end: at },
-        text: fails !== undefined
-          ? ` | ${failureNames.join(" | ")}`
-          : `fails ${failureNames.join(" | ")} `,
-      });
+      edits.push(clauseEdit(
+        fails,
+        "fails",
+        failureNames,
+        uses !== undefined ? tree.starts[uses] : tree.starts[token],
+      ));
     }
     if (useNames.length > 0) {
-      const at = uses !== undefined ? tree.ends[uses] : tree.starts[token];
-      edits.push({
-        span: { source: path, start: at, end: at },
-        text: uses !== undefined
-          ? ` | ${useNames.join(" | ")}`
-          : `with ${useNames.join(" | ")} `,
-      });
+      edits.push(clauseEdit(uses, "with", useNames, tree.starts[token]));
     }
     // Merge insertions at a shared offset in language clause order.
     const merged: SourceEdit[] = [];
@@ -214,4 +227,83 @@ export function contractActionsAt(
     });
   }
   return output;
+}
+
+/**
+ * One action that writes the inferred failure set of the module-level function
+ * whose header holds `start` as a `fails` clause. The header runs from the start
+ * of the declaration to the end of its `=>` token, so `end` is not used. The
+ * action needs a visible name for every error. It changes no failure set,
+ * requirement set, or mode, and it adds no diagnostic.
+ */
+export function failsClauseActionsAt(
+  revision: Revision,
+  path: string,
+  start: number,
+  _end = start,
+): readonly ContractAction[] {
+  const module = revision.checkedModuleAt(path);
+  if (module === undefined || !path.endsWith(".eff")) return [];
+  const { tree } = module;
+  for (const fn of module.functions.values()) {
+    const { signature } = fn;
+    let arrow = -1;
+    for (const child of childrenOf(tree, signature.node)) {
+      if (kindOf(tree, child) === SyntaxKind.ArrowExpr) arrow = child;
+    }
+    if (arrow < 0) continue;
+    const token = [...childrenOf(tree, arrow)].find((n) =>
+      tree.text.slice(tree.starts[n], tree.ends[n]) === "=>"
+    );
+    if (
+      token === undefined || start < signature.span.start ||
+      start > tree.ends[token]
+    ) continue;
+    // The headers of two functions never overlap: this is the only candidate.
+    const entry = revision.moduleInfo(module.module)?.index.byName.get(
+      signature.name,
+    );
+    if (
+      signature.annotation !== "arrow" || !signature.written.result ||
+      signature.written.fails || fn.body === undefined ||
+      entry === undefined || entry.broken ||
+      // The project list also holds the resolver diagnostics, such as unknown names.
+      revision.diagnostics.some((d) =>
+        d.span.source === module.path &&
+        d.span.start >= signature.span.start &&
+        d.span.end <= signature.span.end
+      )
+    ) return [];
+    const names = fn.failures.map((id) =>
+      effectName(revision, module.module, id)
+    );
+    if (names.some((n) => n === undefined)) return [];
+    const at = resultEndOf(tree, signature.node);
+    if (at < 0) return [];
+    const clause = ` fails ${names.length === 0 ? "never" : names.join(" | ")}`;
+    const edits: SourceEdit[] = [{
+      span: { source: path, start: at, end: at },
+      text: clause,
+    }];
+    const files = new Map(revision.inputs());
+    files.set(path, applySourceEdits(tree.text, edits));
+    const checked = new Program(revision.root).update({ set: files });
+    if (!checked.ok) return [];
+    const changed = checked.value.checkedModule(module.module)?.functions.get(
+      signature.id,
+    );
+    if (
+      changed === undefined || changed.mode !== fn.mode ||
+      !sameIds(changed.failures, fn.failures) ||
+      !sameIds(changed.requirements, fn.requirements) ||
+      diagnosticDelta(revision.diagnostics, checked.value.diagnostics, edits)
+          .added.length > 0
+    ) return [];
+    return [{ title: `Write${clause}`, function: signature.id, edits }];
+  }
+  return [];
+}
+
+function sameIds(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((id, i) => id === b[i]);
 }

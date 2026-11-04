@@ -64,4 +64,4 @@ export { BUILTIN_TYPE_NAMES, PRELUDE_NAMES } from "./resolve.ts";
 export type * from "./ir.ts";
 
 export { inlayHintsAt } from "./editor_hints.ts";
-export { contractActionsAt } from "./editor_actions.ts";
+export { contractActionsAt, failsClauseActionsAt } from "./editor_actions.ts";
