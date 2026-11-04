@@ -212,7 +212,7 @@ const SCRATCH_TEXT =
 
 /** A module whose private constant has an inferred contract. */
 const HINTS_TEXT =
-  "type Count = int\nerror Failed = {}\nservice Clock { now(): Count fails Failed }\nconst read = () => { Clock.now() }\n";
+  "type Count = int\nerror Failed = {}\nservice Clock { now(): Count fails Failed }\nconst read = () => { Clock.now() }\nconst shown = (): Count => read()\n";
 
 /** One scripted session that sends valid parameters for all 22 handled methods. */
 export function lspRecords(): readonly LspStep[] {
@@ -290,6 +290,12 @@ export function lspRecords(): readonly LspStep[] {
   ask("textDocument/inlayHint", {
     textDocument: { uri: hints },
     range: { start: { line: 0, character: 0 }, end: { line: 4, character: 0 } },
+  });
+  const shown0 = positionOf(HINTS_TEXT, "const shown");
+  ask("textDocument/codeAction", {
+    textDocument: { uri: hints },
+    range: { start: shown0, end: shown0 },
+    context: { diagnostics: [] },
   });
 
   // Notifications: change, save, watched files, close.

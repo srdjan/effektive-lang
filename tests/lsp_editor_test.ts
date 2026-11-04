@@ -223,6 +223,58 @@ Deno.test("LSP missing-service actions return validated versioned source edits",
   );
 });
 
+const writtenText =
+  "type Count = int\nerror Failed = {}\nservice Clock { now(): Count fails Failed }\nconst read = () => { Clock.now() }\nconst shown = (): Count => read()\n";
+
+function writtenActions(context: unknown): unknown {
+  const h = harness();
+  h.deliver({
+    jsonrpc: "2.0",
+    method: "textDocument/didChange",
+    params: {
+      textDocument: { uri, version: 8 },
+      contentChanges: [{ text: writtenText }],
+    },
+  });
+  const p = position(writtenText, "const shown");
+  return request(h, "textDocument/codeAction", {
+    textDocument: { uri },
+    range: { start: p, end: p },
+    context,
+  });
+}
+
+Deno.test("LSP offers the inferred fails clause as a refactor.rewrite action", () => {
+  const actions = list(writtenActions({ diagnostics: [] }));
+  assertEquals(actions.length, 1);
+  const action = record(actions[0]);
+  assertEquals(action.title, "Write fails Failed");
+  assertEquals(action.kind, "refactor.rewrite");
+  const changes = list(record(action.edit).documentChanges).map(record);
+  assertEquals(record(changes[0].textDocument), { uri, version: 8 });
+  assertEquals(list(changes[0].edits).map((e) => record(e).newText), [
+    " fails Failed",
+  ]);
+});
+
+Deno.test("LSP code action context.only removes the refactor action for quickfix", () => {
+  assertEquals(
+    list(writtenActions({ diagnostics: [], only: ["quickfix"] })),
+    [],
+  );
+});
+
+Deno.test("LSP code action context.only refactor keeps the refactor.rewrite action", () => {
+  const actions = list(writtenActions({ diagnostics: [], only: ["refactor"] }));
+  assertEquals(actions.length, 1);
+  assertEquals(record(actions[0]).kind, "refactor.rewrite");
+});
+
+Deno.test("LSP code action rejects a context.only that is not an array", () => {
+  const answer = record(writtenActions({ only: "quickfix" }));
+  assertEquals(record(answer.error).code, -32602);
+});
+
 Deno.test("new editor methods validate request parameters", () => {
   const h = harness();
   for (

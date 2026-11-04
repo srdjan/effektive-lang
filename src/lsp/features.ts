@@ -18,6 +18,7 @@ import {
   documentSymbols,
   type EditorSymbol,
   type EditorSymbolKind,
+  failsClauseActionsAt,
   hoverAt,
   inlayHintsAt,
   joinPath,
@@ -609,14 +610,29 @@ export function codeActionRequest(
     lineStarts(cursor.text),
     params.range.end,
   );
-  return answer(
-    contractActionsAt(cursor.revision, cursor.path, cursor.offset, end).map(
-      (action) => ({
+  const only = params.context?.only;
+  const wanted = (kind: string): boolean =>
+    only === undefined ||
+    only.some((entry) => kind === entry || kind.startsWith(`${entry}.`));
+  // Each kind checks an edited project, so a kind that `only` removes is skipped.
+  const fixes =
+    (wanted("quickfix")
+      ? contractActionsAt(cursor.revision, cursor.path, cursor.offset, end)
+      : []).map((action) => ({
         title: action.title,
         kind: "quickfix",
         edit: workspaceEdit(cursor, action.edits),
-      }),
-    ),
+      }));
+  const rewrites =
+    (wanted("refactor.rewrite")
+      ? failsClauseActionsAt(cursor.revision, cursor.path, cursor.offset, end)
+      : []).map((action) => ({
+        title: action.title,
+        kind: "refactor.rewrite",
+        edit: workspaceEdit(cursor, action.edits),
+      }));
+  return answer(
+    [...fixes, ...rewrites],
   );
 }
 

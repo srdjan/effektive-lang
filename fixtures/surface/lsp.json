@@ -59,7 +59,8 @@
             },
             "codeActionProvider": {
               "codeActionKinds": [
-                "quickfix"
+                "quickfix",
+                "refactor.rewrite"
               ]
             },
             "inlayHintProvider": true
@@ -1533,6 +1534,46 @@
     ]
   },
   {
+    "step": "textDocument/codeAction",
+    "sent": [
+      {
+        "jsonrpc": "2.0",
+        "id": 15,
+        "result": [
+          {
+            "title": "Write fails Failed",
+            "kind": "refactor.rewrite",
+            "edit": {
+              "documentChanges": [
+                {
+                  "textDocument": {
+                    "uri": "file:///work/examples/hints.eff",
+                    "version": 1
+                  },
+                  "edits": [
+                    {
+                      "range": {
+                        "start": {
+                          "line": 4,
+                          "character": 23
+                        },
+                        "end": {
+                          "line": 4,
+                          "character": 23
+                        }
+                      },
+                      "newText": " fails Failed"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
     "step": "textDocument/didChange",
     "sent": [
       {
@@ -1799,7 +1840,7 @@
     "sent": [
       {
         "jsonrpc": "2.0",
-        "id": 15,
+        "id": 16,
         "error": {
           "code": -32601,
           "message": "method not found: textDocument/formatting"
@@ -1816,7 +1857,7 @@
     "sent": [
       {
         "jsonrpc": "2.0",
-        "id": 16,
+        "id": 17,
         "result": null
       }
     ]

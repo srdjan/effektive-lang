@@ -140,7 +140,7 @@ export const SERVER_CAPABILITIES: ServerCapabilities = {
     },
     full: true,
   },
-  codeActionProvider: { codeActionKinds: ["quickfix"] },
+  codeActionProvider: { codeActionKinds: ["quickfix", "refactor.rewrite"] },
   inlayHintProvider: true,
 };
 
@@ -511,6 +511,7 @@ export interface RenameParams extends EditorPositionParams {
 }
 export interface CodeActionParams extends TextDocumentParams {
   readonly range: Range;
+  readonly context?: { readonly only?: readonly string[] };
 }
 
 export interface InlayHintParams extends TextDocumentParams {
@@ -558,9 +559,22 @@ export function narrowRenameParams(params: unknown): Narrowed<RenameParams> {
   return ok({ ...position.value, newName: params.newName });
 }
 
+const rangeParams = params("request", {
+  textDocument: narrowDocument,
+  range: narrowRange,
+});
+
+// A null context stays accepted, as before the `only` filter existed.
+const codeActionContext = optional(
+  object({ only: optional(array(string)) }),
+);
+const nullableContext: typeof codeActionContext = (value, where) =>
+  value === null ? ok(undefined) : codeActionContext(value, where);
+
 const codeActionParams = params("request", {
   textDocument: narrowDocument,
   range: narrowRange,
+  context: nullableContext,
 });
 
 export function narrowCodeActionParams(
@@ -572,5 +586,5 @@ export function narrowCodeActionParams(
 export function narrowInlayHintParams(
   params: unknown,
 ): Narrowed<InlayHintParams> {
-  return codeActionParams(params);
+  return rangeParams(params);
 }
