@@ -1,4 +1,6 @@
 import type { Revision } from "./db.ts";
+import type { FileIndex } from "./declaration_index.ts";
+import type { Diagnostic } from "./diagnostics.ts";
 import { symbolIndex, type SymbolOccurrence } from "./editor_index.ts";
 import { lex, TokenKind, TriviaKind } from "./lex.ts";
 import { parseFileFresh } from "./project.ts";
@@ -24,6 +26,29 @@ export interface SemanticClassification {
   readonly span: Span;
   readonly type: (typeof SEMANTIC_TOKEN_TYPES)[number];
   readonly modifiers: readonly (typeof SEMANTIC_TOKEN_MODIFIERS)[number][];
+}
+
+/** Starts of service headers before the first ordinary import or declaration. */
+function serviceImportKeywordStarts(
+  index: FileIndex,
+  diagnostics: readonly Diagnostic[],
+): ReadonlySet<number> {
+  const firstOrdinary = Math.min(
+    ...index.decls.map((entry) => entry.span.start),
+    ...index.imports.filter((entry) => entry.role === "ordinary").map((entry) =>
+      entry.span.start
+    ),
+    Infinity,
+  );
+  return new Set(
+    index.imports.filter((entry) =>
+      entry.role === "service" && entry.span.start < firstOrdinary &&
+      !diagnostics.some((diagnostic) =>
+        diagnostic.code === "syntax/008" &&
+        diagnostic.span.start === entry.span.start
+      )
+    ).map((entry) => entry.span.start),
+  );
 }
 
 const contextualKeywords = new Set([
@@ -91,6 +116,17 @@ export function semanticClassifications(
   const matching = revision?.sourceTexts().get(path) === text
     ? revision
     : undefined;
+  const parsed = matching === undefined
+    ? parseFileFresh(path, text)
+    : undefined;
+  const moduleInfo = matching?.moduleInfoAt(path);
+  const fileIndex = moduleInfo?.index ?? parsed?.index;
+  const serviceImports = fileIndex === undefined
+    ? new Set<number>()
+    : serviceImportKeywordStarts(
+      fileIndex,
+      moduleInfo?.parseDiagnostics ?? parsed?.parsed.diagnostics ?? [],
+    );
   const occurrences = matching === undefined
     ? []
     : symbolIndex(matching).byPath.get(path) ?? [];
@@ -122,6 +158,11 @@ export function semanticClassifications(
     } else if (kind === TokenKind.Number) {
       output.push({ span, type: "number", modifiers: [] });
     } else if (
+      kind === TokenKind.Ident && serviceImports.has(span.start) &&
+      text.slice(span.start, span.end) === "imports"
+    ) {
+      output.push({ span, type: "keyword", modifiers: [] });
+    } else if (
       kind >= TokenKind.KwImport && kind <= TokenKind.KwNull ||
       kind === TokenKind.KwFinally || kind === TokenKind.KwWith ||
       kind === TokenKind.Ident &&
@@ -150,17 +191,16 @@ export function semanticClassifications(
     }
   }
   // Declarations recovered from otherwise broken regions can still be marked.
-  if (matching === undefined) {
-    const { index } = parseFileFresh(path, text);
+  if (matching === undefined && fileIndex !== undefined) {
     const names = new Set(
-      index.decls.flatMap((d) => [
+      fileIndex.decls.flatMap((d) => [
         d.nameSpan.start,
         ...d.methodList.map((m) => m.nameSpan.start),
       ]),
     );
     for (let i = 0; i < output.length; i++) {
       if (names.has(output[i].span.start)) {
-        const declaration = index.decls.find((d) =>
+        const declaration = fileIndex.decls.find((d) =>
           d.nameSpan.start === output[i].span.start
         );
         const type = declaration?.kind === "type"

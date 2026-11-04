@@ -10,6 +10,7 @@ import {
 } from "./resolve.ts";
 import type { Span } from "./source.ts";
 import {
+  childrenOf,
   kindOf,
   type NodeId,
   SyntaxKind,
@@ -243,6 +244,31 @@ function startsDeclaration(tree: SyntaxTree, start: number): boolean {
       lexed.kinds[beforeOnLine[0]] === TokenKind.KwExport);
 }
 
+function serviceHeaderKeywordAllowed(site: Site): boolean {
+  const { revision, module, tree, start } = site;
+  const headers =
+    revision.moduleInfo(module)?.index.imports.filter((entry) =>
+      entry.role === "service" && entry.span.end <= start
+    ) ?? [];
+  const insideHeader = (token: number): boolean =>
+    headers.some((entry) =>
+      entry.span.start <= tree.lexed.starts[token] &&
+      tree.lexed.ends[token] <= entry.span.end
+    );
+  for (let i = 0; i < tree.lexed.count; i++) {
+    if (tree.lexed.ends[i] > start) break;
+    if (
+      tree.lexed.kinds[i] !== TokenKind.Newline &&
+      tree.lexed.kinds[i] !== TokenKind.Semicolon &&
+      tree.lexed.kinds[i] !== TokenKind.Eof &&
+      !insideHeader(i)
+    ) return false;
+  }
+  const previous = previousTokenOf(tree, start);
+  return previous < 0 || tree.lexed.kinds[previous] === TokenKind.Newline ||
+    tree.lexed.kinds[previous] === TokenKind.Semicolon;
+}
+
 type NameContext = "value" | "type" | "fails" | "with";
 
 /** The syntax context of the word, and whether a declaration word can start here. */
@@ -340,6 +366,9 @@ function addContextNames(
     if (declarationStart && !values.has("sealed")) {
       values.set("sealed", make("sealed", "keyword"));
     }
+    if (serviceHeaderKeywordAllowed(site) && !values.has("imports")) {
+      values.set("imports", make("imports", "keyword"));
+    }
   } else if (context === "type") {
     for (
       const name of [
@@ -354,6 +383,41 @@ function addContextNames(
       values.set(name, make(name, "class"));
     }
   }
+}
+
+function serviceImportCompletions(
+  site: Site,
+): readonly Completion[] | undefined {
+  const info = site.revision.moduleInfo(site.module);
+  if (info === undefined) return undefined;
+  let importNode = containingNode(info.tree, site.offset);
+  while (
+    importNode >= 0 && kindOf(info.tree, importNode) !== SyntaxKind.ImportDecl
+  ) {
+    importNode = info.tree.parents[importNode];
+  }
+  if (importNode < 0) return undefined;
+  const index = info.index.imports.findIndex((entry) =>
+    entry.role === "service" && entry.node === importNode
+  );
+  if (index < 0) return undefined;
+  const entry = info.index.imports[index];
+  const atName = entry.names.some((name) =>
+    name.span.start <= site.start && site.start <= name.span.end
+  );
+  const keyword = childrenOf(info.tree, importNode)[0];
+  const atMissingName = entry.names.length === 1 &&
+    entry.names[0].name === "from" && keyword !== undefined &&
+    info.tree.ends[keyword] <= site.offset &&
+    site.offset <= entry.names[0].span.start;
+  if (!atName && !atMissingName) return undefined;
+  const target = info.links[index]?.target;
+  if (target === undefined) return [];
+  const declarations = site.revision.moduleInfo(target)?.index.decls ?? [];
+  return site.filter(
+    declarations.filter((entry) => entry.exported && entry.kind === "service")
+      .map((entry) => site.make(entry.name, "interface")),
+  );
 }
 
 /** The names that fit the syntax context of the word. */
@@ -381,6 +445,8 @@ export function completionsAt(
   const { tree } = info;
   if (insideCommentOrString(tree, offset)) return [];
   const site = siteAt(revision, path, offset, info.name, tree);
+  const serviceImports = serviceImportCompletions(site);
+  if (serviceImports !== undefined) return serviceImports;
   const bindingNode = recordBindingAt(tree, offset);
   if (bindingNode >= 0) return recordBindingCompletions(site, bindingNode);
   const previousToken = previousTokenOf(tree, site.start);

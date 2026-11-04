@@ -36,9 +36,11 @@ import {
 
 const MAIN = exampleUri("main.eff");
 const USERS = exampleUri("users.eff");
+const USERS_SERVICE = exampleUri("users-service.eff");
 const PROVIDERS = exampleUri("host/providers.effi");
 const MAIN_TEXT = exampleFiles()["main.eff"];
 const USERS_TEXT = exampleFiles()["users.eff"];
+const USERS_SERVICE_TEXT = exampleFiles()["users-service.eff"];
 const PROVIDERS_TEXT = exampleFiles()["host/providers.effi"];
 const MAIN_BROKEN = MAIN_TEXT.replace('displayName("u1")', "displayName(1)");
 const USERS_BROKEN = USERS_TEXT.replace("Users.save(renamed)", "Users.save(1)");
@@ -99,7 +101,7 @@ Deno.test("hover on a function name has the contract, the backend type, and the 
   assertEquals(
     contract,
     "```effektive\nrename(id: UserId, name: Name): User fails " +
-      "StoreUnavailable | UserMissing with Users.all | Users.find | Users.save\n```",
+      "StoreUnavailable | UserMissing with Users.find | Users.save\n```",
   );
   assert(backend.startsWith("```typescript\n(id: UserId, name: Name): "));
   assert(backend.endsWith("\n```"));
@@ -255,37 +257,44 @@ Deno.test("document symbols have kinds, ranges, and service methods", () => {
   const h = started();
   h.deliver(
     didOpen(USERS, 1, USERS_TEXT),
+    didOpen(USERS_SERVICE, 1, USERS_SERVICE_TEXT),
     request(1, "textDocument/documentSymbol", { textDocument: { uri: USERS } }),
+    request(2, "textDocument/documentSymbol", {
+      textDocument: { uri: USERS_SERVICE },
+    }),
   );
   const symbols = symbolsOf(h, 1);
   assertEquals(
     symbols.map((s) => [s.name, s.kind]),
     [
-      ["UserId", 23],
-      ["Name", 23],
-      ["User", 23],
-      ["UserMissing", 5],
-      ["StoreUnavailable", 5],
-      ["Users", 11],
       ["getUser", 12],
       ["rename", 12],
       ["displayName", 12],
       ["activeNames", 12],
     ],
   );
-  const rename = symbols[7];
+  const rename = symbols[1];
   assertEquals(rename.selectionRange, rangeOf(USERS_TEXT, "rename"));
   assertEquals(rename.range.start.line, rename.selectionRange.start.line);
   assert(rename.range.end.line > rename.range.start.line);
   assertEquals(rename.children, undefined);
-  const users = symbols[5];
+  const contractSymbols = symbolsOf(h, 2);
+  assertEquals(contractSymbols.map((symbol) => [symbol.name, symbol.kind]), [
+    ["UserId", 23],
+    ["Name", 23],
+    ["User", 23],
+    ["UserMissing", 5],
+    ["StoreUnavailable", 5],
+    ["Users", 11],
+  ]);
+  const users = contractSymbols[5];
   assertEquals(
     users.children?.map((c) => [c.name, c.kind]),
     [["find", 6], ["save", 6], ["all", 6]],
   );
   assertEquals(
     users.children?.[1].selectionRange,
-    rangeOf(USERS_TEXT, "save"),
+    rangeOf(USERS_SERVICE_TEXT, "save"),
   );
 });
 
@@ -295,13 +304,13 @@ Deno.test("document symbols of a closed file come from the disk text", () => {
   h.deliver(
     request(1, "textDocument/documentSymbol", { textDocument: { uri: USERS } }),
   );
-  assertEquals(symbolsOf(h, 1).length, 10);
+  assertEquals(symbolsOf(h, 1).length, 4);
 });
 
 Deno.test("document symbols of a host file that no module imports", () => {
   const other = exampleUri("host/other.effi");
   const text =
-    'import { Users } from "../users.eff"\nexport provider OtherLive provides Users\n';
+    'import { Users } from "../users-service.eff"\nexport provider OtherLive provides Users\n';
   const h = makeHarness({
     files: { ...exampleFilesAt(ROOT), [`${ROOT}/host/other.effi`]: text },
   });
@@ -581,10 +590,10 @@ Deno.test("gap A: a save with an error in users.eff on disk does not write main.
   onDisk(h, "users.eff", USERS_BROKEN);
   h.deliver(didOpen(MAIN, 1, MAIN_TEXT), save(MAIN));
   assert(!h.files.has(MAIN_TS) && !h.files.has(`${ROOT}/users.ts`));
-  // The companion module of the host interface imports users, and main imports the companion.
+  assert(h.files.has(`${ROOT}/host/providers.effi.ts`));
   assert(
     typeLogs(h, 3).includes(
-      "main is not written: it imports host/providers, which is not written",
+      "main is not written: it imports users, which is not written",
     ),
   );
   assertEquals(typeLogs(h, 1), []);

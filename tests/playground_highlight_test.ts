@@ -32,6 +32,26 @@ Deno.test("type, error, service, and provider are keywords at the start of a lin
   assertEquals(slices("a type"), []);
 });
 
+Deno.test("imports is a keyword only in the leading service-header region", () => {
+  assertEquals(slices('imports Users from "./users.eff"\n').slice(0, 3), [
+    ["imports", "keyword"],
+    ["Users", "type"],
+    ["from", "keyword"],
+  ]);
+  assert(!slices("const imports = 1\n").some(([word]) => word === "imports"));
+  assert(
+    !slices('const value = 1\nimports Users from "./users.eff"\n').some(
+      ([word]) => word === "imports",
+    ),
+  );
+  assertEquals(
+    slices(
+      'imports Users from "./users.eff"; imports Audit from "./audit.eff"',
+    ).filter(([word]) => word === "imports"),
+    [["imports", "keyword"], ["imports", "keyword"]],
+  );
+});
+
 Deno.test("nominal is an ordinary name", () => {
   assert(
     slices("nominal U = { id: int }\n").every(([word]) => word !== "nominal"),

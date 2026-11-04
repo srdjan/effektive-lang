@@ -47,11 +47,13 @@ function spanOf(path: string, needle: string): Span {
 
 const USERS = "users.eff";
 const USERS_TEXT = FILES[USERS];
+const USERS_SERVICE = "users-service.eff";
+const USERS_SERVICE_TEXT = FILES[USERS_SERVICE];
 
 /** The span of the name `User` in the declaration `export type User = {`. */
 const USER_TYPE_SPAN: Span = (() => {
-  const at = offsetOf(USERS_TEXT, "User = {");
-  return { source: USERS, start: at, end: at + "User".length };
+  const at = offsetOf(USERS_SERVICE_TEXT, "User = {");
+  return { source: USERS_SERVICE, start: at, end: at + "User".length };
 })();
 
 // ------------------------------------------------------------------ hover: contract
@@ -66,7 +68,7 @@ Deno.test("hover on a function name prints parameter types, failures, and requir
   assert(hover !== undefined);
   assertEquals(
     hover.contract,
-    "rename(id: UserId, name: Name): User fails StoreUnavailable | UserMissing with Users.all | Users.find | Users.save",
+    "rename(id: UserId, name: Name): User fails StoreUnavailable | UserMissing with Users.find | Users.save",
   );
   assertEquals(hover.span, spanOf(USERS, "rename"));
   const getUser = hoverAt(
@@ -78,7 +80,7 @@ Deno.test("hover on a function name prints parameter types, failures, and requir
   assert(getUser !== undefined);
   assertEquals(
     getUser.contract,
-    "getUser(id: UserId): User fails StoreUnavailable | UserMissing with Users.all | Users.find | Users.save",
+    "getUser(id: UserId): User fails StoreUnavailable | UserMissing with Users.find",
   );
   const pure = hoverAt(
     examples,
@@ -106,7 +108,7 @@ Deno.test("hover on an expression prints its type and sets, and has no backend",
   assert(callee !== undefined);
   assertEquals(
     callee.contract,
-    "(UserId) => User fails StoreUnavailable | UserMissing with Users.all | Users.find | Users.save",
+    "(UserId) => User fails StoreUnavailable | UserMissing with Users.find",
   );
   assertEquals(callee.backend, undefined);
   assertEquals(callee.span, { source: USERS, start: call, end: call + 7 });
@@ -169,7 +171,7 @@ function goldenHeader(golden: string, name: string): string {
     .replace(/,([)>])/g, "$1");
 }
 
-Deno.test("the backend line of each explicit-contract function in users.eff equals its golden header", () => {
+Deno.test("the backend line of each exported function in users.eff equals its golden header", () => {
   const golden = Deno.readTextFileSync(
     new URL("golden/users.ts", FIXTURES),
   );
@@ -278,7 +280,7 @@ Deno.test("definition of an imported value goes to the other module", () => {
 Deno.test("definition of a type goes to the type declaration", () => {
   const at = offsetOf(
     USERS_TEXT,
-    "(id: UserId): User with Users",
+    "(id: UserId): User =>",
     "(id: UserId): ".length + 1,
   );
   assertEquals(definitionAt(examples, USERS, at), USER_TYPE_SPAN);
@@ -288,17 +290,20 @@ Deno.test("definition of an error goes to the error declaration", () => {
   const at = offsetOf(USERS_TEXT, "fail(UserMissing(", "fail(".length + 2);
   assertEquals(
     definitionAt(examples, USERS, at),
-    spanOf(USERS, "UserMissing"),
+    spanOf(USERS_SERVICE, "UserMissing"),
   );
 });
 
 Deno.test("definition of a service goes to the service declaration", () => {
   const at = offsetOf(
     USERS_TEXT,
-    "with Users =>\n  match",
-    "with ".length + 1,
+    "imports Users from",
+    "imports ".length + 1,
   );
-  assertEquals(definitionAt(examples, USERS, at), spanOf(USERS, "Users"));
+  assertEquals(
+    definitionAt(examples, USERS, at),
+    spanOf(USERS_SERVICE, "Users"),
+  );
 });
 
 Deno.test("definition of a capability goes to the method of the service", () => {
@@ -307,7 +312,7 @@ Deno.test("definition of a capability goes to the method of the service", () => 
     "match Users.find(id)",
     "match Users.".length + 1,
   );
-  const expected = spanOf(USERS, "find(id: UserId)");
+  const expected = spanOf(USERS_SERVICE, "find(id: UserId)");
   assertEquals(definitionAt(examples, USERS, at), {
     ...expected,
     end: expected.start + "find".length,
@@ -378,28 +383,39 @@ Deno.test("documentSymbols lists the declarations in source order with their kin
   assertEquals(
     symbols.map((s) => [s.name, s.kind]),
     [
-      ["UserId", "type"],
-      ["Name", "type"],
-      ["User", "type"],
-      ["UserMissing", "error"],
-      ["StoreUnavailable", "error"],
-      ["Users", "service"],
       ["getUser", "function"],
       ["rename", "function"],
       ["displayName", "function"],
       ["activeNames", "function"],
     ],
   );
-  const service = symbols.find((s) => s.name === "Users");
+  assert(symbols.every((symbol) => symbol.children.length === 0));
+
+  const serviceSymbols = documentSymbols(
+    examples,
+    USERS_SERVICE,
+    USERS_SERVICE_TEXT,
+  );
+  assertEquals(serviceSymbols.map((s) => [s.name, s.kind]), [
+    ["UserId", "type"],
+    ["Name", "type"],
+    ["User", "type"],
+    ["UserMissing", "error"],
+    ["StoreUnavailable", "error"],
+    ["Users", "service"],
+  ]);
+  const service = serviceSymbols.find((s) => s.name === "Users");
   assertEquals(
     service?.children.map((c) => [c.name, c.kind]),
     [["find", "method"], ["save", "method"], ["all", "method"]],
   );
-  const user = symbols.find((s) => s.name === "User");
+  const user = serviceSymbols.find((s) => s.name === "User");
   assertEquals(user?.nameSpan, USER_TYPE_SPAN);
   assert((user?.span.end ?? 0) > USER_TYPE_SPAN.end);
   assertEquals(
-    symbols.every((s) => s.kind === "service" || s.children.length === 0),
+    serviceSymbols.every((s) =>
+      s.kind === "service" || s.children.length === 0
+    ),
     true,
   );
 });

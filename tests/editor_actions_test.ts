@@ -179,15 +179,36 @@ const TWO_FAILURES = PRELUDE +
 
 Deno.test("fails clause: W0 the users example gets its inferred failures", () => {
   const users = Deno.readTextFileSync("fixtures/examples/users.eff");
+  const service = Deno.readTextFileSync(
+    "fixtures/examples/users-service.eff",
+  );
   const at = users.indexOf("getUser");
-  assertEquals(failsActionsAt({ "m.eff": users }, at), [[
+  const files = {
+    "users.eff": users,
+    "users-service.eff": service,
+  };
+  assertEquals(failsActionsAt(files, at, at, "users.eff"), [[
     "Write fails StoreUnavailable | UserMissing",
     users.replace(
-      "(id: UserId): User with Users =>",
-      "(id: UserId): User fails StoreUnavailable | UserMissing with Users =>",
+      "(id: UserId): User =>",
+      "(id: UserId): User fails StoreUnavailable | UserMissing =>",
     ),
   ]]);
-  assertEquals(codesAfterFailsAction(users, at), []);
+  const loaded = new Program("").update({
+    set: { "effektive.json": "{}", ...files },
+  });
+  assert(loaded.ok);
+  const [action] = failsClauseActionsAt(loaded.value, "users.eff", at);
+  assert(action !== undefined);
+  const edited = new Program("").update({
+    set: {
+      "effektive.json": "{}",
+      ...files,
+      "users.eff": applySourceEdits(users, action.edits),
+    },
+  });
+  assert(edited.ok);
+  assertEquals(edited.value.diagnostics, []);
 });
 
 Deno.test("fails clause: W1 the names come in the order of the failure set", () => {

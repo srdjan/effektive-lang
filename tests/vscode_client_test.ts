@@ -195,6 +195,17 @@ Deno.test("the grammar highlights sealed and pure only as modifiers", () => {
   assertEquals(found("const pure = 1", "pure"), undefined);
 });
 
+Deno.test("the grammar highlights imports only in a service header", () => {
+  const matchers = collectMatches(
+    readJson("syntaxes/effektive.tmLanguage.json"),
+  ).map((match) => new RegExp(match, "m"));
+  const found = (text: string): boolean =>
+    matchers.some((matcher) => matcher.exec(text)?.[0].includes("imports"));
+  assert(found('imports Users from "./users.eff"'));
+  assert(found('; imports Audit from "./audit.eff"'));
+  assert(!found("const imports = 1"));
+});
+
 Deno.test("the builtin-types rule matches every builtin type name exactly", () => {
   const rule = field(
     field(readJson("syntaxes/effektive.tmLanguage.json"), "repository"),

@@ -134,9 +134,21 @@ function hoverPass(
       declaration: constant.signature.id,
     };
   }
-  for (
-    const occurrence of symbolIndex(revision).byPath.get(module.path) ?? []
-  ) {
+  const occurrences = symbolIndex(revision).byPath.get(module.path) ?? [];
+  for (const occurrence of occurrences) {
+    if (
+      occurrence.target.kind !== "service" ||
+      !covers(occurrence.span, offset, afterEnd)
+    ) continue;
+    const name = revision.declEntry(occurrence.target.id)?.name ??
+      shortName(occurrence.target.id);
+    return {
+      span: occurrence.span,
+      contract: `service ${name}`,
+      declaration: undefined,
+    };
+  }
+  for (const occurrence of occurrences) {
     if (
       occurrence.target.kind !== "type" ||
       !table.isSealed(occurrence.target.id) ||

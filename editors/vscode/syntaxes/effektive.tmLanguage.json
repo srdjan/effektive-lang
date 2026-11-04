@@ -66,6 +66,14 @@
     "keywords": {
       "patterns": [
         {
+          "match": "(^|;)(\\s*)(imports)(?=\\s+[A-Za-z_$][A-Za-z0-9_$]*\\s+from\\s+\")",
+          "captures": {
+            "3": {
+              "name": "keyword.control.import.effektive"
+            }
+          }
+        },
+        {
           "name": "keyword.control.import.effektive",
           "match": "\\b(?:import|export)\\b"
         },

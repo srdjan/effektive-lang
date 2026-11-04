@@ -334,8 +334,7 @@ Deno.test("a round logs removals, writes, write notes, and held modules in that 
     "4 wrote extra.ts",
     "1 error: cannot write extra.ts.map: permission denied",
     "3 users is not written: it has 1 diagnostics",
-    "3 host/providers is not written: it imports users, which is not written",
-    "3 main is not written: it imports host/providers, which is not written",
+    "3 main is not written: it imports users, which is not written",
   ]);
 });
 
@@ -344,17 +343,12 @@ Deno.test("a held module is logged once at type 3 and cleared when it is writabl
   setDisk(h, "users.eff", USERS_BROKEN);
   h.deliver(save(MAIN));
   const held = logsOf(h, 3);
-  assertEquals(held.length, 3);
+  assertEquals(held.length, 2);
   assert(held.includes("users is not written: it has 1 diagnostics"));
-  // The companion module of the host interface imports users.
+  assert(h.files.has(`${ROOT}/host/providers.effi.ts`));
   assert(
     held.includes(
-      "host/providers is not written: it imports users, which is not written",
-    ),
-  );
-  assert(
-    held.includes(
-      "main is not written: it imports host/providers, which is not written",
+      "main is not written: it imports users, which is not written",
     ),
   );
   h.clearSent();
@@ -365,7 +359,7 @@ Deno.test("a held module is logged once at type 3 and cleared when it is writabl
   assertEquals(logsOf(h, 3), []);
   setDisk(h, "users.eff", USERS_BROKEN);
   h.deliver(save(MAIN));
-  assertEquals(logsOf(h, 3).length, 3);
+  assertEquals(logsOf(h, 3).length, 2);
 });
 
 Deno.test("writeOnSave false creates no disk program, writes nothing, and logs nothing", () => {

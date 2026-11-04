@@ -3,7 +3,7 @@
 // table into one sorted list of ranges. Words and spaces that need no color give
 // no range.
 //
-// The lexer reads `type`, `error`, `service`, `provider`, `fails`,
+// The lexer reads `imports`, `type`, `error`, `service`, `provider`, `fails`,
 // `provides`, and `from` as names. This file gives them the keyword kind by
 // position, from the token stream.
 
@@ -91,10 +91,53 @@ function functionTypeOpeners(
   return openers;
 }
 
+/** Token indexes of complete service headers in the leading header region. */
+function serviceImportOpeners(
+  text: string,
+  kinds: ArrayLike<number>,
+  starts: ArrayLike<number>,
+  ends: ArrayLike<number>,
+  count: number,
+): ReadonlySet<number> {
+  const openers = new Set<number>();
+  let headersAllowed = true;
+  let lineStart = true;
+  for (let i = 0; i < count; i++) {
+    const kind = kinds[i];
+    if (kind === TokenKind.Newline || kind === TokenKind.Semicolon) {
+      lineStart = true;
+      continue;
+    }
+    if (kind === TokenKind.Eof) break;
+    if (
+      headersAllowed && lineStart && kind === TokenKind.Ident &&
+      text.slice(starts[i], ends[i]) === "imports" &&
+      kinds[i + 1] === TokenKind.Ident && kinds[i + 2] === TokenKind.Ident &&
+      text.slice(starts[i + 2], ends[i + 2]) === "from" &&
+      kinds[i + 3] === TokenKind.String
+    ) {
+      openers.add(i);
+      i += 3;
+      lineStart = false;
+      continue;
+    }
+    headersAllowed = false;
+    lineStart = false;
+  }
+  return openers;
+}
+
 /** The ranges of `text`, sorted by `from`. */
 export function highlightTokens(text: string): HighlightRange[] {
   const lexed = lex("", text);
   const pureTypeOpeners = functionTypeOpeners(lexed.kinds, lexed.count);
+  const serviceImports = serviceImportOpeners(
+    text,
+    lexed.kinds,
+    lexed.starts,
+    lexed.ends,
+    lexed.count,
+  );
   const ranges: HighlightRange[] = [];
 
   for (let i = 0; i < lexed.trivia.kinds.length; i++) {
@@ -133,7 +176,8 @@ export function highlightTokens(text: string): HighlightRange[] {
       const afterSealed = previousWord === "sealed" &&
         (beforePrevious === undefined || beforePrevious === TokenKind.Newline ||
           beforePrevious === TokenKind.KwExport);
-      if (
+      if (serviceImports.has(i)) result = "keyword";
+      else if (
         word === "using" && lexed.kinds[i + 1] === TokenKind.LParen &&
         lexed.kinds[i + 2] === TokenKind.Ident &&
         lexed.kinds[i + 3] === TokenKind.Eq
