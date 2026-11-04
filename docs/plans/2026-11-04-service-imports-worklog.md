@@ -39,12 +39,14 @@ Reserved Effect capabilities do not require service headers. Provider acquisitio
 Acceptance now checks foreign service closure and propagation of interface hashes.
 The compiler unit is committed as `5c16c83` after its complete gate passed.
 The diagnostic follow-up is committed as `27dc90f`. Editor support is committed as `c239295`.
-The corpus and playground package are committed as `a5893ca`. Website work is active; final review and mutation reconciliation remain.
+The corpus and playground package are committed as `a5893ca`. The website unit is committed as `a973f40`.
+The review fixes are committed as `4deba49`. Final committed mutation checks and archive reconciliation remain.
 
 ## Compiler checkpoint
 
 The executor chose contextual `imports` syntax with the existing `ImportDecl` node.
-`ImportEntry` distinguishes ordinary imports from service imports. Repeated links to one module must produce one combined IR import.
+`ImportEntry` distinguishes ordinary imports from service imports. A header and ordinary import for the same module produce one combined IR import.
+Correction: ordinary imports without a service header retain separate IR entries. The final review identified and corrected the initial broader merge.
 The first public test failed before implementation with `syntax/009` for `imports` and `unknown-name/001` for `Users`.
 
 The executor owns compiler files and `tests/service_imports_test.ts`. The main agent will review its diff and run the complete gate.
@@ -236,3 +238,44 @@ The main agent's full review-fix gate passes formatting, lint, type checks, 2,85
 Its log is `/tmp/effektive-service-imports-review-fixes-check.log`.
 Review findings 1, 2, 5, and 6 are resolved. The exported constant testing gap is also closed.
 No justified actionable finding remains. Parser recovery and invalid-source coloring retain the documented evidence limits.
+
+## Acceptance reconciliation
+
+The main agent reopened the plan after review fixes. The following evidence covers all 16 acceptance checks.
+
+| Plan checks | Evidence |
+| --- | --- |
+| 1-2: header syntax and rejection | Public parsing and project tests cover relative paths, host paths, positions, missing targets, and interface restrictions. |
+| 3-6: solved requirements and module bounds | Public project tests cover recursion, imported calls, unused headers, pure functions, and undeclared methods. |
+| 7-9: provision and compatibility | Tests cover acquisition requirements, written function bounds, legacy export closure, and separate ordinary IR imports. |
+| 10: incremental propagation | Project revisions check changed requirements, interfaces, hashes, and downstream diagnostics. |
+| 11: lowering and emission | Output tests require nonempty module maps, independent validation, and generated Effect requirements. Golden fixtures cover combined service imports. |
+| 12: published agreement | The main gate builds published source examples. The site passes 12 tests and 65 strict TypeScript units. |
+| 13-14: produced values and inputs | Tests cover deferred outputs, returned functions, exported deferred constants, input-only contracts, and internal Scope. |
+| 15: provider acquisition | The public test removes Users and retains Config after provision. |
+| 16: foreign closure | Interface tests include foreign service declarations and methods, then check hash propagation. |
+
+The main agent checked both browser views and preserved user-owned sessions.
+The review receipt covers all five implementation units. Final archival records the completed checks and the local commits.
+
+## Final committed mutation checks
+
+Both final small samples pass on `4deba49`: six compiler faults and five editor or playground faults are killed.
+Both expanded runs change only `--sample 1` to `--sample 3`.
+The compiler run kills 17 faults and accepts the one registered resolver equivalent. It reports no stale row or unregistered survivor.
+Its log is `/tmp/effektive-service-imports-final-compiler-mutation-expanded.log`.
+
+The editor run kills 14 of 15 faults. The remaining fault changes the public completion guard for missing modules and negative offsets.
+This sample differs from the earlier sample because simplification changed the available mutation sites.
+The main agent adds public checks for a missing module, a negative offset, and an offset after the source.
+All six service-header editor tests pass. The expanded editor command must run again after this test enters a commit.
+The failed sample remains in `/tmp/effektive-service-imports-final-editor-mutation-expanded.log`.
+
+Targeted checks kill the selective import-merge fault and both EOF-guard faults in completion.
+These checks use `--sample all --workers 1` and the corresponding public test file.
+The lowering site is `src/core/lower.ts:1566`. The completion site is `src/core/editor_completion.ts:261`.
+The logs end in `final-lowering-mutation-targeted.log` and `final-completion-mutation-targeted.log` under `/tmp/effektive-service-imports-`.
+
+The gate after the invalid-offset regression passes: 2,851 fast tests and 264 slow tests.
+Formatting, lint, and type checks also pass. The log is `/tmp/effektive-service-imports-offset-check.log`.
+The website manifest receives its separate contract unit and companion dependencies in the final alignment commit.

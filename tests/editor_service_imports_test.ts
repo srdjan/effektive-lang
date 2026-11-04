@@ -123,6 +123,13 @@ imp`;
   );
 });
 
+Deno.test("service header completion rejects missing modules and invalid offsets", () => {
+  const revision = load();
+  assertEquals(completionsAt(revision, "missing.eff", 0), []);
+  assertEquals(completionsAt(revision, "m.eff", -1), []);
+  assertEquals(completionsAt(revision, "m.eff", source.length + 1), []);
+});
+
 Deno.test("semantic classification marks only a valid service-header imports word", () => {
   const text = `imports Users from "./services.eff"
 import { Text } from "./services.eff"
