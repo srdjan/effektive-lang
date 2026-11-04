@@ -119,6 +119,49 @@ Deno.test("check sorts diagnostics by path, position, and code", async () => {
   assertEquals(paths, ["a.eff", "b.eff", "sub/c.eff"]);
 });
 
+Deno.test("check prints a note line for each related location of a contract diagnostic", async () => {
+  const source = [
+    "error Missing = { id: string }",
+    "error Other = { id: string }",
+    "service Store {",
+    "  find(id: Text): Text fails Missing",
+    "}",
+    "",
+    "export const broken = (id: Text): Text",
+    "  fails Other with Store.find =>",
+    "  Store.find(id) + Store.find(id)",
+    "",
+    "type Text = string",
+    "",
+  ].join("\n");
+  const r = await run(["check", ROOT], {
+    [`${ROOT}/effektive.json`]: "{}",
+    [`${ROOT}/m.eff`]: source,
+  });
+  assertEquals(r.code, 1);
+  assertEquals(
+    r.stdout,
+    "m.eff:9:3: error failure-contract/001: the body can fail with Missing, which the `fails` clause does not list\n" +
+      "m.eff:9:3: note: can fail with `Missing` here\n" +
+      "m.eff:9:20: note: can fail with `Missing` here\n",
+  );
+  assertEquals(r.stderr, "1 module, 1 diagnostic\n");
+});
+
+Deno.test("check prints the first declaration as a note line after a duplicate declaration", async () => {
+  const r = await run(["check", ROOT], {
+    [`${ROOT}/effektive.json`]: "{}",
+    [`${ROOT}/d.eff`]: "type A = { a: string }\ntype A = { b: string }\n",
+  });
+  assertEquals(r.code, 1);
+  assertEquals(
+    r.stdout,
+    "d.eff:2:6: error declaration/001: `A` is already declared in this module\n" +
+      "d.eff:1:6: note: first declared here\n",
+  );
+  assertEquals(r.stderr, "1 module, 1 diagnostic\n");
+});
+
 Deno.test("a column counts UTF-16 code units", () => {
   const text = 'const s = "\u{1F600}" + 1\n';
   const offset = text.indexOf("1");

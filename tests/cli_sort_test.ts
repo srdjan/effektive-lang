@@ -32,6 +32,7 @@ Deno.test("check prints two diagnostics of one file in line order", async () => 
   assertEquals(lines, [
     "m.eff:2:16: error type-mismatch/003: the constant has type string, but Int is expected",
     "m.eff:3:20: error declaration/010: the record type already has a field named `x`",
+    "m.eff:3:12: note: first declared here",
   ]);
 });
 

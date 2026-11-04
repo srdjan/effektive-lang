@@ -1,6 +1,7 @@
 // Output lines. A diagnostic prints as `path:line:column: error code: message`.
-// The path is root-relative. The line and the column are one-based, and the
-// column counts UTF-16 code units.
+// Each related location of a diagnostic prints on the next line as
+// `path:line:column: note: message`. The path is root-relative. The line and
+// the column are one-based, and the column counts UTF-16 code units.
 
 import {
   compareText,
@@ -45,6 +46,16 @@ interface Located {
   readonly column: number;
   readonly code: string;
   readonly message: string;
+  /** The note lines that follow the diagnostic line, in the order given. */
+  readonly notes?: readonly Note[];
+}
+
+/** A related location as a note line. */
+interface Note {
+  readonly path: string;
+  readonly line: number;
+  readonly column: number;
+  readonly message: string;
 }
 
 function compareLocated(a: Located, b: Located): number {
@@ -59,15 +70,38 @@ function locate(
   span: Span,
   code: string,
   message: string,
+  related: NonNullable<Diagnostic["related"]> = [],
 ): Located {
   const at = positions.of(span.source, span.start);
-  return { path: span.source, line: at.line, column: at.column, code, message };
+  const notes = related.map((r): Note => {
+    const noteAt = positions.of(r.span.source, r.span.start);
+    return {
+      path: r.span.source,
+      line: noteAt.line,
+      column: noteAt.column,
+      message: r.message,
+    };
+  });
+  return {
+    path: span.source,
+    line: at.line,
+    column: at.column,
+    code,
+    message,
+    notes,
+  };
 }
 
-function line(located: Located): string {
-  return `${located.path}:${located.line}:${located.column}: error ${located.code}: ${
-    oneLine(located.message)
-  }`;
+/** The diagnostic line, then one note line for each related location. */
+function lines(located: Located): string[] {
+  const head =
+    `${located.path}:${located.line}:${located.column}: error ${located.code}: ${
+      oneLine(located.message)
+    }`;
+  const notes = (located.notes ?? []).map((n) =>
+    `${n.path}:${n.line}:${n.column}: note: ${oneLine(n.message)}`
+  );
+  return [head, ...notes];
 }
 
 /** The output lines of the diagnostics, sorted by path, position, and code. */
@@ -76,8 +110,9 @@ export function formatDiagnostics(
   textOf: TextOf,
 ): string[] {
   const positions = new Positions(textOf);
-  return diagnostics.map((d) => locate(positions, d.span, d.code, d.message))
-    .sort(compareLocated).map(line);
+  return diagnostics.map((d) =>
+    locate(positions, d.span, d.code, d.message, d.related)
+  ).sort(compareLocated).flatMap(lines);
 }
 
 /**
@@ -122,7 +157,7 @@ export function formatTscMappings(
         };
     }
   });
-  return located.sort(compareLocated).map(line);
+  return located.sort(compareLocated).flatMap(lines);
 }
 
 /** One diagnostic as the session log records it. Positions are one-based. */

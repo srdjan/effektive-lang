@@ -652,11 +652,18 @@ Build the nested project from its own root.
 
 A diagnostic prints as `path:line:column: error code: message`. The path is
 relative to the root. The line and the column are one-based, and the column
-counts UTF-16 code units. The tool sorts the lines by path, position, and code.
+counts UTF-16 code units. The tool sorts the diagnostic lines by path,
+position, and code.
 
-The message is one line. Stdout holds only diagnostics, except for `--help`,
-which prints the usage on stdout. A summary line and all other messages go to
-stderr.
+A diagnostic can have related locations, such as the first declaration of a
+duplicate name. The tool prints one note line for each related location,
+directly after its diagnostic line, as `path:line:column: note: message`. The
+note lines keep the order of the related locations. They do not join the sort.
+The summary counts diagnostics, not note lines.
+
+The message is one line. Stdout holds only diagnostics and their note lines,
+except for `--help`, which prints the usage on stdout. A summary line and all
+other messages go to stderr.
 
 The exit code is 0 when there is no diagnostic. It is 1 when there is at least
 one diagnostic or a build step fails. It is 2 for a usage or configuration

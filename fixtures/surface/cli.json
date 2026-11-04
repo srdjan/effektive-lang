@@ -173,7 +173,15 @@
       },
       {
         "kind": "stdout",
+        "text": "declaration-duplicate-field.eff:2:15: note: first declared here\n"
+      },
+      {
+        "kind": "stdout",
         "text": "declaration-duplicate-field.eff:5:34: error declaration/010: the record type already has a field named `reason`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-duplicate-field.eff:5:18: note: first declared here\n"
       },
       {
         "kind": "stderr",
@@ -194,7 +202,15 @@
       },
       {
         "kind": "stdout",
+        "text": "declaration-duplicate-name.eff:1:6: note: first declared here\n"
+      },
+      {
+        "kind": "stdout",
         "text": "declaration-duplicate-name.eff:7:7: error declaration/001: `A` is already declared in this module\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-duplicate-name.eff:1:6: note: first declared here\n"
       },
       {
         "kind": "stdout",
@@ -202,11 +218,23 @@
       },
       {
         "kind": "stdout",
+        "text": "declaration-duplicate-name.eff:10:3: note: first declared here\n"
+      },
+      {
+        "kind": "stdout",
         "text": "declaration-duplicate-name.eff:18:3: error declaration/001: `p` is already bound in this scope\n"
       },
       {
         "kind": "stdout",
+        "text": "declaration-duplicate-name.eff:16:3: note: first bound here\n"
+      },
+      {
+        "kind": "stdout",
         "text": "declaration-duplicate-name.eff:24:9: error declaration/001: `v` is already bound in this scope\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-duplicate-name.eff:22:9: note: first bound here\n"
       },
       {
         "kind": "stderr",
@@ -475,6 +503,10 @@
       },
       {
         "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:26:6: note: also part of the cycle\n"
+      },
+      {
+        "kind": "stdout",
         "text": "declaration-recursive-nominal.eff:30:6: error declaration/007: the type `Loop` is defined in terms of itself\n"
       },
       {
@@ -483,7 +515,15 @@
       },
       {
         "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:35:6: note: also part of the cycle\n"
+      },
+      {
+        "kind": "stdout",
         "text": "declaration-recursive-nominal.eff:39:6: error declaration/007: recursive type definition: Left -> Right -> Left\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:41:6: note: also part of the cycle\n"
       },
       {
         "kind": "stdout",
@@ -491,7 +531,19 @@
       },
       {
         "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:47:6: note: also part of the cycle\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:49:6: note: also part of the cycle\n"
+      },
+      {
+        "kind": "stdout",
         "text": "declaration-recursive-nominal.eff:53:6: error declaration/007: recursive type definition: Wraps -> Failure -> Wraps\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-nominal.eff:55:7: note: also part of the cycle\n"
       },
       {
         "kind": "stderr",
@@ -509,6 +561,10 @@
       {
         "kind": "stdout",
         "text": "declaration-recursive-type.eff:5:6: error declaration/007: recursive type definition: Ping -> Pong -> Ping\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-recursive-type.eff:7:6: note: also part of the cycle\n"
       },
       {
         "kind": "stdout",
@@ -622,6 +678,10 @@
       {
         "kind": "stdout",
         "text": "declaration-use-before-bind.eff:6:9: error declaration/004: `outer` is used earlier in this block as an outer name, and this binding would capture that use\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "declaration-use-before-bind.eff:4:3: note: the earlier use\n"
       },
       {
         "kind": "stderr",
@@ -789,6 +849,10 @@
         "text": "failure-contract-extra-failure.eff:14:3: error failure-contract/001: the body can fail with Missing, which the `fails` clause does not list\n"
       },
       {
+        "kind": "stdout",
+        "text": "failure-contract-extra-failure.eff:14:3: note: can fail with `Missing` here\n"
+      },
+      {
         "kind": "stderr",
         "text": "1 module, 1 diagnostic\n"
       }
@@ -863,6 +927,10 @@
       {
         "kind": "stdout",
         "text": "module-initialization-cycle.eff:2:7: error module/004: module initialization cycle: first -> second -> first\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "module-initialization-cycle.eff:4:7: note: also part of the cycle\n"
       },
       {
         "kind": "stderr",
@@ -1067,6 +1135,10 @@
         "text": "requirement-contract-effectful-map.eff:7:3: error requirement-contract/001: the body requires Counter.next, which the `with` clause does not list\n"
       },
       {
+        "kind": "stdout",
+        "text": "requirement-contract-effectful-map.eff:7:18: note: requires `Counter.next` here\n"
+      },
+      {
         "kind": "stderr",
         "text": "1 module, 1 diagnostic\n"
       }
@@ -1082,6 +1154,10 @@
       {
         "kind": "stdout",
         "text": "requirement-contract-extra-requirement.eff:7:3: error requirement-contract/001: the body requires Clock.now, which the `with` clause does not list\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "requirement-contract-extra-requirement.eff:7:3: note: requires `Clock.now` here\n"
       },
       {
         "kind": "stderr",

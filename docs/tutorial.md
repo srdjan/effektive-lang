@@ -166,10 +166,11 @@ The compiler compares each `with` clause with its body. To see this check, remov
 deno task effektive check "$tutorial_dir"
 ```
 
-The compiler reports the operation that the clause does not list:
+The compiler reports the operation that the clause does not list. The note line gives the position of the call that needs it:
 
 ```text
 library.eff:43:59: error requirement-contract/001: the body requires Shelf.save, which the `with` clause does not list
+library.eff:45:3: note: requires `Shelf.save` here
 1 module, 1 diagnostic
 ```
 
