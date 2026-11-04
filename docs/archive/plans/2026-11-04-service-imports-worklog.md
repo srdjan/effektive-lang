@@ -357,3 +357,18 @@ The focused corrected regression passes. The failed gate remains in `/tmp/effekt
 
 The gate with the corrected spread regression passes: formatting, lint, type checks, 2,856 fast tests, and 264 slow tests.
 Its log is `/tmp/effektive-service-transfer-spread-final-check.log`.
+
+The expanded rerun on `f04ee3e` kills all three sampled faults, with no unregistered survivor or stale row.
+The targeted record-field guard run kills all four faults at `check_project.ts:721`.
+The original targeted transfer run kills all eight faults at the three dispatch sites.
+No mutation register row is necessary for this repair.
+Final mutation logs: `/tmp/effektive-service-transfer-mutation-expanded-rerun.log` and `/tmp/effektive-service-transfer-mutation-record-guard.log`.
+
+The repair is committed as `a3059d9`, and the strengthened record update regression is committed as `f04ee3e`.
+The reported escape and all listed controls pass their expected outcomes. No review finding remains unresolved in this follow-up.
+The mutation evidence covers the named samples and targeted sites, not every site in the module.
+The main agent owns the final evidence commit. The user owns the next review of the local commits.
+
+The final evidence gate passes formatting, lint, type checks, 2,856 fast tests, and 264 slow tests.
+Its log is `/tmp/effektive-service-transfer-evidence-check.log`.
+All local repair work is complete. The next action belongs to the user: review the local commits.
