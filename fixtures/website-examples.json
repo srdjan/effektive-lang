@@ -52,7 +52,12 @@
           }
         }
       },
-      "companions": ["users.eff", "host/providers.effi", "users-live.ts"],
+      "companions": [
+        "users-service.eff",
+        "users.eff",
+        "host/providers.effi",
+        "users-live.ts"
+      ],
       "diagnostics": []
     },
     {
@@ -74,9 +79,16 @@
       "diagnostics": []
     },
     {
+      "path": "users-service.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
       "path": "users.eff",
       "kind": "file",
       "configuration": {},
+      "companions": ["users-service.eff"],
       "diagnostics": []
     }
   ]
