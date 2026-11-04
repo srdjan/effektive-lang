@@ -11,6 +11,7 @@ The core exports synchronous, protocol-neutral queries over a `Revision`:
 | `completionsAt(revision, path, offset)` | Visible names, prefix replacement spans, record fields and service methods. No automatic imports. |
 | `semanticClassifications(revision, path, text)` | Classified source spans with declaration/readonly modifiers. Stale or broken regions use lexical information. |
 | `contractActionsAt(revision, path, start, end)` | Validated missing entries for a written `fails` clause and for a `with` clause, from checked body effects. |
+| `failsClauseActionsAt(revision, path, start, end)` | One validated action that writes the inferred failure set of the function whose header holds `start` as a `fails` clause. |
 
 Paths are root-relative and offsets/spans count UTF-16 code units. Core queries
 have no filesystem or LSP dependency. The occurrence index is held in a weak
@@ -46,12 +47,24 @@ is missing, an action adds the service name. Each action checks the edited
 project before it is returned. An action must remove at least one diagnostic and must
 add none, by the same comparison. Diagnostic messages are not parsed to generate
 edits.
+When a written clause holds only `never`, as in `fails never`, the action
+replaces `never` with the missing entries.
+
+A second action writes the inferred failure set of a function as a `fails`
+clause, such as `fails StoreUnavailable | UserMissing`. It is offered when the
+cursor is in the header of a module-level function that has a written result
+type, no `fails` clause, and no diagnostic. An empty set gives `fails never`.
+The action needs a visible name for each error, and it adds no import. It
+checks the edited project: the failure set, the service set, and the execution
+mode must not change, and no diagnostic may appear. After the edit, a new
+failure in the body gives `failure-contract/001`.
 
 An inlay hint shows the inferred part of a function contract. The hint covers
 an exported function and a local function. For an export it shows the inferred
 failures, such as ` fails UserMissing`, at the end of the result type and before
 a written `with` clause. A function with a diagnostic inside its span has no
-hint.
+hint. This includes a resolver diagnostic, such as an unknown name. A reserved
+error has its source name in the hint, such as `SchemaError`.
 
 A contract diagnostic carries related locations: each node of the body that
 introduces a missing `fails` or `with` entry. The language server sends them as
@@ -65,7 +78,10 @@ The LSP adapter exposes `textDocument/references`, `prepareRename`, `rename`,
 `completion`, `semanticTokens/full` and `codeAction`. Requests flush pending
 changes first. Edit requests additionally check current overlays and closed
 files against the indexed revision and return versioned `documentChanges`.
-A stale request or changed disk source cannot produce an edit. Out-of-order
+A stale request or changed disk source cannot produce an edit.
+A contract quick fix has the code action kind `quickfix`, and the fails clause
+action has the kind `refactor.rewrite`. A request with `context.only` gets only
+the actions of the kinds that it names. Out-of-order
 `didChange` versions are ignored. Invalid project configuration disables edits;
 semantic highlighting can still fall back to the current lexical text.
 

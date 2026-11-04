@@ -6,6 +6,7 @@ critique (K1 to K10), and the decisions of the user. The orchestrator wrote the
 list. Fable and Astra analysed it, and a fresh subagent critiqued the top three.
 The selected first item is planned in
 [the contract provenance plan](plans/2026-11-04-contract-provenance.md).
+AD4 is built by [the plan that writes the inferred `fails` clause](plans/2026-11-04-write-inferred-fails.md).
 
 Repository: `effektive-lang` at `928d1b0` (v0.14.0).
 Sources: the orchestrator's study, Fable (subagent, model `fable`), and Astra

@@ -179,6 +179,7 @@ _Avoid: uses clause_
 
 The part of a function header that lists the errors that the body can raise.
 A written clause is a checked upper bound on the failure set of the body.
+`fails never` writes an empty set. An editor action writes the inferred set as a clause.
 _Avoid: error clause_
 
 ### Inferred contract

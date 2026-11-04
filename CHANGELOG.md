@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- The editor offers an action that writes the inferred failure set of a
+  function as a `fails` clause, such as `fails StoreUnavailable | UserMissing`,
+  or `fails never` for an empty set. The cursor must be in the header of a
+  function with a written result type, no `fails` clause, and no diagnostic.
+  The language server sends the action with the kind `refactor.rewrite`, and it
+  honors `context.only`.
+- The contract quick fix and `check --fix` replace a written `fails never` or
+  `with never` with the missing entries, instead of appending them.
+- Diagnostics, note lines, inlay hints, and signature help name a reserved
+  Effect error by its source name, such as `SchemaError`, instead of
+  `error:effect/SchemaError`.
+- A function with an unknown name in its body gets no inlay hint and no
+  contract quick fix, because its inferred sets are unreliable.
 - `failure-contract/001` and `requirement-contract/001` carry a related
   location at each node of the body that introduces a missing entry: a
   `fail(...)`, a service method call, a call of a function, or a builtin call.

@@ -1,6 +1,6 @@
 # Plan: write the inferred failure set as a `fails` clause (WF)
 
-Status: accepted on 2026-11-04. The user accepted WFD1 to WFD5, each with option (a). Fable validated the plan (WFD5), and the section "Validation findings" records each resolution.
+Status: complete on 2026-11-04. The user accepted WFD1 to WFD5, each with option (a). Fable validated the plan (WFD5), and the section "Validation findings" records each resolution. The section "Results" gives the commits and the checks.
 
 IDs: WFD (decisions), WFU (units), WFF (validation findings).
 
@@ -121,4 +121,15 @@ Fable validated the plan read-only at `c37a20f`. It confirmed statements 1 to 10
 
 ## Results
 
-None yet.
+Each commit passed `deno task check` before it landed. The website commit is in the sibling repository `../effektive`.
+
+| Unit | Commit | Result |
+| --- | --- | --- |
+| WFU0 | `af47d13` | `shortName` names a reserved Effect identity by its source name. One new test failed first with ` fails error:effect/SchemaError` and then passed. Seven expected messages in four test files changed to the source names. `deno task behavior:compare 1513017 af47d13` changed 0 of 454 records, because the corpus holds no message with a reserved identity. |
+| WFU1 | `f522d57` | `failsClauseActionsAt` writes the inferred set, and `contractActionsAt` replaces a lone `never`. 17 new fast tests cover W0 to W16. One call that returns an action on `fixtures/applications/portable-publisher` (365 `.eff` lines) took a median of 6.4 ms over five runs. One `contractActionsAt` call that returns an action on the same project took a median of 4.9 ms. |
+| WFF9 | `857ed21` | `diagnosticInside` reads the project diagnostics. The hint, the quick fix, and the new query no longer serve a function with an unknown name. Two tests failed first and then passed. |
+| WFU2 | `e246a7b` | The server sends the action with the kind `refactor.rewrite`, honors `context.only`, and skips a kind that `context.only` removes. Four new fast tests. The `lsp.json` diff holds the advertised kinds, one new step, and the two renumbered request ids. |
+| WFU3 | This commit; website `43e5037` | The editor guide, the rules, the concepts, the status, and the changelog describe the action, `fails never`, the source names of reserved errors, and the hint rule. The website records draft 0.74. Its tests pass, and its strict check passes for 62 panels. |
+| WFU4 | `e524315` | `editor_actions.ts`: 117 sites, 99 killed, 18 survivors registered as `equivalent`. `editor_hints.ts`: 38 of 38 killed. The changed lines of `features.ts` and `protocol.ts`: 5 of 5 killed. The changed lines of `ids.ts`: 1 of 3 killed, and the two survivors are registered as `equivalent`. No run had a timeout. The orchestrator checked each new reason against the cited code and corrected one line reference. |
+
+One check stays with the user: risk 3, the placement of the action in the VS Code menu.
