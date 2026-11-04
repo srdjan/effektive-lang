@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.14.0 - 2026-11-03
+
 - The contract keyword `uses` is now `with`, as in `User with Users`. `with` is
   a keyword, so a name cannot be `with` (`syntax/008`). The keyword applies to
   arrow headers, function types, and `.effi` providers. The meaning, the IR, and
