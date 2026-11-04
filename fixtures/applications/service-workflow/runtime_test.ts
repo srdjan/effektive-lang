@@ -286,14 +286,15 @@ Deno.test("execution defects roll back and bypass typed retries", async () => {
   assertEquals(driver.committed, []);
 });
 
-Deno.test("cleanup defects preserve a simultaneous transient body failure and prevent retry", async () => {
+Deno.test("cleanup defects preserve a transient body failure as a defect and prevent retry", async () => {
   for (const broken of ["rollback", "release"]) {
+    const rollbackFailure = sqlFailure(false, "rollback");
     const driver = makeDriver({
       execute: (phase) =>
         phase === "write"
           ? Effect.fail(sqlFailure(true, "write"))
           : phase === broken
-          ? Effect.fail(sqlFailure(false, "rollback"))
+          ? Effect.fail(rollbackFailure)
           : Effect.void,
       release: () =>
         broken === "release" ? Effect.die("release defect") : Effect.void,
@@ -302,8 +303,16 @@ Deno.test("cleanup defects preserve a simultaneous transient body failure and pr
       Effect.exit(submit(request).pipe(Effect.provide(driver.layer))),
     );
     assert(Exit.isFailure(exit) && Cause.hasDies(exit.cause));
-    const error = failure(exit);
-    assert(error instanceof StoreFailure && error.kind === "Transient");
+    assert(Option.isNone(Cause.findErrorOption(exit.cause)));
+    const defects = exit.cause.reasons.map((reason) => {
+      assert(reason._tag === "Die");
+      return reason.defect;
+    });
+    assertEquals(defects.length, 2);
+    assert(defects[0] instanceof StoreFailure);
+    assertEquals(defects[0].kind, "Transient");
+    if (broken === "release") assertEquals(defects[1], "release defect");
+    else assertEquals(defects[1], rollbackFailure);
     assertEquals(driver.leases, 1);
     assertEquals(driver.committed, []);
     assertEquals([driver.active.size, driver.staged.size], [0, 0]);

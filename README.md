@@ -41,7 +41,7 @@ undeclared service operations. A written `fails` clause rejects any other failur
 
 ## Requirements
 
-The project needs Deno 2.9.8. Generated TypeScript targets Effect 4.0.5.
+The project needs Deno 2.9.8. Generated TypeScript targets Effect 4.1.2.
 Building the VS Code extension also requires Node 20 or later with npm.
 
 ## Installation

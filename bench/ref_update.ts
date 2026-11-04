@@ -4,9 +4,9 @@
 // SynchronizedRef with an effectful callback, each inside one Effect.gen.
 // Run: deno bench --no-lock --allow-read --allow-env bench/ref_update.ts
 
-import * as Effect from "npm:effect@4.0.5/Effect";
-import * as Ref from "npm:effect@4.0.5/Ref";
-import * as SynchronizedRef from "npm:effect@4.0.5/SynchronizedRef";
+import * as Effect from "npm:effect@4.1.2/Effect";
+import * as Ref from "npm:effect@4.1.2/Ref";
+import * as SynchronizedRef from "npm:effect@4.1.2/SynchronizedRef";
 
 const UPDATES = 1000;
 const indexes = Array.from({ length: UPDATES }, (_, i) => i);

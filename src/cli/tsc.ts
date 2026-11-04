@@ -14,7 +14,7 @@ import { formatTscMappings, type TextOf } from "./format.ts";
 import targetLock from "./target_lock.json" with { type: "json" };
 
 /** The version of Effect that the generated code targets. */
-export const EFFECT_VERSION = "4.0.5";
+export const EFFECT_VERSION = "4.1.2";
 
 /** The compiler options of the generated check. */
 export const TARGET_COMPILER_OPTIONS = {

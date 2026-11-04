@@ -148,7 +148,7 @@ Deno.test("partial acquisition and startup failures release acquired resources",
   }
 });
 
-Deno.test("release failure preserves an accompanying execution failure", async () => {
+Deno.test("release failure preserves an accompanying execution failure as a defect", async () => {
   for (const failWork of [false, true]) {
     const memory = makeMemoryPlatform();
     const release = new Error("release failure");
@@ -166,11 +166,14 @@ Deno.test("release failure preserves an accompanying execution failure", async (
     );
     assert(Exit.isFailure(exit) && Cause.hasDies(exit.cause));
     assert(Cause.pretty(exit.cause).includes("release failure"));
-    const failure = Cause.findErrorOption(exit.cause);
-    if (failWork) {
-      assert(Option.isSome(failure));
-      assertEquals(failure.value, work);
-    } else assert(Option.isNone(failure));
+    assert(Option.isNone(Cause.findErrorOption(exit.cause)));
+    assertEquals(
+      exit.cause.reasons.map((reason) => {
+        assert(reason._tag === "Die");
+        return reason.defect;
+      }),
+      failWork ? [work, release] : [release],
+    );
     assertEquals(memory.active(), 0);
   }
 });

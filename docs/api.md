@@ -470,7 +470,7 @@ links on the first line when that line fits. The module also has the cases where
 the join does not happen.
 
 The slow tests copy a fixture project to a temporary directory and build there.
-They check the emitted code with `deno check` under `effect@4.0.5` with strict
+They check the emitted code with `deno check` under `effect@4.1.2` with strict
 settings. They run the emitted code with `deno run`. They need the npm package
 in the Deno cache, so the first run needs network access.
 
@@ -680,7 +680,7 @@ text changes.
 
 `--tsc` runs `deno check` with a generated configuration. The configuration sets
 strict mode, `exactOptionalPropertyTypes`, and `noUncheckedIndexedAccess`. It
-maps `effect` and `@effect/platform-node` to their pinned 4.0.5 packages. The
+maps `effect` and `@effect/platform-node` to their pinned 4.1.2 packages. The
 tool writes the configuration and the pinned lockfile `src/cli/target_lock.json`
 to a temporary directory and removes both after the run. It passes `--lock=` with
 that lockfile, so the transitive packages stay at fixed versions. The project

@@ -1,6 +1,8 @@
 # Local installation
 
-Effektive requires **Deno 2.9.8**. The extension checks the executable before starting its server and reports missing or incompatible installations. Packaged CLI and server entry points also reject other versions. Generated TypeScript targets Effect 4.0.5.
+Effektive requires **Deno 2.9.8**. The extension checks the executable before starting its server and reports missing or incompatible installations. Packaged CLI and server entry points also reject other versions. Generated TypeScript targets Effect 4.1.2.
+
+Applications that use `@effect/platform-node` 4.1.2 require Node.js 22.19.0 or later when they run on Node.js. Compiler packaging still needs Node 20 or later, including npm.
 
 ## Build the local artifacts
 
@@ -32,7 +34,7 @@ deno install --global --name effektive --no-config --no-lock --cached-only \
 
 Add the bin directory printed by Deno to `PATH`. The launcher refers to the copied bundle, so retain that file. Run `effektive --help`, `effektive check /path/to/project`, or `effektive build /path/to/project`. The subprocess grant remains restricted to the PATH executable `deno`; ensure Deno 2.9.8 is on `PATH` for `build --tsc` and `watch --tsc`.
 
-Checking and emitting source work offline. Target checking with `--tsc` still needs the application's host dependencies, Effect 4.0.5, and `@effect/platform-node` 4.0.5 in its Deno cache or registry access. The bundle does not package application runtime dependencies.
+Checking and emitting source work offline. Target checking with `--tsc` still needs the application's host dependencies, Effect 4.1.2, and `@effect/platform-node` 4.1.2 in its Deno cache or registry access. The bundle does not package application runtime dependencies.
 
 ## Install VS Code support
 

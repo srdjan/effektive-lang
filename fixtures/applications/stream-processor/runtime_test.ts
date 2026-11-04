@@ -342,19 +342,32 @@ Deno.test("execution and session cleanup defects remain defects and remaining fi
   }
 });
 
-Deno.test("item recovery follows native catchTags and does not preserve arbitrary mixed transform causes", async () => {
+Deno.test("item recovery preserves mixed transform defects like native catchTags", async () => {
+  const transformFailure = new TransformFailure({ kind: "Recoverable", id: 1 });
   const broken = () =>
-    Effect.fail(new TransformFailure({ kind: "Recoverable", id: 1 })).pipe(
+    Effect.fail(transformFailure).pipe(
       Effect.ensuring(Effect.die("accompanying defect")),
     );
   const expected = await run(
-    broken().pipe(Effect.catchTags({
-      "contracts#TransformFailure": () =>
-        Effect.succeed({ id: 1, value: 1, recovered: true }),
-    })),
+    Effect.exit(
+      broken().pipe(Effect.catchTags({
+        "contracts#TransformFailure": () => Effect.void,
+      })),
+    ),
   );
   const driver = makeDriver({ items: sampleItems(1), transform: broken });
-  await run(program(driver));
-  assertEquals(driver.batches, [[expected]]);
+  const actual = await run(Effect.exit(program(driver)));
+  for (const exit of [expected, actual]) {
+    assert(Exit.isFailure(exit));
+    assert(Option.isNone(Cause.findErrorOption(exit.cause)));
+    assertEquals(
+      exit.cause.reasons.map((reason) => {
+        assert(reason._tag === "Die");
+        return reason.defect;
+      }),
+      [transformFailure, "accompanying defect"],
+    );
+  }
+  assertEquals(driver.batches, []);
   clean(driver);
 });

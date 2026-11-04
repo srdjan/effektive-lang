@@ -1,9 +1,9 @@
 // Measurement M5: the wall time of the TypeScript check over the emitted
-// code, against Effect 4.0.5.
+// code, against Effect 4.1.2.
 //
 // The baseline is a cold `deno check` subprocess with the configuration that
 // `effektive build --tsc` generates (`tscConfig` in src/cli/tsc.ts, with
-// `effect` mapped to `npm:effect@4.0.5`). The harness runs it through the same
+// `effect` mapped to `npm:effect@4.1.2`). The harness runs it through the same
 // port that the CLI uses (`denoIo().denoCheck`) and times the whole call:
 // the write of the configuration, the process, and its exit.
 //
@@ -192,7 +192,7 @@ export function formatM5(result: M5Result, config: M5Config): string {
     "M5: cold `deno check` over the emitted code (milliseconds, whole process)",
   );
   out.push(
-    "Configuration: the one that `effektive build --tsc` generates, with effect mapped to npm:effect@4.0.5.",
+    "Configuration: the one that `effektive build --tsc` generates, with effect mapped to npm:effect@4.1.2.",
   );
   out.push(
     `Each target has ${config.warmups} discarded warm-up run and ${config.pairs} timed A/A pairs of two cold runs. Rows pool both sides.`,

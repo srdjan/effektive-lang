@@ -419,8 +419,8 @@ Deno.test("build --tsc runs deno check over the generated files and the host mod
   ]);
   const config = JSON.parse(request.config);
   assertEquals(config.imports, {
-    effect: "npm:effect@4.0.5",
-    "@effect/platform-node": "npm:@effect/platform-node@4.0.5",
+    effect: "npm:effect@4.1.2",
+    "@effect/platform-node": "npm:@effect/platform-node@4.1.2",
   });
   assertEquals(config.compilerOptions, {
     strict: true,
@@ -434,12 +434,12 @@ Deno.test("build --tsc passes the pinned lockfile of the Effect target", async (
   assertEquals(r.code, 0, r.stderr);
   const lock = JSON.parse(r.m.checks[0].lock);
   assertEquals(lock.specifiers, {
-    "npm:@effect/platform-node@4.0.5": "4.0.5_effect@4.0.5_redis@6.3.1",
-    "npm:effect@4.0.5": "4.0.5",
+    "npm:@effect/platform-node@4.1.2": "4.1.2_effect@4.1.2_redis@6.3.1",
+    "npm:effect@4.1.2": "4.1.2",
   });
   assert(
-    "@effect/platform-node-shared@4.0.5_effect@4.0.5" in lock.npm,
-    "the lockfile pins the shared package to 4.0.5",
+    "@effect/platform-node-shared@4.1.2_effect@4.1.2" in lock.npm,
+    "the lockfile pins the shared package to 4.1.2",
   );
 });
 

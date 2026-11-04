@@ -45,7 +45,7 @@ only a scoped lease. Closing that lease invalidates its captured operations.
 
 The batch completes commands in order. A terminal failure starts no later
 command. Interruption awaits cleanup. Simultaneous execution and release
-failures both remain in the runtime Cause.
+failures both remain as defects in the runtime Cause.
 
 `grants.eff` binds an authorized identifier to an already provided publication
 operation. The issuer retains revocation. Revocation refuses later executions,

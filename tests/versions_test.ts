@@ -20,50 +20,50 @@ const PINS: ReadonlyArray<
   [
     EFFECT_VERSION,
     "fixtures/tutorial/deno.json",
-    '"effect": "npm:effect@4.0.5"',
+    '"effect": "npm:effect@4.1.2"',
   ],
   [
     EFFECT_VERSION,
     "fixtures/applications/order-lifecycle/deno.json",
-    '"effect": "npm:effect@4.0.5"',
+    '"effect": "npm:effect@4.1.2"',
   ],
   [
     EFFECT_VERSION,
     "fixtures/applications/portable-publisher/deno.json",
-    '"effect": "npm:effect@4.0.5"',
+    '"effect": "npm:effect@4.1.2"',
   ],
   [
     EFFECT_VERSION,
     "fixtures/applications/scheduled-worker/deno.json",
-    '"effect": "npm:effect@4.0.5"',
+    '"effect": "npm:effect@4.1.2"',
   ],
   [
     EFFECT_VERSION,
     "fixtures/applications/service-workflow/deno.json",
-    '"effect": "npm:effect@4.0.5"',
+    '"effect": "npm:effect@4.1.2"',
   ],
   [
     EFFECT_VERSION,
     "fixtures/applications/stream-processor/deno.json",
-    '"effect": "npm:effect@4.0.5"',
+    '"effect": "npm:effect@4.1.2"',
   ],
   [
     EFFECT_VERSION,
     "bench/ref_update.ts",
-    'import * as Effect from "npm:effect@4.0.5/Effect";',
+    'import * as Effect from "npm:effect@4.1.2/Effect";',
   ],
   [
     EFFECT_VERSION,
     "bench/ref_update.ts",
-    'import * as Ref from "npm:effect@4.0.5/Ref";',
+    'import * as Ref from "npm:effect@4.1.2/Ref";',
   ],
   [
     EFFECT_VERSION,
     "bench/ref_update.ts",
-    'import * as SynchronizedRef from "npm:effect@4.0.5/SynchronizedRef";',
+    'import * as SynchronizedRef from "npm:effect@4.1.2/SynchronizedRef";',
   ],
   [REQUIRED_DENO_VERSION, "README.md", "The project needs Deno 2.9.8."],
-  [EFFECT_VERSION, "README.md", "Generated TypeScript targets Effect 4.0.5."],
+  [EFFECT_VERSION, "README.md", "Generated TypeScript targets Effect 4.1.2."],
 ];
 
 for (const [version, file, text] of PINS) {

@@ -636,7 +636,7 @@ Deno.test("deno check keeps the pinned closure when a host module imports an ove
     Deno.writeTextFileSync(`${dir}/deno.lock`, tscLock());
     Deno.writeTextFileSync(
       `${dir}/host.ts`,
-      `import * as shared from "npm:@effect/platform-node-shared@^4.0.5";\n` +
+      `import * as shared from "npm:@effect/platform-node-shared@^4.1.2";\n` +
         `import * as ws from "npm:ws@^8";\n` +
         `export const modules: unknown = [shared, ws];\n`,
     );
@@ -647,7 +647,7 @@ Deno.test("deno check keeps the pinned closure when a host module imports an ove
     assertEquals(Object.keys(lock.npm).length, 14);
     assertEquals(
       Object.keys(lock.npm).includes(
-        "@effect/platform-node-shared@4.0.5_effect@4.0.5",
+        "@effect/platform-node-shared@4.1.2_effect@4.1.2",
       ),
       true,
     );

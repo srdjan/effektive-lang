@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Effect 4.1.2 preserves defects in mixed failure causes. Typed recovery skips
+  such causes and converts their typed errors to defects.
+- Replaying one raw Schema constructor Effect now returns a fresh result.
+  Earlier replay results remain unchanged.
+- Generated projects and target checks pin Effect and its Node platform packages
+  to 4.1.2. The target lock pins their transitive dependencies.
+- Applications that use the Node platform packages require Node.js 22.19.0 or
+  later when they run on Node.js.
+
+## 0.15.0 - 2026-11-04
+
 - A source module can declare an external service with
   `imports Users from "./users-service.eff"`. Each header uses an explicit
   source path and must precede ordinary imports and declarations.

@@ -44,10 +44,10 @@ An output acquisition failure closes only the acquired input session.
 Execution defects and session cleanup defects remain defects. Remaining
 session finalizers still run after a cleanup defect.
 
-Item recovery uses native catchTags semantics. A matched typed reason can hide
-an accompanying defect from an arbitrary mixed transformation cause. The
-normal transformation driver has no defecting cleanup. A separate runtime
-probe records this limitation; session cleanup runs outside item recovery.
+Item recovery uses native catchTags semantics. A mixed transformation cause
+that contains a defect bypasses typed recovery. Effect preserves each typed
+error as a defect. A runtime probe checks both preserved reasons and session
+cleanup. Session cleanup runs outside item recovery.
 
 runtime_test.ts runs thirteen compiled cases. Together with source contract,
 IR and strict emitted checks, these cases complete the stream processor gate.

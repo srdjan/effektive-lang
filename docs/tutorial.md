@@ -6,7 +6,7 @@ The complete project is in [fixtures/tutorial/](../fixtures/tutorial/). Tests ch
 
 ## Before you start
 
-You need Deno 2.9.8. The generated TypeScript uses Effect 4.0.5. The first `--tsc` build downloads Effect from npm, so it needs network access once.
+You need Deno 2.9.8. The generated TypeScript uses Effect 4.1.2. The first `--tsc` build downloads Effect from npm, so it needs network access once.
 
 Run all shell commands from the repository root in the same shell. The commands use `deno task effektive`. If you installed the command-line tool (see [installation.md](installation.md)), use `effektive` in place of `deno task effektive`.
 
@@ -40,7 +40,7 @@ The generated modules are ordinary TypeScript files that import `effect`. Create
 ```json
 {
   "imports": {
-    "effect": "npm:effect@4.0.5"
+    "effect": "npm:effect@4.1.2"
   },
   "compilerOptions": {
     "strict": true,

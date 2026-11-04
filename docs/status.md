@@ -6,6 +6,8 @@ compiler state, the remaining and deferred gaps, and the open items. Other
 documents link here and do not restate these facts. History is in
 [archive/](archive/README.md).
 
+The compiler target and application fixtures pin Effect 4.1.2. The dependency update adds no source form.
+
 ## Stopping rule
 
 The accepted
@@ -204,7 +206,7 @@ complete Effect API parity nor external integration coverage.
 
 | Boundary                        | Recorded behavior or evidence limit                                                                                                                                                             |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Typed recovery and mixed causes | Native catchTags can select a typed reason and discard an accompanying defect. The stream witness records this limit. A `Defect` arm in `catch` (ES6) now recovers a defect in source, but the limit still applies to typed handlers. Its session finalizers run outside item recovery.                         |
+| Typed recovery and mixed causes | Native catchTags skips mixed causes that contain defects and preserves typed errors as defects. The stream witness checks both reasons and cleanup. Its session finalizers run outside item recovery.                         |
 | Transaction cancellation        | Body interruption awaits rollback and release. Interruption after COMMIT starts can preserve a committed row. The simulated COMMIT error proves no retry, not actual ambiguous-commit behavior. |
 | Stream failure and buffering    | Native transduction can emit a partial batch before upstream failure. The pinned backpressure trace establishes no global memory bound.                                                         |
 | Delivery guarantees             | The applications promise neither exactly-once delivery nor rollback of earlier successful batches.                                                                                              |

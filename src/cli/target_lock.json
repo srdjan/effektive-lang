@@ -1,20 +1,20 @@
 {
   "version": "5",
   "specifiers": {
-    "npm:@effect/platform-node@4.0.5": "4.0.5_effect@4.0.5_redis@6.3.1",
-    "npm:effect@4.0.5": "4.0.5"
+    "npm:@effect/platform-node@4.1.2": "4.1.2_effect@4.1.2_redis@6.3.1",
+    "npm:effect@4.1.2": "4.1.2"
   },
   "npm": {
-    "@effect/platform-node-shared@4.0.5_effect@4.0.5": {
-      "integrity": "sha512-a8rCdEkfZBGe9C6bsIjxVZuRp73svIyK5IHwHdDAVsvZXjrbkxusfI+rZ8WlX31RP1mKizwI/E72GQTNfdMWHw==",
+    "@effect/platform-node-shared@4.1.2_effect@4.1.2": {
+      "integrity": "sha512-wSwl9A/G1hcVvF8nLI+YfB3EyOIDvWS6+lsTZBkmgDnPBL7m8YWZF+1HD+mdEsb52SUGfukip46Q3gRwSdk3QA==",
       "dependencies": [
         "@types/ws",
         "effect",
         "ws"
       ]
     },
-    "@effect/platform-node@4.0.5_effect@4.0.5_redis@6.3.1": {
-      "integrity": "sha512-v4KD5fWvEUa4QmWFpZFbBsRhmfnTP6ETCME2r9ifyXVDPjhfpxpTZl41prjgQFMqZBHdWWCl7YC5ImbXv5ui5g==",
+    "@effect/platform-node@4.1.2_effect@4.1.2_redis@6.3.1": {
+      "integrity": "sha512-ye0UjxORdd5Qu3paZ1LljgGOALWHt7muP9VTpjUSCNfcesiB/Hm7wPJIvZeu4gnwpTe5BtEnO1VHngWqjJp8mA==",
       "dependencies": [
         "@effect/platform-node-shared",
         "effect",
@@ -61,8 +61,8 @@
         "@types/node"
       ]
     },
-    "effect@4.0.5": {
-      "integrity": "sha512-BY4/28NlpOd99yzmV741xbVGmp+1U7tks4oB7F/Png64bTa5tm5eCA6W0RiXsnuLDDoJpjfVSo4Dnq4BZb/89Q=="
+    "effect@4.1.2": {
+      "integrity": "sha512-d3Oah1WyKxFLFh19yWheS5IXIVaITzxZ71JkE1rkUozq/6EcJSU5nPk5bF2QrSygZ3SQoiNQB8TsxFriyMeMaQ=="
     },
     "redis@6.3.1": {
       "integrity": "sha512-mV96ZKxQ4CGn3SyEGaY0Lb9YA443mdVey3c+mdr0NAUaBxiOZGoYCWX8PoM55kictSOmxlJRtZJxIsmZm3jL+w==",
@@ -80,14 +80,14 @@
     "undici@8.12.3": {
       "integrity": "sha512-+fdndUTwBP86cVjihTp21hZHo7d6oj1c/47XPA3lL8mM0XHs+C4EkcjmgRsFnFk2f/UONGDy9ItBItmXsLOQHw=="
     },
-    "ws@8.22.0": {
-      "integrity": "sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg=="
+    "ws@8.22.1": {
+      "integrity": "sha512-oyL6OPYme/CmiFvNuGzeoxCJ4nOrZE2O1FwM9MWM1AsGri6nLXB2pg+lNA8aLeXMSav0J6eIVS1j6vUPzUtK9g=="
     }
   },
   "workspace": {
     "dependencies": [
-      "npm:@effect/platform-node@4.0.5",
-      "npm:effect@4.0.5"
+      "npm:@effect/platform-node@4.1.2",
+      "npm:effect@4.1.2"
     ]
   }
 }

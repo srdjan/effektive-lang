@@ -32,6 +32,7 @@ export const StoreLive: Layer.Layer<Store, StoreFailure, Runtime> = Layer
       () => new StoreFailure({ kind: "Permanent", stage: "provider" }),
     );
     const sql = yield* SqlClient.make({
+      driver: "sqlite",
       acquirer: backend.acquire,
       compiler: Statement.makeCompilerSqlite(),
       spanAttributes: [],
