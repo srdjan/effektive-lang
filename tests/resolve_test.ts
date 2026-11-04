@@ -70,12 +70,12 @@ function messages(analysis: Analysis): string[] {
   return analysis.diagnostics.map((d) => `${d.code} ${d.message}`);
 }
 
-Deno.test("the five examples and the host interface resolve with no diagnostics", () => {
+Deno.test("the six examples and the host interface resolve with no diagnostics", () => {
   assertEquals(
     examples.diagnostics.map((d) => `${d.span.source} ${d.code} ${d.message}`),
     [],
   );
-  assertEquals(examples.resolutions.size, 6);
+  assertEquals(examples.resolutions.size, 7);
   assert(examples.resolutions.has("host/providers"));
 });
 
@@ -103,12 +103,11 @@ Deno.test("every name node of the examples has a target and none is unresolved",
 Deno.test("Users.find in users.eff resolves to the capability", () => {
   assertEquals(
     targetsOf(examples, "users", SyntaxKind.FieldExpr, "Users.find"),
-    ["cap:users#Users.find"],
+    ["cap:users-service#Users.find"],
   );
-  // The four with clauses of getUser, rename, displayName, and activeNames.
   assertEquals(
-    targetsOf(examples, "users", SyntaxKind.QualifiedName, "Users"),
-    Array(4).fill("service:users#Users"),
+    targetsOf(examples, "users", SyntaxKind.Name, "Users"),
+    ["service:users-service#Users"],
   );
 });
 
@@ -156,10 +155,10 @@ Deno.test("UsersLive in main.eff resolves to the provider of the host interface"
   assertEquals(providers.target.kind, "provider");
 });
 
-Deno.test("the interface file resolves Users to the service of users.eff", () => {
+Deno.test("the interface file resolves Users to the service contract", () => {
   assertEquals(
     targetsOf(examples, "host/providers", SyntaxKind.QualifiedName, "Users"),
-    ["service:users#Users"],
+    ["service:users-service#Users"],
   );
 });
 

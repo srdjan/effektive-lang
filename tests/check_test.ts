@@ -189,9 +189,9 @@ function fixtureDeclaration(id: string): Record<string, unknown> {
   return found;
 }
 
-// ------------------------------------------------------------------ the five examples
+// ------------------------------------------------------------------ the examples
 
-Deno.test("the five examples have no declaration diagnostics", () => {
+Deno.test("the six examples have no declaration diagnostics", () => {
   const project = checkExamples();
   assertEquals(project.diagnostics.map((d) => `${d.code} ${d.message}`), []);
   for (const check of project.modules.values()) {
@@ -205,7 +205,8 @@ Deno.test("the five examples have no declaration diagnostics", () => {
 Deno.test("the modules are checked in topological order", () => {
   const project = checkExamples();
   const order = [...project.modules.keys()];
-  assert(order.indexOf("users") < order.indexOf("host/providers"));
+  assert(order.indexOf("users-service") < order.indexOf("users"));
+  assert(order.indexOf("users-service") < order.indexOf("host/providers"));
   assert(order.indexOf("host/providers") < order.indexOf("main"));
 });
 
@@ -333,9 +334,9 @@ Deno.test("UsersLive has a provider type that provides every Users method", () =
   assertEquals(value.type, {
     kind: "provider",
     provides: [
-      "cap:users#Users.all",
-      "cap:users#Users.find",
-      "cap:users#Users.save",
+      "cap:users-service#Users.all",
+      "cap:users-service#Users.find",
+      "cap:users-service#Users.save",
     ],
     acquisition: {
       execution: "effect",
@@ -350,18 +351,12 @@ Deno.test("UsersLive has a provider type that provides every Users method", () =
   assertEquals(names(payload.errors), ["StoreUnavailable"]);
 });
 
-Deno.test("the users interface lists User, UserMissing, StoreUnavailable, and Users", () => {
+Deno.test("the users interface exports functions and carries contract support", () => {
   const payload = interfaceOf(checkExamples(), "users").payload;
   assertEquals(names(payload.types), ["Name", "User", "UserId"]);
   assertEquals(names(payload.errors), ["StoreUnavailable", "UserMissing"]);
   assertEquals(names(payload.services), ["Users"]);
   assertEquals(payload.exports, [
-    "error:users#StoreUnavailable",
-    "error:users#UserMissing",
-    "service:users#Users",
-    "type:users#Name",
-    "type:users#User",
-    "type:users#UserId",
     "value:users#activeNames",
     "value:users#displayName",
     "value:users#getUser",
@@ -644,17 +639,21 @@ Deno.test("a body edit of getUser leaves the users interface hash unchanged", ()
   assertEquals(after.diagnostics, []);
 });
 
-Deno.test("a comment above the types moves the spans and leaves the hash unchanged", () => {
+Deno.test("a comment above the contract moves spans and leaves its hash unchanged", () => {
   const before = checkExamples();
   const after = checkExamples((files) => {
-    files["users.eff"] = "// A comment that moves every declaration.\n" +
-      files["users.eff"];
+    files["users-service.eff"] =
+      "// A comment that moves every declaration.\n" +
+      files["users-service.eff"];
   });
-  assertEquals(hashOf(after, "users"), hashOf(before, "users"));
+  assertEquals(
+    hashOf(after, "users-service"),
+    hashOf(before, "users-service"),
+  );
   // The value keeps its spans, so the payload itself differs.
   assertNotEquals(
-    interfaceOf(after, "users").payload.types[0].span,
-    interfaceOf(before, "users").payload.types[0].span,
+    interfaceOf(after, "users-service").payload.types[0].span,
+    interfaceOf(before, "users-service").payload.types[0].span,
   );
 });
 
@@ -663,8 +662,8 @@ Deno.test("a header edit that adds a failure changes the users interface hash", 
   const after = checkExamples((files) => {
     const text = files["users.eff"];
     const edited = text.replace(
-      "export const displayName = (id: UserId): Name with Users",
-      "export const displayName = (id: UserId): Name\n  fails StoreUnavailable | UserMissing\n  with Users",
+      "export const displayName = (id: UserId): Name =>",
+      "export const displayName = (id: UserId): Name\n  fails StoreUnavailable | UserMissing =>",
     );
     assertNotEquals(edited, text);
     files["users.eff"] = edited;
@@ -698,15 +697,18 @@ Deno.test("an edit of a private function leaves the interface hash unchanged", (
   assertEquals(hashOf(after, "pay"), hashOf(before, "pay"));
 });
 
-Deno.test("a field edit of an exported type changes the hash of its module", () => {
+Deno.test("a field edit of an exported contract type changes its module hash", () => {
   const before = checkExamples();
   const after = checkExamples((files) => {
-    files["users.eff"] = files["users.eff"].replace(
+    files["users-service.eff"] = files["users-service.eff"].replace(
       "  active: boolean\n}",
       "  active: boolean,\n  admin: boolean\n}",
     );
   });
-  assertNotEquals(hashOf(after, "users"), hashOf(before, "users"));
+  assertNotEquals(
+    hashOf(after, "users-service"),
+    hashOf(before, "users-service"),
+  );
 });
 
 // ------------------------------------------------------------------ private declarations

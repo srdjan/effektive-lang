@@ -56,7 +56,7 @@ The sections follow the language topics: core forms, modules and exports, effect
 
 | Rule | Choice | Evidence |
 | --- | --- | --- |
-| Inferred contracts | A function with a body infers each omitted `fails` clause from the body. This holds for an exported function and for a local function. A written `fails` clause closes its set as a checked upper bound (`failure-contract/001`). A written `fails never` closes an empty set, and `with never` closes an empty service set. A local function, module-level or inline arrow, also infers an omitted `with` clause. An exported function closes its `with` set, so an omitted `with` clause means no services (`requirement-contract/001`). An exported function with a checked input and no `fails` clause infers `SchemaError`; a written `fails` clause must list it. A result annotation alone does not close the sets. A function type in a binding annotation closes every part. Service methods, function types, and `.effi` providers state their sets, because they have no body. The interface carries the solved failure set of each export. The IR records `written: { result, fails, uses }`, and the field name `uses` stays; the validator reads a written set as an upper bound and an inferred set as equal to the body set | [check_declarations.ts](../src/core/check_declarations.ts), [check_project.ts](../src/core/check_project.ts), [2026-11-03-inferred-export-failures.md](archive/plans/2026-11-03-inferred-export-failures.md), [archive/plans/2026-10-24-terse-source.md](archive/plans/2026-10-24-terse-source.md) |
+| Inferred contracts | A function with a body infers each omitted `fails` clause. A module with service headers also infers each omitted `with` clause. This rule includes exported functions. Without a service header, an exported function closes an omitted `with` clause as empty. Local functions always infer an omitted `with` clause. A written clause is a checked upper bound. `fails never` and `with never` write empty bounds. An export with a checked input infers `SchemaError`. A written `fails` clause must list `SchemaError`. A function type in a binding annotation closes every contract part. Service methods, function types, and `.effi` providers state explicit sets because they have no bodies. Interfaces carry each export's solved sets. The IR field remains `written.uses` for a written `with` clause. The validator checks a written set as a bound and an inferred set as exact | [check_declarations.ts](../src/core/check_declarations.ts), [check_project.ts](../src/core/check_project.ts), [service_imports_test.ts](../tests/service_imports_test.ts) |
 | Named error sets | A `fails` clause can name a type alias whose unfolded body is an error or a union of errors, also an alias of aliases. The checker expands it to error identities, so the IR keeps sets of errors. A member that is not an error gives `failure-contract/004`. The rule covers contracts, function types, service methods, and `.effi` files | [check_declarations.ts](../src/core/check_declarations.ts), [resolve.ts](../src/core/resolve.ts) |
 | Contract diagnostics | One diagnostic for each contract kind of a function: `failure-contract/001` lists every extra error, and `requirement-contract/001` lists every extra capability. Each diagnostic carries a related location at each node of the body that introduces a missing entry, in source order. A location is the smallest node that carries the entry: a `fail(...)`, a service method call, a call of a function, or a builtin call that adds the entry. Through a call, the location is the call. A `try` hides the locations in its protected block for an error that one of its handlers names. The `SchemaError` form names each checked parameter | [check_expr.ts](../src/core/check_expr.ts), [contract_origins.ts](../src/core/contract_origins.ts) |
 | Literal widening | Unannotated bindings, branch joins, inferred results, and the `fold` accumulator widen literals to primitives | [check_expr.ts](../src/core/check_expr.ts) |
@@ -103,6 +103,8 @@ The sections follow the language topics: core forms, modules and exports, effect
 | Rule | Choice | Evidence |
 | --- | --- | --- |
 | Namespace | One namespace per module for types, errors, services, providers, constants, and imports | [resolve.ts](../src/core/resolve.ts) |
+| Service headers | `imports Users from "./users-service.eff"` binds one exported service and permits that external dependency. The path can be relative or registered with `host:`. Multiple headers can follow comments and blank lines. Every header must precede ordinary imports and declarations. An ordinary import can use the same path, and lowering merges both declarations. A missing path, missing export, or non-service export is a diagnostic. Host interface files reject service headers. The `imports` word remains an ordinary name outside this position | [parse.ts](../src/core/parse.ts), [resolve.ts](../src/core/resolve.ts), [check_project.ts](../src/core/check_project.ts) |
+| External service bound | Service headers bound external requirements from bodies, calls, and produced values. Input-only requirements do not enter the bound. `provide` removes the supplied service before the bound check. Provider acquisition requirements remain. Local services and reserved Effect capabilities need no header. An undeclared external requirement gives `requirement-contract/002` | [check_project.ts](../src/core/check_project.ts), [service_imports_test.ts](../tests/service_imports_test.ts) |
 | Prelude names | Neither modules nor locals may declare them, except the names that the `PRELUDE` table in `src/core/resolve.ts` marks `shadowable`. An existing binding with such a name shadows the builtin. `run` is one of them. Modules also may not declare builtin type names. `Effect<...>` is parsed as a type application without reserving `Effect` as a value name | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
 | Call-only builtins | A call-only builtin takes ordinary call syntax and has no pipeline stage. A pipeline stage gives `type-mismatch/010`. The `PRELUDE` table in `src/core/resolve.ts` marks each builtin `shadowable` or not. A source binding can shadow a shadowable builtin. The builtins `takeSink`, `transduceStream`, and the Schema constructors are call-only and shadowable. The shadowable set also holds `run` and `all`; the `PRELUDE` table is the complete list. A builtin is call-only when the checker calls `noPipeline` for it in `src/core/check_expr.ts`; `all` and `traverse` accept a pipeline stage. `runStream` is call-only but not shadowable: a binding named `runStream` gives `declaration/002` | [resolve.ts](../src/core/resolve.ts), [check_expr.ts](../src/core/check_expr.ts) |
 | Target names | Neither modules nor locals may declare `undefined`, `Number`, `RangeError`, `SchemaError`, `SchemaIssue`, `TimeoutError`, `Defect`, `ReadonlyArray`, `Math`, `Error`, `String`, `globalThis`, `TypeError`, `BigInt`, `any`, `bigint`, `object`, or `symbol` (`declaration/002`), because the generated TypeScript needs them. Fields and service methods may use them. Decision D20 of 2026-10-17 lists eight of them. The set gained `Math`, `Error`, `String`, `globalThis`, `TypeError`, and `BigInt` on 2026-11-02; `src/core/resolve.ts` holds the current list | [architecture.md](architecture.md), [resolve.ts](../src/core/resolve.ts) |
@@ -110,6 +112,10 @@ The sections follow the language topics: core forms, modules and exports, effect
 | Early outer use | A block that uses an outer name and later binds the same name is `declaration/004` | [resolve.ts](../src/core/resolve.ts) |
 | Own initializer | A local `const x = x` is `unknown-name/001`. A module-level `const x = x` is an initialization cycle, `module/004` | [resolve.ts](../src/core/resolve.ts), [check_project.ts](../src/core/check_project.ts) |
 | Module paths | Only letters, digits, `_`, `.`, `-`, and `/` | [project.ts](../src/core/project.ts) |
+
+The canonical Users consumer uses one service header. `getUser` needs
+`Users.find`. `rename` needs `Users.find | Users.save`. `displayName` needs
+`Users.find`, and `activeNames` needs `Users.all`.
 
 ## Effects and contracts
 
@@ -668,8 +674,9 @@ A single unannotated lambda parameter can omit parentheses: `user => user.name`.
 It is the same arrow as `(user) => user.name`, including contextual parameter
 inference, scope, effects and newline continuation before `=>`. Parameter
 annotations, multiple parameters, and explicit result contracts require the
-parenthesized form. Inference still needs an expected function type; an export
-states its result type and its services. Both spellings support the same editor queries.
+parenthesized form. Inference still needs an expected function type. An export
+states its result type. Module rules determine requirement inference. Both
+spellings support the same editor queries.
 
 `option ?? fallback` is lazy Option unwrapping: `Some` returns its payload;
 `None` evaluates the fallback. It evaluates the subject once, unfolds aliases,
@@ -707,7 +714,9 @@ calls named `using` remain valid; only the binding syntax selects this form.
 ## Inferred inputs and refinements
 
 [Input contracts](inferred-input-contracts.md) define the inference and validation rules.
-Exported results remain explicit. An export closes its service set, and the compiler infers its failure set.
+Exported results remain explicit. The compiler infers each export's failure set.
+A module with service headers also infers each export's service set within the module bound.
+Without a service header, an export closes its omitted service set as empty.
 An exported inferred input with a concrete contract adds `SchemaError` to the inferred failure set. A written `fails` clause must list `SchemaError`.
 The entry checks raw input before the body when its Effect executes.
 Local functions enforce their inferred contracts statically.

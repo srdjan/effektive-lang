@@ -1,38 +1,14 @@
 // Generated from users.eff by the Effektive compiler. Do not edit.
 
-import { Context, Effect, Option, Schema } from "effect";
-
-export const UserId = Schema.String;
-export type UserId = typeof UserId.Type;
-
-export const Name = Schema.String;
-export type Name = typeof Name.Type;
-
-export const User = Schema.Struct({
-  id: Schema.String,
-  name: Schema.String,
-  active: Schema.Boolean,
-});
-export type User = typeof User.Type;
-
-export class UserMissing extends Schema.TaggedError<UserMissing>()(
-  "users#UserMissing",
-  { id: Schema.String },
-) {}
-
-export class StoreUnavailable extends Schema.TaggedError<StoreUnavailable>()(
-  "users#StoreUnavailable",
-  { message: Schema.String },
-) {}
-
-export class Users extends Context.Service<Users, {
-  readonly find: (a: UserId) => Effect.Effect<
-    Option.Option<User>,
-    StoreUnavailable
-  >;
-  readonly save: (a: User) => Effect.Effect<void, StoreUnavailable>;
-  readonly all: () => Effect.Effect<ReadonlyArray<User>, StoreUnavailable>;
-}>()("users#Users") {}
+import { Effect, Option } from "effect";
+import {
+  Name,
+  StoreUnavailable,
+  User,
+  UserId,
+  UserMissing,
+  Users,
+} from "./users-service.ts";
 
 export const getUser = (id: UserId): Effect.Effect<
   User,
@@ -67,7 +43,7 @@ export const displayName = (id: UserId): Effect.Effect<
     return (yield* getUser(id)).name;
   }).pipe(
     Effect.catchTags({
-      "users#UserMissing": (error) => Effect.succeed("Guest"),
+      "users-service#UserMissing": (error) => Effect.succeed("Guest"),
     }),
   );
 

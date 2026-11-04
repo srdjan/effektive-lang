@@ -135,7 +135,7 @@ Deno.test("a host layer of the declared service that lacks a method gives one ho
     assertEquals([only.key, only.file, only.line], [
       "providers",
       "users-live.ts",
-      3,
+      2,
     ]);
   });
 });

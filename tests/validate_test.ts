@@ -563,7 +563,7 @@ Deno.test("src/core/validate imports only ir.ts, source.ts, diagnostics.ts, and 
 
 // ------------------------------------------------------------------ differential
 
-Deno.test("the five examples validate with zero diagnostics", () => {
+Deno.test("the six examples validate with zero diagnostics", () => {
   const checked = checkProject(diskHost(), "examples", EXAMPLE_ENTRIES);
   assert(checked.ok);
   const lowered = lowerProject(checked.value);
@@ -575,6 +575,7 @@ Deno.test("the five examples validate with zero diagnostics", () => {
     "main",
     "pay",
     "users",
+    "users-service",
   ]);
   for (const [name, diagnostics] of report) {
     assertEquals(
@@ -1644,7 +1645,7 @@ Deno.test("a wrong shape in a declaration header or an import gives a diagnostic
   const nullDeclaration = copy(EXAMPLES.modules.get("log"));
   setAt(nullDeclaration, "declarations[0]", null);
   assertEquals(codesOf(nullDeclaration, EXAMPLES.sources), ["validation/008"]);
-  const users = EXAMPLES.modules.get("users");
+  const users = EXAMPLES.modules.get("users-service");
   const service = users?.declarations.findIndex((d) => d.kind === "service");
   assert(service !== undefined && service >= 0);
   const noMethods = copy(users);

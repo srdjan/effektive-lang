@@ -532,6 +532,7 @@ export function exampleFiles(): Record<string, string> {
       "log.eff",
       "main.eff",
       "pay.eff",
+      "users-service.eff",
       "users.eff",
       "host/providers.effi",
     ]
@@ -576,10 +577,11 @@ export const EXAMPLE_ENTRIES: readonly string[] = [
   "log.eff",
   "main.eff",
   "pay.eff",
+  "users-service.eff",
   "users.eff",
 ];
 
-/** The modes that the plan names for the five examples, for the functions with empty sets. */
+/** The modes that the examples need for functions with empty sets. */
 export const EXAMPLE_MODES: ModeMap = new Map<ValueId, Execution>([
   ["value:log#log", "effect"],
   ["value:collections#activeNames", "pure"],
@@ -637,7 +639,7 @@ export function emitFilesWithProject(
   return { project: project.analysis.project, emitted: result };
 }
 
-/** The five examples and the companion module of the host interface, emitted in memory. */
+/** The examples and the companion module of the host interface, emitted in memory. */
 export function emitExamples(): ReadonlyMap<string, EmittedModule> {
   return emitFiles(exampleFiles(), EXAMPLE_ENTRIES);
 }

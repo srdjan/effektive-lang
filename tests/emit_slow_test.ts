@@ -28,6 +28,7 @@ Deno.test("the emitted examples and users-live.ts pass deno check under strict s
         "log.ts",
         "main.ts",
         "pay.ts",
+        "users-service.ts",
         "users.ts",
       ],
     );

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- A source module can declare an external service with
+  `imports Users from "./users-service.eff"`. Each header uses an explicit
+  source path and must precede ordinary imports and declarations.
+- Service headers bind services without providing implementations. They also
+  bound the external service requirements that the module can infer.
+- A module with service headers infers each function's actual omitted `with` set,
+  including exported functions. A written `with` clause remains a checked
+  upper bound.
+- Module bounds include requirements from calls and produced values. They
+  exclude input-only requirements and reserved Effect capabilities.
+- `provide` removes the supplied service before the module bound check.
+  Provider acquisition requirements remain.
+
 ## 0.14.1 - 2026-11-04
 
 - The editor offers an action that writes the inferred failure set of a

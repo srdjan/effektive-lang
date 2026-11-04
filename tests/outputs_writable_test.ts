@@ -33,6 +33,7 @@ Deno.test("writableModules writes the companion of a host interface target", () 
   const revision = new Program().update({
     set: {
       "effektive.json": read("effektive.json"),
+      "users-service.eff": read("users-service.eff"),
       "users.eff": read("users.eff"),
       "host/providers.effi": read("host/providers.effi"),
       "main.eff": read("main.eff"),
@@ -44,6 +45,7 @@ Deno.test("writableModules writes the companion of a host interface target", () 
     "host/providers",
     "main",
     "users",
+    "users-service",
   ]);
 });
 
@@ -68,6 +70,7 @@ Deno.test("writableModules writes no module whose imported host interface has an
   const revision = new Program().update({
     set: {
       "effektive.json": read("effektive.json"),
+      "users-service.eff": read("users-service.eff"),
       "users.eff": read("users.eff"),
       "host/providers.effi": `${
         read("host/providers.effi")
@@ -84,5 +87,6 @@ Deno.test("writableModules writes no module whose imported host interface has an
   assertEquals(writableModules(revision.value).sort(), [
     "host/providers",
     "users",
+    "users-service",
   ]);
 });

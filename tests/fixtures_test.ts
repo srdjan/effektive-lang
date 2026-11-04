@@ -58,6 +58,7 @@ Deno.test("fixtures exist in every group", () => {
       "examples/log.eff",
       "examples/main.eff",
       "examples/pay.eff",
+      "examples/users-service.eff",
       "examples/users.eff",
       "examples/host/providers.effi",
       "ir/example/log.eff",
@@ -67,13 +68,13 @@ Deno.test("fixtures exist in every group", () => {
   }
 });
 
-Deno.test("the host interface fixture has exactly the two lines of the plan", () => {
+Deno.test("the host interface imports the service contract", () => {
   const providers = VALID.find((f) =>
     f.path === "examples/host/providers.effi"
   )!;
   assertEquals(
     providers.text,
-    'import { Users } from "../users.eff"\nexport provider UsersLive provides Users\n',
+    'import { Users } from "../users-service.eff"\nexport provider UsersLive provides Users\n',
   );
 });
 

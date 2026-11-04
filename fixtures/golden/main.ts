@@ -1,7 +1,8 @@
 // Generated from main.eff by the Effektive compiler. Do not edit.
 
 import { Effect, Layer } from "effect";
-import { displayName, Name, StoreUnavailable, Users } from "./users.ts";
+import { Name, StoreUnavailable, Users } from "./users-service.ts";
+import { displayName } from "./users.ts";
 import { UsersLive } from "./users-live.ts";
 
 const UsersLive$host: Layer.Layer<Users> = UsersLive;

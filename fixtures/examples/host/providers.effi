@@ -1,2 +1,2 @@
-import { Users } from "../users.eff"
+import { Users } from "../users-service.eff"
 export provider UsersLive provides Users

@@ -4,6 +4,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { fromFileUrl, toFileUrl } from "@std/path";
 import { build } from "../playground/build.ts";
+import { Program } from "../src/core/frontend.ts";
 
 const OUTPUTS: readonly string[] = [
   "index.html",
@@ -21,6 +22,7 @@ const EXAMPLE_PATHS: readonly string[] = [
   "log.eff",
   "main.eff",
   "pay.eff",
+  "users-service.eff",
   "users.eff",
 ];
 
@@ -38,6 +40,14 @@ Deno.test("build writes the page files and the examples", async () => {
     );
     assert(typeof examples === "object" && examples !== null);
     assertEquals(Object.keys(examples).sort(), [...EXAMPLE_PATHS]);
+    const files: Record<string, string> = {};
+    for (const [path, text] of Object.entries(examples)) {
+      assert(typeof text === "string", path);
+      files[path] = text;
+    }
+    const revision = new Program("").update({ set: files });
+    assert(revision.ok);
+    assertEquals(revision.value.diagnostics, []);
     const app = Deno.readFileSync(`${out}/app.js`);
     assert(app.byteLength > 0);
     assertEquals(result.value.appBytes, app.byteLength);

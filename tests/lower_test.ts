@@ -121,7 +121,7 @@ Deno.test("example/log lowers to the IR fixture apart from the source id", () =>
 
 // ------------------------------------------------------------------ the examples
 
-Deno.test("the five examples lower, serialize, and keep sorted unique sets", () => {
+Deno.test("the six examples lower, serialize, and keep sorted unique sets", () => {
   const results = lowerProject(examples());
   assertEquals([...results.keys()].sort(), [
     "collections",
@@ -130,6 +130,7 @@ Deno.test("the five examples lower, serialize, and keep sorted unique sets", () 
     "main",
     "pay",
     "users",
+    "users-service",
   ]);
   for (const [name, result] of results) {
     assert(result.ok, `${name}: ${JSON.stringify(result)}`);
@@ -187,8 +188,8 @@ export const id = (t: Token): Token => t
   );
 });
 
-Deno.test("declarations keep source order and exports are sorted ids", () => {
-  const ir = lowered(examples(), "users");
+Deno.test("the service contract keeps declaration order and sorted exports", () => {
+  const ir = lowered(examples(), "users-service");
   assertEquals(
     ir.declarations.map((d) => `${d.kind} ${d.name}`),
     [
@@ -198,34 +199,57 @@ Deno.test("declarations keep source order and exports are sorted ids", () => {
       "error UserMissing",
       "error StoreUnavailable",
       "service Users",
-      "function getUser",
-      "function rename",
-      "function displayName",
-      "function activeNames",
     ],
   );
   assertEquals(ir.exports, [...ir.exports].sort());
-  assertEquals(ir.exports.length, 10);
+  assertEquals(ir.exports.length, 6);
 });
 
 // ------------------------------------------------------------------ imports
 
-Deno.test("main has one import for users and one for the host module", () => {
+Deno.test("main imports the users consumer, service contract, and host module", () => {
   const ir = lowered(examples(), "main");
-  assertEquals(ir.imports.map((i) => i.module), ["users", "host:providers"]);
-  const [users, host] = ir.imports;
+  assertEquals(ir.imports.map((i) => i.module), [
+    "users",
+    "users-service",
+    "host:providers",
+  ]);
+  const [users, service, host] = ir.imports;
   assertEquals(users.bindings, [
     { name: "displayName", target: "value:users#displayName" },
-    { name: "Name", target: "type:users#Name" },
-    { name: "StoreUnavailable", target: "error:users#StoreUnavailable" },
   ]);
-  assert(users.exports.includes("service:users#Users"));
-  assertEquals(users.services.map((s) => s.id), ["service:users#Users"]);
+  assertEquals(service.bindings, [
+    { name: "Name", target: "type:users-service#Name" },
+    {
+      name: "StoreUnavailable",
+      target: "error:users-service#StoreUnavailable",
+    },
+  ]);
+  assert(service.exports.includes("service:users-service#Users"));
+  assertEquals(users.services.map((s) => s.id), [
+    "service:users-service#Users",
+  ]);
   assertEquals(host.bindings, [
     { name: "UsersLive", target: "value:host/providers#UsersLive" },
   ]);
   assertEquals(host.exports, ["value:host/providers#UsersLive"]);
   assertEquals(host.values.map((v) => v.type.kind), ["provider"]);
+});
+
+Deno.test("the users header and ordinary import merge into one IR import", () => {
+  const ir = lowered(examples(), "users");
+  const imports = ir.imports.filter((entry) =>
+    entry.module === "users-service"
+  );
+  assertEquals(imports.length, 1);
+  assertEquals(imports[0].bindings.map((binding) => binding.name), [
+    "Users",
+    "Name",
+    "StoreUnavailable",
+    "User",
+    "UserId",
+    "UserMissing",
+  ]);
 });
 
 Deno.test("a module without builtins has no prelude import", () => {

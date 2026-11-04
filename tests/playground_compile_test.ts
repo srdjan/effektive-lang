@@ -21,6 +21,7 @@ const SOURCE_PATHS = [
   "log.eff",
   "main.eff",
   "pay.eff",
+  "users-service.eff",
   "users.eff",
 ];
 const BAD_USERS = FILES["users.eff"] +
@@ -46,7 +47,7 @@ function offsetOf(text: string, needle: string, delta = 0): number {
   return at + delta;
 }
 
-Deno.test("the examples compile with no diagnostics and six outputs, one for the host file", () => {
+Deno.test("the examples compile with no diagnostics and seven outputs, one for the host file", () => {
   const { first } = start();
   for (const diagnostics of Object.values(first.diagnostics)) {
     assertEquals(diagnostics, []);
@@ -114,7 +115,7 @@ Deno.test("an edit of the host interface file changes a diagnostic of main.eff",
   const { pg } = start();
   const result = okOf(pg.update(
     "host/providers.effi",
-    'import { Users } from "../users.eff"\n',
+    'import { Users } from "../users-service.eff"\n',
   ));
   assertEquals(result.diagnostics["host/providers.effi"], []);
   const main = result.diagnostics["main.eff"];
@@ -140,7 +141,7 @@ Deno.test("hover on rename gives the contract and the backend text", () => {
   assertEquals(hit.to, offsetOf(text, "rename") + "rename".length);
   assertEquals(
     hit.contract,
-    "rename(id: UserId, name: Name): User fails StoreUnavailable | UserMissing with Users.all | Users.find | Users.save",
+    "rename(id: UserId, name: Name): User fails StoreUnavailable | UserMissing with Users.find | Users.save",
   );
   assertEquals(
     hit.backend,

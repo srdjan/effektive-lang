@@ -115,6 +115,7 @@ class Session {
 }
 
 const USERS = "users.eff";
+const USERS_SERVICE = "users-service.eff";
 
 Deno.test("incremental alias and brand edits equal fresh checks across dependents and removal", () => {
   const alias = "export type N = int\nexport const n: N = 1\n";
@@ -184,9 +185,10 @@ Deno.test("the first revision checks every module in topological order", () => {
   assertEquals(first.number, 1);
   assertEquals(first.rechecked, [
     "collections",
-    "users",
+    "users-service",
     "host/providers",
     "log",
+    "users",
     "main",
     "pay",
   ]);
@@ -263,8 +265,8 @@ Deno.test("an interface edit in users.eff rechecks main.eff", () => {
   const session = new Session(files);
   const first = session.apply(files);
   const edited = files[USERS].replace(
-    "(): Name[] with Users",
-    "(): Name[] fails StoreUnavailable | UserMissing with Users",
+    "(): Name[] =>",
+    "(): Name[] fails StoreUnavailable | UserMissing =>",
   );
   assertNotEquals(edited, files[USERS]);
   const second = session.apply({ [USERS]: edited });
@@ -273,19 +275,24 @@ Deno.test("an interface edit in users.eff rechecks main.eff", () => {
     first.interfaceHash("users"),
   );
   // pay, log, and collections do not reach users.
-  assertEquals(second.rechecked, ["users", "host/providers", "main"]);
+  assertEquals(second.rechecked, ["users", "main"]);
 });
 
-Deno.test("a comment above the types moves their spans, so the importers lower again but do not recheck", () => {
+Deno.test("a comment above the contract moves spans, so importers lower without rechecking", () => {
   const files = exampleFiles();
   const session = new Session(files);
   const first = session.apply(files);
   const mainBefore = first.checkedModule("main");
   const irBefore = first.lowered("main");
-  const second = session.apply({ [USERS]: "// a comment\n" + files[USERS] });
+  const second = session.apply({
+    [USERS_SERVICE]: "// a comment\n" + files[USERS_SERVICE],
+  });
   // The interface hash leaves spans out and stays equal.
-  assertEquals(second.interfaceHash("users"), first.interfaceHash("users"));
-  assertEquals(second.rechecked, ["users"]);
+  assertEquals(
+    second.interfaceHash("users-service"),
+    first.interfaceHash("users-service"),
+  );
+  assertEquals(second.rechecked, ["users-service"]);
   // The checked declarations of main are reused, and its IR is lowered again
   // with the new spans; the session compares that IR with a run from scratch.
   assert(
@@ -310,11 +317,11 @@ Deno.test("differential: a sequence of edits equals a run from scratch after eac
 
   // An interface edit in users.eff.
   const iface = body.replace(
-    "(): Name[] with Users",
-    "(): Name[] fails StoreUnavailable | UserMissing with Users",
+    "(): Name[] =>",
+    "(): Name[] fails StoreUnavailable | UserMissing =>",
   );
   const edited = session.apply({ [USERS]: iface });
-  assertEquals(edited.rechecked, ["users", "host/providers", "main"]);
+  assertEquals(edited.rechecked, ["users", "main"]);
 
   // A syntax error, then its fix.
   const broken = iface + "\nexport const broken = (\n";
@@ -323,13 +330,15 @@ Deno.test("differential: a sequence of edits equals a run from scratch after eac
   const fixed = session.apply({ [USERS]: iface });
   assertEquals(fixed.diagnostics, []);
 
-  // An edit above the types moves their spans, then it is undone.
-  session.apply({ [USERS]: "// a comment\n" + iface });
-  session.apply({ [USERS]: iface });
+  // An edit above the contract moves its spans, then it is undone.
+  session.apply({
+    [USERS_SERVICE]: "// a comment\n" + files[USERS_SERVICE],
+  });
+  session.apply({ [USERS_SERVICE]: files[USERS_SERVICE] });
 
   // A new file that imports users.
   const extra = [
-    'import { User } from "./users.eff"',
+    'import { User } from "./users-service.eff"',
     "",
     "export const nameOf = (user: User): Text => user.name",
     "",
@@ -354,11 +363,7 @@ Deno.test("differential: a sequence of edits equals a run from scratch after eac
 
   // A removed file: users.eff disappears.
   const gone = session.apply({}, [USERS]);
-  assertEquals(gone.diagnostics.map((d) => d.code), [
-    "module/002",
-    "module/002",
-    "module/002",
-  ]);
+  assertEquals(gone.diagnostics.map((d) => d.code), ["module/002"]);
   const back = session.apply({ [USERS]: iface });
   assertEquals(back.diagnostics, []);
 
@@ -404,7 +409,7 @@ Deno.test("a host registry change rechecks the importers of the host module", ()
   });
   const second = session.apply({ "effektive.json": config });
   // The registry is part of every key, so every module checks again.
-  assertEquals(second.rechecked.length, 6);
+  assertEquals(second.rechecked.length, 7);
 });
 
 // ------------------------------------------------------------------ query counts
@@ -423,10 +428,10 @@ Deno.test("counts: a cold update parses and checks every module and lowers nothi
     lowerings: 0,
   });
   updated(program, exampleFiles());
-  // Five .eff files and the .effi file that main.eff imports.
+  // Six .eff files and the .effi file that main.eff imports.
   assertEquals(program.counts, {
-    parses: 6,
-    checks: 6,
+    parses: 7,
+    checks: 7,
     lowerings: 0,
   });
 });
@@ -442,25 +447,25 @@ Deno.test("counts: a body edit parses and checks one module, an interface edit c
   assertNotEquals(body, files[USERS]);
   updated(program, { [USERS]: body });
   assertEquals(program.counts, {
-    parses: 7,
-    checks: 7,
+    parses: 8,
+    checks: 8,
     lowerings: 0,
   });
   const iface = body.replace(
-    "(): Name[] with Users",
-    "(): Name[] fails StoreUnavailable | UserMissing with Users",
+    "(): Name[] =>",
+    "(): Name[] fails StoreUnavailable | UserMissing =>",
   );
   updated(program, { [USERS]: iface });
-  // users, host/providers, and main check again.
+  // users and main check again.
   assertEquals(program.counts, {
-    parses: 8,
+    parses: 9,
     checks: 10,
     lowerings: 0,
   });
   // An update with no change adds nothing.
   updated(program);
   assertEquals(program.counts, {
-    parses: 8,
+    parses: 9,
     checks: 10,
     lowerings: 0,
   });
@@ -519,8 +524,8 @@ Deno.test("revisionDelta: no change and a body edit change nothing, an interface
     modeChanged: [],
   });
   const iface = body.replace(
-    "(): Name[] with Users",
-    "(): Name[] fails StoreUnavailable | UserMissing with Users",
+    "(): Name[] =>",
+    "(): Name[] fails StoreUnavailable | UserMissing =>",
   );
   const changed = updated(program, { [USERS]: iface });
   const delta = revisionDelta(edited, changed);

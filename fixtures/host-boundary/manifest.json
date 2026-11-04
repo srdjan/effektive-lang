@@ -7,7 +7,7 @@
       "mutation": "The host module provides a service in which find takes a number and all is missing, so UsersLive does not match the provider that host/providers.effi declares.",
       "expected": {
         "source": "main.eff",
-        "line": 2,
+        "line": 3,
         "column": 10,
         "text": "UsersLive"
       }

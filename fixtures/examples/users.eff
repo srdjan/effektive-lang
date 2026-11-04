@@ -1,42 +1,33 @@
-export type UserId = string
-export type Name = string
+imports Users from "./users-service.eff"
+import {
+  Name,
+  StoreUnavailable,
+  User,
+  UserId,
+  UserMissing
+} from "./users-service.eff"
 
-export type User = {
-  id: string,
-  name: string,
-  active: boolean
-}
-
-export error UserMissing = { id: string }
-export error StoreUnavailable = { message: string }
-
-export service Users {
-  find(id: UserId): Option<User> fails StoreUnavailable
-  save(user: User): void fails StoreUnavailable
-  all(): User[] fails StoreUnavailable
-}
-
-export const getUser = (id: UserId): User with Users =>
+export const getUser = (id: UserId): User =>
   match Users.find(id) {
     Some(user) => user,
     None => fail(UserMissing({ id }))
   }
 
-export const rename = (id: UserId, name: Name): User with Users => {
+export const rename = (id: UserId, name: Name): User => {
   const user = getUser(id)
   const renamed = { ...user, name }
   Users.save(renamed)
   renamed
 }
 
-export const displayName = (id: UserId): Name with Users =>
+export const displayName = (id: UserId): Name =>
   try {
     getUser(id).name
   } catch {
     UserMissing(error) => "Guest"
   }
 
-export const activeNames = (): Name[] with Users =>
+export const activeNames = (): Name[] =>
   Users.all()
     |> filter(user => user.active)
     |> map(user => user.name)

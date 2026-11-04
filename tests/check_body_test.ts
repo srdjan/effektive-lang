@@ -619,7 +619,7 @@ function nodesOfKind(
 
 // ------------------------------------------------------------------ the examples
 
-Deno.test("the five examples check with no diagnostics", () => {
+Deno.test("the six examples check with no diagnostics", () => {
   const project = examples();
   assertEquals(messages(project), []);
 });
@@ -667,14 +667,13 @@ Deno.test("the interface rebuilt from the solved sets equals the interface of th
   }
 });
 
-Deno.test("rename fails with UserMissing and StoreUnavailable and requires every Users operation", () => {
+Deno.test("rename infers its failures and required Users operations", () => {
   const rename = fn(examples(), "users", "rename");
   assertEquals(shortIds(rename.body!.failures), [
     "StoreUnavailable",
     "UserMissing",
   ]);
   assertEquals(shortIds(rename.body!.requirements), [
-    "Users.all",
     "Users.find",
     "Users.save",
   ]);
@@ -685,9 +684,7 @@ Deno.test("displayName handles UserMissing and fails only with StoreUnavailable"
   const display = fn(examples(), "users", "displayName");
   assertEquals(shortIds(display.body!.failures), ["StoreUnavailable"]);
   assertEquals(shortIds(display.body!.requirements), [
-    "Users.all",
     "Users.find",
-    "Users.save",
   ]);
 });
 
@@ -842,7 +839,7 @@ Deno.test("pattern facts name the pattern kind and the binding", () => {
     f.kind === "handler"
   );
   assert(handler !== undefined && handler.kind === "handler");
-  assertEquals(handler.error, "error:users#UserMissing");
+  assertEquals(handler.error, "error:users-service#UserMissing");
   assertEquals(handler.binding, "local:users#displayName/error");
 });
 

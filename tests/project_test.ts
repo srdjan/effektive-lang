@@ -108,13 +108,14 @@ Deno.test("a host interface must be an .effi path inside the root", () => {
   assertEquals(result.value.diagnostics.length, 2);
 });
 
-Deno.test("the examples form a graph with users before main", () => {
+Deno.test("the examples form a graph with the service contract before its consumers", () => {
   const entries = listEffFiles("examples");
   assertEquals(entries, [
     "collections.eff",
     "log.eff",
     "main.eff",
     "pay.eff",
+    "users-service.eff",
     "users.eff",
   ]);
   const result = loadProject(diskHost(), "examples", entries);
@@ -128,15 +129,22 @@ Deno.test("the examples form a graph with users before main", () => {
     "main",
     "pay",
     "users",
+    "users-service",
   ]);
   const order = project.order;
-  assertEquals(order.length, 6);
+  assertEquals(order.length, 7);
+  assert(order.indexOf("users-service") < order.indexOf("users"));
   assert(order.indexOf("users") < order.indexOf("main"));
   assert(order.indexOf("host/providers") < order.indexOf("main"));
-  assert(order.indexOf("users") < order.indexOf("host/providers"));
-  assertEquals(project.graph.get("main"), ["host/providers", "users"]);
-  assertEquals(project.graph.get("host/providers"), ["users"]);
-  assertEquals(project.graph.get("users"), []);
+  assert(order.indexOf("users-service") < order.indexOf("host/providers"));
+  assertEquals(project.graph.get("main"), [
+    "host/providers",
+    "users",
+    "users-service",
+  ]);
+  assertEquals(project.graph.get("host/providers"), ["users-service"]);
+  assertEquals(project.graph.get("users"), ["users-service"]);
+  assertEquals(project.graph.get("users-service"), []);
 });
 
 Deno.test("the host import links to the interface file and keeps the import string", () => {
@@ -145,7 +153,11 @@ Deno.test("the host import links to the interface file and keeps the import stri
   const main = result.value.modules.get("main")!;
   assertEquals(
     main.links.map((l) => [l.target, l.label, l.isHost]),
-    [["users", "users", false], ["host/providers", "host:providers", true]],
+    [
+      ["users", "users", false],
+      ["users-service", "users-service", false],
+      ["host/providers", "host:providers", true],
+    ],
   );
   assertEquals(result.value.modules.get("host/providers")!.mode, "effi");
   assertEquals(

@@ -295,6 +295,7 @@ Deno.test("each example emits exactly its golden file", () => {
     "main",
     "pay",
     "users",
+    "users-service",
   ]);
   for (const [name, module] of emitted) {
     const golden = Deno.readTextFileSync(
@@ -1084,7 +1085,7 @@ Deno.test("emitModule returns an error value for a host module that the project 
 });
 
 Deno.test("the example list stays in step with the helper", () => {
-  assertEquals(EXAMPLE_ENTRIES.length, 5);
+  assertEquals(EXAMPLE_ENTRIES.length, 6);
 });
 
 Deno.test("the emitted module lists the range of each host assertion", () => {

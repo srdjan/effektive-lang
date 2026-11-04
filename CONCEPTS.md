@@ -168,11 +168,23 @@ _Avoid: fuzz test_
 
 ## Function contracts
 
+### Service header
+
+A top-level declaration that permits one external service dependency for the module.
+
+The form is `imports Users from "./users-service.eff"`. It binds the exported service without providing an implementation.
+Service headers precede ordinary imports and declarations. A module can declare more than one service header.
+
+The declared services bound the module's inferred requirements. The bound includes requirements reached through calls and produced values.
+It excludes requirements that occur only in input types. Reserved Effect capabilities do not need a service header.
+Services that the same module declares do not need a service header.
+
 ### `with` clause
 
 The part of a function header that lists the services that the body needs, such as `with Users.find | Users.save`.
 A name in the clause is a service or a service method.
-An exported function closes its `with` clause: an omitted clause means no services. A local function infers an omitted clause.
+A written clause is a checked upper bound. A module with service headers can infer an omitted clause on every function.
+Without service headers, an exported function closes its omitted clause as empty. A local function still infers an omitted clause.
 _Avoid: uses clause_
 
 ### `fails` clause
@@ -185,7 +197,7 @@ _Avoid: error clause_
 ### Inferred contract
 
 The failure set or service set that the compiler solves from a function body, when the header omits the clause.
-Every function with a body infers an omitted `fails` clause. Only a local function infers an omitted `with` clause.
+Every function with a body infers an omitted `fails` clause. A service header also enables requirement inference for exported functions.
 A new failure in an exported function with an inferred failure set reaches host TypeScript with no diagnostic. A written `fails` clause guards against this.
 
 ### Contract origin

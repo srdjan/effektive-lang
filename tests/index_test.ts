@@ -31,9 +31,11 @@ Deno.test("fnv1a64 hashes UTF-16 code units, so a surrogate pair is two units", 
   assertEquals(fnv1a64("\u{1F600}"), fnv1a64("😀"));
 });
 
-Deno.test("the index lists the declarations of users.eff with kind and export flag", () => {
-  const text = Deno.readTextFileSync(new URL("examples/users.eff", FIXTURES));
-  const index = indexOf(text, "users.eff");
+Deno.test("the index lists the service contract declarations", () => {
+  const text = Deno.readTextFileSync(
+    new URL("examples/users-service.eff", FIXTURES),
+  );
+  const index = indexOf(text, "users-service.eff");
   assertEquals(
     index.decls.map((d) => `${d.kind} ${d.name} ${d.exported}`),
     [
@@ -43,10 +45,6 @@ Deno.test("the index lists the declarations of users.eff with kind and export fl
       "error UserMissing true",
       "error StoreUnavailable true",
       "service Users true",
-      "const getUser true",
-      "const rename true",
-      "const displayName true",
-      "const activeNames true",
     ],
   );
   const users = index.byName.get("Users")!;

@@ -40,7 +40,11 @@ Each model request reads the full context again, so a long context costs more on
 
 The self-improvement loop is in [docs/logging.md](docs/logging.md): run `deno task logs:report`, rank the findings in a ledger, and prove each fix with `deno task logs:replay`.
 
-Follow the accepted [application acceptance rule](docs/plans/2026-10-19-application-acceptance-rule.md) when selecting gap work. The stopping rule, the application dispositions, and the open items are in [docs/status.md](docs/status.md). Keep application orchestration in `.eff`. Add features only for demonstrated application blockers after checking existing source compositions. Exception, accepted 2026-10-24: a compiler or syntax change that makes source more terse and elegant is welcome without an application blocker. It must keep the source easy to read, keep closed contracts, and keep the result type and the services of each export written. Change accepted 2026-11-03: the compiler infers the failure set of an export.
+Follow the accepted [application acceptance rule](docs/plans/2026-10-19-application-acceptance-rule.md) when selecting gap work. The stopping rule, the application dispositions, and the open items are in [docs/status.md](docs/status.md). Keep application orchestration in `.eff`. Add features only for demonstrated application blockers after checking existing source compositions.
+
+Exception, accepted 2026-10-24: a compiler or syntax change can make source more terse and elegant without an application blocker. It must keep source easy to read and keep contracts closed. Each export must keep its result type. Change accepted 2026-11-03: the compiler infers an export's failure set.
+
+Change accepted 2026-11-04: a module with service headers infers an export's omitted `with` clause. Each service header bounds the module's external service dependencies. A written `with` clause remains an optional checked bound.
 
 Exception, accepted 2026-10-27: Effektive hides the verbosity of Effect. Expose an Effect feature in source only when it carries user intent that the compiler cannot infer. Use every other Effect feature inside the transpiler only. Prefer to extend an existing source form over adding a builtin name. The candidate list is in [docs/status.md](docs/status.md#effect-4-features-to-surface-in-source).
 

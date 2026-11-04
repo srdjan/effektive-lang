@@ -1,0 +1,17 @@
+export type UserId = string
+export type Name = string
+
+export type User = {
+  id: string,
+  name: string,
+  active: boolean
+}
+
+export error UserMissing = { id: string }
+export error StoreUnavailable = { message: string }
+
+export service Users {
+  find(id: UserId): Option<User> fails StoreUnavailable
+  save(user: User): void fails StoreUnavailable
+  all(): User[] fails StoreUnavailable
+}

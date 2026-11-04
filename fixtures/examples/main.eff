@@ -1,4 +1,5 @@
-import { displayName, Name, StoreUnavailable } from "./users.eff"
+import { displayName } from "./users.eff"
+import { Name, StoreUnavailable } from "./users-service.eff"
 import { UsersLive } from "host:providers"
 
 export const main = (): Name =>

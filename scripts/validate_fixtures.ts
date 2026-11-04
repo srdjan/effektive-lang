@@ -159,7 +159,7 @@ interface Mutation {
 const LOG = ["log.eff"];
 const EMPTY_EFFECT = ["empty-effect.eff"];
 const TAGGED = ["tagged.eff"];
-const MAIN = ["main.eff", "users.eff"];
+const MAIN = ["main.eff", "users.eff", "users-service.eff"];
 
 const MUTATIONS: readonly Mutation[] = [
   {
@@ -245,11 +245,14 @@ const MUTATIONS: readonly Mutation[] = [
     base: "users",
     mutation:
       "The argument of Users.find in getUser is recorded as a Name, but the parameter is a UserId.",
-    sources: ["users.eff"],
+    sources: ["users.eff", "users-service.eff"],
     apply(ir) {
       const f = declIndex(ir, "getUser");
       const path = `declarations[${f}].body.subject.arguments[0]`;
-      setAt(ir, `${path}.type`, { kind: "named", id: "type:users#Name" });
+      setAt(ir, `${path}.type`, {
+        kind: "named",
+        id: "type:users-service#Name",
+      });
       return `${path}.type`;
     },
   },
@@ -288,7 +291,7 @@ const MUTATIONS: readonly Mutation[] = [
       const users = imports.findIndex((i) => isObj(i) && i.module === "users");
       const types = arr(ir, `imports[${users}].types`);
       const t = types.findIndex((x) =>
-        isObj(x) && x.id === "type:users#UserId"
+        isObj(x) && x.id === "type:users-service#UserId"
       );
       const path = `imports[${users}].types[${t}].definition`;
       setAt(ir, `${path}.sealed`, true);
@@ -439,7 +442,7 @@ const MUTATIONS: readonly Mutation[] = [
         id: "local:main#main/extra",
         name: "extra",
         type: STRING,
-        span: span("main.eff", 184, 186),
+        span: span("main.eff", 167, 169),
       });
       arr(ir, `${job}.type.parameters`).push(STRING);
       return `declarations[${declIndex(ir, "main")}].body.job`;
@@ -533,6 +536,7 @@ const SOURCE_PATHS: Readonly<Record<string, string>> = {
   "empty-effect.eff": "ir/empty-effect.eff",
   "log.eff": "examples/log.eff",
   "main.eff": "examples/main.eff",
+  "users-service.eff": "examples/users-service.eff",
   "users.eff": "examples/users.eff",
   "pay.eff": "examples/pay.eff",
   "tagged.eff": "ir/tagged.eff",

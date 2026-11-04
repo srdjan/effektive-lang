@@ -113,7 +113,16 @@ export const findBook = (id: BookId): Book with Shelf.find =>
   Shelf.find(id) ?? fail(BookMissing({ id }))
 ```
 
-The contract has three parts. The result is `Book`. The failure set holds every error that the function can fail with. The `with` clause lists every service operation that the function needs. An exported function writes its `with` clause when it needs a service. The compiler infers the failure set from the body, so `findBook` has no `fails` clause. Here, the failure set is `BookMissing | StoreDown`. A `fails` clause is optional. When you write one, the compiler checks that the body fails with no other error.
+The contract has three parts. The result is `Book`. The failure set holds every error that the function can raise.
+The `with` clause lists every required service operation. This module has no service header, so the exported function writes its requirements.
+
+The compiler infers the failure set from the body, so `findBook` has no `fails` clause. Its failure set is `BookMissing | StoreDown`.
+A `fails` clause is optional. When you write one, the compiler checks that the body raises no other error.
+
+A larger project can keep `Shelf` in a separate contract module. The consumer can start with `imports Shelf from "./shelf-service.eff"`.
+
+The header binds `Shelf` without providing its implementation. It also bounds the consumer module's external service dependencies.
+The compiler then infers each function's actual requirements. An exported result type remains mandatory, and a written `with` clause remains optional.
 
 `Shelf.find` returns an `Option<Book>`. The `??` operator gives the value in `Some`. For `None`, it evaluates the expression on its right. Here, that expression is `fail(BookMissing({ id }))`, so the function fails with `BookMissing`. The right side runs only for `None`. `{ id }` is the short form of `{ id: id }`.
 

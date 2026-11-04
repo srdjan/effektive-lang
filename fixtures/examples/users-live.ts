@@ -2,7 +2,7 @@
 // It keeps the users in memory. The store starts with one active and one inactive user.
 
 import { Effect, Layer, Option } from "effect";
-import { type User, Users } from "./users.ts";
+import { type User, Users } from "./users-service.ts";
 
 const store = new Map<string, User>([
   ["u1", { id: "u1", name: "Ada", active: true }],

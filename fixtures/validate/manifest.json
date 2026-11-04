@@ -65,8 +65,9 @@
       "code": "validation/002",
       "file": "types-identity-mismatch.json",
       "mutation": "The argument of Users.find in getUser is recorded as a Name, but the parameter is a UserId.",
-      "path": "declarations[6].body.subject.arguments[0].type",
+      "path": "declarations[0].body.subject.arguments[0].type",
       "sources": {
+        "users-service.eff": "examples/users-service.eff",
         "users.eff": "examples/users.eff"
       }
     },
@@ -88,6 +89,7 @@
       "path": "declarations[0].body.job.body.arguments[0]",
       "sources": {
         "main.eff": "examples/main.eff",
+        "users-service.eff": "examples/users-service.eff",
         "users.eff": "examples/users.eff"
       }
     },
@@ -156,7 +158,7 @@
       "code": "validation/005",
       "file": "recovery-absent-handler.json",
       "mutation": "The catch of displayName gets a handler for an error that the protected block cannot raise.",
-      "path": "declarations[9].body.handlers[1].error",
+      "path": "declarations[3].body.handlers[1].error",
       "sources": {
         "users.eff": "examples/users.eff"
       }
@@ -179,6 +181,7 @@
       "path": "declarations[0].body.job",
       "sources": {
         "main.eff": "examples/main.eff",
+        "users-service.eff": "examples/users-service.eff",
         "users.eff": "examples/users.eff"
       }
     },
@@ -200,6 +203,7 @@
       "path": "imports[0].values[2].type.effects.failures",
       "sources": {
         "main.eff": "examples/main.eff",
+        "users-service.eff": "examples/users-service.eff",
         "users.eff": "examples/users.eff"
       }
     },

@@ -1,7 +1,7 @@
 // Fast tests of `effektive check --fix`. They run `main` in process with the
 // in-memory doubles of cli_helpers.ts.
 
-import { assertEquals } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import { main } from "../src/cli/main.ts";
 import { exampleFiles } from "./helpers.ts";
 import { memoryIo, under } from "./cli_helpers.ts";
@@ -119,7 +119,7 @@ Deno.test("check --fix writes no file when nothing needs a fix", async () => {
   const code = await main(["check", ROOT, "--fix", "--no-log"], m.io);
   assertEquals(code, 0, m.err.join(""));
   assertEquals(m.files, before);
-  assertEquals(m.err.join(""), "6 modules, 0 diagnostics\n");
+  assertEquals(m.err.join(""), "7 modules, 0 diagnostics\n");
 });
 
 Deno.test("check --fix keeps an unrelated error and still fixes a function", async () => {
@@ -164,23 +164,29 @@ Deno.test("watch --fix is a usage error", async () => {
   );
 });
 
-Deno.test("check --fix restores the removed with clauses of the examples and keeps the failures inferred", async () => {
+Deno.test("check --fix writes requirements when the users module removes its service header", async () => {
   const files = exampleFiles();
-  const stripped = files["users.eff"].replace(/ with Users(?= =>)/g, "");
+  const closed = files["users.eff"].replace(
+    'imports Users from "./users-service.eff"\nimport {\n',
+    "import {\n  Users,\n",
+  );
   const r = await run(["check", ROOT, "--fix", "--no-log"], {
     ...files,
-    "users.eff": stripped,
+    "users.eff": closed,
   });
   assertEquals(r.code, 0, r.stdout + r.stderr);
   assertEquals(r.stdout, "");
   assertEquals(
     r.stderr,
-    "6 modules, 0 diagnostics, fixed 4 functions in 1 file\n",
+    "7 modules, 0 diagnostics, fixed 4 functions in 1 file\n",
   );
-  assertEquals(
-    r.m.files.get(`${ROOT}/users.eff`)?.split("\n").slice(18, 19),
-    [
-      "export const getUser = (id: UserId): User with Users.find =>",
-    ],
+  const fixed = r.m.files.get(`${ROOT}/users.eff`) ?? "";
+  assert(fixed.includes("(id: UserId): User with Users.find =>"));
+  assert(
+    fixed.includes(
+      "(id: UserId, name: Name): User with Users.save | Users.find =>",
+    ),
   );
+  assert(fixed.includes("(id: UserId): Name with Users.find =>"));
+  assert(fixed.includes("(): Name[] with Users.all =>"));
 });

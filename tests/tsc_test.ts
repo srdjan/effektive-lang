@@ -1,7 +1,7 @@
 // Tests for the parser of `deno check` output and the mapping of a
 // TypeScript diagnostic back to the Effektive source. The captured output
 // texts are in fixtures/host-boundary/. They show the real format of
-// `deno check` 2.9.7 for the wrong host module of that fixture.
+// `deno check` 2.9.8 for the wrong host module of that fixture.
 
 import { assert, assertEquals } from "@std/assert";
 import {
@@ -58,7 +58,7 @@ Deno.test("parseDenoCheck reads the diagnostic of a captured deno check run", ()
   assertEquals(output.diagnostics.length, 1);
   const found = output.diagnostics[0];
   assertEquals(found.file, "main.ts");
-  assertEquals(found.line, 7);
+  assertEquals(found.line, 8);
   assertEquals(found.column, 7);
   assertEquals(found.code, 2375);
   assert(
@@ -78,7 +78,7 @@ Deno.test("parseDenoCheck reads several diagnostics and drops the summary lines"
   assertEquals(output.other, []);
   assertEquals(
     output.diagnostics.map((d) => [d.file, d.line, d.column, d.code]),
-    [["main.ts", 7, 7, 2375], ["users-live.ts", 21, 14, 2322]],
+    [["main.ts", 8, 7, 2375], ["users-live.ts", 21, 14, 2322]],
   );
   assertEquals(
     output.diagnostics[1].message,

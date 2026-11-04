@@ -2,6 +2,7 @@ Check collections.ts
 Check log.ts
 Check main.ts
 Check pay.ts
+Check users-service.ts
 Check users.ts
 Check users-live.ts
 TS2375 [ERROR]: Type 'Layer<WrongUsers, never, never>' is not assignable to type 'Layer<Users, never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
@@ -12,7 +13,7 @@ TS2375 [ERROR]: Type 'Layer<WrongUsers, never, never>' is not assignable to type
           Type 'number' is not assignable to type 'string'.
 const UsersLive$host: Layer.Layer<Users> = UsersLive;
       ~~~~~~~~~~~~~~
-    at file:///work/project/main.ts:7:7
+    at file:///work/project/main.ts:8:7
 
 TS2322 [ERROR]: Type 'string' is not assignable to type 'number'.
 export const broken: number = "text";

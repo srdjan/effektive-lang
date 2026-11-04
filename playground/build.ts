@@ -30,6 +30,7 @@ export const EXAMPLE_FILES: readonly string[] = [
   "log.eff",
   "main.eff",
   "pay.eff",
+  "users-service.eff",
   "users.eff",
   "host/providers.effi",
 ];

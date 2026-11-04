@@ -4,7 +4,7 @@
       "body": {
         "effects": {
           "failures": [
-            "error:users#StoreUnavailable"
+            "error:users-service#StoreUnavailable"
           ],
           "requirements": []
         },
@@ -20,9 +20,9 @@
                 "execution": "pure",
                 "kind": "literal",
                 "span": {
-                  "end": 185,
+                  "end": 222,
                   "source": "main.eff",
-                  "start": 181
+                  "start": 218
                 },
                 "type": {
                   "kind": "primitive",
@@ -39,55 +39,51 @@
               "execution": "pure",
               "kind": "reference",
               "span": {
-                "end": 180,
+                "end": 217,
                 "source": "main.eff",
-                "start": 169
+                "start": 206
               },
               "target": "value:users#displayName",
               "type": {
                 "effects": {
                   "failures": [
-                    "error:users#StoreUnavailable"
+                    "error:users-service#StoreUnavailable"
                   ],
                   "requirements": [
-                    "cap:users#Users.all",
-                    "cap:users#Users.find",
-                    "cap:users#Users.save"
+                    "cap:users-service#Users.find"
                   ]
                 },
                 "execution": "effect",
                 "kind": "function",
                 "parameters": [
                   {
-                    "id": "type:users#UserId",
+                    "id": "type:users-service#UserId",
                     "kind": "named"
                   }
                 ],
                 "result": {
-                  "id": "type:users#Name",
+                  "id": "type:users-service#Name",
                   "kind": "named"
                 }
               }
             },
             "effects": {
               "failures": [
-                "error:users#StoreUnavailable"
+                "error:users-service#StoreUnavailable"
               ],
               "requirements": [
-                "cap:users#Users.all",
-                "cap:users#Users.find",
-                "cap:users#Users.save"
+                "cap:users-service#Users.find"
               ]
             },
             "execution": "effect",
             "kind": "call",
             "span": {
-              "end": 186,
+              "end": 223,
               "source": "main.eff",
-              "start": 169
+              "start": 206
             },
             "type": {
-              "id": "type:users#Name",
+              "id": "type:users-service#Name",
               "kind": "named"
             }
           },
@@ -102,9 +98,9 @@
               "id": "local:main#main/extra",
               "name": "extra",
               "span": {
-                "end": 186,
+                "end": 169,
                 "source": "main.eff",
-                "start": 184
+                "start": 167
               },
               "type": {
                 "kind": "primitive",
@@ -113,19 +109,17 @@
             }
           ],
           "span": {
-            "end": 186,
+            "end": 223,
             "source": "main.eff",
-            "start": 163
+            "start": 200
           },
           "type": {
             "effects": {
               "failures": [
-                "error:users#StoreUnavailable"
+                "error:users-service#StoreUnavailable"
               ],
               "requirements": [
-                "cap:users#Users.all",
-                "cap:users#Users.find",
-                "cap:users#Users.save"
+                "cap:users-service#Users.find"
               ]
             },
             "execution": "effect",
@@ -137,7 +131,7 @@
               }
             ],
             "result": {
-              "id": "type:users#Name",
+              "id": "type:users-service#Name",
               "kind": "named"
             }
           }
@@ -151,9 +145,9 @@
           "execution": "pure",
           "kind": "reference",
           "span": {
-            "end": 161,
+            "end": 198,
             "source": "main.eff",
-            "start": 152
+            "start": 189
           },
           "target": "value:host/providers#UsersLive",
           "type": {
@@ -166,19 +160,19 @@
             },
             "kind": "provider",
             "provides": [
-              "cap:users#Users.all",
-              "cap:users#Users.find",
-              "cap:users#Users.save"
+              "cap:users-service#Users.all",
+              "cap:users-service#Users.find",
+              "cap:users-service#Users.save"
             ]
           }
         },
         "span": {
-          "end": 187,
+          "end": 224,
           "source": "main.eff",
-          "start": 144
+          "start": 181
         },
         "type": {
-          "id": "type:users#Name",
+          "id": "type:users-service#Name",
           "kind": "named"
         }
       },
@@ -187,14 +181,14 @@
       "name": "main",
       "parameters": [],
       "span": {
-        "end": 187,
+        "end": 224,
         "source": "main.eff",
-        "start": 110
+        "start": 147
       },
       "type": {
         "effects": {
           "failures": [
-            "error:users#StoreUnavailable"
+            "error:users-service#StoreUnavailable"
           ],
           "requirements": []
         },
@@ -202,7 +196,7 @@
         "kind": "function",
         "parameters": [],
         "result": {
-          "id": "type:users#Name",
+          "id": "type:users-service#Name",
           "kind": "named"
         }
       },
@@ -223,14 +217,6 @@
         {
           "name": "displayName",
           "target": "value:users#displayName"
-        },
-        {
-          "name": "Name",
-          "target": "type:users#Name"
-        },
-        {
-          "name": "StoreUnavailable",
-          "target": "error:users#StoreUnavailable"
         }
       ],
       "errors": [
@@ -245,12 +231,12 @@
               }
             }
           ],
-          "id": "error:users#StoreUnavailable",
+          "id": "error:users-service#StoreUnavailable",
           "kind": "error",
           "name": "StoreUnavailable",
           "span": {
             "end": 220,
-            "source": "users.eff",
+            "source": "users-service.eff",
             "start": 169
           }
         },
@@ -265,23 +251,17 @@
               }
             }
           ],
-          "id": "error:users#UserMissing",
+          "id": "error:users-service#UserMissing",
           "kind": "error",
           "name": "UserMissing",
           "span": {
             "end": 168,
-            "source": "users.eff",
+            "source": "users-service.eff",
             "start": 127
           }
         }
       ],
       "exports": [
-        "error:users#StoreUnavailable",
-        "error:users#UserMissing",
-        "service:users#Users",
-        "type:users#Name",
-        "type:users#User",
-        "type:users#UserId",
         "value:users#activeNames",
         "value:users#displayName",
         "value:users#getUser",
@@ -290,21 +270,21 @@
       "module": "users",
       "services": [
         {
-          "id": "service:users#Users",
+          "id": "service:users-service#Users",
           "kind": "service",
           "methods": [
             {
-              "id": "cap:users#Users.find",
+              "id": "cap:users-service#Users.find",
               "name": "find",
               "span": {
                 "end": 300,
-                "source": "users.eff",
+                "source": "users-service.eff",
                 "start": 247
               },
               "type": {
                 "effects": {
                   "failures": [
-                    "error:users#StoreUnavailable"
+                    "error:users-service#StoreUnavailable"
                   ],
                   "requirements": []
                 },
@@ -312,13 +292,13 @@
                 "kind": "function",
                 "parameters": [
                   {
-                    "id": "type:users#UserId",
+                    "id": "type:users-service#UserId",
                     "kind": "named"
                   }
                 ],
                 "result": {
                   "element": {
-                    "id": "type:users#User",
+                    "id": "type:users-service#User",
                     "kind": "named"
                   },
                   "kind": "option"
@@ -326,17 +306,17 @@
               }
             },
             {
-              "id": "cap:users#Users.save",
+              "id": "cap:users-service#Users.save",
               "name": "save",
               "span": {
                 "end": 348,
-                "source": "users.eff",
+                "source": "users-service.eff",
                 "start": 303
               },
               "type": {
                 "effects": {
                   "failures": [
-                    "error:users#StoreUnavailable"
+                    "error:users-service#StoreUnavailable"
                   ],
                   "requirements": []
                 },
@@ -344,7 +324,7 @@
                 "kind": "function",
                 "parameters": [
                   {
-                    "id": "type:users#User",
+                    "id": "type:users-service#User",
                     "kind": "named"
                   }
                 ],
@@ -355,17 +335,17 @@
               }
             },
             {
-              "id": "cap:users#Users.all",
+              "id": "cap:users-service#Users.all",
               "name": "all",
               "span": {
                 "end": 387,
-                "source": "users.eff",
+                "source": "users-service.eff",
                 "start": 351
               },
               "type": {
                 "effects": {
                   "failures": [
-                    "error:users#StoreUnavailable"
+                    "error:users-service#StoreUnavailable"
                   ],
                   "requirements": []
                 },
@@ -374,7 +354,7 @@
                 "parameters": [],
                 "result": {
                   "element": {
-                    "id": "type:users#User",
+                    "id": "type:users-service#User",
                     "kind": "named"
                   },
                   "kind": "array"
@@ -385,7 +365,7 @@
           "name": "Users",
           "span": {
             "end": 389,
-            "source": "users.eff",
+            "source": "users-service.eff",
             "start": 222
           }
         }
@@ -399,12 +379,12 @@
             },
             "kind": "nominal"
           },
-          "id": "type:users#Name",
+          "id": "type:users-service#Name",
           "kind": "type",
           "name": "Name",
           "span": {
             "end": 53,
-            "source": "users.eff",
+            "source": "users-service.eff",
             "start": 28
           }
         },
@@ -441,12 +421,12 @@
             },
             "kind": "nominal"
           },
-          "id": "type:users#User",
+          "id": "type:users-service#User",
           "kind": "type",
           "name": "User",
           "span": {
             "end": 125,
-            "source": "users.eff",
+            "source": "users-service.eff",
             "start": 55
           }
         },
@@ -458,12 +438,12 @@
             },
             "kind": "nominal"
           },
-          "id": "type:users#UserId",
+          "id": "type:users-service#UserId",
           "kind": "type",
           "name": "UserId",
           "span": {
             "end": 27,
-            "source": "users.eff",
+            "source": "users-service.eff",
             "start": 0
           }
         }
@@ -475,12 +455,10 @@
           "type": {
             "effects": {
               "failures": [
-                "error:users#StoreUnavailable"
+                "error:users-service#StoreUnavailable"
               ],
               "requirements": [
-                "cap:users#Users.all",
-                "cap:users#Users.find",
-                "cap:users#Users.save"
+                "cap:users-service#Users.all"
               ]
             },
             "execution": "effect",
@@ -488,7 +466,7 @@
             "parameters": [],
             "result": {
               "element": {
-                "id": "type:users#Name",
+                "id": "type:users-service#Name",
                 "kind": "named"
               },
               "kind": "array"
@@ -501,24 +479,22 @@
           "type": {
             "effects": {
               "failures": [
-                "error:users#StoreUnavailable"
+                "error:users-service#StoreUnavailable"
               ],
               "requirements": [
-                "cap:users#Users.all",
-                "cap:users#Users.find",
-                "cap:users#Users.save"
+                "cap:users-service#Users.find"
               ]
             },
             "execution": "effect",
             "kind": "function",
             "parameters": [
               {
-                "id": "type:users#UserId",
+                "id": "type:users-service#UserId",
                 "kind": "named"
               }
             ],
             "result": {
-              "id": "type:users#Name",
+              "id": "type:users-service#Name",
               "kind": "named"
             }
           }
@@ -529,25 +505,23 @@
           "type": {
             "effects": {
               "failures": [
-                "error:users#StoreUnavailable",
-                "error:users#UserMissing"
+                "error:users-service#StoreUnavailable",
+                "error:users-service#UserMissing"
               ],
               "requirements": [
-                "cap:users#Users.all",
-                "cap:users#Users.find",
-                "cap:users#Users.save"
+                "cap:users-service#Users.find"
               ]
             },
             "execution": "effect",
             "kind": "function",
             "parameters": [
               {
-                "id": "type:users#UserId",
+                "id": "type:users-service#UserId",
                 "kind": "named"
               }
             ],
             "result": {
-              "id": "type:users#User",
+              "id": "type:users-service#User",
               "kind": "named"
             }
           }
@@ -558,34 +532,277 @@
           "type": {
             "effects": {
               "failures": [
-                "error:users#StoreUnavailable",
-                "error:users#UserMissing"
+                "error:users-service#StoreUnavailable",
+                "error:users-service#UserMissing"
               ],
               "requirements": [
-                "cap:users#Users.all",
-                "cap:users#Users.find",
-                "cap:users#Users.save"
+                "cap:users-service#Users.find",
+                "cap:users-service#Users.save"
               ]
             },
             "execution": "effect",
             "kind": "function",
             "parameters": [
               {
-                "id": "type:users#UserId",
+                "id": "type:users-service#UserId",
                 "kind": "named"
               },
               {
-                "id": "type:users#Name",
+                "id": "type:users-service#Name",
                 "kind": "named"
               }
             ],
             "result": {
-              "id": "type:users#User",
+              "id": "type:users-service#User",
               "kind": "named"
             }
           }
         }
       ]
+    },
+    {
+      "bindings": [
+        {
+          "name": "Name",
+          "target": "type:users-service#Name"
+        },
+        {
+          "name": "StoreUnavailable",
+          "target": "error:users-service#StoreUnavailable"
+        }
+      ],
+      "errors": [
+        {
+          "fields": [
+            {
+              "name": "message",
+              "optional": false,
+              "type": {
+                "kind": "primitive",
+                "name": "string"
+              }
+            }
+          ],
+          "id": "error:users-service#StoreUnavailable",
+          "kind": "error",
+          "name": "StoreUnavailable",
+          "span": {
+            "end": 220,
+            "source": "users-service.eff",
+            "start": 169
+          }
+        },
+        {
+          "fields": [
+            {
+              "name": "id",
+              "optional": false,
+              "type": {
+                "kind": "primitive",
+                "name": "string"
+              }
+            }
+          ],
+          "id": "error:users-service#UserMissing",
+          "kind": "error",
+          "name": "UserMissing",
+          "span": {
+            "end": 168,
+            "source": "users-service.eff",
+            "start": 127
+          }
+        }
+      ],
+      "exports": [
+        "error:users-service#StoreUnavailable",
+        "error:users-service#UserMissing",
+        "service:users-service#Users",
+        "type:users-service#Name",
+        "type:users-service#User",
+        "type:users-service#UserId"
+      ],
+      "module": "users-service",
+      "services": [
+        {
+          "id": "service:users-service#Users",
+          "kind": "service",
+          "methods": [
+            {
+              "id": "cap:users-service#Users.find",
+              "name": "find",
+              "span": {
+                "end": 300,
+                "source": "users-service.eff",
+                "start": 247
+              },
+              "type": {
+                "effects": {
+                  "failures": [
+                    "error:users-service#StoreUnavailable"
+                  ],
+                  "requirements": []
+                },
+                "execution": "effect",
+                "kind": "function",
+                "parameters": [
+                  {
+                    "id": "type:users-service#UserId",
+                    "kind": "named"
+                  }
+                ],
+                "result": {
+                  "element": {
+                    "id": "type:users-service#User",
+                    "kind": "named"
+                  },
+                  "kind": "option"
+                }
+              }
+            },
+            {
+              "id": "cap:users-service#Users.save",
+              "name": "save",
+              "span": {
+                "end": 348,
+                "source": "users-service.eff",
+                "start": 303
+              },
+              "type": {
+                "effects": {
+                  "failures": [
+                    "error:users-service#StoreUnavailable"
+                  ],
+                  "requirements": []
+                },
+                "execution": "effect",
+                "kind": "function",
+                "parameters": [
+                  {
+                    "id": "type:users-service#User",
+                    "kind": "named"
+                  }
+                ],
+                "result": {
+                  "kind": "primitive",
+                  "name": "unit"
+                }
+              }
+            },
+            {
+              "id": "cap:users-service#Users.all",
+              "name": "all",
+              "span": {
+                "end": 387,
+                "source": "users-service.eff",
+                "start": 351
+              },
+              "type": {
+                "effects": {
+                  "failures": [
+                    "error:users-service#StoreUnavailable"
+                  ],
+                  "requirements": []
+                },
+                "execution": "effect",
+                "kind": "function",
+                "parameters": [],
+                "result": {
+                  "element": {
+                    "id": "type:users-service#User",
+                    "kind": "named"
+                  },
+                  "kind": "array"
+                }
+              }
+            }
+          ],
+          "name": "Users",
+          "span": {
+            "end": 389,
+            "source": "users-service.eff",
+            "start": 222
+          }
+        }
+      ],
+      "types": [
+        {
+          "definition": {
+            "base": {
+              "kind": "primitive",
+              "name": "string"
+            },
+            "kind": "nominal"
+          },
+          "id": "type:users-service#Name",
+          "kind": "type",
+          "name": "Name",
+          "span": {
+            "end": 53,
+            "source": "users-service.eff",
+            "start": 28
+          }
+        },
+        {
+          "definition": {
+            "base": {
+              "fields": [
+                {
+                  "name": "id",
+                  "optional": false,
+                  "type": {
+                    "kind": "primitive",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "name",
+                  "optional": false,
+                  "type": {
+                    "kind": "primitive",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "active",
+                  "optional": false,
+                  "type": {
+                    "kind": "primitive",
+                    "name": "boolean"
+                  }
+                }
+              ],
+              "kind": "record"
+            },
+            "kind": "nominal"
+          },
+          "id": "type:users-service#User",
+          "kind": "type",
+          "name": "User",
+          "span": {
+            "end": 125,
+            "source": "users-service.eff",
+            "start": 55
+          }
+        },
+        {
+          "definition": {
+            "base": {
+              "kind": "primitive",
+              "name": "string"
+            },
+            "kind": "nominal"
+          },
+          "id": "type:users-service#UserId",
+          "kind": "type",
+          "name": "UserId",
+          "span": {
+            "end": 27,
+            "source": "users-service.eff",
+            "start": 0
+          }
+        }
+      ],
+      "values": []
     },
     {
       "bindings": [
@@ -606,12 +823,12 @@
               }
             }
           ],
-          "id": "error:users#StoreUnavailable",
+          "id": "error:users-service#StoreUnavailable",
           "kind": "error",
           "name": "StoreUnavailable",
           "span": {
             "end": 220,
-            "source": "users.eff",
+            "source": "users-service.eff",
             "start": 169
           }
         }
@@ -622,21 +839,21 @@
       "module": "host:providers",
       "services": [
         {
-          "id": "service:users#Users",
+          "id": "service:users-service#Users",
           "kind": "service",
           "methods": [
             {
-              "id": "cap:users#Users.find",
+              "id": "cap:users-service#Users.find",
               "name": "find",
               "span": {
                 "end": 300,
-                "source": "users.eff",
+                "source": "users-service.eff",
                 "start": 247
               },
               "type": {
                 "effects": {
                   "failures": [
-                    "error:users#StoreUnavailable"
+                    "error:users-service#StoreUnavailable"
                   ],
                   "requirements": []
                 },
@@ -644,13 +861,13 @@
                 "kind": "function",
                 "parameters": [
                   {
-                    "id": "type:users#UserId",
+                    "id": "type:users-service#UserId",
                     "kind": "named"
                   }
                 ],
                 "result": {
                   "element": {
-                    "id": "type:users#User",
+                    "id": "type:users-service#User",
                     "kind": "named"
                   },
                   "kind": "option"
@@ -658,17 +875,17 @@
               }
             },
             {
-              "id": "cap:users#Users.save",
+              "id": "cap:users-service#Users.save",
               "name": "save",
               "span": {
                 "end": 348,
-                "source": "users.eff",
+                "source": "users-service.eff",
                 "start": 303
               },
               "type": {
                 "effects": {
                   "failures": [
-                    "error:users#StoreUnavailable"
+                    "error:users-service#StoreUnavailable"
                   ],
                   "requirements": []
                 },
@@ -676,7 +893,7 @@
                 "kind": "function",
                 "parameters": [
                   {
-                    "id": "type:users#User",
+                    "id": "type:users-service#User",
                     "kind": "named"
                   }
                 ],
@@ -687,17 +904,17 @@
               }
             },
             {
-              "id": "cap:users#Users.all",
+              "id": "cap:users-service#Users.all",
               "name": "all",
               "span": {
                 "end": 387,
-                "source": "users.eff",
+                "source": "users-service.eff",
                 "start": 351
               },
               "type": {
                 "effects": {
                   "failures": [
-                    "error:users#StoreUnavailable"
+                    "error:users-service#StoreUnavailable"
                   ],
                   "requirements": []
                 },
@@ -706,7 +923,7 @@
                 "parameters": [],
                 "result": {
                   "element": {
-                    "id": "type:users#User",
+                    "id": "type:users-service#User",
                     "kind": "named"
                   },
                   "kind": "array"
@@ -717,7 +934,7 @@
           "name": "Users",
           "span": {
             "end": 389,
-            "source": "users.eff",
+            "source": "users-service.eff",
             "start": 222
           }
         }
@@ -756,12 +973,12 @@
             },
             "kind": "nominal"
           },
-          "id": "type:users#User",
+          "id": "type:users-service#User",
           "kind": "type",
           "name": "User",
           "span": {
             "end": 125,
-            "source": "users.eff",
+            "source": "users-service.eff",
             "start": 55
           }
         },
@@ -773,12 +990,12 @@
             },
             "kind": "nominal"
           },
-          "id": "type:users#UserId",
+          "id": "type:users-service#UserId",
           "kind": "type",
           "name": "UserId",
           "span": {
             "end": 27,
-            "source": "users.eff",
+            "source": "users-service.eff",
             "start": 0
           }
         }
@@ -797,9 +1014,9 @@
             },
             "kind": "provider",
             "provides": [
-              "cap:users#Users.all",
-              "cap:users#Users.find",
-              "cap:users#Users.save"
+              "cap:users-service#Users.all",
+              "cap:users-service#Users.find",
+              "cap:users-service#Users.save"
             ]
           }
         }

@@ -4,14 +4,14 @@
 // all is missing. Part A6b uses it to test the host-boundary mapping.
 
 import { Context, Effect, Layer, Option } from "effect";
-import type { StoreUnavailable, User } from "./users.ts";
+import type { StoreUnavailable, User } from "./users-service.ts";
 
 class WrongUsers extends Context.Service<WrongUsers, {
   readonly find: (
     a: number,
   ) => Effect.Effect<Option.Option<User>, StoreUnavailable>;
   readonly save: (a: User) => Effect.Effect<void, StoreUnavailable>;
-}>()("users#Users") {}
+}>()("users-service#Users") {}
 
 export const UsersLive = Layer.succeed(WrongUsers)({
   find: () => Effect.succeed(Option.none()),

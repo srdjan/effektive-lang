@@ -36,13 +36,20 @@ function withTemporary<T>(body: (dir: string) => Promise<T>): Promise<T> {
   return withTemporaryDirectory("effektive-cli-", body);
 }
 
-const MODULES = ["collections", "log", "main", "pay", "users"];
+const MODULES = [
+  "collections",
+  "log",
+  "main",
+  "pay",
+  "users-service",
+  "users",
+];
 
 Deno.test("check on fixtures/examples prints nothing and exits 0", async () => {
   const run = await effektive(["check", "fixtures/examples"]);
   assertEquals(run.code, 0, run.stderr);
   assertEquals(run.stdout, "");
-  assert(run.stderr.includes("6 modules, 0 diagnostics"), run.stderr);
+  assert(run.stderr.includes("7 modules, 0 diagnostics"), run.stderr);
   // The check wrote nothing next to the fixtures.
   for (const name of MODULES) {
     assertEquals(
@@ -135,6 +142,9 @@ Deno.test("build --tsc writes the golden files and the source maps, and exits 0"
       "pay.ts",
       "pay.ts.map",
       "users-live.ts",
+      "users-service.eff",
+      "users-service.ts",
+      "users-service.ts.map",
       "users.eff",
       "users.ts",
       "users.ts.map",
@@ -233,7 +243,7 @@ Deno.test("build --tsc maps a wrong host module to the import in the .eff file",
     assertEquals(lines.length, 1, run.stdout);
     assert(
       lines[0].startsWith(
-        'main.eff:2:10: error host-boundary/001: The host module "providers" does not match its declaration file for UsersLive: TS2375',
+        'main.eff:3:10: error host-boundary/001: The host module "providers" does not match its declaration file for UsersLive: TS2375',
       ),
       lines[0],
     );

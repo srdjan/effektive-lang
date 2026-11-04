@@ -79,7 +79,7 @@ Deno.test("check on the examples prints no diagnostic and exits 0", async () => 
   const r = await run(["check", ROOT], under(ROOT, exampleFiles()));
   assertEquals(r.code, 0);
   assertEquals(r.stdout, "");
-  assertEquals(r.stderr, "6 modules, 0 diagnostics\n");
+  assertEquals(r.stderr, "7 modules, 0 diagnostics\n");
 });
 
 Deno.test("check writes no file", async () => {
@@ -292,7 +292,16 @@ Deno.test("build writes each .ts and .ts.map next to its source", async () => {
   const r = await run(["build", ROOT], under(ROOT, exampleFiles()));
   assertEquals(r.code, 0, r.stderr);
   assertEquals(r.stdout, "");
-  for (const name of ["collections", "log", "main", "pay", "users"]) {
+  for (
+    const name of [
+      "collections",
+      "log",
+      "main",
+      "pay",
+      "users-service",
+      "users",
+    ]
+  ) {
     const golden = Deno.readTextFileSync(
       new URL(`golden/${name}.ts`, FIXTURES),
     );
@@ -309,7 +318,7 @@ Deno.test("build writes each .ts and .ts.map next to its source", async () => {
   const companionMap = r.m.files.get(`${ROOT}/host/providers.effi.ts.map`);
   assert(companionMap !== undefined);
   assertEquals(JSON.parse(companionMap).file, "providers.effi.ts");
-  assertEquals(r.stderr, "6 modules, 0 diagnostics, wrote 12 files\n");
+  assertEquals(r.stderr, "7 modules, 0 diagnostics, wrote 14 files\n");
 });
 
 Deno.test("build writes the companion of the host interface, and a second build writes nothing", async () => {
@@ -319,7 +328,7 @@ Deno.test("build writes the companion of the host interface, and a second build 
   const again = memoryIo(Object.fromEntries(first.m.files));
   const code = await main(["build", ROOT], again.io);
   assertEquals(code, 0);
-  assertEquals(again.err.join(""), "6 modules, 0 diagnostics\n");
+  assertEquals(again.err.join(""), "7 modules, 0 diagnostics\n");
 });
 
 Deno.test("build writes nothing for a module with an error and keeps its last good file", async () => {
@@ -405,6 +414,7 @@ Deno.test("build --tsc runs deno check over the generated files and the host mod
     "main.ts",
     "pay.ts",
     "users-live.ts",
+    "users-service.ts",
     "users.ts",
   ]);
   const config = JSON.parse(request.config);
@@ -447,7 +457,7 @@ Deno.test("build --tsc prints a host-boundary diagnostic at the import and a hos
   assertEquals(lines.length, 2, r.stdout);
   assert(
     lines[0].startsWith(
-      'main.eff:2:10: error host-boundary/001: The host module "providers" does not match its declaration file for UsersLive: TS2375 ',
+      'main.eff:3:10: error host-boundary/001: The host module "providers" does not match its declaration file for UsersLive: TS2375 ',
     ),
     lines[0],
   );
@@ -455,17 +465,17 @@ Deno.test("build --tsc prints a host-boundary diagnostic at the import and a hos
     lines[1],
     "users-live.ts:21:14: error host-boundary/001: Type 'string' is not assignable to type 'number'.",
   );
-  assertEquals(r.stderr, "6 modules, 2 diagnostics, wrote 12 files\n");
+  assertEquals(r.stderr, "7 modules, 2 diagnostics, wrote 14 files\n");
 });
 
 Deno.test("build --tsc prints a source error at the .eff position and a generated error at the generated position", async () => {
-  // Line 10, column 39 of main.ts is the call `displayName("u1")`, which comes
-  // from line 5, column 28 of main.eff. Line 1 is the header, outside every record.
+  // Line 11, column 39 of main.ts is the call `displayName("u1")`.
+  // It comes from line 6, column 28 of main.eff.
   const output = [
     "TS2322 [ERROR]: Type 'a' is not assignable to type 'b'.",
     '  displayName("u1")',
     "  ~",
-    `    at file://${ROOT}/main.ts:10:39`,
+    `    at file://${ROOT}/main.ts:11:39`,
     "",
     "TS2304 [ERROR]: Cannot find name 'q'.",
     "  q;",
@@ -485,7 +495,7 @@ Deno.test("build --tsc prints a source error at the .eff position and a generate
   );
   assertEquals(r.code, 1);
   assertEquals(r.stdout.trim().split("\n"), [
-    "main.eff:5:28: error TS2322: Type 'a' is not assignable to type 'b'.",
+    "main.eff:6:28: error TS2322: Type 'a' is not assignable to type 'b'.",
     "main.ts:1:1: error TS2304: Cannot find name 'q'.",
   ]);
 });
@@ -530,13 +540,13 @@ Deno.test("watch builds once, then rebuilds for each event and prints the rechec
     },
     // No change: nothing prints.
     () => {},
-    // An interface edit: users, the host interface, and main are checked again.
+    // An interface edit: users and main are checked again.
     () => {
       m.files.set(
         users,
         original.replace(
-          "(): Name[] with Users",
-          "(): Name[] fails StoreUnavailable | UserMissing with Users",
+          "(): Name[] =>",
+          "(): Name[] fails StoreUnavailable | UserMissing =>",
         ),
       );
     },
@@ -550,9 +560,9 @@ Deno.test("watch builds once, then rebuilds for each event and prints the rechec
   const err = m.err.join("");
   const rechecked = err.split("\n").filter((l) => l.startsWith("rechecked: "));
   assertEquals(rechecked, [
-    "rechecked: collections, users, host/providers, log, main, pay",
+    "rechecked: collections, users-service, host/providers, log, users, main, pay",
     "rechecked: users",
-    "rechecked: users, host/providers, main",
+    "rechecked: users, main",
     "rechecked: pay",
   ]);
   assert(err.includes(`watching ${ROOT}`));
@@ -583,7 +593,7 @@ Deno.test("watch goes on after a broken project file", async () => {
   const rechecked = err.split("\n").filter((l) => l.startsWith("rechecked: "));
   // The fix brings back the same keys, so the program checks nothing again.
   assertEquals(rechecked, [
-    "rechecked: collections, users, host/providers, log, main, pay",
+    "rechecked: collections, users-service, host/providers, log, users, main, pay",
     "rechecked: none",
   ]);
 });
