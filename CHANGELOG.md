@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.14.1 - 2026-11-04
+
 - The editor offers an action that writes the inferred failure set of a
   function as a `fails` clause, such as `fails StoreUnavailable | UserMissing`,
   or `fails never` for an empty set. The cursor must be in the header of a
