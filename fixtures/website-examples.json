@@ -9,18 +9,21 @@
       "path": "activation-label.eff",
       "kind": "file",
       "configuration": {},
+      "companions": ["users-service.eff"],
       "diagnostics": []
     },
     {
       "path": "activation.eff",
       "kind": "file",
       "configuration": {},
+      "companions": ["users-service.eff"],
       "diagnostics": []
     },
     {
       "path": "active-names.eff",
       "kind": "file",
       "configuration": {},
+      "companions": ["users-service.eff"],
       "diagnostics": []
     },
     {
@@ -30,15 +33,29 @@
       "diagnostics": []
     },
     {
+      "path": "console-service.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
+      "path": "core1-services.eff",
+      "kind": "file",
+      "configuration": {},
+      "diagnostics": []
+    },
+    {
       "path": "core1.eff",
       "kind": "file",
       "configuration": {},
+      "companions": ["core1-services.eff"],
       "diagnostics": []
     },
     {
       "path": "log.eff",
       "kind": "file",
       "configuration": {},
+      "companions": ["console-service.eff"],
       "diagnostics": []
     },
     {
@@ -64,6 +81,13 @@
       "path": "pay.eff",
       "kind": "file",
       "configuration": {},
+      "companions": ["payment-services.eff"],
+      "diagnostics": []
+    },
+    {
+      "path": "payment-services.eff",
+      "kind": "file",
+      "configuration": {},
       "diagnostics": []
     },
     {
@@ -76,6 +100,7 @@
       "path": "retry-lookup.eff",
       "kind": "file",
       "configuration": {},
+      "companions": ["users-service.eff"],
       "diagnostics": []
     },
     {
