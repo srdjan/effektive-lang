@@ -4,7 +4,7 @@ import { diagnosticDelta } from "./diagnostic_delta.ts";
 import type { SourceEdit } from "./source.ts";
 import { applySourceEdits } from "./editor_rename.ts";
 import { EFFECT_ERROR_IDS } from "./resolve.ts";
-import { resultEndOf } from "./editor_hints.ts";
+import { diagnosticInside, resultEndOf } from "./editor_hints.ts";
 import { childrenOf, kindOf, SyntaxKind } from "./syntax.ts";
 
 export interface ContractAction {
@@ -102,11 +102,7 @@ export function contractActionsAt(
     if (entry === undefined || entry.broken) continue;
     // Other body errors can make the inferred effect set incomplete.
     if (
-      module.diagnostics.some((d) =>
-        d.span.start >= signature.span.start &&
-        d.span.end <= signature.span.end && d.code !== "failure-contract/001" &&
-        d.code !== "requirement-contract/001"
-      )
+      diagnosticInside(revision, module.path, signature.span, CONTRACT_CODES)
     ) continue;
     // An open set has no clause to extend, so it never misses an entry.
     const missingFailures = signature.written.fails
@@ -267,12 +263,7 @@ export function failsClauseActionsAt(
       signature.annotation !== "arrow" || !signature.written.result ||
       signature.written.fails || fn.body === undefined ||
       entry === undefined || entry.broken ||
-      // The project list also holds the resolver diagnostics, such as unknown names.
-      revision.diagnostics.some((d) =>
-        d.span.source === module.path &&
-        d.span.start >= signature.span.start &&
-        d.span.end <= signature.span.end
-      )
+      diagnosticInside(revision, module.path, signature.span)
     ) return [];
     const names = fn.failures.map((id) =>
       effectName(revision, module.module, id)

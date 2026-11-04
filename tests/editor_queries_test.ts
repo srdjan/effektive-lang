@@ -516,6 +516,19 @@ Deno.test("inlay hints name a reserved error by its source name", () => {
   );
 });
 
+Deno.test("inlay hints skip a function with an unknown name", () => {
+  const text =
+    "type Int = int\nerror Stop = {}\nexport const f = (): Int => if (missing) { fail(Stop({})) } else { 1 }\n";
+  const loaded = new Program("").update({
+    set: { "effektive.json": "{}", "m.eff": text },
+  });
+  assert(loaded.ok);
+  assertEquals(
+    inlayHintsAt(loaded.value, "m.eff", { start: 0, end: text.length }),
+    [],
+  );
+});
+
 Deno.test("inlay hints keep only the positions inside the range", () => {
   const start = hintSource.indexOf("const result");
   const end = hintSource.indexOf("export");

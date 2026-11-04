@@ -8,6 +8,7 @@ import {
   SyntaxKind,
   type SyntaxTree,
 } from "./syntax.ts";
+import type { Span } from "./source.ts";
 import { isTypeKind } from "./syntax_queries.ts";
 import { effectText, showType } from "./type_show.ts";
 
@@ -39,6 +40,23 @@ export function resultEndOf(tree: SyntaxTree, functionNode: NodeId): number {
 }
 
 /**
+ * True when a diagnostic of the file `path` lies inside `span`, except the
+ * codes in `ignored`. The project list holds the resolver diagnostics, such as
+ * unknown names, which the list of the checked module does not hold.
+ */
+export function diagnosticInside(
+  revision: Revision,
+  path: string,
+  span: Span,
+  ignored: readonly string[] = [],
+): boolean {
+  return revision.diagnostics.some((d) =>
+    d.span.source === path && d.span.start >= span.start &&
+    d.span.end <= span.end && !ignored.includes(d.code)
+  );
+}
+
+/**
  * The hints whose position is inside `range` (inclusive) in the file `path`.
  * A function with a diagnostic inside its span gets no hint, because the
  * inferred sets of a broken body are unreliable.
@@ -57,11 +75,7 @@ export function inlayHintsAt(
     const { signature } = fn;
     const { written } = signature;
     if (index?.byName.get(signature.name)?.broken !== false) continue;
-    if (
-      module.diagnostics.some((d) =>
-        d.span.start >= signature.span.start && d.span.end <= signature.span.end
-      )
-    ) continue;
+    if (diagnosticInside(revision, module.path, signature.span)) continue;
     for (const parameter of signature.parameters) {
       const type = revision.types.node(parameter.type.ref);
       if (

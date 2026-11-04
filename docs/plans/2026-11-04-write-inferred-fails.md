@@ -117,6 +117,7 @@ Fable validated the plan read-only at `c37a20f`. It confirmed statements 1 to 10
 | WFF6 | Minor | `docs/editor.md:13` lists `contractActionsAt` in a query table. The section "Language server" lists methods, not kinds. | WFU3 adds a table row and one sentence about the kinds. |
 | WFF7 | Minor | `deno task mutate` takes modules, and `--only <path:line>` adds one site. Three changed modules have no register rows, so a whole-module run can show older survivors. | WFU4 names the exact commands and the treatment of older survivors. |
 | WFF8 | Minor | W13 as written is also excluded by `written.fails` and by its own diagnostic. | W13 states the input and all three reasons. |
+| WFF9 | Major, found by the WFU1 executor | The list of a checked module does not hold resolver diagnostics such as `unknown-name/001`. So a function with an unknown name got the inlay hint ` fails Stop` and the quick fix "Add missing fails entries", against the documented rule. The defect predates WF. | The orchestrator added `diagnosticInside` to `src/core/editor_hints.ts`. It reads the project list, and the hint, the quick fix, and the new query use it. Two tests reproduce the defect first. |
 
 ## Results
 

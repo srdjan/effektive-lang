@@ -106,6 +106,18 @@ Deno.test("contract actions: a body error that ends the function blocks the acti
   );
 });
 
+Deno.test("contract actions: an unknown name in the body blocks the action", () => {
+  assertEquals(
+    actionsAt(
+      PRELUDE +
+        "export const f = (): Int fails Other => if (missing) { fail(Stop({})) } else { fail(Other({})) }\n",
+      0,
+      500,
+    ),
+    [],
+  );
+});
+
 Deno.test("contract actions: a broken declaration has none", () => {
   assertEquals(
     actionsAt(
