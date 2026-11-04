@@ -123,6 +123,7 @@ class ModuleChecker {
   private readonly methodTypes = new Map<CapabilityId, TypeRef>();
   private readonly values = new Map<ValueId, ValueSignature>();
   private readonly exports: DeclarationId[] = [];
+  private readonly infersExportedRequirements: boolean;
 
   constructor(
     private readonly info: ModuleInfo,
@@ -131,6 +132,9 @@ class ModuleChecker {
     this.tree = env.tree;
     this.table = env.table;
     this.lowerer = new TypeLowerer(env, this.sink);
+    this.infersExportedRequirements = info.index.imports.some((entry) =>
+      entry.role === "service"
+    );
   }
 
   private id<P extends DeclarationPrefix>(
@@ -977,8 +981,8 @@ class ModuleChecker {
     let requirements: CapabilityId[] = [];
     let annotation: FunctionSignature["annotation"] = "none";
     // A binding type is a type, so it closes every part. An exported function
-    // closes its `with` set: an omitted clause is an empty set. It leaves an
-    // omitted `fails` clause open, as a local function does.
+    // closes its omitted `with` set unless a service header enables inference.
+    // It leaves an omitted `fails` clause open, as a local function does.
     let closedParts: WrittenParts = {
       result: false,
       fails: false,
@@ -1000,7 +1004,8 @@ class ModuleChecker {
       closedParts = {
         ...closedParts,
         fails: failsNode !== undefined || bound,
-        uses: usesNode !== undefined || bound || entry.exported,
+        uses: usesNode !== undefined || bound ||
+          (entry.exported && !this.infersExportedRequirements),
       };
       if (closedParts.fails) failures = lowerer.failures(failsNode);
       if (closedParts.uses) requirements = lowerer.requirements(usesNode);

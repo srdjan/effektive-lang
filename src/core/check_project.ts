@@ -41,8 +41,9 @@ import {
   makeDiagnostic,
   normalizeDiagnostics,
 } from "./diagnostics.ts";
+import { contractOrigins } from "./contract_origins.ts";
 import { stronglyConnectedComponents } from "./graph.ts";
-import { serviceOfCapability, shortName } from "./ids.ts";
+import { isTypeId, serviceOfCapability, shortName } from "./ids.ts";
 import { arrowBody, initOf } from "./syntax_queries.ts";
 import {
   buildInitializationGraph,
@@ -55,7 +56,7 @@ import {
   type ModuleInterface,
   reachableModules,
 } from "./interface.ts";
-import type { CapabilityId, Execution, ValueId } from "./ir.ts";
+import type { CapabilityId, Execution, ServiceId, ValueId } from "./ir.ts";
 import { type Solved, solveModeGroup } from "./modes.ts";
 import type { ConfigError, ModuleInfo } from "./project.ts";
 import type { Result, SourceHost } from "./source.ts";
@@ -563,6 +564,165 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
   };
 }
 
+/**
+ * Adds requirements carried by values that a type produces. Function parameters
+ * and sink inputs are inputs, so this walk does not enter them.
+ */
+function producedRequirements(
+  table: TypeTable,
+  ref: TypeRef,
+  into: Set<CapabilityId>,
+  seen = new Set<TypeRef>(),
+): void {
+  if (seen.has(ref)) return;
+  seen.add(ref);
+  const node = table.node(ref);
+  const visit = (child: TypeRef): void =>
+    producedRequirements(table, child, into, seen);
+  const add = (requirements: readonly CapabilityId[]): void => {
+    for (const requirement of requirements) into.add(requirement);
+  };
+  switch (node.kind) {
+    case "named": {
+      const target = isTypeId(node.id) ? table.aliasOf(node.id) : undefined;
+      if (target !== undefined) visit(target);
+      return;
+    }
+    case "record":
+      for (const field of node.fields) visit(field.type);
+      return;
+    case "array":
+    case "option":
+    case "ref":
+      visit(node.element);
+      return;
+    case "tuple":
+      for (const element of node.elements) visit(element);
+      return;
+    case "union":
+      for (const member of node.members) visit(member);
+      return;
+    case "schema":
+      add(node.decodeRequirements);
+      add(node.encodeRequirements);
+      visit(node.decoded);
+      visit(node.encoded);
+      return;
+    case "effect":
+      add(node.requirements);
+      visit(node.result);
+      return;
+    case "stream":
+      add(node.requirements);
+      visit(node.element);
+      return;
+    case "sink":
+      add(node.requirements);
+      visit(node.result);
+      visit(node.leftover);
+      return;
+    case "function":
+      add(node.requirements);
+      visit(node.result);
+      return;
+    case "provider":
+      add(node.requirements);
+      return;
+    case "primitive":
+    case "literal":
+    case "retry-schedule":
+    case "error":
+      return;
+    default: {
+      const unreachable: never = node;
+      return unreachable;
+    }
+  }
+}
+
+function allowedServiceIds(
+  info: ModuleInfo,
+  resolution: ModuleResolution,
+  declarations: ModuleDeclarations,
+): Set<ServiceId> | undefined {
+  const headers = info.index.imports.filter((entry) =>
+    entry.role === "service"
+  );
+  if (headers.length === 0) return undefined;
+  const allowed = new Set<ServiceId>(
+    declarations.services.map((service) => service.id),
+  );
+  for (const header of headers) {
+    for (const name of header.names) {
+      const target = resolution.namespace.get(name.name)?.target;
+      if (target?.kind === "service") allowed.add(target.id);
+    }
+  }
+  return allowed;
+}
+
+/** Checks the closed external-service set after local effect solving finishes. */
+function serviceBoundDiagnostics(
+  info: ModuleInfo,
+  resolution: ModuleResolution,
+  declarations: ModuleDeclarations,
+  bodies: ModuleBodies,
+  table: TypeTable,
+): Diagnostic[] {
+  const allowed = allowedServiceIds(info, resolution, declarations);
+  if (allowed === undefined) return [];
+  const diagnostics: Diagnostic[] = [];
+  const missing = (requirements: Iterable<CapabilityId>): CapabilityId[] => {
+    const found = new Set<CapabilityId>();
+    for (const capability of requirements) {
+      const service = serviceOfCapability(capability);
+      if (service !== undefined && !allowed.has(service)) found.add(capability);
+    }
+    return [...found].sort();
+  };
+  for (const fn of bodies.functions.values()) {
+    const requirements = new Set<CapabilityId>(fn.requirements);
+    producedRequirements(table, fn.result, requirements);
+    const extra = missing(requirements);
+    if (extra.length === 0) continue;
+    const related = extra.flatMap((capability) =>
+      fn.bodyNode === undefined || !fn.requirements.includes(capability)
+        ? []
+        : contractOrigins(
+          info.tree,
+          fn.table,
+          fn.bodyNode,
+          { kind: "requirement", capability },
+        ).map((span) => ({
+          span,
+          message: `requires \`${shortName(capability)}\` here`,
+        }))
+    );
+    diagnostics.push(makeDiagnostic(
+      "requirement-contract/002",
+      `\`${fn.signature.name}\` requires undeclared service methods ${
+        extra.map(shortName).join(", ")
+      }`,
+      fn.signature.nameSpan,
+      related,
+    ));
+  }
+  for (const constant of bodies.constants.values()) {
+    const requirements = new Set<CapabilityId>();
+    producedRequirements(table, constant.type, requirements);
+    const extra = missing(requirements);
+    if (extra.length === 0) continue;
+    diagnostics.push(makeDiagnostic(
+      "requirement-contract/002",
+      `\`${constant.signature.name}\` produces a value with undeclared service methods ${
+        extra.map(shortName).join(", ")
+      }`,
+      constant.signature.nameSpan,
+    ));
+  }
+  return diagnostics;
+}
+
 // ------------------------------------------------------------------ the project
 
 /** What a module sees of the modules that it reaches, among those that are checked so far. */
@@ -631,6 +791,13 @@ export function checkModuleStep(
     proofBudget,
     interfaces: seen.interfaces,
   });
+  const boundDiagnostics = serviceBoundDiagnostics(
+    info,
+    resolution,
+    declarations,
+    bodies,
+    table,
+  );
   const graph = buildTypeGraph(declarations, bodies.solved);
   const built = buildInterface(declarations, bodies.solved, seen.graphs);
   return {
@@ -650,6 +817,7 @@ export function checkModuleStep(
       diagnostics: normalizeDiagnostics([
         ...declarations.diagnostics,
         ...bodies.diagnostics,
+        ...boundDiagnostics,
       ]),
     },
   };

@@ -434,6 +434,15 @@ class Resolver {
         this.declareModuleName(imported.name, poison, imported.node);
         continue;
       }
+      if (entry.role === "service" && decl.kind !== "service") {
+        this.report(
+          "unknown-name/004",
+          `a service import requires a service, but \`${imported.name}\` is a ${decl.kind}`,
+          imported.span,
+        );
+        this.declareModuleName(imported.name, poison, imported.node);
+        continue;
+      }
       this.declareModuleName(
         imported.name,
         this.bindingFor(target.name, decl, imported.span),

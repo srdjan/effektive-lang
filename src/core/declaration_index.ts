@@ -52,7 +52,10 @@ interface ImportName {
   readonly span: Span;
 }
 
+export type ImportRole = "ordinary" | "service";
+
 export interface ImportEntry {
+  readonly role: ImportRole;
   readonly node: NodeId;
   readonly span: Span;
   /** The decoded specifier string, or undefined when the string is absent or broken. */
@@ -161,10 +164,11 @@ function indexDecl(
 }
 
 function indexImport(tree: SyntaxTree, node: NodeId): ImportEntry {
+  const children = childrenOf(tree, node);
   const names: ImportName[] = [];
   let specifier: string | undefined;
   let specifierSpan: Span | undefined;
-  for (const child of childrenOf(tree, node)) {
+  for (const child of children) {
     const kind = kindOf(tree, child);
     if (kind === SyntaxKind.Name) {
       const name = nameTextOf(tree, child);
@@ -179,6 +183,11 @@ function indexImport(tree: SyntaxTree, node: NodeId): ImportEntry {
     }
   }
   return {
+    role: tokenKindOf(tree, children[0]) === TokenKind.Ident &&
+        tree.text.slice(tree.starts[children[0]], tree.ends[children[0]]) ===
+          "imports"
+      ? "service"
+      : "ordinary",
     node,
     span: nodeSpan(tree, node),
     specifier,

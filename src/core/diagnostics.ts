@@ -174,7 +174,11 @@ export const DIAGNOSTIC_CODES = {
   },
   "requirement-contract/001": {
     description:
-      "The body of a function with a written `with` clause needs service methods that the clause does not list. An exported function and a function with a binding type annotation have a written `with` clause, empty when omitted.",
+      "The body of a function with a closed `with` set needs service methods that the set does not list. A written clause and a binding type close the set. An export without a service header also closes an omitted set.",
+  },
+  "requirement-contract/002": {
+    description:
+      "A module with service headers produces or executes a requirement for a service that no service header declares.",
   },
   "execution-mode/001": {
     description:

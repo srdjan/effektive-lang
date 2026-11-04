@@ -1165,6 +1165,27 @@
       }
     ]
   },
+  "errors-requirement-contract-service-import-bound": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "m.eff:5:14: error requirement-contract/002: `bad` requires undeclared service methods Users.find\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "m.eff:5:31: note: requires `Users.find` here\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "2 modules, 1 diagnostic\n"
+      }
+    ]
+  },
   "errors-sealed-authority": {
     "args": [
       "check",

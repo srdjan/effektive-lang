@@ -1510,7 +1510,7 @@ function lowerImports(
   resolution: ModuleResolution,
   module: string,
 ): Result<Import[], LowerError> {
-  const imports: Import[] = [];
+  const imports = new Map<string, Import>();
   for (let i = 0; i < info.links.length; i++) {
     const link = info.links[i];
     const imported = link.target === undefined
@@ -1546,17 +1546,23 @@ function lowerImports(
       bindings.push({ name: name.name, target });
     }
     const payload = iface.value.payload;
-    imports.push({
-      module: link.label,
-      bindings,
-      exports: payload.exports,
-      values: payload.values,
-      types: payload.types,
-      errors: payload.errors,
-      services: payload.services,
-    });
+    const previous = imports.get(link.label);
+    imports.set(
+      link.label,
+      previous === undefined
+        ? {
+          module: link.label,
+          bindings,
+          exports: payload.exports,
+          values: payload.values,
+          types: payload.types,
+          errors: payload.errors,
+          services: payload.services,
+        }
+        : { ...previous, bindings: [...previous.bindings, ...bindings] },
+    );
   }
-  return { ok: true, value: imports };
+  return { ok: true, value: [...imports.values()] };
 }
 
 /** The synthetic import of the closed prelude interface, or nothing when no builtin is used. */

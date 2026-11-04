@@ -367,7 +367,7 @@ class Parser {
         return constAnyColumn ||
           this.lexed.triviaEnd[p - 1] === this.lexed.triviaEnd[p];
       case TokenKind.Ident:
-        return this.isDeclarationWord(p) &&
+        return (this.isDeclarationWord(p) || this.isServiceImportAt(p)) &&
           this.kinds[p + 1] === TokenKind.Ident;
       default:
         return false;
@@ -379,6 +379,13 @@ class Parser {
     const len = this.ends[p] - this.starts[p];
     if (len < 4 || len > 8) return false;
     return DECL_WORDS.has(this.text.slice(this.starts[p], this.ends[p]));
+  }
+
+  /** True when the contextual word `imports` starts a service import. */
+  private isServiceImportAt(p: number): boolean {
+    return this.kinds[p] === TokenKind.Ident &&
+      this.isWordAt(p, "imports") &&
+      this.kinds[p + 1] === TokenKind.Ident;
   }
 
   private isWordAt(p: number, word: string): boolean {
@@ -692,11 +699,18 @@ class Parser {
 
   private parseModule(): NodeId {
     this.begin();
+    let serviceHeadersAllowed = true;
     while (true) {
       this.skipSeps();
       const k = this.kind();
       if (k === TokenKind.Eof) break;
-      this.parseTopItem(k);
+      if (this.isServiceImportAt(this.pos)) {
+        this.parseServiceImport(!serviceHeadersAllowed);
+        this.finishTopItem();
+      } else {
+        serviceHeadersAllowed = false;
+        this.parseTopItem(k);
+      }
     }
     this.leaf(); // the Eof token
     return this.end(SyntaxKind.Module);
@@ -714,6 +728,10 @@ class Parser {
       this.recoverTop();
       return;
     }
+    this.finishTopItem();
+  }
+
+  private finishTopItem(): void {
     const k2 = this.kind();
     if (
       k2 === TokenKind.Newline || k2 === TokenKind.Semicolon ||
@@ -732,6 +750,38 @@ class Parser {
     } else {
       this.missing("`{`");
     }
+    if (this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "from")) {
+      this.tok();
+    } else {
+      this.missing("`from`");
+    }
+    if (this.kind() === TokenKind.String) this.tok();
+    else this.missing("a string");
+    this.end(SyntaxKind.ImportDecl);
+  }
+
+  private parseServiceImport(misplaced: boolean): void {
+    this.begin();
+    const start = this.starts[this.pos];
+    const end = this.ends[this.pos];
+    if (misplaced) {
+      this.report(
+        "syntax/008",
+        "a service import must precede ordinary imports and declarations",
+        start,
+        end,
+      );
+    }
+    if (this.mode === "effi") {
+      this.report(
+        "syntax/008",
+        "a host interface file cannot contain a service import",
+        start,
+        end,
+      );
+    }
+    this.tok(); // imports
+    this.parseName("binding");
     if (this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "from")) {
       this.tok();
     } else {

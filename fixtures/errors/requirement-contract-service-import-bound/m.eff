@@ -1,0 +1,5 @@
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+
+// error: requirement-contract/002
+export const bad = (): Int => Users.find()

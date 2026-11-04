@@ -9,7 +9,7 @@
 //   sets. A set whose clause is not written (`written.fails` or `written.uses`
 //   is false) is open: the body checker infers it, and the signature holds an
 //   empty set for it. An exported function leaves a `fails` clause open when it
-//   writes none, as a local function does; its `with` set stays closed.
+//   writes none. Its omitted `with` set opens only in a module with service headers.
 // - The execution mode and the open sets of a function come from a `Solved`
 //   lookup that the body checker supplies. `executionOf` and `signatureType`
 //   take the lookup and return a Result error when an entry is missing.
@@ -93,8 +93,8 @@ export interface FunctionSignature extends SignatureBase {
   readonly id: ValueId;
   /**
    * The parts that close the contract. A part that is not written is inferred,
-   * except that an exported function closes its `with` set: an omitted clause
-   * is an empty set. A binding function type closes every part.
+   * except that an export outside a service-header module closes its `with` set.
+   * A binding function type closes every part.
    */
   readonly written: WrittenParts;
   /** Where a written result comes from: the arrow, or the binding type annotation. */
