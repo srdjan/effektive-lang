@@ -536,6 +536,66 @@ Deno.test("inlay hints keep only the positions inside the range", () => {
   assertEquals(hints({ start: 0, end: 1 }), []);
 });
 
+/** The hints of one source file in the range, or of the whole file. */
+function hintsOf(
+  text: string,
+  range?: { start: number; end: number },
+  path = "m.eff",
+) {
+  const loaded = new Program("").update({
+    set: { "effektive.json": "{}", "m.eff": text },
+  });
+  assert(loaded.ok);
+  return inlayHintsAt(
+    loaded.value,
+    path,
+    range ?? { start: 0, end: text.length },
+  );
+}
+
+Deno.test("inlay hints: a path without a module has none", () => {
+  assertEquals(
+    hintsOf("type Int = int\nexport const c = (n): Int => n + 1\n", {
+      start: 0,
+      end: 100,
+    }, "gone.eff"),
+    [],
+  );
+});
+
+Deno.test("inlay hints: a range that starts or ends at a hint keeps it", () => {
+  const text = "type Int = int\nexport const c = (n): Int => n + 1\n";
+  const hint = { position: 40, label: " fails SchemaError" };
+  assertEquals(hintsOf(text, { start: 40, end: 40 }), [hint]);
+  assertEquals(hintsOf(text, { start: 40, end: 41 }), [hint]);
+  assertEquals(hintsOf(text, { start: 39, end: 40 }), [hint]);
+});
+
+Deno.test("inlay hints: an unused inferred parameter has no hint", () => {
+  assertEquals(
+    hintsOf("type Int = int\nconst f = (x) => 1\n"),
+    [],
+  );
+});
+
+Deno.test("inlay hints: an inferred parameter of a primitive type has a hint", () => {
+  assertEquals(
+    hintsOf(
+      "const f = (n: int): int => n\nconst g = (m) => f(m)\n",
+    ),
+    [{ position: 41, label: ": int" }],
+  );
+});
+
+Deno.test("inlay hints: a diagnostic at the first offset of the function hides its hints", () => {
+  assertEquals(
+    hintsOf(
+      "type Int = int\nerror Stop = {}\nexport const c = (n): Int fails Stop => n + 1\n",
+    ),
+    [],
+  );
+});
+
 Deno.test("completion after a with keyword offers services and no values", () => {
   const text =
     "type Int = int\nservice Clock { now(): Int }\nconst other = (): Int => 1\nexport const f = (): Int with Cl => Clock.now()\n";

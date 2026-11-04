@@ -108,69 +108,6 @@
     "reason": "The publish step in check_project.ts drops every body diagnostic of a broken declaration, so such a function has no contract diagnostic. The edit then removes no diagnostic, and the delta.removed.length === 0 guard rejects the action."
   },
   {
-    "file": "src/core/editor_actions.ts",
-    "declaration": "contractActionsAt",
-    "offset": 867,
-    "text": "d.span.start >= signature.span.start",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "The checker anchors one function diagnostic at the start of the function span: the SchemaError rule for inferred inputs in check_expr.ts. Its code is failure-contract/001, which this condition excludes. Every other function diagnostic starts at the name or later."
-  },
-  {
-    "file": "src/core/editor_actions.ts",
-    "declaration": "contractActionsAt",
-    "offset": 1986,
-    "text": "arrow < 0",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "The parser numbers nodes in post-order: newNode runs when a leaf or a finished node is added. Node 0 is the first leaf of the file. An ArrowExpr child of a declaration always follows its own => leaf and the const keyword, so its id is never 0."
-  },
-  {
-    "file": "src/core/editor_actions.ts",
-    "declaration": "contractActionsAt",
-    "offset": 2642,
-    "text": "uses !== undefined",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "The branch runs only when a failure entry is missing and the arrow has no fails clause. Then the arrow has a binding type and a written result, because closedParts.fails in check_declarations.ts is true without a clause only through bound. The binding type fixes the failure set, so any inserted entry, at the arrow token or before the with clause, makes the rechecked binding mismatch. That adds a type-mismatch diagnostic, which is not in CONTRACT_CODES, so the harmful test rejects the action under both branches (checked by hand with a binding type and a with clause)."
-  },
-  {
-    "file": "src/core/editor_actions.ts",
-    "declaration": "contractActionsAt",
-    "offset": 3471,
-    "text": "i < 0",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "Two edits share an offset only when the failure entry goes at the end of the fails clause and the with entry goes at the arrow token, so the source has no space between the clause and => and no with clause. The merged text then glues the last failure name and the word with, so the rechecked function names an unknown error and the action is rejected. Without the merge, the two insertions at one offset give the same text, and the same rejection follows (checked by hand with `fails Other=>`)."
-  },
-  {
-    "file": "src/core/editor_actions.ts",
-    "declaration": "contractActionsAt",
-    "offset": 3905,
-    "text": "changedFunction === undefined || changedFunction.body === undefined ||\n      (changedFunction.signature.written.fails &&\n        [...changedFunction.body.failures, ...changedFunction.failures].some((\n          id,\n        ) => !changedFunction.signature.failures.includes(id))) ||\n      (changedFunction.signature.written.uses &&\n        changedFunction.body.requirements.some((id) =>\n          !changedFunction.signature.requirements.includes(id)\n        ))",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "effectName and requirementNames return a name only when the module namespace binds it to the missing id. The edited clause resolves through the same namespace, so the rechecked function holds every inserted id, and this part of the guard is never true."
-  },
-  {
-    "file": "src/core/editor_actions.ts",
-    "declaration": "contractActionsAt",
-    "offset": 3905,
-    "text": "changedFunction === undefined || changedFunction.body === undefined ||\n      (changedFunction.signature.written.fails &&\n        [...changedFunction.body.failures, ...changedFunction.failures].some((\n          id,\n        ) => !changedFunction.signature.failures.includes(id)))",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "effectName and requirementNames return a name only when the module namespace binds it to the missing id. The edited clause resolves through the same namespace, so the rechecked function holds every inserted id, and this part of the guard is never true."
-  },
-  {
-    "file": "src/core/editor_actions.ts",
-    "declaration": "contractActionsAt",
-    "offset": 3905,
-    "text": "changedFunction === undefined || changedFunction.body === undefined",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "The edit inserts entries into a parsed arrow and keeps the declaration name, so the rechecked module keeps the function id with its parsed body. The function is never undefined here, and the body is undefined only for a broken declaration, which the broken guard rejects earlier."
-  },
-  {
     "file": "src/core/predicates.ts",
     "declaration": "spendMany",
     "offset": 67,
@@ -790,5 +727,158 @@
     "operator": "logical",
     "class": "equivalent",
     "reason": "The map found holds only the leaves of the descent in visit. A leaf is a node with no selected child, so no found span contains another found span. Disjoint spans of one tree have the same order by start and by end, and two of them never share a start. The tie-break on end therefore never decides, and the order by end equals the order by start."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 1844,
+    "text": "arrow < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The parser numbers nodes in post-order: newNode runs when a leaf or a finished node is added. Node 0 is the first leaf of the file. An ArrowExpr child of a declaration always follows its own => leaf and the const keyword, so its id is never 0."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 3303,
+    "text": "uses !== undefined",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The branch runs only when a failure entry is missing and the arrow has no fails clause. Then the arrow has a binding type and a written result, because closedParts.fails in check_declarations.ts is true without a clause only through bound. The binding type fixes the failure set, so any inserted entry, at the arrow token or before the with clause, makes the rechecked binding mismatch. That adds a type-mismatch diagnostic, which is not in CONTRACT_CODES, so the harmful test rejects the action under both branches (checked by hand with a binding type and a with clause)."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 3714,
+    "text": "i < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "Two edits share an offset only when the failure entry goes at the end of the fails clause and the with entry goes at the arrow token, so the source has no space between the clause and => and no with clause. The merged text then glues the last failure name and the word with, so the rechecked function names an unknown error and the action is rejected. Without the merge, the two insertions at one offset give the same text, and the same rejection follows (checked by hand with `fails Other=>`)."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 4148,
+    "text": "changedFunction === undefined || changedFunction.body === undefined ||\n      (changedFunction.signature.written.fails &&\n        [...changedFunction.body.failures, ...changedFunction.failures].some((\n          id,\n        ) => !changedFunction.signature.failures.includes(id))) ||\n      (changedFunction.signature.written.uses &&\n        changedFunction.body.requirements.some((id) =>\n          !changedFunction.signature.requirements.includes(id)\n        ))",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "effectName and requirementNames return a name only when the module namespace binds it to the missing id. The edited clause resolves through the same namespace, so the rechecked function holds every inserted id, and this part of the guard is never true."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 4148,
+    "text": "changedFunction === undefined || changedFunction.body === undefined ||\n      (changedFunction.signature.written.fails &&\n        [...changedFunction.body.failures, ...changedFunction.failures].some((\n          id,\n        ) => !changedFunction.signature.failures.includes(id)))",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "effectName and requirementNames return a name only when the module namespace binds it to the missing id. The edited clause resolves through the same namespace, so the rechecked function holds every inserted id, and this part of the guard is never true."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "contractActionsAt",
+    "offset": 4148,
+    "text": "changedFunction === undefined || changedFunction.body === undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The edit inserts entries into a parsed arrow and keeps the declaration name, so the rechecked module keeps the function id with its parsed body. The function is never undefined here, and the body is undefined only for a broken declaration, which the broken guard rejects earlier."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "failsClauseActionsAt",
+    "offset": 524,
+    "text": "arrow < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The parser numbers nodes in post-order, so node 0 is the first leaf of the file. An ArrowExpr child of a declaration follows its own `=>` leaf and the `const` keyword, so its id is never 0."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "failsClauseActionsAt",
+    "offset": 984,
+    "text": "signature.annotation !== \"arrow\" || !signature.written.result",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The annotation is arrow exactly when a result node is written (check_declarations.ts:987-990), so a missing result implies an annotation other than arrow. The mutant therefore tests only the missing result. A binding annotation with no result node still has written.fails true (check_declarations.ts:994-996), and the next term of the guard rejects it. A differential run of the original and the mutant over 2422 calls found no difference."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "failsClauseActionsAt",
+    "offset": 1439,
+    "text": "at < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "resultEndOf returns -1 or the end offset of a header part. That end follows the `const` keyword and the name, so it is never 0."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "failsClauseActionsAt",
+    "offset": 1979,
+    "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements) ||\n      diagnosticDelta(revision.diagnostics, checked.value.diagnostics, edits)\n          .added.length > 0",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The edit inserts only a `fails` clause that names each id of fn.failures. effectName returns a name only for the same id, and failures() in type_lower.ts:681 returns sorted unique ids, as fn.failures is. The clause does not change the `with` set (check_declarations.ts:1001-1005) or the mode of the body run. A new syntax or contract diagnostic cannot arise from a clause that repeats the inferred set. A differential run of the original and the mutant over 2422 calls found no difference."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "failsClauseActionsAt",
+    "offset": 1979,
+    "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements)",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The edit inserts only a `fails` clause that names each id of fn.failures. effectName returns a name only for the same id, and failures() in type_lower.ts:681 returns sorted unique ids, as fn.failures is. The clause does not change the `with` set (check_declarations.ts:1001-1005) or the mode of the body run. A new syntax or contract diagnostic cannot arise from a clause that repeats the inferred set. A differential run of the original and the mutant over 2422 calls found no difference."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "failsClauseActionsAt",
+    "offset": 1979,
+    "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures)",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The edit inserts only a `fails` clause that names each id of fn.failures. effectName returns a name only for the same id, and failures() in type_lower.ts:681 returns sorted unique ids, as fn.failures is. The clause does not change the `with` set (check_declarations.ts:1001-1005) or the mode of the body run. A new syntax or contract diagnostic cannot arise from a clause that repeats the inferred set. A differential run of the original and the mutant over 2422 calls found no difference."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "failsClauseActionsAt",
+    "offset": 1979,
+    "text": "changed === undefined || changed.mode !== fn.mode",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The edit inserts only a `fails` clause that names each id of fn.failures. effectName returns a name only for the same id, and failures() in type_lower.ts:681 returns sorted unique ids, as fn.failures is. The clause does not change the `with` set (check_declarations.ts:1001-1005) or the mode of the body run. A new syntax or contract diagnostic cannot arise from a clause that repeats the inferred set. A differential run of the original and the mutant over 2422 calls found no difference."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "sameIds",
+    "offset": 81,
+    "text": "a.length === b.length && a.every((id, i) => id === b[i])",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The recheck lists the names of fn.failures in order (editor_actions.ts:268-270). effectName returns a name only for the same id, and failures() in type_lower.ts:681 returns sorted unique ids, as fn.failures is. So the two lists are always equal, and the mutant also returns true for them."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "failsClauseActionsAt",
+    "offset": 984,
+    "text": "signature.annotation !== \"arrow\" || !signature.written.result ||\n      signature.written.fails || fn.body === undefined ||\n      entry === undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The mutant reads as the guard terms before it, or the conjunction of the body test and the entry test. It differs from the original only when the body is undefined and the entry is defined, or the reverse. The arrow body is missing only when the parser emits a Missing node, so the declaration is broken and the next term `entry.broken` still rejects it (arrowBody in syntax_queries.ts:166, hasProblem in syntax.ts:281). The module index holds an entry for every function of the module, so the entry is never undefined. A differential run over 5752 broken and valid sources found no function with an undefined body that is not broken."
+  },
+  {
+    "file": "src/core/ids.ts",
+    "declaration": "shortName",
+    "offset": 86,
+    "text": "hash >= 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The mutant differs only when `#` is the first character of the identity. Every identity type starts with its kind and a colon, such as `error:` or `cap:` (ir.ts:4-7 and ir.ts:40-41), so `#` is never at index 0."
+  },
+  {
+    "file": "src/core/ids.ts",
+    "declaration": "shortName",
+    "offset": 180,
+    "text": "reserved < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The mutant differs only when `:effect/` starts at index 0. Every identity type starts with a non-empty kind before its colon, such as `error:effect/SchemaError` (ir.ts:4-7 and ir.ts:40-41), so `:effect/` is never at index 0."
   }
 ]

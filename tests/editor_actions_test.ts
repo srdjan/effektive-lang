@@ -353,3 +353,23 @@ Deno.test("fails clause: W16 a written with never extends by replacement", () =>
     PRELUDE + "export const g = (): Int with Clock => Clock.now()\n",
   ]]);
 });
+
+Deno.test("fails clause: W17 a path without a module gives no action", () => {
+  assertEquals(failsActionsAt({ "m.eff": TWO_FAILURES }, 0, 0, "gone.eff"), []);
+});
+
+Deno.test("fails clause: W18 a cursor before the header gives no action", () => {
+  assertEquals(failsActionsAt({ "m.eff": TWO_FAILURES }, 0), []);
+});
+
+Deno.test("fails clause: W19 an arrow with a binding type gives no action", () => {
+  const text = PRELUDE +
+    "export const b: (n: Int) => Int = (n: Int): Int => n\n";
+  assertEquals(failsActionsAt({ "m.eff": text }, PRELUDE.length), []);
+});
+
+Deno.test("fails clause: W20 a broken declaration gives no action", () => {
+  const text = PRELUDE +
+    "export const f = (n: Int): Int => if f (n > 0) { fail(Stop({})) } else { Clock.now() }\n";
+  assertEquals(failsActionsAt({ "m.eff": text }, PRELUDE.length), []);
+});
