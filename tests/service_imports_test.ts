@@ -1,13 +1,18 @@
-import { assert, assertEquals, assertNotEquals } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertNotEquals,
+  assertStringIncludes,
+} from "@std/assert";
 import {
   checkProject,
   emitProject,
+  type FunctionType,
   lowerProject,
   memoryHost,
   Program,
   type Revision,
 } from "../src/core/mod.ts";
-import type { FunctionType } from "../src/core/ir.ts";
 import { validateProject } from "../src/core/validate_project.ts";
 
 const CONFIG = { "effektive.json": "{}" };
@@ -449,6 +454,39 @@ export const accept = (job: Effect<Int, never, Users.find>): Int => 1
     ),
   );
   assertEquals(functionRequirements(project, "main", "accept"), []);
+});
+
+Deno.test("produced constant contracts obey module service bounds", () => {
+  const services = `
+export type Int = int
+export service Allowed { read(): Int }
+export service Users { find(): Int }
+`;
+  const undeclared = checked({
+    "services.eff": services,
+    "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const pending: Effect<Int, never, Users.find> = defer(() => Users.find())
+`,
+  });
+  assertEquals(undeclared.diagnostics.map((diagnostic) => diagnostic.code), [
+    "requirement-contract/002",
+  ]);
+  assertStringIncludes(
+    undeclared.diagnostics[0].message,
+    "`pending` produces a value with undeclared service methods Users.find",
+  );
+
+  const declared = checked({
+    "services.eff": services,
+    "main.eff": `
+imports Users from "./services.eff"
+import { Int } from "./services.eff"
+export const pending: Effect<Int, never, Users.find> = defer(() => Users.find())
+`,
+  });
+  assertEquals(declared.diagnostics, []);
 });
 
 Deno.test("reserved scope capabilities do not need a service header", () => {

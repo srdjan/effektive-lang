@@ -7,6 +7,36 @@ import {
 } from "../src/core/mod.ts";
 import { validateProject } from "../src/core/validate_project.ts";
 
+Deno.test("ordinary imports from one module remain separate in public IR", () => {
+  const checked = checkProject(
+    memoryHost({
+      "effektive.json": "{}",
+      "types.eff": `
+export type Left = int
+export type Right = int
+`,
+      "main.eff": `
+import { Left } from "./types.eff"
+import { Right } from "./types.eff"
+`,
+    }),
+    "",
+    ["main.eff"],
+  );
+  assert(checked.ok);
+  assertEquals(checked.value.diagnostics, []);
+
+  const lowered = lowerProject(checked.value).get("main");
+  assert(lowered?.ok);
+  const imports = lowered.value.imports.filter((entry) =>
+    entry.module === "types"
+  );
+  assertEquals(
+    imports.map((entry) => entry.bindings.map((binding) => binding.name)),
+    [["Left"], ["Right"]],
+  );
+});
+
 Deno.test("service imports retain both modules through validation and emission", () => {
   const checked = checkProject(
     memoryHost({

@@ -37,7 +37,9 @@ The module bound includes requirements in produced values, but excludes requirem
 
 Reserved Effect capabilities do not require service headers. Provider acquisition requirements remain after `provide`.
 Acceptance now checks foreign service closure and propagation of interface hashes.
-The compiler executor is active. Editor and corpus work remain queued until the compiler unit passes its checks.
+The compiler unit is committed as `5c16c83` after its complete gate passed.
+The diagnostic follow-up is committed as `27dc90f`. Editor support is committed as `c239295`.
+The corpus and playground package are committed as `a5893ca`. Website work is active; final review and mutation reconciliation remain.
 
 ## Compiler checkpoint
 
@@ -72,6 +74,7 @@ The next gate found two surface-snapshot failures because the new error project 
 The main agent regenerated the surface snapshot. The only change adds the expected new diagnostic and its origin note.
 The main agent restarted the complete gate after checking that snapshot diff.
 The complete compiler gate now passes. The log is `/tmp/effektive-service-imports-compiler-check.log`.
+That gate passed 2,835 fast tests and 263 slow tests.
 
 ## Corpus mapping
 
@@ -85,3 +88,151 @@ The website typecheck harness removes one-line local imports and combines panels
 
 The website requires an asset version increase when `site.js` changes. The selected next site version is `0.14.2`.
 The compiler version remains `0.14.1`. No release, tag, or publication is authorized.
+
+## Mutation
+
+The small run used committed `5c16c83` and the full fast suite in temporary copies.
+Command: `deno task mutate --seed 1 --sample 1 --workers 4 src/core/parse.ts src/core/declaration_index.ts src/core/resolve.ts src/core/check_declarations.ts src/core/check_project.ts src/core/lower.ts`.
+All six sampled faults were killed. The run found no unregistered survivor or stale row and reported 14 seconds.
+
+The expanded run keeps every option except `--sample`, which changes from `1` to `3`.
+The logs are `/tmp/effektive-service-imports-mutation-small.log` and `/tmp/effektive-service-imports-mutation-expanded.log`.
+The expanded run killed 17 of 18 faults. It found one unregistered survivor and no stale row, in 27 seconds.
+The survivor changes an existing guard in `Resolver.expr` from `&&` to `||` when a `layer` argument is not a name.
+The main agent added a public regression for an invalid layer key in a module with a service header.
+The regression must enter a commit before mutation can test it, because mutation reads committed HEAD.
+
+The main agent also targeted the new parser and bound-checking guards through `--only`.
+The targeted small run killed both sampled faults. Increasing only the sample size tested all 24 selected mutations.
+That run killed 19 faults and exposed five uncovered mutations: two alias checks, two origin checks, and one malformed-header check.
+
+The main agent added assertions for named output contracts, the `from` keyword, and direct-call origin spans.
+The main agent removed a redundant origin filter. `contractOrigins` already checks whether the body carries the requested capability.
+That change also retains origin notes when an invalid written function bound omits an active requirement.
+The strengthened focused suite passes all 14 tests. A committed rerun remains required.
+
+The targeted logs are `/tmp/effektive-service-imports-mutation-targeted-small.log` and `/tmp/effektive-service-imports-mutation-targeted-expanded.log`.
+
+## Editor, corpus, and cleanup checks
+
+The main agent reviewed editor source and tests, then passed 92 focused editor tests independently.
+The main agent fixed six LSP expectations caused by the contract split. All 52 LSP tests then passed.
+The split preserves separate symbols for the consumer and contract. A failed consumer no longer blocks its independent host companion.
+
+The five simplification reviews covered reuse, quality, efficiency, test value, and comments.
+Accepted changes cache hover occurrences, reuse import syntax for completion, stop scanning past the cursor, and remove a duplicate type-table argument.
+The changes also remove three redundant private helper comments. Existing file overviews and the produced-input exclusion note remain.
+
+Broader caching, batched origin queries, and combined highlighter passes were not necessary for this feature.
+The test review found that empty validation and emission maps could pass one existing test's loops.
+A separate output test now asserts both module keys and the emitted Effect requirement. Existing proof tests remain intact.
+
+The focused compiler, editor, and LSP check passed 159 tests after cleanup. The separate output test also passed.
+The origin regression fails in a temporary copy with the original filter. It passes with the simplified filter.
+
+The first integrated gate passed 2,848 fast tests but found five remaining slow fixture assumptions.
+Those assumptions concerned deterministic edit counts, module counts, file lists, source positions, and a watch-test message.
+The corpus executor corrected them. All 1,920 seeded property edits still run with unchanged validation and emission checks.
+
+The main agent found that the playground package omitted the new contract module.
+The package test failed before the build list changed. It now checks that the actual bundled sources compile without diagnostics.
+The two package tests pass. The final integrated gate passes 2,848 fast tests and 263 slow tests.
+
+## Playground browser check
+
+The main agent checked the Users example at 1440 by 1000 and 390 by 844 pixels.
+The page shows the service header, the contract tab, inferred generated types, and zero compiler problems.
+The mobile TypeScript tab opens correctly. Neither viewport has document-level horizontal overflow.
+
+The browser reported one `/log` 404 because the test server used `--no-log`. No compilation failure occurred.
+The main agent closed its isolated tab and stopped its test server. The pre-existing browser tab remains open.
+
+## Committed mutation checks
+
+The committed targeted rerun kills all 23 selected mutations in the new parser and module-bound functions.
+It reports no unregistered survivor or stale row. Its log is `/tmp/effektive-service-imports-mutation-targeted-committed.log`.
+
+Correction: the invalid-layer regression does not kill the older resolver mutation. The committed broader sample still kills 17 of 18 faults.
+The surviving change only adds a lookup for a non-name argument. Name and missing arguments take identical branches under both guards.
+A non-name expression cannot match a declared identifier or a prelude name. The lookup finds nothing and changes no `outerUses` entry.
+
+The main agent records that source proof as an `equivalent` row in the mutation register.
+The register row must enter a commit before the broader mutation command can read it.
+The invalid-layer test remains a public diagnostic regression, but it is not evidence that this mutation was killed.
+
+The editor and playground small sample kills all five selected faults with no unregistered survivor or stale row.
+Its command names `editor.ts`, `editor_completion.ts`, `editor_tokens.ts`, `playground/src/highlight.ts`, and `playground/build.ts`.
+The expanded run changes only `--sample 1` to `--sample 3`.
+The expanded editor and playground run kills all 15 selected faults. It reports no unregistered survivor or stale row.
+
+## Website verification
+
+The website executor delivered draft 0.75 and asset version 0.14.2. The compiler version remains 0.14.1.
+The main agent repeated the site tests: 12 passed. The strict panel check passed 65 units with no missing panel.
+Five canonical published files match the compiler fixtures byte for byte. The updated main gate passed 2,848 fast and 264 slow tests.
+
+The main agent reviewed the website diff, including imports, error tags, grammar, and direct panel dependencies.
+The mini-book browser check exercised Lookup, Rename, and Recover at 1440 by 1000 pixels, then Collect at 390 by 844.
+The mobile specification contains the separate contract and consumer. All checked views show the service header without document overflow or console errors.
+
+The main agent closed its isolated tab and stopped only its own server. The existing user server and browser tab remain open.
+The main agent corrected the specification to retain other body requirements after `provide`.
+The specification now states the input-only exclusion, contextual identifier rule, and restrictions on host interface files.
+
+## Independent review checkpoint
+
+The formal review found missing keyword completion after a service header newline. The previous-token helper skips newlines.
+The review also found that merging every import changes legacy IR when a module has two ordinary imports from one source.
+The main agent confirmed that baseline `b6e29b9` produces two imports and the current source produces one. Both results pass independent validation.
+
+The review requested an exported deferred-constant bound test and an entry-point type import cleanup.
+The main agent also found a status-row overclaim: inferred failure actions and written-bound repairs are different editor actions.
+These changes await the review receipt before editing primary source.
+
+The TextMate grammar colors late service-header forms even though the compiler rejects their placement.
+The review found no valid identifier or call misclassified by that rule. The plan does not require color parity for invalid source.
+
+The main agent read the solution that requires a differential probe before accepting an equivalent row.
+The probe compares 55 public-API cases over missing, named, literal, parenthesized, structural, function, field, and Option arguments.
+It covers module scope, function scope, and nested shadowing. Its sanity case requires the expected layer diagnostic.
+
+Diagnostics, lowering, independent validation, and emission are byte-identical between source and mutant for those cases.
+The probe supports the static proof; it does not prove equivalence for every possible input.
+The artifacts are in `/tmp/effektive-service-import-proof-kf4wok83/`, including `orig.jsonl`, `mut.jsonl`, and both `probe.ts` copies.
+
+## Review fixes
+
+The review receipt is complete: run `20261104-142719-73dac337`, with verdict `Ready with fixes`.
+Its artifacts are in `/tmp/compound-engineering-501/ce-code-review/20261104-142719-73dac337/`.
+Seven lenses completed. The review used Sol throughout and does not provide independence across models.
+
+The compiler repair unit owns `src/core/lower.ts`, `tests/service_imports_outputs_test.ts`, and `tests/service_imports_test.ts`.
+It addresses finding 1, legacy import preservation, and finding 6, public type imports.
+It also adds the missing exported constant bound case. Its budget is 30 turns; acceptance uses the focused public tests.
+The main agent owns finding 5, newline completion, in `editor_completion.ts` and `editor_service_imports_test.ts`.
+The main agent also owns finding 2, the status wording. Acceptance requires focused tests and the complete project gate.
+
+The main agent accepts all four actionable findings. No actionable finding is deferred.
+The contextual `from` recovery remains greedy because the service name `from` is valid.
+The invalid-source coloring difference does not change accepted source. No grammar change is necessary.
+
+The newline completion regression fails before the fix and passes afterward.
+The fix tracks the immediate preceding token, including newlines, and excludes EOF.
+The public test covers empty source, a first header, semicolon-separated headers, newline-separated headers, and invalid late headers.
+The main agent passes 85 focused editor tests. A separate five-test rerun includes the added empty-source case.
+An initial command named a nonexistent editor test file. The corrected command passes; its log retains the successful result.
+
+The website unit is committed separately as `a973f40` on local `main`.
+Its final checks pass 12 site tests, 65 strict TypeScript units, and JavaScript syntax validation.
+The website checkout is clean. No push, tag, deployment, or release occurred.
+
+The compiler repair preserves separate ordinary imports unless their target also has a service header.
+The main agent reviewed the lowering change and all new tests line by line, then passed 18 focused compiler tests independently.
+The executor reports 49 focused tests, formatting, and diff checks passed. The main agent does not substitute that report for its gate.
+The new constant test checks both an undeclared requirement diagnostic and the corresponding permitted header.
+`FunctionType` now enters the test through `mod.ts`. The status text now describes the actual editor actions.
+
+The main agent's full review-fix gate passes formatting, lint, type checks, 2,850 fast tests, and 264 slow tests.
+Its log is `/tmp/effektive-service-imports-review-fixes-check.log`.
+Review findings 1, 2, 5, and 6 are resolved. The exported constant testing gap is also closed.
+No justified actionable finding remains. Parser recovery and invalid-source coloring retain the documented evidence limits.

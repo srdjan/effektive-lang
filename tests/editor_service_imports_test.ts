@@ -97,6 +97,11 @@ import { Text } from "./services.eff"
       item.label === "imports" && item.kind === "keyword"
     ),
   );
+  assert(
+    completionsAt(load(""), "m.eff", 0).some((item) =>
+      item.label === "imports" && item.kind === "keyword"
+    ),
+  );
   const late = `import { Text } from "./services.eff"
 imp`;
   assert(
@@ -107,6 +112,12 @@ imp`;
   const repeated = `imports Users from "./services.eff"; imp`;
   assert(
     completionsAt(load(repeated), "m.eff", repeated.length).some((item) =>
+      item.label === "imports"
+    ),
+  );
+  const nextLine = `imports Users from "./services.eff"\nimp`;
+  assert(
+    completionsAt(load(nextLine), "m.eff", nextLine.length).some((item) =>
       item.label === "imports"
     ),
   );

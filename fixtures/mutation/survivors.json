@@ -880,5 +880,14 @@
     "operator": "comparison",
     "class": "equivalent",
     "reason": "The mutant differs only when `:effect/` starts at index 0. Every identity type starts with a non-empty kind before its colon, such as `error:effect/SchemaError` (ir.ts:4-7 and ir.ts:40-41), so `:effect/` is never at index 0."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.expr",
+    "offset": 904,
+    "text": "first !== undefined &&\n            kindOf(this.tree, first) === SyntaxKind.NameExpr",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "Name arguments and missing arguments take the same branch under both guards. A non-name expression cannot match an identifier binding. The extra lookup finds no binding or prelude name, then resolves the same expression without changing outerUses."
   }
 ]

@@ -255,8 +255,10 @@ function serviceHeaderKeywordAllowed(site: Site): boolean {
       entry.span.start <= tree.lexed.starts[token] &&
       tree.lexed.ends[token] <= entry.span.end
     );
+  let previous = -1;
   for (let i = 0; i < tree.lexed.count; i++) {
     if (tree.lexed.ends[i] > start) break;
+    if (tree.lexed.kinds[i] !== TokenKind.Eof) previous = i;
     if (
       tree.lexed.kinds[i] !== TokenKind.Newline &&
       tree.lexed.kinds[i] !== TokenKind.Semicolon &&
@@ -264,7 +266,6 @@ function serviceHeaderKeywordAllowed(site: Site): boolean {
       !insideHeader(i)
     ) return false;
   }
-  const previous = previousTokenOf(tree, start);
   return previous < 0 || tree.lexed.kinds[previous] === TokenKind.Newline ||
     tree.lexed.kinds[previous] === TokenKind.Semicolon;
 }
@@ -390,22 +391,16 @@ function serviceImportCompletions(
 ): readonly Completion[] | undefined {
   const info = site.revision.moduleInfo(site.module);
   if (info === undefined) return undefined;
-  let importNode = containingNode(info.tree, site.offset);
-  while (
-    importNode >= 0 && kindOf(info.tree, importNode) !== SyntaxKind.ImportDecl
-  ) {
-    importNode = info.tree.parents[importNode];
-  }
-  if (importNode < 0) return undefined;
   const index = info.index.imports.findIndex((entry) =>
-    entry.role === "service" && entry.node === importNode
+    entry.role === "service" && entry.span.start <= site.offset &&
+    site.offset <= entry.span.end
   );
   if (index < 0) return undefined;
   const entry = info.index.imports[index];
   const atName = entry.names.some((name) =>
     name.span.start <= site.start && site.start <= name.span.end
   );
-  const keyword = childrenOf(info.tree, importNode)[0];
+  const keyword = childrenOf(info.tree, entry.node)[0];
   const atMissingName = entry.names.length === 1 &&
     entry.names[0].name === "from" && keyword !== undefined &&
     info.tree.ends[keyword] <= site.offset &&

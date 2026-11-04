@@ -1510,7 +1510,15 @@ function lowerImports(
   resolution: ModuleResolution,
   module: string,
 ): Result<Import[], LowerError> {
-  const imports = new Map<string, Import>();
+  const serviceModules = new Set(
+    info.links.flatMap((link) =>
+      link.entry.role === "service" && link.label !== undefined
+        ? [link.label]
+        : []
+    ),
+  );
+  const imports: Import[] = [];
+  const mergedImports = new Map<string, number>();
   for (let i = 0; i < info.links.length; i++) {
     const link = info.links[i];
     const imported = link.target === undefined
@@ -1546,23 +1554,32 @@ function lowerImports(
       bindings.push({ name: name.name, target });
     }
     const payload = iface.value.payload;
-    const previous = imports.get(link.label);
-    imports.set(
-      link.label,
-      previous === undefined
-        ? {
-          module: link.label,
-          bindings,
-          exports: payload.exports,
-          values: payload.values,
-          types: payload.types,
-          errors: payload.errors,
-          services: payload.services,
-        }
-        : { ...previous, bindings: [...previous.bindings, ...bindings] },
-    );
+    const lowered = {
+      module: link.label,
+      bindings,
+      exports: payload.exports,
+      values: payload.values,
+      types: payload.types,
+      errors: payload.errors,
+      services: payload.services,
+    };
+    if (!serviceModules.has(link.label)) {
+      imports.push(lowered);
+      continue;
+    }
+    const mergedIndex = mergedImports.get(link.label);
+    if (mergedIndex === undefined) {
+      mergedImports.set(link.label, imports.length);
+      imports.push(lowered);
+      continue;
+    }
+    const previous = imports[mergedIndex];
+    imports[mergedIndex] = {
+      ...previous,
+      bindings: [...previous.bindings, ...bindings],
+    };
   }
-  return { ok: true, value: [...imports.values()] };
+  return { ok: true, value: imports };
 }
 
 /** The synthetic import of the closed prelude interface, or nothing when no builtin is used. */
