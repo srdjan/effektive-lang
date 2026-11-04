@@ -1433,7 +1433,25 @@
               "severity": 1,
               "code": "requirement-contract/001",
               "source": "effektive",
-              "message": "the body requires Clock.now, which the `with` clause does not list"
+              "message": "the body requires Clock.now, which the `with` clause does not list",
+              "relatedInformation": [
+                {
+                  "location": {
+                    "uri": "file:///work/examples/scratch.eff",
+                    "range": {
+                      "start": {
+                        "line": 3,
+                        "character": 32
+                      },
+                      "end": {
+                        "line": 3,
+                        "character": 43
+                      }
+                    }
+                  },
+                  "message": "requires `Clock.now` here"
+                }
+              ]
             }
           ]
         }

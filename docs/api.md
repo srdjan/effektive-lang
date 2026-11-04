@@ -29,6 +29,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   type_lower.ts  Type lowering: the builtin type rows, TypeLowerer, and the recursion check of type groups.
   check_declarations.ts Declaration checker: types, errors, services, providers, and module constants.
   check_expr.ts  Body checker: expressions, calls, contracts, and the prelude dispatch.
+  contract_origins.ts The nodes of a body that introduce a missing fails or with entry, for related locations.
   check_patterns.ts Match patterns, bindings, and coverage through PatternContext.
   check_refinements.ts RefinementChecker: the refinement facts of a body, the proof budget, and the proved, not-required, or failed decision of each obligation.
   check_binary.ts Pure operand rules and result types of the binary operators.

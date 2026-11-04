@@ -16,6 +16,7 @@ import {
   type Diagnostic,
   type DiagnosticCode,
   makeDiagnostic,
+  type RelatedSpan,
 } from "./diagnostics.ts";
 import {
   arrowBody,
@@ -30,6 +31,7 @@ import {
   unparen,
 } from "./syntax_queries.ts";
 import { isBoolean, operatorResult } from "./check_binary.ts";
+import { type ContractEntry, contractOrigins } from "./contract_origins.ts";
 import {
   checkCoverage,
   type MatchState,
@@ -279,8 +281,30 @@ class BodyChecker
     return nodeSpan(this.tree, node);
   }
 
-  report(code: DiagnosticCode, message: string, node: NodeId): void {
-    this.sink.push(makeDiagnostic(code, message, this.span(node)));
+  report(
+    code: DiagnosticCode,
+    message: string,
+    node: NodeId,
+    related?: readonly RelatedSpan[],
+  ): void {
+    this.sink.push(makeDiagnostic(code, message, this.span(node), related));
+  }
+
+  /** The related locations of the missing entries of a body, in source order. */
+  private originsOf(
+    root: NodeId,
+    entries: readonly ContractEntry[],
+  ): RelatedSpan[] {
+    const related: RelatedSpan[] = [];
+    for (const entry of entries) {
+      const message = entry.kind === "failure"
+        ? `can fail with \`${shortName(entry.error)}\` here`
+        : `requires \`${shortName(entry.capability)}\` here`;
+      for (
+        const span of contractOrigins(this.tree, this.body, root, entry)
+      ) related.push({ span, message });
+    }
+    return related.sort((a, b) => a.span.start - b.span.start);
   }
 
   private show(ref: TypeRef): string {
@@ -494,6 +518,10 @@ class BodyChecker
           names(extraFailures)
         }, which the \`fails\` clause does not list`,
         bodyNode,
+        this.originsOf(
+          bodyNode,
+          extraFailures.map((error) => ({ kind: "failure", error })),
+        ),
       );
     }
     const extraRequirements = contract.requirements === undefined
@@ -506,6 +534,13 @@ class BodyChecker
           names(extraRequirements)
         }, which the \`with\` clause does not list`,
         bodyNode,
+        this.originsOf(
+          bodyNode,
+          extraRequirements.map((capability) => ({
+            kind: "requirement",
+            capability,
+          })),
+        ),
       );
     }
     const failures = contract.failures ?? body.failures;
@@ -2942,6 +2977,15 @@ export function checkFunctionBody(
       "failure-contract/001",
       "an exported function with an inferred input contract must list SchemaError in its `fails` clause",
       signature.span,
+      signature.parameters.flatMap((parameter, index) =>
+        checked[index]
+          ? [{
+            span: parameter.span,
+            message:
+              "this input is checked, so the function can fail with `SchemaError`",
+          }]
+          : []
+      ),
     ));
   }
   if (
