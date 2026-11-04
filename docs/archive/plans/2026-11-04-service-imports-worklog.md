@@ -343,3 +343,17 @@ The log is `/tmp/effektive-service-transfer-final-check.log`.
 The main agent reviewed the complete diff, including the correction from the independent check.
 The reported escape now produces `requirement-contract/002`. The matching header permits the operation.
 The remaining action is mutation against the committed repair, followed by its evidence update.
+
+The committed small mutation sample kills its selected fault. All eight targeted mutations of transfer dispatch are killed.
+The expanded sample kills two of three faults. Its survivor changes the record-field guard from `> 0` to `>= 0`.
+That fault can follow an input spread before checking a replacement deferred field in the whole record.
+The main agent strengthens the provided-write regression to store `{ ...input, job: defer(...) }` as one value.
+The corrected strengthened test passes on the repair. This is a new test gap, not an equivalent mutation.
+Logs: `/tmp/effektive-service-transfer-mutation-small.log`, `/tmp/effektive-service-transfer-mutation-transfers.log`, and `/tmp/effektive-service-transfer-mutation-expanded.log`.
+
+The first spread fixture omitted the field that record update requires on its input. The checker correctly rejected that fixture.
+The corrected input includes the existing `job` field, and the update replaces that field with a fresh deferred value.
+The focused corrected regression passes. The failed gate remains in `/tmp/effektive-service-transfer-spread-check.log`.
+
+The gate with the corrected spread regression passes: formatting, lint, type checks, 2,856 fast tests, and 264 slow tests.
+Its log is `/tmp/effektive-service-transfer-spread-final-check.log`.

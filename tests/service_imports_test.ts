@@ -594,8 +594,11 @@ export service Users { read(): Int }
 imports Allowed from "./services.eff"
 import { Int, Users } from "./services.eff"
 const live: Layer<Users> = layer(Users, () => ({ read: () => 1 }))
-export const store = (target: Ref<Effect<Int, never, Users.read>>): void =>
-  provide(live, () => setRef(target, defer(() => Users.read())))
+export const store = (
+  target: Ref<{ tag: Int, job: Effect<Int, never, Users.read> }>,
+  input: { tag: Int, job: Effect<Int, never, Users.read> }
+): void =>
+  provide(live, () => setRef(target, { ...input, job: defer(() => Users.read()) }))
 `,
   });
   assertEquals(project.diagnostics.map((diagnostic) => diagnostic.code), [
