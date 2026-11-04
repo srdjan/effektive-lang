@@ -52,4 +52,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | AD (candidates), K (critique points) | [`docs/archive/feature-review-2026-11-04.md`](../archive/feature-review-2026-11-04.md) | Feature review of 2026-11-04: ranked candidates and their critique |
 | PVD (decisions), PVU (units), PVF (findings) | [`docs/archive/plans/2026-11-04-contract-provenance.md`](../archive/plans/2026-11-04-contract-provenance.md) | Contract provenance, phase 1: related locations on contract diagnostics |
 | WFD (decisions), WFU (units), WFF (findings) | [`docs/archive/plans/2026-11-04-write-inferred-fails.md`](../archive/plans/2026-11-04-write-inferred-fails.md) | Editor action that writes the inferred failure set as a `fails` clause |
-| SID (decisions), SIU (units), SIF (findings) | [`docs/plans/2026-11-04-service-imports.md`](2026-11-04-service-imports.md) | Explicit service imports and inferred function requirements |
+| SID (decisions), SIU (units), SIF (findings) | [`docs/archive/plans/2026-11-04-service-imports.md`](../archive/plans/2026-11-04-service-imports.md) | Explicit service imports and inferred function requirements |

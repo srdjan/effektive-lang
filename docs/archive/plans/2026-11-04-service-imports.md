@@ -1,7 +1,9 @@
 # Plan: service imports and inferred requirements
 
-Status: active. The user selected explicit paths on 2026-11-04.
+Status: complete. The user selected explicit paths on 2026-11-04.
 Prefix: SID identifies decisions, SIU identifies units, and SIF identifies findings.
+
+The [worklog](2026-11-04-service-imports-worklog.md) records checks, review findings, evidence limits, and local commits.
 
 ## Objective and accepted direction
 

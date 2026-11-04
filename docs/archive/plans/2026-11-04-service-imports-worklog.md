@@ -1,5 +1,7 @@
 # Worklog: service imports
 
+Status: complete. All accepted review findings are resolved. All required gates pass before the final archive commit.
+
 The authority is [the service imports plan](2026-11-04-service-imports.md).
 This worklog records evidence and steering for that plan. It introduces no separate ID prefix.
 
@@ -40,7 +42,7 @@ Acceptance now checks foreign service closure and propagation of interface hashe
 The compiler unit is committed as `5c16c83` after its complete gate passed.
 The diagnostic follow-up is committed as `27dc90f`. Editor support is committed as `c239295`.
 The corpus and playground package are committed as `a5893ca`. The website unit is committed as `a973f40`.
-The review fixes are committed as `4deba49`. Final committed mutation checks and archive reconciliation remain.
+The review fixes are committed as `4deba49`. Final committed mutation checks pass, and both plan documents move to the archive.
 
 ## Compiler checkpoint
 
@@ -279,3 +281,25 @@ The logs end in `final-lowering-mutation-targeted.log` and `final-completion-mut
 The gate after the invalid-offset regression passes: 2,851 fast tests and 264 slow tests.
 Formatting, lint, and type checks also pass. The log is `/tmp/effektive-service-imports-offset-check.log`.
 The website manifest receives its separate contract unit and companion dependencies in the final alignment commit.
+
+The expanded editor rerun on `1a8c903` kills all 15 sampled faults, with no unregistered survivor or stale row.
+Its log is `/tmp/effektive-service-imports-final-editor-mutation-expanded-rerun.log`.
+The targeted completion-guard run kills all six faults at `editor_completion.ts:437` using the six public service-header editor tests.
+Its log is `/tmp/effektive-service-imports-final-offset-mutation-targeted.log`.
+The final mutation checks pass. The registered resolver equivalent retains its static proof and 55-case differential evidence.
+
+## Completion
+
+All five plan units and all 16 acceptance checks are complete. No actionable review finding or implementation question remains open.
+The compiler commits are `5c16c83`, `27dc90f`, `c239295`, `a5893ca`, `4deba49`, `80bfd90`, and `1a8c903`.
+The website commit is `a973f40`. The compiler stays at 0.14.1, with unchanged IR version 8.
+The website assets use 0.14.2. This asset stamp is not a compiler release.
+
+Mutation evidence covers the named samples and targeted guards, not every possible fault.
+The review uses seven completed Sol lenses. It does not supply independence across models.
+Website TypeScript checks cover paired target panels; they do not prove isolated source fragments compile.
+Browser evidence covers the named desktop and mobile views. User-owned sessions remain open.
+The next action belongs to the user: review the local commits.
+
+The final archive gate passes formatting, lint, type checks, 2,851 fast tests, and 264 slow tests.
+Its log is `/tmp/effektive-service-imports-archive-check.log`. Both plan documents now live under `docs/archive/plans/`.
