@@ -5099,7 +5099,7 @@ const ISSUE_AND_HINT_CASES: readonly SchemaCase[] = [
     name: "decode result type mismatch",
     tail: "export const shown = (): Int fails Other => schemaDecode(text, 1)",
     expected: [
-      "failure-contract/001 | the body can fail with error:effect/SchemaError, which the `fails` clause does not list | schemaDecode(text, 1)",
+      "failure-contract/001 | the body can fail with SchemaError, which the `fails` clause does not list | schemaDecode(text, 1)",
       "type-mismatch/003 | the function body has type Text, but Int is expected | schemaDecode(text, 1)",
     ],
   },
@@ -5108,7 +5108,7 @@ const ISSUE_AND_HINT_CASES: readonly SchemaCase[] = [
     tail:
       "export const bad = (): Text fails Other => schemaDecode(optionalText, 1)",
     expected: [
-      "failure-contract/001 | the body can fail with error:effect/SchemaError, which the `fails` clause does not list | schemaDecode(optionalText, 1)",
+      "failure-contract/001 | the body can fail with SchemaError, which the `fails` clause does not list | schemaDecode(optionalText, 1)",
       "type-mismatch/010 | `schemaDecode` needs a Schema value | optionalText",
     ],
   },
@@ -5116,7 +5116,7 @@ const ISSUE_AND_HINT_CASES: readonly SchemaCase[] = [
     name: "encode input mismatch",
     tail: "export const bad = (): Text fails Other => schemaEncode(text, 1)",
     expected: [
-      "failure-contract/001 | the body can fail with error:effect/SchemaError, which the `fails` clause does not list | schemaEncode(text, 1)",
+      "failure-contract/001 | the body can fail with SchemaError, which the `fails` clause does not list | schemaEncode(text, 1)",
       "type-mismatch/003 | the schema encode input has type int, but Text is expected | 1",
     ],
   },
@@ -5124,7 +5124,7 @@ const ISSUE_AND_HINT_CASES: readonly SchemaCase[] = [
     name: "make input mismatch",
     tail: "export const bad = (): Text fails Other => schemaMake(text, 1)",
     expected: [
-      "failure-contract/001 | the body can fail with error:effect/SchemaIssue, which the `fails` clause does not list | schemaMake(text, 1)",
+      "failure-contract/001 | the body can fail with SchemaIssue, which the `fails` clause does not list | schemaMake(text, 1)",
       "type-mismatch/003 | the schema make input has type int, but Text is expected | 1",
     ],
   },

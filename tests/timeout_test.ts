@@ -24,7 +24,7 @@ Deno.test("an exported function that uses timeout must list TimeoutError in fail
       `${TYPES}export error Other = {}\nexport const a = (): Int fails Other => timeout(() => 1, 5s)\n`,
     ),
     [
-      "failure-contract/001 the body can fail with error:effect/TimeoutError, which the `fails` clause does not list",
+      "failure-contract/001 the body can fail with TimeoutError, which the `fails` clause does not list",
     ],
   );
 });

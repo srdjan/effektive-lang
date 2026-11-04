@@ -36,8 +36,7 @@ Deno.test("signature help follows direct, imported, and aliased function values"
     consumer.indexOf("entry(raw") + "entry(".length,
   );
   assertEquals(direct, {
-    label:
-      "entry(payload: unknown -> { name: Text }): Text fails error:effect/SchemaError",
+    label: "entry(payload: unknown -> { name: Text }): Text fails SchemaError",
     parameters: [{
       label: "payload: unknown -> { name: Text }",
       documentation:

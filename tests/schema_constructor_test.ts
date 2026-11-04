@@ -46,7 +46,7 @@ const shadow = (): Int => { const schemaMake = (): Int => 4; schemaMake() }
 
 Deno.test("type-side construction rejects encoded or partial inputs, descriptors and wrong failures", () => {
   const missingIssue =
-    "the body can fail with error:effect/SchemaIssue, which the `fails` clause does not list";
+    "the body can fail with SchemaIssue, which the `fails` clause does not list";
   const cases: readonly Case[] = [
     [
       'const bad = (): D fails SchemaIssue => schemaMake(record, { score: "4" })',

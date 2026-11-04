@@ -98,8 +98,16 @@ export function serviceOfCapability(
   return `service:${capability.slice(4, dot)}`;
 }
 
-/** The name after the `#` of an identity, for messages. */
+/** The prefix after the kind of a reserved Effect identity, such as `error:effect/SchemaError`. */
+const RESERVED_SPACE = ":effect/";
+
+/**
+ * The name of an identity, for messages: the part after the `#`. A reserved
+ * Effect identity has no `#`, and its name is the part after `effect/`.
+ */
 export function shortName(id: string): string {
   const hash = id.indexOf("#");
-  return hash < 0 ? id : id.slice(hash + 1);
+  if (hash >= 0) return id.slice(hash + 1);
+  const reserved = id.indexOf(RESERVED_SPACE);
+  return reserved < 0 ? id : id.slice(reserved + RESERVED_SPACE.length);
 }
