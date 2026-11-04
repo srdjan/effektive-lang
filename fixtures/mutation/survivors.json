@@ -754,5 +754,41 @@
     "operator": "comparison",
     "class": "slow-only",
     "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
+  },
+  {
+    "file": "src/core/contract_origins.ts",
+    "declaration": "contractOrigins.carries",
+    "offset": 86,
+    "text": "return false;",
+    "operator": "boolean-return",
+    "class": "equivalent",
+    "reason": "carries runs only on the root, which is the checked body node, and on the nodes that stand returns. stand yields a child only when ownSet(child) is defined, or the body of an arrow. The checker finishes every arrow body, so body.info holds a set for it. No node reaches the undefined branch, and an instrumented run of the whole fast suite never entered it."
+  },
+  {
+    "file": "src/core/contract_origins.ts",
+    "declaration": "contractOrigins.arrowReplacement",
+    "offset": 114,
+    "text": "kindOf(tree, node) === SyntaxKind.ArrowExpr",
+    "operator": "negate-if",
+    "class": "equivalent",
+    "reason": "Both branches return the body of the arrow. For an ArrowExpr the parser puts the body after the parameter list, the clauses, and the result type, so arrowBody and the last child are the same node. For a resource node, implicitArrow in check_expr.ts checks kids(node).at(-1), the last child. An instrumented run of the whole fast suite found no arrow node where arrowBody and the last child differ."
+  },
+  {
+    "file": "src/core/contract_origins.ts",
+    "declaration": "contractOrigins.arrowReplacement",
+    "offset": 114,
+    "text": "kindOf(tree, node) === SyntaxKind.ArrowExpr",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "Both branches return the body of the arrow. For an ArrowExpr the parser puts the body after the parameter list, the clauses, and the result type, so arrowBody and the last child are the same node. For a resource node, implicitArrow in check_expr.ts checks kids(node).at(-1), the last child. An instrumented run of the whole fast suite found no arrow node where arrowBody and the last child differ."
+  },
+  {
+    "file": "src/core/contract_origins.ts",
+    "declaration": "contractOrigins",
+    "offset": 2393,
+    "text": "a.start - b.start || a.end - b.end",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The map found holds only the leaves of the descent in visit. A leaf is a node with no selected child, so no found span contains another found span. Disjoint spans of one tree have the same order by start and by end, and two of them never share a start. The tie-break on end therefore never decides, and the order by end equals the order by start."
   }
 ]
