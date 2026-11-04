@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- `failure-contract/001` and `requirement-contract/001` carry a related
+  location at each node of the body that introduces a missing entry: a
+  `fail(...)`, a service method call, a call of a function, or a builtin call.
+  Through a call, the location is the call. The `SchemaError` form names each
+  checked parameter. The language server shows the locations as related
+  information.
+- The command-line tool prints each related location of a diagnostic as a note
+  line, `path:line:column: note: message`, directly after the diagnostic line.
+  This also shows the related locations that the tool dropped before, such as
+  the first declaration of a duplicate name and the members of a cycle.
+
 ## 0.14.0 - 2026-11-03
 
 - The contract keyword `uses` is now `with`, as in `User with Users`. `with` is

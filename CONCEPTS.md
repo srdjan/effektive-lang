@@ -187,6 +187,13 @@ The failure set or service set that the compiler solves from a function body, wh
 Every function with a body infers an omitted `fails` clause. Only a local function infers an omitted `with` clause.
 A new failure in an exported function with an inferred failure set reaches host TypeScript with no diagnostic. A written `fails` clause guards against this.
 
+### Contract origin
+
+A node of a function body that introduces a failure or a service requirement, such as a `fail(...)` or a service method call.
+When a written clause misses an entry, the contract diagnostic gives each origin of that entry as a related location.
+Through a call, the origin is the call, not a node inside the called function.
+_Avoid: error source, cause_
+
 ## Inferred inputs
 
 ### Input contract

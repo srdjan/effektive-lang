@@ -53,6 +53,10 @@ failures, such as ` fails UserMissing`, at the end of the result type and before
 a written `with` clause. A function with a diagnostic inside its span has no
 hint.
 
+A contract diagnostic carries related locations: each node of the body that
+introduces a missing `fails` or `with` entry. The language server sends them as
+`relatedInformation`, so the editor lists each origin under the diagnostic.
+
 Pure behavior regressions are in `tests/editor_queries_test.ts`.
 
 ## Language server
