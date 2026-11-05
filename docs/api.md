@@ -45,6 +45,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     scope.ts       Scope operations, resource lifetimes and borrowed parameters through ScopeContext.
     stream.ts      Stream/Sink callbacks and execution through StreamContext.
   check_project.ts Project driver: paired declaration entries and body results, modes, interfaces, and the shared per-module step.
+  requirement_provenance.ts Requirements carried by produced values and locally produced components that cross module bounds.
   tables.ts      Side tables of a body: node info and lowering facts.
   patterns.ts    Pattern domains of match subjects.
   predicates.ts  The predicate model of refinements: terms, builders, normalization, solver limits, and proof certificates.

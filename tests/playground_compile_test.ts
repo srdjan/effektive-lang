@@ -111,6 +111,46 @@ Deno.test("a repair clears the diagnostic and the stale flag", () => {
   assertEquals(result.outputs["users.eff"], first.outputs["users.eff"]);
 });
 
+Deno.test("composite input provenance keeps the last good playground output", () => {
+  const services = `
+export type Int = int
+export service Users { read(): Int }
+export service Allowed { publish(input: { job: Effect<Int, never, Users.read> }): void }
+`;
+  const source = (job: string): string => `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const forward = (input: { job: Effect<Int, never, Users.read> }): void =>
+  Allowed.publish({ job: ${job} })
+`;
+  const inherited = source("input.job");
+  const local = source("defer(() => Users.read())");
+  const pg = createPlayground({
+    "effektive.json": "{}",
+    "services.eff": services,
+    "main.eff": inherited,
+  }, { now: () => 0 });
+  const first = pg.start();
+  assert(first.ok, JSON.stringify(first));
+  assertEquals(first.value.diagnostics["main.eff"], []);
+  const lastGood = first.value.outputs["main.eff"];
+  assert(lastGood !== null);
+  assertEquals(lastGood.stale, false);
+
+  const broken = okOf(pg.update("main.eff", local));
+  assertEquals(broken.diagnostics["main.eff"].map((d) => d.code), [
+    "requirement-contract/002",
+  ]);
+  assertEquals(broken.outputs["main.eff"], {
+    text: lastGood.text,
+    stale: true,
+  });
+
+  const repaired = okOf(pg.update("main.eff", inherited));
+  assertEquals(repaired.diagnostics["main.eff"], []);
+  assertEquals(repaired.outputs["main.eff"], lastGood);
+});
+
 Deno.test("an edit of the host interface file changes a diagnostic of main.eff", () => {
   const { pg } = start();
   const result = okOf(pg.update(

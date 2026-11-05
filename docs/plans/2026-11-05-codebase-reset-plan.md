@@ -861,8 +861,8 @@ The original review baseline and the preservation baseline remain distinct from 
 | `2afb1ae` | Failed symlink-target inspection propagates through directory listing |
 | `6ec5490` | Listing regression requires the failing link path |
 
-The current checkout is `6ec5490120ad8adcbd177d0537d4d9fb1eba24be` on local `main`.
-Four paths contain an uncommitted coverage patch:
+At the planning handoff, the checkout was `6ec5490120ad8adcbd177d0537d4d9fb1eba24be` on local `main`.
+Four paths then contained an uncommitted coverage patch:
 
 | Path | Pending responsibility |
 | --- | --- |
@@ -871,9 +871,9 @@ Four paths contain an uncommitted coverage patch:
 | `fixtures/coverage/ownership.json` | Runtime modules and reasoned exclusions |
 | `docs/testing.md` | Coverage ownership rules |
 
-The main agent has not completed an independent line review or full verification gate for that coverage patch.
-The worker's focused test report does not close the coverage phase.
-The plan document is the only file changed during this scope correction.
+The main agent had not completed an independent line review or full verification gate for that coverage patch at handoff.
+The worker's focused test report did not close the coverage phase.
+The scope correction changed only the plan document.
 No push occurred.
 
 The main agent owned the checks, commits, and evidence recorded below.
@@ -998,3 +998,39 @@ The public differential tested 1,024 permutations of 256 records and found zero 
 That proof and probe justify one equivalent row in the mutation register.
 The authoritative focused run passed 32 tests, including ten subprocess cases that each took less than one second.
 The complete follow-up gate passed 2,878 fast tests and 278 slow tests.
+The follow-up is committed as `8629cf7`.
+The final mutation run selected all 124 sites: 123 kills, one registered equivalent, and zero timeouts.
+The run found zero unregistered survivors and zero stale rows.
+The real coverage command then passed against that committed source at 97.27% lines, 95.17% branches, and 99.21% functions.
+The coverage phase is complete.
+
+The completed filesystem and coverage changes contain 408 added or changed code lines outside tests, excluding comment-only lines.
+The phase-boundary simplification used five review rubrics directly because this run limits implementation workers to three.
+The main agent removed one source comment that repeated the membership check.
+The review required no reuse, quality, efficiency, or test changes.
+Proof tests remain unchanged, including their comments.
+The comment-only cleanup still needs the next authoritative gate and its local commit.
+
+Two independent workers started from clean commit `8629cf7`.
+The provenance worker owns the compiler files and tests listed under the composite-input phase.
+The platform worker owns the LSP path and launcher files listed under the platform phase.
+Each worker has an 18-turn budget and cannot write Git state or run shared mutating checks.
+The main agent retains verification and commit ownership.
+The live browser inventory still reports that the browser access host is unavailable.
+Browser acceptance remains open, and no browser session was opened.
+
+Both implementation workers returned their owned changes without Git writes.
+The main agent reviewed every compiler, platform, fixture, documentation, and test diff.
+The compiler worker observed the inherited-composite failure before its source edit; direct input and fresh local controls retained their expected results.
+The repair keeps complete produced-requirement scans for result types and applies component origins only to transferred values.
+The main agent added no production playground feature.
+The public facade regression covers inherited input, a rejected local edit, stale output, and recovery.
+The focused compiler and platform run passed 134 tests, with six native Windows cases skipped.
+The directed slow run passed 33 tests, including strict target and native LSP process checks.
+The main agent reproduced the old launcher failure from an archived checkout whose path contains spaces.
+The same process command passed after the platform patch, including initialization, diagnostics, hover, definition, save, and shutdown.
+The full integrated gate passed, including 279 slow tests.
+The combined checker unit now measures 1,063 code lines and 217 branches, versus 994 lines and 197 branches at `05bdc3c`.
+The additional component traversal explains that increase; shrinking only the driver is not counted as simplification.
+The provenance source needs its committed mutation run, coverage report, and preservation comparison before its phase closes.
+The platform phase still needs native Windows acceptance and directed mutation evidence.

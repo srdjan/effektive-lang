@@ -89,6 +89,7 @@
       "src/core/predicate_source.ts",
       "src/core/predicates.ts",
       "src/core/project.ts",
+      "src/core/requirement_provenance.ts",
       "src/core/resolve.ts",
       "src/core/serialize.ts",
       "src/core/sha256.ts",

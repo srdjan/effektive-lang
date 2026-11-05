@@ -456,6 +456,157 @@ export const accept = (job: Effect<Int, never, Users.find>): Int => 1
   assertEquals(functionRequirements(project, "main", "accept"), []);
 });
 
+Deno.test("composite transfers preserve each input component origin", () => {
+  const project = checked({
+    "services.eff": `
+export type Int = int
+export service Users { read(): Int }
+export service Allowed {
+  record(input: {
+    job: Effect<Int, never, Users.read>,
+    other: Effect<Int, never, Users.read>
+  }): void
+  nested(input: { payload: { job: Effect<Int, never, Users.read> } }): void
+  tuple(input: [Effect<Int, never, Users.read>, Effect<Int, never, Users.read>]): void
+  list(input: Effect<Int, never, Users.read>[]): void
+}
+`,
+    "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const forward = (
+  input: { job: Effect<Int, never, Users.read>, other: Effect<Int, never, Users.read> },
+  jobs: Effect<Int, never, Users.read>[]
+): void => {
+  const alias = input
+  const copied = { ...alias }
+  const { job } = copied
+  Allowed.record({ job: input.job, other: input.other })
+  Allowed.record({ job, other: input.other })
+  Allowed.record({ ...input })
+  Allowed.nested({ payload: { job: alias.job } })
+  Allowed.tuple([input.job, input.other])
+  Allowed.list([input.job, input.other])
+  Allowed.list(jobs)
+}
+`,
+  });
+  assertEquals(project.diagnostics, []);
+  const lowered = lowerProject(project);
+  for (const result of lowered.values()) {
+    assert(result.ok, JSON.stringify(result));
+  }
+  for (
+    const diagnostics of validateProject(project.analysis.project, lowered)
+      .values()
+  ) assertEquals(diagnostics, []);
+});
+
+Deno.test("composite transfers retain fresh requirements with an inherited match", () => {
+  const services = `
+export type Int = int
+export service Users { read(): Int }
+export service Allowed {
+  publish(input: {
+    inherited: Effect<Int, never, Users.read>,
+    fresh: Effect<Int, never, Users.read>
+  }): void
+}
+`;
+  for (
+    const body of [
+      `Allowed.publish({ ...input, fresh: defer(() => Users.read()) })`,
+      `{
+  const fresh = defer(() => Users.read())
+  Allowed.publish({ inherited: input.inherited, fresh })
+}`,
+    ]
+  ) {
+    const project = checked({
+      "services.eff": services,
+      "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const forward = (input: {
+  inherited: Effect<Int, never, Users.read>,
+  fresh: Effect<Int, never, Users.read>
+}): void => ${body}
+`,
+    });
+    assertEquals(project.diagnostics.map((diagnostic) => diagnostic.code), [
+      "requirement-contract/002",
+    ], body);
+  }
+});
+
+Deno.test("composite provenance agrees across fresh, warm, and retained revisions", () => {
+  const services = `
+export type Int = int
+export service Users { read(): Int }
+export service Allowed { publish(input: { job: Effect<Int, never, Users.read> }): void }
+`;
+  const source = (job: string): string => `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const forward = (input: { job: Effect<Int, never, Users.read> }): void =>
+  Allowed.publish({ job: ${job} })
+`;
+  const inherited = source("input.job");
+  const local = source("defer(() => Users.read())");
+  const program = new Program("");
+  const initial = program.update({
+    set: { ...CONFIG, "services.eff": services, "main.eff": inherited },
+  });
+  assert(initial.ok, JSON.stringify(initial));
+  assertEquals(initial.value.diagnostics, []);
+  assertEquals(
+    functionType(initial.value, "main", "forward").effects.requirements,
+    [
+      "cap:services#Allowed.publish",
+    ],
+  );
+
+  const warm = program.update();
+  assert(warm.ok, JSON.stringify(warm));
+  assertEquals(warm.value.diagnostics, []);
+  assertEquals(warm.value.rechecked, []);
+
+  const changed = program.update({ set: { "main.eff": local } });
+  assert(changed.ok, JSON.stringify(changed));
+  assertEquals(changed.value.diagnostics.map((diagnostic) => diagnostic.code), [
+    "requirement-contract/002",
+  ]);
+  assertEquals(
+    functionType(changed.value, "main", "forward").effects.requirements,
+    [
+      "cap:services#Allowed.publish",
+    ],
+  );
+
+  const delayed = initial.value.lowered("main");
+  assert(delayed?.ok, JSON.stringify(delayed));
+  assertEquals(initial.value.diagnostics, []);
+
+  const reverted = program.update({ set: { "main.eff": inherited } });
+  assert(reverted.ok, JSON.stringify(reverted));
+  assertEquals(reverted.value.diagnostics, []);
+  assertEquals(
+    reverted.value.interfaceHash("main"),
+    initial.value.interfaceHash("main"),
+  );
+  assertEquals(changed.value.diagnostics.map((diagnostic) => diagnostic.code), [
+    "requirement-contract/002",
+  ]);
+
+  const fresh = new Program("").update({
+    set: { ...CONFIG, "services.eff": services, "main.eff": local },
+  });
+  assert(fresh.ok, JSON.stringify(fresh));
+  assertEquals(fresh.value.diagnostics.map((diagnostic) => diagnostic.code), [
+    "requirement-contract/002",
+  ]);
+});
+
 Deno.test("deferred writes through input references obey module service bounds", () => {
   const services = `
 export type Int = int
