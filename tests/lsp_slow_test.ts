@@ -3,6 +3,7 @@
 // stdio. Nothing is written under fixtures/.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { join, toFileUrl } from "@std/path";
 import { LspClient } from "../bench/lsp_client.ts";
 import { copyDirectory, FIXTURES } from "./helpers.ts";
 
@@ -16,12 +17,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 Deno.test("the server answers hover, definition, and save, and exits 0", async () => {
-  const dir = Deno.makeTempDirSync({ prefix: "effektive-lsp-" });
+  const dir = Deno.makeTempDirSync({ prefix: "effektive lsp-" });
   let client: LspClient | undefined;
   try {
     copyDirectory(new URL("examples/", FIXTURES), dir);
-    const text = Deno.readTextFileSync(`${dir}/main.eff`);
-    const uri = new URL(`file://${dir}/main.eff`).href;
+    const text = Deno.readTextFileSync(join(dir, "main.eff"));
+    const uri = toFileUrl(join(dir, "main.eff")).href;
     client = startServer(dir);
     assert(isRecord(await client.initialize(undefined)));
     const published = client.waitForDiagnostics(uri, 1);
@@ -54,12 +55,12 @@ Deno.test("the server answers hover, definition, and save, and exits 0", async (
       position: call,
     });
     assert(isRecord(definition));
-    assertEquals(definition.uri, new URL(`file://${dir}/users.eff`).href);
+    assertEquals(definition.uri, toFileUrl(join(dir, "users.eff")).href);
     // A save writes `main.ts`. The stats request is a barrier: the server
     // answers it after it handled the save.
     await client.notify("textDocument/didSave", { textDocument: { uri } });
     await client.request("effektive/stats", { textDocument: { uri } });
-    assert(Deno.statSync(`${dir}/main.ts`).isFile);
+    assert(Deno.statSync(join(dir, "main.ts")).isFile);
     assertEquals(await client.request("shutdown"), null);
     await client.notify("exit");
     assertEquals(await client.finish(), 0);

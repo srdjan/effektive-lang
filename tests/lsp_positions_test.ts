@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import { lineStarts } from "../src/core/frontend.ts";
 import {
   applyContentChanges,
@@ -209,4 +209,21 @@ Deno.test("uri: a non-file or malformed URI gives undefined", () => {
   assertEquals(uriToPath("not a uri"), undefined);
   assertEquals(uriToPath(""), undefined);
   assertEquals(pathToUri("relative/path.eff"), undefined);
+});
+
+Deno.test({
+  name: "uri: Windows drive and UNC paths round trip",
+  ignore: Deno.build.os !== "windows",
+  fn() {
+    for (
+      const path of [
+        String.raw`C:\work\my project\main.eff`,
+        String.raw`\\server\share\my project\main.eff`,
+      ]
+    ) {
+      const uri = pathToUri(path);
+      assert(uri !== undefined);
+      assertEquals(uriToPath(uri), path);
+    }
+  },
 });

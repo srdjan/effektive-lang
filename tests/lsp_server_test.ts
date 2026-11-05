@@ -2,6 +2,7 @@
 // harness: lifecycle, protocol edge cases, the overlay, diagnostics, scheduling.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { join } from "@std/path";
 import { ErrorCodes, type ResponseMessage } from "../src/lsp/jsonrpc.ts";
 import { SERVER_CAPABILITIES } from "../src/lsp/protocol.ts";
 import type { PublishDiagnosticsParams } from "../src/lsp/protocol.ts";
@@ -627,6 +628,167 @@ Deno.test("a document in a subdirectory finds the project above it", () => {
     0,
   ]]);
   assertEquals(h.server.projects.projects().map((p) => p.root), [ROOT]);
+});
+
+Deno.test("a path beside a project does not belong to that project", () => {
+  const h = started();
+  h.deliver(didOpen(MAIN, 1, MAIN_TEXT));
+  assertEquals(
+    h.server.projects.lookup(uriOf(`${ROOT}-other/main.eff`)),
+    undefined,
+  );
+});
+
+Deno.test("an encoded project path keeps its decoded root and source path", () => {
+  const root = "/work/my project héllo";
+  const h = makeHarness({ files: exampleFilesAt(root) });
+  h.start();
+  const uri = exampleUri("main.eff", root);
+  h.deliver(didOpen(uri, 1, MAIN_TEXT));
+  const found = h.server.projects.lookup(uri);
+  assert(found !== undefined);
+  assertEquals(found.project.root, root);
+  assertEquals(found.path, "main.eff");
+});
+
+Deno.test("a nested project owns its own source", () => {
+  const nested = `${ROOT}/nested`;
+  const text = "export const nested = () => 1\n";
+  const h = makeHarness({
+    files: {
+      ...exampleFilesAt(ROOT),
+      [`${nested}/effektive.json`]: "{}",
+      [`${nested}/main.eff`]: text,
+    },
+  });
+  h.start();
+  const uri = uriOf(`${nested}/main.eff`);
+  h.deliver(didOpen(uri, 1, text));
+  const found = h.server.projects.lookup(uri);
+  assert(found !== undefined);
+  assertEquals(found.project.root, nested);
+  assertEquals(found.path, "main.eff");
+});
+
+Deno.test("discovery stops at a POSIX filesystem root without a config", () => {
+  const h = makeHarness({ files: { "/a.eff": "export const a = 1\n" } });
+  h.start();
+  h.deliver(didOpen(uriOf("/a.eff"), 1, "export const a = 1\n"));
+  assertEquals(h.server.projects.projects(), []);
+});
+
+Deno.test({
+  name: "a POSIX backslash filename stays literal",
+  ignore: Deno.build.os === "windows",
+  fn() {
+    const path = String.raw`${ROOT}/literal\name.eff`;
+    const h = started();
+    h.deliver(didOpen(MAIN, 1, MAIN_TEXT));
+    const found = h.server.projects.lookup(uriOf(path));
+    assert(found !== undefined);
+    assertEquals(found.path, String.raw`literal\name.eff`);
+  },
+});
+
+Deno.test({
+  name: "a Windows drive project is discovered with native paths",
+  ignore: Deno.build.os !== "windows",
+  fn() {
+    const root = String.raw`C:\work\app`;
+    const source = join(root, "sub", "main.eff");
+    const config = join(root, "effektive.json");
+    const text = "export const main = () => 1\n";
+    const h = makeHarness({
+      files: {
+        [config]: "{}",
+        [`${root}/effektive.json`]: "{}",
+        [`${root}/sub/main.eff`]: text,
+      },
+    });
+    h.start();
+    const uri = uriOf(source);
+    h.deliver(didOpen(uri, 1, text));
+    const found = h.server.projects.lookup(uri);
+    assert(found !== undefined);
+    assertEquals(found.project.root, root);
+    assertEquals(found.path, "sub/main.eff");
+  },
+});
+
+Deno.test({
+  name: "a Windows URI on another drive does not belong to an open project",
+  ignore: Deno.build.os !== "windows",
+  fn() {
+    const root = String.raw`C:\work\app`;
+    const source = join(root, "main.eff");
+    const config = join(root, "effektive.json");
+    const text = "export const main = () => 1\n";
+    const h = makeHarness({
+      files: {
+        [config]: "{}",
+        [`${root}/effektive.json`]: "{}",
+        [`${root}/main.eff`]: text,
+      },
+    });
+    h.start();
+    h.deliver(didOpen(uriOf(source), 1, text));
+    assert(h.server.projects.lookup(uriOf(source)) !== undefined);
+    assertEquals(
+      h.server.projects.lookup(uriOf(String.raw`D:\other\main.eff`)),
+      undefined,
+    );
+  },
+});
+
+Deno.test({
+  name: "a Windows URI on another UNC share does not belong to an open project",
+  ignore: Deno.build.os !== "windows",
+  fn() {
+    const root = String.raw`\\server\share-one\app`;
+    const source = join(root, "main.eff");
+    const config = join(root, "effektive.json");
+    const text = "export const main = () => 1\n";
+    const h = makeHarness({
+      files: {
+        [config]: "{}",
+        [`${root}/effektive.json`]: "{}",
+        [`${root}/main.eff`]: text,
+      },
+    });
+    h.start();
+    h.deliver(didOpen(uriOf(source), 1, text));
+    assert(h.server.projects.lookup(uriOf(source)) !== undefined);
+    assertEquals(
+      h.server.projects.lookup(
+        uriOf(String.raw`\\server\share-two\main.eff`),
+      ),
+      undefined,
+    );
+  },
+});
+
+Deno.test({
+  name: "discovery stops at a Windows UNC root without a config",
+  ignore: Deno.build.os !== "windows",
+  fn() {
+    const source = String.raw`\\server\share\a.eff`;
+    const h = makeHarness({ files: { [source]: "export const a = 1\n" } });
+    h.start();
+    h.deliver(didOpen(uriOf(source), 1, "export const a = 1\n"));
+    assertEquals(h.server.projects.projects(), []);
+  },
+});
+
+Deno.test({
+  name: "discovery stops at a Windows drive root without a config",
+  ignore: Deno.build.os !== "windows",
+  fn() {
+    const source = String.raw`C:\a.eff`;
+    const h = makeHarness({ files: { [source]: "export const a = 1\n" } });
+    h.start();
+    h.deliver(didOpen(uriOf(source), 1, "export const a = 1\n"));
+    assertEquals(h.server.projects.projects(), []);
+  },
 });
 
 Deno.test("two projects side by side stay separate", () => {

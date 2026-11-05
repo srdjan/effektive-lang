@@ -8,6 +8,13 @@
 // wrapper is the only exception boundary.
 
 import { TypeScriptOutputs } from "../core/typescript.ts";
+import {
+  dirname,
+  isAbsolute,
+  join as joinNativePath,
+  relative,
+  SEPARATOR,
+} from "@std/path";
 import type { HostFs } from "../host/io.ts";
 import { ownedByRoot, runSaveRound } from "../host/save_round.ts";
 import { isSourcePath, readWorkspace } from "../host/workspace.ts";
@@ -181,19 +188,17 @@ function sameTexts(
   return true;
 }
 
-function parentOf(dir: string): string {
-  const slash = dir.lastIndexOf("/");
-  return slash <= 0 ? "/" : dir.slice(0, slash);
-}
-
 /** The root-relative path of the source file `absolute` under `root`, or undefined. */
 function sourcePathUnder(root: string, absolute: string): string | undefined {
-  const prefix = root === "/" ? "/" : `${root}/`;
-  if (!absolute.startsWith(prefix) || absolute.length <= prefix.length) {
+  const path = relative(root, absolute);
+  if (
+    path === "" || path === ".." || path.startsWith(`..${SEPARATOR}`) ||
+    isAbsolute(path)
+  ) {
     return undefined;
   }
-  const path = absolute.slice(prefix.length);
-  return isSourcePath(path) ? path : undefined;
+  const corePath = SEPARATOR === "\\" ? path.replaceAll("\\", "/") : path;
+  return isSourcePath(corePath) ? corePath : undefined;
 }
 
 /**
@@ -529,11 +534,12 @@ export class ProjectSet {
     const absolute = uriToPath(uri);
     if (absolute === undefined) return undefined;
     const fs = this.ports.fs;
-    let dir = parentOf(absolute);
+    let dir = dirname(absolute);
     for (;;) {
-      if (fs.kind(joinPath(dir, CONFIG_FILE)) === "file") break;
-      if (dir === "/" || dir === "") return undefined;
-      dir = parentOf(dir);
+      if (fs.kind(joinNativePath(dir, CONFIG_FILE)) === "file") break;
+      const parent = dirname(dir);
+      if (parent === dir) return undefined;
+      dir = parent;
     }
     const path = sourcePathUnder(dir, absolute);
     if (path === undefined) return undefined;

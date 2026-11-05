@@ -1128,3 +1128,28 @@ The source and mutation register match `6bb23e7` exactly for the restored action
 The produced-component control correctly reports `requirement-contract/002` without a `Users` header.
 Adding the header while retaining the ordinary `Users` binding gives the existing duplicate-declaration diagnostic.
 The documentation now explicitly replaces that ordinary binding with the service header.
+
+The produced-component example also passes the strict target check after the duplicate ordinary binding is removed.
+The final simplification pass uses all five rubrics directly because the implementation run has a three-worker limit.
+Reuse, quality, efficiency, and test-value review found no further supported change in the retained source.
+The review preserves every proof regression and its comments.
+Comment review removes the provenance header because it repeats the exported contracts and final architecture documentation.
+The earlier two-line coverage comment removal remains part of this same documentation cleanup.
+Browser inventory again reports that the browser access host is unavailable.
+No browser application or session is available, and none was opened.
+The required DOM flow therefore remains unrun.
+
+The restored action mutation run selected all 117 sites: 99 kills, 18 existing equivalents, and zero timeouts.
+The run reported zero unregistered survivors and zero stale rows.
+The six raw-action captures remain byte-identical to the pre-trial captures, including retained queries.
+The action phase closes as a rejected optional trial, with its original source and public behavior retained.
+The final measured checker unit contains 1,050 code lines and 209 branches, versus 994 lines and 197 branches at the preservation baseline.
+The reset does not claim a whole-unit size reduction for this correctness repair.
+The current coverage inventory contains 141 production files: 137 runtime modules, two type-only modules, and two browser startup modules.
+The four documentation tests pass, including live links, source-map completeness, cited tests, and release-heading consistency.
+
+The platform-focused command passed 173 tests, with six native Windows cases skipped.
+The authoritative platform gate passed 2,889 fast tests and 279 slow tests, with the same six native skips.
+The five platform paths contain native discovery, URL conversion, non-vacuous ownership controls, and the process regression.
+The platform source is ready for its local commit and directed mutation run.
+Native Windows remains an explicit open acceptance requirement.
