@@ -1,7 +1,11 @@
 import { assertEquals } from "@std/assert";
 import type { ReadError, Result } from "../src/core/frontend.ts";
 import type { DirectoryEntry, FileFailure, HostFs } from "../src/host/io.ts";
-import { readTargetInputs, readWorkspace } from "../src/host/workspace.ts";
+import {
+  isTargetPath,
+  readTargetInputs,
+  readWorkspace,
+} from "../src/host/workspace.ts";
 import { memoryIo } from "./cli_helpers.ts";
 
 /**
@@ -232,6 +236,25 @@ Deno.test("readWorkspace rejects a listed directory link after a transient resol
   assertEquals(read, { ok: false, error: "source: cannot be resolved" });
 });
 
+Deno.test("readWorkspace identifies an unresolved source link in its read error", () => {
+  const fs = memoryIo({ "/p/main.eff": "source" }).io.fs;
+  const read = readWorkspace({
+    ...fs,
+    entryKind: (path) =>
+      path === "/p/main.eff"
+        ? { ok: true, value: "symlink" }
+        : fs.entryKind(path),
+    absolute(path) {
+      if (path === "/p/main.eff") throw new Error("unresolved target");
+      return fs.absolute(path);
+    },
+  }, "/p");
+  assertEquals(read, {
+    ok: false,
+    error: "main.eff cannot be read: symbolic link target cannot be resolved",
+  });
+});
+
 Deno.test("readWorkspace skips a listed file that disappears before its read", () => {
   const fs = linkedFs(FILES, {});
   const read = readWorkspace({
@@ -266,4 +289,13 @@ Deno.test("readTargetInputs rejects a required directory that cannot be resolved
     },
   }, "/p");
   assertEquals(result, { ok: false, error: "sub: cannot be resolved" });
+});
+
+Deno.test("target watching excludes hidden and dependency directories", () => {
+  assertEquals(
+    ["host.ts", "sub/host.ts", ".hidden/host.ts", "node_modules/host.ts"].map(
+      isTargetPath,
+    ),
+    [true, true, false, false],
+  );
 });
