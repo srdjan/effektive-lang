@@ -1,9 +1,59 @@
 // Process checks of the coverage command with a small executable test double.
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { dirname, fromFileUrl, join } from "@std/path";
+import { productionSourcePaths } from "../scripts/coverage.ts";
 import { withTemporaryDirectory } from "./process_helpers.ts";
 
 const repository = dirname(dirname(fromFileUrl(import.meta.url)));
+
+for (
+  const [linkedEntry, directory] of [
+    ["file", "src/nested"],
+    ["directory", "playground/src"],
+  ] as const
+) {
+  Deno.test({
+    name: `coverage inventory rejects a symbolic-link ${linkedEntry}`,
+    ignore: Deno.build.os === "windows",
+    async fn() {
+      await withTemporaryDirectory(
+        "effektive-coverage-inventory-",
+        async (root) => {
+          Deno.mkdirSync(join(root, "src"), { recursive: true });
+          Deno.mkdirSync(join(root, "playground/src"), { recursive: true });
+          const target = join(root, `linked-${linkedEntry}`);
+          const linkName = linkedEntry === "file"
+            ? "linked-file.ts"
+            : "linked-directory";
+          const link = join(root, directory, linkName);
+          Deno.mkdirSync(dirname(link), { recursive: true });
+          if (linkedEntry === "file") {
+            Deno.writeTextFileSync(target, "export const linked = true;\n");
+          } else {
+            Deno.mkdirSync(target);
+            Deno.writeTextFileSync(
+              join(target, "nested.ts"),
+              "export const linked = true;\n",
+            );
+          }
+          Deno.symlinkSync(target, link);
+
+          const result = await productionSourcePaths(root);
+
+          assertEquals(result.ok, false);
+          if (!result.ok) {
+            assertEquals(result.error.tag, "inventory");
+            assertStringIncludes(
+              result.error.message,
+              `${directory}/${linkName}`,
+            );
+            assertStringIncludes(result.error.message, "symbolic link");
+          }
+        },
+      );
+    },
+  });
+}
 
 function shellArgument(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;

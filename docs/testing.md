@@ -106,6 +106,7 @@ The coverage gate reads `fixtures/coverage/ownership.json` before it runs the su
 The manifest assigns every production TypeScript file to one verification owner.
 The gate compares the manifest with the current `src/` and `playground/src/` inventory.
 The gate rejects a new file until the manifest assigns its owner.
+The inventory rejects symbolic links inside production directories.
 
 Runtime-reportable modules require one complete LCOV record with valid aggregate counters.
 The gate rejects missing modules, duplicate aliases, foreign paths, unfinished records, and invalid counters.

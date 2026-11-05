@@ -1450,3 +1450,11 @@ Both original review witnesses now return the required failure data.
 All six selected compiler recovery cases match baseline diagnostic codes exactly.
 The two source repairs still need their committed mutation runs and a fresh production coverage report.
 The compiler bundle also needs the required browser flow after its final source repair.
+
+The compiler recovery repair is committed as `2a69346`.
+Its mutation pilot passed before the complete module run.
+The full run selected 100 sites: 98 kills, the same two justified equivalents, and zero timeouts.
+No unregistered survivor, stale row, or new equivalent row remained.
+The independent spot review found no confirmed regression in either bounded repair.
+That review does not claim exhaustive recovery coverage or native Windows acceptance.
+The authoritative inventory gate also passes 2,891 fast tests, six native Windows skips, and 281 slow tests.

@@ -225,16 +225,26 @@ export function parseCoverageOwnership(
 async function walkTypeScript(
   root: string,
   directory: string,
-): Promise<string[]> {
+): Promise<Result<readonly string[], CoverageValidationError>> {
   const paths: string[] = [];
   for await (const entry of Deno.readDir(directory)) {
     const path = join(directory, entry.name);
-    if (entry.isDirectory) paths.push(...await walkTypeScript(root, path));
-    else if (entry.isFile && entry.name.endsWith(".ts")) {
-      paths.push(manifestPath(relative(root, path)));
+    const relativePath = manifestPath(relative(root, path));
+    if (entry.isSymlink) {
+      return validationError(
+        "inventory",
+        `symbolic link is not allowed in production sources: ${relativePath}`,
+      );
+    }
+    if (entry.isDirectory) {
+      const nested = await walkTypeScript(root, path);
+      if (!nested.ok) return nested;
+      paths.push(...nested.value);
+    } else if (entry.isFile && entry.name.endsWith(".ts")) {
+      paths.push(relativePath);
     }
   }
-  return paths;
+  return { ok: true, value: paths };
 }
 
 /** Discovers all production TypeScript files from the file system. */
@@ -243,10 +253,14 @@ export async function productionSourcePaths(
 ): Promise<Result<readonly string[], CoverageValidationError>> {
   const rootPath = root instanceof URL ? fromFileUrl(root) : root;
   try {
-    const paths = [
-      ...await walkTypeScript(rootPath, join(rootPath, "src")),
-      ...await walkTypeScript(rootPath, join(rootPath, "playground", "src")),
-    ];
+    const source = await walkTypeScript(rootPath, join(rootPath, "src"));
+    if (!source.ok) return source;
+    const playground = await walkTypeScript(
+      rootPath,
+      join(rootPath, "playground", "src"),
+    );
+    if (!playground.ok) return playground;
+    const paths = [...source.value, ...playground.value];
     return { ok: true, value: paths.sort() };
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause);
