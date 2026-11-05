@@ -757,8 +757,8 @@
   },
   {
     "file": "src/core/editor_actions.ts",
-    "declaration": "arrowHeader",
-    "offset": 225,
+    "declaration": "contractActionsAt",
+    "offset": 1844,
     "text": "arrow < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -767,7 +767,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 2977,
+    "offset": 3303,
     "text": "uses !== undefined",
     "operator": "comparison",
     "class": "equivalent",
@@ -776,7 +776,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 3388,
+    "offset": 3714,
     "text": "i < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -785,7 +785,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 3714,
+    "offset": 4148,
     "text": "changedFunction === undefined || changedFunction.body === undefined ||\n      (changedFunction.signature.written.fails &&\n        [...changedFunction.body.failures, ...changedFunction.failures].some((\n          id,\n        ) => !changedFunction.signature.failures.includes(id))) ||\n      (changedFunction.signature.written.uses &&\n        changedFunction.body.requirements.some((id) =>\n          !changedFunction.signature.requirements.includes(id)\n        ))",
     "operator": "logical",
     "class": "equivalent",
@@ -794,7 +794,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 3714,
+    "offset": 4148,
     "text": "changedFunction === undefined || changedFunction.body === undefined ||\n      (changedFunction.signature.written.fails &&\n        [...changedFunction.body.failures, ...changedFunction.failures].some((\n          id,\n        ) => !changedFunction.signature.failures.includes(id)))",
     "operator": "logical",
     "class": "equivalent",
@@ -803,7 +803,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 3714,
+    "offset": 4148,
     "text": "changedFunction === undefined || changedFunction.body === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -812,7 +812,16 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 766,
+    "offset": 524,
+    "text": "arrow < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The parser numbers nodes in post-order, so node 0 is the first leaf of the file. An ArrowExpr child of a declaration follows its own `=>` leaf and the `const` keyword, so its id is never 0."
+  },
+  {
+    "file": "src/core/editor_actions.ts",
+    "declaration": "failsClauseActionsAt",
+    "offset": 984,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result",
     "operator": "logical",
     "class": "equivalent",
@@ -821,7 +830,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1221,
+    "offset": 1439,
     "text": "at < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -830,8 +839,8 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1642,
-    "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements) ||\n      diagnosticDelta(revision.diagnostics, checked.revision.diagnostics, edits)\n          .added.length > 0",
+    "offset": 1979,
+    "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements) ||\n      diagnosticDelta(revision.diagnostics, checked.value.diagnostics, edits)\n          .added.length > 0",
     "operator": "logical",
     "class": "equivalent",
     "reason": "The edit inserts only a `fails` clause that names each id of fn.failures. effectName returns a name only for the same id, and failures() in type_lower.ts:681 returns sorted unique ids, as fn.failures is. The clause does not change the `with` set (check_declarations.ts:1001-1005) or the mode of the body run. A new syntax or contract diagnostic cannot arise from a clause that repeats the inferred set. A differential run of the original and the mutant over 2422 calls found no difference."
@@ -839,7 +848,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1642,
+    "offset": 1979,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements)",
     "operator": "logical",
     "class": "equivalent",
@@ -848,7 +857,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1642,
+    "offset": 1979,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures)",
     "operator": "logical",
     "class": "equivalent",
@@ -857,7 +866,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1642,
+    "offset": 1979,
     "text": "changed === undefined || changed.mode !== fn.mode",
     "operator": "logical",
     "class": "equivalent",
@@ -870,12 +879,12 @@
     "text": "a.length === b.length && a.every((id, i) => id === b[i])",
     "operator": "logical",
     "class": "equivalent",
-    "reason": "The recheck lists the names of fn.failures in order in failsClauseActionsAt. effectName returns a name only for the same id, and failures() in type_lower.ts:681 returns sorted unique ids, as fn.failures is. So the two lists are always equal, and the mutant also returns true for them."
+    "reason": "The recheck lists the names of fn.failures in order (editor_actions.ts:268-270). effectName returns a name only for the same id, and failures() in type_lower.ts:681 returns sorted unique ids, as fn.failures is. So the two lists are always equal, and the mutant also returns true for them."
   },
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 766,
+    "offset": 984,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result ||\n      signature.written.fails || fn.body === undefined ||\n      entry === undefined",
     "operator": "logical",
     "class": "equivalent",

@@ -1098,3 +1098,33 @@ The action refactor's full gate passed 2,889 fast tests, with six native Windows
 The shared header view guarantees a present arrow token before either action reads its range.
 The shared preview retains the original path key, input order, project root, and function identity lookup.
 The main agent confirmed that both public acceptance predicates retain their original checks.
+
+The action trial is committed as `1759071`.
+Its full mutation run selected 116 sites: 99 kills, 17 registered equivalents, and zero timeouts.
+No unregistered survivor or stale row remained.
+All eight behavior rows remained equal against `6bb23e7`.
+Aggregate coverage passed at 97.28% lines, 95.18% branches, and 99.21% functions.
+However, action branch coverage fell from 168 of 183 branches to 165 of 182.
+The shared helpers remove repeated execution paths but add guards at their call sites.
+The trial also adds 36 code lines without reducing the measured branch count.
+The main agent rejected this optional refactor because its added structure did not justify that cost or satisfy retained measured coverage.
+The original action implementation and its 18 existing register rows are restored from `6bb23e7`.
+The two provenance rows remain intact.
+The action phase will close as a rejected trial after the restoration gate and committed mutation check pass.
+No public behavior change is intended or accepted.
+
+The documentation pass now describes snapshot failures, component origins, coverage ownership, and platform acceptance limits.
+The canonical sibling specification already states the repaired input-only exemption and locally produced transfer rule.
+No sibling edit or source-form change is required.
+The new two-module forwarding example builds with the strict target check and produces zero diagnostics.
+The link audit found 109 missing historical probe targets before and after this pass.
+Every missing target belongs to `docs/archive/`; current documentation has zero missing file targets.
+The reset preserves these historical records rather than expanding into archive repair.
+The README now states the existing service-header inference rule.
+The status page identifies the older mutation sample as historical evidence.
+
+The restoration gate passed 2,889 fast tests, with six native Windows cases skipped, and 279 slow tests.
+The source and mutation register match `6bb23e7` exactly for the restored action unit.
+The produced-component control correctly reports `requirement-contract/002` without a `Users` header.
+Adding the header while retaining the ordinary `Users` binding gives the existing duplicate-declaration diagnostic.
+The documentation now explicitly replaces that ordinary binding with the service header.

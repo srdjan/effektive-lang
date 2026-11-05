@@ -1,65 +1,17 @@
 // Contract edits come from checked body effect sets, never diagnostic prose.
 import { Program, type Revision } from "./db.ts";
-import type { CheckedModule, FunctionBody } from "./check_project.ts";
-import type { ValueId } from "./ir.ts";
 import { diagnosticDelta } from "./diagnostic_delta.ts";
 import type { SourceEdit } from "./source.ts";
 import { applySourceEdits } from "./editor_rename.ts";
 import { EFFECT_ERROR_IDS } from "./resolve.ts";
 import { diagnosticInside, resultEndOf } from "./editor_hints.ts";
-import {
-  childrenOf,
-  kindOf,
-  type NodeId,
-  SyntaxKind,
-  type SyntaxTree,
-} from "./syntax.ts";
+import { childrenOf, kindOf, SyntaxKind } from "./syntax.ts";
 
 export interface ContractAction {
   readonly title: string;
   /** The value id of the function that the action edits. */
   readonly function: string;
   readonly edits: readonly SourceEdit[];
-}
-
-interface ArrowHeader {
-  readonly children: readonly NodeId[];
-  readonly token: NodeId;
-}
-
-function arrowHeader(tree: SyntaxTree, node: NodeId): ArrowHeader | undefined {
-  let arrow = -1;
-  for (const child of childrenOf(tree, node)) {
-    if (kindOf(tree, child) === SyntaxKind.ArrowExpr) arrow = child;
-  }
-  if (arrow < 0) return undefined;
-  const children = [...childrenOf(tree, arrow)];
-  const token = children.find((child) =>
-    tree.text.slice(tree.starts[child], tree.ends[child]) === "=>"
-  );
-  return token === undefined ? undefined : { children, token };
-}
-
-interface FunctionPreview {
-  readonly revision: Revision;
-  readonly fn: FunctionBody | undefined;
-}
-
-function previewFunction(
-  revision: Revision,
-  path: string,
-  module: CheckedModule,
-  id: ValueId,
-  edits: readonly SourceEdit[],
-): FunctionPreview | undefined {
-  const files = new Map(revision.inputs());
-  files.set(path, applySourceEdits(module.tree.text, edits));
-  const checked = new Program(revision.root).update({ set: files });
-  if (!checked.ok) return undefined;
-  return {
-    revision: checked.value,
-    fn: checked.value.checkedModule(module.module)?.functions.get(id),
-  };
 }
 
 function effectName(
@@ -168,9 +120,12 @@ export function contractActionsAt(
     const useNames = requirementNames(revision, module.module, missingUses);
     if ([...failureNames, ...useNames].some((n) => n === undefined)) continue;
     const { tree } = module;
-    const header = arrowHeader(tree, signature.node);
-    if (header === undefined) continue;
-    const { children, token } = header;
+    let arrow = -1;
+    for (const child of childrenOf(tree, signature.node)) {
+      if (kindOf(tree, child) === SyntaxKind.ArrowExpr) arrow = child;
+    }
+    if (arrow < 0) continue;
+    const children = [...childrenOf(tree, arrow)];
     const fails = children.find((n) =>
       kindOf(tree, n) === SyntaxKind.FailsClause
     );
@@ -178,6 +133,11 @@ export function contractActionsAt(
       kindOf(tree, n) === SyntaxKind.WithClause
     );
     const text = tree.text;
+    // Reuse the parsed clauses and arrow token, preserving all existing entries.
+    const token = children.find((n) =>
+      text.slice(tree.starts[n], tree.ends[n]) === "=>"
+    );
+    if (token === undefined) continue;
     const edits: SourceEdit[] = [];
     const clauseEdit = (
       clause: number | undefined,
@@ -220,15 +180,12 @@ export function contractActionsAt(
       if (i < 0) merged.push(edit);
       else merged[i] = { span: edit.span, text: merged[i].text + edit.text };
     }
-    const checked = previewFunction(
-      revision,
-      path,
-      module,
-      signature.id,
-      merged,
-    );
-    if (checked === undefined) continue;
-    const changedFunction = checked.fn;
+    const files = new Map(revision.inputs());
+    files.set(path, applySourceEdits(text, merged));
+    const checked = new Program(revision.root).update({ set: files });
+    if (!checked.ok) continue;
+    const changedFunction = checked.value.checkedModule(module.module)
+      ?.functions.get(signature.id);
     if (
       changedFunction === undefined || changedFunction.body === undefined ||
       (changedFunction.signature.written.fails &&
@@ -244,7 +201,7 @@ export function contractActionsAt(
     }
     const delta = diagnosticDelta(
       revision.diagnostics,
-      checked.revision.diagnostics,
+      checked.value.diagnostics,
       merged,
     );
     const harmful = allowCallerGaps
@@ -286,11 +243,17 @@ export function failsClauseActionsAt(
   const { tree } = module;
   for (const fn of module.functions.values()) {
     const { signature } = fn;
-    const header = arrowHeader(tree, signature.node);
-    if (header === undefined) continue;
-    const { token } = header;
+    let arrow = -1;
+    for (const child of childrenOf(tree, signature.node)) {
+      if (kindOf(tree, child) === SyntaxKind.ArrowExpr) arrow = child;
+    }
+    if (arrow < 0) continue;
+    const token = [...childrenOf(tree, arrow)].find((n) =>
+      tree.text.slice(tree.starts[n], tree.ends[n]) === "=>"
+    );
     if (
-      start < signature.span.start || start > tree.ends[token]
+      token === undefined || start < signature.span.start ||
+      start > tree.ends[token]
     ) continue;
     // The headers of two functions never overlap: this is the only candidate.
     const entry = revision.moduleInfo(module.module)?.index.byName.get(
@@ -313,20 +276,18 @@ export function failsClauseActionsAt(
       span: { source: path, start: at, end: at },
       text: clause,
     }];
-    const checked = previewFunction(
-      revision,
-      path,
-      module,
+    const files = new Map(revision.inputs());
+    files.set(path, applySourceEdits(tree.text, edits));
+    const checked = new Program(revision.root).update({ set: files });
+    if (!checked.ok) return [];
+    const changed = checked.value.checkedModule(module.module)?.functions.get(
       signature.id,
-      edits,
     );
-    if (checked === undefined) return [];
-    const changed = checked.fn;
     if (
       changed === undefined || changed.mode !== fn.mode ||
       !sameIds(changed.failures, fn.failures) ||
       !sameIds(changed.requirements, fn.requirements) ||
-      diagnosticDelta(revision.diagnostics, checked.revision.diagnostics, edits)
+      diagnosticDelta(revision.diagnostics, checked.value.diagnostics, edits)
           .added.length > 0
     ) return [];
     return [{ title: `Write${clause}`, function: signature.id, edits }];
