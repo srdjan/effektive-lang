@@ -90,7 +90,7 @@ console.log(JSON.stringify({ source: source.ok, target: target.ok,
     assertEquals(result.source, false);
     assertEquals(result.target, false);
     assert(typeof result.sourceError === "string");
-    assertStringIncludes(result.sourceError, root);
+    assertStringIncludes(result.sourceError, link);
     assertEquals(result.targetError, result.sourceError);
     assertEquals(
       Deno.readTextFileSync(join(hidden, "a.ts")),

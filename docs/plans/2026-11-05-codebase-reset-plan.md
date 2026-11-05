@@ -889,6 +889,11 @@ The physical link test also covers a missing target.
 The authoritative focused run passed six slow tests.
 The final complete gate passed, including 268 slow tests.
 Directed listing mutation has three sites: the symlink branch at line 84 and both error-filter operators at line 90.
+The listing repair is committed as `2afb1ae`.
+Its first directed run killed two of three mutants and found one surviving branch inversion.
+That mutant failed earlier while inspecting the hidden directory, and the probe accepted the wrong error path.
+The probe now requires the error to identify the listed symbolic link.
+The final mutation run will check that stronger assertion after its test commit.
 
 ## Current next action
 
