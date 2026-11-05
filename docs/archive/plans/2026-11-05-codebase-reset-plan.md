@@ -11,7 +11,7 @@ The plan targets those defects, evidence accounting, and duplicated editor-actio
 The action trial retained the original code after its helpers increased structure and lowered branch coverage.
 It does not authorize a general rewrite.
 
-Status: the final review found two defects; their bounded repairs and final verification are active.
+Status: the reset is complete within the scope accepted by the user.
 Codex Astra at xhigh effort accepted the plan before execution.
 The user's explicit plan-only limit governed the first `compound-engineering:lfg` invocation.
 The main agent continued beyond that limit; the existing changes are recorded below and remain preserved.
@@ -964,7 +964,7 @@ The browser inventory returned `The browser access host is unavailable`.
 The main agent opened no browser session.
 These environment limits remain requirements for future acceptance, not reasons to weaken the plan.
 
-## Current next action
+## Authorized implementation work record
 
 The planning deliverable is complete.
 The main agent completed the document checks and stopped before the user's later LFG invocation.
@@ -1214,7 +1214,8 @@ The final report retains raw per-file coverage separately to check complete-unit
 
 ## Current implementation disposition
 
-The local source and documentation changes are committed through `f1ea84f`.
+The final source repairs are committed through `94bc25a`.
+The completion commit records this archived authority and its updated registry and current links.
 The following table supersedes earlier provisional work-record statements.
 
 | Phase | Disposition | Evidence or remaining requirement |
@@ -1222,12 +1223,12 @@ The following table supersedes earlier provisional work-record statements.
 | RCP-0: restore the baseline | Complete | Full gate and baseline comparison pass; preservation starts at `05bdc3c` |
 | RCP-1: complete workspace snapshots | Complete | Public snapshot, watch, save, and nested-ownership regressions; directed mutation accepted |
 | RCP-2: propagate link inspection failures | Complete | Real permission failure identifies the failing link; directed faults detected |
-| RCP-3: coverage ownership | Review repair active | Complete production inventory; malformed reports fail; 123 kills and one justified equivalent |
-| RCP-4: composite input provenance | Review repair active | Public forwarding and production controls; strict target and retained revisions; 93 kills and two justified equivalents |
+| RCP-3: coverage ownership | Complete | Linked entries and malformed reports fail; complete ownership; 127 kills and one justified equivalent |
+| RCP-4: composite input provenance | Complete | Public forwarding and recovery controls; strict target and retained revisions; 98 kills and two justified equivalents |
 | RCP-5: action mechanics | Rejected optional trial | Original source retained; exact action captures equal; 99 kills and 18 existing equivalents |
 | RCP-6: native project discovery | Complete within accepted scope | POSIX process and path checks pass; six selected mutants killed; portable code retained; native Windows acceptance excluded by user |
 | RCP-7: final documentation | Complete for the current design | Checked examples, current links, source map, and explicit evidence limits |
-| RCP-8: reset closure | Final review and archival active | Local gates and the required browser flow pass; independent review and final documentation remain |
+| RCP-8: reset closure | Complete | Final gates, preservation, installation, independent review, and browser acceptance pass; authority archived |
 
 ### Final per-file coverage accounting
 
@@ -1236,7 +1237,7 @@ The checker row combines `check_project.ts` and `requirement_provenance.ts` afte
 
 | Unit | Earlier lines | Final lines | Earlier branches | Final branches |
 | --- | --- | --- | --- | --- |
-| Checker and provenance | 743 / 770: 96.49% | 792 / 815: 97.18% | 301 / 323: 93.19% | 341 / 361: 94.46% |
+| Checker and provenance | 743 / 770: 96.49% | 803 / 824: 97.45% | 301 / 323: 93.19% | 350 / 369: 94.85% |
 | Original editor actions | 228 / 244: 93.44% | 228 / 244: 93.44% | 168 / 183: 91.80% | 168 / 183: 91.80% |
 | Project discovery | 424 / 439: 96.58% | 425 / 441: 96.37% | 206 / 222: 92.79% | 199 / 216: 92.13% |
 
@@ -1269,11 +1270,11 @@ File tabs also select the matching source and generated module.
 The final browser record below names the observed diagnostic, exact-output comparison, expected log response, and local screenshot.
 The main agent closed the owned isolated tab and stopped the owned server.
 
-### Resume ownership
+### Completion ownership
 
-The main agent owns the final independent review, documentation reconciliation, and archival.
+The main agent records the completed review and local verification in this archived authority.
 No browser setup remains for the user.
-The main agent will then reconcile status documentation and archive this authority only when every selected requirement passes.
+The completion commit reconciles status documentation and archives this authority after every selected requirement passes.
 The user owns any push or release.
 
 ## Settled scope decision about native Windows
@@ -1295,20 +1296,20 @@ The remaining diff contains only this authority's close-out evidence and scope q
 
 ## Implementation return
 
-The implementation stage returns `blocked`, rather than `complete`, under the current acceptance contract.
+The implementation stage returns `complete` within the accepted local scope.
 LFG states: "Only a valid `status: complete` from `ce-work` may advance".
-The main agent therefore stops before the final shipping review and publication stages.
+The completed review findings and their accepted repairs appear below.
 The user's no-push rule also remains authoritative.
 
 | Return field | Recorded value |
 | --- | --- |
-| `status` | `blocked` |
-| `plan_path` | `docs/plans/2026-11-05-codebase-reset-plan.md` |
+| `status` | `complete` |
+| `plan_path` | `docs/archive/plans/2026-11-05-codebase-reset-plan.md` |
 | `source_kind` | `plan` |
-| `source_digest` | `null`; native execution did not retain an immutable intake digest |
+| `source_digest` | SHA-256 `1aa49c5a89a6b185c6dccf663b13f5c17116ae97309b00958f626e51db75ae3e`; accepted authority at the resumed checkpoint `cd1a69b` |
 | `changed_files` | 35 tracked paths in `git diff --name-only 05bdc3c f1ea84f`; ownership appears in each phase |
 | `u_ids_attempted` | RCP-0 through RCP-8, as defined in the current disposition table |
-| `u_ids_completed` | RCP-0 through RCP-4; RCP-5 as a rejected optional trial; RCP-6 within accepted scope; RCP-7 for the current design |
+| `u_ids_completed` | RCP-0 through RCP-8 within accepted scope; RCP-5 retains the original code after its rejected optional trial |
 | `verification_results` | Final gate, production coverage, all eight preservation rows, installation, documentation, and playground facade pass |
 | `verification_evidence` | The phase records above retain inspected tests, red probes, exact regressions, commands, results, and accepted equivalence reasons |
 | `implementation_engine_binding` | `null`; native execution |
@@ -1320,17 +1321,17 @@ The user's no-push rule also remains authoritative.
 | `plan_checkpoint` | `null`; intake included an existing coverage patch |
 | `behavior_change` | `true`; confirmed snapshot and provenance repairs |
 | `settled_decision_conflicts` | None; the action trial was rejected under the plan's preservation and complexity gates |
-| `simplified_through` | `f1ea84f3b7eefbdd6f5898f084543504229f2004` |
+| `simplified_through` | `94bc25ab65903b396304c4bb434da1750f12bacf` |
 | `standalone_shipping_skipped` | `true` |
-| `blockers` | None from native Windows or browser access; final review and archival remain active |
+| `blockers` | None within the accepted reset scope |
 | `recovery_path` | Local `main` in `/Users/srdjans/Code/effektive-lang`; detailed temporary evidence in `/tmp/effektive-reset.25ZvGR/` |
 
 The canonical commits, owned files, and cleanup results are recorded in the work record.
 No worker wrote Git state, no detached worker remains active, and the owned playground server is stopped.
-The authority remains live, and the registry path stays unchanged until accepted closure.
+The completion commit archives this authority and updates the registry and current links.
 The Windows scope decision is settled.
 Browser access now works through the Playwright connector.
-The main agent owns the final review and archival.
+The user owns review of the completed local changes and any publication.
 
 ## Accepted scope change: native Windows
 
@@ -1339,7 +1340,7 @@ This decision changes acceptance scope, not source behavior or support claims.
 The two Windows branches and six native tests remain unchanged and unmeasured on this POSIX runner.
 The aggregate production floors remain unchanged.
 The recorded per-file coverage reduction remains visible; native branch execution no longer blocks this reset.
-Browser DOM acceptance remains required and open.
+Browser DOM acceptance is required and passes in the final browser record below.
 
 ### Scope reconciliation orchestration
 
@@ -1458,3 +1459,72 @@ No unregistered survivor, stale row, or new equivalent row remained.
 The independent spot review found no confirmed regression in either bounded repair.
 That review does not claim exhaustive recovery coverage or native Windows acceptance.
 The authoritative inventory gate also passes 2,891 fast tests, six native Windows skips, and 281 slow tests.
+
+The inventory repair is committed as `94bc25a`.
+Its mutation pilot passes, and the full run selects all 128 sites.
+The full result is 127 kills, the same justified comparator equivalent, and zero timeouts.
+The run reports zero unregistered survivors and zero stale rows.
+
+The required browser flow also passes after rebuilding the repaired compiler bundle from `94bc25a`.
+The browser again confirms diagnostics, exactly retained last-good output, recovery, both selections, and provider hover.
+The final screenshot is `demos/reset-browser-8k4ami4l/browser-final-clean.png` and remains ignored.
+Only the expected `/log` 404 appears under `--no-log`; the flow adds no other console error.
+The main agent closes the owned isolated tab and stops the owned server after the final flow.
+The three final review findings now have accepted corrections: compiler recovery, inventory completeness, and status reconciliation during archival.
+No confirmed source finding remains unresolved.
+
+The fresh official coverage report passes at 97.28% lines, 95.20% branches, and 99.21% functions.
+The provenance module now measures 93.56% line coverage and 95.05% branch coverage.
+The preservation comparison against `05bdc3c` has zero changed, missing, or added records in all eight rows.
+The offline installation and reproducible packaging check passes again after both source repairs.
+The final measured checker unit contains 1,059 code lines and 213 branch sites, including the provenance module.
+The initial preservation unit contained 994 lines and 197 branches; this correctness repair does not claim a size reduction.
+The final coverage script contains 631 code lines and 150 branch sites.
+
+The final simplification pass applies the five review lenses inline within the three-agent limit.
+The pass retains every proof regression and its comments.
+The compiler root is defined after the start guard, so repeated undefined guards are unnecessary.
+The inventory uses the existing Result and canonical-path helpers and adds no test-only production hook.
+The pass needs no further source or test change after `94bc25a`.
+The final review retains no unapplied source finding; documentation closure will remove the stale browser status.
+The source regressions and this authority retain the non-obvious reasoning, so no separate solution document is needed.
+
+### Final documentation closure
+
+The main agent owns this authority's final content and verification.
+After the source counters are recorded, `platform_reset` will move this authority and update its registry and current links.
+The unit owns this document's filesystem move, `docs/plans/README.md`, `docs/status.md`, `docs/testing.md`, and `docs/development.md`.
+The model remains Sol high, and the turn budget is eight.
+Acceptance requires a single archived authority, current links, accurate completed status, and no source or test change.
+The main agent will review the result and run `deno task check` before the local completion commit.
+
+The resumed source digest identifies the committed authority at `cd1a69b` after the accepted Windows scope change.
+The original planning intake digest remains unrecorded.
+Every confirmed final review finding has a correction and public verification evidence.
+Native Windows behavior remains unverified by explicit user choice; no selected requirement depends on that native result.
+The current browser connector passes the selected product flow.
+No push, release, or tag occurred during this reset.
+
+The final raw report confirms the complete checker unit counters shown in the current coverage table.
+The official coverage command and the external report-retention copy both pass the same unchanged floors.
+The retained original action coverage and the explicitly scoped native path counters remain visible in that table.
+The final archive gate will verify the documentation move and current links before the completion commit.
+
+## Completion verification
+
+The main agent reviewed the archive move, final wording, registry row, and every updated current link.
+The final `deno task check` passes 2,891 fast tests, six native Windows skips, and 281 slow tests.
+All four documentation checks pass after the move.
+The full link audit retains the same 109 historical archive findings and zero current missing file targets.
+The completion diff changes documentation only; source, tests, fixtures, benchmarks, scripts, and dependency files match `94bc25a`.
+The reset has one archived authority and no live duplicate.
+
+The final source coverage is 97.28% lines, 95.20% branches, and 99.21% functions.
+The final comparator, provenance, filesystem, and platform mutation evidence remains scoped exactly as recorded above.
+No new equivalent row, unregistered survivor, stale row, unexplained timeout, or unexpected fixture difference remains.
+The accepted native Windows exclusion and the limit on concurrent filesystem replacement remain explicit.
+The required browser product flow passes through the working Playwright connector.
+Both agent-owned browser sessions and their local servers are closed.
+
+The local reset is complete.
+The user owns review of local `main` and any later push or release.

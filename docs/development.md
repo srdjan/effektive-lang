@@ -75,7 +75,7 @@ You can also run this command on native Windows as optional validation.
 deno test --allow-all tests/lsp_slow_test.ts tests/bench_lsp_slow_test.ts
 ```
 
-The [reset authority](plans/2026-11-05-codebase-reset-plan.md) records the required portable results.
+The [archived reset authority](archive/plans/2026-11-05-codebase-reset-plan.md) records the required portable results.
 Native Windows process behavior remains unverified.
 
 ## Layout

@@ -69,8 +69,9 @@ Transferred records, tuples, and lists retain component origins through aliases,
 During transfer, an input component adds no external service requirement by itself.
 A produced component retains its requirements when an input contains the same capability.
 Imported deferred values also retain their requirements when transferred.
+
 An unresolved origin falls back to the checked expression type, including during syntax recovery.
-An empty or incomplete composite retains requirements from the original checked expression.
+The collector retains the original checked type when a record value is missing or a composite is empty.
 Function result types retain their complete scan for produced requirements.
 
 Each lookup of an imported value converts its IR type into the current type table.

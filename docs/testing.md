@@ -170,7 +170,7 @@ The [mutation review note](solutions/workflow-issues/mutation-equivalent-rows-ne
 Portable path tests do not establish native Windows process behavior.
 Native Windows validation is outside this reset's acceptance scope and remains unverified.
 The POSIX LSP process checks must pass from a checkout path that contains spaces.
-The [reset authority](plans/2026-11-05-codebase-reset-plan.md) records the portable checks and their current limits.
+The [archived reset authority](archive/plans/2026-11-05-codebase-reset-plan.md) records the portable checks and their limits.
 
 The public playground facade checks last-good output, stale output, and recovery after an invalid edit.
 A real browser session must also check source selection, output selection, and hover.
