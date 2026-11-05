@@ -102,6 +102,17 @@ It compares emitted companion text, maps, span tables, and independent validatio
 
 `deno task coverage` runs both suites with coverage, and it includes child processes through `DENO_COVERAGE_DIR`. It prints a table by directory and the 20 lowest files. The task exits 1 when a floor fails. `deno.json` holds the floors under `coverage.thresholds`.
 
+The coverage gate reads `fixtures/coverage/ownership.json` before it runs the suites.
+The manifest assigns every production TypeScript file to one verification owner.
+The gate compares the manifest with the current `src/` and `playground/src/` inventory.
+The gate rejects a new file until the manifest assigns its owner.
+
+Runtime-reportable modules require one complete LCOV record with valid aggregate counters.
+The gate rejects missing modules, duplicate aliases, foreign paths, unfinished records, and invalid counters.
+The type check owns modules that contain only types.
+Playground browser acceptance owns the two DOM startup modules.
+The percentage floors remain 97 for lines, 95 for branches, and 99 for functions.
+
 The gate does not run this task, because it takes several minutes. `deno task release` runs it. A floor can rise. A change that lowers a floor needs a reason in the commit.
 
 Three solver files have sites that no input can reach, so these sites have no test. Each site guards a case that the code around it rules out, and the type checker needs most of them.
