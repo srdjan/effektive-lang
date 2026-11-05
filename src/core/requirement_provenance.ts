@@ -223,36 +223,45 @@ export function transferredRequirements(
   const addValue = (
     start: NodeId | undefined,
     trail = new Set<NodeId>(),
+    fallback?: NodeId,
   ): void => {
     if (start === undefined || inputOnly(start)) return;
+    const root = fallback ?? start;
     const origin = originOf(start);
     if (origin === undefined) {
-      addType(start);
+      addType(root);
       return;
     }
     const node = unparen(tree, origin);
     if (trail.has(node)) {
-      addType(start);
+      addType(root);
       return;
     }
     const nextTrail = new Set(trail);
     nextTrail.add(node);
     switch (kindOf(tree, node)) {
-      case SyntaxKind.RecordExpr:
-        for (const field of kidsOf(tree, node)) {
+      case SyntaxKind.RecordExpr: {
+        const fields = kidsOf(tree, node);
+        let needsFallback = fields.length === 0;
+        for (const field of fields) {
           const children = kidsOf(tree, field);
-          if (kindOf(tree, field) === SyntaxKind.ShorthandField) {
-            addValue(children[0], nextTrail);
-          } else {
-            addValue(children.at(-1), nextTrail);
-          }
+          const child = kindOf(tree, field) === SyntaxKind.RecordField
+            ? children[1]
+            : children[0];
+          if (child === undefined) needsFallback = true;
+          else addValue(child, nextTrail, root);
         }
+        if (needsFallback) addType(root);
         return;
-      case SyntaxKind.ListExpr:
-        for (const element of kidsOf(tree, node)) addValue(element, nextTrail);
+      }
+      case SyntaxKind.ListExpr: {
+        const elements = kidsOf(tree, node);
+        if (elements.length === 0) addType(root);
+        for (const element of elements) addValue(element, nextTrail, root);
         return;
+      }
       case SyntaxKind.Block:
-        addValue(kidsOf(tree, node).at(-1), nextTrail);
+        addValue(kidsOf(tree, node).at(-1), nextTrail, root);
         return;
       default:
         addType(node);

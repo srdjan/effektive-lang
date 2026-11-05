@@ -628,6 +628,78 @@ export const store = (): void => {
   assertStringIncludes(requirements[0].message, "Users.read");
 });
 
+Deno.test("recovery preserves requirements of a whole malformed record", () => {
+  const services = `
+export type Int = int
+export service Users { read(): Int }
+export service Allowed { publish(input: { job: Effect<Int, never, Users.read> }): void }
+`;
+  for (const malformed of ["{ ... }", "{ job: }"]) {
+    const project = checked({
+      "services.eff": services,
+      "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const store = (): void => {
+  const x: { job: Effect<Int, never, Users.read> } = ${malformed}
+  Allowed.publish(x)
+}
+`,
+    });
+    assertEquals(
+      project.diagnostics.map((diagnostic) => diagnostic.code).sort(),
+      ["requirement-contract/002", "syntax/008"],
+      malformed,
+    );
+  }
+});
+
+Deno.test("recovery preserves requirements through incomplete composites", () => {
+  const services = `
+export type Int = int
+export service Users { read(): Int }
+export service Allowed {
+  publish(input: { job: Effect<Int, never, Users.read> }): void
+  nested(input: { payload: { job: Effect<Int, never, Users.read> } }): void
+  tuple(input: [Effect<Int, never, Users.read>]): void
+}
+`;
+  const cases = [
+    {
+      body:
+        "const x: { payload: { job: Effect<Int, never, Users.read> } } = { payload: { ... } }\n  Allowed.nested(x)",
+      codes: ["requirement-contract/002", "syntax/008"],
+    },
+    {
+      body:
+        "const x: { job: Effect<Int, never, Users.read> } = {}\n  Allowed.publish(x)",
+      codes: ["requirement-contract/002", "type-mismatch/005"],
+    },
+    {
+      body:
+        "const x: [Effect<Int, never, Users.read>] = []\n  Allowed.tuple(x)",
+      codes: ["requirement-contract/002", "type-mismatch/012"],
+    },
+  ] as const;
+  for (const { body, codes: expected } of cases) {
+    const project = checked({
+      "services.eff": services,
+      "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const store = (): void => {
+  ${body}
+}
+`,
+    });
+    assertEquals(
+      project.diagnostics.map((diagnostic) => diagnostic.code).sort(),
+      [...expected],
+      body,
+    );
+  }
+});
+
 Deno.test("composite provenance agrees across fresh, warm, and retained revisions", () => {
   const services = `
 export type Int = int

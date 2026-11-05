@@ -11,13 +11,13 @@ The plan targets those defects, evidence accounting, and duplicated editor-actio
 The action trial retained the original code after its helpers increased structure and lowered branch coverage.
 It does not authorize a general rewrite.
 
-Status: the plan is complete; local changes are integrated, and final acceptance remains open.
+Status: the final review found two defects; their bounded repairs and final verification are active.
 Codex Astra at xhigh effort accepted the plan before execution.
 The user's explicit plan-only limit governed the first `compound-engineering:lfg` invocation.
 The main agent continued beyond that limit; the existing changes are recorded below and remain preserved.
 After the final planning report, the user invoked `compound-engineering:lfg` again to continue this reset.
 That later instruction authorizes implementation and review of the existing patches.
-Final acceptance still requires the browser checks.
+The required browser checks pass through the harness-supplied Playwright connector.
 The user excludes native Windows acceptance from this reset while retaining the portable path code.
 
 ## Scope and constraints
@@ -802,7 +802,8 @@ The reset must not add project-loading features for acceptance.
 The executor will stop the server and close only browser sessions that the executor opens.
 
 Installed-editor acceptance through `deno task test:vscode` is required if the extension client or its packaging changes.
-The path repair still requires native LSP process acceptance even when the extension client stays unchanged.
+The path repair retains POSIX process acceptance even when the extension client stays unchanged.
+Native Windows acceptance remains outside the scope accepted by the user.
 The report must distinguish compiler checks, product acceptance, commits, and releases.
 
 The reset closes only when every selected phase passes and every remaining limitation has an explicit disposition.
@@ -1221,12 +1222,12 @@ The following table supersedes earlier provisional work-record statements.
 | RCP-0: restore the baseline | Complete | Full gate and baseline comparison pass; preservation starts at `05bdc3c` |
 | RCP-1: complete workspace snapshots | Complete | Public snapshot, watch, save, and nested-ownership regressions; directed mutation accepted |
 | RCP-2: propagate link inspection failures | Complete | Real permission failure identifies the failing link; directed faults detected |
-| RCP-3: coverage ownership | Complete | Complete production inventory; malformed reports fail; 123 kills and one justified equivalent |
-| RCP-4: composite input provenance | Complete | Public forwarding and production controls; strict target and retained revisions; 93 kills and two justified equivalents |
+| RCP-3: coverage ownership | Review repair active | Complete production inventory; malformed reports fail; 123 kills and one justified equivalent |
+| RCP-4: composite input provenance | Review repair active | Public forwarding and production controls; strict target and retained revisions; 93 kills and two justified equivalents |
 | RCP-5: action mechanics | Rejected optional trial | Original source retained; exact action captures equal; 99 kills and 18 existing equivalents |
 | RCP-6: native project discovery | Complete within accepted scope | POSIX process and path checks pass; six selected mutants killed; portable code retained; native Windows acceptance excluded by user |
 | RCP-7: final documentation | Complete for the current design | Checked examples, current links, source map, and explicit evidence limits |
-| RCP-8: reset closure | Open | Local gates pass; browser acceptance prevents closure and archival |
+| RCP-8: reset closure | Final review and archival active | Local gates and the required browser flow pass; independent review and final documentation remain |
 
 ### Final per-file coverage accounting
 
@@ -1260,18 +1261,18 @@ The six platform cases remain skipped locally, and native Windows behavior remai
 The user accepted this evidence limit for the reset.
 Portable calculations, source proofs, and POSIX process results do not establish native Windows behavior.
 
-### Required browser evidence
+### Browser acceptance result
 
-The browser access host is unavailable, and its inventory contains no available browser.
-No agent-owned browser session remains open.
-The playground build, HTTP readiness, and facade checks pass, but the required DOM flow remains unrun.
-The pending flow covers clean output, diagnostics, last-good stale output, recovery, source selection, output selection, and hover.
-The main agent stopped the owned local server after HTTP verification.
+The separate computer-use host failed, but the harness-supplied Playwright connector reached the local playground.
+The required DOM flow passes for clean output, diagnostics, retained last-good output, recovery, source selection, output selection, and hover.
+File tabs also select the matching source and generated module.
+The final browser record below names the observed diagnostic, exact-output comparison, expected log response, and local screenshot.
+The main agent closed the owned isolated tab and stopped the owned server.
 
 ### Resume ownership
 
-The user owns access to a working browser host.
-After browser access becomes available, the main agent will run the remaining browser checks and record their exact results.
+The main agent owns the final independent review, documentation reconciliation, and archival.
+No browser setup remains for the user.
 The main agent will then reconcile status documentation and archive this authority only when every selected requirement passes.
 The user owns any push or release.
 
@@ -1321,14 +1322,15 @@ The user's no-push rule also remains authoritative.
 | `settled_decision_conflicts` | None; the action trial was rejected under the plan's preservation and complexity gates |
 | `simplified_through` | `f1ea84f3b7eefbdd6f5898f084543504229f2004` |
 | `standalone_shipping_skipped` | `true` |
-| `blockers` | Browser DOM acceptance remains open because the browser access host is unavailable |
+| `blockers` | None from native Windows or browser access; final review and archival remain active |
 | `recovery_path` | Local `main` in `/Users/srdjans/Code/effektive-lang`; detailed temporary evidence in `/tmp/effektive-reset.25ZvGR/` |
 
 The canonical commits, owned files, and cleanup results are recorded in the work record.
 No worker wrote Git state, no detached worker remains active, and the owned playground server is stopped.
 The authority remains live, and the registry path stays unchanged until accepted closure.
 The Windows scope decision is settled.
-The user owns browser access; the main agent owns the remaining browser checks after access returns.
+Browser access now works through the Playwright connector.
+The main agent owns the final review and archival.
 
 ## Accepted scope change: native Windows
 
@@ -1365,3 +1367,86 @@ This documentation-only follow-up changes no production behavior, test input, mu
 The earlier source coverage, preservation comparison, and directed mutation results remain applicable to the unchanged source.
 The platform phase is complete within the scope accepted by the user.
 Browser DOM acceptance is the sole remaining reset blocker.
+
+## Browser acceptance and final review
+
+The current session exposes a working Playwright browser connector.
+That connector reached the local playground after the separate computer-use host had failed.
+The main agent used only the connector supplied by the active harness and installed no browser package or server.
+The main agent should have checked the connector before asking the user to restore access.
+
+The required browser flow passes on `http://127.0.0.1:8790/`.
+The clean example shows zero problems and generated `main.ts`.
+Changing `displayName("u1")` to `displayName(1)` shows one `type-mismatch/003` diagnostic and the last-good indicator.
+The rendered generated text remains exactly equal to its clean capture during that error.
+Restoring the source clears both the diagnostic and stale indicator and restores the exact source and generated text.
+
+Keyboard selection selects the first source import line.
+The generated pane permits nonempty selection inside its own read-only content.
+Pointer hover over `UsersLive` shows its three provided operations.
+Switching `users.eff` and `main.eff` selects their matching source and generated files with zero problems.
+The current UI has no project-loading control for the composite witness; the existing public facade regression covers that case.
+
+The console records one expected `/log` HTTP 404 because the server runs with `--no-log`.
+The server intentionally returns that response to disable further log posts.
+The browser flow introduces no additional console error.
+The main agent closed the owned isolated playground tab and stopped the owned server.
+The original default browser context was not targeted for closure.
+The screenshot is local and ignored at `demos/reset-browser-8k4ami4l/browser-clean.png`.
+
+### Final review orchestration
+
+The final review compares the current tree with `05bdc3c` and checks the accepted plan requirements.
+The user limits review to three subagents; the main agent owns integration and the final report.
+The review uses Sol subagents only, so no different-provider review job is eligible.
+The main agent retains the earlier inline simplification receipt because every later commit changes documentation only.
+
+| Unit | Owner and model | Read-only scope | Acceptance check | Turn budget |
+| --- | --- | --- | --- | --- |
+| Compiler correctness and portable paths | `coverage_hardening`, Sol high | Checker/provenance, native path adapter, corresponding public regressions | Confirm defects with concrete witnesses; preserve lazy imported types and input exemptions | 10 |
+| Filesystem reliability and coverage gate | `provenance_reset`, Sol high | Host snapshot and ownership repairs, coverage command and tests | Challenge error propagation and false-pass reports; confirm findings with public inputs | 10 |
+| Test quality and requirement completeness | `platform_reset`, Sol high | Test changes, mutation register, ownership manifest, current plan and documentation | Check public oracles, proof quality, scoped exceptions, and completed requirements | 10 |
+
+All reviewers have read-only access and cannot write Git state or delegate.
+The main agent will validate each retained finding and record the final disposition in this authority.
+
+The final independent review found two correctness gaps in the new code.
+A whole malformed annotated record can lose its deferred service requirement during component traversal.
+The coverage inventory also omits production symlinks because directory entries mark them as neither files nor directories.
+The main agent will confirm both public witnesses before accepting their repair.
+The test reviewer also identified the status page's now-stale browser blocker; final documentation reconciliation owns that correction.
+
+### Bounded final repairs
+
+| Unit | Owner and model | Owned files | Acceptance check | Turn budget |
+| --- | --- | --- | --- | --- |
+| Conservative malformed composite traversal | `coverage_hardening`, Sol high | `src/core/requirement_provenance.ts`, `tests/service_imports_test.ts` | Public regression fails first; invalid whole composites retain real requirements; valid input-only reconstruction remains exempt | 12 |
+| Complete inventory of production paths | `provenance_reset`, Sol high | `scripts/coverage.ts`, `tests/coverage_slow_test.ts` | Public real-filesystem regression fails first; linked production entries cannot pass as a complete inventory | 12 |
+
+The main agent retains the authority, authoritative checks, mutation classification, Git state, and final integration.
+The workers cannot edit each other's files or the mutation register.
+
+The main agent confirmed both initial review findings through their public APIs.
+Before repair, the whole malformed record produced only `syntax/008`, and the linked production file returned a successful empty inventory.
+The first compiler repair retains requirements for whole missing spreads and missing field values.
+A baseline differential then found the same loss through a nested missing spread, a missing annotated field, and an empty annotated tuple.
+The bounded compiler repair now includes those confirmed recovery variants.
+
+The inventory repair returns an `inventory` Result error with the linked path and propagates nested failures.
+The main agent strengthened the real-filesystem cases to cover a nested source link and a link in the playground root.
+These cases cover recursive failure propagation and both production roots without adding production test hooks.
+Native symlink setup remains skipped on Windows within the accepted scope.
+
+The main agent confirmed that all six recovery cases now match the actual `05bdc3c` diagnostics.
+The repair carries the original transferred expression through nested descent and retains its checked type for empty or incomplete composites.
+The main agent removed redundant undefined guards by deriving a defined root after the existing start guard.
+The parser guarantees one value child for shorthand or spread fields and a second child for an ordinary field.
+The collector uses those positions directly, so a missing value cannot be mistaken for its field name.
+Valid nonempty input reconstruction still uses component origins.
+
+The authoritative repair gate passes 2,891 fast tests, six native Windows skips, and 281 slow tests.
+The focused run also passes 28 service tests, 17 playground facade tests, 22 pure coverage tests, and 12 slow coverage tests.
+Both original review witnesses now return the required failure data.
+All six selected compiler recovery cases match baseline diagnostic codes exactly.
+The two source repairs still need their committed mutation runs and a fresh production coverage report.
+The compiler bundle also needs the required browser flow after its final source repair.

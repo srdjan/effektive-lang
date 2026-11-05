@@ -70,6 +70,7 @@ During transfer, an input component adds no external service requirement by itse
 A produced component retains its requirements when an input contains the same capability.
 Imported deferred values also retain their requirements when transferred.
 An unresolved origin falls back to the checked expression type, including during syntax recovery.
+An empty or incomplete composite retains requirements from the original checked expression.
 Function result types retain their complete scan for produced requirements.
 
 Each lookup of an imported value converts its IR type into the current type table.
