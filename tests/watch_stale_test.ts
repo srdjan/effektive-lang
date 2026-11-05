@@ -200,3 +200,50 @@ Deno.test("watch does not write or remove the outputs of a nested project", asyn
   assertEquals(outputs(m).filter((path) => path.startsWith("inner/")), []);
   assert(!m.err.join("").includes("removed: inner/"), m.err.join(""));
 });
+
+Deno.test("watch preserves nested ownership when configuration inspection reports missing", async () => {
+  const m = project();
+  const config = `${ROOT}/inner/effektive.json`;
+  m.files.set(config, "{}");
+  m.files.set(`${ROOT}/inner/m.eff`, module("m"));
+  const io = {
+    ...m.io,
+    fs: {
+      ...m.io.fs,
+      kind: (path: string) =>
+        path === config ? "missing" as const : m.io.fs.kind(path),
+    },
+  };
+  assertEquals(await main(["watch", ROOT], io), 0);
+  assertEquals(outputs(m).filter((path) => path.startsWith("inner/")), []);
+});
+
+Deno.test("watch preserves nested ownership when entry inspection fails", async () => {
+  const m = project();
+  const config = `${ROOT}/inner/effektive.json`;
+  m.files.set(config, "{}");
+  m.files.set(`${ROOT}/inner/m.eff`, module("m"));
+  const io = {
+    ...m.io,
+    fs: {
+      ...m.io.fs,
+      entryKind: (path: string) =>
+        path === config
+          ? { ok: false as const, error: { message: "permission denied" } }
+          : m.io.fs.entryKind(path),
+    },
+  };
+  assertEquals(await main(["watch", ROOT], io), 0);
+  assertEquals(outputs(m).filter((path) => path.startsWith("inner/")), []);
+});
+
+Deno.test("watch owns source below a directory named effektive.json", async () => {
+  const m = project();
+  m.files.set(`${ROOT}/inner/effektive.json/marker.txt`, "directory");
+  m.files.set(`${ROOT}/inner/m.eff`, module("m"));
+  assertEquals(await main(["watch", ROOT], m.io), 0);
+  assertEquals(outputs(m).filter((path) => path.startsWith("inner/")), [
+    "inner/m.ts",
+    "inner/m.ts.map",
+  ]);
+});

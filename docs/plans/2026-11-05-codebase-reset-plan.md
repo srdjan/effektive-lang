@@ -870,6 +870,13 @@ The surviving changes affected unresolved-link error text and exclusion of hidde
 Two public workspace regressions now cover those behaviors; the focused file passes 15 tests.
 The ownership repair passed its public red-before-fix probe and then 32 focused tests.
 Its uncommitted patch is preserved at `/tmp/effektive-reset.25ZvGR/ownership.patch` while mutation regressions receive their separate commit.
+The mutation regressions are committed as `cebc385`.
+The final workspace run killed all 55 selected mutants, with zero survivors and zero timeouts.
+The ownership patch is restored and passes its 32 focused tests.
+The ownership repair preserves directories named `effektive.json` while holding outputs after unknown file inspection.
+The planned Deno subprocess probe also reproduced successful source and target snapshots after denied symlink-target inspection.
+The ownership follow-up passed the full gate: 2,867 fast tests and 267 slow tests.
+Its three watch cases cover a false missing result, a failed entry inspection, and a directory named `effektive.json`.
 
 ## Current next action
 

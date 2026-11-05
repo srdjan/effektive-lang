@@ -62,7 +62,11 @@ export function ownedByRoot(fs: HostFs, root: string, name: string): boolean {
   const parts = name.split("/").slice(0, -1);
   for (let n = 1; n <= parts.length; n++) {
     const dir = joinPath(root, parts.slice(0, n).join("/"));
-    if (fs.kind(joinPath(dir, CONFIG_FILE)) === "file") return false;
+    const path = joinPath(dir, CONFIG_FILE);
+    const entry = fs.entryKind(path);
+    if (!entry.ok) return false;
+    if (entry.value === "missing") continue;
+    if (fs.kind(path) !== "directory") return false;
   }
   return true;
 }
