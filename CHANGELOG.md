@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.15.1 - 2026-11-05
+
 - Effect 4.1.2 preserves defects in mixed failure causes. Typed recovery skips
   such causes and converts their typed errors to defects.
 - Replaying one raw Schema constructor Effect now returns a fresh result.

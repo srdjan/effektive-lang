@@ -210,7 +210,7 @@ async function run(
   args: string[],
   env: Record<string, string> = {},
 ): Promise<Run> {
-  const output = await new Deno.Command(Deno.execPath(), {
+  const output = await new Deno.Command("deno", {
     args,
     cwd: ROOT,
     env,
