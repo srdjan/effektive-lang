@@ -67,6 +67,7 @@ import type {
   Execution,
   LocalId,
   ServiceId,
+  Type as IrType,
   ValueId,
 } from "./ir.ts";
 import { type Solved, solveModeGroup } from "./modes.ts";
@@ -263,10 +264,13 @@ function moduleValues(
 ): ModuleValues {
   const { declarations } = args;
   const table = declarations.env.table;
-  const importedValues = new Map<ValueId, TypeRef>();
+  // An imported value type interns on its first read. A module reads few of
+  // the values of the modules that it reaches, and the table interns by
+  // structure, so a second read returns the same ref.
+  const importedTypes = new Map<ValueId, IrType>();
   for (const iface of args.interfaces.values()) {
     for (const value of iface.payload.values) {
-      importedValues.set(value.id, typeFromIr(table, value.type));
+      importedTypes.set(value.id, value.type);
     }
   }
   const methodTypes = new Map<CapabilityId, TypeRef>();
@@ -296,7 +300,10 @@ function moduleValues(
   const constants = new Map<ValueId, ConstantBody>();
   const values = (view: SolvedLookup) => (id: ValueId): TypeRef => {
     const signature: ValueSignature | undefined = declarations.values.get(id);
-    if (signature === undefined) return importedValues.get(id) ?? table.error;
+    if (signature === undefined) {
+      const type = importedTypes.get(id);
+      return type === undefined ? table.error : typeFromIr(table, type);
+    }
     switch (signature.kind) {
       case "function": {
         if (!signature.written.result) {
