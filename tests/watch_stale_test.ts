@@ -46,6 +46,55 @@ Deno.test("watch removes the outputs of a renamed module", async () => {
   assert(err.includes("removed: pay.ts.map\n"), err);
 });
 
+Deno.test("watch keeps outputs when a required directory cannot be resolved", async () => {
+  const m = memoryIo({
+    [`${ROOT}/effektive.json`]: "{}",
+    [`${ROOT}/sub/a.eff`]: module("a"),
+  });
+  const baseAbsolute = m.io.fs.absolute;
+  let failSub = false;
+  let outputsAfterFailure: ReadonlyMap<string, string> | undefined;
+  m.script = [
+    () => {
+      failSub = true;
+      return [`${ROOT}/sub`];
+    },
+    () => {
+      outputsAfterFailure = new Map(
+        [...m.files].filter(([path]) => path.includes("/sub/a.ts")),
+      );
+      return [`${ROOT}/sub`];
+    },
+  ];
+  const io = {
+    ...m.io,
+    fs: {
+      ...m.io.fs,
+      absolute: (path: string) => {
+        if (path === `${ROOT}/sub` && failSub) {
+          failSub = false;
+          throw new Error("permission denied");
+        }
+        return baseAbsolute(path);
+      },
+    },
+  };
+  assertEquals(await main(["watch", ROOT], io), 0);
+  const outputPair = new Map(
+    [...m.files].filter(([path]) => path.includes("/sub/a.ts")),
+  );
+  assertEquals([...outputPair.keys()].sort(), [
+    `${ROOT}/sub/a.ts`,
+    `${ROOT}/sub/a.ts.map`,
+  ]);
+  assertEquals(outputsAfterFailure, outputPair);
+  assertEquals(
+    m.err.filter((line) => line.includes("cannot be resolved")),
+    ["error: sub: cannot be resolved\n"],
+  );
+  assert(!m.err.join("").includes("removed: sub/a"), m.err.join(""));
+});
+
 Deno.test("watch keeps a .ts file that lacks the generated header", async () => {
   const m = project();
   m.script = [

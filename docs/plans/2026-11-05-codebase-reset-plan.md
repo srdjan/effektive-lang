@@ -735,7 +735,7 @@ The orchestrator will run the final checks from the repository root:
 ```sh
 deno task check
 deno task coverage
-deno task behavior:compare a3504d4e9c682ca12b01758c5ffca7eb148d5a9b HEAD --out "$RCP_EVIDENCE/final-behavior"
+deno task behavior:compare 05bdc3c783fcd52d7e450e5f00d150b35ec73050 HEAD --out "$RCP_EVIDENCE/final-behavior"
 deno task test:installation
 ```
 
@@ -828,6 +828,22 @@ The intake behavior comparison found zero changed, missing, or added records acr
 That comparison covers `a3504d4` through `05bdc3c`, before reset implementation.
 The final baseline gate passed again after the coverage launcher correction: 2,856 fast tests and 267 slow tests.
 The baseline phase is complete, with the authority registered and the version gate restored.
+The baseline commit is `84a821e`.
+The mutation pilot selected one existing comparator site in `scripts/coverage.ts` and reported an unregistered survivor.
+The selected change was `a.name < b.name` to `a.name <= b.name` in `summarizeLcov`.
+No mutation pass is claimed for that pilot.
+Coverage hardening owns its classification or repair through a public differential probe.
+The workspace repair remains separate from that tool finding.
+The user reconfirmed `05bdc3c` as the execution baseline after implementation began.
+The final preservation comparison therefore starts at `05bdc3c`; the original review evidence retains `a3504d4`.
+The workspace worker witnessed four failing regressions before its production edit.
+Those failures covered source discovery, target discovery, CLI output deletion, and LSP disk state.
+Main review found that a blanket symlink skip retained the omission defect.
+A new public workspace regression failed before the main agent removed that skip.
+The in-memory directory listing now classifies unresolved cycles like the real adapter's existing listing.
+The authoritative focused run passed 61 tests across six affected test files.
+The nested-ownership probe also showed that a false `missing` result for an existing nested configuration permits outer writes.
+That separate failure needs a bounded ownership repair before the snapshot invariant can close.
 
 ## Current next action
 

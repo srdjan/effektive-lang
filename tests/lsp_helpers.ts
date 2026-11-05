@@ -81,6 +81,8 @@ export interface Harness {
   readonly throwOnRead: Set<string>;
   /** Paths whose read gives an `unreadable` error value. */
   readonly unreadable: Set<string>;
+  /** Paths whose absolute resolution throws. */
+  readonly throwOnAbsolute: Set<string>;
   /** Paths whose write fails. */
   readonly unwritable: Set<string>;
   /** Frames the messages, decodes them, calls `handle` for each, then `afterBatch`. */
@@ -132,6 +134,7 @@ export function makeHarness(options: HarnessOptions = {}): Harness {
   const memory = memoryIo(options.files ?? exampleFilesAt(ROOT));
   const throwOnRead = new Set<string>();
   const unreadable = new Set<string>();
+  const throwOnAbsolute = new Set<string>();
   const baseFs = memory.io.fs;
   const fs: HostFs = {
     ...baseFs,
@@ -144,6 +147,12 @@ export function makeHarness(options: HarnessOptions = {}): Harness {
         };
       }
       return baseFs.readText(path);
+    },
+    absolute(path: string): string {
+      if (throwOnAbsolute.has(path)) {
+        throw new Error(`resolution failure at ${path}`);
+      }
+      return baseFs.absolute(path);
     },
   };
   const sent: OutgoingMessage[] = [];
@@ -185,6 +194,7 @@ export function makeHarness(options: HarnessOptions = {}): Harness {
     files: memory.files,
     throwOnRead,
     unreadable,
+    throwOnAbsolute,
     unwritable: memory.unwritable,
     deliver(...messages) {
       const decoder = new FrameDecoder();

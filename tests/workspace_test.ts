@@ -69,7 +69,16 @@ function linkedFs(
       for (const link of Object.keys(links)) {
         const slash = link.lastIndexOf("/");
         if (resolve(link.slice(0, slash)) === real) {
-          found.set(link.slice(slash + 1), true);
+          let isDirectory = false;
+          try {
+            const target = resolve(link);
+            isDirectory = Object.keys(files).some((key) =>
+              key.startsWith(`${target}/`)
+            );
+          } catch {
+            // An unresolved cycle is not a directory in the real listing.
+          }
+          found.set(link.slice(slash + 1), isDirectory);
         }
       }
       return {
@@ -96,6 +105,17 @@ function textsOf(links: Readonly<Record<string, string>>): string[] {
 }
 
 const ONCE = ["a", "b", "{}"];
+
+Deno.test("readWorkspace rejects a root that cannot be resolved", () => {
+  const m = memoryIo({ "/p/effektive.json": "{}" });
+  const result = readWorkspace({
+    ...m.io.fs,
+    absolute: () => {
+      throw new Error("permission denied");
+    },
+  }, "/p");
+  assertEquals(result, { ok: false, error: "/p: cannot be resolved" });
+});
 
 Deno.test("readWorkspace accepts canonical Windows and POSIX root separators", () => {
   const files = {
@@ -178,7 +198,7 @@ Deno.test("readWorkspace reads a directory once when a link points to a director
   assertEquals(textsOf({ "/p/alias": "/p/sub" }), ONCE);
 });
 
-Deno.test("readWorkspace skips a directory that cannot be resolved", () => {
+Deno.test("readWorkspace rejects a required directory that cannot be resolved", () => {
   const fs = linkedFs(FILES, {});
   const read = readWorkspace(
     {
@@ -190,8 +210,38 @@ Deno.test("readWorkspace skips a directory that cannot be resolved", () => {
     },
     "/p",
   );
-  if (!read.ok) throw new Error(read.error);
-  assertEquals([...read.value.values()].sort(), ["a", "{}"]);
+  assertEquals(read, { ok: false, error: "sub: cannot be resolved" });
+});
+
+Deno.test("readWorkspace rejects a listed directory link after a transient resolution failure", () => {
+  const fs = linkedFs({
+    "/p/effektive.json": "{}",
+    "/p/.hidden/a.eff": "a",
+  }, { "/p/source": "/p/.hidden" });
+  let failed = false;
+  const read = readWorkspace({
+    ...fs,
+    absolute(path) {
+      if (path === "/p/source" && !failed) {
+        failed = true;
+        throw new Error("permission denied");
+      }
+      return fs.absolute(path);
+    },
+  }, "/p");
+  assertEquals(read, { ok: false, error: "source: cannot be resolved" });
+});
+
+Deno.test("readWorkspace skips a listed file that disappears before its read", () => {
+  const fs = linkedFs(FILES, {});
+  const read = readWorkspace({
+    ...fs,
+    readText: (path) =>
+      path === "/p/sub/b.eff"
+        ? { ok: false, error: { tag: "not-found", path } }
+        : fs.readText(path),
+  }, "/p");
+  assertEquals(read.ok && [...read.value.values()].sort(), ["a", "{}"]);
 });
 
 Deno.test("readTargetInputs leaves out the generated modules of .eff and .effi files", () => {
@@ -204,4 +254,16 @@ Deno.test("readTargetInputs leaves out the generated modules of .eff and .effi f
   });
   const result = readTargetInputs(m.io.fs, "/p");
   assertEquals(result.ok && [...result.value.keys()], ["host.ts"]);
+});
+
+Deno.test("readTargetInputs rejects a required directory that cannot be resolved", () => {
+  const m = memoryIo({ "/p/sub/host.ts": "export const host = 1;\n" });
+  const result = readTargetInputs({
+    ...m.io.fs,
+    absolute: (path) => {
+      if (path === "/p/sub") throw new Error("permission denied");
+      return m.io.fs.absolute(path);
+    },
+  }, "/p");
+  assertEquals(result, { ok: false, error: "sub: cannot be resolved" });
 });

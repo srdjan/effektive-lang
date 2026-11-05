@@ -113,7 +113,11 @@ export function readWorkspace(
     // Every directory goes through this check, because a listing does not say
     // which entry is a link.
     const real = relative === "" ? realRoot : realPath(fs, path);
-    if (real === undefined || visited.has(real)) return;
+    if (real === undefined) {
+      failure = `${relative}: cannot be resolved`;
+      return;
+    }
+    if (visited.has(real)) return;
     if (relative !== "" && !insideRoot(realRoot, real)) return;
     visited.add(real);
     const listed = fs.list(path);
