@@ -877,6 +877,18 @@ The ownership repair preserves directories named `effektive.json` while holding 
 The planned Deno subprocess probe also reproduced successful source and target snapshots after denied symlink-target inspection.
 The ownership follow-up passed the full gate: 2,867 fast tests and 267 slow tests.
 Its three watch cases cover a false missing result, a failed entry inspection, and a directory named `effektive.json`.
+The ownership repair is committed as `9d4a01a`.
+Directed mutation selected seven ownership sites and killed all seven, with zero survivors or timeouts.
+Snapshot coverage passed at 97.26% lines, 95.16% branches, and 99.21% functions.
+Workspace coverage increased to 93.79% lines and 95.70% branches.
+The complete snapshot phase is closed, including its bounded ownership follow-up.
+The listing probe failed before the adapter edit because both workspace reads returned success after denied target inspection.
+The adapter now returns a listing error for that inspection failure.
+Confirmed missing targets and filesystem loops keep their existing skip behavior.
+The physical link test also covers a missing target.
+The authoritative focused run passed six slow tests.
+The final complete gate passed, including 268 slow tests.
+Directed listing mutation has three sites: the symlink branch at line 84 and both error-filter operators at line 90.
 
 ## Current next action
 

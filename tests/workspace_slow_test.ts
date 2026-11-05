@@ -1,10 +1,12 @@
 // Slow test of the directory walk with real symbolic links. The test works in a
 // temporary directory that the helper removes.
 
-import { assert, assertEquals } from "@std/assert";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { fromFileUrl, join, toFileUrl } from "@std/path";
+import { isRecord } from "../src/core/frontend.ts";
 import { withTemporaryDirectory } from "./process_helpers.ts";
 
-const REPOSITORY = new URL("../", import.meta.url).pathname;
+const REPOSITORY = fromFileUrl(new URL("../", import.meta.url));
 
 Deno.test("check ends on real symlink cycles and reads each module once", async () => {
   await withTemporaryDirectory("effektive-links-", async (dir) => {
@@ -26,6 +28,7 @@ Deno.test("check ends on real symlink cycles and reads each module once", async 
     // An upward link, a link to a sibling of the root, and a cycle of two links.
     Deno.symlinkSync("..", `${dir}/project/sub/up`);
     Deno.symlinkSync("../../sibling", `${dir}/project/sub/side`);
+    Deno.symlinkSync("missing", `${dir}/project/gone`);
     Deno.symlinkSync("y", `${dir}/project/x`);
     Deno.symlinkSync("x", `${dir}/project/y`);
     const output = await new Deno.Command(Deno.execPath(), {
@@ -39,6 +42,64 @@ Deno.test("check ends on real symlink cycles and reads each module once", async 
     const stderr = new TextDecoder().decode(output.stderr);
     assertEquals(output.code, 0, stderr);
     assert(stderr.includes("2 modules, 0 diagnostics"), stderr);
+  });
+});
+
+Deno.test("workspace reads fail when inspection of a directory link is denied", async () => {
+  await withTemporaryDirectory("effektive-link-inspection-", async (dir) => {
+    const root = join(dir, "project");
+    const hidden = join(root, ".sources");
+    const link = join(root, "source");
+    Deno.mkdirSync(hidden, { recursive: true });
+    Deno.writeTextFileSync(join(root, "effektive.json"), "{}");
+    Deno.writeTextFileSync(join(hidden, "a.eff"), "type I = int\n");
+    Deno.writeTextFileSync(join(hidden, "host.ts"), "export const host = 1;\n");
+    Deno.writeTextFileSync(join(hidden, "a.ts"), "previous output\n");
+    Deno.writeTextFileSync(join(hidden, "a.ts.map"), "previous map\n");
+    Deno.symlinkSync(hidden, link);
+    const probe = join(dir, "probe.ts");
+    const host = toFileUrl(join(REPOSITORY, "src/host/deno_io.ts")).href;
+    const workspace = toFileUrl(join(REPOSITORY, "src/host/workspace.ts")).href;
+    Deno.writeTextFileSync(
+      probe,
+      `import { denoFs } from ${JSON.stringify(host)};
+import { readWorkspace, readTargetInputs } from ${JSON.stringify(workspace)};
+const source = readWorkspace(denoFs, ${JSON.stringify(root)});
+const target = readTargetInputs(denoFs, ${JSON.stringify(root)});
+console.log(JSON.stringify({ source: source.ok, target: target.ok,
+  sourceError: source.ok ? null : source.error,
+  targetError: target.ok ? null : target.error }));
+`,
+    );
+    const output = await new Deno.Command(Deno.execPath(), {
+      args: [
+        "run",
+        "--no-prompt",
+        `--allow-read=${REPOSITORY},${dir}`,
+        `--deny-read=${hidden},${link}`,
+        "--config",
+        join(REPOSITORY, "deno.json"),
+        probe,
+      ],
+      stdout: "piped",
+      stderr: "piped",
+    }).output();
+    assertEquals(output.code, 0, new TextDecoder().decode(output.stderr));
+    const result: unknown = JSON.parse(new TextDecoder().decode(output.stdout));
+    assert(isRecord(result));
+    assertEquals(result.source, false);
+    assertEquals(result.target, false);
+    assert(typeof result.sourceError === "string");
+    assertStringIncludes(result.sourceError, root);
+    assertEquals(result.targetError, result.sourceError);
+    assertEquals(
+      Deno.readTextFileSync(join(hidden, "a.ts")),
+      "previous output\n",
+    );
+    assertEquals(
+      Deno.readTextFileSync(join(hidden, "a.ts.map")),
+      "previous map\n",
+    );
   });
 });
 

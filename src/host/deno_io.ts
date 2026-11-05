@@ -80,9 +80,23 @@ export const denoFs: HostFs = {
       const entries: DirectoryEntry[] = [];
       for (const entry of Deno.readDirSync(path)) {
         // A link to a directory is a directory for the walk.
-        const isDirectory = entry.isDirectory ||
-          (entry.isSymlink &&
-            denoFs.kind(`${path}/${entry.name}`) === "directory");
+        let isDirectory = entry.isDirectory;
+        if (entry.isSymlink) {
+          const target = `${path}/${entry.name}`;
+          try {
+            isDirectory = Deno.statSync(target).isDirectory;
+          } catch (error) {
+            if (
+              !(error instanceof Deno.errors.NotFound) &&
+              !(error instanceof Deno.errors.FilesystemLoop)
+            ) {
+              return {
+                ok: false,
+                error: { message: `${target}: ${errorMessage(error)}` },
+              };
+            }
+          }
+        }
         entries.push({ name: entry.name, isDirectory });
       }
       return { ok: true, value: entries };
