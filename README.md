@@ -32,12 +32,12 @@ undeclared service operations. A written `fails` clause rejects any other failur
 
 ## Features
 
-| Capability         | What it gives you                                                                                                                       |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Inferred contracts | Exported functions name their result and service operations. The compiler infers their failures and the contracts of private functions. |
-| Domain types       | `BookId` and `Title` have separate identities even though both contain strings.                                                         |
-| Effect runtime     | Concurrency, streams, and resource management compile to Effect 4. Typed host adapters connect external packages.                       |
-| Editor support     | The language server supplies diagnostics, navigation, rename, completion, and contract fixes. VS Code previews generated TypeScript.    |
+| Capability         | What it gives you                                                                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Inferred contracts | Exports name their result and infer failures. Service headers permit inferred requirements within the module's declared bound. Private functions infer omitted clauses. |
+| Domain types       | `BookId` and `Title` have separate identities even though both contain strings.                                                                                         |
+| Effect runtime     | Concurrency, streams, and resource management compile to Effect 4. Typed host adapters connect external packages.                                                       |
+| Editor support     | The language server supplies diagnostics, navigation, rename, completion, and contract fixes. VS Code previews generated TypeScript.                                    |
 
 ## Requirements
 

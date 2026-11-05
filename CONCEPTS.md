@@ -56,6 +56,12 @@ The second `Program` of a language-server project that sees only the disk texts 
 It exists so that a generated file always comes from saved source: the overlay program serves diagnostics and hover, and the disk program serves file output.
 _Avoid: mirror, shadow program_
 
+### Complete workspace snapshot
+
+A successful read of every required project entry.
+A failed inspection returns an error and leaves the previous complete inputs available.
+The existing skip rules still apply to confirmed missing files, cycles, and links outside the root.
+
 ### Prelude table
 
 The one table that lists every prelude operation, with a flag that tells whether a source binding may shadow it.
@@ -206,6 +212,13 @@ A node of a function body that introduces a failure or a service requirement, su
 When a written clause misses an entry, the contract diagnostic gives each origin of that entry as a related location.
 Through a call, the origin is the call, not a node inside the called function.
 _Avoid: error source, cause_
+
+### Value provenance
+
+The origin of a value or one component: an input, a local producer, or an unresolved origin.
+Transferred input components keep their exemption from the module's service bound.
+A produced component retains its requirements when an input contains the same capability.
+An unresolved origin retains the requirements of the checked expression type.
 
 ## Inferred inputs
 

@@ -1,7 +1,3 @@
-// Requirements carried by produced values and by values that cross call or
-// reference boundaries. Input components keep their origin through composite
-// reconstruction, so their type requirements do not become module demands.
-
 import type { ModuleResolution } from "./resolve.ts";
 import type { CapabilityId, LocalId } from "./ir.ts";
 import {

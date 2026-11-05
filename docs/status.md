@@ -8,6 +8,12 @@ documents link here and do not restate these facts. History is in
 
 The compiler target and application fixtures pin Effect 4.1.2. The dependency update adds no source form.
 
+The [reset authority](plans/2026-11-05-codebase-reset-plan.md) owns the current correctness and simplification work.
+Its workspace and composite-input repairs pass local public API, process, coverage, and directed mutation checks.
+The optional editor-action refactor was rejected after measurement.
+Native Windows and browser acceptance remain open.
+The reset adds no source form and does not change the application stopping rule.
+
 ## Stopping rule
 
 The accepted
@@ -60,7 +66,7 @@ Each row gives the state of one area, with one link to its rule.
 | Host interfaces | Each `.effi` file has a generated companion module, so the compiler owns every tag string. A tagged record value from unsound host code fails loudly at run time. The table below gives the measured cost of these checks. | [Emission](language-rules.md#emission) |
 | Portable extensions | Sealed types, pure function types, and optional import rules are complete. The sibling website has paired source and TypeScript panels and a runnable project for all three controls. These changes do not expand the three-application stopping rule. Named platforms continue to use existing services and Layers. | [Declarations and types](language-rules.md#declarations-and-types) |
 | Inferred inputs and refinements | The compiler infers closed input requirements, and types with identity support concrete integer and length predicates. Generics and abstract predicates remain deferred. Host mutation through retained aliases remains an evidence limit. [Measurements](refinement-measurements.md) record the bounded solver and the compiler-update checks. | [Inferred inputs and refinements](language-rules.md#inferred-inputs-and-refinements) |
-| Test strength | `deno task coverage` enforces floors of 97% lines, 95% branches, and 99% functions over both suites. Targeted mutation of 1,364 sites at seed 20261031 gave 1,338 kills, 25 survivors with a row in `fixtures/mutation/survivors.json`, and 1 timeout. | [testing.md](testing.md) |
+| Test strength | `deno task coverage` enforces floors of 97% lines, 95% branches, and 99% functions over production modules from both suites. The ownership manifest requires every production module to have a verification owner. The historical sample at seed 20261031 covered 1,364 sites: 1,338 kills, 25 registered survivors, and one timeout. That sample does not establish current mutation acceptance. The reset authority records current directed runs and their dispositions. | [testing.md](testing.md) |
 
 The table gives the measured cost of host checks on emitted code, with an in-memory host. The
 machine was an Apple M4 Pro with Deno 2.9.8 and Effect 4.0.5. The cost in an

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Failed workspace inspections retain the last complete inputs and generated outputs.
+  Directory links propagate inspection failures instead of silently omitting source files.
+- Composite forwarding preserves input requirements through aliases, destructuring, records, tuples, and lists.
+  Locally produced computations still require the appropriate service header.
+- Coverage checks require an owner for every production module and reject incomplete or invalid reports.
+- Language server discovery uses native path operations.
+  The process launcher handles encoded spaces in checkout paths.
+  Native Windows acceptance remains open in the reset plan.
+
 ## 0.15.1 - 2026-11-05
 
 - Effect 4.1.2 preserves defects in mixed failure causes. Typed recovery skips

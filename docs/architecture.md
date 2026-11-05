@@ -21,7 +21,7 @@ below are under `src/core/` unless a path starts with another directory.
 | Types | `types.ts`, `type_ir.ts`, `type_show.ts` | The interned type table, compatibility rules, and readable type text. |
 | Declaration check | `signatures.ts`, `type_lower.ts`, `check_declarations.ts` | The signature model, the lowering of type nodes to interned types, and `ModuleChecker` for types, errors, services, providers, and constants. |
 | Body check | `check_expr.ts`, `check_patterns.ts`, `check_binary.ts`, `check_builtins/`, `infer_inputs.ts`, `infer_contracts.ts`, `modes.ts` | Types, effects, execution modes, contracts, and match coverage of each body. |
-| Project check | `check_project.ts`, `interface.ts`, `initialization.ts` | Paired declaration and body results, module interfaces with hashes, and the module initialization graph. `checkModuleStep` is the one per-module step. |
+| Project check | `check_project.ts`, `requirement_provenance.ts`, `interface.ts`, `initialization.ts` | `checkModuleStep` pairs declaration checks with body results. The driver builds interfaces and initialization graphs. The provenance module collects carried requirements. |
 | Refinements | `check_refinements.ts`, `predicates.ts`, `predicate_source.ts` | The refinement facts of a body, the bounded proof search, and proof certificates. |
 | Lowering | `lower.ts`, `serialize.ts` | Checked modules become typed IR, which `serialize.ts` writes as canonical JSON. `ir.ts` defines the IR. |
 | Validation | `validate/`, `validate_project.ts` | The independent validator recomputes types, effects, and proofs from the IR alone. It is a test oracle: no entry point exports it, and the CLI, the language server, and the playground do not load it. |
@@ -33,6 +33,12 @@ The host adapters are in `src/host/`. They read and write files and run
 `deno check` for the command-line tool and the language server. The
 command-line tool is in `src/cli/`, the language server in `src/lsp/`, and the
 browser playground in `playground/`. The VS Code client is in `editors/vscode/`.
+
+`readWorkspace` returns a complete snapshot or an error for a required inspection.
+Directory resolution and symlink target inspection cannot silently omit a subtree from a successful result.
+Confirmed missing targets, cycles, and links outside the root retain their documented skip behavior.
+CLI watch and LSP save retain their last complete inputs and generated outputs after a read error.
+Nested ownership checks preserve the output boundary when configuration inspection fails.
 
 ## Input contract inference
 
@@ -51,6 +57,23 @@ Complete field origins retain unresolved sibling fields.
 Invocation arguments do not create callable signatures. An unconstrained callback still needs an annotation.
 The ordinary checker owns complete function types, execution modes, failures, and requirements.
 Inference does not repeat whole-body traversal and has no arbitrary iteration limit.
+
+## Requirements carried by values
+
+Value provenance means the origin of a value or one component.
+`requirement_provenance.ts` reads checked facts and `TypeReader`, the read-only view of the type table.
+The project driver owns service bounds and diagnostics.
+The independent validator remains separate from this analysis.
+
+Transferred records, tuples, and lists retain component origins through aliases, destructuring, and spreads.
+During transfer, an input component adds no external service requirement by itself.
+A produced component retains its requirements when an input contains the same capability.
+Imported deferred values also retain their requirements when transferred.
+An unresolved origin falls back to the checked expression type, including during syntax recovery.
+Function result types retain their complete scan for produced requirements.
+
+Each lookup of an imported value converts its IR type into the current type table.
+The table reuses a reference when it already holds the same structure.
 
 ## Revision ownership
 

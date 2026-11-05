@@ -353,8 +353,6 @@ export function validateCoverageReport(
       }
       const relativePath = relativeReportPath(root, current.rawPath);
       if (!relativePath.ok) return relativePath;
-      // Manifest paths have fixed production prefixes. Membership also rejects
-      // empty and parent-relative report paths.
       if (!classified.has(relativePath.value)) {
         return validationError(
           "report",

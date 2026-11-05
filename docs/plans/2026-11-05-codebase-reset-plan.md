@@ -10,7 +10,7 @@ Two public probes reproduce product defects: incomplete workspace reads delete g
 The plan repairs those defects, strengthens evidence accounting, and removes duplicated editor-action mechanics.
 It does not authorize a general rewrite.
 
-Status: the plan is complete; the newly authorized implementation run is active.
+Status: the plan is complete; local changes are integrated, and final acceptance remains open.
 Codex Astra at xhigh effort accepted the plan before execution.
 The user's explicit plan-only limit governed the first `compound-engineering:lfg` invocation.
 The main agent continued beyond that limit; the existing changes are recorded below and remain preserved.
@@ -1173,3 +1173,22 @@ An actual public differential compared 32 lookup captures before and after the r
 All captures match, including root, parent, adjacent root, hidden directories, nested config, and literal backslash paths.
 This differential runs on POSIX; it does not replace native Windows acceptance.
 The reduction gate passed 2,889 fast tests, six native skips, and 279 slow tests.
+
+The platform reduction is committed as `14faaf7`.
+Its directed mutation pilot passed before the full selected run.
+The final run selected all six sites on the changed path lines from 108 total module sites.
+All six mutants were killed, with zero survivors, timeouts, unregistered survivors, or stale rows.
+This scope does not claim mutation acceptance for unchanged project logic or native Windows process behavior.
+No new platform row was added to the mutation register.
+The earlier three survivors belong to the replaced compound guard and no longer exist.
+The source and mutation register for the rejected action trial still match `6bb23e7` exactly.
+The final documentation and comment cleanup need their own gate and local commit.
+
+The final documentation gate passed 2,889 fast tests, with six native Windows skips, and 279 slow tests.
+The separate documentation and playground facade command passed all 30 tests.
+The build wrote six playground files, and the owned local server returned HTTP 200 with the expected page title.
+The main agent stopped the owned server process group after that check.
+HTTP readiness and facade results do not establish DOM acceptance.
+The final diff retains the public entry points, IR version 8, independent validator, emitter, output cache, revision database, and dependency files unchanged.
+The documentation phase is complete for the current design and its stated evidence limits.
+The remaining closure work is final coverage, baseline comparison, installation evidence, and the unavailable native Windows and browser checks.

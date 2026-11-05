@@ -104,7 +104,7 @@ The sections follow the language topics: core forms, modules and exports, effect
 | --- | --- | --- |
 | Namespace | One namespace per module for types, errors, services, providers, constants, and imports | [resolve.ts](../src/core/resolve.ts) |
 | Service headers | `imports Users from "./users-service.eff"` binds one exported service and permits that external dependency. The path can be relative or registered with `host:`. Multiple headers can follow comments and blank lines. Every header must precede ordinary imports and declarations. An ordinary import can use the same path, and lowering merges both declarations. A missing path, missing export, or non-service export is a diagnostic. Host interface files reject service headers. The `imports` word remains an ordinary name outside this position | [parse.ts](../src/core/parse.ts), [resolve.ts](../src/core/resolve.ts), [check_project.ts](../src/core/check_project.ts) |
-| External service bound | Service headers bound external requirements from bodies, calls, and produced values. Input-only requirements do not enter the bound. `provide` removes the supplied service before the bound check. Provider acquisition requirements remain. Local services and reserved Effect capabilities need no header. An undeclared external requirement gives `requirement-contract/002` | [check_project.ts](../src/core/check_project.ts), [service_imports_test.ts](../tests/service_imports_test.ts) |
+| External service bound | Service headers bound external requirements from bodies, calls, and produced values. Transferred input components retain their exemption through aliases, destructuring, and composite values. Produced components and complete result types retain their requirements. `provide` removes the supplied service before the bound check. Provider acquisition requirements remain; local services and reserved Effect capabilities need no header. An undeclared external requirement gives `requirement-contract/002` | [check_project.ts](../src/core/check_project.ts), [requirement_provenance.ts](../src/core/requirement_provenance.ts), [service_imports_test.ts](../tests/service_imports_test.ts) |
 | Prelude names | Neither modules nor locals may declare them, except the names that the `PRELUDE` table in `src/core/resolve.ts` marks `shadowable`. An existing binding with such a name shadows the builtin. `run` is one of them. Modules also may not declare builtin type names. `Effect<...>` is parsed as a type application without reserving `Effect` as a value name | [2026-10-16-phase-a.md](archive/plans/2026-10-16-phase-a.md) |
 | Call-only builtins | A call-only builtin takes ordinary call syntax and has no pipeline stage. A pipeline stage gives `type-mismatch/010`. The `PRELUDE` table in `src/core/resolve.ts` marks each builtin `shadowable` or not. A source binding can shadow a shadowable builtin. The builtins `takeSink`, `transduceStream`, and the Schema constructors are call-only and shadowable. The shadowable set also holds `run` and `all`; the `PRELUDE` table is the complete list. A builtin is call-only when the checker calls `noPipeline` for it in `src/core/check_expr.ts`; `all` and `traverse` accept a pipeline stage. `runStream` is call-only but not shadowable: a binding named `runStream` gives `declaration/002` | [resolve.ts](../src/core/resolve.ts), [check_expr.ts](../src/core/check_expr.ts) |
 | Target names | Neither modules nor locals may declare `undefined`, `Number`, `RangeError`, `SchemaError`, `SchemaIssue`, `TimeoutError`, `Defect`, `ReadonlyArray`, `Math`, `Error`, `String`, `globalThis`, `TypeError`, `BigInt`, `any`, `bigint`, `object`, or `symbol` (`declaration/002`), because the generated TypeScript needs them. Fields and service methods may use them. Decision D20 of 2026-10-17 lists eight of them. The set gained `Math`, `Error`, `String`, `globalThis`, `TypeError`, and `BigInt` on 2026-11-02; `src/core/resolve.ts` holds the current list | [architecture.md](architecture.md), [resolve.ts](../src/core/resolve.ts) |
@@ -116,6 +116,31 @@ The sections follow the language topics: core forms, modules and exports, effect
 The canonical Users consumer uses one service header. `getUser` needs
 `Users.find`. `rename` needs `Users.find | Users.save`. `displayName` needs
 `Users.find`, and `activeNames` needs `Users.all`.
+
+The following two modules forward an input computation inside a record.
+The consumer needs only the `Allowed` service header.
+
+```eff
+// services.eff
+export type Int = int
+export service Users { read(): Int }
+export service Allowed {
+  publish(input: { job: Effect<Int, never, Users.read> }): void
+}
+```
+
+```eff
+// main.eff
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const forward = (
+  input: { job: Effect<Int, never, Users.read> }
+): void => Allowed.publish({ job: input.job })
+```
+
+Replacing `input.job` with `defer(() => Users.read())` creates a local computation.
+That version needs a `Users` service header instead of the ordinary `Users` binding.
+A local computation retains a requirement even when an input names the same capability.
 
 ## Effects and contracts
 

@@ -22,7 +22,7 @@ Run every command from the repository root.
 | `deno task logs:report`        | Prints a Markdown report of the session logs: `[--since <N>(m|h|d)] [folder ...]`. The default window is 24h and the default folder is `playground/.effektive/logs/`. |
 | `deno task logs:replay`        | Runs a logged session again on the current build: `<session.jsonl>`. Exit 0 when the outcomes match, 1 at the first difference, 2 for a usage error or an unsupported session. It skips `--tsc`, and it does not replay watch sessions. |
 | `deno task rules:unfired`      | Runs the fast suite with coverage and prints `path:line: text` for each validator rejection site in `src/core/validate/` that no fast test fires, then the count. Exit 1 when the list has a site, and exit 0 when the count is 0. |
-| `deno task coverage`           | Runs the fast suite and the slow suite with child-process coverage. Prints the line and branch percent for each directory and for the 20 lowest files. Exit 1 when a suite fails or a floor fails. The floors are `coverage.thresholds` in `deno.json`: lines 97, branches 95, functions 99. |
+| `deno task coverage`           | Checks production ownership, then runs both suites with child-process coverage. Rejects an incomplete or invalid LCOV report. Prints directory percentages and the 20 lowest files. Exits 1 for a failed suite, report, or floor. The floors in `deno.json` remain lines 97, branches 95, functions 99. |
 | `deno task mutate`             | Flips one source site at a time and runs the tests: `[--seed N] [--sample <n\|all>] [--workers N] [--tests <file>] [--only <path:line>]... <module>...`. It tests the committed HEAD in temporary copies. It prints the sites, killed, survived, and timeout counts for each module, and each survivor with its register row. Exit 0 when each survivor has a row in `fixtures/mutation/survivors.json` and no row is stale, 1 when not, 2 for a failed clean run, an infrastructure error, a bad register, or bad arguments. |
 | `deno task measure`           | Prints the lines, branches, and cyclomatic numbers of the files that you name, as JSON.                                                                 |
 | `deno task measure:functions` | Prints the branches and cyclomatic number of each function in the files that you name, as TSV.                                                          |
@@ -54,6 +54,27 @@ output. The comparison does not depend on the test suite, so moving or rewriting
 tests does not change its records.
 
 [testing.md](testing.md) describes the test layers, each oracle, the coverage floors, and the mutation register.
+
+After a logic change, the verification order is the full gate, a local commit, directed mutation, coverage, and behavior comparison.
+Mutation reads committed `HEAD`, so an uncommitted correction does not repair a mutation result.
+
+### Native LSP checks
+
+The following cases exercise native Windows paths, including drive and UNC roots.
+They remain skipped on other platforms.
+
+```sh
+deno test --allow-read --filter Windows tests/lsp_positions_test.ts tests/lsp_server_test.ts
+```
+
+The same process command must pass on POSIX and native Windows.
+The process command must also pass from a checkout path that contains a space.
+
+```sh
+deno test --allow-all tests/lsp_slow_test.ts tests/bench_lsp_slow_test.ts
+```
+
+The [reset authority](plans/2026-11-05-codebase-reset-plan.md) records the observed platform results and the remaining checks.
 
 ## Layout
 
@@ -99,6 +120,7 @@ The directories of `fixtures/` are these.
 | `errors/`             | One file or one project directory for each error case, with markers.                                                                                                                                       |
 | `surface/`            | `cli.json` and `lsp.json`: the command-line records and the language server records that `tests/surface_test.ts` compares. `deno task surface:update` writes them. |
 | `mutation/`           | `survivors.json`: the register of the mutants that survive the fast tests, with a class and a reason for each mutant. `deno task mutate` reads it. |
+| `coverage/`           | `ownership.json` assigns every production TypeScript file to runtime coverage, the type check, or browser acceptance. |
 | `logs/`               | Small hand-written session logs (`*.jsonl`), one or more for each surface, for the tests of `logs:report`.                                                                                                |
 | `website-examples.json` | The manifest of `tests/website_examples_slow_test.ts`. Each unit names a project directory or a single file of `../effektive/public/effektive-examples/`, its configuration, its companion files, and its expected `check` diagnostics. A new website example needs a unit. |
 

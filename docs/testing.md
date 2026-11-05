@@ -11,7 +11,7 @@ This file describes the test system. It states what each oracle proves and what 
 | Gate | `deno task check` | The task runs the format check, the lint, the type check, and both suites. Run it before each commit. |
 | Installation | `deno task test:installation` | The task checks reproducible packaging and offline installation. |
 | Editor | `deno task test:vscode` | The task runs installed VSIX acceptance in a local VS Code application. |
-| Browser | Playwright MCP | A person or an agent runs a real user flow against the running page. |
+| Browser | Browser automation or a manual session | A person or an agent runs a real user flow against the running page. |
 
 A fast test time varies with machine load, so one run proves little. To check the one-second rule, run the fast suite three times, and keep the minimum of each test.
 
@@ -113,6 +113,10 @@ The type check owns modules that contain only types.
 Playground browser acceptance owns the two DOM startup modules.
 The percentage floors remain 97 for lines, 95 for branches, and 99 for functions.
 
+These percentages cover only `src/` and `playground/src/`.
+Scripts remain outside that percentage scope.
+Public API tests, subprocess tests, and directed mutation check the coverage command itself.
+
 The gate does not run this task, because it takes several minutes. `deno task release` runs it. A floor can rise. A change that lowers a floor needs a reason in the commit.
 
 Three solver files have sites that no input can reach, so these sites have no test. Each site guards a case that the code around it rules out, and the type checker needs most of them.
@@ -154,3 +158,19 @@ For each survivor, add a test. If no test can kill it, add a row to `fixtures/mu
 A row has no line number, so a change outside its declaration does not affect it. A change inside the declaration can make it stale. The tool then exits 1, and a reviewer must check the reason again.
 
 The tool exits 0 when each survivor has a row and each row matches one site. It exits 1 for a survivor with no row, or for a stale row. It exits 2 when the clean run fails, when no test runs, or when the register or the arguments are not valid.
+
+A timeout does not establish that a regression detects the fault.
+Each timeout needs an isolated rerun with the exact `--only` site before acceptance.
+An unexplained timeout keeps the phase open, even when the command exits zero.
+The [mutation review note](solutions/workflow-issues/mutation-equivalent-rows-need-a-differential-probe.md) records this distinction.
+
+## Platform and browser acceptance
+
+Portable path tests do not establish native process behavior.
+The LSP process checks must also pass on native Windows and from a checkout path that contains spaces.
+The [reset authority](plans/2026-11-05-codebase-reset-plan.md) records these checks and their current limits.
+
+The public playground facade checks last-good output, stale output, and recovery after an invalid edit.
+A real browser session must also check source selection, output selection, and hover.
+Facade tests do not establish DOM behavior or browser acceptance.
+Concurrent filesystem replacement remains unmeasured.
