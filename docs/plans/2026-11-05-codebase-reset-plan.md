@@ -492,7 +492,7 @@ At the budget limit, the executor will stop and return files, checks, and open i
 | `RCP-2`: propagate failures from symlink inspection | RCP-1 | `src/host/deno_io.ts`, `tests/workspace_slow_test.ts` | Listing failures return errors; physical cycle behavior remains | 14 |
 | `RCP-3`: establish coverage ownership | RCP-1 and RCP-2 | `scripts/coverage.ts`, `tests/coverage_test.ts`, new `tests/coverage_slow_test.ts`, new `fixtures/coverage/ownership.json`, `docs/testing.md`, justified row in `fixtures/mutation/survivors.json` | Missing required module and malformed reports fail; real coverage passes | 18 |
 | `RCP-4`: repair composite input provenance | RCP-3 | `src/core/check_project.ts`, new `src/core/requirement_provenance.ts`, `tests/service_imports_test.ts`, new `tests/service_imports_slow_test.ts`, `fixtures/coverage/ownership.json`, justified rows in `fixtures/mutation/survivors.json`, `docs/api.md`; conditional `tests/playground_compile_test.ts` | Positive forwarding and negative local production cases pass | 18 |
-| `RCP-5`: remove duplicated action mechanics | RCP-4 | `src/core/editor_actions.ts`, `tests/editor_actions_test.ts` | Exact action behavior remains; duplicated mechanics leave | 14 |
+| `RCP-5`: remove duplicated action mechanics | RCP-4 | `src/core/editor_actions.ts`, `tests/editor_actions_test.ts`, metadata for existing rows in `fixtures/mutation/survivors.json` | Exact action behavior remains; duplicated mechanics leave | 14 |
 | `RCP-6`: repair platform discovery paths | RCP-3 | `src/lsp/projects.ts`, `bench/lsp_client.ts`, `tests/lsp_server_test.ts`, `tests/lsp_positions_test.ts`, `tests/lsp_slow_test.ts` | POSIX checks pass and native Windows acceptance is recorded | 18 |
 | `RCP-7`: reconcile final documentation | RCP-1 through RCP-6 | Documentation set below, this authority | Every final rule has one current owner and checked links | 14 |
 | `RCP-8`: close the reset | RCP-7 | This authority and its registry or archive path | Final full checks and preservation evidence pass | 10 |
@@ -1069,3 +1069,32 @@ The final recovery gate passed 2,889 fast tests, with six Windows cases skipped,
 The public recovery case retains `requirement-contract/002` and `syntax/008` on the correct source.
 The rejected guard fault removes only `requirement-contract/002`; its permanent regression detects that loss.
 The final source and both accepted register rows still require their committed mutation run and coverage report.
+The final provenance source and regressions are committed as `6bb23e7`.
+The final mutation run selected all 95 sites: 93 kills, two justified equivalents, and zero timeouts.
+The run reported zero unregistered survivors and zero stale rows.
+The real coverage command passed at 97.28% lines, 95.19% branches, and 99.21% functions.
+All eight behavior-comparison rows contain zero changed, missing, or added records against `8629cf7`.
+The provenance module itself has 92.55% line coverage and 94.25% branch coverage.
+The combined checker unit improved from 743 of 770 covered lines to 792 of 815.
+Its covered branches improved from 301 of 323 to 341 of 361; every measured function remains covered.
+Those combined percentages are 97.18% lines and 94.46% branches, versus 96.49% and 93.19% before extraction.
+An external measurement copy retained the real LCOV report without changing repository files or coverage acceptance.
+The composite-input phase is complete.
+
+The action refactor began from `6bb23e7`.
+Its pre-change run passed 194 focused tests.
+Six raw-action characterizations also recorded titles, identities, edits, caller-gap behavior, and retained-query equality before edits.
+One private helper now parses arrow headers; another clones inputs, checks the edited program, and recovers the changed function.
+The public actions retain their separate acceptance conditions.
+The post-change focused run passed the same 194 tests, and every raw-action capture remains byte-identical.
+The refactor measures 322 code lines and 108 branches, versus 286 lines and 108 branches before extraction.
+Its two public functions have own-function complexities of 37 and 24, versus 41 and 28.
+The added type views and helper signatures increase lines while the duplicated mechanisms leave.
+All 18 existing register rows were reviewed against their current enforcers.
+The two copies of the arrow comparison now share one site, leaving 17 rows.
+Actual operator substitutions preserve all six raw-action cases for those 17 rows.
+The action refactor still needs its full gate, source commit, mutation run, coverage, and preservation comparison.
+The action refactor's full gate passed 2,889 fast tests, with six native Windows cases skipped, and 279 slow tests.
+The shared header view guarantees a present arrow token before either action reads its range.
+The shared preview retains the original path key, input order, project root, and function identity lookup.
+The main agent confirmed that both public acceptance predicates retain their original checks.
