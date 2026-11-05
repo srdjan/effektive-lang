@@ -58,23 +58,25 @@ tests does not change its records.
 After a logic change, the verification order is the full gate, a local commit, directed mutation, coverage, and behavior comparison.
 Mutation reads committed `HEAD`, so an uncommitted correction does not repair a mutation result.
 
-### Native LSP checks
+### Portable and optional native LSP checks
 
-The following cases exercise native Windows paths, including drive and UNC roots.
-They remain skipped on other platforms.
+The following optional command exercises native Windows paths, including drive and UNC roots.
+Native Windows validation is outside the reset's acceptance scope.
+The Windows tests remain skipped on other platforms.
 
 ```sh
 deno test --allow-read --filter Windows tests/lsp_positions_test.ts tests/lsp_server_test.ts
 ```
 
-The same process command must pass on POSIX and native Windows.
-The process command must also pass from a checkout path that contains a space.
+The process command must pass on POSIX from a checkout path that contains a space.
+You can also run this command on native Windows as optional validation.
 
 ```sh
 deno test --allow-all tests/lsp_slow_test.ts tests/bench_lsp_slow_test.ts
 ```
 
-The [reset authority](plans/2026-11-05-codebase-reset-plan.md) records the observed platform results and the remaining checks.
+The [reset authority](plans/2026-11-05-codebase-reset-plan.md) records the required portable results.
+Native Windows process behavior remains unverified.
 
 ## Layout
 

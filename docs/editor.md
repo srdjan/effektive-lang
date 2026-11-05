@@ -97,7 +97,7 @@ The process launcher converts file URLs before it constructs native filesystem p
 This preserves encoded spaces in a checkout path.
 
 POSIX process checks cover initialization, diagnostics, definition, saving, and shutdown from a checkout path that contains spaces.
-Native Windows process acceptance remains open in the [reset authority](plans/2026-11-05-codebase-reset-plan.md).
+Native Windows process validation is outside this reset's acceptance scope and remains unverified.
 
 `tests/lsp_editor_test.ts` covers overlays, UTF-16 positions, reference
 inclusion, workspace versions, stale requests/disk, out-of-order changes,

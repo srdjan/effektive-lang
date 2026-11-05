@@ -9,7 +9,7 @@
 - Coverage checks require an owner for every production module and reject incomplete or invalid reports.
 - Language server discovery uses native path operations.
   The process launcher handles encoded spaces in checkout paths.
-  Native Windows acceptance remains open in the reset plan.
+  Native Windows validation is outside this reset's acceptance scope and remains unverified.
 
 ## 0.15.1 - 2026-11-05
 

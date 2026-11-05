@@ -17,7 +17,8 @@ The user's explicit plan-only limit governed the first `compound-engineering:lfg
 The main agent continued beyond that limit; the existing changes are recorded below and remain preserved.
 After the final planning report, the user invoked `compound-engineering:lfg` again to continue this reset.
 That later instruction authorizes implementation and review of the existing patches.
-Final acceptance still requires the native Windows and browser checks.
+Final acceptance still requires the browser checks.
+The user excludes native Windows acceptance from this reset while retaining the portable path code.
 
 ## Scope and constraints
 
@@ -445,6 +446,7 @@ Every production-logic phase requires `deno task coverage` after its source comm
 The aggregate floors remain 97% lines, 95% branches, and 99% functions.
 The percentage scope remains `src/` and `playground/src/`.
 Changed modules within that scope must retain measured coverage and cover each new success, rejection, and failure branch.
+The accepted scope change excludes native Windows execution and its two branch counters for the portable path repair.
 A new module needs the combined coverage report and directed mutation evidence.
 Percentage floors alone do not establish test quality.
 Scripts remain outside production percentage floors.
@@ -494,7 +496,7 @@ At the budget limit, the executor will stop and return files, checks, and open i
 | `RCP-3`: establish coverage ownership | RCP-1 and RCP-2 | `scripts/coverage.ts`, `tests/coverage_test.ts`, new `tests/coverage_slow_test.ts`, new `fixtures/coverage/ownership.json`, `docs/testing.md`, justified row in `fixtures/mutation/survivors.json` | Missing required module and malformed reports fail; real coverage passes | 18 |
 | `RCP-4`: repair composite input provenance | RCP-3 | `src/core/check_project.ts`, new `src/core/requirement_provenance.ts`, `tests/service_imports_test.ts`, new `tests/service_imports_slow_test.ts`, `fixtures/coverage/ownership.json`, justified rows in `fixtures/mutation/survivors.json`, `docs/api.md`; conditional `tests/playground_compile_test.ts` | Positive forwarding and negative local production cases pass | 18 |
 | `RCP-5`: remove duplicated action mechanics | RCP-4 | `src/core/editor_actions.ts`, `tests/editor_actions_test.ts`, metadata for existing rows in `fixtures/mutation/survivors.json` | Exact action behavior remains; duplicated mechanics leave | 14 |
-| `RCP-6`: repair platform discovery paths | RCP-3 | `src/lsp/projects.ts`, `bench/lsp_client.ts`, `tests/lsp_server_test.ts`, `tests/lsp_positions_test.ts`, `tests/lsp_slow_test.ts` | POSIX checks pass and native Windows acceptance is recorded | 18 |
+| `RCP-6`: repair platform discovery paths | RCP-3 | `src/lsp/projects.ts`, `bench/lsp_client.ts`, `tests/lsp_server_test.ts`, `tests/lsp_positions_test.ts`, `tests/lsp_slow_test.ts` | POSIX checks pass; native Windows remains explicitly outside acceptance scope | 18 |
 | `RCP-7`: reconcile final documentation | RCP-1 through RCP-6 | Documentation set below, this authority | Every final rule has one current owner and checked links | 14 |
 | `RCP-8`: close the reset | RCP-7 | This authority and its registry or archive path | Final full checks and preservation evidence pass | 10 |
 
@@ -715,10 +717,10 @@ deno task measure src/lsp/projects.ts
 ```
 
 The final mutation target is `src/lsp/projects.ts`, restricted to the changed path declarations when necessary.
-The same process command must pass on native Windows and the current POSIX environment.
-A portable path calculation cannot replace the native process result.
-If no Windows runner exists, this phase remains open and its completion claim stays limited.
-The remaining independent phases can continue.
+The process command must pass in the current POSIX environment and from a checkout path that contains spaces.
+The user excludes native Windows process acceptance from this reset.
+The portable code and native test cases remain unchanged.
+No source proof or POSIX result establishes native Windows behavior.
 
 ### RCP-7: reconcile final documentation
 
@@ -1222,9 +1224,9 @@ The following table supersedes earlier provisional work-record statements.
 | RCP-3: coverage ownership | Complete | Complete production inventory; malformed reports fail; 123 kills and one justified equivalent |
 | RCP-4: composite input provenance | Complete | Public forwarding and production controls; strict target and retained revisions; 93 kills and two justified equivalents |
 | RCP-5: action mechanics | Rejected optional trial | Original source retained; exact action captures equal; 99 kills and 18 existing equivalents |
-| RCP-6: native project discovery | Open | POSIX process and path checks pass; six selected mutants killed; native Windows and retained coverage remain open |
+| RCP-6: native project discovery | Complete within accepted scope | POSIX process and path checks pass; six selected mutants killed; portable code retained; native Windows acceptance excluded by user |
 | RCP-7: final documentation | Complete for the current design | Checked examples, current links, source map, and explicit evidence limits |
-| RCP-8: reset closure | Open | Local gates pass; native Windows and browser acceptance prevent closure and archival |
+| RCP-8: reset closure | Open | Local gates pass; browser acceptance prevents closure and archival |
 
 ### Final per-file coverage accounting
 
@@ -1237,38 +1239,26 @@ The checker row combines `check_project.ts` and `requirement_provenance.ts` afte
 | Original editor actions | 228 / 244: 93.44% | 228 / 244: 93.44% | 168 / 183: 91.80% | 168 / 183: 91.80% |
 | Project discovery | 424 / 439: 96.58% | 425 / 441: 96.37% | 206 / 222: 92.79% | 199 / 216: 92.13% |
 
-Project discovery does not meet retained measured coverage on the available POSIX runner.
-Its two new uncovered branches reject an absolute relative result and convert native Windows separators.
-Both branches need native Windows evidence from the selected path tests.
-The retained-coverage requirement remains open; no coverage exception or lower floor is accepted.
-The reviewer must inspect those native counters before closing the platform phase.
-The final aggregate floor pass does not close this per-file requirement.
+The recorded project percentages are lower on the POSIX runner.
+Its two new uncovered branches reject an absolute path from `relative` and convert native Windows separators.
+The user retains both portable branches and excludes native Windows acceptance from this reset.
+That exclusion also removes native execution of those two branches as a reset requirement.
+The raw counters remain visible; no threshold, ownership row, source guard, or test changes to hide the difference.
+The aggregate production floors remain unchanged and pass.
 
-### Required native Windows evidence
+### Native Windows evidence outside this reset
 
-The following commands still need a native Windows runner.
-The process command must also run from a checkout path that contains a space.
+The native Windows commands remain available for separate validation.
+These commands do not belong to this reset's required acceptance checks.
 
 ```sh
 deno test --allow-read --filter Windows tests/lsp_positions_test.ts tests/lsp_server_test.ts
 deno test --allow-all tests/lsp_slow_test.ts tests/bench_lsp_slow_test.ts
 ```
 
-The following PowerShell commands collect the six native cases without applying aggregate floors to a partial report.
-The temporary directory remains outside the checkout.
-The zero threshold applies only to this partial counter report; `deno task coverage` retains every production floor.
-
-```powershell
-$rcpNativeCoverage = Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid().ToString())
-deno test --allow-read --filter Windows --coverage-raw-data-only "--coverage=$rcpNativeCoverage" tests/lsp_positions_test.ts tests/lsp_server_test.ts
-deno coverage --threshold=0 --lcov '--include=src[/\\]lsp[/\\]projects\.ts$' $rcpNativeCoverage
-```
-
-This native command sequence remains unrun here.
-The recorded LCOV must show both Windows branches before the reviewer reconciles the per-file gate.
-
-The six platform cases remain skipped locally.
-Portable calculations, source proofs, and POSIX process results cannot replace these native results.
+The six platform cases remain skipped locally, and native Windows behavior remains unverified.
+The user accepted this evidence limit for the reset.
+Portable calculations, source proofs, and POSIX process results do not establish native Windows behavior.
 
 ### Required browser evidence
 
@@ -1280,19 +1270,21 @@ The main agent stopped the owned local server after HTTP verification.
 
 ### Resume ownership
 
-The user owns access to a native Windows runner and a working browser host.
-After those resources become available, the main agent will run the remaining acceptance checks and record their exact results.
+The user owns access to a working browser host.
+After browser access becomes available, the main agent will run the remaining browser checks and record their exact results.
 The main agent will then reconcile status documentation and archive this authority only when every selected requirement passes.
 The user owns any push or release.
 
-## Scope question about native Windows
+## Settled scope decision about native Windows
 
 The user asked whether the reset needs Windows branches and what those branches do.
 The two branches belong to LSP path adaptation, not the source language or generated TypeScript.
-One rejects an absolute result from native relative-path calculation, such as a path on another drive.
+One rejects an absolute path returned by `relative`, such as a path on another drive.
 The other converts native backslashes to the core's slash convention.
 The main agent requested clarification about retaining portable paths while excluding native Windows acceptance from this reset.
-The existing native acceptance requirement remains in force until that scope question is settled.
+
+The user then accepted retaining the small portable code and excluding native Windows acceptance from this reset.
+That decision supersedes earlier work-record statements that make native Windows a blocker.
 
 The direct in-app browser creation attempt also failed because the browser access host is unavailable.
 No tab was created, so no browser session requires cleanup.
@@ -1315,7 +1307,7 @@ The user's no-push rule also remains authoritative.
 | `source_digest` | `null`; native execution did not retain an immutable intake digest |
 | `changed_files` | 35 tracked paths in `git diff --name-only 05bdc3c f1ea84f`; ownership appears in each phase |
 | `u_ids_attempted` | RCP-0 through RCP-8, as defined in the current disposition table |
-| `u_ids_completed` | RCP-0 through RCP-4; RCP-5 as a rejected optional trial; RCP-7 for the current design |
+| `u_ids_completed` | RCP-0 through RCP-4; RCP-5 as a rejected optional trial; RCP-6 within accepted scope; RCP-7 for the current design |
 | `verification_results` | Final gate, production coverage, all eight preservation rows, installation, documentation, and playground facade pass |
 | `verification_evidence` | The phase records above retain inspected tests, red probes, exact regressions, commands, results, and accepted equivalence reasons |
 | `implementation_engine_binding` | `null`; native execution |
@@ -1329,10 +1321,47 @@ The user's no-push rule also remains authoritative.
 | `settled_decision_conflicts` | None; the action trial was rejected under the plan's preservation and complexity gates |
 | `simplified_through` | `f1ea84f3b7eefbdd6f5898f084543504229f2004` |
 | `standalone_shipping_skipped` | `true` |
-| `blockers` | Native Windows scope remains unsettled; current native coverage acceptance and browser DOM acceptance remain open |
+| `blockers` | Browser DOM acceptance remains open because the browser access host is unavailable |
 | `recovery_path` | Local `main` in `/Users/srdjans/Code/effektive-lang`; detailed temporary evidence in `/tmp/effektive-reset.25ZvGR/` |
 
 The canonical commits, owned files, and cleanup results are recorded in the work record.
 No worker wrote Git state, no detached worker remains active, and the owned playground server is stopped.
 The authority remains live, and the registry path stays unchanged until accepted closure.
-The user owns the Windows scope choice and browser access; the main agent owns the remaining checks after that input.
+The Windows scope decision is settled.
+The user owns browser access; the main agent owns the remaining browser checks after access returns.
+
+## Accepted scope change: native Windows
+
+The user accepted retaining the small portable code and excluding native Windows acceptance from this reset.
+This decision changes acceptance scope, not source behavior or support claims.
+The two Windows branches and six native tests remain unchanged and unmeasured on this POSIX runner.
+The aggregate production floors remain unchanged.
+The recorded per-file coverage reduction remains visible; native branch execution no longer blocks this reset.
+Browser DOM acceptance remains required and open.
+
+### Scope reconciliation orchestration
+
+| Unit | Owner and model | Owned files | Acceptance check | Turn budget |
+| --- | --- | --- | --- | --- |
+| Current platform guidance | `platform_reset`, Sol high | `docs/status.md`, `docs/testing.md`, `docs/development.md`, `docs/editor.md`, `CHANGELOG.md` | Current guidance excludes required native Windows acceptance and retains honest evidence limits | 8 |
+| Authority and integration | Main agent, configured default | This authority, diff review, verification, and local commit | Documentation tests and `deno task check` pass; source code remains unchanged | 10 |
+
+The worker cannot edit source, tests, this authority, or Git state.
+The main agent will review every changed line and run the authoritative checks.
+
+The worker returned all five owned documentation updates without source, test, or Git changes.
+The main agent reviewed every changed line against the accepted scope.
+Current guidance no longer makes native Windows acceptance a reset requirement.
+The native test commands remain available for optional validation, and native behavior remains unverified.
+
+The main agent confirmed that source, tests, scripts, fixtures, benchmarks, and dependency files have no change in this follow-up.
+The browser inventory still reports that the browser access host is unavailable.
+No browser session was opened.
+The remaining required product check is browser DOM acceptance.
+
+The scope reconciliation passes all four documentation tests.
+The authoritative `deno task check` passes 2,889 fast tests, six native Windows skips, and 279 slow tests.
+This documentation-only follow-up changes no production behavior, test input, mutation row, coverage owner, or floor.
+The earlier source coverage, preservation comparison, and directed mutation results remain applicable to the unchanged source.
+The platform phase is complete within the scope accepted by the user.
+Browser DOM acceptance is the sole remaining reset blocker.

@@ -11,7 +11,8 @@ The compiler target and application fixtures pin Effect 4.1.2. The dependency up
 The [reset authority](plans/2026-11-05-codebase-reset-plan.md) owns the current correctness and simplification work.
 Its workspace and composite-input repairs pass local public API, process, coverage, and directed mutation checks.
 The optional editor-action refactor was rejected after measurement.
-Native Windows and browser acceptance remain open.
+Native Windows validation is outside this reset's acceptance scope and remains unverified.
+Browser acceptance remains open.
 The reset adds no source form and does not change the application stopping rule.
 
 ## Stopping rule
