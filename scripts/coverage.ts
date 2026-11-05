@@ -140,7 +140,6 @@ function isProductionPath(path: string): boolean {
   const segments = path.split("/");
   return (path.startsWith("src/") || path.startsWith("playground/src/")) &&
     path.endsWith(".ts") && !path.includes("\\") &&
-    !isAbsolute(path) &&
     segments.every((segment) =>
       segment !== "" && segment !== "." && segment !== ".."
     );
@@ -272,11 +271,6 @@ function relativeReportPath(
     return validationError("report", `non-canonical SF path: ${rawPath}`);
   }
   const path = manifestPath(relative(resolve(root), plain));
-  if (
-    path === "" || path === ".." || path.startsWith("../") || isAbsolute(path)
-  ) {
-    return validationError("report", `foreign SF path: ${rawPath}`);
-  }
   return { ok: true, value: path };
 }
 
@@ -359,6 +353,8 @@ export function validateCoverageReport(
       }
       const relativePath = relativeReportPath(root, current.rawPath);
       if (!relativePath.ok) return relativePath;
+      // Manifest paths have fixed production prefixes. Membership also rejects
+      // empty and parent-relative report paths.
       if (!classified.has(relativePath.value)) {
         return validationError(
           "report",
@@ -520,7 +516,7 @@ export function summarizeLcov(lcov: string, root: string): Summary {
   );
   const lowest = files.map(([path, counts]) => row(path, counts)).sort((a, b) =>
     a.linePct - b.linePct || a.branchPct - b.branchPct ||
-    (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
+    (a.name === b.name ? 0 : a.name < b.name ? -1 : 1)
   ).slice(0, LOWEST_COUNT);
   return { groups, lowest, total: row("total", total) };
 }

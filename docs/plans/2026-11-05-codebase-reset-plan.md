@@ -490,7 +490,7 @@ At the budget limit, the executor will stop and return files, checks, and open i
 | `RCP-0`: restore and record the baseline | Implementation authorization | `CHANGELOG.md`, `docs/plans/README.md`, `scripts/coverage.ts` launcher only, this authority | Version test and full gate pass; complete baseline recorded | 10 |
 | `RCP-1`: make workspace reads complete or failed | RCP-0 | `src/host/workspace.ts`, `tests/workspace_test.ts`, `tests/watch_stale_test.ts`, `tests/lsp_save_round_test.ts`, `tests/lsp_helpers.ts`; bounded ownership follow-up below | Inspection failure preserves source, outputs, revision, and retry behavior | 18 |
 | `RCP-2`: propagate failures from symlink inspection | RCP-1 | `src/host/deno_io.ts`, `tests/workspace_slow_test.ts` | Listing failures return errors; physical cycle behavior remains | 14 |
-| `RCP-3`: establish coverage ownership | RCP-1 and RCP-2 | `scripts/coverage.ts`, `tests/coverage_test.ts`, new `fixtures/coverage/ownership.json`, `docs/testing.md` | Missing required module and malformed reports fail; real coverage passes | 18 |
+| `RCP-3`: establish coverage ownership | RCP-1 and RCP-2 | `scripts/coverage.ts`, `tests/coverage_test.ts`, new `tests/coverage_slow_test.ts`, new `fixtures/coverage/ownership.json`, `docs/testing.md`, justified row in `fixtures/mutation/survivors.json` | Missing required module and malformed reports fail; real coverage passes | 18 |
 | `RCP-4`: repair composite input provenance | RCP-3 | `src/core/check_project.ts`, new `src/core/requirement_provenance.ts`, `tests/service_imports_test.ts`, new `tests/service_imports_slow_test.ts`, `fixtures/coverage/ownership.json`, `docs/api.md`; conditional `tests/playground_compile_test.ts` | Positive forwarding and negative local production cases pass | 18 |
 | `RCP-5`: remove duplicated action mechanics | RCP-4 | `src/core/editor_actions.ts`, `tests/editor_actions_test.ts` | Exact action behavior remains; duplicated mechanics leave | 14 |
 | `RCP-6`: repair platform discovery paths | RCP-3 | `src/lsp/projects.ts`, `bench/lsp_client.ts`, `tests/lsp_server_test.ts`, `tests/lsp_positions_test.ts`, `tests/lsp_slow_test.ts` | POSIX checks pass and native Windows acceptance is recorded | 18 |
@@ -985,3 +985,16 @@ The complete gate passed 2,878 fast tests and 268 slow tests.
 The current coverage implementation measures 623 code lines and 148 branch sites under the existing measurement script.
 That growth adds the required ownership and report validation; it is not claimed as a size reduction.
 The coverage unit still needs committed mutation evidence and acceptance of the real report before dependent implementation begins.
+The real report passed at 97.27% lines, 95.17% branches, and 99.21% functions.
+The coverage source and tests are committed as `c9ad5b7`.
+The full initial mutation run selected 131 sites: 111 kills, 20 survivors, and zero timeouts.
+The follow-up strengthens manifest diagnostics and removes guards already enforced by manifest membership.
+Ten subprocess cases now exercise the public command with a small executable test double.
+These cases use a POSIX shebang and remain explicitly skipped on native Windows.
+The sort comparator now handles equal names before it orders distinct names.
+This equivalent definition permits an exact proof for the remaining strict-comparison mutation.
+The equal-name guard makes `<` and `<=` identical for the remaining distinct strings.
+The public differential tested 1,024 permutations of 256 records and found zero differences.
+That proof and probe justify one equivalent row in the mutation register.
+The authoritative focused run passed 32 tests, including ten subprocess cases that each took less than one second.
+The complete follow-up gate passed 2,878 fast tests and 278 slow tests.

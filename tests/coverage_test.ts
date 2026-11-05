@@ -266,6 +266,8 @@ Deno.test("coverage ownership classifies the production source inventory", async
 
 Deno.test("coverage ownership rejects invalid categories and paths", () => {
   const invalidCategories = [
+    "null",
+    "[]",
     JSON.stringify({}),
     JSON.stringify({
       runtimeReportable: category(["src/core/a.ts"]),
@@ -275,6 +277,26 @@ Deno.test("coverage ownership rejects invalid categories and paths", () => {
     JSON.stringify({
       runtimeReportable: category(["src/core/a.ts"]),
       typeOnly: { ...category([]), owner: "" },
+      separatelyExercisedEntrypoint: category([]),
+    }),
+    JSON.stringify({
+      runtimeReportable: null,
+      typeOnly: category([]),
+      separatelyExercisedEntrypoint: category([]),
+    }),
+    JSON.stringify({
+      runtimeReportable: [],
+      typeOnly: category([]),
+      separatelyExercisedEntrypoint: category([]),
+    }),
+    JSON.stringify({
+      runtimeReportable: { ...category([]), paths: "src/core/a.ts" },
+      typeOnly: category([]),
+      separatelyExercisedEntrypoint: category([]),
+    }),
+    JSON.stringify({
+      runtimeReportable: { ...category([]), paths: ["src/core/a.ts", 1] },
+      typeOnly: category([]),
       separatelyExercisedEntrypoint: category([]),
     }),
   ];
@@ -308,7 +330,26 @@ Deno.test("coverage ownership rejects new and duplicate source paths", () => {
     ["src/core/a.ts", "src/core/new.ts"],
   );
   assertEquals(unclassified.ok, false);
-  if (!unclassified.ok) assertEquals(unclassified.error.tag, "inventory");
+  if (!unclassified.ok) {
+    assertEquals(unclassified.error.tag, "inventory");
+    assertEquals(
+      unclassified.error.message,
+      "unclassified source files: src/core/new.ts",
+    );
+  }
+
+  const absent = parseCoverageOwnership(
+    ownershipText(["src/core/a.ts", "src/core/absent.ts"]),
+    ["src/core/a.ts"],
+  );
+  assertEquals(absent.ok, false);
+  if (!absent.ok) {
+    assertEquals(absent.error.tag, "inventory");
+    assertEquals(
+      absent.error.message,
+      "manifest paths without source files: src/core/absent.ts",
+    );
+  }
 
   const duplicate = JSON.stringify({
     runtimeReportable: category(["src/core/a.ts"]),
@@ -424,6 +465,14 @@ Deno.test("coverage validation rejects duplicate aliases and foreign paths", () 
   assertEquals(
     validateCoverageReport(
       completeRecord(testPath("tests/a_test.ts")),
+      TEST_ROOT,
+      ownership,
+    ).ok,
+    false,
+  );
+  assertEquals(
+    validateCoverageReport(
+      completeRecord(resolve(TEST_ROOT, "..", "foreign.ts")),
       TEST_ROOT,
       ownership,
     ).ok,

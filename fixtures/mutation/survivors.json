@@ -1,5 +1,14 @@
 [
   {
+    "file": "scripts/coverage.ts",
+    "declaration": "summarizeLcov",
+    "offset": 739,
+    "text": "a.name < b.name",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The earlier equal-name branch returns zero. This branch compares distinct strings, so < and <= have identical truth values. A public summarizeLcov differential tested 1024 permutations of 256 records with equal aliases and both distinct-name orders; every summary matched."
+  },
+  {
     "file": "src/core/check_binary.ts",
     "declaration": "adoptedNumericIdentity",
     "offset": 371,
