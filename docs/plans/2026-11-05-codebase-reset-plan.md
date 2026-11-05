@@ -491,7 +491,7 @@ At the budget limit, the executor will stop and return files, checks, and open i
 | `RCP-1`: make workspace reads complete or failed | RCP-0 | `src/host/workspace.ts`, `tests/workspace_test.ts`, `tests/watch_stale_test.ts`, `tests/lsp_save_round_test.ts`, `tests/lsp_helpers.ts`; bounded ownership follow-up below | Inspection failure preserves source, outputs, revision, and retry behavior | 18 |
 | `RCP-2`: propagate failures from symlink inspection | RCP-1 | `src/host/deno_io.ts`, `tests/workspace_slow_test.ts` | Listing failures return errors; physical cycle behavior remains | 14 |
 | `RCP-3`: establish coverage ownership | RCP-1 and RCP-2 | `scripts/coverage.ts`, `tests/coverage_test.ts`, new `tests/coverage_slow_test.ts`, new `fixtures/coverage/ownership.json`, `docs/testing.md`, justified row in `fixtures/mutation/survivors.json` | Missing required module and malformed reports fail; real coverage passes | 18 |
-| `RCP-4`: repair composite input provenance | RCP-3 | `src/core/check_project.ts`, new `src/core/requirement_provenance.ts`, `tests/service_imports_test.ts`, new `tests/service_imports_slow_test.ts`, `fixtures/coverage/ownership.json`, `docs/api.md`; conditional `tests/playground_compile_test.ts` | Positive forwarding and negative local production cases pass | 18 |
+| `RCP-4`: repair composite input provenance | RCP-3 | `src/core/check_project.ts`, new `src/core/requirement_provenance.ts`, `tests/service_imports_test.ts`, new `tests/service_imports_slow_test.ts`, `fixtures/coverage/ownership.json`, justified rows in `fixtures/mutation/survivors.json`, `docs/api.md`; conditional `tests/playground_compile_test.ts` | Positive forwarding and negative local production cases pass | 18 |
 | `RCP-5`: remove duplicated action mechanics | RCP-4 | `src/core/editor_actions.ts`, `tests/editor_actions_test.ts` | Exact action behavior remains; duplicated mechanics leave | 14 |
 | `RCP-6`: repair platform discovery paths | RCP-3 | `src/lsp/projects.ts`, `bench/lsp_client.ts`, `tests/lsp_server_test.ts`, `tests/lsp_positions_test.ts`, `tests/lsp_slow_test.ts` | POSIX checks pass and native Windows acceptance is recorded | 18 |
 | `RCP-7`: reconcile final documentation | RCP-1 through RCP-6 | Documentation set below, this authority | Every final rule has one current owner and checked links | 14 |
@@ -1044,3 +1044,28 @@ The shorthand traversal now uses the checked field type as a fallback after norm
 The parser creates a `PipeStage` inside a `PipeExpr`; the unnecessary root-parent guard was removed.
 The follow-up's full gate passed 2,888 fast tests, with six Windows cases skipped, and 279 slow tests.
 The remaining mutation survivors are not accepted or registered without further evidence.
+The follow-up is committed as `311de77`.
+The focused mutation run then selected 98 sites: 91 kills, seven survivors, and zero timeouts.
+Main inspection confirmed that `referenceInfo` records shorthand-name information before `fieldValue` records its field information.
+The redundant field fallback was removed, and component traversal remains the sole owner of block decomposition.
+A public input-callback regression now detects the surviving `updateRef` guard fault.
+The original guard fault passed existing tests; the stronger regression fails under that exact fault in an isolated copy.
+
+The first classification proposal contained three equivalent rows.
+The provenance worker challenged those rows without edits and found a counterexample for the guarded `return false`.
+A malformed spread can retain a binding's written `Effect` type.
+Changing that return to `true` removes the real service diagnostic while the syntax error remains.
+That proposed equivalent row was removed before any commit.
+The permanent public recovery regression passes on the correct source and fails under the exact guard fault.
+The production guard remains unchanged.
+
+Two equivalent rows remain, with source-based reasons and a differential over 14 public cases.
+The differential compares diagnostics, interfaces, lowered IR, independent validation, and emitted output where those results exist.
+The cases include inherited inputs, imported producers, callback inputs, empty callbacks, rejected cycles, malformed selectors, and annotated malformed spreads.
+The logical guard still returns false when its origin is missing.
+The final loop return can change only an error-typed transfer with no produced requirement.
+The main agent confirmed each classification with the actual operator substitution.
+The final recovery gate passed 2,889 fast tests, with six Windows cases skipped, and 279 slow tests.
+The public recovery case retains `requirement-contract/002` and `syntax/008` on the correct source.
+The rejected guard fault removes only `requirement-contract/002`; its permanent regression detects that loss.
+The final source and both accepted register rows still require their committed mutation run and coverage report.

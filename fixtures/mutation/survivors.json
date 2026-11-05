@@ -144,6 +144,24 @@
     "reason": "With an empty list, tasks.pop() returns undefined and the next line breaks out of the loop. The loop ends the same way as with >."
   },
   {
+    "file": "src/core/requirement_provenance.ts",
+    "declaration": "transferredRequirements.inputOnly",
+    "offset": 180,
+    "text": "node === undefined || seen.has(node)",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "When originOf returns undefined, the original guard returns false and the mutant reaches the ordinary false return. A repeated defined origin requires a cycle. Block resolution rejects initializer cycles before recording local targets, while field and getRef traversal descend through syntax children. Fourteen public differential cases, including a malformed spread with a retained annotation, preserve diagnostics, interfaces, IR, validation, and emitted output."
+  },
+  {
+    "file": "src/core/requirement_provenance.ts",
+    "declaration": "transferredRequirements.inputOnly",
+    "offset": 626,
+    "text": "return false;",
+    "operator": "boolean-return",
+    "class": "equivalent",
+    "reason": "Parsed field selections have a base. A getRef fact can lack its argument after arity rejection, which records the error type. That type carries no produced requirement, so returning true instead of false changes no transfer. Fourteen public differential cases include this arity error and preserve diagnostics, interfaces, IR, validation, and emitted output."
+  },
+  {
     "file": "src/core/types.ts",
     "declaration": "executionFits",
     "offset": 103,

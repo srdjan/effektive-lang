@@ -602,6 +602,32 @@ ${declaration}
   }
 });
 
+Deno.test("recovery preserves deferred requirements after a missing spread value", () => {
+  const project = checked({
+    "services.eff": `
+export type Int = int
+export service Users { read(): Int }
+export service Allowed { publish(job: Effect<Int, never, Users.read>): void }
+`,
+    "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users } from "./services.eff"
+export const store = (): void => {
+  const x: { job: Effect<Int, never, Users.read> } = { ... }
+  Allowed.publish(x.job)
+}
+`,
+  });
+  assert(
+    project.diagnostics.some((diagnostic) => diagnostic.category === "syntax"),
+  );
+  const requirements = project.diagnostics.filter((diagnostic) =>
+    diagnostic.code === "requirement-contract/002"
+  );
+  assertEquals(requirements.length, 1);
+  assertStringIncludes(requirements[0].message, "Users.read");
+});
+
 Deno.test("composite provenance agrees across fresh, warm, and retained revisions", () => {
   const services = `
 export type Int = int
@@ -771,6 +797,10 @@ export const unchanged = (target: Ref<Effect<Int, never, Users.read>>): void =>
   updateRef(target, previous => previous)
 export const blockUpdate = (target: Ref<Effect<Int, never, Users.read>>): void =>
   updateRef(target, previous => { previous })
+export const inputUpdate = (
+  target: Ref<Effect<Int, never, Users.read>>,
+  transform: (previous: Effect<Int, never, Users.read>) => Effect<Int, never, Users.read>
+): void => updateRef(target, transform)
 export const aliasedUpdate = (target: Ref<Effect<Int, never, Users.read>>): void => {
   const unchanged = (previous: Effect<Int, never, Users.read>): Effect<Int, never, Users.read> => previous
   updateRef(target, unchanged)

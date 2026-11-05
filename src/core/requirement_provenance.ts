@@ -208,8 +208,6 @@ export function transferredRequirements(
       if (target?.kind === "local" && parameters.has(target.id)) return true;
       if (kindOf(tree, node) === SyntaxKind.FieldExpr) {
         node = kidsOf(tree, node)[0];
-      } else if (kindOf(tree, node) === SyntaxKind.Block) {
-        node = kidsOf(tree, node).at(-1);
       } else if (body.facts.get(node)?.kind === "get-ref") {
         node = argsOf(node)[0];
       } else {
@@ -220,9 +218,8 @@ export function transferredRequirements(
   };
 
   const seenTypes = new Set<TypeRef>();
-  const addType = (node: NodeId, fallback?: NodeId): void => {
-    const info = body.info.get(node) ??
-      (fallback === undefined ? undefined : body.info.get(fallback));
+  const addType = (node: NodeId): void => {
+    const info = body.info.get(node);
     if (info !== undefined) {
       producedRequirements(table, info.type, into, seenTypes);
     }
@@ -230,17 +227,16 @@ export function transferredRequirements(
   const addValue = (
     start: NodeId | undefined,
     trail = new Set<NodeId>(),
-    fallback = start,
   ): void => {
     if (start === undefined || inputOnly(start)) return;
     const origin = originOf(start);
     if (origin === undefined) {
-      addType(start, fallback);
+      addType(start);
       return;
     }
     const node = unparen(tree, origin);
     if (trail.has(node)) {
-      addType(start, fallback);
+      addType(start);
       return;
     }
     const nextTrail = new Set(trail);
@@ -250,7 +246,7 @@ export function transferredRequirements(
         for (const field of kidsOf(tree, node)) {
           const children = kidsOf(tree, field);
           if (kindOf(tree, field) === SyntaxKind.ShorthandField) {
-            addValue(children[0], nextTrail, field);
+            addValue(children[0], nextTrail);
           } else {
             addValue(children.at(-1), nextTrail);
           }
@@ -263,7 +259,7 @@ export function transferredRequirements(
         addValue(kidsOf(tree, node).at(-1), nextTrail);
         return;
       default:
-        addType(node, fallback);
+        addType(node);
     }
   };
 
