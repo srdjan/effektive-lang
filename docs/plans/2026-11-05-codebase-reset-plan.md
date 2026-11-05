@@ -1034,3 +1034,13 @@ The combined checker unit now measures 1,063 code lines and 217 branches, versus
 The additional component traversal explains that increase; shrinking only the driver is not counted as simplification.
 The provenance source needs its committed mutation run, coverage report, and preservation comparison before its phase closes.
 The platform phase still needs native Windows acceptance and directed mutation evidence.
+The provenance source and its initial regressions are committed as `ce537ec`.
+Its first full mutation run selected 108 sites: 89 kills, 19 survivors, and zero timeouts.
+The main agent separately removed each driver call in an isolated archive.
+Each removal failed its corresponding public regression: mixed composite transfer or constant callback storage.
+The follow-up adds imported deferred values, imported callback aliases, direct imported shorthand fields, and input callback blocks.
+These cases separate transferred requirements from requirements independently collected through a local `defer` call.
+The shorthand traversal now uses the checked field type as a fallback after normal origin checks.
+The parser creates a `PipeStage` inside a `PipeExpr`; the unnecessary root-parent guard was removed.
+The follow-up's full gate passed 2,888 fast tests, with six Windows cases skipped, and 279 slow tests.
+The remaining mutation survivors are not accepted or registered without further evidence.

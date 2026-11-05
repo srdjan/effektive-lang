@@ -139,8 +139,7 @@ export function transferredRequirements(
     );
     const args = list === undefined ? [] : kidsOf(tree, list);
     if (kindOf(tree, node) === SyntaxKind.PipeStage) {
-      const parent = tree.parents[node];
-      const left = parent < 0 ? undefined : kidsOf(tree, parent)[0];
+      const left = kidsOf(tree, tree.parents[node])[0];
       if (left !== undefined) args.unshift(left);
     }
     return args;
@@ -221,8 +220,9 @@ export function transferredRequirements(
   };
 
   const seenTypes = new Set<TypeRef>();
-  const addType = (node: NodeId): void => {
-    const info = body.info.get(node);
+  const addType = (node: NodeId, fallback?: NodeId): void => {
+    const info = body.info.get(node) ??
+      (fallback === undefined ? undefined : body.info.get(fallback));
     if (info !== undefined) {
       producedRequirements(table, info.type, into, seenTypes);
     }
@@ -230,16 +230,17 @@ export function transferredRequirements(
   const addValue = (
     start: NodeId | undefined,
     trail = new Set<NodeId>(),
+    fallback = start,
   ): void => {
     if (start === undefined || inputOnly(start)) return;
     const origin = originOf(start);
     if (origin === undefined) {
-      addType(start);
+      addType(start, fallback);
       return;
     }
     const node = unparen(tree, origin);
     if (trail.has(node)) {
-      addType(start);
+      addType(start, fallback);
       return;
     }
     const nextTrail = new Set(trail);
@@ -249,17 +250,7 @@ export function transferredRequirements(
         for (const field of kidsOf(tree, node)) {
           const children = kidsOf(tree, field);
           if (kindOf(tree, field) === SyntaxKind.ShorthandField) {
-            const value = children[0];
-            const origin = value === undefined ? undefined : originOf(value);
-            if (
-              value !== undefined && !inputOnly(value) &&
-              (origin === undefined ||
-                (origin === value && body.info.get(value) === undefined))
-            ) {
-              addType(field);
-            } else {
-              addValue(value, nextTrail);
-            }
+            addValue(children[0], nextTrail, field);
           } else {
             addValue(children.at(-1), nextTrail);
           }
@@ -272,7 +263,7 @@ export function transferredRequirements(
         addValue(kidsOf(tree, node).at(-1), nextTrail);
         return;
       default:
-        addType(node);
+        addType(node, fallback);
     }
   };
 

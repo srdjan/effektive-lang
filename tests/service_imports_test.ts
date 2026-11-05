@@ -539,6 +539,69 @@ export const forward = (input: {
   }
 });
 
+Deno.test("imported deferred values retain transferred requirements", () => {
+  const services = `
+export type Int = int
+export service Users { read(): Int }
+export service Allowed {
+  publish(job: Effect<Int, never, Users.read>): void
+  publishRecord(input: {
+    inherited: Effect<Int, never, Users.read>,
+    fresh: Effect<Int, never, Users.read>
+  }): void
+  publishPending(input: { pending: Effect<Int, never, Users.read> }): void
+}
+export const pending: Effect<Int, never, Users.read> = defer(() => Users.read())
+export const replace = (
+  previous: Effect<Int, never, Users.read>
+): Effect<Int, never, Users.read> => pending
+`;
+  const cases = [
+    `export const forward = (input: {
+  inherited: Effect<Int, never, Users.read>,
+  fresh: Effect<Int, never, Users.read>
+}): void => Allowed.publish(pending)`,
+    `export const forward = (input: {
+  inherited: Effect<Int, never, Users.read>,
+  fresh: Effect<Int, never, Users.read>
+}): void => Allowed.publishRecord({ inherited: input.inherited, fresh: pending })`,
+    `export const forward = (input: {
+  inherited: Effect<Int, never, Users.read>,
+  fresh: Effect<Int, never, Users.read>
+}): void => Allowed.publishRecord({ ...input, fresh: pending })`,
+    `export const forward = (): void => Allowed.publishPending({ pending })`,
+    `export const forward = (input: {
+  inherited: Effect<Int, never, Users.read>,
+  fresh: Effect<Int, never, Users.read>
+}): void => {
+  const fresh = pending
+  Allowed.publishRecord({ inherited: input.inherited, fresh })
+}`,
+    `export const forward = (
+  target: Ref<Effect<Int, never, Users.read>>
+): void => updateRef(target, replace)`,
+    `export const forward = (
+  target: Ref<Effect<Int, never, Users.read>>
+): void => {
+  const callbacks = { replace }
+  updateRef(target, callbacks.replace)
+}`,
+  ];
+  for (const declaration of cases) {
+    const project = checked({
+      "services.eff": services,
+      "main.eff": `
+imports Allowed from "./services.eff"
+import { Int, Users, pending, replace } from "./services.eff"
+${declaration}
+`,
+    });
+    assertEquals(project.diagnostics.map((diagnostic) => diagnostic.code), [
+      "requirement-contract/002",
+    ], declaration);
+  }
+});
+
 Deno.test("composite provenance agrees across fresh, warm, and retained revisions", () => {
   const services = `
 export type Int = int
@@ -706,6 +769,8 @@ export const field = (input: { target: Ref<Effect<Int, never, Users.read>> }): v
 }
 export const unchanged = (target: Ref<Effect<Int, never, Users.read>>): void =>
   updateRef(target, previous => previous)
+export const blockUpdate = (target: Ref<Effect<Int, never, Users.read>>): void =>
+  updateRef(target, previous => { previous })
 export const aliasedUpdate = (target: Ref<Effect<Int, never, Users.read>>): void => {
   const unchanged = (previous: Effect<Int, never, Users.read>): Effect<Int, never, Users.read> => previous
   updateRef(target, unchanged)
