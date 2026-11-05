@@ -1153,3 +1153,23 @@ The authoritative platform gate passed 2,889 fast tests and 279 slow tests, with
 The five platform paths contain native discovery, URL conversion, non-vacuous ownership controls, and the process regression.
 The platform source is ready for its local commit and directed mutation run.
 Native Windows remains an explicit open acceptance requirement.
+
+The first directed platform mutation run selected 11 of 113 module sites: eight kills, three survivors, and zero timeouts.
+The three survivors change logical operators in the compound containment guard.
+No equivalent or slow-only row was added for them.
+The existing `isSourcePath` rejects parent directory components because each component beginning with `.` is excluded.
+The same selector rejects empty paths and a bare `..` because neither names an accepted file.
+Native Windows separator conversion occurs before that selector.
+Absolute relative results, including different drives or UNC shares, still need the explicit `isAbsolute` rejection.
+The main agent removes the repeated empty and parent checks while preserving that absolute-path guard.
+The public ownership test now includes positive project lookup, root, parent, adjacent root, and hidden-directory cases.
+The platform worker will independently challenge that reduction before acceptance.
+
+The independent platform review confirmed the path reduction from the actual selector and native path contracts.
+Parent components remain rejected after Windows separator conversion, including parent-relative paths between UNC shares.
+POSIX backslashes remain literal filename characters.
+The explicit absolute-path guard still rejects absolute results from different drives or UNC hosts.
+An actual public differential compared 32 lookup captures before and after the reduction, with positive controls in both projects.
+All captures match, including root, parent, adjacent root, hidden directories, nested config, and literal backslash paths.
+This differential runs on POSIX; it does not replace native Windows acceptance.
+The reduction gate passed 2,889 fast tests, six native skips, and 279 slow tests.

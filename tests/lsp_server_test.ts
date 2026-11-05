@@ -633,10 +633,17 @@ Deno.test("a document in a subdirectory finds the project above it", () => {
 Deno.test("a path beside a project does not belong to that project", () => {
   const h = started();
   h.deliver(didOpen(MAIN, 1, MAIN_TEXT));
-  assertEquals(
-    h.server.projects.lookup(uriOf(`${ROOT}-other/main.eff`)),
-    undefined,
-  );
+  assert(h.server.projects.lookup(MAIN) !== undefined);
+  for (
+    const path of [
+      ROOT,
+      "/work",
+      `${ROOT}-other/main.eff`,
+      `${ROOT}/.hidden/main.eff`,
+    ]
+  ) {
+    assertEquals(h.server.projects.lookup(uriOf(path)), undefined, path);
+  }
 });
 
 Deno.test("an encoded project path keeps its decoded root and source path", () => {

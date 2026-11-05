@@ -191,12 +191,7 @@ function sameTexts(
 /** The root-relative path of the source file `absolute` under `root`, or undefined. */
 function sourcePathUnder(root: string, absolute: string): string | undefined {
   const path = relative(root, absolute);
-  if (
-    path === "" || path === ".." || path.startsWith(`..${SEPARATOR}`) ||
-    isAbsolute(path)
-  ) {
-    return undefined;
-  }
+  if (isAbsolute(path)) return undefined;
   const corePath = SEPARATOR === "\\" ? path.replaceAll("\\", "/") : path;
   return isSourcePath(corePath) ? corePath : undefined;
 }
