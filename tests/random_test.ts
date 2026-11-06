@@ -134,7 +134,6 @@ Deno.test("the validator rejects wrong result types", () => {
     const ir = loweredModule(SOURCE);
     (allExprs(ir, kind)[0] as { type: unknown }).type = wrong;
     const found = validate(ir);
-    assert(found.length > 0, kind);
     assert(found.some((d) => d.code === "validation/002"), kind);
   }
 });

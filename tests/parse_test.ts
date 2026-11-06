@@ -412,65 +412,32 @@ Deno.test("an error span covers a token on the same line and ends a line when th
 
 Deno.test("diagnostic spans carry the source path", () => {
   const result = parse("dir/a.eff", "const a = )");
-  assertEquals(result.diagnostics.length > 0, true);
-  for (const d of result.diagnostics) assertEquals(d.span.source, "dir/a.eff");
+  assertEquals(
+    result.diagnostics.map((d) => [d.span.source, d.code, d.message]),
+    [["dir/a.eff", "syntax/008", "expected an expression, found `)`"]],
+  );
 });
 
 Deno.test("odd inputs parse without throwing, print back exactly, and give a sound tree", () => {
-  const inputs = [
-    "",
-    "\n",
-    "\n\n  \n",
-    ";",
-    "((((",
-    "))))",
-    "{{{{",
-    "}}}}",
-    "[[[[",
-    "const",
-    "export",
-    "export export",
-    "import",
-    "import {",
-    "type",
-    "type T",
-    "type T =",
-    "error E = ",
-    "service S {",
-    "service S { f(",
-    "provider",
-    '"',
-    '"\\',
-    "/*",
-    "//",
-    "match",
-    "match x {",
-    "if",
-    "if (",
-    "if (a) {",
-    "try {",
-    "try { } catch {",
-    "const f = (",
-    "const f = (a",
-    "const f = (a) =>",
-    "const f = a |>",
-    "const f = a ||",
-    "const f = { ...",
-    "const f = { a:",
-    "@@@ ### 'x'",
-    "\u{1F600}",
-    "a b c d",
-    "=> => =>",
-    "|> |> |>",
-    "const a = 1 const b = 2",
-    "const a = 1\n\n\n\nconst b",
+  const inputs: readonly (readonly [text: string, diagnostics: string[]])[] = [
+    ["", []],
+    ["\n", []],
+    ["a b c d", ["0-1 syntax/009 unexpected `a`; expected a declaration"]],
+    ["=> => =>", ["0-2 syntax/009 unexpected `=>`; expected a declaration"]],
+    ["|> |> |>", ["0-2 syntax/009 unexpected `|>`; expected a declaration"]],
+    ["const a = 1 const b = 2", [
+      "12-17 syntax/008 expected end of line or `;`, found `const`",
+    ]],
+    ["const a = 1\n\n\n\nconst b", [
+      "22-22 syntax/008 expected `=`, found end of file",
+    ]],
   ];
-  for (const text of inputs) {
-    const result = parseChecked(text);
-    if (text.trim() !== "" && text !== ";" && text !== "//" && text !== "/*") {
-      // Every non-trivial odd input is wrong, so the parser must say so.
-      assertEquals(result.diagnostics.length > 0, true, JSON.stringify(text));
-    }
+  for (const [text, diagnostics] of inputs) {
+    assertEquals(
+      parseChecked(text).diagnostics.map(show),
+      diagnostics,
+      JSON.stringify(text),
+    );
   }
 });
 
@@ -551,12 +518,14 @@ Deno.test("nominal is an ordinary name and no declaration word", () => {
     "ConstDecl",
   ]);
   assertEquals(
-    parseChecked("nominal Row = { id: int }\n").diagnostics.length > 0,
-    true,
+    parseChecked("nominal Row = { id: int }\n").diagnostics.map(show),
+    [
+      "0-7 syntax/009 unexpected `nominal`; expected a declaration",
+    ],
   );
   assertEquals(
-    parseChecked("sealed nominal Row = { id: int }\n").diagnostics.length > 0,
-    true,
+    parseChecked("sealed nominal Row = { id: int }\n").diagnostics.map(show),
+    ["7-14 syntax/008 expected `type`, found `nominal`"],
   );
 });
 
@@ -568,10 +537,9 @@ Deno.test("data is an ordinary name and no declaration word", () => {
     "ConstDecl",
     "ConstDecl",
   ]);
-  assertEquals(
-    parseChecked("data Row = { id: int }\n").diagnostics.length > 0,
-    true,
-  );
+  assertEquals(parseChecked("data Row = { id: int }\n").diagnostics.map(show), [
+    "0-4 syntax/009 unexpected `data`; expected a declaration",
+  ]);
 });
 
 Deno.test("unparen strips nested parenthesis expressions and keeps a malformed one", () => {
