@@ -21,7 +21,8 @@
 
 import { denoIo } from "../src/host/deno_io.ts";
 import { tscConfig, tscLock } from "../src/cli/tsc.ts";
-import type { Result } from "../src/core/source.ts";
+import type { Result } from "../src/core/mod.ts";
+import { withTempDir } from "../scripts/lib.ts";
 import {
   DISTRIBUTION_HEADER,
   distributionCells,
@@ -109,8 +110,7 @@ async function measureTarget(
   target: Target,
   config: M5Config,
 ): Promise<Result<TargetResult, M5Error>> {
-  const directory = Deno.makeTempDirSync({ prefix: "effektive-bench-" });
-  try {
+  return await withTempDir("effektive-bench-", async (directory) => {
     const stamp = `${Date.now()}-${Deno.pid}`;
     const cold = async (): Promise<Result<number, M5Error>> => {
       // A new comment changes the source hash, so the check cache cannot hit.
@@ -147,13 +147,7 @@ async function measureTarget(
         control: control.value,
       },
     };
-  } finally {
-    try {
-      Deno.removeSync(directory, { recursive: true });
-    } catch {
-      // The system removes the temporary directory later.
-    }
-  }
+  }, { tolerateRemoveFailure: true });
 }
 
 /** Runs M5 for the examples and the configured synthetic sizes. */

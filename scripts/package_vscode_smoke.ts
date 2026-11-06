@@ -1,9 +1,9 @@
 // Real installed-extension acceptance. Separate from the portable installation test
 // because it requires a local graphical VS Code installation.
-import { dirname, fromFileUrl, join, resolve } from "@std/path";
+import { dirname, join, resolve } from "@std/path";
+import { ROOT, runProcess } from "./lib.ts";
 import { packageRelease } from "./package.ts";
 
-const ROOT = resolve(dirname(fromFileUrl(import.meta.url)), "..");
 const DEFAULT_CODE =
   "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code";
 
@@ -13,19 +13,8 @@ async function checked(
   cwd: string,
   env: Record<string, string>,
 ): Promise<void> {
-  const result = await new Deno.Command(command, {
-    args,
-    cwd,
-    env,
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  if (!result.success) {
-    throw new Error(
-      new TextDecoder().decode(result.stderr) +
-        new TextDecoder().decode(result.stdout),
-    );
-  }
+  const result = await runProcess(command, args, { cwd, env });
+  if (!result.success) throw new Error(result.stderr + result.stdout);
 }
 
 export async function installedEditorSmoke(
@@ -106,54 +95,40 @@ export async function installedEditorSmoke(
       const application = Deno.build.os === "darwin"
         ? resolve(dirname(code), "../../../MacOS/Code")
         : code;
-      const process = new Deno.Command(application, {
-        args: [
-          "--user-data-dir",
-          userData,
-          "--extensions-dir",
-          extensions,
-          "--extensionDevelopmentPath=" + harness,
-          "--extensionTestsPath=" + join(harness, "installed.js"),
-          "--disable-workspace-trust",
-          "--skip-welcome",
-          "--skip-release-notes",
-          "--disable-gpu",
-          "--new-window",
-          "--wait",
-          project,
-        ],
+      const result = await runProcess(application, [
+        "--user-data-dir",
+        userData,
+        "--extensions-dir",
+        extensions,
+        "--extensionDevelopmentPath=" + harness,
+        "--extensionTestsPath=" + join(harness, "installed.js"),
+        "--disable-workspace-trust",
+        "--skip-welcome",
+        "--skip-release-notes",
+        "--disable-gpu",
+        "--new-window",
+        "--wait",
+        project,
+      ], {
         cwd: project,
         env: {
           ...env,
           EFFEKTIVE_TEST_PHASE: phase,
           EFFEKTIVE_TEST_RESULT: resultFile,
         },
-        stdout: "piped",
-        stderr: "piped",
-      }).spawn();
-      const output = process.output();
-      const timeout = setTimeout(() => {
-        try {
-          process.kill();
-        } catch { /* already exited */ }
-      }, 90_000);
-      const result = await output;
-      clearTimeout(timeout);
+        timeoutMs: 90_000,
+      });
       let evidence: { ok: boolean; error?: string };
       try {
         evidence = JSON.parse(Deno.readTextFileSync(resultFile));
       } catch {
         throw new Error(
-          `VS Code ${phase} produced no evidence (exit ${result.code}):\n${
-            new TextDecoder().decode(result.stderr)
-          }\n${new TextDecoder().decode(result.stdout)}`,
+          `VS Code ${phase} produced no evidence (exit ${result.code}):\n${result.stderr}\n${result.stdout}`,
         );
       }
       if (!evidence.ok || !result.success) {
         throw new Error(
-          `VS Code ${phase} failed: ${
-            evidence.error ?? new TextDecoder().decode(result.stderr)
-          }`,
+          `VS Code ${phase} failed: ${evidence.error ?? result.stderr}`,
         );
       }
       console.log(

@@ -35,11 +35,17 @@
 // run failed, a run was an infrastructure error, the register is malformed, or
 // the arguments are bad. The stale check uses all sites of each scanned file.
 
-import { dirname, fromFileUrl, join } from "@std/path";
+import { join } from "@std/path";
 import ts from "typescript";
 import type { Result } from "../src/core/mod.ts";
+import {
+  exportRevision,
+  fastSuiteArgs,
+  ROOT,
+  runProcess,
+  withTempDir,
+} from "./lib.ts";
 
-const ROOT = join(dirname(fromFileUrl(import.meta.url)), "..");
 const REGISTER_PATH = "fixtures/mutation/survivors.json";
 const MUTANT_LIMIT_MS = 60_000;
 const CLEAN_LIMIT_MS = 600_000;
@@ -512,15 +518,7 @@ export function parseOptions(args: readonly string[]): Result<Options, string> {
 export function testArgs(tests: string | undefined, check: boolean): string[] {
   const noCheck = check ? [] : ["--no-check"];
   return tests === undefined
-    ? [
-      "test",
-      ...noCheck,
-      "--allow-read",
-      "--parallel",
-      "--fail-fast",
-      "--ignore=**/*_slow_test.ts",
-      "tests/",
-    ]
+    ? ["test", ...noCheck, ...fastSuiteArgs(["--fail-fast"])]
     : ["test", ...noCheck, "--allow-all", "--fail-fast", tests];
 }
 
@@ -531,74 +529,30 @@ async function runDeno(
   args: string[],
   limitMs: number,
 ): Promise<RunOutput> {
-  const child = new Deno.Command("deno", {
-    args,
+  const result = await runProcess("deno", args, {
     cwd,
     env: { NO_COLOR: "1" },
-    stdout: "piped",
-    stderr: "piped",
-  }).spawn();
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    try {
-      child.kill("SIGKILL");
-    } catch {
-      // The process already ended.
-    }
-  }, limitMs);
-  const result = await child.output();
-  clearTimeout(timer);
-  const decoder = new TextDecoder();
+    timeoutMs: limitMs,
+    killSignal: "SIGKILL",
+  });
   return {
-    timedOut,
-    output: decoder.decode(result.stdout) + "\n" +
-      decoder.decode(result.stderr),
+    timedOut: result.timedOut,
+    output: result.stdout + "\n" + result.stderr,
   };
-}
-
-async function run(
-  command: string,
-  args: string[],
-  options: Deno.CommandOptions = {},
-): Promise<Result<string, string>> {
-  const result = await new Deno.Command(command, {
-    args,
-    stdout: "piped",
-    stderr: "piped",
-    ...options,
-  }).output();
-  if (!result.success) {
-    const message = new TextDecoder().decode(result.stderr).trim();
-    return { ok: false, error: `${command} ${args[0]} failed: ${message}` };
-  }
-  return { ok: true, value: new TextDecoder().decode(result.stdout) };
 }
 
 async function makeCopies(
   base: string,
   count: number,
 ): Promise<Result<string[], string>> {
-  const archive = join(base, "head.tar");
-  const made = await run("git", [
-    "archive",
-    "--format=tar",
-    "-o",
-    archive,
-    "HEAD",
-  ], {
-    cwd: ROOT,
-  });
-  if (!made.ok) return made;
   const dirs = Array.from({ length: count }, (_, i) => join(base, `w${i}`));
-  const extracted = await Promise.all(dirs.map(async (dir) => {
-    await Deno.mkdir(dir);
-    return await run("tar", ["-xf", archive, "-C", dir]);
-  }));
-  for (const result of extracted) {
-    if (!result.ok) return result;
-  }
-  return { ok: true, value: dirs };
+  const exported = await exportRevision("HEAD", {
+    archive: join(base, "head.tar"),
+    destinations: dirs,
+    archiveFlags: ["--format=tar"],
+    failure: "stderr",
+  });
+  return exported.ok ? { ok: true, value: dirs } : exported;
 }
 
 interface Outcome {
@@ -675,8 +629,7 @@ async function main(args: string[]): Promise<number> {
     return 2;
   }
 
-  const base = await Deno.makeTempDir({ prefix: "effektive-mutate-" });
-  try {
+  return await withTempDir("effektive-mutate-", async (base) => {
     const copies = await makeCopies(base, options.workers);
     if (!copies.ok) {
       console.error(`mutate: ${copies.error}`);
@@ -767,9 +720,7 @@ async function main(args: string[]): Promise<number> {
         `elapsed ${Math.round((Date.now() - started) / 1000)} s`,
     );
     return match.unregistered.length === 0 && match.stale.length === 0 ? 0 : 1;
-  } finally {
-    await Deno.remove(base, { recursive: true });
-  }
+  });
 }
 
 if (import.meta.main) {

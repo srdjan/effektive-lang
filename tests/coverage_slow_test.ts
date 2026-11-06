@@ -97,6 +97,10 @@ for (const scenario of cases) {
             join(repository, "scripts/coverage.ts"),
             join(root, "scripts/coverage.ts"),
           );
+          Deno.copyFileSync(
+            join(repository, "scripts/lib.ts"),
+            join(root, "scripts/lib.ts"),
+          );
           Deno.writeTextFileSync(join(root, "src/core/mod.ts"), "export {};\n");
           const category = (paths: readonly string[]) => ({
             paths,

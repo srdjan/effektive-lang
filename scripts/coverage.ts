@@ -11,7 +11,6 @@
 // anchored on the real repository path to leave those copies out.
 
 import {
-  dirname,
   fromFileUrl,
   isAbsolute,
   join,
@@ -21,8 +20,8 @@ import {
   toFileUrl,
 } from "@std/path";
 import type { Result } from "../src/core/mod.ts";
+import { fastSuiteArgs, ROOT, runProcess, withTempDir } from "./lib.ts";
 
-const ROOT = join(dirname(fromFileUrl(import.meta.url)), "..");
 const GROUPS = [
   "src/core",
   "src/cli",
@@ -579,19 +578,8 @@ async function run(
   args: string[],
   env: Record<string, string> = {},
 ): Promise<Run> {
-  const output = await new Deno.Command("deno", {
-    args,
-    cwd: ROOT,
-    env,
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  const decoder = new TextDecoder();
-  return {
-    ok: output.success,
-    stdout: decoder.decode(output.stdout),
-    stderr: decoder.decode(output.stderr),
-  };
+  const output = await runProcess("deno", args, { cwd: ROOT, env });
+  return { ok: output.success, stdout: output.stdout, stderr: output.stderr };
 }
 
 async function main(): Promise<number> {
@@ -615,19 +603,16 @@ async function main(): Promise<number> {
     console.error(`coverage: ${ownership.error.message}`);
     return 1;
   }
-  const dir = await Deno.makeTempDir({ prefix: "coverage-" });
-  try {
+  return await withTempDir("coverage-", async (dir) => {
     const fast = join(dir, "fast");
     const slow = join(dir, "slow");
     const fastRun = await run([
       "test",
-      "--allow-read",
-      "--parallel",
-      "--ignore=**/*_slow_test.ts",
-      // Without this flag, `deno test` applies the floors to one suite alone.
-      "--coverage-raw-data-only",
-      `--coverage=${fast}`,
-      "tests/",
+      ...fastSuiteArgs([
+        // Without this flag, `deno test` applies the floors to one suite alone.
+        "--coverage-raw-data-only",
+        `--coverage=${fast}`,
+      ]),
     ]);
     if (!fastRun.ok) {
       console.error(
@@ -680,9 +665,7 @@ async function main(): Promise<number> {
       return 1;
     }
     return 0;
-  } finally {
-    await Deno.remove(dir, { recursive: true });
-  }
+  });
 }
 
 if (import.meta.main) Deno.exit(await main());

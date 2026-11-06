@@ -12,6 +12,7 @@ import {
   irSnapshot,
   projectFiles,
 } from "../tests/helpers.ts";
+import { prettyJson } from "./lib.ts";
 
 const directory = new URL("../fixtures/golden/", import.meta.url);
 Deno.mkdirSync(directory, { recursive: true });
@@ -42,6 +43,6 @@ const baseline = [
 const irDirectory = new URL("../fixtures/ir/", import.meta.url);
 Deno.writeTextFileSync(
   new URL("examples-baseline.json", irDirectory),
-  JSON.stringify(baseline, null, 2) + "\n",
+  prettyJson(baseline),
 );
 console.log("wrote fixtures/ir/examples-baseline.json");

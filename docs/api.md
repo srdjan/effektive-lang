@@ -158,6 +158,7 @@ playground/    The browser playground. See "Playground". The page is in src/, th
     model.ts       The page logic without a DOM: tabs, Problems, error counts, and hover texts.
     replay.ts      The pure parts of ?replay=: the steps of a session file, edit application, and the timed player.
 scripts/       Scripts that the tasks run.
+               lib.ts holds the repository root, the process runner, the temporary directory helper, the fixture JSON writer, the revision export, and the fast suite arguments that the scripts share.
                golden_update.ts writes the golden files.
                surface_update.ts writes the command-line and language server records in fixtures/surface/.
                test_slow.ts runs the slow tests with a fresh DENO_DIR.

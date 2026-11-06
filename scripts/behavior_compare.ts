@@ -17,6 +17,7 @@
 // revision, the command writes the records of that revision and exits with 0.
 
 import { type Kind, KINDS, type Rec, type Res } from "./behavior_corpus.ts";
+import { exportRevision, runChecked } from "./lib.ts";
 
 // ------------------------------------------------------------------ arguments
 
@@ -279,42 +280,19 @@ export async function runCommand(
 
 // ------------------------------------------------------------------ real boundary
 
-const ROOT = new URL("..", import.meta.url).pathname;
-
-async function run(
-  command: string,
-  args: readonly string[],
-  cwd: string,
-): Promise<Res<string>> {
-  const result = await new Deno.Command(command, {
-    args: [...args],
-    cwd,
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  const decoder = new TextDecoder();
-  if (result.success) return { ok: true, value: decoder.decode(result.stdout) };
-  const text = (decoder.decode(result.stderr) + decoder.decode(result.stdout))
-    .split("\n").slice(-40).join("\n");
-  return { ok: false, error: `${command} ${args.join(" ")} failed:\n${text}` };
-}
-
 /** Exports a revision into a new directory and returns the directory. */
-async function exportRevision(revision: string): Promise<Res<string>> {
+async function exportRevisionTree(revision: string): Promise<Res<string>> {
   const tree = await Deno.makeTempDir({ prefix: "effektive-compare-" });
   const archive = `${tree}.tar`;
   try {
-    const archived = await run(
-      "git",
-      ["archive", "-o", archive, revision],
-      ROOT,
-    );
-    const unpacked = archived.ok
-      ? await run("tar", ["-xf", archive, "-C", tree], ROOT)
-      : archived;
-    if (unpacked.ok) return { ok: true, value: tree };
+    const exported = await exportRevision(revision, {
+      archive,
+      destinations: [tree],
+      failure: "tail",
+    });
+    if (exported.ok) return { ok: true, value: tree };
     await Deno.remove(tree, { recursive: true });
-    return { ok: false, error: `cannot export ${revision}: ${unpacked.error}` };
+    return { ok: false, error: `cannot export ${revision}: ${exported.error}` };
   } finally {
     await Deno.remove(archive).catch(() => {});
   }
@@ -326,7 +304,7 @@ const trees = new Map<string, Promise<Res<string>>>();
 function treeOf(revision: string): Promise<Res<string>> {
   let tree = trees.get(revision);
   if (tree === undefined) {
-    tree = exportRevision(revision);
+    tree = exportRevisionTree(revision);
     trees.set(revision, tree);
   }
   return tree;
@@ -346,7 +324,7 @@ const realDeps: Deps = {
     const copy = `${tree.value}/scripts/behavior_corpus.ts`;
     await Deno.writeTextFile(copy, runner);
     const out = `${tree.value}/behavior.records.${runCount++}.json`;
-    const ran = await run(
+    const ran = await runChecked(
       "deno",
       [
         "run",
@@ -361,7 +339,8 @@ const realDeps: Deps = {
         out,
         ...only.flatMap((p) => ["--only", p]),
       ],
-      tree.value,
+      "tail",
+      { cwd: tree.value },
     );
     if (!ran.ok) {
       return { ok: false, error: `run at ${revision}: ${ran.error}` };

@@ -9,6 +9,7 @@
 // refactor of the lexer must not run it.
 
 import { lex, type Lexed } from "../src/core/lex.ts";
+import { prettyJson } from "./lib.ts";
 
 /** The number of random strings. */
 export const RANDOM_COUNT = 20_000;
@@ -105,7 +106,7 @@ if (import.meta.main) {
   const snapshot = buildSnapshot(randomInputs());
   const target = new URL("fixtures/lex/snapshot.json", root);
   await Deno.mkdir(new URL("./", target), { recursive: true });
-  await Deno.writeTextFile(target, JSON.stringify(snapshot, null, 2) + "\n");
+  await Deno.writeTextFile(target, prettyJson(snapshot));
   console.log(
     `wrote fixtures/lex/snapshot.json: ${snapshot.randomCount} random inputs`,
   );

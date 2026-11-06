@@ -4,6 +4,7 @@
 // after a deliberate change of the command-line output or the server replies.
 
 import { cliRecords, lspRecords } from "../tests/surface_cases.ts";
+import { prettyJson } from "./lib.ts";
 
 const directory = new URL("../fixtures/surface/", import.meta.url);
 Deno.mkdirSync(directory, { recursive: true });
@@ -14,7 +15,7 @@ const files: readonly (readonly [string, unknown])[] = [
 for (const [name, records] of files) {
   Deno.writeTextFileSync(
     new URL(name, directory),
-    JSON.stringify(records, null, 2) + "\n",
+    prettyJson(records),
   );
   console.log(`wrote fixtures/surface/${name}`);
 }

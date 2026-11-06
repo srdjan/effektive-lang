@@ -8,10 +8,10 @@
 // It exits 2 when the version argument is missing. It never commits and never
 // pushes: the maintainer commits with the subject `vX.Y.Z` and pushes.
 
-import { dirname, fromFileUrl, join } from "@std/path";
+import { join } from "@std/path";
 import type { Result } from "../src/core/mod.ts";
+import { ROOT, runProcess } from "./lib.ts";
 
-const ROOT = join(dirname(fromFileUrl(import.meta.url)), "..");
 const VERSION_TEXT = /^\d+\.\d+\.\d+$/;
 const CONFIG_VERSION = /^( {2}"version": ")(\d+\.\d+\.\d+)(")/m;
 const UNRELEASED = "## Unreleased\n";
@@ -112,23 +112,20 @@ function describe(error: ReleaseError): string {
 }
 
 async function git(args: string[]): Promise<string> {
-  const output = await new Deno.Command("git", {
-    args,
+  const output = await runProcess("git", args, {
     cwd: ROOT,
-    stdout: "piped",
     stderr: "inherit",
-  }).output();
-  return new TextDecoder().decode(output.stdout);
+  });
+  return output.stdout;
 }
 
 /** Runs one `deno task` and returns true when it exits 0. */
 async function runTask(name: string): Promise<boolean> {
-  const output = await new Deno.Command("deno", {
-    args: ["task", name],
+  const output = await runProcess("deno", ["task", name], {
     cwd: ROOT,
     stdout: "inherit",
     stderr: "inherit",
-  }).output();
+  });
   return output.success;
 }
 

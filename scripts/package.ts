@@ -1,9 +1,10 @@
 // Local release artifacts. ZIP entries use a fixed DOS date and sorted names,
 // so identical source and locked dependencies produce identical VSIX bytes.
-import { dirname, fromFileUrl, join, resolve } from "@std/path";
+import { join, resolve } from "@std/path";
+import { errorMessage } from "../src/core/mod.ts";
+import { prettyJson, ROOT, runProcess } from "./lib.ts";
 
 export const REQUIRED_DENO_VERSION = "2.9.8";
-const ROOT = resolve(dirname(fromFileUrl(import.meta.url)), "..");
 const encoder = new TextEncoder();
 
 /** The release version. `deno.json` is its only source. */
@@ -17,9 +18,7 @@ export function releaseVersion(denoJson: string): string {
 
 /** The extension manifest with the release version written into it. */
 export function releaseManifest(packageJson: string, version: string): string {
-  return `${
-    JSON.stringify({ ...JSON.parse(packageJson), version }, null, 2)
-  }\n`;
+  return prettyJson({ ...JSON.parse(packageJson), version });
 }
 
 async function command(
@@ -27,19 +26,12 @@ async function command(
   args: string[],
   cwd = ROOT,
 ): Promise<void> {
-  const result = await new Deno.Command(name, {
-    args,
+  const result = await runProcess(name, args, {
     cwd,
-    stdout: "piped",
-    stderr: "piped",
     env: { NO_COLOR: "1" },
-  }).output();
+  });
   if (!result.success) {
-    throw new Error(
-      `${name} ${args.join(" ")} failed:\n${
-        new TextDecoder().decode(result.stderr)
-      }`,
-    );
+    throw new Error(`${name} ${args.join(" ")} failed:\n${result.stderr}`);
   }
 }
 
@@ -244,7 +236,7 @@ if (import.meta.main) {
       const path of await packageRelease(Deno.args[0] ?? join(ROOT, "dist"))
     ) console.log(path);
   } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
+    console.error(errorMessage(error));
     Deno.exit(1);
   }
 }

@@ -95,6 +95,10 @@ async function lay(
   await Deno.mkdir(`${dir}/scripts`, { recursive: true });
   const tool = new URL("../scripts/mutate.ts", import.meta.url);
   await Deno.copyFile(tool, `${dir}/scripts/mutate.ts`);
+  await Deno.copyFile(
+    new URL("../scripts/lib.ts", import.meta.url),
+    `${dir}/scripts/lib.ts`,
+  );
   for (const name of ["deno.json", "deno.lock"]) {
     await Deno.copyFile(
       new URL(`../${name}`, import.meta.url),

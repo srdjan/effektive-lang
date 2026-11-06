@@ -8,9 +8,9 @@
 // "failed to copy esbuild binary". So one bundle of a stub installs esbuild
 // first. A failed warm-up prints its error, and the tests then run as before.
 
-const denoDir = Deno.makeTempDirSync({ prefix: "effektive-slow-deno-dir-" });
-let code = 1;
-try {
+import { withTempDir } from "./lib.ts";
+
+const code = await withTempDir("effektive-slow-deno-dir-", async (denoDir) => {
   const stub = `${denoDir}/warm-up.ts`;
   Deno.writeTextFileSync(stub, "export {};\n");
   const warmUp = await new Deno.Command(Deno.execPath(), {
@@ -42,8 +42,6 @@ try {
     ],
     env: { DENO_DIR: denoDir },
   }).spawn();
-  code = (await child.status).code;
-} finally {
-  Deno.removeSync(denoDir, { recursive: true });
-}
+  return (await child.status).code;
+});
 Deno.exit(code);

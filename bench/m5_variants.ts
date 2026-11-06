@@ -22,8 +22,8 @@
 
 import { type M5Error, type Target, writeTarget } from "./m5_target.ts";
 import { EFFECT_VERSION, TARGET_COMPILER_OPTIONS } from "../src/cli/tsc.ts";
-import { errorMessage } from "../src/core/mod.ts";
-import type { Result } from "../src/core/source.ts";
+import { errorMessage, type Result } from "../src/core/mod.ts";
+import { runProcess, withTempDir } from "../scripts/lib.ts";
 import type { Pair } from "./stats.ts";
 
 /** The pinned tool versions. The first run needs network access to fetch them. */
@@ -61,8 +61,6 @@ export const VARIANT_NAMES = {
 } as const;
 
 // ------------------------------------------------------------------ helpers
-
-const decoder = new TextDecoder();
 
 function firstLines(text: string, count: number): string {
   return text.trim().split("\n").slice(0, count).join(" | ");
@@ -112,19 +110,16 @@ async function runDeno(
 ): Promise<Result<ToolRun, string>> {
   try {
     const start = performance.now();
-    const output = await new Deno.Command("deno", {
-      args: [...args],
+    const output = await runProcess("deno", args, {
       cwd,
       env: { NO_COLOR: "1" },
-      stdout: "piped",
-      stderr: "piped",
-    }).output();
+    });
     return {
       ok: true,
       value: {
         code: output.code,
-        stderr: decoder.decode(output.stderr),
-        stdout: decoder.decode(output.stdout),
+        stderr: output.stderr,
+        stdout: output.stdout,
         elapsed: performance.now() - start,
       },
     };
@@ -329,7 +324,18 @@ export async function runVariants(
   targets: readonly Target[],
   config: VariantConfig,
 ): Promise<Result<VariantOutcome, M5Error>> {
-  const workspace = Deno.makeTempDirSync({ prefix: "effektive-bench-ws-" });
+  return await withTempDir(
+    "effektive-bench-ws-",
+    (workspace) => runVariantsIn(workspace, targets, config),
+    { tolerateRemoveFailure: true },
+  );
+}
+
+async function runVariantsIn(
+  workspace: string,
+  targets: readonly Target[],
+  config: VariantConfig,
+): Promise<Result<VariantOutcome, M5Error>> {
   const results: VariantResult[] = [];
   const skipped: Skipped[] = [];
   const skipAll = (reason: string): Result<VariantOutcome, M5Error> => ({
@@ -342,146 +348,138 @@ export async function runVariants(
       })),
     },
   });
-  try {
-    Deno.writeTextFileSync(`${workspace}/package.json`, PACKAGE_JSON);
-    const install = await runDeno(["install", "--no-lock"], workspace);
-    if (!install.ok) {
-      return skipAll(`cannot run deno install: ${install.error}`);
+  Deno.writeTextFileSync(`${workspace}/package.json`, PACKAGE_JSON);
+  const install = await runDeno(["install", "--no-lock"], workspace);
+  if (!install.ok) {
+    return skipAll(`cannot run deno install: ${install.error}`);
+  }
+  if (install.value.code !== 0) {
+    return skipAll(
+      `deno install failed (a first run needs network access): ${
+        firstLines(install.value.stderr, 3)
+      }`,
+    );
+  }
+  const modules = `${workspace}/node_modules`;
+  const scripts = {
+    tsc: `${modules}/typescript/bin/tsc`,
+    tsgo: `${modules}/@typescript/native-preview/lib/tsgo.js`,
+  };
+  const ts = await loadTypeScript();
+  const stamp = `${Date.now()}-${Deno.pid}`;
+
+  for (const [key, script] of Object.entries(scripts)) {
+    const name = key === "tsc" ? VARIANT_NAMES.tsc : VARIANT_NAMES.tsgo;
+    if (!exists(script)) {
+      skipped.push({ variant: name, reason: `${script} is missing` });
     }
-    if (install.value.code !== 0) {
-      return skipAll(
-        `deno install failed (a first run needs network access): ${
-          firstLines(install.value.stderr, 3)
-        }`,
+  }
+  if (!ts.ok) {
+    skipped.push({ variant: VARIANT_NAMES.service, reason: ts.error });
+  }
+  const failed = new Set<string>();
+
+  for (const [index, target] of targets.entries()) {
+    const directory = `${workspace}/target-${index}`;
+    Deno.mkdirSync(directory, { recursive: true });
+    Deno.writeTextFileSync(`${directory}/tsconfig.json`, TSCONFIG);
+    writeTarget(directory, target, "initial");
+
+    const runs: [string, string, Sampler | undefined][] = [
+      [
+        "tsc",
+        VARIANT_NAMES.tsc,
+        exists(scripts.tsc)
+          ? processSampler(directory, target, scripts.tsc)
+          : undefined,
+      ],
+      [
+        "tsgo",
+        VARIANT_NAMES.tsgo,
+        exists(scripts.tsgo)
+          ? processSampler(directory, target, scripts.tsgo)
+          : undefined,
+      ],
+    ];
+    for (const [, name, sampler] of runs) {
+      if (sampler === undefined || failed.has(name)) continue;
+      const measured = await sampleVariant(
+        sampler,
+        config,
+        name,
+        target.name,
+        stamp,
       );
-    }
-    const modules = `${workspace}/node_modules`;
-    const scripts = {
-      tsc: `${modules}/typescript/bin/tsc`,
-      tsgo: `${modules}/@typescript/native-preview/lib/tsgo.js`,
-    };
-    const ts = await loadTypeScript();
-    const stamp = `${Date.now()}-${Deno.pid}`;
-
-    for (const [key, script] of Object.entries(scripts)) {
-      const name = key === "tsc" ? VARIANT_NAMES.tsc : VARIANT_NAMES.tsgo;
-      if (!exists(script)) {
-        skipped.push({ variant: name, reason: `${script} is missing` });
+      if (measured.ok) results.push(measured.value);
+      else {
+        failed.add(name);
+        skipped.push({
+          variant: name,
+          reason: `${target.name}: ${measured.error}`,
+        });
       }
     }
-    if (!ts.ok) {
-      skipped.push({ variant: VARIANT_NAMES.service, reason: ts.error });
-    }
-    const failed = new Set<string>();
 
-    for (const [index, target] of targets.entries()) {
-      const directory = `${workspace}/target-${index}`;
-      Deno.mkdirSync(directory, { recursive: true });
-      Deno.writeTextFileSync(`${directory}/tsconfig.json`, TSCONFIG);
-      writeTarget(directory, target, "initial");
-
-      const runs: [string, string, Sampler | undefined][] = [
-        [
-          "tsc",
-          VARIANT_NAMES.tsc,
-          exists(scripts.tsc)
-            ? processSampler(directory, target, scripts.tsc)
-            : undefined,
-        ],
-        [
-          "tsgo",
-          VARIANT_NAMES.tsgo,
-          exists(scripts.tsgo)
-            ? processSampler(directory, target, scripts.tsgo)
-            : undefined,
-        ],
+    if (ts.ok && !failed.has(VARIANT_NAMES.service)) {
+      const services = [
+        createService(ts.value, directory, target),
+        createService(ts.value, directory, target),
       ];
-      for (const [, name, sampler] of runs) {
-        if (sampler === undefined || failed.has(name)) continue;
-        const measured = await sampleVariant(
-          sampler,
-          config,
-          name,
-          target.name,
-          stamp,
-        );
-        if (measured.ok) results.push(measured.value);
-        else {
-          failed.add(name);
-          skipped.push({
-            variant: name,
-            reason: `${target.name}: ${measured.error}`,
-          });
-        }
-      }
-
-      if (ts.ok && !failed.has(VARIANT_NAMES.service)) {
-        const services = [
-          createService(ts.value, directory, target),
-          createService(ts.value, directory, target),
-        ];
-        const [a, b] = services;
-        if (a === undefined || b === undefined || !a.ok || !b.ok) {
+      const [a, b] = services;
+      if (a === undefined || b === undefined || !a.ok || !b.ok) {
+        failed.add(VARIANT_NAMES.service);
+        skipped.push({
+          variant: VARIANT_NAMES.service,
+          reason: `${target.name}: ${
+            [a, b].map((s) => (s !== undefined && !s.ok ? s.error : ""))
+              .join("")
+          }`,
+        });
+      } else {
+        // The first call builds the program and loads every library file.
+        const first = a.value.check(`${stamp}-first`);
+        const firstB = b.value.check(`${stamp}-first`);
+        if (!first.ok || !firstB.ok) {
           failed.add(VARIANT_NAMES.service);
           skipped.push({
             variant: VARIANT_NAMES.service,
             reason: `${target.name}: ${
-              [a, b].map((s) => (s !== undefined && !s.ok ? s.error : ""))
-                .join("")
+              !first.ok ? first.error : !firstB.ok ? firstB.error : ""
             }`,
           });
         } else {
-          // The first call builds the program and loads every library file.
-          const first = a.value.check(`${stamp}-first`);
-          const firstB = b.value.check(`${stamp}-first`);
-          if (!first.ok || !firstB.ok) {
+          let turn = 0;
+          const sides = [a.value, b.value];
+          // Each call of the sampler runs the next side. The pair order alternates.
+          const sampler: Sampler = (mark) => {
+            const side = sides[turn++ % 2];
+            return Promise.resolve(
+              side === undefined
+                ? { ok: false, error: "no side" }
+                : side.check(mark),
+            );
+          };
+          const measured = await sampleVariant(
+            sampler,
+            { ...config, warmups: 0 },
+            VARIANT_NAMES.service,
+            target.name,
+            stamp,
+          );
+          if (measured.ok) {
+            results.push({ ...measured.value, firstCall: first.value });
+          } else {
             failed.add(VARIANT_NAMES.service);
             skipped.push({
               variant: VARIANT_NAMES.service,
-              reason: `${target.name}: ${
-                !first.ok ? first.error : !firstB.ok ? firstB.error : ""
-              }`,
+              reason: `${target.name}: ${measured.error}`,
             });
-          } else {
-            let turn = 0;
-            const sides = [a.value, b.value];
-            // Each call of the sampler runs the next side. The pair order alternates.
-            const sampler: Sampler = (mark) => {
-              const side = sides[turn++ % 2];
-              return Promise.resolve(
-                side === undefined
-                  ? { ok: false, error: "no side" }
-                  : side.check(mark),
-              );
-            };
-            const measured = await sampleVariant(
-              sampler,
-              { ...config, warmups: 0 },
-              VARIANT_NAMES.service,
-              target.name,
-              stamp,
-            );
-            if (measured.ok) {
-              results.push({ ...measured.value, firstCall: first.value });
-            } else {
-              failed.add(VARIANT_NAMES.service);
-              skipped.push({
-                variant: VARIANT_NAMES.service,
-                reason: `${target.name}: ${measured.error}`,
-              });
-            }
           }
-          a.value.dispose();
-          b.value.dispose();
         }
+        a.value.dispose();
+        b.value.dispose();
       }
     }
-    return { ok: true, value: { results, skipped } };
-  } finally {
-    try {
-      Deno.removeSync(workspace, { recursive: true });
-    } catch {
-      // The system removes the temporary directory later.
-    }
   }
+  return { ok: true, value: { results, skipped } };
 }

@@ -8,7 +8,8 @@
 // `LspClientError`, a tagged error with a clear message.
 
 import { errorMessage } from "../src/core/mod.ts";
-import { fromFileUrl, join } from "@std/path";
+import { join } from "@std/path";
+import { ROOT } from "../scripts/lib.ts";
 import {
   encodeMessage,
   FrameDecoder,
@@ -19,8 +20,6 @@ import {
 import { pathToUri } from "../src/lsp/positions.ts";
 
 type Timer = ReturnType<typeof setTimeout>;
-
-const REPOSITORY = fromFileUrl(new URL("../", import.meta.url));
 
 /** The default time limit of a request, a wait, or the exit, in milliseconds. */
 export const DEFAULT_TIMEOUT_MS = 60_000;
@@ -105,8 +104,8 @@ export class LspClient {
         "--allow-read",
         "--allow-write",
         "--config",
-        join(REPOSITORY, "deno.json"),
-        join(REPOSITORY, "src/lsp/main.ts"),
+        join(ROOT, "deno.json"),
+        join(ROOT, "src/lsp/main.ts"),
       ],
       ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
       stdin: "piped",

@@ -12,9 +12,9 @@
 // the first line is the one that counts. The match is textual, so a rejection
 // that goes through another helper is not listed.
 
-import { dirname, fromFileUrl, join, relative } from "@std/path";
+import { fromFileUrl, join, relative } from "@std/path";
+import { fastSuiteArgs, ROOT, runProcess, withTempDir } from "./lib.ts";
 
-const ROOT = join(dirname(fromFileUrl(import.meta.url)), "..");
 const VALIDATE_DIR = "src/core/validate/";
 const REJECTION =
   /(?<![\w.])(?:this\.ctx\.report|ctx\.report|report|this|c)\.(?:addDepth|add)\(/;
@@ -84,32 +84,19 @@ export function unfiredExitCode(formatted: readonly string[]): number {
 async function run(
   args: string[],
 ): Promise<{ ok: boolean; stdout: string; stderr: string }> {
-  const output = await new Deno.Command("deno", {
-    args,
-    cwd: ROOT,
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  const decoder = new TextDecoder();
-  return {
-    ok: output.success,
-    stdout: decoder.decode(output.stdout),
-    stderr: decoder.decode(output.stderr),
-  };
+  const output = await runProcess("deno", args, { cwd: ROOT });
+  return { ok: output.success, stdout: output.stdout, stderr: output.stderr };
 }
 
 async function main(): Promise<number> {
-  const dir = await Deno.makeTempDir({ prefix: "rules-unfired-" });
-  try {
+  return await withTempDir("rules-unfired-", async (dir) => {
     const suite = await run([
       "test",
-      "--allow-read",
-      "--parallel",
-      "--ignore=**/*_slow_test.ts",
-      // The floors in deno.json are for the whole project, not for this suite.
-      "--coverage-raw-data-only",
-      `--coverage=${dir}`,
-      "tests/",
+      ...fastSuiteArgs([
+        // The floors in deno.json are for the whole project, not for this suite.
+        "--coverage-raw-data-only",
+        `--coverage=${dir}`,
+      ]),
     ]);
     if (!suite.ok) {
       console.error(
@@ -145,9 +132,7 @@ async function main(): Promise<number> {
     const formatted = formatUnfired(uncovered, sources);
     console.log(formatted.join("\n"));
     return unfiredExitCode(formatted);
-  } finally {
-    await Deno.remove(dir, { recursive: true });
-  }
+  });
 }
 
 if (import.meta.main) Deno.exit(await main());
