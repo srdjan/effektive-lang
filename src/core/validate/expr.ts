@@ -357,8 +357,62 @@ export class BodyValidator implements ValidatorCore {
       case "match":
         expression.arms.forEach((arm) => this.markCheckedRaw(arm.body));
         return;
-      default:
+      case "literal":
+      case "null":
+      case "reference":
+      case "get":
+      case "nominal":
+      case "none":
+      case "error":
+      case "closure":
+      case "call":
+      case "defer":
+      case "run":
+      case "scoped":
+      case "fork-scoped":
+      case "with-resource":
+      case "unfold":
+      case "map-effect":
+      case "map-stream":
+      case "sink-for-each":
+      case "take-sink":
+      case "transduce-stream":
+      case "run-stream":
+      case "buffer-stream":
+      case "race":
+      case "race-all":
+      case "make-ref":
+      case "get-ref":
+      case "set-ref":
+      case "update-ref":
+      case "layer":
+      case "merge-layers":
+      case "retry-schedule":
+      case "retry-with-schedule":
+      case "schema":
+      case "schema-decode":
+      case "schema-encode":
+      case "schema-make":
+      case "perform":
+      case "fail":
+      case "catch":
+      case "ensure":
+      case "retry":
+      case "timeout":
+      case "repeat":
+      case "sleep":
+      case "now":
+      case "log":
+      case "random":
+      case "random-int":
+      case "uninterruptible":
+      case "provide":
+      case "binary":
         return;
+      default: {
+        const unreachable: never = expression;
+        return unreachable;
+      }
     }
   }
 
