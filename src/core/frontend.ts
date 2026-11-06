@@ -59,7 +59,14 @@ export {
 export type { Diagnostic, DiagnosticCode, Severity } from "./diagnostics.ts";
 
 // The lexer and the prelude names, for the highlighter of the playground.
-export { KEYWORDS, lex, TokenKind, TriviaKind } from "./lex.ts";
+export {
+  contextualWordsOf,
+  isKeywordKind,
+  KEYWORDS,
+  lex,
+  TokenKind,
+  TriviaKind,
+} from "./lex.ts";
 export { BUILTIN_TYPE_NAMES, PRELUDE_NAMES } from "./resolve.ts";
 
 // The IR types.

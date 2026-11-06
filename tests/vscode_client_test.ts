@@ -8,6 +8,7 @@ import {
 } from "../scripts/package.ts";
 import {
   BUILTIN_TYPE_NAMES,
+  contextualWordsOf,
   generatedPathOf,
   KEYWORDS,
   PRELUDE_NAMES,
@@ -149,14 +150,9 @@ Deno.test("the grammar names the scope and every lexer keyword", () => {
     ...KEYWORDS.keys(),
     ...PRELUDE_NAMES,
     ...BUILTIN_TYPE_NAMES,
-    // Contextual words of the parser.
-    "type",
-    "error",
-    "service",
-    "provider",
-    "provides",
-    "fails",
-    "with",
+    // Contextual words that the grammar matches as a bare word. The modifiers
+    // and the positional words need a lookahead, so a bare token does not match.
+    ...contextualWordsOf("declaration", "clause"),
     "from",
   ];
   const matchers = collectMatches(grammar).map((match) => new RegExp(match));

@@ -22,10 +22,15 @@ import {
   normalizeDiagnostics,
 } from "./diagnostics.ts";
 import {
+  type ContextualWord,
   describeTokenKind,
+  isDeclarationStartWord,
+  isKeywordKind,
   isWord,
   lex,
   type Lexed,
+  PARSER_CHECKED_WORDS,
+  type ParserCheckedWord,
   TokenKind,
 } from "./lex.ts";
 import { fileModeOf } from "./paths.ts";
@@ -63,20 +68,6 @@ type Group = { readonly sig: boolean; readonly unmatched: number };
 
 /** Deepest nesting of expressions and types that the parser accepts. A parenthesis counts twice. */
 const MAX_NESTING = 512;
-
-const DECL_WORDS: ReadonlySet<string> = new Set([
-  "type",
-  "opaque",
-  "error",
-  "sealed",
-  "service",
-  "provider",
-]);
-
-function isKeywordKind(k: TokenKind): boolean {
-  return k >= TokenKind.KwImport && k <= TokenKind.KwNull ||
-    k === TokenKind.KwFinally || k === TokenKind.KwWith;
-}
 
 function binaryPrecedence(k: TokenKind): number {
   switch (k) {
@@ -371,10 +362,7 @@ class Parser {
   }
 
   private isDeclarationWord(p: number): boolean {
-    if (this.kinds[p] !== TokenKind.Ident) return false;
-    const len = this.ends[p] - this.starts[p];
-    if (len < 4 || len > 8) return false;
-    return DECL_WORDS.has(this.text.slice(this.starts[p], this.ends[p]));
+    return isDeclarationStartWord(this.lexed, p);
   }
 
   /** True when the contextual word `imports` starts a service import. */
@@ -384,21 +372,20 @@ class Parser {
       this.kinds[p + 1] === TokenKind.Ident;
   }
 
-  private isWordAt(p: number, word: string): boolean {
+  private isWordAt(
+    p: number,
+    word: ContextualWord | ParserCheckedWord | "_",
+  ): boolean {
     return isWord(this.lexed, p, word);
   }
 
   /** `void` or `while` at `p`: the reserved words that the lexer leaves to the parser. */
-  private parserCheckedWordAt(p: number): "void" | "while" | undefined {
-    return this.isWordAt(p, "void")
-      ? "void"
-      : this.isWordAt(p, "while")
-      ? "while"
-      : undefined;
+  private parserCheckedWordAt(p: number): ParserCheckedWord | undefined {
+    return PARSER_CHECKED_WORDS.find((word) => this.isWordAt(p, word));
   }
 
   /** True when `fails` starts a clause here, possibly after newlines. */
-  private clauseAhead(word: string): boolean {
+  private clauseAhead(word: ContextualWord): boolean {
     const p = this.laPos();
     return this.isWordAt(p, word) && this.kinds[p + 1] === TokenKind.Ident;
   }

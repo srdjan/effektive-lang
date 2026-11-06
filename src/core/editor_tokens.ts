@@ -2,7 +2,13 @@ import type { Revision } from "./db.ts";
 import type { FileIndex } from "./declaration_index.ts";
 import type { Diagnostic } from "./diagnostics.ts";
 import { symbolIndex, type SymbolOccurrence } from "./editor_index.ts";
-import { lex, TokenKind, TriviaKind } from "./lex.ts";
+import {
+  contextualWordsOf,
+  isKeywordKind,
+  lex,
+  TokenKind,
+  TriviaKind,
+} from "./lex.ts";
 import { parseFileFresh } from "./project.ts";
 import type { Span } from "./source.ts";
 
@@ -51,20 +57,13 @@ function serviceImportKeywordStarts(
   );
 }
 
-const contextualKeywords = new Set([
-  "where",
-  "type",
-  "error",
-  "sealed",
-  "service",
-  "provider",
-  "opaque",
-  "fails",
-  "provides",
-  "borrow",
-  "pure",
-  "using",
-]);
+/** Every contextual word except the import words: `imports` has its own rule, and `from` stays a name. */
+const contextualKeywords = contextualWordsOf(
+  "declaration",
+  "modifier",
+  "clause",
+  "positional",
+);
 
 function resolvedKind(
   revision: Revision,
@@ -163,8 +162,7 @@ export function semanticClassifications(
     ) {
       output.push({ span, type: "keyword", modifiers: [] });
     } else if (
-      kind >= TokenKind.KwImport && kind <= TokenKind.KwNull ||
-      kind === TokenKind.KwFinally || kind === TokenKind.KwWith ||
+      isKeywordKind(kind) ||
       kind === TokenKind.Ident &&
         contextualKeywords.has(text.slice(span.start, span.end))
     ) output.push({ span, type: "keyword", modifiers: [] });

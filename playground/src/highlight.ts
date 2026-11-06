@@ -9,12 +9,13 @@
 
 import {
   BUILTIN_TYPE_NAMES,
-  KEYWORDS,
+  contextualWordsOf,
+  isKeywordKind,
   lex,
   PRELUDE_NAMES,
   TokenKind,
   TriviaKind,
-} from "../../src/core/mod.ts";
+} from "../../src/core/frontend.ts";
 
 export type HighlightKind =
   | "keyword"
@@ -33,17 +34,15 @@ interface HighlightRange {
 }
 
 /** Words that are keywords at the start of a line or after `export`. */
-const DECLARATION_WORDS: ReadonlySet<string> = new Set([
-  "type",
-  "error",
-  "service",
-  "provider",
-]);
+const DECLARATION_WORDS: ReadonlySet<string> = contextualWordsOf("declaration");
 
-/** Words that are keywords wherever they appear as a name. */
+/**
+ * Words that are keywords wherever they appear as a name: the clause words and
+ * `from`. The positional words `where` and `using`, the modifiers, and `imports`
+ * have their own rules below.
+ */
 const CLAUSE_WORDS: ReadonlySet<string> = new Set([
-  "fails",
-  "provides",
+  ...contextualWordsOf("clause"),
   "from",
 ]);
 
@@ -67,8 +66,6 @@ const OPERATORS: ReadonlySet<TokenKind> = new Set([
   TokenKind.Slash,
   TokenKind.Bang,
 ]);
-
-const KEYWORD_KINDS: ReadonlySet<TokenKind> = new Set(KEYWORDS.values());
 
 function isCapitalized(word: string): boolean {
   const first = word.charCodeAt(0);
@@ -156,7 +153,7 @@ export function highlightTokens(text: string): HighlightRange[] {
     const from = lexed.starts[i];
     const to = lexed.ends[i];
     let result: HighlightKind | undefined;
-    if (KEYWORD_KINDS.has(kind)) {
+    if (isKeywordKind(kind)) {
       result = "keyword";
     } else if (kind === TokenKind.String) {
       result = "string";

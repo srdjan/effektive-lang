@@ -1,6 +1,7 @@
 // Resolver identities and declaration anchors shared by editor queries. The
 // cache belongs to a Revision; retaining a Program does not retain old indices.
 import type { Revision } from "./db.ts";
+import { isIdentifier } from "./lex.ts";
 import { methodOfCapability, serviceOfCapability } from "./ids.ts";
 import { type Target, targetText } from "./resolve.ts";
 import type { Span } from "./source.ts";
@@ -121,7 +122,7 @@ export function symbolIndex(revision: Revision): SymbolIndex {
       const text = tree.text.slice(span.start, span.end);
       // FieldExpr/QualifiedName also carry capability identities. Their Name
       // children own the editable token; never edit the entire S.method span.
-      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(text)) continue;
+      if (!isIdentifier(text)) continue;
       const identity = targetText(target);
       const key = `${span.start}:${span.end}:${identity}`;
       if (seen.has(key)) continue;

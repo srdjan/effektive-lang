@@ -102,6 +102,98 @@ export const KEYWORDS: ReadonlyMap<string, TokenKind> = new Map([
   ["with", TokenKind.KwWith],
 ]);
 
+/** The token kinds of the keyword table. The order of the enum does not matter. */
+const KEYWORD_KINDS: ReadonlySet<TokenKind> = new Set(KEYWORDS.values());
+
+/** True when `kind` is a keyword token kind. */
+export function isKeywordKind(kind: TokenKind): boolean {
+  return KEYWORD_KINDS.has(kind);
+}
+
+/**
+ * How a contextual word is used. The lexer reads each of these words as a name.
+ * The parser, the editor queries, and the playground highlighter decide by
+ * position when the word acts as a keyword. Each of them reads the words of the
+ * roles it needs from this table.
+ *
+ * - `declaration`: names the declaration form (`type`, `error`, `service`, `provider`).
+ * - `modifier`: marks the declaration or the type that follows (`sealed`, `opaque`, `borrow`, `pure`).
+ * - `clause`: starts a clause of a header (`fails`, `provides`).
+ * - `positional`: a keyword only in one syntactic position (`where`, `using`).
+ * - `import`: belongs to an import header (`from`, `imports`).
+ *
+ * `startsDeclaration` marks the words that the parser accepts as the first
+ * word of a declaration when a name follows.
+ */
+export type ContextualRole =
+  | "declaration"
+  | "modifier"
+  | "clause"
+  | "positional"
+  | "import";
+
+interface ContextualWordInfo {
+  readonly role: ContextualRole;
+  readonly startsDeclaration: boolean;
+}
+
+export const CONTEXTUAL_WORDS = {
+  type: { role: "declaration", startsDeclaration: true },
+  error: { role: "declaration", startsDeclaration: true },
+  service: { role: "declaration", startsDeclaration: true },
+  provider: { role: "declaration", startsDeclaration: true },
+  sealed: { role: "modifier", startsDeclaration: true },
+  opaque: { role: "modifier", startsDeclaration: true },
+  borrow: { role: "modifier", startsDeclaration: false },
+  pure: { role: "modifier", startsDeclaration: false },
+  fails: { role: "clause", startsDeclaration: false },
+  provides: { role: "clause", startsDeclaration: false },
+  where: { role: "positional", startsDeclaration: false },
+  using: { role: "positional", startsDeclaration: false },
+  from: { role: "import", startsDeclaration: false },
+  imports: { role: "import", startsDeclaration: false },
+} as const satisfies Readonly<Record<string, ContextualWordInfo>>;
+
+export type ContextualWord = keyof typeof CONTEXTUAL_WORDS;
+
+const CONTEXTUAL_ENTRIES = Object.entries(CONTEXTUAL_WORDS) as readonly (
+  readonly [ContextualWord, ContextualWordInfo]
+)[];
+
+/** The contextual words that have one of `roles`, in table order. */
+export function contextualWordsOf(
+  ...roles: readonly ContextualRole[]
+): ReadonlySet<string> {
+  return new Set(
+    CONTEXTUAL_ENTRIES.filter(([, info]) => roles.includes(info.role))
+      .map(([word]) => word),
+  );
+}
+
+/** The words that can start a declaration when a name follows. */
+export const DECLARATION_START_WORDS: ReadonlySet<string> = new Set(
+  CONTEXTUAL_ENTRIES.filter(([, info]) => info.startsDeclaration)
+    .map(([word]) => word),
+);
+
+const DECLARATION_START_LENGTHS = [...DECLARATION_START_WORDS].map((word) =>
+  word.length
+);
+const DECLARATION_START_MIN = Math.min(...DECLARATION_START_LENGTHS);
+const DECLARATION_START_MAX = Math.max(...DECLARATION_START_LENGTHS);
+
+/** True when token `index` is an identifier that spells a declaration start word. */
+export function isDeclarationStartWord(lexed: Lexed, index: number): boolean {
+  if (lexed.kinds[index] !== TokenKind.Ident) return false;
+  const length = lexed.ends[index] - lexed.starts[index];
+  if (length < DECLARATION_START_MIN || length > DECLARATION_START_MAX) {
+    return false;
+  }
+  return DECLARATION_START_WORDS.has(
+    lexed.text.slice(lexed.starts[index], lexed.ends[index]),
+  );
+}
+
 /**
  * Words that a strict ES module reserves. An identifier with one of these
  * spellings is a `syntax` diagnostic, so the emitter never renames a source
@@ -109,7 +201,11 @@ export const KEYWORDS: ReadonlyMap<string, TokenKind> = new Map([
  * `while` stays valid as a record label (the `retry` option): the lexer skips
  * both and the parser checks them in the other positions.
  */
-const PARSER_CHECKED_WORDS: ReadonlySet<string> = new Set(["void", "while"]);
+export const PARSER_CHECKED_WORDS = ["void", "while"] as const;
+
+export type ParserCheckedWord = typeof PARSER_CHECKED_WORDS[number];
+
+const PARSER_CHECKED_SET: ReadonlySet<string> = new Set(PARSER_CHECKED_WORDS);
 
 const RESERVED_WORDS: ReadonlySet<string> = new Set([
   "break",
@@ -215,7 +311,7 @@ export function isWord(lexed: Lexed, index: number, word: string): boolean {
     lexed.text.startsWith(word, lexed.starts[index]);
 }
 
-function isIdentStart(c: number): boolean {
+export function isIdentStart(c: number): boolean {
   return (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) || c === 0x5f ||
     c === 0x24;
 }
@@ -224,8 +320,17 @@ function isDigit(c: number): boolean {
   return c >= 0x30 && c <= 0x39;
 }
 
-function isIdentPart(c: number): boolean {
+export function isIdentPart(c: number): boolean {
   return isIdentStart(c) || isDigit(c);
+}
+
+/** True when `text` has the shape of one identifier. */
+export function isIdentifier(text: string): boolean {
+  if (text.length === 0 || !isIdentStart(text.charCodeAt(0))) return false;
+  for (let i = 1; i < text.length; i++) {
+    if (!isIdentPart(text.charCodeAt(i))) return false;
+  }
+  return true;
 }
 
 function isHexDigit(c: number): boolean {
@@ -525,7 +630,7 @@ export function lex(source: string, text: string): Lexed {
       if (keyword !== undefined) {
         push(keyword, i, j);
       } else {
-        if (!PARSER_CHECKED_WORDS.has(word) && RESERVED_WORDS.has(word)) {
+        if (!PARSER_CHECKED_SET.has(word) && RESERVED_WORDS.has(word)) {
           report(
             "syntax/007",
             `\`${word}\` is a reserved word and cannot be a name`,

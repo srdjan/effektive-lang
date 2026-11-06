@@ -1,5 +1,5 @@
 import { isErrorId, isTypeId } from "./ids.ts";
-import { TokenKind } from "./lex.ts";
+import { isIdentPart, TokenKind } from "./lex.ts";
 import type { Revision } from "./db.ts";
 import { declarationOf, occurrenceAt, symbolIndex } from "./editor_index.ts";
 import { isTypeKind, kidsOf, nameTextOf } from "./syntax_queries.ts";
@@ -111,10 +111,10 @@ function siteAt(
 ): Site {
   const text = tree.text;
   let start = offset;
-  while (start > 0 && /[A-Za-z0-9_$]/.test(text[start - 1])) start--;
+  while (start > 0 && isIdentPart(text.charCodeAt(start - 1))) start--;
   const prefix = text.slice(start, offset);
   let end = offset;
-  while (end < text.length && /[A-Za-z0-9_$]/.test(text[end])) end++;
+  while (end < text.length && isIdentPart(text.charCodeAt(end))) end++;
   const span = { source: path, start, end };
   return {
     revision,
