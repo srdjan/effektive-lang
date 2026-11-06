@@ -390,7 +390,7 @@ Each row names the commits on `main` and the main-tree gate result.
 | UNU9 | `c1b4fc7`, `cbd0d69`, `d44a98f`, `242a1df`, and Opus fix `9212709` (the schema loads through `frontend.ts`; literal test values) | passed, 2919 fast and 285 slow tests; `logs:replay` exits 0 for the six fixture logs |
 | UNU11 | `19877bb`, `f60928f`, `eccf608`, `9b7edb7`, and Opus fix `7a4ae47` (the `writableModules` wrapper goes) | passed, 2919 fast and 285 slow tests |
 | UNU10 | `1995b63`, `0ff62a8`, `45acb4a`, `9b2fc2c`, `ef73b41` | passed, 2924 fast and 285 slow tests; browser check passed (see below) |
-| UNU7 | `f73d493`, `1e6d3d0`, `2c0b478`, `ab67ab2`, `ae03246` | passed, 2925 fast and 285 slow tests |
+| UNU7 | `f73d493`, `1e6d3d0`, `2c0b478`, `ab67ab2`, `ae03246` | passed, 2925 fast and 285 slow tests; `behavior:compare 30bb1d5 48b73d5` 0 changed records in every family |
 
 Decisions made at integration:
 
