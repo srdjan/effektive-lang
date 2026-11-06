@@ -1,11 +1,11 @@
 // Tests for the validator rejection sites that no other fast test fires.
 // Each row lowers a valid program, forges one fact of the IR payload, runs the
 // public entry `validateModule`, and requires the exact diagnostics. A row fails
-// if its site is deleted.
+// if its rejection is deleted.
 //
-// To add a row, append to ROWS. A row names the rejection site (`file:line` in
-// src/core/validate), the program it forges from, the module of that program,
-// a `change` function, and the literal diagnostics (`code path: message`).
+// To add a row, append to ROWS. A row names the forged fact, the program it
+// forges from, a `change` function, and the literal diagnostics
+// (`code path: message`).
 // Add a program to PROGRAMS when the existing programs lack the construct.
 
 import { assert, assertEquals } from "@std/assert";
@@ -237,8 +237,6 @@ function intLiteral(
 // ------------------------------------------------------------------ rows
 
 interface Row {
-  /** The rejection site: `file:line` under src/core/validate at the time of writing. */
-  readonly site: string;
   readonly name: string;
   readonly program: ProgramName;
   readonly change: (ir: ForgedIR) => void;
@@ -249,7 +247,6 @@ interface Row {
 const ROWS: readonly Row[] = [
   // ---------------------------------------------------------------- expr.ts
   {
-    site: "expr.ts:260",
     name: "a parameter identity that is not local",
     program: "core",
     change: (ir) => {
@@ -261,7 +258,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:469",
     name: "more borrow flags than parameters",
     program: "core",
     change: (ir) => {
@@ -274,7 +270,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:478",
     name: "a borrow flag in the type that the parameter lacks",
     program: "core",
     change: (ir) => {
@@ -285,7 +280,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:491",
     name: "a borrow parameter of a type that is not opaque",
     program: "core",
     change: (ir) => {
@@ -302,7 +296,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:499",
     name: "a borrow parameter whose type flag is false",
     program: "core",
     change: (ir) => {
@@ -315,7 +308,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:507",
     name: "a borrow function that returns a value that is not data",
     program: "core",
     change: (ir) => {
@@ -330,7 +322,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:551",
     name: "an inferred contract that omits a body failure",
     program: "core",
     change: (ir) => {
@@ -341,7 +332,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:731",
     name: "a Some value that does not fit the option element",
     program: "core",
     change: (ir) => {
@@ -356,7 +346,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:1121",
     name: "a tuple element that does not fit the tuple type",
     program: "core",
     change: (ir) => {
@@ -371,7 +360,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:1295",
     name: "an error construction of an undeclared error",
     program: "core",
     change: (ir) => {
@@ -382,7 +370,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "expr.ts:1598",
     name: "a generated capture marker that is false",
     program: "core",
     change: (ir) => {
@@ -397,7 +384,6 @@ const ROWS: readonly Row[] = [
   },
   // ---------------------------------------------------------------- scope.ts
   {
-    site: "scope.ts:39",
     name: "scoped over a value that is not an Effect",
     program: "core",
     change: (ir) => {
@@ -408,7 +394,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "scope.ts:60",
     name: "forkScoped over a job that is not an Effect",
     program: "core",
     change: (ir) => {
@@ -419,7 +404,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "scope.ts:64",
     name: "forkScoped over a job with typed failures",
     program: "core",
     change: (ir) => {
@@ -432,7 +416,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "scope.ts:144",
     name: "an acquired record that has no operations",
     program: "core",
     change: (ir) => {
@@ -448,7 +431,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "scope.ts:160",
     name: "an operation that returns a value that is not data",
     program: "core",
     change: (ir) => {
@@ -466,7 +448,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "scope.ts:265",
     name: "an outcome binding over a result that is not data",
     program: "core",
     change: (ir) => {
@@ -479,7 +460,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "scope.ts:341",
     name: "a release that does not accept the acquired handle",
     program: "core",
     change: (ir) => {
@@ -493,7 +473,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "scope.ts:362",
     name: "a release that does not return void",
     program: "core",
     change: (ir) => {
@@ -507,7 +486,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "scope.ts:370",
     name: "a use callback that does not return data",
     program: "core",
     change: (ir) => {
@@ -524,7 +502,6 @@ const ROWS: readonly Row[] = [
   },
   // ---------------------------------------------------------------- world.ts
   {
-    site: "world.ts:540",
     name: "a host interface method that exposes a refined type",
     program: "core",
     change: (ir) => {
@@ -535,7 +512,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:573",
     name: "a service method with a wrong capability identity",
     program: "core",
     change: (ir) => {
@@ -546,7 +522,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:581",
     name: "a service that declares a capability twice",
     program: "core",
     change: (ir) => {
@@ -560,7 +535,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:591",
     name: "a service method that claims checked entry validation",
     program: "core",
     change: (ir) => {
@@ -573,7 +547,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:600",
     name: "a service method with the wrong number of borrow flags",
     program: "core",
     change: (ir) => {
@@ -584,7 +557,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:610",
     name: "a service borrow parameter outside a host interface",
     program: "core",
     change: (ir) => {
@@ -595,7 +567,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:622",
     name: "a service borrow parameter of a type that is not opaque",
     program: "core",
     change: (ir) => {
@@ -606,7 +577,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:727",
     name: "a declaration with a wrong identity",
     program: "core",
     change: (ir) => {
@@ -617,7 +587,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:774",
     name: "an export that appears twice",
     program: "core",
     change: (ir) => {
@@ -628,7 +597,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:1142",
     name: "a builtin whose type is not a function",
     program: "core",
     change: (ir) => {
@@ -641,7 +609,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:1308",
     name: "an import payload that declares an identity twice",
     program: "core",
     change: (ir) => {
@@ -653,7 +620,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:1311",
     name: "a prelude payload that declares an identity of the module",
     program: "core",
     change: (ir) => {
@@ -668,7 +634,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:1363",
     name: "a prelude import with a type",
     program: "core",
     change: (ir) => {
@@ -679,7 +644,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:1371",
     name: "a prelude import that exports no builtin",
     program: "core",
     change: (ir) => {
@@ -690,7 +654,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "world.ts:1391",
     name: "a builtin name that differs from its identity",
     program: "core",
     change: (ir) => {
@@ -702,7 +665,6 @@ const ROWS: readonly Row[] = [
   },
   // ---------------------------------------------------------------- effect.ts
   {
-    site: "effect.ts:71",
     name: "a timeout duration that is not a Duration",
     program: "effects",
     change: (ir) => {
@@ -714,7 +676,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "effect.ts:207",
     name: "a retry schedule step that is not a function",
     program: "effects",
     change: (ir) => {
@@ -726,7 +687,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "effect.ts:217",
     name: "a retry schedule error parameter that is not a declared error",
     program: "effects",
     change: (ir) => {
@@ -741,7 +701,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "effect.ts:228",
     name: "a retry schedule attempt parameter that is not an int",
     program: "effects",
     change: (ir) => {
@@ -754,7 +713,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "effect.ts:236",
     name: "a retry schedule callback that is not pure",
     program: "effects",
     change: (ir) => {
@@ -767,7 +725,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "effect.ts:438",
     name: "run of a value that is not an Effect",
     program: "effects",
     change: (ir) => {
@@ -778,7 +735,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "effect.ts:471",
     name: "race of a value that is not an Effect",
     program: "effects",
     change: (ir) => {
@@ -790,7 +746,6 @@ const ROWS: readonly Row[] = [
   },
   // ---------------------------------------------------------------- layer.ts
   {
-    site: "layer.ts:32",
     name: "a layer of a service that is not declared",
     program: "effects",
     change: (ir) => {
@@ -803,7 +758,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "layer.ts:45",
     name: "a layer record with fewer fields than the service methods",
     program: "effects",
     change: (ir) => {
@@ -819,7 +773,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "layer.ts:59",
     name: "a layer method that does not fit its service contract",
     program: "effects",
     change: (ir) => {
@@ -835,7 +788,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "layer.ts:69",
     name: "a layer acquisition that requires a method it provides",
     program: "effects",
     change: (ir) => {
@@ -850,7 +802,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "layer.ts:93",
     name: "mergeLayers of a value that is not a Layer",
     program: "effects",
     change: (ir) => {
@@ -865,7 +816,6 @@ const ROWS: readonly Row[] = [
   },
   // ---------------------------------------------------------------- families
   {
-    site: "ref.ts:33",
     name: "a getRef over a value that is not a Ref",
     program: "families",
     change: (ir) => {
@@ -876,7 +826,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "ref.ts:42",
     name: "a setRef of a value that does not fit the Ref element",
     program: "families",
     change: (ir) => {
@@ -887,7 +836,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "ref.ts:58",
     name: "an updateRef whose callback is not a function",
     program: "families",
     change: (ir) => {
@@ -901,7 +849,6 @@ const ROWS: readonly Row[] = [
     ],
   },
   {
-    site: "schema.ts:941",
     name: "a schemaDecode over a value that is not a Schema",
     program: "families",
     change: (ir) => {
@@ -916,7 +863,6 @@ const ROWS: readonly Row[] = [
   },
   // ---------------------------------------------------------------- serialization.ts
   {
-    site: "serialization.ts:152",
     name: "a span without an end offset",
     program: "core",
     change: (ir) => {
@@ -929,7 +875,7 @@ const ROWS: readonly Row[] = [
 ];
 
 for (const row of ROWS) {
-  Deno.test(`rejection ${row.site}: ${row.name}`, () => {
+  Deno.test(`rejection: ${row.name}`, () => {
     const ir = baseOf(row.program);
     row.change(ir);
     const program: Program = PROGRAMS[row.program];
