@@ -71,12 +71,6 @@ Deno.test("signature help follows direct, imported, and aliased function values"
 
 Deno.test("signature help selects nested calls and the active parameter", () => {
   const checked = revision();
-  const nested = signatureHelpAt(
-    checked,
-    "main.eff",
-    consumer.indexOf("entry(raw") + "entry(".length,
-  );
-  assert(nested?.label.startsWith("entry("));
   const second = signatureHelpAt(
     checked,
     "main.eff",

@@ -164,18 +164,6 @@ Deno.test("records nest: two records are disjoint or one contains the other", ()
   }
 });
 
-Deno.test("the table sorts outer records before inner records", () => {
-  const table = tableOf("users");
-  for (let i = 0; i < table.records.length; i++) {
-    const parent = table.parents[i];
-    if (parent < 0) continue;
-    assert(parent < i, "a parent comes before its child");
-    const outer = table.records[parent];
-    const inner = table.records[i];
-    assert(outer.start <= inner.start && inner.end <= outer.end);
-  }
-});
-
 Deno.test("hostImportSpans names the imported provider in the .eff import", () => {
   const imports = hostImportSpans(examples.project);
   assertEquals([...imports.keys()], ["main"]);

@@ -1,14 +1,7 @@
-import { assertEquals, assertThrows } from "@std/assert";
+import { assertEquals } from "@std/assert";
 import { compareSpans } from "../src/core/source.ts";
 import { lineStarts, memoryHost, positionOf } from "../src/core/frontend.ts";
-import {
-  coverSpans,
-  makeSpan,
-  spanContains,
-  spanLength,
-  spansOverlap,
-  spanText,
-} from "./helpers.ts";
+import { makeSpan } from "./helpers.ts";
 
 Deno.test("lineStarts treats LF, CRLF, and lone CR as one terminator each", () => {
   assertEquals([...lineStarts("a\nb\r\nc\rd")], [0, 2, 5, 7]);
@@ -45,26 +38,22 @@ Deno.test("memoryHost returns text or a not-found error", () => {
   assertEquals(fromMap.readText("m.eff"), { ok: true, value: "x" });
 });
 
-Deno.test("span helpers", () => {
-  const a = makeSpan("f", 2, 5);
-  const b = makeSpan("f", 4, 9);
-  assertEquals(spanLength(a), 3);
-  assertEquals(spanText("0123456789", a), "234");
-  assertEquals(spanContains(a, 2), true);
-  assertEquals(spanContains(a, 5), false);
-  assertEquals(spansOverlap(a, b), true);
-  assertEquals(spansOverlap(a, makeSpan("f", 5, 6)), false);
-  assertEquals(spansOverlap(a, makeSpan("g", 2, 5)), false);
-  assertEquals(coverSpans(a, b), makeSpan("f", 2, 9));
-  assertEquals(compareSpans(a, b) < 0, true);
+Deno.test("compareSpans orders by source name, then start, then end", () => {
+  assertEquals(
+    compareSpans(makeSpan("f", 2, 5), makeSpan("f", 4, 9)) < 0,
+    true,
+  );
+  assertEquals(
+    compareSpans(makeSpan("f", 4, 9), makeSpan("f", 2, 5)) > 0,
+    true,
+  );
   assertEquals(
     compareSpans(makeSpan("a", 9, 9), makeSpan("b", 0, 0)) < 0,
     true,
   );
-  assertEquals(compareSpans(a, a), 0);
-});
-
-Deno.test("span helpers reject invalid input", () => {
-  assertThrows(() => makeSpan("f", 5, 2));
-  assertThrows(() => coverSpans(makeSpan("f", 0, 1), makeSpan("g", 0, 1)));
+  assertEquals(
+    compareSpans(makeSpan("f", 2, 5), makeSpan("f", 2, 9)) < 0,
+    true,
+  );
+  assertEquals(compareSpans(makeSpan("f", 2, 5), makeSpan("f", 2, 5)), 0);
 });

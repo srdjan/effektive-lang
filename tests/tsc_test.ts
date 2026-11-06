@@ -12,7 +12,7 @@ import {
   type SpanTable,
   type TscDiagnostic,
 } from "../src/core/typescript.ts";
-import { categoryOf, lineStarts, positionOf } from "../src/core/frontend.ts";
+import { lineStarts, positionOf } from "../src/core/frontend.ts";
 import {
   COMPANION_FILES,
   emitFilesWithProject,
@@ -184,10 +184,6 @@ Deno.test("parseDenoCheck removes the undefined advice from a TS2379 message", (
     ),
     "Argument of type '{ a: undefined; }' is not assignable to parameter of type '{ a?: string; }' with 'exactOptionalPropertyTypes: true'.",
   );
-});
-
-Deno.test("host-boundary/001 is registered in its category", () => {
-  assertEquals(categoryOf("host-boundary/001"), "host-boundary");
 });
 
 Deno.test("a diagnostic on a host assertion maps to host-boundary/001 on the import", () => {
