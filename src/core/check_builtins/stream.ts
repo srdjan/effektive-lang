@@ -1,19 +1,18 @@
 // Stream and Sink construction, callbacks, and execution.
-import type { Result } from "../result.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
 import { isPatternKind, literalOf } from "../syntax_queries.ts";
 import { combine, EFFECT_ONLY, PURE_EFFECTS } from "../effect_set.ts";
 import type { NodeInfo } from "../tables.ts";
 import type { TypeNode, TypeRef } from "../types.ts";
-import type {
-  Arg,
-  BuiltinContext,
-  ConcurrencyOperation,
-  FactView,
-  FactWriter,
-  LiteralField,
-  ResolveView,
-  SyntaxView,
+import {
+  type Arg,
+  type BuiltinContext,
+  concurrencyBound,
+  type FactView,
+  type FactWriter,
+  type LiteralRecordView,
+  type ResolveView,
+  type SyntaxView,
 } from "./context.ts";
 import {
   direct,
@@ -22,15 +21,13 @@ import {
   type Rows,
 } from "./rows.ts";
 export interface StreamContext
-  extends BuiltinContext, SyntaxView, ResolveView, FactView, FactWriter {
-  literalRecord(
-    arg: Arg,
-    count: number,
-  ): Result<ReadonlyMap<string, LiteralField>, "shape">;
-  concurrencyBound(
-    arg: Arg,
-    name: Extract<ConcurrencyOperation, "mapEffect">,
-  ): number | "unbounded" | undefined;
+  extends
+    BuiltinContext,
+    SyntaxView,
+    ResolveView,
+    FactView,
+    FactWriter,
+    LiteralRecordView {
   noPipeline(name: string, args: readonly Arg[]): void;
 }
 
@@ -76,7 +73,7 @@ function mapEffectCall(
 ): NodeInfo {
   const concurrency = args[2] === undefined
     ? undefined
-    : c.concurrencyBound(args[2], "mapEffect");
+    : concurrencyBound(c, args[2], "mapEffect");
   c.noPipeline("mapEffect", args);
   c.inlineStreamCallback("mapEffect", args[1]);
   const { info: stream, source, element } = streamArg(c, "mapEffect", args[0]);

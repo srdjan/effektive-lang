@@ -795,7 +795,7 @@ class BodyLowerer {
         kind: "schema",
         op: fact.op,
         arguments: this.schemaArguments(
-          fact.op,
+          fact,
           args.map((_, i) => arg(i)),
         ),
         ...annotation,
@@ -829,16 +829,14 @@ class BodyLowerer {
     arg: ArgumentAt,
     annotation: Annotation,
   ): Expr {
-    // The checker proved a literal options record; `fields` is one of its values.
+    // The checker proved a literal options record and recorded where `fields` is.
     const options = args[1];
-    const fields = options === undefined
-      ? undefined
-      : options.kind === "record"
-      ? options.fields.find((f) => f.name === "fields")?.value
-      : undefined;
     if (options !== undefined && options.kind !== "record") {
       throw internal("log needs a literal options record");
     }
+    const fields = options === undefined || fact.fields === undefined
+      ? undefined
+      : options.fields[fact.fields]?.value;
     return {
       kind: "log",
       message: arg(0),
@@ -1051,16 +1049,16 @@ class BodyLowerer {
    * The record type is the single required field that the IR always had.
    */
   private schemaArguments(
-    op: string,
+    fact: FactOf<"schema">,
     args: readonly Expr[],
   ): readonly Expr[] {
     const options = args[2];
     if (
-      (op !== "default-key" && op !== "default-null-key" &&
-        op !== "default-encoded-key") ||
-      options === undefined || options.kind !== "record"
+      fact.options === undefined || options === undefined ||
+      options.kind !== "record"
     ) return args;
-    const fields = options.fields.filter((field) => field.name !== "on");
+    const { on: dropped, at } = fact.options;
+    const fields = options.fields.filter((_, index) => index !== at);
     if (fields.length === 0) return args.slice(0, 2);
     const type = options.type;
     return [
@@ -1073,7 +1071,7 @@ class BodyLowerer {
           ? {
             kind: "record",
             fields: type.fields
-              .filter((field) => field.name !== "on")
+              .filter((field) => field.name !== dropped)
               .map((field) => ({ ...field, optional: false })),
           }
           : type,

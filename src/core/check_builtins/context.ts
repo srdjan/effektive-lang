@@ -5,6 +5,7 @@
 
 import type { DiagnosticCode } from "../diagnostics.ts";
 import type { LocalId } from "../ir.ts";
+import type { Result } from "../result.ts";
 import type { Target } from "../resolve.ts";
 import type { NodeId, SyntaxTree } from "../syntax.ts";
 import { type EffectSet, PURE_EFFECTS } from "../effect_set.ts";
@@ -53,6 +54,46 @@ export type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
 export interface LiteralField {
   readonly node: NodeId;
   readonly value: unknown;
+}
+
+/** Reads an option record of literal fields. */
+export interface LiteralRecordView {
+  /**
+   * Reads an option record of exactly `count` fields, each `name: literal`, and
+   * gives the fields by name. It fails with "shape" for a pipeline left side, a
+   * value that is not a record, another field count, a field of another form,
+   * or a repeated name. It reports nothing and records nothing.
+   */
+  literalRecord(
+    arg: Arg,
+    count: number,
+  ): Result<ReadonlyMap<string, LiteralField>, "shape">;
+}
+
+/**
+ * The bound of a `{ concurrency: N }` option record, or undefined after a
+ * diagnostic. `N` is a positive safe integer literal or `"unbounded"`.
+ */
+export function concurrencyBound(
+  c: LiteralRecordView & Pick<BuiltinContext, "report">,
+  arg: Arg,
+  operation: ConcurrencyOperation = "traverse",
+): number | "unbounded" | undefined {
+  const record = c.literalRecord(arg, 1);
+  const literal = record.ok
+    ? record.value.get("concurrency")?.value
+    : undefined;
+  if (literal === "unbounded") return literal;
+  if (
+    typeof literal === "number" && Number.isSafeInteger(literal) &&
+    literal > 0
+  ) return literal;
+  c.report(
+    "type-mismatch/010",
+    `\`${operation}\` needs \`{ concurrency: N }\` with a positive safe integer literal, or \`{ concurrency: "unbounded" }\``,
+    arg.node,
+  );
+  return undefined;
 }
 
 /** True when a function runs as an effect or has a failure or requirement. */

@@ -213,6 +213,9 @@ const SCHEMA_BUILTINS = {
 /** The values of the `on` option of `schemaDefaultKey`. */
 const DEFAULT_KEY_ON = ["missing", "null", "encoded"] as const;
 
+/** The option of `schemaDefaultKey` that selects the operation. */
+const DEFAULT_KEY_OPTION = "on";
+
 const DEFAULT_KEY_OPS = {
   missing: "default-key",
   null: "default-null-key",
@@ -288,32 +291,38 @@ function schemaOp(c: SchemaContext, node: NodeId): SchemaOp {
 /** The literal value of a field in an inline options record, by label. */
 function optionsField(c: SchemaContext, record: NodeId, label: string): {
   readonly value: NodeId | undefined;
+  /** The position of the field in the record. */
+  readonly index: number;
 } | undefined {
   if (kindOf(c.tree, record) !== SyntaxKind.RecordExpr) {
     return undefined;
   }
-  for (const field of c.kids(record)) {
+  for (const [index, field] of c.kids(record).entries()) {
     const parts = c.fieldParts(field);
     if (parts?.label === label) {
-      return { value: parts.value };
+      return { value: parts.value, index };
     }
   }
   return undefined;
 }
 
 /**
- * The Schema operation that the `on` option of `schemaDefaultKey` selects.
- * An absent `on` means "missing". An `on` that is not one of the three
- * literals is reported here and selects the default operation.
+ * The Schema operation that the `on` option of `schemaDefaultKey` selects, and
+ * the position of that option. An absent `on` means "missing". An `on` that is
+ * not one of the three literals is reported here and selects the default
+ * operation.
  */
-function defaultKeyOp(
+function defaultKeyChoice(
   c: SchemaContext,
   name: SchemaBuiltinName,
   options: Arg,
-): "default-key" | "default-null-key" | "default-encoded-key" {
-  const field = optionsField(c, options.node, "on");
+): {
+  readonly op: "default-key" | "default-null-key" | "default-encoded-key";
+  readonly on: number | undefined;
+} {
+  const field = optionsField(c, options.node, DEFAULT_KEY_OPTION);
   if (field === undefined) {
-    return "default-key";
+    return { op: "default-key", on: undefined };
   }
   const value = field.value;
   const literal = value !== undefined &&
@@ -327,9 +336,9 @@ function defaultKeyOp(
       `${name} \`on\` must be a literal "missing", "null", or "encoded"`,
       value ?? options.node,
     );
-    return "default-key";
+    return { op: "default-key", on: field.index };
   }
-  return DEFAULT_KEY_OPS[on];
+  return { op: DEFAULT_KEY_OPS[on], on: field.index };
 }
 
 /** Whether an options record is inline with distinct known fields. */
@@ -359,7 +368,7 @@ function defaultKeyOptionsShape(c: SchemaContext, record: NodeId): boolean {
       if (strategy !== "omit" && strategy !== "passthrough") {
         return false;
       }
-    } else if (parts.label !== "on") {
+    } else if (parts.label !== DEFAULT_KEY_OPTION) {
       return false;
     }
   }
@@ -878,7 +887,7 @@ function schemaDefaultKeyCall(c: SchemaContext, call: SchemaCall, variant: {
   const options = args[2] === undefined ? undefined : c.argInfo(
     args[2],
     c.table.record([{
-      name: "on",
+      name: DEFAULT_KEY_OPTION,
       type: c.table.union(DEFAULT_KEY_ON.map((on) => c.table.literal(on))),
       optional: true,
     }, {
@@ -1294,12 +1303,15 @@ const SCHEMA_PROLOGUE: SharedPrologue<SchemaBuiltinName, SchemaContext> = {
   pipeline: "direct",
   fact: (c, name, args) => {
     const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
-    return {
-      kind: "schema",
-      op: builtin.acceptsOptions === true && args.length === 3
-        ? defaultKeyOp(c, name, args[2])
-        : builtin.op,
-    };
+    if (builtin.acceptsOptions === true && args.length === 3) {
+      const { op, on } = defaultKeyChoice(c, name, args[2]);
+      return {
+        kind: "schema",
+        op,
+        options: { on: DEFAULT_KEY_OPTION, at: on },
+      };
+    }
+    return { kind: "schema", op: builtin.op, options: undefined };
   },
 };
 

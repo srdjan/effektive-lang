@@ -8,9 +8,10 @@ import { showType } from "../type_show.ts";
 import {
   type Arg,
   type BuiltinContext,
-  type ConcurrencyOperation,
+  concurrencyBound,
   type FactWriter,
   isEffectfulFunction,
+  type LiteralRecordView,
 } from "./context.ts";
 import {
   optionalLast,
@@ -32,15 +33,9 @@ export interface CollectionContext extends
     | "report"
     | "widen"
   >,
-  FactWriter {
+  FactWriter,
+  LiteralRecordView {
   noPipeline(name: string, args: readonly Arg[]): void;
-  concurrencyBound(
-    arg: Arg,
-    operation?: Extract<
-      ConcurrencyOperation,
-      "traverse" | "all"
-    >,
-  ): number | "unbounded" | undefined;
 }
 
 function allCall(
@@ -61,7 +56,7 @@ function allCall(
   const option = args[1] === undefined ? undefined : c.argInfo(args[1]);
   const concurrency = args[1] === undefined
     ? undefined
-    : c.concurrencyBound(args[1], "all");
+    : concurrencyBound(c, args[1], "all");
   if (effectTypes === undefined) {
     c.report(
       "type-mismatch/010",
@@ -136,31 +131,6 @@ function allCall(
   );
 }
 
-/**
- * The Effect element type of an array of Effect values, or undefined after a
- * diagnostic (`name` needs an array of Effect values). Used by `race`.
- */
-export function effectArrayMember(
-  c: Pick<CollectionContext, "table" | "isError" | "report">,
-  name: string,
-  jobs: NodeInfo,
-  at: NodeId,
-) {
-  const shape = c.table.node(c.table.unfold(jobs.type));
-  const member = shape.kind === "array"
-    ? c.table.node(c.table.unfold(shape.element))
-    : undefined;
-  if (member?.kind === "effect") return member;
-  if (!c.isError(jobs.type)) {
-    c.report(
-      "type-mismatch/010",
-      `\`${name}\` needs an array of Effect values`,
-      at,
-    );
-  }
-  return undefined;
-}
-
 function collectionCall(
   c: CollectionContext,
   node: NodeId,
@@ -179,7 +149,7 @@ function collectionCall(
     infos.push(cb.info);
     const concurrency = args[2] === undefined
       ? undefined
-      : c.concurrencyBound(args[2]);
+      : concurrencyBound(c, args[2]);
     if (args[2] !== undefined) {
       infos.push(c.argInfo(args[2]));
     }

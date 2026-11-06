@@ -111,7 +111,6 @@ import {
 import {
   type Arg,
   type BuiltinContext,
-  type ConcurrencyOperation,
   type FunctionNode,
   invocationOf,
   isEffectfulFunction,
@@ -1462,27 +1461,6 @@ class BodyChecker
       );
     }
     return { info, result: fn.result };
-  }
-
-  concurrencyBound(
-    arg: Arg,
-    operation: ConcurrencyOperation = "traverse",
-  ): number | "unbounded" | undefined {
-    const record = this.literalRecord(arg, 1);
-    const literal = record.ok
-      ? record.value.get("concurrency")?.value
-      : undefined;
-    if (literal === "unbounded") return literal;
-    if (
-      typeof literal === "number" && Number.isSafeInteger(literal) &&
-      literal > 0
-    ) return literal;
-    this.report(
-      "type-mismatch/010",
-      `\`${operation}\` needs \`{ concurrency: N }\` with a positive safe integer literal, or \`{ concurrency: "unbounded" }\``,
-      arg.node,
-    );
-    return undefined;
   }
 
   // -------------------------------------------------------------- pipelines

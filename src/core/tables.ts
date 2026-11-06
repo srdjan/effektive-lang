@@ -95,7 +95,12 @@ export type NodeFact =
   | { readonly kind: "repeat"; readonly options: boolean }
   | { readonly kind: "sleep" }
   | { readonly kind: "now" }
-  | { readonly kind: "log"; readonly level: LogLevel | undefined }
+  | {
+    readonly kind: "log";
+    readonly level: LogLevel | undefined;
+    /** The position of the `fields` option in the options record, when it is written. */
+    readonly fields: number | undefined;
+  }
   | { readonly kind: "random" }
   | { readonly kind: "random-int" }
   | { readonly kind: "uninterruptible" }
@@ -126,6 +131,14 @@ export type NodeFact =
       | "decode"
       | "encode"
       | "make";
+    /**
+     * The options argument of a default-key builtin. The IR drops the option
+     * `on`, because the operation already records its value. `at` is the
+     * position of that option in the options record, when it is written.
+     */
+    readonly options:
+      | { readonly on: string; readonly at: number | undefined }
+      | undefined;
   }
   /** A bracket literal, classified by its checked contextual type. */
   | { readonly kind: "list"; readonly shape: "array" | "tuple" }

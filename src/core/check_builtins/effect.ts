@@ -30,7 +30,6 @@ import {
   type LiteralField,
   type SyntaxView,
 } from "./context.ts";
-import { effectArrayMember } from "./collections.ts";
 import { direct, piped, type PreludeCallName, type Rows } from "./rows.ts";
 export interface EffectContext extends
   Pick<
@@ -59,6 +58,31 @@ export interface EffectContext extends
     count: number,
   ): Result<ReadonlyMap<string, LiteralField>, "shape">;
   jobFunction(name: string, arg: Arg, info: NodeInfo): FunctionNode | undefined;
+}
+
+/**
+ * The Effect element type of an array of Effect values, or undefined after a
+ * diagnostic (`name` needs an array of Effect values). Used by `race`.
+ */
+export function effectArrayMember(
+  c: Pick<EffectContext, "table" | "isError" | "report">,
+  name: string,
+  jobs: NodeInfo,
+  at: NodeId,
+) {
+  const shape = c.table.node(c.table.unfold(jobs.type));
+  const member = shape.kind === "array"
+    ? c.table.node(c.table.unfold(shape.element))
+    : undefined;
+  if (member?.kind === "effect") return member;
+  if (!c.isError(jobs.type)) {
+    c.report(
+      "type-mismatch/010",
+      `\`${name}\` needs an array of Effect values`,
+      at,
+    );
+  }
+  return undefined;
 }
 
 function failCall(
@@ -516,12 +540,14 @@ function logCall(
   c.fits(args[0].node, message.type, c.table.string, "the log message");
   const infos: NodeInfo[] = [message];
   let level: LogLevel = "info";
+  let fields: number | undefined;
   if (args[1] !== undefined) {
     const options = logOptions(c, args[1]);
     infos.push(options.info);
     level = options.level;
+    fields = options.fields;
   }
-  c.fact(node, { kind: "log", level });
+  c.fact(node, { kind: "log", level, fields });
   return c.finish(node, c.table.unit, combine([...infos, EFFECT_ONLY]));
 }
 
@@ -529,8 +555,13 @@ function logCall(
 function logOptions(
   c: EffectContext,
   arg: Arg,
-): { readonly info: NodeInfo; readonly level: LogLevel } {
+): {
+  readonly info: NodeInfo;
+  readonly level: LogLevel;
+  readonly fields: number | undefined;
+} {
   let level: LogLevel = "info";
+  let fieldsAt: number | undefined;
   if (
     arg.pre !== undefined ||
     kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
@@ -540,7 +571,7 @@ function logOptions(
       "`log` needs an options record with `level` or `fields`",
       arg.node,
     );
-    return { info: c.argInfo(arg), level };
+    return { info: c.argInfo(arg), level, fields: undefined };
   }
   const fields = c.kids(arg.node);
   if (fields.length === 0) {
@@ -553,13 +584,16 @@ function logOptions(
   const infos: NodeInfo[] = [];
   const types: { name: string; type: TypeRef; optional: boolean }[] = [];
   const seen = new Set<string>();
-  for (const field of fields) {
+  for (const [index, field] of fields.entries()) {
     const parsed = optionField(c, "log", field);
     if (parsed === undefined) continue;
     const { label, name, value } = parsed;
     const info = c.argInfo({ node: value });
     if (name === "level") level = logLevel(c, value) ?? level;
-    else if (name === "fields") logFields(c, value, info);
+    else if (name === "fields") {
+      logFields(c, value, info);
+      fieldsAt = index;
+    }
     if (!LOG_KEYS.has(name)) {
       c.report(
         "type-mismatch/010",
@@ -581,6 +615,7 @@ function logOptions(
   return {
     info: c.finish(arg.node, c.table.record(types), combine(infos)),
     level,
+    fields: fieldsAt,
   };
 }
 
@@ -778,7 +813,7 @@ export const EFFECT_ROWS = {
       bail: "effect",
       pipeline: "direct",
       usage: "`log` takes a message and optional options",
-      bailFact: { kind: "log", level: undefined },
+      bailFact: { kind: "log", level: undefined, fields: undefined },
     },
     handle: (c, node, _name, args) => logCall(c, node, args),
   },
