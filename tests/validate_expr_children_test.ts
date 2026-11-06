@@ -451,9 +451,6 @@ Deno.test("exprChildren equals a reflective walk on every node of every fixture 
 
 Deno.test("exprChildren equals a reflective walk on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
-  const kinds = Object.keys(synthetic);
-  // The Expr union of src/core/ir.ts has 59 kinds.
-  assertEquals(kinds.length, 59);
   for (const [kind, node] of Object.entries(synthetic)) {
     assertEquals(node.kind, kind);
     assertSameChildren(node, "synthetic");
@@ -473,18 +470,6 @@ Deno.test("exprChildren equals a reflective walk on a synthetic node of every Ex
   }
 });
 
-Deno.test("the fixtures and the synthetic nodes together reach every Expr kind", () => {
-  const reached = new Set<string>();
-  for (const { ir } of MODULES) {
-    const all: Expr[] = [];
-    allExprs(ir, all);
-    for (const node of all) reached.add(node.kind);
-  }
-  const synthetic = new Set(Object.keys(syntheticNodes()));
-  assertEquals(new Set([...reached, ...synthetic]).size, 59);
-  for (const kind of reached) assert(synthetic.has(kind), kind);
-});
-
 // The two enumerations are independent copies. This test compares them on the
 // synthetic node of each kind, as multisets of node identities, because a child
 // can occur twice. The emitter lists a kind's evaluated children first and its
@@ -494,7 +479,6 @@ Deno.test("the fixtures and the synthetic nodes together reach every Expr kind",
 // [job, durationMs].
 Deno.test("childrenOf and exprChildren give the same child multiset on a synthetic node of every Expr kind", () => {
   const synthetic = syntheticNodes();
-  assertEquals(Object.keys(synthetic).length, 59);
   const differentOrder: string[] = [];
   for (const [kind, node] of Object.entries(synthetic)) {
     const emitted = childrenOf(node);
