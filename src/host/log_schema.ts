@@ -5,7 +5,7 @@
 // (`scripts/logs_*.ts`, the log endpoint, the playground replay) share the
 // same kind names and file name format.
 
-import { isRecord, type ReadError } from "../core/mod.ts";
+import { isRecord, type ReadError } from "../core/frontend.ts";
 import type { FileFailure } from "./ports.ts";
 
 export type Surface = "cli" | "lsp" | "playground";

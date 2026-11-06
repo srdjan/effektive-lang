@@ -80,7 +80,18 @@ Deno.test("parseEnvelope browser policy refuses a bad envelope", () => {
     [],
     null,
   ].map((value) => parseEnvelope(value, "browser"));
-  assertEquals(bad, bad.map(() => undefined));
+  assertEquals(bad, [
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+  ]);
 });
 
 Deno.test("parseEnvelope replay policy keeps the value and any kind or surface", () => {
@@ -106,7 +117,7 @@ Deno.test("parseEnvelope replay policy refuses a bad time, surface, or type", ()
     { ...envelope, kind: 3 },
     "text",
   ].map((value) => parseEnvelope(value, "replay"));
-  assertEquals(bad, bad.map(() => undefined));
+  assertEquals(bad, [undefined, undefined, undefined, undefined, undefined]);
 });
 
 Deno.test("emit appends the kind and the data to the log", () => {
