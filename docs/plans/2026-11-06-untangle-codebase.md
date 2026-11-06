@@ -388,12 +388,14 @@ Each row names the commits on `main` and the main-tree gate result.
 | UNU6b | `58aa29f`, `ae8831d`, `b16a5f2`, `e96e20d` | passed, 2906 fast and 285 slow tests; `behavior:compare 30bb1d5 e96e20d` 0 changed records in every family |
 | UNU4 | `1094d8d` to `8abfb9e` (6 commits) | passed, 2909 fast and 285 slow tests |
 | UNU9 | `c1b4fc7`, `cbd0d69`, `d44a98f`, `242a1df`, and Opus fix `9212709` (the schema loads through `frontend.ts`; literal test values) | passed, 2919 fast and 285 slow tests; `logs:replay` exits 0 for the six fixture logs |
+| UNU11 | `19877bb`, `f60928f`, `eccf608`, `9b7edb7`, and Opus fix `7a4ae47` (the `writableModules` wrapper goes) | passed, 2919 fast and 285 slow tests |
 
 Decisions made at integration:
 
 - UNU6b puts the lowering block list on `CheckedProject.blocked`, not on each checked module, because checked modules are shared across revisions and the block depends on project diagnostics. A test or tool that forges a checked project without diagnostics must also clear `blocked`.
 - UNU4 shares no walker for E.H8: the stopping rules of `containsFunction`, `checkKind`, and `needsFieldAdapter` differ. E.H8 moves to the kept list.
 - UNU4 defines the mark payload type in `doc.ts`, because a definition in `emitted_module.ts` makes a type cycle. The renderer is private to the emitter.
+- UNU11 removes the warning filter of the playground `tabCounts`, because `Severity` is only `"error"` (UND3). Three playground test expectations change for that reason only. G.N7 is partly done: `src/lsp/features.ts` still builds line starts for each call, because UNU10 owns that file. It is a follow-up after UNU10.
 - UNU9 keeps field reads in the log readers loose, because old-log replay must stay tolerant. The writers are typed.
 
 The failure probe of `behavior:compare` is the pair `f9b358f~1 f9b358f`. It exits 1. The earlier pair `3ab7c4b 30bb1d5` gives identical corpus output, so it cannot probe a failure.
