@@ -384,6 +384,7 @@ Each row names the commits on `main` and the main-tree gate result.
 | UNU2b | `b40a5c5`, `aa17934`, `899ce2e` | passed, 2906 fast and 285 slow tests |
 | UNF20 rest | `0ba4ac4` (the bench uses the core `isRecord`; `scripts/coverage.ts` keeps its copy, because its slow test runs it with a stub `mod.ts`) | passed |
 | UNU3 | `9c0cce5` to `e46afc7` (7 commits) | passed, 2906 fast and 285 slow tests; `rules:unfired` site set unchanged; `behavior:compare 51de8a9 974d5c8` 56 equal `validate` records |
+| UNU6a | `954e40e`, `339260d`, `f29c431`, and Opus fix `8086a84` (the comparison bounds stay in `predicates.ts`, which removes a new `linear.ts` cycle) | passed, 2906 fast and 285 slow tests |
 
 The failure probe of `behavior:compare` is the pair `f9b358f~1 f9b358f`. It exits 1. The earlier pair `3ab7c4b 30bb1d5` gives identical corpus output, so it cannot probe a failure.
 
