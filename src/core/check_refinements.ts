@@ -442,7 +442,7 @@ function typeAssumptionsAt(
       );
       if (compiled !== undefined) assumptions.push(compiled);
     }
-    const base = table.identityBaseOf(id) ?? table.taggedRecordOf(id);
+    const base = table.nominalBodyOf(id);
     return base === undefined
       ? assumptions
       : [...assumptions, ...typeAssumptionsAt(table, base, path, nextSeen)];

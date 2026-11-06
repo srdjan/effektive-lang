@@ -208,6 +208,9 @@ export type TypeReader = Pick<
   | "taggedRecordOf"
   | "predicateOf"
   | "errorRecordOf"
+  | "isErrorOrTagged"
+  | "recordBodyOf"
+  | "nominalBodyOf"
   | "isSealed"
   | "error"
   | "size"
@@ -771,6 +774,23 @@ export class TypeTable {
     return this.errorRecords.get(id);
   }
 
+  /** True for a named error or a tagged record. An untagged identity, an opaque type, and an alias are not. */
+  isErrorOrTagged(id: TypeId | ErrorId): boolean {
+    return isErrorId(id) || this.taggedRecordOf(id) !== undefined;
+  }
+
+  /** The record body of a named error or a tagged record. Any other id has none. */
+  recordBodyOf(id: TypeId | ErrorId): TypeRef | undefined {
+    return isErrorId(id) ? this.errorRecordOf(id) : this.taggedRecordOf(id);
+  }
+
+  /** The record body, or the base of an untagged identity or an opaque type. An error has no base. */
+  nominalBodyOf(id: TypeId | ErrorId): TypeRef | undefined {
+    return isErrorId(id)
+      ? this.errorRecordOf(id)
+      : this.taggedRecordOf(id) ?? this.identityBaseOf(id);
+  }
+
   /** True when a definition for the id exists. */
   isDefined(id: TypeId | ErrorId): boolean {
     return isErrorId(id) ? this.errorRecords.has(id) : this.defs.has(id);
@@ -1120,9 +1140,7 @@ export function dataOnly(
         rejects.reserved &&
         isReservedErrorId(type.id)
       ) return false;
-      const record = isErrorId(type.id)
-        ? table.errorRecordOf(type.id)
-        : table.taggedRecordOf(type.id) ?? table.identityBaseOf(type.id);
+      const record = table.nominalBodyOf(type.id);
       return record !== undefined && nested(record);
     }
     case "error":

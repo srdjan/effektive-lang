@@ -1,4 +1,3 @@
-import { isErrorId } from "./ids.ts";
 import type { LocalId } from "./ir.ts";
 import type { NodeId } from "./syntax.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
@@ -340,10 +339,7 @@ export class InputContractResolver {
   private recordFields(type: TypeRef) {
     let node = this.table.node(this.table.unfold(type));
     if (node.kind === "named") {
-      const record = isErrorId(node.id)
-        ? this.table.errorRecordOf(node.id)
-        : this.table.taggedRecordOf(node.id) ??
-          this.table.identityBaseOf(node.id);
+      const record = this.table.nominalBodyOf(node.id);
       if (record === undefined) return undefined;
       node = this.table.node(this.table.unfold(record));
     }

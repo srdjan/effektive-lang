@@ -900,8 +900,7 @@ class BodyChecker
     if (s.kind === "named" && isTypeId(s.id) && t.kind !== "named") {
       const id = s.id;
       if (!this.table.ownsSealed(this.module, id)) return false;
-      const base = this.table.identityBaseOf(id) ??
-        this.table.taggedRecordOf(id);
+      const base = this.table.nominalBodyOf(id);
       return base !== undefined &&
         this.checkedTypeFits(base, target, depth + 1);
     }
@@ -1545,9 +1544,7 @@ class BodyChecker
     const node = this.table.node(this.table.unfold(ref));
     if (node.kind === "error") return true;
     if (node.kind !== "named") return false;
-    const record = isErrorId(node.id)
-      ? this.table.errorRecordOf(node.id)
-      : this.table.taggedRecordOf(node.id);
+    const record = this.table.recordBodyOf(node.id);
     return record !== undefined && this.isError(record);
   }
 
@@ -2514,9 +2511,7 @@ class BodyChecker
     return [a, b].every((type) =>
       flattenIdentityMembers(this.table, type).every((member) => {
         const node = this.table.node(member);
-        return node.kind === "named" &&
-          (isErrorId(node.id) ||
-            this.table.taggedRecordOf(node.id) !== undefined);
+        return node.kind === "named" && this.table.isErrorOrTagged(node.id);
       })
     );
   }

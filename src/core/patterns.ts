@@ -117,10 +117,7 @@ export function domainOf(table: TypeTable, subject: TypeRef): Domain {
   );
   const nominal: (TypeId | ErrorId)[] = [];
   for (const n of named) {
-    if (
-      n.kind === "named" &&
-      (isErrorId(n.id) || table.taggedRecordOf(n.id) !== undefined)
-    ) nominal.push(n.id);
+    if (n.kind === "named" && table.isErrorOrTagged(n.id)) nominal.push(n.id);
   }
   if (nominal.length > 0) {
     return nominal.length === named.length
