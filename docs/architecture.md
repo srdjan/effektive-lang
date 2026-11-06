@@ -110,7 +110,7 @@ files through `SourceHost`. Seven tests enforce the rules.
 | A test imports a name of an entry point only from `frontend.ts`, `typescript.ts`, `mod.ts`, `ir.ts`, `validate/index.ts`, or `validate_project.ts`. | `tests/core_boundary_test.ts`, "no test imports an entry-point name from a private core module" |
 | No module that the CLI, the language server, or the playground loads reaches `validate/` or `validate_project.ts`. | `tests/core_boundary_slow_test.ts`, one test for each product entry point, read from `deno info --json` |
 | The validator imports only `ir.ts`, `source.ts`, `diagnostics.ts`, and its own files, plus a type-only import of `predicates.ts`. | `tests/validate_test.ts`, "src/core/validate imports only ir.ts, source.ts, diagnostics.ts, and its own files" |
-| The emitter families never import `emit/expr.ts`, and no value import of the emitter reaches a checker module. | `tests/emit_families_test.ts`, "src/core/emit/families imports only ir.ts, ids.ts, and emit files other than expr.ts"; `tests/emit_families_test.ts`, "the value imports of src/core/emit reach no checker-phase module" |
+| The emitter families never import `emit/expr.ts`, and the value imports of the emitter reach only an allowlist of core modules. | `tests/emit_families_test.ts`, "src/core/emit/families imports only ir.ts, ids.ts, and emit files other than expr.ts"; `tests/emit_families_test.ts`, "the value imports of src/core/emit reach only the allowed core modules" |
 
 ## Invariants
 

@@ -39,7 +39,7 @@ Deno.test("src/core/emit/families imports only ir.ts, ids.ts, and emit files oth
   assert(checked >= 1, "no import found");
 });
 
-Deno.test("the value imports of src/core/emit reach no checker-phase module", () => {
+Deno.test("the value imports of src/core/emit reach only the allowed core modules", () => {
   const core = new URL("../src/core/", import.meta.url);
   const emit = new URL("emit/", core);
   const roots: URL[] = [];
@@ -71,10 +71,16 @@ Deno.test("the value imports of src/core/emit reach no checker-phase module", ()
     .filter((href) => !href.startsWith(emit.href))
     .map((href) => href.slice(core.href.length))
     .sort();
-  const forbidden = outside.filter((name) =>
-    /^(types|modes|project|parse|declaration_index|lower|resolve|check.*)\.ts$/
-      .test(name)
-  );
+  const allowed = new Set([
+    "diagnostics.ts",
+    "graph.ts",
+    "ids.ts",
+    "ir.ts",
+    "paths.ts",
+    "source.ts",
+    "util.ts",
+  ]);
+  const forbidden = outside.filter((name) => !allowed.has(name));
   assert(forbidden.length === 0, `emit reaches ${forbidden.join(", ")}`);
   assert(outside.length > 0, "no import outside emit found");
 });
