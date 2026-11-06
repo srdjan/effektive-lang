@@ -53,7 +53,7 @@ import type {
 import { DURATION_ID } from "./ir.ts";
 import type { Result } from "./result.ts";
 import { TokenKind } from "./lex.ts";
-import type { ModuleInfo } from "./project.ts";
+import { exportRuleOf, type ModuleInfo, planImports } from "./project.ts";
 import type { ModuleResolution, Target } from "./resolve.ts";
 import { sha256Hex } from "./sha256.ts";
 import { canonicalJson } from "./content_id.ts";
@@ -1512,74 +1512,46 @@ function lowerImports(
   resolution: ModuleResolution,
   module: string,
 ): Result<Import[], LowerError> {
-  const serviceModules = new Set(
-    info.links.flatMap((link) =>
-      link.entry.role === "service" && link.label !== undefined
-        ? [link.label]
-        : []
-    ),
-  );
   const imports: Import[] = [];
-  const mergedImports = new Map<string, number>();
-  for (let i = 0; i < info.links.length; i++) {
-    const link = info.links[i];
-    const imported = link.target === undefined
+  for (const planned of planImports(info)) {
+    const imported = planned.target === undefined
       ? undefined
-      : checked.modules.get(link.target);
+      : checked.modules.get(planned.target);
     const iface = imported?.interface;
     if (
-      link.label === undefined || imported === undefined ||
+      planned.label === undefined || imported === undefined ||
       iface === undefined || !iface.ok
     ) {
       return {
         ok: false,
-        error: {
-          tag: "no-interface",
-          module,
-          imported: link.label ?? link.entry.specifier ?? "",
-        },
+        error: { tag: "no-interface", module, imported: planned.imported },
       };
     }
     const bindings: { name: string; target: DeclarationId }[] = [];
-    for (const name of link.entry.names) {
-      const target = targetId(resolution.namespace.get(name.name)?.target);
+    for (const name of planned.names) {
+      const target = targetId(resolution.namespace.get(name)?.target);
       if (target === undefined) {
         return {
           ok: false,
           error: {
             tag: "internal",
             module,
-            message: `the imported name ${name.name} has no target`,
+            message: `the imported name ${name} has no target`,
           },
         };
       }
-      bindings.push({ name: name.name, target });
+      bindings.push({ name, target });
     }
     const payload = iface.value.payload;
-    const lowered = {
-      module: link.label,
+    imports.push({
+      module: planned.label,
       bindings,
       exports: payload.exports,
       values: payload.values,
       types: payload.types,
       errors: payload.errors,
       services: payload.services,
-    };
-    if (!serviceModules.has(link.label)) {
-      imports.push(lowered);
-      continue;
-    }
-    const mergedIndex = mergedImports.get(link.label);
-    if (mergedIndex === undefined) {
-      mergedImports.set(link.label, imports.length);
-      imports.push(lowered);
-      continue;
-    }
-    const previous = imports[mergedIndex];
-    imports[mergedIndex] = {
-      ...previous,
-      bindings: [...previous.bindings, ...bindings],
-    };
+    });
   }
   return { ok: true, value: imports };
 }
@@ -1772,7 +1744,7 @@ export function lowerModule(
         declarations,
         // The companion module of a `.effi` file exports every declaration,
         // because the host module needs each one. Providers are not lowered.
-        exports: info.mode === "effi"
+        exports: exportRuleOf(info) === "every-declaration"
           ? sortedUnique(declarations.map((d) => d.id))
           : checkedModule.declarations.exports,
       },

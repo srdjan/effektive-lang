@@ -66,6 +66,66 @@ export interface ModuleInfo {
   readonly links: readonly ImportLink[];
 }
 
+/** One import of a module as the lowerer binds it. */
+export interface PlannedImport {
+  /** The `Import.module` value, or undefined when the import could not be linked. */
+  readonly label: string | undefined;
+  /** The name of the imported module, or undefined when the import could not be linked. */
+  readonly target: string | undefined;
+  /** The text that reports a missing interface. */
+  readonly imported: string;
+  /** The names that the import binds, in source order. */
+  readonly names: readonly string[];
+}
+
+/**
+ * Plans the imports of a module, in link order. Imports from one module that has a service
+ * import share one entry, which binds the names of every such import.
+ */
+export function planImports(info: ModuleInfo): readonly PlannedImport[] {
+  const serviceLabels = new Set(
+    info.links.flatMap((link) =>
+      link.entry.role === "service" && link.label !== undefined
+        ? [link.label]
+        : []
+    ),
+  );
+  const planned: PlannedImport[] = [];
+  const mergedAt = new Map<string, number>();
+  for (const link of info.links) {
+    const item: PlannedImport = {
+      label: link.label,
+      target: link.target,
+      imported: link.label ?? link.entry.specifier ?? "",
+      names: link.entry.names.map((name) => name.name),
+    };
+    if (link.label === undefined || !serviceLabels.has(link.label)) {
+      planned.push(item);
+      continue;
+    }
+    const at = mergedAt.get(link.label);
+    if (at === undefined) {
+      mergedAt.set(link.label, planned.length);
+      planned.push(item);
+      continue;
+    }
+    const previous = planned[at];
+    planned[at] = { ...previous, names: [...previous.names, ...item.names] };
+  }
+  return planned;
+}
+
+/** Which declarations a module exports. */
+export type ExportRule = "declared" | "every-declaration";
+
+/**
+ * The companion module of a `.effi` file exports every declaration, because the host module
+ * needs each one. Any other module exports what it declares as exported.
+ */
+export function exportRuleOf(info: ModuleInfo): ExportRule {
+  return info.mode === "effi" ? "every-declaration" : "declared";
+}
+
 export interface Project {
   readonly root: string;
   readonly config: ProjectConfig;
