@@ -1,7 +1,12 @@
 // Syntax queries shared by indexing, checking and lowering. They depend only
 // on the lossless tree and lexer, never on checker state or inferred types.
 
-import { isDurationText, numberValue, TokenKind } from "./lex.ts";
+import {
+  type ContextualWord,
+  isDurationText,
+  numberValue,
+  TokenKind,
+} from "./lex.ts";
 import {
   childrenOf,
   decodeString,
@@ -41,6 +46,23 @@ export function tokenKindOf(
   return kindOf(tree, node) === SyntaxKind.Token
     ? tree.lexed.kinds[tree.tokens[node]] as TokenKind
     : undefined;
+}
+
+/**
+ * True when the parser wrote the contextual modifier `word` as the leading
+ * word token of `node`: the first child, or the one after `export`. The check
+ * reads the word token the parser wrote, and nothing else about the node.
+ */
+export function hasModifier(
+  tree: SyntaxTree,
+  node: NodeId,
+  word: ContextualWord,
+): boolean {
+  const children = childrenOf(tree, node);
+  const head =
+    children[tokenKindOf(tree, children[0]) === TokenKind.KwExport ? 1 : 0];
+  return head !== undefined && tokenKindOf(tree, head) === TokenKind.Ident &&
+    tree.text.slice(tree.starts[head], tree.ends[head]) === word;
 }
 
 /** The text of a Name node, or undefined when the parser did not read an identifier. */

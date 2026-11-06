@@ -23,7 +23,13 @@ import { dataOnly, type TypeRef } from "./types.ts";
 import { sortedUnique } from "./util.ts";
 import { showType } from "./type_show.ts";
 import { isErrorId } from "./ids.ts";
-import { isTypeKind, kidsOf, literalOf, nameTextOf } from "./syntax_queries.ts";
+import {
+  hasModifier,
+  isTypeKind,
+  kidsOf,
+  literalOf,
+  nameTextOf,
+} from "./syntax_queries.ts";
 import {
   type Lowered,
   loweredFunction,
@@ -422,11 +428,7 @@ export class TypeLowerer {
 
   /** A function type in type syntax. An unmarked type defaults to `effect`. */
   private functionType(node: NodeId): Lowered {
-    const first = childrenOf(this.tree, node)[0];
-    const execution =
-      first !== undefined && nodeText(this.tree, first) === "pure"
-        ? "pure"
-        : "effect";
+    const execution = hasModifier(this.tree, node, "pure") ? "pure" : "effect";
     const kids = this.kids(node);
     const paramList = kids.find((k) =>
       kindOf(this.tree, k) === SyntaxKind.ParamList

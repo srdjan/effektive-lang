@@ -3,7 +3,12 @@
 
 import { TokenKind } from "./lex.ts";
 import type { Span } from "./source.ts";
-import { kidsOf, nameTextOf, tokenKindOf } from "./syntax_queries.ts";
+import {
+  hasModifier,
+  kidsOf,
+  nameTextOf,
+  tokenKindOf,
+} from "./syntax_queries.ts";
 import {
   childrenOf,
   decodeString,
@@ -135,12 +140,8 @@ function indexDecl(
   const name = nameTextOf(tree, nameNode);
   if (name === undefined) return undefined;
   const children = childrenOf(tree, decl);
-  const first = children[0];
-  const exported = tokenKindOf(tree, first) === TokenKind.KwExport;
-  const head = children[exported ? 1 : 0];
-  const sealed = kind === "type" &&
-    tokenKindOf(tree, head) === TokenKind.Ident &&
-    tree.text.slice(tree.starts[head], tree.ends[head]) === "sealed";
+  const exported = tokenKindOf(tree, children[0]) === TokenKind.KwExport;
+  const sealed = kind === "type" && hasModifier(tree, decl, "sealed");
   const span = nodeSpan(tree, decl);
   const methodList = kind === "service" ? indexMethods(tree, decl) : [];
   const methods = new Map<string, MethodEntry>();
