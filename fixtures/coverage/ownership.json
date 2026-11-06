@@ -121,6 +121,7 @@
       "src/core/validate/import_checks.ts",
       "src/core/validate/index.ts",
       "src/core/validate/predicates.ts",
+      "src/core/validate/prelude.ts",
       "src/core/validate/recursion_checks.ts",
       "src/core/validate/refinements.ts",
       "src/core/validate/report.ts",

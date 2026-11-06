@@ -20,14 +20,8 @@
 //   - unknown is not a top type.
 
 import type { Execution, Field, FunctionType, Type } from "../ir.ts";
-import {
-  CLOSED_UNIT_IDS,
-  DURATION_ID,
-  INSTANT_ID,
-  SCHEMA_ERROR_ID,
-  SCHEMA_ISSUE_ID,
-  TIMEOUT_ERROR_ID,
-} from "../ir.ts";
+import { CLOSED_UNIT_IDS, DURATION_ID, INSTANT_ID } from "../ir.ts";
+import { isReservedError } from "./prelude.ts";
 import { effectsFit, isSubset, sameSet } from "./sets.ts";
 import { typeChildren } from "./type_children.ts";
 import type { Predicate } from "../predicates.ts";
@@ -164,11 +158,7 @@ export function dataOnly(
     case "union":
       return value.members.every(nested);
     case "named": {
-      if (
-        rejects.reserved &&
-        (value.id === SCHEMA_ERROR_ID || value.id === SCHEMA_ISSUE_ID ||
-          value.id === TIMEOUT_ERROR_ID)
-      ) return false;
+      if (rejects.reserved && isReservedError(value.id)) return false;
       const errorFields = env.errors.get(value.id);
       const base = env.taggedRecords.get(value.id) ??
         env.opaqueBases.get(value.id) ??
@@ -608,9 +598,7 @@ export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
   const visit = (current: Type): boolean => {
     if (current.kind === "named") {
       if (
-        current.id === SCHEMA_ERROR_ID || current.id === SCHEMA_ISSUE_ID ||
-        current.id === TIMEOUT_ERROR_ID ||
-        env.opaque.has(current.id)
+        isReservedError(current.id) || env.opaque.has(current.id)
       ) return false;
       if (seen.has(current.id)) return true;
       seen.add(current.id);

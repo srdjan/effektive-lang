@@ -10,11 +10,11 @@ import type {
   Type,
   TypeDecl,
 } from "../ir.ts";
-import { DURATION_ID, INSTANT_ID, TIMEOUT_ERROR_ID } from "../ir.ts";
 import type { Predicate } from "../predicates.ts";
 import type { Report } from "./report.ts";
 import type { TypeEnv } from "./typing.ts";
 import { type BuiltinInfo, builtinInfo } from "./builtins.ts";
+import { preludeErrors, preludeTypes } from "./prelude.ts";
 
 export const PRELUDE_MODULE = "effektive:prelude";
 
@@ -76,51 +76,8 @@ export function buildWorld(ir: ModuleIR): World {
       }
     }
   }
-  errors.set("error:effect/SchemaError", {
-    kind: "error",
-    id: "error:effect/SchemaError",
-    name: "SchemaError",
-    fields: [{
-      name: "message",
-      type: { kind: "primitive", name: "string" },
-      optional: false,
-    }],
-    span: { source: ir.module, start: 0, end: 0 },
-  });
-  errors.set(TIMEOUT_ERROR_ID, {
-    kind: "error",
-    id: TIMEOUT_ERROR_ID,
-    name: "TimeoutError",
-    fields: [{
-      name: "message",
-      type: { kind: "primitive", name: "string" },
-      optional: false,
-    }],
-    span: { source: ir.module, start: 0, end: 0 },
-  });
-  errors.set("error:effect/SchemaIssue", {
-    kind: "error",
-    id: "error:effect/SchemaIssue",
-    name: "SchemaIssue",
-    fields: [],
-    span: { source: ir.module, start: 0, end: 0 },
-  });
-  // `Duration` is the builtin untagged identity over `int`.
-  types.set(DURATION_ID, {
-    kind: "type",
-    id: DURATION_ID,
-    name: "Duration",
-    definition: { kind: "nominal", base: { kind: "primitive", name: "int" } },
-    span: { source: ir.module, start: 0, end: 0 },
-  });
-  // `Instant` is the builtin untagged identity over `int`.
-  types.set(INSTANT_ID, {
-    kind: "type",
-    id: INSTANT_ID,
-    name: "Instant",
-    definition: { kind: "nominal", base: { kind: "primitive", name: "int" } },
-    span: { source: ir.module, start: 0, end: 0 },
-  });
+  for (const e of preludeErrors(ir.module)) errors.set(e.id, e);
+  for (const t of preludeTypes(ir.module)) types.set(t.id, t);
   const methods = new Map<string, MethodDecl>();
   for (const s of services.values()) {
     for (const m of s.methods) addFirst(methods, m.id, m);

@@ -82,6 +82,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   validate/      The independent IR validator. It imports only ir.ts, source.ts, and diagnostics.ts.
     index.ts       validateModule: the public entry.
     world_table.ts The lookup tables of a module (World, buildWorld) and the check context (Ctx).
+    prelude.ts     The prelude declarations (reserved errors, Duration, Instant) and the reserved-error test.
     type_checks.ts Type identity and record field checks.
     declaration_checks.ts Declaration header checks.
     recursion_checks.ts The recursion guard.

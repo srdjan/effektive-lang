@@ -33,8 +33,6 @@ import {
   DURATION_ID,
   INSTANT_ID,
   SCHEMA_ERROR_ID,
-  SCHEMA_ISSUE_ID,
-  TIMEOUT_ERROR_ID,
 } from "../ir.ts";
 import { AREA } from "./report.ts";
 import {
@@ -49,6 +47,7 @@ import {
   sameSet,
   sortedUnique,
 } from "./sets.ts";
+import { isReservedError } from "./prelude.ts";
 import {
   asFunction,
   BOOLEAN,
@@ -1169,10 +1168,7 @@ export class BodyValidator implements ValidatorCore {
       this.check(f.value, `${path}.fields[${i}].value`)
     );
     const active = combine(outs);
-    if (
-      e.error === SCHEMA_ERROR_ID || e.error === SCHEMA_ISSUE_ID ||
-      e.error === TIMEOUT_ERROR_ID
-    ) {
+    if (isReservedError(e.error)) {
       this.add(
         AREA.types,
         path,
