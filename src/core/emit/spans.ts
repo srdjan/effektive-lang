@@ -11,7 +11,7 @@ import type { Span } from "../ir.ts";
 import { lineIndexOf, lineStarts } from "../source.ts";
 import type { Project } from "../project.ts";
 import type { SpanRecord } from "./doc.ts";
-import type { EmittedModule, HostAssertionRecord } from "./emit.ts";
+import type { EmittedModule, HostAssertionRecord } from "./emitted_module.ts";
 
 /** A host assertion with the span of the Effektive import that binds the provider. */
 interface HostAssertionEntry extends HostAssertionRecord {

@@ -3,12 +3,8 @@ import type { Revision } from "./db.ts";
 import type { ModuleIR } from "./ir.ts";
 import type { Result } from "./result.ts";
 import type { LowerError } from "./lower.ts";
-import {
-  type EmitContext,
-  type EmitError,
-  emitModule,
-  type EmittedModule,
-} from "./emit/emit.ts";
+import { type EmitContext, type EmitError, emitModule } from "./emit/emit.ts";
+import type { EmittedModule } from "./emit/emitted_module.ts";
 import { buildSpanTable, type SpanTable } from "./emit/spans.ts";
 import {
   buildSourceMap,
@@ -208,7 +204,8 @@ export function hoverAt(
 }
 
 export { emitModule } from "./emit/emit.ts";
-export type { EmitContext, EmittedModule } from "./emit/emit.ts";
+export type { EmitContext } from "./emit/emit.ts";
+export type { EmittedModule } from "./emit/emitted_module.ts";
 export {
   buildSpanTable,
   hostImportSpans,

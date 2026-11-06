@@ -7,14 +7,7 @@ import type { Declaration, ModuleIR, TypeDecl } from "../ir.ts";
 import type { Result } from "../result.ts";
 import { generatedHeader } from "../paths.ts";
 import type { ProjectConfig } from "../project.ts";
-import {
-  bracketed,
-  type Doc,
-  hard,
-  render,
-  spanned,
-  type SpanRecord,
-} from "./doc.ts";
+import { bracketed, type Doc, hard, render, spanned } from "./doc.ts";
 import {
   DeclarationEmitter,
   exportedIds,
@@ -23,6 +16,7 @@ import {
   recursiveGroups,
 } from "./decls.ts";
 import { EmitFailure } from "./failure.ts";
+import type { EmittedModule, HostAssertionRecord } from "./emitted_module.ts";
 import {
   type HelperKey,
   type ImportGroup,
@@ -33,36 +27,6 @@ import { outcomeDeclaration } from "./outcome.ts";
 export interface EmitContext {
   /** The project configuration, for the paths of host modules. */
   readonly config: ProjectConfig;
-}
-
-/**
- * The generated range of one host assertion constant: the whole statement
- * `const UsersLive$host: Layer.Layer<Users> = UsersLive;`. A `deno check` error
- * on this range is a host-boundary error.
- */
-export interface HostAssertionRecord {
-  /** The name of the assertion constant: `UsersLive$host`. */
-  readonly name: string;
-  /** The name that the Effektive source binds in its import: `UsersLive`. */
-  readonly local: string;
-  /** The name that the host module exports. */
-  readonly exported: string;
-  /** The registry key: `providers` for `host:providers`. */
-  readonly key: string;
-  /** Offsets in UTF-16 code units of the generated text. The end is exclusive. */
-  readonly start: number;
-  readonly end: number;
-}
-
-export interface EmittedModule {
-  readonly module: string;
-  /** The generated file, relative to the project root: `users.ts` for `users.eff`. */
-  readonly path: string;
-  readonly text: string;
-  /** Generated ranges of the printed declarations and expressions. `buildSpanTable` turns them into the span table. */
-  readonly spans: readonly SpanRecord[];
-  /** Generated ranges of the host assertion constants, in the order of the output. */
-  readonly hostAssertions: readonly HostAssertionRecord[];
 }
 
 export type EmitError = {

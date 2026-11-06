@@ -94,6 +94,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   validate_project.ts validateProject: validates the output of lowerProject. No entry point exports it.
   emit/          The Effect-TS emitter.
     emit.ts        emitModule: the emitter of one module. emitProject is in typescript.ts.
+    emitted_module.ts The EmittedModule and HostAssertionRecord data of one emitted module.
     emitted.ts     The printed-expression values that expr.ts and the builtin families share: precedence levels, Emitted, and its helpers.
     families/      The emitter of each builtin family, behind the emitter-owned context in context.ts.
     spans.ts       The span table: generated position to source span, and host import spans.
