@@ -510,10 +510,16 @@ Deno.test("watched events outside known projects or outside source paths are ign
 Deno.test("a configuration error is published on effektive.json and cleared later", () => {
   const h = started();
   h.deliver(didOpen(MAIN, 1, MAIN_TEXT));
-  const found = h.server.projects.lookup(MAIN);
-  assert(found !== undefined);
-  const good = found.project.lastGood;
-  assert(good !== undefined);
+  const generated = (id: number) => {
+    h.deliver(
+      request(id, "effektive/generatedTypeScript", {
+        textDocument: { uri: MAIN },
+      }),
+    );
+    return result(h.responses(id)[0]);
+  };
+  const good = generated(100) as { text: string; stale: boolean };
+  assertEquals(good.stale, false);
   const config = uriOf(`${ROOT}/effektive.json`);
   const goodConfig = h.files.get(`${ROOT}/effektive.json`) ?? "";
   h.clearSent();
@@ -533,14 +539,13 @@ Deno.test("a configuration error is published on effektive.json and cleared late
   });
   assertStringIncludes(published[0].diagnostics[0].message, "not valid JSON");
   // The last good revision stays.
-  assert(found.project.lastGood === good);
-  assert(found.project.configError !== undefined);
+  assertEquals(generated(101), good);
 
   // An edit during the error is held until the next good update.
   h.clearSent();
   h.deliver(didChangeFull(MAIN, 2, MAIN_BROKEN));
   assertEquals(h.published(), []);
-  assert(found.project.lastGood === good);
+  assertEquals(generated(102), good);
 
   h.files.set(`${ROOT}/effektive.json`, goodConfig);
   h.deliver(watched({ uri: config, type: 2 }));
@@ -548,9 +553,7 @@ Deno.test("a configuration error is published on effektive.json and cleared late
     [MAIN, 2, 1],
     [config, undefined, 0],
   ]);
-  assert(found.project.configError === undefined);
-  assert(found.project.lastGood !== good);
-  assert(found.project.lastDelta !== undefined);
+  assertEquals(generated(103), { text: good.text, stale: true });
 });
 
 // ---- Projects ---------------------------------------------------------------
