@@ -1,6 +1,6 @@
 # Untangle the codebase
 
-Status: inventory complete, astra cross-check resolved, implementation not started.
+Status: implementation in progress. The progress section at the end records each landed unit.
 
 This plan is the decision log of the untangle refactor of 2026-11-06. It asks one question of the code: should these pieces change together? The user chose both optional additions: remove comments that only restate the code, and remove tests that would not catch a real bug. The user also asked for an astra cross-check before implementation, and for adversarial reviews and empirical validation at the end.
 
@@ -338,7 +338,8 @@ Each unit goes to one Sonnet executor with the full context in the dispatch. The
 | UNU2 | UNF1, UNF2, UNF20 | `ids.ts`, `paths.ts`, `lex.ts`, `parse.ts`, editor files, emitter literals, adapters, `extension.js` tests | gate | 90 calls |
 | UNU3 | UNF15 | `src/core/validate/**` | gate; `validate` records of `behavior:compare` unchanged | 70 calls |
 | UNU4 | UNF12, UNF13, UNF14, UND2 | `src/core/emit/**`, `typescript.ts`, source map tests, `docs/api.md` | gate; golden files and maps unchanged | 90 calls |
-| UNU6 | UNF8, UNF9, UNF10, UNF11 | `linear.ts`, `predicate_source.ts`, `check_refinements.ts`, `check_project.ts`, `db.ts`, `interface.ts`, `initialization.ts`, `project.ts`, `lower.ts` imports | gate; incremental and revision tests pass | 90 calls |
+| UNU6a | UNF8, UNF11 | `linear.ts`, `predicate_source.ts`, `check_refinements.ts`, `project.ts`, the configuration reader, `lowerImports` in `lower.ts` | gate; IR and diagnostics unchanged | 80 calls |
+| UNU6b | UNF9, UNF10 | `check_project.ts`, `db.ts`, `interface.ts`, `initialization.ts`, the service-bound module, `lowerModule` in `lower.ts` | gate; incremental and revision tests pass | 100 calls |
 | UNU7 | UNF4, UNF5 | `effect_set.ts`, `tables.ts`, `modes.ts`, `check_builtins/**`, `resolve.ts`, `check_expr.ts`, `check_patterns.ts`, `infer_inputs.ts`, `lower.ts`, `ids.ts` | gate | 90 calls |
 | UNU8 | UNF6, UNF7, UND1 | `syntax_queries.ts`, `recursion_guard.ts`, `types.ts`, checker files | gate | 90 calls |
 | UNU9 | UNF16 | `host/log*.ts`, `lsp/wire_log.ts`, `lsp/main.ts`, `cli/args.ts`, playground log files, `scripts/logs_*.ts` | gate; `logs:replay` of the fixture logs | 80 calls |
@@ -347,7 +348,7 @@ Each unit goes to one Sonnet executor with the full context in the dispatch. The
 | UNU13 | UNF23 | all source directories, one executor for each area | gate; `typed-ir.ts` unchanged | 60 calls each |
 | UNU14 | UNF24 | `tests/**` | gate; coverage floors; fault injection | 80 calls each |
 
-Order. UNU5 runs first, so that the comparison tools are fixed and probed before they judge other units. UNU1 runs at the same time as UNU5, because UNU1 does not touch the tools and its check is the gate. UNU2 follows UNU1, because both touch many files. UNU3, UNU4, and UNU6 then run in parallel worktrees. Their only shared files are the coverage inventory files. UNU7, UNU8, UNU9, UNU10, and UNU11 run one after the other, each on the result of the previous unit. UNU13 and UNU14 run last.
+Order. UNU5 runs first, so that the comparison tools are fixed and probed before they judge other units. UNU1 runs at the same time as UNU5, because UNU1 does not touch the tools and its check is the gate. UNU2 follows UNU1, because both touch many files. UNU3, UNU4, UNU6a, and UNU6b then run in parallel worktrees. Their only shared files are the coverage inventory files and import lines in `lower.ts`. UNU7, UNU8, UNU9, UNU10, and UNU11 run one after the other, each on the result of the previous unit. UNU13 and UNU14 run last.
 
 ## Final checks
 
@@ -368,3 +369,20 @@ Adversarial reviews, after the empirical checks:
 - Codex astra and a Fable subagent each review the full diff from `30bb1d5`, independently, with the instruction to find behavior changes, broken contracts, and new hidden links.
 - Fresh survey agents repeat the inventory of hidden links, needless links, surplus, and special cases. The work repeats until no finding is worth a fix.
 - Opus resolves each finding, or records why it rejects the finding.
+
+## Progress
+
+Each row names the commits on `main` and the main-tree gate result.
+
+| Unit | Commits on `main` | Main-tree gate |
+| --- | --- | --- |
+| UNU5 | `66a2690`, `d3c5941`, `5c1de56`, `955378e`, `51de8a9` | passed |
+| UNU1 | `748d597` to `17d063d` (7 commits), website `9a27abf` | passed |
+| UNU2a | `b5f5d33`, `7076a43`, `71933fa` | passed, 285 slow tests |
+| UNU2b | `b40a5c5`, `aa17934`, `899ce2e` | passed, 2906 fast and 285 slow tests |
+
+The failure probe of `behavior:compare` is the pair `f9b358f~1 f9b358f`. It exits 1. The earlier pair `3ab7c4b 30bb1d5` gives identical corpus output, so it cannot probe a failure.
+
+UNU2b found three defects in modifier decoding: a comment between `opaque` and `type`, a parameter named `borrow`, and `borrow/*c*/h` without a space. Commit `899ce2e` fixes them, and `tests/modifier_decoding_test.ts` failed before the fix.
+
+`deno task coverage` fails in a worktree under `~/.claude/scratch` with "no LCOV record: src/lsp/main.ts", also at the baseline. It passes in the main tree. The probable cause is the hidden `.claude` directory in the path. Coverage runs in the main tree only.
