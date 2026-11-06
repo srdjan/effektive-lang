@@ -812,12 +812,44 @@ export function checkModuleStep(
   );
 }
 
+/** What the cache policy decides for one module. */
+export type ModuleDecision =
+  /** Check the module again. */
+  | { readonly kind: "check" }
+  /** Use the step of an earlier check as it is. */
+  | { readonly kind: "reuse"; readonly step: ModuleStep }
+  /** Use the earlier check, and build only the interface again. */
+  | { readonly kind: "refresh"; readonly step: ModuleStep };
+
+/** The cache decisions of one project run. The driver does not know where the policy keeps its steps. */
+export interface ModulePolicy {
+  /** Called before each module, with the modules that it reaches among those done. */
+  decide(
+    name: string,
+    info: ModuleInfo,
+    seen: ReachedModules,
+  ): ModuleDecision;
+  /** Called after each module with the step that the module ends with. */
+  settled(name: string, step: ModuleStep, decision: ModuleDecision): void;
+}
+
+/** The policy that checks every module. */
+const CHECK_EVERY_MODULE: ModulePolicy = {
+  decide: () => ({ kind: "check" }),
+  settled: () => {},
+};
+
 /**
- * Checks every module of an analyzed project in topological order. A module sees
+ * Runs the modules of an analyzed project in topological order. A module sees
  * the finished interfaces of the modules that it reaches, with their modes.
+ * `policy` decides for each module whether to check it, to reuse an earlier
+ * step, or to build only its interface again.
  */
-export function checkAnalysis(analysis: Analysis): CheckedProject {
-  const table = new TypeTable();
+export function driveProject(
+  analysis: Analysis,
+  table: TypeTable,
+  policy: ModulePolicy,
+): CheckedProject {
   const graphs = new Map<string, TypeGraph>();
   const interfaces = new Map<string, ModuleInterface>();
   const modules = new Map<string, CheckedModule>();
@@ -826,13 +858,14 @@ export function checkAnalysis(analysis: Analysis): CheckedProject {
     const info = analysis.project.modules.get(name);
     const resolution = analysis.resolutions.get(name);
     if (info === undefined || resolution === undefined) continue;
-    const step = checkModuleStep(
-      info,
-      resolution,
-      name,
-      table,
-      reachedModules(analysis, name, graphs, interfaces),
-    );
+    const seen = reachedModules(analysis, name, graphs, interfaces);
+    const decision = policy.decide(name, info, seen);
+    const step = decision.kind === "check"
+      ? checkModuleStep(info, resolution, name, table, seen)
+      : decision.kind === "refresh"
+      ? refreshInterface(decision.step, seen)
+      : decision.step;
+    policy.settled(name, step, decision);
     graphs.set(name, step.graph);
     if (step.checked.interface.ok) {
       interfaces.set(name, step.checked.interface.value);
@@ -848,6 +881,11 @@ export function checkAnalysis(analysis: Analysis): CheckedProject {
     modules,
     diagnostics: normalizeDiagnostics(diagnostics),
   };
+}
+
+/** Checks every module of an analyzed project in topological order. */
+export function checkAnalysis(analysis: Analysis): CheckedProject {
+  return driveProject(analysis, new TypeTable(), CHECK_EVERY_MODULE);
 }
 
 /**

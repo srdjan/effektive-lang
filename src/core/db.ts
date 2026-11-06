@@ -18,10 +18,11 @@
 //    below). A module with an unchanged lowering key reuses its IR. Outputs
 //    use the lowering result as their cache key in TypeScriptOutputs.
 //
-// The program checks the modules in the order and with the inputs of
-// `checkAnalysis`, and it calls the same per-module step, `checkModuleStep`, so
-// the result of a revision equals the result of a check from scratch. One test
-// compares both.
+// The program runs the project driver of `checkAnalysis`, `driveProject`, with
+// a policy that decides for each module whether to reuse the memo entry, to
+// build only its interface again, or to check it. The driver does not know the
+// memo, so the result of a revision equals the result of a check from scratch.
+// One test compares both.
 //
 // Each revision owns its definitions and shares append-only interned storage.
 // Type references in reused modules stay valid. Memory growth over a long
@@ -37,20 +38,17 @@
 // then carries the new spans.
 
 import { type Analysis, analyzeProject } from "./analyze.ts";
-import type { ModeMap, TypeGraph } from "./signatures.ts";
+import type { ModeMap } from "./signatures.ts";
 import {
   type CheckedModule,
   type CheckedProject,
-  checkModuleStep,
+  driveProject,
   type ModuleStep,
-  reachedModules,
-  refreshInterface,
 } from "./check_project.ts";
-import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";
+import type { Diagnostic } from "./diagnostics.ts";
 import { fnv1a64 } from "./hash.ts";
 import { moduleOfId, nameOfId } from "./ids.ts";
 import type { DeclEntry } from "./declaration_index.ts";
-import type { ModuleInterface } from "./interface.ts";
 import type { ModuleIR } from "./ir.ts";
 import { type LowerError, lowerModule } from "./lower.ts";
 import {
@@ -336,89 +334,88 @@ export class Program {
     };
   }
 
-  /** The same per-module step and order as `checkAnalysis`, with the memo around each module. */
+  /** The same project driver as `checkAnalysis`, with the memo deciding each module. */
   private check(analysis: Analysis): Revision {
     const table = this.table.fork();
     const { project } = analysis;
     const config = configKey(project.config);
-    const graphs = new Map<string, TypeGraph>();
-    const interfaces = new Map<string, ModuleInterface>();
     const signatures = new Map<string, string>();
     const payloads = new Map<string, string>();
-    const modules = new Map<string, CheckedModule>();
     const entries = new Map<string, Entry>();
     const rechecked: string[] = [];
-    const diagnostics: Diagnostic[] = [...analysis.diagnostics];
-    const texts = new Map<string, string>();
+    let keys = { rest: "", lowerKey: "" };
 
+    const checked = driveProject(analysis, table, {
+      decide: (name, info, seen) => {
+        const { reached } = seen;
+        keys = {
+          rest: JSON.stringify([
+            info.path,
+            config,
+            analysis.diagnostics.filter((d) => d.span.source === info.path),
+            reached.map((other) => [other, signatures.get(other) ?? null]),
+          ]),
+          lowerKey: JSON.stringify(
+            reached.map((other) => [other, payloads.get(other) ?? null]),
+          ),
+        };
+        const entry = this.entries.get(name);
+        if (
+          entry === undefined || entry.text !== info.tree.text ||
+          entry.rest !== keys.rest
+        ) {
+          return { kind: "check" };
+        }
+        return {
+          kind: entry.lowerKey === keys.lowerKey ? "reuse" : "refresh",
+          step: entry.step,
+        };
+      },
+      settled: (name, step, decision) => {
+        const previous = this.entries.get(name);
+        const text = step.checked.tree.text;
+        let entry: Entry;
+        if (decision.kind === "check" || previous === undefined) {
+          const signature = step.checked.hash ??
+            `key:${fnv1a64(keys.rest)}:${fnv1a64(text)}`;
+          entry = {
+            text,
+            rest: keys.rest,
+            step,
+            signature,
+            payload: step.payloadHash ?? signature,
+            lowerKey: keys.lowerKey,
+          };
+          rechecked.push(name);
+          this.counters.checks++;
+        } else if (decision.kind === "refresh") {
+          // Only spans of reached modules moved. The IR is lowered again on demand.
+          entry = {
+            text: previous.text,
+            rest: previous.rest,
+            step,
+            signature: previous.signature,
+            payload: step.payloadHash ?? previous.signature,
+            lowerKey: keys.lowerKey,
+          };
+        } else {
+          entry = previous;
+        }
+        entries.set(name, entry);
+        signatures.set(name, entry.signature);
+        payloads.set(name, entry.payload);
+      },
+    });
+
+    const texts = new Map<string, string>();
     for (const name of project.order) {
       const info = project.modules.get(name);
-      const resolution = analysis.resolutions.get(name);
-      if (info === undefined || resolution === undefined) continue;
-      texts.set(info.path, info.tree.text);
-      const seen = reachedModules(analysis, name, graphs, interfaces);
-      const { reached } = seen;
-      const rest = JSON.stringify([
-        info.path,
-        config,
-        analysis.diagnostics.filter((d) => d.span.source === info.path),
-        reached.map((other) => [other, signatures.get(other) ?? null]),
-      ]);
-      const lowerKey = JSON.stringify(
-        reached.map((other) => [other, payloads.get(other) ?? null]),
-      );
-
-      let entry = this.entries.get(name);
-      if (
-        entry === undefined || entry.text !== info.tree.text ||
-        entry.rest !== rest
-      ) {
-        const step = checkModuleStep(info, resolution, name, table, seen);
-        const signature = step.checked.hash ??
-          `key:${fnv1a64(rest)}:${fnv1a64(info.tree.text)}`;
-        entry = {
-          text: info.tree.text,
-          rest,
-          step,
-          signature,
-          payload: step.payloadHash ?? signature,
-          lowerKey,
-        };
-        rechecked.push(name);
-        this.counters.checks++;
-      } else if (entry.lowerKey !== lowerKey) {
-        // Only spans of reached modules moved. The interface copies foreign
-        // declarations, so it is built again; the IR is lowered again on demand.
-        const step = refreshInterface(entry.step, seen);
-        entry = {
-          text: entry.text,
-          rest: entry.rest,
-          step,
-          signature: entry.signature,
-          payload: step.payloadHash ?? entry.signature,
-          lowerKey,
-        };
-      }
-      entries.set(name, entry);
-      graphs.set(name, entry.step.graph);
-      if (entry.step.checked.interface.ok) {
-        interfaces.set(name, entry.step.checked.interface.value);
-      }
-      signatures.set(name, entry.signature);
-      payloads.set(name, entry.payload);
-      modules.set(name, entry.step.checked);
-      for (const diagnostic of entry.step.checked.diagnostics) {
-        diagnostics.push(diagnostic);
+      if (info !== undefined && analysis.resolutions.has(name)) {
+        texts.set(info.path, info.tree.text);
       }
     }
     this.entries = entries;
     this.table = table;
-    const checked: CheckedProject = {
-      analysis,
-      table,
-      modules,
-      diagnostics: normalizeDiagnostics(diagnostics),
-    };
     return new Revision(
       this.count,
       project,
