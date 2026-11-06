@@ -55,3 +55,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | SID (decisions), SIU (units), SIF (findings) | [`docs/archive/plans/2026-11-04-service-imports.md`](../archive/plans/2026-11-04-service-imports.md) | Explicit service imports and inferred function requirements |
 | EU (units) | [`docs/archive/plans/2026-11-04-effect-upgrade.md`](../archive/plans/2026-11-04-effect-upgrade.md) | Effect 4.1.2 pins and compatibility; checks are in the evidence file |
 | RCP (phases and findings) | [`docs/archive/plans/2026-11-05-codebase-reset-plan.md`](../archive/plans/2026-11-05-codebase-reset-plan.md) | Completed correctness, verification, and simplification reset |
+| UNP (items, written `<slice>.<kind><n>`), UNF (fixes), UNU (units) | [`docs/plans/2026-11-06-untangle-codebase.md`](2026-11-06-untangle-codebase.md) | Untangle refactor: hidden links, needless links, surplus, and special cases |
