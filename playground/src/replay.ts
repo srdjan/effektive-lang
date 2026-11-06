@@ -3,6 +3,7 @@
 // page and `scripts/logs_replay.ts` share this file. It has no DOM code.
 
 import { isRecord } from "../../src/core/mod.ts";
+import { isKind } from "../../src/host/log_schema.ts";
 import type { EditChange } from "./events.ts";
 
 /** The longest single wait of the player, in milliseconds. */
@@ -69,9 +70,9 @@ export function stepsOf(text: string): ReplayStep[] {
     ) continue;
     const waitMs = Math.min(MAX_WAIT_MS, Math.max(0, event.ms - previous));
     const path = event.data.path;
-    if (event.kind === "pg.select") {
+    if (isKind(event, "pg.select")) {
       steps.push({ tag: "select", path, waitMs });
-    } else if (event.kind === "pg.edit") {
+    } else if (isKind(event, "pg.edit")) {
       const changes = editChangesOf(event.data);
       if (changes === undefined) continue;
       steps.push({ tag: "edit", path, changes, waitMs });

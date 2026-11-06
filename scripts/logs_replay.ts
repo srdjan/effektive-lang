@@ -27,7 +27,14 @@ import { parseArgs } from "../src/cli/args.ts";
 import { main } from "../src/cli/main.ts";
 import type { DirectoryEntry, HostIo } from "../src/host/io.ts";
 import type { FileFailure } from "../src/host/ports.ts";
-import { type Envelope, memoryLog, type Surface } from "../src/host/log.ts";
+import { memoryLog } from "../src/host/log.ts";
+import {
+  type Envelope,
+  isAnyKind,
+  isKind,
+  type LogKind,
+  type Surface,
+} from "../src/host/log_schema.ts";
 import type { FrameError } from "../src/lsp/jsonrpc.ts";
 import { LanguageServer, type ServerPorts } from "../src/lsp/server.ts";
 import { EXAMPLE_FILES, REPOSITORY_ROOT } from "../playground/build.ts";
@@ -174,7 +181,7 @@ function memoryFs(files: Map<string, string>): HostIo["fs"] {
   };
 }
 
-const CLI_KINDS: ReadonlySet<string> = new Set([
+const CLI_KINDS: ReadonlySet<LogKind> = new Set<LogKind>([
   "cli.diagnostics",
   "cli.output",
 ]);
@@ -183,7 +190,7 @@ async function replayCli(
   events: readonly Envelope[],
   blob: BlobReader,
 ): Promise<ReplayOutcome> {
-  const start = events.find((e) => e.kind === "cli.start")?.data;
+  const start = events.find((e) => isKind(e, "cli.start"))?.data;
   const logged = isRecord(start) && Array.isArray(start.args) ? start.args : [];
   const argv = logged.filter((a): a is string => typeof a === "string");
   if (argv.length === 0 || argv.length !== logged.length) {
@@ -211,7 +218,7 @@ async function replayCli(
   const root = parsed.value.root;
   const files = new Map<string, string>();
   for (const event of events) {
-    if (event.kind !== "cli.input" || !isRecord(event.data)) continue;
+    if (!isKind(event, "cli.input") || !isRecord(event.data)) continue;
     const { path, hash, removed, target } = event.data;
     if (typeof path !== "string" || target === true) continue;
     if (removed === true) {
@@ -241,17 +248,17 @@ async function replayCli(
   };
   const skipsTsc = argv.includes("--tsc");
   await main(argv.filter((a) => a !== "--tsc" && a !== "--no-log"), io);
-  const expected = events.filter((e) => CLI_KINDS.has(e.kind));
+  const expected = events.filter((e) => isAnyKind(e, CLI_KINDS));
   // The log holds no earlier generated files, so replay writes files that the
   // original run found up to date. Only the files that the original wrote count.
   const wrote = new Set(
     expected.flatMap((e) =>
-      e.kind === "cli.output" && isRecord(e.data) ? [e.data.path] : []
+      isKind(e, "cli.output") && isRecord(e.data) ? [e.data.path] : []
     ),
   );
   const replayed = log.events.filter((e) =>
-    e.kind === "cli.diagnostics" ||
-    (e.kind === "cli.output" && isRecord(e.data) && wrote.has(e.data.path))
+    isKind(e, "cli.diagnostics") ||
+    (isKind(e, "cli.output") && isRecord(e.data) && wrote.has(e.data.path))
   );
   return compare(
     "cli",
@@ -263,7 +270,7 @@ async function replayCli(
 
 // ------------------------------------------------------------------ lsp
 
-const LSP_KINDS: ReadonlySet<string> = new Set([
+const LSP_KINDS: ReadonlySet<LogKind> = new Set<LogKind>([
   "lsp.out",
   "lsp.fs",
   "lsp.flush",
@@ -279,7 +286,7 @@ const LSP_KINDS: ReadonlySet<string> = new Set([
 function normalizeLsp(kind: string, data: unknown): Observation {
   const copy = plain(data);
   if (!isRecord(copy)) return { kind, data: copy };
-  if (kind === "lsp.fs") {
+  if (isKind({ kind }, "lsp.fs")) {
     const { op, path, hash } = copy;
     return {
       kind,
@@ -287,7 +294,7 @@ function normalizeLsp(kind: string, data: unknown): Observation {
     };
   }
   if (
-    kind === "lsp.out" && isRecord(copy.message) &&
+    isKind({ kind }, "lsp.out") && isRecord(copy.message) &&
     isRecord(copy.message.result)
   ) {
     const { memory: _memory, ...result } = copy.message.result;
@@ -306,7 +313,7 @@ function replayLsp(
   blob: BlobReader,
 ): ReplayOutcome {
   // Resolve the blobs first, so that a missing one is a result and not a throw.
-  const fsEvents = events.filter((e) => e.kind === "lsp.fs");
+  const fsEvents = events.filter((e) => isKind(e, "lsp.fs"));
   const texts = new Map<string, string>();
   for (const { data } of fsEvents) {
     if (!isRecord(data) || data.op !== "readText") continue;
@@ -408,7 +415,7 @@ function replayLsp(
   };
   const server = new LanguageServer(ports);
   for (const { kind, data } of events) {
-    if (kind === "lsp.in" && isRecord(data)) {
+    if (isKind({ kind }, "lsp.in") && isRecord(data)) {
       const error = data.error;
       const frame: Result<unknown, FrameError> =
         isRecord(error) && typeof error.message === "string" &&
@@ -416,16 +423,16 @@ function replayLsp(
           ? { ok: false, error: { tag: error.tag, message: error.message } }
           : { ok: true, value: data.message };
       server.handle(frame);
-    } else if (kind === "lsp.batch") {
+    } else if (isKind({ kind }, "lsp.batch")) {
       server.afterBatch();
-    } else if (kind === "lsp.flush" && pending !== undefined) {
+    } else if (isKind({ kind }, "lsp.flush") && pending !== undefined) {
       const run = pending;
       pending = undefined;
       actual.push({ kind: "lsp.flush", data: {} });
       run();
     }
   }
-  const expected: Logged[] = events.filter((e) => LSP_KINDS.has(e.kind)).map((
+  const expected: Logged[] = events.filter((e) => isAnyKind(e, LSP_KINDS)).map((
     e,
   ) => ({ seq: e.seq, ...normalizeLsp(e.kind, e.data) }));
   return compare(
@@ -464,7 +471,7 @@ const withoutTime = (data: unknown): unknown => {
 };
 
 function replayPlayground(events: readonly Envelope[]): ReplayOutcome {
-  const start = events.find((e) => e.kind === "pg.start");
+  const start = events.find((e) => isKind(e, "pg.start"));
   if (start === undefined || !isRecord(start.data)) {
     return unsupported("the session has no pg.start");
   }
@@ -499,9 +506,9 @@ function replayPlayground(events: readonly Envelope[]): ReplayOutcome {
   for (const event of events) {
     const data = event.data;
     if (!isRecord(data)) continue;
-    if (event.kind === "pg.select" && typeof data.path === "string") {
+    if (isKind(event, "pg.select") && typeof data.path === "string") {
       active = data.path;
-    } else if (event.kind === "pg.edit" && typeof data.path === "string") {
+    } else if (isKind(event, "pg.edit") && typeof data.path === "string") {
       const changes = editChangesOf(data);
       if (changes === undefined) {
         return unsupported(`bad pg.edit at seq ${event.seq}`);
@@ -518,11 +525,11 @@ function replayPlayground(events: readonly Envelope[]): ReplayOutcome {
       }
       texts[data.path] = text;
       result = session.update(data.path, text);
-    } else if (event.kind === "pg.compile" || event.kind === "pg.error") {
+    } else if (isKind(event, "pg.compile") || isKind(event, "pg.error")) {
       expected.push({
         seq: event.seq,
         kind: event.kind,
-        data: event.kind === "pg.compile"
+        data: isKind(event, "pg.compile")
           ? withoutTime(event.data)
           : event.data,
       });

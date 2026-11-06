@@ -2,8 +2,12 @@
 // It is pure: the caller reads the request and gives the method, the headers,
 // and the body text. The result is the envelopes to write, or the refusal.
 
-import type { Envelope } from "../src/host/log.ts";
-import { isRecord, type Result } from "../src/core/mod.ts";
+import type { Result } from "../src/core/mod.ts";
+import {
+  type Envelope,
+  parseEnvelope,
+  parseSessionFileName,
+} from "../src/host/log_schema.ts";
 
 /** The only origin that may post besides a same-origin fetch. */
 export const ALLOWED_ORIGIN = "http://127.0.0.1:8790";
@@ -25,31 +29,9 @@ export interface Refusal {
   readonly message: string;
 }
 
-const SESSION =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-
-const REPLAY_NAME = /^playground-\d{8}-[0-9a-f-]{36}\.jsonl$/;
-
 /** True for a playground session file name. A path separator or `..` never matches. */
 export function isReplayName(name: string): boolean {
-  return REPLAY_NAME.test(name) && SESSION.test(name.slice(20, 56));
-}
-
-/** The envelope, when `value` has the playground shape. */
-function toEnvelope(value: unknown): Envelope | undefined {
-  if (!isRecord(value)) return undefined;
-  const { v, t, ms, surface, session, seq, build, kind, data } = value;
-  if (
-    v === 1 && typeof t === "string" && typeof ms === "number" &&
-    Number.isFinite(ms) && surface === "playground" &&
-    typeof session === "string" && SESSION.test(session) &&
-    typeof seq === "number" && Number.isInteger(seq) && seq >= 0 &&
-    typeof build === "string" && typeof kind === "string" &&
-    kind.startsWith("pg.") && "data" in value
-  ) {
-    return { v, t, ms, surface, session, seq, build, kind, data };
-  }
-  return undefined;
+  return parseSessionFileName(name)?.surface === "playground";
 }
 
 export function checkLogRequest(
@@ -84,7 +66,7 @@ export function checkLogRequest(
   }
   const envelopes: Envelope[] = [];
   for (const item of parsed) {
-    const envelope = toEnvelope(item);
+    const envelope = parseEnvelope(item, "browser");
     if (envelope === undefined) return refuse(400, "bad envelope");
     if (envelope.session !== (envelopes[0]?.session ?? envelope.session)) {
       return refuse(400, "mixed sessions");

@@ -4,7 +4,7 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { memoryLog } from "../src/host/log.ts";
-import type { Envelope } from "../src/host/log.ts";
+import type { Envelope } from "../src/host/log_schema.ts";
 import type { HostFs } from "../src/host/io.ts";
 import { main } from "../src/cli/main.ts";
 import { FrameDecoder } from "../src/lsp/jsonrpc.ts";

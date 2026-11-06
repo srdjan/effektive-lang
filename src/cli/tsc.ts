@@ -9,6 +9,7 @@ import {
   type SpanTable,
 } from "../core/mod.ts";
 import type { HostIo } from "../host/io.ts";
+import { emit } from "../host/log_schema.ts";
 import type { EventLog } from "../host/ports.ts";
 import { formatTscMappings, type TextOf } from "./format.ts";
 import targetLock from "./target_lock.json" with { type: "json" };
@@ -79,7 +80,7 @@ export async function runTsc(
     files,
   });
   if (!run.ok) {
-    log.append("cli.error", {
+    emit(log, "cli.error", {
       message: `cannot run deno check: ${run.error.message}`,
     });
     return {
@@ -88,7 +89,7 @@ export async function runTsc(
       failed: true,
     };
   }
-  log.append("cli.tsc", {
+  emit(log, "cli.tsc", {
     code: run.value.code,
     ms: performance.now() - started,
   });

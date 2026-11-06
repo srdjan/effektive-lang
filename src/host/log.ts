@@ -4,25 +4,8 @@
 
 import { isRecord, type Result, sha256Hex } from "../core/mod.ts";
 import config from "../../deno.json" with { type: "json" };
+import { type Envelope, sessionFileName, type Surface } from "./log_schema.ts";
 import type { EventLog, FileFailure } from "./ports.ts";
-
-export type Surface = "cli" | "lsp" | "playground";
-
-/** One line of a session file. */
-export interface Envelope {
-  readonly v: 1;
-  /** Wall time, ISO 8601. */
-  readonly t: string;
-  /** Monotonic milliseconds since the session start. */
-  readonly ms: number;
-  readonly surface: Surface;
-  readonly session: string;
-  /** Starts at 0 and grows by 1 for each event. */
-  readonly seq: number;
-  readonly build: string;
-  readonly kind: string;
-  readonly data: unknown;
-}
 
 /** The release version from `deno.json`. */
 export const BUILD: string = config.version;
@@ -199,8 +182,7 @@ export function openFileLog(
   const logs = prepared.value;
   const blobs = `${logs}/blobs`;
   const factory = envelopes(surface, { ...options, now });
-  const day = now().toISOString().slice(0, 10).replaceAll("-", "");
-  const file = `${logs}/${surface}-${day}-${factory.session}.jsonl`;
+  const file = `${logs}/${sessionFileName(surface, now(), factory.session)}`;
   let enabled = true;
   const guard = (run: () => Result<void, FileFailure>) => {
     try {

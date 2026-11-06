@@ -3,11 +3,24 @@
 // an envelope through `log_client.ts`. This file has no DOM code.
 
 import { sha256Hex } from "../../src/core/mod.ts";
+import type {
+  EditChange,
+  EmptyData,
+  Layout,
+  PgCompileData,
+  PgEditData,
+  PgErrorData,
+  PgHoverData,
+  PgLayoutData,
+  PgProblemData,
+  PgSelectData,
+  PgStartData,
+  PgViewData,
+} from "../../src/host/log_schema.ts";
 import type { PlaygroundHover, PlaygroundResult } from "./compile.ts";
 import { outputState, type ProblemItem, tabCounts } from "./model.ts";
 
-/** The page layout that a viewport width selects. */
-export type Layout = "narrow" | "wide" | "explorer";
+export type { EditChange, Layout };
 
 /** The widths where the wide layout and the explorer start. `app.css` agrees. */
 const WIDE_FROM = 720;
@@ -21,13 +34,6 @@ export function layoutOf(width: number): Layout {
     : "explorer";
 }
 
-/** One change of a document edit. Offsets index the document before the edit. */
-export interface EditChange {
-  readonly from: number;
-  readonly to: number;
-  readonly insert: string;
-}
-
 const round1 = (value: number): number => Math.round(value * 10) / 10;
 
 export function startData(input: {
@@ -36,7 +42,7 @@ export function startData(input: {
   readonly height: number;
   readonly files: Readonly<Record<string, string>>;
   readonly loadMs: number;
-}) {
+}): PgStartData {
   return {
     build: input.build,
     viewport: { w: input.width, h: input.height },
@@ -49,7 +55,7 @@ export function startData(input: {
 export function selectData(
   path: string,
   by: "click" | "key" | "hash" | "start",
-) {
+): PgSelectData {
   return { path, by };
 }
 
@@ -57,7 +63,7 @@ export function editData(
   path: string,
   changes: readonly EditChange[],
   length: number,
-) {
+): PgEditData {
   return { path, changes, length };
 }
 
@@ -66,7 +72,7 @@ export function compileData(
   path: string,
   result: PlaygroundResult,
   saving: string,
-) {
+): PgCompileData {
   const counts: Record<string, number> = {};
   for (const [file, count] of Object.entries(tabCounts(result))) {
     if (count > 0) counts[file] = count;
@@ -89,26 +95,28 @@ export function hoverData(
   offset: number,
   hit: PlaygroundHover | undefined,
   by: "pointer" | "cursor",
-) {
+): PgHoverData {
   return { offset, hit: hit !== undefined, by };
 }
 
-export function problemData(item: Pick<ProblemItem, "code" | "path">) {
+export function problemData(
+  item: Pick<ProblemItem, "code" | "path">,
+): PgProblemData {
   return { code: item.code, path: item.path };
 }
 
-export function viewData(name: string) {
+export function viewData(name: string): PgViewData {
   return { name };
 }
 
-export function layoutData(mode: Layout) {
+export function layoutData(mode: Layout): PgLayoutData {
   return { mode };
 }
 
-export function errorData(tag: string, message: string) {
+export function errorData(tag: string, message: string): PgErrorData {
   return { tag, message };
 }
 
-export function endData(): Record<string, never> {
+export function endData(): EmptyData {
   return {};
 }

@@ -20,6 +20,7 @@ import {
 } from "./build.ts";
 import type { HostIo } from "../host/io.ts";
 import { noLog } from "../host/log.ts";
+import { emit } from "../host/log_schema.ts";
 import type { EventLog } from "../host/ports.ts";
 import { readTargetInputs, readWorkspace } from "../host/workspace.ts";
 
@@ -61,7 +62,7 @@ export class Session {
     const started = performance.now();
     const result = this.read();
     if (result.tag !== "unchanged" && result.tag !== "read-error") {
-      this.log.append("cli.phase", {
+      emit(this.log, "cli.phase", {
         name: "sync",
         ms: performance.now() - started,
       });
@@ -74,16 +75,16 @@ export class Session {
     target: boolean,
   ): void {
     if (this.log === noLog) return;
-    const mark = target ? { target: true } : {};
+    const mark = target ? { target: true as const } : {};
     for (const [path, text] of diff.set) {
-      this.log.append("cli.input", {
+      emit(this.log, "cli.input", {
         path,
         hash: this.log.blob(text),
         ...mark,
       });
     }
     for (const path of diff.remove) {
-      this.log.append("cli.input", { path, removed: true, ...mark });
+      emit(this.log, "cli.input", { path, removed: true, ...mark });
     }
   }
 
@@ -144,18 +145,18 @@ export class Session {
       for (const path of outcome.written) {
         const read = this.io.fs.readText(joinPath(this.root, path));
         if (!read.ok) continue;
-        this.log.append("cli.output", {
+        emit(this.log, "cli.output", {
           path,
           bytes: new TextEncoder().encode(read.value).length,
           hash: sha256Hex(read.value),
         });
       }
     }
-    this.log.append("cli.phase", {
+    emit(this.log, "cli.phase", {
       name: "build",
       ms: performance.now() - started,
     });
-    this.log.append("cli.diagnostics", { items: outcome.items });
+    emit(this.log, "cli.diagnostics", { items: outcome.items });
     return outcome;
   }
 }

@@ -7,7 +7,14 @@
 // `parseSession` and `buildReport` on fixture text.
 
 import { isRecord, type Result } from "../src/core/mod.ts";
-import type { Envelope, Surface } from "../src/host/log.ts";
+import {
+  type Envelope,
+  isAnyKind,
+  isKind,
+  type LogKind,
+  parseEnvelope,
+  type Surface,
+} from "../src/host/log_schema.ts";
 
 /** The p90 budget for diagnostics latency, from `docs/release-measurements.md`. */
 const BUDGET_MS = 100;
@@ -19,8 +26,7 @@ const UNITS: Readonly<Record<string, number>> = {
   h: 3_600_000,
   d: 86_400_000,
 };
-const SURFACES: readonly string[] = ["cli", "lsp", "playground"];
-const END_KINDS: ReadonlySet<string> = new Set([
+const END_KINDS: ReadonlySet<LogKind> = new Set<LogKind>([
   "cli.end",
   "lsp.exit",
   "pg.end",
@@ -51,18 +57,6 @@ export interface ReportOptions {
 
 // ------------------------------------------------------------------ parsing
 
-function asEnvelope(value: unknown): Envelope | undefined {
-  if (!isRecord(value)) return undefined;
-  const { v, t, ms, surface, session, seq, build, kind } = value;
-  return v === 1 && typeof t === "string" && !Number.isNaN(Date.parse(t)) &&
-      typeof ms === "number" && typeof surface === "string" &&
-      SURFACES.includes(surface) && typeof session === "string" &&
-      typeof seq === "number" && typeof build === "string" &&
-      typeof kind === "string"
-    ? value as unknown as Envelope
-    : undefined;
-}
-
 /** Reads the lines of one session file. A bad line is counted, not thrown. */
 export function parseSession(text: string, file: string): LogFile {
   const events: Envelope[] = [];
@@ -75,7 +69,7 @@ export function parseSession(text: string, file: string): LogFile {
     } catch {
       parsed = undefined;
     }
-    const event = asEnvelope(parsed);
+    const event = parseEnvelope(parsed, "replay");
     if (event === undefined) badLines.push(index + 1);
     else events.push(event);
   });
@@ -177,20 +171,20 @@ function docEvents(events: readonly Envelope[]): Map<string, DocEvent[]> {
     const d = record(e.data);
     const message = record(d.message);
     const params = record(message.params);
-    if (e.kind === "pg.edit") add(str(d.path), { edit: true, ms: e.ms });
-    else if (e.kind === "pg.compile") {
+    if (isKind(e, "pg.edit")) add(str(d.path), { edit: true, ms: e.ms });
+    else if (isKind(e, "pg.compile")) {
       add(str(d.path), {
         edit: false,
         ms: e.ms,
         codes: codesOf(d.diagnostics),
       });
-    } else if (e.kind === "lsp.in") {
+    } else if (isKind(e, "lsp.in")) {
       const method = message.method;
       if (method === "textDocument/didChange") {
         add(str(record(params.textDocument).uri), { edit: true, ms: e.ms });
       }
     } else if (
-      e.kind === "lsp.out" &&
+      isKind(e, "lsp.out") &&
       message.method === "textDocument/publishDiagnostics"
     ) {
       add(str(params.uri), {
@@ -238,7 +232,7 @@ function brokenItems(file: LogFile): string[] {
   const items: string[] = [];
   for (const e of file.events) {
     const d = record(e.data);
-    if (e.kind === "lsp.out") {
+    if (isKind(e, "lsp.out")) {
       const error = record(record(d.message).error);
       if (typeof error.code === "number") {
         const name = RPC_NAMES[error.code];
@@ -248,26 +242,26 @@ function brokenItems(file: LogFile): string[] {
           }: ${str(error.message) ?? ""}`,
         );
       }
-    } else if (e.kind === "lsp.in" && d.error !== undefined) {
+    } else if (isKind(e, "lsp.in") && d.error !== undefined) {
       const error = record(d.error);
       items.push(
         `${where(e)}: bad frame ${str(error.tag) ?? ""}: ${
           str(error.message) ?? ""
         }`,
       );
-    } else if (e.kind === "lsp.error") {
+    } else if (isKind(e, "lsp.error")) {
       items.push(
         `${where(e)}: language server error text: ${str(d.text) ?? ""}`,
       );
-    } else if (e.kind === "cli.error") {
+    } else if (isKind(e, "cli.error")) {
       items.push(`${where(e)}: CLI error: ${str(d.message) ?? ""}`);
-    } else if (e.kind === "pg.error") {
+    } else if (isKind(e, "pg.error")) {
       items.push(
         `${where(e)}: playground error ${str(d.tag) ?? ""}: ${
           str(d.message) ?? ""
         }`,
       );
-    } else if (e.kind === "cli.end") {
+    } else if (isKind(e, "cli.end")) {
       // main.ts: 2 is a usage or configuration error, 3 is an internal error.
       if (d.code === 2) {
         items.push(`${where(e)}: CLI exit 2 (usage or configuration error)`);
@@ -286,7 +280,7 @@ function brokenSection(files: readonly LogFile[]) {
   const items = files.flatMap(brokenItems);
   const open =
     files.filter((f) =>
-      f.events.length > 0 && !f.events.some((e) => END_KINDS.has(e.kind))
+      f.events.length > 0 && !f.events.some((e) => isAnyKind(e, END_KINDS))
     ).length;
   const body = items.length === 0
     ? NONE
@@ -306,7 +300,7 @@ function diagnosticsLatency(files: readonly LogFile[]): number[] {
       const message = record(record(e.data).message);
       const params = record(message.params);
       if (
-        e.kind === "lsp.in" &&
+        isKind(e, "lsp.in") &&
         /^textDocument\/did(Change|Open)$/.test(String(message.method))
       ) {
         const uri = str(record(params.textDocument).uri);
@@ -316,7 +310,7 @@ function diagnosticsLatency(files: readonly LogFile[]): number[] {
           else list.push(e.ms);
         }
       } else if (
-        e.kind === "lsp.out" &&
+        isKind(e, "lsp.out") &&
         message.method === "textDocument/publishDiagnostics"
       ) {
         const uri = str(params.uri);
@@ -340,9 +334,9 @@ function latencySection(files: readonly LogFile[]) {
   };
   for (const e of files.flatMap((f) => f.events)) {
     const d = record(e.data);
-    if (e.kind === "cli.phase") add(`cli.phase ${str(d.name)}`, d.ms);
-    else if (e.kind === "lsp.timing") add(`lsp.timing ${str(d.method)}`, d.ms);
-    else if (e.kind === "pg.compile") add("pg.compile", d.ms);
+    if (isKind(e, "cli.phase")) add(`cli.phase ${str(d.name)}`, d.ms);
+    else if (isKind(e, "lsp.timing")) add(`lsp.timing ${str(d.method)}`, d.ms);
+    else if (isKind(e, "pg.compile")) add("pg.compile", d.ms);
   }
   const diagnostics = diagnosticsLatency(files);
   if (diagnostics.length > 0) {
@@ -431,7 +425,7 @@ function staleSpans(events: readonly Envelope[]): number[] {
   const spans: number[] = [];
   let since: number | undefined;
   for (const e of events) {
-    if (e.kind !== "pg.compile") continue;
+    if (!isKind(e, "pg.compile")) continue;
     const stale = record(e.data).stale;
     if (stale === true) since ??= e.ms;
     else if (stale === false && since !== undefined) {
@@ -450,10 +444,10 @@ function lspHoverMisses(
   let total = 0, misses = 0;
   for (const e of events) {
     const message = record(record(e.data).message);
-    if (e.kind === "lsp.in" && message.method === "textDocument/hover") {
+    if (isKind(e, "lsp.in") && message.method === "textDocument/hover") {
       asked.add(message.id);
     } else if (
-      e.kind === "lsp.out" && "result" in message && asked.has(message.id)
+      isKind(e, "lsp.out") && "result" in message && asked.has(message.id)
     ) {
       total++;
       if (message.result === null) misses++;
@@ -481,13 +475,13 @@ function frictionSection(files: readonly LogFile[]) {
     lsp.misses += hover.misses;
     for (const e of f.events) {
       const d = record(e.data);
-      if (e.kind === "pg.hover") {
+      if (isKind(e, "pg.hover")) {
         pgHovers.total++;
         if (d.hit === false) {
           pgHovers[d.by === "cursor" ? "cursor" : "pointer"]++;
         }
-      } else if (e.kind === "pg.problem") problems.push(str(d.code) ?? "?");
-      else if (e.kind === "pg.view") views.push(str(d.name) ?? "?");
+      } else if (isKind(e, "pg.problem")) problems.push(str(d.code) ?? "?");
+      else if (isKind(e, "pg.view")) views.push(str(d.name) ?? "?");
     }
   }
   const parts: string[] = [];
@@ -551,7 +545,7 @@ function outcomesSection(files: readonly LogFile[]) {
     compiles.set(surface, (compiles.get(surface) ?? 0) + 1);
   for (const e of events) {
     const d = record(e.data);
-    if (e.kind === "pg.compile") {
+    if (isKind(e, "pg.compile")) {
       bump(e.surface);
       const path = str(d.path), label = str(d.saving);
       const t = Date.parse(e.t);
@@ -559,12 +553,12 @@ function outcomesSection(files: readonly LogFile[]) {
         const old = saving.get(path);
         if (old === undefined || t >= old.t) saving.set(path, { t, label });
       }
-    } else if (e.kind === "cli.phase" && d.name === "build") bump(e.surface);
+    } else if (isKind(e, "cli.phase") && d.name === "build") bump(e.surface);
     else if (
-      e.kind === "lsp.out" &&
+      isKind(e, "lsp.out") &&
       record(d.message).method === "textDocument/publishDiagnostics"
     ) bump(e.surface);
-    else if (e.kind === "cli.output") {
+    else if (isKind(e, "cli.output")) {
       written++;
       if (typeof d.bytes === "number") bytes += d.bytes;
     }

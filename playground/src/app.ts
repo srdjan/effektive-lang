@@ -14,6 +14,7 @@ import {
   isInterfacePath,
 } from "../../src/core/mod.ts";
 import { BUILD } from "../../src/host/log.ts";
+import { emit } from "../../src/host/log_schema.ts";
 import {
   createPlayground,
   type PlaygroundError,
@@ -258,6 +259,7 @@ async function main(): Promise<void> {
   const log: PageLog = replayName !== null
     ? { event: () => {}, flush: () => {} }
     : createPageLog({ fetch: (url, init) => fetch(url, init) });
+  const sink = { append: log.event };
   const paths = Object.keys(files).filter((path) => path !== CONFIG_FILE);
   const session = createPlayground(files, { now: () => performance.now() });
   const first = session.start();
@@ -282,7 +284,7 @@ async function main(): Promise<void> {
   let problemCount = 0;
 
   function showError(tag: string, message: string): void {
-    log.event("pg.error", errorData(tag, message));
+    emit(sink, "pg.error", errorData(tag, message));
     errorMessage.textContent = message;
     reload.hidden = true;
     errorRegion.hidden = false;
@@ -299,7 +301,7 @@ async function main(): Promise<void> {
   const extensions = sourceExtensions({
     hover: (offset) => {
       const hit = session.hover(active, offset);
-      log.event("pg.hover", hoverData(offset, hit, "pointer"));
+      emit(sink, "pg.hover", hoverData(offset, hit, "pointer"));
       return hit;
     },
     onUpdate: (update: ViewUpdate) => {
@@ -311,7 +313,7 @@ async function main(): Promise<void> {
         update.changes.iterChanges((from, to, _fromB, _toB, inserted) => {
           changes.push({ from, to, insert: inserted.toString() });
         });
-        log.event("pg.edit", editData(active, changes, text.length));
+        emit(sink, "pg.edit", editData(active, changes, text.length));
         applyResult(session.update(active, text));
       } else if (update.selectionSet) {
         scheduleCursorLine();
@@ -350,7 +352,7 @@ async function main(): Promise<void> {
     if (!isInterfacePath(active)) {
       const offset = sourceView.state.selection.main.head;
       const hit = session.hover(active, offset);
-      log.event("pg.hover", hoverData(offset, hit, "cursor"));
+      emit(sink, "pg.hover", hoverData(offset, hit, "cursor"));
       text = hoverLines(hit).cursor;
     }
     if (text !== cursorLine.textContent) cursorLine.textContent = text;
@@ -439,7 +441,7 @@ async function main(): Promise<void> {
   }
 
   function openProblem(item: ProblemItem): void {
-    log.event("pg.problem", problemData(item));
+    emit(sink, "pg.problem", problemData(item));
     goTo(item.path, "click");
     if (narrow) setView("source");
     const length = sourceView.state.doc.length;
@@ -516,7 +518,8 @@ async function main(): Promise<void> {
   }
 
   function logCompile(): void {
-    log.event(
+    emit(
+      sink,
       "pg.compile",
       compileData(active, latest, saving.textContent ?? ""),
     );
@@ -526,7 +529,7 @@ async function main(): Promise<void> {
 
   function selectFile(path: string, by: "click" | "key" | "hash"): void {
     if (path === active) return;
-    log.event("pg.select", selectData(path, by));
+    emit(sink, "pg.select", selectData(path, by));
     clearTimeout(cursorTimer);
     states.set(active, sourceView.state);
     active = path;
@@ -601,7 +604,7 @@ async function main(): Promise<void> {
     wireTablist(list, (tab) => {
       const name = VIEW_NAMES.find((view) => `view-tab-${view}` === tab.id);
       if (name === undefined) return;
-      log.event("pg.view", viewData(name));
+      emit(sink, "pg.view", viewData(name));
       setView(name);
     });
     viewsNav.replaceChildren(list);
@@ -635,7 +638,7 @@ async function main(): Promise<void> {
     const mode = layoutOf(globalThis.innerWidth);
     if (mode === layout) return;
     layout = mode;
-    log.event("pg.layout", layoutData(mode));
+    emit(sink, "pg.layout", layoutData(mode));
   }
   wideQuery.addEventListener("change", () => {
     applyMode();
@@ -654,7 +657,7 @@ async function main(): Promise<void> {
     noteLayout();
   });
   globalThis.addEventListener("pagehide", () => {
-    log.event("pg.end", endData());
+    emit(sink, "pg.end", endData());
     log.flush();
   });
 
@@ -676,7 +679,8 @@ async function main(): Promise<void> {
   sourceView.requestMeasure();
   outputView.requestMeasure();
   scheduleCursorLine();
-  log.event(
+  emit(
+    sink,
     "pg.start",
     startData({
       build: BUILD,
@@ -686,7 +690,7 @@ async function main(): Promise<void> {
       loadMs: performance.now(),
     }),
   );
-  log.event("pg.select", selectData(active, "start"));
+  emit(sink, "pg.select", selectData(active, "start"));
   logCompile();
   if (replayName !== null) await playReplay(replayName);
 

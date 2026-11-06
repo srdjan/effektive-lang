@@ -17,6 +17,7 @@ import { denoIo } from "../host/deno_io.ts";
 import { containedProjectPath } from "../host/workspace.ts";
 import type { HostIo } from "../host/io.ts";
 import { noLog } from "../host/log.ts";
+import { emit } from "../host/log_schema.ts";
 import type { EventLog } from "../host/ports.ts";
 import { fixContracts, type FixOutcome } from "./fix.ts";
 import { type FixSummary, printOutcome, rechecked } from "./report.ts";
@@ -62,7 +63,7 @@ async function watchLoop(
         return;
       case "read-error":
       case "config-error":
-        log.append("cli.error", { message: synced.message });
+        emit(log, "cli.error", { message: synced.message });
         io.stderr(`error: ${synced.message}\n`);
         return;
       case "host-change": {
@@ -101,7 +102,7 @@ async function watchLoop(
       const event = await next;
       if (event.done) break;
       if (event.value.length > 0) {
-        log.append("cli.change", { paths: event.value });
+        emit(log, "cli.change", { paths: event.value });
       }
       await round(session.sync());
       next = iterator.next();
@@ -131,7 +132,7 @@ export async function main(
   } catch (error) {
     const message = errorMessage(error);
     io.stderr(`effektive: internal error: ${message}\n`);
-    opened.log?.append("cli.error", { message });
+    if (opened.log !== undefined) emit(opened.log, "cli.error", { message });
     return EXIT_INTERNAL;
   }
 }
@@ -159,13 +160,13 @@ async function execute(
   const started = performance.now();
   const log = command.log ? io.openLog(root) : noLog;
   opened.log = log;
-  log.append("cli.start", {
+  emit(log, "cli.start", {
     args,
     command: command.kind,
     root: io.fs.absolute(root),
   });
   const code = await runProject(io, command, log);
-  log.append("cli.end", { code, ms: performance.now() - started });
+  emit(log, "cli.end", { code, ms: performance.now() - started });
   return code;
 }
 
@@ -185,7 +186,7 @@ async function runProject(
   // A project that cannot start is a configuration error. A later break in watch mode only prints.
   const synced = session.sync();
   if (isSyncFailure(synced)) {
-    log.append("cli.error", { message: synced.message });
+    emit(log, "cli.error", { message: synced.message });
     io.stderr(`effektive: ${synced.message}\n`);
     return EXIT_USAGE;
   }
@@ -201,7 +202,7 @@ async function runProject(
   // diagnostics print the lines and columns of the fixed text.
   const again = fixed === undefined ? synced : session.sync();
   if (isSyncFailure(again)) {
-    log.append("cli.error", { message: again.message });
+    emit(log, "cli.error", { message: again.message });
     io.stderr(`effektive: ${again.message}\n`);
     return EXIT_USAGE;
   }

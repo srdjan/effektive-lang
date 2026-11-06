@@ -11,6 +11,7 @@ import {
   type Span,
   type TscMapping,
 } from "../core/mod.ts";
+import type { LoggedDiagnostic } from "../host/log_schema.ts";
 
 /** The text of a file by its root-relative path, or undefined. */
 export type TextOf = (path: string) => string | undefined;
@@ -158,16 +159,6 @@ export function formatTscMappings(
     }
   });
   return located.sort(compareLocated).flatMap(lines);
-}
-
-/** One diagnostic as the session log records it. Positions are one-based. */
-export interface LoggedDiagnostic {
-  readonly source: "effektive" | "validate" | "tsc";
-  readonly code?: string;
-  readonly path?: string;
-  readonly start?: { readonly line: number; readonly column: number };
-  readonly end?: { readonly line: number; readonly column: number };
-  readonly message: string;
 }
 
 /** The log items of Effektive or validation diagnostics, in the order given. */

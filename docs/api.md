@@ -142,7 +142,8 @@ src/host/      The host adapters that the command-line tool and the language ser
   outputs.ts     writeGenerated: the write of the .ts and .ts.map files, shared by build and the language server.
   save_round.ts  runSaveRound: the removal of stale outputs and the write, with the removal rule of each caller.
   ports.ts       The port types that io.ts and log.ts share: FileFailure and EventLog.
-  log.ts         The event log: envelope, EventLog port, LogFs port, file adapter with SHA-256 blobs and seven-day rotation, memory adapter.
+  log.ts         The event log: EventLog port, LogFs port, file adapter with SHA-256 blobs and seven-day rotation, memory adapter.
+  log_schema.ts  The log schema: envelope, the data type of each record kind, session file name, envelope parsing. Data and pure code only.
 src/lsp/       The language server. See "Language server".
   main.ts        The stdio entry: reads frames, writes frames, and ends the process.
   server.ts      LanguageServer: lifecycle, dispatch, and the flush schedule.

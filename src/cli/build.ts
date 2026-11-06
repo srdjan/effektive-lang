@@ -3,13 +3,9 @@
 
 import type { TypeScriptOutputs } from "../core/typescript.ts";
 import type { Diagnostic, Revision, SpanTable } from "../core/mod.ts";
-import {
-  formatDiagnostics,
-  type LoggedDiagnostic,
-  loggedDiagnostics,
-  type TextOf,
-} from "./format.ts";
+import { formatDiagnostics, loggedDiagnostics, type TextOf } from "./format.ts";
 import type { HostIo } from "../host/io.ts";
+import type { LoggedDiagnostic } from "../host/log_schema.ts";
 import type { EventLog } from "../host/ports.ts";
 import {
   type ModuleRemoval,

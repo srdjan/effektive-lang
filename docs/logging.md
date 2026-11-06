@@ -35,7 +35,8 @@ Each line is one JSON object:
 ```
 
 `ms` counts from the session start. `session` is a random UUID. `build` is the
-version in `deno.json`. `src/host/log.ts` defines the envelope, the `EventLog`
+version in `deno.json`. `src/host/log_schema.ts` defines the envelope, the data type of each kind,
+the session file name, and the envelope parsing. `src/host/log.ts` defines the `EventLog`
 port, the file adapter, and the memory adapter that tests use.
 
 ## Kinds

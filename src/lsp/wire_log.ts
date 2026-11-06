@@ -7,12 +7,13 @@
 import { isRecord, type Result, sha256Hex } from "../core/mod.ts";
 import type { HostFs } from "../host/io.ts";
 import { noLog } from "../host/log.ts";
+import type { LogData, LspKind } from "../host/log_schema.ts";
 import type { EventLog } from "../host/ports.ts";
 import type { FrameError, RequestId } from "./jsonrpc.ts";
 import { uriToPath } from "./positions.ts";
 import type { ServerPorts } from "./server.ts";
 
-type Event = (log: EventLog) => Record<string, unknown>;
+type Event<K extends LspKind> = (log: EventLog) => LogData[K];
 
 // shortcut: events before `initialize` stop at this count, raise it if a client sends more.
 const MAX_BUFFERED = 1000;
@@ -34,7 +35,7 @@ function workspaceRoot(params: Record<string, unknown>): string | undefined {
 
 export class WireLog {
   #log: EventLog | undefined;
-  readonly #buffer: Array<{ kind: string; data: Event }> = [];
+  readonly #buffer: Array<{ kind: string; data: Event<LspKind> }> = [];
   readonly #started = new Map<RequestId, { method: string; at: number }>();
 
   /**
@@ -46,7 +47,7 @@ export class WireLog {
     private readonly clock: () => number = () => performance.now(),
   ) {}
 
-  #emit(kind: string, data: Event): void {
+  #emit<K extends LspKind>(kind: K, data: Event<K>): void {
     // An off log builds no event, so a disk read hashes nothing.
     if (this.#log === noLog) return;
     if (this.#log !== undefined) {
@@ -129,61 +130,70 @@ export class WireLog {
   }
 
   #fs(real: HostFs): HostFs {
-    const fs = (op: string, path: string, data: Event) =>
-      this.#emit("lsp.fs", (log) => ({ op, path, ...data(log) }));
     return {
       readText: (path) => {
         const result = real.readText(path);
-        fs(
-          "readText",
-          path,
+        this.#emit(
+          "lsp.fs",
           (log) =>
             result.ok
-              ? { hash: log.blob(result.value) }
-              : { error: result.error },
+              ? { op: "readText", path, hash: log.blob(result.value) }
+              : { op: "readText", path, error: result.error },
         );
         return result;
       },
       writeText: (path, text) => {
         const result = real.writeText(path, text);
-        fs("writeText", path, () => ({ hash: sha256Hex(text), ok: result.ok }));
+        this.#emit("lsp.fs", () => ({
+          op: "writeText",
+          path,
+          hash: sha256Hex(text),
+          ok: result.ok,
+        }));
         return result;
       },
       remove: (path) => {
         const result = real.remove(path);
-        fs("remove", path, () => ({ ok: result.ok }));
+        this.#emit("lsp.fs", () => ({ op: "remove", path, ok: result.ok }));
         return result;
       },
       entryKind: (path) => {
         const result = real.entryKind(path);
-        fs(
-          "entryKind",
-          path,
-          () => result.ok ? { kind: result.value } : { error: result.error },
+        this.#emit(
+          "lsp.fs",
+          () =>
+            result.ok
+              ? { op: "entryKind", path, kind: result.value }
+              : { op: "entryKind", path, error: result.error },
         );
         return result;
       },
       kind: (path) => {
         const kind = real.kind(path);
-        fs("kind", path, () => ({ kind }));
+        this.#emit("lsp.fs", () => ({ op: "kind", path, kind }));
         return kind;
       },
       list: (path) => {
         const result = real.list(path);
-        fs("list", path, () =>
+        this.#emit("lsp.fs", () =>
           result.ok
             ? {
+              op: "list",
+              path,
               entries: result.value.map((e) => ({
                 name: e.name,
                 isDirectory: e.isDirectory,
               })),
             }
-            : { error: result.error });
+            : { op: "list", path, error: result.error });
         return result;
       },
       absolute: (path) => {
         const absolute = real.absolute(path);
-        fs("absolute", path, () => ({ result: absolute }));
+        this.#emit(
+          "lsp.fs",
+          () => ({ op: "absolute", path, result: absolute }),
+        );
         return absolute;
       },
     };

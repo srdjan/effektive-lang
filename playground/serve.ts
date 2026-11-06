@@ -7,6 +7,7 @@ import { serveDir } from "@std/http/file-server";
 import { join } from "@std/path";
 import { denoLogFs } from "../src/host/deno_io.ts";
 import { prepareLogFolder } from "../src/host/log.ts";
+import { sessionFileName } from "../src/host/log_schema.ts";
 import { build, describeBuildError, REPOSITORY_ROOT } from "./build.ts";
 import {
   checkLogRequest,
@@ -55,8 +56,8 @@ async function handleLog(request: Request, logs: string): Promise<Response> {
   const size = new TextEncoder().encode(text).length;
   let target = sessions.get(session);
   if (target === undefined) {
-    const day = new Date().toISOString().slice(0, 10).replaceAll("-", "");
-    target = { file: `${logs}/playground-${day}-${session}.jsonl`, bytes: 0 };
+    const name = sessionFileName("playground", new Date(), session);
+    target = { file: `${logs}/${name}`, bytes: 0 };
     sessions.set(session, target);
   }
   if (target.bytes + size > SESSION_CAP_BYTES) {
