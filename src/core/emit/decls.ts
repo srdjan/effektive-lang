@@ -947,7 +947,13 @@ export class DeclarationEmitter {
           result.push(check);
         }
       }
-      result.push(marked(host.hostName, [
+      const data = {
+        name: host.hostName,
+        local: host.local,
+        exported: host.exported,
+        key: host.key,
+      };
+      result.push(marked(data, [
         `const ${host.hostName}: `,
         typeDoc(this.scope, provider),
         " = ",

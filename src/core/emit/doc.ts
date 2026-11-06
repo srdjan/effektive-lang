@@ -42,8 +42,12 @@ export type Doc =
   }
   | { readonly k: "span"; readonly span: Span; readonly d: Doc }
   | { readonly k: "endspan"; readonly span: Span; readonly start: number }
-  | { readonly k: "mark"; readonly key: string; readonly d: Doc }
-  | { readonly k: "endmark"; readonly key: string; readonly start: number }
+  | { readonly k: "mark"; readonly data: HostAssertionData; readonly d: Doc }
+  | {
+    readonly k: "endmark";
+    readonly data: HostAssertionData;
+    readonly start: number;
+  }
   | {
     readonly k: "fill";
     readonly parts: readonly Doc[];
@@ -93,9 +97,9 @@ export function ifBroke(id: GroupId, broken: Doc, flat: Doc = ""): Doc {
   return { k: "ifbroke", id, broken, flat };
 }
 
-/** Tags the output of `d` with a key. `render` returns its generated range. */
-export function marked(key: string, d: Doc): Doc {
-  return { k: "mark", key, d };
+/** Tags the output of `d` with host assertion data. `render` returns its generated range. */
+export function marked(data: HostAssertionData, d: Doc): Doc {
+  return { k: "mark", data, d };
 }
 
 export function indent(d: Doc): Doc {
@@ -247,8 +251,23 @@ export interface SpanRecord {
   readonly span: Span;
 }
 
-interface MarkRecord {
+/**
+ * What a host assertion constant says about itself: the data of its mark. The
+ * range of the constant comes from `render`.
+ */
+export interface HostAssertionData {
+  /** The name of the assertion constant: `UsersLive$host`. */
+  readonly name: string;
+  /** The name that the Effektive source binds in its import: `UsersLive`. */
+  readonly local: string;
+  /** The name that the host module exports. */
+  readonly exported: string;
+  /** The registry key: `providers` for `host:providers`. */
   readonly key: string;
+}
+
+interface MarkRecord {
+  readonly data: HostAssertionData;
   readonly start: number;
   readonly end: number;
 }
@@ -655,12 +674,12 @@ export function render(doc: Doc, width = 80): Rendered {
         stack.push({
           indent: cmd.indent,
           mode: cmd.mode,
-          doc: { k: "endmark", key: d.key, start: offset },
+          doc: { k: "endmark", data: d.data, start: offset },
         });
         stack.push({ indent: cmd.indent, mode: cmd.mode, doc: d.d });
         break;
       case "endmark":
-        marks.push({ key: d.key, start: d.start, end: offset });
+        marks.push({ data: d.data, start: d.start, end: offset });
         break;
     }
   }

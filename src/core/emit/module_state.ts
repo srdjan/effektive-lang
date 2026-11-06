@@ -191,11 +191,12 @@ export interface TypeLookup {
   ): TypeDecl | ErrorDecl | ServiceDecl | undefined;
 }
 
-/** What `emit.ts` reads after all printing. */
+/**
+ * What `emit.ts` reads when all allocation is done. `finish` is the only way to
+ * the import lists; after it, an allocation is an internal failure.
+ */
 interface ImportLedger {
-  moduleImports(): ImportGroup[];
-  effectImports(): { readonly exported: string; readonly local: string }[];
-  hostImports(): ImportGroup[];
+  finish(): ImportGroup[];
   usesHelper(key: HelperKey): boolean;
 }
 
@@ -265,6 +266,8 @@ export class ModuleState
 
   private readonly helpers: HelperNames = {};
   private serviceName: string | undefined;
+  /** True after `finish`: the import lists are read, so no name or import may change. */
+  private finished = false;
   private temporaries = 0;
   private declarationTemporaries: string[] = [];
   private readonly typeOnlyMemo = new Map<DeclarationId, boolean>();
@@ -371,6 +374,7 @@ export class ModuleState
    * companion module: import it from there.
    */
   private importOpaque(module: string, exported: string, local: string): void {
+    this.assertOpen(`the opaque type ${exported} is imported`);
     for (const host of this.config.host.values()) {
       const iface = normalizeRelative(host.interfacePath);
       if (iface === undefined || moduleNameOf(iface) !== module) continue;
@@ -388,8 +392,14 @@ export class ModuleState
 
   // -------------------------------------------------------------- allocation
 
+  /** An allocation after `finish` would miss the import lists that `finish` returned. */
+  private assertOpen(what: string): void {
+    if (this.finished) throw internal(`${what} after the imports are final`);
+  }
+
   /** Reserves `base`, or `base$1`, `base$2`, ... when the name is taken. */
   fresh(base: string): string {
+    this.assertOpen(`the name ${base} is allocated`);
     let candidate = base;
     let n = 0;
     while (this.taken.has(candidate)) {
@@ -402,6 +412,7 @@ export class ModuleState
 
   /** The next temporary `$t<n>`. The counter restarts for each top-level declaration. */
   temp(): string {
+    this.assertOpen("a temporary is allocated");
     for (;;) {
       const candidate = `$t${this.temporaries}`;
       this.temporaries += 1;
@@ -606,6 +617,7 @@ export class ModuleState
     local: string,
     typeOnly: boolean,
   ): void {
+    this.assertOpen(`${exported} is imported`);
     let names = this.foreignImports.get(module);
     if (names === undefined) {
       names = new Map();
@@ -626,8 +638,22 @@ export class ModuleState
     return paths;
   }
 
+  /**
+   * The import groups of the module, in print order: `effect`, other generated
+   * modules, and host modules. It closes the state: a later allocation is an
+   * internal failure.
+   */
+  finish(): ImportGroup[] {
+    this.finished = true;
+    return [
+      ...this.effectImports(),
+      ...this.moduleImports(),
+      ...this.hostImports(),
+    ];
+  }
+
   /** Imports of other generated modules, sorted by specifier. */
-  moduleImports(): ImportGroup[] {
+  private moduleImports(): ImportGroup[] {
     const groups: ImportGroup[] = [];
     const companions = this.companionPaths();
     for (const [module, names] of this.foreignImports) {
@@ -647,14 +673,15 @@ export class ModuleState
   }
 
   /** The imports from `effect` that the module used, sorted by exported name. */
-  effectImports(): { readonly exported: string; readonly local: string }[] {
-    return [...this.effectAliases]
-      .map(([exported, local]) => ({ exported, local }))
+  private effectImports(): ImportGroup[] {
+    const names = [...this.effectAliases]
+      .map(([exported, local]) => ({ exported, local, typeOnly: false }))
       .sort((a, b) => compareImportNames(a.exported, b.exported));
+    return names.length === 0 ? [] : [{ specifier: "effect", names }];
   }
 
   /** The host imports in registry order of first appearance, sorted by specifier. */
-  hostImports(): ImportGroup[] {
+  private hostImports(): ImportGroup[] {
     const bySpecifier = new Map<string, Map<string, ImportedName>>();
     for (const [specifier, names] of this.hostDeclarations) {
       bySpecifier.set(specifier, new Map(names));

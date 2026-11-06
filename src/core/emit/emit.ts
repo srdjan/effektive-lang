@@ -128,19 +128,8 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
 
   helpers.push(fieldHelperDeclarations(scope));
 
-  const effectNames = scope.effectImports().map((n) =>
-    n.exported === n.local ? n.exported : `${n.exported} as ${n.local}`
-  );
-  const imports: Doc[] = [];
-  if (effectNames.length > 0) {
-    imports.push([
-      "import ",
-      bracketed("{", "}", effectNames, true),
-      ' from "effect";',
-    ]);
-  }
-  for (const group of scope.moduleImports()) imports.push(importLine(group));
-  for (const group of scope.hostImports()) imports.push(importLine(group));
+  // Every name and import is allocated by now: the import lists are final.
+  const imports: Doc[] = scope.finish().map(importLine);
 
   const header: Doc = generatedHeader(scope.source);
   const declarationDocs = [...typeDocs, ...functionDocs, ...constantDocs];
@@ -160,20 +149,11 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
   ]);
   const mapName = `${scope.path.slice(scope.path.lastIndexOf("/") + 1)}.map`;
   const rendered = render([doc, hard, `//# sourceMappingURL=${mapName}`, hard]);
-  const assertions: HostAssertionRecord[] = [];
-  for (const mark of rendered.marks) {
-    for (const host of scope.hosts.values()) {
-      if (host.hostName !== mark.key) continue;
-      assertions.push({
-        name: host.hostName,
-        local: host.local,
-        exported: host.exported,
-        key: host.key,
-        start: mark.start,
-        end: mark.end,
-      });
-    }
-  }
+  const assertions: HostAssertionRecord[] = rendered.marks.map((mark) => ({
+    ...mark.data,
+    start: mark.start,
+    end: mark.end,
+  }));
   assertions.sort((a, b) => a.start - b.start);
   return {
     module: ir.module,

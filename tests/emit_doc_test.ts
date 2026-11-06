@@ -105,10 +105,11 @@ Deno.test("ifBroke counts a group that a hard line forces to break", () => {
 });
 
 Deno.test("mark tags record the generated range of their content", () => {
-  const doc: Doc = ["a ", marked("k", ["b", hard, "c"]), " d"];
+  const data = { name: "N$host", local: "N", exported: "n", key: "k" };
+  const doc: Doc = ["a ", marked(data, ["b", hard, "c"]), " d"];
   const result = render(doc);
   assertEquals(result.text, "a b\nc d");
-  assertEquals(result.marks, [{ key: "k", start: 2, end: 5 }]);
+  assertEquals(result.marks, [{ data, start: 2, end: 5 }]);
 });
 
 // ------------------------------------------------------------------ fill and through (A6c)
