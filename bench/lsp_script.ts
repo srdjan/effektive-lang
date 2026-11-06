@@ -8,7 +8,7 @@
 // list. Any other list stops the run with an error value. This is the
 // checksum-like gate of the protocol.
 
-import { errorMessage } from "../src/core/mod.ts";
+import { errorMessage, isRecord } from "../src/core/mod.ts";
 import type { Result } from "../src/core/mod.ts";
 import { STATS_METHOD } from "../src/lsp/methods.ts";
 import {
@@ -246,10 +246,6 @@ export interface StepStats {
   /** Null only for older stats producers that omit this metric. */
   readonly heapUsed: number | null;
   readonly typeTableSize: number | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function isStringArray(value: unknown): value is string[] {

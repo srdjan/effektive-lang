@@ -7,7 +7,7 @@
 // Requests, waits, and the exit all have a timeout. A failure rejects with an
 // `LspClientError`, a tagged error with a clear message.
 
-import { errorMessage } from "../src/core/mod.ts";
+import { errorMessage, isRecord } from "../src/core/mod.ts";
 import { join } from "@std/path";
 import { ROOT } from "../scripts/lib.ts";
 import {
@@ -43,10 +43,6 @@ export class LspClientError extends Error {
 
 export function describeLspClientError(error: LspClientError): string {
   return `${error.tag}: ${error.message}`;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 interface Pending {
