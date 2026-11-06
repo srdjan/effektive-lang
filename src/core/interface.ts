@@ -15,15 +15,14 @@
 import type { Analysis } from "./analyze.ts";
 import {
   contractSets,
-  effectIds,
   type FunctionSignature,
   isPendingMode,
   type ModuleDeclarations,
-  referencedIds,
   signatureType,
   type SolvedLookup,
   type TypeGraph,
 } from "./signatures.ts";
+import { effectIds, referencedIds } from "./referenced_ids.ts";
 import { fnv1a64 } from "./hash.ts";
 import type {
   DeclarationId,

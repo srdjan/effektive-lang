@@ -3,7 +3,7 @@
 
 import type { ErrorId, Field, FunctionType, Type, TypeId } from "./ir.ts";
 import type { Predicate } from "./predicates.ts";
-import { guardedRecord } from "./recursion_guard.ts";
+import { guardedRecord, literalTagOf } from "./recursion_guard.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 import { canonicalJson } from "./content_id.ts";
 import { compareText } from "./util.ts";
@@ -267,19 +267,8 @@ export function loadGraph(table: TypeTable, source: DefinitionSource): void {
       aliasTypes.set(decl.id, decl.definition.base);
     }
   }
-  const tagOf = (type: Type): string | undefined => {
-    const seen = new Set<string>();
-    let current: Type | undefined = type;
-    while (current !== undefined) {
-      if (current.kind === "literal") {
-        return typeof current.value === "string" ? current.value : undefined;
-      }
-      if (current.kind !== "named" || seen.has(current.id)) return undefined;
-      seen.add(current.id);
-      current = aliasTypes.get(current.id);
-    }
-    return undefined;
-  };
+  const tagOf = (type: Type): string | undefined =>
+    literalTagOf(type, (id) => aliasTypes.get(id));
   for (const decl of source.types) {
     if (table.isDefined(decl.id)) continue;
     if (decl.definition.kind === "alias") {

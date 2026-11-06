@@ -26,9 +26,10 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   resolve.ts     Names to identities, scopes, prelude, side table of targets.
   types.ts       Interned types and compatibility.
   type_ir.ts     Conversion between IR type trees and interned types, and loadGraph: the registration of an imported graph.
-  recursion_guard.ts Rule 11: the guard that a recursive data alias needs.
+  recursion_guard.ts Rule 11: the guard that a recursive data alias or tagged group needs, and the tag walk.
+  referenced_ids.ts The type and error ids that an IR type mentions.
   type_show.ts   Readable forms of types for messages, and effectText.
-  signatures.ts  Signature model: function and constant signatures, module declarations, execution modes, and referenced identities.
+  signatures.ts  Signature model: function and constant signatures, module declarations, and execution modes.
   type_lower.ts  Type lowering: the builtin type rows, TypeLowerer, and the recursion check of type groups.
   check_declarations.ts Declaration checker: types, errors, services, providers, and module constants.
   check_expr.ts  Body checker: expressions, calls, contracts, and the prelude dispatch.

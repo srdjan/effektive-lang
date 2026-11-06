@@ -45,7 +45,12 @@ import {
   type TypeRef,
   type TypeTable,
 } from "./types.ts";
-import { guardedRecord } from "./recursion_guard.ts";
+import {
+  guardedRecord,
+  literalTagOf,
+  recursionIsGuarded,
+} from "./recursion_guard.ts";
+import { referencedIds } from "./referenced_ids.ts";
 import { loadGraph, typeToIr } from "./type_ir.ts";
 import { showType } from "./type_show.ts";
 import {
@@ -70,18 +75,12 @@ import {
   type ModuleDeclarations,
   type ParameterSignature,
   type ProviderSignature,
-  referencedIds,
   type SignatureBase,
   type TypeEnv,
   type TypeGraph,
   type ValueSignature,
 } from "./signatures.ts";
-import {
-  type LoweredField,
-  recursionIsGuarded,
-  toIrField,
-  TypeLowerer,
-} from "./type_lower.ts";
+import { type LoweredField, toIrField, TypeLowerer } from "./type_lower.ts";
 
 type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
 
@@ -704,24 +703,14 @@ class ModuleChecker {
    * before the cycle analysis, and a repeated name stops an alias cycle.
    */
   private literalTag(type: Type): string | undefined {
-    if (type.kind === "literal") {
-      return typeof type.value === "string" ? type.value : undefined;
-    }
-    if (type.kind !== "named") return undefined;
-    const seen = new Set<string>();
-    let id: TypeId | ErrorId = type.id;
-    while (!isErrorId(id) && !seen.has(id)) {
-      seen.add(id);
+    return literalTagOf(type, (id): Type | undefined => {
+      if (!isTypeId(id)) return undefined;
       const target = this.table.aliasOf(id);
-      if (target === undefined) return undefined;
-      const node = this.table.node(target);
-      if (node.kind === "literal") {
-        return typeof node.value === "string" ? node.value : undefined;
-      }
-      if (node.kind !== "named") return undefined;
-      id = node.id;
-    }
-    return undefined;
+      const node = target === undefined ? undefined : this.table.node(target);
+      return node?.kind === "literal" || node?.kind === "named"
+        ? node
+        : undefined;
+    });
   }
 
   /**
