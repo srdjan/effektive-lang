@@ -140,6 +140,7 @@
       "src/host/events.ts",
       "src/host/generation.ts",
       "src/host/log.ts",
+      "src/host/log_schema.ts",
       "src/host/outputs.ts",
       "src/host/save_round.ts",
       "src/host/workspace.ts",
