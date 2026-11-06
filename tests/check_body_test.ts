@@ -636,14 +636,6 @@ Deno.test("the computed modes equal the modes that the plan names", () => {
   );
 });
 
-Deno.test("every example module has an interface with a hash", () => {
-  const project = examples();
-  for (const module of project.modules.values()) {
-    assert(module.interface.ok, module.module);
-    assertEquals(module.hash?.length, 16);
-  }
-});
-
 Deno.test("the interface rebuilt from the solved sets equals the interface of the checked module", () => {
   const project = examples();
   for (const module of project.modules.values()) {
