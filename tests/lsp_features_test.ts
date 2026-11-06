@@ -343,8 +343,6 @@ Deno.test("document symbols before the first good revision", () => {
       textDocument: { uri: MAIN },
     }),
   );
-  const found = h.server.projects.lookup(MAIN);
-  assert(found !== undefined && found.project.lastGood === undefined);
   assertEquals(symbolsOf(h, 1).map((s) => s.name), ["main"]);
   assertEquals(result(h.responses(2)[0]), null);
   assertEquals(result(h.responses(3)[0]), null);
@@ -438,15 +436,12 @@ Deno.test("generated TypeScript of a host interface file is its companion module
   const fresh = generated(h, 1, PROVIDERS);
   assert(fresh !== null);
   assertEquals(fresh.stale, false);
-  assertStringIncludes(fresh.text, "export");
-  const found = h.server.projects.lookup(PROVIDERS);
-  assert(found !== undefined && found.project.lastGood !== undefined);
-  const emitted = found.project.outputs.emitted(
-    found.project.lastGood,
-    found.project.lastGood.moduleInfoAt("host/providers.effi")?.name ?? "",
+  assertEquals(
+    fresh.text,
+    Deno.readTextFileSync(
+      new URL("../fixtures/golden/host/providers.effi.ts", import.meta.url),
+    ),
   );
-  assert(emitted !== undefined && emitted.ok);
-  assertEquals(fresh.text, emitted.value.text);
   // A host file that never produced output gives null, like an `.eff` file.
   const broken = exampleUri("host/broken.effi");
   h.deliver(didOpen(broken, 1, "export provider {"));

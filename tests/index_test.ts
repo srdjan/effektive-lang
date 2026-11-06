@@ -1,6 +1,6 @@
 // Tests for the declaration index and the content hash.
 
-import { assert, assertEquals, assertNotEquals } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import { fnv1a64 } from "../src/core/hash.ts";
 import { buildIndex, type DeclEntry } from "../src/core/declaration_index.ts";
 import { parse } from "../src/core/parse.ts";
@@ -27,8 +27,8 @@ Deno.test("fnv1a64 matches the published FNV-1a 64-bit vectors", () => {
 });
 
 Deno.test("fnv1a64 hashes UTF-16 code units, so a surrogate pair is two units", () => {
-  assertNotEquals(fnv1a64("\u{1F600}"), fnv1a64("\u{1F601}"));
-  assertEquals(fnv1a64("\u{1F600}"), fnv1a64("😀"));
+  assertEquals(fnv1a64("\u{1F600}"), "e5e45a0a241b88d8");
+  assertEquals(fnv1a64("\u{1F601}"), "e5e45b0a241b8a8b");
 });
 
 Deno.test("the index lists the service contract declarations", () => {

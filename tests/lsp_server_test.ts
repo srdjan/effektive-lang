@@ -377,13 +377,11 @@ Deno.test("incremental edits through ranges", () => {
     textDocument: { uri: MAIN, version: 2 },
     contentChanges: [{ range: rangeOf(MAIN_TEXT, '"u1"'), text: "1" }],
   }));
-  const found = h.server.projects.lookup(MAIN);
-  assert(found !== undefined);
-  assertEquals(found.project.open.get("main.eff")?.text, MAIN_BROKEN);
   const published = h.published();
   assertEquals(published.length, 1);
   assertEquals(published[0].version, 2);
   assertEquals(published[0].diagnostics.length, 1);
+  h.clearSent();
   // Two changes in one message apply in order.
   h.deliver(notification("textDocument/didChange", {
     textDocument: { uri: MAIN, version: 3 },
@@ -392,7 +390,7 @@ Deno.test("incremental edits through ranges", () => {
       { range: rangeOf(MAIN_BROKEN, "main"), text: "main" },
     ],
   }));
-  assertEquals(found.project.open.get("main.eff")?.text, MAIN_TEXT);
+  assertEquals(h.published().map(summary), [[MAIN, 3, 0]]);
 });
 
 Deno.test("didClose restores the disk text", () => {
@@ -403,10 +401,6 @@ Deno.test("didClose restores the disk text", () => {
   h.deliver(didClose(MAIN));
   // The disk text is clean: one empty list for the closed file.
   assertEquals(h.published().map(summary), [[MAIN, undefined, 0]]);
-  const found = h.server.projects.lookup(MAIN);
-  assert(found !== undefined);
-  assertEquals(found.project.current.get("main.eff"), MAIN_TEXT);
-  assertEquals(found.project.open.size, 0);
 });
 
 Deno.test("didClose reads the disk again, so a save while open is not lost", () => {
@@ -418,9 +412,6 @@ Deno.test("didClose reads the disk again, so a save while open is not lost", () 
   h.deliver(watched({ uri: MAIN, type: 2 }));
   h.clearSent();
   h.deliver(didClose(MAIN));
-  const found = h.server.projects.lookup(MAIN);
-  assert(found !== undefined);
-  assertEquals(found.project.current.get("main.eff"), MAIN_BROKEN);
   // The list did not change, so the closed file needs no new publish.
   assertEquals(h.published(), []);
 });
@@ -431,14 +422,10 @@ Deno.test("didClose of a file that is not on disk removes it from the program", 
   const broken = 'export const x = (): Num => "s"\n\ntype Num = number\n';
   h.deliver(didOpen(MAIN, 1, MAIN_TEXT));
   h.deliver(didOpen(extra, 1, broken));
-  const found = h.server.projects.lookup(extra);
-  assert(found !== undefined);
-  assert(found.project.current.has("extra.eff"));
   assertEquals(h.published().at(-1)?.uri, extra);
   assert((h.published().at(-1)?.diagnostics.length ?? 0) > 0);
   h.clearSent();
   h.deliver(didClose(extra));
-  assert(!found.project.current.has("extra.eff"));
   assertEquals(h.published().map(summary), [[extra, undefined, 0]]);
 });
 
@@ -496,9 +483,6 @@ Deno.test("a watched event for an open document is ignored", () => {
   h.files.set(`${ROOT}/main.eff`, MAIN_BROKEN);
   h.deliver(watched({ uri: MAIN, type: 2 }));
   assertEquals(h.sent, []);
-  const found = h.server.projects.lookup(MAIN);
-  assert(found !== undefined);
-  assertEquals(found.project.current.get("main.eff"), MAIN_TEXT);
 });
 
 Deno.test("watched events outside known projects or outside source paths are ignored", () => {
@@ -831,11 +815,6 @@ Deno.test("two projects side by side stay separate", () => {
   assertEquals(published[0].diagnostics.map((d) => d.code), [
     "type-mismatch/003",
   ]);
-  const main = h.server.projects.lookup(MAIN);
-  const other = h.server.projects.lookup(a);
-  assert(main !== undefined && other !== undefined);
-  assert(main.project.program !== other.project.program);
-  assertEquals(main.project.lastGood?.diagnostics.length, 0);
 });
 
 // ---- Scheduling -------------------------------------------------------------

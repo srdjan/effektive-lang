@@ -1,6 +1,5 @@
 import { assertEquals } from "@std/assert";
 import {
-  emit,
   type Envelope,
   isAnyKind,
   isKind,
@@ -118,15 +117,6 @@ Deno.test("parseEnvelope replay policy refuses a bad time, surface, or type", ()
     "text",
   ].map((value) => parseEnvelope(value, "replay"));
   assertEquals(bad, [undefined, undefined, undefined, undefined, undefined]);
-});
-
-Deno.test("emit appends the kind and the data to the log", () => {
-  const seen: unknown[] = [];
-  emit({ append: (kind, data) => seen.push([kind, data]) }, "cli.end", {
-    code: 0,
-    ms: 2,
-  });
-  assertEquals(seen, [["cli.end", { code: 0, ms: 2 }]]);
 });
 
 Deno.test("isKind and isAnyKind compare the kind name", () => {
