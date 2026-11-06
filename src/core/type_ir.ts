@@ -3,7 +3,8 @@
 
 import type { ErrorId, Field, FunctionType, Type, TypeId } from "./ir.ts";
 import type { Predicate } from "./predicates.ts";
-import { guardedRecord, type TypeRef, type TypeTable } from "./types.ts";
+import { guardedRecord } from "./recursion_guard.ts";
+import type { TypeRef, TypeTable } from "./types.ts";
 import { canonicalJson, compareText } from "./util.ts";
 
 /** Interns an IR type tree. Unions flatten and sort, records sort. */

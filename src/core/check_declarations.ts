@@ -41,11 +41,11 @@ import {
   containsDeferredType,
   containsOpaqueType,
   dataOnly,
-  guardedRecord,
   type TypeNode,
   type TypeRef,
   type TypeTable,
 } from "./types.ts";
+import { guardedRecord } from "./recursion_guard.ts";
 import { loadGraph, typeToIr } from "./type_ir.ts";
 import { showType } from "./type_show.ts";
 import {
