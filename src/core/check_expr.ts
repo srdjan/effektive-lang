@@ -2633,7 +2633,7 @@ class BodyChecker
         kindOf(this.tree, k) !== SyntaxKind.Name
       ).pop();
       const isDefect = errorNode !== undefined &&
-        nameTextOf(this.tree, errorNode) === "Defect";
+        this.benv.env.defectArms.has(errorNode);
       const errorTarget = errorNode === undefined || isDefect
         ? undefined
         : this.targets.get(errorNode);

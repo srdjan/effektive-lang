@@ -58,6 +58,8 @@ export interface TypeEnv {
   readonly module: string;
   readonly tree: SyntaxTree;
   readonly targets: ReadonlyMap<NodeId, Target>;
+  /** The error-name nodes of the handler arms that catch defects. */
+  readonly defectArms: ReadonlySet<NodeId>;
   readonly table: TypeTable;
   /** Local and imported services by identity. */
   readonly services: Map<ServiceId, ServiceDecl>;

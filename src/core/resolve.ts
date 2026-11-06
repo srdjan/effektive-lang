@@ -135,6 +135,17 @@ export type OptionConstructorName = {
     { readonly role: "option-some" | "option-none" } ? K : never;
 }[PreludeName];
 
+/** True when the builtin named by `text` takes a service name as its first argument. */
+function takesServiceArgument(text: string): boolean {
+  const name = asPrelude(text);
+  if (name === undefined) return false;
+  const entry: PreludeEntry = PRELUDE[name];
+  return entry.role === "service-argument";
+}
+
+/** The handler arm that catches defects. It is a keyword of the handler, not an error identity. */
+const DEFECT_ARM = "Defect";
+
 /** True when a prelude name is an option constructor. */
 export function isOptionConstructorName(
   name: PreludeName,
@@ -202,7 +213,7 @@ const TARGET_NAMES: ReadonlySet<string> = new Set([
   "SchemaError",
   "SchemaIssue",
   "TimeoutError",
-  "Defect",
+  DEFECT_ARM,
   "ReadonlyArray",
   "Math",
   "Error",
@@ -287,6 +298,8 @@ interface Binding {
 export interface ModuleResolution {
   /** From syntax node id to target. Every resolved name node has one entry. */
   readonly targets: ReadonlyMap<NodeId, Target>;
+  /** The error-name nodes of the handler arms that catch defects. They have no target. */
+  readonly defectArms: ReadonlySet<NodeId>;
   /** From local identity to the span of the name that binds it. */
   readonly locals: ReadonlyMap<LocalId, Span>;
   /** The module-level names, including imported names. */
@@ -348,6 +361,7 @@ function describeKind(target: Target): string {
 
 class Resolver {
   readonly targets = new Map<NodeId, Target>();
+  readonly defectArms = new Set<NodeId>();
   readonly locals = new Map<LocalId, Span>();
   readonly diagnostics: Diagnostic[] = [];
   readonly namespace = new Map<string, Binding>();
@@ -1088,7 +1102,7 @@ class Resolver {
         if (
           kids[0] !== undefined &&
           kindOf(this.tree, kids[0]) === SyntaxKind.NameExpr &&
-          nodeText(this.tree, kids[0]) === "layer" &&
+          takesServiceArgument(nodeText(this.tree, kids[0])) &&
           kids[1] !== undefined &&
           kindOf(this.tree, kids[1]) === SyntaxKind.ArgList
         ) {
@@ -1361,9 +1375,10 @@ class Resolver {
     for (const kid of kidsOf(this.tree, node)) {
       const kind = kindOf(this.tree, kid);
       if (kind === SyntaxKind.Name) {
-        // `Defect` is a handler keyword, not an error identity.
         if (names === 0) {
-          if (nameTextOf(this.tree, kid) !== "Defect") this.errorRef(kid);
+          if (nameTextOf(this.tree, kid) === DEFECT_ARM) {
+            this.defectArms.add(kid);
+          } else this.errorRef(kid);
         } else this.declareLocal(kid, false);
         names++;
       } else if (kind === SyntaxKind.Block) {
@@ -1415,6 +1430,7 @@ class Resolver {
     for (const decl of this.info.index.decls) this.resolveDecl(decl);
     return {
       targets: this.targets,
+      defectArms: this.defectArms,
       locals: this.locals,
       namespace: this.namespace,
       diagnostics: normalizeDiagnostics(this.diagnostics),

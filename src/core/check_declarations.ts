@@ -1141,6 +1141,7 @@ export function checkModuleDeclarations(
     module,
     tree: info.tree,
     targets: resolution.targets,
+    defectArms: resolution.defectArms,
     table,
     services,
   };
