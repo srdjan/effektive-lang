@@ -6,8 +6,8 @@
 // Each handler calls `ctx.projects.forRequest`, which flushes a dirty project
 // first, so that no answer comes from an old revision.
 //
-// This file imports only types from `server.ts`. The server imports the values
-// of this file, so a value import back would form a cycle.
+// This file imports only types from `handler.ts`. The server imports the values
+// of this file.
 
 import type { TypeScriptOutputs } from "../core/typescript.ts";
 import {
@@ -60,7 +60,7 @@ import type {
 import { GENERATED_CHANGED_METHOD } from "./methods.ts";
 import { SymbolKind } from "./protocol.ts";
 import type { ProjectState } from "./projects.ts";
-import type { RequestFailure, ServerContext } from "./server.ts";
+import type { RequestFailure, ServerContext } from "./handler.ts";
 
 type Answer = Result<unknown, RequestFailure>;
 

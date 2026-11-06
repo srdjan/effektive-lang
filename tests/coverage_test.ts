@@ -259,6 +259,7 @@ Deno.test("coverage ownership classifies the production source inventory", async
     "src/core/emit/families/context.ts",
     "src/core/result.ts",
     "src/host/io.ts",
+    "src/lsp/handler.ts",
   ]);
   assertEquals(ownership.value.separatePaths, [
     "playground/src/app.ts",

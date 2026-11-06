@@ -15,11 +15,8 @@ import type {
   LogMessageParams,
   PublishDiagnosticsParams,
 } from "../src/lsp/protocol.ts";
-import {
-  LanguageServer,
-  type RequestHandler,
-  type ServerPorts,
-} from "../src/lsp/server.ts";
+import type { RequestHandler } from "../src/lsp/handler.ts";
+import { LanguageServer, type ServerPorts } from "../src/lsp/server.ts";
 import { memoryIo } from "./cli_helpers.ts";
 import { FIXTURES } from "./helpers.ts";
 

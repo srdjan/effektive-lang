@@ -149,7 +149,8 @@
       "src/core/body_env.ts",
       "src/core/emit/families/context.ts",
       "src/core/result.ts",
-      "src/host/io.ts"
+      "src/host/io.ts",
+      "src/lsp/handler.ts"
     ]
   },
   "separatelyExercisedEntrypoint": {

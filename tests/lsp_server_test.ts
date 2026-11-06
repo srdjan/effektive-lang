@@ -6,7 +6,8 @@ import { join } from "@std/path";
 import { ErrorCodes, type ResponseMessage } from "../src/lsp/jsonrpc.ts";
 import { SERVER_CAPABILITIES } from "../src/lsp/protocol.ts";
 import type { PublishDiagnosticsParams } from "../src/lsp/protocol.ts";
-import { type RequestHandler, withParams } from "../src/lsp/server.ts";
+import type { RequestHandler } from "../src/lsp/handler.ts";
+import { withParams } from "../src/lsp/server.ts";
 import {
   didChangeFull,
   didClose,
