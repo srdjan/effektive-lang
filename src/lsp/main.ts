@@ -4,8 +4,7 @@
 // stderr and never to stdout. The end of stdin ends the process: code 0 after
 // `shutdown`, else 1.
 
-import { denoFs, denoLogFs } from "../host/deno_io.ts";
-import { noLog, openFileLog } from "../host/log.ts";
+import { denoFs, denoIo } from "../host/deno_io.ts";
 import {
   encodeMessage,
   FrameDecoder,
@@ -27,14 +26,8 @@ function writeAll(
   }
 }
 
-const wire = new WireLog((root) => {
-  const opened = openFileLog({
-    fs: denoLogFs,
-    projectDir: root,
-    surface: "lsp",
-  });
-  return opened.ok ? opened.value : noLog;
-});
+const io = denoIo();
+const wire = new WireLog((root) => io.openLog(root, "lsp"));
 
 const server = new LanguageServer(wire.ports({
   send: (message: OutgoingMessage) => {

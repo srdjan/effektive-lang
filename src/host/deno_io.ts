@@ -235,11 +235,11 @@ export function denoIo(): HostIo {
     fs: denoFs,
     denoCheck,
     watch: (root) => debounceBatches(sourceEvents(root), WATCH_DEBOUNCE_MS),
-    openLog: (root) => {
+    openLog: (root, surface) => {
       const opened = openFileLog({
         fs: denoLogFs,
         projectDir: root,
-        surface: "cli",
+        surface,
       });
       return opened.ok ? opened.value : noLog;
     },

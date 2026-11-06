@@ -158,7 +158,7 @@ async function execute(
     return EXIT_USAGE;
   }
   const started = performance.now();
-  const log = command.log ? io.openLog(root) : noLog;
+  const log = command.log ? io.openLog(root, "cli") : noLog;
   opened.log = log;
   emit(log, "cli.start", {
     args,
