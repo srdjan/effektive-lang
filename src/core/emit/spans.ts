@@ -163,20 +163,6 @@ export function offsetOfGenerated(
   return offset > table.textLength ? undefined : offset;
 }
 
-/**
- * The source span of a generated position. The line and the column are
- * one-based. Returns undefined for a position that lies outside the text or
- * outside every record.
- */
-export function mapGenerated(
-  table: SpanTable,
-  line: number,
-  column: number,
-): Span | undefined {
-  const offset = offsetOfGenerated(table, line, column);
-  return offset === undefined ? undefined : mapOffset(table, offset);
-}
-
 /** The host assertion whose generated range contains the offset. */
 export function hostAssertionAtOffset(
   table: SpanTable,

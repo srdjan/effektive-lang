@@ -5,16 +5,18 @@ import { assert, assertEquals } from "@std/assert";
 import {
   buildSourceMap,
   buildSpanTable,
-  decodeMappings,
-  decodeVlqList,
   encodeVlq,
   hostImportSpans,
-  lookupMapping,
   mapOffset,
   serializeSourceMap,
   type SpanTable,
 } from "../src/core/typescript.ts";
 import { lineStarts, positionOf } from "../src/core/frontend.ts";
+import {
+  decodeMappings,
+  decodeVlqList,
+  lookupMapping,
+} from "./support/source_map_decoder.ts";
 import {
   emitFilesWithProject,
   EXAMPLE_ENTRIES,

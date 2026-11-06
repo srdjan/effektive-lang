@@ -3,7 +3,7 @@
 // files work in a temporary directory. Nothing is written under fixtures/.
 
 import { assert, assertEquals } from "@std/assert";
-import { decodeMappings } from "../src/core/typescript.ts";
+import { decodeMappings } from "./support/source_map_decoder.ts";
 import { tscConfig, tscLock } from "../src/cli/tsc.ts";
 import { validationProblems } from "./validate_helpers.ts";
 import { COMPANION_FILES, copyDirectory, FIXTURES } from "./helpers.ts";

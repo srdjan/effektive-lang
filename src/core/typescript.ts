@@ -3,7 +3,12 @@ import type { Revision } from "./db.ts";
 import type { ModuleIR } from "./ir.ts";
 import type { Result } from "./result.ts";
 import type { LowerError } from "./lower.ts";
-import { type EmitContext, type EmitError, emitModule } from "./emit/emit.ts";
+import {
+  declarationTypeText,
+  type EmitContext,
+  type EmitError,
+  emitModule,
+} from "./emit/emit.ts";
 import type { EmittedModule } from "./emit/emitted_module.ts";
 import { buildSpanTable, type SpanTable } from "./emit/spans.ts";
 import {
@@ -11,10 +16,6 @@ import {
   type SourceMapError,
   type SourceMapV3,
 } from "./emit/sourcemap.ts";
-import { type Doc, render } from "./emit/doc.ts";
-import { constantTypeDoc, functionHeaderDoc } from "./emit/decls.ts";
-import { EmitFailure } from "./emit/failure.ts";
-import { ModuleState } from "./emit/module_state.ts";
 import { sourceHoverAt } from "./editor.ts";
 import type { Span } from "./source.ts";
 
@@ -143,13 +144,6 @@ interface Hover {
   readonly backend: HoverBackend | undefined;
 }
 
-/** One line, as the emitter prints the declaration header, without the width limit. */
-const FLAT_WIDTH = 1_000_000;
-
-function renderDoc(doc: Doc): string {
-  return render(doc, FLAT_WIDTH).text;
-}
-
 function backendOf(
   revision: Revision,
   module: string,
@@ -161,27 +155,8 @@ function backendOf(
   const lowered = revision.lowered(module);
   if (lowered === undefined || !lowered.ok) return unavailable;
   const ir: ModuleIR = lowered.value;
-  const declaration = ir.declarations.find((d) => d.id === id);
-  if (declaration === undefined) return unavailable;
-  try {
-    const scope = new ModuleState(ir, revision.config);
-    if (declaration.kind === "function") {
-      return {
-        tag: "type",
-        text: renderDoc(functionHeaderDoc(scope, declaration, "always")),
-      };
-    }
-    if (declaration.kind === "constant") {
-      return {
-        tag: "type",
-        text: renderDoc(constantTypeDoc(scope, declaration)),
-      };
-    }
-    return unavailable;
-  } catch (error) {
-    if (error instanceof EmitFailure) return unavailable;
-    throw error;
-  }
+  const text = declarationTypeText(ir, { config: revision.config }, id);
+  return text.ok ? { tag: "type", text: text.value } : unavailable;
 }
 
 export function hoverAt(
@@ -209,7 +184,6 @@ export type { EmittedModule } from "./emit/emitted_module.ts";
 export {
   buildSpanTable,
   hostImportSpans,
-  mapGenerated,
   mapOffset,
   offsetOfGenerated,
   recordAtOffset,
@@ -217,10 +191,7 @@ export {
 } from "./emit/spans.ts";
 export {
   buildSourceMap,
-  decodeMappings,
-  decodeVlqList,
   encodeVlq,
-  lookupMapping,
   serializeSourceMap,
   type SourceMapError,
   type SourceMapV3,

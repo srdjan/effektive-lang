@@ -6,13 +6,13 @@ import type { EmittedModule } from "../src/core/typescript.ts";
 import {
   buildSpanTable,
   hostImportSpans,
-  mapGenerated,
   mapOffset,
   offsetOfGenerated,
   recordAtOffset,
   type SpanTable,
 } from "../src/core/typescript.ts";
 import { lineStarts, positionOf } from "../src/core/frontend.ts";
+import { mapGenerated } from "./support/source_map_decoder.ts";
 import {
   emitFilesWithProject,
   EXAMPLE_ENTRIES,

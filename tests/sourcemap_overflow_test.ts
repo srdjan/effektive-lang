@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
-import { decodeMappings, encodeVlq } from "../src/core/typescript.ts";
+import { encodeVlq } from "../src/core/typescript.ts";
+import { decodeMappings } from "./support/source_map_decoder.ts";
 
 function mapping(field: number, second: number): string {
   const first = [0, 0, 0, 0];

@@ -9,8 +9,10 @@ import { generatedHeader, isInterfacePath } from "../paths.ts";
 import type { ProjectConfig } from "../project_config.ts";
 import { bracketed, type Doc, hard, render, spanned } from "./doc.ts";
 import {
+  constantTypeDoc,
   DeclarationEmitter,
   exportedIds,
+  functionHeaderDoc,
   orderConstants,
   orderTypeLevel,
   recursiveGroups,
@@ -183,6 +185,51 @@ export function emitModule(
 ): Result<EmittedModule, EmitError> {
   try {
     return { ok: true, value: build(ir, context) };
+  } catch (e) {
+    if (e instanceof EmitFailure) {
+      return {
+        ok: false,
+        error: { tag: "internal", module: ir.module, message: e.message },
+      };
+    }
+    throw e;
+  }
+}
+
+/** No backend type text exists: the declaration is missing, or it is neither a function nor a constant. */
+export type NoDeclarationType = { readonly tag: "unavailable" };
+
+/** One line, as the emitter prints the declaration header, without the width limit. */
+const FLAT_WIDTH = 1_000_000;
+
+/**
+ * The backend type text of one declaration of the IR on one line: the header
+ * of a function or the type of a constant. Unlike `emitModule`, it does not
+ * erase an untagged nominal type, so the text is the same as hover printed
+ * before this function existed.
+ */
+export function declarationTypeText(
+  ir: ModuleIR,
+  context: EmitContext,
+  id: string,
+): Result<string, EmitError | NoDeclarationType> {
+  const declaration = ir.declarations.find((d) => d.id === id);
+  if (declaration === undefined) {
+    return { ok: false, error: { tag: "unavailable" } };
+  }
+  try {
+    const scope = new ModuleState(ir, context.config);
+    if (declaration.kind === "function") {
+      const doc = functionHeaderDoc(scope, declaration, "always");
+      return { ok: true, value: render(doc, FLAT_WIDTH).text };
+    }
+    if (declaration.kind === "constant") {
+      return {
+        ok: true,
+        value: render(constantTypeDoc(scope, declaration), FLAT_WIDTH).text,
+      };
+    }
+    return { ok: false, error: { tag: "unavailable" } };
   } catch (e) {
     if (e instanceof EmitFailure) {
       return {

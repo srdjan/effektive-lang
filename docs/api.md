@@ -505,19 +505,19 @@ from the outside in. `importSpans` maps the name that the `.eff` source binds in
 a host import to the span of that name. Get it with
 `hostImportSpans(project).get(emitted.module)`.
 
-`mapGenerated(table, line, column)` returns the source span of a generated
-position, or `undefined`. The line and the column are one-based, in UTF-16
-units. `mapOffset(table, offset)` does the same for a zero-based offset. The
-innermost record that contains the position wins. A position outside every
-record has no span. The header, the imports, and the host assertions are outside
+`offsetOfGenerated(table, line, column)` returns the zero-based offset of a
+generated position, or `undefined`. The line and the column are one-based, in
+UTF-16 units. `mapOffset(table, offset)` returns the source span of an offset,
+or `undefined`. The innermost record that contains the offset wins. An offset
+outside every record has no span. The header, the imports, and the host assertions are outside
 every record.
 
 `buildSourceMap(table, sourceTexts, options)` returns a version 3 source map as
 a `Result`. The `sourceTexts` value maps each source path to its text.
 `serializeSourceMap(map)` returns the text of the `.ts.map` file. The emitted
 `.ts` text ends with the line `//# sourceMappingURL=<file>.map`, so a written
-`.ts.map` file takes effect. `decodeMappings` and `lookupMapping` read a map
-back. `encodeVlq` and `decodeVlqList` are the base64 VLQ coding.
+`.ts.map` file takes effect. `encodeVlq` is the base64 VLQ coding. The package
+has no map decoder: the tests read a map with `tests/support/source_map_decoder.ts`.
 
 ## Using the host-boundary mapping
 
