@@ -44,10 +44,10 @@ import { createPageLog, type PageLog } from "./log_client.ts";
 import {
   DEFAULT_TAB,
   hoverLines,
+  outputSaving,
   outputState,
   type ProblemItem,
   problemItems,
-  savingLabel,
   tabCounts,
   tabFromHash,
 } from "./model.ts";
@@ -459,11 +459,7 @@ async function main(): Promise<void> {
   function renderOutput(): void {
     const state = outputState(latest, active);
     staleBanner.hidden = state.tag !== "stale";
-    // Stale output belongs to older source, and an interface's companion
-    // module is a check module, not its translation, so neither compares.
-    saving.textContent = state.tag === "text" && !isInterfacePath(active)
-      ? savingLabel(texts[active] ?? "", state.text)
-      : "";
+    saving.textContent = outputSaving(state, active, texts[active] ?? "");
     saving.hidden = saving.textContent === "";
     switch (state.tag) {
       case "text":

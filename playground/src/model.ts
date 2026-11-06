@@ -2,7 +2,12 @@
 // the URL hash, the Problems list, the error count of each tab, the state of
 // the TypeScript pane, and the hover texts. Fast tests cover each function.
 
-import { lineStarts, positionOf, type Severity } from "../../src/core/mod.ts";
+import {
+  isInterfacePath,
+  lineStarts,
+  positionOf,
+  type Severity,
+} from "../../src/core/mod.ts";
 import { BACKEND_UNAVAILABLE_TEXT } from "../../src/core/typescript.ts";
 import type { PlaygroundHover, PlaygroundResult } from "./compile.ts";
 
@@ -129,6 +134,21 @@ export function savingLabel(source: string, generated: string): string {
   return saved >= 0
     ? `${saved}% fewer characters than Effect-TS`
     : `${-saved}% more characters than Effect-TS`;
+}
+
+/**
+ * The saving label that the page shows for a file, and the replay expects.
+ * Stale output belongs to older source, and the companion module of an
+ * interface is a check module, not its translation, so neither compares.
+ */
+export function outputSaving(
+  state: OutputState,
+  path: string,
+  source: string,
+): string {
+  return state.tag === "text" && !isInterfacePath(path)
+    ? savingLabel(source, state.text)
+    : "";
 }
 
 /** One labelled block of the hover tooltip. `code` is false for a plain message. */

@@ -40,7 +40,7 @@ import { LanguageServer, type ServerPorts } from "../src/lsp/server.ts";
 import { EXAMPLE_FILES, REPOSITORY_ROOT } from "../playground/build.ts";
 import { createPlayground } from "../playground/src/compile.ts";
 import { compileData, errorData } from "../playground/src/events.ts";
-import { outputState, savingLabel } from "../playground/src/model.ts";
+import { outputSaving, outputState } from "../playground/src/model.ts";
 import { applyChanges, editChangesOf } from "../playground/src/replay.ts";
 import { parseSession } from "./logs_report.ts";
 
@@ -495,9 +495,7 @@ function replayPlayground(events: readonly Envelope[]): ReplayOutcome {
       };
     }
     const state = outputState(result.value, active);
-    const saving = state.tag === "text" && !active.endsWith(".effi")
-      ? savingLabel(texts[active] ?? "", state.text)
-      : "";
+    const saving = outputSaving(state, active, texts[active] ?? "");
     return {
       kind: "pg.compile",
       data: withoutTime(compileData(active, result.value, saving)),

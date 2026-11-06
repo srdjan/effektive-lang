@@ -10,6 +10,7 @@ import type {
 import {
   DEFAULT_TAB,
   hoverLines,
+  outputSaving,
   outputState,
   problemItems,
   savingLabel,
@@ -173,4 +174,19 @@ Deno.test("savingLabel compares code characters and skips whitespace and comment
     "50% more characters than Effect-TS",
   );
   assertEquals(savingLabel("x", "// only a comment\n"), "");
+});
+
+Deno.test("outputSaving labels current output of a source file only", () => {
+  const text = "export const abcdefghijkl = 1;";
+  const current = { tag: "text", text } as const;
+  assertEquals(
+    outputSaving(current, "a.eff", "abcdefghij =  1;"),
+    "50% fewer characters than Effect-TS",
+  );
+  assertEquals(outputSaving(current, "a.effi", "abcdefghij =  1;"), "");
+  assertEquals(
+    outputSaving({ tag: "stale", text }, "a.eff", "abcdefghij =  1;"),
+    "",
+  );
+  assertEquals(outputSaving({ tag: "none" }, "a.eff", "abcdefghij =  1;"), "");
 });

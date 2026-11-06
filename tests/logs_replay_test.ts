@@ -17,7 +17,7 @@ import {
   selectData,
   startData,
 } from "../playground/src/events.ts";
-import { outputState, savingLabel } from "../playground/src/model.ts";
+import { outputSaving, outputState } from "../playground/src/model.ts";
 import { isReplayName } from "../playground/log_endpoint.ts";
 import { applyChanges } from "../playground/src/replay.ts";
 import { loadExamples, replaySession } from "../scripts/logs_replay.ts";
@@ -302,9 +302,7 @@ function recordPlayground(
   const compile = () => {
     if (!result.ok) throw new Error("the facade failed");
     const state = outputState(result.value, active);
-    const saving = state.tag === "text" && !active.endsWith(".effi")
-      ? savingLabel(texts[active] ?? "", state.text)
-      : "";
+    const saving = outputSaving(state, active, texts[active] ?? "");
     log.append("pg.compile", compileData(active, result.value, saving));
   };
   log.append(
