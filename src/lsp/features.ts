@@ -161,8 +161,6 @@ export function hoverRequest(
   return answer(result);
 }
 
-// ---- Definition -------------------------------------------------------------
-
 /** `textDocument/definition`. */
 export function definitionRequest(
   params: PositionParams,
@@ -227,8 +225,6 @@ export function documentSymbolRequest(
   return answer(symbols.map((symbol) => convertSymbol(symbol, text, starts)));
 }
 
-// ---- Generated TypeScript ---------------------------------------------------
-
 /** `effektive/generatedTypeScript`. */
 export function generatedTypeScriptRequest(
   params: TextDocumentParams,
@@ -239,8 +235,6 @@ export function generatedTypeScriptRequest(
   if (found === undefined) return answer(null);
   return answer(ctx.generated.request(found.project, found.path, uri));
 }
-
-// ---- Save -------------------------------------------------------------------
 
 /**
  * `textDocument/didSave`. A save of a `.eff` or `.effi`
@@ -254,8 +248,6 @@ export function didSave(params: TextDocumentParams, ctx: ServerContext): void {
   if (!isModulePath(found.path)) return;
   ctx.projects.saveRound(found.project);
 }
-
-// ---- Stats ------------------------------------------------------------------
 
 /** `effektive/stats`. */
 export function statsRequest(

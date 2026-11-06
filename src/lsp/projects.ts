@@ -411,8 +411,6 @@ export class ProjectSet {
     for (const project of reconfigured) this.saveRound(project);
   }
 
-  // ---- Save round ---------------------------------------------------------
-
   /**
    * One save round: reads the workspace from disk,
    * brings the disk program up to date, removes the outputs of deleted
@@ -480,8 +478,6 @@ export class ProjectSet {
       if (!held.has(name)) session.heldReasons.delete(name);
     }
   }
-
-  // ---- Discovery ----------------------------------------------------------
 
   /** Finds or opens the project of a document. */
   #discover(uri: string): DocumentRef | undefined {
