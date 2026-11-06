@@ -2,7 +2,7 @@
 // in-memory doubles of cli_helpers.ts. Nothing touches the file system.
 
 import { assert, assertEquals } from "@std/assert";
-import { parseArgs } from "../src/cli/args.ts";
+import { parseArgs, replayArguments } from "../src/cli/args.ts";
 import { debounceBatches } from "../src/host/events.ts";
 import { formatDiagnostics } from "../src/cli/format.ts";
 import { main } from "../src/cli/main.ts";
@@ -30,6 +30,13 @@ function errorFixture(name: string): string {
 }
 
 // ------------------------------------------------------------------ arguments
+
+Deno.test("replayArguments drops the tsc and no-log flags and keeps the rest", () => {
+  assertEquals(
+    replayArguments(["build", "app", "--tsc", "--no-log"]),
+    ["build", "app"],
+  );
+});
 
 Deno.test("parseArgs reads the commands, the root, and the flags", () => {
   assertEquals(parseArgs(["check"]), {

@@ -41,11 +41,25 @@ export const USAGE = [
   "",
 ].join("\n");
 
+/** The flag that turns the session log off. */
+export const NO_LOG_FLAG = "--no-log";
+
+/** The flag that adds the `deno check` stage to `build` and `watch`. */
+export const TSC_FLAG = "--tsc";
+
 const FLAGS: Readonly<Record<string, readonly string[]>> = {
-  check: ["--fix", "--no-log"],
-  build: ["--tsc", "--no-log"],
-  watch: ["--tsc", "--no-log"],
+  check: ["--fix", NO_LOG_FLAG],
+  build: [TSC_FLAG, NO_LOG_FLAG],
+  watch: [TSC_FLAG, NO_LOG_FLAG],
 };
+
+/**
+ * The logged arguments of a session without the flags that a replay cannot
+ * keep: the replay supplies its own log and skips the `deno check` stage.
+ */
+export function replayArguments(args: readonly string[]): string[] {
+  return args.filter((arg) => arg !== TSC_FLAG && arg !== NO_LOG_FLAG);
+}
 
 /** Parses the arguments. An error value holds the message for the user. */
 export function parseArgs(args: readonly string[]): Result<Command, string> {
@@ -78,7 +92,7 @@ export function parseArgs(args: readonly string[]): Result<Command, string> {
     return fail(`too many arguments: \`${positional.join(" ")}\``);
   }
   const root = positional[0] ?? ".";
-  const log = !flags.has("--no-log");
+  const log = !flags.has(NO_LOG_FLAG);
   switch (name) {
     case "check":
       return {
@@ -91,14 +105,14 @@ export function parseArgs(args: readonly string[]): Result<Command, string> {
         value: {
           kind: "build",
           root,
-          tsc: flags.has("--tsc"),
+          tsc: flags.has(TSC_FLAG),
           log,
         },
       };
     case "watch":
       return {
         ok: true,
-        value: { kind: "watch", root, tsc: flags.has("--tsc"), log },
+        value: { kind: "watch", root, tsc: flags.has(TSC_FLAG), log },
       };
   }
 }

@@ -23,7 +23,7 @@ import {
   sha256Hex,
 } from "../src/core/mod.ts";
 import type { Result } from "../src/core/mod.ts";
-import { parseArgs } from "../src/cli/args.ts";
+import { parseArgs, replayArguments, TSC_FLAG } from "../src/cli/args.ts";
 import { main } from "../src/cli/main.ts";
 import type { DirectoryEntry, HostIo } from "../src/host/io.ts";
 import type { FileFailure } from "../src/host/ports.ts";
@@ -246,8 +246,8 @@ async function replayCli(
     }),
     openLog: () => log,
   };
-  const skipsTsc = argv.includes("--tsc");
-  await main(argv.filter((a) => a !== "--tsc" && a !== "--no-log"), io);
+  const skipsTsc = argv.includes(TSC_FLAG);
+  await main(replayArguments(argv), io);
   const expected = events.filter((e) => isAnyKind(e, CLI_KINDS));
   // The log holds no earlier generated files, so replay writes files that the
   // original run found up to date. Only the files that the original wrote count.
