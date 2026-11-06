@@ -11,7 +11,8 @@ import {
   type SyntaxTree,
 } from "./syntax.ts";
 import { arrowBody, kidsOf } from "./syntax_queries.ts";
-import type { BodyTable, EffectSet } from "./tables.ts";
+import type { EffectSet } from "./effect_set.ts";
+import type { BodyTable } from "./tables.ts";
 
 /** One missing entry of a contract. */
 export type ContractEntry =

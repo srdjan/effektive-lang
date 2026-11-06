@@ -9,7 +9,8 @@ import {
   type ValueId,
 } from "../ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
-import { combine, EFFECT_ONLY, type NodeInfo, without } from "../tables.ts";
+import { combine, EFFECT_ONLY, without } from "../effect_set.ts";
+import type { NodeInfo } from "../tables.ts";
 import { dataOnly, type TypeRef } from "../types.ts";
 import {
   type Arg,

@@ -1,6 +1,7 @@
 // Collection checking. Prelude dispatch retains arity and lowering-fact policy.
 import type { NodeId } from "../syntax.ts";
-import { combine, type NodeInfo } from "../tables.ts";
+import { combine } from "../effect_set.ts";
+import type { NodeInfo } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
 import { functionTypeToIr } from "../type_ir.ts";
 import { showType } from "../type_show.ts";

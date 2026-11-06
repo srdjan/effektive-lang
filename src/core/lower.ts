@@ -9,7 +9,6 @@
 // failures are error values. A violated internal invariant throws inside the
 // lowering and the entry point turns it into an `internal` error value.
 
-import { PURE_EFFECTS } from "./tables.ts";
 import {
   arrowBody,
   type BinaryOperator,
@@ -66,13 +65,12 @@ import {
   type SyntaxTree,
 } from "./syntax.ts";
 import {
-  type BodyTable,
   combine,
   type EffectSet,
   isQuiet,
-  type NodeFact,
-  type NodeInfo,
-} from "./tables.ts";
+  PURE_EFFECTS,
+} from "./effect_set.ts";
+import type { BodyTable, NodeFact, NodeInfo } from "./tables.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 import { functionTypeToIr, typeToIr } from "./type_ir.ts";
 import { bodyLocalId, builtinInstanceId, localId } from "./ids.ts";

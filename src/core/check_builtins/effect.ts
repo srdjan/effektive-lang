@@ -15,9 +15,9 @@ import {
   combine,
   EFFECT_ONLY,
   type EffectSet,
-  type NodeInfo,
   PURE_EFFECTS,
-} from "../tables.ts";
+} from "../effect_set.ts";
+import type { NodeInfo } from "../tables.ts";
 import { dataOnly, type TypeRef } from "../types.ts";
 import { showType } from "../type_show.ts";
 import {

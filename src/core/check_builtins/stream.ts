@@ -2,12 +2,8 @@
 import type { Result } from "../result.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
 import { isPatternKind, literalOf } from "../syntax_queries.ts";
-import {
-  combine,
-  EFFECT_ONLY,
-  type NodeInfo,
-  PURE_EFFECTS,
-} from "../tables.ts";
+import { combine, EFFECT_ONLY, PURE_EFFECTS } from "../effect_set.ts";
+import type { NodeInfo } from "../tables.ts";
 import type { TypeNode, TypeRef } from "../types.ts";
 import type {
   Arg,

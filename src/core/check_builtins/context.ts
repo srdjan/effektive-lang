@@ -7,12 +7,8 @@ import type { DiagnosticCode } from "../diagnostics.ts";
 import type { LocalId } from "../ir.ts";
 import type { Target } from "../resolve.ts";
 import type { NodeId, SyntaxTree } from "../syntax.ts";
-import {
-  type EffectSet,
-  type NodeFact,
-  type NodeInfo,
-  PURE_EFFECTS,
-} from "../tables.ts";
+import { type EffectSet, PURE_EFFECTS } from "../effect_set.ts";
+import type { NodeFact, NodeInfo } from "../tables.ts";
 import type { TypeNode, TypeRef, TypeTable } from "../types.ts";
 
 export interface Arg {

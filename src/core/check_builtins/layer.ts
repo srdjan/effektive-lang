@@ -7,10 +7,10 @@ import {
   combine,
   EFFECT_ONLY,
   type EffectSet,
-  type NodeInfo,
   PURE_EFFECTS,
   without,
-} from "../tables.ts";
+} from "../effect_set.ts";
+import type { NodeInfo } from "../tables.ts";
 import type {
   Arg,
   BuiltinContext,

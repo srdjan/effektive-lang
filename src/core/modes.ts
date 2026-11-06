@@ -9,7 +9,7 @@
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import type { CapabilityId, ErrorId, Execution, ValueId } from "./ir.ts";
 import type { Span } from "./source.ts";
-import { sortedUnique } from "./util.ts";
+import { sortedUnion } from "./effect_set.ts";
 
 /** The most rounds that one group may take (design 4.6, resource caps). */
 const ROUND_CAP = 32;
@@ -71,8 +71,8 @@ const PURE: Solved = { mode: "pure", failures: [], requirements: [] };
 function join(a: Solved, b: Solved): Solved {
   return {
     mode: a.mode === "effect" || b.mode === "effect" ? "effect" : "pure",
-    failures: sortedUnique([...a.failures, ...b.failures]),
-    requirements: sortedUnique([...a.requirements, ...b.requirements]),
+    failures: sortedUnion(a.failures, b.failures),
+    requirements: sortedUnion(a.requirements, b.requirements),
   };
 }
 

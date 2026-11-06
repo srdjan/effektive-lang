@@ -2,7 +2,8 @@
 // Prelude dispatch checks arity and records facts before this handler runs.
 
 import type { NodeId } from "../syntax.ts";
-import { combine, EFFECT_ONLY, type NodeInfo } from "../tables.ts";
+import { combine, EFFECT_ONLY } from "../effect_set.ts";
+import type { NodeInfo } from "../tables.ts";
 import type { Arg, BuiltinContext } from "./context.ts";
 import { direct, type PreludeCallName, type Rows } from "./rows.ts";
 

@@ -51,6 +51,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   check_project.ts Project driver: paired declaration entries and body results, modes, interfaces, the shared per-module step, and one driver for a fresh check and a revision.
   service_bounds.ts The service-bound policy: requirement-contract/002 for a module with service headers.
   requirement_provenance.ts Requirements carried by produced values and locally produced components that cross module bounds.
+  effect_set.ts  Effect sets: failures, requirements, mode, their union, and the sorted-set union.
   tables.ts      Side tables of a body: node info and lowering facts.
   patterns.ts    Pattern domains of match subjects.
   predicates.ts  The predicate model of refinements: terms, builders, normalization, the comparison bounds, solver limits, and proof certificates.

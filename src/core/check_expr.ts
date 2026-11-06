@@ -71,17 +71,19 @@ import {
   type LiteralValue,
 } from "./patterns.ts";
 import {
-  type ArrowParameterFact,
-  type BodyTable,
   combine,
   EFFECT_ONLY,
   type EffectSet,
   isQuiet,
+  PURE_EFFECTS,
+  without,
+} from "./effect_set.ts";
+import {
+  type ArrowParameterFact,
+  type BodyTable,
   newBodyTable,
   type NodeFact,
   type NodeInfo,
-  PURE_EFFECTS,
-  without,
 } from "./tables.ts";
 import {
   containsOpaqueType,

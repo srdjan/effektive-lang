@@ -47,6 +47,7 @@
       "src/core/editor_rename.ts",
       "src/core/editor_signature.ts",
       "src/core/editor_tokens.ts",
+      "src/core/effect_set.ts",
       "src/core/emit/calls.ts",
       "src/core/emit/decls.ts",
       "src/core/emit/doc.ts",
