@@ -146,6 +146,7 @@
       "src/host/save_round.ts",
       "src/host/workspace.ts",
       "src/lsp/features.ts",
+      "src/lsp/generated_texts.ts",
       "src/lsp/jsonrpc.ts",
       "src/lsp/main.ts",
       "src/lsp/methods.ts",

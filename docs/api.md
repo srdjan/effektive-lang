@@ -151,6 +151,7 @@ src/lsp/       The language server. See "Language server".
   projects.ts    Project discovery, the overlay's tagged update state, diagnostic flushes and disk-only save rounds.
   handler.ts     The types of a request handler: ServerContext, RequestFailure, and RequestHandler.
   features.ts    The handlers: hover, definition, symbols, generated text, save, stats, references, validated versioned rename and actions, completion, and semantic tokens.
+  generated_texts.ts  GeneratedTexts: the subscriptions and received results of the generated-text protocol.
   jsonrpc.ts     Content-Length frames and the message shapes.
   protocol.ts    The subset of the protocol: types and the narrowing of incoming params.
   positions.ts   Positions, ranges, and the conversion between URIs and paths.

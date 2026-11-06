@@ -22,7 +22,6 @@ import {
   definitionRequest,
   didSave,
   documentSymbolRequest,
-  GeneratedTexts,
   generatedTypeScriptRequest,
   hoverRequest,
   inlayHintRequest,
@@ -33,6 +32,7 @@ import {
   signatureHelpRequest,
   statsRequest,
 } from "./features.ts";
+import { GeneratedTexts } from "./generated_texts.ts";
 import {
   classifyMessage,
   ErrorCodes,
