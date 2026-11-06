@@ -269,6 +269,40 @@ export function signatureType(
   };
 }
 
+/**
+ * `signatureType` for a state that the caller already holds, as the lowering
+ * holds the state of a checked function. The written result keeps source order.
+ */
+export function solvedSignatureType(
+  table: TypeTable,
+  signature: FunctionSignature,
+  state: Solved,
+): Result<SignatureType, SignatureError> {
+  return signatureType(table, signature, { get: () => state });
+}
+
+/**
+ * The interned function type of a signature with the contract and the result
+ * that a body check found. The borrow flags and the checked flags come from the
+ * signature, as in `signatureType`.
+ */
+export function signatureFunctionRef(
+  table: TypeTable,
+  signature: FunctionSignature,
+  contract: Pick<Solved, "mode" | "failures" | "requirements">,
+  result: TypeRef,
+): TypeRef {
+  return table.function({
+    execution: contract.mode,
+    parameters: signature.parameters.map((p) => p.type.ref),
+    borrows: signature.parameters.map((p) => p.borrow),
+    checked: checkedInputFlags(signature, table),
+    result,
+    failures: contract.failures,
+    requirements: contract.requirements,
+  });
+}
+
 /** A function type as an interned type and an IR tree. The sets are sorted and unique. */
 export function loweredFunction(
   table: TypeTable,

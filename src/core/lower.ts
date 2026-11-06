@@ -26,7 +26,7 @@ import {
   pipeParts,
   stageParts,
 } from "./syntax_queries.ts";
-import { signatureType } from "./signatures.ts";
+import { solvedSignatureType } from "./signatures.ts";
 import type {
   CheckedModule,
   CheckedProject,
@@ -1612,12 +1612,10 @@ function lowerFunction(
   let type: FunctionType;
   if (signature.written.result) {
     // The written result keeps source order, which `toIrFunction` loses.
-    const computed = signatureType(checked.table, signature, {
-      get: () => ({
-        mode: fn.mode,
-        failures: fn.failures,
-        requirements: fn.requirements,
-      }),
+    const computed = solvedSignatureType(checked.table, signature, {
+      mode: fn.mode,
+      failures: fn.failures,
+      requirements: fn.requirements,
     });
     if (!computed.ok) {
       throw internal(`the function ${signature.name} has no computed mode`);

@@ -75,6 +75,7 @@ import {
   checkedInputFlags,
   type ConstantSignature,
   type FunctionSignature,
+  signatureFunctionRef,
   type TypeEnv,
 } from "./signatures.ts";
 import { TypeLowerer } from "./type_lower.ts";
@@ -2875,46 +2876,7 @@ export function checkFunctionBody(
   const run = checker.checkBody(bodyNode, contract, undefined);
   const checked = checkedInputFlags(signature, benv.env.table);
   const checkedInput = checked.some(Boolean);
-  if (checkedInput) {
-    for (const parameter of signature.parameters) {
-      if (
-        !parameter.inferred || parameter.type.ref === benv.env.table.unknown
-      ) continue;
-      const table = benv.env.table;
-      if (
-        !dataOnly(table, parameter.type.ref, "entry", true) ||
-        containsOpaqueType(table, parameter.type.ref) ||
-        table.foreignSealedOf(benv.env.module, parameter.type.ref) !== undefined
-      ) {
-        checker.sink.push(
-          makeDiagnostic(
-            "type-mismatch/010",
-            `the inferred input \`${parameter.name}\` has no compiler-derived schema; use a concrete annotation or a source-owned decoder`,
-            parameter.span,
-          ),
-        );
-      }
-    }
-  }
-  if (
-    checkedInput && signature.written.fails &&
-    !signature.failures.includes(SCHEMA_ERROR_ID)
-  ) {
-    checker.sink.push(makeDiagnostic(
-      "failure-contract/001",
-      "an exported function with an inferred input contract must list SchemaError in its `fails` clause",
-      signature.span,
-      signature.parameters.flatMap((parameter, index) =>
-        checked[index]
-          ? [{
-            span: parameter.span,
-            message:
-              "this input is checked, so the function can fail with `SchemaError`",
-          }]
-          : []
-      ),
-    ));
-  }
+  reportCheckedInputs(checker, benv, signature, checked);
   if (
     signature.expectedExecution === "pure" &&
     (checkedInput || run.mode !== "pure") &&
@@ -2936,15 +2898,12 @@ export function checkFunctionBody(
     ? sortedUnique([...run.failures, SCHEMA_ERROR_ID])
     : run.failures;
   const mode = checkedInput ? "effect" : run.mode;
-  const type = table.function({
-    execution: mode,
-    parameters: signature.parameters.map((p) => p.type.ref),
-    borrows: signature.parameters.map((p) => p.borrow),
-    checked,
-    result: run.result,
-    failures,
-    requirements: run.requirements,
-  });
+  const type = signatureFunctionRef(
+    table,
+    signature,
+    { mode, failures, requirements: run.requirements },
+    run.result,
+  );
   return {
     table: checker.body,
     body: run.body,
@@ -2955,6 +2914,57 @@ export function checkFunctionBody(
     type,
     diagnostics: checker.sink,
   };
+}
+
+/**
+ * An exported function with an inferred input checks that input at the entry.
+ * Reports an input that has no compiler-derived schema, and a written `fails`
+ * clause that omits `SchemaError`.
+ */
+function reportCheckedInputs(
+  checker: BodyChecker,
+  benv: BodyEnv,
+  signature: FunctionSignature,
+  checked: readonly boolean[],
+): void {
+  if (!checked.some(Boolean)) return;
+  for (const parameter of signature.parameters) {
+    if (
+      !parameter.inferred || parameter.type.ref === benv.env.table.unknown
+    ) continue;
+    const table = benv.env.table;
+    if (
+      !dataOnly(table, parameter.type.ref, "entry", true) ||
+      containsOpaqueType(table, parameter.type.ref) ||
+      table.foreignSealedOf(benv.env.module, parameter.type.ref) !== undefined
+    ) {
+      checker.sink.push(
+        makeDiagnostic(
+          "type-mismatch/010",
+          `the inferred input \`${parameter.name}\` has no compiler-derived schema; use a concrete annotation or a source-owned decoder`,
+          parameter.span,
+        ),
+      );
+    }
+  }
+  if (
+    signature.written.fails && !signature.failures.includes(SCHEMA_ERROR_ID)
+  ) {
+    checker.sink.push(makeDiagnostic(
+      "failure-contract/001",
+      "an exported function with an inferred input contract must list SchemaError in its `fails` clause",
+      signature.span,
+      signature.parameters.flatMap((parameter, index) =>
+        checked[index]
+          ? [{
+            span: parameter.span,
+            message:
+              "this input is checked, so the function can fail with `SchemaError`",
+          }]
+          : []
+      ),
+    ));
+  }
 }
 
 /** Checks the initializer of a module-level constant. */
