@@ -64,7 +64,7 @@ export function layer(
       );
     }
   }
-  const provides = service.methods.map((m) => m.id).sort();
+  const provides = sortedUnique(service.methods.map((m) => m.id));
   if (fn.effects.requirements.some((r) => provides.includes(r))) {
     c.add(
       AREA.control,

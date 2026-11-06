@@ -22,7 +22,7 @@
 import type { Execution, Field, FunctionType, Type } from "../ir.ts";
 import { CLOSED_UNIT_IDS, DURATION_ID, INSTANT_ID } from "../ir.ts";
 import { isReservedError } from "./prelude.ts";
-import { effectsFit, isSubset, sameSet } from "./sets.ts";
+import { effectsFit, isSubset, sameSet, sortedUnique } from "./sets.ts";
 import { typeChildren } from "./type_children.ts";
 import type { Predicate } from "../predicates.ts";
 
@@ -650,7 +650,7 @@ function nameSignature(env: TypeEnv, type: Type): string {
     for (const child of typeChildren(current)) visit(child.type, depth + 1);
   };
   visit(type, 0);
-  return [...names].sort().join(",");
+  return sortedUnique([...names]).join(",");
 }
 
 /**
