@@ -14,7 +14,6 @@ import { isTypeKind } from "./syntax_queries.ts";
 import { effectText, showType } from "./type_show.ts";
 
 export interface InlayHint {
-  /** The insertion offset for the displayed label. */
   readonly position: number;
   /** Holds only the inferred contract part. */
   readonly label: string;

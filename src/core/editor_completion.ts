@@ -74,21 +74,18 @@ function recordFields(
   return [];
 }
 
-/** What each position kind needs: the word under the cursor and its builders. */
 interface Site {
   readonly revision: Revision;
   readonly path: string;
   readonly offset: number;
   readonly module: string;
   readonly tree: SyntaxTree;
-  /** The start of the word under the cursor. */
   readonly start: number;
   readonly make: (label: string, kind: Completion["kind"]) => Completion;
   /** Keeps the labels that start with the typed prefix, sorted. */
   readonly filter: (values: readonly Completion[]) => Completion[];
 }
 
-/** A comment/string is never a code-completion context. */
 function insideCommentOrString(tree: SyntaxTree, offset: number): boolean {
   const { lexed } = tree;
   return [...lexed.trivia.starts].some((start, i) =>
@@ -304,7 +301,6 @@ function nameContextAt(
   return { context, declarationStart };
 }
 
-/** The names in scope that fit the context. */
 function namespaceCompletions(
   site: Site,
   context: NameContext,
@@ -343,7 +339,6 @@ function namespaceCompletions(
   return values;
 }
 
-/** Adds the locals, the prelude, the type names, or the effect errors that the context allows. */
 function addContextNames(
   site: Site,
   values: Map<string, Completion>,
@@ -415,7 +410,6 @@ function serviceImportCompletions(
   );
 }
 
-/** The names that fit the syntax context of the word. */
 function nameCompletions(site: Site): readonly Completion[] {
   const { context, declarationStart } = nameContextAt(
     site.tree,

@@ -12,7 +12,6 @@ import { functionParts } from "./syntax_queries.ts";
 
 export interface ContractAction {
   readonly title: string;
-  /** The value id of the function that the action edits. */
   readonly function: string;
   readonly edits: readonly SourceEdit[];
 }
@@ -131,7 +130,6 @@ export function contractActionsAt(
     const children = [...childrenOf(tree, arrow)];
     const { fails, uses } = functionParts(tree, arrow);
     const text = tree.text;
-    // Reuse the parsed clauses and arrow token, preserving all existing entries.
     const token = children.find((n) =>
       text.slice(tree.starts[n], tree.ends[n]) === "=>"
     );

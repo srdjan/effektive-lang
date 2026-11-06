@@ -16,8 +16,6 @@ import { type NodeId, nodeSpan, type SyntaxTree } from "./syntax.ts";
 import type { BodyTable } from "./tables.ts";
 import { effectText, showType } from "./type_show.ts";
 
-// ------------------------------------------------------------------ positions
-
 interface Range {
   readonly start: number;
   readonly end: number;
@@ -36,8 +34,6 @@ function covers(range: Range, offset: number, afterEnd: boolean): boolean {
 
 const PASSES: readonly boolean[] = [false, true];
 
-// ------------------------------------------------------------------ hover
-
 export interface SourceHover {
   readonly span: Span;
   readonly contract: string;
@@ -45,7 +41,6 @@ export interface SourceHover {
   readonly declaration: string | undefined;
 }
 
-/** Replaces the checker text for an error type by the hover text. */
 function cleanErrors(text: string): string {
   return text.replaceAll("<error>", "unknown (error)");
 }
@@ -97,7 +92,6 @@ function innermostNode<T>(
   return best;
 }
 
-/** Every node of the body tables, with the table that holds its checker info. */
 function* tableNodes(
   tables: Iterable<BodyTable>,
 ): Generator<{ readonly node: NodeId; readonly table: BodyTable }> {
@@ -203,8 +197,6 @@ export function sourceHoverAt(
   return undefined;
 }
 
-// ------------------------------------------------------------------ definition
-
 /**
  * The declaration name span that the innermost resolved name at the offset
  * refers to. Returns undefined for a builtin, a field, an unresolved name, or an
@@ -237,8 +229,6 @@ export function definitionAt(
   return undefined;
 }
 
-// ------------------------------------------------------------------ symbols
-
 export type EditorSymbolKind =
   | "function"
   | "constant"
@@ -251,7 +241,6 @@ export type EditorSymbolKind =
 export interface EditorSymbol {
   readonly name: string;
   readonly kind: EditorSymbolKind;
-  /** The whole declaration. */
   readonly span: Span;
   readonly nameSpan: Span;
   /** The methods of a service. Empty for every other kind. */
@@ -277,7 +266,6 @@ function symbolOf(entry: DeclEntry): EditorSymbol {
   };
 }
 
-/** The index of the file `path`: from the revision when its text equals `text`, else parsed fresh. */
 function indexOfFile(
   revision: Revision | undefined,
   path: string,
