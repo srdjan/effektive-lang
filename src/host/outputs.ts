@@ -50,13 +50,30 @@ function describeEmitError(error: EmitProjectError): string {
   }
 }
 
-/**
- * The modules that a build writes, in the order of `revision.moduleNames()`.
- * A module that imports a module that is not written is not written either,
- * because its generated import would not load.
- */
-export function writableModules(revision: Revision): string[] {
-  const passed = new Set(revision.moduleNames());
+/** Why a module is not written. A caller words it for its own output. */
+export type HeldReason =
+  /** The module has diagnostics of its own. */
+  | { readonly tag: "diagnostics"; readonly count: number }
+  /** The module imports `target`, which is not written. */
+  | { readonly tag: "import"; readonly target: string }
+  /** The module cannot be lowered. */
+  | { readonly tag: "lowering" };
+
+export interface WritePlan {
+  /**
+   * The modules that a build writes, in the order of `revision.moduleNames()`.
+   * A module that imports a module that is not written is not written either,
+   * because its generated import would not load. A module whose own lowering
+   * failed stays in the list, and `writeGenerated` skips it.
+   */
+  readonly writable: readonly string[];
+  /** The reason for each module that is not written, in the order of `moduleNames()`. */
+  readonly held: ReadonlyMap<string, HeldReason>;
+}
+
+export function planWrites(revision: Revision): WritePlan {
+  const names = revision.moduleNames();
+  const passed = new Set(names);
   const writable = (name: string): boolean => {
     const lowered = revision.lowered(name);
     return lowered !== undefined && lowered.ok && passed.has(name);
@@ -72,7 +89,32 @@ export function writableModules(revision: Revision): string[] {
       }
     }
   }
-  return [...passed];
+  const held = new Map<string, HeldReason>();
+  for (const name of names) {
+    if (writable(name)) continue;
+    held.set(name, heldReasonOf(revision, name, writable));
+  }
+  return { writable: [...passed], held };
+}
+
+function heldReasonOf(
+  revision: Revision,
+  name: string,
+  writable: (name: string) => boolean,
+): HeldReason {
+  const lowered = revision.lowered(name);
+  if (lowered !== undefined && !lowered.ok) {
+    if (lowered.error.tag === "diagnostics") {
+      return { tag: "diagnostics", count: lowered.error.count };
+    }
+  }
+  const blocker = revision.imports(name).find((target) => !writable(target));
+  if (blocker !== undefined) return { tag: "import", target: blocker };
+  return { tag: "lowering" };
+}
+
+export function writableModules(revision: Revision): string[] {
+  return [...planWrites(revision).writable];
 }
 
 /**

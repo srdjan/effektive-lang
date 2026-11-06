@@ -17,6 +17,7 @@ import {
 } from "@std/path";
 import type { HostFs } from "../host/io.ts";
 import { DiskProgram } from "../host/disk_program.ts";
+import type { HeldReason } from "../host/outputs.ts";
 import { ownedByRoot, runSaveRound } from "../host/save_round.ts";
 import { isSourcePath, readWorkspace } from "../host/workspace.ts";
 import {
@@ -239,24 +240,15 @@ function groupDiagnostics(
 }
 
 /** Why a module is not written, for the log. */
-function heldReason(
-  revision: Revision,
-  name: string,
-  writable: ReadonlySet<string>,
-): string {
-  const lowered = revision.lowered(name);
-  if (lowered !== undefined && !lowered.ok) {
-    if (lowered.error.tag === "diagnostics") {
-      return `${name} is not written: it has ${lowered.error.count} diagnostics`;
-    }
+function heldMessage(name: string, reason: HeldReason): string {
+  switch (reason.tag) {
+    case "diagnostics":
+      return `${name} is not written: it has ${reason.count} diagnostics`;
+    case "import":
+      return `${name} is not written: it imports ${reason.target}, which is not written`;
+    case "lowering":
+      return `${name} is not written: it cannot be lowered`;
   }
-  const blocker = revision.imports(name).find((target) =>
-    !writable.has(target)
-  );
-  if (blocker !== undefined) {
-    return `${name} is not written: it imports ${blocker}, which is not written`;
-  }
-  return `${name} is not written: it cannot be lowered`;
 }
 
 export class ProjectSet {
@@ -471,7 +463,6 @@ export class ProjectSet {
     const revision = updated.value;
     const owns = (name: string): boolean => this.#owns(project, name);
 
-    const names = revision.moduleNames();
     const round = runSaveRound({
       fs,
       root: project.root,
@@ -488,19 +479,14 @@ export class ProjectSet {
     }
     session.modules = round.modules;
 
-    // `writableModules` also keeps a module whose own lowering failed, and
-    // `writeGenerated` skips it. A module is written only when it lowered.
-    const writableSet = new Set(
-      round.writable.filter((name) => revision.lowered(name)?.ok === true),
-    );
     for (const path of round.outputs.written) log(4, `wrote ${path}`);
     for (const note of round.outputs.notes) log(1, note);
 
     const held = new Set<string>();
-    for (const name of names) {
-      if (writableSet.has(name) || !owns(name)) continue;
+    for (const [name, why] of round.held) {
+      if (!owns(name)) continue;
       held.add(name);
-      const reason = heldReason(revision, name, writableSet);
+      const reason = heldMessage(name, why);
       if (session.heldReasons.get(name) === reason) continue;
       session.heldReasons.set(name, reason);
       log(3, reason);

@@ -11,8 +11,9 @@ import type { HostFs } from "./io.ts";
 import { generationSource } from "./generation.ts";
 import {
   type GeneratedOutputs,
+  type HeldReason,
+  planWrites,
   removeStaleOutputs,
-  writableModules,
   writeGenerated,
 } from "./outputs.ts";
 
@@ -50,6 +51,8 @@ export interface SaveRound {
   readonly removals: readonly ModuleRemoval[];
   /** The writable modules, before the `owns` filter. */
   readonly writable: readonly string[];
+  /** The reason for each module that is not written, before the `owns` filter. */
+  readonly held: ReadonlyMap<string, HeldReason>;
   readonly outputs: GeneratedOutputs;
 }
 
@@ -83,7 +86,7 @@ export function runSaveRound(input: SaveRoundInput): SaveRound {
     removals.push({ name, removed, notes });
     if (input.removal === "retry" && notes.length > 0) kept.push(name);
   }
-  const writable = writableModules(revision);
+  const { writable, held } = planWrites(revision);
   const outputs = writeGenerated(
     fs,
     root,
@@ -91,5 +94,5 @@ export function runSaveRound(input: SaveRoundInput): SaveRound {
     writable.filter(owns),
     input.write,
   );
-  return { modules: [...names, ...kept], removals, writable, outputs };
+  return { modules: [...names, ...kept], removals, writable, held, outputs };
 }
