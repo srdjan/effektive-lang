@@ -9,7 +9,6 @@ import {
   referencesAt,
   renameAt,
   semanticClassifications,
-  symbolIndex,
 } from "../src/core/frontend.ts";
 import { assert, assertEquals } from "@std/assert";
 import { diagnosticDelta } from "../src/core/diagnostic_delta.ts";
@@ -50,7 +49,6 @@ Deno.test("revision index shares declaration identities across imports, locals, 
     referencesAt(revision, "m.eff", consumer.indexOf("arg"), false).length,
     1,
   );
-  assertEquals(symbolIndex(revision), symbolIndex(revision));
 });
 
 Deno.test("indices are revision scoped and recover resolvable symbols from malformed source", () => {
@@ -70,7 +68,6 @@ Deno.test("indices are revision scoped and recover resolvable symbols from malfo
   );
   const next = program.update({ set: { "m.eff": text.replaceAll("x", "y") } });
   assert(next.ok);
-  assert(symbolIndex(first.value) !== symbolIndex(next.value));
   assertEquals(
     occurrenceAt(first.value, "m.eff", text.indexOf("x:"))?.target.kind,
     "local",

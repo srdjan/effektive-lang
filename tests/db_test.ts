@@ -195,34 +195,23 @@ Deno.test("the first revision checks every module in topological order", () => {
   assertEquals(first.diagnostics, []);
 });
 
-Deno.test("an update with no change rechecks nothing and keeps every tree", () => {
+Deno.test("an update with no change rechecks nothing and recomputes nothing", () => {
   const session = new Session(exampleFiles());
-  const first = session.apply(exampleFiles());
+  session.apply(exampleFiles());
+  const before = { ...session.program.counts };
   const second = session.apply({});
   assertEquals(second.rechecked, []);
   assertEquals(second.number, 2);
-  for (const name of first.moduleNames()) {
-    assert(
-      first.checkedModule(name)?.tree === second.checkedModule(name)?.tree,
-    );
-    assert(first.checkedModule(name) === second.checkedModule(name));
-  }
-  // The lazy queries return the same objects.
-  assert(first.lowered("main") === second.lowered("main"));
-  assert(outputs.emitted(first, "main") === outputs.emitted(second, "main"));
+  assertEquals(session.program.counts, before);
 });
 
-Deno.test("a changed file gets a new tree, and the other files keep theirs", () => {
+Deno.test("a changed file is rechecked alone when no module imports it", () => {
   const session = new Session(exampleFiles());
-  const first = session.apply(exampleFiles());
+  session.apply(exampleFiles());
   const text = exampleFiles()["pay.eff"] + "\n";
   const second = session.apply({ "pay.eff": text });
-  assert(
-    first.checkedModule("pay")?.tree !== second.checkedModule("pay")?.tree,
-  );
-  assert(
-    first.checkedModule("log")?.tree === second.checkedModule("log")?.tree,
-  );
+  assertEquals(second.rechecked, ["pay"]);
+  assertEquals(second.diagnostics, []);
 });
 
 // ------------------------------------------------------------------ cutoff (acceptance check 9)

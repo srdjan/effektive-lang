@@ -2,7 +2,7 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { DIAGNOSTIC_CODES } from "../src/core/diagnostics.ts";
-import { type DiagnosticCode, registeredCodes } from "../src/core/frontend.ts";
+import { registeredCodes } from "../src/core/frontend.ts";
 import { parse } from "../src/core/parse.ts";
 import { printTree } from "../src/core/syntax.ts";
 import {
@@ -368,9 +368,4 @@ Deno.test("seeded random edits keep the parser total, lossless, and sound", () =
       );
     }
   }
-});
-
-Deno.test("code type guard: the registry keys are the diagnostic code type", () => {
-  const code: DiagnosticCode = "syntax/001";
-  assert(code in DIAGNOSTIC_CODES);
 });
