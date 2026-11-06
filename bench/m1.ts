@@ -31,6 +31,7 @@ import {
   summarize,
   table,
 } from "./stats.ts";
+import { byTurn } from "./pairs.ts";
 
 export interface M1InputConfig {
   readonly input: LspInputName;
@@ -98,17 +99,13 @@ export async function runM1(
         const hover: Pair[] = [];
         for (let i = 0; i < entry.warmups + entry.steps; i++, turn++) {
           // Alternate which side goes first.
-          const first = turn % 2 === 0 ? a.value : b.value;
-          const second = turn % 2 === 0 ? b.value : a.value;
+          const [first, second] = byTurn(turn, a.value, b.value);
           const one = await stepOn(first, kind);
           if (!one.ok) return one;
           const two = await stepOn(second, kind);
           if (!two.ok) return two;
           if (i < entry.warmups) continue;
-          const [onA, onB] = turn % 2 === 0 ? [one.value, two.value] : [
-            two.value,
-            one.value,
-          ];
+          const [onA, onB] = byTurn(turn, one.value, two.value);
           change.push([onA[0], onB[0]]);
           hover.push([onA[1], onB[1]]);
         }

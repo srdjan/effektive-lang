@@ -32,6 +32,7 @@ import {
   summarize,
   table,
 } from "./stats.ts";
+import { byTurn } from "./pairs.ts";
 import {
   exampleTarget,
   type M5Error,
@@ -130,9 +131,7 @@ async function measureTarget(
       if (!second.ok) return second;
       samples.push(first.value, second.value);
       // Alternate which run counts as side A.
-      pairs.push(
-        k % 2 === 0 ? [first.value, second.value] : [second.value, first.value],
-      );
+      pairs.push(byTurn(k, first.value, second.value));
     }
     // The control: the same input again. The type-check cache answers.
     const control = await timeCheck(directory, target);

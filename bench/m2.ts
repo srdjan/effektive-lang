@@ -60,6 +60,7 @@ import {
   summarize,
   table,
 } from "./stats.ts";
+import { byTurn } from "./pairs.ts";
 
 // ------------------------------------------------------------------ types
 
@@ -416,8 +417,7 @@ function measureStages(
     const first = runs[0];
     const second = runs[1];
     if (first === undefined || second === undefined) continue;
-    const a = k % 2 === 0 ? first : second;
-    const b = k % 2 === 0 ? second : first;
+    const [a, b] = byTurn(k, first, second);
     for (const stage of STAGES) {
       samples.get(stage)?.push(first.times[stage], second.times[stage]);
       pairs.get(stage)?.push([a.times[stage], b.times[stage]]);

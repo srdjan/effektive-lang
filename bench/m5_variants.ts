@@ -25,6 +25,7 @@ import { EFFECT_VERSION, TARGET_COMPILER_OPTIONS } from "../src/cli/tsc.ts";
 import { errorMessage, type Result } from "../src/core/mod.ts";
 import { runProcess, withTempDir } from "../scripts/lib.ts";
 import type { Pair } from "./stats.ts";
+import { byTurn } from "./pairs.ts";
 
 /** The pinned tool versions. The first run needs network access to fetch them. */
 export const TYPESCRIPT_VERSION = "5.9.3";
@@ -284,9 +285,7 @@ async function sampleVariant(
     const second = await next();
     if (!second.ok) return second;
     samples.push(first.value, second.value);
-    pairs.push(
-      k % 2 === 0 ? [first.value, second.value] : [second.value, first.value],
-    );
+    pairs.push(byTurn(k, first.value, second.value));
   }
   return { ok: true, value: { variant: name, target, samples, pairs } };
 }

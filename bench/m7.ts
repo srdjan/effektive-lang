@@ -47,6 +47,7 @@ import {
   summarize,
   table,
 } from "./stats.ts";
+import { byTurn } from "./pairs.ts";
 
 export interface M7PresetConfig {
   readonly size: SizeName;
@@ -180,16 +181,13 @@ async function runPairs(
 ): Promise<Result<readonly Pair[], LspBenchError>> {
   const pairs: Pair[] = [];
   for (let turn = 0; turn < warmups + steps; turn++) {
-    const first = turn % 2 === 0 ? a : b;
-    const second = turn % 2 === 0 ? b : a;
+    const [first, second] = byTurn(turn, a, b);
     const one = await step(first);
     if (!one.ok) return one;
     const two = await step(second);
     if (!two.ok) return two;
     if (turn < warmups) continue;
-    pairs.push(
-      turn % 2 === 0 ? [one.value, two.value] : [two.value, one.value],
-    );
+    pairs.push(byTurn(turn, one.value, two.value));
   }
   return { ok: true, value: pairs };
 }
@@ -242,8 +240,7 @@ export async function runM7(
           on,
         );
         if (!b.ok) return b;
-        const first = turn % 2 === 0 ? a.value : b.value;
-        const second = turn % 2 === 0 ? b.value : a.value;
+        const [first, second] = byTurn(turn, a.value, b.value);
         const one = await first.save();
         if (!one.ok) return one;
         const gateOne = checkOutput(first, undefined, "cold save");
@@ -252,9 +249,7 @@ export async function runM7(
         if (!two.ok) return two;
         const gateTwo = checkOutput(second, undefined, "cold save");
         if (!gateTwo.ok) return gateTwo;
-        cold.push(
-          turn % 2 === 0 ? [one.value, two.value] : [two.value, one.value],
-        );
+        cold.push(byTurn(turn, one.value, two.value));
         const done = await workspace.finish();
         if (!done.ok) return done;
       } finally {

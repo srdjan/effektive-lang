@@ -12,6 +12,7 @@ import {
   Workspace,
 } from "./lsp_script.ts";
 import { fixed, table } from "./stats.ts";
+import { byTurn } from "./pairs.ts";
 import type { SizeName } from "./generate.ts";
 
 export interface M4Config {
@@ -176,9 +177,11 @@ export async function runM4(
         if (kind === undefined || path === undefined) {
           throw new Error("no edit target");
         }
-        const order = i % 2 === 0
-          ? [[a.value, memorySamplesA], [b.value, memorySamplesB]] as const
-          : [[b.value, memorySamplesB], [a.value, memorySamplesA]] as const;
+        const order = byTurn(
+          i,
+          [a.value, memorySamplesA] as const,
+          [b.value, memorySamplesB] as const,
+        );
         for (const [session, samples] of order) {
           const changed = await session.step(kind, path);
           if (!changed.ok) return changed;
