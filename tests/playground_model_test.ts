@@ -26,9 +26,8 @@ function diagnostic(
   from: number,
   to: number,
   code: string,
-  severity: "error" | "warning" = "error",
 ): PlaygroundDiagnostic {
-  return { from, to, severity, code, message: `message ${code}` };
+  return { from, to, severity: "error", code, message: `message ${code}` };
 }
 
 const RESULT: PlaygroundResult = {
@@ -36,7 +35,7 @@ const RESULT: PlaygroundResult = {
     "users.eff": [
       diagnostic(9, 12, "b/002"),
       diagnostic(4, 5, "b/001"),
-      diagnostic(4, 9, "b/003", "warning"),
+      diagnostic(4, 9, "b/003"),
     ],
     "main.eff": [diagnostic(0, 1, "a/001")],
     "host/providers.effi": [],
@@ -86,7 +85,7 @@ Deno.test("problemItems sorts by path and position with one-based line and colum
     ],
   );
   assertEquals(items[0].message, "message a/001");
-  assertEquals(items[2].severity, "warning");
+  assertEquals(items[2].severity, "error");
 });
 
 Deno.test("problemItems gives line 1 column 1 to a path without text", () => {
@@ -97,9 +96,9 @@ Deno.test("problemItems gives line 1 column 1 to a path without text", () => {
   );
 });
 
-Deno.test("tabCounts counts errors for each path, warnings excluded", () => {
+Deno.test("tabCounts counts the diagnostics of each path", () => {
   assertEquals(tabCounts(RESULT), {
-    "users.eff": 2,
+    "users.eff": 3,
     "main.eff": 1,
     "host/providers.effi": 0,
   });

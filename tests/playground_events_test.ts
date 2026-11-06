@@ -21,7 +21,7 @@ const RESULT: PlaygroundResult = {
   diagnostics: {
     "main.eff": [
       { from: 1, to: 4, severity: "error", code: "b/001", message: "m" },
-      { from: 6, to: 7, severity: "warning", code: "b/002", message: "m" },
+      { from: 6, to: 7, severity: "error", code: "b/002", message: "m" },
     ],
     "users.eff": [
       { from: 0, to: 1, severity: "error", code: "b/003", message: "m" },
@@ -71,7 +71,7 @@ Deno.test("compileData lists the active file, the error counts, and staleness", 
       { code: "b/001", from: 1, to: 4 },
       { code: "b/002", from: 6, to: 7 },
     ],
-    counts: { "main.eff": 1, "users.eff": 1 },
+    counts: { "main.eff": 2, "users.eff": 1 },
     stale: true,
     saving: "5% fewer",
   });

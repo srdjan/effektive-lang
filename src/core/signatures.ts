@@ -11,8 +11,8 @@
 //   empty set for it. An exported function leaves a `fails` clause open when it
 //   writes none. Its omitted `with` set opens only in a module with service headers.
 // - The execution mode and the open sets of a function come from a `Solved`
-//   lookup that the body checker supplies. `executionOf` and `signatureType`
-//   take the lookup and return a Result error when an entry is missing.
+//   lookup that the body checker supplies. `signatureType` takes the lookup
+//   and returns a Result error when an entry is missing.
 
 import type { Diagnostic } from "./diagnostics.ts";
 import type {
@@ -224,18 +224,6 @@ function contractOf(
       requirements,
     },
   };
-}
-
-/**
- * The execution mode of a signature with a written result. A nonempty set gives
- * `effect`. Otherwise the mode comes from `solved`.
- */
-export function executionOf(
-  signature: FunctionSignature,
-  solved: SolvedLookup,
-): Result<Execution, SignatureError> {
-  const contract = contractOf(signature, solved);
-  return contract.ok ? { ok: true, value: contract.value.mode } : contract;
 }
 
 export interface SignatureType {

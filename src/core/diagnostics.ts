@@ -17,7 +17,7 @@ export type Category =
   | "host-boundary"
   | "validation";
 
-export type Severity = "error" | "warning";
+export type Severity = "error";
 
 interface CodeInfo {
   readonly description: string;

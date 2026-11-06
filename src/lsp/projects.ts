@@ -211,7 +211,7 @@ function groupDiagnostics(
     });
     const converted: Diagnostic = {
       range: rangeOf(d.span),
-      severity: d.severity === "error" ? 1 : 2,
+      severity: 1,
       code: d.code,
       source: "effektive",
       message: d.message,

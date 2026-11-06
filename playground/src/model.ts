@@ -80,13 +80,13 @@ export function problemItems(
 }
 
 /**
- * The number of diagnostics with severity `error` in each file. Every path of
+ * The number of diagnostics in each file. Every path of
  * `result.diagnostics` has an entry, also with count 0.
  */
 export function tabCounts(result: PlaygroundResult): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const [path, diagnostics] of Object.entries(result.diagnostics)) {
-    counts[path] = diagnostics.filter((d) => d.severity === "error").length;
+    counts[path] = diagnostics.length;
   }
   return counts;
 }

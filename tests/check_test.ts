@@ -3,7 +3,7 @@
 import { assert, assertEquals, assertNotEquals } from "@std/assert";
 import { type Analysis, analyzeProject } from "../src/core/analyze.ts";
 import {
-  executionOf,
+  contractSets,
   type FunctionSignature,
   type ModeMap,
   type ModuleDeclarations,
@@ -410,8 +410,16 @@ Deno.test("a function without a result annotation has an open contract", () => {
   assertEquals(twice.result, undefined);
   assertEquals(twice.parameters.length, 1);
   assertEquals(project.diagnostics, []);
-  const mode = executionOf(twice, modesAsSolved(new Map()));
-  assert(!mode.ok && mode.error.tag === "inferred-contract");
+  assertEquals(contractSets(twice, modesAsSolved(new Map())), {
+    failures: [],
+    requirements: [],
+  });
+  const type = signatureType(
+    new TypeTable(),
+    twice,
+    modesAsSolved(new Map()),
+  );
+  assert(!type.ok && type.error.tag === "inferred-contract");
 });
 
 Deno.test("a binding annotation that is a function type supplies the signature", () => {
@@ -583,25 +591,38 @@ Deno.test("nonempty sets force effect mode whatever the map says", () => {
     files["log.eff"] = CLOSED_LOG;
   });
   const log = signatureOf(project, "log", "value:log#log");
-  const forced = executionOf(
+  const forced = contractSets(
     log,
     modesAsSolved(new Map([["value:log#log", "pure"]])),
   );
-  assert(forced.ok);
-  assertEquals(forced.value, "effect");
-  const withoutEntry = executionOf(log, modesAsSolved(new Map()));
-  assert(withoutEntry.ok);
-  assertEquals(withoutEntry.value, "effect");
+  const withoutEntry = contractSets(log, modesAsSolved(new Map()));
+  assertEquals(forced, withoutEntry);
+  assertEquals(forced, {
+    failures: ["error:log#ConsoleUnavailable"],
+    requirements: ["cap:log#Console.print"],
+  });
+  const forcedType = signatureType(
+    new TypeTable(),
+    log,
+    modesAsSolved(new Map([["value:log#log", "pure"]])),
+  );
+  assert(forcedType.ok);
+  assertEquals(forcedType.value.ir.execution, "effect");
+  const typeWithoutEntry = signatureType(
+    new TypeTable(),
+    log,
+    modesAsSolved(new Map()),
+  );
+  assert(typeWithoutEntry.ok);
+  assertEquals(typeWithoutEntry.value.ir.execution, "effect");
 });
 
 Deno.test("an empty-set function without an entry is a Result error", () => {
   const project = checkExamples();
   const total = signatureOf(project, "collections", "value:collections#total");
-  const missing = executionOf(total, modesAsSolved(new Map()));
-  assert(!missing.ok);
-  assertEquals(missing.error, {
-    tag: "missing-mode",
-    id: "value:collections#total",
+  assertEquals(contractSets(total, modesAsSolved(new Map())), {
+    failures: [],
+    requirements: [],
   });
   const type = signatureType(
     new TypeTable(),
@@ -609,6 +630,10 @@ Deno.test("an empty-set function without an entry is a Result error", () => {
     modesAsSolved(new Map()),
   );
   assert(!type.ok);
+  assertEquals(type.error, {
+    tag: "missing-mode",
+    id: "value:collections#total",
+  });
 });
 
 // ------------------------------------------------------------------ hashes

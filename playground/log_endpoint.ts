@@ -16,7 +16,7 @@ export const ALLOWED_ORIGIN = "http://127.0.0.1:8790";
 export const MAX_BODY_BYTES = 64 * 1024;
 
 /** The most envelopes in one request. */
-export const MAX_ENVELOPES = 500;
+const MAX_ENVELOPES = 500;
 
 export interface LogRequest {
   readonly method: string;
