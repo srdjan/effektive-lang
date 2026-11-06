@@ -5,9 +5,9 @@ import type {
   DenoCheckRequest,
   DenoCheckRun,
   DirectoryEntry,
-  FileFailure,
   HostIo,
 } from "../src/host/io.ts";
+import type { FileFailure } from "../src/host/ports.ts";
 import type { ReadError, Result } from "../src/core/frontend.ts";
 import { memoryLog } from "../src/host/log.ts";
 

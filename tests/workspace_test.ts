@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import type { ReadError, Result } from "../src/core/frontend.ts";
-import type { DirectoryEntry, FileFailure, HostFs } from "../src/host/io.ts";
+import type { DirectoryEntry, HostFs } from "../src/host/io.ts";
+import type { FileFailure } from "../src/host/ports.ts";
 import {
   isTargetPath,
   readTargetInputs,

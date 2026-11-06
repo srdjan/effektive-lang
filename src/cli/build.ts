@@ -10,7 +10,7 @@ import {
   type TextOf,
 } from "./format.ts";
 import type { HostIo } from "../host/io.ts";
-import type { EventLog } from "../host/log.ts";
+import type { EventLog } from "../host/ports.ts";
 import {
   type ModuleRemoval,
   ownedByRoot,

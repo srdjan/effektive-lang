@@ -6,7 +6,8 @@
 
 import { isRecord, type Result, sha256Hex } from "../core/mod.ts";
 import type { HostFs } from "../host/io.ts";
-import { type EventLog, noLog } from "../host/log.ts";
+import { noLog } from "../host/log.ts";
+import type { EventLog } from "../host/ports.ts";
 import type { FrameError, RequestId } from "./jsonrpc.ts";
 import { uriToPath } from "./positions.ts";
 import type { ServerPorts } from "./server.ts";

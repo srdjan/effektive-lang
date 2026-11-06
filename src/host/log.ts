@@ -4,7 +4,7 @@
 
 import { isRecord, type Result, sha256Hex } from "../core/mod.ts";
 import config from "../../deno.json" with { type: "json" };
-import type { FileFailure } from "./io.ts";
+import type { EventLog, FileFailure } from "./ports.ts";
 
 export type Surface = "cli" | "lsp" | "playground";
 
@@ -26,12 +26,6 @@ export interface Envelope {
 
 /** The release version from `deno.json`. */
 export const BUILD: string = config.version;
-
-export interface EventLog {
-  append(kind: string, data: unknown): void;
-  /** Stores the text under its SHA-256 hex hash, and returns the hash. */
-  blob(text: string): string;
-}
 
 /** A log that records nothing. */
 export const noLog: EventLog = {

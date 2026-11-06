@@ -9,11 +9,11 @@ import type {
   DenoCheckRun,
   DirectoryEntry,
   EntryKind,
-  FileFailure,
   HostFs,
   HostIo,
 } from "./io.ts";
 import { type LogFs, noLog, openFileLog } from "./log.ts";
+import type { FileFailure } from "./ports.ts";
 import { isSourcePath, isTargetPath } from "./workspace.ts";
 
 const encoder = new TextEncoder();

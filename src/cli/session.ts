@@ -19,7 +19,8 @@ import {
   buildRevision,
 } from "./build.ts";
 import type { HostIo } from "../host/io.ts";
-import { type EventLog, noLog } from "../host/log.ts";
+import { noLog } from "../host/log.ts";
+import type { EventLog } from "../host/ports.ts";
 import { readTargetInputs, readWorkspace } from "../host/workspace.ts";
 
 export type SyncResult =

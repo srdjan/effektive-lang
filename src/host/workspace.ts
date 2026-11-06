@@ -9,7 +9,8 @@ import {
   joinPath,
   type Result,
 } from "../core/mod.ts";
-import type { FileFailure, HostFs } from "./io.ts";
+import type { HostFs } from "./io.ts";
+import type { FileFailure } from "./ports.ts";
 
 function skippedDirectory(name: string): boolean {
   return name.startsWith(".") || name === "node_modules";

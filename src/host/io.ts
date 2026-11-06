@@ -4,15 +4,11 @@
 // tests run them with in-memory doubles.
 
 import type { ReadError, Result } from "../core/mod.ts";
-import type { EventLog } from "./log.ts";
+import type { EventLog, FileFailure } from "./ports.ts";
 
 export interface DirectoryEntry {
   readonly name: string;
   readonly isDirectory: boolean;
-}
-
-export interface FileFailure {
-  readonly message: string;
 }
 
 export type EntryKind = "symlink" | "other" | "missing";

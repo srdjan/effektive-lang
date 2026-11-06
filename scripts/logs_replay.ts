@@ -25,7 +25,8 @@ import {
 import type { Result } from "../src/core/mod.ts";
 import { parseArgs } from "../src/cli/args.ts";
 import { main } from "../src/cli/main.ts";
-import type { DirectoryEntry, FileFailure, HostIo } from "../src/host/io.ts";
+import type { DirectoryEntry, HostIo } from "../src/host/io.ts";
+import type { FileFailure } from "../src/host/ports.ts";
 import { type Envelope, memoryLog, type Surface } from "../src/host/log.ts";
 import type { FrameError } from "../src/lsp/jsonrpc.ts";
 import { LanguageServer, type ServerPorts } from "../src/lsp/server.ts";

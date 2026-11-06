@@ -9,7 +9,7 @@ import {
   type SpanTable,
 } from "../core/mod.ts";
 import type { HostIo } from "../host/io.ts";
-import type { EventLog } from "../host/log.ts";
+import type { EventLog } from "../host/ports.ts";
 import { formatTscMappings, type TextOf } from "./format.ts";
 import targetLock from "./target_lock.json" with { type: "json" };
 
