@@ -33,6 +33,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   contract_origins.ts The nodes of a body that introduce a missing fails or with entry, for related locations.
   check_patterns.ts Match patterns, bindings, and coverage through PatternContext.
   check_refinements.ts RefinementChecker: the refinement facts of a body, the proof budget, and the proved, not-required, or failed decision of each obligation.
+  body_env.ts    BodyEnv and ProofBudget: what the body checker reads from the module and the project.
   check_binary.ts Pure operand rules and result types of the binary operators.
   check_builtins/ Source-checker builtin families; shared dispatch and body-table writes stay in check_expr.ts.
     context.ts     Shared argument, function, literal-field and local-use shapes, invocation effects, the shared views, and the checker operations.

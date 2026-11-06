@@ -128,24 +128,14 @@ import {
 } from "./check_builtins/scope.ts";
 import type { StreamContext } from "./check_builtins/stream.ts";
 import { inferArrowInputs } from "./infer_inputs.ts";
+import type { BodyEnv } from "./body_env.ts";
 import {
-  type ProofBudget,
   RefinementChecker,
   type RefinementDecision,
 } from "./check_refinements.ts";
 import { not } from "./predicates.ts";
 
 // ------------------------------------------------------------------ environment
-
-/** What the body checker needs from the module and from the project. */
-export interface BodyEnv {
-  readonly env: TypeEnv;
-  /** The type of a module-level value, local or imported. The error type when unknown. */
-  readonly values: (id: ValueId) => TypeRef;
-  /** The function type of a service method. The error type when unknown. */
-  readonly methodType: (capability: CapabilityId) => TypeRef;
-  readonly proofBudget?: ProofBudget;
-}
 
 /**
  * The contract of a function body. An absent part is open: the body infers it.

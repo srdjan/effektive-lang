@@ -25,17 +25,14 @@ import {
 } from "./signatures.ts";
 import { checkModuleDeclarations } from "./check_declarations.ts";
 import {
-  type BodyEnv,
   checkConstantBody,
   checkFunctionBody,
   type ConstantRun,
   type FunctionRun,
 } from "./check_expr.ts";
 import { inferFunctionInputs, withInferredInputs } from "./infer_inputs.ts";
-import {
-  type ProofBudget,
-  REFINEMENT_AGGREGATE_STEPS,
-} from "./check_refinements.ts";
+import type { BodyEnv, ProofBudget } from "./body_env.ts";
+import { REFINEMENT_AGGREGATE_STEPS } from "./check_refinements.ts";
 import {
   type Diagnostic,
   makeDiagnostic,

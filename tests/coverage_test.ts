@@ -255,6 +255,7 @@ Deno.test("coverage ownership classifies the production source inventory", async
   assert(ownership.ok);
   assert(ownership.value.runtimePaths.includes("src/core/mod.ts"));
   assertEquals(ownership.value.typeOnlyPaths, [
+    "src/core/body_env.ts",
     "src/core/emit/families/context.ts",
     "src/core/result.ts",
     "src/host/io.ts",

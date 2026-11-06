@@ -146,6 +146,7 @@
     "reason": "These modules contain only TypeScript declarations and imports of types.",
     "owner": "deno task check",
     "paths": [
+      "src/core/body_env.ts",
       "src/core/emit/families/context.ts",
       "src/core/result.ts",
       "src/host/io.ts"

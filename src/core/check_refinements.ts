@@ -1,5 +1,6 @@
 import { compareText } from "./util.ts";
 import { isTypeId } from "./ids.ts";
+import type { ProofBudget } from "./body_env.ts";
 import type { LocalId, RefinementProof, TypeId } from "./ir.ts";
 import { and, entails, not, type Predicate, type Term } from "./predicates.ts";
 import { flattenMembers } from "./patterns.ts";
@@ -22,10 +23,6 @@ import type { TypeRef, TypeTable } from "./types.ts";
 
 const REFINEMENT_QUERY_STEPS = 8_192;
 export const REFINEMENT_AGGREGATE_STEPS = 100_000;
-
-export interface ProofBudget {
-  remaining: number;
-}
 
 type Linear = {
   readonly terms: ReadonlyMap<

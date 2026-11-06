@@ -5,7 +5,7 @@ import type {
 } from "./signatures.ts";
 import { TypeLowerer } from "./type_lower.ts";
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
-import type { BodyEnv } from "./check_expr.ts";
+import type { BodyEnv } from "./body_env.ts";
 import type { LocalId } from "./ir.ts";
 import {
   type CallableEvidence,
