@@ -3,7 +3,7 @@
 // type groups. The body checker uses `TypeLowerer` for annotations inside bodies.
 
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
-import type { CapabilityId, ErrorId, Execution, Field } from "./ir.ts";
+import type { CapabilityId, ErrorId, Execution, Field, TypeId } from "./ir.ts";
 import { DURATION_ID, INSTANT_ID } from "./ir.ts";
 import { TokenKind } from "./lex.ts";
 import type { Target } from "./resolve.ts";
@@ -66,15 +66,46 @@ type BuiltinTypeRow =
     ) => Lowered;
   };
 
+/**
+ * The primitive type names that take no type arguments. A value primitive
+ * (`true`) carries data and can occur only inside a type or error declaration.
+ */
+const PRIMITIVE_TYPES = {
+  string: true,
+  boolean: true,
+  int: true,
+  number: true,
+  never: false,
+  unknown: false,
+} as const;
+
+type PrimitiveTypeName = keyof typeof PRIMITIVE_TYPES;
+
+/** True for a built-in type name that is a primitive that carries data. */
+export function isValuePrimitiveName(name: string): boolean {
+  return Object.entries(PRIMITIVE_TYPES).some(([primitive, value]) =>
+    value && primitive === name
+  );
+}
+
 /** The row of a primitive type name that takes no type arguments. */
-function primitiveRow(
-  name: "string" | "boolean" | "int" | "number" | "never" | "unknown",
-): BuiltinTypeRow {
+function primitiveRow(name: PrimitiveTypeName): BuiltinTypeRow {
   return {
     kind: "plain",
     build: (lowerer) => ({
       ref: lowerer.env.table.primitive(name),
       ir: { kind: "primitive", name },
+    }),
+  };
+}
+
+/** The row of a closed unit type name that takes no type arguments. */
+function unitRow(id: TypeId): BuiltinTypeRow {
+  return {
+    kind: "plain",
+    build: (lowerer) => ({
+      ref: lowerer.env.table.named(id),
+      ir: { kind: "named", id },
     }),
   };
 }
@@ -241,20 +272,8 @@ export class TypeLowerer {
         ir: { kind: "primitive", name: "unit" },
       }),
     },
-    Duration: {
-      kind: "plain",
-      build: (lowerer) => ({
-        ref: lowerer.env.table.named(DURATION_ID),
-        ir: { kind: "named", id: DURATION_ID },
-      }),
-    },
-    Instant: {
-      kind: "plain",
-      build: (lowerer) => ({
-        ref: lowerer.env.table.named(INSTANT_ID),
-        ir: { kind: "named", id: INSTANT_ID },
-      }),
-    },
+    Duration: unitRow(DURATION_ID),
+    Instant: unitRow(INSTANT_ID),
     Option: {
       kind: "generic",
       arity: 1,

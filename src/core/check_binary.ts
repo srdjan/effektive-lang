@@ -146,43 +146,6 @@ function isStringClass(table: TypeTable, cls: string): boolean {
   return classChain(table, cls).includes("string");
 }
 
-function isDuration(table: TypeTable, ref: TypeRef): boolean {
-  const node = table.node(table.unfoldTransparent(ref));
-  return node.kind === "named" && node.id === DURATION_ID;
-}
-
-function isInstant(table: TypeTable, ref: TypeRef): boolean {
-  const node = table.node(table.unfoldTransparent(ref));
-  return node.kind === "named" && node.id === INSTANT_ID;
-}
-
-/**
- * The arithmetic of `Instant`, or undefined when no operand is an `Instant`. It
- * runs before the `Duration` rules. `Instant - Instant` is a `Duration`, and an
- * `Instant` moves by a `Duration`. Every other mix is a mismatch.
- */
-function instantArithmetic(
-  table: TypeTable,
-  operator: ArithmeticOperator,
-  left: TypeRef,
-  right: TypeRef,
-): OperatorResult | undefined {
-  const l = isInstant(table, left);
-  const r = isInstant(table, right);
-  if (!l && !r) return undefined;
-  const instant = { type: table.named(INSTANT_ID), mismatch: false };
-  if (l && r) {
-    return operator === "-"
-      ? { type: table.named(DURATION_ID), mismatch: false }
-      : { type: table.error, mismatch: true };
-  }
-  const other = l ? right : left;
-  const fits = isDuration(table, other);
-  if (operator === "+" && fits) return instant;
-  if (operator === "-" && l && fits) return instant;
-  return { type: table.error, mismatch: true };
-}
-
 /** The closed unit class of a comparison class, or undefined for another class. */
 function closedUnitClass(cls: string | undefined): string | undefined {
   return cls !== undefined && cls.startsWith(IDENTITY_CLASS) &&
@@ -202,38 +165,198 @@ function closedUnitsDiffer(
 }
 
 /**
- * The arithmetic of `Duration`, or undefined when the general rules decide. A
- * bare number has no unit, so `Duration + int` and `Duration - int` do not fit.
+ * An operand of a unit rule: the id of a closed unit type, or `integral` for a
+ * type that fits `int`, or `numeric` for a type that fits `int` or `number`.
  */
-function durationArithmetic(
+type UnitOperand = TypeId | "integral" | "numeric";
+
+/**
+ * The outcome of a unit rule: the id of a closed unit type, `number`, a
+ * `mismatch`, or `general` when the general class rules decide.
+ */
+type UnitOutcome = TypeId | "number" | "mismatch" | "general";
+
+interface UnitRule {
+  readonly operator: ArithmeticOperator;
+  readonly left: UnitOperand;
+  readonly right: UnitOperand;
+  readonly result: UnitOutcome;
+}
+
+interface UnitArithmetic {
+  readonly unit: TypeId;
+  /** The first rule that fits both operands decides. */
+  readonly rules: readonly UnitRule[];
+  /** The outcome when an operand is the unit and no rule fits. */
+  readonly otherwise: UnitOutcome;
+}
+
+/**
+ * The arithmetic of the closed units. A table runs in order, and the first
+ * table with a unit operand decides. `Instant - Instant` is a `Duration`, and
+ * an `Instant` moves by a `Duration`. A bare number has no unit, so
+ * `Duration + int` and `Duration - int` do not fit.
+ */
+const UNIT_ARITHMETIC: readonly UnitArithmetic[] = [
+  {
+    unit: INSTANT_ID,
+    rules: [
+      {
+        operator: "-",
+        left: INSTANT_ID,
+        right: INSTANT_ID,
+        result: DURATION_ID,
+      },
+      {
+        operator: "+",
+        left: INSTANT_ID,
+        right: DURATION_ID,
+        result: INSTANT_ID,
+      },
+      {
+        operator: "+",
+        left: DURATION_ID,
+        right: INSTANT_ID,
+        result: INSTANT_ID,
+      },
+      {
+        operator: "-",
+        left: INSTANT_ID,
+        right: DURATION_ID,
+        result: INSTANT_ID,
+      },
+    ],
+    otherwise: "mismatch",
+  },
+  {
+    unit: DURATION_ID,
+    rules: [
+      {
+        operator: "+",
+        left: DURATION_ID,
+        right: DURATION_ID,
+        result: DURATION_ID,
+      },
+      {
+        operator: "-",
+        left: DURATION_ID,
+        right: DURATION_ID,
+        result: DURATION_ID,
+      },
+      {
+        operator: "*",
+        left: DURATION_ID,
+        right: DURATION_ID,
+        result: "general",
+      },
+      {
+        operator: "/",
+        left: DURATION_ID,
+        right: DURATION_ID,
+        result: "number",
+      },
+      {
+        operator: "+",
+        left: DURATION_ID,
+        right: "numeric",
+        result: "mismatch",
+      },
+      {
+        operator: "+",
+        left: "numeric",
+        right: DURATION_ID,
+        result: "mismatch",
+      },
+      {
+        operator: "-",
+        left: DURATION_ID,
+        right: "numeric",
+        result: "mismatch",
+      },
+      {
+        operator: "-",
+        left: "numeric",
+        right: DURATION_ID,
+        result: "mismatch",
+      },
+      {
+        operator: "*",
+        left: DURATION_ID,
+        right: "integral",
+        result: DURATION_ID,
+      },
+      {
+        operator: "*",
+        left: "integral",
+        right: DURATION_ID,
+        result: DURATION_ID,
+      },
+      {
+        operator: "/",
+        left: DURATION_ID,
+        right: "integral",
+        result: DURATION_ID,
+      },
+    ],
+    otherwise: "general",
+  },
+];
+
+function isUnit(table: TypeTable, ref: TypeRef, unit: TypeId): boolean {
+  const node = table.node(table.unfoldTransparent(ref));
+  return node.kind === "named" && node.id === unit;
+}
+
+function fitsUnitOperand(
+  table: TypeTable,
+  module: string,
+  operand: UnitOperand,
+  ref: TypeRef,
+): boolean {
+  switch (operand) {
+    case "integral":
+      return table.isAssignableIn(module, ref, table.int);
+    case "numeric":
+      return table.isAssignableIn(module, ref, table.int) ||
+        table.isAssignableIn(module, ref, table.number);
+    default:
+      return isUnit(table, ref, operand);
+  }
+}
+
+/**
+ * The arithmetic of the closed units, or undefined when the general rules
+ * decide.
+ */
+function unitArithmetic(
   table: TypeTable,
   module: string,
   operator: ArithmeticOperator,
   left: TypeRef,
   right: TypeRef,
 ): OperatorResult | undefined {
-  const l = isDuration(table, left);
-  const r = isDuration(table, right);
-  if (!l && !r) return undefined;
-  const duration = { type: table.named(DURATION_ID), mismatch: false };
-  if (l && r) {
-    if (operator === "/") return { type: table.number, mismatch: false };
-    return operator === "*" ? undefined : duration;
+  for (const row of UNIT_ARITHMETIC) {
+    if (!isUnit(table, left, row.unit) && !isUnit(table, right, row.unit)) {
+      continue;
+    }
+    const rule = row.rules.find((candidate) =>
+      candidate.operator === operator &&
+      fitsUnitOperand(table, module, candidate.left, left) &&
+      fitsUnitOperand(table, module, candidate.right, right)
+    );
+    const outcome = rule?.result ?? row.otherwise;
+    switch (outcome) {
+      case "general":
+        return undefined;
+      case "mismatch":
+        return { type: table.error, mismatch: true };
+      case "number":
+        return { type: table.number, mismatch: false };
+      default:
+        return { type: table.named(outcome), mismatch: false };
+    }
   }
-  const other = l ? right : left;
-  const integral = table.isAssignableIn(module, other, table.int);
-  switch (operator) {
-    case "+":
-    case "-":
-      // A bare number has no unit, so it never adds to a Duration.
-      return integral || table.isAssignableIn(module, other, table.number)
-        ? { type: table.error, mismatch: true }
-        : undefined;
-    case "*":
-      return integral ? duration : undefined;
-    case "/":
-      return l && integral ? duration : undefined;
-  }
+  return undefined;
 }
 
 /** The result type of a binary operator, and whether the operands do not fit it. */
@@ -306,10 +429,8 @@ export function operatorResult(
         return { type: table.error, mismatch: false, sealed };
       }
       // A bare number has no unit, and a widened operand needs no shared class.
-      const instant = instantArithmetic(table, operator, left, right);
-      if (instant !== undefined) return instant;
-      const duration = durationArithmetic(table, module, operator, left, right);
-      if (duration !== undefined) return duration;
+      const unit = unitArithmetic(table, module, operator, left, right);
+      if (unit !== undefined) return unit;
       const l = comparisonClass(table, left);
       const r = comparisonClass(table, right);
       if (

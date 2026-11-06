@@ -80,7 +80,12 @@ import {
   type TypeGraph,
   type ValueSignature,
 } from "./signatures.ts";
-import { type LoweredField, toIrField, TypeLowerer } from "./type_lower.ts";
+import {
+  isValuePrimitiveName,
+  type LoweredField,
+  toIrField,
+  TypeLowerer,
+} from "./type_lower.ts";
 
 type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
 
@@ -275,27 +280,7 @@ class ModuleChecker {
     if (nameNode === undefined) return false;
     const target = this.env.targets.get(nameNode);
     if (target?.kind !== "builtin-type") return false;
-    const name = target.name;
-    switch (name) {
-      case "string":
-      case "int":
-      case "number":
-      case "boolean":
-        return true;
-      case "void":
-      case "never":
-      case "unknown":
-      case "Option":
-      case "Ref":
-      case "RetrySchedule":
-      case "Duration":
-      case "Instant":
-        return false;
-      default: {
-        const unreachable: never = name;
-        return unreachable;
-      }
-    }
+    return isValuePrimitiveName(target.name);
   }
 
   // -------------------------------------------------------------- types and errors
