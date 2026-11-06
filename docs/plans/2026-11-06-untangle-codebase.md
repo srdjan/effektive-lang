@@ -400,4 +400,4 @@ The failure probe of `behavior:compare` is the pair `f9b358f~1 f9b358f`. It exit
 
 UNU2b found three defects in modifier decoding: a comment between `opaque` and `type`, a parameter named `borrow`, and `borrow/*c*/h` without a space. Commit `899ce2e` fixes them, and `tests/modifier_decoding_test.ts` failed before the fix.
 
-`deno task coverage` fails in a worktree under `~/.claude/scratch` with "no LCOV record: src/lsp/main.ts", also at the baseline. It passes in the main tree. The probable cause is the hidden `.claude` directory in the path. Coverage runs in the main tree only.
+`deno task coverage` sometimes stops with "no LCOV record: src/lsp/main.ts", in scratch worktrees and once in the main tree, while other executors run gates. A rerun on main at `fdf4539` passed: lines 97.31, branches 95.22, functions 99.22 (baseline 97.28, 95.20, 99.21). The probable cause is machine load on the language server child process. An earlier note here blamed the `.claude` path, which was wrong.
