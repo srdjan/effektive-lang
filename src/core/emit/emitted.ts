@@ -178,7 +178,7 @@ export function callArguments(args: readonly Emitted[]): Doc {
 }
 
 /** The text of a concurrency limit: a number, or `"unbounded"` with its quotes. */
-export function concurrencyText(limit: number | "unbounded"): string {
+function concurrencyText(limit: number | "unbounded"): string {
   return limit === "unbounded" ? '"unbounded"' : String(limit);
 }
 
