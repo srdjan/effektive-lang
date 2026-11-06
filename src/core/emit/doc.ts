@@ -57,7 +57,6 @@ export type Doc =
   | { readonly k: "spanopen"; readonly span: Span; readonly id: GroupId }
   | { readonly k: "spanclose"; readonly span: Span; readonly id: GroupId };
 
-/** The `fill` node of the `Doc` type. */
 type FillDoc = Extract<Doc, { readonly k: "fill" }>;
 
 /** Names a group, so that a later `ifBroke` can ask whether the group broke. */
@@ -360,7 +359,6 @@ export function hasHardLine(doc: Doc): boolean {
   return makeHardCheck()(doc);
 }
 
-/** Lays out `doc` at `width` columns. */
 export function render(doc: Doc, width = 80): Rendered {
   const hasHard = makeHardCheck();
   const out: string[] = [];

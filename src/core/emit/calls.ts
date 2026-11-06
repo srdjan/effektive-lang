@@ -8,7 +8,6 @@ import type { Expr } from "../ir.ts";
 import type { EffectModule } from "./module_state.ts";
 import type { ExprOf } from "./shape.ts";
 
-/** The function that a simple call invokes. */
 export interface Callee {
   readonly kind: "method";
   readonly module: EffectModule;
@@ -29,7 +28,6 @@ export type Treatment = "value" | "callback" | "effect-callback";
 
 type Operand = readonly [expression: Expr, treatment: Treatment];
 
-/** A call of a structural kind: the callee and the printed operands. */
 interface OperandCall<E extends Expr> {
   readonly callee: Callee;
   readonly operands: (e: E) => readonly Operand[];

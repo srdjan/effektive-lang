@@ -119,7 +119,6 @@ export function recordAtOffset(
   offset: number,
 ): SpanRecord | undefined {
   const records = table.records;
-  // The last record that starts at or before the offset.
   let lo = 0;
   let hi = records.length - 1;
   let found = -1;

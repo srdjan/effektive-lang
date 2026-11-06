@@ -104,8 +104,6 @@ import {
   shortName,
 } from "../ids.ts";
 
-// ------------------------------------------------------------------ precedence
-
 function binaryPrecedence(operator: string): number {
   switch (operator) {
     case "||":
@@ -496,7 +494,6 @@ export class ExprEmitter implements ExprCore {
     return [parameters, " => ", braces(statements)];
   }
 
-  /** The chain of an arrow with the parameters `parameters` and the tail `tail`. */
   private chainOf(parameters: Doc, tail: ChainTail): Chain {
     const head: ChainHead = { doc: parameters, span: undefined };
     if (tail.kind === "expr" && tail.body.chain !== undefined) {
@@ -833,7 +830,6 @@ export class ExprEmitter implements ExprCore {
     }
   }
 
-  /** A structural kind that prints as `callee(operands)`. */
   private operandCall<K extends OperandCallKind>(
     kind: K,
     e: ExprOf<K>,
@@ -905,7 +901,6 @@ export class ExprEmitter implements ExprCore {
     return property(fieldKey(name), free(kid(value, expected)));
   }
 
-  /** The declared type of a field of a record type or a data type. */
   private fieldType(type: Type, name: string): Type | undefined {
     return this.recordFieldsOf(type)?.find((f) => f.name === name)?.type;
   }
@@ -1109,8 +1104,6 @@ export class ExprEmitter implements ExprCore {
     });
   }
 
-  // -------------------------------------------------------------- closures
-
   closure(
     e: Extract<Expr, { kind: "closure" }>,
     annotate: boolean,
@@ -1277,8 +1270,6 @@ export class ExprEmitter implements ExprCore {
   private yieldOf(effect: Emitted): Emitted {
     return emitted(["yield* ", at(effect, PREC.conditional)], PREC.yield);
   }
-
-  // -------------------------------------------------------------- match
 
   private match(
     e: Extract<Expr, { kind: "match" }>,

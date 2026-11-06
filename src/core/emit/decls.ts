@@ -65,7 +65,6 @@ const LINE_WIDTH = 80;
 
 // ------------------------------------------------------------------ references
 
-/** The type-level declarations that a type names, directly. */
 function namedIn(type: Type, out: Set<DeclarationId>): void {
   switch (type.kind) {
     case "primitive":
@@ -143,7 +142,6 @@ function effectsIn(
   }
 }
 
-/** The declarations that the interface of `declaration` mentions. */
 function interfaceReferences(declaration: Declaration): Set<DeclarationId> {
   const out = new Set<DeclarationId>();
   switch (declaration.kind) {
@@ -330,7 +328,6 @@ export function functionHeaderDoc(
   return [parameters, ": ", returns];
 }
 
-/** The declared type of a constant. */
 export function constantTypeDoc(scope: ModuleState, d: ConstantDecl): Doc {
   return typeDoc(scope, d.type);
 }

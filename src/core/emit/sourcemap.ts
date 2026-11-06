@@ -99,7 +99,6 @@ export function buildSourceMap(
     sourceLineStarts.set(source, lineStarts(sourceTexts.get(source) ?? ""));
   }
 
-  // Every position where the mapping can change.
   const points = new Set<number>();
   for (const record of table.records) {
     points.add(record.start);

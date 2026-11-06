@@ -164,7 +164,6 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
   };
 }
 
-/** Emits the TypeScript module for one module of the IR. */
 export function emitModule(
   ir: ModuleIR,
   context: EmitContext,

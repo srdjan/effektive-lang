@@ -173,7 +173,6 @@ const ROWS = {
   binary: { children: (e) => [e.left, e.right], leaf: "structural" },
 } as const satisfies ShapeTable;
 
-/** The kinds that the table marks `leaf`. */
 export type LeafKind = {
   readonly [K in ExprKind]: (typeof ROWS)[K]["leaf"] extends "leaf" ? K
     : never;

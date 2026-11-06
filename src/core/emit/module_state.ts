@@ -36,7 +36,6 @@ import { collectBinderNames } from "./walk.ts";
 
 const INT_TYPE: Type = { kind: "primitive", name: "int" };
 
-/** The imports from the `effect` package. */
 export type EffectModule =
   | "Effect"
   | "Context"
@@ -95,7 +94,6 @@ export function isDeferredType(type: Type): type is DeferredType {
   return Object.hasOwn(DEFERRED_KINDS, type.kind);
 }
 
-/** True when `type` has the kind `kind`. */
 function hasKind<K extends Type["kind"]>(
   type: Type,
   kind: K,
@@ -431,7 +429,6 @@ export class ModuleState
     this.temporaries = 0;
   }
 
-  /** The name that an import from `effect` has in this module. */
   effect(module: EffectModule): string {
     let alias = this.effectAliases.get(module);
     if (alias === undefined) {
@@ -455,7 +452,6 @@ export class ModuleState
     return this.helpers[key] !== undefined;
   }
 
-  /** The `int` helper function `$int`. */
   intFunction(): string {
     return this.helpers.intFunction ??= this.fresh("$int");
   }
@@ -478,12 +474,10 @@ export class ModuleState
     return this.helpers.hostCheck ??= this.fresh("$hostCheck");
   }
 
-  /** The `int` schema `$Int`. */
   intSchemaName(): string {
     return this.helpers.intSchema ??= this.fresh("$Int");
   }
 
-  /** The service parameter `$s` of a `perform`. */
   serviceParameter(): string {
     this.serviceName ??= this.fresh("$s");
     return this.serviceName;
