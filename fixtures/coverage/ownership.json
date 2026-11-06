@@ -82,6 +82,7 @@
       "src/core/interface.ts",
       "src/core/ir.ts",
       "src/core/lex.ts",
+      "src/core/linear.ts",
       "src/core/lower.ts",
       "src/core/mod.ts",
       "src/core/modes.ts",

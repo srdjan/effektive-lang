@@ -1,4 +1,10 @@
 import type { Span } from "./ir.ts";
+import {
+  addLinear,
+  type ComparisonOperator,
+  differenceShape,
+  type Linear,
+} from "./linear.ts";
 import type { Result } from "./result.ts";
 import {
   and,
@@ -28,16 +34,6 @@ import type { TypeRef, TypeTable } from "./types.ts";
 interface PredicateSourceError {
   readonly message: string;
   readonly span: Span;
-}
-
-interface LinearTerm {
-  readonly term: Term;
-  readonly coefficient: bigint;
-}
-
-interface Linear {
-  readonly terms: ReadonlyMap<string, LinearTerm>;
-  readonly offset: bigint;
 }
 
 interface Context {
@@ -148,30 +144,18 @@ function compareLinear(
   tree: SyntaxTree,
   node: NodeId,
   left: Linear,
-  operator: "<" | "<=" | "===" | "!==" | ">=" | ">",
+  operator: ComparisonOperator,
   right: Linear,
 ): Result<Predicate, PredicateSourceError> {
-  const terms = new Map<string, LinearTerm>();
-  mergeTerms(terms, left.terms, 1n);
-  mergeTerms(terms, right.terms, -1n);
-  const nonzero = [...terms.values()].filter((item) => item.coefficient !== 0n);
-  if (
-    nonzero.length > 2 ||
-    nonzero.filter((item) => item.coefficient > 0n).length > 1 ||
-    nonzero.filter((item) => item.coefficient < 0n).length > 1 ||
-    nonzero.some((item) => item.coefficient !== 1n && item.coefficient !== -1n)
-  ) {
+  const difference = addLinear(left, right, -1n);
+  const shape = differenceShape(difference);
+  if (shape === undefined) {
     return fail(tree, node, "the comparison is not a difference constraint");
   }
-  const positive = nonzero.find((item) => item.coefficient === 1n)?.term ?? {
-    kind: "zero" as const,
-  };
-  const negative = nonzero.find((item) => item.coefficient === -1n)?.term ?? {
-    kind: "zero" as const,
-  };
+  const { positive, negative } = shape;
   const result = comparison(
     positive,
-    (left.offset - right.offset).toString(),
+    difference.offset.toString(),
     operator,
     negative,
     "0",
@@ -209,16 +193,9 @@ function compileLinear(
     if (!left.ok) return left;
     const right = compileLinear(context, operands[1]);
     if (!right.ok) return right;
-    const terms = new Map<string, LinearTerm>();
-    mergeTerms(terms, left.value.terms, 1n);
-    mergeTerms(terms, right.value.terms, operator === "+" ? 1n : -1n);
     return {
       ok: true,
-      value: {
-        terms,
-        offset: left.value.offset +
-          (operator === "+" ? right.value.offset : -right.value.offset),
-      },
+      value: addLinear(left.value, right.value, operator === "+" ? 1n : -1n),
     };
   }
   const term = compileTerm(context, inner);
@@ -364,18 +341,6 @@ function hasLength(table: TypeTable, ref: TypeRef): boolean {
   if (node.kind === "literal") return typeof node.value === "string";
   return node.kind === "union" &&
     node.members.every((member) => hasLength(table, member));
-}
-
-function mergeTerms(
-  target: Map<string, LinearTerm>,
-  source: ReadonlyMap<string, LinearTerm>,
-  scale: bigint,
-): void {
-  for (const [key, item] of source) {
-    const coefficient = (target.get(key)?.coefficient ?? 0n) +
-      item.coefficient * scale;
-    target.set(key, { term: item.term, coefficient });
-  }
 }
 
 function termKey(term: Term): string {

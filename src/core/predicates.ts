@@ -1,3 +1,4 @@
+import { COMPARISON_BOUNDS, type ComparisonOperator } from "./linear.ts";
 import type { Result } from "./result.ts";
 
 export const PREDICATE_RULES_VERSION = 1;
@@ -147,30 +148,25 @@ export function comparison(
   const rightInteger = parseInteger(rightOffset);
   if (!rightInteger.ok) return rightInteger;
   const maximum = rightInteger.value - leftInteger.value;
-  const forward = (bound: bigint): Predicate => difference(left, right, bound);
-  const reverse = (bound: bigint): Predicate => difference(right, left, bound);
-  switch (operator) {
-    case "<":
-      return { ok: true, value: forward(maximum - 1n) };
-    case "<=":
-      return { ok: true, value: forward(maximum) };
-    case "==":
-    case "===":
-      return {
-        ok: true,
-        value: and(forward(maximum), reverse(-maximum)),
-      };
-    case "!=":
-    case "!==":
-      return {
-        ok: true,
-        value: or(forward(maximum - 1n), reverse(-maximum - 1n)),
-      };
-    case ">=":
-      return { ok: true, value: reverse(-maximum) };
-    case ">":
-      return { ok: true, value: reverse(-maximum - 1n) };
+  const { join, parts } = COMPARISON_BOUNDS[canonicalOperator(operator)];
+  const bounds = parts.map((part) =>
+    part.reversed
+      ? difference(right, left, -maximum + part.slack)
+      : difference(left, right, maximum + part.slack)
+  );
+  switch (join) {
+    case "single":
+      return { ok: true, value: bounds[0] };
+    case "and":
+      return { ok: true, value: and(...bounds) };
+    case "or":
+      return { ok: true, value: or(...bounds) };
   }
+}
+
+function canonicalOperator(operator: Comparison): ComparisonOperator {
+  if (operator === "==") return "===";
+  return operator === "!=" ? "!==" : operator;
 }
 
 interface Constraint {

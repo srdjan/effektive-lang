@@ -22,7 +22,7 @@ below are under `src/core/` unless a path starts with another directory.
 | Declaration check | `signatures.ts`, `type_lower.ts`, `check_declarations.ts` | The signature model, the lowering of type nodes to interned types, and `ModuleChecker` for types, errors, services, providers, and constants. |
 | Body check | `check_expr.ts`, `check_patterns.ts`, `check_binary.ts`, `check_builtins/`, `infer_inputs.ts`, `infer_contracts.ts`, `modes.ts` | Types, effects, execution modes, contracts, and match coverage of each body. |
 | Project check | `check_project.ts`, `requirement_provenance.ts`, `interface.ts`, `initialization.ts` | `checkModuleStep` pairs declaration checks with body results. The driver builds interfaces and initialization graphs. The provenance module collects carried requirements. |
-| Refinements | `check_refinements.ts`, `predicates.ts`, `predicate_source.ts` | The refinement facts of a body, the bounded proof search, and proof certificates. |
+| Refinements | `check_refinements.ts`, `predicates.ts`, `predicate_source.ts`, `linear.ts` | The refinement facts of a body, the bounded proof search, and proof certificates. |
 | Lowering | `lower.ts`, `serialize.ts` | Checked modules become typed IR, which `serialize.ts` writes as canonical JSON. `ir.ts` defines the IR. |
 | Validation | `validate/`, `validate_project.ts` | The independent validator recomputes types, effects, and proofs from the IR alone. It is a test oracle: no entry point exports it, and the CLI, the language server, and the playground do not load it. |
 | Emission | `emit/`, `typescript.ts` | Effect-TS text, source maps, and the mapping of `deno check` errors to Effektive spans. |

@@ -1,4 +1,11 @@
 import { compareText } from "./util.ts";
+import {
+  addLinear,
+  COMPARISON_BOUNDS,
+  type ComparisonOperator,
+  differenceShape,
+  type Linear,
+} from "./linear.ts";
 import { isTypeId } from "./ids.ts";
 import type { ProofBudget } from "./body_env.ts";
 import type { LocalId, RefinementProof, TypeId } from "./ir.ts";
@@ -23,14 +30,6 @@ import type { TypeRef, TypeTable } from "./types.ts";
 
 const REFINEMENT_QUERY_STEPS = 8_192;
 export const REFINEMENT_AGGREGATE_STEPS = 100_000;
-
-type Linear = {
-  readonly terms: ReadonlyMap<
-    string,
-    { readonly term: Term; readonly coefficient: bigint }
-  >;
-  readonly offset: bigint;
-};
 
 interface RefinementSnapshot {
   readonly locals: ReadonlyMap<LocalId, TypeRef>;
@@ -512,18 +511,6 @@ function linearForPath(path: readonly string[], length: boolean): Linear {
   };
 }
 
-function addLinear(left: Linear, right: Linear, scale: bigint): Linear {
-  const terms = new Map(left.terms);
-  for (const [key, item] of right.terms) {
-    terms.set(key, {
-      term: item.term,
-      coefficient: (terms.get(key)?.coefficient ?? 0n) +
-        item.coefficient * scale,
-    });
-  }
-  return { terms, offset: left.offset + right.offset * scale };
-}
-
 function substitute(
   predicate: Predicate,
   value: (term: Term) => Linear | undefined,
@@ -561,62 +548,42 @@ function substitute(
 }
 
 function difference(linear: Linear, maximum: bigint): Predicate | undefined {
-  const terms = [...linear.terms.values()].filter((item) =>
-    item.coefficient !== 0n
-  );
-  if (
-    terms.length > 2 ||
-    terms.filter((item) => item.coefficient === 1n).length > 1 ||
-    terms.filter((item) => item.coefficient === -1n).length > 1 ||
-    terms.some((item) => item.coefficient !== 1n && item.coefficient !== -1n)
-  ) return undefined;
-  const positive = terms.find((item) => item.coefficient === 1n)?.term ?? {
-    kind: "zero" as const,
-  };
-  const negative = terms.find((item) => item.coefficient === -1n)?.term ?? {
-    kind: "zero" as const,
-  };
-  if (terms.length === 0) {
+  const shape = differenceShape(linear);
+  if (shape === undefined) return undefined;
+  if (shape.constant) {
     return { kind: "constant", value: linear.offset <= maximum };
   }
   return {
     kind: "difference",
-    left: positive,
-    right: negative,
+    left: shape.positive,
+    right: shape.negative,
     maximum: (maximum - linear.offset).toString(),
   };
 }
 
 function compare(
   left: Linear,
-  operator: "<" | "<=" | "===" | "!==" | ">=" | ">",
+  operator: ComparisonOperator,
   right: Linear,
 ): Predicate | undefined {
   const forward = addLinear(left, right, -1n);
   const reverse = addLinear(right, left, -1n);
-  switch (operator) {
-    case "<":
-      return difference(forward, -1n);
-    case "<=":
-      return difference(forward, 0n);
-    case ">":
-      return difference(reverse, -1n);
-    case ">=":
-      return difference(reverse, 0n);
-    case "===": {
-      const a = difference(forward, 0n);
-      const b = difference(reverse, 0n);
-      return a === undefined || b === undefined
-        ? undefined
-        : canonicalAnd([a, b]);
-    }
-    case "!==": {
-      const a = difference(forward, -1n);
-      const b = difference(reverse, -1n);
-      return a === undefined || b === undefined
-        ? undefined
-        : canonicalPredicate({ kind: "or", operands: [a, b] });
-    }
+  const { join, parts } = COMPARISON_BOUNDS[operator];
+  const bounds = parts.map((part) =>
+    difference(part.reversed ? reverse : forward, part.slack)
+  );
+  const defined: Predicate[] = [];
+  for (const bound of bounds) {
+    if (bound === undefined) return undefined;
+    defined.push(bound);
+  }
+  switch (join) {
+    case "single":
+      return defined[0];
+    case "and":
+      return canonicalAnd(defined);
+    case "or":
+      return canonicalPredicate({ kind: "or", operands: defined });
   }
 }
 
