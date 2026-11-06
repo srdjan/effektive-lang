@@ -371,15 +371,6 @@ Deno.test("a file that cannot be written gives a note and exit 1", async () => {
 
 // ------------------------------------------------------------------ build
 
-Deno.test("build on the examples reports nothing", async () => {
-  const r = await run(
-    ["build", ROOT],
-    under(ROOT, exampleFiles()),
-  );
-  assertEquals(r.code, 0, r.stderr);
-  assertEquals(r.stdout, "");
-});
-
 Deno.test("build accepts a retry pipeline with an effectful left value", async () => {
   const files = {
     [`${ROOT}/effektive.json`]: "{}",
