@@ -44,9 +44,11 @@ An update task writes what the current code gives. So an update can hide a defec
 
 A comparison exits 0 when no record changed and none is missing. It exits 1 for a change or a missing record, and 2 for a usage error or a failed run.
 
-`tests/sourcemap_test.ts` exercises the public VLQ codec through
-`src/core/typescript.ts`. Its regressions cover both safe-integer boundaries,
-both signs, malformed overflow, and invalid encoder inputs.
+`tests/sourcemap_test.ts` exercises the public VLQ encoder of
+`src/core/typescript.ts` against the independent decoder in
+`tests/support/source_map_decoder.ts`. The decoder does not call the encoder, so
+one coding error cannot pass both. Its regressions cover both safe-integer
+boundaries, both signs, malformed overflow, and invalid encoder inputs.
 `tests/sourcemap_overflow_test.ts` covers safe and overflowing accumulated
 source-map positions. These tests cover only their listed inputs.
 
