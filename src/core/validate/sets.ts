@@ -46,6 +46,20 @@ export const QUIET: Active = {
   execution: "pure",
 };
 
+export const EFFECT_ONLY: Active = {
+  failures: [],
+  requirements: [],
+  execution: "effect",
+};
+
+/** An evaluation in effect mode with the given failure and requirement sets. */
+export function effectOf(
+  failures: readonly ErrorId[],
+  requirements: readonly CapabilityId[],
+): Active {
+  return { failures, requirements, execution: "effect" };
+}
+
 /** True when the evaluation is pure and its failure and requirement sets are empty. */
 export function isQuiet(active: Active): boolean {
   return active.execution === "pure" && active.failures.length === 0 &&
@@ -96,8 +110,4 @@ export function combine(parts: readonly Active[]): Active {
     requirements: r,
     execution: effect || f.length > 0 || r.length > 0 ? "effect" : "pure",
   };
-}
-
-export function list(items: readonly string[]): string {
-  return `[${items.join(", ")}]`;
 }

@@ -125,6 +125,7 @@
       "src/core/validate/recursion_checks.ts",
       "src/core/validate/refinements.ts",
       "src/core/validate/report.ts",
+      "src/core/validate/results.ts",
       "src/core/validate/serialization.ts",
       "src/core/validate/sets.ts",
       "src/core/validate/type_checks.ts",

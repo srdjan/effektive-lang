@@ -10,7 +10,13 @@ import {
   type Type,
 } from "../../ir.ts";
 import { AREA } from "../report.ts";
-import { combine, invocationOf, minus } from "../sets.ts";
+import {
+  combine,
+  EFFECT_ONLY,
+  effectOf,
+  invocationOf,
+  minus,
+} from "../sets.ts";
 import {
   asFunction,
   dataOnly,
@@ -21,12 +27,8 @@ import {
   UNIT,
 } from "../typing.ts";
 import { walkExprs } from "../expr_walk.ts";
-import {
-  type Comp,
-  derivedResult,
-  EFFECT_ONLY,
-  type ValidatorCore,
-} from "./context.ts";
+import type { ValidatorCore } from "./context.ts";
+import { type Comp, derivedResult } from "../results.ts";
 
 export function scoped(
   c: ValidatorCore,
@@ -41,11 +43,13 @@ export function scoped(
   }
   return derivedResult(
     effect.result,
-    combine([value, {
-      failures: effect.effects.failures,
-      requirements: minus(effect.effects.requirements, [SCOPE_CAPABILITY]),
-      execution: "effect",
-    }]),
+    combine([
+      value,
+      effectOf(
+        effect.effects.failures,
+        minus(effect.effects.requirements, [SCOPE_CAPABILITY]),
+      ),
+    ]),
   );
 }
 
@@ -70,11 +74,10 @@ export function forkScoped(
   }
   return derivedResult(
     UNIT,
-    combine([job, {
-      failures: [],
-      requirements: [...effect.effects.requirements, SCOPE_CAPABILITY],
-      execution: "effect",
-    }]),
+    combine([
+      job,
+      effectOf([], [...effect.effects.requirements, SCOPE_CAPABILITY]),
+    ]),
   );
 }
 

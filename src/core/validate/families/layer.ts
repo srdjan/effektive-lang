@@ -5,17 +5,15 @@ import { AREA } from "../report.ts";
 import {
   type Active,
   combine,
+  EFFECT_ONLY,
+  effectOf,
   minus,
   sortedUnique,
   unionEffects,
 } from "../sets.ts";
 import { asFunction, fits, show, unfold } from "../typing.ts";
-import {
-  type Comp,
-  derivedResult,
-  EFFECT_ONLY,
-  type ValidatorCore,
-} from "./context.ts";
+import type { ValidatorCore } from "./context.ts";
+import { type Comp, derivedResult } from "../results.ts";
 
 export function layer(
   c: ValidatorCore,
@@ -145,11 +143,10 @@ export function provide(
     requirements: minus(fn.effects.requirements, providerType.provides),
     execution: fn.execution,
   };
-  const acquisition: Active = {
-    failures: providerType.acquisition.effects.failures,
-    requirements: providerType.acquisition.effects.requirements,
-    execution: "effect",
-  };
+  const acquisition: Active = effectOf(
+    providerType.acquisition.effects.failures,
+    providerType.acquisition.effects.requirements,
+  );
   return derivedResult(
     fn.result,
     combine([

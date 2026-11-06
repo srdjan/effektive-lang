@@ -12,6 +12,7 @@ import { AREA } from "../report.ts";
 import { exprChildren } from "../expr_walk.ts";
 import {
   combine,
+  effectOf,
   invocationOf,
   isQuiet,
   QUIET,
@@ -25,12 +26,8 @@ import {
   same,
   unfold,
 } from "../typing.ts";
-import {
-  type Comp,
-  derivedResult,
-  type Out,
-  type ValidatorCore,
-} from "./context.ts";
+import type { ValidatorCore } from "./context.ts";
+import { type Comp, derivedResult, type Out } from "../results.ts";
 
 type SchemaExpr = Extract<Expr, { kind: "schema" }>;
 
@@ -928,16 +925,17 @@ export function schemaOperation(
   }
   return derivedResult(
     e.kind === "schema-encode" ? type.encoded : type.decoded,
-    combine([schema, input, {
-      execution: "effect",
-      failures: [
-        e.kind === "schema-make" ? SCHEMA_ISSUE_ID : SCHEMA_ERROR_ID,
-      ],
-      requirements: e.kind === "schema-make"
-        ? []
-        : e.kind === "schema-decode"
-        ? type.decodeRequirements
-        : type.encodeRequirements,
-    }]),
+    combine([
+      schema,
+      input,
+      effectOf(
+        [e.kind === "schema-make" ? SCHEMA_ISSUE_ID : SCHEMA_ERROR_ID],
+        e.kind === "schema-make"
+          ? []
+          : e.kind === "schema-decode"
+          ? type.decodeRequirements
+          : type.encodeRequirements,
+      ),
+    ]),
   );
 }

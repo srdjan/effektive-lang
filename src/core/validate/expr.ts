@@ -34,14 +34,15 @@ import {
   INSTANT_ID,
   SCHEMA_ERROR_ID,
 } from "../ir.ts";
-import { AREA } from "./report.ts";
+import { AREA, type AreaCode } from "./report.ts";
 import {
   type Active,
   combine,
+  EFFECT_ONLY,
+  effectOf,
   invocationOf,
   isQuiet,
   isSubset,
-  list,
   minus,
   QUIET,
   sameSet,
@@ -89,14 +90,8 @@ import {
 import { checkTypeIds } from "./type_checks.ts";
 import type { Ctx } from "./world_table.ts";
 import { exprChildren } from "./expr_walk.ts";
-import {
-  type Area,
-  type Comp,
-  derivedResult,
-  EFFECT_ONLY,
-  type Out,
-  type ValidatorCore,
-} from "./families/context.ts";
+import type { ValidatorCore } from "./families/context.ts";
+import { type Comp, derivedResult, type Out } from "./results.ts";
 import {
   defer,
   log,
@@ -135,6 +130,11 @@ import { negateRefinement, RefinementValidator } from "./refinements.ts";
 
 // The test of the expression children imports this walk from here.
 export { exprChildren };
+
+/** An identity list in a message, such as `[A, B]`. */
+function list(items: readonly string[]): string {
+  return `[${items.join(", ")}]`;
+}
 
 function checkedResult(active: Active): Comp {
   return { kind: "checked", active };
@@ -215,7 +215,7 @@ export class BodyValidator implements ValidatorCore {
   }
 
   add(
-    area: Area,
+    area: AreaCode,
     path: string,
     what: string,
     span: Span,
@@ -1500,7 +1500,7 @@ export class BodyValidator implements ValidatorCore {
       combine([
         ...outs,
         invocationOf(fn),
-        { failures: [], requirements: [e.capability], execution: "effect" },
+        effectOf([], [e.capability]),
       ]),
     );
   }
@@ -1788,11 +1788,7 @@ export class BodyValidator implements ValidatorCore {
       NEVER,
       combine([
         err,
-        {
-          failures,
-          requirements: [],
-          execution: "effect",
-        },
+        effectOf(failures, []),
       ]),
     );
   }

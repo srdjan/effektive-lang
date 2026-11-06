@@ -2,15 +2,10 @@
 
 import type { Expr } from "../../ir.ts";
 import { AREA } from "../report.ts";
-import { combine, invocationOf } from "../sets.ts";
+import { combine, EFFECT_ONLY, invocationOf } from "../sets.ts";
 import { asFunction, fits, unfold, UNIT } from "../typing.ts";
-import {
-  type Comp,
-  derivedResult,
-  EFFECT_ONLY,
-  streamState,
-  type ValidatorCore,
-} from "./context.ts";
+import { streamState, type ValidatorCore } from "./context.ts";
+import { type Comp, derivedResult } from "../results.ts";
 
 export function refOperation(
   c: ValidatorCore,

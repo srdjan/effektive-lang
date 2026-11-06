@@ -13,6 +13,8 @@ import { AREA } from "../report.ts";
 import {
   type Active,
   combine,
+  EFFECT_ONLY,
+  effectOf,
   invocationOf,
   isQuiet,
   unionEffects,
@@ -29,13 +31,8 @@ import {
   unfold,
   UNIT,
 } from "../typing.ts";
-import {
-  type Comp,
-  derivedResult,
-  EFFECT_ONLY,
-  type Out,
-  type ValidatorCore,
-} from "./context.ts";
+import type { ValidatorCore } from "./context.ts";
+import { type Comp, derivedResult, type Out } from "../results.ts";
 
 export function retry(
   c: ValidatorCore,
@@ -78,11 +75,12 @@ export function timeout(
   if (fn === undefined) return c.poison();
   return derivedResult(
     fn.result,
-    combine([job, duration, invocationOf(fn), {
-      failures: [TIMEOUT_ERROR_ID],
-      requirements: [],
-      execution: "effect",
-    }]),
+    combine([
+      job,
+      duration,
+      invocationOf(fn),
+      effectOf([TIMEOUT_ERROR_ID], []),
+    ]),
   );
 }
 
@@ -428,11 +426,7 @@ export function run(
     type.result,
     combine([
       value,
-      {
-        failures: type.effects.failures,
-        requirements: type.effects.requirements,
-        execution: "effect",
-      },
+      effectOf(type.effects.failures, type.effects.requirements),
     ]),
   );
 }

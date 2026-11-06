@@ -11,12 +11,8 @@ import {
   unionEffects,
 } from "../sets.ts";
 import { asFunction, fits, NEVER, unfold, UNIT } from "../typing.ts";
-import {
-  type Comp,
-  derivedResult,
-  streamState,
-  type ValidatorCore,
-} from "./context.ts";
+import { streamState, type ValidatorCore } from "./context.ts";
+import { type Comp, derivedResult } from "../results.ts";
 
 /** The Stream operators that map the elements, with the callback rule and the message. */
 type StreamMap = Extract<Expr, { kind: "map-effect" | "map-stream" }>;
