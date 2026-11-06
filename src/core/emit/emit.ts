@@ -190,8 +190,7 @@ const FLAT_WIDTH = 1_000_000;
 /**
  * The backend type text of one declaration of the IR on one line: the header
  * of a function or the type of a constant. Unlike `emitModule`, it does not
- * erase an untagged nominal type, so the text is the same as hover printed
- * before this function existed.
+ * erase an untagged nominal type.
  */
 export function declarationTypeText(
   ir: ModuleIR,
