@@ -8,6 +8,7 @@ import {
 // including uses of symbols that the requested rename does not edit.
 import { Program, type Revision } from "./db.ts";
 import { diagnosticDelta } from "./diagnostic_delta.ts";
+import type { ConfigError } from "./project_config.ts";
 import { lex, TokenKind } from "./lex.ts";
 import type { Result, SourceEdit, Span } from "./source.ts";
 import {
@@ -56,6 +57,23 @@ export function applySourceEdits(
       value.slice(0, edit.span.start) + edit.text + value.slice(edit.span.end),
     text,
   );
+}
+
+/**
+ * The revision that results from applying `edits` to the inputs of `revision`.
+ * An edit of a file that is not an input is ignored. The caller decides if the
+ * speculative revision is acceptable.
+ */
+export function reviseWithEdits(
+  revision: Revision,
+  edits: readonly SourceEdit[],
+): Result<Revision, ConfigError> {
+  const files = new Map(revision.inputs());
+  for (const [source, text] of files) {
+    const own = edits.filter((e) => e.span.source === source);
+    if (own.length > 0) files.set(source, applySourceEdits(text, own));
+  }
+  return new Program(revision.root).update({ set: files });
 }
 
 function movedSpan(
@@ -118,14 +136,7 @@ export function renameAt(
     span: o.span,
     text: o.shorthand ? `${prepared.name}: ${name}` : name,
   }));
-  const files = new Map(revision.inputs());
-  for (const [source, text] of files) {
-    files.set(
-      source,
-      applySourceEdits(text, edits.filter((e) => e.span.source === source)),
-    );
-  }
-  const changed = new Program(revision.root).update({ set: files });
+  const changed = reviseWithEdits(revision, edits);
   if (!changed.ok) {
     return {
       ok: false,

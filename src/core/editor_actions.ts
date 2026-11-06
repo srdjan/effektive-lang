@@ -1,9 +1,9 @@
 // Contract edits come from checked body effect sets, never diagnostic prose.
 import { isSourcePath } from "./paths.ts";
-import { Program, type Revision } from "./db.ts";
+import type { Revision } from "./db.ts";
 import { diagnosticDelta } from "./diagnostic_delta.ts";
 import type { SourceEdit } from "./source.ts";
-import { applySourceEdits } from "./editor_rename.ts";
+import { reviseWithEdits } from "./editor_rename.ts";
 import { capabilityOfService } from "./ids.ts";
 import { EFFECT_ERROR_IDS } from "./resolve.ts";
 import { diagnosticInside, resultEndOf } from "./editor_hints.ts";
@@ -182,9 +182,7 @@ export function contractActionsAt(
       if (i < 0) merged.push(edit);
       else merged[i] = { span: edit.span, text: merged[i].text + edit.text };
     }
-    const files = new Map(revision.inputs());
-    files.set(path, applySourceEdits(text, merged));
-    const checked = new Program(revision.root).update({ set: files });
+    const checked = reviseWithEdits(revision, merged);
     if (!checked.ok) continue;
     const changedFunction = checked.value.checkedModule(module.module)
       ?.functions.get(signature.id);
@@ -238,7 +236,6 @@ export function failsClauseActionsAt(
   revision: Revision,
   path: string,
   start: number,
-  _end = start,
 ): readonly ContractAction[] {
   const module = revision.checkedModuleAt(path);
   if (module === undefined || !isSourcePath(path)) return [];
@@ -278,9 +275,7 @@ export function failsClauseActionsAt(
       span: { source: path, start: at, end: at },
       text: clause,
     }];
-    const files = new Map(revision.inputs());
-    files.set(path, applySourceEdits(tree.text, edits));
-    const checked = new Program(revision.root).update({ set: files });
+    const checked = reviseWithEdits(revision, edits);
     if (!checked.ok) return [];
     const changed = checked.value.checkedModule(module.module)?.functions.get(
       signature.id,

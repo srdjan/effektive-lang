@@ -15,6 +15,7 @@ export {
   applySourceEdits,
   prepareRenameAt,
   renameAt,
+  reviseWithEdits,
 } from "./editor_rename.ts";
 export { completionsAt } from "./editor_completion.ts";
 export {

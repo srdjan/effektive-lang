@@ -5,8 +5,9 @@ import {
   applySourceEdits,
   compareText,
   contractActionsAt,
-  Program,
+  reviseWithEdits,
   type Revision,
+  type SourceEdit,
 } from "../core/mod.ts";
 
 export interface FixOutcome {
@@ -30,18 +31,19 @@ export function fixContracts(first: Revision): FixOutcome {
   const functions = new Set<string>();
   let revision = first;
   while (true) {
-    const files = new Map(revision.inputs());
+    const inputs = revision.inputs();
+    const edits: SourceEdit[] = [];
     const touched: string[] = [];
-    for (const path of [...files.keys()].sort(compareText)) {
-      const text = files.get(path) ?? "";
+    for (const path of [...inputs.keys()].sort(compareText)) {
+      const text = inputs.get(path) ?? "";
       const actions = contractActionsAt(revision, path, 0, text.length, true);
-      const next = applySourceEdits(text, actions.flatMap((a) => a.edits));
-      if (next === text) continue;
-      files.set(path, next);
+      const own = actions.flatMap((a) => a.edits);
+      if (applySourceEdits(text, own) === text) continue;
+      edits.push(...own);
       for (const action of actions) touched.push(action.function);
     }
     if (touched.length === 0) break;
-    const updated = new Program(revision.root).update({ set: files });
+    const updated = reviseWithEdits(revision, edits);
     if (!updated.ok) break;
     for (const id of touched) functions.add(id);
     revision = updated.value;

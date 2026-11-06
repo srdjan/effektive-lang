@@ -7,11 +7,10 @@
 
 import type { CheckedModule, FunctionBody } from "./check_project.ts";
 import type { Revision } from "./db.ts";
-import { methodOfCapability, serviceOfCapability, shortName } from "./ids.ts";
+import { shortName } from "./ids.ts";
 import type { DeclEntry, FileIndex } from "./declaration_index.ts";
-import { symbolIndex } from "./editor_index.ts";
+import { declarationOf, symbolIndex } from "./editor_index.ts";
 import { parseFileFresh } from "./project.ts";
-import type { Target } from "./resolve.ts";
 import type { Span } from "./source.ts";
 import { type NodeId, nodeSpan, type SyntaxTree } from "./syntax.ts";
 import type { BodyTable } from "./tables.ts";
@@ -206,35 +205,6 @@ export function sourceHoverAt(
 
 // ------------------------------------------------------------------ definition
 
-function targetSpan(
-  revision: Revision,
-  module: CheckedModule,
-  target: Target,
-): Span | undefined {
-  switch (target.kind) {
-    case "type":
-    case "error":
-    case "service":
-    case "value":
-    case "provider":
-      return revision.declEntry(target.id)?.nameSpan;
-    case "cap": {
-      const service = serviceOfCapability(target.id);
-      const method = methodOfCapability(target.id);
-      if (service === undefined || method === undefined) return undefined;
-      return revision.declEntry(service)?.methods.get(method)?.nameSpan;
-    }
-    case "local":
-      return revision.resolution(module.module)?.locals
-        .get(target.id);
-    case "builtin":
-    case "builtin-type":
-    case "field":
-    case "unresolved":
-      return undefined;
-  }
-}
-
 /**
  * The declaration name span that the innermost resolved name at the offset
  * refers to. Returns undefined for a builtin, a field, an unresolved name, or an
@@ -262,7 +232,7 @@ export function definitionAt(
     const target = resolution.targets.get(best);
     return target === undefined
       ? undefined
-      : targetSpan(revision, module, target);
+      : declarationOf(revision, module.module, target);
   }
   return undefined;
 }

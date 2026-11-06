@@ -525,7 +525,7 @@ export function codeActionRequest(
       }));
   const rewrites =
     (wanted("refactor.rewrite")
-      ? failsClauseActionsAt(cursor.revision, cursor.path, cursor.offset, end)
+      ? failsClauseActionsAt(cursor.revision, cursor.path, cursor.offset)
       : []).map((action) => ({
         title: action.title,
         kind: "refactor.rewrite",

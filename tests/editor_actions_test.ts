@@ -145,14 +145,13 @@ Deno.test("contract actions: an action that breaks a closed caller needs allowCa
 function failsActionsAt(
   files: Readonly<Record<string, string>>,
   start: number,
-  end = start,
   path = "m.eff",
 ): readonly (readonly [string, string])[] {
   const loaded = new Program("").update({
     set: { "effektive.json": "{}", ...files },
   });
   assert(loaded.ok);
-  return failsClauseActionsAt(loaded.value, path, start, end).map((action) =>
+  return failsClauseActionsAt(loaded.value, path, start).map((action) =>
     [action.title, applySourceEdits(files[path], action.edits)] as const
   );
 }
@@ -187,7 +186,7 @@ Deno.test("fails clause: W0 the users example gets its inferred failures", () =>
     "users.eff": users,
     "users-service.eff": service,
   };
-  assertEquals(failsActionsAt(files, at, at, "users.eff"), [[
+  assertEquals(failsActionsAt(files, at, "users.eff"), [[
     "Write fails StoreUnavailable | UserMissing",
     users.replace(
       "(id: UserId): User =>",
@@ -328,11 +327,11 @@ Deno.test("fails clause: W11 only the header holds the cursor", () => {
   );
 });
 
-Deno.test("fails clause: W12 a range over two headers gives the action of the first", () => {
+Deno.test("fails clause: W12 a cursor in the first of two headers gives the action of the first", () => {
   const text = PRELUDE + "export const a = (): Int => fail(Stop({}))\n" +
     "export const b = (): Int => fail(Other({}))\n";
   assertEquals(
-    failsActionsAt({ "m.eff": text }, PRELUDE.length, text.length - 5),
+    failsActionsAt({ "m.eff": text }, PRELUDE.length),
     [[
       "Write fails Stop",
       PRELUDE + "export const a = (): Int fails Stop => fail(Stop({}))\n" +
@@ -376,7 +375,7 @@ Deno.test("fails clause: W16 a written with never extends by replacement", () =>
 });
 
 Deno.test("fails clause: W17 a path without a module gives no action", () => {
-  assertEquals(failsActionsAt({ "m.eff": TWO_FAILURES }, 0, 0, "gone.eff"), []);
+  assertEquals(failsActionsAt({ "m.eff": TWO_FAILURES }, 0, "gone.eff"), []);
 });
 
 Deno.test("fails clause: W18 a cursor before the header gives no action", () => {
