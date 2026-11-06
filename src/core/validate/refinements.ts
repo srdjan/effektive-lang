@@ -19,7 +19,7 @@ import {
   ownsSealed,
   unfold,
 } from "./typing.ts";
-import type { Ctx } from "./world.ts";
+import type { Ctx } from "./world_table.ts";
 
 const QUERY_STEPS = 8_192;
 const AGGREGATE_STEPS = 100_000;

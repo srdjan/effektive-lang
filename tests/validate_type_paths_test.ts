@@ -1,5 +1,5 @@
 // The IR paths and the visit order of the three validator type walkers in
-// src/core/validate/world.ts: `checkTypeIds`, `checkRecordFields`, and
+// src/core/validate/type_checks.ts: `checkTypeIds`, `checkRecordFields`, and
 // `checkRecursion`. Each walker reaches every child type of every Type kind.
 // A diagnostic names the child by an IR path suffix such as `.fields[0].type`.
 // These tests put a probe type in each child slot and require the exact
@@ -11,12 +11,12 @@ import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { Effects, ModuleIR, Span, Type } from "../src/core/ir.ts";
 import { Report } from "../src/core/validate/report.ts";
 import { typeChildren } from "../src/core/validate/type_children.ts";
+import { checkRecursion } from "../src/core/validate/recursion_checks.ts";
 import {
-  buildWorld,
   checkRecordFields,
-  checkRecursion,
   checkTypeIds,
-} from "../src/core/validate/world.ts";
+} from "../src/core/validate/type_checks.ts";
+import { buildWorld } from "../src/core/validate/world_table.ts";
 
 const SPAN: Span = { source: "m.eff", start: 0, end: 0 };
 const NONE: Effects = { failures: [], requirements: [] };

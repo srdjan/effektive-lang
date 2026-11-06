@@ -9,12 +9,10 @@ import type { ModuleIR, Span } from "../ir.ts";
 import { BodyValidator } from "./expr.ts";
 import { AREA, Report } from "./report.ts";
 import { checkSerialization } from "./serialization.ts";
-import {
-  buildWorld,
-  checkDeclarationHeaders,
-  checkImports,
-  checkRecursion,
-} from "./world.ts";
+import { checkDeclarationHeaders } from "./declaration_checks.ts";
+import { checkImports } from "./import_checks.ts";
+import { checkRecursion } from "./recursion_checks.ts";
+import { buildWorld } from "./world_table.ts";
 
 export { AREA } from "./report.ts";
 

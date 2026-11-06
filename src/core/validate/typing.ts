@@ -67,7 +67,7 @@ export const NEVER: Type = { kind: "primitive", name: "never" };
 // nesting to 512 levels and `declaration/012` limits an alias to 128 levels.
 // So one type is at most about 640 levels deep, and two types give at most
 // about 1280 frames. 1536 leaves room above that. The type walkers of
-// world.ts use the same bound and report a type that goes past it.
+// type_checks.ts use the same bound and report a type that goes past it.
 export const MAX_DEPTH = 1536;
 
 export function isNever(type: Type): boolean {

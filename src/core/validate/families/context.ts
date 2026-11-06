@@ -14,7 +14,7 @@ import {
   type TypeEnv,
   unfold,
 } from "../typing.ts";
-import type { Ctx } from "../world.ts";
+import type { Ctx } from "../world_table.ts";
 
 /** The validation area code of a report entry. */
 export type Area = Parameters<Report["add"]>[0];

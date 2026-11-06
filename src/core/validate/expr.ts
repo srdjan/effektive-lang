@@ -87,7 +87,8 @@ import {
   unionOf,
   UNIT,
 } from "./typing.ts";
-import { checkTypeIds, type Ctx } from "./world.ts";
+import { checkTypeIds } from "./type_checks.ts";
+import type { Ctx } from "./world_table.ts";
 import { exprChildren } from "./expr_walk.ts";
 import {
   type Area,

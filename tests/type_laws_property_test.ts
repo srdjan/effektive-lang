@@ -5,7 +5,7 @@
 //
 // One generated set of definitions feeds both sides. `TypeTable.load` reads the
 // definitions for the checker, and `envOf` reads them for the validator in the
-// same way as `src/core/validate/world.ts`. The module `owner` has authority
+// same way as `src/core/validate/world_table.ts`. The module `owner` has authority
 // over the sealed types of `owner` and none over the sealed types of `other`.
 
 import { assertEquals } from "@std/assert";
@@ -102,7 +102,7 @@ interface Definitions {
 
 /**
  * The validator's view of the definitions. It follows the definition loop of
- * `buildWorld` in src/core/validate/world.ts.
+ * `buildWorld` in src/core/validate/world_table.ts.
  */
 function envOf(definitions: Definitions): TypeEnv {
   const aliases = new Map<string, Type>();

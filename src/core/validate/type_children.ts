@@ -1,4 +1,4 @@
-// The child types of a type. The three type walkers of world.ts descend
+// The child types of a type. The type walkers of the validator descend
 // through `typeChildren`, so a new Type kind is a compile error here and
 // nowhere else. A child comes with the IR path suffix that diagnostics use.
 

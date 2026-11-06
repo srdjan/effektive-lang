@@ -1,5 +1,5 @@
 // The depth bound of the validator type walkers (decision D3). Three walkers
-// in src/core/validate/world.ts visit every type of a declaration: the
+// in src/core/validate/type_checks.ts and recursion_checks.ts visit every type of a declaration: the
 // identity check (`checkTypeIds`), the duplicate field check
 // (`checkRecordFields`), and the recursion check (`checkRecursion`). Each
 // walker accepts a node at depth 1536, the documented `MAX_DEPTH` of
@@ -14,12 +14,12 @@ import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { ModuleIR, Type } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import { Report } from "../src/core/validate/report.ts";
+import { checkRecursion } from "../src/core/validate/recursion_checks.ts";
 import {
-  buildWorld,
   checkRecordFields,
-  checkRecursion,
   checkTypeIds,
-} from "../src/core/validate/world.ts";
+} from "../src/core/validate/type_checks.ts";
+import { buildWorld } from "../src/core/validate/world_table.ts";
 
 const LIMIT = 1536;
 const BOUND = "type nesting exceeds 1536 levels";

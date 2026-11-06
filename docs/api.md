@@ -81,7 +81,11 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   serialize.ts   Canonical JSON of a module IR, with the set and number checks.
   validate/      The independent IR validator. It imports only ir.ts, source.ts, and diagnostics.ts.
     index.ts       validateModule: the public entry.
-    world.ts       Identities in scope, imports, declaration headers, recursive types.
+    world_table.ts The lookup tables of a module (World, buildWorld) and the check context (Ctx).
+    type_checks.ts Type identity and record field checks.
+    declaration_checks.ts Declaration header checks.
+    recursion_checks.ts The recursion guard.
+    import_checks.ts Import shape checks.
     expr.ts        Bottom-up recomputation of types, sets, and modes of each body.
     expr_walk.ts   The child expressions of a node, and a walk over them.
     builtins.ts    Builtin metadata and collection shapes used only by the validator.
