@@ -28,7 +28,6 @@ import {
   type Diagnostic as CoreDiagnostic,
   diffFiles,
   joinPath,
-  lineStarts,
   Program,
   type Result,
   type Revision,
@@ -38,7 +37,7 @@ import {
 import {
   applyContentChanges,
   pathToUri,
-  spanToRange,
+  rangeConverter,
   uriToPath,
 } from "./positions.ts";
 import type {
@@ -104,11 +103,6 @@ export class ProjectState {
 
   /** The disk state of the save round. Created on the first round, and only when `writeOnSave` is true. */
   diskSession: DiskSession | undefined;
-
-  /** The disk program of the save round, or `undefined` before the first round. */
-  get diskProgram(): Program | undefined {
-    return this.diskSession?.disk.program;
-  }
 
   constructor(readonly root: string) {
     this.program = new Program(root);
@@ -205,16 +199,7 @@ function groupDiagnostics(
   root: string,
   textOf: (path: string) => string,
 ): Map<string, Diagnostic[]> {
-  const starts = new Map<string, Uint32Array>();
-  const rangeOf = (span: CoreDiagnostic["span"]) => {
-    const text = textOf(span.source);
-    let table = starts.get(span.source);
-    if (table === undefined) {
-      table = lineStarts(text);
-      starts.set(span.source, table);
-    }
-    return spanToRange(text, table, span);
-  };
+  const rangeOf = rangeConverter(textOf);
   const groups = new Map<string, Diagnostic[]>();
   for (const d of diagnostics) {
     const related = (d.related ?? []).flatMap((item) => {
@@ -461,7 +446,7 @@ export class ProjectSet {
       return;
     }
     const revision = updated.value;
-    const owns = (name: string): boolean => this.#owns(project, name);
+    const owns = (name: string): boolean => ownedByRoot(fs, project.root, name);
 
     const round = runSaveRound({
       fs,
@@ -494,14 +479,6 @@ export class ProjectSet {
     for (const name of [...session.heldReasons.keys()]) {
       if (!held.has(name)) session.heldReasons.delete(name);
     }
-  }
-
-  /**
-   * True when no directory between the root and the module's directory has its
-   * own `effektive.json`. The root itself does not count.
-   */
-  #owns(project: ProjectState, name: string): boolean {
-    return ownedByRoot(this.ports.fs, project.root, name);
   }
 
   // ---- Discovery ----------------------------------------------------------

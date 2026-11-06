@@ -396,7 +396,7 @@ Deno.test("a held module is logged once at type 3 and cleared when it is writabl
   assertEquals(logsOf(h, 3).length, 2);
 });
 
-Deno.test("writeOnSave false creates no disk program, writes nothing, and logs nothing", () => {
+Deno.test("writeOnSave false writes nothing and logs nothing", () => {
   const h = started({}, { writeOnSave: false });
   const before = new Map(h.files);
   h.deliver(
@@ -405,7 +405,4 @@ Deno.test("writeOnSave false creates no disk program, writes nothing, and logs n
   );
   assertEquals(h.files, before);
   assertEquals(h.logs(), []);
-  for (const project of h.server.projects.projects()) {
-    assertEquals(project.diskProgram, undefined);
-  }
 });

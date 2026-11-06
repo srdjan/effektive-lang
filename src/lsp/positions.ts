@@ -58,6 +58,22 @@ export function spanToRange(
   };
 }
 
+/** Converts spans to ranges, with one line-start table for each path. */
+export function rangeConverter(
+  textOf: (path: string) => string,
+): (span: Span) => Range {
+  const tables = new Map<string, Uint32Array>();
+  return (span) => {
+    const text = textOf(span.source);
+    let table = tables.get(span.source);
+    if (table === undefined) {
+      table = lineStarts(text);
+      tables.set(span.source, table);
+    }
+    return spanToRange(text, table, span);
+  };
+}
+
 /**
  * Applies change events in order. A change with a range replaces that range. A
  * change without a range replaces the whole text. A range whose end lies before
