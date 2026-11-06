@@ -8,9 +8,11 @@ import {
 } from "../scripts/package.ts";
 import {
   BUILTIN_TYPE_NAMES,
+  generatedPathOf,
   KEYWORDS,
   PRELUDE_NAMES,
 } from "../src/core/frontend.ts";
+import { DEFAULT_INITIALIZATION_OPTIONS } from "../src/lsp/protocol.ts";
 import {
   GENERATED_CHANGED_METHOD,
   GENERATED_SCHEME,
@@ -257,6 +259,7 @@ function activateClient(
   const errors: string[] = [];
   const infos: string[] = [];
   const launches: { command: string; args: string[] }[] = [];
+  const clientOptions: { initializationOptions: unknown }[] = [];
   const commands = new Map<string, () => Promise<void>>();
   const notifications = new Map<string, (params: unknown) => void>();
   const opened: FakeUri[] = [];
@@ -267,8 +270,10 @@ function activateClient(
       _id: string,
       _name: string,
       options: { command: string; args: string[] },
+      clientOption: { initializationOptions: unknown },
     ) {
       launches.push(options);
+      clientOptions.push(clientOption);
     }
     onNotification(method: string, handler: (params: unknown) => void) {
       notifications.set(method, handler);
@@ -356,6 +361,7 @@ function activateClient(
     errors,
     infos,
     launches,
+    clientOptions,
     commands,
     notifications,
     opened,
@@ -457,4 +463,45 @@ Deno.test("a generatedChanged notification refreshes the .effi.ts view", () => {
   assert(changed !== undefined, "the notification must have a handler");
   changed({ uri: "/work/app/host.effi" });
   assertEquals(client.fired.map((uri) => uri.path), ["/work/app/host.effi.ts"]);
+});
+
+Deno.test("the client sends the initialization defaults of the server", () => {
+  const { clientOptions } = activateClient({}, REQUIRED_DENO_VERSION);
+  assertEquals(clientOptions.length, 1);
+  // The client runs in another realm, so compare the JSON the server receives.
+  assertEquals(
+    JSON.parse(JSON.stringify(clientOptions[0].initializationOptions)),
+    DEFAULT_INITIALIZATION_OPTIONS,
+  );
+});
+
+Deno.test("the setting defaults of package.json equal the server defaults", () => {
+  const properties = field(
+    field(field(readJson("package.json"), "contributes"), "configuration"),
+    "properties",
+  );
+  assertEquals(
+    {
+      debounceMs: field(field(properties, "effektive.debounceMs"), "default"),
+      writeOnSave: field(field(properties, "effektive.writeOnSave"), "default"),
+      log: field(field(properties, "effektive.log"), "default"),
+    },
+    DEFAULT_INITIALIZATION_OPTIONS,
+  );
+});
+
+Deno.test("the virtual URI of the client matches the generated path of the core", () => {
+  const { notifications, fired } = activateClient({}, REQUIRED_DENO_VERSION);
+  const changed = notifications.get(GENERATED_CHANGED_METHOD);
+  assert(changed !== undefined);
+  changed({ uri: "foo/users.eff" });
+  changed({ uri: "foo/host.effi" });
+  assertEquals(fired.map((uri) => uri.path), [
+    generatedPathOf("foo/users.eff"),
+    generatedPathOf("foo/host.effi"),
+  ]);
+  assertEquals(fired.map((uri) => uri.path), [
+    "foo/users.ts",
+    "foo/host.effi.ts",
+  ]);
 });
