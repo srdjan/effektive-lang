@@ -198,7 +198,6 @@ export function checkTypeIds(
   return ok;
 }
 
-/** Reports a record type with two fields of one name. */
 export function checkFieldNames(
   ctx: Ctx,
   fields: readonly Field[],
@@ -282,7 +281,6 @@ export function checkDeferredFields(
   });
 }
 
-/** Checks the field names of every record type inside a type. */
 export function checkRecordFields(
   ctx: Ctx,
   type: Type,
@@ -296,7 +294,6 @@ export function checkRecordFields(
   });
 }
 
-/** Identity and field checks of one type in a declaration. */
 export function checkDeclaredType(
   ctx: Ctx,
   type: Type,

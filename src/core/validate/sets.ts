@@ -52,7 +52,6 @@ export const EFFECT_ONLY: Active = {
   execution: "effect",
 };
 
-/** An evaluation in effect mode with the given failure and requirement sets. */
 export function effectOf(
   failures: readonly ErrorId[],
   requirements: readonly CapabilityId[],
@@ -60,13 +59,11 @@ export function effectOf(
   return { failures, requirements, execution: "effect" };
 }
 
-/** True when the evaluation is pure and its failure and requirement sets are empty. */
 export function isQuiet(active: Active): boolean {
   return active.execution === "pure" && active.failures.length === 0 &&
     active.requirements.length === 0;
 }
 
-/** The active effects of calling a function of the given type. */
 export function invocationOf(fn: {
   readonly execution: Execution;
   readonly effects: Effects;

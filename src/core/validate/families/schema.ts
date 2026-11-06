@@ -46,7 +46,6 @@ const DEFAULT_KEY_NAMES: Record<DefaultKeyOp, string> = {
   "default-encoded-key": "schemaDefaultEncodedKey",
 };
 
-/** The Schema operation under validation: the node, its path, and its checked arguments. */
 interface SchemaCall {
   readonly e: SchemaExpr;
   readonly path: string;
@@ -276,7 +275,6 @@ function schemaOf(
     : undefined;
 }
 
-/** The accepted input Schema at an argument position. */
 function schemaArg(
   c: ValidatorCore,
   call: SchemaCall,
@@ -286,7 +284,6 @@ function schemaArg(
   return arg === undefined ? undefined : schemaOf(c, call, arg.type);
 }
 
-/** The optional-key Schema at an argument position. */
 function optionalArg(
   c: ValidatorCore,
   call: SchemaCall,
@@ -302,7 +299,6 @@ function optionalArg(
     : undefined;
 }
 
-/** The function type at an argument position. */
 function functionArg(
   c: ValidatorCore,
   call: SchemaCall,
@@ -312,7 +308,6 @@ function functionArg(
   return arg === undefined ? undefined : asFunction(c.env, arg.type);
 }
 
-/** The unfolded type at an argument position. */
 function typeArg(
   c: ValidatorCore,
   call: SchemaCall,
@@ -322,7 +317,6 @@ function typeArg(
   return arg === undefined ? undefined : unfold(c.env, arg.type);
 }
 
-/** Whether the node holds an inline closure at an argument position. */
 function closureArg(
   call: SchemaCall,
   index: number,

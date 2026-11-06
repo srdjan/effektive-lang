@@ -55,7 +55,6 @@ export function validateModule(
   try {
     world = buildWorld(ir);
   } catch (e) {
-    // Every later check reads the world, so none of them can run.
     unexpected("", fallback, e);
     return normalizeDiagnostics(report.items);
   }

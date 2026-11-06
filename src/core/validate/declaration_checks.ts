@@ -176,7 +176,6 @@ export function checkErrorDecl(ctx: Ctx, d: ErrorDecl, path: string): void {
   );
 }
 
-/** Identity and type checks of the declaration headers of the module. */
 export function checkDeclarationHeaders(ctx: Ctx, ir: ModuleIR): void {
   const { report } = ctx;
   const seen = new Set<string>();

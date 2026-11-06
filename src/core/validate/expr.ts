@@ -223,8 +223,6 @@ export class BodyValidator implements ValidatorCore {
     this.ctx.report.add(area, path, what, span);
   }
 
-  // -------------------------------------------------------------- locals
-
   private declareLocal(
     p: Parameter,
     path: string,
@@ -283,7 +281,6 @@ export class BodyValidator implements ValidatorCore {
     }
   }
 
-  /** Compares each declared parameter type with the recorded function type. */
   private checkParameterTypes(
     parameters: readonly Parameter[],
     recorded: readonly Type[],
@@ -438,8 +435,6 @@ export class BodyValidator implements ValidatorCore {
       );
     }
   }
-
-  // -------------------------------------------------------------- declarations
 
   checkFunction(d: FunctionDecl, path: string): void {
     const env = this.env;
@@ -637,8 +632,6 @@ export class BodyValidator implements ValidatorCore {
     }
     this.refinements.audit(d.value, `${path}.value`, exprChildren);
   }
-
-  // -------------------------------------------------------------- expressions
 
   check(e: Expr, path: string, callee = false): Out {
     return this.finish(e, path, this.compute(e, path, callee));
@@ -866,8 +859,6 @@ export class BodyValidator implements ValidatorCore {
         return this.binary(e, path);
     }
   }
-
-  // -------------------------------------------------------------- leaves and data
 
   private reference(
     target: string,
@@ -1253,8 +1244,6 @@ export class BodyValidator implements ValidatorCore {
     return derivedResult({ kind: "named", id: e.error }, active);
   }
 
-  // -------------------------------------------------------------- functions
-
   private closure(e: Extract<Expr, { kind: "closure" }>, path: string): Comp {
     const env = this.env;
     const refinementScope = this.refinements.snapshot();
@@ -1505,8 +1494,6 @@ export class BodyValidator implements ValidatorCore {
     );
   }
 
-  // -------------------------------------------------------------- control flow
-
   private block(e: Extract<Expr, { kind: "block" }>, path: string): Comp {
     const refinementScope = this.refinements.snapshot();
     const parts: Out[] = [];
@@ -1658,7 +1645,6 @@ export class BodyValidator implements ValidatorCore {
     return checkedResult(combine(parts));
   }
 
-  /** Checks one pattern against the subject type and declares its bindings. */
   private pattern(p: Pattern, subject: Type, path: string): string[] {
     const env = this.env;
     const added: string[] = [];
@@ -1907,8 +1893,6 @@ export class BodyValidator implements ValidatorCore {
   }
 
   // The argument readers share one rule: a missing argument gives undefined.
-
-  // -------------------------------------------------------------- operators
 
   private binary(e: Extract<Expr, { kind: "binary" }>, path: string): Comp {
     const env = this.env;

@@ -8,8 +8,6 @@ import { MAX_DEPTH } from "./type_children.ts";
 import { typeChildren } from "./type_children.ts";
 import type { Ctx, World } from "./world_table.ts";
 
-// ------------------------------------------------------------------ recursion
-
 /** Rechecks finite self recursion without trusting the checker. */
 function guardedRecord(
   type: Type,

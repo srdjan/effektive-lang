@@ -110,7 +110,6 @@ export function buildWorld(ir: ModuleIR): World {
           taggedRecords.set(t.id, t.definition.base);
         } else if (t.opaque === true) opaqueBases.set(t.id, t.definition.base);
         else {
-          // An untagged nominal type is an alias with identity.
           aliases.set(t.id, t.definition.base);
           identities.add(t.id);
         }

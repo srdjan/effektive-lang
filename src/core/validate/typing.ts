@@ -770,10 +770,6 @@ export function isBooleanLike(env: TypeEnv, type: Type): boolean {
   return fits(env, type, BOOLEAN) && !isNever(type);
 }
 
-/**
- * The identity type when the type, after transparent aliases, is an identity
- * over `int` or `number`. An identity over a literal union is not numeric.
- */
 /** True when the type, after transparent aliases, is `Duration`. */
 export function isDurationType(env: TypeEnv, type: Type): boolean {
   const unfolded = unfoldTransparent(env, type);
@@ -796,6 +792,10 @@ export function isInstantType(env: TypeEnv, type: Type): boolean {
   return unfolded.kind === "named" && unfolded.id === INSTANT_ID;
 }
 
+/**
+ * The identity type when the type, after transparent aliases, is an identity
+ * over `int` or `number`. An identity over a literal union is not numeric.
+ */
 export function numericIdentityOf(env: TypeEnv, type: Type): Type | undefined {
   const unfolded = unfoldTransparent(env, type);
   if (unfolded.kind !== "named") return undefined;
