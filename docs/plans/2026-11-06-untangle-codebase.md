@@ -266,6 +266,8 @@ Remove comments that restate the implementation. Keep comments about outside fac
 
 ### UNF24 (tests)
 
+Item added during UNU3: `tests/validate_rejections_test.ts` names each row by a `file:line` site "at the time of writing". UNU3 deleted `world.ts`, so 16 names point at a missing file, and every line move makes more names false. The test name keeps only the row name.
+
 After every structural fix, remove tests that repeat the implementation or cannot fail. Rewrite tests that depend on internals to depend on behavior. Fault injection runs before a test goes. Tests of malformed IR, emitted order, stale state, recovery, and public APIs keep their behavioral checks.
 
 ## Kept on purpose
@@ -380,6 +382,8 @@ Each row names the commits on `main` and the main-tree gate result.
 | UNU1 | `748d597` to `17d063d` (7 commits), website `9a27abf` | passed |
 | UNU2a | `b5f5d33`, `7076a43`, `71933fa` | passed, 285 slow tests |
 | UNU2b | `b40a5c5`, `aa17934`, `899ce2e` | passed, 2906 fast and 285 slow tests |
+| UNF20 rest | `0ba4ac4` (the bench uses the core `isRecord`; `scripts/coverage.ts` keeps its copy, because its slow test runs it with a stub `mod.ts`) | passed |
+| UNU3 | `9c0cce5` to `e46afc7` (7 commits) | passed, 2906 fast and 285 slow tests; `rules:unfired` site set unchanged; `behavior:compare 51de8a9 974d5c8` 56 equal `validate` records |
 
 The failure probe of `behavior:compare` is the pair `f9b358f~1 f9b358f`. It exits 1. The earlier pair `3ab7c4b 30bb1d5` gives identical corpus output, so it cannot probe a failure.
 
