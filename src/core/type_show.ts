@@ -55,10 +55,7 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
     case "named": {
       names.shown?.add(node.id);
       const hash = node.id.indexOf("#");
-      if (CLOSED_UNIT_IDS.has(node.id)) {
-        return shortName(node.id);
-      }
-      if (hash < 0) return node.id;
+      if (hash < 0 || CLOSED_UNIT_IDS.has(node.id)) return shortName(node.id);
       return names.qualified.has(node.id)
         ? `${moduleOfId(node.id) ?? ""}#${node.id.slice(hash + 1)}`
         : node.id.slice(hash + 1);
