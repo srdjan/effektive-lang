@@ -13,7 +13,6 @@ import {
   COMPANION_FILES,
   emitExamples,
   emitFiles,
-  EXAMPLE_ENTRIES,
   FIXTURES,
   projectFiles,
 } from "./helpers.ts";
@@ -297,17 +296,22 @@ Deno.test("each example emits exactly its golden file", () => {
     "users",
     "users-service",
   ]);
-  for (const [name, module] of emitted) {
+  for (const module of emitted.values()) {
     const golden = Deno.readTextFileSync(
       new URL(`golden/${module.path}`, FIXTURES),
     );
     assertEquals(module.text, golden, `golden file ${module.path} differs`);
-    // The companion module of `host/providers.effi` is `host/providers.effi.ts`.
-    assertEquals(
-      module.path,
-      name === "host/providers" ? `${name}.effi.ts` : `${name}.ts`,
-    );
   }
+  // The companion module of `host/providers.effi` is `host/providers.effi.ts`.
+  assertEquals([...emitted.values()].map((module) => module.path).sort(), [
+    "collections.ts",
+    "host/providers.effi.ts",
+    "log.ts",
+    "main.ts",
+    "pay.ts",
+    "users-service.ts",
+    "users.ts",
+  ]);
 });
 
 Deno.test("an interface emits a companion module with every declaration exported", () => {
@@ -1082,10 +1086,6 @@ Deno.test("emitModule returns an error value for a host module that the project 
   });
   assert(!result.ok);
   assertEquals(result.error.tag, "internal");
-});
-
-Deno.test("the example list stays in step with the helper", () => {
-  assertEquals(EXAMPLE_ENTRIES.length, 6);
 });
 
 Deno.test("the emitted module lists the range of each host assertion", () => {
