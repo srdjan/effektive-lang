@@ -102,6 +102,8 @@ export function canonicalJson(value: unknown): string {
 /** The part of a checked project that the runner reads. */
 export interface CheckedLike {
   readonly diagnostics: readonly unknown[];
+  /** Absent in older trees. The head tree lists the modules that cannot be lowered. */
+  readonly blocked?: ReadonlyMap<string, number>;
   readonly modules: ReadonlyMap<string, unknown>;
   readonly analysis: { readonly project: ProjectLike };
 }
@@ -222,6 +224,7 @@ export async function loadCore(root: string): Promise<Res<CoreApi>> {
     withoutDiagnostics: (checked) => ({
       ...checked,
       diagnostics: [],
+      blocked: new Map(),
       modules: new Map(
         [...checked.modules].map((
           [name, m],

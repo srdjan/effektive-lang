@@ -1688,9 +1688,9 @@ function lowerConstant(
 }
 
 /**
- * Lowers one checked module to typed IR. The module must have no diagnostics.
- * A `.effi` module lowers to its type, error, and service declarations. The diagnostics of the module are the declaration and body
- * diagnostics plus every project diagnostic whose span names the module's file.
+ * Lowers one checked module to typed IR. A module that `checked.blocked` lists
+ * has an error value. A `.effi` module lowers to its type, error, and service
+ * declarations.
  */
 export function lowerModule(
   checked: CheckedProject,
@@ -1705,18 +1705,9 @@ export function lowerModule(
   ) {
     return { ok: false, error: { tag: "unknown-module", module } };
   }
-  const count =
-    checked.diagnostics.filter((d) => d.span.source === checkedModule.path)
-      .length;
-  if (count > 0 || checkedModule.diagnostics.length > 0) {
-    return {
-      ok: false,
-      error: {
-        tag: "diagnostics",
-        module,
-        count: Math.max(count, checkedModule.diagnostics.length),
-      },
-    };
+  const count = checked.blocked.get(module);
+  if (count !== undefined) {
+    return { ok: false, error: { tag: "diagnostics", module, count } };
   }
   const imports = lowerImports(checked, info, resolution, module);
   if (!imports.ok) return imports;

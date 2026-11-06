@@ -52,6 +52,7 @@ function withoutDiagnostics(checked: CheckedProject): CheckedProject {
   return {
     ...checked,
     diagnostics: [],
+    blocked: new Map(),
     modules: new Map(
       [...checked.modules].map((
         [name, m],

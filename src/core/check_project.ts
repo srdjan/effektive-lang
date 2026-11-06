@@ -141,6 +141,12 @@ export interface CheckedProject {
   readonly modules: ReadonlyMap<string, CheckedModule>;
   /** All diagnostics of the project, sorted and without duplicates. */
   readonly diagnostics: readonly Diagnostic[];
+  /**
+   * The modules that cannot be lowered, each with the number of project
+   * diagnostics that block it. A module is blocked when a project diagnostic
+   * names its file or when its own diagnostics are not empty.
+   */
+  readonly blocked: ReadonlyMap<string, number>;
 }
 
 // ------------------------------------------------------------------ one module
@@ -875,12 +881,35 @@ export function driveProject(
     }
     modules.set(name, step.checked);
   }
+  const sorted = normalizeDiagnostics(diagnostics);
   return {
     analysis,
     table,
     modules,
-    diagnostics: normalizeDiagnostics(diagnostics),
+    diagnostics: sorted,
+    blocked: blockedModules(modules, sorted),
   };
+}
+
+/** The modules that have a diagnostic, each with the number of diagnostics that name its file. */
+function blockedModules(
+  modules: ReadonlyMap<string, CheckedModule>,
+  diagnostics: readonly Diagnostic[],
+): Map<string, number> {
+  const named = new Map<string, number>();
+  for (const diagnostic of diagnostics) {
+    const source = diagnostic.span.source;
+    named.set(source, (named.get(source) ?? 0) + 1);
+  }
+  const blocked = new Map<string, number>();
+  for (const [name, checked] of modules) {
+    const count = Math.max(
+      named.get(checked.path) ?? 0,
+      checked.diagnostics.length,
+    );
+    if (count > 0) blocked.set(name, count);
+  }
+  return blocked;
 }
 
 /** Checks every module of an analyzed project in topological order. */
