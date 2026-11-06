@@ -24,7 +24,6 @@ export type SchemaLeafKind = LeafOf<
   "schema-make" | "schema-decode" | "schema-encode"
 >;
 
-/** Emit a Schema operation. The switch is exhaustive: a new operation needs a case. */
 export function schemaStructural(
   c: ExprCore,
   e: ExprOf<SchemaStructuralKind>,

@@ -113,7 +113,6 @@ function guardedDuration(
   ]);
 }
 
-/** The Effect `Severity` spelling of a source level: the level name, capitalized. */
 function severityOf(level: LogLevel): string {
   return level.charAt(0).toUpperCase() + level.slice(1);
 }
@@ -123,11 +122,9 @@ export function effectLeaf(
   e: ExprOf<EffectLeafKind>,
   children: readonly Emitted[],
 ): Emitted {
-  // `now` reads the `Clock` value and needs no `Effect` import.
   if (e.kind === "now") {
     return emitted(`${c.scope.effect("Clock")}.currentTimeMillis`);
   }
-  // `random` reads the `Random` value and needs no `Effect` import.
   if (e.kind === "random") {
     return emitted(`${c.scope.effect("Random")}.next`);
   }
