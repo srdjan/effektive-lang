@@ -222,7 +222,7 @@ export const LAYER_ROWS = {
     handle: (c, node, _name, args) => layerCall(c, node, args),
   },
   mergeLayers: {
-    prologue: direct(2, "pure", { fact: { kind: "merge-layers" } }),
+    prologue: direct(2, "pure", { fact: "key" }),
     handle: (c, node, _name, args) => mergeLayersCall(c, node, args),
   },
 } satisfies Partial<Rows<PreludeCallName, LayerContext>>;

@@ -1,6 +1,6 @@
 // The family rows of the prelude builtins. A new builtin in an existing family
 // adds its row to that family file, so the body checker does not change. The
-// body checker adds the rows of the builtins that call its private members.
+// body checker checks the option constructors, which have no family row.
 
 import type { BuiltinContext } from "./context.ts";
 import { COLLECTION_ROWS, type CollectionContext } from "./collections.ts";
@@ -11,14 +11,6 @@ import type { PreludeCallName, Rows } from "./rows.ts";
 import { SCHEMA_ROWS, type SchemaContext } from "./schema.ts";
 import { SCOPE_ROWS, type ScopeContext } from "./scope.ts";
 import { STREAM_ROWS, type StreamContext } from "./stream.ts";
-
-/** The builtins whose rows stay in the body checker, because they call its private members. */
-export type CoreRowName = "Some";
-
-/** The names of the rows in `BodyChecker`. The type above and this list must agree. */
-export const CORE_ROW_NAMES: readonly CoreRowName[] = [
-  "Some",
-];
 
 /** Every operation that a family handler or prologue reads from the checker. */
 type FamilyContext =
@@ -43,10 +35,7 @@ export const FAMILY_ROW_TABLES = {
 
 // A type annotation keeps the generic index of `preludeCall` valid. A
 // `satisfies` clause on this table breaks it.
-export const FAMILY_ROWS: Rows<
-  Exclude<PreludeCallName, CoreRowName>,
-  FamilyContext
-> = {
+export const FAMILY_ROWS: Rows<PreludeCallName, FamilyContext> = {
   ...COLLECTION_ROWS,
   ...EFFECT_ROWS,
   ...LAYER_ROWS,

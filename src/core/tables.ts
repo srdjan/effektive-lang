@@ -7,6 +7,7 @@
 import type {
   CapabilityId,
   ErrorId,
+  Expr,
   FunctionType,
   LocalId,
   LogLevel,
@@ -119,22 +120,9 @@ export type NodeFact =
   | { readonly kind: "retry-schedule" | "retry-with-schedule" }
   | {
     readonly kind: "schema";
+    /** The IR operations, and the three that lower to their own kinds. */
     readonly op:
-      | "identity"
-      | "array"
-      | "struct"
-      | "optional-key"
-      | "null-to-missing-key"
-      | "option-from-optional-key"
-      | "default-key"
-      | "constructor-default"
-      | "default-null-key"
-      | "default-encoded-key"
-      | "optional-transform"
-      | "optional-from-required"
-      | "union"
-      | "transform"
-      | "recursive"
+      | Extract<Expr, { kind: "schema" }>["op"]
       | "decode"
       | "encode"
       | "make";

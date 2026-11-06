@@ -430,7 +430,7 @@ function streamBufferCapacity(
 /** The rows of the Stream and Sink builtins. */
 export const STREAM_ROWS = {
   unfold: {
-    prologue: direct(2, "pure", { fact: { kind: "unfold" } }),
+    prologue: direct(2, "pure", { fact: "key" }),
     handle: (c, node, _name, args) => unfoldCall(c, node, args),
   },
   mapEffect: {
@@ -441,7 +441,7 @@ export const STREAM_ROWS = {
     handle: (c, node, _name, args) => mapEffectCall(c, node, args),
   },
   sinkForEach: {
-    prologue: direct(1, "pure", { fact: { kind: "sink-for-each" } }),
+    prologue: direct(1, "pure", { fact: "key" }),
     handle: (c, node, _name, args, expected) =>
       sinkForEachCall(c, node, args, expected),
   },
@@ -453,12 +453,12 @@ export const STREAM_ROWS = {
       takeSinkCall(c, node, args, expected),
   },
   transduceStream: {
-    prologue: direct(2, "pure", { fact: { kind: "transduce-stream" } }),
+    prologue: direct(2, "pure", { fact: "key" }),
     handle: (c, node, name, args) =>
       sinkTransformStreamCall(c, node, args, name),
   },
   runStream: {
-    prologue: direct(2, "effect", { fact: { kind: "run-stream" } }),
+    prologue: direct(2, "effect", { fact: "key" }),
     handle: (c, node, _name, args) => runStreamCall(c, node, args),
   },
   bufferStream: {

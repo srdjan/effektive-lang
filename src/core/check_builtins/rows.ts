@@ -4,14 +4,14 @@
 // must be disjoint from the others: a key that two spreads give compiles with
 // no error, so `tests/builtin_rows_test.ts` checks the key sets.
 
-import type { PreludeName } from "../resolve.ts";
+import type { OptionConstructorName, PreludeName } from "../resolve.ts";
 import type { NodeId } from "../syntax.ts";
 import type { NodeFact, NodeInfo } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
 import type { Arg } from "./context.ts";
 
-/** The prelude names that have a handler. `None` is a value, so it has none. */
-export type PreludeCallName = Exclude<PreludeName, "None">;
+/** The prelude names that have a family row. An option constructor has its own checking rule. */
+export type PreludeCallName = Exclude<PreludeName, OptionConstructorName>;
 
 /** Camel case to kebab case at the type level: `retrySchedule` gives `retry-schedule`. */
 type Kebab<S extends string> = S extends `${infer Head}${infer Tail}`
@@ -21,12 +21,32 @@ type Kebab<S extends string> = S extends `${infer Head}${infer Tail}`
   : S;
 
 /**
+ * `"key"` when the row key alone gives the fact: a fact with no field besides
+ * its kind, where the kind is the key in kebab case.
+ */
+type KeyFact<K extends PreludeCallName> = NodeFact extends infer F
+  ? F extends { readonly kind: infer Kind }
+    ? [Kebab<K>] extends [Kind]
+      ? Exclude<keyof F, "kind"> extends never ? "key" : never
+    : never
+  : never
+  : never;
+
+/** The fact that the key of a row gives: its name in kebab case is the kind. */
+export function keyFact(name: string): NodeFact {
+  return {
+    kind: name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`),
+  } as NodeFact;
+}
+
+/**
  * The facts of a prologue. `fact` is recorded before the argument count is
  * tested, so a call with a wrong count keeps it. `bailFact` is recorded only
  * after a wrong count, for a handler that records another fact after its checks.
  */
 interface PrologueFacts<K extends PreludeCallName, C> {
   readonly fact?:
+    | KeyFact<K>
     | NodeFact & { readonly kind: Kebab<K> }
     | ((checker: C, name: K, args: readonly Arg[]) => NodeFact);
   readonly bailFact?: NodeFact & { readonly kind: Kebab<K> };

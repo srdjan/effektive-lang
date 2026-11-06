@@ -51,8 +51,22 @@ import {
 // ------------------------------------------------------------------ prelude
 
 /**
+ * What the compiler treats differently about a prelude name. An option
+ * constructor has its own resolution and checking rules and is not a family
+ * builtin. A service-argument builtin takes a service name as its first
+ * argument.
+ */
+type PreludeRole = "option-some" | "option-none" | "service-argument";
+
+interface PreludeEntry {
+  readonly shadowable: boolean;
+  readonly role?: PreludeRole;
+}
+
+/**
  * The prelude operations, in one table. `shadowable` marks a name that a module
- * constant, a parameter, or a local may shadow. Existing programs may use these
+ * constant, a parameter, or a local may shadow. `role` marks a name that the
+ * compiler handles apart from the family builtins. Existing programs may use these
  * names as values. Bindings shadow these prelude operations; lookupValue already
  * checks bindings first. Every other name is reserved.
  */
@@ -85,7 +99,7 @@ const PRELUDE = {
   getRef: { shadowable: false },
   setRef: { shadowable: false },
   updateRef: { shadowable: false },
-  layer: { shadowable: false },
+  layer: { shadowable: false, role: "service-argument" },
   mergeLayers: { shadowable: false },
   retrySchedule: { shadowable: false },
   schema: { shadowable: true },
@@ -104,16 +118,44 @@ const PRELUDE = {
   schemaDecode: { shadowable: true },
   schemaEncode: { shadowable: true },
   schemaMake: { shadowable: true },
-  Some: { shadowable: false },
-  None: { shadowable: false },
+  Some: { shadowable: false, role: "option-some" },
+  None: { shadowable: false, role: "option-none" },
   map: { shadowable: false },
   filter: { shadowable: false },
   fold: { shadowable: false },
   all: { shadowable: true },
   traverse: { shadowable: false },
-} as const satisfies Record<string, { readonly shadowable: boolean }>;
+} as const satisfies Record<string, PreludeEntry>;
 
 export type PreludeName = keyof typeof PRELUDE;
+
+/** The prelude names that are option constructors. */
+export type OptionConstructorName = {
+  [K in PreludeName]: typeof PRELUDE[K] extends
+    { readonly role: "option-some" | "option-none" } ? K : never;
+}[PreludeName];
+
+/** True when a prelude name is an option constructor. */
+export function isOptionConstructorName(
+  name: PreludeName,
+): name is OptionConstructorName {
+  return optionRole(name) !== undefined;
+}
+
+/** The option constructor that a prelude name is, or undefined. */
+export function optionRole(name: PreludeName): "some" | "none" | undefined {
+  const entry: PreludeEntry = PRELUDE[name];
+  if (entry.role === "option-some") return "some";
+  if (entry.role === "option-none") return "none";
+  return undefined;
+}
+
+/** The option constructor that a target names, or undefined. */
+export function optionConstructorOf(
+  target: Target | undefined,
+): "some" | "none" | undefined {
+  return target?.kind === "builtin" ? optionRole(target.name) : undefined;
+}
 
 export const PRELUDE_NAMES: ReadonlySet<string> = new Set(
   Object.keys(PRELUDE),
@@ -631,7 +673,7 @@ class Resolver {
       return;
     }
     if (found.tag === "builtin") {
-      if (position === "callee" || found.name === "None") {
+      if (position === "callee" || optionRole(found.name) === "none") {
         this.set(node, { kind: "builtin", name: found.name });
       } else {
         this.wrongKind(
@@ -749,8 +791,9 @@ class Resolver {
   private ctorRef(nameNode: NodeId): void {
     const name = nameTextOf(this.tree, nameNode);
     if (name === undefined) return;
-    if (name === "Some" || name === "None") {
-      this.set(nameNode, { kind: "builtin", name });
+    const prelude = asPrelude(name);
+    if (prelude !== undefined && optionRole(prelude) !== undefined) {
+      this.set(nameNode, { kind: "builtin", name: prelude });
       return;
     }
     const target = this.namespace.get(name)?.target;

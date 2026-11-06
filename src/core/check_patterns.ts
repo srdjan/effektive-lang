@@ -12,7 +12,7 @@ import {
   narrowTagged,
   taggedValues,
 } from "./patterns.ts";
-import { type Target, targetText } from "./resolve.ts";
+import { optionConstructorOf, type Target, targetText } from "./resolve.ts";
 import { kindOf, type NodeId, SyntaxKind, type SyntaxTree } from "./syntax.ts";
 import { literalOf, nameTextOf, numberTextOf } from "./syntax_queries.ts";
 import { isDurationText } from "./lex.ts";
@@ -51,8 +51,8 @@ function missingOf(
   const missing: string[] = [];
   switch (domain.kind) {
     case "option":
-      if (!state.covered.has("Some")) missing.push("Some(_)");
-      if (!state.covered.has("None")) missing.push("None");
+      if (!state.covered.has("some")) missing.push("Some(_)");
+      if (!state.covered.has("none")) missing.push("None");
       return missing;
     case "nominal":
       for (const [i, name] of namesOf(table, domain.ids).entries()) {
@@ -203,9 +203,9 @@ export function pattern(
       const target = names[0] === undefined
         ? undefined
         : c.targets.get(names[0]);
-      if (target?.kind === "builtin" && target.name === "None") {
+      if (optionConstructorOf(target) === "none") {
         if (domain.kind === "option") {
-          reach(c, node, state, "None");
+          reach(c, node, state, "none");
         } else if (!silent) {
           foreign(c, node, "`None`", domain);
         }
@@ -227,11 +227,11 @@ export function pattern(
         ? undefined
         : c.targets.get(names[0]);
       const bindingNode = names[1];
-      if (target?.kind === "builtin" && target.name === "Some") {
+      if (optionConstructorOf(target) === "some") {
         let element = c.table.error;
         if (domain.kind === "option") {
           element = domain.element;
-          reach(c, node, state, "Some");
+          reach(c, node, state, "some");
         } else if (!silent) {
           foreign(c, node, "`Some`", domain);
         }

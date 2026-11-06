@@ -48,7 +48,13 @@ import type {
   ValueId,
 } from "./ir.ts";
 import type { Result } from "./result.ts";
-import type { PreludeName, Target } from "./resolve.ts";
+import {
+  isOptionConstructorName,
+  optionConstructorOf,
+  optionRole,
+  type PreludeName,
+  type Target,
+} from "./resolve.ts";
 import type { Span } from "./source.ts";
 import {
   kindOf,
@@ -115,12 +121,12 @@ import {
 import type { CollectionContext } from "./check_builtins/collections.ts";
 import type { EffectContext } from "./check_builtins/effect.ts";
 import type { LayerContext } from "./check_builtins/layer.ts";
-import { type CoreRowName, FAMILY_ROWS } from "./check_builtins/registry.ts";
-import type {
-  BuiltinRow,
-  PreludeCallName,
-  Prologue,
-  Rows,
+import { FAMILY_ROWS } from "./check_builtins/registry.ts";
+import {
+  type BuiltinRow,
+  keyFact,
+  type PreludeCallName,
+  type Prologue,
 } from "./check_builtins/rows.ts";
 import type { SchemaContext } from "./check_builtins/schema.ts";
 import {
@@ -692,7 +698,9 @@ class BodyChecker
       case "provider":
         return this.finish(node, this.benv.values(target.id), PURE_EFFECTS);
       case "builtin":
-        if (target.name === "None") return this.none(node, expected);
+        if (optionConstructorOf(target) === "none") {
+          return this.none(node, expected);
+        }
         return this.errorInfo(node);
       case "type":
       case "error":
@@ -1139,7 +1147,10 @@ class BodyChecker
     args: readonly Arg[],
     expected: TypeRef | undefined,
   ): NodeInfo {
-    if (name === "None") {
+    if (isOptionConstructorName(name)) {
+      if (optionRole(name) === "some") {
+        return this.someCall(node, name, args, expected);
+      }
       const infos = args.map((a) => this.argInfo(a));
       this.report(
         "type-mismatch/008",
@@ -1151,14 +1162,14 @@ class BodyChecker
     return this.preludeCall(node, name, args, expected);
   }
 
-  /** Runs the handler of a prelude name. The table has one row for each name except `None`. */
+  /** Runs the handler of a prelude name. The table has one row for each name that is not an option constructor. */
   private preludeCall<K extends PreludeCallName>(
     node: NodeId,
     name: K,
     args: readonly Arg[],
     expected: TypeRef | undefined,
   ): NodeInfo {
-    const row: BuiltinRow<K, BodyChecker> = BodyChecker.PRELUDE_ROWS[name];
+    const row: BuiltinRow<K, BodyChecker> = FAMILY_ROWS[name];
     if (row.prologue !== "own-arity") {
       const bailed = this.runPrologue(node, name, args, row.prologue);
       if (bailed !== undefined) return bailed;
@@ -1177,7 +1188,11 @@ class BodyChecker
     if (fact !== undefined) {
       this.fact(
         node,
-        typeof fact === "function" ? fact(this, name, args) : fact,
+        typeof fact === "function"
+          ? fact(this, name, args)
+          : fact === "key"
+          ? keyFact(name)
+          : fact,
       );
     }
     const count = typeof prologue.arity === "number"
@@ -1195,26 +1210,6 @@ class BodyChecker
     if (prologue.pipeline === "direct") this.noPipeline(name, args);
     return undefined;
   }
-
-  /** The rows of the builtins that call private members of the checker. */
-  private static readonly CORE_ROWS: Rows<CoreRowName, BodyChecker> = {
-    Some: {
-      prologue: "own-arity",
-      handle: (c, node, _name, args, expected) =>
-        c.someCall(node, args, expected),
-    },
-  };
-
-  /**
-   * The row of each prelude call name. The family files own the rows of the
-   * other builtins. A row with the prologue `"own-arity"` tests its own
-   * argument count. `CORE_ROWS` must come first, because static initializers
-   * run in source order.
-   */
-  private static readonly PRELUDE_ROWS: Rows<PreludeCallName, BodyChecker> = {
-    ...FAMILY_ROWS,
-    ...BodyChecker.CORE_ROWS,
-  };
 
   /** Reports a wrong argument count for a prelude call. Returns true when the count is right. */
   arity(
@@ -1238,11 +1233,12 @@ class BodyChecker
 
   private someCall(
     node: NodeId,
+    name: PreludeName,
     args: readonly Arg[],
     expected: TypeRef | undefined,
   ): NodeInfo {
     this.fact(node, { kind: "some" });
-    const rightCount = this.arity(node, "Some", 1, args);
+    const rightCount = this.arity(node, name, 1, args);
     const hint = this.optionElement(expected);
     let element = hint;
     if (this.checkedSlots.has(node)) {

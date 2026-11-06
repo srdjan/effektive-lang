@@ -756,20 +756,20 @@ export const EFFECT_ROWS = {
     handle: (c, node, _name, args) => repeatCall(c, node, args),
   },
   retrySchedule: {
-    prologue: piped(1, "pure", { fact: { kind: "retry-schedule" } }),
+    prologue: piped(1, "pure", { fact: "key" }),
     handle: (c, node, _name, args, expected) =>
       retryScheduleCall(c, node, args, expected),
   },
   timeout: {
-    prologue: piped(2, "effect", { fact: { kind: "timeout" } }),
+    prologue: piped(2, "effect", { fact: "key" }),
     handle: (c, node, _name, args) => timeoutCall(c, node, args),
   },
   uninterruptible: {
-    prologue: piped(1, "effect", { fact: { kind: "uninterruptible" } }),
+    prologue: piped(1, "effect", { fact: "key" }),
     handle: (c, node, _name, args) => uninterruptibleCall(c, node, args),
   },
   now: {
-    prologue: direct(0, "effect", { fact: { kind: "now" } }),
+    prologue: direct(0, "effect", { fact: "key" }),
     handle: (c, node) => c.finish(node, c.table.named(INSTANT_ID), EFFECT_ONLY),
   },
   log: {
@@ -783,23 +783,23 @@ export const EFFECT_ROWS = {
     handle: (c, node, _name, args) => logCall(c, node, args),
   },
   random: {
-    prologue: direct(0, "effect", { fact: { kind: "random" } }),
+    prologue: direct(0, "effect", { fact: "key" }),
     handle: (c, node) => c.finish(node, c.table.number, EFFECT_ONLY),
   },
   randomInt: {
-    prologue: direct(2, "effect", { fact: { kind: "random-int" } }),
+    prologue: direct(2, "effect", { fact: "key" }),
     handle: (c, node, _name, args) => randomIntCall(c, node, args),
   },
   sleep: {
-    prologue: direct(1, "effect", { fact: { kind: "sleep" } }),
+    prologue: direct(1, "effect", { fact: "key" }),
     handle: (c, node, _name, args) => sleepCall(c, node, args),
   },
   defer: {
-    prologue: piped(1, "pure", { fact: { kind: "defer" } }),
+    prologue: piped(1, "pure", { fact: "key" }),
     handle: (c, node, _name, args) => deferCall(c, node, args),
   },
   run: {
-    prologue: piped(1, "effect", { fact: { kind: "run" } }),
+    prologue: piped(1, "effect", { fact: "key" }),
     handle: (c, node, _name, args) => runCall(c, node, args),
   },
   race: {

@@ -1,13 +1,10 @@
 // The builtin rows of src/core/check_builtins. A key that two row tables give
 // compiles with no error, and a spread keeps the last one. These tests check
-// that the family tables and the core names are disjoint and that together
-// they cover each prelude call name.
+// that the family tables are disjoint and that together they cover each
+// prelude call name except the option constructors.
 
 import { assert, assertEquals } from "@std/assert";
-import {
-  CORE_ROW_NAMES,
-  FAMILY_ROW_TABLES,
-} from "../src/core/check_builtins/registry.ts";
+import { FAMILY_ROW_TABLES } from "../src/core/check_builtins/registry.ts";
 import { PRELUDE_NAMES } from "../src/core/frontend.ts";
 
 const owners = new Map<string, string[]>();
@@ -17,7 +14,6 @@ function own(name: string, owner: string): void {
 for (const [family, rows] of Object.entries(FAMILY_ROW_TABLES)) {
   for (const name of Object.keys(rows)) own(name, family);
 }
-for (const name of CORE_ROW_NAMES) own(name, "core");
 
 Deno.test("each builtin row has exactly one owner", () => {
   const shared = [...owners].filter(([, list]) => list.length > 1);
@@ -25,7 +21,9 @@ Deno.test("each builtin row has exactly one owner", () => {
 });
 
 Deno.test("the rows cover each prelude call name and nothing else", () => {
-  const expected = [...PRELUDE_NAMES].filter((name) => name !== "None").sort();
+  const expected = [...PRELUDE_NAMES].filter((name) =>
+    name !== "None" && name !== "Some"
+  ).sort();
   assertEquals([...owners.keys()].sort(), expected);
 });
 

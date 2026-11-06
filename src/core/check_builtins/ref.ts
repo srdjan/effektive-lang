@@ -61,19 +61,19 @@ function refCall(
 /** The rows of the Ref builtins. */
 export const REF_ROWS = {
   makeRef: {
-    prologue: direct(1, "effect", { fact: { kind: "make-ref" } }),
+    prologue: direct(1, "effect", { fact: "key" }),
     handle: (c, node, name, args) => refCall(c, node, name, args),
   },
   getRef: {
-    prologue: direct(1, "effect", { fact: { kind: "get-ref" } }),
+    prologue: direct(1, "effect", { fact: "key" }),
     handle: (c, node, name, args) => refCall(c, node, name, args),
   },
   setRef: {
-    prologue: direct(2, "effect", { fact: { kind: "set-ref" } }),
+    prologue: direct(2, "effect", { fact: "key" }),
     handle: (c, node, name, args) => refCall(c, node, name, args),
   },
   updateRef: {
-    prologue: direct(2, "effect", { fact: { kind: "update-ref" } }),
+    prologue: direct(2, "effect", { fact: "key" }),
     handle: (c, node, name, args) => refCall(c, node, name, args),
   },
 } satisfies Partial<Rows<PreludeCallName, BuiltinContext>>;

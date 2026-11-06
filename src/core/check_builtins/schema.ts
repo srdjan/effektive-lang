@@ -13,12 +13,7 @@ import type {
   ResolveView,
   SyntaxView,
 } from "./context.ts";
-import type {
-  BuiltinRow,
-  PreludeCallName,
-  Rows,
-  SharedPrologue,
-} from "./rows.ts";
+import type { BuiltinRow, Rows, SharedPrologue } from "./rows.ts";
 
 export interface SchemaContext extends
   Pick<
@@ -1287,7 +1282,7 @@ function guardedSchemaCallback(c: SchemaContext, node: NodeId): boolean {
   return visit(body, finiteChoice) && found;
 }
 
-/** One prologue serves every Schema builtin. `schemaDefaultKey` selects its operation with the `on` option. */
+/** One prologue serves every Schema builtin. A builtin that accepts options selects its operation with the `on` option. */
 const SCHEMA_PROLOGUE: SharedPrologue<SchemaBuiltinName, SchemaContext> = {
   arity: (name, args) => {
     const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
@@ -1297,12 +1292,15 @@ const SCHEMA_PROLOGUE: SharedPrologue<SchemaBuiltinName, SchemaContext> = {
   },
   bail: "pure",
   pipeline: "direct",
-  fact: (c, name, args) => ({
-    kind: "schema",
-    op: name === "schemaDefaultKey" && args.length === 3
-      ? defaultKeyOp(c, name, args[2])
-      : SCHEMA_BUILTINS[name].op,
-  }),
+  fact: (c, name, args) => {
+    const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
+    return {
+      kind: "schema",
+      op: builtin.acceptsOptions === true && args.length === 3
+        ? defaultKeyOp(c, name, args[2])
+        : builtin.op,
+    };
+  },
 };
 
 const SCHEMA_HANDLE: BuiltinRow<SchemaBuiltinName, SchemaContext>["handle"] = (
@@ -1313,31 +1311,12 @@ const SCHEMA_HANDLE: BuiltinRow<SchemaBuiltinName, SchemaContext>["handle"] = (
   expected,
 ) => schemaCall(c, node, name, args, expected);
 
-/** The rows of the Schema builtins. */
-export const SCHEMA_ROWS = {
-  schema: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaArray: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaStruct: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaOptionalKey: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaNullToMissingKey: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaOptionFromOptionalKey: {
-    prologue: SCHEMA_PROLOGUE,
-    handle: SCHEMA_HANDLE,
-  },
-  schemaDefaultKey: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaConstructorDefault: {
-    prologue: SCHEMA_PROLOGUE,
-    handle: SCHEMA_HANDLE,
-  },
-  schemaOptionalTransform: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaOptionalFromRequired: {
-    prologue: SCHEMA_PROLOGUE,
-    handle: SCHEMA_HANDLE,
-  },
-  schemaUnion: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaTransform: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaRecursive: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaDecode: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaEncode: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-  schemaMake: { prologue: SCHEMA_PROLOGUE, handle: SCHEMA_HANDLE },
-} satisfies Partial<Rows<PreludeCallName, SchemaContext>>;
+const SCHEMA_ROW: BuiltinRow<SchemaBuiltinName, SchemaContext> = {
+  prologue: SCHEMA_PROLOGUE,
+  handle: SCHEMA_HANDLE,
+};
+
+/** The rows of the Schema builtins: one row for each key of `SCHEMA_BUILTINS`. */
+export const SCHEMA_ROWS = Object.fromEntries(
+  Object.keys(SCHEMA_BUILTINS).map((name) => [name, SCHEMA_ROW]),
+) as Rows<SchemaBuiltinName, SchemaContext>;

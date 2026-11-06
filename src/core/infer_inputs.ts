@@ -13,7 +13,7 @@ import {
   type Origin,
 } from "./infer_contracts.ts";
 import { flattenMembers } from "./patterns.ts";
-import type { Target } from "./resolve.ts";
+import { optionConstructorOf, type Target } from "./resolve.ts";
 import {
   arrowBody,
   initOf,
@@ -343,7 +343,7 @@ class InputEngine {
       args.slice(1).forEach((argument) => this.visit(argument));
       return this.table.named(target.id);
     }
-    if (target?.kind === "builtin" && target.name === "Some") {
+    if (optionConstructorOf(target) === "some") {
       const element = this.optionElement(expected);
       const inferred = args[0] === undefined
         ? undefined
@@ -411,7 +411,7 @@ class InputEngine {
       args.forEach((argument) => this.visit(argument));
       return this.table.named(target.id);
     }
-    if (target?.kind === "builtin" && target.name === "Some") {
+    if (optionConstructorOf(target) === "some") {
       const element = this.optionElement(expected);
       const inferred = this.visit(left, element);
       args.forEach((argument) => this.visit(argument));
