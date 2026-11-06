@@ -21,7 +21,7 @@ below are under `src/core/` unless a path starts with another directory.
 | Types | `types.ts`, `type_ir.ts`, `type_show.ts` | The interned type table, compatibility rules, and readable type text. |
 | Declaration check | `signatures.ts`, `type_lower.ts`, `check_declarations.ts` | The signature model, the lowering of type nodes to interned types, and `ModuleChecker` for types, errors, services, providers, and constants. |
 | Body check | `check_expr.ts`, `check_patterns.ts`, `check_binary.ts`, `check_builtins/`, `infer_inputs.ts`, `infer_contracts.ts`, `modes.ts` | Types, effects, execution modes, contracts, and match coverage of each body. |
-| Project check | `check_project.ts`, `requirement_provenance.ts`, `interface.ts`, `initialization.ts` | `checkModuleStep` pairs declaration checks with body results. The driver builds interfaces and initialization graphs. The provenance module collects carried requirements. |
+| Project check | `check_project.ts`, `service_bounds.ts`, `requirement_provenance.ts`, `interface.ts`, `initialization.ts` | `checkModuleStep` pairs declaration checks with body results. `driveProject` takes the cache decision for each module. `initialization.ts` builds the initialization graph and reports its cycles. `service_bounds.ts` reports the service bounds. The provenance module collects carried requirements. |
 | Refinements | `check_refinements.ts`, `predicates.ts`, `predicate_source.ts`, `linear.ts` | The refinement facts of a body, the bounded proof search, and proof certificates. |
 | Lowering | `lower.ts`, `serialize.ts` | Checked modules become typed IR, which `serialize.ts` writes as canonical JSON. `ir.ts` defines the IR. |
 | Validation | `validate/`, `validate_project.ts` | The independent validator recomputes types, effects, and proofs from the IR alone. It is a test oracle: no entry point exports it, and the CLI, the language server, and the playground do not load it. |
@@ -62,7 +62,7 @@ Inference does not repeat whole-body traversal and has no arbitrary iteration li
 
 Value provenance means the origin of a value or one component.
 `requirement_provenance.ts` reads checked facts and `TypeReader`, the read-only view of the type table.
-The project driver owns service bounds and diagnostics.
+`service_bounds.ts` owns the service bounds and their diagnostics. The project driver calls it after the body checks.
 The independent validator remains separate from this analysis.
 
 Transferred records, tuples, and lists retain component origins through aliases, destructuring, and spreads.

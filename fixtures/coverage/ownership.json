@@ -97,6 +97,7 @@
       "src/core/requirement_provenance.ts",
       "src/core/resolve.ts",
       "src/core/serialize.ts",
+      "src/core/service_bounds.ts",
       "src/core/sha256.ts",
       "src/core/signatures.ts",
       "src/core/source.ts",

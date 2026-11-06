@@ -4,8 +4,11 @@
 // transitively. A cycle that holds a constant cannot be initialized. The emitter
 // orders the emitted constants by `order`.
 
+import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import { stronglyConnectedComponents } from "./graph.ts";
+import { shortName } from "./ids.ts";
 import type { ValueId } from "./ir.ts";
+import type { Span } from "./source.ts";
 
 export interface InitializationGraph {
   /** Module constants in source order. */
@@ -28,18 +31,33 @@ interface InitializationNode {
   readonly references: readonly ValueId[];
 }
 
+/**
+ * For each node, the sorted positions of the nodes that its references name.
+ * A reference to an id outside `nodes` is dropped.
+ */
+export function referenceEdges(
+  nodes: readonly {
+    readonly id: ValueId;
+    readonly references: readonly ValueId[];
+  }[],
+): number[][] {
+  const position = new Map<ValueId, number>();
+  nodes.forEach((node, i) => position.set(node.id, i));
+  return nodes.map((node) =>
+    [...new Set(node.references)]
+      .map((id) => position.get(id))
+      .filter((p): p is number => p !== undefined)
+      .sort((a, b) => a - b)
+  );
+}
+
 /** Builds the graph. `nodes` lists every function and constant in source order. */
 export function buildInitializationGraph(
   nodes: readonly InitializationNode[],
 ): InitializationGraph {
   const position = new Map<ValueId, number>();
   nodes.forEach((node, i) => position.set(node.id, i));
-  const edges: number[][] = nodes.map((node) =>
-    [...new Set(node.references)]
-      .map((id) => position.get(id))
-      .filter((p): p is number => p !== undefined)
-      .sort((a, b) => a - b)
-  );
+  const edges = referenceEdges(nodes);
   const constants = nodes.filter((n) => n.kind === "constant").map((n) => n.id);
 
   const dependencies = new Map<ValueId, readonly ValueId[]>();
@@ -116,4 +134,41 @@ export function buildInitializationGraph(
   }
 
   return { constants, dependencies, order, cycles };
+}
+
+/** A node with the span of its name, for the cycle diagnostics. */
+interface NamedNode extends InitializationNode {
+  readonly nameSpan: Span;
+}
+
+/** The initialization graph of the nodes, and one `module/004` diagnostic for each cycle. */
+export function checkInitialization(nodes: readonly NamedNode[]): {
+  readonly graph: InitializationGraph;
+  readonly diagnostics: readonly Diagnostic[];
+} {
+  const graph = buildInitializationGraph(nodes);
+  const diagnostics: Diagnostic[] = [];
+  const byId = new Map<ValueId, NamedNode>(nodes.map((n) => [n.id, n]));
+  for (const cycle of graph.cycles) {
+    // A cycle lists ids of `nodes`, so every id has a node.
+    const members = cycle.map((id) => {
+      const node = byId.get(id);
+      if (node === undefined) {
+        throw new Error("internal: a cycle id has no signature");
+      }
+      return node;
+    });
+    const first = members.find((m) => m.kind === "constant") ?? members[0];
+    const loop = [...cycle.map(shortName), shortName(cycle[0])].join(" -> ");
+    diagnostics.push(makeDiagnostic(
+      "module/004",
+      `module initialization cycle: ${loop}`,
+      first.nameSpan,
+      members.filter((m) => m !== first).map((m) => ({
+        span: m.nameSpan,
+        message: "also part of the cycle",
+      })),
+    ));
+  }
+  return { graph, diagnostics };
 }

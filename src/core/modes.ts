@@ -6,11 +6,37 @@
 // `effect`, and a set only grows, so the rounds end. A round cap guards the
 // loop all the same.
 
+import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import type { CapabilityId, ErrorId, Execution, ValueId } from "./ir.ts";
+import type { Span } from "./source.ts";
 import { sortedUnique } from "./util.ts";
 
 /** The most rounds that one group may take (design 4.6, resource caps). */
 const ROUND_CAP = 32;
+
+/** `execution-mode/003`: a member of a recursive group lacks a written parameter or result type. */
+export function recursiveAnnotationDiagnostic(
+  name: string,
+  nameSpan: Span,
+): Diagnostic {
+  return makeDiagnostic(
+    "execution-mode/003",
+    `\`${name}\` is recursive, so it needs explicit parameter and result annotations`,
+    nameSpan,
+  );
+}
+
+/** `execution-mode/004`: the group of `name` did not settle within the round cap. */
+export function unsettledGroupDiagnostic(
+  name: string,
+  nameSpan: Span,
+): Diagnostic {
+  return makeDiagnostic(
+    "execution-mode/004",
+    `the execution modes and effect sets of the recursive group with \`${name}\` did not settle within the round cap`,
+    nameSpan,
+  );
+}
 
 /** The invocation state of a function that its body decides: the mode and the sets. */
 export interface Solved {

@@ -33,22 +33,15 @@ import {
 import { inferFunctionInputs, withInferredInputs } from "./infer_inputs.ts";
 import type { BodyEnv, ProofBudget } from "./body_env.ts";
 import { newProofBudget } from "./check_refinements.ts";
-import {
-  type Diagnostic,
-  makeDiagnostic,
-  normalizeDiagnostics,
-} from "./diagnostics.ts";
-import { contractOrigins } from "./contract_origins.ts";
-import {
-  producedRequirements,
-  transferredRequirements,
-} from "./requirement_provenance.ts";
+import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";
+import { serviceOfCapability } from "./ids.ts";
+import { serviceBoundDiagnostics } from "./service_bounds.ts";
 import { stronglyConnectedComponents } from "./graph.ts";
-import { serviceOfCapability, shortName } from "./ids.ts";
 import { arrowBody, initOf } from "./syntax_queries.ts";
 import {
-  buildInitializationGraph,
+  checkInitialization,
   type InitializationGraph,
+  referenceEdges,
 } from "./initialization.ts";
 import {
   buildInterface,
@@ -58,14 +51,13 @@ import {
   payloadHash,
   reachableModules,
 } from "./interface.ts";
-import type {
-  CapabilityId,
-  Execution,
-  ServiceId,
-  Type as IrType,
-  ValueId,
-} from "./ir.ts";
-import { type Solved, solveModeGroup } from "./modes.ts";
+import type { CapabilityId, Execution, Type as IrType, ValueId } from "./ir.ts";
+import {
+  recursiveAnnotationDiagnostic,
+  type Solved,
+  solveModeGroup,
+  unsettledGroupDiagnostic,
+} from "./modes.ts";
 import type { ModuleInfo } from "./project.ts";
 import type { ConfigError } from "./project_config.ts";
 import type { Result, SourceHost } from "./source.ts";
@@ -440,11 +432,9 @@ function scheduleRuns(
         (!signature.written.result ||
           signature.parameters.some((parameter) => parameter.inferred))
       ) {
-        diagnostics.push(makeDiagnostic(
-          "execution-mode/003",
-          `\`${signature.name}\` is recursive, so it needs explicit parameter and result annotations`,
-          signature.nameSpan,
-        ));
+        diagnostics.push(
+          recursiveAnnotationDiagnostic(signature.name, signature.nameSpan),
+        );
       }
     }
     const pending: ValueId[] = [];
@@ -477,65 +467,20 @@ function scheduleRuns(
     values.settle(solution.solved);
     if (!solution.settled) {
       const first = members[0].signature;
-      diagnostics.push(makeDiagnostic(
-        "execution-mode/004",
-        `the execution modes and effect sets of the recursive group with \`${first.name}\` did not settle within the round cap`,
-        first.nameSpan,
-      ));
+      diagnostics.push(unsettledGroupDiagnostic(first.name, first.nameSpan));
     }
     solution.results.forEach((run) => values.publish(run, true));
   }
 }
 
-/** The initialization graph of the entries, and one `module/004` diagnostic for each cycle. */
-function initializationDiagnostics(entries: readonly Entry[]): {
-  readonly graph: InitializationGraph;
-  readonly diagnostics: readonly Diagnostic[];
-} {
-  const graph = buildInitializationGraph(
-    entries.map((entry) => ({
-      id: entry.signature.id,
-      kind: entry.signature.kind,
-      references: entry.references,
-    })),
-  );
-  const diagnostics: Diagnostic[] = [];
-  const signatures = new Map<ValueId, FunctionSignature | ConstantSignature>(
-    entries.map((e) => [e.signature.id, e.signature]),
-  );
-  for (const cycle of graph.cycles) {
-    // A cycle lists ids of `entries`, so every id has a signature.
-    const members = cycle.map((id) => {
-      const signature = signatures.get(id);
-      if (signature === undefined) {
-        throw new Error("internal: a cycle id has no signature");
-      }
-      return signature;
-    });
-    const first = members.find((m) => m.kind === "constant") ?? members[0];
-    const loop = [...cycle.map(shortName), shortName(cycle[0])].join(" -> ");
-    diagnostics.push(makeDiagnostic(
-      "module/004",
-      `module initialization cycle: ${loop}`,
-      first.nameSpan,
-      members.filter((m) => m !== first).map((m) => ({
-        span: m.nameSpan,
-        message: "also part of the cycle",
-      })),
-    ));
-  }
-  return { graph, diagnostics };
-}
-
 /** Checks every body of one module and solves its execution modes. */
 function checkModuleBodies(args: CheckArguments): ModuleBodies {
   const entries = collectEntries(args);
-  const position = new Map<ValueId, number>();
-  entries.forEach((entry, i) => position.set(entry.signature.id, i));
-  const edges = entries.map((entry) =>
-    entry.references.map((id) => position.get(id)).filter((p): p is number =>
-      p !== undefined
-    ).sort((a, b) => a - b)
+  const edges = referenceEdges(
+    entries.map((entry) => ({
+      id: entry.signature.id,
+      references: entry.references,
+    })),
   );
 
   // The component diagnostics come first, then the initialization cycles,
@@ -549,7 +494,14 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
     args.declarations.values,
     diagnostics,
   );
-  const initialization = initializationDiagnostics(entries);
+  const initialization = checkInitialization(
+    entries.map((entry) => ({
+      id: entry.signature.id,
+      kind: entry.signature.kind,
+      references: entry.references,
+      nameSpan: entry.signature.nameSpan,
+    })),
+  );
   for (const diagnostic of initialization.diagnostics) {
     diagnostics.push(diagnostic);
   }
@@ -583,100 +535,6 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
     initialization: initialization.graph,
     diagnostics: normalizeDiagnostics(diagnostics),
   };
-}
-
-function allowedServiceIds(
-  info: ModuleInfo,
-  resolution: ModuleResolution,
-  declarations: ModuleDeclarations,
-): Set<ServiceId> | undefined {
-  const headers = info.index.imports.filter((entry) =>
-    entry.role === "service"
-  );
-  if (headers.length === 0) return undefined;
-  const allowed = new Set<ServiceId>(
-    declarations.services.map((service) => service.id),
-  );
-  for (const header of headers) {
-    for (const name of header.names) {
-      const target = resolution.namespace.get(name.name)?.target;
-      if (target?.kind === "service") allowed.add(target.id);
-    }
-  }
-  return allowed;
-}
-
-function serviceBoundDiagnostics(
-  info: ModuleInfo,
-  resolution: ModuleResolution,
-  declarations: ModuleDeclarations,
-  bodies: ModuleBodies,
-): Diagnostic[] {
-  const table = declarations.env.table;
-  const allowed = allowedServiceIds(info, resolution, declarations);
-  if (allowed === undefined) return [];
-  const diagnostics: Diagnostic[] = [];
-  const missing = (requirements: Iterable<CapabilityId>): CapabilityId[] => {
-    const found = new Set<CapabilityId>();
-    for (const capability of requirements) {
-      const service = serviceOfCapability(capability);
-      if (service !== undefined && !allowed.has(service)) found.add(capability);
-    }
-    return [...found].sort();
-  };
-  for (const fn of bodies.functions.values()) {
-    const requirements = new Set<CapabilityId>(fn.requirements);
-    producedRequirements(table, fn.result, requirements);
-    transferredRequirements({
-      table,
-      tree: info.tree,
-      resolution,
-      body: fn.table,
-      parameters: fn.signature.parameters.map((parameter) => parameter.id),
-    }, requirements);
-    const extra = missing(requirements);
-    if (extra.length === 0) continue;
-    const related = extra.flatMap((capability) =>
-      fn.bodyNode === undefined ? [] : contractOrigins(
-        info.tree,
-        fn.table,
-        fn.bodyNode,
-        { kind: "requirement", capability },
-      ).map((span) => ({
-        span,
-        message: `requires \`${shortName(capability)}\` here`,
-      }))
-    );
-    diagnostics.push(makeDiagnostic(
-      "requirement-contract/002",
-      `\`${fn.signature.name}\` requires undeclared service methods ${
-        extra.map(shortName).join(", ")
-      }`,
-      fn.signature.nameSpan,
-      related,
-    ));
-  }
-  for (const constant of bodies.constants.values()) {
-    const requirements = new Set<CapabilityId>();
-    producedRequirements(table, constant.type, requirements);
-    transferredRequirements({
-      table,
-      tree: info.tree,
-      resolution,
-      body: constant.table,
-      parameters: [],
-    }, requirements);
-    const extra = missing(requirements);
-    if (extra.length === 0) continue;
-    diagnostics.push(makeDiagnostic(
-      "requirement-contract/002",
-      `\`${constant.signature.name}\` produces a value with undeclared service methods ${
-        extra.map(shortName).join(", ")
-      }`,
-      constant.signature.nameSpan,
-    ));
-  }
-  return diagnostics;
 }
 
 // ------------------------------------------------------------------ the project
@@ -789,12 +647,14 @@ export function checkModuleStep(
     proofBudget,
     interfaces: seen.interfaces,
   });
-  const boundDiagnostics = serviceBoundDiagnostics(
+  const boundDiagnostics = serviceBoundDiagnostics({
     info,
     resolution,
-    declarations,
-    bodies,
-  );
+    declaredServices: declarations.services,
+    table: declarations.env.table,
+    functions: bodies.functions.values(),
+    constants: bodies.constants.values(),
+  });
   const graph = buildTypeGraph(declarations, bodies.solved);
   return withInterface(
     {

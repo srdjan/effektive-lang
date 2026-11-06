@@ -48,7 +48,8 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     schema.ts      Schema metadata, exhaustive handlers, defaults, directional effects and recursion through SchemaContext.
     scope.ts       Scope operations, resource lifetimes and borrowed parameters through ScopeContext.
     stream.ts      Stream/Sink callbacks and execution through StreamContext.
-  check_project.ts Project driver: paired declaration entries and body results, modes, interfaces, and the shared per-module step.
+  check_project.ts Project driver: paired declaration entries and body results, modes, interfaces, the shared per-module step, and one driver for a fresh check and a revision.
+  service_bounds.ts The service-bound policy: requirement-contract/002 for a module with service headers.
   requirement_provenance.ts Requirements carried by produced values and locally produced components that cross module bounds.
   tables.ts      Side tables of a body: node info and lowering facts.
   patterns.ts    Pattern domains of match subjects.
@@ -59,7 +60,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   infer_contracts.ts InputContractResolver: origins, demands, deferred calls, tagged issues, and finite worklist resolution with an explicit TypeTable.
   modes.ts       The mode fixed point of recursive groups.
   graph.ts       Strongly connected components of an integer graph.
-  initialization.ts Eager dependency graph of module constants.
+  initialization.ts Eager dependency graph of module constants, the reference edges, and the cycle diagnostics.
   interface.ts   Module interfaces, their hashes, and the reachable modules.
   analyze.ts     Public entry: load a project, resolve it, collect diagnostics.
   db.ts          Program: revisions, parse memo, check memo with module cutoff, and lazy IR.
