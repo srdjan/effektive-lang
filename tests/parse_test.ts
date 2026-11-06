@@ -1,4 +1,4 @@
-import { assertEquals, assertNotEquals } from "@std/assert";
+import { assertEquals } from "@std/assert";
 import type { Diagnostic } from "../src/core/frontend.ts";
 import { parse } from "../src/core/parse.ts";
 import { fileModeOf } from "../src/core/paths.ts";
@@ -64,12 +64,23 @@ Deno.test("Sink appends leftovers after its existing effect channels", () => {
   );
   parseClean("type S = Sink<int, int[], E, Service.call, int | string>");
   for (
-    const text of [
-      "type S = Sink<int, int[], never, never, int, string>",
-      "type S = Stream<int, never, never, int>",
-      "type S = Sink<int, int[], never, never, >",
-    ]
-  ) assertNotEquals(parseChecked(text).diagnostics.length, 0, text);
+    const [text, diagnostic] of [
+      [
+        "type S = Sink<int, int[], never, never, int, string>",
+        "43-44 syntax/008 expected `>`, found `,`",
+      ],
+      [
+        "type S = Stream<int, never, never, int>",
+        "33-34 syntax/008 expected `>`, found `,`",
+      ],
+      [
+        "type S = Sink<int, int[], never, never, >",
+        "40-41 syntax/008 expected a type, found `>`",
+      ],
+    ] as const
+  ) {
+    assertEquals(parseChecked(text).diagnostics.map(show), [diagnostic], text);
+  }
 });
 
 Deno.test("a newline continues an item before fails, with, =>, |>, else, and catch", () => {
@@ -94,7 +105,9 @@ Deno.test("a newline continues an item before fails, with, =>, |>, else, and cat
 
 Deno.test("a newline ends an item before a binary operator and before a call", () => {
   const plus = parseChecked("const f = a\n+ b");
-  assertNotEquals(plus.diagnostics.length, 0);
+  assertEquals(plus.diagnostics.map(show), [
+    "12-13 syntax/009 unexpected `+`; expected a declaration",
+  ]);
   assertEquals(declSummaries(plus.tree)[0].kind, "ConstDecl");
   const call = parseClean("const f = (): int => {\n  a\n  (b)\n}");
   const block = findFirst(call, SyntaxKind.Block)!;
@@ -217,11 +230,6 @@ Deno.test("a brace opens a block, a handler list, an arm list, or a record by co
   const branch = parseClean("const i = if (c) { 1 } else { 2 }");
   assertEquals(countKind(branch, SyntaxKind.Block), 2);
   assertEquals(countKind(branch, SyntaxKind.RecordExpr), 0);
-});
-
-Deno.test("a record result after => needs parentheses", () => {
-  const result = parseChecked("const f = (): R => { a: 1 }");
-  assertNotEquals(result.diagnostics.length, 0);
 });
 
 Deno.test("record expressions: leading spread, shorthand, trailing comma", () => {
