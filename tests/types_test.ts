@@ -25,7 +25,7 @@ import {
 } from "../src/core/types.ts";
 import type { TypeRef } from "../src/core/frontend.ts";
 import { canonicalJson } from "../src/core/util.ts";
-import { typeFromIr, typeToIr } from "../src/core/type_ir.ts";
+import { loadGraph, typeFromIr, typeToIr } from "../src/core/type_ir.ts";
 import { showType, showTypes } from "../src/core/type_show.ts";
 
 const USER = "type:m#User" as TypeId;
@@ -846,7 +846,7 @@ Deno.test("load defines opaque, tagged, guarded, and sealed types", () => {
       optional: false,
     }],
   });
-  t.load({
+  loadGraph(t, {
     types: [
       {
         id: OPAQUE,
@@ -1048,7 +1048,7 @@ Deno.test("two different guarded records never fit each other, even when their b
   const array = (element: Type): Type => ({ kind: "array", element });
   // Left recurses through x. Right recurses through y and takes Left in x.
   // Without the guard rule, Left unfolds and fits Right.
-  t.load({
+  loadGraph(t, {
     types: [
       {
         id: left,
@@ -1176,7 +1176,7 @@ Deno.test("unfold follows a chain of aliases that uses every definition in the t
 
 Deno.test("load registers an error declaration and keeps one that the table has", () => {
   const t = fresh();
-  t.load({
+  loadGraph(t, {
     types: [],
     errors: [
       {
@@ -1284,7 +1284,7 @@ Deno.test("a cycle of aliases gives a tag field no tag, so the recursion stays u
   const a = "type:m#CycleA" as TypeId;
   const b = "type:m#CycleB" as TypeId;
   const named = (id: TypeId): Type => ({ kind: "named", id });
-  t.load({
+  loadGraph(t, {
     types: [
       { id: a, definition: { kind: "alias", type: named(b) } },
       { id: b, definition: { kind: "alias", type: named(a) } },
@@ -1318,7 +1318,7 @@ Deno.test("a tagged type is no tag alias, even when its base is a literal", () =
   const tagA = "type:m#TagA" as TypeId;
   const tagB = "type:m#TagB" as TypeId;
   const named = (id: TypeId): Type => ({ kind: "named", id });
-  t.load({
+  loadGraph(t, {
     types: [
       {
         id: tagA,
@@ -1358,7 +1358,7 @@ Deno.test("an opaque type is no tag alias, even when its declared base is a lite
   const tagA = "type:m#TagA" as TypeId;
   const tagB = "type:m#TagB" as TypeId;
   const named = (id: TypeId): Type => ({ kind: "named", id });
-  t.load({
+  loadGraph(t, {
     types: [
       {
         id: tagA,

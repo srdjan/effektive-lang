@@ -7,14 +7,7 @@
 // depend on the order of interning, so no output may depend on a raw id. The
 // serialization functions below sort by canonical text, not by id.
 
-import type {
-  CapabilityId,
-  ErrorId,
-  Execution,
-  Field,
-  Type,
-  TypeId,
-} from "./ir.ts";
+import type { CapabilityId, ErrorId, Execution, Type, TypeId } from "./ir.ts";
 import {
   CLOSED_UNIT_IDS,
   DURATION_ID,
@@ -25,7 +18,7 @@ import {
 } from "./ir.ts";
 import { isErrorId, isTypeId, moduleOfId } from "./ids.ts";
 import type { Predicate } from "./predicates.ts";
-import { typeFromIr, typeToIr } from "./type_ir.ts";
+import { typeToIr } from "./type_ir.ts";
 import { canonicalJson, compareText, sortedUnique } from "./util.ts";
 
 declare const typeRefBrand: unique symbol;
@@ -256,27 +249,6 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
 }
 
 // ------------------------------------------------------------------ the table
-
-/** What a graph of imported declarations supplies to the table. */
-interface DefinitionSource {
-  readonly types: readonly {
-    readonly id: TypeId;
-    readonly opaque?: boolean;
-    readonly predicate?: Predicate;
-    readonly definition:
-      | { readonly kind: "alias"; readonly type: Type }
-      | {
-        readonly kind: "nominal";
-        readonly base: Type;
-        readonly tagged?: true;
-        readonly sealed?: true;
-      };
-  }[];
-  readonly errors: readonly {
-    readonly id: ErrorId;
-    readonly fields: readonly Field[];
-  }[];
-}
 
 // The bound on the recursion of one comparison. The parser limits written
 // nesting to 512 levels and `declaration/012` limits an alias to 128 levels.
@@ -897,74 +869,6 @@ export class TypeTable {
   /** True when a definition for the id exists. */
   isDefined(id: TypeId | ErrorId): boolean {
     return isErrorId(id) ? this.errorRecords.has(id) : this.defs.has(id);
-  }
-
-  /**
-   * Registers the declarations of an imported module graph. A definition that
-   * the table already has stays as it is.
-   */
-  load(source: DefinitionSource): void {
-    // The table registers the declarations one at a time, so a tag alias may
-    // come after the alias that uses it. The source lists all of them.
-    const aliasTypes = new Map<string, Type>();
-    for (const decl of source.types) {
-      if (decl.definition.kind === "alias") {
-        aliasTypes.set(decl.id, decl.definition.type);
-      } else if (decl.definition.tagged !== true && decl.opaque !== true) {
-        aliasTypes.set(decl.id, decl.definition.base);
-      }
-    }
-    const tagOf = (type: Type): string | undefined => {
-      const seen = new Set<string>();
-      let current: Type | undefined = type;
-      while (current !== undefined) {
-        if (current.kind === "literal") {
-          return typeof current.value === "string" ? current.value : undefined;
-        }
-        if (current.kind !== "named" || seen.has(current.id)) return undefined;
-        seen.add(current.id);
-        current = aliasTypes.get(current.id);
-      }
-      return undefined;
-    };
-    for (const decl of source.types) {
-      if (this.isDefined(decl.id)) continue;
-      if (decl.definition.kind === "alias") {
-        this.defineAlias(
-          decl.id,
-          typeFromIr(this, decl.definition.type),
-          guardedRecord(decl.definition.type, decl.id, tagOf),
-        );
-      } else if (decl.opaque === true) {
-        this.defineOpaque(decl.id);
-      } else {
-        // A nominal type is an alias with identity. A tagged one is a tagged record.
-        const body = typeFromIr(this, decl.definition.base);
-        const sealed = decl.definition.sealed === true;
-        if (decl.definition.tagged === true) {
-          this.defineTagged(decl.id, body, sealed, decl.predicate);
-        } else {
-          this.defineIdentity(
-            decl.id,
-            body,
-            sealed,
-            guardedRecord(decl.definition.base, decl.id, tagOf),
-            decl.predicate,
-          );
-        }
-      }
-    }
-    for (const decl of source.errors) {
-      if (this.isDefined(decl.id)) continue;
-      this.defineError(
-        decl.id,
-        this.record(decl.fields.map((f) => ({
-          name: f.name,
-          type: typeFromIr(this, f.type),
-          optional: f.optional,
-        }))),
-      );
-    }
   }
 
   /** Follows alias definitions until the type is not a defined alias. */

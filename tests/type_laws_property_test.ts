@@ -24,7 +24,7 @@ import { type ModuleIR, Program, type Result } from "../src/core/frontend.ts";
 import { DURATION_ID, INSTANT_ID } from "../src/core/ir.ts";
 import type { LowerError } from "../src/core/frontend.ts";
 import type { Predicate } from "../src/core/predicates.ts";
-import { typeFromIr } from "../src/core/type_ir.ts";
+import { loadGraph, typeFromIr } from "../src/core/type_ir.ts";
 import { TypeTable } from "../src/core/types.ts";
 import { fits, show, type TypeEnv } from "../src/core/validate/typing.ts";
 import { validateRevision } from "./validate_helpers.ts";
@@ -536,7 +536,7 @@ interface World extends Sides {
 
 function sidesOf(definitions: Definitions): Sides {
   const table = new TypeTable();
-  table.load(definitions);
+  loadGraph(table, definitions);
   return { table, env: envOf(definitions) };
 }
 

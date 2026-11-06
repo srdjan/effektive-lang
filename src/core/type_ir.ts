@@ -1,8 +1,9 @@
 // Conversion between IR type trees and interned types. Each function reads or
 // writes through the public methods of one `TypeTable`.
 
-import type { FunctionType, Type } from "./ir.ts";
-import type { TypeRef, TypeTable } from "./types.ts";
+import type { ErrorId, Field, FunctionType, Type, TypeId } from "./ir.ts";
+import type { Predicate } from "./predicates.ts";
+import { guardedRecord, type TypeRef, type TypeTable } from "./types.ts";
 import { canonicalJson, compareText } from "./util.ts";
 
 /** Interns an IR type tree. Unions flatten and sort, records sort. */
@@ -226,4 +227,93 @@ export function functionTypeToIr(
     result: typeToIr(table, node.result),
     effects: { failures: node.failures, requirements: node.requirements },
   };
+}
+
+/** What a graph of imported declarations supplies to the table. */
+export interface DefinitionSource {
+  readonly types: readonly {
+    readonly id: TypeId;
+    readonly opaque?: boolean;
+    readonly predicate?: Predicate;
+    readonly definition:
+      | { readonly kind: "alias"; readonly type: Type }
+      | {
+        readonly kind: "nominal";
+        readonly base: Type;
+        readonly tagged?: true;
+        readonly sealed?: true;
+      };
+  }[];
+  readonly errors: readonly {
+    readonly id: ErrorId;
+    readonly fields: readonly Field[];
+  }[];
+}
+
+/**
+ * Registers the declarations of an imported module graph. A definition that
+ * the table already has stays as it is.
+ */
+export function loadGraph(table: TypeTable, source: DefinitionSource): void {
+  // The table registers the declarations one at a time, so a tag alias may
+  // come after the alias that uses it. The source lists all of them.
+  const aliasTypes = new Map<string, Type>();
+  for (const decl of source.types) {
+    if (decl.definition.kind === "alias") {
+      aliasTypes.set(decl.id, decl.definition.type);
+    } else if (decl.definition.tagged !== true && decl.opaque !== true) {
+      aliasTypes.set(decl.id, decl.definition.base);
+    }
+  }
+  const tagOf = (type: Type): string | undefined => {
+    const seen = new Set<string>();
+    let current: Type | undefined = type;
+    while (current !== undefined) {
+      if (current.kind === "literal") {
+        return typeof current.value === "string" ? current.value : undefined;
+      }
+      if (current.kind !== "named" || seen.has(current.id)) return undefined;
+      seen.add(current.id);
+      current = aliasTypes.get(current.id);
+    }
+    return undefined;
+  };
+  for (const decl of source.types) {
+    if (table.isDefined(decl.id)) continue;
+    if (decl.definition.kind === "alias") {
+      table.defineAlias(
+        decl.id,
+        typeFromIr(table, decl.definition.type),
+        guardedRecord(decl.definition.type, decl.id, tagOf),
+      );
+    } else if (decl.opaque === true) {
+      table.defineOpaque(decl.id);
+    } else {
+      // A nominal type is an alias with identity. A tagged one is a tagged record.
+      const body = typeFromIr(table, decl.definition.base);
+      const sealed = decl.definition.sealed === true;
+      if (decl.definition.tagged === true) {
+        table.defineTagged(decl.id, body, sealed, decl.predicate);
+      } else {
+        table.defineIdentity(
+          decl.id,
+          body,
+          sealed,
+          guardedRecord(decl.definition.base, decl.id, tagOf),
+          decl.predicate,
+        );
+      }
+    }
+  }
+  for (const decl of source.errors) {
+    if (table.isDefined(decl.id)) continue;
+    table.defineError(
+      decl.id,
+      table.record(decl.fields.map((f) => ({
+        name: f.name,
+        type: typeFromIr(table, f.type),
+        optional: f.optional,
+      }))),
+    );
+  }
 }

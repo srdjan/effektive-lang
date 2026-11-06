@@ -46,7 +46,7 @@ import {
   type TypeRef,
   type TypeTable,
 } from "./types.ts";
-import { typeToIr } from "./type_ir.ts";
+import { loadGraph, typeToIr } from "./type_ir.ts";
 import { showType } from "./type_show.ts";
 import {
   declarationId,
@@ -1131,7 +1131,7 @@ export function checkModuleDeclarations(
 ): ModuleDeclarations {
   const services = new Map<ServiceId, ServiceDecl>();
   for (const graph of imported.values()) {
-    table.load(graph);
+    loadGraph(table, graph);
     for (const service of graph.services) services.set(service.id, service);
   }
   const env: TypeEnv = {

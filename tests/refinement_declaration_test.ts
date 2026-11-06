@@ -7,7 +7,11 @@ import type { TypeId } from "../src/core/ir.ts";
 import { parse } from "../src/core/parse.ts";
 import { memoryHost } from "../src/core/frontend.ts";
 import { childrenOf, kindName } from "../src/core/syntax.ts";
-import { functionTypeFromIr, functionTypeToIr } from "../src/core/type_ir.ts";
+import {
+  functionTypeFromIr,
+  functionTypeToIr,
+  loadGraph,
+} from "../src/core/type_ir.ts";
 import { TypeTable } from "../src/core/types.ts";
 
 function checkDeclarations(text: string) {
@@ -131,7 +135,7 @@ Deno.test("type tables preserve predicates and reject unproved adoption", () => 
   );
 
   const loaded = new TypeTable();
-  loaded.load({
+  loadGraph(loaded, {
     types: checked.declarations.types,
     errors: checked.declarations.errors,
   });
