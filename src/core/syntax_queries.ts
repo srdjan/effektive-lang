@@ -48,6 +48,20 @@ export function tokenKindOf(
     : undefined;
 }
 
+function isWordToken(
+  tree: SyntaxTree,
+  node: NodeId | undefined,
+  word: ContextualWord,
+): boolean {
+  return node !== undefined && tokenKindOf(tree, node) === TokenKind.Ident &&
+    tree.text.slice(tree.starts[node], tree.ends[node]) === word;
+}
+
+/** The index of the leading word child of a node: the first child, or the one after `export`. */
+function headIndex(tree: SyntaxTree, children: Uint32Array): number {
+  return tokenKindOf(tree, children[0]) === TokenKind.KwExport ? 1 : 0;
+}
+
 /**
  * True when the parser wrote the contextual modifier `word` as the leading
  * word token of `node`: the first child, or the one after `export`. The check
@@ -59,10 +73,19 @@ export function hasModifier(
   word: ContextualWord,
 ): boolean {
   const children = childrenOf(tree, node);
-  const head =
-    children[tokenKindOf(tree, children[0]) === TokenKind.KwExport ? 1 : 0];
-  return head !== undefined && tokenKindOf(tree, head) === TokenKind.Ident &&
-    tree.text.slice(tree.starts[head], tree.ends[head]) === word;
+  return isWordToken(tree, children[headIndex(tree, children)], word);
+}
+
+/**
+ * True for `opaque type`: the leading word token `opaque` is followed by the
+ * word token `type`. After `opaque` without `type`, the parser writes a Missing
+ * node and the declaration is not opaque.
+ */
+export function isOpaqueTypeDecl(tree: SyntaxTree, decl: NodeId): boolean {
+  const children = childrenOf(tree, decl);
+  const head = headIndex(tree, children);
+  return isWordToken(tree, children[head], "opaque") &&
+    isWordToken(tree, children[head + 1], "type");
 }
 
 /** The text of a Name node, or undefined when the parser did not read an identifier. */

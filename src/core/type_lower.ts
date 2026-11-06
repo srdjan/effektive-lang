@@ -668,7 +668,7 @@ export class TypeLowerer {
         : this.lower(typeNode);
       result.push({
         name,
-        borrow: /^borrow\s+/.test(nodeText(this.tree, param)),
+        borrow: hasModifier(this.tree, param, "borrow"),
         id: target?.kind === "local" ? target.id : undefined,
         type,
         annotated: typeNode !== undefined,

@@ -56,7 +56,7 @@ import {
   isServiceId,
   isTypeId,
 } from "./ids.ts";
-import { initOf, isTypeKind } from "./syntax_queries.ts";
+import { initOf, isOpaqueTypeDecl, isTypeKind } from "./syntax_queries.ts";
 import { compareText } from "./util.ts";
 import {
   checkedInputFlags,
@@ -305,9 +305,7 @@ class ModuleChecker {
   private checkType(entry: DeclEntry): TypeNodeInfo {
     const id = this.id("type", entry.name);
     const body = this.bodyOf(entry);
-    const opaque = /^(?:export\s+)?opaque\s+type\b/.test(
-      nodeText(this.tree, entry.node),
-    );
+    const opaque = isOpaqueTypeDecl(this.tree, entry.node);
     let definition: TypeDecl["definition"];
     let kind: "alias" | "identity" = "alias";
     let literal: LoweredField[] | undefined;
