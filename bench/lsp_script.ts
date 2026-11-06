@@ -27,8 +27,6 @@ import {
   LspClientError,
 } from "./lsp_client.ts";
 
-// ------------------------------------------------------------------ errors
-
 export type LspBenchError =
   | { readonly tag: "setup"; readonly message: string }
   | { readonly tag: "server"; readonly message: string }
@@ -74,8 +72,6 @@ function serverError(error: unknown): LspBenchError {
   }
   throw error;
 }
-
-// ------------------------------------------------------------------ inputs
 
 export type LspInputName = "examples" | SizeName;
 
@@ -193,8 +189,6 @@ export function applyCompanionEdit(text: string, revision: number): string {
   return markRevision(next, revision);
 }
 
-// ------------------------------------------------------------------ temporary projects
-
 /** The prefix of this process's harness directories, so cleanup checks ignore other runs. */
 export const TEMP_PREFIX = `effektive-bench-lsp-${Deno.pid}-`;
 
@@ -217,8 +211,6 @@ function writeProject(
   }
   return succeed(dir);
 }
-
-// ------------------------------------------------------------------ session
 
 /** The options of one session beyond the documents it opens. */
 export interface SessionOptions {
@@ -252,7 +244,6 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === "string");
 }
 
-/** Narrows a stats reply. */
 export function parseStats(value: unknown): Result<StepStats, LspBenchError> {
   const bad = (message: string) =>
     fail<StepStats>({ tag: "protocol", message });
@@ -743,8 +734,6 @@ export class Session {
   }
 }
 
-// ------------------------------------------------------------------ workspace
-
 /**
  * The temporary directories and servers of one measurement. `dispose` ends the
  * servers and removes the directories. It is safe to call twice, and it runs
@@ -778,7 +767,6 @@ export class Workspace {
     return succeed(started.value.session);
   }
 
-  /** Shuts down every session in order. */
   async finish(): Promise<Result<null, LspBenchError>> {
     for (const session of this.#sessions) {
       const done = await session.finish();

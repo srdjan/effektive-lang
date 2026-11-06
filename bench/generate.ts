@@ -58,8 +58,6 @@ export function allFiles(project: GeneratedProject): Map<string, string> {
   return new Map([...project.sources, ...project.hostModules]);
 }
 
-// ------------------------------------------------------------------ random
-
 /** A small seeded generator (mulberry32). */
 export function makeRandom(seed: number): () => number {
   let state = seed >>> 0;
@@ -71,8 +69,6 @@ export function makeRandom(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-
-// ------------------------------------------------------------------ fixed text
 
 /**
  * The alias declarations that rule R1 requires. A primitive type can occur
@@ -146,8 +142,6 @@ export const GateLive: Layer.Layer<Gate> = Layer.succeed(Gate)({
   charge: (amount) => Effect.succeed(String(amount)),
 });
 `;
-
-// ------------------------------------------------------------------ templates
 
 /** The names in a module that later declarations use. */
 interface ModuleNames {
@@ -328,8 +322,6 @@ const TEMPLATES: readonly Template[] = [
       : [`export const via${n} = (x: Int): Int => ${names.link}(x) + 1`],
 ];
 
-// ------------------------------------------------------------------ the project
-
 function moduleName(index: number): string {
   return `m${String(index).padStart(2, "0")}`;
 }
@@ -412,7 +404,6 @@ export function generateProject(options: GenerateOptions): GeneratedProject {
   let remaining = total;
 
   for (let index = 0; index < moduleCount; index++) {
-    // Spread the declarations evenly over the modules.
     const share = Math.ceil(remaining / (moduleCount - index));
     remaining -= share;
     const opening = prologue(index, index === editIndex);
@@ -488,8 +479,6 @@ export function countDeclarations(project: GeneratedProject): number {
   return count;
 }
 
-// ------------------------------------------------------------------ edits
-
 /**
  * A body edit: changes a literal in the body of `bump`. The interface of the
  * module does not change. Revision `k` writes the literal `k`.
@@ -555,8 +544,6 @@ export function applyExamplesBodyEdit(text: string, revision: number): string {
     `$1${revision}"`,
   );
 }
-
-// ------------------------------------------------------------------ command line
 
 /** Writes a generated project to a directory: `deno run bench/generate.ts <size> <dir>`. */
 if (import.meta.main) {

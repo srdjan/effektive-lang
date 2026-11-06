@@ -67,8 +67,6 @@ import {
 } from "./stats.ts";
 import { byTurn } from "./pairs.ts";
 
-// ------------------------------------------------------------------ types
-
 export const STAGES = [
   "lex",
   "parse",
@@ -171,8 +169,6 @@ export interface M2Result {
   readonly sizes: readonly SizeResult[];
 }
 
-// ------------------------------------------------------------------ prepared input
-
 interface Prepared {
   /** `.eff` and `.effi` files, sorted by path. */
   readonly sourceFiles: readonly (readonly [string, string])[];
@@ -195,8 +191,6 @@ function prepare(project: GeneratedProject): Prepared {
     entries: paths.filter((p) => p.endsWith(".eff")),
   };
 }
-
-// ------------------------------------------------------------------ one pipeline run
 
 export interface PipelineRun {
   readonly times: StageTimes;
@@ -370,8 +364,6 @@ function runPipeline(input: Prepared): Result<PipelineRun, M2Error> {
   };
 }
 
-// ------------------------------------------------------------------ the gate
-
 /** The first checksum seen for each key. A later different one is an error value. */
 export class ChecksumGate {
   private readonly seen = new Map<string, string>();
@@ -387,8 +379,6 @@ export class ChecksumGate {
       : { tag: "checksum-mismatch", where, expected, actual };
   }
 }
-
-// ------------------------------------------------------------------ stage runs
 
 function measureStages(
   input: Prepared,
@@ -437,8 +427,6 @@ function measureStages(
   }));
   return { ok: true, value: { stages, checksum: sum } };
 }
-
-// ------------------------------------------------------------------ incremental path
 
 interface StepSample {
   readonly kind: StepKind;
@@ -606,8 +594,6 @@ function measureSteps(
   };
 }
 
-// ------------------------------------------------------------------ the run
-
 /** Runs M2 for each configured size. A failed gate gives an error value and no time. */
 export function runM2(config: M2Config): Result<M2Result, M2Error> {
   const sizes: SizeResult[] = [];
@@ -645,8 +631,6 @@ export function runM2(config: M2Config): Result<M2Result, M2Error> {
   }
   return { ok: true, value: { seed: config.seed, sizes } };
 }
-
-// ------------------------------------------------------------------ the report
 
 export const TOKEN_NOTE =
   "Token representation (object arrays against typed arrays): not run. " +

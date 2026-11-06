@@ -61,8 +61,6 @@ export function noiseFloor(pairs: readonly Pair[]): NoiseFloor {
   };
 }
 
-// ------------------------------------------------------------------ checksum
-
 /**
  * A fast 53-bit string hash (cyrb53) as 14 hex digits. The checksum gate uses
  * it over emitted text. It is not a cryptographic hash.
@@ -82,8 +80,6 @@ export function checksum(text: string): string {
   const value = 4294967296 * (2097151 & h2) + (h1 >>> 0);
   return value.toString(16).padStart(14, "0");
 }
-
-// ------------------------------------------------------------------ tables
 
 export function fixed(value: number, digits: number): string {
   return Number.isFinite(value) ? value.toFixed(digits) : "n/a";

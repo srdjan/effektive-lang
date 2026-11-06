@@ -61,8 +61,6 @@ export const VARIANT_NAMES = {
   tsgo: `tsgo ${TSGO_VERSION} cold process`,
 } as const;
 
-// ------------------------------------------------------------------ helpers
-
 function firstLines(text: string, count: number): string {
   return text.trim().split("\n").slice(0, count).join(" | ");
 }
@@ -137,8 +135,6 @@ function exists(path: string): boolean {
     return false;
   }
 }
-
-// ------------------------------------------------------------------ the TypeScript API
 
 /** The part of the TypeScript API that the warm variant uses. */
 interface TsApi {
@@ -260,8 +256,6 @@ function createService(
   };
 }
 
-// ------------------------------------------------------------------ the run
-
 type Sampler = (mark: string) => Promise<Result<number, string>>;
 
 async function sampleVariant(
@@ -290,7 +284,6 @@ async function sampleVariant(
   return { ok: true, value: { variant: name, target, samples, pairs } };
 }
 
-/** Runs the process variant: write the marked file, then time one process. */
 function processSampler(
   directory: string,
   target: Target,

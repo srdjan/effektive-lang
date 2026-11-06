@@ -98,7 +98,6 @@ export async function runM1(
         const change: Pair[] = [];
         const hover: Pair[] = [];
         for (let i = 0; i < entry.warmups + entry.steps; i++, turn++) {
-          // Alternate which side goes first.
           const [first, second] = byTurn(turn, a.value, b.value);
           const one = await stepOn(first, kind);
           if (!one.ok) return one;

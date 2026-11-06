@@ -70,8 +70,6 @@ export interface M5Result {
   readonly variants?: VariantOutcome;
 }
 
-// ------------------------------------------------------------------ the check
-
 /** Runs `deno check` once and returns the wall time of the call in milliseconds. */
 async function timeCheck(
   directory: string,
@@ -130,7 +128,6 @@ async function measureTarget(
       const second = await cold();
       if (!second.ok) return second;
       samples.push(first.value, second.value);
-      // Alternate which run counts as side A.
       pairs.push(byTurn(k, first.value, second.value));
     }
     // The control: the same input again. The type-check cache answers.
@@ -149,7 +146,6 @@ async function measureTarget(
   }, { tolerateRemoveFailure: true });
 }
 
-/** Runs M5 for the examples and the configured synthetic sizes. */
 export async function runM5(
   config: M5Config,
 ): Promise<Result<M5Result, M5Error>> {
@@ -176,8 +172,6 @@ export async function runM5(
   if (!variants.ok) return variants;
   return { ok: true, value: { targets: results, variants: variants.value } };
 }
-
-// ------------------------------------------------------------------ the report
 
 export function formatM5(result: M5Result, config: M5Config): string {
   const out: string[] = [];

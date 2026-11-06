@@ -13,7 +13,6 @@ import type { M7Config } from "./m7.ts";
 
 export type ProfileName = "quick" | "full";
 
-/** The seed of the synthetic projects. */
 export const SEED = 1;
 
 interface Scale {
