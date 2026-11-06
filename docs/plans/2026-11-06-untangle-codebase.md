@@ -389,13 +389,16 @@ Each row names the commits on `main` and the main-tree gate result.
 | UNU4 | `1094d8d` to `8abfb9e` (6 commits) | passed, 2909 fast and 285 slow tests |
 | UNU9 | `c1b4fc7`, `cbd0d69`, `d44a98f`, `242a1df`, and Opus fix `9212709` (the schema loads through `frontend.ts`; literal test values) | passed, 2919 fast and 285 slow tests; `logs:replay` exits 0 for the six fixture logs |
 | UNU11 | `19877bb`, `f60928f`, `eccf608`, `9b7edb7`, and Opus fix `7a4ae47` (the `writableModules` wrapper goes) | passed, 2919 fast and 285 slow tests |
+| UNU10 | `1995b63`, `0ff62a8`, `45acb4a`, `9b2fc2c`, `ef73b41` | passed, 2924 fast and 285 slow tests; browser check passed (see below) |
 
 Decisions made at integration:
 
 - UNU6b puts the lowering block list on `CheckedProject.blocked`, not on each checked module, because checked modules are shared across revisions and the block depends on project diagnostics. A test or tool that forges a checked project without diagnostics must also clear `blocked`.
 - UNU4 shares no walker for E.H8: the stopping rules of `containsFunction`, `checkKind`, and `needsFieldAdapter` differ. E.H8 moves to the kept list.
 - UNU4 defines the mark payload type in `doc.ts`, because a definition in `emitted_module.ts` makes a type cycle. The renderer is private to the emitter.
-- UNU11 removes the warning filter of the playground `tabCounts`, because `Severity` is only `"error"` (UND3). Three playground test expectations change for that reason only. G.N7 is partly done: `src/lsp/features.ts` still builds line starts for each call, because UNU10 owns that file. It is a follow-up after UNU10.
+- UNU11 removes the warning filter of the playground `tabCounts`, because `Severity` is only `"error"` (UND3). Three playground test expectations change for that reason only. G.N7 is partly done: `src/lsp/features.ts` still builds line starts for each call, because UNU10 owns that file. After UNU10, `features.ts` builds line starts once per request, so no follow-up is needed.
+- UNU10 shares the hover text "backend type: not available while the module has errors" as one core constant, and both clients branch on the hover backend tag, not on the text.
+- Browser check at `ef73b41` with Playwright: a `.effi` tab shows no saving label; hover on `getUser` shows the Contract and Backend type blocks as code; after a breaking edit, the output pane shows the last good text under the banner, the saving label goes, the tabs show the error counts, and hover on a module with errors shows the unavailable note as plain text; after undo, the banner is hidden and the saving label returns.
 - UNU9 keeps field reads in the log readers loose, because old-log replay must stay tolerant. The writers are typed.
 
 The failure probe of `behavior:compare` is the pair `f9b358f~1 f9b358f`. It exits 1. The earlier pair `3ab7c4b 30bb1d5` gives identical corpus output, so it cannot probe a failure.
