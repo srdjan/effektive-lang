@@ -24,17 +24,9 @@ for (const module of [...emitExamples().values(), ...traverse.values()]) {
   console.log(`wrote fixtures/golden/${module.path}`);
 }
 
-const resourceCase = [
-  "type Int = int",
-  "service Jobs { open(): { read: () => Int, close: () => void }; next(): Int }",
-  "export const resource = (): Int with Jobs.open => withResource(() => Jobs.open(), (job) => job.read(), (job) => job.close())",
-  "const batches = (source: Stream<Int>) => transduceStream(source, takeSink(2))",
-  "const numberSchema: Schema<Int> = schema()",
-  "export const decoded = (input: unknown): Int fails SchemaError => schemaDecode(numberSchema, input)",
-  "export const encoded = (input: Int): Int fails SchemaError => schemaEncode(numberSchema, input)",
-  "export const made = (input: Int): Int fails SchemaIssue => schemaMake(numberSchema, input)",
-  "",
-].join("\n");
+const resourceCase = Deno.readTextFileSync(
+  new URL("../fixtures/ir/resource-case.eff", import.meta.url),
+);
 
 const baseline = [
   exampleFiles(),
