@@ -7,7 +7,8 @@ import {
   memoryHost,
   type Project,
 } from "../src/core/frontend.ts";
-import { loadProject, parseConfig } from "../src/core/project.ts";
+import { loadProject } from "../src/core/project.ts";
+import { parseConfig } from "../src/core/project_config.ts";
 import { moduleNameOf, normalizeRelative } from "../src/core/paths.ts";
 import { diskHost, listEffFiles } from "./helpers.ts";
 

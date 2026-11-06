@@ -53,14 +53,13 @@ import { buildInterface, type ModuleInterface } from "./interface.ts";
 import type { ModuleIR } from "./ir.ts";
 import { type LowerError, lowerModule } from "./lower.ts";
 import {
-  type ConfigError,
   type FileParser,
   type ModuleInfo,
   type ParsedFile,
   parseFileFresh,
   type Project,
-  type ProjectConfig,
 } from "./project.ts";
+import type { ConfigError, ProjectConfig } from "./project_config.ts";
 import { isSourcePath, joinPath } from "./paths.ts";
 import type { ModuleResolution } from "./resolve.ts";
 import { memoryHost, type Result } from "./source.ts";

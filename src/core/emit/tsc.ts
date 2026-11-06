@@ -14,7 +14,7 @@
 
 import { type Diagnostic, makeDiagnostic } from "../diagnostics.ts";
 import type { Span } from "../ir.ts";
-import type { ProjectConfig } from "../project.ts";
+import type { ProjectConfig } from "../project_config.ts";
 import {
   hostAssertionAtOffset,
   mapOffset,

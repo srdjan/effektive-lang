@@ -6,7 +6,7 @@ import { fieldHelperDeclarations } from "./fields.ts";
 import type { Declaration, ModuleIR, TypeDecl } from "../ir.ts";
 import type { Result } from "../result.ts";
 import { generatedHeader, isInterfacePath } from "../paths.ts";
-import type { ProjectConfig } from "../project.ts";
+import type { ProjectConfig } from "../project_config.ts";
 import { bracketed, type Doc, hard, render, spanned } from "./doc.ts";
 import {
   DeclarationEmitter,

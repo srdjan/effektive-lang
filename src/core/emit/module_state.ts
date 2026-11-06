@@ -28,7 +28,7 @@ import {
   normalizeRelative,
   relativeSpecifier,
 } from "../paths.ts";
-import type { ProjectConfig } from "../project.ts";
+import type { ProjectConfig } from "../project_config.ts";
 import { compareText } from "../util.ts";
 import { internal } from "./failure.ts";
 import { moduleOfId, nameOfId } from "./identity.ts";

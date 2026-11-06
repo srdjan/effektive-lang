@@ -2,12 +2,8 @@
 // collect all diagnostics. Expected failures are values; nothing throws.
 
 import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";
-import {
-  type ConfigError,
-  type FileParser,
-  loadProject,
-  type Project,
-} from "./project.ts";
+import { type FileParser, loadProject, type Project } from "./project.ts";
+import type { ConfigError } from "./project_config.ts";
 import { type ModuleResolution, resolveProject } from "./resolve.ts";
 import type { Result, SourceHost } from "./source.ts";
 

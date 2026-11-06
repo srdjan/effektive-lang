@@ -17,7 +17,7 @@ below are under `src/core/` unless a path starts with another directory.
 | Stage | Main files | Result |
 | --- | --- | --- |
 | Lex and parse | `lex.ts`, `parse.ts`, `syntax.ts`, `syntax_queries.ts` | A lossless syntax tree with error recovery, and `syntax` diagnostics. |
-| Project, index, and resolve | `project.ts`, `declaration_index.ts`, `resolve.ts`, `analyze.ts` | The module graph from `effektive.json`, the declaration index of each file, and names resolved to identities. |
+| Project, index, and resolve | `project_config.ts`, `project.ts`, `declaration_index.ts`, `resolve.ts`, `analyze.ts` | The module graph from `effektive.json`, the declaration index of each file, and names resolved to identities. |
 | Types | `types.ts`, `type_ir.ts`, `type_show.ts` | The interned type table, compatibility rules, and readable type text. |
 | Declaration check | `signatures.ts`, `type_lower.ts`, `check_declarations.ts` | The signature model, the lowering of type nodes to interned types, and `ModuleChecker` for types, errors, services, providers, and constants. |
 | Body check | `check_expr.ts`, `check_patterns.ts`, `check_binary.ts`, `check_builtins/`, `infer_inputs.ts`, `infer_contracts.ts`, `modes.ts` | Types, effects, execution modes, contracts, and match coverage of each body. |

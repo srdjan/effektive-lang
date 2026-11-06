@@ -33,7 +33,7 @@ export { lowerModule, lowerProject } from "./lower.ts";
 export type { LowerError } from "./lower.ts";
 export { serializeModule } from "./serialize.ts";
 // The project file and the source host.
-export { CONFIG_FILE, describeConfigError } from "./project.ts";
+export { CONFIG_FILE, describeConfigError } from "./project_config.ts";
 export {
   generatedHeader,
   generatedPathOf,
@@ -42,7 +42,8 @@ export {
   isModulePath,
   joinPath,
 } from "./paths.ts";
-export type { ConfigError, Project, ProjectConfig } from "./project.ts";
+export type { Project } from "./project.ts";
+export type { ConfigError, ProjectConfig } from "./project_config.ts";
 export { lineIndexOf, lineStarts, memoryHost, positionOf } from "./source.ts";
 export type { ReadError, Result, SourceEdit, SourceHost } from "./source.ts";
 export { compareText, errorMessage, isRecord } from "./util.ts";

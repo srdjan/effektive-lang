@@ -65,7 +65,8 @@ import type {
   ValueId,
 } from "./ir.ts";
 import { type Solved, solveModeGroup } from "./modes.ts";
-import type { ConfigError, ModuleInfo } from "./project.ts";
+import type { ModuleInfo } from "./project.ts";
+import type { ConfigError } from "./project_config.ts";
 import type { Result, SourceHost } from "./source.ts";
 import {
   kindOf,

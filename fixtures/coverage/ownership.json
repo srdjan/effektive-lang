@@ -92,6 +92,7 @@
       "src/core/predicate_source.ts",
       "src/core/predicates.ts",
       "src/core/project.ts",
+      "src/core/project_config.ts",
       "src/core/recursion_guard.ts",
       "src/core/requirement_provenance.ts",
       "src/core/resolve.ts",
