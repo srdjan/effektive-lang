@@ -5,6 +5,7 @@ import type {
   SolverLimits,
   UnsatProof,
 } from "../predicates.ts";
+import { isRecord } from "./serialization.ts";
 
 type CertificateError =
   | { readonly tag: "invalid-certificate"; readonly message: string }
@@ -51,7 +52,7 @@ export function verifyCertificate(
     );
   }
   if (
-    !isObject(certificate) ||
+    !isRecord(certificate) ||
     (certificate.claim !== "proved" && certificate.claim !== "disproved") ||
     !isUnsatProof(certificate.proof)
   ) {
@@ -88,7 +89,7 @@ function checkBranch(
     const signed = task.pending.pop();
     if (signed === undefined) break;
     const node = signed.predicate;
-    if (!isObject(node) || typeof node.kind !== "string") {
+    if (!isRecord(node) || typeof node.kind !== "string") {
       return failure("invalid-predicate", "a predicate is not an object");
     }
     if (node.kind === "constant") {
@@ -103,7 +104,7 @@ function checkBranch(
       continue;
     }
     if (node.kind === "not") {
-      if (!isObject(node.operand)) {
+      if (!isRecord(node.operand)) {
         return failure(
           "invalid-predicate",
           "a not node has no predicate operand",
@@ -266,7 +267,7 @@ function decodeConstraint(
 }
 
 function decodeTerm(term: unknown): Result<string, CertificateError> {
-  if (!isObject(term) || typeof term.kind !== "string") {
+  if (!isRecord(term) || typeof term.kind !== "string") {
     return failure("invalid-predicate", "a term is not an object");
   }
   if (term.kind === "zero") return { ok: true, value: "zero" };
@@ -295,12 +296,8 @@ function decodeTerm(term: unknown): Result<string, CertificateError> {
   };
 }
 
-function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function isUnsatProof(value: unknown): value is UnsatProof {
-  return isObject(value) &&
+  return isRecord(value) &&
     (value.kind === "false" || value.kind === "split" ||
       value.kind === "negative-cycle");
 }

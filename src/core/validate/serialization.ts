@@ -10,7 +10,10 @@
 import type { ModuleIR, Span } from "../ir.ts";
 import { AREA, type Report } from "./report.ts";
 
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+/** True for a plain JSON object: not null and not an array. */
+export function isRecord(
+  value: unknown,
+): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
