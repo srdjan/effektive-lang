@@ -390,6 +390,7 @@ Each row names the commits on `main` and the main-tree gate result.
 | UNU9 | `c1b4fc7`, `cbd0d69`, `d44a98f`, `242a1df`, and Opus fix `9212709` (the schema loads through `frontend.ts`; literal test values) | passed, 2919 fast and 285 slow tests; `logs:replay` exits 0 for the six fixture logs |
 | UNU11 | `19877bb`, `f60928f`, `eccf608`, `9b7edb7`, and Opus fix `7a4ae47` (the `writableModules` wrapper goes) | passed, 2919 fast and 285 slow tests |
 | UNU10 | `1995b63`, `0ff62a8`, `45acb4a`, `9b2fc2c`, `ef73b41` | passed, 2924 fast and 285 slow tests; browser check passed (see below) |
+| UNU7 | `f73d493`, `1e6d3d0`, `2c0b478`, `ab67ab2`, `ae03246` | passed, 2925 fast and 285 slow tests |
 
 Decisions made at integration:
 
@@ -398,6 +399,7 @@ Decisions made at integration:
 - UNU4 defines the mark payload type in `doc.ts`, because a definition in `emitted_module.ts` makes a type cycle. The renderer is private to the emitter.
 - UNU11 removes the warning filter of the playground `tabCounts`, because `Severity` is only `"error"` (UND3). Three playground test expectations change for that reason only. G.N7 is partly done: `src/lsp/features.ts` still builds line starts for each call, because UNU10 owns that file. After UNU10, `features.ts` builds line starts once per request, so no follow-up is needed.
 - UNU10 shares the hover text "backend type: not available while the module has errors" as one core constant, and both clients branch on the hover backend tag, not on the text.
+- UNU7 records `Defect` arms as `ModuleResolution.defectArms`, not as a new target kind, because the editor index walks every target. The `layer` test reads the prelude `service-argument` role with the same text rule, so a program that declares its own `layer` gets no new diagnostic. C.X2 stays: rows with their own arity skip the shared prologue to keep the diagnostic order.
 - Browser check at `ef73b41` with Playwright: a `.effi` tab shows no saving label; hover on `getUser` shows the Contract and Backend type blocks as code; after a breaking edit, the output pane shows the last good text under the banner, the saving label goes, the tabs show the error counts, and hover on a module with errors shows the unavailable note as plain text; after undo, the banner is hidden and the saving label returns.
 - UNU9 keeps field reads in the log readers loose, because old-log replay must stay tolerant. The writers are typed.
 
