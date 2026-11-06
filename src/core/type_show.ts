@@ -25,7 +25,7 @@ export function showTypes(table: TypeReader, ...refs: TypeRef[]): string[] {
   for (const ref of refs) print(table, { shown, qualified: new Set() }, ref);
   const byName = new Map<string, string[]>();
   for (const id of shown) {
-    const name = idName(id);
+    const name = declaredName(id);
     byName.set(name, [...(byName.get(name) ?? []), id]);
   }
   const names: Names = {
@@ -36,7 +36,11 @@ export function showTypes(table: TypeReader, ...refs: TypeRef[]): string[] {
   return refs.map((ref) => print(table, names, ref));
 }
 
-function idName(id: string): string {
+/**
+ * The name that two ids can share: the part after the `#`. An id without a `#`
+ * is its own name, so a reserved id never collides with a declared name.
+ */
+function declaredName(id: string): string {
   const hash = id.indexOf("#");
   return hash < 0 ? id : id.slice(hash + 1);
 }
@@ -96,25 +100,25 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
       }${node.constructorDefault === true ? "ConstructorDefault" : ""}<${
         print(table, names, node.decoded)
       }, ${print(table, names, node.encoded)}, ${
-        node.decodeRequirements.map(idName).join(" | ") || "never"
-      }, ${node.encodeRequirements.map(idName).join(" | ") || "never"}${
+        node.decodeRequirements.map(shortName).join(" | ") || "never"
+      }, ${node.encodeRequirements.map(shortName).join(" | ") || "never"}${
         node.makeInput === undefined
           ? ""
           : `, ${print(table, names, node.makeInput)}`
       }>`;
     case "effect":
       return `Effect<${print(table, names, node.result)}, ${
-        node.failures.map(idName).join(" | ") || "never"
-      }, ${node.requirements.map(idName).join(" | ") || "never"}>`;
+        node.failures.map(shortName).join(" | ") || "never"
+      }, ${node.requirements.map(shortName).join(" | ") || "never"}>`;
     case "stream":
       return `Stream<${print(table, names, node.element)}, ${
-        node.failures.map(idName).join(" | ") || "never"
-      }, ${node.requirements.map(idName).join(" | ") || "never"}>`;
+        node.failures.map(shortName).join(" | ") || "never"
+      }, ${node.requirements.map(shortName).join(" | ") || "never"}>`;
     case "sink":
       return `Sink<${print(table, names, node.input)}, ${
         print(table, names, node.result)
-      }, ${node.failures.map(idName).join(" | ") || "never"}, ${
-        node.requirements.map(idName).join(" | ") || "never"
+      }, ${node.failures.map(shortName).join(" | ") || "never"}, ${
+        node.requirements.map(shortName).join(" | ") || "never"
       }${
         node.leftover === table.never
           ? ""
@@ -125,17 +129,17 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
         .join(", ");
       const fails = node.failures.length === 0
         ? ""
-        : ` fails ${node.failures.map(idName).join(" | ")}`;
+        : ` fails ${node.failures.map(shortName).join(" | ")}`;
       const withText = node.requirements.length === 0
         ? ""
-        : ` with ${node.requirements.map(idName).join(" | ")}`;
+        : ` with ${node.requirements.map(shortName).join(" | ")}`;
       const execution = node.execution === "pure" ? "pure " : "";
       return `${execution}(${parameters}) => ${
         print(table, names, node.result)
       }${fails}${withText}`;
     }
     case "provider":
-      return `provider provides ${node.provides.map(idName).join(" | ")}`;
+      return `provider provides ${node.provides.map(shortName).join(" | ")}`;
     case "error":
       return "<error>";
   }
