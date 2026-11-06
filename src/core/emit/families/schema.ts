@@ -1,6 +1,7 @@
 // Emission of the Schema builtins: Schema operations, make, decode, and encode.
 
 import type { Type } from "../../ir.ts";
+import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "../../ir.ts";
 import { type Doc, member } from "../doc.ts";
 import {
   at,
@@ -126,7 +127,7 @@ export function schemaStructural(
       const callback = args[1].type;
       const effectful = isEffectfulCallback(callback);
       const issueFailure = callback.kind === "function" &&
-        callback.effects.failures.includes("error:effect/SchemaIssue");
+        callback.effects.failures.includes(SCHEMA_ISSUE_ID);
       const deferred: Doc = [
         `${effect}.${effectful ? "suspend" : "sync"}(() => `,
         at(fallback, PREC.member),
@@ -151,7 +152,7 @@ export function schemaStructural(
         const source = c.scope.temp();
         const value = c.scope.temp();
         const issueDefault: Doc = callback.kind === "function" &&
-            callback.effects.failures.includes("error:effect/SchemaError")
+            callback.effects.failures.includes(SCHEMA_ERROR_ID)
           ? [
             `${effect}.mapError(`,
             deferred,
@@ -347,9 +348,7 @@ export function schemaStructural(
           ];
       const issueMode = (index: number) =>
         args[index].type.kind === "function" &&
-        args[index].type.effects.failures.includes(
-          "error:effect/SchemaIssue",
-        );
+        args[index].type.effects.failures.includes(SCHEMA_ISSUE_ID);
       const effectful = (index: number) =>
         isEffectfulCallback(args[index].type);
       return withSchemaView(emitted([

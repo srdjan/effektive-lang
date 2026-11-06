@@ -49,9 +49,11 @@ import { guardedRecord } from "./recursion_guard.ts";
 import { loadGraph, typeToIr } from "./type_ir.ts";
 import { showType } from "./type_show.ts";
 import {
+  capabilityId,
   declarationId,
   type DeclarationPrefix,
   isErrorId,
+  isServiceId,
   isTypeId,
 } from "./ids.ts";
 import { initOf, isTypeKind } from "./syntax_queries.ts";
@@ -207,7 +209,7 @@ class ModuleChecker {
           );
           return;
         }
-        if (id.startsWith("service:")) {
+        if (isServiceId(id)) {
           for (
             const method of this.env.services.get(id as ServiceId)?.methods ??
               []
@@ -821,8 +823,11 @@ class ModuleChecker {
         failures,
         [],
       );
-      const capability: CapabilityId =
-        `cap:${this.env.module}#${entry.name}.${method.name}`;
+      const capability: CapabilityId = capabilityId(
+        this.env.module,
+        entry.name,
+        method.name,
+      );
       this.methodTypes.set(capability, type.ref);
       methods.push({
         id: capability,

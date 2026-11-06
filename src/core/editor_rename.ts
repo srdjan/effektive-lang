@@ -1,3 +1,4 @@
+import { isModulePath, isSourcePath } from "./paths.ts";
 import {
   BUILTIN_TYPE_NAMES,
   PRELUDE_NAMES,
@@ -28,16 +29,14 @@ export function prepareRenameAt(
 ): RenameTarget | undefined {
   const hit = occurrenceAt(revision, path, offset);
   if (
-    hit?.declaration === undefined || !hit.declaration.source.endsWith(".eff")
+    hit?.declaration === undefined || !isSourcePath(hit.declaration.source)
   ) return undefined;
   if (
     ["field", "builtin", "builtin-type", "unresolved"].includes(hit.target.kind)
   ) return undefined;
   const occurrences = symbolIndex(revision).byIdentity.get(hit.identity) ?? [];
   if (
-    occurrences.some((o) =>
-      !o.span.source.endsWith(".eff") && !o.span.source.endsWith(".effi")
-    )
+    occurrences.some((o) => !isModulePath(o.span.source))
   ) {
     return undefined;
   }

@@ -1,5 +1,6 @@
 // Inlay hints for inferred parameter and effect contracts. Inline arrows get
 // no hint: shortcut, callback hints would add noise at every call site.
+import { isSourcePath } from "./paths.ts";
 import type { Revision } from "./db.ts";
 import {
   childrenOf,
@@ -67,7 +68,7 @@ export function inlayHintsAt(
   range: { readonly start: number; readonly end: number },
 ): readonly InlayHint[] {
   const module = revision.checkedModuleAt(path);
-  if (module === undefined || !path.endsWith(".eff")) return [];
+  if (module === undefined || !isSourcePath(path)) return [];
   const { tree } = module;
   const index = revision.moduleInfo(module.module)?.index;
   const hints: InlayHint[] = [];

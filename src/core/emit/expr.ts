@@ -25,7 +25,12 @@ import type {
   Type,
   ValueId,
 } from "../ir.ts";
-import { CLOSED_UNIT_IDS } from "../ir.ts";
+import {
+  CLOSED_UNIT_IDS,
+  SCHEMA_ERROR_ID,
+  SCHEMA_ISSUE_ID,
+  TIMEOUT_ERROR_ID,
+} from "../ir.ts";
 import { defectMessage } from "./outcome.ts";
 import {
   alt,
@@ -73,13 +78,12 @@ import {
   type Run,
 } from "./emitted.ts";
 import { internal } from "./failure.ts";
+import { type ExprScope, resolvedAs } from "./module_state.ts";
 import {
-  type ExprScope,
   methodOfCapability,
-  resolvedAs,
   serviceOfCapability,
   tokenOfId,
-} from "./module_state.ts";
+} from "./identity.ts";
 import { channelTypeArguments, typeArguments, typeDoc } from "./types.ts";
 import {
   type Callee,
@@ -91,7 +95,7 @@ import {
 } from "./calls.ts";
 import { evaluatedChildren, type ExprOf, isLeafExpr } from "./shape.ts";
 import { patternBinding } from "./walk.ts";
-import { builtinInstanceName, isLocalId } from "../ids.ts";
+import { builtinInstanceName, isLocalId, shortName } from "../ids.ts";
 
 // ------------------------------------------------------------------ precedence
 
@@ -382,8 +386,8 @@ function armEquality(left: string, right: Doc): ArmTest {
 
 /** The `_tag` value of an error: the Effect SchemaError class has a fixed tag. */
 function errorTag(id: string): string {
-  if (id === "error:effect/SchemaError") return "SchemaError";
-  return id === "error:effect/TimeoutError" ? "TimeoutError" : tokenOfId(id);
+  if (id === SCHEMA_ERROR_ID || id === TIMEOUT_ERROR_ID) return shortName(id);
+  return tokenOfId(id);
 }
 
 function isIntType(type: Type): boolean {
@@ -1418,7 +1422,7 @@ export class ExprEmitter implements ExprCore {
       case "duration":
         return armEquality(selector, this.literal(pattern.millis));
       case "error":
-        if (pattern.error === "error:effect/SchemaIssue") {
+        if (pattern.error === SCHEMA_ISSUE_ID) {
           return armEquality(
             `${this.scope.effect("SchemaIssue")}.isIssue(${selector})`,
             "true",
@@ -1818,12 +1822,8 @@ export class ExprEmitter implements ExprCore {
         callArguments(defect),
       ]);
     }
-    const issueHandler = e.handlers.find((h) =>
-      h.error === "error:effect/SchemaIssue"
-    );
-    const tagged = e.handlers.filter((h) =>
-      h.error !== "error:effect/SchemaIssue"
-    );
+    const issueHandler = e.handlers.find((h) => h.error === SCHEMA_ISSUE_ID);
+    const tagged = e.handlers.filter((h) => h.error !== SCHEMA_ISSUE_ID);
     const handlers = tagged.map((h: Handler) =>
       this.handlerEntry(
         JSON.stringify(errorTag(h.error)),

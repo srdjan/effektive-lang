@@ -22,7 +22,12 @@ import {
   kidsOf,
   nameTextOf,
 } from "./syntax_queries.ts";
-import { declarationId, type DeclarationPrefix } from "./ids.ts";
+import {
+  capabilityId,
+  declarationId,
+  type DeclarationPrefix,
+  localId,
+} from "./ids.ts";
 import type {
   CapabilityId,
   ErrorId,
@@ -474,7 +479,7 @@ class Resolver {
       if (first === undefined) seen.set(method.name, method);
       this.set(method.nameNode, {
         kind: "cap",
-        id: `cap:${this.name}#${decl.name}.${method.name}`,
+        id: capabilityId(this.name, decl.name, method.name),
       });
     }
   }
@@ -549,7 +554,7 @@ class Resolver {
     const key = `${this.fn}/${name}`;
     const count = (this.counters.get(key) ?? 0) + 1;
     this.counters.set(key, count);
-    const base: LocalId = `local:${this.name}#${this.fn}/${name}`;
+    const base: LocalId = localId(this.name, this.fn, name);
     const binding: LocalBinding = {
       id: count === 1 ? base : `${base}/${count}`,
       pending,
@@ -830,7 +835,7 @@ class Resolver {
     }
     const target: Target = {
       kind: "cap",
-      id: `cap:${info.module}#${info.entry.name}.${method}`,
+      id: capabilityId(info.module, info.entry.name, method),
     };
     this.set(methodNode, target);
     return target;

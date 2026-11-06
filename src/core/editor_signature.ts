@@ -1,5 +1,6 @@
 // Signature help for ordinary calls. The query reads checked callee types from
 // body tables and keeps LSP wire types outside the core.
+import { isSourcePath } from "./paths.ts";
 import type { Revision } from "./db.ts";
 import { moduleOfId } from "./ids.ts";
 import type { LocalId } from "./ir.ts";
@@ -175,7 +176,7 @@ export function signatureHelpAt(
   offset: number,
 ): SignatureHelp | undefined {
   const module = revision.checkedModuleAt(path);
-  if (module === undefined || !path.endsWith(".eff")) return undefined;
+  if (module === undefined || !isSourcePath(path)) return undefined;
   const { tree } = module;
   const tables = tablesOf(revision, module.module);
   let best:

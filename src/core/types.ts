@@ -16,7 +16,7 @@ import {
   SCHEMA_ISSUE_ID,
   TIMEOUT_ERROR_ID,
 } from "./ir.ts";
-import { isErrorId, isTypeId, moduleOfId } from "./ids.ts";
+import { isErrorId, isReservedErrorId, isTypeId, moduleOfId } from "./ids.ts";
 import type { Predicate } from "./predicates.ts";
 import { typeToIr } from "./type_ir.ts";
 import { canonicalJson, compareText, sortedUnique } from "./util.ts";
@@ -302,10 +302,10 @@ export class TypeTable {
     this.unknown = this.primitive("unknown");
     if (state !== undefined) return;
     this.defineError(
-      "error:effect/SchemaError",
+      SCHEMA_ERROR_ID,
       this.record([{ name: "message", type: this.string, optional: false }]),
     );
-    this.defineError("error:effect/SchemaIssue", this.record([]));
+    this.defineError(SCHEMA_ISSUE_ID, this.record([]));
     this.defineIdentity(DURATION_ID, this.int, false);
     this.defineIdentity(INSTANT_ID, this.int, false);
     this.defineError(
@@ -1117,8 +1117,7 @@ export function dataOnly(
     case "named": {
       if (
         rejects.reserved &&
-        (type.id === SCHEMA_ERROR_ID || type.id === SCHEMA_ISSUE_ID ||
-          type.id === TIMEOUT_ERROR_ID)
+        isReservedErrorId(type.id)
       ) return false;
       const record = isErrorId(type.id)
         ? table.errorRecordOf(type.id)

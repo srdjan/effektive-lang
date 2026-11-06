@@ -74,7 +74,8 @@ import {
 } from "./tables.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 import { functionTypeToIr, typeToIr } from "./type_ir.ts";
-import { builtinInstanceId } from "./ids.ts";
+import { bodyLocalId, builtinInstanceId, localId } from "./ids.ts";
+import { PRELUDE_MODULE } from "./paths.ts";
 
 // ------------------------------------------------------------------ errors
 
@@ -406,7 +407,7 @@ class BodyLowerer {
     while (this.ctx.identifiers.has(`$p${this.pipelines}`)) {
       this.pipelines += 1;
     }
-    return `local:${this.ctx.module}#${this.owner}/$p${this.pipelines}`;
+    return localId(this.ctx.module, this.owner, `$p${this.pipelines}`);
   }
 
   // -------------------------------------------------------------- expressions
@@ -530,7 +531,7 @@ class BodyLowerer {
       const source = fact.parameters[0];
       const outcome = fact.parameters[1];
       const outcomeName = this.kidsOfKind(region, SyntaxKind.Name)[0];
-      const id: LocalId = `local:${this.body.declaration}/$using${region}`;
+      const id: LocalId = bodyLocalId(this.body.declaration, `$using${region}`);
       const parameters = source === undefined
         ? []
         : [this.parameter(id, source.name, source.type, this.span(parts[0]))];
@@ -1589,7 +1590,7 @@ function preludeImport(
   if (builtins.size === 0) return undefined;
   const entries = [...builtins].sort(([a], [b]) => compareText(a, b));
   return {
-    module: "effektive:prelude",
+    module: PRELUDE_MODULE,
     bindings: [],
     exports: entries.map(([id]) => id),
     values: entries.map(([id, builtin]) => ({

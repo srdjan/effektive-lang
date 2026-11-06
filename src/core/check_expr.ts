@@ -38,12 +38,7 @@ import {
   pattern,
   type PatternContext,
 } from "./check_patterns.ts";
-import {
-  DURATION_ID,
-  SCHEMA_ERROR_ID,
-  SCHEMA_ISSUE_ID,
-  TIMEOUT_ERROR_ID,
-} from "./ir.ts";
+import { DURATION_ID, SCHEMA_ERROR_ID } from "./ir.ts";
 import type {
   CapabilityId,
   ErrorId,
@@ -98,7 +93,13 @@ import {
 } from "./types.ts";
 import { sortedUnique } from "./util.ts";
 import { showType, showTypes } from "./type_show.ts";
-import { isErrorId, isTypeId, shortName } from "./ids.ts";
+import {
+  bodyLocalId,
+  isErrorId,
+  isReservedErrorId,
+  isTypeId,
+  shortName,
+} from "./ids.ts";
 import {
   type Arg,
   type BuiltinContext,
@@ -981,20 +982,11 @@ class BodyChecker
     id: ErrorId,
     args: readonly Arg[],
   ): NodeInfo {
-    if (
-      id === SCHEMA_ERROR_ID || id === SCHEMA_ISSUE_ID ||
-      id === TIMEOUT_ERROR_ID
-    ) {
+    if (isReservedErrorId(id)) {
       const infos = args.map((arg) => this.argInfo(arg));
       this.report(
         "type-mismatch/010",
-        `${
-          id === SCHEMA_ERROR_ID
-            ? "SchemaError"
-            : id === TIMEOUT_ERROR_ID
-            ? "TimeoutError"
-            : "SchemaIssue"
-        } cannot be constructed directly`,
+        `${shortName(id)} cannot be constructed directly`,
         node,
       );
       return this.finish(node, this.table.error, combine(infos));
@@ -2479,7 +2471,7 @@ class BodyChecker
     let name = `$record${node}`;
     while (this.tree.text.includes(name)) name += "$";
     const captured = {
-      id: `local:${this.body.declaration}/${name}` as LocalId,
+      id: bodyLocalId(this.body.declaration, name),
       name,
       type,
     };
@@ -2800,7 +2792,7 @@ class BodyChecker
     }
     let name = `$option${node}`;
     while (this.tree.text.includes(name)) name += "$";
-    const id: LocalId = `local:${this.body.declaration}/${name}`;
+    const id: LocalId = bodyLocalId(this.body.declaration, name);
     this.fact(node, {
       kind: "option-fallback",
       binding: { id, name, type: element },

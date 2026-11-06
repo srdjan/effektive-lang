@@ -3,14 +3,20 @@
 // malformed identity, so the editor queries never throw. The emitter wraps these
 // helpers and turns undefined into an internal failure.
 
-import type {
-  CapabilityId,
-  ErrorId,
-  LocalId,
-  ServiceId,
-  TypeId,
-  ValueId,
+import {
+  type CapabilityId,
+  type ErrorId,
+  type LocalId,
+  SCHEMA_ERROR_ID,
+  SCHEMA_ISSUE_ID,
+  type ServiceId,
+  TIMEOUT_ERROR_ID,
+  type TypeId,
+  type ValueId,
 } from "./ir.ts";
+
+const SERVICE_PREFIX = "service:";
+const CAPABILITY_PREFIX = "cap:";
 
 /** The prefixes of declaration identities. A provider has a value identity. */
 export type DeclarationPrefix = "type" | "error" | "service" | "value";
@@ -34,6 +40,17 @@ export function isErrorId(id: string): id is ErrorId {
   return id.startsWith("error:");
 }
 
+/** True for an identity such as `service:users#Users`. */
+export function isServiceId(id: string): id is ServiceId {
+  return id.startsWith(SERVICE_PREFIX);
+}
+
+/** True for one of the reserved Effect errors, which have no `#` and no source declaration. */
+export function isReservedErrorId(id: string): id is ErrorId {
+  return id === SCHEMA_ERROR_ID || id === SCHEMA_ISSUE_ID ||
+    id === TIMEOUT_ERROR_ID;
+}
+
 /** True for an identity such as `value:users#find`. */
 export function isValueId(id: string): id is ValueId {
   return id.startsWith("value:");
@@ -42,6 +59,37 @@ export function isValueId(id: string): id is ValueId {
 /** True for an identity such as `local:users#find/x`. */
 export function isLocalId(id: string): id is LocalId {
   return id.startsWith("local:");
+}
+
+/** The identity of a service method: `cap:users#Users.find`. */
+export function capabilityId(
+  module: string,
+  service: string,
+  method: string,
+): CapabilityId {
+  return `cap:${module}#${service}.${method}`;
+}
+
+/** The capability of a method of the service with identity `service:m#S`. */
+export function capabilityOfService(
+  service: ServiceId,
+  method: string,
+): CapabilityId {
+  return `cap:${service.slice(SERVICE_PREFIX.length)}.${method}`;
+}
+
+/** The identity of a local binding of a declaration: `local:users#find/x`. */
+export function localId(
+  module: string,
+  owner: string,
+  name: string,
+): LocalId {
+  return `local:${module}#${owner}/${name}`;
+}
+
+/** The identity of a local binding that the checker adds to a body: `local:value:users#find/$record3`. */
+export function bodyLocalId(declaration: ValueId, name: string): LocalId {
+  return `local:${declaration}/${name}`;
 }
 
 /** The identity of a closed builtin instance: `value:<module>#$builtin/<name>/<hash>`. */
@@ -95,7 +143,7 @@ export function serviceOfCapability(
   if (hash < 0) return undefined;
   const dot = capability.indexOf(".", hash);
   if (dot < 0) return undefined;
-  return `service:${capability.slice(4, dot)}`;
+  return `${SERVICE_PREFIX}${capability.slice(CAPABILITY_PREFIX.length, dot)}`;
 }
 
 /** The prefix after the kind of a reserved Effect identity, such as `error:effect/SchemaError`. */

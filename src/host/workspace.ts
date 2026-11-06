@@ -6,6 +6,7 @@ import {
   compareText,
   CONFIG_FILE,
   generatedSourceOf,
+  isModulePath,
   joinPath,
   type Result,
 } from "../core/mod.ts";
@@ -22,7 +23,7 @@ export function isSourcePath(path: string): boolean {
   const name = parts[parts.length - 1];
   const directories = parts.slice(0, -1);
   if (directories.some(skippedDirectory)) return false;
-  return name.endsWith(".eff") || name.endsWith(".effi") ||
+  return isModulePath(name) ||
     (directories.length === 0 && name === CONFIG_FILE);
 }
 

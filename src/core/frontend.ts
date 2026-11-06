@@ -38,6 +38,8 @@ export {
   generatedHeader,
   generatedPathOf,
   generatedSourceOf,
+  isInterfacePath,
+  isModulePath,
   joinPath,
 } from "./paths.ts";
 export type { ConfigError, Project, ProjectConfig } from "./project.ts";

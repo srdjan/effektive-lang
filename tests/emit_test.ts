@@ -8,7 +8,7 @@ import {
   memoryHost,
 } from "../src/core/frontend.ts";
 import { emitModule, emitProject } from "../src/core/typescript.ts";
-import { relativeSpecifier } from "../src/core/emit/module_state.ts";
+import { relativeSpecifier } from "../src/core/paths.ts";
 import {
   COMPANION_FILES,
   emitExamples,

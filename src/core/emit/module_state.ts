@@ -3,28 +3,35 @@
 // the module must print, and the host registry.
 
 import type {
-  CapabilityId,
   Declaration,
   DeclarationId,
   ErrorDecl,
   LocalId,
   ModuleIR,
   ServiceDecl,
-  ServiceId,
   Type,
   TypeDecl,
 } from "../ir.ts";
-import { CLOSED_UNIT_IDS, SCOPE_CAPABILITY } from "../ir.ts";
 import {
-  methodOfCapability as coreMethodOfCapability,
-  moduleOfId as coreModuleOfId,
-  nameOfId as coreNameOfId,
-  serviceOfCapability as coreServiceOfCapability,
-} from "../ids.ts";
-import { generatedPathOf, moduleNameOf, normalizeRelative } from "../paths.ts";
+  CLOSED_UNIT_IDS,
+  SCHEMA_ERROR_ID,
+  SCHEMA_ISSUE_ID,
+  TIMEOUT_ERROR_ID,
+} from "../ir.ts";
+import {
+  generatedPathOf,
+  hostKeyOf,
+  isHostLabel,
+  isInterfacePath,
+  isPreludeModule,
+  moduleNameOf,
+  normalizeRelative,
+  relativeSpecifier,
+} from "../paths.ts";
 import type { ProjectConfig } from "../project.ts";
 import { compareText } from "../util.ts";
 import { internal } from "./failure.ts";
+import { moduleOfId, nameOfId } from "./identity.ts";
 import { collectBinderNames } from "./walk.ts";
 
 const INT_TYPE: Type = { kind: "primitive", name: "int" };
@@ -108,83 +115,9 @@ export function resolvedAs<K extends Type["kind"]>(
   return resolved;
 }
 
-// ------------------------------------------------------------------ identities
-
-/** The module part of an identity such as `type:users#User`. */
-function moduleOfId(id: string): string {
-  const module = coreModuleOfId(id);
-  if (module === undefined) throw internal(`malformed identity ${id}`);
-  return module;
-}
-
-/** The declared name in an identity such as `type:users#User`. */
-export function nameOfId(id: string): string {
-  const name = coreNameOfId(id);
-  if (name === undefined) throw internal(`malformed identity ${id}`);
-  return name;
-}
-
-/** The text after the colon: the tag, service key, or identity token of the emitted code. */
-export function tokenOfId(id: string): string {
-  return id.slice(id.indexOf(":") + 1);
-}
-
-export function serviceOfCapability(capability: CapabilityId): ServiceId {
-  const service = coreServiceOfCapability(capability);
-  if (service === undefined) {
-    throw internal(`malformed capability ${capability}`);
-  }
-  return service;
-}
-
-export function methodOfCapability(capability: CapabilityId): string {
-  const method = coreMethodOfCapability(capability);
-  if (method === undefined) {
-    throw internal(`malformed capability ${capability}`);
-  }
-  return method;
-}
-
 /** The order of `deno fmt` for named imports: case-insensitive, then by code unit. */
 function compareImportNames(a: string, b: string): number {
   return compareText(a.toLowerCase(), b.toLowerCase()) || compareText(a, b);
-}
-
-/** Service identities of a capability list, sorted and unique. */
-export function servicesOf(
-  capabilities: readonly CapabilityId[],
-): ServiceId[] {
-  return [
-    ...new Set(
-      capabilities.filter((id) => id !== SCOPE_CAPABILITY).map(
-        serviceOfCapability,
-      ),
-    ),
-  ].sort(compareText);
-}
-
-// ------------------------------------------------------------------ paths
-
-function directoryOf(path: string): string[] {
-  const parts = path.split("/");
-  parts.pop();
-  return parts;
-}
-
-/** The import specifier from one root-relative file to another. */
-export function relativeSpecifier(fromFile: string, toFile: string): string {
-  const from = directoryOf(fromFile);
-  const to = toFile.split("/");
-  let common = 0;
-  while (
-    common < from.length && common < to.length - 1 &&
-    from[common] === to[common]
-  ) {
-    common += 1;
-  }
-  const ups = from.length - common;
-  const rest = to.slice(common).join("/");
-  return ups === 0 ? `./${rest}` : `${"../".repeat(ups)}${rest}`;
 }
 
 // ------------------------------------------------------------------ the scope
@@ -355,14 +288,14 @@ export class ModuleState
       for (const s of imported.services) this.foreignDecls.set(s.id, s);
     }
     for (const imported of ir.imports) {
-      if (imported.module === "effektive:prelude") continue;
+      if (isPreludeModule(imported.module)) continue;
       for (const binding of imported.bindings) {
         this.taken.add(binding.name);
       }
     }
     for (const imported of ir.imports) {
-      if (imported.module === "effektive:prelude") continue;
-      if (imported.module.startsWith("host:")) {
+      if (isPreludeModule(imported.module)) continue;
+      if (isHostLabel(imported.module)) {
         this.bindHost(imported.module, imported.bindings);
         continue;
       }
@@ -376,7 +309,7 @@ export class ModuleState
             this.isTypeOnly(binding.target),
           );
         // A companion module prints only the imports that its declarations use.
-        if (this.source.endsWith(".effi")) {
+        if (isInterfacePath(this.source)) {
           this.unusedImports.set(binding.target, use);
         } else use();
       }
@@ -390,7 +323,7 @@ export class ModuleState
       readonly target: DeclarationId;
     }[],
   ): void {
-    const key = label.slice("host:".length);
+    const key = hostKeyOf(label);
     const host = this.config.host.get(key);
     if (host === undefined) {
       throw internal(`the host module ${label} is not in the project file`);
@@ -627,13 +560,13 @@ export class ModuleState
   nameOf(id: DeclarationId): string {
     // `Duration` and `Instant` are numbers of milliseconds at run time.
     if (CLOSED_UNIT_IDS.has(id)) return "number";
-    if (id === "error:effect/SchemaError") {
+    if (id === SCHEMA_ERROR_ID) {
       return `${this.effect("Schema")}.SchemaError`;
     }
-    if (id === "error:effect/TimeoutError") {
+    if (id === TIMEOUT_ERROR_ID) {
       return `${this.effect("Cause")}.TimeoutError`;
     }
-    if (id === "error:effect/SchemaIssue") {
+    if (id === SCHEMA_ISSUE_ID) {
       return `${this.effect("SchemaIssue")}.Issue`;
     }
     const local = this.localDecls.get(id);

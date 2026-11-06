@@ -43,14 +43,13 @@ import {
 import { at } from "./emitted.ts";
 import { ExprEmitter } from "./expr.ts";
 import { internal } from "./failure.ts";
+import { isDeferredType, type ModuleState } from "./module_state.ts";
 import {
-  isDeferredType,
-  type ModuleState,
   nameOfId,
   serviceOfCapability,
   servicesOf,
   tokenOfId,
-} from "./module_state.ts";
+} from "./identity.ts";
 import {
   effectTypeDoc,
   encodedTypeDoc,

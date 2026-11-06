@@ -61,7 +61,7 @@ import {
   type Project,
   type ProjectConfig,
 } from "./project.ts";
-import { joinPath } from "./paths.ts";
+import { isSourcePath, joinPath } from "./paths.ts";
 import type { ModuleResolution } from "./resolve.ts";
 import { memoryHost, type Result } from "./source.ts";
 import { type TypeReader, TypeTable } from "./types.ts";
@@ -320,7 +320,7 @@ export class Program {
     for (const [path, text] of this.files) {
       hostFiles.set(joinPath(this.root, path), text);
     }
-    const entryPaths = [...this.files.keys()].filter((p) => p.endsWith(".eff"))
+    const entryPaths = [...this.files.keys()].filter(isSourcePath)
       .sort(compareText);
     const analyzed = analyzeProject(
       memoryHost(hostFiles),

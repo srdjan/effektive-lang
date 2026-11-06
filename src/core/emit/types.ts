@@ -26,7 +26,8 @@ import {
   soft,
 } from "./doc.ts";
 import { internal } from "./failure.ts";
-import { type EmitNames, isDeferredType, servicesOf } from "./module_state.ts";
+import { servicesOf } from "./identity.ts";
+import { type EmitNames, isDeferredType } from "./module_state.ts";
 
 function literalText(value: string | number | boolean | null): string {
   return typeof value === "string" ? JSON.stringify(value) : String(value);

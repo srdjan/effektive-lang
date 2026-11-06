@@ -21,6 +21,7 @@ import {
   failsClauseActionsAt,
   hoverAt,
   inlayHintsAt,
+  isModulePath,
   joinPath,
   lineStarts,
   prepareRenameAt,
@@ -291,7 +292,7 @@ export class GeneratedTexts {
     path: string,
     uri: string,
   ): GeneratedTypeScriptResult | null {
-    if (!path.endsWith(".eff") && !path.endsWith(".effi")) return null;
+    if (!isModulePath(path)) return null;
     const entries = this.#entriesOf(project);
     let entry = entries.get(path);
     if (entry === undefined) {
@@ -351,7 +352,7 @@ export function generatedTypeScriptRequest(
 export function didSave(params: TextDocumentParams, ctx: ServerContext): void {
   const found = ctx.projects.lookup(params.textDocument.uri);
   if (found === undefined) return;
-  if (!found.path.endsWith(".eff") && !found.path.endsWith(".effi")) return;
+  if (!isModulePath(found.path)) return;
   ctx.projects.saveRound(found.project);
 }
 

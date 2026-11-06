@@ -20,7 +20,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   parse.ts       Parser with recovery.
   hash.ts        Synchronous content hash (FNV-1a 64).
   declaration_index.ts Declaration index of one file: names, kinds, export flags, spans, and methods.
-  paths.ts       Path helpers and the generated-file header: joinPath, normalizeRelative, moduleNameOf, generatedPathOf, generatedHeader, generatedSourceOf.
+  paths.ts       Path helpers and the generated-file header: joinPath, normalizeRelative, moduleNameOf, generatedPathOf, generatedHeader, generatedSourceOf, the extension tests, fileModeOf, relativeSpecifier, and the prelude and host label tests.
   project.ts     effektive.json, module graph, cycles, order.
   resolve.ts     Names to identities, scopes, prelude, side table of targets.
   types.ts       Interned types and compatibility.
@@ -70,7 +70,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   editor_tokens.ts Semantic classifications with lexical recovery.
   editor_actions.ts Validated missing fails/with actions from checked body effects.
   editor_signature.ts signatureHelpAt: signature help for ordinary calls from checked callee types.
-  ids.ts         Parts of a declaration identity: module, name, and method.
+  ids.ts         Constructors, tests, and parts of identities: module, name, method, capability, local, service, and reserved error.
   util.ts        Small pure helpers of the front end and the edges: compareText, errorMessage, isRecord, canonicalJson, and sortedUnique.
   frontend.ts    Checking, IR, and source editor queries, with no backend dependency.
   typescript.ts  TypeScript output caches, emitProject, backend hover, maps, diagnostic mapping.
@@ -103,6 +103,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     tsc.ts         Parser for deno check output and the mapping of its errors.
     doc.ts         The printer: documents, layout at 80 columns, span tags.
     module_state.ts ModuleState: names, fresh names, imports, host bindings, specifiers.
+    identity.ts    Identity helpers that throw an internal failure for a malformed identity.
     failure.ts     EmitFailure and internal: the failure that the emitter throws inside one module.
     calls.ts       The simple calls: tables of the structural and leaf kinds that print as callee(operands).
     fields.ts      Own-field construction, optional reads and declared schema input adapters.

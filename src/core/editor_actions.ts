@@ -1,8 +1,10 @@
 // Contract edits come from checked body effect sets, never diagnostic prose.
+import { isSourcePath } from "./paths.ts";
 import { Program, type Revision } from "./db.ts";
 import { diagnosticDelta } from "./diagnostic_delta.ts";
 import type { SourceEdit } from "./source.ts";
 import { applySourceEdits } from "./editor_rename.ts";
+import { capabilityOfService } from "./ids.ts";
 import { EFFECT_ERROR_IDS } from "./resolve.ts";
 import { diagnosticInside, resultEndOf } from "./editor_hints.ts";
 import { childrenOf, kindOf, SyntaxKind } from "./syntax.ts";
@@ -28,7 +30,7 @@ function effectName(
     if ("id" in target && target.id === id) return name;
     if (target.kind === "service") {
       for (const method of binding.service?.entry.methodList ?? []) {
-        if (`cap:${target.id.slice("service:".length)}.${method.name}` === id) {
+        if (capabilityOfService(target.id, method.name) === id) {
           return `${name}.${method.name}`;
         }
       }
@@ -51,7 +53,7 @@ function requirementNames(
   const covered = new Set<string>();
   for (const [name, binding] of revision.resolution(module)?.namespace ?? []) {
     if (binding.target.kind !== "service") continue;
-    const prefix = `cap:${binding.target.id.slice("service:".length)}.`;
+    const prefix = capabilityOfService(binding.target.id, "");
     const methods = (binding.service?.entry.methodList ?? []).map((m) =>
       prefix + m.name
     );
@@ -87,7 +89,7 @@ export function contractActionsAt(
   allowCallerGaps = false,
 ): readonly ContractAction[] {
   const module = revision.checkedModuleAt(path);
-  if (module === undefined || !path.endsWith(".eff")) return [];
+  if (module === undefined || !isSourcePath(path)) return [];
   const output: ContractAction[] = [];
   for (const fn of module.functions.values()) {
     const { signature, body } = fn;
@@ -239,7 +241,7 @@ export function failsClauseActionsAt(
   _end = start,
 ): readonly ContractAction[] {
   const module = revision.checkedModuleAt(path);
-  if (module === undefined || !path.endsWith(".eff")) return [];
+  if (module === undefined || !isSourcePath(path)) return [];
   const { tree } = module;
   for (const fn of module.functions.values()) {
     const { signature } = fn;

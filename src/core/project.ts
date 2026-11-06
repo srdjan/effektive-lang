@@ -13,7 +13,16 @@ import {
   type FileIndex,
   type ImportEntry,
 } from "./declaration_index.ts";
-import { joinPath, moduleNameOf, normalizeRelative } from "./paths.ts";
+import {
+  hostKeyOf,
+  isHostLabel,
+  isInterfacePath,
+  isModulePath,
+  isSourcePath,
+  joinPath,
+  moduleNameOf,
+  normalizeRelative,
+} from "./paths.ts";
 import { parse, type ParseResult } from "./parse.ts";
 import type { ReadError, Result, SourceHost, Span } from "./source.ts";
 import type { FileMode, SyntaxTree } from "./syntax.ts";
@@ -110,12 +119,12 @@ function validModulePattern(pattern: string): boolean {
     return false;
   }
   const last = parts[parts.length - 1];
-  return !last.endsWith(".eff") && !last.endsWith(".effi");
+  return !isModulePath(last);
 }
 
 function validTargetPattern(pattern: string): boolean {
-  if (!pattern.startsWith("host:")) return validModulePattern(pattern);
-  const key = pattern.slice(5);
+  if (!isHostLabel(pattern)) return validModulePattern(pattern);
+  const key = hostKeyOf(pattern);
   return key !== "" && (key === "*" || !key.includes("*"));
 }
 
@@ -146,10 +155,10 @@ function modulePatternMatches(pattern: string, module: string): boolean {
 }
 
 function targetPatternMatches(pattern: string, target: string): boolean {
-  if (target.startsWith("host:")) {
+  if (isHostLabel(target)) {
     return pattern === "host:*" || pattern === target;
   }
-  return !pattern.startsWith("host:") && modulePatternMatches(pattern, target);
+  return !isHostLabel(pattern) && modulePatternMatches(pattern, target);
 }
 
 function importAllowed(
@@ -285,7 +294,7 @@ export function parseConfig(
       const interfacePath = normalizeRelative(interfaceValue);
       const modulePath = normalizeRelative(moduleValue);
       const interfaceSpan = keySpan(text, "interface", entryStart);
-      if (interfacePath === undefined || !interfacePath.endsWith(".effi")) {
+      if (interfacePath === undefined || !isInterfacePath(interfacePath)) {
         diagnostics.push(makeDiagnostic(
           "module/001",
           `the interface of host entry \`${key}\` must be a path inside the project root that ends in .effi`,
@@ -500,7 +509,7 @@ class Loader {
       ));
       return;
     }
-    if (!path.endsWith(".eff") && !path.endsWith(".effi")) {
+    if (!isModulePath(path)) {
       this.diagnostics.push(makeDiagnostic(
         "module/001",
         `the entry path \`${path}\` does not end in .eff or .effi`,
@@ -528,8 +537,8 @@ class Loader {
       this.diagnostics.push(makeDiagnostic("module/001", message, span));
       return unlinked;
     };
-    if (specifier.startsWith("host:")) {
-      const key = specifier.slice(5);
+    if (isHostLabel(specifier)) {
+      const key = hostKeyOf(specifier);
       const registered = this.config.host.get(key);
       if (registered === undefined) {
         this.diagnostics.push(makeDiagnostic(
@@ -557,7 +566,7 @@ class Loader {
         `import \`${specifier}\` must start with ./ or ../, or use the host: prefix`,
       );
     }
-    if (!specifier.endsWith(".eff")) {
+    if (!isSourcePath(specifier)) {
       return bad(`relative import \`${specifier}\` must end in .eff`);
     }
     const dir = dirName(importer);

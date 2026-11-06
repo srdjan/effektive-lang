@@ -5,7 +5,7 @@ import { fieldHelperDeclarations } from "./fields.ts";
 
 import type { Declaration, ModuleIR, TypeDecl } from "../ir.ts";
 import type { Result } from "../result.ts";
-import { generatedHeader } from "../paths.ts";
+import { generatedHeader, isInterfacePath } from "../paths.ts";
 import type { ProjectConfig } from "../project.ts";
 import { bracketed, type Doc, hard, render, spanned } from "./doc.ts";
 import {
@@ -138,7 +138,7 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
   const declarationDocs = [...typeDocs, ...functionDocs, ...constantDocs];
   // A companion module without a declaration would not be a module without this line.
   const moduleMarker: Doc[] =
-    scope.source.endsWith(".effi") && declarationDocs.length === 0 &&
+    isInterfacePath(scope.source) && declarationDocs.length === 0 &&
       imports.length === 0
       ? ["export {};"]
       : [];

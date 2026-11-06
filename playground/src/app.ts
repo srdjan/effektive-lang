@@ -11,6 +11,7 @@ import {
   CONFIG_FILE,
   errorMessage,
   generatedPathOf,
+  isInterfacePath,
 } from "../../src/core/mod.ts";
 import { BUILD } from "../../src/host/log.ts";
 import {
@@ -346,7 +347,7 @@ async function main(): Promise<void> {
 
   function refreshCursorLine(): void {
     let text = "";
-    if (!active.endsWith(".effi")) {
+    if (!isInterfacePath(active)) {
       const offset = sourceView.state.selection.main.head;
       const hit = session.hover(active, offset);
       log.event("pg.hover", hoverData(offset, hit, "cursor"));
@@ -458,7 +459,7 @@ async function main(): Promise<void> {
     staleBanner.hidden = state.tag !== "stale";
     // Stale output belongs to older source, and an interface's companion
     // module is a check module, not its translation, so neither compares.
-    saving.textContent = state.tag === "text" && !active.endsWith(".effi")
+    saving.textContent = state.tag === "text" && !isInterfacePath(active)
       ? savingLabel(texts[active] ?? "", state.text)
       : "";
     saving.hidden = saving.textContent === "";

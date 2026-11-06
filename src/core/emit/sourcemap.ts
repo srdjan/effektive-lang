@@ -13,8 +13,8 @@
 // format and JavaScript tooling expect.
 
 import type { Result } from "../result.ts";
+import { relativeSpecifier } from "../paths.ts";
 import { lineIndexOf, lineStarts } from "../source.ts";
-import { relativeSpecifier } from "./module_state.ts";
 import { recordAtOffset, type SpanTable, zeroBasedPosition } from "./spans.ts";
 
 // ------------------------------------------------------------------ base64 VLQ

@@ -28,6 +28,7 @@ import {
   type Lexed,
   TokenKind,
 } from "./lex.ts";
+import { fileModeOf } from "./paths.ts";
 import {
   type FileMode,
   type NodeId,
@@ -41,11 +42,6 @@ export interface ParseResult {
   readonly tree: SyntaxTree;
   /** Lexer and parser diagnostics, sorted and without duplicates. */
   readonly diagnostics: readonly Diagnostic[];
-}
-
-/** `.effi` files are host interface files. Every other path parses as `.eff`. */
-export function fileModeOf(path: string): FileMode {
-  return path.endsWith(".effi") ? "effi" : "eff";
 }
 
 export function parse(

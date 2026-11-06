@@ -60,6 +60,7 @@
       "src/core/emit/families/scope.ts",
       "src/core/emit/families/stream.ts",
       "src/core/emit/fields.ts",
+      "src/core/emit/identity.ts",
       "src/core/emit/module_state.ts",
       "src/core/emit/outcome.ts",
       "src/core/emit/predicates.ts",

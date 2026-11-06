@@ -52,7 +52,7 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
       names.shown?.add(node.id);
       const hash = node.id.indexOf("#");
       if (CLOSED_UNIT_IDS.has(node.id)) {
-        return node.id.slice(node.id.indexOf("/") + 1);
+        return shortName(node.id);
       }
       if (hash < 0) return node.id;
       return names.qualified.has(node.id)
