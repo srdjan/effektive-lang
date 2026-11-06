@@ -6,7 +6,7 @@
 import { isErrorId } from "./ids.ts";
 import { CLOSED_UNIT_IDS, DURATION_ID, INSTANT_ID, type TypeId } from "./ir.ts";
 import { flattenIdentityMembers } from "./patterns.ts";
-import type { BinaryOperator } from "./syntax_queries.ts";
+import type { ArithmeticOperator, BinaryOperator } from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 
 function isError(table: TypeTable, ref: TypeRef): boolean {
@@ -163,7 +163,7 @@ function isInstant(table: TypeTable, ref: TypeRef): boolean {
  */
 function instantArithmetic(
   table: TypeTable,
-  operator: "+" | "-" | "*" | "/",
+  operator: ArithmeticOperator,
   left: TypeRef,
   right: TypeRef,
 ): OperatorResult | undefined {
@@ -208,7 +208,7 @@ function closedUnitsDiffer(
 function durationArithmetic(
   table: TypeTable,
   module: string,
-  operator: "+" | "-" | "*" | "/",
+  operator: ArithmeticOperator,
   left: TypeRef,
   right: TypeRef,
 ): OperatorResult | undefined {

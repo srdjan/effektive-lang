@@ -17,7 +17,7 @@ import { kindOf, type NodeId, SyntaxKind, type SyntaxTree } from "./syntax.ts";
 import { literalOf, nameTextOf, numberTextOf } from "./syntax_queries.ts";
 import { isDurationText } from "./lex.ts";
 import type { BodyTable, NodeFact, PatternFact } from "./tables.ts";
-import type { TypeRef, TypeTable } from "./types.ts";
+import { literalFitsPrimitive, type TypeRef, type TypeTable } from "./types.ts";
 import { showTypes } from "./type_show.ts";
 
 /** What the pattern checker needs from the body checker. */
@@ -300,11 +300,7 @@ export function pattern(
       if (domain.kind === "literals") {
         fits = domain.values.includes(value);
       } else if (domain.kind === "open" && domain.duration !== true) {
-        fits = domain.primitive === "string"
-          ? typeof value === "string"
-          : domain.primitive === "int"
-          ? typeof value === "number" && Number.isSafeInteger(value)
-          : typeof value === "number";
+        fits = literalFitsPrimitive(value, domain.primitive);
       }
       if (fits) {
         reach(c, node, state, `L:${JSON.stringify(value)}`);

@@ -24,6 +24,7 @@ import {
   fieldParts,
   functionParts,
   initOf,
+  isArithmeticOperator,
   isDurationLiteral,
   isPatternKind,
   isTypeKind,
@@ -102,6 +103,7 @@ import {
   containsOpaqueType,
   containsUnknownPredicateInput,
   dataOnly,
+  literalFitsPrimitive,
   MAX_DEPTH,
   type TypeRef,
   type TypeTable,
@@ -459,7 +461,9 @@ class BodyChecker
     if (value === null) return this.table.literal(null);
     if (typeof value === "string") return this.table.string;
     if (typeof value === "boolean") return this.table.boolean;
-    return Number.isSafeInteger(value) ? this.table.int : this.table.number;
+    return literalFitsPrimitive(value, "int")
+      ? this.table.int
+      : this.table.number;
   }
 
   functionOf(ref: TypeRef): FunctionNode | undefined {
@@ -670,7 +674,7 @@ class BodyChecker
         const hasNumber = members.some((m) =>
           m.kind === "primitive" && m.name === "number"
         );
-        if (hasNumber && !(hasInt && Number.isSafeInteger(value))) {
+        if (hasNumber && !(hasInt && literalFitsPrimitive(value, "int"))) {
           return this.table.number;
         }
       }
@@ -2127,8 +2131,7 @@ class BodyChecker
     const info = this.finish(node, result.type, eff);
     const identity = this.table.node(this.table.unfoldTransparent(result.type));
     if (
-      (operator === "+" || operator === "-" || operator === "*" ||
-        operator === "/") &&
+      isArithmeticOperator(operator) &&
       identity.kind === "named" &&
       isTypeId(identity.id) &&
       this.table.predicateOf(identity.id) !== undefined

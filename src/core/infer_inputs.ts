@@ -20,6 +20,7 @@ import {
   fieldParts,
   functionParts,
   initOf,
+  isArithmeticOperator,
   isTypeKind,
   kidsOf,
   nameTextOf,
@@ -426,8 +427,7 @@ class InputEngine {
     const operands = kidsOf(this.tree, node);
     const operator = operatorOf(this.tree, node);
     const contextual =
-      operator !== undefined && ["+", "-", "*", "/"].includes(operator) &&
-        this.resolver.isConcrete(expected)
+      isArithmeticOperator(operator) && this.resolver.isConcrete(expected)
         ? expected
         : undefined;
     operands.forEach((operand) => this.visit(operand, contextual));

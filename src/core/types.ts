@@ -1275,7 +1275,8 @@ export function containsOpaqueType(
   }
 }
 
-function literalFitsPrimitive(
+/** True when a literal value is a member of a primitive: an `int` is a safe integer. */
+export function literalFitsPrimitive(
   value: string | number | boolean | null,
   name: PrimitiveName,
 ): boolean {
