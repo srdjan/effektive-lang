@@ -1,19 +1,19 @@
-// Fast tests of `writableModules`: which modules a build writes. They use
+// Fast tests of `planWrites`: which modules a build writes. They use
 // `Program` over in-memory files.
 
 import { assertEquals } from "@std/assert";
 import { Program } from "../src/core/mod.ts";
-import { writableModules } from "../src/host/outputs.ts";
+import { planWrites } from "../src/host/outputs.ts";
 
 function writable(files: Readonly<Record<string, string>>): string[] {
   const revision = new Program().update({
     set: { "effektive.json": "{}", ...files },
   });
   if (!revision.ok) throw new Error(JSON.stringify(revision));
-  return writableModules(revision.value);
+  return [...planWrites(revision.value).writable];
 }
 
-Deno.test("writableModules writes no member of an import cycle with an error", () => {
+Deno.test("planWrites writes no member of an import cycle with an error", () => {
   assertEquals(
     writable({
       "c.eff":
@@ -25,7 +25,7 @@ Deno.test("writableModules writes no member of an import cycle with an error", (
   );
 });
 
-Deno.test("writableModules writes the companion of a host interface target", () => {
+Deno.test("planWrites writes the companion of a host interface target", () => {
   const read = (path: string) =>
     Deno.readTextFileSync(
       new URL(`../fixtures/examples/${path}`, import.meta.url),
@@ -41,7 +41,7 @@ Deno.test("writableModules writes the companion of a host interface target", () 
   });
   if (!revision.ok) throw new Error(JSON.stringify(revision));
   assertEquals(revision.value.diagnostics.map((d) => d.code), []);
-  assertEquals(writableModules(revision.value).sort(), [
+  assertEquals([...planWrites(revision.value).writable].sort(), [
     "host/providers",
     "main",
     "users",
@@ -49,7 +49,7 @@ Deno.test("writableModules writes the companion of a host interface target", () 
   ]);
 });
 
-Deno.test("writableModules writes every module of a clean chain", () => {
+Deno.test("planWrites writes every module of a clean chain", () => {
   assertEquals(
     writable({
       "a.eff":
@@ -62,7 +62,7 @@ Deno.test("writableModules writes every module of a clean chain", () => {
   );
 });
 
-Deno.test("writableModules writes no module whose imported host interface has an error", () => {
+Deno.test("planWrites writes no module whose imported host interface has an error", () => {
   const read = (path: string) =>
     Deno.readTextFileSync(
       new URL(`../fixtures/examples/${path}`, import.meta.url),
@@ -84,7 +84,7 @@ Deno.test("writableModules writes no module whose imported host interface has an
     ["host/providers.effi"],
   );
   // The broken companion stays in the list, and `writeGenerated` skips it. Main is out.
-  assertEquals(writableModules(revision.value).sort(), [
+  assertEquals([...planWrites(revision.value).writable].sort(), [
     "host/providers",
     "users",
     "users-service",

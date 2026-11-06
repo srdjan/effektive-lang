@@ -113,10 +113,6 @@ function heldReasonOf(
   return { tag: "lowering" };
 }
 
-export function writableModules(revision: Revision): string[] {
-  return [...planWrites(revision).writable];
-}
-
 /**
  * Emits the named modules of the revision. With `write` true, it writes the
  * generated file and its map under `root` for each module whose text changed:

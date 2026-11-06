@@ -7,7 +7,7 @@ const outputCache = new TypeScriptOutputs();
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { Program, serializeSourceMap } from "../src/core/mod.ts";
-import { writableModules } from "../src/host/outputs.ts";
+import { planWrites } from "../src/host/outputs.ts";
 import { isSourcePath } from "../src/host/workspace.ts";
 import {
   didChangeFull,
@@ -76,7 +76,7 @@ function oracle(h: Harness, skip = ""): Map<string, string> {
   assert(updated.ok);
   const revision = updated.value;
   const outputs = new Map<string, string>();
-  for (const name of writableModules(revision)) {
+  for (const name of planWrites(revision).writable) {
     if (skip !== "" && name.startsWith(skip)) continue;
     const emitted = outputCache.emitted(revision, name);
     const map = outputCache.sourceMap(revision, name);
