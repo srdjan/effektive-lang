@@ -13,7 +13,7 @@
 // The rows pool the runs of both sides. The noise floor comes from the A/B
 // pairs (see `noiseFloor` in stats.ts).
 
-import type { Result } from "../src/core/source.ts";
+import type { Result } from "../src/core/mod.ts";
 import {
   type EditKind,
   loadInput,

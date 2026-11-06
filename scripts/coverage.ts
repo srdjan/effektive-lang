@@ -469,7 +469,7 @@ export function includePattern(root: string): string {
 }
 
 /** The counts of each file in the lcov text, keyed by the `SF:` path. */
-export function parseLcovCounts(lcov: string): Record<string, Counts> {
+function parseLcovCounts(lcov: string): Record<string, Counts> {
   const result: Record<string, Counts> = {};
   let path: string | undefined;
   let counts = ZERO;

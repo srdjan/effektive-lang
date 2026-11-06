@@ -8,7 +8,8 @@
 // `deno task lex:update` only after a deliberate change of the lexer output. A
 // refactor of the lexer must not run it.
 
-import { lex, type Lexed } from "../src/core/lex.ts";
+import { lex } from "../src/core/mod.ts";
+import type { Lexed } from "../src/core/lex.ts";
 import { prettyJson } from "./lib.ts";
 
 /** The number of random strings. */
@@ -60,7 +61,7 @@ export function randomInputs(count: number = RANDOM_COUNT): string[] {
 }
 
 /** A 64-bit hash (two 32-bit FNV style lanes) of a text, as 16 hex digits. */
-export function hashText(text: string): string {
+function hashText(text: string): string {
   let a = 0x811c9dc5, b = 0x01000193;
   for (let i = 0; i < text.length; i++) {
     const c = text.charCodeAt(i);

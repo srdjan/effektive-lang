@@ -27,7 +27,7 @@
 // starts. After each round the generated output of the edited module must
 // exist on disk, and after a body edit it must hold the new revision.
 
-import type { Result } from "../src/core/source.ts";
+import type { Result } from "../src/core/mod.ts";
 import type { SizeName } from "./generate.ts";
 import {
   type EditKind,
@@ -99,7 +99,7 @@ export interface M7Result {
 }
 
 /** The latency budget SV-D3 for a body edit save on the large preset, in milliseconds. */
-export const SAVE_BUDGET_MS = 100;
+const SAVE_BUDGET_MS = 100;
 
 /** The 90th percentile of the body edit rows of the large preset, if M7 ran it. */
 export function bodyEditP90(result: M7Result): number | undefined {

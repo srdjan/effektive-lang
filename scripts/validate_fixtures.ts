@@ -6,8 +6,7 @@
 // the validator. A test regenerates the files in memory and compares them with
 // the files on disk, so the fixtures stay valid and current.
 
-import { checkProject } from "../src/core/check_project.ts";
-import { lowerProject } from "../src/core/lower.ts";
+import { checkProject, lowerProject } from "../src/core/mod.ts";
 import { AREA, validateModule } from "../src/core/validate/index.ts";
 import { diskHost, EXAMPLE_ENTRIES } from "../tests/helpers.ts";
 

@@ -29,7 +29,7 @@ import { byTurn } from "./pairs.ts";
 
 /** The pinned tool versions. The first run needs network access to fetch them. */
 export const TYPESCRIPT_VERSION = "5.9.3";
-export const TSGO_VERSION = "7.0.0-dev.20260707.2";
+const TSGO_VERSION = "7.0.0-dev.20260707.2";
 
 export interface VariantConfig {
   readonly pairs: number;

@@ -4,8 +4,7 @@ const outputs = new TypeScriptOutputs();
 // synthetic projects, as maps of TypeScript files, and the error values of the
 // measurement. Nothing here runs a type check.
 
-import { errorMessage, Program } from "../src/core/mod.ts";
-import type { Result } from "../src/core/source.ts";
+import { errorMessage, Program, type Result } from "../src/core/mod.ts";
 import { generateProject } from "./generate.ts";
 
 export type M5Error =
@@ -62,7 +61,7 @@ function readTree(
 }
 
 /** Emits every module of a project in memory. Returns the generated files by path. */
-export function emitSources(
+function emitSources(
   sources: ReadonlyMap<string, string>,
 ): Result<Map<string, string>, M5Error> {
   const program = new Program("");

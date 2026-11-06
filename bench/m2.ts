@@ -19,7 +19,13 @@
 // so its time includes `lex`. `total` is the sum of every stage except `lex`.
 
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
-import { compareText, Program, type Revision } from "../src/core/mod.ts";
+import {
+  compareText,
+  memoryHost,
+  Program,
+  type Result,
+  type Revision,
+} from "../src/core/mod.ts";
 import {
   checkAnalysis,
   type CheckedProject,
@@ -42,7 +48,6 @@ import {
 } from "../src/core/project.ts";
 import { joinPath } from "../src/core/paths.ts";
 import { resolveProject } from "../src/core/resolve.ts";
-import { memoryHost, type Result } from "../src/core/source.ts";
 import { validateProject } from "../src/core/validate_project.ts";
 import {
   applyBodyEdit,

@@ -5,6 +5,7 @@
 
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { REQUIRED_DENO_VERSION } from "../scripts/package.ts";
+import { TYPESCRIPT_VERSION } from "../bench/m5_variants.ts";
 import { EFFECT_VERSION } from "../src/cli/tsc.ts";
 
 const ROOT = new URL("../", import.meta.url);
@@ -62,6 +63,7 @@ const PINS: ReadonlyArray<
     "bench/ref_update.ts",
     'import * as SynchronizedRef from "npm:effect@4.1.2/SynchronizedRef";',
   ],
+  [TYPESCRIPT_VERSION, "deno.json", '"typescript": "npm:typescript@5.9.3"'],
   [REQUIRED_DENO_VERSION, "README.md", "The project needs Deno 2.9.8."],
   [EFFECT_VERSION, "README.md", "Generated TypeScript targets Effect 4.1.2."],
 ];

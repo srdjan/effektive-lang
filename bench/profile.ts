@@ -128,7 +128,7 @@ export function m5Config(profile: ProfileName, variants: boolean): M5Config {
 }
 
 /** The time limit of each server request or wait, in milliseconds. */
-export const LSP_TIMEOUT_MS = 60_000;
+const LSP_TIMEOUT_MS = 60_000;
 
 /** The inputs of M1 and M3: the examples, then the three synthetic sizes. */
 const LSP_INPUTS = ["examples", ...SIZE_NAMES] as const;

@@ -9,7 +9,7 @@
 // checksum-like gate of the protocol.
 
 import { errorMessage } from "../src/core/mod.ts";
-import type { Result } from "../src/core/source.ts";
+import type { Result } from "../src/core/mod.ts";
 import { STATS_METHOD } from "../src/lsp/methods.ts";
 import {
   allFiles,

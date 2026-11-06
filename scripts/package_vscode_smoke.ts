@@ -17,7 +17,7 @@ async function checked(
   if (!result.success) throw new Error(result.stderr + result.stdout);
 }
 
-export async function installedEditorSmoke(
+async function installedEditorSmoke(
   code: string,
   features = true,
 ): Promise<void> {

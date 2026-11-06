@@ -140,7 +140,7 @@ export function compareRecords(
 }
 
 /** One summary line for each kind. */
-export function summaryLines(comparison: Comparison): string[] {
+function summaryLines(comparison: Comparison): string[] {
   return KINDS.map((kind) => {
     const c = comparison.counts[kind];
     return `${kind}: ${c.equal} equal, ${c.changed} changed, ${c.missing} missing, ${c.added} added`;

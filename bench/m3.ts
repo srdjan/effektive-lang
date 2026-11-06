@@ -7,7 +7,7 @@
 // mode delta of the last flush. Counts are exact, so M3 has no noise floor and
 // drops no warm-up step.
 
-import type { Result } from "../src/core/source.ts";
+import type { Result } from "../src/core/mod.ts";
 import {
   type EditKind,
   loadInput,

@@ -2,7 +2,7 @@
 // Two fresh servers run the same distinct revisions, rotating between open
 // documents. Step-end samples cannot reveal a short peak inside a step.
 
-import type { Result } from "../src/core/source.ts";
+import type { Result } from "../src/core/mod.ts";
 import {
   EDIT_KINDS,
   loadInput,

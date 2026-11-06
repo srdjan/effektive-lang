@@ -1,4 +1,4 @@
-import { Program } from "../src/core/db.ts";
+import { Program } from "../src/core/mod.ts";
 import {
   and,
   comparison,

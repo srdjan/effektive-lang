@@ -10,9 +10,9 @@ import { isRecord, type Result } from "../src/core/mod.ts";
 import type { Envelope, Surface } from "../src/host/log.ts";
 
 /** The p90 budget for diagnostics latency, from `docs/release-measurements.md`. */
-export const BUDGET_MS = 100;
+const BUDGET_MS = 100;
 /** Edits closer together than this form one burst. */
-export const BURST_GAP_MS = 1000;
+const BURST_GAP_MS = 1000;
 const DEFAULT_FOLDER = "playground/.effektive/logs/";
 const UNITS: Readonly<Record<string, number>> = {
   m: 60_000,

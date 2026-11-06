@@ -22,7 +22,7 @@ import { pathToUri } from "../src/lsp/positions.ts";
 type Timer = ReturnType<typeof setTimeout>;
 
 /** The default time limit of a request, a wait, or the exit, in milliseconds. */
-export const DEFAULT_TIMEOUT_MS = 60_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
 
 /** The kinds of client failure. */
 export type LspClientErrorTag =
