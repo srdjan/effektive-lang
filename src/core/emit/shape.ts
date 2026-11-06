@@ -179,6 +179,13 @@ export type LeafKind = {
     : never;
 }[ExprKind];
 
+/**
+ * `K` itself, when the table marks every member of `K` as `leaf`. A family
+ * names its leaf kinds with it, so a name that the table does not mark as a
+ * leaf is a type error.
+ */
+export type LeafOf<K extends LeafKind> = K;
+
 /** The expressions that the emitter always prints as leaf effects. */
 type LeafExpr = ExprOf<LeafKind>;
 

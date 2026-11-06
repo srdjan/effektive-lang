@@ -12,13 +12,13 @@ import {
   PREC,
 } from "../emitted.ts";
 import { resolvedAs } from "../module_state.ts";
-import type { ExprOf } from "../shape.ts";
+import type { ExprOf, LeafOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
 type EffectStructuralKind = "defer" | "retry-schedule" | "race-all";
 
-type EffectLeafKind =
+export type EffectLeafKind = LeafOf<
   | "retry"
   | "retry-with-schedule"
   | "run"
@@ -29,7 +29,8 @@ type EffectLeafKind =
   | "log"
   | "random"
   | "random-int"
-  | "uninterruptible";
+  | "uninterruptible"
+>;
 
 export function effectStructural(
   c: ExprCore,

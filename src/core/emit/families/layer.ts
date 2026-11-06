@@ -4,13 +4,13 @@ import { bracketed, type Doc } from "../doc.ts";
 import { callArguments, type Emitted, emitted } from "../emitted.ts";
 import { fieldKey } from "../fields.ts";
 import { internal } from "../failure.ts";
-import type { ExprOf } from "../shape.ts";
+import type { ExprOf, LeafOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
 type LayerStructuralKind = "layer";
 
-type LayerLeafKind = "provide";
+export type LayerLeafKind = LeafOf<"provide">;
 
 export function layerStructural(
   c: ExprCore,

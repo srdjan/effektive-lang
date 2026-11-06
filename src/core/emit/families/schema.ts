@@ -14,13 +14,15 @@ import {
 } from "../emitted.ts";
 import { internal } from "../failure.ts";
 import { resolvedAs } from "../module_state.ts";
-import type { ExprOf } from "../shape.ts";
+import type { ExprOf, LeafOf } from "../shape.ts";
 import { hasSchemaMetadata, schemaDoc, typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
 type SchemaStructuralKind = "schema";
 
-type SchemaLeafKind = "schema-make" | "schema-decode" | "schema-encode";
+export type SchemaLeafKind = LeafOf<
+  "schema-make" | "schema-decode" | "schema-encode"
+>;
 
 /** Emit a Schema operation. The switch is exhaustive: a new operation needs a case. */
 export function schemaStructural(

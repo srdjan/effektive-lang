@@ -2,7 +2,7 @@
 
 import { at, callArguments, type Emitted, emitted, PREC } from "../emitted.ts";
 import { internal } from "../failure.ts";
-import type { ExprOf } from "../shape.ts";
+import type { ExprOf, LeafOf } from "../shape.ts";
 import type { ExprCore } from "./context.ts";
 import type { ClosureExpr } from "../../ir.ts";
 
@@ -20,7 +20,7 @@ function releaseWithOutcome(c: ExprCore, release: ClosureExpr): Emitted {
   return emitted(c.arrow(`(${resource}, ${exit})`, call), PREC.yield);
 }
 
-type ScopeLeafKind = "fork-scoped" | "with-resource";
+export type ScopeLeafKind = LeafOf<"fork-scoped" | "with-resource">;
 
 export function scopeLeaf(
   c: ExprCore,
