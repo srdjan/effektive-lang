@@ -9,9 +9,8 @@
 // body edit that moves a declaration does not change it. The hash is FNV-1a 64
 // over canonical JSON. A later part may switch to SHA-256.
 //
-// `reachableModules` also lives here. The project drivers in `check_project.ts`
-// and `db.ts` use it to give each module the type graphs of the modules that it
-// reaches.
+// `reachableModules` also lives here. The project driver in `check_project.ts`
+// uses it to give each module the type graphs of the modules that it reaches.
 
 import type { Analysis } from "./analyze.ts";
 import {
@@ -72,6 +71,11 @@ export function stripSpans(value: unknown): unknown {
     result[key] = stripSpans(record[key]);
   }
   return result;
+}
+
+/** FNV-1a 64 of the canonical JSON of an interface payload with its spans. */
+export function payloadHash(payload: InterfacePayload): string {
+  return fnv1a64(canonicalJson(payload));
 }
 
 /** The hash of an interface payload. */
@@ -238,12 +242,13 @@ function foreignTypeGraph(
  * Builds the interface of a module. Every function with a pending mode needs an
  * entry in `solved`. Without it the result is an error value, because the hash
  * would otherwise hide a pending mode. An open set of an exported function comes
- * from `solved`.
+ * from `solved`. A caller that has built the type graph of the module passes it as `ownGraph`.
  */
 export function buildInterface(
   declarations: ModuleDeclarations,
   solved: SolvedLookup,
   imported: ReadonlyMap<string, TypeGraph> = new Map(),
+  ownGraph?: TypeGraph,
 ): Result<ModuleInterface, InterfaceError> {
   const functions: FunctionSignature[] = [];
   for (const signature of declarations.values.values()) {
@@ -295,7 +300,7 @@ export function buildInterface(
         break;
     }
   }
-  const graph = buildTypeGraph(declarations, solved);
+  const graph = ownGraph ?? buildTypeGraph(declarations, solved);
   const foreign = foreignTypeGraph(declarations, solved, graph, imported);
   const payload: InterfacePayload = {
     exports: declarations.exports as readonly DeclarationId[],

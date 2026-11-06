@@ -37,19 +37,20 @@
 // then carries the new spans.
 
 import { type Analysis, analyzeProject } from "./analyze.ts";
-import { PREDICATE_RULES_VERSION } from "./predicates.ts";
 import type { ModeMap, TypeGraph } from "./signatures.ts";
 import {
   type CheckedModule,
   type CheckedProject,
   checkModuleStep,
+  type ModuleStep,
   reachedModules,
+  refreshInterface,
 } from "./check_project.ts";
 import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";
 import { fnv1a64 } from "./hash.ts";
 import { moduleOfId, nameOfId } from "./ids.ts";
 import type { DeclEntry } from "./declaration_index.ts";
-import { buildInterface, type ModuleInterface } from "./interface.ts";
+import type { ModuleInterface } from "./interface.ts";
 import type { ModuleIR } from "./ir.ts";
 import { type LowerError, lowerModule } from "./lower.ts";
 import {
@@ -64,7 +65,6 @@ import { isSourcePath, joinPath } from "./paths.ts";
 import type { ModuleResolution } from "./resolve.ts";
 import { memoryHost, type Result } from "./source.ts";
 import { type TypeReader, TypeTable } from "./types.ts";
-import { canonicalJson } from "./content_id.ts";
 import { compareText } from "./util.ts";
 
 // ------------------------------------------------------------------ changes
@@ -103,9 +103,7 @@ type Counters = { -readonly [K in keyof QueryCounts]: number };
 interface Entry {
   readonly text: string;
   readonly rest: string;
-  readonly checked: CheckedModule;
-  readonly graph: TypeGraph;
-  readonly iface: ModuleInterface | undefined;
+  readonly step: ModuleStep;
   /** What the checker of an importer sees: the interface hash, or the key when there is no interface. */
   readonly signature: string;
   /** What the lowering of an importer sees: the full payload hash, or the signature when there is no interface. */
@@ -163,7 +161,7 @@ export class Revision {
   }
 
   checkedModule(name: string): CheckedModule | undefined {
-    return this.entries.get(name)?.checked;
+    return this.entries.get(name)?.step.checked;
   }
 
   /** The project root. */
@@ -205,7 +203,9 @@ export class Revision {
   /** The checked module of a root-relative file path. */
   checkedModuleAt(path: string): CheckedModule | undefined {
     const name = this.namesByPath().get(path);
-    return name === undefined ? undefined : this.entries.get(name)?.checked;
+    return name === undefined
+      ? undefined
+      : this.entries.get(name)?.step.checked;
   }
 
   /** The resolver result of a module name. */
@@ -238,7 +238,7 @@ export class Revision {
 
   /** The interface hash, which leaves out source spans. */
   interfaceHash(name: string): string | undefined {
-    return this.entries.get(name)?.checked.hash;
+    return this.entries.get(name)?.step.checked.hash;
   }
 
   /** The text of each file that the project loaded, keyed by root-relative path. */
@@ -359,7 +359,6 @@ export class Program {
       const seen = reachedModules(analysis, name, graphs, interfaces);
       const { reached } = seen;
       const rest = JSON.stringify([
-        PREDICATE_RULES_VERSION,
         info.path,
         config,
         analysis.diagnostics.filter((d) => d.span.source === info.path),
@@ -374,62 +373,41 @@ export class Program {
         entry === undefined || entry.text !== info.tree.text ||
         entry.rest !== rest
       ) {
-        const { checked, graph } = checkModuleStep(
-          info,
-          resolution,
-          name,
-          table,
-          seen,
-        );
-        const iface = checked.interface.ok
-          ? checked.interface.value
-          : undefined;
-        const signature = iface === undefined
-          ? `key:${fnv1a64(rest)}:${fnv1a64(info.tree.text)}`
-          : iface.hash;
+        const step = checkModuleStep(info, resolution, name, table, seen);
+        const signature = step.checked.hash ??
+          `key:${fnv1a64(rest)}:${fnv1a64(info.tree.text)}`;
         entry = {
           text: info.tree.text,
           rest,
-          graph,
-          iface,
+          step,
           signature,
-          payload: iface === undefined
-            ? signature
-            : fnv1a64(canonicalJson(iface.payload)),
+          payload: step.payloadHash ?? signature,
           lowerKey,
-          checked,
         };
         rechecked.push(name);
         this.counters.checks++;
       } else if (entry.lowerKey !== lowerKey) {
         // Only spans of reached modules moved. The interface copies foreign
         // declarations, so it is built again; the IR is lowered again on demand.
-        const built = buildInterface(
-          entry.checked.declarations,
-          entry.checked.solved,
-          seen.graphs,
-        );
-        const iface = built.ok ? built.value : undefined;
+        const step = refreshInterface(entry.step, seen);
         entry = {
           text: entry.text,
           rest: entry.rest,
-          graph: entry.graph,
-          iface,
+          step,
           signature: entry.signature,
-          payload: iface === undefined
-            ? entry.signature
-            : fnv1a64(canonicalJson(iface.payload)),
+          payload: step.payloadHash ?? entry.signature,
           lowerKey,
-          checked: { ...entry.checked, interface: built, hash: iface?.hash },
         };
       }
       entries.set(name, entry);
-      graphs.set(name, entry.graph);
-      if (entry.iface !== undefined) interfaces.set(name, entry.iface);
+      graphs.set(name, entry.step.graph);
+      if (entry.step.checked.interface.ok) {
+        interfaces.set(name, entry.step.checked.interface.value);
+      }
       signatures.set(name, entry.signature);
       payloads.set(name, entry.payload);
-      modules.set(name, entry.checked);
-      for (const diagnostic of entry.checked.diagnostics) {
+      modules.set(name, entry.step.checked);
+      for (const diagnostic of entry.step.checked.diagnostics) {
         diagnostics.push(diagnostic);
       }
     }

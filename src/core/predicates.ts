@@ -1,7 +1,5 @@
 import type { Result } from "./result.ts";
 
-export const PREDICATE_RULES_VERSION = 1;
-
 /** An integer written without a precision-losing JavaScript number. */
 type DecimalInteger = string;
 

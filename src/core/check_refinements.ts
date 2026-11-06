@@ -31,7 +31,12 @@ import {
 import type { TypeRef, TypeTable } from "./types.ts";
 
 const REFINEMENT_QUERY_STEPS = 8_192;
-export const REFINEMENT_AGGREGATE_STEPS = 100_000;
+const REFINEMENT_AGGREGATE_STEPS = 100_000;
+
+/** A new aggregate proof budget: the steps that the bodies of one module may spend together. */
+export function newProofBudget(): ProofBudget {
+  return { remaining: REFINEMENT_AGGREGATE_STEPS };
+}
 
 interface RefinementSnapshot {
   readonly locals: ReadonlyMap<LocalId, TypeRef>;
@@ -61,7 +66,7 @@ export class RefinementChecker {
     private readonly targets: ReadonlyMap<NodeId, Target>,
     budget?: ProofBudget,
   ) {
-    this.budget = budget ?? { remaining: REFINEMENT_AGGREGATE_STEPS };
+    this.budget = budget ?? newProofBudget();
   }
 
   snapshot(): RefinementSnapshot {

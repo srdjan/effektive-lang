@@ -32,7 +32,7 @@ import {
 } from "./check_expr.ts";
 import { inferFunctionInputs, withInferredInputs } from "./infer_inputs.ts";
 import type { BodyEnv, ProofBudget } from "./body_env.ts";
-import { REFINEMENT_AGGREGATE_STEPS } from "./check_refinements.ts";
+import { newProofBudget } from "./check_refinements.ts";
 import {
   type Diagnostic,
   makeDiagnostic,
@@ -55,6 +55,7 @@ import {
   buildTypeGraph,
   type InterfaceError,
   type ModuleInterface,
+  payloadHash,
   reachableModules,
 } from "./interface.ts";
 import type {
@@ -675,7 +676,7 @@ function serviceBoundDiagnostics(
 // ------------------------------------------------------------------ the project
 
 /** What a module sees of the modules that it reaches, among those that are checked so far. */
-interface ReachedModules {
+export interface ReachedModules {
   readonly reached: readonly string[];
   readonly graphs: ReadonlyMap<string, TypeGraph>;
   readonly interfaces: ReadonlyMap<string, ModuleInterface>;
@@ -700,10 +701,52 @@ export function reachedModules(
   return { reached, graphs: importedGraphs, interfaces: visible };
 }
 
-/** The result of the check of one module: its checked form and its type graph. */
-interface ModuleStep {
+/**
+ * The result of the check of one module: its checked form, its type graph, and
+ * the two identities of its interface. `checked.hash` leaves out source spans.
+ * `payloadHash` covers the payload with its spans.
+ */
+export interface ModuleStep {
   readonly checked: CheckedModule;
   readonly graph: TypeGraph;
+  /** FNV-1a 64 of the canonical JSON of the interface payload with spans, when the interface exists. */
+  readonly payloadHash: string | undefined;
+}
+
+/** Joins a module without its interface to the interface, and names both identities of it. */
+function withInterface(
+  checked: Omit<CheckedModule, "interface" | "hash">,
+  graph: TypeGraph,
+  built: Result<ModuleInterface, InterfaceError>,
+): ModuleStep {
+  return {
+    graph,
+    payloadHash: built.ok ? payloadHash(built.value.payload) : undefined,
+    checked: {
+      ...checked,
+      interface: built,
+      hash: built.ok ? built.value.hash : undefined,
+    },
+  };
+}
+
+/**
+ * Builds the interface of a checked module again from its declarations and
+ * solved modes. The reached modules moved their spans, so the interface payload
+ * carries new spans. The module is not checked again.
+ */
+export function refreshInterface(
+  previous: ModuleStep,
+  seen: ReachedModules,
+): ModuleStep {
+  const { declarations, solved } = previous.checked;
+  const built = buildInterface(
+    declarations,
+    solved,
+    seen.graphs,
+    previous.graph,
+  );
+  return withInterface(previous.checked, previous.graph, built);
 }
 
 /**
@@ -717,7 +760,7 @@ export function checkModuleStep(
   name: string,
   table: TypeTable,
   seen: ReachedModules,
-  proofBudget: ProofBudget = { remaining: REFINEMENT_AGGREGATE_STEPS },
+  proofBudget: ProofBudget = newProofBudget(),
 ): ModuleStep {
   const checkedDeclarations = checkModuleDeclarations(
     info,
@@ -747,10 +790,8 @@ export function checkModuleStep(
     bodies,
   );
   const graph = buildTypeGraph(declarations, bodies.solved);
-  const built = buildInterface(declarations, bodies.solved, seen.graphs);
-  return {
-    graph,
-    checked: {
+  return withInterface(
+    {
       module: name,
       path: info.path,
       tree: info.tree,
@@ -760,15 +801,15 @@ export function checkModuleStep(
       modes: bodies.modes,
       solved: bodies.solved,
       initialization: bodies.initialization,
-      interface: built,
-      hash: built.ok ? built.value.hash : undefined,
       diagnostics: normalizeDiagnostics([
         ...declarations.diagnostics,
         ...bodies.diagnostics,
         ...boundDiagnostics,
       ]),
     },
-  };
+    graph,
+    buildInterface(declarations, bodies.solved, seen.graphs, graph),
+  );
 }
 
 /**
