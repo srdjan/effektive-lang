@@ -245,6 +245,7 @@ Deno.test("a comparison with more than one difference is rejected", () => {
   const rows: readonly string[] = [
     `${INT_WHERE} n => n + n > 0`,
     "{ a: int, b: int } where r => r.a + r.b > 0",
+    "{ a: int, b: int } where r => 0 > r.a + r.b",
     "{ a: int, b: int, c: int } where r => r.a - r.b - r.c > 0",
     "{ a: int, b: int, c: int } where r => r.a + r.b + r.c > 0",
     "{ a: int, b: int } where r => r.a - r.a - r.b > r.b",
