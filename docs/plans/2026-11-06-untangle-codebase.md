@@ -391,6 +391,8 @@ Each row names the commits on `main` and the main-tree gate result.
 | UNU11 | `19877bb`, `f60928f`, `eccf608`, `9b7edb7`, and Opus fix `7a4ae47` (the `writableModules` wrapper goes) | passed, 2919 fast and 285 slow tests |
 | UNU10 | `1995b63`, `0ff62a8`, `45acb4a`, `9b2fc2c`, `ef73b41` | passed, 2924 fast and 285 slow tests; browser check passed (see below) |
 | UNU7 | `f73d493`, `1e6d3d0`, `2c0b478`, `ab67ab2`, `ae03246` | passed, 2925 fast and 285 slow tests; `behavior:compare 30bb1d5 48b73d5` 0 changed records in every family |
+| UNU8 | `5ca3616` to `c47452c` (7 commits), and Opus fix `db02d03` (UND1 in the named display branch) | passed, 2927 fast and 285 slow tests; `behavior:compare 30bb1d5 db02d03` 0 changed records |
+| UNU13 (emitter, validator, adapters, scripts, bench) | `bc85a23`, `d04b2cc`, `aab3a26`, `47be5f9`, `01ddad1`, `6f6bfec`, `2d1c21b`, `0562621`, and Opus fix `b012df3` | passed |
 
 Decisions made at integration:
 
@@ -400,6 +402,8 @@ Decisions made at integration:
 - UNU11 removes the warning filter of the playground `tabCounts`, because `Severity` is only `"error"` (UND3). Three playground test expectations change for that reason only. G.N7 is partly done: `src/lsp/features.ts` still builds line starts for each call, because UNU10 owns that file. After UNU10, `features.ts` builds line starts once per request, so no follow-up is needed.
 - UNU10 shares the hover text "backend type: not available while the module has errors" as one core constant, and both clients branch on the hover backend tag, not on the text.
 - UNU7 records `Defect` arms as `ModuleResolution.defectArms`, not as a new target kind, because the editor index walks every target. The `layer` test reads the prelude `service-argument` role with the same text rule, so a program that declares its own `layer` gets no new diagnostic. C.X2 stays: rows with their own arity skip the shared prologue to keep the diagnostic order.
+- UND1 is done in both display paths: `c47452c` prints the effect lists with short names, and `db02d03` prints a reserved error type with its short name. Before, a type mismatch said "but error:effect/SchemaIssue is expected". UNU8 keeps the collision key of `showTypes` as the part after `#`, so a reserved id never groups with a user name, and a user cannot declare a reserved name.
+- UNU8 leaves on purpose: the forced effect mode and the injected `SchemaError` in `checkFunctionBody`, the `written.result` branch in `lower.ts`, the binding compare in `check_declarations.ts`, and several nominal variants whose rules differ (listed in the UNU8 handback).
 - Browser check at `ef73b41` with Playwright: a `.effi` tab shows no saving label; hover on `getUser` shows the Contract and Backend type blocks as code; after a breaking edit, the output pane shows the last good text under the banner, the saving label goes, the tabs show the error counts, and hover on a module with errors shows the unavailable note as plain text; after undo, the banner is hidden and the saving label returns.
 - UNU9 keeps field reads in the log readers loose, because old-log replay must stay tolerant. The writers are typed.
 
