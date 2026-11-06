@@ -23,7 +23,7 @@ import type { Execution, Field, FunctionType, Type } from "../ir.ts";
 import { CLOSED_UNIT_IDS, DURATION_ID, INSTANT_ID } from "../ir.ts";
 import { isReservedError } from "./prelude.ts";
 import { effectsFit, isSubset, sameSet, sortedUnique } from "./sets.ts";
-import { typeChildren } from "./type_children.ts";
+import { MAX_DEPTH, typeChildren } from "./type_children.ts";
 import type { Predicate } from "../predicates.ts";
 
 export interface TypeEnv {
@@ -56,13 +56,6 @@ export const STRING: Type = { kind: "primitive", name: "string" };
 export const BOOLEAN: Type = { kind: "primitive", name: "boolean" };
 export const UNIT: Type = { kind: "primitive", name: "unit" };
 export const NEVER: Type = { kind: "primitive", name: "never" };
-
-// The bound on the recursion of one comparison. The parser limits written
-// nesting to 512 levels and `declaration/012` limits an alias to 128 levels.
-// So one type is at most about 640 levels deep, and two types give at most
-// about 1280 frames. 1536 leaves room above that. The type walkers of
-// type_checks.ts use the same bound and report a type that goes past it.
-export const MAX_DEPTH = 1536;
 
 export function isNever(type: Type): boolean {
   return type.kind === "primitive" && type.name === "never";

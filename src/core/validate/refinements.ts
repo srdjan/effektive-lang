@@ -10,11 +10,11 @@ import type {
 import type { Predicate, Term } from "../predicates.ts";
 import { verifyCertificate } from "./predicates.ts";
 import { AREA } from "./report.ts";
+import { MAX_DEPTH } from "./type_children.ts";
 import {
   fieldsOf,
   fits,
   identityBody,
-  MAX_DEPTH,
   members,
   ownsSealed,
   unfold,

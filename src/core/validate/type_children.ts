@@ -1,8 +1,16 @@
-// The child types of a type. The type walkers of the validator descend
+// The child types of a type, and the bounded walk over them. The type walkers of the validator descend
 // through `typeChildren`, so a new Type kind is a compile error here and
 // nowhere else. A child comes with the IR path suffix that diagnostics use.
 
-import type { Type } from "../ir.ts";
+import type { Span, Type } from "../ir.ts";
+import type { Report } from "./report.ts";
+
+// The bound on the recursion of one comparison. The parser limits written
+// nesting to 512 levels and `declaration/012` limits an alias to 128 levels.
+// So one type is at most about 640 levels deep, and two types give at most
+// about 1280 frames. 1536 leaves room above that. The type walkers that
+// report depth use the same bound and report a type that goes past it.
+export const MAX_DEPTH = 1536;
 
 /** A child type and the IR path suffix from its parent, such as `.fields[0].type`. */
 interface TypeChild {
@@ -65,4 +73,31 @@ export function typeChildren(t: Type): readonly TypeChild[] {
       return unreachable;
     }
   }
+}
+
+/**
+ * Walks a type and its children in the order of `typeChildren`. `enter` runs
+ * on a node before its children, and `leave` after them. A node deeper than
+ * `MAX_DEPTH` stops its branch and gets the one depth report of its declaration.
+ */
+export function walkTypeBounded(
+  report: Report,
+  span: Span,
+  type: Type,
+  path: string,
+  enter: (t: Type, at: string) => void,
+  leave: (t: Type, at: string) => void = () => {},
+): void {
+  const walk = (t: Type, at: string, depth: number): void => {
+    if (depth > MAX_DEPTH) {
+      report.addDepth(at, MAX_DEPTH, span);
+      return;
+    }
+    enter(t, at);
+    for (const c of typeChildren(t)) {
+      walk(c.type, `${at}${c.suffix}`, depth + 1);
+    }
+    leave(t, at);
+  };
+  walk(type, path, 0);
 }

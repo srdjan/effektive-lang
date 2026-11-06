@@ -8,10 +8,9 @@ import {
   containsRefinement,
   dataOnly,
   entrySchemaDerivable,
-  MAX_DEPTH,
   type TypeEnv,
 } from "./typing.ts";
-import { typeChildren } from "./type_children.ts";
+import { MAX_DEPTH, typeChildren, walkTypeBounded } from "./type_children.ts";
 import type { Ctx } from "./world_table.ts";
 
 /**
@@ -124,16 +123,11 @@ export function checkTypeIds(
       requirements: t.encodeRequirements,
     });
   };
-  const walk = (t: Type, at: string, depth: number): void => {
-    if (depth > MAX_DEPTH) {
-      report.addDepth(at, MAX_DEPTH, span);
-      return;
-    }
-    // A function checks its flags before its children.
+  // A function checks its flags before its children.
+  const enter = (t: Type, at: string): void => {
     if (t.kind === "function") functionFlags(t, at);
-    for (const c of typeChildren(t)) {
-      walk(c.type, `${at}${c.suffix}`, depth + 1);
-    }
+  };
+  const leave = (t: Type, at: string): void => {
     // Every other check of a kind follows its children.
     switch (t.kind) {
       case "primitive":
@@ -200,7 +194,7 @@ export function checkTypeIds(
       }
     }
   };
-  walk(type, path, 0);
+  walkTypeBounded(report, span, type, path, enter, leave);
   return ok;
 }
 
@@ -295,19 +289,11 @@ export function checkRecordFields(
   path: string,
   span: Span,
 ): void {
-  const walk = (t: Type, at: string, depth: number): void => {
-    if (depth > MAX_DEPTH) {
-      ctx.report.addDepth(at, MAX_DEPTH, span);
-      return;
-    }
+  walkTypeBounded(ctx.report, span, type, path, (t, at) => {
     if (t.kind === "record") {
       checkFieldNames(ctx, t.fields, `${at}.fields`, span);
     }
-    for (const c of typeChildren(t)) {
-      walk(c.type, `${at}${c.suffix}`, depth + 1);
-    }
-  };
-  walk(type, path, 0);
+  });
 }
 
 /** Identity and field checks of one type in a declaration. */

@@ -14,13 +14,13 @@ import {
   fits,
   fitsCheckedInput,
   identityMembers,
-  MAX_DEPTH,
   members,
   same,
   show,
   type TypeEnv,
   unfold,
 } from "../src/core/validate/typing.ts";
+import { MAX_DEPTH } from "../src/core/validate/type_children.ts";
 
 const ENV: TypeEnv = {
   module: "m",

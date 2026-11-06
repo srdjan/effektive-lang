@@ -3,7 +3,8 @@
 
 import type { ModuleIR, Type } from "../ir.ts";
 import { AREA } from "./report.ts";
-import { dataOnly, MAX_DEPTH } from "./typing.ts";
+import { dataOnly } from "./typing.ts";
+import { MAX_DEPTH } from "./type_children.ts";
 import { typeChildren } from "./type_children.ts";
 import type { Ctx, World } from "./world_table.ts";
 

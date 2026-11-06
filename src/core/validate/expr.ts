@@ -49,6 +49,7 @@ import {
   sortedUnique,
 } from "./sets.ts";
 import { isReservedError } from "./prelude.ts";
+import { MAX_DEPTH } from "./type_children.ts";
 import {
   asFunction,
   BOOLEAN,
@@ -72,7 +73,6 @@ import {
   isNever,
   isNumericClass,
   isStringClass,
-  MAX_DEPTH,
   members,
   NEVER,
   NUMBER,

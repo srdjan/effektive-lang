@@ -93,7 +93,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     builtins.ts    Builtin metadata and collection shapes used only by the validator.
     families/      The builtin families of the validator, behind the validator-owned ValidatorCore in context.ts.
     typing.ts      Type compatibility, including the lift rule.
-    type_children.ts The child types of a type with their IR path suffixes: one descent for the type walkers.
+    type_children.ts The child types of a type with their IR path suffixes, and the bounded walk that reports depth.
     sets.ts        Sorted effect sets and the combine rule.
     serialization.ts Sorted sets, finite numbers, and spans against the source texts.
     report.ts      The eight area codes and the diagnostic collector.
