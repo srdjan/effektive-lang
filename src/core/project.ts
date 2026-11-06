@@ -34,14 +34,10 @@ import {
 import type { FileMode, SyntaxTree } from "./syntax.ts";
 import { compareText } from "./util.ts";
 
-// ------------------------------------------------------------------ paths
-
 function dirName(path: string): string {
   const slash = path.lastIndexOf("/");
   return slash < 0 ? "" : path.slice(0, slash);
 }
-
-// ------------------------------------------------------------------ modules
 
 interface ImportLink {
   /** The import declaration in the index of the importing module. */
@@ -115,7 +111,6 @@ export function planImports(info: ModuleInfo): readonly PlannedImport[] {
   return planned;
 }
 
-/** Which declarations a module exports. */
 export type ExportRule = "declared" | "every-declaration";
 
 /**
@@ -367,15 +362,12 @@ class Loader {
   }
 }
 
-// ------------------------------------------------------------------ graph
-
 interface GraphResult {
   readonly graph: ReadonlyMap<string, readonly string[]>;
   readonly order: readonly string[];
   readonly diagnostics: readonly Diagnostic[];
 }
 
-/** Builds the graph, finds cycles with strongly connected components, and orders the modules. */
 function linkModules(
   modules: ReadonlyMap<string, ModuleInfo>,
 ): GraphResult {
@@ -438,8 +430,6 @@ function cycleDiagnostic(
     : `import cycle: ${component.join(" -> ")} -> ${component[0]}`;
   return makeDiagnostic("module/003", cycle, span);
 }
-
-// ------------------------------------------------------------------ entry
 
 /**
  * Reads the project file, loads the entry files and every module they import,

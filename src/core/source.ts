@@ -24,7 +24,6 @@ export interface SourceHost {
   readText(path: string): Result<string, ReadError>;
 }
 
-/** An in-memory host for tests. */
 export function memoryHost(
   files: ReadonlyMap<string, string> | Readonly<Record<string, string>>,
 ): SourceHost {

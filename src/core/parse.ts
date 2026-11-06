@@ -147,7 +147,6 @@ class Parser {
   private lastErrorStart = -1;
   private lastErrorEnd = -1;
 
-  // Node storage.
   private readonly nodeKinds: number[] = [];
   private readonly nodeStarts: number[] = [];
   private readonly nodeEnds: number[] = [];
@@ -191,8 +190,6 @@ class Parser {
       children: Uint32Array.from(this.flat),
     };
   }
-
-  // ---------------------------------------------------------------- tree building
 
   private top(): NodeId[] {
     return this.stack[this.stack.length - 1];
@@ -266,8 +263,6 @@ class Parser {
     this.stack.push(items);
     return this.end(kind);
   }
-
-  // ---------------------------------------------------------------- token access
 
   private leaf(): NodeId {
     const t = this.pos;
@@ -397,8 +392,6 @@ class Parser {
       this.kinds[p + 1] === TokenKind.Ident;
   }
 
-  // ---------------------------------------------------------------- groups
-
   private open(inner: "sig" | "free"): Group {
     const index = this.pos;
     this.tok();
@@ -416,8 +409,6 @@ class Parser {
     this.sig = group.sig;
     this.unmatched -= group.unmatched;
   }
-
-  // ---------------------------------------------------------------- diagnostics
 
   private prevEnd(): number {
     let p = this.pos - 1;
@@ -528,8 +519,6 @@ class Parser {
     this.missing(label);
     return false;
   }
-
-  // ---------------------------------------------------------------- recovery
 
   /**
    * Skips junk into an Error node. Skips at least one token unless at Eof. Jumps
@@ -678,8 +667,6 @@ class Parser {
     }
   }
 
-  // ---------------------------------------------------------------- module and declarations
-
   private parseModule(): NodeId {
     this.begin();
     let serviceHeadersAllowed = true;
@@ -695,7 +682,7 @@ class Parser {
         this.parseTopItem(k);
       }
     }
-    this.leaf(); // the Eof token
+    this.leaf();
     return this.end(SyntaxKind.Module);
   }
 
@@ -727,7 +714,7 @@ class Parser {
 
   private parseImport(): void {
     this.begin();
-    this.tok(); // import
+    this.tok();
     if (this.kind() === TokenKind.LBrace) {
       this.parseDelimited(TokenKind.RBrace, () => this.parseName("binding"));
     } else {
@@ -763,7 +750,7 @@ class Parser {
         end,
       );
     }
-    this.tok(); // imports
+    this.tok();
     this.parseName("binding");
     if (this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "from")) {
       this.tok();
@@ -819,7 +806,7 @@ class Parser {
         this.ends[this.pos],
       );
     }
-    this.tok(); // const
+    this.tok();
     if (!topLevel && this.kind() === TokenKind.LBrace) {
       this.parseRecordBinding();
     } else this.parseName("binding");
@@ -856,7 +843,7 @@ class Parser {
   }
 
   private parseTypeBody(): void {
-    this.tok(); // type
+    this.tok();
     this.parseName("binding");
     if (this.kind() === TokenKind.Eq) {
       this.tok();
@@ -876,7 +863,7 @@ class Parser {
   private parseSealedTypeBody(): void {
     const start = this.starts[this.pos];
     const end = this.ends[this.pos];
-    this.tok(); // sealed
+    this.tok();
     if (this.mode === "effi") {
       this.report(
         "syntax/008",
@@ -901,7 +888,7 @@ class Parser {
         this.ends[this.pos],
       );
     }
-    this.tok(); // opaque
+    this.tok();
     if (this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "type")) {
       this.tok();
     } else this.missing("`type`");
@@ -909,7 +896,7 @@ class Parser {
   }
 
   private parseErrorBody(): void {
-    this.tok(); // error
+    this.tok();
     this.parseName("binding");
     if (this.kind() === TokenKind.Eq) {
       this.tok();
@@ -922,7 +909,7 @@ class Parser {
   }
 
   private parseServiceBody(): void {
-    this.tok(); // service
+    this.tok();
     this.parseName("binding");
     if (this.kind() === TokenKind.LBrace) {
       const group = this.open("sig");
@@ -957,7 +944,7 @@ class Parser {
         this.ends[this.pos],
       );
     }
-    this.tok(); // provider
+    this.tok();
     this.parseName("binding");
     if (
       this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "provides")
@@ -980,7 +967,7 @@ class Parser {
   private parseFailsClause(): void {
     this.skipNl();
     this.begin();
-    this.tok(); // fails
+    this.tok();
     this.parseNameSet(false);
     this.end(SyntaxKind.FailsClause);
   }
@@ -988,7 +975,7 @@ class Parser {
   private parseWithClause(): void {
     this.skipNl();
     this.begin();
-    this.tok(); // with
+    this.tok();
     this.parseNameSet(true);
     this.end(SyntaxKind.WithClause);
   }
@@ -1064,8 +1051,6 @@ class Parser {
     }
     this.end(SyntaxKind.Param);
   }
-
-  // ---------------------------------------------------------------- types
 
   private parseType(): void {
     const cp = this.checkpoint();
@@ -1260,8 +1245,6 @@ class Parser {
     return k === TokenKind.Arrow || (allowColon && k === TokenKind.Colon);
   }
 
-  // ---------------------------------------------------------------- expressions
-
   /** Full expression: a pipeline of binary expressions. */
   private parseExpr(): void {
     if (!this.enter()) return;
@@ -1277,7 +1260,7 @@ class Parser {
       if (!this.enterLink()) break;
       links++;
       this.skipNl();
-      this.tok(); // |>
+      this.tok();
       this.skipNl();
       this.begin();
       if (this.kind() === TokenKind.Ident) {
@@ -1480,7 +1463,7 @@ class Parser {
 
   private parseUsing(): void {
     this.begin();
-    this.tok(); // contextual using
+    this.tok();
     const group = this.open("free");
     this.parseName("binding");
     this.expect(TokenKind.Eq, "`=`");
@@ -1631,7 +1614,7 @@ class Parser {
 
   private parseIfInner(): void {
     this.begin();
-    this.tok(); // if
+    this.tok();
     if (this.kind() === TokenKind.LParen) {
       const group = this.open("free");
       this.parseExpr();
@@ -1653,7 +1636,7 @@ class Parser {
 
   private parseMatch(): void {
     this.begin();
-    this.tok(); // match
+    this.tok();
     this.parseExpr();
     if (this.kind() === TokenKind.LBrace) {
       this.parseDelimited(TokenKind.RBrace, () => this.parseArm());
@@ -1678,13 +1661,13 @@ class Parser {
 
   private parseTry(): void {
     this.begin();
-    this.tok(); // try
+    this.tok();
     this.parseBlockExpected();
     const caught = this.la() === TokenKind.KwCatch;
     if (caught) {
       this.skipNl();
       this.begin();
-      this.tok(); // catch
+      this.tok();
       if (this.kind() === TokenKind.LBrace) {
         this.parseDelimited(TokenKind.RBrace, () => this.parseHandler());
       } else {
@@ -1695,7 +1678,7 @@ class Parser {
     if (this.la() === TokenKind.KwFinally) {
       this.skipNl();
       this.begin();
-      this.tok(); // finally
+      this.tok();
       this.skipNl();
       this.parseOutcomeBinding();
       this.parseBlockExpected();
@@ -1734,8 +1717,6 @@ class Parser {
     this.parseBody();
     this.end(SyntaxKind.Handler);
   }
-
-  // ---------------------------------------------------------------- patterns
 
   private isLiteralKind(k: TokenKind): boolean {
     return k === TokenKind.String || k === TokenKind.Number ||

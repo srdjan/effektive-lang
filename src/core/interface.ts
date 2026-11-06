@@ -77,7 +77,6 @@ export function payloadHash(payload: InterfacePayload): string {
   return fnv1a64(canonicalJson(payload));
 }
 
-/** The hash of an interface payload. */
 function interfaceHash(payload: InterfacePayload): string {
   return fnv1a64(canonicalJson(stripSpans(payload)));
 }
@@ -120,7 +119,6 @@ function exportedValueIds(
 
 type GraphDecl = TypeDecl | ErrorDecl | ServiceDecl;
 
-/** Adds the identities that one declaration mentions. */
 function declarationRefs(d: GraphDecl, into: Set<string>): void {
   switch (d.kind) {
     case "type":
@@ -316,8 +314,6 @@ export function buildInterface(
     },
   };
 }
-
-// ------------------------------------------------------------------ reachability
 
 /** The names of the modules that `module` reaches through imports, directly or not. */
 export function reachableModules(analysis: Analysis, module: string): string[] {

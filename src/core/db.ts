@@ -65,8 +65,6 @@ import { memoryHost, type Result } from "./source.ts";
 import { type TypeReader, TypeTable } from "./types.ts";
 import { compareText } from "./util.ts";
 
-// ------------------------------------------------------------------ changes
-
 /** A change set. Paths are relative to the project root. */
 export interface ProgramChanges {
   /** Files that are new or that have new text. */
@@ -76,8 +74,6 @@ export interface ProgramChanges {
   /** Files that no longer exist. */
   readonly remove?: readonly string[];
 }
-
-// ------------------------------------------------------------------ query counts
 
 /**
  * Cumulative counts of the expensive queries of a program (design measurement
@@ -94,8 +90,6 @@ export interface QueryCounts {
 
 /** The mutable counters that a program shares with its revisions. */
 type Counters = { -readonly [K in keyof QueryCounts]: number };
-
-// ------------------------------------------------------------------ memo entries
 
 /** A memo entry. The key decides when it is valid. The lazy fields fill on demand. */
 interface Entry {
@@ -119,8 +113,6 @@ function configKey(config: ProjectConfig): string {
     config.imports?.map((rule) => [rule.from, ...rule.allow]) ?? null,
   ]);
 }
-
-// ------------------------------------------------------------------ the revision
 
 /**
  * The state of the program after one `update`. The query methods return
@@ -162,12 +154,10 @@ export class Revision {
     return this.entries.get(name)?.step.checked;
   }
 
-  /** The project root. */
   get root(): string {
     return this.project.root;
   }
 
-  /** The project configuration. */
   get config(): ProjectConfig {
     return this.project.config;
   }
@@ -187,18 +177,15 @@ export class Revision {
     return this.project.modules.values();
   }
 
-  /** The module info of a module name. */
   moduleInfo(name: string): ModuleInfo | undefined {
     return this.project.modules.get(name);
   }
 
-  /** The module info of a root-relative file path. */
   moduleInfoAt(path: string): ModuleInfo | undefined {
     const name = this.namesByPath().get(path);
     return name === undefined ? undefined : this.project.modules.get(name);
   }
 
-  /** The checked module of a root-relative file path. */
   checkedModuleAt(path: string): CheckedModule | undefined {
     const name = this.namesByPath().get(path);
     return name === undefined
@@ -206,7 +193,6 @@ export class Revision {
       : this.entries.get(name)?.step.checked;
   }
 
-  /** The resolver result of a module name. */
   resolution(name: string): ModuleResolution | undefined {
     return this.checked.analysis.resolutions.get(name);
   }
@@ -264,8 +250,6 @@ export class Revision {
     return entry.lowered;
   }
 }
-
-// ------------------------------------------------------------------ the program
 
 export class Program {
   private readonly files = new Map<string, string>();
@@ -428,8 +412,6 @@ export class Program {
     );
   }
 }
-
-// ------------------------------------------------------------------ revision delta
 
 /** The modules that differ between two revisions, in the module order of the later one. */
 export interface RevisionDelta {

@@ -33,7 +33,6 @@ const TYPE_KINDS: ReadonlySet<SyntaxKind> = new Set([
   SyntaxKind.ParenType,
 ]);
 
-/** True for the syntax kinds of type nodes. */
 export function isTypeKind(kind: SyntaxKind): boolean {
   return TYPE_KINDS.has(kind);
 }
@@ -346,7 +345,6 @@ const PATTERN_KINDS: ReadonlySet<SyntaxKind> = new Set([
   SyntaxKind.RecordPattern,
 ]);
 
-/** True for the syntax kinds of match patterns. */
 export function isPatternKind(kind: SyntaxKind): boolean {
   return PATTERN_KINDS.has(kind);
 }

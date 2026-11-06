@@ -49,8 +49,6 @@ import {
   type SyntaxTree,
 } from "./syntax.ts";
 
-// ------------------------------------------------------------------ prelude
-
 /**
  * What the compiler treats differently about a prelude name. An option
  * constructor has its own resolution and checking rules and is not a family
@@ -147,7 +145,6 @@ function takesServiceArgument(text: string): boolean {
 /** The handler arm that catches defects. It is a keyword of the handler, not an error identity. */
 const DEFECT_ARM = "Defect";
 
-/** True when a prelude name is an option constructor. */
 export function isOptionConstructorName(
   name: PreludeName,
 ): name is OptionConstructorName {
@@ -247,8 +244,6 @@ function asBuiltinType(name: string): BuiltinTypeName | undefined {
   return BUILTIN_TYPES.find((builtin) => builtin === name);
 }
 
-// ------------------------------------------------------------------ targets
-
 export type Target =
   | { readonly kind: "type"; readonly id: TypeId }
   | { readonly kind: "error"; readonly id: ErrorId }
@@ -288,7 +283,6 @@ export function targetText(target: Target): string {
   }
 }
 
-/** A module-level name. */
 interface Binding {
   readonly target: Target;
   /** For a service: the defining module and the declaration, to look up methods. */
@@ -307,8 +301,6 @@ export interface ModuleResolution {
   readonly namespace: ReadonlyMap<string, Binding>;
   readonly diagnostics: readonly Diagnostic[];
 }
-
-// ------------------------------------------------------------------ scopes
 
 interface LocalBinding {
   readonly id: LocalId;
@@ -358,8 +350,6 @@ function describeKind(target: Target): string {
   }
 }
 
-// ------------------------------------------------------------------ resolver
-
 class Resolver {
   readonly targets = new Map<NodeId, Target>();
   readonly defectArms = new Set<NodeId>();
@@ -380,8 +370,6 @@ class Resolver {
     this.tree = info.tree;
     this.name = info.name;
   }
-
-  // -------------------------------------------------------------- helpers
 
   private kidsOfKind(node: NodeId, kind: SyntaxKind): NodeId[] {
     return kidsOf(this.tree, node).filter((k) => kindOf(this.tree, k) === kind);
@@ -407,8 +395,6 @@ class Resolver {
   private unresolved(node: NodeId, name: string): void {
     this.set(node, { kind: "unresolved", name });
   }
-
-  // -------------------------------------------------------------- namespace
 
   private declareModuleName(
     name: string,
@@ -562,8 +548,6 @@ class Resolver {
     }
   }
 
-  // -------------------------------------------------------------- locals
-
   private declareLocal(
     nameNode: NodeId,
     pending: boolean,
@@ -650,8 +634,6 @@ class Resolver {
     }
     return found;
   }
-
-  // -------------------------------------------------------------- name references
 
   private unknown(node: NodeId, name: string, what: string): void {
     this.report(
@@ -939,8 +921,6 @@ class Resolver {
     if (whole !== undefined) this.set(qn, whole);
   }
 
-  // -------------------------------------------------------------- types and clauses
-
   private resolveType(node: NodeId): void {
     const kind = kindOf(this.tree, node);
     switch (kind) {
@@ -1033,8 +1013,6 @@ class Resolver {
     }
   }
 
-  // -------------------------------------------------------------- declarations
-
   private resolveDecl(decl: DeclEntry): void {
     const node = decl.node;
     this.fn = decl.name;
@@ -1082,8 +1060,6 @@ class Resolver {
       this.expr(init, "value");
     }
   }
-
-  // -------------------------------------------------------------- expressions
 
   private expr(node: NodeId, position: Position): void {
     const kind = kindOf(this.tree, node);
@@ -1420,8 +1396,6 @@ class Resolver {
     }
   }
 
-  // -------------------------------------------------------------- driver
-
   run(): ModuleResolution {
     this.bindImports();
     for (const decl of this.info.index.decls) this.resolveDecl(decl);
@@ -1435,7 +1409,6 @@ class Resolver {
   }
 }
 
-/** Resolves every name of one module of the project. */
 function resolveModule(
   project: Project,
   info: ModuleInfo,

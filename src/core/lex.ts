@@ -105,7 +105,6 @@ export const KEYWORDS: ReadonlyMap<string, TokenKind> = new Map([
 /** The token kinds of the keyword table. The order of the enum does not matter. */
 const KEYWORD_KINDS: ReadonlySet<TokenKind> = new Set(KEYWORDS.values());
 
-/** True when `kind` is a keyword token kind. */
 export function isKeywordKind(kind: TokenKind): boolean {
   return KEYWORD_KINDS.has(kind);
 }
@@ -304,7 +303,6 @@ export function describeTokenKind(kind: TokenKind): string {
   return TOKEN_NAMES[kind];
 }
 
-/** True when token `index` is an identifier that spells `word`. */
 export function isWord(lexed: Lexed, index: number, word: string): boolean {
   return lexed.kinds[index] === TokenKind.Ident &&
     lexed.ends[index] - lexed.starts[index] === word.length &&

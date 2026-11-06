@@ -33,17 +33,14 @@ export function normalizeRelative(path: string): string | undefined {
 const SOURCE_EXTENSION = ".eff";
 const INTERFACE_EXTENSION = ".effi";
 
-/** True for the path of a source file: it ends in `.eff`. */
 export function isSourcePath(path: string): boolean {
   return path.endsWith(SOURCE_EXTENSION);
 }
 
-/** True for the path of a host interface file: it ends in `.effi`. */
 export function isInterfacePath(path: string): boolean {
   return path.endsWith(INTERFACE_EXTENSION);
 }
 
-/** True for the path of a source file or a host interface file. */
 export function isModulePath(path: string): boolean {
   return isSourcePath(path) || isInterfacePath(path);
 }
@@ -70,7 +67,6 @@ export function generatedPathOf(path: string): string {
 /** The module name that the prelude import uses. */
 export const PRELUDE_MODULE = "effektive:prelude";
 
-/** True for the import specifier of the prelude. */
 export function isPreludeModule(module: string): boolean {
   return module === PRELUDE_MODULE;
 }

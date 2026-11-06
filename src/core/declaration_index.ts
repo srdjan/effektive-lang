@@ -197,7 +197,6 @@ function indexImport(tree: SyntaxTree, node: NodeId): ImportEntry {
   };
 }
 
-/** Builds the declaration index of a parsed file. */
 export function buildIndex(tree: SyntaxTree): FileIndex {
   const decls: DeclEntry[] = [];
   const byName = new Map<string, DeclEntry>();
