@@ -58,6 +58,19 @@ Deno.test("rejectionLines selects the lines that start a report call", () => {
   assertEquals(rejectionLines(source), [4, 5, 8, 9, 10]);
 });
 
+Deno.test("rejectionLines recognizes a report call on a renamed receiver", () => {
+  const source = [
+    "context.report.add(AREA.types, path, 'x', span);", // 1
+    "reporter.addDepth(at, 3, span);", // 2
+    "checker.add(", // 3
+    "  AREA.types,", // 4
+    ");", // 5
+    "sink.add(area, path, 'y', span);", // 6
+    "visited.add(name);", // 7
+  ].join("\n");
+  assertEquals(rejectionLines(source), [1, 2, 3, 6]);
+});
+
 Deno.test("formatUnfired lists path:line: text sorted, then the count", () => {
   const sources = {
     "src/core/validate/b.ts": "x\n  c.add(AREA.types, p, 'm', s);\nz",

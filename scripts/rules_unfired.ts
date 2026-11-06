@@ -6,18 +6,19 @@
 // the list has a site, or when the suite or the coverage report fails. It
 // exits 0 when the list is empty.
 //
-// A rejection starts at a line that calls `add` or `addDepth` on a report
-// receiver: `report`, `ctx.report`, `this.ctx.report`, `this` (the expression
-// checker), or `c` (the family checkers). A call can span several lines, and
-// the first line is the one that counts. The match is textual, so a rejection
-// that goes through another helper is not listed.
+// A rejection starts at a line that, on any receiver, calls `addDepth`, calls
+// `add` with an `AREA.` member or the forwarded `area` as the first argument,
+// or ends with `.add(` and so continues its arguments on the next line. A call
+// can span several lines, and the first line is the one that counts. The match is textual, so a rejection that goes through another
+// helper is not listed.
 
 import { fromFileUrl, join, relative } from "@std/path";
 import { fastSuiteArgs, ROOT, runProcess, withTempDir } from "./lib.ts";
 
 const VALIDATE_DIR = "src/core/validate/";
-const REJECTION =
-  /(?<![\w.])(?:this\.ctx\.report|ctx\.report|report|this|c)\.(?:addDepth|add)\(/;
+const DEPTH_CALL = /\.addDepth\(/;
+const ADD_CALL = /\.add\(\s*(?:AREA\.|area,)/;
+const ADD_OPEN = /\.add\($/;
 
 /** Uncovered line numbers (ascending) of each file in the lcov text. */
 export function parseLcovUncovered(lcov: string): Record<string, number[]> {
@@ -44,7 +45,9 @@ export function rejectionLines(source: string): number[] {
   source.split("\n").forEach((text, index) => {
     const trimmed = text.trimStart();
     if (trimmed.startsWith("//") || trimmed.startsWith("*")) return;
-    if (REJECTION.test(text)) found.push(index + 1);
+    if (DEPTH_CALL.test(text) || ADD_CALL.test(text) || ADD_OPEN.test(text)) {
+      found.push(index + 1);
+    }
   });
   return found;
 }
