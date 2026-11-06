@@ -17,20 +17,17 @@ import targetLock from "./target_lock.json" with { type: "json" };
 /** The version of Effect that the generated code targets. */
 export const EFFECT_VERSION = "4.1.2";
 
-/** The compiler options of the generated check. */
 export const TARGET_COMPILER_OPTIONS = {
   strict: true,
   exactOptionalPropertyTypes: true,
   noUncheckedIndexedAccess: true,
 } as const;
 
-/** The pinned host imports of the generated check. */
 export const TARGET_IMPORTS = {
   effect: `npm:effect@${EFFECT_VERSION}`,
   "@effect/platform-node": `npm:@effect/platform-node@${EFFECT_VERSION}`,
 } as const;
 
-/** The configuration of the generated check: strict, with pinned host imports. */
 export function tscConfig(): string {
   return JSON.stringify(
     {

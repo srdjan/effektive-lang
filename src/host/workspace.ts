@@ -27,7 +27,6 @@ export function isSourcePath(path: string): boolean {
     (directories.length === 0 && name === CONFIG_FILE);
 }
 
-/** The real path of a directory, or undefined when it cannot be resolved. */
 function realPath(fs: HostFs, path: string): string | undefined {
   try {
     return fs.absolute(path);

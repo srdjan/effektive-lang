@@ -40,7 +40,6 @@ class Positions {
   }
 }
 
-/** A diagnostic with its printed position. */
 interface Located {
   readonly path: string;
   readonly line: number;
@@ -51,7 +50,6 @@ interface Located {
   readonly notes?: readonly Note[];
 }
 
-/** A related location as a note line. */
 interface Note {
   readonly path: string;
   readonly line: number;
@@ -65,7 +63,6 @@ function compareLocated(a: Located, b: Located): number {
     compareText(a.message, b.message);
 }
 
-/** The printed position of the start of `span`, with the code and the message. */
 function locate(
   positions: Positions,
   span: Span,
@@ -93,7 +90,6 @@ function locate(
   };
 }
 
-/** The diagnostic line, then one note line for each related location. */
 function lines(located: Located): string[] {
   const head =
     `${located.path}:${located.line}:${located.column}: error ${located.code}: ${

@@ -73,14 +73,12 @@ export function memoryLog(
   };
 }
 
-/** A file in a directory listing. */
 export interface LogEntry {
   readonly name: string;
   /** Modification time, in milliseconds since the epoch. */
   readonly mtimeMs: number;
 }
 
-/** The small file system that the file log needs. */
 export interface LogFs {
   /** Creates the directory and its parents. */
   mkdir(path: string): Result<void, FileFailure>;

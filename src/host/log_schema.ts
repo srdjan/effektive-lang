@@ -286,7 +286,6 @@ export function isKind(
   return event.kind === kind;
 }
 
-/** True when the kind of the event is in the set. */
 export function isAnyKind(
   event: { readonly kind: string },
   kinds: ReadonlySet<LogKind>,

@@ -2,7 +2,6 @@
 
 import type { Result } from "../core/mod.ts";
 
-/** A command that works on a project directory. */
 export type ProjectCommand =
   | {
     readonly kind: "check";
@@ -41,7 +40,6 @@ export const USAGE = [
   "",
 ].join("\n");
 
-/** The flag that turns the session log off. */
 export const NO_LOG_FLAG = "--no-log";
 
 /** The flag that adds the `deno check` stage to `build` and `watch`. */

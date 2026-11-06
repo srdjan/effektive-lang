@@ -3,7 +3,6 @@
 import type { BuildOutcome } from "./build.ts";
 import type { HostIo } from "../host/io.ts";
 
-/** The modules a revision checked, as one line of text. */
 export function rechecked(names: readonly string[]): string {
   return names.length === 0 ? "none" : names.join(", ");
 }
