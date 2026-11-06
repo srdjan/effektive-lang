@@ -3,7 +3,7 @@
 // and the body text. The result is the envelopes to write, or the refusal.
 
 import type { Envelope } from "../src/host/log.ts";
-import type { Result } from "../src/core/mod.ts";
+import { isRecord, type Result } from "../src/core/mod.ts";
 
 /** The only origin that may post besides a same-origin fetch. */
 export const ALLOWED_ORIGIN = "http://127.0.0.1:8790";
@@ -33,10 +33,6 @@ const REPLAY_NAME = /^playground-\d{8}-[0-9a-f-]{36}\.jsonl$/;
 /** True for a playground session file name. A path separator or `..` never matches. */
 export function isReplayName(name: string): boolean {
   return REPLAY_NAME.test(name) && SESSION.test(name.slice(20, 56));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** The envelope, when `value` has the playground shape. */

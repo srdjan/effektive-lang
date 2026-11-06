@@ -71,7 +71,8 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   editor_actions.ts Validated missing fails/with actions from checked body effects.
   editor_signature.ts signatureHelpAt: signature help for ordinary calls from checked callee types.
   ids.ts         Constructors, tests, and parts of identities: module, name, method, capability, local, service, and reserved error.
-  util.ts        Small pure helpers of the front end and the edges: compareText, errorMessage, isRecord, canonicalJson, and sortedUnique.
+  util.ts        Small pure helpers of the front end and the edges: compareText, errorMessage, isRecord, and sortedUnique.
+  content_id.ts  canonicalJson: the text that content identities hash. Emitted builtin names depend on it.
   frontend.ts    Checking, IR, and source editor queries, with no backend dependency.
   typescript.ts  TypeScript output caches, emitProject, backend hover, maps, diagnostic mapping.
   mod.ts         Aggregate public API.

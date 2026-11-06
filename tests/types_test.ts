@@ -23,7 +23,7 @@ import {
   TypeTable,
 } from "../src/core/types.ts";
 import type { TypeRef } from "../src/core/frontend.ts";
-import { canonicalJson } from "../src/core/util.ts";
+import { canonicalJson } from "../src/core/content_id.ts";
 import { guardedRecord } from "../src/core/recursion_guard.ts";
 import { loadGraph, typeFromIr, typeToIr } from "../src/core/type_ir.ts";
 import { showType, showTypes } from "../src/core/type_show.ts";

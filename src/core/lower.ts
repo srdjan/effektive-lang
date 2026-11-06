@@ -56,7 +56,8 @@ import { TokenKind } from "./lex.ts";
 import type { ModuleInfo } from "./project.ts";
 import type { ModuleResolution, Target } from "./resolve.ts";
 import { sha256Hex } from "./sha256.ts";
-import { canonicalJson, compareText, sortedUnique } from "./util.ts";
+import { canonicalJson } from "./content_id.ts";
+import { compareText, sortedUnique } from "./util.ts";
 import {
   kindOf,
   type NodeId,

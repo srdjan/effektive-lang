@@ -19,7 +19,8 @@ import {
 import { isErrorId, isReservedErrorId, isTypeId, moduleOfId } from "./ids.ts";
 import type { Predicate } from "./predicates.ts";
 import { typeToIr } from "./type_ir.ts";
-import { canonicalJson, compareText, sortedUnique } from "./util.ts";
+import { canonicalJson } from "./content_id.ts";
+import { compareText, sortedUnique } from "./util.ts";
 
 declare const typeRefBrand: unique symbol;
 

@@ -65,7 +65,8 @@ import { isSourcePath, joinPath } from "./paths.ts";
 import type { ModuleResolution } from "./resolve.ts";
 import { memoryHost, type Result } from "./source.ts";
 import { type TypeReader, TypeTable } from "./types.ts";
-import { canonicalJson, compareText } from "./util.ts";
+import { canonicalJson } from "./content_id.ts";
+import { compareText } from "./util.ts";
 
 // ------------------------------------------------------------------ changes
 
