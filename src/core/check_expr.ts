@@ -19,7 +19,10 @@ import {
   type RelatedSpan,
 } from "./diagnostics.ts";
 import {
+  argNodes,
   arrowBody,
+  fieldParts,
+  functionParts,
   initOf,
   isDurationLiteral,
   isPatternKind,
@@ -28,6 +31,10 @@ import {
   literalOf,
   nameTextOf,
   operatorOf,
+  paramNodes,
+  paramParts,
+  pipeParts,
+  stageParts,
   unparen,
 } from "./syntax_queries.ts";
 import { isBoolean, operatorResult } from "./check_binary.ts";
@@ -731,12 +738,7 @@ class BodyChecker
     const kids = this.kids(node);
     const callee = kids[0];
     if (callee === undefined) return this.errorInfo(node);
-    const argList = kids.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.ArgList
-    );
-    const args: Arg[] = argList === undefined
-      ? []
-      : this.kids(argList).map((n) => ({ node: n }));
+    const args: Arg[] = argNodes(this.tree, node).map((n) => ({ node: n }));
     const calleeKind = kindOf(this.tree, callee);
     const target = calleeKind === SyntaxKind.NameExpr ||
         calleeKind === SyntaxKind.FieldExpr
@@ -1466,21 +1468,11 @@ class BodyChecker
   // -------------------------------------------------------------- pipelines
 
   private pipe(node: NodeId, expected: TypeRef | undefined): NodeInfo {
-    const kids = this.kids(node);
-    const left = kids[0];
-    const stage = kids.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.PipeStage
-    );
+    const { left, stage } = pipeParts(this.tree, node);
     if (left === undefined) return this.errorInfo(node);
     const leftInfo = this.expr(left);
     if (stage === undefined) return this.errorInfo(node);
-    const parts = this.kids(stage);
-    const qualified = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.QualifiedName
-    );
-    const argList = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.ArgList
-    );
+    const { callee: qualified, args: stageArgs } = stageParts(this.tree, stage);
     if (qualified === undefined) {
       this.errorInfo(stage);
       return this.finish(node, this.table.error, leftInfo);
@@ -1493,9 +1485,7 @@ class BodyChecker
       : { type: leftInfo.type, ...PURE_EFFECTS };
     const args: Arg[] = [
       { node: left, pre },
-      ...(argList === undefined
-        ? []
-        : this.kids(argList).map((n) => ({ node: n }))),
+      ...stageArgs.map((n) => ({ node: n })),
     ];
     if (this.checkedSlots.has(node)) this.checkedSlots.add(stage);
     const q = this.invoke(
@@ -1520,11 +1510,7 @@ class BodyChecker
   // -------------------------------------------------------------- fields and records
 
   private fieldExpr(node: NodeId): NodeInfo {
-    const kids = this.kids(node);
-    const base = kids[0];
-    const member = kids.find((k, i) =>
-      i > 0 && kindOf(this.tree, k) === SyntaxKind.Name
-    );
+    const { base, member } = fieldParts(this.tree, node);
     const target = this.targets.get(node);
     if (target?.kind === "cap") {
       this.report(
@@ -2164,13 +2150,8 @@ class BodyChecker
    */
   private arrow(node: NodeId, context: ArrowContext | undefined): NodeInfo {
     const refinementScope = this.refinements.snapshot();
-    const parts = this.kids(node);
-    const paramList = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.ParamList
-    );
-    const params = paramList === undefined
-      ? []
-      : this.kidsOfKind(paramList, SyntaxKind.Param);
+    const header = functionParts(this.tree, node);
+    const params = paramNodes(this.tree, header.paramList);
     const inferredParameters: {
       readonly id: LocalId | undefined;
       readonly name: string;
@@ -2178,11 +2159,7 @@ class BodyChecker
       readonly inferred: boolean;
     }[] = [];
     params.forEach((param, i) => {
-      const piece = this.kids(param);
-      const nameNode = piece.find((k) =>
-        kindOf(this.tree, k) === SyntaxKind.Name
-      );
-      const typeNode = piece.find((k) => k !== nameNode);
+      const { name: nameNode, type: typeNode } = paramParts(this.tree, param);
       const name = nameNode === undefined
         ? ""
         : nameTextOf(this.tree, nameNode) ?? "";
@@ -2206,13 +2183,7 @@ class BodyChecker
         inferred: type === this.table.unknown,
       });
     });
-    const resultNode = parts.find((k) => isTypeKind(kindOf(this.tree, k)));
-    const failsNode = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.FailsClause
-    );
-    const usesNode = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.WithClause
-    );
+    const { result: resultNode, fails: failsNode, uses: usesNode } = header;
     const bodyNode = arrowBody(this.tree, node);
     const contract: Contract = {
       result: resultNode === undefined

@@ -20,9 +20,13 @@ import {
 } from "./syntax.ts";
 import {
   arrowBody,
+  fieldParts,
+  functionParts,
   kidsOf,
   nameTextOf,
   operatorOf,
+  paramNodes,
+  paramParts,
   unparen,
 } from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
@@ -52,21 +56,12 @@ export function predicateFromSource(
   if (arrow === undefined) {
     return fail(tree, clause, "a refinement needs one predicate function");
   }
-  const paramList = kidsOf(tree, arrow).find((node) =>
-    kindOf(tree, node) === SyntaxKind.ParamList
-  );
-  const parameters = paramList === undefined
-    ? []
-    : kidsOf(tree, paramList).filter((node) =>
-      kindOf(tree, node) === SyntaxKind.Param
-    );
+  const parameters = paramNodes(tree, functionParts(tree, arrow).paramList);
   if (parameters.length !== 1) {
     return fail(tree, arrow, "a refinement predicate needs one parameter");
   }
   const parameterParts = kidsOf(tree, parameters[0]);
-  const nameNode = parameterParts.find((node) =>
-    kindOf(tree, node) === SyntaxKind.Name
-  );
+  const nameNode = paramParts(tree, parameters[0]).name;
   const inputName = nameNode === undefined
     ? undefined
     : nameTextOf(tree, nameNode);
@@ -280,9 +275,7 @@ function pathOf(
   if (kindOf(tree, inner) !== SyntaxKind.FieldExpr) {
     return fail(tree, inner, "a refinement term must be an input field path");
   }
-  const parts = kidsOf(tree, inner);
-  const base = parts[0];
-  const fieldNode = parts[1];
+  const { base, member: fieldNode } = fieldParts(tree, inner);
   const field = fieldNode === undefined
     ? undefined
     : nameTextOf(tree, fieldNode);

@@ -1,7 +1,7 @@
 // Schema construction, directional transformations, defaults and recursion checks.
 import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "../ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
-import { literalOf } from "../syntax_queries.ts";
+import { functionParts, literalOf } from "../syntax_queries.ts";
 import { combine, PURE_EFFECTS } from "../effect_set.ts";
 import type { NodeFact, NodeInfo } from "../tables.ts";
 import { dataOnly, type TypeNode, type TypeRef } from "../types.ts";
@@ -1169,9 +1169,7 @@ function guardedSchemaCallback(c: SchemaContext, node: NodeId): boolean {
     return false;
   }
   const parts = c.kids(node);
-  const params = parts.find((part) =>
-    kindOf(c.tree, part) === SyntaxKind.ParamList
-  );
+  const params = functionParts(c.tree, node).paramList;
   const first = params === undefined
     ? undefined
     : c.kidsOfKind(params, SyntaxKind.Param)[0];

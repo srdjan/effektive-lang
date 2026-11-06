@@ -24,6 +24,7 @@ import { sortedUnique } from "./util.ts";
 import { showType } from "./type_show.ts";
 import { isErrorId } from "./ids.ts";
 import {
+  functionParts,
   hasModifier,
   isTypeKind,
   kidsOf,
@@ -430,9 +431,7 @@ export class TypeLowerer {
   private functionType(node: NodeId): Lowered {
     const execution = hasModifier(this.tree, node, "pure") ? "pure" : "effect";
     const kids = this.kids(node);
-    const paramList = kids.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.ParamList
-    );
+    const { paramList, fails, uses } = functionParts(this.tree, node);
     const parameters = paramList === undefined
       ? []
       : this.parameters(paramList);
@@ -444,12 +443,8 @@ export class TypeLowerer {
     const result = resultNode === undefined
       ? this.errorLowered()
       : this.lower(resultNode);
-    const failures = this.failures(
-      kids.find((k) => kindOf(this.tree, k) === SyntaxKind.FailsClause),
-    );
-    const requirements = this.requirements(
-      kids.find((k) => kindOf(this.tree, k) === SyntaxKind.WithClause),
-    );
+    const failures = this.failures(fails);
+    const requirements = this.requirements(uses);
     if (
       execution === "pure" &&
       (failures.length > 0 || requirements.length > 0)
@@ -538,12 +533,9 @@ export class TypeLowerer {
         },
       };
     }
-    const failures = this.failures(
-      kids.find((k) => kindOf(this.tree, k) === SyntaxKind.FailsClause),
-    );
-    const requirements = this.requirements(
-      kids.find((k) => kindOf(this.tree, k) === SyntaxKind.WithClause),
-    );
+    const clauses = functionParts(this.tree, node);
+    const failures = this.failures(clauses.fails);
+    const requirements = this.requirements(clauses.uses);
     const effects = { failures, requirements };
     const kind = kindOf(this.tree, node);
     if (kind === SyntaxKind.LayerType) {

@@ -10,8 +10,10 @@
 // lowering and the entry point turns it into an `internal` error value.
 
 import {
+  argNodes,
   arrowBody,
   type BinaryOperator,
+  functionParts,
   initOf,
   isDurationLiteral,
   isPatternKind,
@@ -20,6 +22,9 @@ import {
   literalOf,
   nameTextOf,
   operatorOf,
+  paramNodes,
+  pipeParts,
+  stageParts,
 } from "./syntax_queries.ts";
 import { signatureType } from "./signatures.ts";
 import type {
@@ -581,13 +586,10 @@ class BodyLowerer {
     if (fact?.kind !== "arrow") {
       throw internal(`no arrow fact at ${this.describe(node)}`);
     }
-    const parts = this.kids(node);
-    const paramList = parts.find((k) =>
-      kindOf(this.ctx.tree, k) === SyntaxKind.ParamList
+    const params = paramNodes(
+      this.ctx.tree,
+      functionParts(this.ctx.tree, node).paramList,
     );
-    const params = paramList === undefined
-      ? []
-      : this.kidsOfKind(paramList, SyntaxKind.Param);
     const parameters = fact.parameters.map((p, i) =>
       this.parameter(
         p.id,
@@ -608,10 +610,7 @@ class BodyLowerer {
   private call(node: NodeId): Expr {
     const kids = this.kids(node);
     const callee = this.required(kids[0], "the callee", node);
-    const argList = kids.find((k) =>
-      kindOf(this.ctx.tree, k) === SyntaxKind.ArgList
-    );
-    const args = argList === undefined ? [] : this.kids(argList);
+    const args = argNodes(this.ctx.tree, node);
     return this.invoke(node, callee, args, undefined);
   }
 
@@ -920,15 +919,12 @@ class BodyLowerer {
     const chain: { readonly pipe: NodeId; readonly stage: NodeId }[] = [];
     let base = node;
     while (kindOf(this.ctx.tree, base) === SyntaxKind.PipeExpr) {
-      const parts = this.kids(base);
-      const stage = parts.find((k) =>
-        kindOf(this.ctx.tree, k) === SyntaxKind.PipeStage
-      );
+      const { left, stage } = pipeParts(this.ctx.tree, base);
       chain.unshift({
         pipe: base,
         stage: this.required(stage, "the pipeline stage", base),
       });
-      base = this.required(parts[0], "the pipeline value", base);
+      base = this.required(left, "the pipeline value", base);
     }
     // One binding for the base value and one for each stage but the last.
     const ids = chain.map(() => this.nextPipelineBinding());
@@ -990,16 +986,8 @@ class BodyLowerer {
 
   /** Lowers one stage as a call whose first argument is the generated reference. */
   private stage(stage: NodeId, pre: Expr, leftInfo: NodeInfo): Expr {
-    const parts = this.kids(stage);
-    const qualified = this.required(
-      parts.find((k) => kindOf(this.ctx.tree, k) === SyntaxKind.QualifiedName),
-      "the stage name",
-      stage,
-    );
-    const argList = parts.find((k) =>
-      kindOf(this.ctx.tree, k) === SyntaxKind.ArgList
-    );
-    const argNodes = argList === undefined ? [] : this.kids(argList);
+    const { callee, args: stageArgs } = stageParts(this.ctx.tree, stage);
+    const qualified = this.required(callee, "the stage name", stage);
     if (!isQuiet(leftInfo)) {
       this.required(
         this.body.stageSets.get(stage),
@@ -1007,7 +995,7 @@ class BodyLowerer {
         stage,
       );
     }
-    return this.invoke(stage, qualified, argNodes, pre);
+    return this.invoke(stage, qualified, stageArgs, pre);
   }
 
   // -------------------------------------------------------------- records

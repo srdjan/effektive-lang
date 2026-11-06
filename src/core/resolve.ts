@@ -17,6 +17,7 @@ import {
 } from "./diagnostics.ts";
 import type { DeclEntry, MethodEntry } from "./declaration_index.ts";
 import {
+  fieldParts,
   isPatternKind,
   isTypeKind,
   kidsOf,
@@ -1181,11 +1182,7 @@ class Resolver {
   }
 
   private fieldExpr(node: NodeId): void {
-    const kids = kidsOf(this.tree, node);
-    const base = kids[0];
-    const member = kids.find((k, i) =>
-      i > 0 && kindOf(this.tree, k) === SyntaxKind.Name
-    );
+    const { base, member } = fieldParts(this.tree, node);
     if (base === undefined) return;
     if (kindOf(this.tree, base) === SyntaxKind.NameExpr) {
       const baseName = nodeText(this.tree, base);

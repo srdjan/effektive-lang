@@ -1,10 +1,13 @@
 import type { ModuleResolution } from "./resolve.ts";
 import type { CapabilityId, LocalId } from "./ir.ts";
 import {
+  argNodes,
   arrowBody,
+  fieldParts,
   initOf,
   kidsOf,
   nameTextOf,
+  pipeParts,
   unparen,
 } from "./syntax_queries.ts";
 import { kindOf, type NodeId, SyntaxKind, type SyntaxTree } from "./syntax.ts";
@@ -130,12 +133,9 @@ export function transferredRequirements(
   }
 
   const argsOf = (node: NodeId): NodeId[] => {
-    const list = kidsOf(tree, node).find((child) =>
-      kindOf(tree, child) === SyntaxKind.ArgList
-    );
-    const args = list === undefined ? [] : kidsOf(tree, list);
+    const args = argNodes(tree, node);
     if (kindOf(tree, node) === SyntaxKind.PipeStage) {
-      const left = kidsOf(tree, tree.parents[node])[0];
+      const { left } = pipeParts(tree, tree.parents[node]);
       if (left !== undefined) args.unshift(left);
     }
     return args;
@@ -159,7 +159,7 @@ export function transferredRequirements(
         continue;
       }
       if (kindOf(tree, node) === SyntaxKind.FieldExpr) {
-        const [base, label] = kidsOf(tree, node);
+        const { base, member: label } = fieldParts(tree, node);
         const name = label === undefined ? undefined : nameTextOf(tree, label);
         if (name === undefined) return node;
         fields.push(name);

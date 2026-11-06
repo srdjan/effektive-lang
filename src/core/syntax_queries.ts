@@ -216,6 +216,107 @@ export function arrowBody(tree: SyntaxTree, node: NodeId): NodeId | undefined {
   }).pop();
 }
 
+/**
+ * The parts of a function-shaped node (an arrow, a function type, a method, a
+ * signature): its parameter list, its first type child, and its `fails` and
+ * `with` clauses. Each part is undefined when the parser wrote none.
+ */
+export interface FunctionParts {
+  readonly paramList: NodeId | undefined;
+  readonly result: NodeId | undefined;
+  readonly fails: NodeId | undefined;
+  readonly uses: NodeId | undefined;
+}
+
+export function functionParts(tree: SyntaxTree, node: NodeId): FunctionParts {
+  const kids = kidsOf(tree, node);
+  const first = (kind: SyntaxKind): NodeId | undefined =>
+    kids.find((kid) => kindOf(tree, kid) === kind);
+  return {
+    paramList: first(SyntaxKind.ParamList),
+    result: kids.find((kid) => isTypeKind(kindOf(tree, kid))),
+    fails: first(SyntaxKind.FailsClause),
+    uses: first(SyntaxKind.WithClause),
+  };
+}
+
+/** The Param nodes of a parameter list, or none when the list is absent. */
+export function paramNodes(
+  tree: SyntaxTree,
+  paramList: NodeId | undefined,
+): NodeId[] {
+  return paramList === undefined
+    ? []
+    : kidsOf(tree, paramList).filter((kid) =>
+      kindOf(tree, kid) === SyntaxKind.Param
+    );
+}
+
+/** The name node and the first other child (the written type) of a Param node. */
+export interface ParamParts {
+  readonly name: NodeId | undefined;
+  readonly type: NodeId | undefined;
+}
+
+export function paramParts(tree: SyntaxTree, param: NodeId): ParamParts {
+  const pieces = kidsOf(tree, param);
+  const name = pieces.find((piece) => kindOf(tree, piece) === SyntaxKind.Name);
+  return { name, type: pieces.find((piece) => piece !== name) };
+}
+
+/** The base expression and the member Name node of a FieldExpr. */
+export interface FieldParts {
+  readonly base: NodeId | undefined;
+  readonly member: NodeId | undefined;
+}
+
+export function fieldParts(tree: SyntaxTree, node: NodeId): FieldParts {
+  const kids = kidsOf(tree, node);
+  return {
+    base: kids[0],
+    member: kids.find((kid, index) =>
+      index > 0 && kindOf(tree, kid) === SyntaxKind.Name
+    ),
+  };
+}
+
+/** The argument nodes of the first ArgList child of a call or a pipe stage. */
+export function argNodes(tree: SyntaxTree, node: NodeId): NodeId[] {
+  const list = kidsOf(tree, node).find((kid) =>
+    kindOf(tree, kid) === SyntaxKind.ArgList
+  );
+  return list === undefined ? [] : kidsOf(tree, list);
+}
+
+/** The left value of a PipeExpr and its first PipeStage child. */
+export interface PipeParts {
+  readonly left: NodeId | undefined;
+  readonly stage: NodeId | undefined;
+}
+
+export function pipeParts(tree: SyntaxTree, node: NodeId): PipeParts {
+  const kids = kidsOf(tree, node);
+  return {
+    left: kids[0],
+    stage: kids.find((kid) => kindOf(tree, kid) === SyntaxKind.PipeStage),
+  };
+}
+
+/** The qualified callee name of a PipeStage and its written arguments. The left value is not among them. */
+export interface StageParts {
+  readonly callee: NodeId | undefined;
+  readonly args: NodeId[];
+}
+
+export function stageParts(tree: SyntaxTree, stage: NodeId): StageParts {
+  return {
+    callee: kidsOf(tree, stage).find((kid) =>
+      kindOf(tree, kid) === SyntaxKind.QualifiedName
+    ),
+    args: argNodes(tree, stage),
+  };
+}
+
 /** The last declaration child outside its binding name and type annotation. */
 export function initOf(
   tree: SyntaxTree,

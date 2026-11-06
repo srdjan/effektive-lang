@@ -56,7 +56,12 @@ import {
   isServiceId,
   isTypeId,
 } from "./ids.ts";
-import { initOf, isOpaqueTypeDecl, isTypeKind } from "./syntax_queries.ts";
+import {
+  functionParts,
+  initOf,
+  isOpaqueTypeDecl,
+  isTypeKind,
+} from "./syntax_queries.ts";
 import { compareText } from "./util.ts";
 import {
   checkedInputFlags,
@@ -776,9 +781,7 @@ class ModuleChecker {
     for (const method of entry.methodList) {
       if (entry.methods.get(method.name) !== method) continue;
       const parts = this.lowerer.kids(method.node);
-      const paramList = parts.find((k) =>
-        kindOf(this.tree, k) === SyntaxKind.ParamList
-      );
+      const { paramList, fails } = functionParts(this.tree, method.node);
       const parameters = paramList === undefined
         ? []
         : this.lowerer.parameters(paramList);
@@ -805,15 +808,12 @@ class ModuleChecker {
         }
       }
       const resultNode = parts.find((k) =>
-        k !== method.nameNode && k !== paramList &&
-        kindOf(this.tree, k) !== SyntaxKind.FailsClause
+        k !== method.nameNode && k !== paramList && k !== fails
       );
       const result = resultNode === undefined
         ? this.lowerer.errorLowered()
         : this.lowerer.lower(resultNode);
-      const failures = this.lowerer.failures(
-        parts.find((k) => kindOf(this.tree, k) === SyntaxKind.FailsClause),
-      );
+      const failures = this.lowerer.failures(fails);
       const type = this.lowerer.functionOf(
         "effect",
         parameters.map((p) => p.type),
@@ -865,12 +865,9 @@ class ModuleChecker {
         }
       }
     }
-    const failures = this.lowerer.failures(
-      parts.find((k) => kindOf(this.tree, k) === SyntaxKind.FailsClause),
-    );
-    const requirements = this.lowerer.requirements(
-      parts.find((k) => kindOf(this.tree, k) === SyntaxKind.WithClause),
-    );
+    const { fails, uses } = functionParts(this.tree, entry.node);
+    const failures = this.lowerer.failures(fails);
+    const requirements = this.lowerer.requirements(uses);
     const signature: ProviderSignature = {
       kind: "provider",
       id,
@@ -933,17 +930,12 @@ class ModuleChecker {
     binding: Lowered | undefined,
   ): FunctionSignature {
     const lowerer = this.lowerer;
-    const parts = lowerer.kids(arrow);
-    const paramList = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.ParamList
-    );
-    const resultNode = parts.find((k) => isTypeKind(kindOf(this.tree, k)));
-    const failsNode = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.FailsClause
-    );
-    const usesNode = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.WithClause
-    );
+    const {
+      paramList,
+      result: resultNode,
+      fails: failsNode,
+      uses: usesNode,
+    } = functionParts(this.tree, arrow);
     const written = paramList === undefined
       ? []
       : lowerer.parameters(paramList);

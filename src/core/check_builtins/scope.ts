@@ -9,6 +9,7 @@ import {
   type ValueId,
 } from "../ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
+import { functionParts } from "../syntax_queries.ts";
 import { combine, EFFECT_ONLY, without } from "../effect_set.ts";
 import type { NodeInfo } from "../tables.ts";
 import { dataOnly, type TypeRef } from "../types.ts";
@@ -134,9 +135,7 @@ function releaseWantsOutcome(c: ScopeContext, arg: Arg): boolean {
     return c.kids(arg.node).some((k) => kindOf(c.tree, k) === SyntaxKind.Name);
   }
   if (kind !== SyntaxKind.ArrowExpr) return false;
-  const list = c.kids(arg.node).find((k) =>
-    kindOf(c.tree, k) === SyntaxKind.ParamList
-  );
+  const list = functionParts(c.tree, arg.node).paramList;
   return list !== undefined && c.kids(list).length === 2;
 }
 

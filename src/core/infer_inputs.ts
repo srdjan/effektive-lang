@@ -15,12 +15,19 @@ import {
 import { flattenMembers } from "./patterns.ts";
 import { optionConstructorOf, type Target } from "./resolve.ts";
 import {
+  argNodes,
   arrowBody,
+  fieldParts,
+  functionParts,
   initOf,
   isTypeKind,
   kidsOf,
   nameTextOf,
   operatorOf,
+  paramNodes,
+  paramParts,
+  pipeParts,
+  stageParts,
   unparen,
 } from "./syntax_queries.ts";
 import { kindOf, type NodeId, nodeSpan, SyntaxKind } from "./syntax.ts";
@@ -183,11 +190,7 @@ class InputEngine {
         : undefined;
     }
     if (kind !== SyntaxKind.FieldExpr) return undefined;
-    const kids = kidsOf(this.tree, node);
-    const base = kids[0];
-    const member = kids.find((child, index) =>
-      index > 0 && kindOf(this.tree, child) === SyntaxKind.Name
-    );
+    const { base, member } = fieldParts(this.tree, node);
     const origin = base === undefined ? undefined : this.originOf(base);
     const name = member === undefined
       ? undefined
@@ -261,11 +264,7 @@ class InputEngine {
         : undefined;
     }
     if (kind !== SyntaxKind.FieldExpr) return undefined;
-    const parts = kidsOf(this.tree, node);
-    const base = parts[0];
-    const member = parts.find((part) =>
-      kindOf(this.tree, part) === SyntaxKind.Name
-    );
+    const { base, member } = fieldParts(this.tree, node);
     const name = member === undefined
       ? undefined
       : nameTextOf(this.tree, member);
@@ -297,11 +296,7 @@ class InputEngine {
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const kids = kidsOf(this.tree, node);
-    const base = kids[0];
-    const member = kids.find((child, index) =>
-      index > 0 && kindOf(this.tree, child) === SyntaxKind.Name
-    );
+    const { base, member } = fieldParts(this.tree, node);
     const name = member === undefined
       ? undefined
       : nameTextOf(this.tree, member);
@@ -314,12 +309,8 @@ class InputEngine {
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const kids = kidsOf(this.tree, node);
-    const callee = kids[0];
-    const argList = kids.find((child) =>
-      kindOf(this.tree, child) === SyntaxKind.ArgList
-    );
-    const args = argList === undefined ? [] : kidsOf(this.tree, argList);
+    const callee = kidsOf(this.tree, node)[0];
+    const args = argNodes(this.tree, node);
     if (callee === undefined) return undefined;
     const target = this.targets.get(callee);
     let type: TypeRef | undefined;
@@ -385,20 +376,9 @@ class InputEngine {
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const parts = kidsOf(this.tree, node);
-    const left = parts[0];
-    const stage = parts.find((part) =>
-      kindOf(this.tree, part) === SyntaxKind.PipeStage
-    );
+    const { left, stage } = pipeParts(this.tree, node);
     if (left === undefined || stage === undefined) return undefined;
-    const stageParts = kidsOf(this.tree, stage);
-    const callee = stageParts.find((part) =>
-      kindOf(this.tree, part) === SyntaxKind.QualifiedName
-    );
-    const argList = stageParts.find((part) =>
-      kindOf(this.tree, part) === SyntaxKind.ArgList
-    );
-    const args = argList === undefined ? [] : kidsOf(this.tree, argList);
+    const { callee, args } = stageParts(this.tree, stage);
     const target = callee === undefined ? undefined : this.targets.get(callee);
     if (target?.kind === "type") {
       const record = this.table.taggedRecordOf(target.id);
@@ -541,22 +521,11 @@ class InputEngine {
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
     const fn = this.resolver.callableEvidence(expected);
-    const parts = kidsOf(this.tree, node);
-    const paramList = parts.find((part) =>
-      kindOf(this.tree, part) === SyntaxKind.ParamList
-    );
-    const params = paramList === undefined
-      ? []
-      : kidsOf(this.tree, paramList).filter((part) =>
-        kindOf(this.tree, part) === SyntaxKind.Param
-      );
+    const header = functionParts(this.tree, node);
+    const params = paramNodes(this.tree, header.paramList);
     const parameterEvidence: (TypeRef | undefined)[] = [];
     params.forEach((param, index) => {
-      const pieces = kidsOf(this.tree, param);
-      const nameNode = pieces.find((piece) =>
-        kindOf(this.tree, piece) === SyntaxKind.Name
-      );
-      const typeNode = pieces.find((piece) => piece !== nameNode);
+      const { name: nameNode, type: typeNode } = paramParts(this.tree, param);
       const target = nameNode === undefined
         ? undefined
         : this.targets.get(nameNode);
@@ -569,9 +538,7 @@ class InputEngine {
       );
       if (id !== undefined) this.localTypes.set(id, type);
     });
-    const resultNode = parts.find((part) =>
-      isTypeKind(kindOf(this.tree, part))
-    );
+    const resultNode = header.result;
     const result = resultNode === undefined
       ? fn?.result
       : this.lowerer.lower(resultNode).ref;

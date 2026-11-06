@@ -8,6 +8,7 @@ import { capabilityOfService } from "./ids.ts";
 import { EFFECT_ERROR_IDS } from "./resolve.ts";
 import { diagnosticInside, resultEndOf } from "./editor_hints.ts";
 import { childrenOf, kindOf, SyntaxKind } from "./syntax.ts";
+import { functionParts } from "./syntax_queries.ts";
 
 export interface ContractAction {
   readonly title: string;
@@ -128,12 +129,7 @@ export function contractActionsAt(
     }
     if (arrow < 0) continue;
     const children = [...childrenOf(tree, arrow)];
-    const fails = children.find((n) =>
-      kindOf(tree, n) === SyntaxKind.FailsClause
-    );
-    const uses = children.find((n) =>
-      kindOf(tree, n) === SyntaxKind.WithClause
-    );
+    const { fails, uses } = functionParts(tree, arrow);
     const text = tree.text;
     // Reuse the parsed clauses and arrow token, preserving all existing entries.
     const token = children.find((n) =>
