@@ -47,19 +47,19 @@ Deno.test("randomInt needs int arguments", () => {
 
 Deno.test("random returns a number, not an int", () => {
   assertEquals(
-    diagnosticsOf(`${TYPES}export const f = (): Int => random()\n`).length,
-    1,
+    diagnosticsOf(`${TYPES}export const f = (): Int => random()\n`),
+    ["type-mismatch/003 the function body has type number, but Int is expected"],
   );
 });
 
 Deno.test("an arity mismatch is a diagnostic", () => {
-  assert(
-    diagnosticsOf(`${TYPES}export const f = (): Int => randomInt(1)\n`)
-      .length > 0,
+  assertEquals(
+    diagnosticsOf(`${TYPES}export const f = (): Int => randomInt(1)\n`),
+    ["type-mismatch/004 `randomInt` takes 2 arguments, but 1 is given"],
   );
-  assert(
-    diagnosticsOf(`${TYPES}export const f = (): Num => random(1)\n`)
-      .length > 0,
+  assertEquals(
+    diagnosticsOf(`${TYPES}export const f = (): Num => random(1)\n`),
+    ["type-mismatch/004 `random` takes 0 arguments, but 1 is given"],
   );
 });
 
