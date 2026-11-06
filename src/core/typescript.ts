@@ -168,7 +168,11 @@ export function stepOutput(
   };
 }
 
-type HoverBackend = { readonly tag: "type"; readonly text: string } | {
+/** The text that a client shows when the backend type is not available. */
+export const BACKEND_UNAVAILABLE_TEXT =
+  "backend type: not available while the module has errors";
+
+export type HoverBackend = { readonly tag: "type"; readonly text: string } | {
   readonly tag: "unavailable";
 };
 interface Hover {

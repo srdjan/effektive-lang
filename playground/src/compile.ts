@@ -15,7 +15,11 @@
 // an `internal` error leaves the project unsent, so the next call sends every
 // file again.
 
-import { stepOutput, TypeScriptOutputs } from "../../src/core/typescript.ts";
+import {
+  type HoverBackend,
+  stepOutput,
+  TypeScriptOutputs,
+} from "../../src/core/typescript.ts";
 import {
   type ConfigError,
   describeConfigError,
@@ -77,13 +81,9 @@ export interface PlaygroundHover {
   readonly from: number;
   readonly to: number;
   readonly contract: string;
-  /** The backend type text, `BACKEND_UNAVAILABLE`, or undefined. */
-  readonly backend: string | undefined;
+  /** The backend type, `unavailable` while the module has errors, or undefined. */
+  readonly backend: HoverBackend | undefined;
 }
-
-/** The text that the LSP shows when the module has errors. */
-export const BACKEND_UNAVAILABLE =
-  "backend type: not available while the module has errors";
 
 export interface Playground {
   /** Sends every file and returns the first result. Later calls send every file again. */
@@ -186,16 +186,11 @@ export function createPlayground(
       if (lastGood === undefined) return undefined;
       const hit = hoverAt(lastGood, path, offset, outputCache);
       if (hit === undefined) return undefined;
-      const backend = hit.backend === undefined
-        ? undefined
-        : hit.backend.tag === "type"
-        ? hit.backend.text
-        : BACKEND_UNAVAILABLE;
       return {
         from: hit.span.start,
         to: hit.span.end,
         contract: hit.contract,
-        backend,
+        backend: hit.backend,
       };
     },
   };

@@ -3,10 +3,9 @@
 // label.
 
 import { assertEquals } from "@std/assert";
-import {
-  BACKEND_UNAVAILABLE,
-  type PlaygroundDiagnostic,
-  type PlaygroundResult,
+import type {
+  PlaygroundDiagnostic,
+  PlaygroundResult,
 } from "../playground/src/compile.ts";
 import {
   DEFAULT_TAB,
@@ -128,7 +127,7 @@ Deno.test("hoverLines gives labelled blocks and a one-line cursor text", () => {
     from: 0,
     to: 1,
     contract: "f(\n  a: int\n): int",
-    backend: "(a: number): number",
+    backend: { tag: "type", text: "(a: number): number" },
   });
   assertEquals(withBackend.cursor, "f( a: int ): int");
   assertEquals(withBackend.tooltip[1], {
@@ -140,11 +139,11 @@ Deno.test("hoverLines gives labelled blocks and a one-line cursor text", () => {
     from: 0,
     to: 1,
     contract: "f(): int",
-    backend: BACKEND_UNAVAILABLE,
+    backend: { tag: "unavailable" },
   });
   assertEquals(unavailable.tooltip[1], {
     label: "Backend type",
-    text: BACKEND_UNAVAILABLE,
+    text: "backend type: not available while the module has errors",
     code: false,
   });
 });

@@ -9,7 +9,11 @@
 // This file imports only types from `handler.ts`. The server imports the values
 // of this file.
 
-import { stepOutput, type TypeScriptOutputs } from "../core/typescript.ts";
+import {
+  BACKEND_UNAVAILABLE_TEXT,
+  stepOutput,
+  type TypeScriptOutputs,
+} from "../core/typescript.ts";
 import {
   completionsAt,
   CONFIG_FILE,
@@ -163,7 +167,7 @@ export function hoverRequest(
   if (hit.backend?.tag === "type") {
     value += "\n\n" + fenced("typescript", hit.backend.text);
   } else if (hit.backend?.tag === "unavailable") {
-    value += "\n\nbackend type: not available while the module has errors";
+    value += "\n\n" + BACKEND_UNAVAILABLE_TEXT;
   }
   const result: Hover = { contents: { kind: "markdown", value }, range };
   return answer(result);

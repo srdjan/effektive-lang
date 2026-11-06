@@ -6,7 +6,6 @@ import { TypeScriptOutputs } from "../src/core/typescript.ts";
 import { assert, assertEquals, assertNotEquals } from "@std/assert";
 import { Program } from "../src/core/frontend.ts";
 import {
-  BACKEND_UNAVAILABLE,
   createPlayground,
   type Playground,
   type PlaygroundResult,
@@ -183,10 +182,11 @@ Deno.test("hover on rename gives the contract and the backend text", () => {
     hit.contract,
     "rename(id: UserId, name: Name): User fails StoreUnavailable | UserMissing with Users.find | Users.save",
   );
-  assertEquals(
-    hit.backend,
-    "(id: UserId, name: Name): Effect.Effect<User, StoreUnavailable | UserMissing, Users>",
-  );
+  assertEquals(hit.backend, {
+    tag: "type",
+    text:
+      "(id: UserId, name: Name): Effect.Effect<User, StoreUnavailable | UserMissing, Users>",
+  });
   assertEquals(pg.hover("users.eff", 0), undefined);
 });
 
@@ -198,11 +198,7 @@ Deno.test("hover after a breaking edit gives the unavailable backend", () => {
     offsetOf(FILES["users.eff"], "rename", 2),
   );
   assert(hit !== undefined);
-  assertEquals(hit.backend, BACKEND_UNAVAILABLE);
-  assertEquals(
-    BACKEND_UNAVAILABLE,
-    "backend type: not available while the module has errors",
-  );
+  assertEquals(hit.backend, { tag: "unavailable" });
 });
 
 Deno.test("a broken effektive.json gives a config error and no hover", () => {

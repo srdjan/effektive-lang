@@ -3,11 +3,8 @@
 // the TypeScript pane, and the hover texts. Fast tests cover each function.
 
 import { lineStarts, positionOf, type Severity } from "../../src/core/mod.ts";
-import {
-  BACKEND_UNAVAILABLE,
-  type PlaygroundHover,
-  type PlaygroundResult,
-} from "./compile.ts";
+import { BACKEND_UNAVAILABLE_TEXT } from "../../src/core/typescript.ts";
+import type { PlaygroundHover, PlaygroundResult } from "./compile.ts";
 
 /** The tab that opens when the hash names no known file. */
 export const DEFAULT_TAB = "main.eff";
@@ -154,11 +151,13 @@ export function hoverLines(hit: PlaygroundHover | undefined): HoverLines {
   const tooltip: HoverBlock[] = [
     { label: "Contract", text: hit.contract, code: true },
   ];
-  if (hit.backend !== undefined) {
+  if (hit.backend?.tag === "type") {
+    tooltip.push({ label: "Backend type", text: hit.backend.text, code: true });
+  } else if (hit.backend?.tag === "unavailable") {
     tooltip.push({
       label: "Backend type",
-      text: hit.backend,
-      code: hit.backend !== BACKEND_UNAVAILABLE,
+      text: BACKEND_UNAVAILABLE_TEXT,
+      code: false,
     });
   }
   return {
