@@ -500,7 +500,7 @@ const ROWS: readonly Row[] = [
       "validation/002 declarations[12].body.use.body: the body type type:host#Text does not fit the closure result unknown",
     ],
   },
-  // ---------------------------------------------------------------- world.ts
+  // ------------------------------------------- type, declaration, recursion, import checks
   {
     name: "a host interface method that exposes a refined type",
     program: "core",
