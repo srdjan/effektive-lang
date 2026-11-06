@@ -127,7 +127,6 @@ function errorText(error: PlaygroundError): string {
   }
 }
 
-/** The tabs of `list`, in document order. */
 function tabsOf(list: HTMLElement): HTMLButtonElement[] {
   return Array.from(list.querySelectorAll<HTMLButtonElement>("[role=tab]"));
 }
@@ -363,8 +362,6 @@ async function main(): Promise<void> {
     cursorTimer = setTimeout(refreshCursorLine, CURSOR_PAUSE_MS);
   }
 
-  // The file tabs.
-
   for (const path of paths) {
     const tab = makeTab(`file-tab-${fileButtons.size}`, path);
     tab.dataset.path = path;
@@ -402,15 +399,12 @@ async function main(): Promise<void> {
     if (button !== undefined) markSelected(fileTabs, button);
   }
 
-  /** Scrolls the tab of the active file into view inside its tablist. */
   function revealActiveTab(): void {
     fileButtons.get(active)?.scrollIntoView({
       block: "nearest",
       inline: "nearest",
     });
   }
-
-  // The Problems region.
 
   function renderProblems(): void {
     const items = problemItems(latest, texts);
@@ -454,8 +448,6 @@ async function main(): Promise<void> {
     sourceView.focus();
   }
 
-  // The TypeScript region.
-
   function renderOutput(): void {
     const state = outputState(latest, active);
     staleBanner.hidden = state.tag !== "stale";
@@ -495,8 +487,6 @@ async function main(): Promise<void> {
     outputView.requestMeasure();
   }
 
-  // Results of the facade.
-
   function applyResult(result: CompileResult): void {
     if (!result.ok) {
       showError(result.error.tag, errorText(result.error));
@@ -520,8 +510,6 @@ async function main(): Promise<void> {
       compileData(active, latest, saving.textContent ?? ""),
     );
   }
-
-  // The active file and the URL hash.
 
   function selectFile(path: string, by: "click" | "key" | "hash"): void {
     if (path === active) return;
@@ -657,8 +645,6 @@ async function main(): Promise<void> {
     log.flush();
   });
 
-  // Start.
-
   status.textContent = `compiled in ${latest.elapsedMs.toFixed(1)} ms`;
   applyMode();
   applyOrientation();
@@ -690,7 +676,6 @@ async function main(): Promise<void> {
   logCompile();
   if (replayName !== null) await playReplay(replayName);
 
-  /** Plays a logged session in the editor, at the recorded times. */
   async function playReplay(name: string): Promise<void> {
     const failReplay = (message: string) =>
       showError("replay", `Replay ${name}: ${message}`);

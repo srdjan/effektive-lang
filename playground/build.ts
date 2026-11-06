@@ -220,7 +220,6 @@ export async function build(
   }
 }
 
-/** Text for a `BuildError`, for the command line. */
 export function describeBuildError(error: BuildError): string {
   switch (error.tag) {
     case "unsafe-out-dir":

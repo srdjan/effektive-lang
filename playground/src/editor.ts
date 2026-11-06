@@ -311,7 +311,6 @@ export function sourceExtensions(options: SourceOptions): Extension[] {
   ];
 }
 
-/** The extensions of the read-only pane for the generated TypeScript. */
 export function outputExtensions(): Extension[] {
   return [
     EditorState.readOnly.of(true),
