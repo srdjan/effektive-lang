@@ -73,7 +73,12 @@ import {
 import type { BodyTable, NodeFact, NodeInfo } from "./tables.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 import { functionTypeToIr, typeToIr } from "./type_ir.ts";
-import { bodyLocalId, builtinInstanceId, localId } from "./ids.ts";
+import {
+  bodyLocalId,
+  builtinInstanceId,
+  type BuiltinInstanceName,
+  localId,
+} from "./ids.ts";
 import { PRELUDE_MODULE } from "./paths.ts";
 
 // ------------------------------------------------------------------ errors
@@ -859,7 +864,7 @@ class BodyLowerer {
   }
 
   /** The identity of a closed builtin instance. Equal types share one identity. */
-  private specialize(name: string, type: FunctionType): ValueId {
+  private specialize(name: BuiltinInstanceName, type: FunctionType): ValueId {
     const json = canonicalJson(type);
     const hash = sha256Hex(json).slice(0, 12);
     const id: ValueId = builtinInstanceId(this.ctx.module, name, hash);

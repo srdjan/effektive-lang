@@ -18,6 +18,7 @@ import type {
   WrittenParts,
 } from "./ir.ts";
 import type { EffectSet } from "./effect_set.ts";
+import type { BuiltinInstanceName } from "./ids.ts";
 import type { NodeId } from "./syntax.ts";
 import type { TypeRef } from "./types.ts";
 
@@ -145,7 +146,7 @@ export type NodeFact =
   /** A collection builtin with its closed function type. */
   | {
     readonly kind: "builtin";
-    readonly name: "map" | "filter" | "fold" | "all" | "traverse";
+    readonly name: BuiltinInstanceName;
     readonly ir: FunctionType;
   }
   /** A field read. `optional` is true when the field is optional and the read is `Option<T>`. */

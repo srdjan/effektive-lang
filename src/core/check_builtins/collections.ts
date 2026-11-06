@@ -38,6 +38,9 @@ export interface CollectionContext extends
   noPipeline(name: string, args: readonly Arg[]): void;
 }
 
+/** The collection builtins that take an array first. */
+type CollectionName = "map" | "filter" | "fold" | "traverse";
+
 function allCall(
   c: CollectionContext,
   node: NodeId,
@@ -131,112 +134,29 @@ function allCall(
   );
 }
 
-function collectionCall(
+/** Checks the array that every collection builtin takes first. */
+function collectionInput(
+  c: CollectionContext,
+  name: CollectionName,
+  args: readonly Arg[],
+): { readonly xs: NodeInfo; readonly element: TypeRef } {
+  const xs = c.argInfo(args[0]);
+  return { xs, element: arrayElement(c, name, args[0], xs) };
+}
+
+/** Records the builtin fact of a collection call and gives the call its result. */
+function finishCollection(
   c: CollectionContext,
   node: NodeId,
-  name: "map" | "filter" | "fold" | "traverse",
-  args: readonly Arg[],
-  expected: TypeRef | undefined,
+  name: CollectionName,
+  infos: readonly NodeInfo[],
+  result: TypeRef,
+  specialized: TypeRef,
 ): NodeInfo {
-  const xs = c.argInfo(args[0]);
-  const element = arrayElement(c, name, args[0], xs);
-  const table = c.table;
-  const infos: NodeInfo[] = [xs];
-  let result: TypeRef;
-  let specialized: TypeRef;
-  if (name === "traverse") {
-    const cb = c.callback(name, args[1], [element], undefined, true);
-    infos.push(cb.info);
-    const concurrency = args[2] === undefined
-      ? undefined
-      : concurrencyBound(c, args[2]);
-    if (args[2] !== undefined) {
-      infos.push(c.argInfo(args[2]));
-    }
-    const fn = c.functionOf(cb.info.type);
-    const failures = fn?.failures ?? [];
-    const requirements = fn?.requirements ?? [];
-    const callbackType = table.function({
-      execution: "effect",
-      parameters: [element],
-      result: cb.result,
-      failures,
-      requirements,
-    });
-    result = table.array(cb.result);
-    specialized = table.function({
-      execution: "effect",
-      parameters: args.length === 3
-        ? [
-          table.array(element),
-          callbackType,
-          table.record([{
-            name: "concurrency",
-            type: concurrency === "unbounded" ? table.string : table.int,
-            optional: false,
-          }]),
-        ]
-        : [table.array(element), callbackType],
-      result,
-      failures,
-      requirements,
-    });
-  } else if (name === "map") {
-    const cb = c.callback(name, args[1], [element], undefined, true);
-    infos.push(cb.info);
-    result = table.array(cb.result);
-    specialized = callbackFunction(
-      c,
-      cb.info,
-      [element],
-      cb.result,
-      (cbType) => [
-        table.array(element),
-        cbType,
-      ],
-      result,
-    );
-  } else if (name === "filter") {
-    const cb = c.callback(name, args[1], [element], table.boolean, true);
-    infos.push(cb.info);
-    c.fits(args[1].node, cb.result, table.boolean, "the predicate result");
-    result = table.array(element);
-    specialized = callbackFunction(
-      c,
-      cb.info,
-      [element],
-      table.boolean,
-      (cbType) => [result, cbType],
-      result,
-    );
-  } else {
-    const initial = c.argInfo(args[1], expected);
-    infos.push(initial);
-    const accumulator = expected ?? c.widen(initial.type);
-    c.fits(args[1].node, initial.type, accumulator, "the initial value");
-    const cb = c.callback(
-      name,
-      args[2],
-      [accumulator, element],
-      accumulator,
-      true,
-    );
-    infos.push(cb.info);
-    c.fits(args[2].node, cb.result, accumulator, "the callback result");
-    result = accumulator;
-    specialized = callbackFunction(
-      c,
-      cb.info,
-      [accumulator, element],
-      accumulator,
-      (cbType) => [table.array(element), accumulator, cbType],
-      result,
-    );
-  }
   c.fact(node, {
     kind: "builtin",
     name,
-    ir: functionTypeToIr(table, specialized),
+    ir: functionTypeToIr(c.table, specialized),
   });
   const invocation = c.table.node(specialized);
   return c.finish(
@@ -249,6 +169,141 @@ function collectionCall(
         mode: invocation.execution,
       }])
       : combine(infos),
+  );
+}
+
+function traverseCall(
+  c: CollectionContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const { xs, element } = collectionInput(c, "traverse", args);
+  const table = c.table;
+  const infos: NodeInfo[] = [xs];
+  const cb = c.callback("traverse", args[1], [element], undefined, true);
+  infos.push(cb.info);
+  const concurrency = args[2] === undefined
+    ? undefined
+    : concurrencyBound(c, args[2]);
+  if (args[2] !== undefined) {
+    infos.push(c.argInfo(args[2]));
+  }
+  const fn = c.functionOf(cb.info.type);
+  const failures = fn?.failures ?? [];
+  const requirements = fn?.requirements ?? [];
+  const callbackType = table.function({
+    execution: "effect",
+    parameters: [element],
+    result: cb.result,
+    failures,
+    requirements,
+  });
+  const result = table.array(cb.result);
+  const specialized = table.function({
+    execution: "effect",
+    parameters: args.length === 3
+      ? [
+        table.array(element),
+        callbackType,
+        table.record([{
+          name: "concurrency",
+          type: concurrency === "unbounded" ? table.string : table.int,
+          optional: false,
+        }]),
+      ]
+      : [table.array(element), callbackType],
+    result,
+    failures,
+    requirements,
+  });
+  return finishCollection(c, node, "traverse", infos, result, specialized);
+}
+
+function mapCall(
+  c: CollectionContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const { xs, element } = collectionInput(c, "map", args);
+  const table = c.table;
+  const cb = c.callback("map", args[1], [element], undefined, true);
+  const result = table.array(cb.result);
+  const specialized = callbackFunction(
+    c,
+    cb.info,
+    [element],
+    cb.result,
+    (cbType) => [
+      table.array(element),
+      cbType,
+    ],
+    result,
+  );
+  return finishCollection(c, node, "map", [xs, cb.info], result, specialized);
+}
+
+function filterCall(
+  c: CollectionContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const { xs, element } = collectionInput(c, "filter", args);
+  const table = c.table;
+  const cb = c.callback("filter", args[1], [element], table.boolean, true);
+  c.fits(args[1].node, cb.result, table.boolean, "the predicate result");
+  const result = table.array(element);
+  const specialized = callbackFunction(
+    c,
+    cb.info,
+    [element],
+    table.boolean,
+    (cbType) => [result, cbType],
+    result,
+  );
+  return finishCollection(
+    c,
+    node,
+    "filter",
+    [xs, cb.info],
+    result,
+    specialized,
+  );
+}
+
+function foldCall(
+  c: CollectionContext,
+  node: NodeId,
+  args: readonly Arg[],
+  expected: TypeRef | undefined,
+): NodeInfo {
+  const { xs, element } = collectionInput(c, "fold", args);
+  const table = c.table;
+  const initial = c.argInfo(args[1], expected);
+  const accumulator = expected ?? c.widen(initial.type);
+  c.fits(args[1].node, initial.type, accumulator, "the initial value");
+  const cb = c.callback(
+    "fold",
+    args[2],
+    [accumulator, element],
+    accumulator,
+    true,
+  );
+  c.fits(args[2].node, cb.result, accumulator, "the callback result");
+  const specialized = callbackFunction(
+    c,
+    cb.info,
+    [accumulator, element],
+    accumulator,
+    (cbType) => [table.array(element), accumulator, cbType],
+    accumulator,
+  );
+  return finishCollection(
+    c,
+    node,
+    "fold",
+    [xs, initial, cb.info],
+    accumulator,
+    specialized,
   );
 }
 
@@ -321,22 +376,19 @@ export const COLLECTION_ROWS = {
       2,
       "`traverse` takes two arguments and an optional concurrency record",
     ),
-    handle: (c, node, name, args, expected) =>
-      collectionCall(c, node, name, args, expected),
+    handle: (c, node, _name, args) => traverseCall(c, node, args),
   },
   map: {
     prologue: piped(2, "pure"),
-    handle: (c, node, name, args, expected) =>
-      collectionCall(c, node, name, args, expected),
+    handle: (c, node, _name, args) => mapCall(c, node, args),
   },
   filter: {
     prologue: piped(2, "pure"),
-    handle: (c, node, name, args, expected) =>
-      collectionCall(c, node, name, args, expected),
+    handle: (c, node, _name, args) => filterCall(c, node, args),
   },
   fold: {
     prologue: piped(3, "pure"),
-    handle: (c, node, name, args, expected) =>
-      collectionCall(c, node, name, args, expected),
+    handle: (c, node, _name, args, expected) =>
+      foldCall(c, node, args, expected),
   },
 } satisfies Partial<Rows<PreludeCallName, CollectionContext>>;

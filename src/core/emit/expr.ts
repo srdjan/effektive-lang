@@ -95,7 +95,14 @@ import {
 } from "./calls.ts";
 import { evaluatedChildren, type ExprOf, isLeafExpr } from "./shape.ts";
 import { patternBinding } from "./walk.ts";
-import { builtinInstanceName, isLocalId, shortName } from "../ids.ts";
+import {
+  asBuiltinInstanceName,
+  type BuiltinInstanceName,
+  builtinInstanceName,
+  isLocalId,
+  knownBuiltinInstanceName,
+  shortName,
+} from "../ids.ts";
 
 // ------------------------------------------------------------------ precedence
 
@@ -392,16 +399,6 @@ function errorTag(id: string): string {
 
 function isIntType(type: Type): boolean {
   return type.kind === "primitive" && type.name === "int";
-}
-
-function effectCollectionBuiltin(
-  target: string,
-): "all" | "traverse" | "map" | "filter" | "fold" | undefined {
-  const name = builtinInstanceName(target);
-  return name === "all" || name === "traverse" || name === "map" ||
-      name === "filter" || name === "fold"
-    ? name
-    : undefined;
 }
 
 export class ExprEmitter implements ExprCore {
@@ -1201,10 +1198,14 @@ export class ExprEmitter implements ExprCore {
 
   private builtinCall(
     e: Extract<Expr, { kind: "call" }>,
-    name: string,
+    builtinName: string,
     kid: Kid,
   ): Emitted {
     const args = e.arguments;
+    const name = asBuiltinInstanceName(builtinName);
+    if (name === undefined) {
+      throw internal(`the builtin ${builtinName} has no emission form`);
+    }
     switch (name) {
       case "map":
       case "filter": {
@@ -1227,7 +1228,8 @@ export class ExprEmitter implements ExprCore {
           callArguments([this.callback(args[2], kid), kid(args[1])]),
         ]);
       }
-      default:
+      case "all":
+      case "traverse":
         throw internal(`the builtin ${name} has no emission form`);
     }
   }
@@ -1513,7 +1515,7 @@ export class ExprEmitter implements ExprCore {
   /** The children that a leaf evaluates before it runs, in source order. */
   private evaluatedChildren(e: Expr): Expr[] {
     return e.kind === "call" && e.callee.kind === "reference" &&
-        effectCollectionBuiltin(e.callee.target) !== undefined
+        knownBuiltinInstanceName(e.callee.target) !== undefined
       ? [...e.arguments]
       : evaluatedChildren(e);
   }
@@ -1523,7 +1525,7 @@ export class ExprEmitter implements ExprCore {
     switch (e.kind) {
       case "call":
         return e.callee.kind === "reference" &&
-            effectCollectionBuiltin(e.callee.target) !== undefined
+            knownBuiltinInstanceName(e.callee.target) !== undefined
           ? [...(this.functionTypeOf(e.callee.type)?.parameters ?? [])]
           : [
             undefined,
@@ -1625,9 +1627,9 @@ export class ExprEmitter implements ExprCore {
     switch (e.kind) {
       case "call":
         if (e.callee.kind === "reference") {
-          const builtin = effectCollectionBuiltin(e.callee.target);
+          const builtin = knownBuiltinInstanceName(e.callee.target);
           if (builtin !== undefined) {
-            const counts: Record<string, readonly number[]> = {
+            const counts: Record<BuiltinInstanceName, readonly number[]> = {
               all: [1, 2],
               traverse: [2, 3],
               map: [2],
@@ -1673,16 +1675,21 @@ export class ExprEmitter implements ExprCore {
                   free(third),
                   ")",
                 ]);
-              default:
+              case "all":
                 return emitted([
-                  `${effect}.${builtin === "all" ? "all" : "forEach"}(`,
+                  `${effect}.all(`,
                   free(first),
-                  ...(builtin === "all" ? [] : [", ", free(second)]),
-                  ...(builtin === "all"
-                    ? second === undefined ? [] : [", ", free(second)]
-                    : third === undefined
-                    ? []
-                    : [", ", free(third)]),
+                  ...(second === undefined ? [] : [", ", free(second)]),
+                  ")",
+                ]);
+              case "map":
+              case "traverse":
+                return emitted([
+                  `${effect}.forEach(`,
+                  free(first),
+                  ", ",
+                  free(second),
+                  ...(third === undefined ? [] : [", ", free(third)]),
                   ")",
                 ]);
             }

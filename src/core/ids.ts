@@ -92,10 +92,21 @@ export function bodyLocalId(declaration: ValueId, name: string): LocalId {
   return `local:${declaration}/${name}`;
 }
 
+/** The collection builtins whose closed instances the IR names in a call. */
+export const BUILTIN_INSTANCE_NAMES = [
+  "all",
+  "traverse",
+  "map",
+  "filter",
+  "fold",
+] as const;
+
+export type BuiltinInstanceName = typeof BUILTIN_INSTANCE_NAMES[number];
+
 /** The identity of a closed builtin instance: `value:<module>#$builtin/<name>/<hash>`. */
 export function builtinInstanceId(
   module: string,
-  name: string,
+  name: BuiltinInstanceName,
   hash: string,
 ): ValueId {
   return `value:${module}#$builtin/${name}/${hash}`;
@@ -107,6 +118,20 @@ export function builtinInstanceName(id: string): string | undefined {
   const rest = id.slice(id.indexOf("#") + 1);
   if (!rest.startsWith("$builtin/")) return undefined;
   return rest.split("/")[1];
+}
+
+/** The typed name, or undefined when `name` is not a collection builtin. */
+export function asBuiltinInstanceName(
+  name: string | undefined,
+): BuiltinInstanceName | undefined {
+  return BUILTIN_INSTANCE_NAMES.find((candidate) => candidate === name);
+}
+
+/** The typed builtin name of an instance identity, or undefined for any other identity. */
+export function knownBuiltinInstanceName(
+  id: string,
+): BuiltinInstanceName | undefined {
+  return asBuiltinInstanceName(builtinInstanceName(id));
 }
 
 /** The module part of an identity such as `type:users#User`. */
