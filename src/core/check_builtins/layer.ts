@@ -207,7 +207,6 @@ function mergeLayersCall(
   return c.finish(node, type, combine([left, right]));
 }
 
-/** The rows of the Layer builtins. */
 export const LAYER_ROWS = {
   provide: {
     prologue: piped(2, "effect", {

@@ -45,7 +45,6 @@ export interface SchemaContext extends
   } | undefined;
 }
 
-/** A Schema type node. */
 type SchemaNode = Extract<TypeNode, { kind: "schema" }>;
 
 /**
@@ -61,7 +60,6 @@ function failsOnlyWith(
     failures.every((id) => allowed.includes(id));
 }
 
-/** The Schema op of a builtin. */
 type SchemaOp = Extract<NodeFact, { kind: "schema" }>["op"];
 
 /**
@@ -82,7 +80,6 @@ type RecursionRole =
 /** How `schemaCall` treats one Schema builtin. */
 interface SchemaBuiltin {
   readonly op: SchemaOp;
-  /** The number of arguments. */
   readonly arity: number;
   /** A third options argument is also accepted. */
   readonly acceptsOptions?: true;
@@ -210,10 +207,8 @@ const SCHEMA_BUILTINS = {
   },
 } as const satisfies Record<string, SchemaBuiltin>;
 
-/** The values of the `on` option of `schemaDefaultKey`. */
 const DEFAULT_KEY_ON = ["missing", "null", "encoded"] as const;
 
-/** The option of `schemaDefaultKey` that selects the operation. */
 const DEFAULT_KEY_OPTION = "on";
 
 const DEFAULT_KEY_OPS = {
@@ -231,7 +226,6 @@ function recursionRoleOf(name: string | undefined): RecursionRole {
     : "reject";
 }
 
-/** True when a builtin name is a Schema builtin. */
 function isSchemaBuiltinName(name: string): name is SchemaBuiltinName {
   return Object.hasOwn(SCHEMA_BUILTINS, name);
 }
@@ -252,7 +246,6 @@ type SchemaHandler = (checker: SchemaContext, call: SchemaCall) => NodeInfo;
 /** One handler for each Schema op. A missing op is a compile error. */
 type SchemaHandlers = { readonly [O in SchemaOp]: SchemaHandler };
 
-/** One handler for every Schema op; missing operations fail checking. */
 const SCHEMA_HANDLERS: SchemaHandlers = {
   identity: (c, call) => schemaIdentityCall(c, call),
   array: (c, call) => schemaArrayCall(c, call),
@@ -279,7 +272,6 @@ const SCHEMA_HANDLERS: SchemaHandlers = {
   make: (c, call) => schemaOperationCall(c, call, "make"),
 };
 
-/** The Schema operation that the prologue recorded for a Schema builtin call. */
 function schemaOp(c: SchemaContext, node: NodeId): SchemaOp {
   const fact = c.facts.get(node);
   if (fact?.kind !== "schema") {
@@ -291,7 +283,6 @@ function schemaOp(c: SchemaContext, node: NodeId): SchemaOp {
 /** The literal value of a field in an inline options record, by label. */
 function optionsField(c: SchemaContext, record: NodeId, label: string): {
   readonly value: NodeId | undefined;
-  /** The position of the field in the record. */
   readonly index: number;
 } | undefined {
   if (kindOf(c.tree, record) !== SyntaxKind.RecordExpr) {
@@ -1326,7 +1317,6 @@ const SCHEMA_ROW: BuiltinRow<SchemaBuiltinName, SchemaContext> = {
   handle: SCHEMA_HANDLE,
 };
 
-/** The rows of the Schema builtins: one row for each key of `SCHEMA_BUILTINS`. */
 export const SCHEMA_ROWS = Object.fromEntries(
   Object.keys(SCHEMA_BUILTINS).map((name) => [name, SCHEMA_ROW]),
 ) as Rows<SchemaBuiltinName, SchemaContext>;

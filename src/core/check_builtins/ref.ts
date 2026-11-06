@@ -87,7 +87,6 @@ function updateRefCall(
   );
 }
 
-/** The rows of the Ref builtins. */
 export const REF_ROWS = {
   makeRef: {
     prologue: direct(1, "effect", { fact: "key" }),

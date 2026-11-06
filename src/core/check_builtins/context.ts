@@ -21,7 +21,6 @@ export interface Arg {
 /** The builtins that take a concurrency option record. */
 export type ConcurrencyOperation = "traverse" | "all" | "mapEffect";
 
-/** Shared operations needed by the extracted builtin families. */
 export interface BuiltinContext {
   readonly table: TypeTable;
   readonly module: string;
@@ -50,13 +49,11 @@ export interface BuiltinContext {
 
 export type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
 
-/** One `name: literal` field of an option record. */
 export interface LiteralField {
   readonly node: NodeId;
   readonly value: unknown;
 }
 
-/** Reads an option record of literal fields. */
 export interface LiteralRecordView {
   /**
    * Reads an option record of exactly `count` fields, each `name: literal`, and
@@ -111,7 +108,6 @@ export function invocationOf(fn: FunctionNode | undefined): EffectSet {
   };
 }
 
-/** One use of a local in a body. */
 export interface LocalUse {
   readonly node: NodeId;
   readonly parent: NodeId | undefined;
@@ -139,12 +135,10 @@ export interface FactView {
   readonly facts: ReadonlyMap<NodeId, NodeFact>;
 }
 
-/** Records a fact about a node. */
 export interface FactWriter {
   fact(node: NodeId, fact: NodeFact): void;
 }
 
-/** The uses of a local in a body. */
 export interface LocalUseView {
   localUses(
     body: NodeId,

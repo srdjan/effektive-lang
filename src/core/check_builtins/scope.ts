@@ -345,7 +345,6 @@ function scopedBorrowUses(c: ScopeContext, body: NodeId, id: LocalId): void {
   }
 }
 
-/** The rows of the Scope builtins. */
 export const SCOPE_ROWS = {
   scoped: {
     prologue: piped(1, "effect", { fact: "key" }),

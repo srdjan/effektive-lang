@@ -362,7 +362,6 @@ function callbackFunction(
   });
 }
 
-/** The rows of the collection builtins. */
 export const COLLECTION_ROWS = {
   all: {
     prologue: optionalLast(

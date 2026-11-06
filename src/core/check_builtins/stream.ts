@@ -424,7 +424,6 @@ function streamBufferCapacity(
   return value;
 }
 
-/** The rows of the Stream and Sink builtins. */
 export const STREAM_ROWS = {
   unfold: {
     prologue: direct(2, "pure", { fact: "key" }),

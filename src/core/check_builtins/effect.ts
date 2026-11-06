@@ -769,7 +769,6 @@ function retryTimes(c: EffectContext, arg: Arg): number | undefined {
   return value;
 }
 
-/** The rows of the Effect builtins. */
 export const EFFECT_ROWS = {
   fail: {
     prologue: "own-arity",
