@@ -16,10 +16,20 @@ function slices(text: string): [string, HighlightKind][] {
 }
 
 Deno.test("the ten keyword tokens are keywords", () => {
-  const text = "import export const match try catch if else true false";
   assertEquals(
-    slices(text),
-    text.split(" ").map((word) => [word, "keyword"]),
+    slices("import export const match try catch if else true false"),
+    [
+      ["import", "keyword"],
+      ["export", "keyword"],
+      ["const", "keyword"],
+      ["match", "keyword"],
+      ["try", "keyword"],
+      ["catch", "keyword"],
+      ["if", "keyword"],
+      ["else", "keyword"],
+      ["true", "keyword"],
+      ["false", "keyword"],
+    ],
   );
 });
 

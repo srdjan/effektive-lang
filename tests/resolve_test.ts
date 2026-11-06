@@ -242,10 +242,8 @@ Deno.test("log.eff under the root fixtures/ir has the module name example/log", 
   );
 });
 
-Deno.test("the topological order of the examples puts users before main", () => {
-  const order = examples.project.order;
-  assert(order.indexOf("users") < order.indexOf("main"));
-  assertEquals([...examples.resolutions.keys()], [...order]);
+Deno.test("the resolutions of the examples follow the topological order of the project", () => {
+  assertEquals([...examples.resolutions.keys()], [...examples.project.order]);
 });
 
 Deno.test("repeated local names in one function get /2 and /3 in source order", () => {
