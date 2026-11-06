@@ -128,7 +128,6 @@ function classChain(table: TypeTable, cls: string): readonly string[] {
   return chain;
 }
 
-/** Two classes are compatible when one widens to the other. */
 function compatibleClasses(
   table: TypeTable,
   l: string,
@@ -137,7 +136,6 @@ function compatibleClasses(
   return classChain(table, l).includes(r) || classChain(table, r).includes(l);
 }
 
-/** True when the class widens to `number`. */
 function isNumericClass(table: TypeTable, cls: string): boolean {
   return classChain(table, cls).includes("number");
 }

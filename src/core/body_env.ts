@@ -2,7 +2,6 @@ import type { CapabilityId, ValueId } from "./ir.ts";
 import type { TypeEnv } from "./signatures.ts";
 import type { TypeRef } from "./types.ts";
 
-/** What the body checker needs from the module and from the project. */
 export interface BodyEnv {
   readonly env: TypeEnv;
   /** The type of a module-level value, local or imported. The error type when unknown. */

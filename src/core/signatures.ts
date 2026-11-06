@@ -37,8 +37,6 @@ import type { NodeId, SyntaxTree } from "./syntax.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 import { sortedUnique } from "./util.ts";
 
-// ------------------------------------------------------------------ shapes
-
 /** An interned type together with its IR tree in source order. */
 export interface Lowered {
   readonly ref: TypeRef;
@@ -148,9 +146,6 @@ export interface ModuleDeclarations {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-// ------------------------------------------------------------------ modes
-
-/** The mode map of a module: the invocation mode of each function. */
 export type ModeMap = ReadonlyMap<ValueId, Execution>;
 /** Consumers can look up a solved state without owning or mutating the map. */
 export type SolvedLookup = Pick<ReadonlyMap<ValueId, Solved>, "get">;

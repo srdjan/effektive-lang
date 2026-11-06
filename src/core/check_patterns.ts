@@ -20,7 +20,6 @@ import type { BodyTable, NodeFact, PatternFact } from "./tables.ts";
 import { literalFitsPrimitive, type TypeRef, type TypeTable } from "./types.ts";
 import { showTypes } from "./type_show.ts";
 
-/** What the pattern checker needs from the body checker. */
 export interface PatternContext {
   readonly tree: SyntaxTree;
   readonly table: TypeTable;

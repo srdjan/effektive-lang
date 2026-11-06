@@ -150,7 +150,6 @@ export class TypeLowerer {
     };
   }
 
-  /** Lowers a type syntax node. */
   lower(node: NodeId): Lowered {
     const table = this.env.table;
     switch (kindOf(this.tree, node)) {
@@ -255,7 +254,6 @@ export class TypeLowerer {
     }
   }
 
-  /** One row for each built-in type name. A missing name is a compile error. */
   private static readonly BUILTIN_TYPES: {
     readonly [N in BuiltinTypeName]: BuiltinTypeRow;
   } = {

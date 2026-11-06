@@ -89,8 +89,6 @@ import {
 
 type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
 
-// ------------------------------------------------------------------ the module checker
-
 type TypeNodeInfo =
   & {
     readonly name: string;
@@ -282,8 +280,6 @@ class ModuleChecker {
     if (target?.kind !== "builtin-type") return false;
     return isValuePrimitiveName(target.name);
   }
-
-  // -------------------------------------------------------------- types and errors
 
   private bodyOf(entry: DeclEntry): NodeId | undefined {
     return this.lowerer.kids(entry.node).find((k) =>
@@ -747,8 +743,6 @@ class ModuleChecker {
     }
   }
 
-  // -------------------------------------------------------------- services and providers
-
   private checkService(entry: DeclEntry): void {
     const id = this.id("service", entry.name);
     const methods: MethodDecl[] = [];
@@ -852,8 +846,6 @@ class ModuleChecker {
     };
     this.values.set(id, signature);
   }
-
-  // -------------------------------------------------------------- consts
 
   private base(entry: DeclEntry): SignatureBase {
     return {

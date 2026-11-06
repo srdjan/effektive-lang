@@ -47,7 +47,6 @@ export interface Solved {
   readonly requirements: readonly CapabilityId[];
 }
 
-/** What one round of body checks returns. */
 interface Round<R> {
   /** The checks of this round. The last round's results are the final ones. */
   readonly results: R;
@@ -56,7 +55,6 @@ interface Round<R> {
 }
 
 interface GroupSolution<R> {
-  /** The settled state of the pending members. */
   readonly solved: ReadonlyMap<ValueId, Solved>;
   /** The results of the last round. When `settled`, they used the final modes. */
   readonly results: R;

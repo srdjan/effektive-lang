@@ -72,9 +72,6 @@ import type { BodyTable } from "./tables.ts";
 import { type TypeRef, TypeTable } from "./types.ts";
 import { functionTypeFromIr, typeFromIr } from "./type_ir.ts";
 
-// ------------------------------------------------------------------ results
-
-/** The checked body of a module-level function. */
 export interface FunctionBody extends Omit<FunctionRun, "diagnostics"> {
   readonly kind: "function";
   readonly signature: FunctionSignature;
@@ -82,7 +79,6 @@ export interface FunctionBody extends Omit<FunctionRun, "diagnostics"> {
   readonly bodyNode: NodeId | undefined;
 }
 
-/** The checked initializer of a module-level constant. */
 export interface ConstantBody {
   readonly kind: "constant";
   readonly signature: ConstantSignature;
@@ -140,8 +136,6 @@ export interface CheckedProject {
    */
   readonly blocked: ReadonlyMap<string, number>;
 }
-
-// ------------------------------------------------------------------ one module
 
 interface EntryInfo {
   readonly broken: boolean;
@@ -473,7 +467,6 @@ function scheduleRuns(
   }
 }
 
-/** Checks every body of one module and solves its execution modes. */
 function checkModuleBodies(args: CheckArguments): ModuleBodies {
   const entries = collectEntries(args);
   const edges = referenceEdges(
@@ -536,8 +529,6 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
     diagnostics: normalizeDiagnostics(diagnostics),
   };
 }
-
-// ------------------------------------------------------------------ the project
 
 /** What a module sees of the modules that it reaches, among those that are checked so far. */
 export interface ReachedModules {
@@ -699,7 +690,6 @@ export interface ModulePolicy {
   settled(name: string, step: ModuleStep, decision: ModuleDecision): void;
 }
 
-/** The policy that checks every module. */
 const CHECK_EVERY_MODULE: ModulePolicy = {
   decide: () => ({ kind: "check" }),
   settled: () => {},
@@ -772,7 +762,6 @@ function blockedModules(
   return blocked;
 }
 
-/** Checks every module of an analyzed project in topological order. */
 export function checkAnalysis(analysis: Analysis): CheckedProject {
   return driveProject(analysis, new TypeTable(), CHECK_EVERY_MODULE);
 }

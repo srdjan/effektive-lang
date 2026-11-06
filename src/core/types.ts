@@ -55,7 +55,7 @@ interface RecordField {
   readonly optional: boolean;
 }
 
-/** The interned form. Records are sorted by field name, unions by ref. */
+/** The interned form. Records are sorted by field name, unions by the canonical text of their IR. */
 export type TypeNode =
   | { readonly kind: "primitive"; readonly name: PrimitiveName }
   | {
@@ -152,8 +152,6 @@ function isSubset(
 function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((item, i) => item === b[i]);
 }
-
-// ------------------------------------------------------------------ the table
 
 // The bound on the recursion of one comparison. The parser limits written
 // nesting to 512 levels and `declaration/012` limits an alias to 128 levels.
@@ -278,7 +276,6 @@ export class TypeTable {
   private readonly defs: Map<TypeId, AliasDef>;
   private readonly errorRecords: Map<ErrorId, TypeRef>;
 
-  /** The recovery type. */
   readonly error: TypeRef;
   readonly string: TypeRef;
   readonly boolean: TypeRef;
@@ -337,8 +334,6 @@ export class TypeTable {
     if (node === undefined) throw new Error(`unknown type ref ${ref}`);
     return node;
   }
-
-  // -------------------------------------------------------------- interning
 
   /** The intern key of a node. Each kind has its own prefix, so keys of different kinds never collide. */
   private keyOf(node: TypeNode): string {
@@ -610,8 +605,6 @@ export class TypeTable {
     });
   }
 
-  // -------------------------------------------------------------- definitions
-
   /**
    * Registers the definition of an alias. The last definition wins. A guarded
    * alias is a recursive record that needs an array, an optional key, or a
@@ -730,7 +723,6 @@ export class TypeTable {
     return this.foreignSealedOf(module, ref) !== undefined;
   }
 
-  /** Registers the field record of an error declaration. */
   defineError(id: ErrorId, record: TypeRef): void {
     this.errorRecords.set(id, record);
   }
@@ -791,7 +783,6 @@ export class TypeTable {
       : this.taggedRecordOf(id) ?? this.identityBaseOf(id);
   }
 
-  /** True when a definition for the id exists. */
   isDefined(id: TypeId | ErrorId): boolean {
     return isErrorId(id) ? this.errorRecords.has(id) : this.defs.has(id);
   }
@@ -869,8 +860,6 @@ export class TypeTable {
     ) return [];
     return [def.body];
   }
-
-  // -------------------------------------------------------------- compatibility
 
   /** True when a value of type `source` may be used where `target` is expected. */
   isAssignable(source: TypeRef, target: TypeRef): boolean {

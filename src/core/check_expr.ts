@@ -153,8 +153,6 @@ import {
 } from "./check_refinements.ts";
 import { not } from "./predicates.ts";
 
-// ------------------------------------------------------------------ environment
-
 /**
  * The contract of a function body. An absent part is open: the body infers it.
  * A present part is closed, and the body must stay within it.
@@ -165,7 +163,6 @@ interface Contract {
   readonly requirements: readonly CapabilityId[] | undefined;
 }
 
-/** What checking the body expression of a function produces. */
 interface BodyOutcome {
   /** The info of the body expression. Absent when the body is missing. */
   readonly body: NodeInfo | undefined;
@@ -174,11 +171,9 @@ interface BodyOutcome {
   /** The invocation sets: declared for a closed set, inferred for an open one. */
   readonly failures: readonly ErrorId[];
   readonly requirements: readonly CapabilityId[];
-  /** The invocation mode. */
   readonly mode: Execution;
 }
 
-/** What checking one function body produces. */
 export interface FunctionRun extends BodyOutcome {
   readonly table: BodyTable;
   /** The function type with that mode. */
@@ -215,8 +210,6 @@ type RecordTarget =
 function names(ids: readonly string[]): string {
   return ids.map(shortName).join(", ");
 }
-
-// ------------------------------------------------------------------ the checker
 
 // Family contexts expose only the checker operations and read views they need.
 class BodyChecker
@@ -274,8 +267,6 @@ class BodyChecker
   valueType(id: ValueId): TypeRef {
     return this.benv.values(id);
   }
-
-  // -------------------------------------------------------------- helpers
 
   kids(node: NodeId): NodeId[] {
     return kidsOf(this.tree, node);
@@ -492,8 +483,6 @@ class BodyChecker
     return only.kind === "option" ? only.element : undefined;
   }
 
-  // -------------------------------------------------------------- public entries
-
   /**
    * Checks a function body against its contract. The parameters must already be
    * in `locals`.
@@ -564,7 +553,6 @@ class BodyChecker
     };
   }
 
-  /** Checks a module-level constant initializer. */
   checkConstant(
     initNode: NodeId | undefined,
     annotation: TypeRef | undefined,
@@ -586,8 +574,6 @@ class BodyChecker
     }
     return { type: annotation ?? this.widen(init.type) };
   }
-
-  // -------------------------------------------------------------- expressions
 
   expr(node: NodeId, expected?: TypeRef): NodeInfo {
     switch (kindOf(this.tree, node)) {
@@ -644,8 +630,6 @@ class BodyChecker
   argInfo(arg: Arg, expected?: TypeRef): NodeInfo {
     return arg.pre ?? this.expr(arg.node, expected);
   }
-
-  // -------------------------------------------------------------- literals and names
 
   private literal(node: NodeId, expected: TypeRef | undefined): NodeInfo {
     const value = literalOf(this.tree, node);
@@ -736,8 +720,6 @@ class BodyChecker
     this.fact(node, { kind: "none" });
     return this.finish(node, type, PURE_EFFECTS);
   }
-
-  // -------------------------------------------------------------- calls
 
   private call(node: NodeId, expected: TypeRef | undefined): NodeInfo {
     const kids = this.kids(node);
@@ -1144,8 +1126,6 @@ class BodyChecker
     return this.finish(node, this.table.named(id), combine(infos));
   }
 
-  // -------------------------------------------------------------- prelude calls
-
   private builtinCall(
     node: NodeId,
     name: PreludeName,
@@ -1266,12 +1246,6 @@ class BodyChecker
     return this.finish(node, type, combine(infos));
   }
 
-  /**
-   * Reads an option record of exactly `count` fields, each `name: literal`, and
-   * gives the fields by name. It fails with "shape" for a pipeline left side, a
-   * value that is not a record, another field count, a field of another form,
-   * or a repeated name. It reports nothing and records nothing.
-   */
   literalRecord(
     arg: Arg,
     count: number,
@@ -1469,8 +1443,6 @@ class BodyChecker
     return { info, result: fn.result };
   }
 
-  // -------------------------------------------------------------- pipelines
-
   private pipe(node: NodeId, expected: TypeRef | undefined): NodeInfo {
     const { left, stage } = pipeParts(this.tree, node);
     if (left === undefined) return this.errorInfo(node);
@@ -1510,8 +1482,6 @@ class BodyChecker
     this.finish(stage, q.type, combined);
     return this.finish(node, q.type, combined);
   }
-
-  // -------------------------------------------------------------- fields and records
 
   private fieldExpr(node: NodeId): NodeInfo {
     const { base, member } = fieldParts(this.tree, node);
@@ -2079,8 +2049,6 @@ class BodyChecker
     return result;
   }
 
-  // -------------------------------------------------------------- operators
-
   private binary(node: NodeId): NodeInfo {
     const kids = this.kids(node);
     const operator = operatorOf(this.tree, node);
@@ -2142,8 +2110,6 @@ class BodyChecker
     }
     return info;
   }
-
-  // -------------------------------------------------------------- arrows
 
   /**
    * Checks an arrow expression. Creating a closure is pure with empty sets. The
@@ -2277,7 +2243,6 @@ class BodyChecker
     return result;
   }
 
-  /** Declares the outcome binding of a `finally` region. */
   private outcomeParameter(
     nameNode: NodeId,
     type: TypeRef,
@@ -2313,8 +2278,6 @@ class BodyChecker
     this.fact(node, { kind: "arrow", parameters: parameterFacts, written });
     return this.finish(node, type, PURE_EFFECTS);
   }
-
-  // -------------------------------------------------------------- blocks and control
 
   private block(node: NodeId, expected: TypeRef | undefined): NodeInfo {
     const refinementScope = this.refinements.snapshot();
@@ -2565,8 +2528,6 @@ class BodyChecker
     return this.finish(node, type, combine(infos));
   }
 
-  // -------------------------------------------------------------- try and catch
-
   private tryExpr(node: NodeId, expected: TypeRef | undefined): NodeInfo {
     const kids = this.kids(node);
     const bodyNode = kids.find((k) =>
@@ -2750,8 +2711,6 @@ class BodyChecker
     return this.finish(node, type, combine([subject, fallback]));
   }
 
-  // -------------------------------------------------------------- match
-
   private match(node: NodeId, expected: TypeRef | undefined): NodeInfo {
     const kids = this.kids(node);
     const subjectNode = kids[0];
@@ -2852,9 +2811,6 @@ class BodyChecker
   }
 }
 
-// ------------------------------------------------------------------ entry points
-
-/** Checks the body of a module-level function against its signature. */
 export function checkFunctionBody(
   benv: BodyEnv,
   signature: FunctionSignature,
@@ -2967,7 +2923,6 @@ function reportCheckedInputs(
   }
 }
 
-/** Checks the initializer of a module-level constant. */
 export function checkConstantBody(
   benv: BodyEnv,
   signature: ConstantSignature,

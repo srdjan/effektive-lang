@@ -182,7 +182,6 @@ export type NodeFact =
     readonly binding: LocalId | undefined;
   };
 
-/** The side tables of one declaration body. */
 export interface BodyTable {
   readonly declaration: ValueId;
   /** Syntax node id to type, sets, and mode. */

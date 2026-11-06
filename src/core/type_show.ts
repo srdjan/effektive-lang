@@ -10,7 +10,6 @@ interface Names {
   readonly qualified: ReadonlySet<string>;
 }
 
-/** A readable form for messages. It is not a serialization format. */
 export function showType(table: TypeReader, ref: TypeRef): string {
   return print(table, { qualified: new Set() }, ref);
 }

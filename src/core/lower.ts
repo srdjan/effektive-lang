@@ -86,8 +86,6 @@ import {
 } from "./ids.ts";
 import { PRELUDE_MODULE } from "./paths.ts";
 
-// ------------------------------------------------------------------ errors
-
 export type LowerError =
   /** The module name is not part of the checked project. */
   | { readonly tag: "unknown-module"; readonly module: string }
@@ -117,9 +115,6 @@ function internal(message: string): LowerFailure {
   return new LowerFailure(message);
 }
 
-// ------------------------------------------------------------------ context
-
-/** A specialized builtin instance of one module. */
 interface BuiltinInstance {
   readonly type: FunctionType;
 }
@@ -138,7 +133,6 @@ interface ModuleContext {
 
 const EMPTY_EFFECTS: Effects = { failures: [], requirements: [] };
 
-/** Every identifier text of a module. */
 function identifiersOf(tree: SyntaxTree): ReadonlySet<string> {
   const lexed = tree.lexed;
   const names = new Set<string>();
@@ -157,8 +151,6 @@ function setOf(expr: Expr): EffectSet {
     mode: expr.execution,
   };
 }
-
-// ------------------------------------------------------------------ call facts
 
 type FactKind = NodeFact["kind"];
 
@@ -196,7 +188,6 @@ type SpecialKind =
 /** The fact kinds whose node moves positional arguments into named fields. */
 type PositionalKind = Exclude<FactKind, SpecialKind>;
 
-/** The fact members that have a kind in `K`. */
 type FactOf<K extends FactKind> = NodeFact extends infer F
   ? F extends { readonly kind: infer FK }
     ? [Extract<K, FK>] extends [never] ? never
@@ -204,7 +195,6 @@ type FactOf<K extends FactKind> = NodeFact extends infer F
   : never
   : never;
 
-/** The node members that have a kind in `K`, without their annotation. */
 type BodyOf<K extends PositionalKind> = Extract<Expr, { kind: K }> extends
   infer E ? E extends Expr ? Omit<E, keyof Annotation> : never
   : never;
@@ -291,8 +281,6 @@ function positionalBody<K extends PositionalKind>(
   return POSITIONAL_BUILDERS[kind](arg, fact);
 }
 
-// ------------------------------------------------------------------ one body
-
 /**
  * Lowers the expressions of one top-level declaration. The counter of generated
  * pipeline bindings belongs to the declaration and starts at 1.
@@ -306,8 +294,6 @@ class BodyLowerer {
     /** The name of the top-level declaration, which forms generated local identities. */
     private readonly owner: string,
   ) {}
-
-  // -------------------------------------------------------------- helpers
 
   private kids(node: NodeId): NodeId[] {
     return kidsOf(this.ctx.tree, node);
@@ -358,7 +344,6 @@ class BodyLowerer {
     };
   }
 
-  /** The annotation that the checker recorded for a node. */
   private annotation(node: NodeId, spanNode: NodeId = node): Annotation {
     const info = this.info(node);
     const proofs = this.body.proofs.get(node);
@@ -418,8 +403,6 @@ class BodyLowerer {
     }
     return localId(this.ctx.module, this.owner, `$p${this.pipelines}`);
   }
-
-  // -------------------------------------------------------------- expressions
 
   expr(node: NodeId): Expr {
     const tree = this.ctx.tree;
@@ -907,8 +890,6 @@ class BodyLowerer {
     };
   }
 
-  // -------------------------------------------------------------- pipelines
-
   /**
    * `x |> s1 |> s2(a)` becomes a block that binds `$p1 = x` and `$p2 = s1($p1)`
    * and returns `s2($p2, a)`. A generated binding and each reference to it use
@@ -997,8 +978,6 @@ class BodyLowerer {
     }
     return this.invoke(stage, qualified, stageArgs, pre);
   }
-
-  // -------------------------------------------------------------- records
 
   /** The label, label node, and value node of a field. The value is absent in a shorthand field. */
   private fieldParts(field: NodeId): {
@@ -1121,8 +1100,6 @@ class BodyLowerer {
       ),
     };
   }
-
-  // -------------------------------------------------------------- blocks and control
 
   private block(node: NodeId): Expr {
     const items = this.kids(node);
@@ -1479,8 +1456,6 @@ class BodyLowerer {
     };
   }
 }
-
-// ------------------------------------------------------------------ one module
 
 function targetId(target: Target | undefined): DeclarationId | undefined {
   switch (target?.kind) {

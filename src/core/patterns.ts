@@ -101,7 +101,6 @@ function unique(values: readonly LiteralValue[]): LiteralValue[] {
   return result;
 }
 
-/** The pattern domain of a subject type. */
 export function domainOf(table: TypeTable, subject: TypeRef): Domain {
   const members = flattenMembers(table, subject);
   const nodes = members.map((m) => table.node(m));

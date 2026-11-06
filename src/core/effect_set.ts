@@ -6,7 +6,6 @@
 import type { CapabilityId, ErrorId, Execution } from "./ir.ts";
 import { sortedUnique } from "./util.ts";
 
-/** The effects of one evaluation: failures, requirements, and the mode. */
 export interface EffectSet {
   readonly failures: readonly ErrorId[];
   readonly requirements: readonly CapabilityId[];
