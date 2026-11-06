@@ -16,6 +16,7 @@ import {
   SEPARATOR,
 } from "@std/path";
 import type { HostFs } from "../host/io.ts";
+import { DiskProgram } from "../host/disk_program.ts";
 import { ownedByRoot, runSaveRound } from "../host/save_round.ts";
 import { isSourcePath, readWorkspace } from "../host/workspace.ts";
 import {
@@ -73,10 +74,8 @@ type ProjectPhase =
 
 /** The disk state of one project. It sees disk texts only. `saveRound` owns it. */
 interface DiskSession {
-  readonly program: Program;
+  readonly disk: DiskProgram;
   readonly outputs: TypeScriptOutputs;
-  /** The texts that the last round gave to `program`, whether or not that update succeeded. */
-  inputs: ReadonlyMap<string, string>;
   /** The module names of the last successful round, plus names whose removal failed. */
   modules: readonly string[];
   /** The reason last logged for each held module, so that a repeat stays silent. */
@@ -107,7 +106,7 @@ export class ProjectState {
 
   /** The disk program of the save round, or `undefined` before the first round. */
   get diskProgram(): Program | undefined {
-    return this.diskSession?.program;
+    return this.diskSession?.disk.program;
   }
 
   constructor(readonly root: string) {
@@ -446,28 +445,25 @@ export class ProjectSet {
   saveRound(project: ProjectState): void {
     if (!this.ports.writeOnSave()) return;
     const { fs, log } = this.ports;
-    const read = readWorkspace(fs, project.root);
+    const session = project.diskSession ??= {
+      disk: new DiskProgram(project.root),
+      outputs: new TypeScriptOutputs(),
+      modules: [],
+      heldReasons: new Map(),
+    };
+    const { disk, outputs } = session;
+    const read = disk.read(fs);
     if (!read.ok) {
       log(1, `cannot read the project ${project.root}: ${read.error}`);
       return;
     }
-    const workspace = read.value;
+    const workspace = read.value.files;
     if (!sameTexts(project.disk, workspace)) {
       // The overlay program must see the new disk text at the next flush.
       project.disk = workspace;
       project.dirty = true;
     }
-    const session = project.diskSession ??= {
-      program: new Program(project.root),
-      outputs: new TypeScriptOutputs(),
-      inputs: new Map(),
-      modules: [],
-      heldReasons: new Map(),
-    };
-    const { program, outputs } = session;
-    const { set, remove } = diffFiles(session.inputs, workspace);
-    const updated = program.update({ set, remove });
-    session.inputs = workspace;
+    const updated = disk.update(read.value);
     if (!updated.ok) {
       log(1, describeConfigError(updated.error));
       return;

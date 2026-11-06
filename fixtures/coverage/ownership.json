@@ -137,6 +137,7 @@
       "src/core/validate/world_table.ts",
       "src/core/validate_project.ts",
       "src/host/deno_io.ts",
+      "src/host/disk_program.ts",
       "src/host/events.ts",
       "src/host/generation.ts",
       "src/host/log.ts",

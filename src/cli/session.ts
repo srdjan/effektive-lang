@@ -8,8 +8,6 @@ import {
   describeConfigError,
   diffFiles,
   joinPath,
-  Program,
-  type ProgramChanges,
   type Revision,
   sha256Hex,
 } from "../core/mod.ts";
@@ -18,11 +16,12 @@ import {
   type BuildOutcome,
   buildRevision,
 } from "./build.ts";
+import { DiskProgram } from "../host/disk_program.ts";
 import type { HostIo } from "../host/io.ts";
 import { noLog } from "../host/log.ts";
 import { emit } from "../host/log_schema.ts";
 import type { EventLog } from "../host/ports.ts";
-import { readTargetInputs, readWorkspace } from "../host/workspace.ts";
+import { readTargetInputs } from "../host/workspace.ts";
 
 export type SyncResult =
   /** No file changed since the last sync. */
@@ -35,9 +34,8 @@ export type SyncResult =
   | { readonly tag: "revision"; readonly revision: Revision };
 
 export class Session {
-  private readonly program: Program;
+  private readonly disk: DiskProgram;
   private readonly outputs = new TypeScriptOutputs();
-  private known = new Map<string, string>();
   private started = false;
   private targetInputs = new Map<string, string>();
   private latest: Revision | undefined;
@@ -48,11 +46,12 @@ export class Session {
     private readonly trackTargets = false,
     private readonly log: EventLog = noLog,
   ) {
-    this.program = new Program(root);
+    this.disk = new DiskProgram(root);
   }
 
   /** The text of a file of the last sync, by its root-relative path. */
-  readonly textOf = (path: string): string | undefined => this.known.get(path);
+  readonly textOf = (path: string): string | undefined =>
+    this.disk.known.get(path);
 
   /**
    * Reads the directory. The first sync always starts a revision. A sync that
@@ -89,10 +88,9 @@ export class Session {
   }
 
   private read(): SyncResult {
-    const read = readWorkspace(this.io.fs, this.root);
+    const read = this.disk.read(this.io.fs);
     if (!read.ok) return { tag: "read-error", message: read.error };
-    const files = read.value;
-    const { set, remove } = diffFiles(this.known, files);
+    const { set, remove } = read.value;
     let hostChanged = false;
     let hostDiff: ReturnType<typeof diffFiles> | undefined;
     if (this.trackTargets) {
@@ -110,9 +108,7 @@ export class Session {
         : { tag: "unchanged" };
     }
     this.started = true;
-    this.known = new Map(files);
-    const changes: ProgramChanges = { set, remove };
-    const updated = this.program.update(changes);
+    const updated = this.disk.update(read.value);
     if (!updated.ok) {
       this.latest = undefined;
       return {
