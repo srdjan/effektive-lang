@@ -110,27 +110,28 @@ Deno.test("the same position sorts by code before message, in both input orders"
 });
 
 Deno.test("the same position and code sort by message in every input order", () => {
-  const messages = ["a first", "b second", "c third"];
-  const expected = messages.map((m) =>
-    `m.eff:2:2: error type-mismatch/003: ${m}`
-  );
-  const permutations = [
-    [0, 1, 2],
-    [0, 2, 1],
-    [1, 0, 2],
-    [1, 2, 0],
-    [2, 0, 1],
-    [2, 1, 0],
+  const a = at("type-mismatch/003", "a first", 2, 2);
+  const b = at("type-mismatch/003", "b second", 2, 2);
+  const c = at("type-mismatch/003", "c third", 2, 2);
+  const expected = [
+    "m.eff:2:2: error type-mismatch/003: a first",
+    "m.eff:2:2: error type-mismatch/003: b second",
+    "m.eff:2:2: error type-mismatch/003: c third",
   ];
-  for (const order of permutations) {
-    const input = order.map((i) => at("type-mismatch/003", messages[i], 2, 2));
-    assertEquals(print(input), expected, order.join(","));
-  }
+  const orders = [[a, b, c], [a, c, b], [b, a, c], [b, c, a], [c, a, b], [
+    c,
+    b,
+    a,
+  ]];
+  for (const input of orders) assertEquals(print(input), expected);
 });
 
 Deno.test("two equal diagnostics both print", () => {
   const one = at("type-mismatch/003", "same", 1, 1);
-  assertEquals(print([one, one]).length, 2);
+  assertEquals(print([one, one]), [
+    "m.eff:1:1: error type-mismatch/003: same",
+    "m.eff:1:1: error type-mismatch/003: same",
+  ]);
 });
 
 Deno.test("a different path sorts before the position, in both input orders", () => {
