@@ -31,7 +31,7 @@ import {
   SCHEMA_ISSUE_ID,
   TIMEOUT_ERROR_ID,
 } from "../ir.ts";
-import { defectMessage } from "./outcome.ts";
+import { defectMessage } from "./helper_declarations.ts";
 import {
   alt,
   assignment,

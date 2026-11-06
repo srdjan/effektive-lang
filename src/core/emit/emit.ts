@@ -24,7 +24,13 @@ import {
   type ImportGroup,
   ModuleState,
 } from "./module_state.ts";
-import { outcomeDeclaration } from "./outcome.ts";
+import {
+  hostCheckDeclaration,
+  intFunctionDeclaration,
+  intSchemaDeclaration,
+  outcomeDeclaration,
+  unmatchedDeclaration,
+} from "./helper_declarations.ts";
 
 export interface EmitContext {
   /** The project configuration, for the paths of host modules. */
@@ -109,10 +115,10 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
   // The host assertions come first: their check schemas register `$Int` and `$hostCheck`.
   const hostAssertions = emitter.hostAssertions();
   const helperDeclarations: readonly (readonly [HelperKey, () => Doc])[] = [
-    ["intSchema", () => emitter.intSchemaDeclaration()],
-    ["intFunction", () => emitter.intFunctionDeclaration()],
-    ["unmatched", () => emitter.unmatchedDeclaration()],
-    ["hostCheck", () => emitter.hostCheckDeclaration()],
+    ["intSchema", () => intSchemaDeclaration(scope)],
+    ["intFunction", () => intFunctionDeclaration(scope)],
+    ["unmatched", () => unmatchedDeclaration(scope)],
+    ["hostCheck", () => hostCheckDeclaration(scope)],
     ["outcome", () => outcomeDeclaration(scope)],
   ];
   const helpers: Doc[][] = [];

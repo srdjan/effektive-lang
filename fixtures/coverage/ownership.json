@@ -62,7 +62,7 @@
       "src/core/emit/fields.ts",
       "src/core/emit/identity.ts",
       "src/core/emit/module_state.ts",
-      "src/core/emit/outcome.ts",
+      "src/core/emit/helper_declarations.ts",
       "src/core/emit/predicates.ts",
       "src/core/emit/shape.ts",
       "src/core/emit/sourcemap.ts",

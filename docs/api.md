@@ -118,7 +118,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     calls.ts       The simple calls: tables of the structural and leaf kinds that print as callee(operands).
     fields.ts      Own-field construction, optional reads and declared schema input adapters.
     shape.ts       The shape table of every IR expression kind: children, deferred children, and leaf effects.
-    outcome.ts     The helper that maps an Exit to the outcome record of a `finally` binding.
+    helper_declarations.ts The declarations of the generated helpers: `$int`, `$unmatched`, `$Int`, `$hostCheck`, and `$outcome`.
     types.ts       The type printer and the schema printer.
     expr.ts        The expression scheme: pure, inGen, asEffect.
     decls.ts       Declarations, their order, and the export rule.
