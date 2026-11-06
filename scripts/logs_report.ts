@@ -55,8 +55,6 @@ export interface ReportOptions {
   readonly notes?: readonly string[];
 }
 
-// ------------------------------------------------------------------ parsing
-
 /** Reads the lines of one session file. A bad line is counted, not thrown. */
 export function parseSession(text: string, file: string): LogFile {
   const events: Envelope[] = [];
@@ -103,8 +101,6 @@ export function parseArgs(
     },
   };
 }
-
-// ------------------------------------------------------------------ helpers
 
 const record = (value: unknown): Obj => isRecord(value) ? value : {};
 const str = (value: unknown): string | undefined =>
@@ -196,8 +192,6 @@ function docEvents(events: readonly Envelope[]): Map<string, DocEvent[]> {
   }
   return docs;
 }
-
-// ------------------------------------------------------------------ sections
 
 function sessionsSection(files: readonly LogFile[], options: ReportOptions) {
   const rows = countBy(
@@ -585,8 +579,6 @@ function outcomesSection(files: readonly LogFile[]) {
   return section("Outcomes", parts.join("\n\n"));
 }
 
-// ------------------------------------------------------------------ report
-
 /** Builds the report. Sessions that started before the window are dropped. */
 export function buildReport(
   logFiles: readonly LogFile[],
@@ -611,8 +603,6 @@ export function buildReport(
     outcomesSection(sessions),
   ].join("\n");
 }
-
-// ------------------------------------------------------------------ entry
 
 /** Reads the `*.jsonl` files directly in one folder. */
 function readFolder(folder: string): Result<LogFile[], string> {

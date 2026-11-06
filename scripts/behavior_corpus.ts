@@ -22,8 +22,6 @@
 //   deno run -A scripts/behavior_corpus.ts --tree <root> --fixtures <dir>
 //     --out <file> [--only <prefix>]...
 
-// ------------------------------------------------------------------ records
-
 export const KINDS = [
   "check",
   "program",
@@ -253,8 +251,6 @@ export async function loadCore(root: string): Promise<Res<CoreApi>> {
   return { ok: true, value: api };
 }
 
-// ------------------------------------------------------------------ the corpus
-
 export type Files = Readonly<Record<string, string>>;
 
 /** One project: its files, and the entry paths. */
@@ -461,8 +457,6 @@ export function readCorpus(fixtures: string): Corpus {
   };
 }
 
-// ------------------------------------------------------------------ running
-
 /** True when no prefix is given, or when the name starts with a prefix. */
 export function selects(name: string, only: readonly string[]): boolean {
   return only.length === 0 || only.some((p) => name.startsWith(p));
@@ -487,7 +481,6 @@ class Thrown {
   constructor(readonly thrown: string) {}
 }
 
-/** Runs a step that may throw. A thrown error becomes a `Thrown`. */
 function attempt<T>(run: () => T): T | Thrown {
   try {
     return run();
@@ -641,8 +634,6 @@ export function runCorpus(
     KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind)
   );
 }
-
-// ------------------------------------------------------------------ command line
 
 if (import.meta.main) {
   const args = [...Deno.args];

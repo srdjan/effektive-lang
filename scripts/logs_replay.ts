@@ -537,8 +537,6 @@ function replayPlayground(events: readonly Envelope[]): ReplayOutcome {
   return compare("playground", expected, actual);
 }
 
-// ------------------------------------------------------------------ entry
-
 /** Replays the events of one session on the current build. */
 export function replaySession(
   events: readonly Envelope[],

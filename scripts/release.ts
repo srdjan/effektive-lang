@@ -119,7 +119,6 @@ async function git(args: string[]): Promise<string> {
   return output.stdout;
 }
 
-/** Runs one `deno task` and returns true when it exits 0. */
 async function runTask(name: string): Promise<boolean> {
   const output = await runProcess("deno", ["task", name], {
     cwd: ROOT,
@@ -129,7 +128,6 @@ async function runTask(name: string): Promise<boolean> {
   return output.success;
 }
 
-/** The name of the first release task that fails, or undefined. */
 async function failedTask(): Promise<string | undefined> {
   for (const name of ["check", "coverage"]) {
     if (!(await runTask(name))) return name;

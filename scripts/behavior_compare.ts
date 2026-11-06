@@ -19,8 +19,6 @@
 import { type Kind, KINDS, type Rec, type Res } from "./behavior_corpus.ts";
 import { exportRevision, runChecked } from "./lib.ts";
 
-// ------------------------------------------------------------------ arguments
-
 export interface Options {
   /** One revision, or the base and the head. */
   readonly revisions: readonly string[];
@@ -55,8 +53,6 @@ export function parseArgs(args: readonly string[]): Res<Options> {
   }
   return { ok: true, value: { revisions, out, only } };
 }
-
-// ------------------------------------------------------------------ comparison
 
 export interface KindCounts {
   readonly equal: number;
@@ -139,7 +135,6 @@ export function compareRecords(
   };
 }
 
-/** One summary line for each kind. */
 function summaryLines(comparison: Comparison): string[] {
   return KINDS.map((kind) => {
     const c = comparison.counts[kind];
@@ -183,8 +178,6 @@ export function parseRecords(text: string): Res<readonly Rec[]> {
   return { ok: true, value: parsed.records as Rec[] };
 }
 
-// ------------------------------------------------------------------ output files
-
 /**
  * A file-name part for a case name. A slash becomes two underscores. A
  * character outside letters, digits, dot, underscore, and hyphen becomes its
@@ -221,8 +214,6 @@ export function differenceFiles(
   return files;
 }
 
-// ------------------------------------------------------------------ the command
-
 /** The boundary of the command: the exports, the runs, the files, and the output. */
 export interface Deps {
   /** The records of one revision. `fixturesFrom` is the head revision. */
@@ -237,7 +228,6 @@ export interface Deps {
   fail(line: string): void;
 }
 
-/** Runs the command and returns its exit status. */
 export async function runCommand(
   args: readonly string[],
   deps: Deps,
@@ -280,7 +270,6 @@ export async function runCommand(
 
 // ------------------------------------------------------------------ real boundary
 
-/** Exports a revision into a new directory and returns the directory. */
 async function exportRevisionTree(revision: string): Promise<Res<string>> {
   const tree = await Deno.makeTempDir({ prefix: "effektive-compare-" });
   const archive = `${tree}.tar`;

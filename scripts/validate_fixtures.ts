@@ -12,8 +12,6 @@ import { diskHost, EXAMPLE_ENTRIES } from "../tests/helpers.ts";
 
 type Obj = Record<string, unknown>;
 
-// ------------------------------------------------------------------ JSON helpers
-
 function isObj(value: unknown): value is Obj {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -521,8 +519,6 @@ const MUTATIONS: readonly Mutation[] = [
     },
   },
 ];
-
-// ------------------------------------------------------------------ build
 
 export interface Built {
   /** File name to file text, including `manifest.json`. */
