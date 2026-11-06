@@ -1,6 +1,7 @@
 // Concrete TypeScript orchestration. Frontend queries do not import this module.
 import type { Revision } from "./db.ts";
-import type { ModuleIR, Result } from "./ir.ts";
+import type { ModuleIR } from "./ir.ts";
+import type { Result } from "./result.ts";
 import type { LowerError } from "./lower.ts";
 import {
   type EmitContext,

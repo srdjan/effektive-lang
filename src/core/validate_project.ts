@@ -18,7 +18,8 @@ import {
   normalizeDiagnostics,
 } from "./diagnostics.ts";
 import type { LowerError } from "./lower.ts";
-import type { Declaration, Import, ModuleIR, Result } from "./ir.ts";
+import type { Declaration, Import, ModuleIR } from "./ir.ts";
+import type { Result } from "./source.ts";
 import type { Project } from "./project.ts";
 import { validateModule } from "./validate/index.ts";
 

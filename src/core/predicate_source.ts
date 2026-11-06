@@ -1,4 +1,5 @@
-import type { Result, Span } from "./ir.ts";
+import type { Span } from "./ir.ts";
+import type { Result } from "./result.ts";
 import {
   and,
   comparison,

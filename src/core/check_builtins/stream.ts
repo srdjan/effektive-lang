@@ -1,5 +1,5 @@
 // Stream and Sink construction, callbacks, and execution.
-import type { Result } from "../ir.ts";
+import type { Result } from "../result.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
 import { isPatternKind, literalOf } from "../syntax_queries.ts";
 import {

@@ -6,7 +6,8 @@
 // out. The check runs before the text is produced, so a bad module gives an
 // error value and no text.
 
-import type { ModuleIR, Result } from "./ir.ts";
+import type { ModuleIR } from "./ir.ts";
+import type { Result } from "./result.ts";
 import { compareText } from "./util.ts";
 
 type SerializeError =

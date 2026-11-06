@@ -6,9 +6,9 @@ import {
   INSTANT_ID,
   LOG_LEVELS,
   type LogLevel,
-  type Result,
   TIMEOUT_ERROR_ID,
 } from "../ir.ts";
+import type { Result } from "../result.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
 import { literalOf, nameTextOf } from "../syntax_queries.ts";
 import {

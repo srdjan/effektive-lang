@@ -1,4 +1,4 @@
-import type { Result } from "../ir.ts";
+import type { Result } from "../source.ts";
 import type {
   Predicate,
   ProofCertificate,

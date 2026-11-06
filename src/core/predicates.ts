@@ -1,4 +1,4 @@
-import type { Result } from "./ir.ts";
+import type { Result } from "./result.ts";
 
 export const PREDICATE_RULES_VERSION = 1;
 

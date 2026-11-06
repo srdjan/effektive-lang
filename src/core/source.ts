@@ -1,7 +1,8 @@
 // Source access, line tables, and span helpers. Positions are UTF-16 code units
 // with an exclusive end, as JavaScript strings index them.
 
-import type { Result, Span } from "./ir.ts";
+import type { Span } from "./ir.ts";
+import type { Result } from "./result.ts";
 
 export type { Result, Span };
 

@@ -12,7 +12,7 @@
 // Source lines and columns are zero-based UTF-16 positions, as the source map
 // format and JavaScript tooling expect.
 
-import type { Result } from "../ir.ts";
+import type { Result } from "../result.ts";
 import { lineIndexOf, lineStarts } from "../source.ts";
 import { relativeSpecifier } from "./module_state.ts";
 import { recordAtOffset, type SpanTable, zeroBasedPosition } from "./spans.ts";

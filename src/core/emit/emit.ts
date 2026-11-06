@@ -3,7 +3,8 @@ import { fieldHelperDeclarations } from "./fields.ts";
 // `ModuleIR` into the text of one TypeScript module. It reads only the IR and
 // the project configuration. It is synchronous and pure: the caller writes files.
 
-import type { Declaration, ModuleIR, Result, TypeDecl } from "../ir.ts";
+import type { Declaration, ModuleIR, TypeDecl } from "../ir.ts";
+import type { Result } from "../result.ts";
 import { generatedHeader } from "../paths.ts";
 import type { ProjectConfig } from "../project.ts";
 import {

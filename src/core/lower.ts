@@ -45,13 +45,13 @@ import type {
   ModuleIR,
   Parameter,
   Pattern,
-  Result,
   Span,
   Step,
   Type,
   ValueId,
 } from "./ir.ts";
 import { DURATION_ID } from "./ir.ts";
+import type { Result } from "./result.ts";
 import { TokenKind } from "./lex.ts";
 import type { ModuleInfo } from "./project.ts";
 import type { ModuleResolution, Target } from "./resolve.ts";
