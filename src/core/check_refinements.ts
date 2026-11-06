@@ -1,15 +1,17 @@
 import { compareText } from "./util.ts";
-import {
-  addLinear,
-  COMPARISON_BOUNDS,
-  type ComparisonOperator,
-  differenceShape,
-  type Linear,
-} from "./linear.ts";
+import { addLinear, differenceShape, type Linear } from "./linear.ts";
 import { isTypeId } from "./ids.ts";
 import type { ProofBudget } from "./body_env.ts";
 import type { LocalId, RefinementProof, TypeId } from "./ir.ts";
-import { and, entails, not, type Predicate, type Term } from "./predicates.ts";
+import {
+  and,
+  COMPARISON_BOUNDS,
+  type ComparisonOperator,
+  entails,
+  not,
+  type Predicate,
+  type Term,
+} from "./predicates.ts";
 import { flattenMembers } from "./patterns.ts";
 import type { Target } from "./resolve.ts";
 import {

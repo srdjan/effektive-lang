@@ -56,39 +56,3 @@ export function differenceShape(linear: Linear): DifferenceShape | undefined {
     constant: terms.length === 0,
   };
 }
-
-export type ComparisonOperator = "<" | "<=" | "===" | "!==" | ">=" | ">";
-
-/**
- * One difference bound of a comparison of `left + leftOffset` with `right + rightOffset`.
- * With `maximum = rightOffset - leftOffset`, the forward bound is
- * `left - right <= maximum + slack`. The reverse bound is `right - left <= -maximum + slack`.
- */
-interface ComparisonPart {
-  readonly reversed: boolean;
-  readonly slack: bigint;
-}
-
-interface ComparisonBounds {
-  readonly parts: readonly ComparisonPart[];
-  /** How the parts combine. A single part has no join. */
-  readonly join: "single" | "and" | "or";
-}
-
-/** Turns each comparison operator into its difference bounds. */
-export const COMPARISON_BOUNDS: Readonly<
-  Record<ComparisonOperator, ComparisonBounds>
-> = {
-  "<": { join: "single", parts: [{ reversed: false, slack: -1n }] },
-  "<=": { join: "single", parts: [{ reversed: false, slack: 0n }] },
-  ">": { join: "single", parts: [{ reversed: true, slack: -1n }] },
-  ">=": { join: "single", parts: [{ reversed: true, slack: 0n }] },
-  "===": {
-    join: "and",
-    parts: [{ reversed: false, slack: 0n }, { reversed: true, slack: 0n }],
-  },
-  "!==": {
-    join: "or",
-    parts: [{ reversed: false, slack: -1n }, { reversed: true, slack: -1n }],
-  },
-};

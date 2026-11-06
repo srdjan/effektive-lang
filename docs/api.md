@@ -52,9 +52,9 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   requirement_provenance.ts Requirements carried by produced values and locally produced components that cross module bounds.
   tables.ts      Side tables of a body: node info and lowering facts.
   patterns.ts    Pattern domains of match subjects.
-  predicates.ts  The predicate model of refinements: terms, builders, normalization, solver limits, and proof certificates.
+  predicates.ts  The predicate model of refinements: terms, builders, normalization, the comparison bounds, solver limits, and proof certificates.
   predicate_source.ts predicateFromSource: the predicate of a refinement written in source.
-  linear.ts      Linear integer expressions, the difference-constraint test, and the comparison operator table that the refinement modules share.
+  linear.ts      Linear integer expressions and the difference-constraint test that the refinement modules share.
   infer_inputs.ts inferFunctionInputs, inferArrowInputs, withInferredInputs: syntax traversal, partial callable evidence, callbacks, and source diagnostics for inferred input contracts.
   infer_contracts.ts InputContractResolver: origins, demands, deferred calls, tagged issues, and finite worklist resolution with an explicit TypeTable.
   modes.ts       The mode fixed point of recursive groups.
