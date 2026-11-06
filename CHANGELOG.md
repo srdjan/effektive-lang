@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.15.2 - 2026-11-05
+
 - Failed workspace inspections retain the last complete inputs and generated outputs.
   Directory links propagate inspection failures instead of silently omitting source files.
 - Composite forwarding preserves input requirements through aliases, destructuring, records, tuples, and lists.
