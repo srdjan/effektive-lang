@@ -15,7 +15,7 @@
 // an `internal` error leaves the project unsent, so the next call sends every
 // file again.
 
-import { TypeScriptOutputs } from "../../src/core/typescript.ts";
+import { stepOutput, TypeScriptOutputs } from "../../src/core/typescript.ts";
 import {
   type ConfigError,
   describeConfigError,
@@ -154,14 +154,12 @@ export function createPlayground(
       const revision = updated.value;
       const outputs: Record<string, PlaygroundOutput | null> = {};
       for (const [path, name] of sourceModulesOf(revision)) {
-        const emitted = outputCache.emitted(revision, name);
-        if (emitted !== undefined && emitted.ok) {
-          lastGoodText.set(path, emitted.value.text);
-          outputs[path] = { text: emitted.value.text, stale: false };
-        } else {
-          const text = lastGoodText.get(path);
-          outputs[path] = text === undefined ? null : { text, stale: true };
-        }
+        const step = stepOutput(
+          lastGoodText.get(path),
+          outputCache.emitted(revision, name),
+        );
+        if (step.lastGood !== undefined) lastGoodText.set(path, step.lastGood);
+        outputs[path] = step.output;
       }
       const diagnostics = diagnosticsOf(revision);
       lastGood = revision;

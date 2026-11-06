@@ -9,7 +9,7 @@
 // This file imports only types from `handler.ts`. The server imports the values
 // of this file.
 
-import type { TypeScriptOutputs } from "../core/typescript.ts";
+import { stepOutput, type TypeScriptOutputs } from "../core/typescript.ts";
 import {
   completionsAt,
   CONFIG_FILE,
@@ -274,16 +274,12 @@ export class GeneratedTexts {
     outputs: TypeScriptOutputs,
   ): GeneratedTypeScriptResult | null {
     const name = sourceModuleOf(revision, path);
-    const emitted = name === undefined
-      ? undefined
-      : outputs.emitted(revision, name);
-    if (emitted !== undefined && emitted.ok) {
-      entry.lastGood = emitted.value.text;
-      return { text: emitted.value.text, stale: false };
-    }
-    return entry.lastGood === undefined
-      ? null
-      : { text: entry.lastGood, stale: true };
+    const step = stepOutput(
+      entry.lastGood,
+      name === undefined ? undefined : outputs.emitted(revision, name),
+    );
+    entry.lastGood = step.lastGood;
+    return step.output;
   }
 
   /** Answers `effektive/generatedTypeScript` and subscribes the module. */

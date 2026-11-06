@@ -135,6 +135,39 @@ export class TypeScriptOutputs {
   }
 }
 
+/** The generated text that a client shows for one module. */
+export interface GeneratedOutput {
+  readonly text: string;
+  /** True when the text comes from an earlier emit, because the newest emit failed. */
+  readonly stale: boolean;
+}
+
+/** The new last good text of a module and the output to show after one emit. */
+export interface OutputStep {
+  readonly lastGood: string | undefined;
+  /** `null`: no emit of the module has ever succeeded. */
+  readonly output: GeneratedOutput | null;
+}
+
+/**
+ * The stale-output rule. A successful emit gives its text, and that text becomes
+ * the last good text. A failed or missing emit gives the last good text, marked
+ * stale, or no output when no emit has succeeded.
+ */
+export function stepOutput(
+  lastGood: string | undefined,
+  emitted: Result<EmittedModule, EmitProjectError> | undefined,
+): OutputStep {
+  if (emitted !== undefined && emitted.ok) {
+    const text = emitted.value.text;
+    return { lastGood: text, output: { text, stale: false } };
+  }
+  return {
+    lastGood,
+    output: lastGood === undefined ? null : { text: lastGood, stale: true },
+  };
+}
+
 type HoverBackend = { readonly tag: "type"; readonly text: string } | {
   readonly tag: "unavailable";
 };
