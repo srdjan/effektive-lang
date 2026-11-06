@@ -11,7 +11,7 @@ Prefixes: UNP (problem items, written as `<slice>.<kind><n>`), UNF (fixes), UNU 
 - The validator duplicates checker rules on purpose. It is a differential oracle. A fix never shares a rule between `src/core/validate/` and the checker.
 - The emitter `ROWS` table and the validator `exprChildren` stay separate.
 - Emitted text, source maps, IR, diagnostics with their messages, CLI output, and language server output stay byte-identical. Only UND1 changes output, in its own commit.
-- The generated website file `typed-ir.ts` stays byte-identical. `scripts/site_ir.ts` may change. `tests/ir_site_slow_test.ts` runs only when the sibling `../effektive` exists, so this check runs in the main tree after each integration, not in a scratch worktree.
+- The generated website file `typed-ir.ts` stays byte-identical, except that UNU1 removes the unused `Result` declaration (UND6). `scripts/site_ir.ts` may change. `tests/ir_site_slow_test.ts` runs only when the sibling `../effektive` exists, so this check runs in the main tree after each integration, not in a scratch worktree.
 - `src/core` does no I/O. Adapters import the core only through the entry points.
 - `scripts/behavior_corpus.ts` stays self-contained, because `behavior_compare.ts` copies it into old trees.
 - Each new or removed production module updates `fixtures/coverage/ownership.json`, and a type-only module also updates the list in `tests/coverage_test.ts`. Opus resolves conflicts in these two files at integration.
@@ -24,6 +24,7 @@ Baseline: `30bb1d5` (the changelog heading fix on top of `efb2acd`). The gate pa
 - UND2 (source map decoder): `mapGenerated`, `decodeMappings`, `lookupMapping`, and `decodeVlqList` are documented in `docs/api.md` but have no product caller. No outside code imports the package. Decision: move them to test support, keep the decoder independent of the encoder, and update `docs/api.md`. `encodeVlq` stays, because production uses it.
 - UND3 (diagnostic severity): the field stays, because removing it changes serialized diagnostics. The `Severity` type narrows to `"error"`.
 - UND4 (`localeCompare` in the occurrence order): stays. A change would reorder public occurrence results. No failing case is known.
+- UND6 (`Result` in the published IR): `Span` is an IR type and stays in `ir.ts`. `Result` is not used by any IR type, so it moves to a leaf `result.ts`. The website `typed-ir.ts` then loses one unused declaration. Opus regenerates it with `deno task site:ir` and commits it separately in `../effektive`.
 - UND5 (orchestration): the Claude global instructions name Sonnet executors and permit detached worktrees from local main. The astra remark about Sol delegates applies to Codex sessions. Executors commit in detached worktrees under `~/.claude/scratch`, and Opus cherry-picks to `main`.
 
 ## Fixes
@@ -61,7 +62,7 @@ Each fix is above the problems that it removes. A problem line gives the item ID
 
 ### UNF3 (shared types move to leaf modules)
 
-`Result` and `Span` move from `ir.ts` to `source.ts`, and `scripts/site_ir.ts` splices them into `typed-ir.ts` at their old position, so the published file stays byte-identical. `BodyEnv` and `ProofBudget` move to a new leaf module that imports only `types.ts` and `signatures.ts`. `TypeTable.load` moves to `type_ir.ts`, and `DefinitionSource` becomes a `Pick` of `TypeGraph`. The language server handler types move to `lsp/handler.ts`. The host port types move to `host/ports.ts`. The `types.ts`-`type_ir.ts` pair keeps a type-only back edge, because union order depends on the canonical IR on purpose (B.H18). The gate is: no import cycle with value imports in both directions.
+`Result` moves from `ir.ts` to a leaf `result.ts`, and `source.ts` re-exports it (UND6). `Span` stays in `ir.ts`. `BodyEnv` and `ProofBudget` move to a new leaf module that imports only `types.ts` and `signatures.ts`. `TypeTable.load` moves to `type_ir.ts`, and `DefinitionSource` becomes a `Pick` of `TypeGraph`. The language server handler types move to `lsp/handler.ts`. The host port types move to `host/ports.ts`. The `types.ts`-`type_ir.ts` pair keeps a type-only back edge, because union order depends on the canonical IR on purpose (B.H18). No cycle has value imports in both directions at the baseline. The gate is: only the `types.ts`-`type_ir.ts` cycle and the validator cycle remain after UNU1, and the validator cycle goes in UNU3.
 
 - D.N8: `predicates.ts` imports `Result` from `ir.ts`, which creates a cycle and a wide fan-in.
 - B.N1: `infer_inputs.ts` imports `BodyEnv` from the largest checker file, which creates a cycle.
@@ -333,7 +334,7 @@ Each unit goes to one Sonnet executor with the full context in the dispatch. The
 | Unit | Fixes | Main files | Acceptance check | Budget |
 | --- | --- | --- | --- | --- |
 | UNU5 | UNF21, H.X6 of UNF15 | `scripts/**`, `bench/**`, `tests/versions_test.ts` | gate; failure probe of `behavior:compare`; `mutate` smoke run; `rules:unfired` count unchanged | 80 calls |
-| UNU1 | UNF3 | `source.ts`, `ir.ts`, `scripts/site_ir.ts`, `predicates.ts`, checker env leaf, `types.ts`, `type_ir.ts`, `lsp/handler.ts`, `host/ports.ts` | gate; `typed-ir.ts` unchanged; no value cycle | 70 calls |
+| UNU1 | UNF3 | `result.ts`, `source.ts`, `ir.ts`, `predicates.ts`, checker env leaf, `types.ts`, `type_ir.ts`, `lsp/handler.ts`, `host/ports.ts`, emitted-module types | gate; `typed-ir.ts` differs only by the `Result` block; the cycle gate of UNF3 | 70 calls |
 | UNU2 | UNF1, UNF2, UNF20 | `ids.ts`, `paths.ts`, `lex.ts`, `parse.ts`, editor files, emitter literals, adapters, `extension.js` tests | gate | 90 calls |
 | UNU3 | UNF15 | `src/core/validate/**` | gate; `validate` records of `behavior:compare` unchanged | 70 calls |
 | UNU4 | UNF12, UNF13, UNF14, UND2 | `src/core/emit/**`, `typescript.ts`, source map tests, `docs/api.md` | gate; golden files and maps unchanged | 90 calls |
@@ -346,7 +347,7 @@ Each unit goes to one Sonnet executor with the full context in the dispatch. The
 | UNU13 | UNF23 | all source directories, one executor for each area | gate; `typed-ir.ts` unchanged | 60 calls each |
 | UNU14 | UNF24 | `tests/**` | gate; coverage floors; fault injection | 80 calls each |
 
-Order. UNU5 runs first and alone, so that the comparison tools are fixed and probed before they judge other units. UNU1 and UNU2 run next on `main`, one after the other, because they touch many files. UNU3, UNU4, and UNU6 then run in parallel worktrees. Their only shared files are the coverage inventory files. UNU7, UNU8, UNU9, UNU10, and UNU11 run one after the other, each on the result of the previous unit. UNU13 and UNU14 run last.
+Order. UNU5 runs first, so that the comparison tools are fixed and probed before they judge other units. UNU1 runs at the same time as UNU5, because UNU1 does not touch the tools and its check is the gate. UNU2 follows UNU1, because both touch many files. UNU3, UNU4, and UNU6 then run in parallel worktrees. Their only shared files are the coverage inventory files. UNU7, UNU8, UNU9, UNU10, and UNU11 run one after the other, each on the result of the previous unit. UNU13 and UNU14 run last.
 
 ## Final checks
 
