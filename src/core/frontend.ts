@@ -65,6 +65,7 @@ export type { Diagnostic, DiagnosticCode, Severity } from "./diagnostics.ts";
 // The lexer and the prelude names, for the highlighter of the playground.
 export {
   contextualWordsOf,
+  isFromKeyword,
   isKeywordKind,
   KEYWORDS,
   lex,

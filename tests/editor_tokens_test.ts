@@ -34,3 +34,26 @@ Deno.test("lexical classification marks the equals sign as an operator and an un
     "y:variable",
   ]);
 });
+
+Deno.test("lexical classification marks from as a keyword before a module path and as a name elsewhere", () => {
+  const importText = 'import { a } from "./a.eff"';
+  const imported = semanticClassifications(undefined, "m.eff", importText).map((
+    c,
+  ) => `${importText.slice(c.span.start, c.span.end)}:${c.type}`);
+  assertEquals(imported, [
+    "import:keyword",
+    "a:variable",
+    "from:keyword",
+    '"./a.eff":string',
+  ]);
+  const constText = "const from = 1";
+  const bound = semanticClassifications(undefined, "m.eff", constText).map((
+    c,
+  ) => `${constText.slice(c.span.start, c.span.end)}:${c.type}`);
+  assertEquals(bound, [
+    "const:keyword",
+    "from:variable",
+    "=:operator",
+    "1:number",
+  ]);
+});

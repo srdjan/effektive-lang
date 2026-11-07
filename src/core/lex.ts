@@ -109,6 +109,14 @@ export function isKeywordKind(kind: TokenKind): boolean {
   return KEYWORD_KINDS.has(kind);
 }
 
+/** Whether the name `word` is the keyword `from`: only a string literal, the module path, follows it. */
+export function isFromKeyword(
+  word: string,
+  next: TokenKind | undefined,
+): boolean {
+  return word === "from" && next === TokenKind.String;
+}
+
 /** The token kinds that the editors color as operators. The order of the enum does not matter. */
 export const OPERATOR_KINDS: ReadonlySet<TokenKind> = new Set([
   TokenKind.Eq,

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The editor and the playground color `from` as a keyword only before a module path, and as a name everywhere else.
+  Before, the editor colored `from` as a name in an import, and the playground colored it as a keyword in every position.
 - A type message prints a name in a `fails`, `with`, or `provides` list as `module#Name` when another name in the message has the same short name.
   Before, two different errors named `E` from two modules printed as the same `E`.
 

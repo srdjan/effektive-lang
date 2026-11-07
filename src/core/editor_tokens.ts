@@ -4,6 +4,7 @@ import type { Diagnostic } from "./diagnostics.ts";
 import { symbolIndex, type SymbolOccurrence } from "./editor_index.ts";
 import {
   contextualWordsOf,
+  isFromKeyword,
   isKeywordKind,
   lex,
   OPERATOR_KINDS,
@@ -58,7 +59,7 @@ function serviceImportKeywordStarts(
   );
 }
 
-/** Every contextual word except the import words: `imports` has its own rule, and `from` stays a name. */
+/** Every contextual word except the import words: `imports` and `from` have their own rules. */
 const contextualKeywords = contextualWordsOf(
   "declaration",
   "modifier",
@@ -160,6 +161,14 @@ export function semanticClassifications(
     } else if (
       kind === TokenKind.Ident && serviceImports.has(span.start) &&
       text.slice(span.start, span.end) === "imports"
+    ) {
+      output.push({ span, type: "keyword", modifiers: [] });
+    } else if (
+      kind === TokenKind.Ident &&
+      isFromKeyword(
+        text.slice(span.start, span.end),
+        lexed.kinds[i + 1] as TokenKind | undefined,
+      )
     ) {
       output.push({ span, type: "keyword", modifiers: [] });
     } else if (

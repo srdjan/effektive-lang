@@ -10,6 +10,7 @@
 import {
   BUILTIN_TYPE_NAMES,
   contextualWordsOf,
+  isFromKeyword,
   isKeywordKind,
   lex,
   OPERATOR_KINDS,
@@ -38,14 +39,11 @@ interface HighlightRange {
 const DECLARATION_WORDS: ReadonlySet<string> = contextualWordsOf("declaration");
 
 /**
- * Words that are keywords wherever they appear as a name: the clause words and
- * `from`. The positional words `where` and `using`, the modifiers, and `imports`
+ * Words that are keywords wherever they appear as a name: the clause words. The
+ * positional words `where` and `using`, the modifiers, `imports`, and `from`
  * have their own rules below.
  */
-const CLAUSE_WORDS: ReadonlySet<string> = new Set([
-  ...contextualWordsOf("clause"),
-  "from",
-]);
+const CLAUSE_WORDS: ReadonlySet<string> = contextualWordsOf("clause");
 
 function isCapitalized(word: string): boolean {
   const first = word.charCodeAt(0);
@@ -158,6 +156,9 @@ export function highlightTokens(text: string): HighlightRange[] {
         word === "using" && lexed.kinds[i + 1] === TokenKind.LParen &&
         lexed.kinds[i + 2] === TokenKind.Ident &&
         lexed.kinds[i + 3] === TokenKind.Eq
+      ) result = "keyword";
+      else if (
+        isFromKeyword(word, lexed.kinds[i + 1] as TokenKind | undefined)
       ) result = "keyword";
       else if (CLAUSE_WORDS.has(word)) result = "keyword";
       else if (

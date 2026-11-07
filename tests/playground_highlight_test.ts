@@ -134,13 +134,12 @@ Deno.test("error is a name in a pattern, and type elsewhere is a name", () => {
   ]);
 });
 
-Deno.test("fails, provides, and from are keywords anywhere", () => {
+Deno.test("fails and provides are keywords anywhere", () => {
   assertEquals(
-    slices("f(fails provides from)"),
+    slices("f(fails provides)"),
     [
       ["fails", "keyword"],
       ["provides", "keyword"],
-      ["from", "keyword"],
     ],
   );
 });
@@ -227,4 +226,17 @@ Deno.test("ranges are sorted and do not overlap in every example file", () => {
       end = r.to;
     }
   }
+});
+
+Deno.test("from is a keyword before a module path and a name elsewhere", () => {
+  assertEquals(slices('import { a } from "./a.eff"'), [
+    ["import", "keyword"],
+    ["from", "keyword"],
+    ['"./a.eff"', "string"],
+  ]);
+  assertEquals(slices("const from = 1"), [
+    ["const", "keyword"],
+    ["=", "operator"],
+    ["1", "number"],
+  ]);
 });
