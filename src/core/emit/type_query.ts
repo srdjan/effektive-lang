@@ -24,7 +24,6 @@ export type EffectModule =
   | "Exit"
   | "Scope";
 
-// ------------------------------------------------------------------ deferred types
 
 /**
  * The Type kinds that have no schema and no runtime value: functions and the
