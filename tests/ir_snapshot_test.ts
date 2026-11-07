@@ -11,6 +11,7 @@ Deno.test("IR, emitted text, source maps, and interface hashes match the example
       new URL("../fixtures/ir/examples-baseline.json", import.meta.url),
     ),
   );
+  assert(corpus.length > 0, "the baseline holds no corpus");
   for (const { files, modules } of corpus) {
     const { revision, modules: actual } = irSnapshot(files);
     assertEquals(actual, modules);

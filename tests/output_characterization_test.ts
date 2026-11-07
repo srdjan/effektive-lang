@@ -1,6 +1,6 @@
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 const outputs = new TypeScriptOutputs();
-import { assert, assertEquals, assertNotEquals } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import {
   hoverAt,
   Program,
@@ -37,7 +37,14 @@ Deno.test("output characterization: lazy queries, old revisions, failures and un
     set: { "main.eff": source.replace("1", "missing") },
   });
   assert(broken.ok);
-  assertNotEquals(outputs.emitted(broken.value, "main"), emitted);
+  assertEquals(outputs.emitted(broken.value, "main"), {
+    ok: false,
+    error: {
+      tag: "lowering",
+      module: "main",
+      error: { tag: "diagnostics", module: "main", count: 1 },
+    },
+  });
   assertEquals(
     hoverAt(broken.value, "main.eff", source.indexOf("value"), outputs)
       ?.backend,
