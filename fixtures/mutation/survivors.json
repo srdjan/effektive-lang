@@ -916,5 +916,86 @@
     "operator": "logical",
     "class": "equivalent",
     "reason": "Name arguments and missing arguments take the same branch under both guards. A non-name expression cannot match an identifier binding. The extra lookup finds no binding or prelude name, then resolves the same expression without changing outerUses."
+  },
+  {
+    "file": "src/core/project_config.ts",
+    "declaration": "keySpan",
+    "offset": 156,
+    "text": "at < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The text comes from a parsed top-level object, so its first character is `{` or white space. A quoted key never starts at index 0, so `at` is -1 or positive and < and <= agree."
+  },
+  {
+    "file": "src/core/project_config.ts",
+    "declaration": "validModulePattern",
+    "offset": 62,
+    "text": "pattern === \"\" || pattern.startsWith(\"/\") || pattern.includes(\"\\\\\")",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The per-part test that follows rejects every pattern that this test rejects: an empty pattern and a leading slash give an empty first part, and a backslash fails the part character class because a star part holds no backslash. A differential over 159,393 probe lines (every one- to three-part pattern over 16 atoms through parseConfig and importAllowed, key spans, and about 137,000 forged types through guardedRecord) matched the source on every row; a control mutant differed."
+  },
+  {
+    "file": "src/core/project_config.ts",
+    "declaration": "validModulePattern",
+    "offset": 62,
+    "text": "pattern === \"\" || pattern.startsWith(\"/\")",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The per-part test that follows rejects every pattern that this test rejects: an empty pattern and a leading slash give an empty first part, and a backslash fails the part character class because a star part holds no backslash. A differential over 159,393 probe lines (every one- to three-part pattern over 16 atoms through parseConfig and importAllowed, key spans, and about 137,000 forged types through guardedRecord) matched the source on every row; a control mutant differed."
+  },
+  {
+    "file": "src/core/project_config.ts",
+    "declaration": "modulePatternMatches.matches",
+    "offset": 406,
+    "text": "partIndex < parts.length",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "With partIndex equal to parts.length, the next call has partIndex past the end. Every later step needs partIndex < parts.length or an exhausted pattern with partIndex === parts.length, so that call always returns false."
+  },
+  {
+    "file": "src/core/project_config.ts",
+    "declaration": "modulePatternMatches.matches",
+    "offset": 501,
+    "text": "partIndex < parts.length",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "With partIndex equal to parts.length, parts[partIndex] is undefined and the next call has partIndex past the end. A star pattern then reaches only calls that return false, because no step accepts an index past the end."
+  },
+  {
+    "file": "src/core/recursion_guard.ts",
+    "declaration": "guardedRecord",
+    "offset": 1190,
+    "text": "!field.optional && tagOf(field.type) !== undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "A name that the || form adds is later checked by the every test, which needs a non-optional field with a tag in every member, so the added name never passes. The some result is unchanged."
+  },
+  {
+    "file": "src/core/recursion_guard.ts",
+    "declaration": "guardedRecord",
+    "offset": 1826,
+    "text": "tagged && hasDistinctTag",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "hasDistinctTag needs a non-empty tagNames, and tagNames is empty unless tagged, so hasDistinctTag implies tagged. When tagged holds without hasDistinctTag, the walk starts a union with guarded false and the same two terms, so it returns false."
+  },
+  {
+    "file": "src/core/recursion_guard.ts",
+    "declaration": "guardedRecord.visit",
+    "offset": 418,
+    "text": "part === type && tagged && hasDistinctTag",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "For a union top, the earlier return leaves tagged && hasDistinctTag true, and each nested part is visited with guarded true. For a record top, part is never type, and tagged and hasDistinctTag are both false, so every form of the term is false. A differential over 159,393 probe lines (every one- to three-part pattern over 16 atoms through parseConfig and importAllowed, key spans, and about 137,000 forged types through guardedRecord) matched the source on every row; a control mutant differed."
+  },
+  {
+    "file": "src/core/recursion_guard.ts",
+    "declaration": "guardedRecord.visit",
+    "offset": 418,
+    "text": "part === type && tagged",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "For a union top, the earlier return leaves tagged && hasDistinctTag true, and each nested part is visited with guarded true. For a record top, part is never type, and tagged and hasDistinctTag are both false, so every form of the term is false. A differential over 159,393 probe lines (every one- to three-part pattern over 16 atoms through parseConfig and importAllowed, key spans, and about 137,000 forged types through guardedRecord) matched the source on every row; a control mutant differed."
   }
 ]
