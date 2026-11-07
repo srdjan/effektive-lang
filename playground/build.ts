@@ -15,7 +15,7 @@ import {
   resolve,
   SEPARATOR,
 } from "@std/path";
-import type { Result } from "../src/core/source.ts";
+import type { Result } from "../src/core/frontend.ts";
 
 /** The repository root, found from this file and not from the process cwd. */
 export const REPOSITORY_ROOT: string = resolve(
