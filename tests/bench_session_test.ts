@@ -80,16 +80,74 @@ Deno.test("stats parser retains real heap and type-table measurements and marks 
   assertEquals([old.value.heapUsed, old.value.typeTableSize], [null, null]);
 });
 
-Deno.test("stats parser rejects malformed supplied memory measurements instead of fabricating samples", () => {
-  for (const metric of [null, "50", -1, NaN, Infinity]) {
-    assert(
-      !parseStats({ ...stats, memory: { ...stats.memory, heapUsed: metric } })
-        .ok,
-    );
-    assert(!parseStats({ ...stats, typeTableSize: metric }).ok);
-    assert(
-      !parseStats({ ...stats, memory: { ...stats.memory, rss: metric } }).ok,
-    );
+Deno.test("stats parser rejects each malformed supplied measurement with its own error instead of fabricating samples", () => {
+  const cases: [unknown, string][] = [
+    [
+      { ...stats, memory: { ...stats.memory, heapUsed: null } },
+      "stats heapUsed is not a finite nonnegative number",
+    ],
+    [
+      { ...stats, memory: { ...stats.memory, heapUsed: "50" } },
+      "stats heapUsed is not a finite nonnegative number",
+    ],
+    [
+      { ...stats, memory: { ...stats.memory, heapUsed: -1 } },
+      "stats heapUsed is not a finite nonnegative number",
+    ],
+    [
+      { ...stats, memory: { ...stats.memory, heapUsed: NaN } },
+      "stats heapUsed is not a finite nonnegative number",
+    ],
+    [
+      { ...stats, memory: { ...stats.memory, heapUsed: Infinity } },
+      "stats heapUsed is not a finite nonnegative number",
+    ],
+    [
+      { ...stats, typeTableSize: null },
+      "stats typeTableSize is not a finite nonnegative number",
+    ],
+    [
+      { ...stats, typeTableSize: "50" },
+      "stats typeTableSize is not a finite nonnegative number",
+    ],
+    [
+      { ...stats, typeTableSize: -1 },
+      "stats typeTableSize is not a finite nonnegative number",
+    ],
+    [
+      { ...stats, typeTableSize: NaN },
+      "stats typeTableSize is not a finite nonnegative number",
+    ],
+    [
+      { ...stats, typeTableSize: Infinity },
+      "stats typeTableSize is not a finite nonnegative number",
+    ],
+    [
+      { ...stats, memory: { ...stats.memory, rss: null } },
+      "stats has a field of the wrong type",
+    ],
+    [
+      { ...stats, memory: { ...stats.memory, rss: "50" } },
+      "stats has a field of the wrong type",
+    ],
+    [
+      { ...stats, memory: { ...stats.memory, rss: -1 } },
+      "stats has a field of the wrong type",
+    ],
+    [
+      { ...stats, memory: { ...stats.memory, rss: NaN } },
+      "stats has a field of the wrong type",
+    ],
+    [
+      { ...stats, memory: { ...stats.memory, rss: Infinity } },
+      "stats has a field of the wrong type",
+    ],
+    [{ ...stats, typeTableSize: 1.5 }, "stats typeTableSize is not an integer"],
+  ];
+  for (const [input, message] of cases) {
+    assertEquals(parseStats(input), {
+      ok: false,
+      error: { tag: "protocol", message },
+    });
   }
-  assert(!parseStats({ ...stats, typeTableSize: 1.5 }).ok);
 });
