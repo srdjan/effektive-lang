@@ -18,6 +18,8 @@ Deno.test("runProcess returns the streams and the exit code", async () => {
   );
 });
 
+// The process ends by itself after 5 s, so a fault that skips the timer fails
+// this test instead of making it hang.
 Deno.test("runProcess kills a process after the timeout", async () => {
   const result = await runProcess("deno", [
     "eval",
