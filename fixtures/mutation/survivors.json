@@ -74,7 +74,7 @@
   {
     "file": "src/core/check_project.ts",
     "declaration": "scheduleRuns",
-    "offset": 2797,
+    "offset": 2752,
     "text": "run.kind === \"function\" && pending.includes(run.entry.signature.id)",
     "operator": "logical",
     "class": "equivalent",
@@ -938,7 +938,7 @@
   {
     "file": "src/core/resolve.ts",
     "declaration": "Resolver.expr",
-    "offset": 904,
+    "offset": 914,
     "text": "first !== undefined &&\n            kindOf(this.tree, first) === SyntaxKind.NameExpr",
     "operator": "logical",
     "class": "equivalent",
