@@ -36,6 +36,16 @@ export interface ProjectConfig {
   readonly imports?: readonly ImportRuleConfig[];
 }
 
+/** The cache key of a configuration. It lists every field, so a new field must be added here. */
+export function configKey(config: ProjectConfig): string {
+  return JSON.stringify([
+    [...config.host].map((
+      [key, host],
+    ) => [key, host.interfacePath, host.modulePath]),
+    config.imports?.map((rule) => [rule.from, ...rule.allow]) ?? null,
+  ]);
+}
+
 export type ConfigError =
   | { readonly tag: "missing"; readonly path: string }
   | {

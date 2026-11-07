@@ -60,7 +60,11 @@ import {
   parseFileFresh,
   type Project,
 } from "./project.ts";
-import type { ConfigError, ProjectConfig } from "./project_config.ts";
+import {
+  type ConfigError,
+  configKey,
+  type ProjectConfig,
+} from "./project_config.ts";
 import { isSourcePath, joinPath } from "./paths.ts";
 import type { ModuleResolution } from "./resolve.ts";
 import { memoryHost, type Result } from "./source.ts";
@@ -119,15 +123,6 @@ interface Entry {
   /** The payload hashes of the reached modules when this entry was lowered. */
   readonly lowerKey: string;
   lowered?: Result<ModuleIR, LowerError>;
-}
-
-function configKey(config: ProjectConfig): string {
-  return JSON.stringify([
-    [...config.host].map((
-      [key, host],
-    ) => [key, host.interfacePath, host.modulePath]),
-    config.imports?.map((rule) => [rule.from, ...rule.allow]) ?? null,
-  ]);
 }
 
 /**
