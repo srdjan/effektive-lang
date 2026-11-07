@@ -20,7 +20,7 @@
   {
     "file": "src/core/check_binary.ts",
     "declaration": "operatorResult",
-    "offset": 3303,
+    "offset": 3167,
     "text": "isNumericClass(table, l) && isNumericClass(table, r)",
     "operator": "logical",
     "class": "equivalent",
@@ -28,8 +28,8 @@
   },
   {
     "file": "src/core/check_builtins/schema.ts",
-    "declaration": "defaultKeyOp",
-    "offset": 309,
+    "declaration": "defaultKeyChoice",
+    "offset": 317,
     "text": "value !== undefined &&\n      kindOf(c.tree, value) === SyntaxKind.LiteralExpr",
     "operator": "logical",
     "class": "equivalent",
@@ -38,7 +38,7 @@
   {
     "file": "src/core/check_builtins/schema.ts",
     "declaration": "guardedSchemaCallback",
-    "offset": 910,
+    "offset": 873,
     "text": "self?.kind !== \"local\" || body === undefined ||\n    kindOf(c.tree, body) !== SyntaxKind.CallExpr",
     "operator": "logical",
     "class": "equivalent",
@@ -119,7 +119,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 415,
+    "offset": 412,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result ||\n      body === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -128,7 +128,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 415,
+    "offset": 412,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result",
     "operator": "logical",
     "class": "equivalent",
@@ -137,7 +137,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 696,
+    "offset": 693,
     "text": "entry === undefined || entry.broken",
     "operator": "logical",
     "class": "equivalent",
@@ -208,24 +208,6 @@
   },
   {
     "file": "src/core/types.ts",
-    "declaration": "guardedRecord.visit",
-    "offset": 418,
-    "text": "part === type && tagged",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "hasDistinctTag implies a union root with tagged true. Every nested part is visited with guarded=true, so the part === type test matters only at the root, where the mutant gives the same value."
-  },
-  {
-    "file": "src/core/types.ts",
-    "declaration": "guardedRecord.visit",
-    "offset": 418,
-    "text": "part === type && tagged && hasDistinctTag",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "hasDistinctTag implies a union root with tagged true. Every nested part is visited with guarded=true, so the part === type test matters only at the root, where the mutant gives the same value."
-  },
-  {
-    "file": "src/core/types.ts",
     "declaration": "TypeTable.heightWithin",
     "offset": 450,
     "text": "height > tallest",
@@ -262,15 +244,6 @@
   },
   {
     "file": "src/core/types.ts",
-    "declaration": "guardedRecord",
-    "offset": 1210,
-    "text": "!field.optional && tagOf(field.type) !== undefined",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "Each extra name the mutant adds comes from the first member and fails the later every(!optional && tagged) check on that same member. hasDistinctTag does not change."
-  },
-  {
-    "file": "src/core/types.ts",
     "declaration": "TypeTable.keyOf",
     "offset": 1146,
     "text": "node.constructorDefault === true",
@@ -280,17 +253,8 @@
   },
   {
     "file": "src/core/types.ts",
-    "declaration": "guardedRecord",
-    "offset": 1846,
-    "text": "tagged && hasDistinctTag",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "tagged without hasDistinctTag happens only for a union root. visit starts with guarded=false and its union guard needs hasDistinctTag, so visit returns false, the same as the early return false."
-  },
-  {
-    "file": "src/core/types.ts",
     "declaration": "TypeTable.assignable",
-    "offset": 5592,
+    "offset": 5446,
     "text": "i < sn.elements.length",
     "operator": "comparison",
     "class": "equivalent",
@@ -299,7 +263,7 @@
   {
     "file": "src/core/types.ts",
     "declaration": "TypeTable.assignable",
-    "offset": 6507,
+    "offset": 6361,
     "text": "i < tn.parameters.length",
     "operator": "comparison",
     "class": "equivalent",
@@ -388,24 +352,6 @@
   },
   {
     "file": "scripts/behavior_compare.ts",
-    "declaration": "run",
-    "offset": 288,
-    "text": "result.success",
-    "operator": "negate-if",
-    "class": "slow-only",
-    "reason": "The negated test swaps the success and failure paths of a subprocess. tests/behavior_compare_slow_test.ts kills it: the run of HEAD against HEAD fails. Checked by hand on a copy, because mutate copies are not git repositories and the slow test needs one."
-  },
-  {
-    "file": "scripts/behavior_compare.ts",
-    "declaration": "exportRevision",
-    "offset": 414,
-    "text": "unpacked.ok",
-    "operator": "negate-if",
-    "class": "slow-only",
-    "reason": "The negated test returns the failure of a good export. tests/behavior_compare_slow_test.ts kills it, and the test for a missing revision kills the other direction. Checked by hand on a copy."
-  },
-  {
-    "file": "scripts/behavior_compare.ts",
     "declaration": "treeOf",
     "offset": 98,
     "text": "tree === undefined",
@@ -443,7 +389,7 @@
   {
     "file": "scripts/behavior_compare.ts",
     "declaration": "records",
-    "offset": 831,
+    "offset": 861,
     "text": "!ran.ok",
     "operator": "negate-if",
     "class": "slow-only",
@@ -452,7 +398,7 @@
   {
     "file": "scripts/behavior_compare.ts",
     "declaration": "<module>",
-    "offset": 12718,
+    "offset": 11596,
     "text": "done.ok",
     "operator": "negate-if",
     "class": "slow-only",
@@ -493,33 +439,6 @@
     "operator": "comparison",
     "class": "equivalent",
     "reason": "This code runs only for an argument that starts with two hyphens, so indexOf(\"=\") is -1 or at least 2 and never 0. A differential probe of 1323 argument lists, including \"--=\" and \"--=5\", found no difference."
-  },
-  {
-    "file": "scripts/mutate.ts",
-    "declaration": "run",
-    "offset": 271,
-    "text": "!result.success",
-    "operator": "negate-if",
-    "class": "slow-only",
-    "reason": "tests/mutate_tool_slow_test.ts runs the tool in a directory that is not a git repository and in a repository, so a wrong failure test for a command breaks the exit code."
-  },
-  {
-    "file": "scripts/mutate.ts",
-    "declaration": "makeCopies",
-    "offset": 279,
-    "text": "!made.ok",
-    "operator": "negate-if",
-    "class": "slow-only",
-    "reason": "tests/mutate_tool_slow_test.ts runs the tool end to end, so a wrong check of the archive or extract result breaks the run or the exit code."
-  },
-  {
-    "file": "scripts/mutate.ts",
-    "declaration": "makeCopies",
-    "offset": 579,
-    "text": "!result.ok",
-    "operator": "negate-if",
-    "class": "slow-only",
-    "reason": "tests/mutate_tool_slow_test.ts runs the tool end to end, so a wrong check of the archive or extract result breaks the run or the exit code."
   },
   {
     "file": "scripts/mutate.ts",
@@ -596,7 +515,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 755,
+    "offset": 741,
     "text": "!copies.ok",
     "operator": "negate-if",
     "class": "slow-only",
@@ -605,7 +524,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 970,
+    "offset": 956,
     "text": "clean.timedOut || classify(clean) !== \"survived\"",
     "operator": "negate-if",
     "class": "slow-only",
@@ -614,7 +533,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 970,
+    "offset": 956,
     "text": "clean.timedOut || classify(clean) !== \"survived\"",
     "operator": "logical",
     "class": "slow-only",
@@ -623,7 +542,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 988,
+    "offset": 974,
     "text": "classify(clean) !== \"survived\"",
     "operator": "comparison",
     "class": "slow-only",
@@ -632,7 +551,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 1679,
+    "offset": 1665,
     "text": "options.only.length === 0",
     "operator": "comparison",
     "class": "slow-only",
@@ -641,7 +560,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 1789,
+    "offset": 1775,
     "text": "site.file === o.file && site.line === o.line",
     "operator": "logical",
     "class": "slow-only",
@@ -650,7 +569,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 1789,
+    "offset": 1775,
     "text": "site.file === o.file",
     "operator": "comparison",
     "class": "slow-only",
@@ -659,7 +578,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 1813,
+    "offset": 1799,
     "text": "site.line === o.line",
     "operator": "comparison",
     "class": "slow-only",
@@ -668,7 +587,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2100,
+    "offset": 2086,
     "text": "outcome.class === \"infrastructure\"",
     "operator": "comparison",
     "class": "slow-only",
@@ -677,7 +596,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2150,
+    "offset": 2136,
     "text": "broken !== undefined",
     "operator": "negate-if",
     "class": "slow-only",
@@ -686,7 +605,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2150,
+    "offset": 2136,
     "text": "broken !== undefined",
     "operator": "comparison",
     "class": "slow-only",
@@ -695,7 +614,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2352,
+    "offset": 2338,
     "text": "o.class === \"survived\"",
     "operator": "comparison",
     "class": "slow-only",
@@ -704,7 +623,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2453,
+    "offset": 2439,
     "text": "o.class === \"timeout\"",
     "operator": "comparison",
     "class": "slow-only",
@@ -713,7 +632,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2660,
+    "offset": 2646,
     "text": "o.mutant.file === module",
     "operator": "comparison",
     "class": "slow-only",
@@ -731,7 +650,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 3820,
+    "offset": 3806,
     "text": "match.unregistered.length === 0 && match.stale.length === 0",
     "operator": "logical",
     "class": "slow-only",
@@ -740,7 +659,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 3820,
+    "offset": 3806,
     "text": "match.unregistered.length === 0",
     "operator": "comparison",
     "class": "slow-only",
@@ -749,7 +668,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 3855,
+    "offset": 3841,
     "text": "match.stale.length === 0",
     "operator": "comparison",
     "class": "slow-only",
@@ -794,7 +713,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 1844,
+    "offset": 1841,
     "text": "arrow < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -803,7 +722,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 3303,
+    "offset": 3086,
     "text": "uses !== undefined",
     "operator": "comparison",
     "class": "equivalent",
@@ -812,7 +731,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 3714,
+    "offset": 3497,
     "text": "i < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -821,7 +740,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 4148,
+    "offset": 3816,
     "text": "changedFunction === undefined || changedFunction.body === undefined ||\n      (changedFunction.signature.written.fails &&\n        [...changedFunction.body.failures, ...changedFunction.failures].some((\n          id,\n        ) => !changedFunction.signature.failures.includes(id))) ||\n      (changedFunction.signature.written.uses &&\n        changedFunction.body.requirements.some((id) =>\n          !changedFunction.signature.requirements.includes(id)\n        ))",
     "operator": "logical",
     "class": "equivalent",
@@ -830,7 +749,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 4148,
+    "offset": 3816,
     "text": "changedFunction === undefined || changedFunction.body === undefined ||\n      (changedFunction.signature.written.fails &&\n        [...changedFunction.body.failures, ...changedFunction.failures].some((\n          id,\n        ) => !changedFunction.signature.failures.includes(id)))",
     "operator": "logical",
     "class": "equivalent",
@@ -839,7 +758,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 4148,
+    "offset": 3816,
     "text": "changedFunction === undefined || changedFunction.body === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -848,7 +767,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 524,
+    "offset": 505,
     "text": "arrow < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -857,7 +776,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 984,
+    "offset": 965,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result",
     "operator": "logical",
     "class": "equivalent",
@@ -866,7 +785,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1439,
+    "offset": 1420,
     "text": "at < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -875,7 +794,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1979,
+    "offset": 1840,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements) ||\n      diagnosticDelta(revision.diagnostics, checked.value.diagnostics, edits)\n          .added.length > 0",
     "operator": "logical",
     "class": "equivalent",
@@ -884,7 +803,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1979,
+    "offset": 1840,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements)",
     "operator": "logical",
     "class": "equivalent",
@@ -893,7 +812,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1979,
+    "offset": 1840,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures)",
     "operator": "logical",
     "class": "equivalent",
@@ -902,7 +821,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1979,
+    "offset": 1840,
     "text": "changed === undefined || changed.mode !== fn.mode",
     "operator": "logical",
     "class": "equivalent",
@@ -920,7 +839,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 984,
+    "offset": 965,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result ||\n      signature.written.fails || fn.body === undefined ||\n      entry === undefined",
     "operator": "logical",
     "class": "equivalent",
