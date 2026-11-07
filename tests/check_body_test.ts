@@ -1438,6 +1438,28 @@ const run = () => take(make("x"))
   ]);
 });
 
+Deno.test("two errors with one short name print as module#Name in a fails list", () => {
+  const project = checkFiles({
+    "effektive.json": "{}",
+    "num.eff": "export type Int = int\n",
+    "a.eff": `import { Int } from "./num.eff"
+export error E = { m: string }
+export const take = (j: () => Int fails E): Int => 0
+`,
+    "b.eff": `import { Int } from "./num.eff"
+export error E = { m: string }
+export const make = (): () => Int fails E => () => 1
+`,
+    "main.eff": `import { take } from "./a.eff"
+import { make } from "./b.eff"
+const run = () => take(make())
+`,
+  }, ["main.eff"]);
+  assertEquals(messages(project), [
+    "type-mismatch/003 argument 1 has type () => Int fails b#E, but () => Int fails a#E is expected",
+  ]);
+});
+
 Deno.test("arithmetic with an unnamed operand does not give another name", () => {
   const project = checkText(`${NOMINAL_OPERANDS}
 type Count = int

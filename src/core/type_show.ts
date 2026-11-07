@@ -4,7 +4,7 @@ import { moduleOfId, shortName } from "./ids.ts";
 import { CLOSED_UNIT_IDS } from "./ir.ts";
 import type { TypeReader, TypeRef } from "./types.ts";
 
-/** Named ids that `print` meets, and the ids that it prints as `module#Name`. */
+/** Ids that `print` meets, in types and in id lists, and the ids that it prints as `module#Name`. */
 interface Names {
   readonly shown?: Set<string>;
   readonly qualified: ReadonlySet<string>;
@@ -44,6 +44,19 @@ function declaredName(id: string): string {
   return hash < 0 ? id : id.slice(hash + 1);
 }
 
+/** An id as `print` shows it: `module#Name` when another id shares its name. */
+function idText(names: Names, id: string): string {
+  names.shown?.add(id);
+  return names.qualified.has(id) && !CLOSED_UNIT_IDS.has(id)
+    ? `${moduleOfId(id) ?? ""}#${declaredName(id)}`
+    : shortName(id);
+}
+
+/** Ids joined with ` | `. */
+function listText(names: Names, ids: readonly string[]): string {
+  return ids.map((id) => idText(names, id)).join(" | ");
+}
+
 function print(table: TypeReader, names: Names, ref: TypeRef): string {
   const node = table.node(ref);
   switch (node.kind) {
@@ -51,14 +64,8 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
       return node.name === "unit" ? "void" : node.name;
     case "literal":
       return JSON.stringify(node.value);
-    case "named": {
-      names.shown?.add(node.id);
-      const hash = node.id.indexOf("#");
-      if (hash < 0 || CLOSED_UNIT_IDS.has(node.id)) return shortName(node.id);
-      return names.qualified.has(node.id)
-        ? `${moduleOfId(node.id) ?? ""}#${node.id.slice(hash + 1)}`
-        : node.id.slice(hash + 1);
-    }
+    case "named":
+      return idText(names, node.id);
     case "record":
       return node.fields.length === 0
         ? "{}"
@@ -96,25 +103,25 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
       }${node.constructorDefault === true ? "ConstructorDefault" : ""}<${
         print(table, names, node.decoded)
       }, ${print(table, names, node.encoded)}, ${
-        node.decodeRequirements.map(shortName).join(" | ") || "never"
-      }, ${node.encodeRequirements.map(shortName).join(" | ") || "never"}${
+        listText(names, node.decodeRequirements) || "never"
+      }, ${listText(names, node.encodeRequirements) || "never"}${
         node.makeInput === undefined
           ? ""
           : `, ${print(table, names, node.makeInput)}`
       }>`;
     case "effect":
       return `Effect<${print(table, names, node.result)}, ${
-        node.failures.map(shortName).join(" | ") || "never"
-      }, ${node.requirements.map(shortName).join(" | ") || "never"}>`;
+        listText(names, node.failures) || "never"
+      }, ${listText(names, node.requirements) || "never"}>`;
     case "stream":
       return `Stream<${print(table, names, node.element)}, ${
-        node.failures.map(shortName).join(" | ") || "never"
-      }, ${node.requirements.map(shortName).join(" | ") || "never"}>`;
+        listText(names, node.failures) || "never"
+      }, ${listText(names, node.requirements) || "never"}>`;
     case "sink":
       return `Sink<${print(table, names, node.input)}, ${
         print(table, names, node.result)
-      }, ${node.failures.map(shortName).join(" | ") || "never"}, ${
-        node.requirements.map(shortName).join(" | ") || "never"
+      }, ${listText(names, node.failures) || "never"}, ${
+        listText(names, node.requirements) || "never"
       }${
         node.leftover === table.never
           ? ""
@@ -125,17 +132,17 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
         .join(", ");
       const fails = node.failures.length === 0
         ? ""
-        : ` fails ${node.failures.map(shortName).join(" | ")}`;
+        : ` fails ${listText(names, node.failures)}`;
       const withText = node.requirements.length === 0
         ? ""
-        : ` with ${node.requirements.map(shortName).join(" | ")}`;
+        : ` with ${listText(names, node.requirements)}`;
       const execution = node.execution === "pure" ? "pure " : "";
       return `${execution}(${parameters}) => ${
         print(table, names, node.result)
       }${fails}${withText}`;
     }
     case "provider":
-      return `provider provides ${node.provides.map(shortName).join(" | ")}`;
+      return `provider provides ${listText(names, node.provides)}`;
     case "error":
       return "<error>";
   }

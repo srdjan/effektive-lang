@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A type message prints a name in a `fails`, `with`, or `provides` list as `module#Name` when another name in the message has the same short name.
+  Before, two different errors named `E` from two modules printed as the same `E`.
+
 ## 0.15.4 - 2026-11-07
 
 - The language server binds each open document to its nearest project again after a watched-file event for any `effektive.json`.
