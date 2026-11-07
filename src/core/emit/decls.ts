@@ -8,7 +8,6 @@ import {
 // Declarations and their order, and the export rule.
 
 import type {
-  CapabilityId,
   ConstantDecl,
   Declaration,
   DeclarationId,
@@ -21,8 +20,8 @@ import type {
   TypeDecl,
   ValueId,
 } from "../ir.ts";
-import { SCOPE_CAPABILITY } from "../ir.ts";
 import { stronglyConnectedComponents } from "../graph.ts";
+import { declarationReferencedIds } from "../referenced_ids.ts";
 import {
   assignment,
   braces,
@@ -45,12 +44,7 @@ import { ExprEmitter } from "./expr.ts";
 import { internal } from "./failure.ts";
 import type { ModuleState } from "./module_state.ts";
 import { isDeferredType } from "./type_query.ts";
-import {
-  nameOfId,
-  serviceOfCapability,
-  servicesOf,
-  tokenOfId,
-} from "./identity.ts";
+import { nameOfId, servicesOf, tokenOfId } from "./identity.ts";
 import {
   effectTypeDoc,
   encodedTypeDoc,
@@ -66,110 +60,11 @@ const LINE_WIDTH = 80;
 
 // ------------------------------------------------------------------ references
 
-function namedIn(type: Type, out: Set<DeclarationId>): void {
-  switch (type.kind) {
-    case "primitive":
-    case "literal":
-      return;
-    case "named":
-      out.add(type.id);
-      return;
-    case "record":
-      for (const f of type.fields) namedIn(f.type, out);
-      return;
-    case "array":
-    case "option":
-    case "ref":
-      namedIn(type.element, out);
-      return;
-    case "retry-schedule":
-      namedIn(type.error, out);
-      return;
-    case "effect":
-      namedIn(type.result, out);
-      effectsIn(type.effects.failures, type.effects.requirements, out);
-      return;
-    case "stream":
-      namedIn(type.element, out);
-      effectsIn(type.effects.failures, type.effects.requirements, out);
-      return;
-    case "sink":
-      namedIn(type.input, out);
-      namedIn(type.result, out);
-      if (type.leftover !== undefined) namedIn(type.leftover, out);
-      effectsIn(type.effects.failures, type.effects.requirements, out);
-      return;
-    case "schema":
-      namedIn(type.decoded, out);
-      namedIn(type.encoded, out);
-      if (type.makeInput !== undefined) namedIn(type.makeInput, out);
-      effectsIn([], type.decodeRequirements, out);
-      effectsIn([], type.encodeRequirements, out);
-      return;
-    case "tuple":
-      for (const t of type.elements) namedIn(t, out);
-      return;
-    case "union":
-      for (const t of type.members) namedIn(t, out);
-      return;
-    case "function":
-      for (const p of type.parameters) namedIn(p, out);
-      namedIn(type.result, out);
-      effectsIn(type.effects.failures, type.effects.requirements, out);
-      return;
-    case "provider":
-      for (const c of type.provides) out.add(serviceOfCapability(c));
-      effectsIn(
-        type.acquisition.effects.failures,
-        type.acquisition.effects.requirements,
-        out,
-      );
-      return;
-    default: {
-      const unreachable: never = type;
-      return unreachable;
-    }
-  }
-}
-
-function effectsIn(
-  failures: readonly DeclarationId[],
-  requirements: readonly CapabilityId[],
-  out: Set<DeclarationId>,
-): void {
-  for (const f of failures) out.add(f);
-  for (const r of requirements) {
-    if (r !== SCOPE_CAPABILITY) out.add(serviceOfCapability(r));
-  }
-}
-
-function interfaceReferences(declaration: Declaration): Set<DeclarationId> {
-  const out = new Set<DeclarationId>();
-  switch (declaration.kind) {
-    case "function":
-      namedIn(declaration.type, out);
-      break;
-    case "constant":
-      namedIn(declaration.type, out);
-      break;
-    case "type":
-      switch (declaration.definition.kind) {
-        case "alias":
-          namedIn(declaration.definition.type, out);
-          break;
-        case "nominal":
-          namedIn(declaration.definition.base, out);
-          break;
-      }
-      break;
-    case "error":
-      for (const f of declaration.fields) namedIn(f.type, out);
-      break;
-    case "service":
-      for (const m of declaration.methods) namedIn(m.type, out);
-      break;
-  }
-  return out;
+/** The walk adds only type, error, and service identities, so each one is a `DeclarationId`. */
+function referencedDeclarations(declaration: Declaration): Set<DeclarationId> {
+  const ids = new Set<string>();
+  declarationReferencedIds(declaration, ids);
+  return ids as Set<DeclarationId>;
 }
 
 /** Source exports plus every declaration that the interface of an export reaches. */
@@ -183,7 +78,7 @@ export function exportedIds(ir: ModuleIR): Set<DeclarationId> {
     const declaration = byId.get(id);
     if (declaration === undefined) return;
     seen.add(id);
-    for (const next of interfaceReferences(declaration)) visit(next);
+    for (const next of referencedDeclarations(declaration)) visit(next);
   };
   for (const id of ir.exports) visit(id);
   return seen;
@@ -203,7 +98,7 @@ export function recursiveGroups(
   const group = ir.declarations.filter(isTypeLevel);
   const index = new Map<DeclarationId, number>(group.map((d, n) => [d.id, n]));
   const edges = group.map((d) =>
-    [...interfaceReferences(d)].flatMap((id) => {
+    [...referencedDeclarations(d)].flatMap((id) => {
       const target = index.get(id);
       return target === undefined ? [] : [target];
     })
@@ -239,7 +134,7 @@ export function orderTypeLevel(ir: ModuleIR): TypeLevel[] {
   const visit = (declaration: TypeLevel): void => {
     if (state.has(declaration.id)) return;
     state.set(declaration.id, "active");
-    const dependencies = [...interfaceReferences(declaration)]
+    const dependencies = [...referencedDeclarations(declaration)]
       .flatMap((id) => {
         const dependency = byId.get(id);
         return dependency === undefined ? [] : [dependency];

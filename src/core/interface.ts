@@ -22,7 +22,11 @@ import {
   type SolvedLookup,
   type TypeGraph,
 } from "./signatures.ts";
-import { effectIds, referencedIds } from "./referenced_ids.ts";
+import {
+  declarationReferencedIds,
+  effectIds,
+  referencedIds,
+} from "./referenced_ids.ts";
 import { fnv1a64 } from "./hash.ts";
 import type {
   DeclarationId,
@@ -119,27 +123,6 @@ function exportedValueIds(
 
 type GraphDecl = TypeDecl | ErrorDecl | ServiceDecl;
 
-function declarationRefs(d: GraphDecl, into: Set<string>): void {
-  switch (d.kind) {
-    case "type":
-      switch (d.definition.kind) {
-        case "alias":
-          referencedIds(d.definition.type, into);
-          return;
-        case "nominal":
-          referencedIds(d.definition.base, into);
-          return;
-      }
-      return;
-    case "error":
-      for (const field of d.fields) referencedIds(field.type, into);
-      return;
-    case "service":
-      for (const method of d.methods) referencedIds(method.type, into);
-      return;
-  }
-}
-
 function declarationsOf(graph: TypeGraph): GraphDecl[] {
   return [...graph.types, ...graph.errors, ...graph.services];
 }
@@ -162,7 +145,7 @@ function reach(
   visit(seeds);
   for (let d = pending.pop(); d !== undefined; d = pending.pop()) {
     const found = new Set<string>();
-    declarationRefs(d, found);
+    declarationReferencedIds(d, found);
     visit(found);
   }
   return [...reached.values()];
@@ -231,7 +214,7 @@ function foreignTypeGraph(
     for (const d of declarationsOf(graph)) foreign.set(d.id, d);
   }
   const seeds = exportedValueIds(declarations, solved);
-  for (const d of declarationsOf(own)) declarationRefs(d, seeds);
+  for (const d of declarationsOf(own)) declarationReferencedIds(d, seeds);
   return graphOf(reach(foreign, seeds));
 }
 

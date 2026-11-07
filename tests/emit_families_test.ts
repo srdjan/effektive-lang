@@ -77,6 +77,7 @@ Deno.test("the value imports of src/core/emit reach only the allowed core module
     "ids.ts",
     "ir.ts",
     "paths.ts",
+    "referenced_ids.ts",
     "source.ts",
     "util.ts",
   ]);

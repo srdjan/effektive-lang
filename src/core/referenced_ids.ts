@@ -1,6 +1,6 @@
 // The identities that an IR type mentions. A leaf module: it reads only IR types.
 
-import type { CapabilityId, ErrorId, Type } from "./ir.ts";
+import type { CapabilityId, Declaration, ErrorId, Type } from "./ir.ts";
 import { serviceOfCapability } from "./ids.ts";
 
 /** Adds the type and error identities that an IR type mentions, and the services of its capabilities. */
@@ -63,6 +63,45 @@ export function referencedIds(type: Type, ids: Set<string>): void {
         ids,
       );
       return;
+    default: {
+      const unreachable: never = type;
+      return unreachable;
+    }
+  }
+}
+
+/** Adds the identities that the interface of a declaration mentions. */
+export function declarationReferencedIds(
+  declaration: Declaration,
+  ids: Set<string>,
+): void {
+  switch (declaration.kind) {
+    case "function":
+    case "constant":
+      referencedIds(declaration.type, ids);
+      return;
+    case "type":
+      switch (declaration.definition.kind) {
+        case "alias":
+          referencedIds(declaration.definition.type, ids);
+          return;
+        case "nominal":
+          referencedIds(declaration.definition.base, ids);
+          return;
+      }
+      return;
+    case "error":
+      for (const field of declaration.fields) referencedIds(field.type, ids);
+      return;
+    case "service":
+      for (const method of declaration.methods) {
+        referencedIds(method.type, ids);
+      }
+      return;
+    default: {
+      const unreachable: never = declaration;
+      return unreachable;
+    }
   }
 }
 
