@@ -12,7 +12,9 @@ applies_when:
   - "The mutated code is near MAX_DEPTH or any other bound"
   - "Subagents close a batch of survivors with deno task mutate"
   - "A test that kills a survivor would pin a behavior that looks wrong"
-tags: [mutation, survivor-register, equivalent-mutant, differential-probe, depth-bound, forged-ir, private-clone]
+  - "A differential probe shows no difference between the source and a mutant"
+tags: [mutation, survivor-register, equivalent-mutant, differential-probe, depth-bound, forged-ir, private-clone, reach-count]
+last_updated: 2026-11-07
 ---
 
 # Test an equivalent mutation row against a mutated copy
@@ -42,6 +44,16 @@ diff <scratch>/orig.txt <scratch>/mut.txt
 
 `probe.ts` imports `src/core/mod.ts` from the directory that it receives, so one script serves both copies. Use `--no-check`, because some mutants do not pass the type check. Print a sanity row first: an input with a known rejection shows that the probe reaches the rule. An early probe here gave no difference only because each program stopped at an unrelated diagnostic.
 
+A sanity row that reaches the rule does not show that the probe reaches the mutant. A mutant changes the result only for some inputs. For `A || B` changed to `A && B`, the result changes only when exactly one term is true. So make one more copy that keeps the source and logs each time the two expressions disagree:
+
+```ts
+if ((A || B) !== (A && B)) console.log("REACH", site);
+```
+
+Count the `REACH` lines. Zero lines means that the probe tested nothing, whatever the diff shows.
+
+In the work of 2026-11-07, six language-server scenarios for the survivor `path === undefined || !project.published.has(path)` in `ProjectSet.#removeDeadProjects` gave no difference. The logging copy showed that none of them reached a defined path with no published entry. Two fixture mistakes kept the outer project out of that state. `Int` gave `unknown type`, and the `type Num = number` declarations of two modules were different types (`main#Num` and `sub/y#Num`). Each mistake gave the outer project a diagnostic for the path, so the project published an entry for it. After the fix, four of ten removal scenarios reached the case, and the outputs still matched.
+
 A difference disproves the row, so write a test. No difference over a wide input set supports the row, but it does not prove it. Keep the proof in the row, and name the fact that it rests on. Do not cite a line number, because a line number goes stale.
 
 A survivor can also show a defect. Do not write a test that pins the defect. Leave the survivor open, record the finding, and ask for a decision. After the repair, a test for the repaired behavior usually kills the survivor. Here, one test killed both open survivors.
@@ -64,4 +76,5 @@ Apply this to each `equivalent` row, and most of all to a row from a subagent or
 
 - [`docs/testing.md`](../../testing.md): the mutation tool and the register rule.
 - [`docs/archive/plans/2026-11-01-mutation-survivors.md`](../../archive/plans/2026-11-01-mutation-survivors.md): the plan, finding MUF1, and the ledger.
+- [`docs/archive/plans/2026-11-07-project-rebinding.md`](../../archive/plans/2026-11-07-project-rebinding.md): the plan whose PBU3 probe needed the reach count.
 - [`behavior-capture-hold-tests-constant.md`](behavior-capture-hold-tests-constant.md): the capture method for a change that alters behavior, which the repair used.
