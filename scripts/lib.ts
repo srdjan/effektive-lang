@@ -145,13 +145,9 @@ export async function runChecked(
 export async function withTempDir<T>(
   prefix: string,
   body: (directory: string) => Promise<T>,
-  options: { readonly dir?: string; readonly tolerateRemoveFailure?: boolean } =
-    {},
+  options: { readonly tolerateRemoveFailure?: boolean } = {},
 ): Promise<T> {
-  const directory = await Deno.makeTempDir({
-    prefix,
-    ...(options.dir === undefined ? {} : { dir: options.dir }),
-  });
+  const directory = await Deno.makeTempDir({ prefix });
   try {
     return await body(directory);
   } finally {
