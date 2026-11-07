@@ -886,6 +886,12 @@ the server walks up from its directory to the nearest `effektive.json`. It keeps
 one `Program` for each project root. A document with no project gets no
 diagnostics, and its requests return `null`.
 
+A project reads every file under its root, also the files of a nested project.
+It publishes the diagnostics of a closed file only when it owns the file: no
+directory between the root and the file holds its own `effektive.json`. So a
+closed file of a nested project gets no diagnostics until a file of that
+project opens. An open document is always published by its own project.
+
 An open document overrides the disk text of its path. When the document closes,
 the server reads the disk text again. Out-of-order document changes are ignored.
 Rename and code-action edits are withheld if the project configuration is
@@ -903,8 +909,9 @@ version. When it finds no project for a document of a project, the document
 stays in that project, and the project shows the diagnostic for a missing
 `effektive.json`. A project that lost its `effektive.json` and keeps no
 open document is removed. The server clears the diagnostics that the project
-published. Each other project that covers such a file then publishes its own
-diagnostics for it again.
+published. Each project also clears the diagnostics that it published for a
+file that it no longer owns. Each project that owns such a file then publishes
+its own diagnostics for it.
 
 A save round starts on `textDocument/didSave` of an `.eff` or `.effi` file, and
 on a watched-file event for the `effektive.json` of a project, because the

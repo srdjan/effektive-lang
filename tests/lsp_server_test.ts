@@ -1012,3 +1012,117 @@ Deno.test("a stale change to a document without a project is ignored", () => {
   h.deliver(watched({ uri: uriOf(`${REBIND_ROOT}/effektive.json`), type: 1 }));
   assertEquals(h.published().map(summary), [[x, 2, 0]]);
 });
+
+// ---- Diagnostic ownership ---------------------------------------------------
+
+Deno.test("a module of a nested project is published only by the nested project", () => {
+  const h = makeHarness({
+    files: {
+      [`${REBIND_ROOT}/effektive.json`]: "{}",
+      [`${REBIND_ROOT}/main.eff`]: REBIND_OK,
+      [`${REBIND_ROOT}/sub/effektive.json`]: "{}",
+      [`${REBIND_ROOT}/sub/x.eff`]: REBIND_BAD,
+    },
+  });
+  h.start();
+  const main = uriOf(`${REBIND_ROOT}/main.eff`);
+  const x = uriOf(`${REBIND_ROOT}/sub/x.eff`);
+  h.deliver(didOpen(x, 1, REBIND_OK));
+  h.deliver(didOpen(main, 1, REBIND_OK));
+  assertEquals(
+    h.published().filter((p) => p.uri === x).map(summary),
+    [[x, 1, 0]],
+  );
+});
+
+Deno.test("a closed file of a nested project that is not open gets no diagnostics", () => {
+  const h = makeHarness({
+    files: {
+      [`${REBIND_ROOT}/effektive.json`]: "{}",
+      [`${REBIND_ROOT}/main.eff`]: REBIND_OK,
+      [`${REBIND_ROOT}/sub/effektive.json`]: "{}",
+      [`${REBIND_ROOT}/sub/y.eff`]: REBIND_BAD,
+    },
+  });
+  h.start();
+  const main = uriOf(`${REBIND_ROOT}/main.eff`);
+  h.deliver(didOpen(main, 1, REBIND_OK));
+  assertEquals(h.published().map(summary), [[main, 1, 0]]);
+});
+
+Deno.test("a new nested effektive.json clears the outer lists of its files", () => {
+  const h = makeHarness({
+    files: {
+      [`${REBIND_ROOT}/effektive.json`]: "{}",
+      [`${REBIND_ROOT}/main.eff`]: REBIND_OK,
+      [`${REBIND_ROOT}/sub/y.eff`]: REBIND_BAD,
+    },
+  });
+  h.start();
+  const main = uriOf(`${REBIND_ROOT}/main.eff`);
+  const y = uriOf(`${REBIND_ROOT}/sub/y.eff`);
+  h.deliver(didOpen(main, 1, REBIND_OK));
+  assertEquals(
+    h.published().filter((p) => p.uri === y).map(summary),
+    [[y, undefined, 1]],
+  );
+  h.clearSent();
+  h.files.set(`${REBIND_ROOT}/sub/effektive.json`, "{}");
+  h.deliver(
+    watched({ uri: uriOf(`${REBIND_ROOT}/sub/effektive.json`), type: 1 }),
+  );
+  assertEquals(h.published().map(summary), [[y, undefined, 0]]);
+});
+
+Deno.test("a removed nested project hands its closed files back to the outer project", () => {
+  const h = makeHarness({
+    files: {
+      [`${REBIND_ROOT}/effektive.json`]: "{}",
+      [`${REBIND_ROOT}/main.eff`]: REBIND_OK,
+      [`${REBIND_ROOT}/sub/effektive.json`]: "{}",
+      [`${REBIND_ROOT}/sub/x.eff`]: REBIND_OK,
+      [`${REBIND_ROOT}/sub/y.eff`]: REBIND_BAD,
+    },
+  });
+  h.start();
+  const main = uriOf(`${REBIND_ROOT}/main.eff`);
+  const x = uriOf(`${REBIND_ROOT}/sub/x.eff`);
+  const y = uriOf(`${REBIND_ROOT}/sub/y.eff`);
+  h.deliver(didOpen(x, 1, REBIND_OK));
+  h.deliver(didClose(x));
+  h.deliver(didOpen(main, 1, REBIND_OK));
+  h.clearSent();
+  h.files.delete(`${REBIND_ROOT}/sub/effektive.json`);
+  h.deliver(
+    watched({ uri: uriOf(`${REBIND_ROOT}/sub/effektive.json`), type: 3 }),
+  );
+  assertEquals(h.published().map(summary), [
+    [y, undefined, 0],
+    [y, undefined, 1],
+  ]);
+});
+
+Deno.test("a new nested effektive.json clears the outer list before the nested project publishes", () => {
+  const h = makeHarness({
+    files: {
+      [`${REBIND_ROOT}/effektive.json`]: "{}",
+      [`${REBIND_ROOT}/sub/x.eff`]: REBIND_OK,
+      [`${REBIND_ROOT}/sub/y.eff`]: REBIND_BAD,
+    },
+  });
+  h.start();
+  const x = uriOf(`${REBIND_ROOT}/sub/x.eff`);
+  const y = uriOf(`${REBIND_ROOT}/sub/y.eff`);
+  h.deliver(didOpen(x, 1, REBIND_OK));
+  h.clearSent();
+  h.files.set(`${REBIND_ROOT}/sub/effektive.json`, "{}");
+  h.deliver(
+    watched({ uri: uriOf(`${REBIND_ROOT}/sub/effektive.json`), type: 1 }),
+  );
+  assertEquals(h.server.projects.lookup(x)?.project.root, `${REBIND_ROOT}/sub`);
+  assertEquals(h.published().map(summary), [
+    [y, undefined, 0],
+    [x, 1, 0],
+    [y, undefined, 1],
+  ]);
+});

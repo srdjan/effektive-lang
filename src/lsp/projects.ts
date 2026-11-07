@@ -397,7 +397,8 @@ export class ProjectSet {
    * Watched-file events. An event counts when its path lies under a known
    * project root, passes `isSourcePath`, and is not an open document. An event
    * for any `effektive.json` also binds the open documents to their projects
-   * again, including the documents that had no project.
+   * again, including the documents that had no project. It then removes dead
+   * projects and clears the lists for files that a project no longer owns.
    */
   didChangeWatchedFiles(events: readonly FileEvent[]): void {
     const absolutes: string[] = [];
@@ -421,7 +422,10 @@ export class ProjectSet {
     }
     if (absolutes.some((absolute) => basename(absolute) === CONFIG_FILE)) {
       this.#rebind();
-      this.#removeDeadProjects();
+      this.#forgetCleared([
+        ...this.#removeDeadProjects(),
+        ...this.#releaseUnowned(),
+      ]);
     }
     // The client sends no `didSave` for `effektive.json`, so each project
     // whose own `effektive.json` changed gets a save round.
@@ -467,11 +471,10 @@ export class ProjectSet {
 
   /**
    * Removes each project that has no `effektive.json` and no open document.
-   * The set clears the lists that the project published. A project that covers
-   * a cleared path forgets its list for it, so that its next flush publishes
-   * that list again.
+   * The set clears the lists that the project published, and returns the
+   * cleared URIs.
    */
-  #removeDeadProjects(): void {
+  #removeDeadProjects(): string[] {
     const hasDocument = new Set<ProjectState>();
     for (const { project } of this.#documents.values()) {
       hasDocument.add(project);
@@ -490,12 +493,42 @@ export class ProjectSet {
         cleared.push(uri);
       }
     }
-    for (const uri of cleared) {
+    return cleared;
+  }
+
+  /**
+   * Clears each non-empty list that a project published for a file that it no
+   * longer owns, and returns the cleared URIs. A nested `effektive.json` that
+   * appears takes the ownership of its files from the outer project.
+   */
+  #releaseUnowned(): string[] {
+    const cleared: string[] = [];
+    for (const project of this.#projects.values()) {
+      for (const [path, json] of [...project.published]) {
+        if (ownedByRoot(this.ports.fs, project.root, path)) continue;
+        project.published.delete(path);
+        if (json === "[]") continue;
+        const uri = pathToUri(joinPath(project.root, path));
+        if (uri === undefined) continue;
+        this.ports.publish({ uri, diagnostics: [] });
+        cleared.push(uri);
+      }
+    }
+    return cleared;
+  }
+
+  /**
+   * Makes each project that covers a cleared URI forget its list for the file
+   * and become dirty, also when it has no list. The next flush then publishes
+   * the list of the project that owns the file.
+   */
+  #forgetCleared(uris: readonly string[]): void {
+    for (const uri of uris) {
       const absolute = uriToPath(uri);
       if (absolute === undefined) continue;
       for (const project of this.#projects.values()) {
         const path = sourcePathUnder(project.root, absolute);
-        if (path === undefined || !project.published.has(path)) continue;
+        if (path === undefined) continue;
         project.published.delete(path);
         project.dirty = true;
       }
@@ -620,6 +653,10 @@ export class ProjectSet {
     if (updated.ok) this.ports.flushed(project, updated.value);
   }
 
+  /**
+   * Publishes the lists of one project. A closed file is published only when
+   * the project owns it: a nested project publishes its own files.
+   */
   #publish(project: ProjectState, wanted: ReadonlyMap<string, string>): void {
     const error = project.configError;
     if (error !== undefined) {
@@ -660,6 +697,7 @@ export class ProjectSet {
     const closed = new Set([...groups.keys(), ...project.published.keys()]);
     for (const path of [...closed].sort(compareText)) {
       if (project.open.has(path)) continue;
+      if (!ownedByRoot(this.ports.fs, project.root, path)) continue;
       this.#publishList(project, path, listOf(path));
     }
   }
