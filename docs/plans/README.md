@@ -60,3 +60,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | DOF (findings), DOD (decisions), DOU (units) | [`docs/archive/plans/2026-11-07-diagnostic-ownership.md`](../archive/plans/2026-11-07-diagnostic-ownership.md) | Diagnostic ownership of nested project files |
 | KN (knots) | [`docs/archive/plans/2026-11-07-untangle-knots.md`](../archive/plans/2026-11-07-untangle-knots.md) | Remaining knots: leaky abstractions, drifted copies, stale workarounds, and empty wrappers |
 | QN (defects), QNU (units) | [`docs/archive/plans/2026-11-07-qualify-effect-names.md`](../archive/plans/2026-11-07-qualify-effect-names.md) | Qualified names in the effect lists of type messages |
+| RTU (units), RTD (decisions) | [`docs/archive/plans/2026-11-07-remaining-follow-ups.md`](../archive/plans/2026-11-07-remaining-follow-ups.md) | Remaining follow-ups of the knots work |
