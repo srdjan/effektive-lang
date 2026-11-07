@@ -401,3 +401,63 @@ Deno.test("writeOnSave false writes nothing and logs nothing", () => {
   assertEquals(h.files, before);
   assertEquals(h.logs(), []);
 });
+
+const NESTED_V1 = "export const x = (): Int => 1\n\ntype Int = int\n";
+const NESTED_V2 = "export const x = (): Int => 2\n\ntype Int = int\n";
+
+Deno.test("a nested effektive.json created while a module is open moves the module and gets a round", () => {
+  const h = makeHarness({
+    files: {
+      [`${ROOT}/effektive.json`]: "{}",
+      [`${ROOT}/sub/x.eff`]: NESTED_V1,
+    },
+  });
+  h.start();
+  const x = uriOf(`${ROOT}/sub/x.eff`);
+  h.deliver(didOpen(x, 1, NESTED_V1));
+  h.files.set(`${ROOT}/sub/effektive.json`, "{}");
+  h.clearSent();
+  h.deliver(watched({ uri: uriOf(`${ROOT}/sub/effektive.json`), type: 1 }));
+  assertEquals(h.server.projects.lookup(x)?.project.root, `${ROOT}/sub`);
+  assertEquals(roundLogs(h), ["4 wrote x.ts", "4 wrote x.ts.map"]);
+  h.files.set(`${ROOT}/sub/x.eff`, NESTED_V2);
+  h.clearSent();
+  h.deliver(didChangeFull(x, 2, NESTED_V2), save(x));
+  // The source map is the same for both versions, so only the module changes.
+  assertEquals(roundLogs(h), ["4 wrote x.ts"]);
+  assertStringIncludes(
+    h.files.get(`${ROOT}/sub/x.ts`) ?? "",
+    "export const x = (): Int => 2",
+  );
+});
+
+Deno.test("a nested effektive.json deleted while a module is open returns the module to the outer project", () => {
+  const h = makeHarness({
+    files: {
+      [`${ROOT}/effektive.json`]: "{}",
+      [`${ROOT}/sub/effektive.json`]: "{}",
+      [`${ROOT}/sub/x.eff`]: NESTED_V1,
+    },
+  });
+  h.start();
+  const x = uriOf(`${ROOT}/sub/x.eff`);
+  h.deliver(didOpen(x, 1, NESTED_V1), save(x));
+  h.files.delete(`${ROOT}/sub/effektive.json`);
+  h.clearSent();
+  h.deliver(watched({ uri: uriOf(`${ROOT}/sub/effektive.json`), type: 3 }));
+  assertEquals(h.server.projects.lookup(x)?.project.root, ROOT);
+  assertEquals(h.server.projects.projects().map((p) => p.root), [ROOT]);
+  assertEquals(roundLogs(h), []);
+  assertEquals(h.published(), [{ uri: x, version: 1, diagnostics: [] }]);
+  // The nested project wrote these files with a header that names `x.eff`.
+  h.files.delete(`${ROOT}/sub/x.ts`);
+  h.files.delete(`${ROOT}/sub/x.ts.map`);
+  h.files.set(`${ROOT}/sub/x.eff`, NESTED_V2);
+  h.clearSent();
+  h.deliver(didChangeFull(x, 2, NESTED_V2), save(x));
+  assertEquals(roundLogs(h), ["4 wrote sub/x.ts", "4 wrote sub/x.ts.map"]);
+  assertStringIncludes(
+    h.files.get(`${ROOT}/sub/x.ts`) ?? "",
+    "export const x = (): Int => 2",
+  );
+});

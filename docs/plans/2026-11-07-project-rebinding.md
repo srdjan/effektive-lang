@@ -1,0 +1,91 @@
+# Project rebinding after `effektive.json` events
+
+Prefixes: PBF (findings), PBD (decisions), PBU (units). A PBF number is the
+number of the finding in the state audit of 2026-11-07.
+
+## Findings
+
+PBF1. A nested `effektive.json` created while one of its modules is open stops
+the writes of that module. The server compares the event path only with known
+project roots. `sub/effektive.json` is not a source path of the outer project,
+so the server drops the event (`src/lsp/projects.ts:397`,
+`src/host/workspace.ts:27`). The outer project no longer owns `sub/x`
+(`src/host/save_round.ts:94`), and no nested project exists, because discovery
+runs only in `didOpen` (`src/lsp/projects.ts:311`). A save writes nothing and
+logs nothing (`src/lsp/projects.ts:470`).
+
+PBF2. A nested `effektive.json` deleted while one of its modules is open stops
+the writes of that module. The document stays in the nested project
+(`src/lsp/projects.ts:327`). Each save logs that `sub/effektive.json` does not
+exist and writes nothing (`src/lsp/projects.ts:443`). The flush also publishes a
+configuration diagnostic on the deleted file.
+
+PBF6. A document opened before its `effektive.json` exists never joins the new
+project. The server keeps only the URI of a document with no project
+(`src/lsp/projects.ts:244`), and it compares watched events only with known
+roots (`src/lsp/projects.ts:396`).
+
+PBF9 (outside this plan). When a module of a nested project is open, the outer
+project also publishes diagnostics for that file, from the disk text and with
+no version. The two lists replace each other in the client. A probe showed a
+publish of 0 diagnostics from the nested project, then 2 from the outer
+project, for an editor text without errors.
+
+PBF10. An output that another project root generated blocks the new owner. The
+first line of a generated file names its source relative to the project root,
+for example `x.eff` from `sub/` and `sub/x.eff` from the outer root. The write
+step compares that line as a string and refuses with "Move or delete it"
+(`src/host/outputs.ts:194`). Removal uses the same comparison
+(`src/host/outputs.ts:255`). After PBU1, a probe with outputs from before the
+`effektive.json` change logged that refusal in both directions and wrote
+nothing. The language server, `build`, and `watch` share this step.
+
+## Decisions
+
+PBD1 (user, 2026-11-07). A project whose `effektive.json` is gone, and that
+keeps no open document after a rebind, is removed. The server clears each
+non-empty list that the project published. Each remaining project that covers
+such a path forgets its published list for the path and becomes dirty, so that
+its next flush publishes its current list again.
+
+PBD2 (user, 2026-11-07). PBF6 is in this plan, in its own commit after PBF1 and
+PBF2.
+
+PBD3. When the new search finds no project for an open document, the document
+stays in its project. This keeps the documented diagnostic for a missing root
+`effektive.json`.
+
+PBD4. A rebind runs after a watched event for any file named `effektive.json`,
+at any depth, of any change type. A rebind with no layout change does nothing.
+
+PBD5. A project that a rebind creates gets a save round, because the event was
+for its `effektive.json` (`docs/api.md`, "Projects, save, and configuration
+errors"). A removed project gets no save round.
+
+PBD6. A moved document keeps its text and version. The old project reads the
+disk text of the path again and becomes dirty. The new project becomes dirty
+and publishes the document at its next flush, also with an unchanged list.
+
+PBD7 (user, 2026-11-07). A writer adopts an existing output when its first line
+names the same source file from another root: one source path ends the other at
+a `/` boundary. Removal uses the same rule.
+
+## Units
+
+| Unit | Model | Files | Acceptance check | Turn budget |
+| --- | --- | --- | --- | --- |
+| PBU1: PBF1, PBF2, PBD1, PBD3 to PBD6 | Sonnet | `src/lsp/projects.ts`, `tests/lsp_save_round_test.ts`, `tests/lsp_server_test.ts`, `docs/api.md`, `CHANGELOG.md` | Each new test fails before the fix for the reason of the finding and passes after it. `deno task test` passes. | 45 |
+| PBU4: PBF10, PBD7 | Sonnet | `src/host/outputs.ts`, its tests, `tests/lsp_save_round_test.ts` | The same check as PBU1. The PBU1 tests run with the outputs from before the change. | 30 |
+| PBU2: PBF6 | Sonnet | `src/lsp/projects.ts`, `tests/lsp_server_test.ts`, `docs/api.md`, `CHANGELOG.md` | The same check as PBU1. | 30 |
+| PBU3: mutation of the changed declarations | Opus | `fixtures/mutation/survivors.json` and tests, if a survivor needs them | `deno task mutate` exits 0 for the changed sites of `src/lsp/projects.ts` and `src/host/outputs.ts`. | 20 |
+
+The orchestrator reviews each diff, runs `deno task check`, and commits each
+unit. The commit of PBU1 adds this plan. The last commit moves the plan to
+`docs/archive/plans/`.
+
+## Progress
+
+- PBU1: implemented. Three tests failed before the fix for the reason of their finding and pass after it. The PBD3 guard test passes before and after. `deno task check` exited 0, with 2973 fast and 286 slow tests passed.
+- PBU4: open.
+- PBU2: open.
+- PBU3: open.

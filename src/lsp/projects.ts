@@ -1,14 +1,16 @@
-// Projects and the open-document overlay. A project is a
-// directory with `effektive.json`. The set keeps one `Program` per project for
-// the life of the server. The text that the program sees is the disk text of
-// each file with the open documents laid over it. A flush gives the program the
-// difference and then publishes diagnostics.
+// Projects and the open-document overlay. A project is a directory with
+// `effektive.json`. The set keeps one `Program` per project. A project lives
+// until it loses its `effektive.json` and its last open document. The text that
+// the program sees is the disk text of each file with the open documents laid
+// over it. A flush gives the program the difference and then publishes
+// diagnostics.
 //
 // Nothing here throws on purpose. The server wraps each handler, and that
 // wrapper is the only exception boundary.
 
 import { TypeScriptOutputs } from "../core/typescript.ts";
 import {
+  basename,
   dirname,
   isAbsolute,
   join as joinNativePath,
@@ -384,15 +386,16 @@ export class ProjectSet {
 
   /**
    * Watched-file events. An event counts when its path lies under a known
-   * project root, passes `isSourcePath`, and is not an open document.
+   * project root, passes `isSourcePath`, and is not an open document. An event
+   * for any `effektive.json` also binds the open documents to their projects
+   * again.
    */
   didChangeWatchedFiles(events: readonly FileEvent[]): void {
-    // The projects whose `effektive.json` changed. The client sends no
-    // `didSave` for that file, so each of them gets a save round.
-    const reconfigured = new Set<ProjectState>();
+    const absolutes: string[] = [];
     for (const event of events) {
       const absolute = uriToPath(event.uri);
       if (absolute === undefined) continue;
+      absolutes.push(absolute);
       for (const project of this.#projects.values()) {
         const path = sourcePathUnder(project.root, absolute);
         if (path === undefined) continue;
@@ -405,10 +408,76 @@ export class ProjectSet {
           this.#reread(project, path);
         }
         project.dirty = true;
-        if (path === CONFIG_FILE) reconfigured.add(project);
       }
     }
-    for (const project of reconfigured) this.saveRound(project);
+    if (absolutes.some((absolute) => basename(absolute) === CONFIG_FILE)) {
+      this.#rebind();
+      this.#removeDeadProjects();
+    }
+    // The client sends no `didSave` for `effektive.json`, so each project
+    // whose own `effektive.json` changed gets a save round.
+    for (const project of [...this.#projects.values()]) {
+      const named = absolutes.some((absolute) =>
+        sourcePathUnder(project.root, absolute) === CONFIG_FILE
+      );
+      if (named) this.saveRound(project);
+    }
+  }
+
+  /** Finds the project of each open document again, and moves a document whose project changed. */
+  #rebind(): void {
+    for (const [uri, old] of [...this.#documents]) {
+      const found = this.#discover(uri);
+      if (found === undefined || found.project === old.project) continue;
+      const document = old.project.open.get(old.path);
+      if (document === undefined) continue;
+      old.project.open.delete(old.path);
+      old.project.publishedVersions.delete(old.path);
+      this.#reread(old.project, old.path);
+      old.project.dirty = true;
+      const { version, text } = document;
+      found.project.open.set(found.path, { uri, version, text });
+      found.project.publishedVersions.delete(found.path);
+      found.project.dirty = true;
+      this.#documents.set(uri, found);
+    }
+  }
+
+  /**
+   * Removes each project that has no `effektive.json` and no open document.
+   * The set clears the lists that the project published. A project that covers
+   * a cleared path forgets its list for it, so that its next flush publishes
+   * that list again.
+   */
+  #removeDeadProjects(): void {
+    const hasDocument = new Set<ProjectState>();
+    for (const { project } of this.#documents.values()) {
+      hasDocument.add(project);
+    }
+    const cleared: string[] = [];
+    for (const [root, project] of [...this.#projects]) {
+      if (hasDocument.has(project)) continue;
+      const config = joinNativePath(root, CONFIG_FILE);
+      if (this.ports.fs.kind(config) === "file") continue;
+      this.#projects.delete(root);
+      for (const [path, json] of project.published) {
+        if (json === "[]") continue;
+        const uri = pathToUri(joinPath(project.root, path));
+        if (uri === undefined) continue;
+        this.ports.publish({ uri, diagnostics: [] });
+        cleared.push(uri);
+      }
+    }
+    for (const uri of cleared) {
+      const absolute = uriToPath(uri);
+      if (absolute === undefined) continue;
+      for (const project of this.#projects.values()) {
+        const path = sourcePathUnder(project.root, absolute);
+        if (path === undefined || !project.published.has(path)) continue;
+        project.published.delete(path);
+        project.dirty = true;
+      }
+    }
   }
 
   /**

@@ -887,11 +887,21 @@ use a null version. The client sends `workspace/didChangeWatchedFiles` for
 changes on disk. The server ignores such an event for an open document, because
 the editor owns that text.
 
+After a watched-file event for any `effektive.json`, the server searches the
+nearest project of each open document again. When it finds a different project,
+the document moves there with its text and version. When it finds no project,
+the document stays in its project, and that project shows the diagnostic for a
+missing `effektive.json`. A project that lost its `effektive.json` and keeps no
+open document is removed. The server clears the diagnostics that the project
+published. Each other project that covers such a file then publishes its own
+diagnostics for it again.
+
 A save round starts on `textDocument/didSave` of an `.eff` or `.effi` file, and
 on a watched-file event for the `effektive.json` of a project, because the
-client sends no `didSave` for that file. The server does nothing when
-`writeOnSave` is false. `writeOnSave` comes from the initialization options, so
-a change takes effect after a restart of the server.
+client sends no `didSave` for that file. This includes a project that the event
+creates. The server does nothing when `writeOnSave` is false. `writeOnSave`
+comes from the initialization options, so a change takes effect after a restart
+of the server.
 
 The round uses the disk texts only. Unsaved text of an open document never
 reaches a generated file. The server reads the whole project from disk and

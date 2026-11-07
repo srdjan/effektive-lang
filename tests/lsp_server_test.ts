@@ -912,3 +912,60 @@ Deno.test("related spans become relatedInformation with a file URI", () => {
     0,
   );
 });
+
+// ---- Project rebinding ------------------------------------------------------
+
+const REBIND_ROOT = "/work/app";
+const REBIND_OK = "export const x = (): Num => 1\n\ntype Num = number\n";
+const REBIND_BAD = 'export const y = (): Num => "s"\n\ntype Num = number\n';
+
+Deno.test("a removed project clears its published lists, and the outer project publishes them again", () => {
+  const h = makeHarness({
+    files: {
+      [`${REBIND_ROOT}/effektive.json`]: "{}",
+      [`${REBIND_ROOT}/main.eff`]: REBIND_OK,
+      [`${REBIND_ROOT}/sub/effektive.json`]: "{}",
+      [`${REBIND_ROOT}/sub/x.eff`]: REBIND_OK,
+      [`${REBIND_ROOT}/sub/y.eff`]: REBIND_BAD,
+    },
+  });
+  h.start();
+  const main = uriOf(`${REBIND_ROOT}/main.eff`);
+  const x = uriOf(`${REBIND_ROOT}/sub/x.eff`);
+  const y = uriOf(`${REBIND_ROOT}/sub/y.eff`);
+  h.deliver(didOpen(main, 1, REBIND_OK), didOpen(x, 1, REBIND_OK));
+  assertEquals(h.server.projects.projects().map((p) => p.root), [
+    REBIND_ROOT,
+    `${REBIND_ROOT}/sub`,
+  ]);
+  h.clearSent();
+  h.files.delete(`${REBIND_ROOT}/sub/effektive.json`);
+  h.deliver(
+    watched({ uri: uriOf(`${REBIND_ROOT}/sub/effektive.json`), type: 3 }),
+  );
+  assertEquals(h.server.projects.projects().map((p) => p.root), [REBIND_ROOT]);
+  assertEquals(h.published().map(summary), [
+    [y, undefined, 0],
+    [x, 1, 0],
+    [y, undefined, 1],
+  ]);
+  assertEquals(h.published()[2].diagnostics.map((d) => d.code), [
+    "type-mismatch/003",
+  ]);
+});
+
+Deno.test("a deleted root effektive.json keeps its open document and publishes the configuration error", () => {
+  const h = started();
+  h.deliver(didOpen(MAIN, 1, MAIN_TEXT));
+  h.clearSent();
+  h.files.delete(`${ROOT}/effektive.json`);
+  h.deliver(watched({ uri: uriOf(`${ROOT}/effektive.json`), type: 3 }));
+  assertEquals(h.server.projects.lookup(MAIN)?.project.root, ROOT);
+  assertEquals(h.published().map(summary), [
+    [uriOf(`${ROOT}/effektive.json`), undefined, 1],
+  ]);
+  assertEquals(
+    h.published()[0].diagnostics.map((d) => d.message),
+    [`${ROOT}/effektive.json does not exist`],
+  );
+});
