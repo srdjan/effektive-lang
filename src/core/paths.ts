@@ -64,6 +64,21 @@ export function generatedPathOf(path: string): string {
   return isInterfacePath(path) ? `${path}.ts` : `${moduleNameOf(path)}.ts`;
 }
 
+/** The source map of a generated file: `x.ts` gives `x.ts.map`. */
+export function sourceMapPathOf(generatedPath: string): string {
+  return `${generatedPath}.map`;
+}
+
+/** The `.eff` and `.effi` paths of a module name, in that order. */
+export function modulePathsOf(module: string): [string, string] {
+  return [`${module}${SOURCE_EXTENSION}`, `${module}${INTERFACE_EXTENSION}`];
+}
+
+/** The last segment of a path. */
+export function fileNameOf(path: string): string {
+  return path.slice(path.lastIndexOf("/") + 1);
+}
+
 /** The module name that the prelude import uses. */
 export const PRELUDE_MODULE = "effektive:prelude";
 

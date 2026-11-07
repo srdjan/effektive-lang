@@ -5,7 +5,12 @@ import { fieldHelperDeclarations } from "./fields.ts";
 
 import type { Declaration, ModuleIR, TypeDecl } from "../ir.ts";
 import type { Result } from "../result.ts";
-import { generatedHeader, isInterfacePath } from "../paths.ts";
+import {
+  fileNameOf,
+  generatedHeader,
+  isInterfacePath,
+  sourceMapPathOf,
+} from "../paths.ts";
 import type { ProjectConfig } from "../project_config.ts";
 import { bracketed, type Doc, hard, render, spanned } from "./doc.ts";
 import {
@@ -147,7 +152,7 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
     ...declarationDocs.map((d) => [d]),
     moduleMarker,
   ]);
-  const mapName = `${scope.path.slice(scope.path.lastIndexOf("/") + 1)}.map`;
+  const mapName = fileNameOf(sourceMapPathOf(scope.path));
   const rendered = render([doc, hard, `//# sourceMappingURL=${mapName}`, hard]);
   const assertions: HostAssertionRecord[] = rendered.marks.map((mark) => ({
     ...mark.data,

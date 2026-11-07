@@ -8,7 +8,7 @@ const outputCache = new TypeScriptOutputs();
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { Program, serializeSourceMap } from "../src/core/mod.ts";
 import { planWrites } from "../src/host/outputs.ts";
-import { isSourcePath } from "../src/host/workspace.ts";
+import { isWorkspaceInput } from "../src/host/workspace.ts";
 import {
   didChangeFull,
   didClose,
@@ -70,7 +70,7 @@ function oracle(h: Harness, skip = ""): Map<string, string> {
   for (const [full, text] of h.files) {
     if (!full.startsWith(`${ROOT}/`)) continue;
     const path = full.slice(ROOT.length + 1);
-    if (isSourcePath(path)) set.set(path, text);
+    if (isWorkspaceInput(path)) set.set(path, text);
   }
   const updated = new Program(ROOT).update({ set });
   assert(updated.ok);

@@ -20,7 +20,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   parse.ts       Parser with recovery.
   hash.ts        Synchronous content hash (FNV-1a 64).
   declaration_index.ts Declaration index of one file: names, kinds, export flags, spans, and methods.
-  paths.ts       Path helpers and the generated-file header: joinPath, normalizeRelative, moduleNameOf, generatedPathOf, generatedHeader, generatedSourceOf, the extension tests, fileModeOf, relativeSpecifier, and the prelude and host label tests.
+  paths.ts       Path helpers and the generated-file header: joinPath, normalizeRelative, moduleNameOf, generatedPathOf, sourceMapPathOf, modulePathsOf, fileNameOf, generatedHeader, generatedSourceOf, the extension tests, fileModeOf, relativeSpecifier, and the prelude and host label tests.
   project_config.ts effektive.json reader, its validation, and the import-rule globs.
   project.ts     Module loader: module graph, cycles, order.
   resolve.ts     Names to identities, scopes, prelude, side table of targets.

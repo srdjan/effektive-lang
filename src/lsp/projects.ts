@@ -21,7 +21,7 @@ import type { HostFs } from "../host/io.ts";
 import { DiskProgram } from "../host/disk_program.ts";
 import type { HeldReason } from "../host/outputs.ts";
 import { ownedByRoot, runSaveRound } from "../host/save_round.ts";
-import { isSourcePath, readWorkspace } from "../host/workspace.ts";
+import { isWorkspaceInput, readWorkspace } from "../host/workspace.ts";
 import {
   compareText,
   CONFIG_FILE,
@@ -189,7 +189,7 @@ function sourcePathUnder(root: string, absolute: string): string | undefined {
   const path = relative(root, absolute);
   if (isAbsolute(path)) return undefined;
   const corePath = SEPARATOR === "\\" ? path.replaceAll("\\", "/") : path;
-  return isSourcePath(corePath) ? corePath : undefined;
+  return isWorkspaceInput(corePath) ? corePath : undefined;
 }
 
 /**
@@ -395,7 +395,7 @@ export class ProjectSet {
 
   /**
    * Watched-file events. An event counts when its path lies under a known
-   * project root, passes `isSourcePath`, and is not an open document. An event
+   * project root, passes `isWorkspaceInput`, and is not an open document. An event
    * for any `effektive.json` also binds the open documents to their projects
    * again, including the documents that had no project. It then removes dead
    * projects and clears the lists for files that a project no longer owns.

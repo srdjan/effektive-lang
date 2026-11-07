@@ -8,8 +8,10 @@ import {
   generatedSourceOf,
   joinPath,
   type LowerError,
+  modulePathsOf,
   type Revision,
   serializeSourceMap,
+  sourceMapPathOf,
   type SpanTable,
 } from "../core/mod.ts";
 import type { HostFs } from "./io.ts";
@@ -183,7 +185,7 @@ export function writeGenerated(
     if (write) {
       const outputs: [string, string][] = [
         [emitted.path, emitted.text],
-        [`${emitted.path}.map`, serializeSourceMap(map)],
+        [sourceMapPathOf(emitted.path), serializeSourceMap(map)],
       ];
       const targets: [string, string, string][] = [];
       let blocked = false;
@@ -259,7 +261,7 @@ export function removeStaleOutputs(
   const removed: string[] = [];
   const notes: string[] = [];
   for (const module of modules) {
-    for (const source of [`${module}.eff`, `${module}.effi`]) {
+    for (const source of modulePathsOf(module)) {
       const path = generatedPathOf(source);
       const output = containedProjectPath(fs, root, path);
       if (!output.ok) {
@@ -280,7 +282,7 @@ export function removeStaleOutputs(
       // proves ownership, so a later call can retry. A missing file counts as removed.
       const targets: [string, string][] = [];
       let blocked = false;
-      for (const target of [`${path}.map`, path]) {
+      for (const target of [sourceMapPathOf(path), path]) {
         const contained = containedProjectPath(fs, root, target);
         if (!contained.ok) {
           notes.push(

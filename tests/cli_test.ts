@@ -6,7 +6,7 @@ import { parseArgs, replayArguments } from "../src/cli/args.ts";
 import { debounceBatches } from "../src/host/events.ts";
 import { formatDiagnostics } from "../src/cli/format.ts";
 import { main } from "../src/cli/main.ts";
-import { isSourcePath } from "../src/host/workspace.ts";
+import { isWorkspaceInput } from "../src/host/workspace.ts";
 import { makeDiagnostic } from "../src/core/frontend.ts";
 import { exampleFiles, FIXTURES } from "./helpers.ts";
 import { memoryIo, under } from "./cli_helpers.ts";
@@ -213,14 +213,14 @@ Deno.test("the walk finds .eff files in subdirectories and skips dot directories
   assertEquals(r.stderr, "2 modules, 1 diagnostic\n");
 });
 
-Deno.test("isSourcePath accepts sources and the project file, and skips hidden and vendored directories", () => {
-  assert(isSourcePath("a.eff"));
-  assert(isSourcePath("host/p.effi"));
-  assert(isSourcePath("effektive.json"));
-  assert(!isSourcePath("sub/effektive.json"));
-  assert(!isSourcePath("a.ts"));
-  assert(!isSourcePath(".x/a.eff"));
-  assert(!isSourcePath("a/node_modules/b.eff"));
+Deno.test("isWorkspaceInput accepts sources and the project file, and skips hidden and vendored directories", () => {
+  assert(isWorkspaceInput("a.eff"));
+  assert(isWorkspaceInput("host/p.effi"));
+  assert(isWorkspaceInput("effektive.json"));
+  assert(!isWorkspaceInput("sub/effektive.json"));
+  assert(!isWorkspaceInput("a.ts"));
+  assert(!isWorkspaceInput(".x/a.eff"));
+  assert(!isWorkspaceInput("a/node_modules/b.eff"));
 });
 
 // ------------------------------------------------------------------ usage errors

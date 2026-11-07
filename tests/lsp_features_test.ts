@@ -6,7 +6,7 @@ const outputs = new TypeScriptOutputs();
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { Program } from "../src/core/mod.ts";
-import { isSourcePath } from "../src/host/workspace.ts";
+import { isWorkspaceInput } from "../src/host/workspace.ts";
 import type { ResponseMessage } from "../src/lsp/jsonrpc.ts";
 import type {
   DocumentSymbol,
@@ -470,7 +470,9 @@ function freshOutput(h: Harness, name: string): string {
   const set = new Map<string, string>();
   for (const [full, text] of h.files) {
     const path = full.slice(ROOT.length + 1);
-    if (full.startsWith(`${ROOT}/`) && isSourcePath(path)) set.set(path, text);
+    if (full.startsWith(`${ROOT}/`) && isWorkspaceInput(path)) {
+      set.set(path, text);
+    }
   }
   const updated = new Program(ROOT).update({ set });
   assert(updated.ok);

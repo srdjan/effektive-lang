@@ -14,7 +14,7 @@ import type {
 } from "./io.ts";
 import { type LogFs, noLog, openFileLog } from "./log.ts";
 import type { FileFailure } from "./ports.ts";
-import { isSourcePath, isTargetPath } from "./workspace.ts";
+import { isTargetPath, isWorkspaceInput } from "./workspace.ts";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -215,7 +215,7 @@ async function* sourceEvents(root: string): AsyncGenerator<readonly string[]> {
       const relative = result.value.paths
         .filter((path) => path.startsWith(prefix))
         .map((path) => path.slice(prefix.length))
-        .filter((path) => isSourcePath(path) || isTargetPath(path));
+        .filter((path) => isWorkspaceInput(path) || isTargetPath(path));
       if (relative.length > 0) yield relative;
     }
   } finally {

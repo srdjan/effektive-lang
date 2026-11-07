@@ -18,7 +18,7 @@ function skippedDirectory(name: string): boolean {
 }
 
 /** True for a root-relative path that the program reads: a source file or the project file. */
-export function isSourcePath(path: string): boolean {
+export function isWorkspaceInput(path: string): boolean {
   const parts = path.split("/");
   const name = parts[parts.length - 1];
   const directories = parts.slice(0, -1);
@@ -100,7 +100,7 @@ export function containedProjectPath(
 export function readWorkspace(
   fs: HostFs,
   root: string,
-  accepts: (path: string) => boolean = isSourcePath,
+  accepts: (path: string) => boolean = isWorkspaceInput,
 ): Result<ReadonlyMap<string, string>, string> {
   const files = new Map<string, string>();
   let failure: string | undefined;

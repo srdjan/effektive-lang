@@ -14,7 +14,7 @@
 // format and JavaScript tooling expect.
 
 import type { Result } from "../result.ts";
-import { relativeSpecifier } from "../paths.ts";
+import { fileNameOf, relativeSpecifier } from "../paths.ts";
 import { lineIndexOf, lineStarts } from "../source.ts";
 import { recordAtOffset, type SpanTable, zeroBasedPosition } from "./spans.ts";
 
@@ -62,10 +62,6 @@ export type SourceMapError = {
 interface SourceMapOptions {
   /** Add the source texts as `sourcesContent`. Default: false. */
   readonly includeContent?: boolean;
-}
-
-function fileName(path: string): string {
-  return path.slice(path.lastIndexOf("/") + 1);
 }
 
 /** The path of `source` relative to the directory of the generated file `path`. */
@@ -158,7 +154,7 @@ export function buildSourceMap(
 
   const base = {
     version: 3 as const,
-    file: fileName(table.path),
+    file: fileNameOf(table.path),
     sources: sources.map((s) => relativeSource(table.path, s)),
     names: [] as string[],
     mappings: lines.map((segments) => segments.join(",")).join(";"),

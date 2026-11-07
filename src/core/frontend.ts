@@ -42,6 +42,8 @@ export {
   isInterfacePath,
   isModulePath,
   joinPath,
+  modulePathsOf,
+  sourceMapPathOf,
 } from "./paths.ts";
 export type { Project } from "./project.ts";
 export type { ConfigError, ProjectConfig } from "./project_config.ts";
