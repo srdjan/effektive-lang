@@ -1218,29 +1218,6 @@ type Int = int
 
 // ------------------------------------------------------------------ initialization
 
-Deno.test("the initialization graph orders constants by their eager dependencies", () => {
-  const project = checkText(`
-const total: Int = double(base)
-const double = (n: Int): Int => n * scale
-const scale: Int = 2
-const base: Int = 21
-type Int = int
-`);
-  assertEquals(messages(project), []);
-  const graph = project.modules.get("m")!.initialization;
-  assertEquals(graph.constants.map((c) => c.slice(8)), [
-    "total",
-    "scale",
-    "base",
-  ]);
-  assertEquals(
-    graph.dependencies.get("value:m#total" as ValueId)?.map((c) => c.slice(8)),
-    ["scale", "base"],
-  );
-  assertEquals(graph.order.map((c) => c.slice(8)), ["scale", "base", "total"]);
-  assertEquals(graph.cycles, []);
-});
-
 Deno.test("a cycle through a function is a module diagnostic", () => {
   const project = checkText(`
 const a: Int = f(1)

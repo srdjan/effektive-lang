@@ -1125,3 +1125,17 @@ export const pair = (a: Text): [Text, Text] => ["aVeryLongStringLiteralNumberOne
     'export const pair = (a: Text): readonly [Text, Text] => [\n  "aVeryLongStringLiteralNumberOneForTheTest",\n  "aVeryLongStringLiteralNumberTwoForTheTest",\n];',
   );
 });
+
+Deno.test("a constant is emitted after the constants that its initializer reaches", () => {
+  const output = oneModule(`
+const total: Int = double(base)
+const double = (n: Int): Int => n * scale
+const scale: Int = 2
+const base: Int = 21
+type Int = int
+`);
+  assertStringIncludes(
+    output,
+    "const scale: Int = 2;\n\nconst base: Int = 21;\n\nconst total: Int = double(base);",
+  );
+});

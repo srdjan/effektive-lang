@@ -1,6 +1,6 @@
 // The project driver. For each module, in topological order, it runs
 // the declaration checker, checks every body, solves the execution modes,
-// builds the initialization graph, and builds the module interface with the
+// reports the initialization cycles, and builds the module interface with the
 // modes. The finished interface goes to the modules that import it.
 //
 // Body checking order. The module-local reference graph over functions and
@@ -38,11 +38,7 @@ import { serviceOfCapability } from "./ids.ts";
 import { serviceBoundDiagnostics } from "./service_bounds.ts";
 import { stronglyConnectedComponents } from "./graph.ts";
 import { arrowBody, initOf } from "./syntax_queries.ts";
-import {
-  checkInitialization,
-  type InitializationGraph,
-  referenceEdges,
-} from "./initialization.ts";
+import { checkInitialization, referenceEdges } from "./initialization.ts";
 import {
   buildInterface,
   buildTypeGraph,
@@ -95,7 +91,6 @@ interface ModuleBodies {
   readonly modes: ModeMap;
   /** The mode and the effect sets of every function, in source order. */
   readonly solved: ReadonlyMap<ValueId, Solved>;
-  readonly initialization: InitializationGraph;
   /** Body, mode, and initialization diagnostics of the module, sorted. */
   readonly diagnostics: readonly Diagnostic[];
 }
@@ -111,7 +106,6 @@ export interface CheckedModule {
   readonly modes: ModeMap;
   /** The mode and the effect sets of every function, in source order. */
   readonly solved: ReadonlyMap<ValueId, Solved>;
-  readonly initialization: InitializationGraph;
   /** An error value only when the mode map lacks an entry, which cannot happen after body checking. */
   readonly interface: Result<ModuleInterface, InterfaceError>;
   /** The interface hash, when the interface exists. */
@@ -494,7 +488,7 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
       nameSpan: entry.signature.nameSpan,
     })),
   );
-  for (const diagnostic of initialization.diagnostics) {
+  for (const diagnostic of initialization) {
     diagnostics.push(diagnostic);
   }
 
@@ -524,7 +518,6 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
     constants: orderedConstants,
     modes: orderedModes,
     solved: orderedSolved,
-    initialization: initialization.graph,
     diagnostics: normalizeDiagnostics(diagnostics),
   };
 }
@@ -650,7 +643,6 @@ export function checkModuleStep(
       constants: bodies.constants,
       modes: bodies.modes,
       solved: bodies.solved,
-      initialization: bodies.initialization,
       diagnostics: normalizeDiagnostics([
         ...declarations.diagnostics,
         ...bodies.diagnostics,
