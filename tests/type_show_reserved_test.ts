@@ -38,3 +38,22 @@ Deno.test("a diagnostic prints a reserved error type by its short name", () => {
     "argument 1 has type int, but SchemaIssue is expected",
   ]);
 });
+
+Deno.test("a diagnostic prints a reserved capability by its short name", () => {
+  const project = checkProject(
+    memoryHost({
+      "effektive.json": "{}",
+      "m.eff": [
+        "type Int = int",
+        "const take = (n: Int): Int => n",
+        "const bad = (): Int => take(defer(() => forkScoped(defer(() => 1))))",
+      ].join("\n"),
+    }),
+    "",
+    ["m.eff"],
+  );
+  if (!project.ok) throw new Error(JSON.stringify(project.error));
+  assertEquals(project.value.diagnostics.map((d) => d.message), [
+    "argument 1 has type Effect<void, never, Scope>, but Int is expected",
+  ]);
+});

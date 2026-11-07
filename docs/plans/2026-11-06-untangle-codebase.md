@@ -20,7 +20,7 @@ Baseline: `30bb1d5` (the changelog heading fix on top of `efb2acd`). The gate pa
 
 ## Decisions
 
-- UND1 (display of reserved errors): astra showed that `showType` prints `fails error:effect/SchemaError` while `effectText` prints `fails SchemaError`, because `type_show.ts` has `idName` beside `ids.ts` `shortName`. Decision: fix it as a defect in its own commit, with a test that fails first. Readable text then uses the short name in both paths.
+- UND1 (display of reserved errors): astra showed that `showType` prints `fails error:effect/SchemaError` while `effectText` prints `fails SchemaError`, because `type_show.ts` has `idName` beside `ids.ts` `shortName`. Decision: fix it as a defect in its own commit, with a test that fails first. Readable text then uses the short name in both paths. The same split applies to a reserved capability: `effectText` printed `with Scope`, and `showType` printed `Effect<void, never, cap:effect/Scope>`. Commit `c47452c` fixes both sets, so a hover contract and a type mismatch message now print `Scope`. The astra adversarial review found this case, and `tests/type_show_reserved_test.ts` pins it.
 - UND2 (source map decoder): `mapGenerated`, `decodeMappings`, `lookupMapping`, and `decodeVlqList` are documented in `docs/api.md` but have no product caller. No outside code imports the package. Decision: move them to test support, keep the decoder independent of the encoder, and update `docs/api.md`. `encodeVlq` stays, because production uses it.
 - UND3 (diagnostic severity): the field stays, because removing it changes serialized diagnostics. The `Severity` type narrows to `"error"`.
 - UND4 (`localeCompare` in the occurrence order): stays. A change would reorder public occurrence results. No failing case is known.
