@@ -2,7 +2,7 @@
 
 Prefixes: DOF (findings), DOD (decisions), DOU (units). DOF1 is finding 9 of the
 state audit of 2026-11-07, recorded as PBF9 in the archived
-[project rebinding plan](../archive/plans/2026-11-07-project-rebinding.md).
+[project rebinding plan](2026-11-07-project-rebinding.md).
 
 ## Findings
 
@@ -50,4 +50,4 @@ to `docs/archive/plans/`.
 ## Progress
 
 - DOU1: implemented. Four tests failed before the fix for the reason of DOF1: the outer project published a nested file, or it kept its old list after a nested `effektive.json` appeared. One of them checks that the clear comes before the publish of the new nested project. They pass after the fix. The DOD3 guard test passes before the fix, and it failed with only the DOD1 filter. `deno task check` exited 0, with 2988 fast and 286 slow tests passed.
-- DOU2: open.
+- DOU2: complete. A run of `deno task mutate` on 10 changed guard lines of `src/lsp/projects.ts` killed 17 of 17 mutants. It reported the `equivalent` row of the old published-entry guard in `#removeDeadProjects` as stale, because DOD3 removed that guard, so the row is removed. The second run, which also covered the stale-change return in `#applyChange`, exited 0: 17 of 18 killed, and the 1 survivor matches its row.

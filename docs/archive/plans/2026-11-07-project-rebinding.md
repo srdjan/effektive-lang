@@ -98,6 +98,6 @@ unit. The commit of PBU1 adds this plan. The last commit moves the plan to
 
 ## Follow-ups outside this plan
 
-- PBF9: the outer project still publishes diagnostics for a module of a nested project, so the two lists replace each other in the client.
+- PBF9: fixed as DOF1 of the [diagnostic ownership plan](2026-11-07-diagnostic-ownership.md). Before, the outer project also published diagnostics for a module of a nested project, so the two lists replaced each other in the client.
 - Probable, from code reading only: a moved document keeps its subscription to the generated view in the old project, because the subscriptions are keyed by the project. A test that subscribes, moves the document, and changes it can confirm this.
 - The outer project gets no save round when a nested `effektive.json` is deleted. Its next save of the module writes the output.
