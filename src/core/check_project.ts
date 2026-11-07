@@ -606,8 +606,9 @@ export function refreshInterface(
 
 /**
  * Checks one module: its declarations, its type graph, its bodies, and its
- * interface. `checkAnalysis` and `Program` both call this step, so a check from
- * scratch and a revision of the program give the same result.
+ * interface. `driveProject` calls this step for each module that its policy
+ * checks. `checkAnalysis` and `Program` both run `driveProject`, so a check
+ * from scratch and a revision of the program give the same result.
  */
 export function checkModuleStep(
   info: ModuleInfo,
