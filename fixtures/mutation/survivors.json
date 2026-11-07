@@ -1006,5 +1006,59 @@
     "operator": "comparison",
     "class": "equivalent",
     "reason": "The guard `colon >= 0` comes first, and `hash` is `id.indexOf(\"#\", colon + 1)`. So `hash` is either -1 or at least colon + 1, and it never equals `colon`. With `colon >= 0`, the tests `hash > colon` and `hash >= colon` give the same truth value. A differential probe through `validateModule` of 22 forged payload ids (empty, colon-only, hash before colon, leading colon, repeated colon and hash) gave identical diagnostics in the source and in the mutated copy."
+  },
+  {
+    "file": "src/core/validate/recursion_checks.ts",
+    "declaration": "guardedRecord",
+    "offset": 1183,
+    "text": "!field.optional && tagOf(field.type) !== undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The filter only chooses candidate tag names from the first member. The later test requires the first field of that name in every member, the first member included, to be required and tagged. A name that the mutant adds fails that test in the first member. A differential through checkRecursion tested 300000 random forged declarations, with optional and untagged fields in tagged unions, and every report matched."
+  },
+  {
+    "file": "src/core/validate/recursion_checks.ts",
+    "declaration": "guardedRecord",
+    "offset": 1819,
+    "text": "tagged && hasDistinctTag",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "hasDistinctTag is true only when tagged is true. The mutant only lets a union with tagged and no distinct tag past the early return. The walk then reaches the root union with guarded false and the root-union guard false, so it returns false, as the early return does. A differential through checkRecursion tested 300000 random forged declarations, and every report matched. In a count over 100000 of them, 11150 held a tagged union with no distinct tag."
+  },
+  {
+    "file": "src/core/validate/recursion_checks.ts",
+    "declaration": "guardedRecord.walk",
+    "offset": 418,
+    "text": "part === type && tagged && hasDistinctTag",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The early return leaves only a record root or a root union that is tagged with distinct tags. A union below the root has guarded true, because the root union walks its members with guarded true. A record root has tagged and hasDistinctTag false, because both need a union root. So the extra term never changes a result. A differential through checkRecursion tested 300000 random forged declarations and every report matched."
+  },
+  {
+    "file": "src/core/validate/recursion_checks.ts",
+    "declaration": "guardedRecord.walk",
+    "offset": 418,
+    "text": "part === type && tagged",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The early return leaves only a record root or a root union that is tagged with distinct tags. A union below the root has guarded true, because the root union walks its members with guarded true. A record root has tagged false, because tagged needs a union root. So the mutant term never changes a result. A differential through checkRecursion tested 300000 random forged declarations and every report matched."
+  },
+  {
+    "file": "src/core/validate/recursion_checks.ts",
+    "declaration": "guardedDataGroups.strong",
+    "offset": 661,
+    "text": "members.length > 1",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The mutant registers a group for a tagged component of one member that has no self edge. The reaches walk consults a group only when the source and the target are the same group. For a one-member group that means a self reference, which is a self edge of the graph, so the component is a cycle in the source too. A differential through checkRecursion tested 300000 random forged declarations, and every report matched. In a count over 100000 of them, 81276 held such a tagged singleton."
+  },
+  {
+    "file": "src/core/validate/recursion_checks.ts",
+    "declaration": "guardedDataGroups.strong",
+    "offset": 727,
+    "text": "!cycle || !members.some((m) => env.taggedRecords.has(m))",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The mutant adds two cases. An acyclic tagged singleton gets a group that nothing consults, as the row for the length test explains. A cycle without a tagged member is made of aliases only, and the alias-only test keeps every edge of such a component, so the cycle test returns before a group is set. A differential through checkRecursion tested 300000 random forged declarations, and every report matched. In a count over 100000 of them, 1909 held an alias-only cycle of several members."
   }
 ]
