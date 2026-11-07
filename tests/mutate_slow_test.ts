@@ -3,7 +3,7 @@
 // no subprocess. They are slow tests only because the `typescript` import
 // needs env access, which the fast suite does not grant.
 
-import { assertEquals } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import {
   applyMutant,
   classify,
@@ -489,4 +489,18 @@ Deno.test("testArgs builds the clean and mutant commands", () => {
     "--fail-fast",
     "tests/a_test.ts",
   ]);
+});
+
+// A census of the register: a refactor that moves the code of a row must move
+// the row, even in a file that no mutation run scans.
+Deno.test("each row of the survivor register matches exactly one current site", () => {
+  const register = parseRegister(
+    Deno.readTextFileSync("fixtures/mutation/survivors.json"),
+  );
+  assert(register.ok);
+  const files = [...new Set(register.value.map((row) => row.file))];
+  const sites = files.flatMap((file) =>
+    mutantsOf(file, Deno.readTextFileSync(file))
+  );
+  assertEquals(matchRegister(sites, [], register.value, files).stale, []);
 });

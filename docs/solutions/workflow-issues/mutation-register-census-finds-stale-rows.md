@@ -1,6 +1,7 @@
 ---
 title: Census the mutation register to find stale rows without a mutation run
 date: 2026-11-07
+last_updated: 2026-11-07
 category: workflow-issues
 module: scripts/mutate.ts
 problem_type: workflow_issue
@@ -59,7 +60,7 @@ The census read 26 files and 130 rows in 3.5 s of wall time. That time includes 
 
 ## Prevention
 
-A test that asserts an empty stale list for all register files would stop the drift. This test is a recommendation, not done work. It cannot pass now, because 50 rows are stale at the head of `untangle-knots`. Someone must first check each stale row and its reason again. Measure the run time of the test before you put it in the fast suite or the slow suite.
+On 2026-11-07, the remaining follow-ups plan (`docs/archive/plans/2026-11-07-remaining-follow-ups.md`) moved or deleted all 50 stale rows. The test "each row of the survivor register matches exactly one current site" in `tests/mutate_slow_test.ts` now runs this census in the slow suite. It takes about 130 ms. It is a slow test only because `scripts/mutate.ts` loads the TypeScript compiler, which needs env access. When the test fails, its diff shows each stale row. Move the row to its new site, or delete it, and check its reason again.
 
 ## When to Apply
 
