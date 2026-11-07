@@ -395,13 +395,16 @@ Each row names the commits on `main` and the main-tree gate result.
 | UNU13 (emitter, validator, adapters, scripts, bench) | `bc85a23`, `d04b2cc`, `aab3a26`, `47be5f9`, `01ddad1`, `6f6bfec`, `2d1c21b`, `0562621`, and Opus fix `b012df3` | passed |
 | UNU13 (core) | `0872f74`, `49de945`, `f25c7ca`, `f9c7fcc` | passed after the rerun noted below |
 | UNU14 T1 to T3 | `6e66d36`, `a9a0fa2`, `00dafc9`, `ffa7498`, `e738463`, `fc3c62a`, `7658101` | passed on a quiet machine, 2922 fast and 285 slow tests |
+| UNU14 T4 to T6 | `ec978d4` to `16f1aea` (9 commits) | fast suite passed; the final gate covers them |
+| Final checks, round 1 | `749ce2c` (a test for the `linear.ts` survivor), `1346acb` (UND1 capability test) | fast suite passed |
+| Round 2 | `bb878ce` to `ee84fca` (21 commits) | fast suite passed, 2917 tests; the final gate covers them |
 
 Decisions made at integration:
 
 - UNU6b puts the lowering block list on `CheckedProject.blocked`, not on each checked module, because checked modules are shared across revisions and the block depends on project diagnostics. A test or tool that forges a checked project without diagnostics must also clear `blocked`.
 - UNU4 shares no walker for E.H8: the stopping rules of `containsFunction`, `checkKind`, and `needsFieldAdapter` differ. E.H8 moves to the kept list.
 - UNU4 defines the mark payload type in `doc.ts`, because a definition in `emitted_module.ts` makes a type cycle. The renderer is private to the emitter.
-- UNU11 removes the warning filter of the playground `tabCounts`, because `Severity` is only `"error"` (UND3). Three playground test expectations change for that reason only. G.N7 is partly done: `src/lsp/features.ts` still builds line starts for each call, because UNU10 owns that file. That note was wrong: after UNU10, `rangeOfSpan` in `features.ts` still built one line table for each span, so a references answer built it once for each hit. The round-2 survey found this. Commit `features.ts` now converts the spans of one request through one `rangeConverter`.
+- UNU11 removes the warning filter of the playground `tabCounts`, because `Severity` is only `"error"` (UND3). Three playground test expectations change for that reason only. G.N7 is partly done: `src/lsp/features.ts` still builds line starts for each call, because UNU10 owns that file. That note was wrong: after UNU10, `rangeOfSpan` in `features.ts` still built one line table for each span, so a references answer built it once for each hit. The round-2 survey found this. Commit `ee84fca` converts the spans of one request through one `rangeConverter`.
 - UNU10 shares the hover text "backend type: not available while the module has errors" as one core constant, and both clients branch on the hover backend tag, not on the text.
 - UNU7 records `Defect` arms as `ModuleResolution.defectArms`, not as a new target kind, because the editor index walks every target. The `layer` test reads the prelude `service-argument` role with the same text rule, so a program that declares its own `layer` gets no new diagnostic. C.X2 stays: rows with their own arity skip the shared prologue to keep the diagnostic order.
 - UND1 is done in both display paths: `c47452c` prints the effect lists with short names, and `db02d03` prints a reserved error type with its short name. Before, a type mismatch said "but error:effect/SchemaIssue is expected". UNU8 keeps the collision key of `showTypes` as the part after `#`, so a reserved id never groups with a user name, and a user cannot declare a reserved name.
@@ -417,3 +420,29 @@ The failure probe of `behavior:compare` is the pair `f9b358f~1 f9b358f`. It exit
 UNU2b found three defects in modifier decoding: a comment between `opaque` and `type`, a parameter named `borrow`, and `borrow/*c*/h` without a space. Commit `899ce2e` fixes them, and `tests/modifier_decoding_test.ts` failed before the fix.
 
 `deno task coverage` sometimes stops with "no LCOV record: src/lsp/main.ts", in scratch worktrees and once in the main tree, while other executors run gates. A rerun on main at `fdf4539` passed: lines 97.31, branches 95.22, functions 99.22 (baseline 97.28, 95.20, 99.21). The probable cause is machine load on the language server child process. An earlier note here blamed the `.claude` path, which was wrong.
+
+## Round 2 survey
+
+Four fresh survey agents repeated the inventory at `749ce2c`, one for each pair of first-round slices. Their reports are `round2-R1.md` to `round2-R4.md` in the evidence folder. Opus checked each claim in the code before a decision.
+
+Fixed:
+
+- B.H15 rest: `optionElement` was the same function in `check_expr.ts` and `infer_inputs.ts`. `TypeTable.optionElementOf` replaces both (`1604ac6`).
+- B.H1 and B.H2 rest: the alias-or-record body lookup was written twice. `TypeTable.declaredBodyOf` replaces both, and the deferred-type walk calls `isErrorOrTagged` (`d43e4f1`).
+- B.H10 sibling: a record field decoder was written in the checker, the schema port, the effect family, and the lowerer, and the name `fieldParts` meant two things. `recordFieldParts` and `memberAccessParts` in `syntax_queries.ts` replace them (`bb878ce`, `a339e3f`). `requirement_provenance.ts` and `resolve.ts` decode by another rule and stay.
+- A.H6 rest: the editor index read the service header role from raw text. It uses `hasModifier` (`50fa6aa`).
+- Five exports had no outside user (`74919f1`). A lowering site sliced an id by hand (`560f559`). A doc comment named the wrong caller (`e8b6ab4`). The playground build imported `Result` past the entry points (`26b0eee`).
+- F.H6 rest: `validate_project.ts` copied `isRecord` and the prelude module name of the validator (`ac37da8`).
+- A new hidden link: `spanTable` in `typescript.ts` copied the host name loop of `hostImportSpans`, so the tested copy was not the product copy. `hostNameSpans` serves both (`e15d394`).
+- A new hidden link: `fieldHelper` took four keys as plain strings. `FieldHelperKey` types them (`1d9192e`).
+- H rest: the m2 harness wrote the A/B alternation by hand (`0fca56b`), and `withTempDir` had an unused option (`a903835`).
+- G.N7 rest: see the note above (`ee84fca`).
+- Tests: eleven tests could not fail on a regression, repeated the code, or checked only a count or a difference (`ab2166d` to `bea794c`). Each commit body holds a fault that the old test missed and the new test catches.
+
+Rejected, with the reason:
+
+- `LeafCallKind` in `emit/calls.ts` is still a list, although the message of `1094d8d` says that the kinds come from the table. The `default` branch of the leaf switch indexes `LEAF_CALLS` with the remaining kinds, so a new leaf kind without an emitter is a type error. The list adds no unchecked link.
+- `FAMILY_ROW_TABLES` has only a test reader. It is the census list beside `FAMILY_ROWS` in the same file, and the test guards a silent override of a spread key.
+- The three builtin instance parsers in `ids.ts` stay apart: the untyped one keeps an internal error for an unknown instance name in a malformed IR.
+- Marginal items stay until a change touches them: the `Solved` type beside `EffectSet` (the join rule differs), the string-encoded comparison class in `check_binary.ts`, the integer-valued type test in two refinement files, the `guardedRecord` callback, the collision loop in `check_expr.ts`, the constant `on` in the Schema fact (C.H5), and the one-caller types of the service bounds.
+- `DefinitionSource` in `type_ir.ts` stays a copy: a `Pick` of the signature types makes an import cycle, and the checker compiles the match.
