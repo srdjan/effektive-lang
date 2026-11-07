@@ -28,6 +28,7 @@ import {
   isPatternKind,
   isTypeKind,
   kidsOf,
+  kidsOfKind,
   literalOf,
   memberAccessParts,
   nameTextOf,
@@ -268,7 +269,7 @@ class BodyChecker
   }
 
   kidsOfKind(node: NodeId, kind: SyntaxKind): NodeId[] {
-    return this.kids(node).filter((k) => kindOf(this.tree, k) === kind);
+    return kidsOfKind(this.tree, node, kind);
   }
 
   private span(node: NodeId): Span {
@@ -2499,7 +2500,7 @@ class BodyChecker
     const bodyHadErrors = this.errorCount > errorsBefore;
     const handlers = catchNode === undefined
       ? []
-      : this.kidsOfKind(catchNode, SyntaxKind.Handler);
+      : kidsOfKind(this.tree, catchNode, SyntaxKind.Handler);
     const protectedSet = new Set<ErrorId>(body.failures);
     const handled = new Set<ErrorId>();
     // Every error that a handler names, so a repeat is a duplicate even for an absent error.

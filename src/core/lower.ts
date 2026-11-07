@@ -19,6 +19,7 @@ import {
   isPatternKind,
   isTypeKind,
   kidsOf,
+  kidsOfKind,
   literalOf,
   nameTextOf,
   operatorOf,
@@ -302,10 +303,6 @@ class BodyLowerer {
     return kidsOf(this.ctx.tree, node);
   }
 
-  private kidsOfKind(node: NodeId, kind: SyntaxKind): NodeId[] {
-    return this.kids(node).filter((k) => kindOf(this.ctx.tree, k) === kind);
-  }
-
   private span(node: NodeId): Span {
     return nodeSpan(this.ctx.tree, node);
   }
@@ -525,7 +522,7 @@ class BodyLowerer {
       }
       const source = fact.parameters[0];
       const outcome = fact.parameters[1];
-      const outcomeName = this.kidsOfKind(region, SyntaxKind.Name)[0];
+      const outcomeName = kidsOfKind(this.ctx.tree, region, SyntaxKind.Name)[0];
       const id: LocalId = bodyLocalId(this.body.declaration, `$using${region}`);
       const parameters = source === undefined
         ? []
@@ -1266,7 +1263,7 @@ class BodyLowerer {
     }
     const pattern = fact.pattern;
     const span = this.span(node);
-    const names = this.kidsOfKind(node, SyntaxKind.Name);
+    const names = kidsOfKind(this.ctx.tree, node, SyntaxKind.Name);
     switch (pattern.kind) {
       case "wildcard":
         return { kind: "wildcard", span };
@@ -1297,10 +1294,11 @@ class BodyLowerer {
           span,
         };
       case "tag": {
-        const spread = this.kidsOfKind(node, SyntaxKind.SpreadPattern)[0];
+        const spread =
+          kidsOfKind(this.ctx.tree, node, SyntaxKind.SpreadPattern)[0];
         const spreadName = spread === undefined
           ? undefined
-          : this.kidsOfKind(spread, SyntaxKind.Name)[0];
+          : kidsOfKind(this.ctx.tree, spread, SyntaxKind.Name)[0];
         return {
           kind: "tag",
           field: pattern.field,
@@ -1332,7 +1330,7 @@ class BodyLowerer {
     const body = this.expr(bodyNode);
     const arms = catchNode === undefined
       ? []
-      : this.kidsOfKind(catchNode, SyntaxKind.Handler);
+      : kidsOfKind(this.ctx.tree, catchNode, SyntaxKind.Handler);
     const isDefect = (h: NodeId) => {
       const fact = this.fact(h);
       return fact?.kind === "handler" && fact.defect === true;
@@ -1382,7 +1380,7 @@ class BodyLowerer {
       "the finally block",
       node,
     );
-    const name = this.kidsOfKind(node, SyntaxKind.Name)[0];
+    const name = kidsOfKind(this.ctx.tree, node, SyntaxKind.Name)[0];
     const info = this.info(node);
     const body = this.expr(block);
     return {

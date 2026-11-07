@@ -66,6 +66,8 @@ import {
   initOf,
   isOpaqueTypeDecl,
   isTypeKind,
+  kidsOf,
+  kidsOfKind,
 } from "./syntax_queries.ts";
 import { compareText } from "./util.ts";
 import {
@@ -270,7 +272,7 @@ class ModuleChecker {
   /** True for a named type that resolves to string, int, number, or boolean. */
   private isPrimitiveName(node: NodeId): boolean {
     if (kindOf(this.tree, node) !== SyntaxKind.NamedType) return false;
-    const nameNode = this.lowerer.kidsOfKind(node, SyntaxKind.Name)[0];
+    const nameNode = kidsOfKind(this.tree, node, SyntaxKind.Name)[0];
     if (nameNode === undefined) return false;
     const target = this.env.targets.get(nameNode);
     if (target?.kind !== "builtin-type") return false;
@@ -278,7 +280,7 @@ class ModuleChecker {
   }
 
   private bodyOf(entry: DeclEntry): NodeId | undefined {
-    return this.lowerer.kids(entry.node).find((k) =>
+    return kidsOf(this.tree, entry.node).find((k) =>
       k !== entry.nameNode && kindOf(this.tree, k) !== SyntaxKind.Error
     );
   }
@@ -292,10 +294,8 @@ class ModuleChecker {
     let literal: LoweredField[] | undefined;
     let record = false;
     let predicate: TypeDecl["predicate"];
-    const refinement = this.lowerer.kidsOfKind(
-      entry.node,
-      SyntaxKind.RefinementClause,
-    )[0];
+    const refinement =
+      kidsOfKind(this.tree, entry.node, SyntaxKind.RefinementClause)[0];
     if (opaque) {
       this.table.defineOpaque(id);
       definition = {
@@ -526,8 +526,7 @@ class ModuleChecker {
 
   private checkError(entry: DeclEntry): TypeNodeInfo {
     const id = this.id("error", entry.name);
-    const record =
-      this.lowerer.kidsOfKind(entry.node, SyntaxKind.RecordType)[0];
+    const record = kidsOfKind(this.tree, entry.node, SyntaxKind.RecordType)[0];
     const fields = record === undefined
       ? []
       : this.lowerer.fields(record, true);
@@ -744,7 +743,7 @@ class ModuleChecker {
     const methods: MethodDecl[] = [];
     for (const method of entry.methodList) {
       if (entry.methods.get(method.name) !== method) continue;
-      const parts = this.lowerer.kids(method.node);
+      const parts = kidsOf(this.tree, method.node);
       const { paramList, fails } = functionParts(this.tree, method.node);
       const parameters = paramList === undefined
         ? []
@@ -814,7 +813,7 @@ class ModuleChecker {
 
   private checkProvider(entry: DeclEntry): void {
     const id = this.id("value", entry.name);
-    const parts = this.lowerer.kids(entry.node);
+    const parts = kidsOf(this.tree, entry.node);
     const provides: CapabilityId[] = [];
     for (
       const clause of parts.filter((k) =>
@@ -822,7 +821,7 @@ class ModuleChecker {
       )
     ) {
       for (
-        const qn of this.lowerer.kidsOfKind(clause, SyntaxKind.QualifiedName)
+        const qn of kidsOfKind(this.tree, clause, SyntaxKind.QualifiedName)
       ) {
         for (const capability of this.lowerer.capabilitiesOf(qn)) {
           provides.push(capability);
@@ -856,7 +855,7 @@ class ModuleChecker {
 
   private checkConst(entry: DeclEntry): void {
     const id = this.id("value", entry.name);
-    const rest = this.lowerer.kids(entry.node).filter((k) =>
+    const rest = kidsOf(this.tree, entry.node).filter((k) =>
       k !== entry.nameNode
     );
     const bindingNode = rest.find((k) => isTypeKind(kindOf(this.tree, k)));
@@ -1039,7 +1038,7 @@ class ModuleChecker {
       this.lowerer.report(
         "type-mismatch/003",
         `the value is a function, but ${expected} is expected`,
-        this.lowerer.span(arrow),
+        nodeSpan(this.tree, arrow),
       );
       return;
     }
@@ -1049,7 +1048,7 @@ class ModuleChecker {
         this.lowerer.report(
           "type-mismatch/003",
           `the function takes ${parameters.length} parameters, but ${expected} is expected`,
-          this.lowerer.span(arrow),
+          nodeSpan(this.tree, arrow),
         );
       }
       return;
@@ -1068,7 +1067,7 @@ class ModuleChecker {
         `the function has type ${
           showType(this.table, found)
         }, but ${expected} is expected`,
-        this.lowerer.span(arrow),
+        nodeSpan(this.tree, arrow),
       );
     }
   }

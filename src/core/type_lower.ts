@@ -27,6 +27,7 @@ import {
   hasModifier,
   isTypeKind,
   kidsOf,
+  kidsOfKind,
   literalOf,
   nameTextOf,
 } from "./syntax_queries.ts";
@@ -131,12 +132,8 @@ export class TypeLowerer {
   }
 
   /** Child nodes that are not tokens or Missing nodes. */
-  kids(node: NodeId): NodeId[] {
+  private kids(node: NodeId): NodeId[] {
     return kidsOf(this.tree, node);
-  }
-
-  kidsOfKind(node: NodeId, kind: SyntaxKind): NodeId[] {
-    return this.kids(node).filter((k) => kindOf(this.tree, k) === kind);
   }
 
   span(node: NodeId): Span {
@@ -217,8 +214,8 @@ export class TypeLowerer {
 
   private named(node: NodeId): Lowered {
     const table = this.env.table;
-    const nameNode = this.kidsOfKind(node, SyntaxKind.Name)[0];
-    const argsNode = this.kidsOfKind(node, SyntaxKind.TypeArgs)[0];
+    const nameNode = kidsOfKind(this.tree, node, SyntaxKind.Name)[0];
+    const argsNode = kidsOfKind(this.tree, node, SyntaxKind.TypeArgs)[0];
     const args = argsNode === undefined ? [] : this.kids(argsNode);
     if (nameNode === undefined) return this.errorLowered();
     const name = nameTextOf(this.tree, nameNode) ?? "";
@@ -344,7 +341,7 @@ export class TypeLowerer {
   fields(node: NodeId, errorDeclaration: boolean): LoweredField[] {
     const result: LoweredField[] = [];
     const seen = new Map<string, Span>();
-    for (const fieldNode of this.kidsOfKind(node, SyntaxKind.FieldType)) {
+    for (const fieldNode of kidsOfKind(this.tree, node, SyntaxKind.FieldType)) {
       const parts = this.kids(fieldNode);
       const nameNode = parts.find((k) =>
         kindOf(this.tree, k) === SyntaxKind.Name
@@ -559,7 +556,9 @@ export class TypeLowerer {
         kindOf(this.tree, k) === SyntaxKind.ProvidesClause
       );
       if (clause !== undefined) {
-        for (const qn of this.kidsOfKind(clause, SyntaxKind.QualifiedName)) {
+        for (
+          const qn of kidsOfKind(this.tree, clause, SyntaxKind.QualifiedName)
+        ) {
           for (const capability of this.capabilitiesOf(qn)) {
             provides.push(capability);
           }
@@ -655,7 +654,7 @@ export class TypeLowerer {
   /** The parameters of a parameter list. An omitted annotation starts as unknown. */
   parameters(paramList: NodeId): ParameterSignature[] {
     const result: ParameterSignature[] = [];
-    for (const param of this.kidsOfKind(paramList, SyntaxKind.Param)) {
+    for (const param of kidsOfKind(this.tree, paramList, SyntaxKind.Param)) {
       const parts = this.kids(param);
       const nameNode = parts.find((k) =>
         kindOf(this.tree, k) === SyntaxKind.Name
@@ -691,7 +690,7 @@ export class TypeLowerer {
     if (clause === undefined) return [];
     const table = this.env.table;
     const ids: ErrorId[] = [];
-    for (const name of this.kidsOfKind(clause, SyntaxKind.Name)) {
+    for (const name of kidsOfKind(this.tree, clause, SyntaxKind.Name)) {
       const target = this.env.targets.get(name);
       if (target?.kind === "error") ids.push(target.id);
       else if (target?.kind === "type") {
@@ -736,7 +735,7 @@ export class TypeLowerer {
   requirements(clause: NodeId | undefined): CapabilityId[] {
     if (clause === undefined) return [];
     const ids: CapabilityId[] = [];
-    for (const qn of this.kidsOfKind(clause, SyntaxKind.QualifiedName)) {
+    for (const qn of kidsOfKind(this.tree, clause, SyntaxKind.QualifiedName)) {
       for (const capability of this.capabilitiesOf(qn)) {
         ids.push(capability);
       }

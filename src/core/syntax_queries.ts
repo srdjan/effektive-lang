@@ -150,6 +150,15 @@ export function kidsOf(tree: SyntaxTree, node: NodeId): NodeId[] {
   return result;
 }
 
+/** Child nodes of a node that have the given kind. */
+export function kidsOfKind(
+  tree: SyntaxTree,
+  node: NodeId,
+  kind: SyntaxKind,
+): NodeId[] {
+  return kidsOf(tree, node).filter((k) => kindOf(tree, k) === kind);
+}
+
 /**
  * Strips nested parenthesis expressions. A parenthesis without an inner node,
  * such as `(` with a Missing child, stays as the result.

@@ -20,6 +20,7 @@ import {
   isPatternKind,
   isTypeKind,
   kidsOf,
+  kidsOfKind,
   memberAccessParts,
   nameTextOf,
 } from "./syntax_queries.ts";
@@ -369,10 +370,6 @@ class Resolver {
   ) {
     this.tree = info.tree;
     this.name = info.name;
-  }
-
-  private kidsOfKind(node: NodeId, kind: SyntaxKind): NodeId[] {
-    return kidsOf(this.tree, node).filter((k) => kindOf(this.tree, k) === kind);
   }
 
   private span(node: NodeId): Span {
@@ -886,7 +883,7 @@ class Resolver {
     qn: NodeId,
     context: "with" | "provides" | "stage",
   ): void {
-    const names = this.kidsOfKind(qn, SyntaxKind.Name);
+    const names = kidsOfKind(this.tree, qn, SyntaxKind.Name);
     if (names.length === 0) return;
     if (context === "stage" && names.length === 1) {
       const name = nameTextOf(this.tree, names[0]);
@@ -931,7 +928,7 @@ class Resolver {
         }
         return;
       case SyntaxKind.RecordType:
-        for (const field of this.kidsOfKind(node, SyntaxKind.FieldType)) {
+        for (const field of kidsOfKind(this.tree, node, SyntaxKind.FieldType)) {
           for (const kid of kidsOf(this.tree, field)) {
             if (kindOf(this.tree, kid) === SyntaxKind.Name) {
               this.fieldLabel(kid);
@@ -986,7 +983,7 @@ class Resolver {
 
   /** Parameter names in a signature without a body are labels. Their types resolve. */
   private labelParams(paramList: NodeId): void {
-    for (const param of this.kidsOfKind(paramList, SyntaxKind.Param)) {
+    for (const param of kidsOfKind(this.tree, paramList, SyntaxKind.Param)) {
       for (const kid of kidsOf(this.tree, param)) {
         if (kindOf(this.tree, kid) === SyntaxKind.Name) this.fieldLabel(kid);
         else this.resolveType(kid);
@@ -997,17 +994,17 @@ class Resolver {
   private clause(node: NodeId): void {
     const kind = kindOf(this.tree, node);
     if (kind === SyntaxKind.FailsClause) {
-      for (const name of this.kidsOfKind(node, SyntaxKind.Name)) {
+      for (const name of kidsOfKind(this.tree, node, SyntaxKind.Name)) {
         if (nameTextOf(this.tree, name) === "never") continue;
         this.errorRef(name, true);
       }
     } else if (kind === SyntaxKind.WithClause) {
-      for (const qn of this.kidsOfKind(node, SyntaxKind.QualifiedName)) {
+      for (const qn of kidsOfKind(this.tree, node, SyntaxKind.QualifiedName)) {
         if (nodeText(this.tree, qn) === "never") continue;
         this.qualified(qn, "with");
       }
     } else if (kind === SyntaxKind.ProvidesClause) {
-      for (const qn of this.kidsOfKind(node, SyntaxKind.QualifiedName)) {
+      for (const qn of kidsOfKind(this.tree, node, SyntaxKind.QualifiedName)) {
         this.qualified(qn, "provides");
       }
     }
@@ -1025,7 +1022,9 @@ class Resolver {
         }
         break;
       case "service":
-        for (const method of this.kidsOfKind(node, SyntaxKind.ServiceMethod)) {
+        for (
+          const method of kidsOfKind(this.tree, node, SyntaxKind.ServiceMethod)
+        ) {
           for (const kid of kidsOf(this.tree, method)) {
             const k = kindOf(this.tree, kid);
             if (k === SyntaxKind.Name) continue;
@@ -1131,7 +1130,7 @@ class Resolver {
       case SyntaxKind.TryExpr:
         for (const kid of kidsOf(this.tree, node)) {
           if (kindOf(this.tree, kid) === SyntaxKind.CatchClause) {
-            for (const h of this.kidsOfKind(kid, SyntaxKind.Handler)) {
+            for (const h of kidsOfKind(this.tree, kid, SyntaxKind.Handler)) {
               this.handler(h);
             }
           } else if (kindOf(this.tree, kid) === SyntaxKind.FinallyClause) {
@@ -1249,7 +1248,7 @@ class Resolver {
     for (const kid of kidsOf(this.tree, node)) {
       const kind = kindOf(this.tree, kid);
       if (kind === SyntaxKind.ParamList) {
-        for (const param of this.kidsOfKind(kid, SyntaxKind.Param)) {
+        for (const param of kidsOfKind(this.tree, kid, SyntaxKind.Param)) {
           for (const part of kidsOf(this.tree, param)) {
             if (kindOf(this.tree, part) === SyntaxKind.Name) {
               this.declareLocal(part, false);
@@ -1295,7 +1294,7 @@ class Resolver {
     if (record !== undefined) {
       const bindings: LocalBinding[] = [];
       for (const field of kidsOf(this.tree, record)) {
-        const names = this.kidsOfKind(field, SyntaxKind.Name);
+        const names = kidsOfKind(this.tree, field, SyntaxKind.Name);
         if (
           kindOf(this.tree, field) === SyntaxKind.BindingField &&
           names[0] !== undefined
@@ -1367,12 +1366,12 @@ class Resolver {
     const kind = kindOf(this.tree, node);
     switch (kind) {
       case SyntaxKind.NamePattern:
-        for (const name of this.kidsOfKind(node, SyntaxKind.Name)) {
+        for (const name of kidsOfKind(this.tree, node, SyntaxKind.Name)) {
           this.ctorRef(name);
         }
         return;
       case SyntaxKind.CtorPattern: {
-        const names = this.kidsOfKind(node, SyntaxKind.Name);
+        const names = kidsOfKind(this.tree, node, SyntaxKind.Name);
         if (names.length > 0) this.ctorRef(names[0]);
         if (names.length > 1) this.declareLocal(names[1], false);
         return;
@@ -1381,11 +1380,11 @@ class Resolver {
         for (const field of kidsOf(this.tree, node)) {
           const fieldKind = kindOf(this.tree, field);
           if (fieldKind === SyntaxKind.PatternField) {
-            for (const name of this.kidsOfKind(field, SyntaxKind.Name)) {
+            for (const name of kidsOfKind(this.tree, field, SyntaxKind.Name)) {
               this.fieldLabel(name);
             }
           } else if (fieldKind === SyntaxKind.SpreadPattern) {
-            for (const name of this.kidsOfKind(field, SyntaxKind.Name)) {
+            for (const name of kidsOfKind(this.tree, field, SyntaxKind.Name)) {
               this.declareLocal(name, false);
             }
           }
