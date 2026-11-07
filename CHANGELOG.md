@@ -17,6 +17,10 @@
 - The language server publishes the diagnostics of a closed file only from the project that owns it.
   Before, the outer project also published a file of a nested project from the disk text, and its list replaced the list of the open document.
   A closed file of a nested project now gets no diagnostics until a file of that project opens.
+- The language server marks `=` as an operator in its semantic tokens, and it no longer marks an unknown character as an operator.
+  Before, `=` had no operator token, and an unknown character had one.
+- The language server sorts completion labels by code unit on every machine, for example `A`, `B`, `a`, `b`.
+  Before, the order followed the locale of the machine, for example `a`, `A`, `b`, `B` under an English locale.
 
 ## 0.15.3 - 2026-11-07
 
