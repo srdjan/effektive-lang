@@ -23,7 +23,7 @@ import type {
   ValueId,
   WrittenParts,
 } from "./ir.ts";
-import { stronglyConnectedComponents } from "./graph.ts";
+import { isCycle, stronglyConnectedComponents } from "./graph.ts";
 import { flattenIdentityMembers } from "./patterns.ts";
 import { predicateFromSource } from "./predicate_source.ts";
 import type { ModuleInfo } from "./project.ts";
@@ -586,9 +586,7 @@ class ModuleChecker {
     const components: TypeNodeInfo[][] = [];
     for (const members of stronglyConnectedComponents(nodes.length, edges)) {
       const component = members.map((n) => nodes[n]);
-      const selfLoop = component.length === 1 &&
-        component[0].refs.has(component[0].id);
-      if (component.length > 1 || selfLoop) components.push(component);
+      if (isCycle(members, edges)) components.push(component);
     }
 
     for (const component of components) {

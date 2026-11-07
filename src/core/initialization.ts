@@ -5,7 +5,7 @@
 // constants itself, from the IR.
 
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
-import { stronglyConnectedComponents } from "./graph.ts";
+import { isCycle, stronglyConnectedComponents } from "./graph.ts";
 import { shortName } from "./ids.ts";
 import type { ValueId } from "./ir.ts";
 import type { Span } from "./source.ts";
@@ -51,9 +51,7 @@ export function checkInitialization(
   const edges = referenceEdges(nodes);
   const cycles: ValueId[][] = [];
   for (const component of stronglyConnectedComponents(nodes.length, edges)) {
-    const selfLoop = component.length === 1 &&
-      edges[component[0]].includes(component[0]);
-    if (component.length === 1 && !selfLoop) continue;
+    if (!isCycle(component, edges)) continue;
     if (!component.some((p) => nodes[p].kind === "constant")) continue;
     cycles.push(component.map((p) => nodes[p].id));
   }

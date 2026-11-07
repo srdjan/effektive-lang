@@ -20,7 +20,7 @@ import type {
   TypeDecl,
   ValueId,
 } from "../ir.ts";
-import { stronglyConnectedComponents } from "../graph.ts";
+import { isCycle, stronglyConnectedComponents } from "../graph.ts";
 import { declarationReferencedIds } from "../referenced_ids.ts";
 import {
   assignment,
@@ -107,7 +107,7 @@ export function recursiveGroups(
   const groups = new Map<DeclarationId, ReadonlySet<DeclarationId>>();
   for (const members of stronglyConnectedComponents(group.length, edges)) {
     const declarations = members.map((n) => group[n]);
-    const cycle = members.length > 1 || edges[members[0]].includes(members[0]);
+    const cycle = isCycle(members, edges);
     const hasData = declarations.some((d) =>
       d.kind === "type" && taggedFields(d) !== undefined
     );

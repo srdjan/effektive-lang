@@ -1,6 +1,6 @@
 // Rule 11: a recursive data alias needs a guard that ends the recursion.
 
-import { stronglyConnectedComponents } from "./graph.ts";
+import { isCycle, stronglyConnectedComponents } from "./graph.ts";
 import type { Type, TypeId } from "./ir.ts";
 import { referencedIds } from "./referenced_ids.ts";
 
@@ -191,7 +191,7 @@ export function recursionIsGuarded(
       )
     );
     return stronglyConnectedComponents(members.length, graph).some((c) =>
-      c.length > 1 || graph[c[0]].includes(c[0])
+      isCycle(c, graph)
     );
   };
   return !cyclic((from, to) => !members[from].tagged && !members[to].tagged) &&

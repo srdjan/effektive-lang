@@ -36,7 +36,7 @@ import { newProofBudget } from "./check_refinements.ts";
 import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";
 import { serviceOfCapability } from "./ids.ts";
 import { serviceBoundDiagnostics } from "./service_bounds.ts";
-import { stronglyConnectedComponents } from "./graph.ts";
+import { isCycle, stronglyConnectedComponents } from "./graph.ts";
 import { arrowBody, initOf } from "./syntax_queries.ts";
 import { checkInitialization, referenceEdges } from "./initialization.ts";
 import {
@@ -377,8 +377,7 @@ function scheduleRuns(
   const solved = values.settled();
   for (const component of stronglyConnectedComponents(entries.length, edges)) {
     let members = component.map((i) => entries[i]);
-    const recursive = members.length > 1 ||
-      edges[component[0]].includes(component[0]);
+    const recursive = isCycle(component, edges);
     if (!recursive) {
       const entry = members[0];
       if (

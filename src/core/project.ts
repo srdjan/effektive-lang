@@ -7,7 +7,7 @@ import {
   makeDiagnostic,
   normalizeDiagnostics,
 } from "./diagnostics.ts";
-import { stronglyConnectedComponents } from "./graph.ts";
+import { isCycle, stronglyConnectedComponents } from "./graph.ts";
 import {
   buildIndex,
   type FileIndex,
@@ -400,9 +400,7 @@ function linkModules(
     for (const moduleName of component) {
       order.push(moduleName);
     }
-    const selfLoop = component.length === 1 &&
-      targetLists[indexes[0]].includes(component[0]);
-    if (component.length > 1 || selfLoop) {
+    if (isCycle(indexes, edges)) {
       diagnostics.push(cycleDiagnostic(modules, component));
     }
   }

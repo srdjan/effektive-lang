@@ -1,5 +1,13 @@
 // Graph helpers shared by the checker, the project loader, and the emitter.
 
+/** Whether a component of `stronglyConnectedComponents` is a cycle: it has two nodes or a self-loop. */
+export function isCycle(
+  component: readonly number[],
+  edges: readonly (readonly number[])[],
+): boolean {
+  return component.length > 1 || edges[component[0]].includes(component[0]);
+}
+
 /**
  * Strongly connected components of a graph over the nodes `0 .. count - 1`. The
  * result lists components so that a component comes after every component that
