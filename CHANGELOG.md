@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.15.3 - 2026-11-07
+
 - Diagnostics and hover contracts name a reserved error type or capability by its short name, such as `SchemaIssue` or `Scope`.
   Before, a type mismatch could print an internal id such as `error:effect/SchemaIssue`.
 
