@@ -182,7 +182,6 @@ Deno.test("a missing source text is an error value", () => {
  * of the generated text: each generated position maps back to the start line
  * and column of its innermost source span, or to nothing.
  */
-// A source is scanned once for its line starts, however many offsets look it up.
 function assertRoundTrip(
   table: SpanTable,
   text: string,

@@ -302,13 +302,9 @@ function defaultKeyChoice(
   c: SchemaContext,
   name: SchemaBuiltinName,
   options: Arg,
-): {
-  readonly op: "default-key" | "default-null-key" | "default-encoded-key";
-} {
+): "default-key" | "default-null-key" | "default-encoded-key" {
   const field = optionsField(c, options.node, DEFAULT_KEY_OPTION);
-  if (field === undefined) {
-    return { op: "default-key" };
-  }
+  if (field === undefined) return "default-key";
   const value = field.value;
   const literal = value !== undefined &&
       kindOf(c.tree, value) === SyntaxKind.LiteralExpr
@@ -321,9 +317,9 @@ function defaultKeyChoice(
       `${name} \`on\` must be a literal "missing", "null", or "encoded"`,
       value ?? options.node,
     );
-    return { op: "default-key" };
+    return "default-key";
   }
-  return { op: DEFAULT_KEY_OPS[on] };
+  return DEFAULT_KEY_OPS[on];
 }
 
 /** Whether an options record is inline with distinct known fields. */
@@ -1287,7 +1283,7 @@ const SCHEMA_PROLOGUE: SharedPrologue<SchemaBuiltinName, SchemaContext> = {
   fact: (c, name, args) => {
     const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
     if (builtin.acceptsOptions === true && args.length === 3) {
-      const { op } = defaultKeyChoice(c, name, args[2]);
+      const op = defaultKeyChoice(c, name, args[2]);
       return {
         kind: "schema",
         op,

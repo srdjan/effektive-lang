@@ -988,16 +988,11 @@ class BodyLowerer {
     if (kind !== SyntaxKind.RecordField && kind !== SyntaxKind.ShorthandField) {
       throw internal("a record spread must come first in a record");
     }
-    const parts = recordFieldParts(this.ctx.tree, field);
-    if (parts !== undefined) return parts;
-    this.required(
-      this.kids(field).find((k) =>
-        kindOf(this.ctx.tree, k) === SyntaxKind.Name
-      ),
+    return this.required(
+      recordFieldParts(this.ctx.tree, field),
       "the field label",
       field,
     );
-    throw internal("a name node has no identifier");
   }
 
   private fieldValue(field: NodeId): Expr {
