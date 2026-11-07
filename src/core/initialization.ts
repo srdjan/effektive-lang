@@ -52,7 +52,7 @@ export function referenceEdges(
 }
 
 /** Builds the graph. `nodes` lists every function and constant in source order. */
-export function buildInitializationGraph(
+function buildInitializationGraph(
   nodes: readonly InitializationNode[],
 ): InitializationGraph {
   const position = new Map<ValueId, number>();

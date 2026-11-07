@@ -136,7 +136,7 @@ interface ContextualWordInfo {
   readonly startsDeclaration: boolean;
 }
 
-export const CONTEXTUAL_WORDS = {
+const CONTEXTUAL_WORDS = {
   type: { role: "declaration", startsDeclaration: true },
   error: { role: "declaration", startsDeclaration: true },
   service: { role: "declaration", startsDeclaration: true },
@@ -170,7 +170,7 @@ export function contextualWordsOf(
 }
 
 /** The words that can start a declaration when a name follows. */
-export const DECLARATION_START_WORDS: ReadonlySet<string> = new Set(
+const DECLARATION_START_WORDS: ReadonlySet<string> = new Set(
   CONTEXTUAL_ENTRIES.filter(([, info]) => info.startsDeclaration)
     .map(([word]) => word),
 );
@@ -309,7 +309,7 @@ export function isWord(lexed: Lexed, index: number, word: string): boolean {
     lexed.text.startsWith(word, lexed.starts[index]);
 }
 
-export function isIdentStart(c: number): boolean {
+function isIdentStart(c: number): boolean {
   return (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) || c === 0x5f ||
     c === 0x24;
 }

@@ -93,7 +93,7 @@ export function bodyLocalId(declaration: ValueId, name: string): LocalId {
 }
 
 /** The collection builtins whose closed instances the IR names in a call. */
-export const BUILTIN_INSTANCE_NAMES = [
+const BUILTIN_INSTANCE_NAMES = [
   "all",
   "traverse",
   "map",
