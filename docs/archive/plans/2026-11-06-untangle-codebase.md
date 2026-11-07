@@ -1,6 +1,6 @@
 # Untangle the codebase
 
-Status: implementation in progress. The progress section at the end records each landed unit.
+Status: complete. The progress section records each landed unit, and the section "Result" at the end gives the outcome.
 
 This plan is the decision log of the untangle refactor of 2026-11-06. It asks one question of the code: should these pieces change together? The user chose both optional additions: remove comments that only restate the code, and remove tests that would not catch a real bug. The user also asked for an astra cross-check before implementation, and for adversarial reviews and empirical validation at the end.
 
@@ -395,9 +395,15 @@ Each row names the commits on `main` and the main-tree gate result.
 | UNU13 (emitter, validator, adapters, scripts, bench) | `bc85a23`, `d04b2cc`, `aab3a26`, `47be5f9`, `01ddad1`, `6f6bfec`, `2d1c21b`, `0562621`, and Opus fix `b012df3` | passed |
 | UNU13 (core) | `0872f74`, `49de945`, `f25c7ca`, `f9c7fcc` | passed after the rerun noted below |
 | UNU14 T1 to T3 | `6e66d36`, `a9a0fa2`, `00dafc9`, `ffa7498`, `e738463`, `fc3c62a`, `7658101` | passed on a quiet machine, 2922 fast and 285 slow tests |
-| UNU14 T4 to T6 | `ec978d4` to `16f1aea` (9 commits) | fast suite passed; the final gate covers them |
+| UNU14 T4 to T6 | `ec978d4` to `16f1aea` (9 commits) | fast suite passed; the final gate at `37a720f` passed |
 | Final checks, round 1 | `749ce2c` (a test for the `linear.ts` survivor), `1346acb` (UND1 capability test) | fast suite passed |
-| Round 2 | `bb878ce` to `ee84fca` (21 commits) | fast suite passed, 2917 tests; the final gate covers them |
+| Round 2 | `bb878ce` to `ee84fca` (21 commits) | fast suite passed, 2917 tests; the final gate at `37a720f` passed |
+| Round 2, rest | `8ee61f6`, `1e4744f`, `1adf0f7`, `1b281ac`, `5c55f49`, `3f2923a` | the final gate at `37a720f` passed |
+| Mutation survivors | `1de3adb`, `e44dff2`, `dff317d`, `8a12c06` | the final mutation run: 0 unregistered survivors, 0 stale rows |
+| Adversarial fixes | `75a0772`, `1a5ec90` | the final gate at `37a720f` passed |
+| Round 3 | `b8a5ba1` | the final gate at `37a720f` passed |
+| Bench finding | `2501e2d` (the payload hash returns to `db.ts`) | passed, 2966 fast and 285 slow tests |
+| S5 | `0198e7c` (the project driver survivors) | `deno task mutate` on `db.ts` and `check_project.ts`: 0 unregistered survivors, 0 stale rows |
 
 Decisions made at integration:
 
@@ -432,7 +438,9 @@ Fixed:
 - B.H10 sibling: a record field decoder was written in the checker, the schema port, the effect family, and the lowerer, and the name `fieldParts` meant two things. `recordFieldParts` and `memberAccessParts` in `syntax_queries.ts` replace them (`bb878ce`, `a339e3f`). `requirement_provenance.ts` and `resolve.ts` decode by another rule and stay.
 - A.H6 rest: the editor index read the service header role from raw text. It uses `hasModifier` (`50fa6aa`).
 - Five exports had no outside user (`74919f1`). A lowering site sliced an id by hand (`560f559`). A doc comment named the wrong caller (`e8b6ab4`). The playground build imported `Result` past the entry points (`26b0eee`).
-- F.H6 rest: `validate_project.ts` copied `isRecord` and the prelude module name of the validator (`ac37da8`).
+- F.H6 rest: `validate_project.ts` copied `isRecord` and the prelude module name of the validator (`ac37da8`). The certificate checks imported `isRecord` from the serializer walk. The guard moves to `validate/guards.ts` (`3f2923a`).
+- F.H3 rest: four validator checks each built the module fallback span. One `moduleSpan` in `validate/report.ts` builds it (`5c55f49`).
+- E.N3 rest: six emitter files imported the naming ledger only for `EffectModule`, `isDeferredType`, or `resolvedAs`. These queries move to the leaf module `emit/type_query.ts` (`8ee61f6`, with the format fixes `1adf0f7` and `1b281ac`). `emitModule` and `declarationTypeText` share one catch of `EmitFailure` (`1e4744f`).
 - A new hidden link: `spanTable` in `typescript.ts` copied the host name loop of `hostImportSpans`, so the tested copy was not the product copy. `hostNameSpans` serves both (`e15d394`).
 - A new hidden link: `fieldHelper` took four keys as plain strings. `FieldHelperKey` types them (`1d9192e`).
 - H rest: the m2 harness wrote the A/B alternation by hand (`0fca56b`), and `withTempDir` had an unused option (`a903835`).
@@ -467,8 +475,9 @@ The directed run at `749ce2c` covered 19 new or moved modules and left 65 unregi
 | S2 | `project_config.ts`, `recursion_guard.ts` | 5 | 9 | `1de3adb` |
 | S3 | `validate/recursion_checks.ts` | 11 | 6 | `dff317d` |
 | S4 | `validate/declaration_checks.ts`, `import_checks.ts`, `type_checks.ts` | 15 | 1 | `e44dff2` |
+| S5 | `db.ts`, `check_project.ts` | 3 | 4 | `0198e7c` |
 
-Each `equivalent` row rests on a code fact and a differential probe against a mutated copy. The timeout at the alias cycle guard of `recursion_checks.ts` is explained: under that mutant, `tests/guarded_recursion_cases_test.ts` never ends on a cyclic alias chain.
+Each `equivalent` row rests on a code fact and a differential probe against a mutated copy. S5 came later: the final run did not cover `db.ts` and `check_project.ts`, although UNU6b, UNU10, and `75a0772` moved logic in both. A run at `2501e2d` found six survivors and one stale row. The stale row was the `db.ts` driver guard, which moved into `driveProject` in `ae8831d`. Two tests kill that guard with a forged `Analysis`, the only input that reaches it. The rows for `collectEntries` and `Program.check` cover conditions with a redundant part. They stay, because each `!== undefined` test narrows a type, and a removal changes nothing observable. The timeout at the alias cycle guard of `recursion_checks.ts` is explained: under that mutant, `tests/guarded_recursion_cases_test.ts` never ends on a cyclic alias chain.
 
 Fault injection: five hand faults in moved data tables, which mutation does not reach, each made a fast test fail. They were the declaration role of `provider`, the role of `where`, the session file name, the stale flag of `stepOutput`, and the unavailable hover text.
 
@@ -477,3 +486,17 @@ Fault injection: five hand faults in moved data tables, which mutation does not 
 One survey agent read every change after `749ce2c` and the four new mutation test files. Its report is `round3.md` in the evidence folder. It found no new import cycle and no test that repeats the code or cannot fail. It found three leftovers, and `b8a5ba1` removes them: the lowerer searched for a field label again after `recordFieldParts` failed, `defaultKeyChoice` returned a one-field record, and a test comment described a cache in another file. The lowerer path is unreachable: the parser builds a record field and a shorthand field only at an identifier token, so the label always exists. The commit message of `b8a5ba1` gives a weaker reason.
 
 Not worth a fix, with the reasons in `round3.md`: the `optionElementOf` entry in the `TypeReader` pick, the overlap of `declaredBodyOf` and `recordBodyOf`, the constant labels in the `log` and Schema facts, and a dead `?? ""` in the language server features. The parser recovery test of `memberAccessParts` is fragile, but it is the only input that reaches the `index > 0` guard.
+
+## Bench finding
+
+The quick bench `m1 m2 m6` at `30bb1d5` and at `37a720f` ran under external load (load average 68 to 100) and flagged no row. Four base runs and four head runs of `m2`, run alternately at load 6 to 11, then separated: the `check` stage was slower at every size. Small went from 1.03-1.09 ms to 1.23-1.27 ms, medium from 5.46-5.90 ms to 6.58-6.83 ms, and large from 48.7-55.4 ms to 58.2-61.1 ms. The other stages were equal or faster.
+
+A bisect with a timer of only the medium `check` stage found one step at `58aa29f` (UNU6b). Every earlier commit had a ratio of 1.000 to 1.008 to the base, and `58aa29f` had 1.19. That commit moved the payload hash, the FNV-1a 64 of the canonical JSON of the interface payload with spans, into the module step. So `checkAnalysis` hashed every interface payload, although only the `Program` memo reads the hash. The fix returns the hash to `db.ts`, which computes it at the same two points as before `58aa29f`, so the memo keys do not change. With the fix, two alternating pairs at load 15 gave medium `check` medians of 5.67-5.68 ms against 5.56-5.57 ms at the base. These two pairs were not saved; the four-round timing below is in `bench.md`. A fault that replaces the hash with the fallback makes 13 fast tests fail, in `db_test.ts`, `incremental_property_test.ts`, `output_characterization_test.ts`, and `revision_isolation_test.ts`. The message of `2501e2d` says eight tests in three files, because the first count read only the first eight lines of the output.
+
+A residual of about 2% stays unsettled. In four alternating rounds at load 4.8 to 6.5, the fixed tree was 0.9% to 2.8% above the base, and `58aa29f` without its eager hash was within 0.6% of the base. A second bisect over `58aa29f..37a720f` could not localize it: it blamed `6d376ab`, whose `src` and `bench` equal those of `ef73b41`, which passed. So the floor of one bisect step is at least 1.8%, and the residual is not above it. A run on a quiet machine with more rounds can settle it.
+
+A second alternating run of four base and four head runs, at `0198e7c` and load 15 to 26, separated no `check` row. One row separated: the large `validate` stage, with a median ratio of 1.06, by 0.025 ms between the slowest base run and the fastest head run. The validator code did not change after `37a720f`, and the quieter first run gave 0.99 for that row, so noise is the probable cause. A quiet-machine rerun can confirm it. The runs, the bisect logs, and the three-way timing are in `bench.md` in the evidence folder.
+
+## Result
+
+All checks in the section "Final checks" ran. Their outputs are in `final-checks.md` and `bench.md` in the evidence folder. At the last code commit `0198e7c`, the gate, coverage, the behavior comparison, the unfired rule sites, log replay, mutation, fault injection, the browser check, and the website tests pass. The one intended behavior change is UND1: diagnostics and hover print a reserved error or capability by its short name, such as `Scope`. The surveys of rounds 2 and 3 and the adversarial reviews left no finding worth a fix. The bench fix `2501e2d` removed the one measured slowdown. Two items stay open: the residual of about 2% in `check`, and the large `validate` row of the second run. A bench run on a quiet machine can settle both.

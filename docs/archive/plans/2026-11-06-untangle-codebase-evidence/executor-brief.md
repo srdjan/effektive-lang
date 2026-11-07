@@ -2,9 +2,9 @@
 
 You are a Sonnet executor for one unit of the untangle refactor of the repository effektive-lang, a
 Deno 2.9.8 TypeScript compiler for the Effektive language. The plan is
-`docs/plans/2026-11-06-untangle-codebase.md`. The evidence for each problem item (file:line) is in
-`docs/plans/2026-11-06-untangle-codebase-evidence/survey-*.md`. The astra cross-check of the plan is in
-`docs/plans/2026-11-06-untangle-codebase-evidence/astra-crosscheck.md`. Read the plan sections of your
+`docs/archive/plans/2026-11-06-untangle-codebase.md`. The evidence for each problem item (file:line) is in
+`docs/archive/plans/2026-11-06-untangle-codebase-evidence/survey-*.md`. The astra cross-check of the plan is in
+`docs/archive/plans/2026-11-06-untangle-codebase-evidence/astra-crosscheck.md`. Read the plan sections of your
 fixes, the evidence lines of your items, and `docs/architecture.md` (layering rules and invariants).
 
 ## The goal of a refactor unit
