@@ -1227,6 +1227,36 @@ type Int = int
   assertEquals(codes(project), ["module/004"]);
 });
 
+Deno.test("an initialization cycle diagnostic points at its constant, not at its first function", () => {
+  const project = checkText(`
+const f = (n: Int): Int => n + a
+const a: Int = f(1)
+type Int = int
+`);
+  assertEquals(
+    project.diagnostics.map((d) => [
+      d.message,
+      d.span.start,
+      (d.related ?? []).map((r) => r.span.start),
+    ]),
+    [["module initialization cycle: f -> a -> f", 40, [7]]],
+  );
+});
+
+Deno.test("two initialization cycles report in source order", () => {
+  const project = checkText(`
+const a: Int = b
+const b: Int = a
+const c: Int = d
+const d: Int = c
+type Int = int
+`);
+  assertEquals(messages(project), [
+    "module/004 module initialization cycle: a -> b -> a",
+    "module/004 module initialization cycle: c -> d -> c",
+  ]);
+});
+
 Deno.test("a recursive function without a constant in the cycle is no initialization cycle", () => {
   const project = checkText(`
 const total: Int = down(3)
