@@ -1460,6 +1460,20 @@ const run = () => take(make())
   ]);
 });
 
+Deno.test("an array of a union or of a function prints its element in parentheses", () => {
+  const project = checkText(`type A = int
+type B = string
+const take = (xs: (A | B)[]): A => 0
+const pick = (fs: (() => A)[]): A => 0
+const run = () => take(1)
+const go = () => pick(1)
+`);
+  assertEquals(messages(project), [
+    "type-mismatch/003 argument 1 has type int, but (A | B)[] is expected",
+    "type-mismatch/003 argument 1 has type int, but (() => A)[] is expected",
+  ]);
+});
+
 Deno.test("arithmetic with an unnamed operand does not give another name", () => {
   const project = checkText(`${NOMINAL_OPERANDS}
 type Count = int

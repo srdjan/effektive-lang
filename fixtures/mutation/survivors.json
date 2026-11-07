@@ -189,6 +189,15 @@
     "reason": "Parsed field selections have a base. A getRef fact can lack its argument after arity rejection, which records the error type. That type carries no produced requirement, so returning true instead of false changes no transfer. Fourteen public differential cases include this arity error and preserve diagnostics, interfaces, IR, validation, and emitted output."
   },
   {
+    "file": "src/core/type_show.ts",
+    "declaration": "declaredName",
+    "offset": 85,
+    "text": "hash < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The mutant differs only for an id whose # is at index 0. Every id is built as prefix:module#name (ids.ts:30, :70, :87), and the validator checks that form for interface ids (validate/declaration_checks.ts:185), so the # is never first. A differential probe over 164 fixtures and two colliding-name projects gave the same 395 messages for the source and the mutant."
+  },
+  {
     "file": "src/core/types.ts",
     "declaration": "executionFits",
     "offset": 103,
