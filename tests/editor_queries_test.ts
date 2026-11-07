@@ -625,3 +625,31 @@ Deno.test("completion after a with keyword offers services and no values", () =>
     ["Clock"],
   );
 });
+
+Deno.test("rename reports the failure of the first occurrence in path order, not in offset order", () => {
+  const lib =
+    "export type Int = int\nexport const pick = (lo: Int, hi: Int): Int => lo\n";
+  const imports = 'import { Int, pick } from "./lib.eff"\n';
+  const early =
+    `${imports}// The prelude name below sits late in this file, behind a long comment line.
+// The prelude name below sits late in this file, behind a long comment line.
+export const r = (): Int => randomInt(1, 2)
+`;
+  const late =
+    `${imports}export const q = (randomInt: (lo: Int, hi: Int) => Int): Int => pick(1, 2)
+`;
+  const loaded = new Program("").update({
+    set: {
+      "effektive.json": "{}",
+      "lib.eff": lib,
+      "a.eff": early,
+      "z.eff": late,
+    },
+  });
+  assert(loaded.ok);
+  assertEquals(loaded.value.diagnostics, []);
+  assertEquals(
+    renameAt(loaded.value, "lib.eff", lib.indexOf("pick"), "randomInt"),
+    { ok: false, error: "The rename would capture another name." },
+  );
+});
