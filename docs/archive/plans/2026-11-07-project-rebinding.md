@@ -94,4 +94,10 @@ unit. The commit of PBU1 adds this plan. The last commit moves the plan to
 - PBU1: implemented. Three tests failed before the fix for the reason of their finding and pass after it. The PBD3 guard test passes before and after. `deno task check` exited 0, with 2973 fast and 286 slow tests passed.
 - PBU4: implemented. Five tests failed before the fix for the reason of PBF10, with the "Move or delete it" refusal or a kept stale file. They pass after it. The PBU1 test of a deleted nested `effektive.json` no longer deletes the outputs before its save. A move rewrites only the `.ts` file, because the map is the same for both roots. `deno task check` exited 0, with 2980 fast and 286 slow tests passed.
 - PBU2: implemented. Two tests failed before the fix for the reason of PBF6: the document did not join the new project, and a stale change to it gave no stderr line. They pass after it. The guard test for a closed document passes before and after. `deno task check` exited 0, with 2983 fast and 286 slow tests passed.
-- PBU3: open.
+- PBU3: complete. The first run of `deno task mutate` on the 21 changed lines left three survivors. The `catch` in `namesSource` was reachable only when the file system changed between two synchronous calls, so `namesSource` now reuses `realPath`. The stale-change return in `#applyChange` and the published-entry guard in `#removeDeadProjects` only add a dirty flag with no text change. They are registered as equivalent after a differential probe found no difference in any sent message. The second run exited 0: `src/host/outputs.ts` killed 8 of 8, and `src/lsp/projects.ts` killed 27 of 29, with the 2 survivors registered.
+
+## Follow-ups outside this plan
+
+- PBF9: the outer project still publishes diagnostics for a module of a nested project, so the two lists replace each other in the client.
+- Probable, from code reading only: a moved document keeps its subscription to the generated view in the old project, because the subscriptions are keyed by the project. A test that subscribes, moves the document, and changes it can confirm this.
+- The outer project gets no save round when a nested `effektive.json` is deleted. Its next save of the module writes the output.

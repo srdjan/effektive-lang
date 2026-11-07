@@ -56,4 +56,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | EU (units) | [`docs/archive/plans/2026-11-04-effect-upgrade.md`](../archive/plans/2026-11-04-effect-upgrade.md) | Effect 4.1.2 pins and compatibility; checks are in the evidence file |
 | RCP (phases and findings) | [`docs/archive/plans/2026-11-05-codebase-reset-plan.md`](../archive/plans/2026-11-05-codebase-reset-plan.md) | Completed correctness, verification, and simplification reset |
 | UNP (items, written `<slice>.<kind><n>`), UNF (fixes), UNU (units) | [`docs/archive/plans/2026-11-06-untangle-codebase.md`](../archive/plans/2026-11-06-untangle-codebase.md) | Untangle refactor: hidden links, needless links, surplus, and special cases |
-| PBF (findings), PBD (decisions), PBU (units) | [`docs/plans/2026-11-07-project-rebinding.md`](2026-11-07-project-rebinding.md) | Project rebinding after `effektive.json` events |
+| PBF (findings), PBD (decisions), PBU (units) | [`docs/archive/plans/2026-11-07-project-rebinding.md`](../archive/plans/2026-11-07-project-rebinding.md) | Project rebinding after `effektive.json` events |
