@@ -50,6 +50,7 @@ import type { Diagnostic } from "./diagnostics.ts";
 import { fnv1a64 } from "./hash.ts";
 import { moduleOfId, nameOfId } from "./ids.ts";
 import type { DeclEntry } from "./declaration_index.ts";
+import { payloadHash } from "./interface.ts";
 import type { ModuleIR } from "./ir.ts";
 import { type LowerError, lowerModule } from "./lower.ts";
 import {
@@ -99,6 +100,12 @@ type Counters = { -readonly [K in keyof QueryCounts]: number };
 type MemoDecision = ModuleDecision & {
   readonly keys: { readonly rest: string; readonly lowerKey: string };
 };
+
+/** The payload hash of the interface of a step, or `fallback` when the step has no interface. */
+function payloadOf(step: ModuleStep, fallback: string): string {
+  const built = step.checked.interface;
+  return built.ok ? payloadHash(built.value.payload) : fallback;
+}
 
 /** A memo entry. The key decides when it is valid. The lazy fields fill on demand. */
 interface Entry {
@@ -376,7 +383,7 @@ export class Program {
             rest: keys.rest,
             step,
             signature,
-            payload: step.payloadHash ?? signature,
+            payload: payloadOf(step, signature),
             lowerKey: keys.lowerKey,
           };
           rechecked.push(name);
@@ -388,7 +395,7 @@ export class Program {
             rest: previous.rest,
             step,
             signature: previous.signature,
-            payload: step.payloadHash ?? previous.signature,
+            payload: payloadOf(step, previous.signature),
             lowerKey: keys.lowerKey,
           };
         } else {

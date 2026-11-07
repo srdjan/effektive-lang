@@ -48,7 +48,6 @@ import {
   buildTypeGraph,
   type InterfaceError,
   type ModuleInterface,
-  payloadHash,
   reachableModules,
 } from "./interface.ts";
 import type { CapabilityId, Execution, Type as IrType, ValueId } from "./ir.ts";
@@ -556,19 +555,13 @@ export function reachedModules(
   return { reached, graphs: importedGraphs, interfaces: visible };
 }
 
-/**
- * The result of the check of one module: its checked form, its type graph, and
- * the two identities of its interface. `checked.hash` leaves out source spans.
- * `payloadHash` covers the payload with its spans.
- */
+/** The result of the check of one module: its checked form and its type graph. */
 export interface ModuleStep {
   readonly checked: CheckedModule;
   readonly graph: TypeGraph;
-  /** FNV-1a 64 of the canonical JSON of the interface payload with spans, when the interface exists. */
-  readonly payloadHash: string | undefined;
 }
 
-/** Joins a module without its interface to the interface, and names both identities of it. */
+/** Joins a module without its interface to the interface and its hash, which leaves out source spans. */
 function withInterface(
   checked: Omit<CheckedModule, "interface" | "hash">,
   graph: TypeGraph,
@@ -576,7 +569,6 @@ function withInterface(
 ): ModuleStep {
   return {
     graph,
-    payloadHash: built.ok ? payloadHash(built.value.payload) : undefined,
     checked: {
       ...checked,
       interface: built,
