@@ -162,6 +162,13 @@ interface HelperNames {
 
 export type HelperKey = keyof HelperNames;
 
+/** The key of a module-level field helper. The key names the helper in the emitted text. */
+export type FieldHelperKey =
+  | "record"
+  | "optionalField"
+  | "suppliedFields"
+  | "untagged";
+
 /** Names for the emitted module. Each member records the name on first use. */
 export interface EmitNames {
   effect(module: EffectModule): string;
@@ -173,7 +180,7 @@ export interface EmitNames {
   outcome(): OutcomeNames;
   hostCheck(): string;
   serviceParameter(): string;
-  fieldHelper(key: string): string;
+  fieldHelper(key: FieldHelperKey): string;
 }
 
 interface Temporaries {
@@ -243,7 +250,7 @@ export class ModuleState
     Map<string, ImportedName>
   >();
   private readonly effectAliases = new Map<EffectModule, string>();
-  readonly fieldHelpers = new Map<string, string>();
+  readonly fieldHelpers = new Map<FieldHelperKey, string>();
   readonly fieldAdapters = new Map<
     string,
     {
@@ -253,7 +260,7 @@ export class ModuleState
     }
   >();
 
-  fieldHelper(key: string): string {
+  fieldHelper(key: FieldHelperKey): string {
     let name = this.fieldHelpers.get(key);
     if (name === undefined) {
       name = this.fresh(`$${key}`);
