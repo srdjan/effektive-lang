@@ -168,13 +168,24 @@ export function emitModule(
   ir: ModuleIR,
   context: EmitContext,
 ): Result<EmittedModule, EmitError> {
+  return emitFailureAsResult(
+    ir.module,
+    () => ({ ok: true, value: build(ir, context) }),
+  );
+}
+
+/** `run`, with an `EmitFailure` turned into an internal `EmitError`. Any other error is thrown again. */
+function emitFailureAsResult<T, E>(
+  module: string,
+  run: () => Result<T, E>,
+): Result<T, E | EmitError> {
   try {
-    return { ok: true, value: build(ir, context) };
+    return run();
   } catch (e) {
     if (e instanceof EmitFailure) {
       return {
         ok: false,
-        error: { tag: "internal", module: ir.module, message: e.message },
+        error: { tag: "internal", module, message: e.message },
       };
     }
     throw e;
@@ -201,7 +212,7 @@ export function declarationTypeText(
   if (declaration === undefined) {
     return { ok: false, error: { tag: "unavailable" } };
   }
-  try {
+  return emitFailureAsResult(ir.module, () => {
     const scope = new ModuleState(ir, context.config);
     if (declaration.kind === "function") {
       const doc = functionHeaderDoc(scope, declaration, "always");
@@ -214,13 +225,5 @@ export function declarationTypeText(
       };
     }
     return { ok: false, error: { tag: "unavailable" } };
-  } catch (e) {
-    if (e instanceof EmitFailure) {
-      return {
-        ok: false,
-        error: { tag: "internal", module: ir.module, message: e.message },
-      };
-    }
-    throw e;
-  }
+  });
 }
