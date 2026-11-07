@@ -85,6 +85,7 @@ import {
   builtinInstanceId,
   type BuiltinInstanceName,
   localId,
+  shortName,
 } from "./ids.ts";
 import { PRELUDE_MODULE } from "./paths.ts";
 
@@ -1527,7 +1528,7 @@ function preludeImport(
     exports: entries.map(([id]) => id),
     values: entries.map(([id, builtin]) => ({
       id,
-      name: id.slice(id.indexOf("#") + 1),
+      name: shortName(id),
       type: builtin.type,
     })),
     types: [],
