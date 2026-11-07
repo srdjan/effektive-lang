@@ -2,7 +2,7 @@
 // the builtin shapes of the prelude import.
 
 import type { FunctionType, Import, ModuleIR, Span, Type } from "../ir.ts";
-import { AREA } from "./report.ts";
+import { AREA, moduleSpan } from "./report.ts";
 import { isNever, same, unfold } from "./typing.ts";
 import { invocationOf, isQuiet, sameSet } from "./sets.ts";
 import {
@@ -195,7 +195,7 @@ function checkImport(
 ): void {
   const { world, report } = ctx;
   const path = `imports[${i}]`;
-  const span: Span = { source: ir.sources[0] ?? ir.module, start: 0, end: 0 };
+  const span: Span = moduleSpan(ir);
   const ids = new Set<string>();
   const add = (id: string, at: string, s: Span): void => {
     if (imp.module !== PRELUDE_MODULE && typeof id === "string") {

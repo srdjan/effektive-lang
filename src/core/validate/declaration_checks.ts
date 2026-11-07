@@ -2,7 +2,7 @@
 // type declarations, and error declarations.
 
 import type { ErrorDecl, ModuleIR, ServiceDecl, TypeDecl } from "../ir.ts";
-import { AREA } from "./report.ts";
+import { AREA, moduleSpan } from "./report.ts";
 import { checkRefinementDeclaration } from "./refinements.ts";
 import type { Ctx } from "./world_table.ts";
 import {
@@ -221,7 +221,7 @@ export function checkDeclarationHeaders(ctx: Ctx, ir: ModuleIR): void {
   const declared = new Set(ir.declarations.map((d) => d.id));
   const exported = new Set<string>();
   ir.exports.forEach((id, i) => {
-    const span = { source: ir.sources[0] ?? ir.module, start: 0, end: 0 };
+    const span = moduleSpan(ir);
     if (!declared.has(id)) {
       report.add(
         AREA.identity,

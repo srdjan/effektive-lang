@@ -7,7 +7,8 @@
 import { type Diagnostic, normalizeDiagnostics } from "../diagnostics.ts";
 import type { ModuleIR, Span } from "../ir.ts";
 import { BodyValidator } from "./expr.ts";
-import { AREA, Report } from "./report.ts";
+import { AREA, moduleSpan, Report } from "./report.ts";
+import { fallbackSpan } from "./prelude.ts";
 import { checkSerialization } from "./serialization.ts";
 import { checkDeclarationHeaders } from "./declaration_checks.ts";
 import { checkImports } from "./import_checks.ts";
@@ -26,12 +27,9 @@ export function validateModule(
   sources: ReadonlyMap<string, string>,
 ): readonly Diagnostic[] {
   const report = new Report();
-  const fallback: Span = {
-    source: (Array.isArray(ir.sources) ? ir.sources[0] : undefined) ??
-      ir.module,
-    start: 0,
-    end: 0,
-  };
+  const fallback: Span = Array.isArray(ir.sources)
+    ? moduleSpan(ir)
+    : fallbackSpan(ir.module);
   // A module that does not have the shape of ModuleIR makes a check throw.
   // The validator reports the shape problem and goes on with the next part.
   const unexpected = (path: string, span: Span, e: unknown): void => {

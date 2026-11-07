@@ -8,7 +8,7 @@
 // when the caller supplies that text.
 
 import type { ModuleIR, Span } from "../ir.ts";
-import { AREA, type Report } from "./report.ts";
+import { AREA, moduleSpan, type Report } from "./report.ts";
 
 /** True for a plain JSON object: not null and not an array. */
 export function isRecord(
@@ -42,11 +42,7 @@ export function checkSerialization(
   sources: ReadonlyMap<string, string>,
   report: Report,
 ): void {
-  const fallback: Span = {
-    source: ir.sources[0] ?? ir.module,
-    start: 0,
-    end: 0,
-  };
+  const fallback: Span = moduleSpan(ir);
   const own = new Set<string>(ir.sources);
   if (ir.format !== "light-functional-ir" || ir.version !== 8) {
     report.add(

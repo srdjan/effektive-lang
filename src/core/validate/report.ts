@@ -3,7 +3,9 @@
 // validation"). A message starts with the IR path of the node.
 
 import { type Diagnostic, makeDiagnostic } from "../diagnostics.ts";
+import type { ModuleIR } from "../ir.ts";
 import type { Span } from "../source.ts";
+import { fallbackSpan } from "./prelude.ts";
 
 /** The eight validation areas and their codes. */
 export const AREA = {
@@ -18,6 +20,11 @@ export const AREA = {
 } as const;
 
 export type AreaCode = typeof AREA[keyof typeof AREA];
+
+/** The span of a finding that has no source position: the start of the first source. */
+export function moduleSpan(ir: ModuleIR): Span {
+  return fallbackSpan(ir.sources[0] ?? ir.module);
+}
 
 export class Report {
   readonly items: Diagnostic[] = [];
