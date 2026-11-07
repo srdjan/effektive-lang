@@ -3,9 +3,9 @@ import type { CapabilityId, LocalId } from "./ir.ts";
 import {
   argNodes,
   arrowBody,
-  fieldParts,
   initOf,
   kidsOf,
+  memberAccessParts,
   nameTextOf,
   pipeParts,
   unparen,
@@ -159,7 +159,7 @@ export function transferredRequirements(
         continue;
       }
       if (kindOf(tree, node) === SyntaxKind.FieldExpr) {
-        const { base, member: label } = fieldParts(tree, node);
+        const { base, member: label } = memberAccessParts(tree, node);
         const name = label === undefined ? undefined : nameTextOf(tree, label);
         if (name === undefined) return node;
         fields.push(name);

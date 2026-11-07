@@ -22,9 +22,9 @@ import {
   type SyntaxTree,
 } from "./syntax.ts";
 import {
-  fieldParts,
   kidsOf,
   literalOf,
+  memberAccessParts,
   nameTextOf,
   operatorOf,
   unparen,
@@ -338,7 +338,7 @@ export class RefinementChecker {
         : undefined;
     }
     if (kind !== SyntaxKind.FieldExpr) return undefined;
-    const { base, member } = fieldParts(this.tree, node);
+    const { base, member } = memberAccessParts(this.tree, node);
     if (base === undefined || member === undefined) return undefined;
     const path = this.pathOf(unparen(this.tree, base));
     const name = nameTextOf(this.tree, member);

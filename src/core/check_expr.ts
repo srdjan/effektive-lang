@@ -21,7 +21,6 @@ import {
 import {
   argNodes,
   arrowBody,
-  fieldParts,
   functionParts,
   initOf,
   isArithmeticOperator,
@@ -30,6 +29,7 @@ import {
   isTypeKind,
   kidsOf,
   literalOf,
+  memberAccessParts,
   nameTextOf,
   operatorOf,
   paramNodes,
@@ -1484,7 +1484,7 @@ class BodyChecker
   }
 
   private fieldExpr(node: NodeId): NodeInfo {
-    const { base, member } = fieldParts(this.tree, node);
+    const { base, member } = memberAccessParts(this.tree, node);
     const target = this.targets.get(node);
     if (target?.kind === "cap") {
       this.report(

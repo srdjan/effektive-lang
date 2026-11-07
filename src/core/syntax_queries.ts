@@ -274,12 +274,15 @@ export function paramParts(tree: SyntaxTree, param: NodeId): ParamParts {
 }
 
 /** The base expression and the member Name node of a FieldExpr. */
-export interface FieldParts {
+export interface MemberAccessParts {
   readonly base: NodeId | undefined;
   readonly member: NodeId | undefined;
 }
 
-export function fieldParts(tree: SyntaxTree, node: NodeId): FieldParts {
+export function memberAccessParts(
+  tree: SyntaxTree,
+  node: NodeId,
+): MemberAccessParts {
   const kids = kidsOf(tree, node);
   return {
     base: kids[0],

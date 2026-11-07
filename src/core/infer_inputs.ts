@@ -17,12 +17,12 @@ import { optionConstructorOf, type Target } from "./resolve.ts";
 import {
   argNodes,
   arrowBody,
-  fieldParts,
   functionParts,
   initOf,
   isArithmeticOperator,
   isTypeKind,
   kidsOf,
+  memberAccessParts,
   nameTextOf,
   operatorOf,
   paramNodes,
@@ -191,7 +191,7 @@ class InputEngine {
         : undefined;
     }
     if (kind !== SyntaxKind.FieldExpr) return undefined;
-    const { base, member } = fieldParts(this.tree, node);
+    const { base, member } = memberAccessParts(this.tree, node);
     const origin = base === undefined ? undefined : this.originOf(base);
     const name = member === undefined
       ? undefined
@@ -265,7 +265,7 @@ class InputEngine {
         : undefined;
     }
     if (kind !== SyntaxKind.FieldExpr) return undefined;
-    const { base, member } = fieldParts(this.tree, node);
+    const { base, member } = memberAccessParts(this.tree, node);
     const name = member === undefined
       ? undefined
       : nameTextOf(this.tree, member);
@@ -297,7 +297,7 @@ class InputEngine {
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const { base, member } = fieldParts(this.tree, node);
+    const { base, member } = memberAccessParts(this.tree, node);
     const name = member === undefined
       ? undefined
       : nameTextOf(this.tree, member);

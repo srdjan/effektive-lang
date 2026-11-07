@@ -17,10 +17,10 @@ import {
 } from "./diagnostics.ts";
 import type { DeclEntry, MethodEntry } from "./declaration_index.ts";
 import {
-  fieldParts,
   isPatternKind,
   isTypeKind,
   kidsOf,
+  memberAccessParts,
   nameTextOf,
 } from "./syntax_queries.ts";
 import {
@@ -1158,7 +1158,7 @@ class Resolver {
   }
 
   private fieldExpr(node: NodeId): void {
-    const { base, member } = fieldParts(this.tree, node);
+    const { base, member } = memberAccessParts(this.tree, node);
     if (base === undefined) return;
     if (kindOf(this.tree, base) === SyntaxKind.NameExpr) {
       const baseName = nodeText(this.tree, base);

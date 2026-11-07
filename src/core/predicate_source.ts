@@ -20,9 +20,9 @@ import {
 } from "./syntax.ts";
 import {
   arrowBody,
-  fieldParts,
   functionParts,
   kidsOf,
+  memberAccessParts,
   nameTextOf,
   operatorOf,
   paramNodes,
@@ -275,7 +275,7 @@ function pathOf(
   if (kindOf(tree, inner) !== SyntaxKind.FieldExpr) {
     return fail(tree, inner, "a refinement term must be an input field path");
   }
-  const { base, member: fieldNode } = fieldParts(tree, inner);
+  const { base, member: fieldNode } = memberAccessParts(tree, inner);
   const field = fieldNode === undefined
     ? undefined
     : nameTextOf(tree, fieldNode);
