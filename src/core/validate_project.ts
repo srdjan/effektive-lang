@@ -22,6 +22,8 @@ import type { Declaration, Import, ModuleIR } from "./ir.ts";
 import type { Result } from "./source.ts";
 import type { Project } from "./project.ts";
 import { validateModule } from "./validate/index.ts";
+import { isRecord } from "./validate/serialization.ts";
+import { PRELUDE_MODULE } from "./validate/world_table.ts";
 
 /** The part of a project that the validator reads: its modules. */
 export type ProjectModules = Pick<Project, "modules">;
@@ -35,24 +37,17 @@ function projectSources(project: ProjectModules): ReadonlyMap<string, string> {
   return sources;
 }
 
-/** The module name of the prelude import. It has no producer IR. */
-const PRELUDE_MODULE = "effektive:prelude";
-
 /** The prefix of a host import. It names a host module and has no producer IR. */
 const HOST_PREFIX = "host:";
 
 /** A value that the IR holds: JSON data. */
 type Json = unknown;
 
-function isObject(value: Json): value is Readonly<Record<string, Json>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /** The text of one side of a difference. */
 function shown(value: Json): string {
   if (value === undefined) return "no value";
   if (Array.isArray(value)) return `${value.length} items`;
-  if (isObject(value)) return "an object";
+  if (isRecord(value)) return "an object";
   return JSON.stringify(value);
 }
 
@@ -76,7 +71,7 @@ function firstDifference(
     }
     return undefined;
   }
-  if (isObject(imported) && isObject(produced)) {
+  if (isRecord(imported) && isRecord(produced)) {
     const keys = new Set([...Object.keys(imported), ...Object.keys(produced)]);
     for (const key of [...keys].sort()) {
       if (key === "span") continue;
