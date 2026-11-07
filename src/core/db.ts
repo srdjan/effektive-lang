@@ -43,6 +43,7 @@ import {
   type CheckedModule,
   type CheckedProject,
   driveProject,
+  type ModuleDecision,
   type ModuleStep,
 } from "./check_project.ts";
 import type { Diagnostic } from "./diagnostics.ts";
@@ -90,6 +91,14 @@ export interface QueryCounts {
 
 /** The mutable counters that a program shares with its revisions. */
 type Counters = { -readonly [K in keyof QueryCounts]: number };
+
+/**
+ * A cache decision with the keys that `decide` computed for the module.
+ * `settled` stores them in the new memo entry.
+ */
+type MemoDecision = ModuleDecision & {
+  readonly keys: { readonly rest: string; readonly lowerKey: string };
+};
 
 /** A memo entry. The key decides when it is valid. The lazy fields fill on demand. */
 interface Entry {
@@ -327,12 +336,10 @@ export class Program {
     const payloads = new Map<string, string>();
     const entries = new Map<string, Entry>();
     const rechecked: string[] = [];
-    let keys = { rest: "", lowerKey: "" };
-
-    const checked = driveProject(analysis, table, {
+    const checked = driveProject<MemoDecision>(analysis, table, {
       decide: (name, info, seen) => {
         const { reached } = seen;
-        keys = {
+        const keys = {
           rest: JSON.stringify([
             info.path,
             config,
@@ -348,14 +355,16 @@ export class Program {
           entry === undefined || entry.text !== info.tree.text ||
           entry.rest !== keys.rest
         ) {
-          return { kind: "check" };
+          return { kind: "check", keys };
         }
         return {
           kind: entry.lowerKey === keys.lowerKey ? "reuse" : "refresh",
           step: entry.step,
+          keys,
         };
       },
       settled: (name, step, decision) => {
+        const { keys } = decision;
         const previous = this.entries.get(name);
         const text = step.checked.tree.text;
         let entry: Entry;

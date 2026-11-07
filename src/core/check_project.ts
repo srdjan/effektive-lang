@@ -679,16 +679,20 @@ export type ModuleDecision =
   /** Use the earlier check, and build only the interface again. */
   | { readonly kind: "refresh"; readonly step: ModuleStep };
 
-/** The cache decisions of one project run. The driver does not know where the policy keeps its steps. */
-export interface ModulePolicy {
+/**
+ * The cache decisions of one project run. The driver does not know where the
+ * policy keeps its steps. A decision type `D` lets the policy carry its own
+ * data from `decide` to `settled` of the same module.
+ */
+export interface ModulePolicy<D extends ModuleDecision = ModuleDecision> {
   /** Called before each module, with the modules that it reaches among those done. */
   decide(
     name: string,
     info: ModuleInfo,
     seen: ReachedModules,
-  ): ModuleDecision;
-  /** Called after each module with the step that the module ends with. */
-  settled(name: string, step: ModuleStep, decision: ModuleDecision): void;
+  ): D;
+  /** Called after each module with the step that the module ends with and the decision for it. */
+  settled(name: string, step: ModuleStep, decision: D): void;
 }
 
 const CHECK_EVERY_MODULE: ModulePolicy = {
@@ -702,10 +706,10 @@ const CHECK_EVERY_MODULE: ModulePolicy = {
  * `policy` decides for each module whether to check it, to reuse an earlier
  * step, or to build only its interface again.
  */
-export function driveProject(
+export function driveProject<D extends ModuleDecision>(
   analysis: Analysis,
   table: TypeTable,
-  policy: ModulePolicy,
+  policy: ModulePolicy<D>,
 ): CheckedProject {
   const graphs = new Map<string, TypeGraph>();
   const interfaces = new Map<string, ModuleInterface>();
