@@ -1141,14 +1141,5 @@
     "operator": "boolean-return",
     "class": "equivalent",
     "reason": "A stale change leaves the text and the version unchanged, so the mutant only marks the project dirty. A flush of a started project with no text difference starts no revision, and `#publish` sends a list only when its JSON or the version of its open document changed. A project that has not flushed is already dirty. A differential probe of six stale-change scenarios, at debounce 0 and 50 and with an `effektive/stats` request, matched."
-  },
-  {
-    "file": "src/lsp/projects.ts",
-    "declaration": "ProjectSet.#removeDeadProjects",
-    "offset": 995,
-    "text": "path === undefined || !project.published.has(path)",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "For a covered path with no published entry, the mutant deletes nothing and only marks the project dirty. A flush of a started project with no text difference starts no revision, and `#publish` sends a list only when its JSON or the version of its open document changed. A project that has not flushed is already dirty. A differential probe of ten removal scenarios matched. Four reached this case, two of them with a flushed outer project that had no entry for the cleared path."
   }
 ]
