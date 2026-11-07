@@ -969,3 +969,46 @@ Deno.test("a deleted root effektive.json keeps its open document and publishes t
     [`${ROOT}/effektive.json does not exist`],
   );
 });
+
+Deno.test("a document opened before its effektive.json exists joins the new project with its unsaved text", () => {
+  const x = uriOf(`${REBIND_ROOT}/x.eff`);
+  const h = makeHarness({ files: { [`${REBIND_ROOT}/x.eff`]: REBIND_OK } });
+  h.start();
+  h.deliver(didOpen(x, 1, REBIND_OK));
+  assertEquals(h.server.projects.projects(), []);
+  h.deliver(didChangeFull(x, 2, REBIND_BAD));
+  h.clearSent();
+  h.files.set(`${REBIND_ROOT}/effektive.json`, "{}");
+  h.deliver(watched({ uri: uriOf(`${REBIND_ROOT}/effektive.json`), type: 1 }));
+  assertEquals(h.server.projects.lookup(x)?.project.root, REBIND_ROOT);
+  assertEquals(h.published().map(summary), [[x, 2, 1]]);
+  assertEquals(h.published()[0].diagnostics.map((d) => d.code), [
+    "type-mismatch/003",
+  ]);
+});
+
+Deno.test("a closed document without a project does not join a new project", () => {
+  const x = uriOf(`${REBIND_ROOT}/x.eff`);
+  const h = makeHarness({ files: { [`${REBIND_ROOT}/x.eff`]: REBIND_OK } });
+  h.start();
+  h.deliver(didOpen(x, 1, REBIND_OK));
+  h.deliver(didClose(x));
+  h.clearSent();
+  h.files.set(`${REBIND_ROOT}/effektive.json`, "{}");
+  h.deliver(watched({ uri: uriOf(`${REBIND_ROOT}/effektive.json`), type: 1 }));
+  assertEquals(h.server.projects.projects(), []);
+  assertEquals(h.published(), []);
+});
+
+Deno.test("a stale change to a document without a project is ignored", () => {
+  const x = uriOf(`${REBIND_ROOT}/x.eff`);
+  const h = makeHarness({ files: { [`${REBIND_ROOT}/x.eff`]: REBIND_OK } });
+  h.start();
+  h.deliver(didOpen(x, 2, REBIND_OK));
+  h.deliver(didChangeFull(x, 2, REBIND_BAD));
+  assertEquals(h.stderr, [`ignored stale document version 2 for ${x}\n`]);
+  h.clearSent();
+  h.files.set(`${REBIND_ROOT}/effektive.json`, "{}");
+  h.deliver(watched({ uri: uriOf(`${REBIND_ROOT}/effektive.json`), type: 1 }));
+  assertEquals(h.published().map(summary), [[x, 2, 0]]);
+});

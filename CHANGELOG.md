@@ -7,6 +7,8 @@
   A project that lost its `effektive.json` and its last open document is removed, and its diagnostics are cleared.
 - `build`, `watch`, and the language server replace or remove a generated file whose header names the same source file from another project root.
   Before, a module that moved to a nested project, or back to the outer project, failed with "Move or delete it" and wrote nothing.
+- The language server adds a document that was open before its `effektive.json` existed to the new project, with its unsaved text.
+  Before, the document got no diagnostics until the user closed and opened it again.
 
 ## 0.15.3 - 2026-11-07
 

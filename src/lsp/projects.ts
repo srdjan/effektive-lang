@@ -242,8 +242,8 @@ export class ProjectSet {
   readonly #projects = new Map<string, ProjectState>();
   /** Open documents with a project, by URI. */
   readonly #documents = new Map<string, DocumentRef>();
-  /** Open documents without a project, by URI. */
-  readonly #orphans = new Set<string>();
+  /** Open documents without a project, by URI, with their unsaved text. */
+  readonly #orphans = new Map<string, OpenDocument>();
   /** URIs whose missing project the set already logged. */
   readonly #logged = new Set<string>();
 
@@ -312,7 +312,7 @@ export class ProjectSet {
     this.#orphans.delete(uri);
     const found = this.#discover(uri);
     if (found === undefined) {
-      this.#orphans.add(uri);
+      this.#orphans.set(uri, { uri, version, text });
       if (!this.#logged.has(uri)) {
         this.#logged.add(uri);
         this.ports.log(
@@ -330,26 +330,35 @@ export class ProjectSet {
   }
 
   didChange(params: DidChangeParams): void {
-    const { uri, version } = params.textDocument;
+    const { uri } = params.textDocument;
     const found = this.#documents.get(uri);
     if (found === undefined) {
-      if (!this.#orphans.has(uri)) {
+      const orphan = this.#orphans.get(uri);
+      if (orphan === undefined) {
         this.ports.stderr(`didChange for a document that is not open: ${uri}`);
+      } else {
+        this.#applyChange(orphan, params);
       }
       return;
     }
     const document = found.project.open.get(found.path);
     if (document === undefined) return;
+    if (this.#applyChange(document, params)) found.project.dirty = true;
+  }
+
+  /** Applies a change to an open document. Returns false for a stale version. */
+  #applyChange(document: OpenDocument, params: DidChangeParams): boolean {
+    const { uri, version } = params.textDocument;
     if (version <= document.version) {
       this.ports.stderr(`ignored stale document version ${version} for ${uri}`);
-      return;
+      return false;
     }
     document.text = applyContentChanges(
       document.text,
       params.contentChanges,
     );
     document.version = version;
-    found.project.dirty = true;
+    return true;
   }
 
   didClose(uri: string): void {
@@ -388,7 +397,7 @@ export class ProjectSet {
    * Watched-file events. An event counts when its path lies under a known
    * project root, passes `isSourcePath`, and is not an open document. An event
    * for any `effektive.json` also binds the open documents to their projects
-   * again.
+   * again, including the documents that had no project.
    */
   didChangeWatchedFiles(events: readonly FileEvent[]): void {
     const absolutes: string[] = [];
@@ -424,7 +433,11 @@ export class ProjectSet {
     }
   }
 
-  /** Finds the project of each open document again, and moves a document whose project changed. */
+  /**
+   * Finds the project of each open document again, and moves a document whose
+   * project changed. A document without a project joins the project that it
+   * now finds, with its unsaved text.
+   */
   #rebind(): void {
     for (const [uri, old] of [...this.#documents]) {
       const found = this.#discover(uri);
@@ -440,6 +453,15 @@ export class ProjectSet {
       found.project.publishedVersions.delete(found.path);
       found.project.dirty = true;
       this.#documents.set(uri, found);
+    }
+    for (const [uri, { version, text }] of [...this.#orphans]) {
+      const found = this.#discover(uri);
+      if (found === undefined) continue;
+      found.project.open.set(found.path, { uri, version, text });
+      found.project.publishedVersions.delete(found.path);
+      found.project.dirty = true;
+      this.#documents.set(uri, found);
+      this.#orphans.delete(uri);
     }
   }
 

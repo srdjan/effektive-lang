@@ -897,9 +897,11 @@ the editor owns that text.
 
 After a watched-file event for any `effektive.json`, the server searches the
 nearest project of each open document again. When it finds a different project,
-the document moves there with its text and version. When it finds no project,
-the document stays in its project, and that project shows the diagnostic for a
-missing `effektive.json`. A project that lost its `effektive.json` and keeps no
+the document moves there with its text and version. An open document that has
+no project yet joins the project that the search finds, also with its text and
+version. When it finds no project for a document of a project, the document
+stays in that project, and the project shows the diagnostic for a missing
+`effektive.json`. A project that lost its `effektive.json` and keeps no
 open document is removed. The server clears the diagnostics that the project
 published. Each other project that covers such a file then publishes its own
 diagnostics for it again.
