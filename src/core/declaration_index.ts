@@ -184,11 +184,7 @@ function indexImport(tree: SyntaxTree, node: NodeId): ImportEntry {
     }
   }
   return {
-    role: tokenKindOf(tree, children[0]) === TokenKind.Ident &&
-        tree.text.slice(tree.starts[children[0]], tree.ends[children[0]]) ===
-          "imports"
-      ? "service"
-      : "ordinary",
+    role: hasModifier(tree, node, "imports") ? "service" : "ordinary",
     node,
     span: nodeSpan(tree, node),
     specifier,
