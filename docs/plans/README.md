@@ -58,4 +58,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | UNP (items, written `<slice>.<kind><n>`), UNF (fixes), UNU (units) | [`docs/archive/plans/2026-11-06-untangle-codebase.md`](../archive/plans/2026-11-06-untangle-codebase.md) | Untangle refactor: hidden links, needless links, surplus, and special cases |
 | PBF (findings), PBD (decisions), PBU (units) | [`docs/archive/plans/2026-11-07-project-rebinding.md`](../archive/plans/2026-11-07-project-rebinding.md) | Project rebinding after `effektive.json` events |
 | DOF (findings), DOD (decisions), DOU (units) | [`docs/archive/plans/2026-11-07-diagnostic-ownership.md`](../archive/plans/2026-11-07-diagnostic-ownership.md) | Diagnostic ownership of nested project files |
-| KN (knots) | [`docs/plans/2026-11-07-untangle-knots.md`](2026-11-07-untangle-knots.md) | Remaining knots: leaky abstractions, drifted copies, stale workarounds, and empty wrappers |
+| KN (knots) | [`docs/archive/plans/2026-11-07-untangle-knots.md`](../archive/plans/2026-11-07-untangle-knots.md) | Remaining knots: leaky abstractions, drifted copies, stale workarounds, and empty wrappers |

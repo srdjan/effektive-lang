@@ -1,8 +1,8 @@
 # Untangle the remaining knots
 
-Status: in progress on the branch `untangle-knots`. The user asked for a branch for this work, and the branch is not pushed or merged.
+Status: complete on the branch `untangle-knots`. The user asked for a branch for this work. The branch is not pushed or merged.
 
-A knot is one of four defects: a leaky abstraction, a drifted copy, a stale workaround, or an empty wrapper. Three read-only audits found 29 candidates on 2026-11-07. This plan keeps the 13 candidates that Opus confirmed in the code and that the [2026-11-06 untangle plan](../archive/plans/2026-11-06-untangle-codebase.md#kept-on-purpose) did not keep on purpose. The wiring diagram and its knot data are in the gitignored `demos/untangle/`.
+A knot is one of four defects: a leaky abstraction, a drifted copy, a stale workaround, or an empty wrapper. Three read-only audits found 29 candidates on 2026-11-07. This plan keeps the 13 candidates that Opus confirmed in the code and that the [2026-11-06 untangle plan](2026-11-06-untangle-codebase.md#kept-on-purpose) did not keep on purpose. The wiring diagram and its knot data are in the gitignored `demos/untangle/`.
 
 ## Constraints
 
@@ -43,5 +43,29 @@ Sonnet implements KN1, KN2, KN3, KN4, KN5, KN6, KN8, and KN9, each in a detached
 
 ## Progress
 
+Each gate ran `deno task check` on the branch with the knot applied, and then `deno task behavior:compare HEAD~1 HEAD`. Every behavior comparison gave 461 equal records and no changed, missing, or added record. No knot was rolled back. The counts are fast tests and slow tests that passed; no test failed.
+
 | ID | Commit | Gate |
 | --- | --- | --- |
+| KN1 | `2c92ece` | 2988 and 286 passed |
+| KN2 | `423e1be` | 2988 and 286 passed |
+| KN3 | `15cfd8f` | 2988 and 286 passed |
+| KN5 | `0860f51` | 2989 and 286 passed. The surface snapshot gains six `=` operator tokens on purpose. |
+| KN4 | `7661ad1` | 2989 and 286 passed. KN4 landed after KN5, because its executor finished later. |
+| KN6 | `5875463` | 2989 and 286 passed |
+| KN7 | `72fb6fb` | 2989 and 286 passed |
+| KN8 | `06c19f7` | 2989 and 286 passed |
+| KN9 | `092b739` | 2990 and 286 passed |
+| KN10 | `d1df0e6` | 2990 and 286 passed |
+| KN11 | `026d667` | 2991 and 286 passed. Completion order changes on purpose. |
+| KN12 | `8f59286` | 2991 and 286 passed |
+| KN13 | `4126502` | 2991 and 286 passed |
+
+`deno task behavior:compare main HEAD` gives 461 equal records. The product code under `src/` and `playground/src/` has 349 lines added and 505 lines removed.
+
+## Mutation results
+
+- KN8 shortened `scheduleRuns`, so one register row went stale. `adb80f2` moves it to its new offset. The same commit corrects the `Resolver.expr` row, which was already stale on `main`.
+- `deno task mutate --sample all` on `graph.ts`, `content_id.ts`, `referenced_ids.ts`, `initialization.ts`, and `paths.ts` found six survivors. All six also survive on `main`. `f154ea8` kills the three in `initialization.ts` with two tests and registers the three equivalent mutants in `stronglyConnectedComponents`. The rerun of `graph.ts` and `initialization.ts` exits 0.
+- A directed run on the changed lines of seven more modules kills four of the five sampled sites. The survivor is `editor_index.ts:175`, `||` to `&&` in the occurrence sort. It also survives on `main`. The sort order is observable only when a rename fails at two occurrences with different messages, so it is not equivalent. It stays open.
+- The register has 48 more stale rows in files that this branch does not change, for example 17 in `src/core/editor_actions.ts`. `deno task mutate` on that unchanged file reports the same 17 rows. They stay open for a separate pass.
