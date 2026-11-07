@@ -1060,5 +1060,50 @@
     "operator": "logical",
     "class": "equivalent",
     "reason": "The mutant adds two cases. An acyclic tagged singleton gets a group that nothing consults, as the row for the length test explains. A cycle without a tagged member is made of aliases only, and the alias-only test keeps every edge of such a component, so the cycle test returns before a group is set. A differential through checkRecursion tested 300000 random forged declarations, and every report matched. In a count over 100000 of them, 1909 held an alias-only cycle of several members."
+  },
+  {
+    "file": "src/core/paths.ts",
+    "declaration": "relativeSpecifier",
+    "offset": 180,
+    "text": "common < from.length",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The mutant differs only when common equals the directory length of the source file. The second loop guard then holds, so to[common] is a string, while from[common] is undefined. The two never compare equal, so the loop stops under both guards. A differential over 339,000 path pairs of up to four segments matched."
+  },
+  {
+    "file": "src/core/ids.ts",
+    "declaration": "moduleOfId",
+    "offset": 145,
+    "text": "hash < colon",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The mutant differs only when the index of the hash equals the index of the colon. One index cannot hold both characters. When both are absent, the first term colon < 0 already returns undefined. A differential over all strings of up to six characters from `c a p : # . x` matched."
+  },
+  {
+    "file": "src/core/ids.ts",
+    "declaration": "methodOfCapability",
+    "offset": 158,
+    "text": "dot < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The mutant differs only when the dot is at index 0. A CapabilityId starts with `cap:`, so index 0 holds `c` (ir.ts:7). A differential over all `cap:` strings with up to six more characters matched."
+  },
+  {
+    "file": "src/core/ids.ts",
+    "declaration": "serviceOfCapability",
+    "offset": 138,
+    "text": "hash < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The mutant differs only when `#` is at index 0. A CapabilityId starts with `cap:`, so index 0 holds `c` (ir.ts:7). A differential over all `cap:` strings with up to six more characters matched."
+  },
+  {
+    "file": "src/core/ids.ts",
+    "declaration": "serviceOfCapability",
+    "offset": 217,
+    "text": "dot < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The dot search starts at the hash index, and the hash is not at index 0 for a CapabilityId. So a dot found is at an index of at least 1, and index 0 cannot hold it. A differential over all `cap:` strings with up to six more characters matched."
   }
 ]
