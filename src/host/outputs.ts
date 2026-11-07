@@ -14,7 +14,7 @@ import {
 } from "../core/mod.ts";
 import type { HostFs } from "./io.ts";
 import type { GeneratedSource } from "./generation.ts";
-import { containedProjectPath } from "./workspace.ts";
+import { containedProjectPath, realPath } from "./workspace.ts";
 
 export interface GeneratedOutputs {
   /** The root-relative paths of the files that changed on disk. */
@@ -126,13 +126,9 @@ function namesSource(
   header: string | undefined,
 ): boolean {
   if (header === undefined) return false;
-  let resolved: string;
-  try {
-    resolved = fs.absolute(root).replaceAll("\\", "/");
-  } catch {
-    return false;
-  }
-  return joinPath(resolved, source).endsWith("/" + header);
+  const resolved = realPath(fs, root);
+  return resolved !== undefined &&
+    joinPath(resolved.replaceAll("\\", "/"), source).endsWith(`/${header}`);
 }
 
 /**
