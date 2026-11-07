@@ -1,6 +1,6 @@
 # Qualify colliding names in effect lists
 
-Status: in progress on the branch `qualify-effect-names`, which starts at the head of `untangle-knots`. The user approved this plan on 2026-11-07 (decision D2 of the knots follow-up). The branch is not pushed or merged.
+Status: complete on the branch `qualify-effect-names`, which starts at the head of `untangle-knots`. The user approved this plan on 2026-11-07 (decision D2 of the knots follow-up). The branch is not pushed or merged.
 
 ## Problem
 
@@ -34,3 +34,10 @@ type-mismatch/003 argument 1 has type () => Int fails b#E, but () => Int fails a
 - `deno task check` exits 0.
 - `deno task mutate --sample all src/core/type_show.ts` gives no new survivor and no new stale row.
 - `CHANGELOG.md` gets one entry under `## Unreleased`.
+
+## Results
+
+- The new test failed before the fix with `() => Int fails E, but () => Int fails E is expected`, and it passes after the fix (`9174e0c`).
+- `deno task check` exits 0 with 2995 fast tests and 286 slow tests.
+- `deno task behavior:compare HEAD~1 HEAD` gives 461 equal records and 0 changed records for the fix.
+- `deno task mutate --sample all src/core/type_show.ts` found three survivors at the base and two after the fix. The fix removed the survivor in the old `named` case. The two others predate the fix. `3193b81` kills the array survivor with a test and registers the `declaredName` survivor as equivalent, after a differential probe over 166 projects. The rerun exits 0.
