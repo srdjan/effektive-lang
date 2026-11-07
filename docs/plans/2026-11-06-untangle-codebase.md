@@ -446,3 +446,28 @@ Rejected, with the reason:
 - The three builtin instance parsers in `ids.ts` stay apart: the untyped one keeps an internal error for an unknown instance name in a malformed IR.
 - Marginal items stay until a change touches them: the `Solved` type beside `EffectSet` (the join rule differs), the string-encoded comparison class in `check_binary.ts`, the integer-valued type test in two refinement files, the `guardedRecord` callback, the collision loop in `check_expr.ts`, the constant `on` in the Schema fact (C.H5), and the one-caller types of the service bounds.
 - `DefinitionSource` in `type_ir.ts` stays a copy: a `Pick` of the signature types makes an import cycle, and the checker compiles the match.
+
+## Adversarial reviews
+
+Codex astra and a Fable subagent reviewed `30bb1d5..749ce2c` independently, each in its own worktree. Their reports are `adversarial-astra.md` and `adversarial-fable.md` in the evidence folder. Both ran `behavior:compare` with no changed record. Astra also compared 2,224 inline inputs, 4,000 source mutations, 2,000 malformed IR mutations, 18 incremental updates, and the language server and CLI watch flows. Fable compared 535,077 editor and output records over 27 fixture projects.
+
+- Astra, CONFIRMED: a `Scope` requirement now prints as `Scope`, not `cap:effect/Scope`, in hover contracts and type mismatch messages. This is the UND1 defect in the requirement set, so the change stays. UND1 now names the case, and `1346acb` pins it with a test that fails at `30bb1d5`.
+- Fable F1, PLAUSIBLE: the checker recorded the syntax index of the `fields` option of `log` and the `on` option of `schemaDefaultKey`, and the lowerer indexed the IR record fields with it. The two arrays agree only while every child is a plain field. Fixed in `1a5ec90`: the facts hold the option label, and the lowerer finds the field by name, as before `2c0b478`.
+- Fable F2, PLAUSIBLE: the program policy carried its memo keys from `decide` to `settled` through a mutable closure. Fixed in `75a0772`: `ModulePolicy` is generic over its decision type, and the memo decision holds its keys.
+- Fable F3, PLAUSIBLE: a forged `CheckedProject` must fill `blocked`, and a forged `ModuleResolution` must fill `defectArms`. Kept: the types require both fields, and no product path forges them. The UNU6b and UNU7 integration decisions above record both links.
+- Fable F4, PLAUSIBLE: for a module with a merged service import, a later import without an interface, and a name without a resolver target at the same time, `lowerImports` now reports the internal missing-target error before `no-interface`. Kept: it needs two faults at once, a module with diagnostics never lowers, and a missing target is a resolver defect.
+
+## Mutation survivors
+
+The directed run at `749ce2c` covered 19 new or moved modules and left 65 unregistered survivors and one timeout. The survivors were old test gaps that the moves exposed: the register had no row for any of these modules. Four Sonnet units handled them in detached worktrees, and Opus checked each `equivalent` reason against the code before integration.
+
+| Unit | Modules | Tests | Rows | Commit |
+| --- | --- | --- | --- | --- |
+| S1 | `effect_set.ts`, `paths.ts`, `ids.ts`, `syntax_queries.ts`, new `flattenUnion` | 17 | 5 | `8a12c06` |
+| S2 | `project_config.ts`, `recursion_guard.ts` | 5 | 9 | `1de3adb` |
+| S3 | `validate/recursion_checks.ts` | 11 | 6 | `dff317d` |
+| S4 | `validate/declaration_checks.ts`, `import_checks.ts`, `type_checks.ts` | 15 | 1 | `e44dff2` |
+
+Each `equivalent` row rests on a code fact and a differential probe against a mutated copy. The timeout at the alias cycle guard of `recursion_checks.ts` is explained: under that mutant, `tests/guarded_recursion_cases_test.ts` never ends on a cyclic alias chain.
+
+Fault injection: five hand faults in moved data tables, which mutation does not reach, each made a fast test fail. They were the declaration role of `provider`, the role of `where`, the session file name, the stale flag of `stepOutput`, and the unavailable hover text.
