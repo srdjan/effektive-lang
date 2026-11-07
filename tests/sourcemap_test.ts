@@ -11,7 +11,7 @@ import {
   serializeSourceMap,
   type SpanTable,
 } from "../src/core/typescript.ts";
-import { lineStarts, positionOf } from "../src/core/frontend.ts";
+import { scanLines } from "./support/line_scan.ts";
 import {
   decodeMappings,
   decodeVlqList,
@@ -183,16 +183,6 @@ Deno.test("a missing source text is an error value", () => {
  * and column of its innermost source span, or to nothing.
  */
 // A source is scanned once for its line starts, however many offsets look it up.
-const lineStartsCache = new Map<string, Uint32Array>();
-function cachedLineStarts(source: string): Uint32Array {
-  let starts = lineStartsCache.get(source);
-  if (starts === undefined) {
-    starts = lineStarts(source);
-    lineStartsCache.set(source, starts);
-  }
-  return starts;
-}
-
 function assertRoundTrip(
   table: SpanTable,
   text: string,
@@ -202,10 +192,10 @@ function assertRoundTrip(
   assert(built.ok, JSON.stringify(built));
   const decoded = decodeMappings(built.value.mappings);
   assert(decoded.ok, JSON.stringify(decoded));
-  assertEquals(decoded.value.length, table.lineStarts.length);
-  const starts = cachedLineStarts(text);
+  const generatedScan = scanLines(text);
+  assertEquals(decoded.value.length, generatedScan.lineCount);
   for (let offset = 0; offset < text.length; offset++) {
-    const generated = positionOf(starts, text, offset);
+    const generated = generatedScan.at(offset);
     const found = lookupMapping(
       decoded.value,
       generated.line - 1,
@@ -220,7 +210,7 @@ function assertRoundTrip(
       continue;
     }
     const source = files[span.source];
-    const expected = positionOf(cachedLineStarts(source), source, span.start);
+    const expected = scanLines(source).at(span.start);
     assert(found !== undefined, `${table.path} offset ${offset} is unmapped`);
     const relative = built.value.sources[found.source ?? -1];
     const directory = table.path.slice(0, table.path.lastIndexOf("/") + 1);
@@ -272,7 +262,7 @@ Deno.test("each recorded segment start maps to its source line and column", () =
   const decoded = decodeMappings(built.value.mappings);
   assert(decoded.ok);
   const offset = module.text.indexOf("new UserMissing");
-  const generated = positionOf(lineStarts(module.text), module.text, offset);
+  const generated = scanLines(module.text).at(offset);
   const found = lookupMapping(
     decoded.value,
     generated.line - 1,
@@ -280,7 +270,7 @@ Deno.test("each recorded segment start maps to its source line and column", () =
   );
   const source = files["users.eff"];
   const start = source.indexOf("UserMissing({ id })");
-  const expected = positionOf(lineStarts(source), source, start);
+  const expected = scanLines(source).at(start);
   assertEquals(found?.line, expected.line - 1);
   assertEquals(found?.column, expected.column - 1);
 });
