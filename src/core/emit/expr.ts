@@ -80,11 +80,7 @@ import {
 import { internal } from "./failure.ts";
 import type { ExprScope } from "./module_state.ts";
 import { resolvedAs } from "./type_query.ts";
-import {
-  methodOfCapability,
-  serviceOfCapability,
-  tokenOfId,
-} from "./identity.ts";
+import { methodOfCapability, serviceOfCapability } from "./identity.ts";
 import { channelTypeArguments, typeArguments, typeDoc } from "./types.ts";
 import {
   type Callee,
@@ -103,6 +99,7 @@ import {
   isLocalId,
   knownBuiltinInstanceName,
   shortName,
+  tokenOfId,
 } from "../ids.ts";
 
 function binaryPrecedence(operator: string): number {

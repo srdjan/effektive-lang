@@ -142,6 +142,11 @@ export function moduleOfId(id: string): string | undefined {
   return id.slice(colon + 1, hash);
 }
 
+/** The text after the colon: the tag, service key, or identity token of the emitted code. */
+export function tokenOfId(id: string): string {
+  return id.slice(id.indexOf(":") + 1);
+}
+
 /** The declared name in an identity such as `type:users#User`. */
 export function nameOfId(id: string): string | undefined {
   const hash = id.indexOf("#");

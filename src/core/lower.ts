@@ -396,12 +396,16 @@ class BodyLowerer {
     );
   }
 
-  private nextPipelineBinding(): LocalId {
+  private nextPipelineBinding(): {
+    readonly id: LocalId;
+    readonly name: string;
+  } {
     this.pipelines += 1;
     while (this.ctx.identifiers.has(`$p${this.pipelines}`)) {
       this.pipelines += 1;
     }
-    return localId(this.ctx.module, this.owner, `$p${this.pipelines}`);
+    const name = `$p${this.pipelines}`;
+    return { id: localId(this.ctx.module, this.owner, name), name };
   }
 
   expr(node: NodeId): Expr {
@@ -908,7 +912,7 @@ class BodyLowerer {
       base = this.required(left, "the pipeline value", base);
     }
     // One binding for the base value and one for each stage but the last.
-    const ids = chain.map(() => this.nextPipelineBinding());
+    const bindings = chain.map(() => this.nextPipelineBinding());
     const steps: Step[] = [];
     let left: NodeId = base;
     let value = this.expr(base);
@@ -929,8 +933,8 @@ class BodyLowerer {
         kind: "bind",
         generated: true,
         binding: {
-          id: ids[i],
-          name: ids[i].slice(ids[i].lastIndexOf("/") + 1),
+          id: bindings[i].id,
+          name: bindings[i].name,
           type,
           span: leftSpan,
         },
@@ -938,7 +942,7 @@ class BodyLowerer {
       });
       const reference: Expr = {
         kind: "reference",
-        target: ids[i],
+        target: bindings[i].id,
         type,
         execution: "pure",
         effects: EMPTY_EFFECTS,

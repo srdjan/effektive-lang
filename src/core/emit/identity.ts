@@ -26,11 +26,6 @@ export function nameOfId(id: string): string {
   return name;
 }
 
-/** The text after the colon: the tag, service key, or identity token of the emitted code. */
-export function tokenOfId(id: string): string {
-  return id.slice(id.indexOf(":") + 1);
-}
-
 export function serviceOfCapability(capability: CapabilityId): ServiceId {
   const service = coreServiceOfCapability(capability);
   if (service === undefined) {

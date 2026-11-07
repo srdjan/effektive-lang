@@ -30,6 +30,7 @@ import {
 } from "../paths.ts";
 import type { ProjectConfig } from "../project_config.ts";
 import { compareText } from "../util.ts";
+import { isValueId } from "../ids.ts";
 import { internal } from "./failure.ts";
 import { moduleOfId, nameOfId } from "./identity.ts";
 import { type EffectModule, isDeferredType } from "./type_query.ts";
@@ -266,7 +267,7 @@ export class ModuleState
     }
     const specifier = relativeSpecifier(this.path, target);
     for (const binding of bindings) {
-      if (binding.target.startsWith("value:")) {
+      if (isValueId(binding.target)) {
         this.hosts.set(binding.target, {
           key,
           exported: nameOfId(binding.target),
