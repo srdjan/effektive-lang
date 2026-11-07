@@ -40,6 +40,7 @@ import {
   offsetToPosition,
   pathToUri,
   positionToOffset,
+  rangeConverter,
   spanToRange,
 } from "./positions.ts";
 import type {
@@ -75,11 +76,14 @@ const stale = (): Answer => ({
   },
 });
 
-/** The range of a span, against the text that the revision used for the span's file. */
-function rangeOfSpan(revision: Revision, span: Span): Range | undefined {
-  const text = revision.sourceTexts().get(span.source);
-  if (text === undefined) return undefined;
-  return spanToRange(text, lineStarts(text), span);
+/**
+ * Converts spans to ranges against the texts that the revision used, with one
+ * line table for each file. A span of a file that the revision lacks has no range.
+ */
+function spanRanges(revision: Revision): (span: Span) => Range | undefined {
+  const texts = revision.sourceTexts();
+  const convert = rangeConverter((path) => texts.get(path) ?? "");
+  return (span) => texts.has(span.source) ? convert(span) : undefined;
 }
 
 /** The place of a request: the project, its newest good revision, the file, and the offset. */
@@ -122,8 +126,12 @@ function cursorOf(
 }
 
 /** The location of a span, or undefined when the text or the URI is not known. */
-function locationOf(cursor: Cursor, span: Span): Location | undefined {
-  const range = rangeOfSpan(cursor.revision, span);
+function locationOf(
+  cursor: Cursor,
+  rangeOf: (span: Span) => Range | undefined,
+  span: Span,
+): Location | undefined {
+  const range = rangeOf(span);
   const uri = pathToUri(joinPath(cursor.project.root, span.source));
   return range === undefined || uri === undefined ? undefined : { uri, range };
 }
@@ -149,7 +157,7 @@ export function hoverRequest(
     cursor.project.outputs,
   );
   if (hit === undefined) return answer(null);
-  const range = rangeOfSpan(revision, hit.span);
+  const range = spanRanges(revision)(hit.span);
   if (range === undefined) return answer(null);
   let value = fenced("effektive", hit.contract);
   if (hit.backend?.tag === "type") {
@@ -171,7 +179,7 @@ export function definitionRequest(
   const { revision } = cursor;
   const span = definitionAt(revision, cursor.path, cursor.offset);
   if (span === undefined) return answer(null);
-  return answer(locationOf(cursor, span) ?? null);
+  return answer(locationOf(cursor, spanRanges(revision), span) ?? null);
 }
 
 // ---- Document symbols -------------------------------------------------------
@@ -333,13 +341,15 @@ export function referencesRequest(
   ctx: ServerContext,
 ): Answer {
   const cursor = cursorOf(params, ctx, true);
+  if (cursor === undefined) return answer([]);
+  const rangeOf = spanRanges(cursor.revision);
   return answer(
-    cursor === undefined ? [] : referencesAt(
+    referencesAt(
       cursor.revision,
       cursor.path,
       cursor.offset,
       params.includeDeclaration,
-    ).map((span) => locationOf(cursor, span)).filter((loc) =>
+    ).map((span) => locationOf(cursor, rangeOf, span)).filter((loc) =>
       loc !== undefined
     ),
   );
