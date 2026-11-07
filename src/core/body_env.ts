@@ -8,7 +8,7 @@ export interface BodyEnv {
   readonly values: (id: ValueId) => TypeRef;
   /** The function type of a service method. The error type when unknown. */
   readonly methodType: (capability: CapabilityId) => TypeRef;
-  readonly proofBudget?: ProofBudget;
+  readonly proofBudget: ProofBudget;
 }
 
 export interface ProofBudget {

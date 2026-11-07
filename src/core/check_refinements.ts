@@ -58,17 +58,14 @@ export class RefinementChecker {
   private locals = new Map<LocalId, TypeRef>();
   private aliases: Predicate[] = [];
   private branches: Predicate[] = [];
-  private readonly budget: ProofBudget;
 
   constructor(
     private readonly tree: SyntaxTree,
     private readonly table: TypeTable,
     private readonly module: string,
     private readonly targets: ReadonlyMap<NodeId, Target>,
-    budget?: ProofBudget,
-  ) {
-    this.budget = budget ?? newProofBudget();
-  }
+    private readonly budget: ProofBudget,
+  ) {}
 
   snapshot(): RefinementSnapshot {
     return {
