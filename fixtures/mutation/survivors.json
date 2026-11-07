@@ -675,6 +675,159 @@
     "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
   },
   {
+    "file": "scripts/lib.ts",
+    "declaration": "runProcess",
+    "offset": 287,
+    "text": "options.cwd === undefined",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runProcess runs in the directory and with the environment of the caller\" fails with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "runProcess",
+    "offset": 351,
+    "text": "options.env === undefined",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runProcess runs in the directory and with the environment of the caller\" fails with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "runProcess",
+    "offset": 513,
+    "text": "options.timeoutMs === undefined",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. With this mutant, the test \"runProcess kills a process after the timeout\" in tests/scripts_lib_slow_test.ts never ends, because no timer kills the process, and the mutation time limit counts that as killed."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "runProcess",
+    "offset": 513,
+    "text": "options.timeoutMs === undefined",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. With this mutant, the test \"runProcess kills a process after the timeout\" in tests/scripts_lib_slow_test.ts never ends, because no timer kills the process, and the mutation time limit counts that as killed."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "runProcess",
+    "offset": 1052,
+    "text": "options.stdout === undefined || options.stdout === \"piped\"",
+    "operator": "logical",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runProcess returns the streams and the exit code\" fails with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "runProcess",
+    "offset": 1052,
+    "text": "options.stdout === undefined",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runProcess returns the streams and the exit code\" fails with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "runProcess",
+    "offset": 1084,
+    "text": "options.stdout === \"piped\"",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runProcess leaves the text of a stream empty when the stream is not piped\" fails with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "runProcess",
+    "offset": 1173,
+    "text": "options.stderr === undefined || options.stderr === \"piped\"",
+    "operator": "logical",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runProcess returns the streams and the exit code\" fails with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "runProcess",
+    "offset": 1173,
+    "text": "options.stderr === undefined",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runProcess returns the streams and the exit code\" fails with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "runProcess",
+    "offset": 1205,
+    "text": "options.stderr === \"piped\"",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runProcess leaves the text of a stream empty when the stream is not piped\" fails with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "failureText",
+    "offset": 130,
+    "text": "style === \"stderr\"",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the tests \"runChecked words a failure in the stderr style\" and \"runChecked words a failure in the tail style with all arguments\" fail with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "failureText",
+    "offset": 130,
+    "text": "style === \"stderr\"",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the tests \"runChecked words a failure in the stderr style\" and \"runChecked words a failure in the tail style with all arguments\" fail with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "runChecked",
+    "offset": 260,
+    "text": "result.success",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runChecked returns stdout when the command exits 0\" fails with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "withTempDir",
+    "offset": 326,
+    "text": "options.tolerateRemoveFailure === true",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "The fast suite grants no write permission, so a fast test cannot make a temporary directory. In tests/scripts_lib_slow_test.ts, the tests \"withTempDir throws a failed removal by default\" and \"withTempDir ignores a failed removal when it tolerates the failure\" fail with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "removeDirectory",
+    "offset": 191,
+    "text": "!tolerateFailure",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The fast suite grants no write permission, so a fast test cannot make a temporary directory. In tests/scripts_lib_slow_test.ts, the tests \"withTempDir throws a failed removal by default\" and \"withTempDir ignores a failed removal when it tolerates the failure\" fail with this mutant."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "exportRevision",
+    "offset": 331,
+    "text": "!made.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_export_slow_test.ts, the test \"exportRevision extracts a committed tree into each destination\" fails with this mutant. That file needs the .git directory, so it cannot run in a mutation copy."
+  },
+  {
+    "file": "scripts/lib.ts",
+    "declaration": "exportRevision",
+    "offset": 666,
+    "text": "!result.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_export_slow_test.ts, the test \"exportRevision extracts a committed tree into each destination\" fails with this mutant. That file needs the .git directory, so it cannot run in a mutation copy."
+  },
+  {
     "file": "src/core/contract_origins.ts",
     "declaration": "contractOrigins.carries",
     "offset": 86,
