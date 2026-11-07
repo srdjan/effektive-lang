@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.15.4 - 2026-11-07
+
 - The language server binds each open document to its nearest project again after a watched-file event for any `effektive.json`.
   Before, a module stayed in its first project when the user created or deleted a nested `effektive.json`, and its saves wrote nothing.
   A project that lost its `effektive.json` and its last open document is removed, and its diagnostics are cleared.
