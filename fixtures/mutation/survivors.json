@@ -54,6 +54,33 @@
     "reason": "The wider guard already rejects every case that the mutant drops. When capacity is undefined, value is undefined, so the second operand is true and the next operand, !Number.isSafeInteger(value), is true too. When value is not a number, Number.isSafeInteger(value) is false, so the third operand rejects it. Only a safe positive integer reaches the accept path, in both forms."
   },
   {
+    "file": "src/core/check_project.ts",
+    "declaration": "collectEntries",
+    "offset": 564,
+    "text": "signature.kind === \"function\" && initNode !== undefined &&\n        kindOf(tree, initNode) === SyntaxKind.ArrowExpr",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "checkConst makes a function signature exactly when the initializer is an ArrowExpr (check_declarations.ts:868-870), with the same node and name node that collectEntries gives to initOf. So the third test implies the first two, and a constant never has an arrow initializer. A differential probe compared the original and the mutant over 125 inputs, which are every project directory and single file under fixtures/. The diagnostics, module names, interfaces, and source texts matched on all of them."
+  },
+  {
+    "file": "src/core/check_project.ts",
+    "declaration": "collectEntries",
+    "offset": 564,
+    "text": "signature.kind === \"function\" && initNode !== undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "When the ArrowExpr test is true, the declaration has a function signature and a defined initializer (check_declarations.ts:868-870). The inner && and || then both give true, and when the ArrowExpr test is false the whole condition is false. A differential probe compared the original and the mutant over 125 inputs, which are every project directory and single file under fixtures/. The diagnostics, module names, interfaces, and source texts matched on all of them."
+  },
+  {
+    "file": "src/core/check_project.ts",
+    "declaration": "scheduleRuns",
+    "offset": 2797,
+    "text": "run.kind === \"function\" && pending.includes(run.entry.signature.id)",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "solveModeGroup reads computed only for the ids in pending (modes.ts:98-100), and pending holds function ids only (check_project.ts:433-437). The mutant adds entries for constants and for non-pending functions, and no code reads them. A differential probe compared the original and the mutant over 125 inputs, which are every project directory and single file under fixtures/. The diagnostics, module names, interfaces, and source texts matched on all of them."
+  },
+  {
     "file": "src/core/db.ts",
     "declaration": "sameModes",
     "offset": 84,
@@ -83,11 +110,11 @@
   {
     "file": "src/core/db.ts",
     "declaration": "Program.check",
-    "offset": 769,
-    "text": "info === undefined || resolution === undefined",
+    "offset": 2631,
+    "text": "info !== undefined && analysis.resolutions.has(name)",
     "operator": "logical",
     "class": "equivalent",
-    "reason": "resolveProject fills resolutions with one entry for each name of project.order, and that name has an entry in project.modules. The two values are defined together, so && and || give one result."
+    "reason": "Program.update builds the analysis with analyzeProject (db.ts:323). Its order lists the keys of project.modules (project.ts:396-401), and resolveProject adds one resolution for each name that has a module (resolve.ts:1426), so both tests give one result. A differential probe compared the original and the mutant over 125 inputs, which are every project directory and single file under fixtures/. The diagnostics, module names, interfaces, and source texts matched on all of them."
   },
   {
     "file": "src/core/editor_actions.ts",
