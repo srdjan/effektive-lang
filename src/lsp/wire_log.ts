@@ -11,6 +11,7 @@ import type { LogData, LspKind } from "../host/log_schema.ts";
 import type { EventLog } from "../host/ports.ts";
 import type { FrameError, RequestId } from "./jsonrpc.ts";
 import { uriToPath } from "./positions.ts";
+import { narrowInitializeParams } from "./protocol.ts";
 import type { ServerPorts } from "./server.ts";
 
 type Event<K extends LspKind> = (log: EventLog) => LogData[K];
@@ -68,8 +69,8 @@ export class WireLog {
   #initialize(params: unknown): void {
     if (this.#log !== undefined) return;
     const record = isRecord(params) ? params : {};
-    const options = record.initializationOptions;
-    const off = isRecord(options) && options.log === false;
+    const narrowed = narrowInitializeParams(params);
+    const off = narrowed.ok && !narrowed.value.options.log;
     const root = off ? undefined : workspaceRoot(record);
     this.#decide(root === undefined ? noLog : this.open(root));
   }
