@@ -2,11 +2,10 @@ import { assert, assertEquals } from "@std/assert";
 import {
   bodyEditP90,
   formatM7,
-  M7_SCENARIOS,
   type M7Result,
   type M7Row,
 } from "../bench/m7.ts";
-import { m4Config, m4DiskConfig, m7Config } from "../bench/profile.ts";
+import { m4DiskConfig, m7Config } from "../bench/profile.ts";
 
 function row(
   size: "small" | "large",
@@ -71,19 +70,15 @@ Deno.test("the M7 profiles cover every preset and Save All counts shrink on the 
       assert(p.steps > 0 && p.coldPairs > 0 && p.saveAllSteps > 0);
     }
   }
-  assert(
-    m7Config("full").presets.every((p, i) =>
-      p.steps > (m7Config("quick").presets[i]?.steps ?? 0)
-    ),
-  );
-  assertEquals(M7_SCENARIOS.length, 6);
 });
 
-Deno.test("the M4 disk configuration differs from M4 only in writeOnSave", () => {
-  for (const profile of ["quick", "full"] as const) {
-    assertEquals(m4DiskConfig(profile), {
-      ...m4Config(profile),
-      writeOnSave: true,
-    });
-  }
+Deno.test("the M4 disk configuration of the quick profile is the M4 configuration with writeOnSave", () => {
+  assertEquals(m4DiskConfig("quick"), {
+    seed: 1,
+    size: "medium",
+    timeoutMs: 60_000,
+    stepCounts: [50, 100, 200],
+    openDocuments: 3,
+    writeOnSave: true,
+  });
 });

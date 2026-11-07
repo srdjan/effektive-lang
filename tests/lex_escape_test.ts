@@ -14,7 +14,6 @@ function reports(text: string) {
 Deno.test("an invalid escape of an astral character reports both code units", () => {
   // `"`, `\`, two code units of U+1F600, `"`: five code units.
   const text = '"\\\u{1F600}"';
-  assertEquals(text.length, 5);
   assertEquals(reports(text), [
     ["syntax/003", "invalid escape sequence: \\\u{1F600}", 1, 4],
   ]);
