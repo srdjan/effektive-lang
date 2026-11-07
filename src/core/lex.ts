@@ -109,6 +109,28 @@ export function isKeywordKind(kind: TokenKind): boolean {
   return KEYWORD_KINDS.has(kind);
 }
 
+/** The token kinds that the editors color as operators. The order of the enum does not matter. */
+export const OPERATOR_KINDS: ReadonlySet<TokenKind> = new Set([
+  TokenKind.Eq,
+  TokenKind.QuestionQuestion,
+  TokenKind.Arrow,
+  TokenKind.EqEqEq,
+  TokenKind.BangEqEq,
+  TokenKind.Lt,
+  TokenKind.LtEq,
+  TokenKind.Gt,
+  TokenKind.GtEq,
+  TokenKind.AmpAmp,
+  TokenKind.PipePipe,
+  TokenKind.Pipe,
+  TokenKind.PipeGt,
+  TokenKind.Plus,
+  TokenKind.Minus,
+  TokenKind.Star,
+  TokenKind.Slash,
+  TokenKind.Bang,
+]);
+
 /**
  * How a contextual word is used. The lexer reads each of these words as a name.
  * The parser, the editor queries, and the playground highlighter decide by

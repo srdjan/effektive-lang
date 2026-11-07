@@ -12,6 +12,7 @@ import {
   contextualWordsOf,
   isKeywordKind,
   lex,
+  OPERATOR_KINDS,
   PRELUDE_NAMES,
   TokenKind,
   TriviaKind,
@@ -44,27 +45,6 @@ const DECLARATION_WORDS: ReadonlySet<string> = contextualWordsOf("declaration");
 const CLAUSE_WORDS: ReadonlySet<string> = new Set([
   ...contextualWordsOf("clause"),
   "from",
-]);
-
-const OPERATORS: ReadonlySet<TokenKind> = new Set([
-  TokenKind.Eq,
-  TokenKind.QuestionQuestion,
-  TokenKind.Arrow,
-  TokenKind.EqEqEq,
-  TokenKind.BangEqEq,
-  TokenKind.Lt,
-  TokenKind.LtEq,
-  TokenKind.Gt,
-  TokenKind.GtEq,
-  TokenKind.AmpAmp,
-  TokenKind.PipePipe,
-  TokenKind.Pipe,
-  TokenKind.PipeGt,
-  TokenKind.Plus,
-  TokenKind.Minus,
-  TokenKind.Star,
-  TokenKind.Slash,
-  TokenKind.Bang,
 ]);
 
 function isCapitalized(word: string): boolean {
@@ -159,7 +139,7 @@ export function highlightTokens(text: string): HighlightRange[] {
       result = "string";
     } else if (kind === TokenKind.Number) {
       result = "number";
-    } else if (OPERATORS.has(kind)) {
+    } else if (OPERATOR_KINDS.has(kind)) {
       result = "operator";
     } else if (kind === TokenKind.Ident) {
       const word = text.slice(from, to);

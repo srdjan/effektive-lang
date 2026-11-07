@@ -68,6 +68,7 @@ export {
   isKeywordKind,
   KEYWORDS,
   lex,
+  OPERATOR_KINDS,
   TokenKind,
   TriviaKind,
 } from "./lex.ts";

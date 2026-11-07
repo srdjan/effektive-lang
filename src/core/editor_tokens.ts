@@ -6,6 +6,7 @@ import {
   contextualWordsOf,
   isKeywordKind,
   lex,
+  OPERATOR_KINDS,
   TokenKind,
   TriviaKind,
 } from "./lex.ts";
@@ -168,7 +169,7 @@ export function semanticClassifications(
     ) output.push({ span, type: "keyword", modifiers: [] });
     else if (kind === TokenKind.Ident) {
       output.push({ span, type: "variable", modifiers: [] });
-    } else if (kind >= TokenKind.Arrow) {
+    } else if (OPERATOR_KINDS.has(kind)) {
       output.push({ span, type: "operator", modifiers: [] });
     }
   }

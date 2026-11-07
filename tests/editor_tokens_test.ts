@@ -19,3 +19,18 @@ Deno.test("lexical classification marks the first and last keyword tokens, with,
     "value:variable",
   ]);
 });
+
+Deno.test("lexical classification marks the equals sign as an operator and an unused character as no operator", () => {
+  const text = "const x: Int = 1 # y";
+  const classes = semanticClassifications(undefined, "m.eff", text).map((c) =>
+    `${text.slice(c.span.start, c.span.end)}:${c.type}`
+  );
+  assertEquals(classes, [
+    "const:keyword",
+    "x:variable",
+    "Int:variable",
+    "=:operator",
+    "1:number",
+    "y:variable",
+  ]);
+});

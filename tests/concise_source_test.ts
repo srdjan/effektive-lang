@@ -108,7 +108,7 @@ Deno.test("bare lambda locals support references, rename, hover, completion, tok
     assert(
       completionsAt(revision, "m.eff", use).some((c) => c.label === "value"),
     );
-    assertEquals(semanticClassifications(revision, "m.eff", text).length, 18);
+    assertEquals(semanticClassifications(revision, "m.eff", text).length, 21);
     assertEquals(
       inlayHintsAt(revision, "m.eff", { start: 0, end: text.length }),
       [],

@@ -166,7 +166,7 @@ Deno.test("LSP completion and full semantic tokens recover after malformed unsav
       request(h, "textDocument/semanticTokens/full", { textDocument: { uri } }),
     ).data,
   );
-  assertEquals(tokens.length, 95);
+  assertEquals(tokens.length, 110);
   assert(tokens.every((n) => typeof n === "number" && n >= 0));
   const bad = request(h, "textDocument/rename", {
     textDocument: { uri },
