@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { exportRevision, runChecked, runProcess } from "../scripts/lib.ts";
+import { runChecked, runProcess, withTempDir } from "../scripts/lib.ts";
 
 Deno.test("runProcess returns the streams and the exit code", async () => {
   const result = await runProcess("deno", [
@@ -85,41 +85,45 @@ Deno.test("runChecked words a failure in the tail style with all arguments", asy
   });
 });
 
-Deno.test("exportRevision extracts a committed tree into each destination", async () => {
-  const dir = Deno.makeTempDirSync({ prefix: "lib-test-" });
+Deno.test("withTempDir removes the directory after the body and after a throw", async () => {
+  let seen = "";
+  const value = await withTempDir("lib-test-", (dir) => {
+    seen = dir;
+    Deno.writeTextFileSync(`${dir}/a.txt`, "x");
+    return Promise.resolve(7);
+  });
+  assertEquals(value, 7);
+  assertEquals(await Deno.stat(seen).then(() => true, () => false), false);
+  let thrown = "";
   try {
-    const result = await exportRevision("HEAD:fixtures/mutation", {
-      archive: `${dir}/tree.tar`,
-      destinations: [`${dir}/a`, `${dir}/b/c`],
-      failure: "stderr",
+    await withTempDir("lib-test-", (dir) => {
+      seen = dir;
+      throw new Error("boom");
     });
-    assertEquals(result, { ok: true, value: undefined });
-    assertEquals(
-      [
-        Deno.statSync(`${dir}/a/survivors.json`).isFile,
-        Deno.statSync(`${dir}/b/c/survivors.json`).isFile,
-      ],
-      [true, true],
-    );
-  } finally {
-    Deno.removeSync(dir, { recursive: true });
+  } catch (cause) {
+    thrown = (cause as Error).message;
   }
+  assertEquals(thrown, "boom");
+  assertEquals(await Deno.stat(seen).then(() => true, () => false), false);
 });
 
-Deno.test("exportRevision words the failure of an unknown revision", async () => {
-  const dir = Deno.makeTempDirSync({ prefix: "lib-test-" });
+Deno.test("withTempDir throws a failed removal by default", async () => {
+  let thrown = "";
   try {
-    const result = await exportRevision("no-such-revision", {
-      archive: `${dir}/tree.tar`,
-      destinations: [`${dir}/a`],
-      failure: "stderr",
+    await withTempDir("lib-test-", (dir) => {
+      Deno.removeSync(dir);
+      return Promise.resolve();
     });
-    assertEquals(result, {
-      ok: false,
-      error:
-        "git archive failed: fatal: not a valid object name: no-such-revision",
-    });
-  } finally {
-    Deno.removeSync(dir, { recursive: true });
+  } catch (cause) {
+    thrown = (cause as Error).name;
   }
+  assertEquals(thrown, "NotFound");
+});
+
+Deno.test("withTempDir ignores a failed removal when it tolerates the failure", async () => {
+  const value = await withTempDir("lib-test-", (dir) => {
+    Deno.removeSync(dir);
+    return Promise.resolve("done");
+  }, { tolerateRemoveFailure: true });
+  assertEquals(value, "done");
 });
