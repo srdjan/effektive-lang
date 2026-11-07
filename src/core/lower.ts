@@ -24,6 +24,8 @@ import {
   operatorOf,
   paramNodes,
   pipeParts,
+  type RecordFieldParts,
+  recordFieldParts,
   stageParts,
 } from "./syntax_queries.ts";
 import { solvedSignatureType } from "./signatures.ts";
@@ -980,28 +982,21 @@ class BodyLowerer {
   }
 
   /** The label, label node, and value node of a field. The value is absent in a shorthand field. */
-  private fieldParts(field: NodeId): {
-    readonly label: string;
-    readonly labelNode: NodeId;
-    readonly value: NodeId | undefined;
-  } {
+  private fieldParts(field: NodeId): RecordFieldParts {
     const kind = kindOf(this.ctx.tree, field);
     if (kind !== SyntaxKind.RecordField && kind !== SyntaxKind.ShorthandField) {
       throw internal("a record spread must come first in a record");
     }
-    const parts = this.kids(field);
-    const labelNode = this.required(
-      parts.find((k) => kindOf(this.ctx.tree, k) === SyntaxKind.Name),
+    const parts = recordFieldParts(this.ctx.tree, field);
+    if (parts !== undefined) return parts;
+    this.required(
+      this.kids(field).find((k) =>
+        kindOf(this.ctx.tree, k) === SyntaxKind.Name
+      ),
       "the field label",
       field,
     );
-    return {
-      label: this.nameText(labelNode),
-      labelNode,
-      value: kind === SyntaxKind.ShorthandField
-        ? undefined
-        : parts.find((k) => k !== labelNode),
-    };
+    throw internal("a name node has no identifier");
   }
 
   private fieldValue(field: NodeId): Expr {

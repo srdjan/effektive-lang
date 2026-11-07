@@ -10,7 +10,7 @@ import {
 } from "../ir.ts";
 import type { Result } from "../result.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
-import { literalOf, nameTextOf } from "../syntax_queries.ts";
+import { literalOf, recordFieldParts } from "../syntax_queries.ts";
 import {
   combine,
   EFFECT_ONLY,
@@ -171,10 +171,7 @@ function timesOnlyOption(c: EffectContext, arg: Arg): boolean {
   ) {
     return false;
   }
-  const label = c.kids(fields[0]).find((k) =>
-    kindOf(c.tree, k) === SyntaxKind.Name
-  );
-  return label !== undefined && nameTextOf(c.tree, label) === "times";
+  return recordFieldParts(c.tree, fields[0])?.label === "times";
 }
 
 /** What `callOptions` needs to know about a retry or a repeat call. */
@@ -198,14 +195,8 @@ function optionField(
 ):
   | { readonly label: NodeId; readonly name: string; readonly value: NodeId }
   | undefined {
-  const parts = c.kids(field);
-  const label = parts.find((k) => kindOf(c.tree, k) === SyntaxKind.Name);
-  const value = parts.find((k) => k !== label);
-  const name = label === undefined ? undefined : nameTextOf(c.tree, label);
-  if (
-    kindOf(c.tree, field) !== SyntaxKind.RecordField || label === undefined ||
-    name === undefined || value === undefined
-  ) {
+  const parts = recordFieldParts(c.tree, field);
+  if (parts?.value === undefined) {
     c.report(
       "type-mismatch/010",
       `\`${call}\` options need the form \`name: value\``,
@@ -213,7 +204,7 @@ function optionField(
     );
     return undefined;
   }
-  return { label, name, value };
+  return { label: parts.labelNode, name: parts.label, value: parts.value };
 }
 
 /**

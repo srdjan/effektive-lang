@@ -35,6 +35,7 @@ import {
   paramNodes,
   paramParts,
   pipeParts,
+  recordFieldParts,
   stageParts,
   unparen,
 } from "./syntax_queries.ts";
@@ -823,7 +824,7 @@ class BodyChecker
     const kids = this.kids(node);
     if (kind === SyntaxKind.RecordExpr) {
       for (const field of kids) {
-        const parts = this.fieldParts(field);
+        const parts = recordFieldParts(this.tree, field);
         if (parts !== undefined) this.markCheckedSlots(parts.value ?? field);
       }
     } else if (kind === SyntaxKind.ParenExpr || kind === SyntaxKind.ListExpr) {
@@ -1661,31 +1662,6 @@ class BodyChecker
     return this.finish(node, table.array(element), combine(infos));
   }
 
-  /** The label, label node, and value node of a record field. */
-  fieldParts(
-    field: NodeId,
-  ): {
-    readonly label: string;
-    readonly labelNode: NodeId;
-    readonly value: NodeId | undefined;
-  } | undefined {
-    const kind = kindOf(this.tree, field);
-    const parts = this.kids(field);
-    const labelNode = parts.find((k) =>
-      kindOf(this.tree, k) === SyntaxKind.Name
-    );
-    if (labelNode === undefined) return undefined;
-    const label = nameTextOf(this.tree, labelNode);
-    if (label === undefined) return undefined;
-    if (kind === SyntaxKind.ShorthandField) {
-      return { label, labelNode, value: undefined };
-    }
-    if (kind === SyntaxKind.RecordField) {
-      return { label, labelNode, value: parts.find((k) => k !== labelNode) };
-    }
-    return undefined;
-  }
-
   /** The value of a field: an expression, or the variable of a shorthand field. */
   private fieldValue(
     field: NodeId,
@@ -1791,7 +1767,7 @@ class BodyChecker
 
   /** The labels, literal values, and known name types that pick a record target. */
   private prescanRecordFields(
-    partsList: readonly (ReturnType<BodyChecker["fieldParts"]>)[],
+    partsList: readonly (ReturnType<typeof recordFieldParts>)[],
   ): {
     readonly labels: readonly string[];
     readonly literals: ReadonlyMap<string, LiteralValue>;
@@ -1825,7 +1801,10 @@ class BodyChecker
     fields: readonly NodeId[],
     expected: TypeRef | undefined,
   ): NodeInfo {
-    const parsed = fields.map((f) => ({ node: f, parts: this.fieldParts(f) }));
+    const parsed = fields.map((f) => ({
+      node: f,
+      parts: recordFieldParts(this.tree, f),
+    }));
     const { labels, literals, known } = this.prescanRecordFields(
       parsed.map((p) => p.parts),
     );
@@ -1995,7 +1974,7 @@ class BodyChecker
     const seen = new Set<string>();
     const infos: NodeInfo[] = [base];
     for (const fieldNode of rest) {
-      const parts = this.fieldParts(fieldNode);
+      const parts = recordFieldParts(this.tree, fieldNode);
       if (parts === undefined) {
         if (kindOf(this.tree, fieldNode) === SyntaxKind.SpreadField) {
           this.report(

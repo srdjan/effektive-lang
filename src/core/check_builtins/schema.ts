@@ -1,7 +1,11 @@
 // Schema construction, directional transformations, defaults and recursion checks.
 import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "../ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
-import { functionParts, literalOf } from "../syntax_queries.ts";
+import {
+  functionParts,
+  literalOf,
+  recordFieldParts,
+} from "../syntax_queries.ts";
 import { combine, PURE_EFFECTS } from "../effect_set.ts";
 import type { NodeFact, NodeInfo } from "../tables.ts";
 import { dataOnly, type TypeNode, type TypeRef } from "../types.ts";
@@ -36,13 +40,6 @@ export interface SchemaContext extends
   readonly infos: ReadonlyMap<NodeId, NodeInfo>;
   kidsOfKind(node: NodeId, kind: SyntaxKind): NodeId[];
   expr(node: NodeId, expected?: TypeRef): NodeInfo;
-  fieldParts(
-    field: NodeId,
-  ): {
-    readonly label: string;
-    readonly labelNode: NodeId;
-    readonly value: NodeId | undefined;
-  } | undefined;
 }
 
 type SchemaNode = Extract<TypeNode, { kind: "schema" }>;
@@ -289,7 +286,7 @@ function optionsField(c: SchemaContext, record: NodeId, label: string): {
     return undefined;
   }
   for (const [index, field] of c.kids(record).entries()) {
-    const parts = c.fieldParts(field);
+    const parts = recordFieldParts(c.tree, field);
     if (parts?.label === label) {
       return { value: parts.value, index };
     }
@@ -344,7 +341,7 @@ function defaultKeyOptionsShape(c: SchemaContext, record: NodeId): boolean {
   const seen = new Set<string>();
   for (const field of fields) {
     const parts = kindOf(c.tree, field) === SyntaxKind.RecordField
-      ? c.fieldParts(field)
+      ? recordFieldParts(c.tree, field)
       : undefined;
     if (
       parts === undefined || parts.value === undefined ||

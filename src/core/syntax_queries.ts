@@ -292,6 +292,36 @@ export function memberAccessParts(
   };
 }
 
+/** The label, label node, and value node of a record field. The value is absent in a shorthand field. */
+export interface RecordFieldParts {
+  readonly label: string;
+  readonly labelNode: NodeId;
+  readonly value: NodeId | undefined;
+}
+
+/** Undefined when the node is not a RecordField or ShorthandField, or its label has no identifier. */
+export function recordFieldParts(
+  tree: SyntaxTree,
+  field: NodeId,
+): RecordFieldParts | undefined {
+  const kind = kindOf(tree, field);
+  if (kind !== SyntaxKind.RecordField && kind !== SyntaxKind.ShorthandField) {
+    return undefined;
+  }
+  const kids = kidsOf(tree, field);
+  const labelNode = kids.find((kid) => kindOf(tree, kid) === SyntaxKind.Name);
+  if (labelNode === undefined) return undefined;
+  const label = nameTextOf(tree, labelNode);
+  if (label === undefined) return undefined;
+  return {
+    label,
+    labelNode,
+    value: kind === SyntaxKind.ShorthandField
+      ? undefined
+      : kids.find((kid) => kid !== labelNode),
+  };
+}
+
 /** The argument nodes of the first ArgList child of a call or a pipe stage. */
 export function argNodes(tree: SyntaxTree, node: NodeId): NodeId[] {
   const list = kidsOf(tree, node).find((kid) =>
