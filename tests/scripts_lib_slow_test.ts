@@ -21,7 +21,7 @@ Deno.test("runProcess returns the streams and the exit code", async () => {
 Deno.test("runProcess kills a process after the timeout", async () => {
   const result = await runProcess("deno", [
     "eval",
-    "setInterval(() => {}, 1000)",
+    "setTimeout(() => {}, 5000)",
   ], { timeoutMs: 1500, killSignal: "SIGKILL" });
   assertEquals([result.success, result.timedOut], [false, true]);
 });
