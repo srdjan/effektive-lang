@@ -81,15 +81,16 @@ Deno.test("two Defect arms are a duplicate handler", () => {
 });
 
 Deno.test("Defect is reserved as a declaration name", () => {
+  const reserved =
+    "declaration/002 `Defect` is reserved because the generated TypeScript needs it";
   for (
     const declaration of [
       "error Defect = {}",
       "type Defect = int",
-      "service Defect { f(): int }",
+      "type Int = int\nservice Defect { f(): Int }",
     ]
   ) {
-    const found = diagnosticsOf(`${declaration}\n`);
-    assert(found.some((f) => f.includes("Defect")), found.join("\n"));
+    assertEquals(diagnosticsOf(`${declaration}\n`), [reserved], declaration);
   }
 });
 
