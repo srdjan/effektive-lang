@@ -5,6 +5,7 @@ import { isIdentifier } from "./lex.ts";
 import { methodOfCapability, serviceOfCapability } from "./ids.ts";
 import { type Target, targetText } from "./resolve.ts";
 import type { Span } from "./source.ts";
+import { compareText } from "./util.ts";
 import {
   childrenOf,
   kindOf,
@@ -171,7 +172,7 @@ export function symbolIndex(revision: Revision): SymbolIndex {
     locals.set(info.path, scopes);
   }
   occurrences.sort((a, b) =>
-    a.span.source.localeCompare(b.span.source) || a.span.start - b.span.start
+    compareText(a.span.source, b.span.source) || a.span.start - b.span.start
   );
   const result = { occurrences, byIdentity, byPath, locals };
   indices.set(revision, result);

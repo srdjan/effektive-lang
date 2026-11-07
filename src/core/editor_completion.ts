@@ -17,6 +17,7 @@ import {
   TYPE_WORDS,
 } from "./syntax.ts";
 import type { TypeRef } from "./types.ts";
+import { compareText } from "./util.ts";
 
 export interface Completion {
   readonly label: string;
@@ -118,7 +119,7 @@ function siteAt(
     make: (label, kind) => ({ label, kind, span }),
     filter: (values) =>
       values.filter((v) => v.label.startsWith(prefix)).sort((a, b) =>
-        a.label.localeCompare(b.label)
+        compareText(a.label, b.label)
       ),
   };
 }

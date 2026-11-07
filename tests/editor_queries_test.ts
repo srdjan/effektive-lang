@@ -144,6 +144,24 @@ Deno.test("rename rejects capture, conflicts, reserved names, structural fields 
   assertEquals(prepareRenameAt(host.value, "m.eff", 10), undefined);
 });
 
+Deno.test("completion orders labels by code unit, not by the host locale", () => {
+  const text = `type Int = int
+type Point = { b: Int, B: Int, a: Int, A: Int }
+const p: Point = { b: 1, B: 2, a: 3, A: 4 }
+const q: Int = p.
+`;
+  const loaded = new Program("").update({
+    set: { "effektive.json": "{}", "m.eff": text },
+  });
+  assert(loaded.ok);
+  assertEquals(
+    completionsAt(loaded.value, "m.eff", text.indexOf("p.\n") + 2).map((c) =>
+      c.label
+    ),
+    ["A", "B", "a", "b"],
+  );
+});
+
 Deno.test("completion respects prefix, context, local scopes and incomplete member access", () => {
   const text = `type Int = int
  type R = { first: Int, second: Int }
