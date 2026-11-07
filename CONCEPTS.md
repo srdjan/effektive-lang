@@ -162,7 +162,7 @@ _Avoid: mutation fixture, which is a forged IR in `fixtures/validate/`_
 
 The file `fixtures/mutation/survivors.json`, with one row for each survivor that the project accepts, and the reason.
 
-`deno task mutate` exits 1 for a survivor with no row and for a row that matches no site, so the register stays current.
+`deno task mutate` exits 1 for a survivor with no row. It also exits 1 for a stale row: a row of a scanned file that does not match exactly one site. A row of a file that no run scans can stay stale.
 _Avoid: ignore list_
 
 ### Property test
