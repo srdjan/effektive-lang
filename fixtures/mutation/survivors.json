@@ -997,5 +997,14 @@
     "operator": "logical",
     "class": "equivalent",
     "reason": "For a union top, the earlier return leaves tagged && hasDistinctTag true, and each nested part is visited with guarded true. For a record top, part is never type, and tagged and hasDistinctTag are both false, so every form of the term is false. A differential over 159,393 probe lines (every one- to three-part pattern over 16 atoms through parseConfig and importAllowed, key spans, and about 137,000 forged types through guardedRecord) matched the source on every row; a control mutant differed."
+  },
+  {
+    "file": "src/core/validate/import_checks.ts",
+    "declaration": "checkImport.add",
+    "offset": 229,
+    "text": "hash > colon",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The guard `colon >= 0` comes first, and `hash` is `id.indexOf(\"#\", colon + 1)`. So `hash` is either -1 or at least colon + 1, and it never equals `colon`. With `colon >= 0`, the tests `hash > colon` and `hash >= colon` give the same truth value. A differential probe through `validateModule` of 22 forged payload ids (empty, colon-only, hash before colon, leading colon, repeated colon and hash) gave identical diagnostics in the source and in the mutated copy."
   }
 ]
