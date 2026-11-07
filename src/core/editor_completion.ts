@@ -1,4 +1,3 @@
-import { isErrorId, isTypeId } from "./ids.ts";
 import { isIdentPart, TokenKind } from "./lex.ts";
 import type { Revision } from "./db.ts";
 import { declarationOf, occurrenceAt, symbolIndex } from "./editor_index.ts";
@@ -54,11 +53,7 @@ function recordFields(
   const node = table.node(ref);
   if (node.kind === "record") return node.fields.map((f) => f.name);
   if (node.kind === "named") {
-    const target = isTypeId(node.id)
-      ? table.aliasOf(node.id) ?? table.taggedRecordOf(node.id)
-      : isErrorId(node.id)
-      ? table.errorRecordOf(node.id)
-      : undefined;
+    const target = table.declaredBodyOf(node.id);
     return target === undefined
       ? []
       : recordFields(revision, target, new Set([...seen, ref]));

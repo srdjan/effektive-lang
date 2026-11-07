@@ -112,13 +112,7 @@ import {
 } from "./types.ts";
 import { sortedUnique } from "./util.ts";
 import { showType, showTypes } from "./type_show.ts";
-import {
-  bodyLocalId,
-  isErrorId,
-  isReservedErrorId,
-  isTypeId,
-  shortName,
-} from "./ids.ts";
+import { bodyLocalId, isReservedErrorId, isTypeId, shortName } from "./ids.ts";
 import {
   type Arg,
   type BuiltinContext,
@@ -1520,16 +1514,9 @@ class BodyChecker
     const node = this.table.node(unfolded);
     if (node.kind === "record") return node.fields;
     if (node.kind === "named") {
-      if (isErrorId(node.id)) {
-        const record = this.table.errorRecordOf(node.id);
-        const recordNode = record === undefined
-          ? undefined
-          : this.table.node(record);
-        return recordNode?.kind === "record" ? recordNode.fields : undefined;
-      }
-      // A tagged record has the fields of its base record.
-      const base = this.table.taggedRecordOf(node.id);
-      if (base !== undefined) return this.recordFields(base);
+      // A named error or a tagged record has the fields of its record body.
+      const body = this.table.recordBodyOf(node.id);
+      if (body !== undefined) return this.recordFields(body);
     }
     return undefined;
   }

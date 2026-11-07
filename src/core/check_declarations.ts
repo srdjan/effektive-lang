@@ -222,11 +222,7 @@ class ModuleChecker {
               []
           ) referencedIds(method.type, ids);
         }
-        const body = isTypeId(id)
-          ? this.table.aliasOf(id) ?? this.table.taggedRecordOf(id)
-          : isErrorId(id)
-          ? this.table.errorRecordOf(id)
-          : undefined;
+        const body = this.table.declaredBodyOf(id);
         if (body !== undefined) referencedIds(typeToIr(this.table, body), ids);
       }
     };

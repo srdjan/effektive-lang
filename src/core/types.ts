@@ -229,6 +229,7 @@ export type TypeReader = Pick<
   | "isErrorOrTagged"
   | "recordBodyOf"
   | "nominalBodyOf"
+  | "declaredBodyOf"
   | "optionElementOf"
   | "isSealed"
   | "error"
@@ -804,6 +805,15 @@ export class TypeTable {
       : this.taggedRecordOf(id) ?? this.identityBaseOf(id);
   }
 
+  /** The alias or record body of a type id, or the record body of an error id. Any other id has none. */
+  declaredBodyOf(id: string): TypeRef | undefined {
+    return isTypeId(id)
+      ? this.aliasOf(id) ?? this.taggedRecordOf(id)
+      : isErrorId(id)
+      ? this.errorRecordOf(id)
+      : undefined;
+  }
+
   /** The element type of an option type, or undefined when the type is no option or has several options. */
   optionElementOf(ref: TypeRef | undefined): TypeRef | undefined {
     if (ref === undefined) return undefined;
@@ -1249,10 +1259,9 @@ export function containsDeferredType(
       return true;
     case "named": {
       // A tagged record stops the walk: its own declaration is checked on its own.
-      const alias =
-        isErrorId(type.id) || table.taggedRecordOf(type.id) !== undefined
-          ? undefined
-          : table.aliasOf(type.id);
+      const alias = !isTypeId(type.id) || table.isErrorOrTagged(type.id)
+        ? undefined
+        : table.aliasOf(type.id);
       return alias !== undefined && any([alias]);
     }
     case "record":
