@@ -88,6 +88,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     index.ts       validateModule: the public entry.
     world_table.ts The lookup tables of a module (World, buildWorld) and the check context (Ctx).
     prelude.ts     The prelude declarations (reserved errors, Duration, Instant) and the reserved-error test.
+    guards.ts      The isRecord type guard that the serializer and the certificate checks share.
     results.ts     The result types Out and Comp that expr.ts and the families share.
     type_checks.ts Type identity and record field checks.
     declaration_checks.ts Declaration header checks.

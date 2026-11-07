@@ -124,6 +124,7 @@
       "src/core/validate/families/schema.ts",
       "src/core/validate/families/scope.ts",
       "src/core/validate/families/stream.ts",
+      "src/core/validate/guards.ts",
       "src/core/validate/import_checks.ts",
       "src/core/validate/index.ts",
       "src/core/validate/predicates.ts",

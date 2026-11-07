@@ -22,7 +22,7 @@ import type { Declaration, Import, ModuleIR } from "./ir.ts";
 import type { Result } from "./source.ts";
 import type { Project } from "./project.ts";
 import { validateModule } from "./validate/index.ts";
-import { isRecord } from "./validate/serialization.ts";
+import { isRecord } from "./validate/guards.ts";
 import { PRELUDE_MODULE } from "./validate/world_table.ts";
 
 /** The part of a project that the validator reads: its modules. */

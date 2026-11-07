@@ -8,14 +8,8 @@
 // when the caller supplies that text.
 
 import type { ModuleIR, Span } from "../ir.ts";
+import { isRecord } from "./guards.ts";
 import { AREA, moduleSpan, type Report } from "./report.ts";
-
-/** True for a plain JSON object: not null and not an array. */
-export function isRecord(
-  value: unknown,
-): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function isSortedUnique(items: readonly unknown[]): boolean {
   for (let i = 0; i < items.length; i++) {

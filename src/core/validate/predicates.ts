@@ -5,7 +5,7 @@ import type {
   SolverLimits,
   UnsatProof,
 } from "../predicates.ts";
-import { isRecord } from "./serialization.ts";
+import { isRecord } from "./guards.ts";
 
 type CertificateError =
   | { readonly tag: "invalid-certificate"; readonly message: string }
