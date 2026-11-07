@@ -12,7 +12,7 @@ import {
   type Mode,
   PREC,
 } from "../emitted.ts";
-import { resolvedAs } from "../module_state.ts";
+import { resolvedAs } from "../type_query.ts";
 import type { ExprOf, LeafOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";

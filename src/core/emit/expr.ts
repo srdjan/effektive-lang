@@ -78,7 +78,8 @@ import {
   type Run,
 } from "./emitted.ts";
 import { internal } from "./failure.ts";
-import { type ExprScope, resolvedAs } from "./module_state.ts";
+import type { ExprScope } from "./module_state.ts";
+import { resolvedAs } from "./type_query.ts";
 import {
   methodOfCapability,
   serviceOfCapability,

@@ -27,7 +27,8 @@ import {
 } from "./doc.ts";
 import { internal } from "./failure.ts";
 import { servicesOf } from "./identity.ts";
-import { type EmitNames, isDeferredType } from "./module_state.ts";
+import type { EmitNames } from "./module_state.ts";
+import { isDeferredType } from "./type_query.ts";
 
 function literalText(value: string | number | boolean | null): string {
   return typeof value === "string" ? JSON.stringify(value) : String(value);

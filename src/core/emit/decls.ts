@@ -43,7 +43,8 @@ import {
 import { at } from "./emitted.ts";
 import { ExprEmitter } from "./expr.ts";
 import { internal } from "./failure.ts";
-import { isDeferredType, type ModuleState } from "./module_state.ts";
+import type { ModuleState } from "./module_state.ts";
+import { isDeferredType } from "./type_query.ts";
 import {
   nameOfId,
   serviceOfCapability,

@@ -32,86 +32,10 @@ import type { ProjectConfig } from "../project_config.ts";
 import { compareText } from "../util.ts";
 import { internal } from "./failure.ts";
 import { moduleOfId, nameOfId } from "./identity.ts";
+import { type EffectModule, isDeferredType } from "./type_query.ts";
 import { collectBinderNames } from "./walk.ts";
 
 const INT_TYPE: Type = { kind: "primitive", name: "int" };
-
-export type EffectModule =
-  | "Effect"
-  | "Context"
-  | "Layer"
-  | "Option"
-  | "Schema"
-  | "SchemaIssue"
-  | "SchemaGetter"
-  | "SchemaTransformation"
-  | "Stream"
-  | "Sink"
-  | "SynchronizedRef"
-  | "Schedule"
-  | "Duration"
-  | "Cause"
-  | "Clock"
-  | "Random"
-  | "Exit"
-  | "Scope";
-
-// ------------------------------------------------------------------ deferred types
-
-/**
- * The Type kinds that have no schema and no runtime value: functions and the
- * effectful or handle types. The type printers throw for them, and an alias
- * that contains one is type-only.
- */
-type DeferredKind =
-  | "function"
-  | "effect"
-  | "stream"
-  | "sink"
-  | "provider"
-  | "ref"
-  | "retry-schedule"
-  | "schema";
-
-type DeferredType = Extract<Type, { readonly kind: DeferredKind }>;
-
-const DEFERRED_KINDS = {
-  "function": true,
-  "effect": true,
-  "stream": true,
-  "sink": true,
-  "provider": true,
-  "ref": true,
-  "retry-schedule": true,
-  "schema": true,
-} as const satisfies Record<DeferredKind, true>;
-
-/**
- * True for a deferred Type kind. After this guard fails, a switch over the
- * rest of the kinds is exhaustive, so a new kind is a compile error there.
- */
-export function isDeferredType(type: Type): type is DeferredType {
-  return Object.hasOwn(DEFERRED_KINDS, type.kind);
-}
-
-function hasKind<K extends Type["kind"]>(
-  type: Type,
-  kind: K,
-): type is Extract<Type, { readonly kind: K }> {
-  return type.kind === kind;
-}
-
-/** `type` after `resolve`, when it has `kind`. Else an internal failure with `message`. */
-export function resolvedAs<K extends Type["kind"]>(
-  scope: TypeLookup,
-  type: Type,
-  kind: K,
-  message: string,
-): Extract<Type, { readonly kind: K }> {
-  const resolved = scope.resolve(type);
-  if (!hasKind(resolved, kind)) throw internal(message);
-  return resolved;
-}
 
 /** The order of `deno fmt` for named imports: case-insensitive, then by code unit. */
 function compareImportNames(a: string, b: string): number {

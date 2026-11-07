@@ -69,6 +69,7 @@
       "src/core/emit/sourcemap.ts",
       "src/core/emit/spans.ts",
       "src/core/emit/tsc.ts",
+      "src/core/emit/type_query.ts",
       "src/core/emit/types.ts",
       "src/core/emit/walk.ts",
       "src/core/file_diff.ts",

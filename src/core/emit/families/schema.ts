@@ -13,7 +13,7 @@ import {
   PREC,
 } from "../emitted.ts";
 import { internal } from "../failure.ts";
-import { resolvedAs } from "../module_state.ts";
+import { resolvedAs } from "../type_query.ts";
 import type { ExprOf, LeafOf } from "../shape.ts";
 import { hasSchemaMetadata, schemaDoc, typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";

@@ -4,7 +4,7 @@
 
 import { assertEquals } from "@std/assert";
 import type { Effects, Type } from "../src/core/ir.ts";
-import { isDeferredType } from "../src/core/emit/module_state.ts";
+import { isDeferredType } from "../src/core/emit/type_query.ts";
 
 const NONE: Effects = { failures: [], requirements: [] };
 const STRING: Type = { kind: "primitive", name: "string" };
