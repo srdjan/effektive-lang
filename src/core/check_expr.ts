@@ -472,18 +472,6 @@ class BodyChecker
       : { parameters: fn.parameters, result: fn.result };
   }
 
-  /** The element type of an option type, or undefined when the type is no option. */
-  private optionElement(ref: TypeRef | undefined): TypeRef | undefined {
-    if (ref === undefined) return undefined;
-    const members = flattenMembers(this.table, ref).map((m) =>
-      this.table.node(m)
-    );
-    const options = members.filter((m) => m.kind === "option");
-    if (options.length !== 1) return undefined;
-    const only = options[0];
-    return only.kind === "option" ? only.element : undefined;
-  }
-
   /**
    * Checks a function body against its contract. The parameters must already be
    * in `locals`.
@@ -714,7 +702,7 @@ class BodyChecker
   }
 
   private none(node: NodeId, expected: TypeRef | undefined): NodeInfo {
-    const element = this.optionElement(expected);
+    const element = this.table.optionElementOf(expected);
     const type = element === undefined
       ? this.table.option(this.table.never)
       : this.table.option(element);
@@ -1225,7 +1213,7 @@ class BodyChecker
   ): NodeInfo {
     this.fact(node, { kind: "some" });
     const rightCount = this.arity(node, name, 1, args);
-    const hint = this.optionElement(expected);
+    const hint = this.table.optionElementOf(expected);
     let element = hint;
     if (this.checkedSlots.has(node)) {
       for (const arg of args) this.markCheckedSlots(arg.node);
@@ -2664,7 +2652,7 @@ class BodyChecker
     const [left, right] = this.kids(node);
     if (left === undefined || right === undefined) return this.errorInfo(node);
     const subject = this.expr(left);
-    const element = this.optionElement(subject.type);
+    const element = this.table.optionElementOf(subject.type);
     const fallback = this.expr(right, expected);
     if (element === undefined) {
       if (!this.isError(subject.type)) {

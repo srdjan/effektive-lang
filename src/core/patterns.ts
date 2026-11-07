@@ -4,7 +4,12 @@
 // arms and reports the diagnostics.
 
 import { DURATION_ID, type ErrorId, type TypeId } from "./ir.ts";
-import { MAX_DEPTH, type TypeRef, type TypeTable } from "./types.ts";
+import {
+  flattenUnion,
+  MAX_DEPTH,
+  type TypeRef,
+  type TypeTable,
+} from "./types.ts";
 import { isErrorId } from "./ids.ts";
 
 export type LiteralValue = string | number | boolean | null;
@@ -42,7 +47,7 @@ export type Domain =
  * not a union has itself as the only member.
  */
 export function flattenMembers(table: TypeTable, ref: TypeRef): TypeRef[] {
-  return flatten(table, ref, (r) => table.unfold(r));
+  return flattenUnion(table, ref, (r) => table.unfold(r));
 }
 
 /** As `flattenMembers`, but an alias with identity stops the unfold. */
@@ -50,26 +55,7 @@ export function flattenIdentityMembers(
   table: TypeTable,
   ref: TypeRef,
 ): TypeRef[] {
-  return flatten(table, ref, (r) => table.unfoldTransparent(r));
-}
-
-function flatten(
-  table: TypeTable,
-  ref: TypeRef,
-  unfold: (ref: TypeRef) => TypeRef,
-): TypeRef[] {
-  const out: TypeRef[] = [];
-  const visit = (current: TypeRef, depth: number): void => {
-    const unfolded = unfold(current);
-    const node = table.node(unfolded);
-    if (node.kind === "union" && depth < MAX_DEPTH) {
-      for (const member of node.members) visit(member, depth + 1);
-    } else {
-      out.push(unfolded);
-    }
-  };
-  visit(ref, 0);
-  return out;
+  return flattenUnion(table, ref, (r) => table.unfoldTransparent(r));
 }
 
 function literalValuesOf(

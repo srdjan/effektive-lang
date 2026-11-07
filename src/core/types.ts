@@ -159,6 +159,26 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
 // about 1280 frames. 1536 leaves room above that.
 export const MAX_DEPTH = 1536;
 
+/** The members of a type after `unfold` and union flattening. A type that is not a union is its own member. */
+export function flattenUnion(
+  table: TypeTable,
+  ref: TypeRef,
+  unfold: (ref: TypeRef) => TypeRef,
+): TypeRef[] {
+  const out: TypeRef[] = [];
+  const visit = (current: TypeRef, depth: number): void => {
+    const unfolded = unfold(current);
+    const node = table.node(unfolded);
+    if (node.kind === "union" && depth < MAX_DEPTH) {
+      for (const member of node.members) visit(member, depth + 1);
+    } else {
+      out.push(unfolded);
+    }
+  };
+  visit(ref, 0);
+  return out;
+}
+
 // No module has this name, so it owns no sealed type.
 const NO_MODULE = "";
 
@@ -209,6 +229,7 @@ export type TypeReader = Pick<
   | "isErrorOrTagged"
   | "recordBodyOf"
   | "nominalBodyOf"
+  | "optionElementOf"
   | "isSealed"
   | "error"
   | "size"
@@ -781,6 +802,16 @@ export class TypeTable {
     return isErrorId(id)
       ? this.errorRecordOf(id)
       : this.taggedRecordOf(id) ?? this.identityBaseOf(id);
+  }
+
+  /** The element type of an option type, or undefined when the type is no option or has several options. */
+  optionElementOf(ref: TypeRef | undefined): TypeRef | undefined {
+    if (ref === undefined) return undefined;
+    const options = flattenUnion(this, ref, (r) => this.unfold(r)).map((m) =>
+      this.node(m)
+    ).filter((m) => m.kind === "option");
+    const only = options.length === 1 ? options[0] : undefined;
+    return only?.kind === "option" ? only.element : undefined;
   }
 
   isDefined(id: TypeId | ErrorId): boolean {

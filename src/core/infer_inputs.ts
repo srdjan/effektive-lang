@@ -12,7 +12,6 @@ import {
   InputContractResolver,
   type Origin,
 } from "./infer_contracts.ts";
-import { flattenMembers } from "./patterns.ts";
 import { optionConstructorOf, type Target } from "./resolve.ts";
 import {
   argNodes,
@@ -284,15 +283,6 @@ class InputEngine {
     return evidence?.kind === "callable" ? evidence : undefined;
   }
 
-  private optionElement(type: TypeRef | undefined): TypeRef | undefined {
-    if (type === undefined) return undefined;
-    const options = flattenMembers(this.table, type).map((member) =>
-      this.table.node(member)
-    ).filter((member) => member.kind === "option");
-    const option = options.length === 1 ? options[0] : undefined;
-    return option?.kind === "option" ? option.element : undefined;
-  }
-
   private field(
     node: NodeId,
     expected: TypeRef | undefined,
@@ -336,7 +326,7 @@ class InputEngine {
       return this.table.named(target.id);
     }
     if (optionConstructorOf(target) === "some") {
-      const element = this.optionElement(expected);
+      const element = this.table.optionElementOf(expected);
       const inferred = args[0] === undefined
         ? undefined
         : this.visit(args[0], element);
@@ -393,7 +383,7 @@ class InputEngine {
       return this.table.named(target.id);
     }
     if (optionConstructorOf(target) === "some") {
-      const element = this.optionElement(expected);
+      const element = this.table.optionElementOf(expected);
       const inferred = this.visit(left, element);
       args.forEach((argument) => this.visit(argument));
       return this.table.option(element ?? inferred ?? this.table.unknown);
