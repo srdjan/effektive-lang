@@ -59,4 +59,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | PBF (findings), PBD (decisions), PBU (units) | [`docs/archive/plans/2026-11-07-project-rebinding.md`](../archive/plans/2026-11-07-project-rebinding.md) | Project rebinding after `effektive.json` events |
 | DOF (findings), DOD (decisions), DOU (units) | [`docs/archive/plans/2026-11-07-diagnostic-ownership.md`](../archive/plans/2026-11-07-diagnostic-ownership.md) | Diagnostic ownership of nested project files |
 | KN (knots) | [`docs/archive/plans/2026-11-07-untangle-knots.md`](../archive/plans/2026-11-07-untangle-knots.md) | Remaining knots: leaky abstractions, drifted copies, stale workarounds, and empty wrappers |
-| QN (defects), QNU (units) | [`docs/plans/2026-11-07-qualify-effect-names.md`](2026-11-07-qualify-effect-names.md) | Qualified names in the effect lists of type messages |
+| QN (defects), QNU (units) | [`docs/archive/plans/2026-11-07-qualify-effect-names.md`](../archive/plans/2026-11-07-qualify-effect-names.md) | Qualified names in the effect lists of type messages |
