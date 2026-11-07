@@ -6,6 +6,7 @@ import {
   type EmitProjectError,
   generatedPathOf,
   generatedSourceOf,
+  joinPath,
   type LowerError,
   type Revision,
   serializeSourceMap,
@@ -114,6 +115,27 @@ function heldReasonOf(
 }
 
 /**
+ * True when `header`, the source path in the first line of an existing output,
+ * names `source` under `root`. Another project root can have written the
+ * header, so the test is a suffix of the absolute source path.
+ */
+function namesSource(
+  fs: HostFs,
+  root: string,
+  source: string,
+  header: string | undefined,
+): boolean {
+  if (header === undefined) return false;
+  let resolved: string;
+  try {
+    resolved = fs.absolute(root).replaceAll("\\", "/");
+  } catch {
+    return false;
+  }
+  return joinPath(resolved, source).endsWith("/" + header);
+}
+
+/**
  * Emits the named modules of the revision. With `write` true, it writes the
  * generated file and its map under `root` for each module whose text changed:
  * `<module>.ts` for `.eff`, `<module>.effi.ts` for `.effi`. A module with
@@ -181,7 +203,8 @@ export function writeGenerated(
       }
       if (blocked) continue;
       // The `.ts` file decides for the pair. A file that this source did not
-      // generate stays, with its map unwritten and the module left out.
+      // generate stays, with its map unwritten and the module left out. The
+      // header can name the source from another project root.
       const owner = generatedSourceOf(emitted.text);
       const existing = fs.readText(targets[0][2]);
       if (!existing.ok && existing.error.tag === "unreadable") {
@@ -193,7 +216,8 @@ export function writeGenerated(
       }
       if (
         existing.ok && existing.value !== emitted.text &&
-        (owner === undefined || generatedSourceOf(existing.value) !== owner)
+        (owner === undefined ||
+          !namesSource(fs, root, owner, generatedSourceOf(existing.value)))
       ) {
         notes.push(
           `error: cannot write ${emitted.path}: the file exists and is not generated from ${
@@ -226,9 +250,10 @@ export function writeGenerated(
  * no known mode, so each named module tries `<module>.ts` for `<module>.eff` and
  * `<module>.effi.ts` for `<module>.effi`, each with its `.map`. A `.ts` file goes
  * only when its first line is the emitter header of that source, so a
- * hand-written file at the same path stays. The map goes only together with its
- * `.ts` file, and before it. Returns the root-relative paths that it removed,
- * and messages for stderr.
+ * hand-written file at the same path stays. The header can name the source from
+ * another project root. The map goes only together with its `.ts` file, and
+ * before it. Returns the root-relative paths that it removed, and messages for
+ * stderr.
  */
 export function removeStaleOutputs(
   fs: HostFs,
@@ -252,7 +277,9 @@ export function removeStaleOutputs(
         }
         continue;
       }
-      if (generatedSourceOf(read.value) !== source) continue;
+      if (!namesSource(fs, root, source, generatedSourceOf(read.value))) {
+        continue;
+      }
       // The map goes first. When it fails, the `.ts` file keeps the header that
       // proves ownership, so a later call can retry. A missing file counts as removed.
       const targets: [string, string][] = [];

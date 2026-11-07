@@ -653,10 +653,18 @@ cycle, one error stops every module of the cycle. The `watch` command leaves the
 last written file of a stopped module on disk. When a module leaves the project,
 for example after a rename, `watch` removes its `<module>.ts` or
 `<module>.effi.ts` and the map. It prints `removed: <path>` on stderr for each
-file. It removes the `.ts` file only when
-the first line is the header that the emitter writes for that module. It removes
-the map only together with the `.ts` file. The `build` command never removes a
-file.
+file. It removes the `.ts` file only when its first line is the emitter header
+of that source file, by the rule in the next paragraph. It removes the map only
+together with the `.ts` file. The `build` command never removes a file.
+
+An existing `.ts` file blocks the write when its first line is not the emitter
+header of the same source file. The tool then writes neither file and reports
+`error: cannot write <path>: the file exists and is not generated from <source>. Move or delete it.`
+The header names the source relative to the project root that wrote it. A
+header from another root names the same file when the absolute source path ends
+with `/` and the header path. For example, after a user adds
+`sub/effektive.json`, the project in `sub/` replaces `sub/x.ts` whose header
+names `sub/x.eff`.
 
 The tool checks both `.ts` and `.ts.map` targets before it writes either file.
 Root-relative target paths use `/` separators and reject backslashes.

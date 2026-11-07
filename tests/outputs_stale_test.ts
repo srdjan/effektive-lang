@@ -50,3 +50,43 @@ Deno.test("removeStaleOutputs removes the companion module of a left interface, 
     `${ROOT}/kept.effi.ts.map`,
   ]);
 });
+
+Deno.test("removeStaleOutputs removes an output that the outer project root wrote", () => {
+  const m = memoryIo({
+    "/work/sub/gone.ts":
+      "// Generated from sub/gone.eff by the Effektive compiler. Do not edit.\nexport {}\n",
+    "/work/sub/gone.ts.map": "{}",
+  });
+  const result = removeStaleOutputs(m.io.fs, "/work/sub", ["gone"]);
+  assertEquals(result.removed, ["gone.ts.map", "gone.ts"]);
+  assertEquals(result.notes, []);
+  assertEquals([...m.files.keys()], []);
+});
+
+Deno.test("removeStaleOutputs keeps an output whose header names another file with the same tail", () => {
+  const m = memoryIo({
+    "/work/sub/gone.ts":
+      "// Generated from zzz/sub/gone.eff by the Effektive compiler. Do not edit.\nexport {}\n",
+    "/work/sub/gone.ts.map": "{}",
+  });
+  const result = removeStaleOutputs(m.io.fs, "/work/sub", ["gone"]);
+  assertEquals(result.removed, []);
+  assertEquals([...m.files.keys()].sort(), [
+    "/work/sub/gone.ts",
+    "/work/sub/gone.ts.map",
+  ]);
+});
+
+Deno.test("removeStaleOutputs keeps an output whose header is a suffix that does not start at a slash", () => {
+  const m = memoryIo({
+    "/work/sub/gone.ts":
+      "// Generated from ub/gone.eff by the Effektive compiler. Do not edit.\nexport {}\n",
+    "/work/sub/gone.ts.map": "{}",
+  });
+  const result = removeStaleOutputs(m.io.fs, "/work/sub", ["gone"]);
+  assertEquals(result.removed, []);
+  assertEquals([...m.files.keys()].sort(), [
+    "/work/sub/gone.ts",
+    "/work/sub/gone.ts.map",
+  ]);
+});

@@ -67,8 +67,14 @@ disk text of the path again and becomes dirty. The new project becomes dirty
 and publishes the document at its next flush, also with an unchanged list.
 
 PBD7 (user, 2026-11-07). A writer adopts an existing output when its first line
-names the same source file from another root: one source path ends the other at
-a `/` boundary. Removal uses the same rule.
+names the same source file from another root. The test: the resolved absolute
+path of the source, with `/` separators, ends with `/` and the header path. For
+`/work/app/sub/x.eff`, the headers `x.eff` and `sub/x.eff` pass, and
+`zzz/sub/x.eff` and `zzz/x.eff` fail. An emitter cannot write a failing header
+at that location, because `build` and the language server write only through
+`containedProjectPath`. Removal uses the same rule. Adoption cannot make two
+roots overwrite each other, because each writer passes `ownedByRoot`
+(`src/cli/build.ts:83`, `src/lsp/projects.ts:516`).
 
 ## Units
 
@@ -86,6 +92,6 @@ unit. The commit of PBU1 adds this plan. The last commit moves the plan to
 ## Progress
 
 - PBU1: implemented. Three tests failed before the fix for the reason of their finding and pass after it. The PBD3 guard test passes before and after. `deno task check` exited 0, with 2973 fast and 286 slow tests passed.
-- PBU4: open.
+- PBU4: implemented. Five tests failed before the fix for the reason of PBF10, with the "Move or delete it" refusal or a kept stale file. They pass after it. The PBU1 test of a deleted nested `effektive.json` no longer deletes the outputs before its save. A move rewrites only the `.ts` file, because the map is the same for both roots. `deno task check` exited 0, with 2980 fast and 286 slow tests passed.
 - PBU2: open.
 - PBU3: open.

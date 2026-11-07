@@ -383,3 +383,69 @@ Deno.test("writeGenerated writes nothing when the .ts file cannot be read", () =
   assertEquals(io.files.size, 0);
   assertEquals(output.generated, []);
 });
+
+const NESTED: EmittedModule = {
+  ...emitted,
+  path: "sub/m.ts",
+  text:
+    "// Generated from sub/m.eff by the Effektive compiler. Do not edit.\nexport {};\n",
+};
+
+function writeAt(
+  root: string,
+  module: EmittedModule,
+  files: Record<string, string>,
+) {
+  const io = memoryIo(files);
+  const output = writeGenerated(
+    io.io.fs,
+    root,
+    source({ kind: "ready", emitted: module, table, map }),
+    ["m"],
+    true,
+  );
+  return { io, output };
+}
+
+Deno.test("writeGenerated replaces an output that the outer project root wrote", () => {
+  const { io, output } = writeAt("/work/sub", emitted, {
+    "/work/sub/m.ts":
+      "// Generated from sub/m.eff by the Effektive compiler. Do not edit.\nexport const old = 1;\n",
+  });
+  assertEquals(output.notes, []);
+  assertEquals(output.failed, false);
+  assertEquals(output.written, ["m.ts", "m.ts.map"]);
+  assertEquals(io.files.get("/work/sub/m.ts"), emitted.text);
+});
+
+Deno.test("writeGenerated replaces an output that a nested project root wrote", () => {
+  const { io, output } = writeAt("/work", NESTED, {
+    "/work/sub/m.ts":
+      "// Generated from m.eff by the Effektive compiler. Do not edit.\nexport const old = 1;\n",
+  });
+  assertEquals(output.notes, []);
+  assertEquals(output.failed, false);
+  assertEquals(output.written, ["sub/m.ts", "sub/m.ts.map"]);
+  assertEquals(io.files.get("/work/sub/m.ts"), NESTED.text);
+});
+
+Deno.test("writeGenerated keeps an output whose header names another file with the same tail", () => {
+  const cases = [
+    "// Generated from zzz/sub/m.eff by the Effektive compiler. Do not edit.\n",
+    "// Generated from zzz/m.eff by the Effektive compiler. Do not edit.\n",
+    // A suffix of `/work/sub/m.eff` that does not start at a `/`.
+    "// Generated from ub/m.eff by the Effektive compiler. Do not edit.\n",
+  ];
+  for (const other of cases) {
+    const { io, output } = writeAt("/work/sub", emitted, {
+      "/work/sub/m.ts": other,
+    });
+    assertEquals(io.files.get("/work/sub/m.ts"), other, other);
+    assertEquals(io.files.has("/work/sub/m.ts.map"), false, other);
+    assertEquals(output.failed, true, other);
+    assertEquals(output.written, [], other);
+    assertEquals(output.notes, [
+      "error: cannot write m.ts: the file exists and is not generated from m.eff. Move or delete it.",
+    ], other);
+  }
+});
