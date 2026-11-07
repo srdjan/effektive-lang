@@ -550,7 +550,7 @@ function measureSteps(
       const kind = kinds[i];
       if (kind === undefined) continue;
       // Run the two sides in lock step. The first side alternates.
-      const order: readonly (0 | 1)[] = (k + i) % 2 === 0 ? [0, 1] : [1, 0];
+      const order = byTurn<0 | 1>(k + i, 0, 1);
       const results: [StepSample | undefined, StepSample | undefined] = [
         undefined,
         undefined,
