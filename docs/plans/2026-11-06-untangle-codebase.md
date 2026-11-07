@@ -471,3 +471,9 @@ The directed run at `749ce2c` covered 19 new or moved modules and left 65 unregi
 Each `equivalent` row rests on a code fact and a differential probe against a mutated copy. The timeout at the alias cycle guard of `recursion_checks.ts` is explained: under that mutant, `tests/guarded_recursion_cases_test.ts` never ends on a cyclic alias chain.
 
 Fault injection: five hand faults in moved data tables, which mutation does not reach, each made a fast test fail. They were the declaration role of `provider`, the role of `where`, the session file name, the stale flag of `stepOutput`, and the unavailable hover text.
+
+## Round 3 survey
+
+One survey agent read every change after `749ce2c` and the four new mutation test files. Its report is `round3.md` in the evidence folder. It found no new import cycle and no test that repeats the code or cannot fail. It found three leftovers, and `b8a5ba1` removes them: the lowerer searched for a field label again after `recordFieldParts` failed, `defaultKeyChoice` returned a one-field record, and a test comment described a cache in another file. The lowerer path is unreachable: the parser builds a record field and a shorthand field only at an identifier token, so the label always exists. The commit message of `b8a5ba1` gives a weaker reason.
+
+Not worth a fix, with the reasons in `round3.md`: the `optionElementOf` entry in the `TypeReader` pick, the overlap of `declaredBodyOf` and `recordBodyOf`, the constant labels in the `log` and Schema facts, and a dead `?? ""` in the language server features. The parser recovery test of `memberAccessParts` is fragile, but it is the only input that reaches the `index > 0` guard.
