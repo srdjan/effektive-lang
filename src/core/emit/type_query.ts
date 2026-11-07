@@ -24,7 +24,6 @@ export type EffectModule =
   | "Exit"
   | "Scope";
 
-
 /**
  * The Type kinds that have no schema and no runtime value: functions and the
  * effectful or handle types. The type printers throw for them, and an alias
