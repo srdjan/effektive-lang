@@ -363,22 +363,62 @@ Deno.test("resource expressions match explicit callbacks, preserve empty-channel
 Deno.test("resource expressions retain scopes, data-only results, finalizer contracts and nested capture rejection", () => {
   const prefix =
     "type Int = int\nservice Jobs { open(): { read: () => Int, close: () => void } }\n";
-  for (
-    const expression of [
+  const NOT_DIRECT =
+    "a scoped operation record may only be used as the direct receiver of an operation call";
+  const NOT_RECORD =
+    "acquisition must return a nonempty record of required operations";
+  const cases: [string, string[][]][] = [
+    [
       "using (job = job.read()) { 1 } finally {}",
+      [["unknown-name/001", "unknown name `job`"], [
+        "type-mismatch/010",
+        NOT_RECORD,
+      ]],
+    ],
+    [
       "using (job = Jobs.open()) { const local = 1; job.read() } finally { local }",
+      [["unknown-name/001", "unknown name `local`"]],
+    ],
+    [
       "using (job = Jobs.open()) { job } finally { job.close() }",
+      [["type-mismatch/010", "the use result must be data only"], [
+        "type-mismatch/010",
+        NOT_DIRECT,
+      ]],
+    ],
+    [
       "using (job = Jobs.open()) { job.read() } finally { 1 }",
+      [[
+        "type-mismatch/003",
+        "the release result has type int, but void is expected",
+      ]],
+    ],
+    [
       "using (job = Jobs.open()) { const captured = () => job.read(); captured() } finally { job.close() }",
+      [["type-mismatch/010", NOT_DIRECT]],
+    ],
+    [
       "using (outer = Jobs.open()) { using (inner = Jobs.open()) { outer.read() } finally { inner.close() } } finally { outer.close() }",
+      [["type-mismatch/010", NOT_DIRECT]],
+    ],
+    [
       "using (outer = Jobs.open()) { using (inner = outer.read()) { 1 } finally {} } finally { outer.close() }",
+      [["type-mismatch/010", NOT_DIRECT], ["type-mismatch/010", NOT_RECORD]],
+    ],
+    [
       "using (job = Jobs.open()) { const { read } = job; read() } finally { job.close() }",
+      [["type-mismatch/010", NOT_DIRECT]],
+    ],
+    [
       "using (job = Jobs.open()) { job.read() }",
-    ]
-  ) {
-    assert(
+      [["syntax/008", "expected `finally`, found end of file"]],
+    ],
+  ];
+  for (const [expression, expected] of cases) {
+    assertEquals(
       checked(prefix + `const run = () => ${expression}`, false).diagnostics
-        .length > 0,
+        .map((d) => [d.code, d.message]),
+      expected,
       expression,
     );
   }
