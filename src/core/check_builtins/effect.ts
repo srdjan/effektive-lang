@@ -531,7 +531,7 @@ function logCall(
   c.fits(args[0].node, message.type, c.table.string, "the log message");
   const infos: NodeInfo[] = [message];
   let level: LogLevel = "info";
-  let fields: number | undefined;
+  let fields: string | undefined;
   if (args[1] !== undefined) {
     const options = logOptions(c, args[1]);
     infos.push(options.info);
@@ -549,10 +549,10 @@ function logOptions(
 ): {
   readonly info: NodeInfo;
   readonly level: LogLevel;
-  readonly fields: number | undefined;
+  readonly fields: string | undefined;
 } {
   let level: LogLevel = "info";
-  let fieldsAt: number | undefined;
+  let fieldsLabel: string | undefined;
   if (
     arg.pre !== undefined ||
     kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
@@ -575,7 +575,7 @@ function logOptions(
   const infos: NodeInfo[] = [];
   const types: { name: string; type: TypeRef; optional: boolean }[] = [];
   const seen = new Set<string>();
-  for (const [index, field] of fields.entries()) {
+  for (const field of fields) {
     const parsed = optionField(c, "log", field);
     if (parsed === undefined) continue;
     const { label, name, value } = parsed;
@@ -583,7 +583,7 @@ function logOptions(
     if (name === "level") level = logLevel(c, value) ?? level;
     else if (name === "fields") {
       logFields(c, value, info);
-      fieldsAt = index;
+      fieldsLabel = name;
     }
     if (!LOG_KEYS.has(name)) {
       c.report(
@@ -606,7 +606,7 @@ function logOptions(
   return {
     info: c.finish(arg.node, c.table.record(types), combine(infos)),
     level,
-    fields: fieldsAt,
+    fields: fieldsLabel,
   };
 }
 

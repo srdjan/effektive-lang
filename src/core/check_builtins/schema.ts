@@ -280,25 +280,23 @@ function schemaOp(c: SchemaContext, node: NodeId): SchemaOp {
 /** The literal value of a field in an inline options record, by label. */
 function optionsField(c: SchemaContext, record: NodeId, label: string): {
   readonly value: NodeId | undefined;
-  readonly index: number;
 } | undefined {
   if (kindOf(c.tree, record) !== SyntaxKind.RecordExpr) {
     return undefined;
   }
-  for (const [index, field] of c.kids(record).entries()) {
+  for (const field of c.kids(record)) {
     const parts = recordFieldParts(c.tree, field);
     if (parts?.label === label) {
-      return { value: parts.value, index };
+      return { value: parts.value };
     }
   }
   return undefined;
 }
 
 /**
- * The Schema operation that the `on` option of `schemaDefaultKey` selects, and
- * the position of that option. An absent `on` means "missing". An `on` that is
- * not one of the three literals is reported here and selects the default
- * operation.
+ * The Schema operation that the `on` option of `schemaDefaultKey` selects. An
+ * absent `on` means "missing". An `on` that is not one of the three literals
+ * is reported here and selects the default operation.
  */
 function defaultKeyChoice(
   c: SchemaContext,
@@ -306,11 +304,10 @@ function defaultKeyChoice(
   options: Arg,
 ): {
   readonly op: "default-key" | "default-null-key" | "default-encoded-key";
-  readonly on: number | undefined;
 } {
   const field = optionsField(c, options.node, DEFAULT_KEY_OPTION);
   if (field === undefined) {
-    return { op: "default-key", on: undefined };
+    return { op: "default-key" };
   }
   const value = field.value;
   const literal = value !== undefined &&
@@ -324,9 +321,9 @@ function defaultKeyChoice(
       `${name} \`on\` must be a literal "missing", "null", or "encoded"`,
       value ?? options.node,
     );
-    return { op: "default-key", on: field.index };
+    return { op: "default-key" };
   }
-  return { op: DEFAULT_KEY_OPS[on], on: field.index };
+  return { op: DEFAULT_KEY_OPS[on] };
 }
 
 /** Whether an options record is inline with distinct known fields. */
@@ -1290,11 +1287,11 @@ const SCHEMA_PROLOGUE: SharedPrologue<SchemaBuiltinName, SchemaContext> = {
   fact: (c, name, args) => {
     const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
     if (builtin.acceptsOptions === true && args.length === 3) {
-      const { op, on } = defaultKeyChoice(c, name, args[2]);
+      const { op } = defaultKeyChoice(c, name, args[2]);
       return {
         kind: "schema",
         op,
-        options: { on: DEFAULT_KEY_OPTION, at: on },
+        options: { on: DEFAULT_KEY_OPTION },
       };
     }
     return { kind: "schema", op: builtin.op, options: undefined };

@@ -99,8 +99,8 @@ export type NodeFact =
   | {
     readonly kind: "log";
     readonly level: LogLevel | undefined;
-    /** The position of the `fields` option in the options record, when it is written. */
-    readonly fields: number | undefined;
+    /** The label of the `fields` option in the options record, when it is written. */
+    readonly fields: string | undefined;
   }
   | { readonly kind: "random" }
   | { readonly kind: "random-int" }
@@ -134,12 +134,10 @@ export type NodeFact =
       | "make";
     /**
      * The options argument of a default-key builtin. The IR drops the option
-     * `on`, because the operation already records its value. `at` is the
-     * position of that option in the options record, when it is written.
+     * `on`, because the operation already records its value. `on` is the
+     * label of that option.
      */
-    readonly options:
-      | { readonly on: string; readonly at: number | undefined }
-      | undefined;
+    readonly options: { readonly on: string } | undefined;
   }
   /** A bracket literal, classified by its checked contextual type. */
   | { readonly kind: "list"; readonly shape: "array" | "tuple" }
