@@ -101,9 +101,9 @@ function adapterBody(
     if (d?.kind === "type") {
       return `return ${apply(definitionType(d), "value")};`;
     }
-    if (d?.kind !== "error") return "return value;";
-    // Compiler-derived error schemas are nominal identity schemas. Never clone
-    // their instances: class validation and recovery rely on that identity.
+    // Any other named type keeps its value. Compiler-derived error schemas are
+    // nominal identity schemas: never clone their instances, because class
+    // validation and recovery rely on that identity.
     return "return value;";
   } else if (type.kind === "record") fields = type.fields;
   else if (type.kind === "option") {

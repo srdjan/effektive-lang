@@ -419,32 +419,26 @@ export interface DidOpenParams {
   readonly textDocument: TextDocumentItem;
 }
 
-const didOpen = params("textDocument/didOpen", {
-  textDocument: object({
-    uri,
-    languageId: string,
-    version: integer,
-    text: string,
-  }),
-});
-
-export function narrowDidOpen(params: unknown): Narrowed<DidOpenParams> {
-  return didOpen(params);
-}
+export const narrowDidOpen: (value: unknown) => Narrowed<DidOpenParams> =
+  params("textDocument/didOpen", {
+    textDocument: object({
+      uri,
+      languageId: string,
+      version: integer,
+      text: string,
+    }),
+  });
 
 export interface DidChangeParams {
   readonly textDocument: VersionedTextDocumentIdentifier;
   readonly contentChanges: readonly TextChange[];
 }
 
-const didChange = params("textDocument/didChange", {
-  textDocument: object({ uri, version: integer }),
-  contentChanges: array(narrowChange),
-});
-
-export function narrowDidChange(params: unknown): Narrowed<DidChangeParams> {
-  return didChange(params);
-}
+export const narrowDidChange: (value: unknown) => Narrowed<DidChangeParams> =
+  params("textDocument/didChange", {
+    textDocument: object({ uri, version: integer }),
+    contentChanges: array(narrowChange),
+  });
 
 export interface TextDocumentParams {
   readonly textDocument: TextDocumentIdentifier;
@@ -455,13 +449,11 @@ export interface TextDocumentParams {
  * `effektive/generatedTypeScript`, and `effektive/stats`. Other fields are
  * ignored, so `didSave` with `text` passes.
  */
-export function narrowTextDocumentParams(
-  params: unknown,
-): Narrowed<TextDocumentParams> {
-  return textDocumentParams(params);
-}
-
-const textDocumentParams = params("request", { textDocument: narrowDocument });
+export const narrowTextDocumentParams: (
+  value: unknown,
+) => Narrowed<TextDocumentParams> = params("request", {
+  textDocument: narrowDocument,
+});
 
 export interface PositionParams {
   readonly textDocument: TextDocumentIdentifier;
@@ -469,13 +461,9 @@ export interface PositionParams {
 }
 
 /** `textDocument/hover` and `textDocument/definition`. */
-export function narrowPositionParams(
-  params: unknown,
-): Narrowed<PositionParams> {
-  return positionParams(params);
-}
-
-const positionParams = params("request", {
+export const narrowPositionParams: (
+  value: unknown,
+) => Narrowed<PositionParams> = params("request", {
   textDocument: narrowDocument,
   position: narrowPosition,
 });
@@ -489,15 +477,12 @@ interface DidChangeWatchedFilesParams {
   readonly changes: readonly FileEvent[];
 }
 
-export function narrowDidChangeWatchedFiles(
-  params: unknown,
-): Narrowed<DidChangeWatchedFilesParams> {
-  return didChangeWatchedFiles(params);
-}
-
-const didChangeWatchedFiles = params("workspace/didChangeWatchedFiles", {
-  changes: array(object({ uri, type: fileChangeType })),
-});
+export const narrowDidChangeWatchedFiles: (
+  value: unknown,
+) => Narrowed<DidChangeWatchedFilesParams> = params(
+  "workspace/didChangeWatchedFiles",
+  { changes: array(object({ uri, type: fileChangeType })) },
+);
 
 /** Editor mutation requests may carry an explicit document version. */
 export interface EditorPositionParams extends PositionParams {
@@ -559,11 +544,6 @@ export function narrowRenameParams(params: unknown): Narrowed<RenameParams> {
   return ok({ ...position.value, newName: params.newName });
 }
 
-const rangeParams = params("request", {
-  textDocument: narrowDocument,
-  range: narrowRange,
-});
-
 // A null context stays accepted, as before the `only` filter existed.
 const codeActionContext = optional(
   object({ only: optional(array(string)) }),
@@ -571,20 +551,17 @@ const codeActionContext = optional(
 const nullableContext: typeof codeActionContext = (value, where) =>
   value === null ? ok(undefined) : codeActionContext(value, where);
 
-const codeActionParams = params("request", {
+export const narrowCodeActionParams: (
+  value: unknown,
+) => Narrowed<CodeActionParams> = params("request", {
   textDocument: narrowDocument,
   range: narrowRange,
   context: nullableContext,
 });
 
-export function narrowCodeActionParams(
-  params: unknown,
-): Narrowed<CodeActionParams> {
-  return codeActionParams(params);
-}
-
-export function narrowInlayHintParams(
-  params: unknown,
-): Narrowed<InlayHintParams> {
-  return rangeParams(params);
-}
+export const narrowInlayHintParams: (
+  value: unknown,
+) => Narrowed<InlayHintParams> = params("request", {
+  textDocument: narrowDocument,
+  range: narrowRange,
+});

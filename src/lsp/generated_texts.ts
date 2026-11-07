@@ -11,11 +11,6 @@ import type {
   GeneratedTypeScriptResult,
 } from "./protocol.ts";
 
-/** The module name of the `.eff` or `.effi` file `path` in the revision, or undefined. */
-function sourceModuleOf(revision: Revision, path: string): string | undefined {
-  return revision.moduleInfoAt(path)?.name;
-}
-
 interface GeneratedEntry {
   /** The URI that the client used in its request. */
   uri: string;
@@ -52,7 +47,7 @@ export class GeneratedTexts {
     entry: GeneratedEntry,
     outputs: TypeScriptOutputs,
   ): GeneratedTypeScriptResult | null {
-    const name = sourceModuleOf(revision, path);
+    const name = revision.moduleInfoAt(path)?.name;
     const step = stepOutput(
       entry.lastGood,
       name === undefined ? undefined : outputs.emitted(revision, name),

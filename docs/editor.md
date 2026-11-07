@@ -8,7 +8,6 @@ describes the definition and document symbol features.
 
 | Query | Result |
 | --- | --- |
-| `symbolIndex(revision)` | Resolver identities, declaration anchors, occurrences and local scope spans, memoized for that revision. |
 | `referencesAt(revision, path, offset, includeDeclaration)` | Declaration, import and use spans across the loaded project. Structural fields and builtins have no reference target. |
 | `prepareRenameAt(revision, path, offset)` | The editable name span and original spelling, or no target. |
 | `renameAt(revision, path, offset, newName)` | Validated source edits, or a reason the rename cannot preserve binding identities. |

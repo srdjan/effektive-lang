@@ -10,7 +10,7 @@ export type { TypeReader, TypeRef } from "./types.ts";
 export { diffFiles } from "./file_diff.ts";
 
 // The editor queries.
-export { occurrenceAt, referencesAt, symbolIndex } from "./editor_index.ts";
+export { occurrenceAt, referencesAt } from "./editor_index.ts";
 export {
   applySourceEdits,
   prepareRenameAt,
