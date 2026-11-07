@@ -37,7 +37,7 @@ The independent validator is a test oracle. No product path runs it, and no entr
 | Behavior comparison | `deno task behavior:compare` | Two revisions give equal full results of eight kinds for the named corpus: the fixture projects, the forged IR files, and four edit sequences | It sees only fixture inputs. Inline test programs and command-line or language server output are outside it. |
 | Unfired rejection sites | None | A fast test fires each direct validator rejection | The match is textual, so a rejection through another helper is not listed |
 | Log replay | None | A logged session gives equal results on the current build | It skips `--tsc` sessions and watch sessions |
-| Website IR in `tests/ir_site_slow_test.ts` | `scripts/site_ir.ts` | The sibling `typed-ir.ts` equals the generated text byte for byte, and passes `deno check` alone | A `git archive` export has no sibling, so the test is ignored there |
+| Website IR in `tests/ir_site_slow_test.ts` | `scripts/site_ir.ts` | The sibling `typed-ir.ts` equals the generated text byte for byte, and passes `deno check` alone. The sibling `log.ir.json` equals `fixtures/ir/example/log.ir.json` byte for byte | A `git archive` export has no sibling, so the test is ignored there |
 | Website examples in `tests/website_examples_slow_test.ts` | `fixtures/website-examples.json` | Each website example gives its listed diagnostics, and it builds with `--tsc` | A snippet in an HTML page is not checked. A `git archive` export has no sibling, so the test is ignored there |
 
 An update task writes what the current code gives. So an update can hide a defect. The reviewer must read each fixture diff, and a change needs a reason in the commit.
