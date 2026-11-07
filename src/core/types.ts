@@ -902,7 +902,11 @@ export class TypeTable {
     return [def.body];
   }
 
-  /** True when a value of type `source` may be used where `target` is expected. */
+  /**
+   * True when a value of type `source` may be used where `target` is expected.
+   * Every module owns every sealed type here. Use this form only for a test
+   * that builds no value, such as a `null` equality or a literal pattern.
+   */
   isAssignable(source: TypeRef, target: TypeRef): boolean {
     return this.assignable(source, target, 0, true);
   }
