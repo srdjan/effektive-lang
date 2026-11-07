@@ -9,7 +9,7 @@
 
 import type { Span } from "../ir.ts";
 import { lineIndexOf, lineStarts } from "../source.ts";
-import type { Project } from "../project.ts";
+import type { ModuleInfo, Project } from "../project.ts";
 import type { SpanRecord } from "./doc.ts";
 import type { EmittedModule, HostAssertionRecord } from "./emitted_module.ts";
 
@@ -87,21 +87,32 @@ export function buildSpanTable(
 }
 
 /**
+ * The span of each name that the host imports of one module bind: local name
+ * to span. The `.eff` source binds the local name.
+ */
+export function hostNameSpans(
+  links: ModuleInfo["links"],
+): ReadonlyMap<string, Span> {
+  const names = new Map<string, Span>();
+  for (const link of links) {
+    if (!link.isHost) continue;
+    for (const imported of link.entry.names) {
+      names.set(imported.name, imported.span);
+    }
+  }
+  return names;
+}
+
+/**
  * The span of each imported name in the host imports of each module:
- * module name to local name to span. The `.eff` source binds the local name.
+ * module name to local name to span. A module with no host name is absent.
  */
 export function hostImportSpans(
   project: Project,
 ): ReadonlyMap<string, ReadonlyMap<string, Span>> {
   const result = new Map<string, ReadonlyMap<string, Span>>();
   for (const [name, info] of project.modules) {
-    const names = new Map<string, Span>();
-    for (const link of info.links) {
-      if (!link.isHost) continue;
-      for (const imported of link.entry.names) {
-        names.set(imported.name, imported.span);
-      }
-    }
+    const names = hostNameSpans(info.links);
     if (names.size > 0) result.set(name, names);
   }
   return result;

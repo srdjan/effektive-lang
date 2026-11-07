@@ -10,7 +10,7 @@ import {
   emitModule,
 } from "./emit/emit.ts";
 import type { EmittedModule } from "./emit/emitted_module.ts";
-import { buildSpanTable, type SpanTable } from "./emit/spans.ts";
+import { buildSpanTable, hostNameSpans, type SpanTable } from "./emit/spans.ts";
 import {
   buildSourceMap,
   type SourceMapError,
@@ -105,13 +105,7 @@ export class TypeScriptOutputs {
     const emitted = this.emitted(revision, name);
     if (entry === undefined || emitted === undefined) return undefined;
     if (entry.table === undefined) {
-      const names = new Map<string, Span>();
-      for (const link of revision.moduleInfo(name)?.links ?? []) {
-        if (!link.isHost) continue;
-        for (const imported of link.entry.names) {
-          names.set(imported.name, imported.span);
-        }
-      }
+      const names = hostNameSpans(revision.moduleInfo(name)?.links ?? []);
       entry.table = emitted.ok
         ? { ok: true, value: buildSpanTable(emitted.value, names) }
         : emitted;
