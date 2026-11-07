@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Diagnostics and hover contracts name a reserved error type or capability by its short name, such as `SchemaIssue` or `Scope`.
+  Before, a type mismatch could print an internal id such as `error:effect/SchemaIssue`.
+
 ## 0.15.2 - 2026-11-05
 
 - Failed workspace inspections retain the last complete inputs and generated outputs.
