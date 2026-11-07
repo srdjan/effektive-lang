@@ -172,6 +172,13 @@ A test that generates its inputs from a literal table of seeds and asserts one l
 The test also asserts literal counts of each outcome, so it cannot pass with no effective input. `docs/testing.md` lists each property test and what it can miss.
 _Avoid: fuzz test_
 
+### Noise floor
+
+The bound on timing noise of one bench row: the 90th percentile of `|A/B - 1|` over alternating pairs of two sides of the same build.
+
+A difference inside the floor of its row counts as null. The floor covers only the noise inside one run. Load that changes between runs makes a wider spread, so a comparison of two commits alternates base and head runs and records the load. A bisect step has its own floor, which two trees with the same code measure.
+_Avoid: error bar, noise level_
+
 ## Function contracts
 
 ### Service header
