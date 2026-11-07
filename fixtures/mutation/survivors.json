@@ -699,7 +699,7 @@
     "text": "options.timeoutMs === undefined",
     "operator": "negate-if",
     "class": "slow-only",
-    "reason": "Every fast test runs without a subprocess. With this mutant, the test \"runProcess kills a process after the timeout\" in tests/scripts_lib_slow_test.ts never ends, because no timer kills the process, and the mutation time limit counts that as killed."
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runProcess kills a process after the timeout\" fails with this mutant: no timer kills the process, so it ends by itself after 5 s with success true and timedOut false. Checked on a mutated copy."
   },
   {
     "file": "scripts/lib.ts",
@@ -708,7 +708,7 @@
     "text": "options.timeoutMs === undefined",
     "operator": "comparison",
     "class": "slow-only",
-    "reason": "Every fast test runs without a subprocess. With this mutant, the test \"runProcess kills a process after the timeout\" in tests/scripts_lib_slow_test.ts never ends, because no timer kills the process, and the mutation time limit counts that as killed."
+    "reason": "Every fast test runs without a subprocess. In tests/scripts_lib_slow_test.ts, the test \"runProcess kills a process after the timeout\" fails with this mutant: no timer kills the process, so it ends by itself after 5 s with success true and timedOut false. Checked on a mutated copy."
   },
   {
     "file": "scripts/lib.ts",
