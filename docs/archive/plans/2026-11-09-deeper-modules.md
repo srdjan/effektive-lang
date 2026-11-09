@@ -1,6 +1,6 @@
 # Deeper modules
 
-Status: in progress on local `main`. On 2026-11-09 the user set this goal: fewer and deeper modules, smaller interfaces, one check of data where it enters, one-off logic written where it is used, and no try/catch where it is not necessary. The user pushes; this plan does not.
+Status: complete on local `main`. On 2026-11-09 the user set this goal: fewer and deeper modules, smaller interfaces, one check of data where it enters, one-off logic written where it is used, and no try/catch where it is not necessary. The user pushes; this plan does not.
 
 ## Baseline
 
@@ -61,4 +61,31 @@ Opus kept these small modules on purpose: `emit/failure.ts`, `emit/emitted_modul
 
 ## Results
 
-Each unit adds its result here after Opus reviews it.
+Opus reviewed each unit diff line by line and cherry-picked it into `main`. Opus then did DMM8 and removed one redundant check in `fixContracts` of `src/cli/main.ts`. The fallback `inputs.get(path) ?? ""` read a key of the map that the loop iterated.
+
+| Measure | `de8d0e5` | `c1d0f15` |
+| --- | --- | --- |
+| Source modules under `src/` | 157 | 149 |
+| Lines with `try {` under `src/` | 41 | 39 |
+| Exported names that no other file names | 70 | 0 |
+| Lines that start with `export` | 1000 | 923 |
+| Functions and methods | 1485 | 1425 |
+| Private helpers with one use (10 lines or fewer) | 392 (76) | 337 (36) |
+| Source lines | 51732 | 51486 |
+
+| Check | Result |
+| --- | --- |
+| `deno task check` on `main` | exit 0: 3005 fast and 296 slow tests passed, in 44 seconds |
+| `deno task behavior:compare de8d0e5 HEAD` | exit 0: 461 records equal, 0 changed, 0 missing, 0 added |
+| `deno task mutate --seed 1 --sample 1` on the 10 changed modules with register rows | exit 0: 0 stale rows, 0 unregistered survivors |
+| `deno task coverage` | exit 0: lines 97.41%, branches 95.39%, functions 99.26%; the floors are 97, 95, and 99 |
+
+### Kept on purpose
+
+The 39 remaining try blocks are boundaries or resource releases. They wrap a Deno API, `JSON.parse`, `new URL`, `decodeURIComponent`, or a port that throws. Others turn an internal failure into a result, or release an iterator, a timer, a watcher, or a temporary directory.
+
+The units kept a one-use helper in these cases: it is an entry of a dispatch table, a grammar production, a type guard that narrows, a generic that carries correlated typing, or a body with early returns. A helper also stayed when a declaration with a register row calls it. Each unit handback lists its kept helpers with the reason.
+
+The units found no other redundant check. The remaining fallbacks read a `Map.get` result, an optional field, a possibly empty array, or outside input.
+
+`db.ts` keeps an unexported `FileDiff` type for the result of `diffFiles`. `ProgramChanges` has optional fields, so a caller that reads `diff.set.size` needs the required form.
