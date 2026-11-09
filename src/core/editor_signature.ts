@@ -14,9 +14,8 @@ import {
   type SyntaxTree,
 } from "./syntax.ts";
 import { initOf, kidsOf, tokenKindOf, unparen } from "./syntax_queries.ts";
-import type { BodyTable } from "./tables.ts";
 import { effectText, showType } from "./type_show.ts";
-import type { TypeNode, TypeReader, TypeRef } from "./types.ts";
+import type { TypeNode, TypeRef } from "./types.ts";
 
 type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
 
@@ -29,22 +28,6 @@ export interface SignatureHelp {
   readonly label: string;
   readonly parameters: readonly SignatureParameter[];
   readonly activeParameter: number;
-}
-
-function functionOf(
-  table: TypeReader,
-  ref: TypeRef,
-): FunctionNode | undefined {
-  const node = table.node(table.unfold(ref));
-  return node.kind === "function" ? node : undefined;
-}
-
-function tablesOf(revision: Revision, module: string): readonly BodyTable[] {
-  const checked = revision.checkedModule(module);
-  return checked === undefined ? [] : [
-    ...[...checked.functions.values()].map((fn) => fn.table),
-    ...[...checked.constants.values()].map((constant) => constant.table),
-  ];
 }
 
 function aliasTargetNode(
@@ -178,7 +161,11 @@ export function signatureHelpAt(
   const module = revision.checkedModuleAt(path);
   if (module === undefined || !isSourcePath(path)) return undefined;
   const { tree } = module;
-  const tables = tablesOf(revision, module.module);
+  const checked = revision.checkedModule(module.module);
+  const tables = checked === undefined ? [] : [
+    ...[...checked.functions.values()].map((fn) => fn.table),
+    ...[...checked.constants.values()].map((constant) => constant.table),
+  ];
   let best:
     | {
       readonly callee: NodeId;
@@ -206,8 +193,8 @@ export function signatureHelpAt(
       if (type !== undefined) break;
     }
     if (type === undefined) continue;
-    const fn = functionOf(revision.types, type);
-    if (fn === undefined) continue;
+    const fn = revision.types.node(revision.types.unfold(type));
+    if (fn.kind !== "function") continue;
     const width = tree.ends[node] - tree.starts[node];
     if (best === undefined || width < best.width) {
       best = { callee, args, fn, width };

@@ -124,15 +124,6 @@ function siteAt(
   };
 }
 
-/** The record binding that holds the offset, or -1. */
-function recordBindingAt(tree: SyntaxTree, offset: number): NodeId {
-  let bindingNode = containingNode(tree, offset);
-  while (
-    bindingNode >= 0 && kindOf(tree, bindingNode) !== SyntaxKind.RecordBinding
-  ) bindingNode = tree.parents[bindingNode];
-  return bindingNode;
-}
-
 /** The fields of the bound record that the pattern does not name yet. */
 function recordBindingCompletions(
   site: Site,
@@ -406,17 +397,6 @@ function serviceImportCompletions(
   );
 }
 
-function nameCompletions(site: Site): readonly Completion[] {
-  const { context, declarationStart } = nameContextAt(
-    site.tree,
-    site.start,
-    startsDeclaration(site.tree, site.start),
-  );
-  const values = namespaceCompletions(site, context);
-  addContextNames(site, values, context, declarationStart);
-  return site.filter([...values.values()]);
-}
-
 /** Visible names, filtered by context and prefix. No automatic import edits. */
 export function completionsAt(
   revision: Revision,
@@ -432,11 +412,21 @@ export function completionsAt(
   const site = siteAt(revision, path, offset, info.name, tree);
   const serviceImports = serviceImportCompletions(site);
   if (serviceImports !== undefined) return serviceImports;
-  const bindingNode = recordBindingAt(tree, offset);
+  let bindingNode = containingNode(tree, offset);
+  while (
+    bindingNode >= 0 && kindOf(tree, bindingNode) !== SyntaxKind.RecordBinding
+  ) bindingNode = tree.parents[bindingNode];
   if (bindingNode >= 0) return recordBindingCompletions(site, bindingNode);
   const previousToken = previousTokenOf(tree, site.start);
   if (previousToken >= 0 && tree.lexed.kinds[previousToken] === TokenKind.Dot) {
     return memberCompletions(site, previousToken);
   }
-  return nameCompletions(site);
+  const { context, declarationStart } = nameContextAt(
+    tree,
+    site.start,
+    startsDeclaration(tree, site.start),
+  );
+  const values = namespaceCompletions(site, context);
+  addContextNames(site, values, context, declarationStart);
+  return site.filter([...values.values()]);
 }

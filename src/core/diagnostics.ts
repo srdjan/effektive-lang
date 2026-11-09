@@ -398,19 +398,17 @@ export function makeDiagnostic(
     : { ...base, related };
 }
 
-function compareDiagnostics(a: Diagnostic, b: Diagnostic): number {
-  const bySpan = compareSpans(a.span, b.span);
-  if (bySpan !== 0) return bySpan;
-  if (a.code !== b.code) return a.code < b.code ? -1 : 1;
-  if (a.message !== b.message) return a.message < b.message ? -1 : 1;
-  return 0;
-}
-
 /** Sorts by span, then code, then message. The input is not changed. */
 export function sortDiagnostics(
   diagnostics: readonly Diagnostic[],
 ): Diagnostic[] {
-  return [...diagnostics].sort(compareDiagnostics);
+  return [...diagnostics].sort((a, b) => {
+    const bySpan = compareSpans(a.span, b.span);
+    if (bySpan !== 0) return bySpan;
+    if (a.code !== b.code) return a.code < b.code ? -1 : 1;
+    if (a.message !== b.message) return a.message < b.message ? -1 : 1;
+    return 0;
+  });
 }
 
 /** Removes diagnostics with equal code, span, and message. Keeps the first of each. */

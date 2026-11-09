@@ -13,7 +13,6 @@ import { declarationOf, symbolIndex } from "./editor_index.ts";
 import { parseFileFresh } from "./project.ts";
 import type { Span } from "./source.ts";
 import { type NodeId, nodeSpan, type SyntaxTree } from "./syntax.ts";
-import type { BodyTable } from "./tables.ts";
 import { effectText, showType } from "./type_show.ts";
 
 interface Range {
@@ -92,14 +91,6 @@ function innermostNode<T>(
   return best;
 }
 
-function* tableNodes(
-  tables: Iterable<BodyTable>,
-): Generator<{ readonly node: NodeId; readonly table: BodyTable }> {
-  for (const table of tables) {
-    for (const node of table.info.keys()) yield { node, table };
-  }
-}
-
 function hoverPass(
   revision: Revision,
   module: CheckedModule,
@@ -159,7 +150,9 @@ function hoverPass(
   ];
   const found = innermostNode(
     module.tree,
-    tableNodes(tables),
+    tables.flatMap((table) =>
+      [...table.info.keys()].map((node) => ({ node, table }))
+    ),
     (candidate) => candidate.node,
     offset,
     afterEnd,

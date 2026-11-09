@@ -97,10 +97,6 @@ export function payloadHash(payload: InterfacePayload): string {
   return fnv1a64(canonicalJson(payload));
 }
 
-function interfaceHash(payload: InterfacePayload): string {
-  return fnv1a64(canonicalJson(stripSpans(payload)));
-}
-
 /**
  * The identities that the exported values mention in their types and effect
  * sets. The effect sets are the written sets, else the solved sets.
@@ -309,7 +305,7 @@ export function buildInterface(
     ok: true,
     value: {
       payload,
-      hash: interfaceHash(payload),
+      hash: fnv1a64(canonicalJson(stripSpans(payload))),
     },
   };
 }
