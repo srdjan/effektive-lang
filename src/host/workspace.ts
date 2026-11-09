@@ -3,6 +3,7 @@
 // whose names start with `.` and directories named `node_modules`.
 
 import {
+  caught,
   compareText,
   CONFIG_FILE,
   generatedSourceOf,
@@ -29,11 +30,8 @@ export function isWorkspaceInput(path: string): boolean {
 
 /** The absolute form of an existing path, or undefined when it cannot be resolved. */
 export function realPath(fs: HostFs, path: string): string | undefined {
-  try {
-    return fs.absolute(path);
-  } catch {
-    return undefined;
-  }
+  const resolved = caught(() => fs.absolute(path));
+  return resolved.ok ? resolved.value : undefined;
 }
 
 function insideRoot(root: string, path: string): boolean {

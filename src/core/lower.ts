@@ -58,7 +58,7 @@ import type {
   ValueId,
 } from "./ir.ts";
 import { DURATION_ID } from "./ir.ts";
-import type { Result } from "./source.ts";
+import { caught, type Result } from "./source.ts";
 import { TokenKind } from "./lex.ts";
 import { exportRuleOf, type ModuleInfo, planImports } from "./project.ts";
 import type { ModuleResolution, Target } from "./resolve.ts";
@@ -1664,36 +1664,34 @@ export function lowerModule(
     builtins: new Map(),
     identifiers,
   };
-  try {
-    const declarations = lowerDeclarations(checked, checkedModule, ctx);
-    const prelude = preludeImport(ctx.builtins);
+  const lowered = caught(() => lowerDeclarations(checked, checkedModule, ctx));
+  if (!lowered.ok) {
+    if (!(lowered.error instanceof LowerFailure)) throw lowered.error;
     return {
-      ok: true,
-      value: {
-        format: "light-functional-ir",
-        version: 8,
-        module,
-        sources: [checkedModule.path],
-        imports: prelude === undefined
-          ? imports.value
-          : [...imports.value, prelude],
-        declarations,
-        // The companion module of a `.effi` file exports every declaration,
-        // because the host module needs each one. Providers are not lowered.
-        exports: exportRuleOf(info) === "every-declaration"
-          ? sortedUnique(declarations.map((d) => d.id))
-          : checkedModule.declarations.exports,
-      },
+      ok: false,
+      error: { tag: "internal", module, message: lowered.error.message },
     };
-  } catch (e) {
-    if (e instanceof LowerFailure) {
-      return {
-        ok: false,
-        error: { tag: "internal", module, message: e.message },
-      };
-    }
-    throw e;
   }
+  const declarations = lowered.value;
+  const prelude = preludeImport(ctx.builtins);
+  return {
+    ok: true,
+    value: {
+      format: "light-functional-ir",
+      version: 8,
+      module,
+      sources: [checkedModule.path],
+      imports: prelude === undefined
+        ? imports.value
+        : [...imports.value, prelude],
+      declarations,
+      // The companion module of a `.effi` file exports every declaration,
+      // because the host module needs each one. Providers are not lowered.
+      exports: exportRuleOf(info) === "every-declaration"
+        ? sortedUnique(declarations.map((d) => d.id))
+        : checkedModule.declarations.exports,
+    },
+  };
 }
 
 /**

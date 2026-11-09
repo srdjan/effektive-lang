@@ -14,6 +14,7 @@
 
 import { type Diagnostic, makeDiagnostic } from "../diagnostics.ts";
 import type { Span } from "../ir.ts";
+import { caught } from "../source.ts";
 import type { ProjectConfig } from "../project_config.ts";
 import {
   hostAssertionAtOffset,
@@ -65,11 +66,8 @@ const SUMMARY = /^error: Type checking failed\.$|^Found \d+ errors?\.$/;
 
 function pathOfFileUrl(url: string): string {
   const path = url.slice("file://".length);
-  try {
-    return decodeURIComponent(path);
-  } catch {
-    return path;
-  }
+  const decoded = caught(() => decodeURIComponent(path));
+  return decoded.ok ? decoded.value : path;
 }
 
 /**

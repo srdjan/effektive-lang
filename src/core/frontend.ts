@@ -44,7 +44,13 @@ export {
 } from "./paths.ts";
 export type { Project } from "./project.ts";
 export type { ConfigError, ProjectConfig } from "./project_config.ts";
-export { lineIndexOf, lineStarts, memoryHost, positionOf } from "./source.ts";
+export {
+  caught,
+  lineIndexOf,
+  lineStarts,
+  memoryHost,
+  positionOf,
+} from "./source.ts";
 export type { ReadError, Result, SourceEdit, SourceHost } from "./source.ts";
 export { compareText, errorMessage, isRecord } from "./util.ts";
 export { sha256Hex } from "./sha256.ts";

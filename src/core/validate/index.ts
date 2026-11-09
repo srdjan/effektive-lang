@@ -14,6 +14,7 @@ import { checkDeclarationHeaders } from "./declaration_checks.ts";
 import { checkImports } from "./import_checks.ts";
 import { checkRecursion } from "./recursion_checks.ts";
 import { buildWorld } from "./world_table.ts";
+import { caught } from "../source.ts";
 
 export { AREA } from "./report.ts";
 
@@ -43,20 +44,15 @@ export function validateModule(
     );
   };
   const guard = (path: string, span: Span, run: () => void): void => {
-    try {
-      run();
-    } catch (e) {
-      unexpected(path, span, e);
-    }
+    const done = caught(run);
+    if (!done.ok) unexpected(path, span, done.error);
   };
-  let world: ReturnType<typeof buildWorld>;
-  try {
-    world = buildWorld(ir);
-  } catch (e) {
-    unexpected("", fallback, e);
+  const world = caught(() => buildWorld(ir));
+  if (!world.ok) {
+    unexpected("", fallback, world.error);
     return normalizeDiagnostics(report.items);
   }
-  const ctx = { world, report };
+  const ctx = { world: world.value, report };
   guard("imports", fallback, () => checkImports(ctx, ir));
   guard("declarations", fallback, () => checkDeclarationHeaders(ctx, ir));
   guard("declarations", fallback, () => checkRecursion(ctx, ir));

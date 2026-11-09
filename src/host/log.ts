@@ -2,7 +2,7 @@
 // Logging never breaks the program: after a write failure the file log turns
 // itself off. The core never imports this file.
 
-import { isRecord, type Result, sha256Hex } from "../core/mod.ts";
+import { caught, isRecord, type Result, sha256Hex } from "../core/mod.ts";
 import config from "../../deno.json" with { type: "json" };
 import { type Envelope, sessionFileName, type Surface } from "./log_schema.ts";
 import type { EventLog, FileFailure } from "./ports.ts";
@@ -147,14 +147,11 @@ export function prepareLogFolder(
     if (!read.ok) return { ok: true, value: logs };
     for (const line of read.value.split("\n")) {
       if (line.trim() === "") continue;
-      let event: unknown;
-      try {
-        event = JSON.parse(line);
-      } catch {
-        return { ok: true, value: logs };
-      }
-      if (isRecord(event) && isRecord(event.data)) {
-        if (typeof event.data.hash === "string") hashes.add(event.data.hash);
+      const event = caught((): unknown => JSON.parse(line));
+      if (!event.ok) return { ok: true, value: logs };
+      const data = isRecord(event.value) ? event.value.data : undefined;
+      if (isRecord(data) && typeof data.hash === "string") {
+        hashes.add(data.hash);
       }
     }
   }
@@ -183,12 +180,9 @@ export function openFileLog(
   const file = `${logs}/${sessionFileName(surface, now(), factory.session)}`;
   let enabled = true;
   const guard = (run: () => Result<void, FileFailure>) => {
-    try {
-      if (!run().ok) enabled = false;
-    } catch {
-      // A throwing file system counts as a write failure.
-      enabled = false;
-    }
+    // A throwing file system counts as a write failure.
+    const done = caught(run);
+    if (!done.ok || !done.value.ok) enabled = false;
   };
   return {
     ok: true,

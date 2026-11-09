@@ -2,7 +2,12 @@
 // `Deno.watchFs`. In the CLI, only this file and the wiring at the end of
 // `main.ts` call Deno APIs.
 
-import { errorMessage, type ReadError, type Result } from "../core/mod.ts";
+import {
+  caught,
+  errorMessage,
+  type ReadError,
+  type Result,
+} from "../core/mod.ts";
 import type {
   DenoCheckRequest,
   DenoCheckRun,
@@ -21,17 +26,14 @@ const decoder = new TextDecoder();
 /** The real file system. The language server uses the same object. */
 export const denoFs: HostFs = {
   readText(path: string): Result<string, ReadError> {
-    try {
-      return { ok: true, value: Deno.readTextFileSync(path) };
-    } catch (e) {
-      if (e instanceof Deno.errors.NotFound) {
-        return { ok: false, error: { tag: "not-found", path } };
-      }
-      return {
-        ok: false,
-        error: { tag: "unreadable", path, message: errorMessage(e) },
-      };
-    }
+    const read = caught(() => Deno.readTextFileSync(path));
+    if (read.ok) return read;
+    return {
+      ok: false,
+      error: read.error instanceof Deno.errors.NotFound
+        ? { tag: "not-found", path }
+        : { tag: "unreadable", path, message: errorMessage(read.error) },
+    };
   },
   writeText(path: string, text: string): Result<void, FileFailure> {
     return attempt(() => {
@@ -41,62 +43,58 @@ export const denoFs: HostFs = {
     });
   },
   remove(path: string): Result<void, FileFailure> {
-    try {
-      Deno.removeSync(path);
+    const removed = caught(() => Deno.removeSync(path));
+    if (removed.ok || removed.error instanceof Deno.errors.NotFound) {
       return { ok: true, value: undefined };
-    } catch (e) {
-      if (e instanceof Deno.errors.NotFound) {
-        return { ok: true, value: undefined };
-      }
-      return { ok: false, error: { message: errorMessage(e) } };
     }
+    return { ok: false, error: { message: errorMessage(removed.error) } };
   },
   entryKind(path: string): Result<EntryKind, FileFailure> {
-    try {
-      return {
-        ok: true,
-        value: Deno.lstatSync(path).isSymlink ? "symlink" : "other",
-      };
-    } catch (e) {
-      if (e instanceof Deno.errors.NotFound) {
-        return { ok: true, value: "missing" };
-      }
-      return { ok: false, error: { message: errorMessage(e) } };
+    const stat = caught(() => Deno.lstatSync(path));
+    if (stat.ok) {
+      return { ok: true, value: stat.value.isSymlink ? "symlink" : "other" };
     }
+    if (stat.error instanceof Deno.errors.NotFound) {
+      return { ok: true, value: "missing" };
+    }
+    return { ok: false, error: { message: errorMessage(stat.error) } };
   },
   kind(path: string): "file" | "directory" | "missing" {
-    const stat = attempt(() => Deno.statSync(path));
+    const stat = caught(() => Deno.statSync(path));
     if (!stat.ok) return "missing";
     return stat.value.isDirectory ? "directory" : "file";
   },
   list(path: string): Result<readonly DirectoryEntry[], FileFailure> {
-    try {
-      const entries: DirectoryEntry[] = [];
-      for (const entry of Deno.readDirSync(path)) {
-        // A link to a directory is a directory for the walk.
-        let isDirectory = entry.isDirectory;
-        if (entry.isSymlink) {
-          const target = `${path}/${entry.name}`;
-          try {
-            isDirectory = Deno.statSync(target).isDirectory;
-          } catch (error) {
-            if (
-              !(error instanceof Deno.errors.NotFound) &&
-              !(error instanceof Deno.errors.FilesystemLoop)
-            ) {
-              return {
-                ok: false,
-                error: { message: `${target}: ${errorMessage(error)}` },
-              };
-            }
-          }
-        }
-        entries.push({ name: entry.name, isDirectory });
-      }
-      return { ok: true, value: entries };
-    } catch (e) {
-      return { ok: false, error: { message: `${path}: ${errorMessage(e)}` } };
+    const listed = caught(() => [...Deno.readDirSync(path)]);
+    if (!listed.ok) {
+      return {
+        ok: false,
+        error: { message: `${path}: ${errorMessage(listed.error)}` },
+      };
     }
+    const entries: DirectoryEntry[] = [];
+    for (const entry of listed.value) {
+      // A link to a directory is a directory for the walk. A link whose
+      // target is missing or loops is not.
+      let isDirectory = entry.isDirectory;
+      if (entry.isSymlink) {
+        const target = `${path}/${entry.name}`;
+        const stat = caught(() => Deno.statSync(target));
+        if (stat.ok) {
+          isDirectory = stat.value.isDirectory;
+        } else if (
+          !(stat.error instanceof Deno.errors.NotFound) &&
+          !(stat.error instanceof Deno.errors.FilesystemLoop)
+        ) {
+          return {
+            ok: false,
+            error: { message: `${target}: ${errorMessage(stat.error)}` },
+          };
+        }
+      }
+      entries.push({ name: entry.name, isDirectory });
+    }
+    return { ok: true, value: entries };
   },
   absolute(path: string): string {
     return Deno.realPathSync(path);
@@ -129,11 +127,10 @@ export const denoLogFs: LogFs = {
 };
 
 function attempt<T>(run: () => T): Result<T, FileFailure> {
-  try {
-    return { ok: true, value: run() };
-  } catch (e) {
-    return { ok: false, error: { message: errorMessage(e) } };
-  }
+  const done = caught(run);
+  return done.ok
+    ? done
+    : { ok: false, error: { message: errorMessage(done.error) } };
 }
 
 /**
@@ -145,12 +142,17 @@ function attempt<T>(run: () => T): Result<T, FileFailure> {
 async function denoCheck(
   request: DenoCheckRequest,
 ): Promise<Result<DenoCheckRun, FileFailure>> {
-  let directory: string | undefined;
+  const made = attempt(() =>
+    Deno.makeTempDirSync({ prefix: "effektive-tsc-" })
+  );
+  if (!made.ok) return made;
+  const config = `${made.value}/deno.json`;
+  const lock = `${made.value}/deno.lock`;
+  let run: Result<DenoCheckRun, FileFailure>;
+  // `Deno.Command` throws at once when it cannot start the process, and its
+  // `output` promise rejects on a later failure. One catch takes both.
   try {
-    directory = Deno.makeTempDirSync({ prefix: "effektive-tsc-" });
-    const config = `${directory}/deno.json`;
     Deno.writeTextFileSync(config, request.config);
-    const lock = `${directory}/deno.lock`;
     Deno.writeTextFileSync(lock, request.lock);
     const output = await new Deno.Command("deno", {
       args: ["check", `--lock=${lock}`, "--config", config, ...request.files],
@@ -159,19 +161,16 @@ async function denoCheck(
       stdout: "piped",
       stderr: "piped",
     }).output();
-    return {
+    run = {
       ok: true,
       value: { code: output.code, stderr: decoder.decode(output.stderr) },
     };
   } catch (e) {
-    return { ok: false, error: { message: errorMessage(e) } };
-  } finally {
-    // When the removal fails, the system removes the temporary directory later.
-    const made = directory;
-    if (made !== undefined) {
-      attempt(() => Deno.removeSync(made, { recursive: true }));
-    }
+    run = { ok: false, error: { message: errorMessage(e) } };
   }
+  // When the removal fails, the system removes the temporary directory later.
+  attempt(() => Deno.removeSync(made.value, { recursive: true }));
+  return run;
 }
 
 /** The quiet time after the last file event before a rebuild starts. */

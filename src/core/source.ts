@@ -10,6 +10,19 @@ export type Result<A, E> =
   | { readonly ok: true; readonly value: A }
   | { readonly ok: false; readonly error: E };
 
+/**
+ * Runs `run` and returns its value, or the value that it throws, as a result.
+ * This is the one place where the compiler and its adapters catch a synchronous
+ * throw from an API such as `JSON.parse`, `new URL`, or a Deno call.
+ */
+export function caught<T>(run: () => T): Result<T, unknown> {
+  try {
+    return { ok: true, value: run() };
+  } catch (thrown) {
+    return { ok: false, error: thrown };
+  }
+}
+
 export interface SourceEdit {
   readonly span: Span;
   readonly text: string;

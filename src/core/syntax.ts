@@ -4,7 +4,7 @@
 // tables and the printer emits it in front of its token.
 
 import type { Lexed } from "./lex.ts";
-import type { Span } from "./source.ts";
+import { caught, type Span } from "./source.ts";
 
 export type NodeId = number;
 
@@ -227,12 +227,10 @@ export interface SyntaxTree {
 
 /** Decodes a string token. The lexer accepts only strings that JSON accepts. */
 export function decodeString(text: string): string | undefined {
-  try {
-    const value: unknown = JSON.parse(text);
-    return typeof value === "string" ? value : undefined;
-  } catch {
-    return undefined;
-  }
+  const parsed = caught((): unknown => JSON.parse(text));
+  return parsed.ok && typeof parsed.value === "string"
+    ? parsed.value
+    : undefined;
 }
 
 export function kindOf(tree: SyntaxTree, node: NodeId): SyntaxKind {

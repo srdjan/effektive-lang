@@ -10,7 +10,7 @@ import {
   joinPath,
   normalizeRelative,
 } from "./paths.ts";
-import type { Result, SourceHost, Span } from "./source.ts";
+import { caught, type Result, type SourceHost, type Span } from "./source.ts";
 import { errorMessage, isRecord } from "./util.ts";
 
 export const CONFIG_FILE = "effektive.json";
@@ -165,19 +165,18 @@ interface ConfigResult {
 export function parseConfig(
   text: string,
 ): Result<ConfigResult, ConfigError> {
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch (e) {
+  const parsed = caught((): unknown => JSON.parse(text));
+  if (!parsed.ok) {
     return {
       ok: false,
       error: {
         tag: "malformed-json",
         path: CONFIG_FILE,
-        message: errorMessage(e),
+        message: errorMessage(parsed.error),
       },
     };
   }
+  const data = parsed.value;
   const invalid = (message: string): Result<ConfigResult, ConfigError> => ({
     ok: false,
     error: { tag: "invalid-shape", path: CONFIG_FILE, message },

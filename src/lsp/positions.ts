@@ -4,7 +4,7 @@
 // `\r`. A position inside a surrogate pair is not corrected.
 
 import { fromFileUrl, isAbsolute, toFileUrl } from "@std/path";
-import { lineIndexOf, lineStarts, type Span } from "../core/mod.ts";
+import { caught, lineIndexOf, lineStarts, type Span } from "../core/mod.ts";
 import type { Position, Range, TextChange } from "./protocol.ts";
 
 /** Offset of the end of line `line`, before its terminator. */
@@ -102,12 +102,11 @@ export function applyContentChanges(
 
 /** The file path of a `file:` URI, or undefined for any other URI or a malformed one. */
 export function uriToPath(uri: string): string | undefined {
-  try {
+  const path = caught(() => {
     const url = new URL(uri);
     return url.protocol === "file:" ? fromFileUrl(url) : undefined;
-  } catch {
-    return undefined;
-  }
+  });
+  return path.ok ? path.value : undefined;
 }
 
 /** The `file:` URI of an absolute path, or undefined for a relative path. */

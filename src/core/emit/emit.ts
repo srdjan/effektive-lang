@@ -4,7 +4,7 @@ import { fieldHelperDeclarations } from "./fields.ts";
 // the project configuration. It is synchronous and pure: the caller writes files.
 
 import type { Declaration, ModuleIR, TypeDecl } from "../ir.ts";
-import type { Result } from "../source.ts";
+import { caught, type Result } from "../source.ts";
 import {
   fileNameOf,
   generatedHeader,
@@ -180,17 +180,13 @@ function emitFailureAsResult<T, E>(
   module: string,
   run: () => Result<T, E>,
 ): Result<T, E | EmitError> {
-  try {
-    return run();
-  } catch (e) {
-    if (e instanceof EmitFailure) {
-      return {
-        ok: false,
-        error: { tag: "internal", module, message: e.message },
-      };
-    }
-    throw e;
-  }
+  const done = caught(run);
+  if (done.ok) return done.value;
+  if (!(done.error instanceof EmitFailure)) throw done.error;
+  return {
+    ok: false,
+    error: { tag: "internal", module, message: done.error.message },
+  };
 }
 
 /** No backend type text exists: the declaration is missing, or it is neither a function nor a constant. */

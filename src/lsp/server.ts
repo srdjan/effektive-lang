@@ -10,7 +10,12 @@
 // names and sends `effektive/generatedChanged` after a flush.
 
 import type { HostFs } from "../host/io.ts";
-import { errorMessage, type Result, type Revision } from "../core/mod.ts";
+import {
+  caught,
+  errorMessage,
+  type Result,
+  type Revision,
+} from "../core/mod.ts";
 import type {
   RequestFailure,
   RequestHandler,
@@ -357,17 +362,18 @@ export class LanguageServer {
       fail(ErrorCodes.methodNotFound, `method not found: ${method}`);
       return;
     }
-    try {
+    const sent = caught(() => {
       const result = handler(request.params, this.#context);
       this.ports.send(
         result.ok
           ? successResponse(id, result.value)
           : errorResponse(id, result.error.code, result.error.message),
       );
-    } catch (error) {
-      this.#stderr(`request ${method} failed: ${describeError(error)}`);
+    });
+    if (!sent.ok) {
+      this.#stderr(`request ${method} failed: ${describeError(sent.error)}`);
       this.ports.send(
-        errorResponse(id, ErrorCodes.internalError, errorMessage(error)),
+        errorResponse(id, ErrorCodes.internalError, errorMessage(sent.error)),
       );
     }
   }
@@ -413,11 +419,8 @@ export class LanguageServer {
 
   /** The only exception boundary of notifications and flushes. */
   #contain(label: string, body: () => void): void {
-    try {
-      body();
-    } catch (error) {
-      this.#stderr(`${label} failed: ${describeError(error)}`);
-    }
+    const done = caught(body);
+    if (!done.ok) this.#stderr(`${label} failed: ${describeError(done.error)}`);
   }
 
   #cancelPending(): void {
