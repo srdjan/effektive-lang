@@ -322,10 +322,6 @@ class Parser {
     return this.kinds[this.pos] as TokenKind;
   }
 
-  private isRealEof(): boolean {
-    return this.kinds[this.pos] === TokenKind.Eof;
-  }
-
   /** Position of the next token that is not a newline, without consuming. */
   private laPos(): number {
     let p = this.pos;
@@ -383,13 +379,6 @@ class Parser {
   private clauseAhead(word: ContextualWord): boolean {
     const p = this.laPos();
     return this.isWordAt(p, word) && this.kinds[p + 1] === TokenKind.Ident;
-  }
-
-  /** True when `with` starts a clause here, possibly after newlines. */
-  private withClauseAhead(): boolean {
-    const p = this.laPos();
-    return this.kinds[p] === TokenKind.KwWith &&
-      this.kinds[p + 1] === TokenKind.Ident;
   }
 
   private open(inner: "sig" | "free"): Group {
@@ -593,7 +582,7 @@ class Parser {
     this.begin();
     let skipped = 0;
     while (true) {
-      if (this.isRealEof()) break;
+      if (this.kinds[this.pos] === TokenKind.Eof) break;
       if (skipped > 0 && this.atDeclarationStart(true)) break;
       if (skipped === 0) this.unexpectedAt("; expected a declaration");
       this.leaf();
@@ -961,7 +950,12 @@ class Parser {
 
   private parseEffects(): void {
     if (this.clauseAhead("fails")) this.parseFailsClause();
-    if (this.withClauseAhead()) this.parseWithClause();
+    // A `with` clause starts here, possibly after newlines.
+    const p = this.laPos();
+    if (
+      this.kinds[p] === TokenKind.KwWith &&
+      this.kinds[p + 1] === TokenKind.Ident
+    ) this.parseWithClause();
   }
 
   private parseFailsClause(): void {

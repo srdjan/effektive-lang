@@ -557,14 +557,6 @@ function scanString(text: string, i: number, report: Report): number {
   return j;
 }
 
-/** Scans a block comment that starts at `i`. Returns its end. */
-function scanBlockComment(text: string, i: number, report: Report): number {
-  const close = text.indexOf("*/", i + 2);
-  if (close >= 0) return close + 2;
-  report("syntax/004", "block comment has no closing `*/`", i, text.length);
-  return text.length;
-}
-
 /** Scans the whole text. Never throws. */
 export function lex(source: string, text: string): Lexed {
   const n = text.length;
@@ -704,7 +696,17 @@ export function lex(source: string, text: string): Lexed {
           pushTrivia(TriviaKind.LineComment, i, j);
           i = j;
         } else if (next === 0x2a) {
-          const j = scanBlockComment(text, i, report);
+          // A block comment ends at its `*/`, or at the end of the text.
+          const close = text.indexOf("*/", i + 2);
+          if (close < 0) {
+            report(
+              "syntax/004",
+              "block comment has no closing `*/`",
+              i,
+              text.length,
+            );
+          }
+          const j = close < 0 ? text.length : close + 2;
           pushTrivia(TriviaKind.BlockComment, i, j);
           i = j;
         } else {
