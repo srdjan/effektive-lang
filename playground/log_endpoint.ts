@@ -25,13 +25,21 @@ export interface LogRequest {
 }
 
 export interface Refusal {
-  readonly status: 400 | 403 | 413 | 415 | 405;
+  readonly status: 400 | 403 | 411 | 413 | 415 | 405;
   readonly message: string;
 }
 
 /** True for a playground session file name. A path separator or `..` never matches. */
 export function isReplayName(name: string): boolean {
   return parseSessionFileName(name)?.surface === "playground";
+}
+
+/** True when the request comes from the page of this server. */
+export function isAllowedOrigin(
+  headers: { get(name: string): string | null },
+): boolean {
+  return headers.get("Sec-Fetch-Site") === "same-origin" ||
+    headers.get("Origin") === ALLOWED_ORIGIN;
 }
 
 export function checkLogRequest(
@@ -42,11 +50,7 @@ export function checkLogRequest(
     error: { status, message },
   });
   if (request.method !== "POST") return refuse(405, "POST only");
-  const site = request.headers.get("Sec-Fetch-Site");
-  const origin = request.headers.get("Origin");
-  if (site !== "same-origin" && origin !== ALLOWED_ORIGIN) {
-    return refuse(403, "foreign origin");
-  }
+  if (!isAllowedOrigin(request.headers)) return refuse(403, "foreign origin");
   if (request.headers.get("Content-Type") !== "application/json") {
     return refuse(415, "Content-Type must be application/json");
   }

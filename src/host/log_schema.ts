@@ -340,12 +340,16 @@ export function parseSessionFileName(
  */
 type EnvelopePolicy = "browser" | "replay";
 
+/** True for a string that `Date.parse` reads as a time. */
+const isTime = (t: unknown): t is string =>
+  typeof t === "string" && !Number.isNaN(Date.parse(t));
+
 function browserEnvelope(
   value: Readonly<Record<string, unknown>>,
 ): Envelope | undefined {
   const { v, t, ms, surface, session, seq, build, kind, data } = value;
   if (
-    v === 1 && typeof t === "string" && typeof ms === "number" &&
+    v === 1 && isTime(t) && typeof ms === "number" &&
     Number.isFinite(ms) && surface === "playground" &&
     typeof session === "string" && SESSION_ID.test(session) &&
     typeof seq === "number" && Number.isInteger(seq) && seq >= 0 &&
@@ -371,7 +375,7 @@ function isReplayEnvelope(
   value: Readonly<Record<string, unknown>>,
 ): value is Readonly<Record<string, unknown>> & Envelope {
   const { v, t, ms, surface, session, seq, build, kind } = value;
-  return v === 1 && typeof t === "string" && !Number.isNaN(Date.parse(t)) &&
+  return v === 1 && isTime(t) &&
     typeof ms === "number" && typeof surface === "string" &&
     SURFACES.some((s) => s === surface) && typeof session === "string" &&
     typeof seq === "number" && typeof build === "string" &&

@@ -6,6 +6,7 @@ import {
   checkLogRequest,
   MAX_BODY_BYTES,
 } from "../playground/log_endpoint.ts";
+import { route } from "../playground/serve.ts";
 
 const SESSION = "11111111-2222-3333-4444-555555555555";
 
@@ -113,4 +114,88 @@ Deno.test("a wrong shape gives 400", () => {
 
 Deno.test("a method other than POST is refused", () => {
   assertEquals(status(check([envelope()], {}, "GET")), 405);
+});
+
+// ------------------------------------------------------------ the server route
+
+const HOST = "127.0.0.1:8790";
+
+/** A refused request never reaches the log folder, so a fast test needs no real one. */
+const NO_LOGS = "/nonexistent-log-folder";
+
+/** A POST whose body stream counts the bytes that the handler pulls. */
+function post(
+  headers: Record<string, string>,
+  body: string,
+  pulled: { bytes: number } = { bytes: 0 },
+): Request {
+  const bytes = new TextEncoder().encode(body);
+  // A high-water mark of 0 makes the stream pull only when the handler reads.
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      pulled.bytes += bytes.length;
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  }, { highWaterMark: 0 });
+  return new Request(`http://${HOST}/log`, {
+    method: "POST",
+    headers: {
+      Host: HOST,
+      Origin: ALLOWED_ORIGIN,
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: stream,
+    // @ts-expect-error `duplex` is missing from the DOM `RequestInit` type.
+    duplex: "half",
+  });
+}
+
+const batch = (over: Record<string, unknown> = {}) =>
+  JSON.stringify([envelope(over)]);
+
+Deno.test("a foreign origin gives 403 before the server reads the body", async () => {
+  const pulled = { bytes: 0 };
+  const body = batch();
+  const response = await route(
+    post(
+      { Origin: "http://evil.example", "Content-Length": String(body.length) },
+      body,
+      pulled,
+    ),
+    NO_LOGS,
+    new Map(),
+  );
+  assertEquals([response.status, pulled.bytes], [403, 0]);
+});
+
+Deno.test("a foreign Host with a same-origin fetch gives 403 before the server reads the body", async () => {
+  const pulled = { bytes: 0 };
+  const body = batch();
+  const response = await route(
+    post(
+      {
+        Host: "evil.example:8790",
+        Origin: "",
+        "Sec-Fetch-Site": "same-origin",
+        "Content-Length": String(body.length),
+      },
+      body,
+      pulled,
+    ),
+    NO_LOGS,
+    new Map(),
+  );
+  assertEquals([response.status, pulled.bytes], [403, 0]);
+});
+
+Deno.test("a POST without Content-Length gives 411 and no body read", async () => {
+  const pulled = { bytes: 0 };
+  const response = await route(
+    post({}, batch(), pulled),
+    NO_LOGS,
+    new Map(),
+  );
+  assertEquals([response.status, pulled.bytes], [411, 0]);
 });

@@ -5,12 +5,14 @@
 
 import { serveDir } from "@std/http/file-server";
 import { join } from "@std/path";
+import { caught } from "../src/core/source.ts";
 import { denoLogFs } from "../src/host/deno_io.ts";
 import { prepareLogFolder } from "../src/host/log.ts";
 import { sessionFileName } from "../src/host/log_schema.ts";
 import { build, describeBuildError, REPOSITORY_ROOT } from "./build.ts";
 import {
   checkLogRequest,
+  isAllowedOrigin,
   isReplayName,
   MAX_BODY_BYTES,
 } from "./log_endpoint.ts";
@@ -38,12 +40,29 @@ function openLogFolder(): string | undefined {
 const respond = (status: number, message = "") =>
   new Response(message === "" ? null : message, { status });
 
-/** The session files by session ID, with the bytes written so far. */
-const sessions = new Map<string, { file: string; bytes: number }>();
+/**
+ * The most sessions in the map. A page makes one session per load, so 256 is
+ * far above one person's use. The map drops its oldest session at the bound;
+ * the size of that session file comes back from `Deno.stat`.
+ */
+const MAX_SESSIONS = 256;
 
-async function handleLog(request: Request, logs: string): Promise<Response> {
-  const length = Number(request.headers.get("Content-Length") ?? 0);
-  if (length > MAX_BODY_BYTES) return respond(413, "body too large");
+/** The session files by session ID, with the bytes written so far. */
+type Sessions = Map<string, { file: string; bytes: number }>;
+
+async function handleLog(
+  request: Request,
+  logs: string,
+  sessions: Sessions,
+): Promise<Response> {
+  // A DNS-rebinding page is same-origin under another host name.
+  if (request.headers.get("host") !== `${HOSTNAME}:${PORT}`) {
+    return respond(403, "wrong host");
+  }
+  if (!isAllowedOrigin(request.headers)) return respond(403, "foreign origin");
+  const declared = request.headers.get("Content-Length");
+  if (declared === null) return respond(411, "Content-Length required");
+  if (Number(declared) > MAX_BODY_BYTES) return respond(413, "body too large");
   const checked = checkLogRequest({
     method: request.method,
     headers: request.headers,
@@ -57,7 +76,14 @@ async function handleLog(request: Request, logs: string): Promise<Response> {
   let target = sessions.get(session);
   if (target === undefined) {
     const name = sessionFileName("playground", new Date(), session);
-    target = { file: `${logs}/${name}`, bytes: 0 };
+    const file = `${logs}/${name}`;
+    // After a restart the file may exist already.
+    const size = caught(() => Deno.statSync(file).size);
+    const oldest = sessions.keys().next().value;
+    if (sessions.size >= MAX_SESSIONS && oldest !== undefined) {
+      sessions.delete(oldest);
+    }
+    target = { file, bytes: size.ok ? size.value : 0 };
     sessions.set(session, target);
   }
   if (target.bytes + size > SESSION_CAP_BYTES) {
@@ -93,6 +119,25 @@ function handleReplay(request: Request, logs: string | undefined): Response {
   }
 }
 
+/** Sends a request to its handler. */
+export function route(
+  request: Request,
+  logs: string | undefined,
+  sessions: Sessions,
+): Response | Promise<Response> {
+  const { pathname } = new URL(request.url);
+  if (request.method === "POST" && pathname === "/log") {
+    // With --no-log the answer is 404, so the page stops after its first post.
+    return logs === undefined
+      ? respond(404)
+      : handleLog(request, logs, sessions);
+  }
+  if (request.method === "GET" && pathname.startsWith("/replay/")) {
+    return handleReplay(request, logs);
+  }
+  return serveDir(request, { fsRoot: OUT_DIR, quiet: true });
+}
+
 if (import.meta.main) {
   const result = await build(OUT_DIR);
   if (!result.ok) {
@@ -103,20 +148,9 @@ if (import.meta.main) {
   console.log(`app.js: ${appBytes} bytes, ${appGzipBytes} bytes after gzip`);
   console.log(`http://${HOSTNAME}:${PORT}/`);
   const logs = openLogFolder();
+  const sessions: Sessions = new Map();
   Deno.serve(
     { hostname: HOSTNAME, port: PORT, onListen: () => {} },
-    (request) => {
-      if (
-        request.method === "POST" && new URL(request.url).pathname === "/log"
-      ) {
-        // With --no-log the answer is 404, so the page stops after its first post.
-        return logs === undefined ? respond(404) : handleLog(request, logs);
-      }
-      if (
-        request.method === "GET" &&
-        new URL(request.url).pathname.startsWith("/replay/")
-      ) return handleReplay(request, logs);
-      return serveDir(request, { fsRoot: OUT_DIR, quiet: true });
-    },
+    (request) => route(request, logs, sessions),
   );
 }

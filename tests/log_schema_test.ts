@@ -93,6 +93,10 @@ Deno.test("parseEnvelope browser policy refuses a bad envelope", () => {
   ]);
 });
 
+Deno.test("parseEnvelope browser policy refuses a time that Date.parse rejects", () => {
+  assertEquals(parseEnvelope({ ...envelope, t: "x" }, "browser"), undefined);
+});
+
 Deno.test("parseEnvelope replay policy keeps the value and any kind or surface", () => {
   const old = {
     v: 1,
