@@ -123,8 +123,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     type_query.ts  EffectModule, isDeferredType, and resolvedAs: questions about an IR type that need no emitter state.
     types.ts       The type printer and the schema printer.
     expr.ts        The expression scheme: pure, inGen, asEffect.
-    decls.ts       Declarations, their order, and the export rule.
-    predicates.ts  predicateDoc: exact integer comparisons that print a refinement predicate.
+    decls.ts       Declarations, their order, the export rule, and predicateDoc: exact integer comparisons that print a refinement predicate.
     walk.ts        Traversals of the IR.
 src/cli/       The command-line tool. The Layout section of development.md says where Deno APIs may appear.
   main.ts        main(args, io) returns the exit code, and the watch loop over an injected event source. The last lines wire the real io.
