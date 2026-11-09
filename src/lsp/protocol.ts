@@ -520,21 +520,23 @@ export interface InlayHintParams extends TextDocumentParams {
   readonly range: Range;
 }
 
+const narrowDocumentVersion = params("request", {
+  textDocument: object({ version: optional(integer) }),
+});
+const narrowNewName = params("request", { newName: string });
+
 // Editor requests validate the position before an optional document version.
 export function narrowEditorPositionParams(
   params: unknown,
 ): Narrowed<EditorPositionParams> {
   const position = narrowPositionParams(params);
   if (!position.ok) return position;
-  if (
-    !isRecord(params) || !isRecord(params.textDocument) ||
-    params.textDocument.version === undefined
-  ) return position;
-  const version = params.textDocument.version;
-  if (!isInteger(version)) {
-    return fail("textDocument.version must be an integer");
-  }
-  return ok({ ...position.value, documentVersion: version });
+  const versioned = narrowDocumentVersion(params);
+  if (!versioned.ok) return versioned;
+  const documentVersion = versioned.value.textDocument.version;
+  return documentVersion === undefined
+    ? position
+    : ok({ ...position.value, documentVersion });
 }
 
 export function narrowReferencesParams(
@@ -555,10 +557,9 @@ export function narrowReferencesParams(
 export function narrowRenameParams(params: unknown): Narrowed<RenameParams> {
   const position = narrowEditorPositionParams(params);
   if (!position.ok) return position;
-  if (!isRecord(params) || typeof params.newName !== "string") {
-    return fail("newName must be a string");
-  }
-  return ok({ ...position.value, newName: params.newName });
+  const named = narrowNewName(params);
+  if (!named.ok) return named;
+  return ok({ ...position.value, newName: named.value.newName });
 }
 
 // A null context stays accepted, as before the `only` filter existed.
