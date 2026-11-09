@@ -53,8 +53,10 @@ stdin read, each timer flush, and each disk call. The playground builds its
 event data in `playground/src/events.ts` and posts batches to `POST /log`.
 The playground waits for each response before posting the next batch, including batches from later flushes.
 A failed request stops queued batches and later events.
-`playground/log_endpoint.ts` checks each request: same origin, the JSON content
-type, the size limits, and the envelope shape.
+Before it reads a body, `playground/serve.ts` checks the `Host` header and the
+origin. It refuses a body without `Content-Length` with status 411.
+`playground/log_endpoint.ts` checks each request: the JSON content type, the
+size limits, and the envelope shape, including a valid date in `t`.
 
 ## Content and privacy
 
