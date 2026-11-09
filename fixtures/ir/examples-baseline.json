@@ -8731,5 +8731,797 @@
         "hash": "a7bef3fe5449eada"
       }
     ]
+  },
+  {
+    "files": {
+      "effektive.json": "{}",
+      "empty-effect.eff": "type Int = int\nexport const empty = (): Int => run(defer(() => 1))\n",
+      "tagged.eff": "type Cents = int\ntype Fixed = { amount: Cents }\ntype Times = { factor: Cents }\ntype Rule = Fixed | Times\nexport const fixed = (): Fixed => ({ amount: 50 })\nexport const amountOf = (rule: Rule): Cents =>\n  match rule {\n    Fixed(f) => f.amount,\n    Times(t) => t.factor\n  }\n"
+    },
+    "modules": [
+      {
+        "name": "empty-effect",
+        "ir": {
+          "declarations": [
+            {
+              "definition": {
+                "base": {
+                  "kind": "primitive",
+                  "name": "int"
+                },
+                "kind": "nominal"
+              },
+              "id": "type:empty-effect#Int",
+              "kind": "type",
+              "name": "Int",
+              "span": {
+                "end": 14,
+                "source": "empty-effect.eff",
+                "start": 0
+              }
+            },
+            {
+              "body": {
+                "effects": {
+                  "failures": [],
+                  "requirements": []
+                },
+                "execution": "effect",
+                "kind": "run",
+                "span": {
+                  "end": 66,
+                  "source": "empty-effect.eff",
+                  "start": 47
+                },
+                "type": {
+                  "kind": "primitive",
+                  "name": "int"
+                },
+                "value": {
+                  "effects": {
+                    "failures": [],
+                    "requirements": []
+                  },
+                  "execution": "pure",
+                  "job": {
+                    "body": {
+                      "effects": {
+                        "failures": [],
+                        "requirements": []
+                      },
+                      "execution": "pure",
+                      "kind": "literal",
+                      "span": {
+                        "end": 64,
+                        "source": "empty-effect.eff",
+                        "start": 63
+                      },
+                      "type": {
+                        "kind": "primitive",
+                        "name": "int"
+                      },
+                      "value": 1
+                    },
+                    "effects": {
+                      "failures": [],
+                      "requirements": []
+                    },
+                    "execution": "pure",
+                    "kind": "closure",
+                    "parameters": [],
+                    "span": {
+                      "end": 64,
+                      "source": "empty-effect.eff",
+                      "start": 57
+                    },
+                    "type": {
+                      "effects": {
+                        "failures": [],
+                        "requirements": []
+                      },
+                      "execution": "pure",
+                      "kind": "function",
+                      "parameters": [],
+                      "result": {
+                        "kind": "primitive",
+                        "name": "int"
+                      }
+                    }
+                  },
+                  "kind": "defer",
+                  "span": {
+                    "end": 65,
+                    "source": "empty-effect.eff",
+                    "start": 51
+                  },
+                  "type": {
+                    "effects": {
+                      "failures": [],
+                      "requirements": []
+                    },
+                    "kind": "effect",
+                    "result": {
+                      "kind": "primitive",
+                      "name": "int"
+                    }
+                  }
+                }
+              },
+              "id": "value:empty-effect#empty",
+              "kind": "function",
+              "name": "empty",
+              "parameters": [],
+              "span": {
+                "end": 66,
+                "source": "empty-effect.eff",
+                "start": 15
+              },
+              "type": {
+                "effects": {
+                  "failures": [],
+                  "requirements": []
+                },
+                "execution": "effect",
+                "kind": "function",
+                "parameters": [],
+                "result": {
+                  "id": "type:empty-effect#Int",
+                  "kind": "named"
+                }
+              },
+              "written": {
+                "fails": false,
+                "result": true,
+                "uses": true
+              }
+            }
+          ],
+          "exports": [
+            "value:empty-effect#empty"
+          ],
+          "format": "light-functional-ir",
+          "imports": [],
+          "module": "empty-effect",
+          "sources": [
+            "empty-effect.eff"
+          ],
+          "version": 8
+        },
+        "emitted": {
+          "module": "empty-effect",
+          "path": "empty-effect.ts",
+          "text": "// Generated from empty-effect.eff by the Effektive compiler. Do not edit.\n\nimport { Effect, Schema } from \"effect\";\n\nconst $Int = Schema.Finite.check(\n  Schema.makeFilter(\n    (value) => Number.isSafeInteger(value) || \"expected a safe integer\",\n  ),\n);\n\nexport const Int = $Int;\nexport type Int = typeof Int.Type;\n\nexport const empty = (): Effect.Effect<Int> =>\n  Effect.suspend(() => Effect.succeed(1));\n//# sourceMappingURL=empty-effect.ts.map\n",
+          "spans": [
+            {
+              "start": 255,
+              "end": 314,
+              "span": {
+                "source": "empty-effect.eff",
+                "start": 0,
+                "end": 14
+              }
+            },
+            {
+              "start": 401,
+              "end": 402,
+              "span": {
+                "source": "empty-effect.eff",
+                "start": 63,
+                "end": 64
+              }
+            },
+            {
+              "start": 386,
+              "end": 403,
+              "span": {
+                "source": "empty-effect.eff",
+                "start": 63,
+                "end": 64
+              }
+            },
+            {
+              "start": 380,
+              "end": 403,
+              "span": {
+                "source": "empty-effect.eff",
+                "start": 57,
+                "end": 64
+              }
+            },
+            {
+              "start": 365,
+              "end": 404,
+              "span": {
+                "source": "empty-effect.eff",
+                "start": 51,
+                "end": 65
+              }
+            },
+            {
+              "start": 365,
+              "end": 404,
+              "span": {
+                "source": "empty-effect.eff",
+                "start": 47,
+                "end": 66
+              }
+            },
+            {
+              "start": 316,
+              "end": 405,
+              "span": {
+                "source": "empty-effect.eff",
+                "start": 15,
+                "end": 66
+              }
+            }
+          ],
+          "hostAssertions": []
+        },
+        "map": "{\n  \"version\": 3,\n  \"file\": \"empty-effect.ts\",\n  \"sources\": [\n    \"empty-effect.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;;;;;;;AAAA;AAAA,kC;;AACA;AAAA,EAAoC,eAAM,MAAM,iBAAZ,CAApC,C;;\"\n}\n",
+        "hash": "3bf4dafa6a0d71c2"
+      },
+      {
+        "name": "tagged",
+        "ir": {
+          "declarations": [
+            {
+              "definition": {
+                "base": {
+                  "kind": "primitive",
+                  "name": "int"
+                },
+                "kind": "nominal"
+              },
+              "id": "type:tagged#Cents",
+              "kind": "type",
+              "name": "Cents",
+              "span": {
+                "end": 16,
+                "source": "tagged.eff",
+                "start": 0
+              }
+            },
+            {
+              "definition": {
+                "base": {
+                  "fields": [
+                    {
+                      "name": "amount",
+                      "optional": false,
+                      "type": {
+                        "id": "type:tagged#Cents",
+                        "kind": "named"
+                      }
+                    }
+                  ],
+                  "kind": "record"
+                },
+                "kind": "nominal",
+                "tagged": true
+              },
+              "id": "type:tagged#Fixed",
+              "kind": "type",
+              "name": "Fixed",
+              "span": {
+                "end": 47,
+                "source": "tagged.eff",
+                "start": 17
+              }
+            },
+            {
+              "definition": {
+                "base": {
+                  "fields": [
+                    {
+                      "name": "factor",
+                      "optional": false,
+                      "type": {
+                        "id": "type:tagged#Cents",
+                        "kind": "named"
+                      }
+                    }
+                  ],
+                  "kind": "record"
+                },
+                "kind": "nominal",
+                "tagged": true
+              },
+              "id": "type:tagged#Times",
+              "kind": "type",
+              "name": "Times",
+              "span": {
+                "end": 78,
+                "source": "tagged.eff",
+                "start": 48
+              }
+            },
+            {
+              "definition": {
+                "kind": "alias",
+                "type": {
+                  "kind": "union",
+                  "members": [
+                    {
+                      "id": "type:tagged#Fixed",
+                      "kind": "named"
+                    },
+                    {
+                      "id": "type:tagged#Times",
+                      "kind": "named"
+                    }
+                  ]
+                }
+              },
+              "id": "type:tagged#Rule",
+              "kind": "type",
+              "name": "Rule",
+              "span": {
+                "end": 104,
+                "source": "tagged.eff",
+                "start": 79
+              }
+            },
+            {
+              "body": {
+                "effects": {
+                  "failures": [],
+                  "requirements": []
+                },
+                "execution": "pure",
+                "kind": "nominal",
+                "nominal": "type:tagged#Fixed",
+                "span": {
+                  "end": 154,
+                  "source": "tagged.eff",
+                  "start": 140
+                },
+                "type": {
+                  "id": "type:tagged#Fixed",
+                  "kind": "named"
+                },
+                "value": {
+                  "effects": {
+                    "failures": [],
+                    "requirements": []
+                  },
+                  "execution": "pure",
+                  "fields": [
+                    {
+                      "name": "amount",
+                      "value": {
+                        "effects": {
+                          "failures": [],
+                          "requirements": []
+                        },
+                        "execution": "pure",
+                        "kind": "literal",
+                        "span": {
+                          "end": 152,
+                          "source": "tagged.eff",
+                          "start": 150
+                        },
+                        "type": {
+                          "kind": "primitive",
+                          "name": "int"
+                        },
+                        "value": 50
+                      }
+                    }
+                  ],
+                  "kind": "record",
+                  "span": {
+                    "end": 154,
+                    "source": "tagged.eff",
+                    "start": 140
+                  },
+                  "type": {
+                    "fields": [
+                      {
+                        "name": "amount",
+                        "optional": false,
+                        "type": {
+                          "id": "type:tagged#Cents",
+                          "kind": "named"
+                        }
+                      }
+                    ],
+                    "kind": "record"
+                  }
+                }
+              },
+              "id": "value:tagged#fixed",
+              "kind": "function",
+              "name": "fixed",
+              "parameters": [],
+              "span": {
+                "end": 155,
+                "source": "tagged.eff",
+                "start": 105
+              },
+              "type": {
+                "effects": {
+                  "failures": [],
+                  "requirements": []
+                },
+                "execution": "pure",
+                "kind": "function",
+                "parameters": [],
+                "result": {
+                  "id": "type:tagged#Fixed",
+                  "kind": "named"
+                }
+              },
+              "written": {
+                "fails": false,
+                "result": true,
+                "uses": true
+              }
+            },
+            {
+              "body": {
+                "arms": [
+                  {
+                    "body": {
+                      "effects": {
+                        "failures": [],
+                        "requirements": []
+                      },
+                      "execution": "pure",
+                      "field": "amount",
+                      "kind": "get",
+                      "record": {
+                        "effects": {
+                          "failures": [],
+                          "requirements": []
+                        },
+                        "execution": "pure",
+                        "kind": "reference",
+                        "span": {
+                          "end": 235,
+                          "source": "tagged.eff",
+                          "start": 234
+                        },
+                        "target": "local:tagged#amountOf/f",
+                        "type": {
+                          "id": "type:tagged#Fixed",
+                          "kind": "named"
+                        }
+                      },
+                      "span": {
+                        "end": 242,
+                        "source": "tagged.eff",
+                        "start": 234
+                      },
+                      "type": {
+                        "id": "type:tagged#Cents",
+                        "kind": "named"
+                      }
+                    },
+                    "pattern": {
+                      "binding": {
+                        "id": "local:tagged#amountOf/f",
+                        "name": "f",
+                        "span": {
+                          "end": 229,
+                          "source": "tagged.eff",
+                          "start": 228
+                        },
+                        "type": {
+                          "id": "type:tagged#Fixed",
+                          "kind": "named"
+                        }
+                      },
+                      "kind": "nominal",
+                      "nominal": "type:tagged#Fixed",
+                      "span": {
+                        "end": 230,
+                        "source": "tagged.eff",
+                        "start": 222
+                      }
+                    }
+                  },
+                  {
+                    "body": {
+                      "effects": {
+                        "failures": [],
+                        "requirements": []
+                      },
+                      "execution": "pure",
+                      "field": "factor",
+                      "kind": "get",
+                      "record": {
+                        "effects": {
+                          "failures": [],
+                          "requirements": []
+                        },
+                        "execution": "pure",
+                        "kind": "reference",
+                        "span": {
+                          "end": 261,
+                          "source": "tagged.eff",
+                          "start": 260
+                        },
+                        "target": "local:tagged#amountOf/t",
+                        "type": {
+                          "id": "type:tagged#Times",
+                          "kind": "named"
+                        }
+                      },
+                      "span": {
+                        "end": 268,
+                        "source": "tagged.eff",
+                        "start": 260
+                      },
+                      "type": {
+                        "id": "type:tagged#Cents",
+                        "kind": "named"
+                      }
+                    },
+                    "pattern": {
+                      "binding": {
+                        "id": "local:tagged#amountOf/t",
+                        "name": "t",
+                        "span": {
+                          "end": 255,
+                          "source": "tagged.eff",
+                          "start": 254
+                        },
+                        "type": {
+                          "id": "type:tagged#Times",
+                          "kind": "named"
+                        }
+                      },
+                      "kind": "nominal",
+                      "nominal": "type:tagged#Times",
+                      "span": {
+                        "end": 256,
+                        "source": "tagged.eff",
+                        "start": 248
+                      }
+                    }
+                  }
+                ],
+                "effects": {
+                  "failures": [],
+                  "requirements": []
+                },
+                "execution": "pure",
+                "kind": "match",
+                "span": {
+                  "end": 272,
+                  "source": "tagged.eff",
+                  "start": 205
+                },
+                "subject": {
+                  "effects": {
+                    "failures": [],
+                    "requirements": []
+                  },
+                  "execution": "pure",
+                  "kind": "reference",
+                  "span": {
+                    "end": 215,
+                    "source": "tagged.eff",
+                    "start": 211
+                  },
+                  "target": "local:tagged#amountOf/rule",
+                  "type": {
+                    "id": "type:tagged#Rule",
+                    "kind": "named"
+                  }
+                },
+                "type": {
+                  "id": "type:tagged#Cents",
+                  "kind": "named"
+                }
+              },
+              "id": "value:tagged#amountOf",
+              "kind": "function",
+              "name": "amountOf",
+              "parameters": [
+                {
+                  "id": "local:tagged#amountOf/rule",
+                  "name": "rule",
+                  "span": {
+                    "end": 191,
+                    "source": "tagged.eff",
+                    "start": 181
+                  },
+                  "type": {
+                    "id": "type:tagged#Rule",
+                    "kind": "named"
+                  }
+                }
+              ],
+              "span": {
+                "end": 272,
+                "source": "tagged.eff",
+                "start": 156
+              },
+              "type": {
+                "effects": {
+                  "failures": [],
+                  "requirements": []
+                },
+                "execution": "pure",
+                "kind": "function",
+                "parameters": [
+                  {
+                    "id": "type:tagged#Rule",
+                    "kind": "named"
+                  }
+                ],
+                "result": {
+                  "id": "type:tagged#Cents",
+                  "kind": "named"
+                }
+              },
+              "written": {
+                "fails": false,
+                "result": true,
+                "uses": true
+              }
+            }
+          ],
+          "exports": [
+            "value:tagged#amountOf",
+            "value:tagged#fixed"
+          ],
+          "format": "light-functional-ir",
+          "imports": [],
+          "module": "tagged",
+          "sources": [
+            "tagged.eff"
+          ],
+          "version": 8
+        },
+        "emitted": {
+          "module": "tagged",
+          "path": "tagged.ts",
+          "text": "// Generated from tagged.eff by the Effektive compiler. Do not edit.\n\nimport { Schema } from \"effect\";\n\nconst $Int = Schema.Finite.check(\n  Schema.makeFilter(\n    (value) => Number.isSafeInteger(value) || \"expected a safe integer\",\n  ),\n);\n\nconst $unmatched = (_value: never): never => {\n  throw new TypeError(\"a match received a value outside its type\");\n};\n\nexport const Cents = $Int;\nexport type Cents = typeof Cents.Type;\n\nexport const Fixed = Schema.TaggedStruct(\"tagged#Fixed\", { amount: Cents });\nexport type Fixed = typeof Fixed.Type;\n\nexport const Times = Schema.TaggedStruct(\"tagged#Times\", { factor: Cents });\nexport type Times = typeof Times.Type;\n\nexport const Rule = Schema.Union([Fixed, Times]);\nexport type Rule = typeof Rule.Type;\n\nexport const fixed = (): Fixed => Fixed.make({ amount: 50 });\n\nexport const amountOf = (rule: Rule): Cents =>\n  (($t0) =>\n    $t0._tag === \"tagged#Fixed\"\n      ? ((f) => f.amount)($t0)\n      : $t0._tag === \"tagged#Times\"\n      ? ((t) => t.factor)($t0)\n      : $unmatched($t0))(rule);\n//# sourceMappingURL=tagged.ts.map\n",
+          "spans": [
+            {
+              "start": 360,
+              "end": 425,
+              "span": {
+                "source": "tagged.eff",
+                "start": 0,
+                "end": 16
+              }
+            },
+            {
+              "start": 427,
+              "end": 542,
+              "span": {
+                "source": "tagged.eff",
+                "start": 17,
+                "end": 47
+              }
+            },
+            {
+              "start": 544,
+              "end": 659,
+              "span": {
+                "source": "tagged.eff",
+                "start": 48,
+                "end": 78
+              }
+            },
+            {
+              "start": 661,
+              "end": 747,
+              "span": {
+                "source": "tagged.eff",
+                "start": 79,
+                "end": 104
+              }
+            },
+            {
+              "start": 804,
+              "end": 806,
+              "span": {
+                "source": "tagged.eff",
+                "start": 150,
+                "end": 152
+              }
+            },
+            {
+              "start": 794,
+              "end": 808,
+              "span": {
+                "source": "tagged.eff",
+                "start": 140,
+                "end": 154
+              }
+            },
+            {
+              "start": 783,
+              "end": 809,
+              "span": {
+                "source": "tagged.eff",
+                "start": 140,
+                "end": 154
+              }
+            },
+            {
+              "start": 749,
+              "end": 810,
+              "span": {
+                "source": "tagged.eff",
+                "start": 105,
+                "end": 155
+              }
+            },
+            {
+              "start": 919,
+              "end": 920,
+              "span": {
+                "source": "tagged.eff",
+                "start": 234,
+                "end": 235
+              }
+            },
+            {
+              "start": 919,
+              "end": 927,
+              "span": {
+                "source": "tagged.eff",
+                "start": 234,
+                "end": 242
+              }
+            },
+            {
+              "start": 986,
+              "end": 987,
+              "span": {
+                "source": "tagged.eff",
+                "start": 260,
+                "end": 261
+              }
+            },
+            {
+              "start": 986,
+              "end": 994,
+              "span": {
+                "source": "tagged.eff",
+                "start": 260,
+                "end": 268
+              }
+            },
+            {
+              "start": 1026,
+              "end": 1030,
+              "span": {
+                "source": "tagged.eff",
+                "start": 211,
+                "end": 215
+              }
+            },
+            {
+              "start": 861,
+              "end": 1031,
+              "span": {
+                "source": "tagged.eff",
+                "start": 205,
+                "end": 272
+              }
+            },
+            {
+              "start": 812,
+              "end": 1032,
+              "span": {
+                "source": "tagged.eff",
+                "start": 156,
+                "end": 272
+              }
+            }
+          ],
+          "hostAssertions": []
+        },
+        "map": "{\n  \"version\": 3,\n  \"file\": \"tagged.ts\",\n  \"sources\": [\n    \"tagged.eff\"\n  ],\n  \"names\": [],\n  \"mappings\": \";;;;;;;;;;;;;;AAAA;AAAA,sC;;AACA;AAAA,sC;;AACA;AAAA,sC;;AACA;AAAA,oC;;AACA,kCAAmC,qBAAU,EAAV,GAAnC,C;;AACA;AAAA,EACE;AAAA;AAAA,gBACc,QADd;AAAA;AAAA,gBAEc,QAFd;AAAA,yBAAM,IAAN,CADF,C;;\"\n}\n",
+        "hash": "807656f045004c38"
+      }
+    ]
   }
 ]

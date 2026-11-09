@@ -2,7 +2,8 @@
 // fixtures/emit/traverse, the sixth golden module. The companion module of the
 // host interface goes to fixtures/golden/host/providers.effi.ts.
 // It also writes fixtures/ir/examples-baseline.json, the IR, emitted text, source map,
-// and interface hash of the examples and of one case of resource and schema forms.
+// and interface hash of the examples, of one case of resource and schema forms,
+// and of the empty-effect and tagged programs.
 // Run it with `deno task golden:update` after a deliberate change of the emitter.
 
 import {
@@ -28,9 +29,17 @@ const resourceCase = Deno.readTextFileSync(
   new URL("../fixtures/ir/resource-case.eff", import.meta.url),
 );
 
+const irFile = (name: string) =>
+  Deno.readTextFileSync(new URL(`../fixtures/ir/${name}`, import.meta.url));
+
 const baseline = [
   exampleFiles(),
   { "effektive.json": "{}", "m.eff": resourceCase },
+  {
+    "effektive.json": "{}",
+    "empty-effect.eff": irFile("empty-effect.eff"),
+    "tagged.eff": irFile("tagged.eff"),
+  },
 ].map((files) => ({ files, modules: irSnapshot(files).modules }));
 const irDirectory = new URL("../fixtures/ir/", import.meta.url);
 Deno.writeTextFileSync(
