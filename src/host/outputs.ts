@@ -3,7 +3,6 @@
 // generated file and the map when their text changed.
 
 import {
-  type EmitProjectError,
   generatedPathOf,
   generatedSourceOf,
   joinPath,
@@ -41,15 +40,6 @@ function describeLowerError(error: LowerError): string {
       return `${error.module} imports ${error.imported}, which has no interface`;
     case "internal":
       return `${error.module}: ${error.message}`;
-  }
-}
-
-function describeEmitError(error: EmitProjectError): string {
-  switch (error.tag) {
-    case "lowering":
-      return describeLowerError(error.error);
-    case "internal":
-      return error.message;
   }
 }
 
@@ -162,12 +152,14 @@ export function writeGenerated(
         );
         failed = true;
         continue;
-      case "emit":
-        notes.push(
-          `error: cannot emit ${name}: ${describeEmitError(output.error)}`,
-        );
+      case "emit": {
+        const why = output.error.tag === "lowering"
+          ? describeLowerError(output.error.error)
+          : output.error.message;
+        notes.push(`error: cannot emit ${name}: ${why}`);
         failed = true;
         continue;
+      }
       case "map":
         notes.push(
           `error: cannot build the source map of ${name}: source ${output.error.source} is missing`,
