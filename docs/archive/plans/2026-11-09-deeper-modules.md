@@ -86,6 +86,40 @@ The 29 remaining try blocks were boundaries or resource releases. A later pass r
 
 The units kept a one-use helper in these cases: it is an entry of a dispatch table, a grammar production, a type guard that narrows, a generic that carries correlated typing, or a body with early returns. A helper also stayed when a declaration with a register row calls it. Each unit handback lists its kept helpers with the reason.
 
-The units found no other redundant check. The remaining fallbacks read a `Map.get` result, an optional field, a possibly empty array, or outside input.
+The first pass found no other redundant check. The second pass below read every census site. The remaining fallbacks read a `Map.get` result, an optional field, a possibly empty array, or outside input.
 
 `db.ts` keeps an unexported `FileDiff` type for the result of `diffFiles`. `ProgramChanges` has optional fields, so a caller that reads `diff.set.size` needs the required form.
+
+## Second pass: checks and try blocks
+
+The goal hook found two gaps after the first pass. First, no unit had read every check site. Second, the try blocks had no ledger. Opus ran a second pass on 2026-11-09.
+
+Opus judged each try block, removed four in `src/host/deno_io.ts` (`e16f546`), and wrote [the try ledger](2026-11-09-deeper-modules-evidence/try-blocks.md). The whole-word count is 31 at `de8d0e5` and 25 now.
+
+Four Sonnet auditors read every site of five census patterns: a fallback after a map lookup, a `typeof` test, an `isRecord` test, an exit on `=== undefined`, and an internal throw. Each auditor wrote a ledger with one row for each site. The validator is out of scope, because it is a test oracle that must check IR that can be malformed.
+
+| Unit | Area | Ledger rows | Removed or restructured |
+| --- | --- | --- | --- |
+| RC1 | `src/cli`, `src/host`, `src/lsp` | 89 | 8 ([ledger](2026-11-09-deeper-modules-evidence/checks-RC1.md)) |
+| RC2 | front end, program, editor queries | 81 | 8 ([ledger](2026-11-09-deeper-modules-evidence/checks-RC2.md)) |
+| RC3 | checker, refinements, lowering, types | 170 | 3 ([ledger](2026-11-09-deeper-modules-evidence/checks-RC3.md)) |
+| RC4 | emitter and `typescript.ts` | 79 | 10 ([ledger](2026-11-09-deeper-modules-evidence/checks-RC4.md)) |
+
+These are the main changes:
+
+- The LSP narrowers check the document version and the new name once, with the shared shape helpers. Two LSP queries check the located project once.
+- The editor hover and definition queries iterate map entries, so a second lookup and its undefined exit are gone.
+- `linkModules` indexes module edges once, and the cycle diagnostic gets the module entries, so an internal throw is gone.
+- `checkInitialization` carries the cycle nodes, so two lookups and two internal throws are gone.
+- `buildSourceMap` stores the text and the line starts of each source with its record, so five fallbacks are gone.
+- `liftedFrom` returns the function type, so `fit` needs no second lookup and no internal throw.
+- `TypeScriptOutputs` returns the lowered module with its cache entry, so a non-null assertion is gone.
+
+The kept sites check an entry point or a value that can really be absent, give a default for a missing key in a multimap, or guard a fact in a side table. A fact in a side table cannot reach the reader through the types. No site was changed to a non-null assertion or a cast.
+
+| Check after the second pass | Result |
+| --- | --- |
+| `deno task check` | exit 0: 3005 fast and 296 slow tests passed |
+| `deno task behavior:compare de8d0e5 HEAD` | exit 0: 461 records equal, 0 changed |
+| `deno task mutate --seed 1 --sample 1 src/lsp/projects.ts` | exit 0: 0 stale rows, 0 unregistered survivors |
+| `deno task coverage` | exit 0: lines 97.47%, branches 95.49%, functions 99.26%; the floors are 97, 95, and 99 |
