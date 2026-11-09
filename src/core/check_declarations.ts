@@ -279,15 +279,11 @@ class ModuleChecker {
     return isValuePrimitiveName(target.name);
   }
 
-  private bodyOf(entry: DeclEntry): NodeId | undefined {
-    return kidsOf(this.tree, entry.node).find((k) =>
-      k !== entry.nameNode && kindOf(this.tree, k) !== SyntaxKind.Error
-    );
-  }
-
   private checkType(entry: DeclEntry): TypeNodeInfo {
     const id = this.id("type", entry.name);
-    const body = this.bodyOf(entry);
+    const body = kidsOf(this.tree, entry.node).find((k) =>
+      k !== entry.nameNode && kindOf(this.tree, k) !== SyntaxKind.Error
+    );
     const opaque = isOpaqueTypeDecl(this.tree, entry.node);
     let definition: TypeDecl["definition"];
     let kind: "alias" | "identity" = "alias";

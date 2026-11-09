@@ -176,12 +176,17 @@ export class RefinementChecker {
   }
 
   prove(node: NodeId, expected: TypeRef): RefinementDecision {
-    const target = refinedTarget(this.table, expected);
-    if (target === undefined) return { status: "not-required" };
-    if (!this.table.ownsSealed(this.module, target.id)) {
+    const named = this.table.node(this.table.unfoldTransparent(expected));
+    if (named.kind !== "named" || !isTypeId(named.id)) {
+      return { status: "not-required" };
+    }
+    const id = named.id;
+    const predicate = this.table.predicateOf(id);
+    if (predicate === undefined) return { status: "not-required" };
+    if (!this.table.ownsSealed(this.module, id)) {
       return { status: "failed", reason: "unknown" };
     }
-    return this.proveTarget(node, target.id, target.predicate);
+    return this.proveTarget(node, id, predicate);
   }
 
   proveIdentity(node: NodeId, id: TypeId): RefinementDecision {
@@ -196,14 +201,19 @@ export class RefinementChecker {
     target: TypeId,
     predicate: Predicate,
   ): RefinementDecision {
-    const goal = this.substituteValue(predicate, node);
+    const goal = substitute(
+      predicate,
+      (term) => this.linearAt(node, termPath(term), term.kind === "length"),
+    );
     if (goal === undefined) return { status: "failed", reason: "unknown" };
     if (this.budget.remaining === 0) {
       return { status: "failed", reason: "exhausted" };
     }
     const maxSteps = Math.min(REFINEMENT_QUERY_STEPS, this.budget.remaining);
     const assumptions = canonicalAnd([
-      ...this.typeAssumptions(),
+      ...[...this.locals].flatMap(([id, type]) =>
+        typeAssumptionsAt(this.table, type, [id])
+      ),
       ...this.aliases,
       ...this.branches,
     ]);
@@ -225,16 +235,6 @@ export class RefinementChecker {
     };
   }
 
-  private typeAssumptions(): Predicate[] {
-    const assumptions: Predicate[] = [];
-    for (const [id, type] of this.locals) {
-      for (const assumption of typeAssumptionsAt(this.table, type, [id])) {
-        assumptions.push(assumption);
-      }
-    }
-    return assumptions;
-  }
-
   private aliasEquations(
     id: LocalId,
     type: TypeRef,
@@ -251,16 +251,6 @@ export class RefinementChecker {
     return result;
   }
 
-  private substituteValue(
-    predicate: Predicate,
-    node: NodeId,
-  ): Predicate | undefined {
-    return substitute(
-      predicate,
-      (term) => this.linearAt(node, termPath(term), term.kind === "length"),
-    );
-  }
-
   private linearAt(
     node: NodeId,
     path: readonly string[],
@@ -272,7 +262,14 @@ export class RefinementChecker {
       if (field !== undefined) {
         return this.linearAt(field, path.slice(1), length);
       }
-      const spread = this.recordSpread(inner);
+      // The operand of a spread in a record update.
+      const first = kindOf(this.tree, inner) === SyntaxKind.RecordExpr
+        ? kidsOf(this.tree, inner)[0]
+        : undefined;
+      const spread = first !== undefined &&
+          kindOf(this.tree, first) === SyntaxKind.SpreadField
+        ? kidsOf(this.tree, first)[0]
+        : undefined;
       if (spread !== undefined) return this.linearAt(spread, path, length);
       const base = this.pathOf(inner);
       if (base === undefined) return undefined;
@@ -393,26 +390,6 @@ export class RefinementChecker {
     }
     return undefined;
   }
-
-  private recordSpread(node: NodeId): NodeId | undefined {
-    if (kindOf(this.tree, node) !== SyntaxKind.RecordExpr) return undefined;
-    const first = kidsOf(this.tree, node)[0];
-    return first !== undefined &&
-        kindOf(this.tree, first) === SyntaxKind.SpreadField
-      ? kidsOf(this.tree, first)[0]
-      : undefined;
-  }
-}
-
-function refinedTarget(
-  table: TypeTable,
-  ref: TypeRef,
-): { readonly id: TypeId; readonly predicate: Predicate } | undefined {
-  const node = table.node(table.unfoldTransparent(ref));
-  if (node.kind !== "named" || !isTypeId(node.id)) return undefined;
-  const id = node.id;
-  const predicate = table.predicateOf(id);
-  return predicate === undefined ? undefined : { id, predicate };
 }
 
 function typeAssumptionsAt(

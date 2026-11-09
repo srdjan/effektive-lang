@@ -269,14 +269,6 @@ const SCHEMA_HANDLERS: SchemaHandlers = {
   make: (c, call) => schemaOperationCall(c, call, "make"),
 };
 
-function schemaOp(c: SchemaContext, node: NodeId): SchemaOp {
-  const fact = c.facts.get(node);
-  if (fact?.kind !== "schema") {
-    throw new Error("internal: a Schema builtin call has no schema fact");
-  }
-  return fact.op;
-}
-
 /** The literal value of a field in an inline options record, by label. */
 function optionsField(c: SchemaContext, record: NodeId, label: string): {
   readonly value: NodeId | undefined;
@@ -364,7 +356,11 @@ function schemaCall(
   expected: TypeRef | undefined,
 ): NodeInfo {
   const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
-  const op = schemaOp(c, node);
+  const fact = c.facts.get(node);
+  if (fact?.kind !== "schema") {
+    throw new Error("internal: a Schema builtin call has no schema fact");
+  }
+  const op = fact.op;
   const handler = SCHEMA_HANDLERS[op];
   const result = handler(c, { node, name, builtin, op, args, expected });
   const type = c.table.node(c.table.unfold(result.type));

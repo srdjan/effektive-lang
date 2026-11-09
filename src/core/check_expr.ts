@@ -435,14 +435,13 @@ class BodyChecker
   widen(ref: TypeRef): TypeRef {
     const node = this.table.node(ref);
     if (node.kind === "literal") return this.primitiveOf(node.value);
-    if (node.kind === "union" && node.members.some((m) => this.isLiteral(m))) {
+    if (
+      node.kind === "union" &&
+      node.members.some((m) => this.table.node(m).kind === "literal")
+    ) {
       return this.table.union(node.members.map((m) => this.widen(m)));
     }
     return ref;
-  }
-
-  private isLiteral(ref: TypeRef): boolean {
-    return this.table.node(ref).kind === "literal";
   }
 
   private primitiveOf(value: LiteralValue): TypeRef {
@@ -742,9 +741,18 @@ class BodyChecker
         return this.errorConstruction(node, target.id, args);
       case "type": {
         const record = this.table.taggedRecordOf(target.id);
-        return record === undefined
-          ? this.identityConstruction(node, target.id, args)
-          : this.taggedConstruction(node, target.id, record, args);
+        if (record === undefined) {
+          return this.identityConstruction(node, target.id, args);
+        }
+        this.requireSealedOwner(node, target.id);
+        this.fact(node, { kind: "identity-construction", identity: target.id });
+        return this.constructFrom(
+          node,
+          target.id,
+          record,
+          "tagged record",
+          args,
+        );
       }
       case "cap":
         return this.perform(node, target.id, args);
@@ -1060,17 +1068,6 @@ class BodyChecker
         node,
       );
     }
-  }
-
-  private taggedConstruction(
-    node: NodeId,
-    id: TypeId,
-    record: TypeRef,
-    args: readonly Arg[],
-  ): NodeInfo {
-    this.requireSealedOwner(node, id);
-    this.fact(node, { kind: "identity-construction", identity: id });
-    return this.constructFrom(node, id, record, "tagged record", args);
   }
 
   /** The single argument of a constructor must fit the base type. */
