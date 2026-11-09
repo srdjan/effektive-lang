@@ -224,7 +224,7 @@ export class LanguageServer {
   #options: InitializationOptions = DEFAULT_INITIALIZATION_OPTIONS;
   #cancelFlush: (() => void) | undefined;
   readonly #projects: ProjectSet;
-  readonly #generated = new GeneratedTexts();
+  readonly #generated: GeneratedTexts;
   readonly #requests: ReadonlyMap<string, RequestHandler>;
   readonly #context: ServerContext;
 
@@ -245,6 +245,7 @@ export class LanguageServer {
       writeOnSave: () => this.#options.writeOnSave,
       flushed: (project, revision) => this.#flushed(project, revision),
     });
+    this.#generated = new GeneratedTexts((uri) => this.#projects.lookup(uri));
     const currentOptions = (): InitializationOptions => this.#options;
     this.#context = {
       projects: this.#projects,

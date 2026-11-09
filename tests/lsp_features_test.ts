@@ -430,6 +430,37 @@ Deno.test("only subscribed modules send generatedChanged, and a configuration er
   assertEquals(generated(h, 2, exampleUri("notes.txt")), null);
 });
 
+const APP = "/work/app";
+const Y_ONE = "export const y = (): Num => 1\n\ntype Num = number\n";
+const Y_TWO = "export const y = (): Num => 2\n\ntype Num = number\n";
+
+Deno.test("a generated view keeps its subscription when its module moves to a nested project", () => {
+  const y = uriOf(`${APP}/sub/y.eff`);
+  const h = makeHarness({
+    files: { [`${APP}/effektive.json`]: "{}", [`${APP}/sub/y.eff`]: Y_ONE },
+  });
+  h.start();
+  h.deliver(didOpen(y, 1, Y_ONE));
+  assert(generated(h, 1, y) !== null);
+  h.files.set(`${APP}/sub/effektive.json`, "{}");
+  h.deliver(watched({ uri: uriOf(`${APP}/sub/effektive.json`), type: 1 }));
+  h.clearSent();
+  h.deliver(didChangeFull(y, 2, Y_TWO));
+  assertEquals(h.notifications("effektive/generatedChanged"), [{ uri: y }]);
+});
+
+Deno.test("a generated view of a document without a project updates after the document joins a new project", () => {
+  const x = uriOf(`${APP}/x.eff`);
+  const h = makeHarness({ files: { [`${APP}/x.eff`]: Y_ONE } });
+  h.start();
+  h.deliver(didOpen(x, 1, Y_ONE));
+  assertEquals(generated(h, 1, x), null);
+  h.clearSent();
+  h.files.set(`${APP}/effektive.json`, "{}");
+  h.deliver(watched({ uri: uriOf(`${APP}/effektive.json`), type: 1 }));
+  assertEquals(h.notifications("effektive/generatedChanged"), [{ uri: x }]);
+});
+
 Deno.test("generated TypeScript of a host interface file is its companion module", () => {
   const h = started();
   h.deliver(didOpen(PROVIDERS, 1, PROVIDERS_TEXT));

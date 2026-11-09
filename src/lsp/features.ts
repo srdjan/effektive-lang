@@ -239,9 +239,7 @@ export function generatedTypeScriptRequest(
   ctx: ServerContext,
 ): Answer {
   const uri = params.textDocument.uri;
-  const found = ctx.projects.forRequest(uri);
-  if (found === undefined) return answer(null);
-  return answer(ctx.generated.request(found.project, found.path, uri));
+  return answer(ctx.generated.request(uri, ctx.projects.forRequest(uri)));
 }
 
 /**

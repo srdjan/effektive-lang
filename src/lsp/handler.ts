@@ -4,15 +4,18 @@ import type {
   GeneratedTypeScriptResult,
   InitializationOptions,
 } from "./protocol.ts";
-import type { LogType, ProjectSet, ProjectState } from "./projects.ts";
+import type { LocatedModule } from "./generated_texts.ts";
+import type { LogType, ProjectSet } from "./projects.ts";
 
 /** What a handler reads of the generated TypeScript of the subscribed modules. */
 export interface GeneratedSource {
-  /** Answers `effektive/generatedTypeScript` and subscribes the module. */
+  /**
+   * Answers `effektive/generatedTypeScript` and subscribes the URI of a
+   * module. `found` is the project of the URI, or undefined when it has none.
+   */
   request(
-    project: ProjectState,
-    path: string,
     uri: string,
+    found: LocatedModule | undefined,
   ): GeneratedTypeScriptResult | null;
 }
 
