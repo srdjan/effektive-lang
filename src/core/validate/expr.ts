@@ -252,7 +252,8 @@ export class BodyValidator implements ValidatorCore {
 
   /**
    * Runs `run` with the locals that it declares in scope, and releases them
-   * when `run` ends. A local cannot stay in scope after its region.
+   * when `run` returns. A local cannot stay in scope after its region. A throw
+   * ends the validator: the guard in `index.ts` makes a new one per declaration.
    */
   private withLocals<T>(
     run: (
@@ -265,14 +266,12 @@ export class BodyValidator implements ValidatorCore {
     ) => T,
   ): T {
     const added: string[] = [];
-    try {
-      return run((p, path, init, generated) => {
-        this.declareLocal(p, path, init, generated);
-        added.push(p.id);
-      });
-    } finally {
-      this.release(added);
-    }
+    const result = run((p, path, init, generated) => {
+      this.declareLocal(p, path, init, generated);
+      added.push(p.id);
+    });
+    this.release(added);
+    return result;
   }
 
   private checkParameterTypes(
