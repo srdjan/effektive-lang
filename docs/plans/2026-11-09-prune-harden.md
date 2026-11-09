@@ -2,7 +2,7 @@
 
 Prefixes: PH (items), PHD (decisions for the user), PHF (findings of the adversarial reviews: PHF-A from codex astra, PHF-F from Fable), PHU (units).
 
-Date: 2026-11-09. Base: `6ae0538` on local `main`. Status: proposed. The reviews and the pilots are complete. The user has not approved a unit. The evidence is in [2026-11-09-prune-harden-evidence/](2026-11-09-prune-harden-evidence/).
+Date: 2026-11-09. Base: `6ae0538` on local `main`. Status: accepted on 2026-11-09. The user answered "as recommended": PHD1 (a), PHD2 (a), and the execution of units PHU1 to PHU12. The acceptance authorizes one commit for each unit on local `main`, and one separate commit in `../effektive` for PHU12. It does not authorize a push, a release, or a version change. Section 11 holds the progress. The evidence is in [2026-11-09-prune-harden-evidence/](2026-11-09-prune-harden-evidence/).
 
 The user asked for a list of unnecessary complexity, and for ways to reduce the design to a minimum without loss of functionality. This is the cleanup step before more features. The list ends with adversarial reviews and empirical checks.
 
@@ -248,3 +248,20 @@ Each unit starts from local `main`, keeps the rules of the deeper-modules plan (
 | PHU12 | PHD1 (a), if approved | Sonnet | from pilot `aadb6b1`, plus the message rename; then the website | Gate; website strict checks. | 40 |
 
 Order: PHU1 to PHU4 first (defects), then PHU5 to PHU9, then PHU10 to PHU12. PHU1, PHU2, PHU4, and PHU6 touch different files and can run in parallel worktrees.
+
+## 11. Progress
+
+| Unit | State | Commit |
+| --- | --- | --- |
+| PHU1 | open | - |
+| PHU2 | open | - |
+| PHU3 | open | - |
+| PHU4 | open | - |
+| PHU5 | open | - |
+| PHU6 | open | - |
+| PHU7 | open | - |
+| PHU8 | open | - |
+| PHU9 | open | - |
+| PHU10 | open | - |
+| PHU11 | open | - |
+| PHU12 | open | - |
