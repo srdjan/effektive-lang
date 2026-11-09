@@ -79,7 +79,12 @@ import { internal } from "./failure.ts";
 import type { ExprScope } from "./module_state.ts";
 import { resolvedAs } from "./type_query.ts";
 import { methodOfCapability, serviceOfCapability } from "./identity.ts";
-import { channelTypeArguments, typeArguments, typeDoc } from "./types.ts";
+import {
+  bracketsBreak,
+  channelTypeArguments,
+  typeArguments,
+  typeDoc,
+} from "./types.ts";
 import {
   type Callee,
   LEAF_CALLS,
@@ -1286,14 +1291,18 @@ export class ExprEmitter implements ExprCore {
         "const ",
         step.binding.name,
         ": ",
-        typeDoc(this.scope, step.binding.type),
+        typeDoc(this.scope, step.binding.type, true),
       ];
       const bound = value(step.value, step.binding.type);
       // A curried closure lays out like a declaration of the module.
       return [
         bound.chain !== undefined
           ? chainDeclaration(prefix, bound.chain)
-          : assignment(prefix, free(bound)),
+          : assignment(
+            prefix,
+            free(bound),
+            bracketsBreak(step.binding.type),
+          ),
         ";",
       ];
     }

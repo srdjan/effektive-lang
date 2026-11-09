@@ -18,6 +18,7 @@ import {
   type Doc,
   group,
   ifBreak,
+  ifFits,
   indent,
   join,
   line,
@@ -47,6 +48,31 @@ export function typeArguments(args: readonly Doc[]): Doc {
     soft,
     ">",
   ]);
+}
+
+/**
+ * The type argument of a one-argument type. `deno fmt` keeps a record type
+ * beside the brackets. It breaks the brackets around any other type that does
+ * not fit. A `breakable` type gets that break as a printer choice, not a
+ * group, so the parameters of a signature still break first. The binding of a
+ * block asks for it. Every other place keeps the brackets closed.
+ */
+function singleArgument(element: Type, inner: Doc, breakable: boolean): Doc {
+  const beside: Doc = ["<", inner, ">"];
+  if (element.kind === "record" || !breakable) return beside;
+  return ifFits(beside, beside, ["<", indent([soft, inner]), soft, ">"]);
+}
+
+/** True when the printed type can break the brackets of a one-argument type. */
+export function bracketsBreak(type: Type): boolean {
+  switch (type.kind) {
+    case "array":
+    case "option":
+    case "ref":
+      return type.element.kind !== "record";
+    default:
+      return false;
+  }
 }
 
 function unionDoc(members: readonly Doc[]): Doc {
@@ -149,7 +175,11 @@ export function hasSchemaMetadata(
     type.decodedOptionalKey === true;
 }
 
-export function typeDoc(scope: EmitNames, type: Type): Doc {
+export function typeDoc(
+  scope: EmitNames,
+  type: Type,
+  breakable = false,
+): Doc {
   switch (type.kind) {
     case "primitive":
       return type.name === "int"
@@ -162,7 +192,14 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
     case "named":
       return scope.nameOf(type.id);
     case "array":
-      return [`ReadonlyArray<`, typeDoc(scope, type.element), ">"];
+      return [
+        "ReadonlyArray",
+        singleArgument(
+          type.element,
+          typeDoc(scope, type.element, breakable),
+          breakable,
+        ),
+      ];
     case "tuple":
       return type.elements.length === 0 ? "readonly []" : [
         "readonly [",
@@ -171,13 +208,23 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
       ];
     case "option": {
       const option = scope.effect("Option");
-      return [`${option}.Option<`, typeDoc(scope, type.element), ">"];
+      return [
+        `${option}.Option`,
+        singleArgument(
+          type.element,
+          typeDoc(scope, type.element, breakable),
+          breakable,
+        ),
+      ];
     }
     case "ref":
       return [
-        `${scope.effect("SynchronizedRef")}.SynchronizedRef<`,
-        typeDoc(scope, type.element),
-        ">",
+        `${scope.effect("SynchronizedRef")}.SynchronizedRef`,
+        singleArgument(
+          type.element,
+          typeDoc(scope, type.element, breakable),
+          breakable,
+        ),
       ];
     case "retry-schedule":
       return [
