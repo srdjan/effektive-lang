@@ -34,7 +34,6 @@ interface SaveRoundInput {
   readonly removal: RemovalRule;
   /** False for a module that a nested project owns. Callers pass `ownedByRoot`. */
   readonly owns: (name: string) => boolean;
-  readonly write: boolean;
 }
 
 /** The removal of the outputs of one module that left the project. */
@@ -49,8 +48,6 @@ interface SaveRound {
   readonly modules: readonly string[];
   /** One entry per module that left, in the order of `previous`. */
   readonly removals: readonly ModuleRemoval[];
-  /** The writable modules, before the `owns` filter. */
-  readonly writable: readonly string[];
   /** The reason for each module that is not written, before the `owns` filter. */
   readonly held: ReadonlyMap<string, HeldReason>;
   readonly outputs: GeneratedOutputs;
@@ -92,7 +89,7 @@ export function runSaveRound(input: SaveRoundInput): SaveRound {
     root,
     generationSource(revision, input.outputs),
     writable.filter(owns),
-    input.write,
+    true,
   );
-  return { modules: [...names, ...kept], removals, writable, held, outputs };
+  return { modules: [...names, ...kept], removals, held, outputs };
 }

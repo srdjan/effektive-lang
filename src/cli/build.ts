@@ -81,7 +81,6 @@ export async function buildRevision(
       previous,
       removal: "forget",
       owns: (name) => ownedByRoot(io.fs, root, name),
-      write: options.write,
     });
     const outputs = round.outputs;
     removals = round.removals;

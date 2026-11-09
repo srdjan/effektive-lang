@@ -560,7 +560,6 @@ export class ProjectSet {
       previous: session.modules,
       removal: "retry",
       owns,
-      write: true,
     });
     for (const { removed, notes } of round.removals) {
       for (const path of removed) log(4, `removed ${path}`);
