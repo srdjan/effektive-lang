@@ -19,14 +19,11 @@ import {
   GENERATED_SCHEME,
   GENERATED_TYPESCRIPT_METHOD,
 } from "../src/lsp/protocol.ts";
+import { isRecord } from "./helpers.ts";
 
 const CLIENT = new URL("../editors/vscode/", import.meta.url);
 
 type Json = Record<string, unknown>;
-
-function isRecord(value: unknown): value is Json {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function readJson(relative: string): Json {
   const parsed: unknown = JSON.parse(

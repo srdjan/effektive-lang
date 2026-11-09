@@ -18,13 +18,10 @@ import { assert, assertEquals } from "@std/assert";
 import type { Diagnostic } from "../src/core/frontend.ts";
 import type { ModuleIR } from "../src/core/ir.ts";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { isRecord } from "./helpers.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 
 // ------------------------------------------------------------------ helpers
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function segments(path: string): (string | number)[] {
   const out: (string | number)[] = [];

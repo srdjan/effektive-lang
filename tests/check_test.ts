@@ -37,6 +37,7 @@ import {
   EXAMPLE_ENTRIES,
   EXAMPLE_MODES,
   exampleFiles,
+  isRecord,
   modesAsSolved,
 } from "./helpers.ts";
 
@@ -169,10 +170,6 @@ function signatureOf(
 
 function names(items: readonly { readonly name: string }[]): string[] {
   return items.map((i) => i.name).sort();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** The declaration with the given id from the parsed `log.ir.json`. */
