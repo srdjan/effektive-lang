@@ -492,9 +492,7 @@ export function render(doc: Doc, width = 80): Rendered {
     column = spaces;
   };
 
-  while (stack.length > 0) {
-    const cmd = stack.pop();
-    if (cmd === undefined) break;
+  for (let cmd = stack.pop(); cmd !== undefined; cmd = stack.pop()) {
     const d = cmd.doc;
     if (isText(d)) {
       write(d);

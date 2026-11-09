@@ -162,9 +162,7 @@ export function orderConstants(ir: ModuleIR): ConstantDecl[] {
     const found = new Map<ValueId, ConstantDecl>();
     const expanded = new Set<ValueId>();
     const pending = valueReferences(constant);
-    while (pending.length > 0) {
-      const id = pending.pop();
-      if (id === undefined) break;
+    for (let id = pending.pop(); id !== undefined; id = pending.pop()) {
       const target = values.get(id);
       if (target === undefined || expanded.has(id)) continue;
       expanded.add(id);
@@ -681,7 +679,6 @@ export class DeclarationEmitter {
       case "union":
         return all(type.members);
     }
-    throw internal("unreachable type in a host check");
   }
 
   /**
