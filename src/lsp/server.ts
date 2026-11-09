@@ -252,17 +252,11 @@ export class LanguageServer {
       flushed: (project, revision) => this.#flushed(project, revision),
     });
     this.#generated = new GeneratedTexts((uri) => this.#projects.lookup(uri));
-    const currentOptions = (): InitializationOptions => this.#options;
     this.#context = {
       projects: this.#projects,
       fs: ports.fs,
       generated: this.#generated,
       memory: () => ports.memory(),
-      get options() {
-        return currentOptions();
-      },
-      log: (type, message) => this.#log(type, message),
-      notify: (method, params) => this.#notify(method, params),
     };
   }
 

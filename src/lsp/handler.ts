@@ -1,11 +1,8 @@
 import type { HostFs } from "../host/io.ts";
 import type { Result } from "../core/mod.ts";
-import type {
-  GeneratedTypeScriptResult,
-  InitializationOptions,
-} from "./protocol.ts";
+import type { GeneratedTypeScriptResult } from "./protocol.ts";
 import type { LocatedModule } from "./generated_texts.ts";
-import type { LogType, ProjectSet } from "./projects.ts";
+import type { ProjectSet } from "./projects.ts";
 
 /** What a handler reads of the generated TypeScript of the subscribed modules. */
 export interface GeneratedSource {
@@ -27,10 +24,6 @@ export interface ServerContext {
   readonly generated: GeneratedSource;
   /** The memory use of the process, in bytes. */
   memory(): { readonly rss: number; readonly heapUsed: number };
-  /** The options from `initialize`. */
-  readonly options: InitializationOptions;
-  log(type: LogType, message: string): void;
-  notify(method: string, params: unknown): void;
 }
 
 /** A failed request: the code and the message of the error response. */
