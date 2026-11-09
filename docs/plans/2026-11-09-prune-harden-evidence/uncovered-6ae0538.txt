@@ -1,0 +1,90 @@
+playground/src/highlight.ts: 155-159, 168-171, 173
+playground/src/log_client.ts: 40-43, 71-72, 105-106, 117-118
+playground/src/replay.ts: 24
+src/cli/main.ts: 99, 225, 233-236, 277, 298-300, 303-305
+src/cli/session.ts: 143
+src/cli/tsc.ts: 100-101
+src/core/check_binary.ts: 28, 124, 470-472
+src/core/check_builtins/effect.ts: 580, 642
+src/core/check_builtins/layer.ts: 137-140, 142, 175
+src/core/check_builtins/ref.ts: 85
+src/core/check_builtins/schema.ts: 361-362, 1160-1161, 1259-1261
+src/core/check_builtins/scope.ts: 132, 137, 237-238
+src/core/check_builtins/stream.ts: 213-216, 218-219, 384-385
+src/core/check_declarations.ts: 276, 469, 471, 506-511, 655-656, 677, 701, 748-751, 753, 759-762, 764
+src/core/check_expr.ts: 441-442, 580, 657, 681-686, 691-693, 709, 766-768, 772-774, 846, 852-853, 855, 857-858, 860, 876, 893-895, 897-898, 948, 974-978, 980-981, 1242, 1253, 1428, 1430, 1480, 1621, 1710, 1728, 2325-2326, 2334, 2466-2467, 2626, 2652, 2668
+src/core/check_patterns.ts: 162, 280-282, 316, 375, 377-378, 380, 382-383, 385, 423-424, 427-428, 452-453, 455
+src/core/check_project.ts: 299, 567
+src/core/check_refinements.ts: 145-146, 155-158, 181-182, 187-188, 336, 346, 348, 359, 401, 457, 466-472, 504-506, 512, 568, 598
+src/core/contract_origins.ts: 35
+src/core/db.ts: 459
+src/core/declaration_index.ts: 88, 119, 139
+src/core/editor.ts: 205
+src/core/editor_actions.ts: 129, 136, 177, 180, 194-195, 243, 266, 273, 277-283
+src/core/editor_completion.ts: 53, 63-65, 67-68, 70-71, 146, 150, 157, 182-183, 390, 392, 411
+src/core/editor_hints.ts: 77
+src/core/editor_index.ts: 58, 116, 199
+src/core/editor_rename.ts: 37, 42-43, 141-145, 167-171
+src/core/editor_signature.ts: 40, 65, 67-71, 100, 112-113, 162, 197, 203
+src/core/editor_tokens.ts: 107
+src/core/emit/decls.ts: 321-322, 361, 374-376, 594, 649, 663-664, 697-698, 866, 868, 872-873
+src/core/emit/doc.ts: 339-341, 555
+src/core/emit/emit.ts: 210-211, 224
+src/core/emit/expr.ts: 331-341, 412-413, 665-666, 1001, 1117-1118, 1155-1156, 1178-1179, 1196, 1204, 1215, 1217, 1305-1306, 1352, 1365-1368, 1401, 1449, 1516, 1528-1529, 1534, 1536, 1538-1540, 1542, 1544-1545, 1547, 1603-1604, 1618-1619, 1628-1629
+src/core/emit/families/effect.ts: 89-91, 196-198
+src/core/emit/families/layer.ts: 25-26, 36-37
+src/core/emit/families/schema.ts: 369-371, 415-417
+src/core/emit/families/scope.ts: 45-46, 62-64
+src/core/emit/families/stream.ts: 105-107
+src/core/emit/fields.ts: 55, 70-72, 107, 119-123, 126-141
+src/core/emit/identity.ts: 18, 25, 32-33, 40-41
+src/core/emit/module_state.ts: 310, 312
+src/core/emit/spans.ts: 174
+src/core/emit/tsc.ts: 93
+src/core/emit/type_query.ts: 78
+src/core/emit/types.ts: 218, 317, 321, 334-338, 340-341, 349, 400
+src/core/emit/walk.ts: 29-31, 92
+src/core/infer_contracts.ts: 125-129, 131, 146-148, 215, 318, 321, 325-328, 330-334, 343
+src/core/infer_inputs.ts: 305, 371, 375-384, 464, 563, 589-596
+src/core/interface.ts: 269
+src/core/lex.ts: 357
+src/core/lower.ts: 302-303, 349, 355-356, 367-368, 378-379, 406-407, 455-456, 472, 514-515, 546, 562-563, 690-698, 700-701, 720-721, 793-794, 814-815, 850-851, 858-859, 1017-1018, 1116-1117, 1154-1155, 1194-1195, 1249-1250, 1300, 1399-1400, 1418-1419, 1445, 1474-1482, 1561-1562, 1572-1573, 1580-1581, 1615-1616
+src/core/parse.ts: 222, 277-278, 592, 873-877, 879, 1176-1177, 1199-1201, 1277
+src/core/paths.ts: 59
+src/core/patterns.ts: 83, 192, 196
+src/core/predicate_source.ts: 337
+src/core/predicates.ts: 283, 320
+src/core/project_config.ts: 72, 124, 206-207, 236-239, 241, 288-291, 293-294
+src/core/recursion_guard.ts: 46, 60-62, 118-120, 173-174, 178
+src/core/referenced_ids.ts: 67-69, 92, 102-104
+src/core/requirement_provenance.ts: 68-71, 85-87, 123, 187, 213, 237-239, 281-283, 289
+src/core/resolve.ts: 277-279, 336, 338, 340, 342, 344, 346, 549, 711-713, 720, 783, 803, 808-810, 812-815, 817-818, 820-823, 825-826, 883, 886, 908-911, 913, 1092, 1154, 1163, 1175, 1192, 1309
+src/core/serialize.ts: 36
+src/core/signatures.ts: 250-251
+src/core/syntax_queries.ts: 182, 225, 322, 324
+src/core/type_ir.ts: 221-222
+src/core/type_lower.ts: 174, 220, 234, 248-250, 414, 425, 427-435
+src/core/type_show.ts: 93
+src/core/types.ts: 290-292, 356, 471, 712, 715, 1182-1184, 1192-1194, 1213-1214, 1224-1225, 1227-1228, 1285-1287
+src/core/typescript.ts: 111, 127, 192
+src/core/validate/expr.ts: 180-181, 334-336, 338-339, 403-405, 1700, 1704-1705, 1735, 1823-1827, 1829
+src/core/validate/families/effect.ts: 52, 333-334, 356, 399
+src/core/validate/families/schema.ts: 293, 535, 545, 729, 821, 854-856
+src/core/validate/import_checks.ts: 53-55, 70-71, 74-76, 80, 121-123, 128-130, 183-185
+src/core/validate/predicates.ts: 72, 91
+src/core/validate/recursion_checks.ts: 27, 41-43, 99-101, 149, 216-217, 273
+src/core/validate/refinements.ts: 131-135, 168-171, 283-286, 288-289, 401, 403, 478, 480-481, 488, 492-493, 496, 501-502, 507, 513-514, 522-523, 528-529, 531-532, 534-535, 553, 631-632, 653, 664, 673-679, 723-725, 731, 800-805, 872, 876
+src/core/validate/serialization.ts: 17, 70-72
+src/core/validate/type_checks.ts: 183-185, 187, 192-194
+src/core/validate/type_children.ts: 72-74
+src/core/validate/typing.ts: 150, 163-168, 173-175, 441-443, 484-485, 487, 489-490, 492, 611, 613, 665, 696, 803, 860, 922
+src/host/deno_io.ts: 50, 60, 70-74, 148, 169-173, 175, 225-238, 240-251
+src/host/log.ts: 126, 176
+src/host/outputs.ts: 36, 106, 172-174, 266-267, 280-281, 283-285, 288
+src/host/workspace.ts: 64-65, 77-79, 111
+src/lsp/features.ts: 162, 179, 227, 231, 255, 288, 327, 343, 362, 434, 550
+src/lsp/jsonrpc.ts: 302-303
+src/lsp/main.ts: 37-40, 46-48
+src/lsp/projects.ts: 180, 286-289, 323, 369-372, 430, 443, 471, 492, 508, 511, 576, 588-589, 603, 669, 714
+src/lsp/server.ts: 261-263, 265, 322
+src/lsp/wire_log.ts: 70, 86, 125-128, 156-160
