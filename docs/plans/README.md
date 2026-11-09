@@ -62,4 +62,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | QN (defects), QNU (units) | [`docs/archive/plans/2026-11-07-qualify-effect-names.md`](../archive/plans/2026-11-07-qualify-effect-names.md) | Qualified names in the effect lists of type messages |
 | RTU (units), RTD (decisions) | [`docs/archive/plans/2026-11-07-remaining-follow-ups.md`](../archive/plans/2026-11-07-remaining-follow-ups.md) | Remaining follow-ups of the knots work |
 | DMU (units), DMM (merges) | [`docs/archive/plans/2026-11-09-deeper-modules.md`](../archive/plans/2026-11-09-deeper-modules.md) | Fewer and deeper modules, smaller interfaces, and fewer try blocks |
-| PH (items), PHD (decisions), PHF (review findings), PHU (units) | [`docs/plans/2026-11-09-prune-harden.md`](2026-11-09-prune-harden.md) | Pruning and hardening list before more features, with adversarial reviews and pilots |
+| PH (items), PHD (decisions), PHF (review findings), PHU (units) | [`docs/archive/plans/2026-11-09-prune-harden.md`](../archive/plans/2026-11-09-prune-harden.md) | Pruning and hardening list before more features, with adversarial reviews and pilots |

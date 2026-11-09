@@ -2,7 +2,7 @@
 
 Prefixes: PH (items), PHD (decisions for the user), PHF (findings of the adversarial reviews: PHF-A from codex astra, PHF-F from Fable), PHU (units).
 
-Date: 2026-11-09. Base: `6ae0538` on local `main`. Status: accepted on 2026-11-09. The user answered "as recommended": PHD1 (a), PHD2 (a), and the execution of units PHU1 to PHU12. The acceptance authorizes one commit for each unit on local `main`, and one separate commit in `../effektive` for PHU12. It does not authorize a push, a release, or a version change. Section 11 holds the progress. Units PHU1 to PHU12 are complete, and PHU10 was rejected by measurement. PHD7 (two new layout defects) is open. The evidence is in [2026-11-09-prune-harden-evidence/](2026-11-09-prune-harden-evidence/).
+Date: 2026-11-09. Base: `6ae0538` on local `main`. Status: accepted on 2026-11-09. The user answered "as recommended": PHD1 (a), PHD2 (a), and the execution of units PHU1 to PHU12. The acceptance authorizes one commit for each unit on local `main`, and one separate commit in `../effektive` for PHU12. It does not authorize a push, a release, or a version change. Section 11 holds the progress. Units PHU1 to PHU12 are complete, and PHU10 was rejected by measurement. The user chose PHD7 (a) on 2026-11-09, so unit PHU13 fixes PH21 and PH22. The plan is complete. PH23 and PH24, found during PHU13, are open in `docs/status.md`. The evidence is in [2026-11-09-prune-harden-evidence/](2026-11-09-prune-harden-evidence/).
 
 The user asked for a list of unnecessary complexity, and for ways to reduce the design to a minimum without loss of functionality. This is the cleanup step before more features. The list ends with adversarial reviews and empirical checks.
 
@@ -93,6 +93,10 @@ PH21 (closure chains in call arguments that `deno fmt` rewrites). Found by Opus 
 
 PH22 (a long type argument in a pipeline temporary that `deno fmt` rewrites). Found by the PH21 probe. Reproduced (M). When `pairs(xs)` of PH21 starts a pipeline, the annotation of `$p1` breaks inside the object type of `ReadonlyArray<(a: IntVal) => { ... }>`, and the value moves below the `=`. `deno fmt` breaks the type argument list and keeps `= pairs(xs);` on the line. This breaks D12. Cause: not read.
 
+PH23 (a long type argument of a generic call). Found by the PHU13b executor, reproduced by Opus (M). `const maybe = Some(sumMaker(n))`, where `sumMaker` returns a closure with an object result, emits `Option.some<(a: IntVal) => {` and keeps the brackets around the object. `deno fmt` breaks the brackets: `Option.some<`, the type on its own lines, then `>(sumMaker(n))`. This breaks D12. It is outside PHU13, which changes type annotations only. The PHU13b executor also reports that a long union inside a type argument does not break; nobody has reproduced that through the compiler.
+
+PH24 (a binding name longer than the line). Found by Opus during the review of PHU13b (M). With a local or exported name of about 75 characters, `deno fmt` breaks after the colon: `name:` and then `IntVal = $int(n + 1);` on the next line. The emitter does not break there, before or after PHU13. This breaks D12 for names that no fixture or application uses.
+
 ## 5. Pruning items
 
 PH8 (generated validator fixtures). Pilot `8e884a8`. `fixtures/validate/` holds 13,646 lines in 23 files. `scripts/validate_fixtures.ts` builds each file from a lowered program and one mutation, and `tests/validate_test.ts:1011` asserts that the files equal `buildFixtures()`. Change: the tests iterate `buildFixtures()`. `behavior:compare` runs the head revision's builder into the exported head tree before both runs, so that both revisions read the same forged inputs and `readForged` stays the same (PHF-F2). A tree that still holds the files uses them. Two oracles must stay (PHF-A3):
@@ -133,6 +137,7 @@ PHD2 (builtins that no application calls). On 2026-11-02 the reason to keep `now
 PHD7 (the two layout defects found during execution, PH21 and PH22). The approval covered PHU1 to PHU12, so these items need a decision. Both change only the layout of the emitted TypeScript, not its behavior.
 (a) Fix both now as unit PHU13: one test that fails first for each item, then the fix, with the golden files unchanged. Recommended by Opus: both break D12, and PH21 is the same defect class as PH2.
 (b) Add both to the open items in `docs/status.md`, and archive this plan.
+The user chose (a) on 2026-11-09.
 
 ## 7. Checked and kept
 
@@ -254,7 +259,7 @@ Each unit starts from local `main`, keeps the rules of the deeper-modules plan (
 | PHU10 | PH15, PH19 | Sonnet | `src/lsp/projects.ts`, `src/core/service_bounds.ts`, `src/core/check_expr.ts`, `src/core/contract_origins.ts` | Gate equal; mutate on the two modules; no change of order. | 40 |
 | PHU11 | PH14 | Sonnet | `tests/` | The test count stays; net lines are negative. | 40 |
 | PHU12 | PHD1 (a), if approved | Sonnet | from pilot `aadb6b1`, plus the message rename; then the website | Gate; website strict checks. | 40 |
-| PHU13 | PH21, PH22, if PHD7 (a) | Sonnet | `src/core/emit/expr.ts`, the type layout, `fixtures/emit/forms/forms.eff` | `tests/emit_slow_test.ts` fails before each fix and passes after it; the golden files do not change. | 50 |
+| PHU13 | PH21, PH22 (PHD7 (a)) | Sonnet, two executors: PHU13a for PH21, PHU13b for PH22 | `src/core/emit/expr.ts`, `src/core/emit/types.ts`, `fixtures/emit/forms/forms.eff` | `tests/emit_slow_test.ts` fails before each fix and passes after it; the golden files do not change. | 50 |
 
 Order: PHU1 to PHU4 first (defects), then PHU5 to PHU9, then PHU10 to PHU12. PHU1, PHU2, PHU4, and PHU6 touch different files and can run in parallel worktrees.
 
@@ -274,8 +279,9 @@ Order: PHU1 to PHU4 first (defects), then PHU5 to PHU9, then PHU10 to PHU12. PHU
 | PHU10 | rejected by measurement (below) | none |
 | PHU11 | done: five of six groups kept, net -118 lines; the pass counts of each changed file are equal | `0a18bb1`, `181ccae`, `0223aa6`, `6aa566f`, `d5864ef`, `52e920b` |
 | PHU12 | done; website draft 0.77 is `061349a` in `../effektive` | `8198890`, `e00cd82` |
+| PHU13 | done: each new forms test fails before its fix; `behavior:compare 9c9bfed afe8a29` changes only `emit/forms#forms` | `9c9bfed` (PH21), `afe8a29` (PH22) |
 
-`deno task check` on `main` at `58fcac2`: exit 0, 3,022 fast and 301 slow tests passed. At `7b93f36` and at `52e920b`: exit 0, 3,018 fast and 301 slow tests passed. The fast count fell by 4 at `8198890`, which removed the tests of `withResource`.
+`deno task check` on `main` at `58fcac2`: exit 0, 3,022 fast and 301 slow tests passed. At `7b93f36` and at `52e920b`: exit 0, 3,018 fast and 301 slow tests passed. At `afe8a29`: exit 0, 3,019 fast and 301 slow tests passed. The fast count fell by 4 at `8198890`, which removed the tests of `withResource`.
 
 Corrections found during execution:
 - PH18 is dropped. The three records are live evidence: six live links cite them, including `docs/status.md:68`, which the reviews missed, and archived documents hold 26 references. The move would break those references and serve no reader.
@@ -286,4 +292,6 @@ Corrections found during execution:
 - PHU12 expected a reachable `withResource` message for `using`. None exists: `0670bf5` deleted the check, and the parser and `implicitArrow` make the two callback messages unreachable. The rename only keeps the labels from naming a removed builtin.
 - Two mutation survivors in `src/core/emit/expr.ts` were not in the register. They are older than this work, and a sample found them after the site count changed. Both are equivalent, with probes as evidence: the depth guard of `isOptionalField` (`7b93f36`) and the internal guard of `optionMatch` (`51d3e67`).
 - PHU11 merged one `diagnosticsOf` copy whose failure message differs from the shared form for a project that cannot load. All other behavior is equal, so the merge stays. Five converted process sites now pass `NO_COLOR=1`, which changes only color output.
+- The first PH22 fix (`a098aa6`) changed the layout of six old programs: two applications and four schema fixtures. It also failed `tests/emit_extreme_identifiers_slow_test.ts`. Its checks covered only the forms and the examples, so the full gate and `behavior:compare` on `main` found it. `566cf98` reverted it. The rework applies the bracket break and the value placement only to the type of a block binding. A build of the old forms, examples, and both applications with the compilers of `9c9bfed` and `afe8a29` gives identical bytes.
+- After the plan, three items stay open in `docs/status.md`: PH23 and PH24 in the row "Emitted layout", and two unclassified survivors in `hasSchemaMetadata` (`src/core/emit/types.ts:174`) in the row "Test strength". PHU13 did not change that function.
 - The website keeps `effektive-validation.txt:152`, which names `withResource` in the dated record of draft 0.3.

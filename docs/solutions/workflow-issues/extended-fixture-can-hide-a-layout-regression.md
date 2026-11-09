@@ -78,4 +78,4 @@ needs a change to `scripts/golden_update.ts`, so it was not added.
 
 - `docs/solutions/workflow-issues/behavior-capture-hold-tests-constant.md`
   covers the retired `behavior:capture` task.
-- `docs/plans/2026-11-09-prune-harden.md`, Section 11, records the finding.
+- `docs/archive/plans/2026-11-09-prune-harden.md`, Section 11, records the finding.
