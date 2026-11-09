@@ -11,7 +11,7 @@ import {
   type PlaygroundResult,
   type ProgramPort,
 } from "../playground/src/compile.ts";
-import { exampleFiles } from "./helpers.ts";
+import { exampleFiles, offsetOf } from "./helpers.ts";
 
 const FILES = exampleFiles();
 const SOURCE_PATHS = [
@@ -38,12 +38,6 @@ function okOf(
 ): PlaygroundResult {
   assert(result.ok, JSON.stringify(result));
   return result.value;
-}
-
-function offsetOf(text: string, needle: string, delta = 0): number {
-  const at = text.indexOf(needle);
-  assert(at >= 0, `missing ${needle}`);
-  return at + delta;
 }
 
 Deno.test("the examples compile with no diagnostics and seven outputs, one for the host file", () => {

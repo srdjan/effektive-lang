@@ -75,6 +75,13 @@ export function spanText(text: string, span: Span): string {
   return text.slice(span.start, span.end);
 }
 
+/** The offset of `needle` in `text`, plus `delta`. The needle must occur. */
+export function offsetOf(text: string, needle: string, delta = 0): number {
+  const at = text.indexOf(needle);
+  assert(at >= 0, `missing ${needle}`);
+  return at + delta;
+}
+
 export const FIXTURES = new URL("../fixtures/", import.meta.url);
 
 export interface FixtureFile {

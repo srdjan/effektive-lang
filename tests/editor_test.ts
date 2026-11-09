@@ -13,7 +13,7 @@ import {
   Program,
   type Revision,
 } from "../src/core/mod.ts";
-import { exampleFiles, FIXTURES } from "./helpers.ts";
+import { exampleFiles, FIXTURES, offsetOf } from "./helpers.ts";
 import { showType } from "../src/core/type_show.ts";
 
 type Files = Record<string, string>;
@@ -31,13 +31,6 @@ function loadModule(text: string): Revision {
 
 const FILES = exampleFiles();
 const examples = load(FILES);
-
-/** The offset of `needle` in `text`, plus `delta`. The needle must occur. */
-function offsetOf(text: string, needle: string, delta = 0): number {
-  const at = text.indexOf(needle);
-  assert(at >= 0, `missing ${needle}`);
-  return at + delta;
-}
 
 /** The span of the first occurrence of `needle` in the file. */
 function spanOf(path: string, needle: string): Span {
