@@ -2,12 +2,9 @@
 // synchronous and does no I/O: it reads files only through `SourceHost`.
 
 // The program with module cutoff.
-export { Program, Revision, revisionDelta } from "./db.ts";
+export { diffFiles, Program, Revision, revisionDelta } from "./db.ts";
 export type { ProgramChanges, RevisionDelta } from "./db.ts";
 export type { TypeReader, TypeRef } from "./types.ts";
-
-// The difference between two file maps, for `Program.update`.
-export { diffFiles } from "./file_diff.ts";
 
 // The editor queries.
 export { occurrenceAt, referencesAt } from "./editor_index.ts";

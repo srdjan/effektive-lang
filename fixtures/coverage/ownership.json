@@ -72,7 +72,6 @@
       "src/core/emit/type_query.ts",
       "src/core/emit/types.ts",
       "src/core/emit/walk.ts",
-      "src/core/file_diff.ts",
       "src/core/frontend.ts",
       "src/core/graph.ts",
       "src/core/hash.ts",

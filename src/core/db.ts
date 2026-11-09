@@ -81,6 +81,30 @@ export interface ProgramChanges {
   readonly remove?: readonly string[];
 }
 
+/** The files to set and the paths to remove, so that `known` becomes `wanted`. */
+interface FileDiff {
+  readonly set: Map<string, string>;
+  readonly remove: string[];
+}
+
+/**
+ * The change set that turns `known` into `wanted`, in the shape that
+ * `Program.update` takes. A path is in `set` when `wanted` holds a text that
+ * `known` lacks or holds with another text. A path is in `remove` when `known`
+ * holds it and `wanted` does not. Both lists keep the order of their source map.
+ */
+export function diffFiles(
+  known: ReadonlyMap<string, string>,
+  wanted: ReadonlyMap<string, string>,
+): FileDiff {
+  const set = new Map<string, string>();
+  for (const [path, text] of wanted) {
+    if (known.get(path) !== text) set.set(path, text);
+  }
+  const remove = [...known.keys()].filter((path) => !wanted.has(path));
+  return { set, remove };
+}
+
 /**
  * Cumulative counts of the expensive queries of a program (design measurement
  * M3). A memo hit does not count.

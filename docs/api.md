@@ -12,7 +12,6 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   ir.ts          Typed IR model. This file is the authored contract. The sibling repository effektive publishes a copy.
   result.ts      The Result type of an expected failure. source.ts re-exports it.
   source.ts      SourceHost, line tables, positions, and span helpers.
-  file_diff.ts   diffFiles: the set and remove lists that turn one file map into another, for Program.update.
   diagnostics.ts Diagnostic type, the registry of codes, sort and dedupe.
   lex.ts         Lexer: typed arrays of tokens plus trivia.
   syntax.ts      Syntax tree types and the printer.
@@ -65,7 +64,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   initialization.ts Eager dependency graph of module constants, the reference edges, and the cycle diagnostics.
   interface.ts   Module interfaces, their hashes, and the reachable modules.
   analyze.ts     Public entry: load a project, resolve it, collect diagnostics.
-  db.ts          Program: revisions, parse memo, check memo with module cutoff, and lazy IR.
+  db.ts          Program: revisions, parse memo, check memo with module cutoff, and lazy IR. Also diffFiles: the set and remove lists that turn one file map into another, for Program.update.
   editor.ts      sourceHoverAt, definitionAt, and documentSymbols over a revision.
   editor_index.ts Revision-scoped resolver identities, occurrences and lexical scopes.
   editor_rename.ts References, prepare-rename and re-resolved rename edits.
