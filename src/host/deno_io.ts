@@ -34,14 +34,11 @@ export const denoFs: HostFs = {
     }
   },
   writeText(path: string, text: string): Result<void, FileFailure> {
-    try {
+    return attempt(() => {
       const slash = path.lastIndexOf("/");
       if (slash > 0) Deno.mkdirSync(path.slice(0, slash), { recursive: true });
       Deno.writeTextFileSync(path, text);
-      return { ok: true, value: undefined };
-    } catch (e) {
-      return { ok: false, error: { message: errorMessage(e) } };
-    }
+    });
   },
   remove(path: string): Result<void, FileFailure> {
     try {
@@ -68,11 +65,9 @@ export const denoFs: HostFs = {
     }
   },
   kind(path: string): "file" | "directory" | "missing" {
-    try {
-      return Deno.statSync(path).isDirectory ? "directory" : "file";
-    } catch {
-      return "missing";
-    }
+    const stat = attempt(() => Deno.statSync(path));
+    if (!stat.ok) return "missing";
+    return stat.value.isDirectory ? "directory" : "file";
   },
   list(path: string): Result<readonly DirectoryEntry[], FileFailure> {
     try {
@@ -171,12 +166,10 @@ async function denoCheck(
   } catch (e) {
     return { ok: false, error: { message: errorMessage(e) } };
   } finally {
-    if (directory !== undefined) {
-      try {
-        Deno.removeSync(directory, { recursive: true });
-      } catch {
-        // The temporary directory stays; the system removes it later.
-      }
+    // When the removal fails, the system removes the temporary directory later.
+    const made = directory;
+    if (made !== undefined) {
+      attempt(() => Deno.removeSync(made, { recursive: true }));
     }
   }
 }
@@ -241,12 +234,8 @@ async function* sourceEvents(root: string): AsyncGenerator<readonly string[]> {
       const poll = new Promise<"poll">((resolve) => {
         timeout = setTimeout(() => resolve("poll"), WATCH_POLL_MS);
       });
-      let result: IteratorResult<Deno.FsEvent> | "poll";
-      try {
-        result = await Promise.race([pending, poll]);
-      } finally {
-        clearTimeout(timeout);
-      }
+      const result = await Promise.race([pending, poll]);
+      clearTimeout(timeout);
       if (result === "poll") {
         // The watch loop rescans, but an unchanged project prints nothing.
         yield [];
