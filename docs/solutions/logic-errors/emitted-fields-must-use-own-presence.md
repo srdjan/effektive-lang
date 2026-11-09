@@ -41,8 +41,8 @@ existing output. The checker and independent validator do not change.
 ## Tagged record copies (added 2026-10-23, updated 2026-10-24 for type identity)
 
 Construction of a tagged record prints `$untagged<T>(value)` for each argument
-whose IR node is not a `record` literal (`src/core/emit/fields.ts:162-174`,
-`src/core/emit/expr.ts:730-739`). The IR still calls this node `nominal`.
+whose IR node is not a `record` literal (`src/core/emit/fields.ts:175-187`,
+`src/core/emit/expr.ts:796-806`). The IR still calls this node `nominal`.
 Before the `nominal` declaration, `unbrand` printed this copy. The `nominal`
 keyword is gone now, and a tagged record value still fits its record body
 with no call, so a widened value can reach another constructor with its old
