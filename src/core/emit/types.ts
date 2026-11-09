@@ -113,18 +113,6 @@ function deferredArguments(
   return typeArguments(args);
 }
 
-/** `Layer.Layer<S1 | S2, E, Rq>` for a provider type. */
-function layerTypeDoc(
-  scope: EmitNames,
-  provides: readonly CapabilityId[],
-  acquisition: Effects,
-): Doc {
-  const services = servicesOf(provides).map((id) => scope.nameOf(id));
-  const args = deferredArguments(scope, [unionDoc(services)], acquisition);
-  const layer = scope.effect("Layer");
-  return [`${layer}.Layer`, args];
-}
-
 function functionTypeDoc(scope: EmitNames, type: FunctionType): Doc {
   const parameters = type.parameters.map((p, i) =>
     property(
@@ -147,11 +135,6 @@ function functionTypeDoc(scope: EmitNames, type: FunctionType): Doc {
     " => ",
     returns,
   ];
-}
-
-/** True when the type needs parentheses as a member of a union or as an array element. */
-function needsParentheses(type: Type): boolean {
-  return type.kind === "function" || type.kind === "union";
 }
 
 /**
@@ -252,7 +235,10 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
       return unionDoc(
         type.members.map((m) => {
           const inner = typeDoc(scope, m);
-          return needsParentheses(m) ? ["(", inner, ")"] : inner;
+          // A function or union member needs parentheses inside a union.
+          return m.kind === "function" || m.kind === "union"
+            ? ["(", inner, ")"]
+            : inner;
         }),
       );
     case "function":
@@ -274,8 +260,18 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
           ...channelTypeArguments(scope, type.effects),
         ]),
       ];
-    case "provider":
-      return layerTypeDoc(scope, type.provides, type.acquisition.effects);
+    case "provider": {
+      // `Layer.Layer<S1 | S2, E, Rq>`.
+      const services = servicesOf(type.provides).map((id) => scope.nameOf(id));
+      return [
+        `${scope.effect("Layer")}.Layer`,
+        deferredArguments(
+          scope,
+          [unionDoc(services)],
+          type.acquisition.effects,
+        ),
+      ];
+    }
   }
 }
 

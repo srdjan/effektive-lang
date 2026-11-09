@@ -64,12 +64,6 @@ interface SourceMapOptions {
   readonly includeContent?: boolean;
 }
 
-/** The path of `source` relative to the directory of the generated file `path`. */
-function relativeSource(path: string, source: string): string {
-  const specifier = relativeSpecifier(path, source);
-  return specifier.startsWith("./") ? specifier.slice(2) : specifier;
-}
-
 /**
  * Builds the source map of one module. `sourceTexts` maps each root-relative
  * source path to its text, for the line tables. A source that a record names
@@ -155,7 +149,11 @@ export function buildSourceMap(
   const base = {
     version: 3 as const,
     file: fileNameOf(table.path),
-    sources: sources.map((s) => relativeSource(table.path, s)),
+    // Each source path is relative to the directory of the generated file.
+    sources: sources.map((s) => {
+      const specifier = relativeSpecifier(table.path, s);
+      return specifier.startsWith("./") ? specifier.slice(2) : specifier;
+    }),
     names: [] as string[],
     mappings: lines.map((segments) => segments.join(",")).join(";"),
   };

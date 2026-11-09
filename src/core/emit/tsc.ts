@@ -59,12 +59,6 @@ const HEADER = /^TS(\d+) \[(?:ERROR|WARN)\]: (.*)$/;
 const UNDEFINED_ADVICE =
   " Consider adding 'undefined' to the types of the target's properties.";
 
-function relayedMessage(line: string): string {
-  return line.endsWith(UNDEFINED_ADVICE)
-    ? line.slice(0, -UNDEFINED_ADVICE.length)
-    : line;
-}
-
 const LOCATION = /^\s+at (file:\/\/\S+):(\d+):(\d+)$/;
 const PROGRESS = /^(Check|Download|Resolving|Initialize) /;
 const SUMMARY = /^error: Type checking failed\.$|^Found \d+ errors?\.$/;
@@ -78,11 +72,6 @@ function pathOfFileUrl(url: string): string {
   }
 }
 
-function relativeToRoot(file: string, root: string): string {
-  const prefix = root.endsWith("/") ? root : root + "/";
-  return file.startsWith(prefix) ? file.slice(prefix.length) : file;
-}
-
 /**
  * Parses the output of `deno check` (stderr, without color codes). `root` is
  * the absolute project directory, as `deno check` prints it. A file under the
@@ -90,6 +79,7 @@ function relativeToRoot(file: string, root: string): string {
  * diagnostic, such as a note about a related declaration, is dropped.
  */
 export function parseDenoCheck(text: string, root: string): DenoCheckOutput {
+  const prefix = root.endsWith("/") ? root : root + "/";
   const diagnostics: TscDiagnostic[] = [];
   const other: string[] = [];
   type Open = {
@@ -105,7 +95,9 @@ export function parseDenoCheck(text: string, root: string): DenoCheckOutput {
       other.push(`TS${open.code}: ${open.message}`);
     } else {
       diagnostics.push({
-        file: relativeToRoot(open.location.file, root),
+        file: open.location.file.startsWith(prefix)
+          ? open.location.file.slice(prefix.length)
+          : open.location.file,
         line: open.location.line,
         column: open.location.column,
         code: open.code,
@@ -121,7 +113,9 @@ export function parseDenoCheck(text: string, root: string): DenoCheckOutput {
       close();
       open = {
         code: Number(header[1]),
-        message: relayedMessage(header[2]),
+        message: header[2].endsWith(UNDEFINED_ADVICE)
+          ? header[2].slice(0, -UNDEFINED_ADVICE.length)
+          : header[2],
         detail: [],
         location: undefined,
       };
