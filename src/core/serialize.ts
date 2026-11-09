@@ -31,15 +31,13 @@ const SET_KEYS: ReadonlySet<string> = new Set([
 
 /** True when the list holds strings in strictly increasing order. */
 function isSortedUnique(list: readonly unknown[]): boolean {
-  for (let i = 0; i < list.length; i++) {
-    const item = list[i];
+  let previous: string | undefined;
+  for (const item of list) {
     if (typeof item !== "string") return false;
-    const previous = list[i - 1];
-    if (
-      i > 0 && typeof previous === "string" && compareText(previous, item) >= 0
-    ) {
+    if (previous !== undefined && compareText(previous, item) >= 0) {
       return false;
     }
+    previous = item;
   }
   return true;
 }
