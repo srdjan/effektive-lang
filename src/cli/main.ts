@@ -270,8 +270,8 @@ function fixContracts(first: Revision): FixOutcome {
     const inputs = revision.inputs();
     const edits: SourceEdit[] = [];
     const touched: string[] = [];
-    for (const path of [...inputs.keys()].sort(compareText)) {
-      const text = inputs.get(path) ?? "";
+    const sorted = [...inputs].sort(([a], [b]) => compareText(a, b));
+    for (const [path, text] of sorted) {
       const actions = contractActionsAt(revision, path, 0, text.length, true);
       const own = actions.flatMap((a) => a.edits);
       if (applySourceEdits(text, own) === text) continue;
