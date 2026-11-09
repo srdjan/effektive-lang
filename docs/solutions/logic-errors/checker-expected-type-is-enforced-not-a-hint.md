@@ -118,4 +118,4 @@ branch.
 
 Update 2026-10-24: TE4 of the terse source plan renamed `takeSinkHint` to `sinkHint` and
 `resultsInTakeSink` to `resultsInSink`. The hint now also gives an inline `sinkForEach`
-callback its input type.
+callback its input type. Both helpers now live in `src/core/check_builtins/stream.ts`.
