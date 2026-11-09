@@ -366,59 +366,50 @@ function linkModules(
 ): GraphResult {
   const sorted = [...modules].sort(([a], [b]) => compareText(a, b));
   const names = sorted.map(([name]) => name);
-  const graph = new Map<string, readonly string[]>();
-  const targetLists: (readonly string[])[] = [];
-  for (const [name, info] of sorted) {
-    const targets = new Set<string>();
-    for (const link of info.links) {
-      if (link.target !== undefined && modules.has(link.target)) {
-        targets.add(link.target);
-      }
-    }
-    const list = [...targets].sort(compareText);
-    graph.set(name, list);
-    targetLists.push(list);
-  }
-
   // Module names are sorted, so ascending indexes keep the order of `names`.
-  const position = new Map<string, number>();
-  names.forEach((name, i) => position.set(name, i));
-  const edges = targetLists.map((targets) =>
-    targets.flatMap((target) => position.get(target) ?? [])
-  );
+  const position = new Map(names.map((name, i) => [name, i]));
+  const graph = new Map<string, readonly string[]>();
+  const edges: (readonly number[])[] = [];
+  for (const [name, info] of sorted) {
+    const targets = new Set<number>();
+    for (const link of info.links) {
+      const at = link.target === undefined
+        ? undefined
+        : position.get(link.target);
+      if (at !== undefined) targets.add(at);
+    }
+    const indexes = [...targets].sort((a, b) => a - b);
+    graph.set(name, indexes.map((i) => names[i]));
+    edges.push(indexes);
+  }
   const order: string[] = [];
   const diagnostics: Diagnostic[] = [];
   for (const indexes of stronglyConnectedComponents(names.length, edges)) {
-    const component = indexes.map((i) => names[i]);
-    for (const moduleName of component) {
+    const component = indexes.map((i) => sorted[i]);
+    for (const [moduleName] of component) {
       order.push(moduleName);
     }
     if (isCycle(indexes, edges)) {
-      diagnostics.push(cycleDiagnostic(modules, component));
+      diagnostics.push(cycleDiagnostic(component));
     }
   }
   return { graph, order, diagnostics };
 }
 
 function cycleDiagnostic(
-  modules: ReadonlyMap<string, ModuleInfo>,
-  component: readonly string[],
+  component: readonly (readonly [string, ModuleInfo])[],
 ): Diagnostic {
-  const members = new Set(component);
-  const first = modules.get(component[0]);
-  if (first === undefined) {
-    throw new Error(
-      `internal: the cycle names an unknown module ${component[0]}`,
-    );
-  }
+  const names = component.map(([name]) => name);
+  const members = new Set(names);
+  const first = component[0][1];
   const link = first.links.find((l) =>
     l.target !== undefined && members.has(l.target) &&
     l.entry.specifierSpan !== undefined
   );
   const span = link?.entry.specifierSpan ?? emptySpan(first.path);
-  const cycle = component.length === 1
-    ? `${component[0]} imports itself`
-    : `import cycle: ${component.join(" -> ")} -> ${component[0]}`;
+  const cycle = names.length === 1
+    ? `${names[0]} imports itself`
+    : `import cycle: ${names.join(" -> ")} -> ${names[0]}`;
   return makeDiagnostic("module/003", cycle, span);
 }
 
