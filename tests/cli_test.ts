@@ -89,6 +89,15 @@ Deno.test("check on the examples prints no diagnostic and exits 0", async () => 
   assertEquals(r.stderr, "7 modules, 0 diagnostics\n");
 });
 
+Deno.test("check prints 130,000 diagnostics and exits 1", async () => {
+  const r = await run(["check", ROOT], {
+    [`${ROOT}/effektive.json`]: "{}",
+    [`${ROOT}/m.eff`]: "@".repeat(130_000),
+  });
+  assertEquals(r.code, 1);
+  assertEquals(r.stderr, "1 module, 130000 diagnostics\n");
+});
+
 Deno.test("check writes no file", async () => {
   const files = under(ROOT, exampleFiles());
   const r = await run(["check", ROOT], files);

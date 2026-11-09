@@ -92,7 +92,8 @@ export async function buildRevision(
     tables = outputs.tables;
   }
 
-  lines.push(...formatDiagnostics(diagnostics, textOf));
+  // A loop, because a spread of a very large array overflows the call stack.
+  for (const line of formatDiagnostics(diagnostics, textOf)) lines.push(line);
   let count = diagnostics.length;
   if (diagnostics.length > 0) failed = true;
 
@@ -109,8 +110,8 @@ export async function buildRevision(
         textOf,
         log,
       );
-      lines.push(...outcome.lines);
       for (const message of outcome.lines) {
+        lines.push(message);
         items.push({ source: "tsc", message });
       }
       notes.push(...outcome.notes);
