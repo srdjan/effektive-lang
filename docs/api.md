@@ -151,10 +151,9 @@ src/lsp/       The language server. See "Language server".
   features.ts    The handlers: hover, definition, symbols, generated text, save, stats, references, validated versioned rename and actions, completion, and semantic tokens.
   generated_texts.ts  GeneratedTexts: the subscriptions and received results of the generated-text protocol.
   jsonrpc.ts     Content-Length frames and the message shapes.
-  protocol.ts    The subset of the protocol: types and the narrowing of incoming params.
+  protocol.ts    The subset of the protocol: types, the narrowing of incoming params, and the names of the custom methods, shared with the client.
   positions.ts   Positions, ranges, and the conversion between URIs and paths.
   wire_log.ts    WireLog: the session log of messages, disk calls, and timings, wrapped around the ports.
-  methods.ts     The names of the custom methods, shared with the client.
 editors/vscode/ The VS Code client. See "VS Code client". Plain JavaScript client; release packaging bundles the server.
 playground/    The browser playground. See "Playground". The page is in src/, the build in build.ts.
   build.ts       build(outDir): bundles the page, copies the static files, and writes examples.json.
@@ -834,7 +833,7 @@ version gets no message.
 
 ### Custom methods
 
-The names are in `src/lsp/methods.ts`. Each request takes the params
+The names are in `src/lsp/protocol.ts`. Each request takes the params
 `{ textDocument: { uri } }`. The URI selects the project, as for every other
 request.
 

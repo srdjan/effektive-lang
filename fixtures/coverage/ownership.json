@@ -147,7 +147,6 @@
       "src/lsp/generated_texts.ts",
       "src/lsp/jsonrpc.ts",
       "src/lsp/main.ts",
-      "src/lsp/methods.ts",
       "src/lsp/positions.ts",
       "src/lsp/projects.ts",
       "src/lsp/protocol.ts",

@@ -2,6 +2,9 @@ import { assert, assertEquals } from "@std/assert";
 import {
   DEFAULT_INITIALIZATION_OPTIONS,
   FileChangeType,
+  GENERATED_CHANGED_METHOD,
+  GENERATED_SCHEME,
+  GENERATED_TYPESCRIPT_METHOD,
   narrowCodeActionParams,
   narrowDidChange,
   narrowDidChangeWatchedFiles,
@@ -13,14 +16,9 @@ import {
   narrowRenameParams,
   narrowTextDocumentParams,
   SERVER_CAPABILITIES,
+  STATS_METHOD,
   TextDocumentSyncKind,
 } from "../src/lsp/protocol.ts";
-import {
-  GENERATED_CHANGED_METHOD,
-  GENERATED_SCHEME,
-  GENERATED_TYPESCRIPT_METHOD,
-  STATS_METHOD,
-} from "../src/lsp/methods.ts";
 
 const URI = "file:///tmp/p/main.eff";
 

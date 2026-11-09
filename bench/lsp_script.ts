@@ -10,7 +10,7 @@
 
 import { errorMessage, isRecord } from "../src/core/mod.ts";
 import type { Result } from "../src/core/mod.ts";
-import { STATS_METHOD } from "../src/lsp/methods.ts";
+import { STATS_METHOD } from "../src/lsp/protocol.ts";
 import {
   allFiles,
   applyAliasEdit,

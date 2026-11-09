@@ -13,12 +13,12 @@ import {
   KEYWORDS,
   PRELUDE_NAMES,
 } from "../src/core/frontend.ts";
-import { DEFAULT_INITIALIZATION_OPTIONS } from "../src/lsp/protocol.ts";
 import {
+  DEFAULT_INITIALIZATION_OPTIONS,
   GENERATED_CHANGED_METHOD,
   GENERATED_SCHEME,
   GENERATED_TYPESCRIPT_METHOD,
-} from "../src/lsp/methods.ts";
+} from "../src/lsp/protocol.ts";
 
 const CLIENT = new URL("../editors/vscode/", import.meta.url);
 

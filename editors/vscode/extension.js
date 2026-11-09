@@ -9,7 +9,7 @@ const REQUIRED_DENO_VERSION = "2.9.8";
 const vscode = require("vscode");
 const { LanguageClient, State } = require("vscode-languageclient/node");
 
-// These values must equal the exports of src/lsp/methods.ts.
+// These values must equal the exports of src/lsp/protocol.ts.
 const GENERATED_TYPESCRIPT_METHOD = "effektive/generatedTypeScript";
 const GENERATED_CHANGED_METHOD = "effektive/generatedChanged";
 const GENERATED_SCHEME = "effektive-generated";

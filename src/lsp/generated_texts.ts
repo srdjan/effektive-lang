@@ -7,12 +7,12 @@
 
 import { isModulePath, type Revision } from "../core/mod.ts";
 import { stepOutput, type TypeScriptOutputs } from "../core/typescript.ts";
-import { GENERATED_CHANGED_METHOD } from "./methods.ts";
 import { uriToPath } from "./positions.ts";
 import type { ProjectState } from "./projects.ts";
-import type {
-  GeneratedChangedParams,
-  GeneratedTypeScriptResult,
+import {
+  GENERATED_CHANGED_METHOD,
+  type GeneratedChangedParams,
+  type GeneratedTypeScriptResult,
 } from "./protocol.ts";
 
 /** The project of a URI and the path of the module in that project. */

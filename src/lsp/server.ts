@@ -46,6 +46,7 @@ import {
 } from "./jsonrpc.ts";
 import {
   DEFAULT_INITIALIZATION_OPTIONS,
+  GENERATED_TYPESCRIPT_METHOD,
   type InitializationOptions,
   narrowCodeActionParams,
   narrowDidChange,
@@ -61,8 +62,8 @@ import {
   narrowTextDocumentParams,
   type PublishDiagnosticsParams,
   SERVER_CAPABILITIES,
+  STATS_METHOD,
 } from "./protocol.ts";
-import { GENERATED_TYPESCRIPT_METHOD, STATS_METHOD } from "./methods.ts";
 import { type LogType, ProjectSet, type ProjectState } from "./projects.ts";
 
 /** The ports of the server. */

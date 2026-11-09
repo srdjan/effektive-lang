@@ -2,6 +2,7 @@
 // types, and narrowing functions from `unknown` for every incoming params
 // shape. Ordered field schemas share primitive, object, array and optional
 // checks. Narrowers return a Result whose error text fits a -32602 response.
+// The names of the custom methods are here too.
 
 import {
   isRecord,
@@ -9,6 +10,22 @@ import {
   SEMANTIC_TOKEN_MODIFIERS,
   SEMANTIC_TOKEN_TYPES,
 } from "../core/mod.ts";
+
+// ---- Names shared with the clients ---------------------------------------
+// The custom methods and the virtual document scheme are part of the protocol
+// between the server and the clients.
+
+/** Request: the generated TypeScript text of one `.eff` module. */
+export const GENERATED_TYPESCRIPT_METHOD = "effektive/generatedTypeScript";
+
+/** Notification: the generated text or the stale flag of a subscribed module changed. */
+export const GENERATED_CHANGED_METHOD = "effektive/generatedChanged";
+
+/** Request: revision, query counts, and memory use for the measurements. */
+export const STATS_METHOD = "effektive/stats";
+
+/** The URI scheme of the virtual document that shows generated TypeScript. */
+export const GENERATED_SCHEME = "effektive-generated";
 
 // ---- Wire types -----------------------------------------------------------
 
