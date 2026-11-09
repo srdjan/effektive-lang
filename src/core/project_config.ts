@@ -140,13 +140,6 @@ function modulePatternMatches(pattern: string, module: string): boolean {
   return matches(0, 0);
 }
 
-function targetPatternMatches(pattern: string, target: string): boolean {
-  if (isHostLabel(target)) {
-    return pattern === "host:*" || pattern === target;
-  }
-  return !isHostLabel(pattern) && modulePatternMatches(pattern, target);
-}
-
 export function importAllowed(
   config: ProjectConfig,
   source: string,
@@ -156,7 +149,11 @@ export function importAllowed(
     modulePatternMatches(candidate.from, source)
   );
   return rule === undefined ||
-    rule.allow.some((pattern) => targetPatternMatches(pattern, target));
+    rule.allow.some((pattern) =>
+      isHostLabel(target)
+        ? pattern === "host:*" || pattern === target
+        : !isHostLabel(pattern) && modulePatternMatches(pattern, target)
+    );
 }
 
 interface ConfigResult {

@@ -34,11 +34,6 @@ import {
 import type { FileMode, SyntaxTree } from "./syntax.ts";
 import { compareText } from "./util.ts";
 
-function dirName(path: string): string {
-  const slash = path.lastIndexOf("/");
-  return slash < 0 ? "" : path.slice(0, slash);
-}
-
 interface ImportLink {
   /** The import declaration in the index of the importing module. */
   readonly entry: ImportEntry;
@@ -145,12 +140,6 @@ type LoadFailure =
  */
 const MODULE_NAME_PATTERN = /^[A-Za-z0-9_.\/-]+$/;
 
-function describeReadError(error: ReadError): string {
-  return error.tag === "not-found"
-    ? "the file does not exist"
-    : `the file cannot be read: ${error.message}`;
-}
-
 function emptySpan(source: string): Span {
   return { source, start: 0, end: 0 };
 }
@@ -240,9 +229,12 @@ class Loader {
         span,
       ));
     } else {
+      const reason = failure.error.tag === "not-found"
+        ? "the file does not exist"
+        : `the file cannot be read: ${failure.error.message}`;
       this.diagnostics.push(makeDiagnostic(
         "module/002",
-        `cannot load ${path}: ${describeReadError(failure.error)}`,
+        `cannot load ${path}: ${reason}`,
         span,
       ));
     }
@@ -328,7 +320,8 @@ class Loader {
     if (!isSourcePath(specifier)) {
       return bad(`relative import \`${specifier}\` must end in .eff`);
     }
-    const dir = dirName(importer);
+    const slash = importer.lastIndexOf("/");
+    const dir = slash < 0 ? "" : importer.slice(0, slash);
     const resolved = normalizeRelative(
       dir === "" ? specifier : `${dir}/${specifier}`,
     );
