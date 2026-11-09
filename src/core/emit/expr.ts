@@ -599,13 +599,18 @@ export class ExprEmitter implements ExprCore {
       : own;
   }
 
-  /** True when `e` is a pure function value for a slot of an effect function type. */
-  private liftsInto(e: Expr, expected: Type | undefined): boolean {
-    if (expected === undefined) return false;
+  /** The function type of `e` when `e` is a pure function value for a slot of an effect function type. */
+  private liftedFrom(
+    e: Expr,
+    expected: Type | undefined,
+  ): FunctionType | undefined {
+    if (expected === undefined) return undefined;
     const from = this.functionTypeOf(e.type);
     const to = this.functionTypeOf(expected);
     return from !== undefined && to !== undefined &&
-      from.execution === "pure" && to.execution === "effect";
+        from.execution === "pure" && to.execution === "effect"
+      ? from
+      : undefined;
   }
 
   /**
@@ -619,12 +624,9 @@ export class ExprEmitter implements ExprCore {
    * `e` binds its value once: `(($f) => (a) => Effect.succeed($f(a)))(yield* e)`.
    */
   fit(e: Expr, expected: Type | undefined, mode: Mode): Emitted {
-    if (!this.liftsInto(e, expected)) {
-      return mode === "gen" ? this.inGen(e, expected) : this.pure(e, expected);
-    }
-    const from = this.functionTypeOf(e.type);
+    const from = this.liftedFrom(e, expected);
     if (from === undefined) {
-      throw internal("a lifted value has no function type");
+      return mode === "gen" ? this.inGen(e, expected) : this.pure(e, expected);
     }
     if (e.execution !== "pure") {
       const plain = mode === "gen" ? this.inGen(e, expected) : this.pure(e);
@@ -1474,7 +1476,7 @@ export class ExprEmitter implements ExprCore {
         callArguments([this.fit(e, expected, "pure")]),
       ]);
     }
-    if (this.isLeaf(e) && !this.liftsInto(e, expected)) {
+    if (this.isLeaf(e) && this.liftedFrom(e, expected) === undefined) {
       return this.leafEffect(e, false);
     }
     if (e.kind === "block" && e.steps.length > 0) {
