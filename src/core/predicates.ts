@@ -449,9 +449,11 @@ function readConstraint(
   if (!left.ok) return left;
   const right = checkTerm(predicate.right);
   if (!right.ok) return right;
-  const maximum = typeof predicate.maximum === "string"
-    ? parseInteger(predicate.maximum)
-    : invalidInteger(String(predicate.maximum));
+  const maximum: Result<bigint, PredicateError> =
+    typeof predicate.maximum === "string" ? parseInteger(predicate.maximum) : {
+      ok: false,
+      error: { tag: "invalid-integer", value: String(predicate.maximum) },
+    };
   if (!maximum.ok) return maximum;
   if (maximum.value.toString() !== predicate.maximum) {
     return {
@@ -487,10 +489,6 @@ function parseInteger(value: string): Result<bigint, PredicateError> {
   return normalized.ok
     ? { ok: true, value: BigInt(normalized.value) }
     : normalized;
-}
-
-function invalidInteger(value: string): Result<never, PredicateError> {
-  return { ok: false, error: { tag: "invalid-integer", value } };
 }
 
 function checkTerm(term: Term): Result<Term, PredicateError> {
