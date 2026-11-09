@@ -23,6 +23,7 @@ import type { Execution, ValueId } from "../src/core/ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../src/core/syntax.ts";
 import type { NodeFact } from "../src/core/tables.ts";
 import {
+  checkModule as checkText,
   diskHost,
   EXAMPLE_ENTRIES,
   EXAMPLE_MODES,
@@ -38,11 +39,6 @@ function checkFiles(
   const result = checkProject(memoryHost(files), "", entries);
   assert(result.ok, JSON.stringify(result));
   return result.value;
-}
-
-/** Checks one module `m.eff` with an empty project file. */
-function checkText(text: string): CheckedProject {
-  return checkFiles({ "effektive.json": "{}", "m.eff": text }, ["m.eff"]);
 }
 
 /** The hover contract of `m.eff` at an offset, through the public editor query. */

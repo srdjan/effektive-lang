@@ -15,7 +15,12 @@ import {
 import type { Expr, ModuleIR, Span } from "../src/core/ir.ts";
 import { walkExpr } from "../src/core/emit/walk.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { diskHost, EXAMPLE_ENTRIES, FIXTURES } from "./helpers.ts";
+import {
+  checkModule as checkText,
+  diskHost,
+  EXAMPLE_ENTRIES,
+  FIXTURES,
+} from "./helpers.ts";
 
 // ------------------------------------------------------------------ helpers
 
@@ -27,16 +32,6 @@ function examples(): CheckedProject {
 
 function exampleText(name: string): string {
   return Deno.readTextFileSync(new URL(`examples/${name}.eff`, FIXTURES));
-}
-
-function checkText(text: string): CheckedProject {
-  const result = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(result.ok, JSON.stringify(result));
-  return result.value;
 }
 
 function lowered(checked: CheckedProject, module: string): ModuleIR {
