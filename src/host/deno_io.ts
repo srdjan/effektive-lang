@@ -22,11 +22,16 @@ import { isTargetPath, isWorkspaceInput } from "./workspace.ts";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+/** Rejects invalid UTF-8 and keeps a leading BOM, as the text read did before. */
+const strictDecoder = new TextDecoder("utf-8", {
+  fatal: true,
+  ignoreBOM: true,
+});
 
 /** The real file system. The language server uses the same object. */
 export const denoFs: HostFs = {
   readText(path: string): Result<string, ReadError> {
-    const read = caught(() => Deno.readTextFileSync(path));
+    const read = caught(() => strictDecoder.decode(Deno.readFileSync(path)));
     if (read.ok) return read;
     return {
       ok: false,
