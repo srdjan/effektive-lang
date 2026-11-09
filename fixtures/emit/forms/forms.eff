@@ -292,6 +292,10 @@ export const wideElseIf = (alphaValueNumberOne: IntVal, betaValueNumberTwo: IntV
 
 const wideFoldChain = (xs: IntVal[]) => xs |> fold((q: IntVal) => q, (accumulatorValueNumberOneXXXXXXXXXXXXXXXXX, currentValueNumberTwoXXXXXXXXXXXXXXXXXXXXXX) => (q: IntVal) => q + 1)
 
+const argCurryObject = (xs: IntVal[]) => xs |> map((alpha: IntVal) => (beta: IntVal) => ({ leftSideWithLongName: alpha, rightSideWithLongName: beta, totalWithLongName: alpha + beta }))
+
+const argCurryShortObject = (xs: IntVal[]) => xs |> map((a: IntVal) => (b: IntVal) => ({ leftSideWithLongName: a, rightSideWithLongName: b, totalWithLongName: b }))
+
 export const localCurryBlock = (n: IntVal): IntVal => {
   const f = (a: IntVal) => (b: IntVal) => { const s = a + b; s + n }
   f(1)(2)

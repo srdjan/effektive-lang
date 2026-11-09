@@ -364,7 +364,14 @@ function chainOptions(chain: Chain): ChainOptions {
 function chainDocOf(chain: Chain): Doc {
   const options = chainOptions(chain);
   const split = options.splitAdaptive(hard);
-  if (options.bodyDown === undefined) return alt([options.oneLine, split]);
+  if (options.bodyDown === undefined) {
+    // An object body breaks inside its braces, so the heads stay on one line
+    // when only the object is too long. The printer measures a middle option
+    // flat, so this option holds the object broken.
+    const { broken } = options;
+    if (broken === undefined) return alt([options.oneLine, split]);
+    return alt([options.oneLine, broken(" "), split]);
+  }
   return alt([options.oneLine, options.bodyDown, split]);
 }
 
