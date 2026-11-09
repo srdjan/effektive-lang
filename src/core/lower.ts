@@ -532,21 +532,20 @@ class BodyLowerer {
         ? undefined
         : this.resourceBindings.get(source.id);
       if (source?.id !== undefined) this.resourceBindings.set(source.id, id);
-      try {
-        return {
-          kind: "closure",
-          parameters,
-          body: this.expr(
-            this.required(this.kids(region).at(-1), "the region body", node),
-          ),
-          ...this.annotation(region),
-        };
-      } finally {
-        if (source?.id !== undefined) {
-          if (previous === undefined) this.resourceBindings.delete(source.id);
-          else this.resourceBindings.set(source.id, previous);
-        }
+      // A failure ends the lowering of the module, so no restore on a throw.
+      const closure: Expr = {
+        kind: "closure",
+        parameters,
+        body: this.expr(
+          this.required(this.kids(region).at(-1), "the region body", node),
+        ),
+        ...this.annotation(region),
+      };
+      if (source?.id !== undefined) {
+        if (previous === undefined) this.resourceBindings.delete(source.id);
+        else this.resourceBindings.set(source.id, previous);
       }
+      return closure;
     };
     return {
       kind: "with-resource",
