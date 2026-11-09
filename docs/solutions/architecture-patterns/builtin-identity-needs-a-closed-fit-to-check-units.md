@@ -29,13 +29,13 @@ Two existing rules cause this:
 
 - **Implicit fit.** A named target takes an unnamed value through the body of an
   untagged identity when the identity has no predicate and the module "owns" it
-  (`TypeTable.assignable`, `src/core/types.ts` near line 1237). "Owns" means
-  `ownsSealed` (`src/core/types.ts:835-837`), which returns true for every identity that
+  (`TypeTable.assignable`, `src/core/types.ts` near line 981). "Owns" means
+  `ownsSealed` (`src/core/types.ts:698-700`), which returns true for every identity that
   is not sealed. So a non-sealed identity accepts any unnamed `int` in any
   module. `docs/language-rules.md` documents this as "An unnamed value fits an
   untagged identity whose body it fits".
 - **NI25 adoption.** `adoptedNumericIdentity` (`src/core/check_binary.ts:52`, validator
-  mirror `src/core/validate/expr.ts:198`) gives `Identity op int` the identity type for
+  mirror `src/core/validate/expr.ts:169`) gives `Identity op int` the identity type for
   `+`, `-` and `*`. So `5s + 3` would type as `Duration` and silently add 3
   milliseconds.
 
@@ -51,8 +51,8 @@ own operator table that runs before NI25 adoption.
 
 - Exclude the id from the implicit fit. The code keeps the closed ids in one
   set, `CLOSED_UNIT_IDS` in `src/core/ir.ts`, and tests
-  `!CLOSED_UNIT_IDS.has(tn.id)` in `src/core/types.ts` (near 1269) and
-  `!CLOSED_UNIT_IDS.has(t.id)` in `src/core/validate/typing.ts` (near 314).
+  `!CLOSED_UNIT_IDS.has(tn.id)` in `src/core/types.ts` (near 981) and
+  `!CLOSED_UNIT_IDS.has(t.id)` in `src/core/validate/typing.ts` (near 290).
   Widening from the identity to its base stays, because the id is not sealed.
   A new closed unit type joins the set instead of adding its own branches.
 - Skip the id in both `adoptedNumericIdentity` functions, and add an explicit
