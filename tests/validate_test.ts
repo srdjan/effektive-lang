@@ -17,12 +17,7 @@ import { SCHEMA_ERROR_ID } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import { fits, same, show, type TypeEnv } from "../src/core/validate/typing.ts";
 import { buildFixtures } from "../scripts/validate_fixtures.ts";
-import {
-  diskHost,
-  EXAMPLE_ENTRIES,
-  FIXTURES,
-  validationManifest,
-} from "./helpers.ts";
+import { diskHost, EXAMPLE_ENTRIES, FIXTURES } from "./helpers.ts";
 
 // ------------------------------------------------------------------ helpers
 
@@ -972,9 +967,10 @@ Deno.test("validateProject skips a module whose lowering gave an error value", (
 
 // ------------------------------------------------------------------ mutation fixtures
 
-Deno.test("the manifest lists at least eight mutation fixtures and every area", () => {
-  const manifest = validationManifest();
-  assert(manifest.length >= 8, `only ${manifest.length} fixtures`);
+const FORGED = buildFixtures();
+
+Deno.test("the forged fixtures number at least eight and cover every area", () => {
+  assert(FORGED.length >= 8, `only ${FORGED.length} fixtures`);
   // `validation/009` compares two modules. A mutation fixture holds one
   // module, so `tests/validate_import_binding_test.ts` covers that code.
   for (
@@ -982,15 +978,13 @@ Deno.test("the manifest lists at least eight mutation fixtures and every area", 
       c.startsWith("validation/") && c !== "validation/009"
     )
   ) {
-    assert(manifest.some((f) => f.code === code), `no fixture for ${code}`);
+    assert(FORGED.some((f) => f.code === code), `no fixture for ${code}`);
   }
 });
 
-for (const fixture of validationManifest()) {
+for (const fixture of FORGED) {
   Deno.test(`mutation fixture ${fixture.file} is rejected with ${fixture.code}`, () => {
-    const ir: ModuleIR = JSON.parse(
-      Deno.readTextFileSync(new URL(`validate/${fixture.file}`, FIXTURES)),
-    );
+    const ir = fixture.ir as ModuleIR;
     const sources = new Map<string, string>();
     for (const [id, path] of Object.entries(fixture.sources)) {
       sources.set(id, Deno.readTextFileSync(new URL(path, FIXTURES)));
@@ -1009,23 +1003,6 @@ for (const fixture of validationManifest()) {
     );
   });
 }
-
-Deno.test("the mutation fixtures on disk equal the regenerated fixtures", () => {
-  const built = buildFixtures();
-  const names = [...built.files.keys()].sort();
-  const onDisk: string[] = [];
-  for (const entry of Deno.readDirSync(new URL("validate/", FIXTURES))) {
-    if (entry.isFile) onDisk.push(entry.name);
-  }
-  assertEquals(onDisk.sort(), names);
-  for (const [name, text] of built.files) {
-    assertEquals(
-      Deno.readTextFileSync(new URL(`validate/${name}`, FIXTURES)),
-      text,
-      `${name} is stale; run deno task validate:update`,
-    );
-  }
-});
 
 // ------------------------------------------------------------------ identity
 

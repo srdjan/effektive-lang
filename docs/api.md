@@ -172,7 +172,7 @@ scripts/       Scripts that the tasks run.
                golden_update.ts writes the golden files.
                surface_update.ts writes the command-line and language server records in fixtures/surface/.
                test_slow.ts runs the slow tests with a fresh DENO_DIR.
-               validate_fixtures.ts writes the mutation fixtures.
+               validate_fixtures.ts builds the forged IR fixtures in memory.
                behavior_corpus.ts runs the named corpus of compiler behavior in one source tree and writes its records.
                behavior_compare.ts compares the corpus records of two git revisions.
                lex_snapshot.ts writes the lexer snapshot of a random corpus in fixtures/lex.
@@ -418,10 +418,10 @@ Each code names a validation area. `validation/001` is Identity, `002` is Types,
 Only `validateProject` reports `009`. The registry in
 `src/core/diagnostics.ts` describes each code.
 
-A mutation fixture in `fixtures/validate/` is a lowered example IR with one
-change. `manifest.json` names the expected code, the IR path, and the source
-texts of each fixture. Run `deno task validate:update` to write them again. A
-test compares the files on disk with the regenerated files.
+A forged IR fixture is a lowered example IR with one change.
+`buildFixtures()` in `scripts/validate_fixtures.ts` builds each fixture in
+memory from the current lowering. It names the expected code, the IR path, and
+the source files of each fixture. No file holds them.
 
 ## Using the emitter
 

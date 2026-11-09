@@ -4,8 +4,8 @@
 // node, with a fragment of the message. The families are the Stream operators
 // and the Schema constructors. Their guard branches had no test before.
 //
-// The committed fixtures under fixtures/validate stay untouched: the mutations
-// happen here, in memory. A mutation may also make a parent node disagree with
+// The forged fixtures of scripts/validate_fixtures.ts stay untouched: the
+// mutations happen here, in memory. A mutation may also make a parent node disagree with
 // its child, so the tests require the expected diagnostic and ignore extra ones.
 
 import { assert, assertEquals } from "@std/assert";

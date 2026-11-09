@@ -299,6 +299,38 @@ function treeOf(revision: string): Promise<Res<string>> {
   return tree;
 }
 
+const forgedTrees = new Map<string, Promise<Res<string>>>();
+
+/**
+ * Writes the forged IR of a tree into its `fixtures/validate/`, unless the tree
+ * still holds the files. The tree builds them with its own code. Both runs of a
+ * comparison read the same files, so a tree is filled once.
+ */
+function materializeForged(tree: string): Promise<Res<string>> {
+  let filled = forgedTrees.get(tree);
+  if (filled === undefined) {
+    const directory = `${tree}/fixtures/validate`;
+    filled = Deno.stat(`${directory}/manifest.json`).then(
+      () => ({ ok: true as const, value: directory }),
+      () =>
+        runChecked(
+          "deno",
+          [
+            "run",
+            "--allow-read",
+            "--allow-write",
+            `${tree}/scripts/validate_fixtures.ts`,
+            directory,
+          ],
+          "tail",
+          { cwd: tree },
+        ).then((ran) => ran.ok ? { ok: true as const, value: directory } : ran),
+    );
+    forgedTrees.set(tree, filled);
+  }
+  return filled;
+}
+
 let runCount = 0;
 
 const realDeps: Deps = {
@@ -307,6 +339,8 @@ const realDeps: Deps = {
     const fixtures = await treeOf(fixturesFrom);
     if (!tree.ok) return tree;
     if (!fixtures.ok) return fixtures;
+    const forged = await materializeForged(fixtures.value);
+    if (!forged.ok) return forged;
     const runner = await Deno.readTextFile(
       new URL("./behavior_corpus.ts", import.meta.url),
     );

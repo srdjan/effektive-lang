@@ -15,7 +15,6 @@ Run every command from the repository root.
 | `deno task test:slow`         | Runs only files named `*_slow_test.ts`, in parallel. They run `deno check`, `deno fmt`, and `deno run` with a fresh `DENO_DIR` that the task removes after. A warm-up `deno bundle` first installs esbuild in that `DENO_DIR`, so that concurrent bundles in the tests do not race.          |
 | `deno task golden:update`     | Writes `fixtures/golden/<module>.ts` again from `fixtures/examples` and `fixtures/emit/traverse`, and the companion module `golden/host/providers.effi.ts`. Also writes `fixtures/ir/examples-baseline.json`, the IR snapshot of the examples. |
 | `deno task surface:update`    | Writes `fixtures/surface/cli.json` and `fixtures/surface/lsp.json` again from the current build: the command-line output and the language server replies that `tests/surface_test.ts` compares. Run it only after a deliberate change of that output. |
-| `deno task validate:update`   | Writes the mutation fixtures in `fixtures/validate/` again from the current lowering.                                                                   |
 | `deno task lex:update`        | Writes `fixtures/lex/snapshot.json` again from the current lexer. Run it only after a deliberate change of the lexer output.                            |
 | `deno task site:ir`           | Writes `../effektive/public/typed-ir.ts` from `src/core/ir.ts` and the type declarations of `src/core/predicates.ts` that it needs. Give a path to write to another file. Run it after a change of `ir.ts`. |
 | `deno task behavior:compare`  | Runs the named corpus through the public entry points of two revisions: `<base> [<head>] [--out <dir>] [--only <prefix>]...`. With one revision, it writes the records of that revision and exits 0. Exit 0 for no change, 1 for a change or a missing record, 2 for a usage error or a failed run. See the comparison note below. Use it for refactors. |
@@ -40,7 +39,8 @@ Run every command from the repository root.
 
 The comparison runs one named corpus through the public entry points of two
 revisions. The corpus holds the fixture projects of the head tree, the forged IR
-files of `fixtures/validate/`, and four edit sequences of `Program.update`. The
+that the head tree builds with `scripts/validate_fixtures.ts`, and four edit
+sequences of `Program.update`. The
 forged IR goes to `validateModule` in `src/core/validate/index.ts`, because no
 public entry point validates one IR module. It records the full canonical result
 of eight kinds: check, program, program-error, lower, lower-error, emit,
@@ -117,7 +117,6 @@ The directories of `fixtures/` are these.
 | `tutorial/`           | The project that `docs/tutorial.md` quotes. `tests/tutorial_test.ts` and `tests/tutorial_slow_test.ts` keep the two equal.                                                                                     |
 | `host-adapter-files/` | A project with a typed host adapter for `effect/FileSystem`.                                                                                                                                               |
 | `lex/`                | `snapshot.json`: hashes of the lexer output for a fixed corpus.                                                                                                                                            |
-| `validate/`           | Mutated copies of lowered IR and `manifest.json`, which names the expected code of each.                                                                                                                   |
 | `parse/`              | Valid syntax forms (`ok-*`) and recovery inputs (`recovery-*`).                                                                                                                                            |
 | `errors/`             | One file or one project directory for each error case, with markers.                                                                                                                                       |
 | `surface/`            | `cli.json` and `lsp.json`: the command-line records and the language server records that `tests/surface_test.ts` compares. `deno task surface:update` writes them. |

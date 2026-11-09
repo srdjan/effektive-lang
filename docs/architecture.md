@@ -130,10 +130,10 @@ files through `SourceHost`. Seven tests enforce the rules.
    standalone copy that `deno task site:ir` generates. The IR node `nominal` is part of IR version 8 (and of
    earlier versions).
 4. Emitted text is byte-identical across refactors. The golden files in
-   `fixtures/golden/` and the mutation fixtures in `fixtures/validate/` change
-   only when the emitted text or the validator rules change on purpose. Run
-   `golden:update` and `validate:update` for that reason only, never to make a
-   test pass.
+   `fixtures/golden/` changes only when the emitted text changes on purpose. Run
+   `golden:update` for that reason only, never to make a test pass. The forged
+   validator fixtures are built in memory, so a lowering change changes them
+   with it.
 5. The three package entry points in `deno.json` hold what the repository uses.
    No outside code imports the package. Check this fact again before the project
    publishes the package.

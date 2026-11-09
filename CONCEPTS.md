@@ -135,7 +135,7 @@ _Avoid: interface module, host types module_
 
 The refactor oracle that runs one named corpus through the public entry points of two revisions and compares the full canonical results.
 
-The corpus holds the fixture projects of the head tree, the forged IR files of `fixtures/validate/`, and four edit sequences of `Program.update`. It records results of eight kinds: check, program, program-error, lower, lower-error, emit, emit-error, and validate. The command names each changed or missing record. It does not depend on the test suite, so moving or rewriting tests does not change its records. The corpus sees only fixture inputs, so it does not cover inline test programs or command-line or language server output. The surface snapshot covers that output.
+The corpus holds the fixture projects of the head tree, the forged IR of `buildFixtures()` in `scripts/validate_fixtures.ts`, and four edit sequences of `Program.update`. It records results of eight kinds: check, program, program-error, lower, lower-error, emit, emit-error, and validate. The command names each changed or missing record. It does not depend on the test suite, so moving or rewriting tests does not change its records. The corpus sees only fixture inputs, so it does not cover inline test programs or command-line or language server output. The surface snapshot covers that output.
 _Avoid: behavior capture, snapshot, golden run_
 
 ### Surface snapshot
@@ -156,7 +156,7 @@ The runner runs the files in parallel, one file for each worker, and runs the te
 One small fault that `deno task mutate` makes in a copy of the source, such as a flipped comparison.
 
 A test kills a mutant when the test fails against that fault. A mutant that no test kills is a survivor, and it shows a missing test or a change that no input can observe.
-_Avoid: mutation fixture, which is a forged IR in `fixtures/validate/`_
+_Avoid: mutation fixture, which is a forged IR in `scripts/validate_fixtures.ts`_
 
 ### Survivor register
 

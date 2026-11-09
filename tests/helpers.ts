@@ -657,31 +657,6 @@ export function projectFiles(dir: string): Record<string, string> {
 
 // ------------------------------------------------------------------ validator
 
-/** One entry of `fixtures/validate/manifest.json`. */
-export interface ValidationFixture {
-  readonly file: string;
-  readonly code: string;
-  readonly area: string;
-  readonly mutation: string;
-  readonly path: string;
-  /** Source identifier to the path of its text under `fixtures/`. */
-  readonly sources: Readonly<Record<string, string>>;
-}
-
-export function validationManifest(): readonly ValidationFixture[] {
-  const text = Deno.readTextFileSync(
-    new URL("validate/manifest.json", FIXTURES),
-  );
-  const parsed: unknown = JSON.parse(text);
-  if (
-    typeof parsed !== "object" || parsed === null || !("fixtures" in parsed) ||
-    !Array.isArray(parsed.fixtures)
-  ) {
-    throw new Error("fixtures/validate/manifest.json has no fixtures list");
-  }
-  return parsed.fixtures as ValidationFixture[];
-}
-
 // ------------------------------------------------------------------ host boundary
 
 /** One entry of `fixtures/host-boundary/manifest.json`. */

@@ -57,6 +57,6 @@ is a worked example, not a fixed count of sites for every builtin.
   not change its records.
 - Run `deno task rules:unfired` before a builtin plan closes. Each new validator
   rejection site must fire in a fast test, or the plan records the reason.
-- Inspect expected output manually. Do not run `golden:update` or
-  `validate:update` to accept a refactor difference. For an intentional behavior
+- Inspect expected output manually. Do not run `golden:update` to accept a
+  refactor difference. For an intentional behavior
   change, explain the exact expected differences instead of claiming parity.

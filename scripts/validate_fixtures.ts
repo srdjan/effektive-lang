@@ -1,10 +1,8 @@
-// Generates fixtures/validate/ from the current lowering output. Each fixture
-// is a lowered example IR with one mutation. The manifest names the expected
-// validation code of each fixture.
-//
-// Run `deno task validate:update` after a deliberate change of the lowering or
-// the validator. A test regenerates the files in memory and compares them with
-// the files on disk, so the fixtures stay valid and current.
+// Builds the forged validator fixtures from the current lowering output. Each
+// fixture is a lowered example IR with one mutation. It names the expected
+// validation code and path. `tests/validate_test.ts` runs every fixture through
+// the validator. Nothing is committed: a change of the lowering changes the
+// fixtures with it.
 
 import { checkProject, lowerProject } from "../src/core/mod.ts";
 import { AREA, validateModule } from "../src/core/validate/index.ts";
@@ -520,9 +518,16 @@ const MUTATIONS: readonly Mutation[] = [
   },
 ];
 
-export interface Built {
-  /** File name to file text, including `manifest.json`. */
-  readonly files: ReadonlyMap<string, string>;
+/** One forged IR with the validation code and the path that it must produce. */
+export interface ValidationFixture {
+  readonly file: string;
+  readonly code: string;
+  readonly area: string;
+  readonly mutation: string;
+  readonly path: string;
+  /** Source identifier to the path of its text under `fixtures/`. */
+  readonly sources: Readonly<Record<string, string>>;
+  readonly ir: unknown;
 }
 
 /** The sources of a fixture: identifier to the fixture path of its text. */
@@ -537,10 +542,9 @@ const SOURCE_PATHS: Readonly<Record<string, string>> = {
   "tagged.eff": "ir/tagged.eff",
 };
 
-export function buildFixtures(): Built {
+export function buildFixtures(): readonly ValidationFixture[] {
   const bases = lowerBases();
-  const files = new Map<string, string>();
-  const manifest: Obj[] = [];
+  const fixtures: ValidationFixture[] = [];
   for (const m of MUTATIONS) {
     const base = bases.modules.get(m.base);
     if (base === undefined) throw new Error(`no base module ${m.base}`);
@@ -548,7 +552,6 @@ export function buildFixtures(): Built {
     const path = m.apply(ir);
     const sources: Record<string, string> = {};
     for (const id of m.sources) sources[id] = SOURCE_PATHS[id];
-    const file = `${m.name}.json`;
     const code = AREA[m.area];
     const found = validateModule(
       ir as Parameters<typeof validateModule>[0],
@@ -562,31 +565,38 @@ export function buildFixtures(): Built {
         }`,
       );
     }
-    files.set(file, canonical(ir) + "\n");
-    manifest.push({
-      file,
+    fixtures.push({
+      file: `${m.name}.json`,
       code,
       area: m.area,
       mutation: m.mutation,
       path,
       sources,
+      ir: JSON.parse(canonical(ir)),
     });
   }
-  files.set("manifest.json", canonical({ fixtures: manifest }) + "\n");
-  return { files };
+  return fixtures;
 }
 
+/**
+ * Writes the forged files and `manifest.json` into the directory in the first
+ * argument. `scripts/behavior_compare.ts` runs this file in the exported head
+ * tree, so the corpus reads the forged IR of the head revision.
+ */
 if (import.meta.main) {
-  const directory = new URL("../fixtures/validate/", import.meta.url);
+  const directory = Deno.args[0];
+  if (directory === undefined) {
+    console.error("usage: validate_fixtures.ts <directory>");
+    Deno.exit(2);
+  }
   Deno.mkdirSync(directory, { recursive: true });
-  const built = buildFixtures();
-  for (const entry of Deno.readDirSync(directory)) {
-    if (entry.isFile && entry.name.endsWith(".json")) {
-      Deno.removeSync(new URL(entry.name, directory));
-    }
+  const fixtures = buildFixtures();
+  const manifest = fixtures.map(({ ir: _ir, ...entry }) => entry);
+  for (const { file, ir } of fixtures) {
+    Deno.writeTextFileSync(`${directory}/${file}`, canonical(ir) + "\n");
   }
-  for (const [name, text] of built.files) {
-    Deno.writeTextFileSync(new URL(name, directory), text);
-    console.log(`wrote fixtures/validate/${name}`);
-  }
+  Deno.writeTextFileSync(
+    `${directory}/manifest.json`,
+    canonical({ fixtures: manifest }) + "\n",
+  );
 }
