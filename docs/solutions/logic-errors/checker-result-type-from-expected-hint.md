@@ -16,7 +16,7 @@ tags: [checker, validator, expected-type, contextual-typing, schedule, ir-valida
 
 # The checker must not take a builtin result type from the expected hint when the validator derives it
 
-Status: `scheduleFromStep` and `src/core/check_builtins/schedule.ts` were removed on 2026-11-02 by the simplification rebase (G2). The rule stays valid.
+Status: `scheduleFromStep` and `src/core/check_builtins/schedule.ts` were removed on 2026-11-02 by the simplification rebase (G2). The rule stays valid. The `--validate` flag of `build` was removed on the same date (`500d15d`). The validator now runs as a test oracle through `validateProject` in `src/core/validate_project.ts`.
 
 ## Problem
 
