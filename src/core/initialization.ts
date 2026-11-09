@@ -46,38 +46,20 @@ interface NamedNode extends InitializationNode {
 export function checkInitialization(
   nodes: readonly NamedNode[],
 ): readonly Diagnostic[] {
-  const position = new Map<ValueId, number>();
-  nodes.forEach((node, i) => position.set(node.id, i));
   const edges = referenceEdges(nodes);
-  const cycles: ValueId[][] = [];
+  const cycles: { readonly at: number; readonly members: NamedNode[] }[] = [];
   for (const component of stronglyConnectedComponents(nodes.length, edges)) {
     if (!isCycle(component, edges)) continue;
     if (!component.some((p) => nodes[p].kind === "constant")) continue;
-    cycles.push(component.map((p) => nodes[p].id));
+    cycles.push({ at: component[0], members: component.map((p) => nodes[p]) });
   }
-  // A cycle lists ids of `nodes`, so each first id has a position.
-  const firstPosition = (cycle: readonly ValueId[]): number => {
-    const at = position.get(cycle[0]);
-    if (at === undefined) {
-      throw new Error("internal: a cycle id has no position");
-    }
-    return at;
-  };
-  cycles.sort((a, b) => firstPosition(a) - firstPosition(b));
+  cycles.sort((a, b) => a.at - b.at);
 
   const diagnostics: Diagnostic[] = [];
-  const byId = new Map<ValueId, NamedNode>(nodes.map((n) => [n.id, n]));
-  for (const cycle of cycles) {
-    // A cycle lists ids of `nodes`, so every id has a node.
-    const members = cycle.map((id) => {
-      const node = byId.get(id);
-      if (node === undefined) {
-        throw new Error("internal: a cycle id has no signature");
-      }
-      return node;
-    });
+  for (const { members } of cycles) {
     const first = members.find((m) => m.kind === "constant") ?? members[0];
-    const loop = [...cycle.map(shortName), shortName(cycle[0])].join(" -> ");
+    const ids = members.map((m) => m.id);
+    const loop = [...ids.map(shortName), shortName(ids[0])].join(" -> ");
     diagnostics.push(makeDiagnostic(
       "module/004",
       `module initialization cycle: ${loop}`,
