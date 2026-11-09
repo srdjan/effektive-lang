@@ -370,10 +370,24 @@ function chainDocOf(chain: Chain): Doc {
 
 /**
  * `const name = <chain>`. A chain that does not fit moves below the `=`. When
- * some head does not fit there, each head gets a line of its own.
+ * some head does not fit there, each head gets a line of its own. When the
+ * prefix fits on its line, each layout holds it, so a type annotation in the
+ * prefix is measured with the layout. A longer prefix breaks first.
  */
 function chainDeclaration(prefix: Doc, chain: Chain): Doc {
   const options = chainOptions(chain);
+  return ifFits(
+    [prefix, " ="],
+    chainLayouts(options, (layout) => [prefix, " =", layout]),
+    [prefix, " =", chainLayouts(options, (layout) => layout)],
+  );
+}
+
+/** The layouts of `chainDeclaration`, each wrapped by `declare`. */
+function chainLayouts(
+  options: ChainOptions,
+  declare: (layout: Doc) => Doc,
+): Doc {
   if (options.bodyDown === undefined) {
     // A block or an object body. The object breaks inside its braces when the
     // line is too long, so a flat measure of the whole chain would reject a
@@ -388,14 +402,11 @@ function chainDeclaration(prefix: Doc, chain: Chain): Doc {
     if (broken !== undefined) {
       layouts.push(indent([through, broken(through)]));
     }
-    return [
-      prefix,
-      " =",
-      layouts.reduceRight<Doc>(
-        (otherwise, layout) => ifFits(layout, layout, otherwise),
-        [" ", options.splitAdaptive(hard)],
-      ),
-    ];
+    return layouts.reduceRight<Doc>(
+      (otherwise, layout) =>
+        ifFits(declare(layout), declare(layout), otherwise),
+      declare([" ", options.splitAdaptive(hard)]),
+    );
   }
   const choices: Doc[] = [
     [" ", options.oneLine],
@@ -408,7 +419,7 @@ function chainDeclaration(prefix: Doc, chain: Chain): Doc {
     choices.push(indent([through, options.splitDown(through)]));
   }
   choices.push([" ", options.splitAdaptive(hard)]);
-  return [prefix, " =", alt(choices)];
+  return alt(choices.map(declare));
 }
 
 /** True when the doc that `at(e, min)` prints starts with `{`. */

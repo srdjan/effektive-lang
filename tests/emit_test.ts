@@ -916,6 +916,11 @@ Deno.test("an arrow chain that is too long moves below the equals sign", () => {
     forms.text,
     "export const adder =\n  (n: IntVal): (a: IntVal) => Effect.Effect<IntVal> => (x: IntVal) =>\n    Effect.succeed($int(x + n));",
   );
+  // A local closure keeps its type annotation on one line when it fits.
+  assertStringIncludes(
+    forms.text,
+    "  const adder: (a: IntVal, b: IntVal, c: IntVal) => (a: IntVal) => IntVal = (\n    alphaValueNumberOne: IntVal,\n",
+  );
   // A short chain stays on one line.
   const short = oneModule(
     "type F = (x: int) => int\nexport const f = (n: Int): F => (x) => x\ntype Int = int\n",
