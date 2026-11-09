@@ -45,7 +45,7 @@ import { runVariants, type VariantOutcome } from "./m5_variants.ts";
 
 export interface M5Config {
   readonly seed: number;
-  /** Synthetic targets, besides the five examples. */
+  /** Synthetic targets, besides the six examples. */
   readonly sizes: readonly M5SizeConfig[];
   /** Timed A/A pairs per target. Each pair runs two cold checks. */
   readonly pairs: number;

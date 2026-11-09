@@ -51,7 +51,7 @@ function envelopes(
   };
 }
 
-/** A log that keeps its events and blobs in memory, for tests. */
+/** A log that keeps its events and blobs in memory. The tests and the playground page use it. */
 export function memoryLog(
   surface: Surface,
   options: LogClock = {},

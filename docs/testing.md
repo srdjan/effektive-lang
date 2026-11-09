@@ -29,12 +29,12 @@ The independent validator is a test oracle. No product path runs it, and no entr
 
 | Oracle | Update task | What it proves | What it can miss |
 | --- | --- | --- | --- |
-| Golden files in `fixtures/golden/` | `deno task golden:update` | The exact TypeScript of seven generated example modules and the `traverse` fixture | Each other program |
+| Golden files in `fixtures/golden/` | `deno task golden:update` | The exact TypeScript of the generated example modules, the host companion, and the `traverse` fixture | Each other program |
 | Mutation fixtures in `fixtures/validate/` | `deno task validate:update` | The validator rejects each forged IR in the fixture list | A forged form that the list does not hold |
-| Surface snapshot in `fixtures/surface/` | `deno task surface:update` | 92 command-line records and 29 language server records | The records run in memory, so process and file behavior stay outside |
-| IR snapshot in `fixtures/ir/` | The test file | The wire form of its example | It reaches 27 of the 59 expression kinds |
-| Lexer snapshot in `fixtures/lex/` | `deno task lex:update` | The tokens of a random corpus of 20,000 strings | Input that the corpus does not hold |
-| Behavior comparison | `deno task behavior:compare` | Two revisions give equal full results of eight kinds for the named corpus: the fixture projects, the forged IR files, and four edit sequences | It sees only fixture inputs. Inline test programs and command-line or language server output are outside it. |
+| Surface snapshot in `fixtures/surface/` | `deno task surface:update` | The command-line and language server records | The records run in memory, so process and file behavior stay outside |
+| IR snapshot in `fixtures/ir/` | The test file | The wire form of its example | It reaches only part of the expression kinds |
+| Lexer snapshot in `fixtures/lex/` | `deno task lex:update` | The tokens of a seeded random corpus of strings | Input that the corpus does not hold |
+| Behavior comparison | `deno task behavior:compare` | Two revisions give equal full results of each record kind for the named corpus: the fixture projects, the forged IR files, and four edit sequences | It sees only fixture inputs. Inline test programs and command-line or language server output are outside it. |
 | Unfired rejection sites | None | A fast test fires each direct validator rejection | The match is textual, so a rejection through another helper is not listed |
 | Log replay | None | A logged session gives equal results on the current build | It skips `--tsc` sessions and watch sessions |
 | Website IR in `tests/ir_site_slow_test.ts` | `scripts/site_ir.ts` | The sibling `typed-ir.ts` equals the generated text byte for byte, and passes `deno check` alone. The sibling `log.ir.json` equals `fixtures/ir/example/log.ir.json` byte for byte | A `git archive` export has no sibling, so the test is ignored there |

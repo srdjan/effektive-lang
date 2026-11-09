@@ -177,7 +177,8 @@ Group rules:
 
 - G2 removes the general `Schedule` type and the `schedule` option of `repeat`. It keeps `RetrySchedule`, `retrySchedule`, and the `schedule` option of `retry` with a `RetrySchedule`, because `service-workflow/workflow.eff:21` and `scheduled-worker/worker.eff:28` use it. The website file `core1.eff:14-15` uses `scheduleSpaced` and `aggregateWithinStream`. Its rewrite is an expected change in the sibling repository.
 - G3 removes the `CloseableScope` type. G4 removes the `Codec` type. G5 needs a decision in the unit about the `Fiber` type and the borrow rules.
-- Kept with no corpus use: `timeout` `sleep` `race` `uninterruptible` `repeat` `random` `randomInt` `updateRef` `withResource`. They are basic effect vocabulary, and `using` can need `withResource`.
+- Kept with no corpus use: `timeout` `sleep` `race` `uninterruptible` `repeat` `random` `randomInt` `updateRef` `withResource`.
+- Correction on 2026-11-09: `now`, `run`, `all`, and `log` have no builtin call in the applications either. The counts in `analysis-fable.md:15-16` matched service methods and a user export. See PHD2 of [the pruning and hardening list](../../plans/2026-11-09-prune-harden.md). They are basic effect vocabulary, and `using` can need `withResource`.
 - Kept for the website: the 13 programmable Schema builders, for example `schemaStruct`. SRD1 option b removes them.
 
 Checklist for each group (VA8): types and type walkers, IR kinds, lowering, the three families, diagnostics and their registration, editor data, test generators and their seeded distributions, the surface snapshot, the mutation register anchors, and generated output in fixture directories.

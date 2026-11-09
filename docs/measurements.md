@@ -19,7 +19,7 @@ The bench task passes `--no-lock`, so the optional variants never change `deno.l
 
 M2 times the whole-module recheck for each stage: lex, parse, index, link, resolve, check, lower, emit, and validate. It also replays a body edit and an interface edit through `Program.update` and prints the modules that each revision checked again. M2 shows which stage costs the time when M1 misses the D9 budget, which is the gate for Phase B (design section 4.5). It also decides whether typed arrays pay for tokens and whether a Zig port is worth its cost.
 
-M5 times a cold `deno check` over the emitted five examples and the three synthetic sizes. The recorded results used the configuration from `effektive build --tsc`, with `effect` mapped to `npm:effect@4.0.5`. The current harness uses the pinned compiler target, Effect 4.1.2. M5 decides the oracle runner and whether `watch --tsc` can default to on.
+M5 times a cold `deno check` over the emitted six examples and the three synthetic sizes. The recorded results used the configuration from `effektive build --tsc`, with `effect` mapped to `npm:effect@4.0.5`. The current harness uses the pinned compiler target, Effect 4.1.2. M5 decides the oracle runner and whether `watch --tsc` can default to on.
 
 M5 also tries three optional variants: `tsc` as a cold process, a warm `ts.LanguageService` in the same process, and `tsgo` from `@typescript/native-preview`. The harness installs `tsc` and `tsgo` into a temporary workspace with `deno install`. The `ts.LanguageService` variant imports `npm:typescript` into the bench process from the Deno cache. The first run needs network access. A variant that cannot run is skipped, and the report names the reason.
 
@@ -68,7 +68,7 @@ On the synthetic sizes, there are four kinds of edit.
 | `alias`  | Toggles the type alias `Amount` between `int` and `number`. The exported function `scale` names the alias, so the interface hash changes.           |
 | `flip`   | Toggles the body of the function `flip` between `n + 1` and `retry(() => n + 1, { times: 1 })`. The mode of `flip` changes between pure and effect. |
 
-For the five examples, the script has only the body edit. It changes the string literal in `displayName` of `users.eff` from `"Guest"` to `"Guest<n>"`, where `<n>` is a number that is new in each step. The hover of M1 names `displayName` on the examples and `bump` on the synthetic sizes.
+For the six examples, the script has only the body edit. It changes the string literal in `displayName` of `users.eff` from `"Guest"` to `"Guest<n>"`, where `<n>` is a number that is new in each step. The hover of M1 names `displayName` on the examples and `bump` on the synthetic sizes.
 
 ## Ref update cost (ES-D3)
 

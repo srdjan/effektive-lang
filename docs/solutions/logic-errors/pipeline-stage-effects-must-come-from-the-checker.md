@@ -16,6 +16,8 @@ tags: [checker, lowering, validator, pipeline, effect-sets, scoped, fork-scoped,
 
 # Pipeline stage effect sets must come from the checker, not from a second copy in lowering
 
+Status: `deno task behavior:capture` was replaced on 2026-11-02 by `deno task behavior:compare` (SR10). The rule stays valid.
+
 ## Problem
 
 Lowering rewrites `x |> s(a)` into a block that binds `x` first. Then the block calls `s` with a pure reference. So the IR call of the stage must carry the stage's own effect set, without the effects of `x`. Lowering computed that set with its own copy of the checker's rules, one switch arm for each stage kind. The copy had no arm for `scoped` and `forkScoped`. So a valid program lowered to IR that the independent validator rejected.

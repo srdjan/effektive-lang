@@ -98,7 +98,7 @@ function emitSources(
   return { ok: true, value: generated };
 }
 
-/** The five examples and the companion module, emitted, with `users-live.ts`. The gate compares them with the golden files. */
+/** The six examples and the companion module, emitted, with `users-live.ts`. The gate compares them with the golden files. */
 export function exampleTarget(): Result<Target, M5Error> {
   const fixtures = new URL("../fixtures/", import.meta.url).pathname;
   const tree = new Map<string, string>();

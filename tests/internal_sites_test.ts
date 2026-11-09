@@ -1,6 +1,6 @@
-// Tests for the failure results of lowering and emission. Thirteen sites throw
-// an `internal` failure: two in the lowering and eleven in the emitter. The
-// checker or the parser excludes all of them, so no source program reaches one.
+// Tests for the failure results of lowering and emission. Some sites in the
+// lowering and the emitter throw an `internal` failure. The checker or the
+// parser excludes each of them, so no source program reaches one.
 // These tests forge the input: a changed CheckedProject for `lowerModule`, and
 // changed IR for `emitModule`. Each test asserts the whole error value, which
 // has no `span`.
