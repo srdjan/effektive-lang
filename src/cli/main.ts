@@ -20,13 +20,50 @@ import { noLog } from "../host/log.ts";
 import { emit } from "../host/log_schema.ts";
 import type { EventLog } from "../host/ports.ts";
 import { fixContracts, type FixOutcome } from "./fix.ts";
-import { type FixSummary, printOutcome, rechecked } from "./report.ts";
 import { Session, type SyncResult } from "./session.ts";
 
 const EXIT_OK = 0;
 const EXIT_DIAGNOSTICS = 1;
 const EXIT_USAGE = 2;
 const EXIT_INTERNAL = 3;
+
+function rechecked(names: readonly string[]): string {
+  return names.length === 0 ? "none" : names.join(", ");
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
+/** The contract fixes of a `check --fix` run: distinct functions and written files. */
+interface FixSummary {
+  readonly functions: number;
+  readonly files: number;
+}
+
+/** Writes the diagnostics to stdout, then the notes and a summary line to stderr. */
+function printOutcome(
+  io: HostIo,
+  outcome: BuildOutcome,
+  moduleCount: number,
+  fixed?: FixSummary,
+): void {
+  for (const line of outcome.lines) io.stdout(`${line}\n`);
+  for (const note of outcome.notes) io.stderr(`${note}\n`);
+  const wrote = outcome.written.length === 0
+    ? ""
+    : `, wrote ${plural(outcome.written.length, "file")}`;
+  const fixes = fixed === undefined || fixed.functions === 0
+    ? ""
+    : `, fixed ${plural(fixed.functions, "function")} in ${
+      plural(fixed.files, "file")
+    }`;
+  io.stderr(
+    `${plural(moduleCount, "module")}, ${
+      plural(outcome.diagnosticCount, "diagnostic")
+    }${wrote}${fixes}\n`,
+  );
+}
 
 function optionsOf(command: ProjectCommand): BuildOptions {
   switch (command.kind) {

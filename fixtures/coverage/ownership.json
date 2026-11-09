@@ -14,7 +14,6 @@
       "src/cli/fix.ts",
       "src/cli/format.ts",
       "src/cli/main.ts",
-      "src/cli/report.ts",
       "src/cli/session.ts",
       "src/cli/tsc.ts",
       "src/core/analyze.ts",
