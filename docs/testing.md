@@ -32,7 +32,7 @@ The independent validator is a test oracle. No product path runs it, and no entr
 | Golden files in `fixtures/golden/` | `deno task golden:update` | The exact TypeScript of the generated example modules, the host companion, and the `traverse` fixture | Each other program |
 | Forged IR fixtures in `scripts/validate_fixtures.ts` | None: built in memory | The validator rejects each forged IR in the fixture list | A forged form that the list does not hold |
 | Surface snapshot in `fixtures/surface/` | `deno task surface:update` | The command-line and language server records | The records run in memory, so process and file behavior stay outside |
-| IR snapshot in `fixtures/ir/` | The test file | The wire form of its example | It reaches only part of the expression kinds |
+| IR snapshot in `fixtures/ir/` | `deno task golden:update` | The IR, emitted text, source map, and interface hash of the examples and two more cases | It reaches only part of the expression kinds |
 | Lexer snapshot in `fixtures/lex/` | `deno task lex:update` | The tokens of a seeded random corpus of strings | Input that the corpus does not hold |
 | Behavior comparison | `deno task behavior:compare` | Two revisions give equal full results of each record kind for the named corpus: the fixture projects, the forged IR files, and four edit sequences | It sees only fixture inputs. Inline test programs and command-line or language server output are outside it. |
 | Unfired rejection sites | None | A fast test fires each direct validator rejection | The match is textual, so a rejection through another helper is not listed |
