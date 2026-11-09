@@ -52,7 +52,6 @@ export interface SourceMapV3 {
   readonly file: string;
   /** The `.eff` files, relative to the directory of the map. */
   readonly sources: readonly string[];
-  readonly sourcesContent?: readonly string[];
   readonly names: readonly string[];
   readonly mappings: string;
 }
@@ -69,11 +68,6 @@ interface SourceInfo {
   readonly starts: Uint32Array;
 }
 
-interface SourceMapOptions {
-  /** Add the source texts as `sourcesContent`. Default: false. */
-  readonly includeContent?: boolean;
-}
-
 /**
  * Builds the source map of one module. `sourceTexts` maps each root-relative
  * source path to its text, for the line tables. A source that a record names
@@ -82,7 +76,6 @@ interface SourceMapOptions {
 export function buildSourceMap(
   table: SpanTable,
   sourceTexts: ReadonlyMap<string, string>,
-  options: SourceMapOptions = {},
 ): Result<SourceMapV3, SourceMapError> {
   const infoOf = new Map<string, SourceInfo>();
   // The source of each record, in the order of `table.records`.
@@ -157,38 +150,30 @@ export function buildSourceMap(
     lastTarget = key;
   }
 
-  const base = {
-    version: 3 as const,
-    file: fileNameOf(table.path),
-    // Each source path is relative to the directory of the generated file.
-    sources: sources.map((s) => {
-      const specifier = relativeSpecifier(table.path, s);
-      return specifier.startsWith("./") ? specifier.slice(2) : specifier;
-    }),
-    names: [] as string[],
-    mappings: lines.map((segments) => segments.join(",")).join(";"),
-  };
-  if (options.includeContent !== true) return { ok: true, value: base };
   return {
     ok: true,
     value: {
-      ...base,
-      sourcesContent: [...infoOf.values()].map((info) => info.text),
+      version: 3,
+      file: fileNameOf(table.path),
+      // Each source path is relative to the directory of the generated file.
+      sources: sources.map((s) => {
+        const specifier = relativeSpecifier(table.path, s);
+        return specifier.startsWith("./") ? specifier.slice(2) : specifier;
+      }),
+      names: [],
+      mappings: lines.map((segments) => segments.join(",")).join(";"),
     },
   };
 }
 
 /** The text of the `.ts.map` file: JSON with two-space indentation and a final newline. */
 export function serializeSourceMap(map: SourceMapV3): string {
-  const ordered: Record<string, unknown> = {
+  const ordered = {
     version: map.version,
     file: map.file,
     sources: map.sources,
+    names: map.names,
+    mappings: map.mappings,
   };
-  if (map.sourcesContent !== undefined) {
-    ordered.sourcesContent = map.sourcesContent;
-  }
-  ordered.names = map.names;
-  ordered.mappings = map.mappings;
   return JSON.stringify(ordered, null, 2) + "\n";
 }

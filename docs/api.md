@@ -511,7 +511,7 @@ or `undefined`. The innermost record that contains the offset wins. An offset
 outside every record has no span. The header, the imports, and the host assertions are outside
 every record.
 
-`buildSourceMap(table, sourceTexts, options)` returns a version 3 source map as
+`buildSourceMap(table, sourceTexts)` returns a version 3 source map as
 a `Result`. The `sourceTexts` value maps each source path to its text.
 `serializeSourceMap(map)` returns the text of the `.ts.map` file. The emitted
 `.ts` text ends with the line `//# sourceMappingURL=<file>.map`, so a written

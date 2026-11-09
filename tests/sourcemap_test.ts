@@ -148,16 +148,7 @@ Deno.test("a source map has version 3, the file, the relative source, and no nam
   assertEquals(built.value.file, "users.ts");
   assertEquals(built.value.sources, ["users.eff"]);
   assertEquals(built.value.names, []);
-  assertEquals(built.value.sourcesContent, undefined);
   assert(built.value.mappings.length > 0);
-});
-
-Deno.test("sourcesContent holds the source texts when asked", () => {
-  const table = tableOf(exampleProject, "users");
-  const files = exampleFiles();
-  const built = buildSourceMap(table, textsOf(files), { includeContent: true });
-  assert(built.ok);
-  assertEquals(built.value.sourcesContent, [files["users.eff"]]);
 });
 
 Deno.test("a module in a directory gets a source path relative to its map", () => {
@@ -289,16 +280,14 @@ Deno.test("the mappings stay compact: merged segments, no empty line markers", (
 
 Deno.test("a serialized map is JSON with a fixed key order and a final newline", () => {
   const table = tableOf(exampleProject, "users");
-  const built = buildSourceMap(table, textsOf(exampleFiles()), {
-    includeContent: true,
-  });
+  const built = buildSourceMap(table, textsOf(exampleFiles()));
   assert(built.ok);
   const text = serializeSourceMap(built.value);
   assert(text.endsWith("}\n"));
   assertEquals(JSON.parse(text), built.value);
   assertEquals(
     Object.keys(JSON.parse(text)),
-    ["version", "file", "sources", "sourcesContent", "names", "mappings"],
+    ["version", "file", "sources", "names", "mappings"],
   );
   assertEquals(serializeSourceMap(built.value), text);
 });
