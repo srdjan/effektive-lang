@@ -253,15 +253,23 @@ Order: PHU1 to PHU4 first (defects), then PHU5 to PHU9, then PHU10 to PHU12. PHU
 
 | Unit | State | Commit |
 | --- | --- | --- |
-| PHU1 | open | - |
-| PHU2 | open | - |
-| PHU3 | open | - |
-| PHU4 | open | - |
-| PHU5 | open | - |
-| PHU6 | open | - |
-| PHU7 | open | - |
-| PHU8 | open | - |
-| PHU9 | open | - |
-| PHU10 | open | - |
+| PHU1 | done: test fails with exit 0 before the fix | `277fe30` |
+| PHU2 | running | - |
+| PHU3 | done: test fails with exit 3 before the fix | `db6b34c` |
+| PHU4 | done: five tests fail before their fixes | `7da7c7e` |
+| PHU5 | done for PH4 and PH17; PH18 dropped (below) | `08602e2` |
+| PHU6 | done: five of six ranges get hits; `describeKind` keeps its arms (below) | `58fcac2` |
+| PHU7 | running | - |
+| PHU8 | done: `deno task coverage` on `main` exit 0, lines 97.54%, branches 95.53%, functions 99.45% | `3233bf4` |
+| PHU9 | done: `behavior:compare db6b34c` exit 0, 461 records equal | `3cf3b2c`, `a775b39`, `2ed22ef`, `e53ac90` |
+| PHU10 | rejected by measurement (below) | none |
 | PHU11 | open | - |
-| PHU12 | open | - |
+| PHU12 | running | - |
+
+`deno task check` on `main` at `58fcac2`: exit 0, 3,022 fast and 301 slow tests passed.
+
+Corrections found during execution:
+- PH18 is dropped. The three records are live evidence: six live links cite them, including `docs/status.md:68`, which the reviews missed, and archived documents hold 26 references. The move would break those references and serve no reader.
+- `docs/solutions/workflow-issues/behavior-capture-hold-tests-constant.md` already had a status line (line 23). Only the pipeline note needed one.
+- PHU6 reported that the arms of `describeKind` (`src/core/resolve.ts:336-346`) are unreachable. That is false for `local` and `builtin`: `serviceRef` (`resolve.ts:847`) uses `describeKind`, and the new PH7 tests print "`s` is a local binding, not a service" and "`map` is a builtin function, not a service". No arm is removed.
+- PH15 and PH19 do not pay. Trial edits measured PH15 at +1 net lines in the best form and +12 with comments, and PH19 at +13, because the two span builders share only one `map` and use different messages. The trial patches are in `~/.claude/scratch/prune-2026-11-09/`.
