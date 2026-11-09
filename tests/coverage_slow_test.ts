@@ -67,7 +67,11 @@ const cases = [
   { mode: "empty", code: 1, message: "deno coverage failed" },
   { mode: "incomplete", code: 1, message: "invalid LCOV report" },
   { mode: "floor", code: 1, message: "Coverage threshold not met" },
-  { mode: "inventory", code: 1, message: "unclassified source files" },
+  {
+    mode: "inventory",
+    code: 1,
+    message: "manifest paths without source files",
+  },
   { mode: "manifest", code: 1, message: "cannot read coverage ownership" },
   { mode: "sources", code: 1, message: "cannot read production sources" },
 ] as const;
@@ -110,10 +114,9 @@ for (const scenario of cases) {
           Deno.writeTextFileSync(
             join(root, "fixtures/coverage/ownership.json"),
             JSON.stringify({
-              runtimeReportable: category(
-                scenario.mode === "inventory" ? [] : ["src/core/mod.ts"],
+              typeOnly: category(
+                scenario.mode === "inventory" ? ["src/core/gone.ts"] : [],
               ),
-              typeOnly: category([]),
               separatelyExercisedEntrypoint: category([]),
             }),
           );

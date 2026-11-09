@@ -122,7 +122,7 @@ The directories of `fixtures/` are these.
 | `errors/`             | One file or one project directory for each error case, with markers.                                                                                                                                       |
 | `surface/`            | `cli.json` and `lsp.json`: the command-line records and the language server records that `tests/surface_test.ts` compares. `deno task surface:update` writes them. |
 | `mutation/`           | `survivors.json`: the register of the mutants that survive the fast tests, with a class and a reason for each mutant. `deno task mutate` reads it. |
-| `coverage/`           | `ownership.json` assigns every production TypeScript file to runtime coverage, the type check, or browser acceptance. |
+| `coverage/`           | `ownership.json` lists the production TypeScript files that the type check or browser acceptance owns. Every other file needs runtime coverage. |
 | `logs/`               | Small hand-written session logs (`*.jsonl`), one or more for each surface, for the tests of `logs:report`.                                                                                                |
 | `website-examples.json` | The manifest of `tests/website_examples_slow_test.ts`. Each unit names a project directory or a single file of `../effektive/public/effektive-examples/`, its configuration, its companion files, and its expected `check` diagnostics. A new website example needs a unit. |
 

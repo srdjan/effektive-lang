@@ -207,10 +207,9 @@ function testPath(path: string): string {
   return join(TEST_ROOT, ...path.split("/"));
 }
 
-const ownershipText = (runtimePaths: readonly string[]): string =>
+const ownershipText = (typeOnlyPaths: readonly string[] = []): string =>
   JSON.stringify({
-    runtimeReportable: category(runtimePaths),
-    typeOnly: category([], "deno task check"),
+    typeOnly: category(typeOnlyPaths, "deno task check"),
     separatelyExercisedEntrypoint: category(
       [],
       "playground browser acceptance",
@@ -240,7 +239,7 @@ const completeRecord = (
 };
 
 function ownershipFor(paths: readonly string[]) {
-  const result = parseCoverageOwnership(ownershipText(paths), paths);
+  const result = parseCoverageOwnership(ownershipText(), paths);
   assert(result.ok);
   return result.value;
 }
@@ -274,32 +273,31 @@ Deno.test("coverage ownership rejects invalid categories and paths", () => {
     "[]",
     JSON.stringify({}),
     JSON.stringify({
-      runtimeReportable: category(["src/core/a.ts"]),
       typeOnly: { ...category([]), reason: "" },
       separatelyExercisedEntrypoint: category([]),
     }),
     JSON.stringify({
-      runtimeReportable: category(["src/core/a.ts"]),
       typeOnly: { ...category([]), owner: "" },
       separatelyExercisedEntrypoint: category([]),
     }),
     JSON.stringify({
-      runtimeReportable: null,
-      typeOnly: category([]),
+      typeOnly: null,
       separatelyExercisedEntrypoint: category([]),
     }),
     JSON.stringify({
-      runtimeReportable: [],
-      typeOnly: category([]),
+      typeOnly: [],
       separatelyExercisedEntrypoint: category([]),
     }),
     JSON.stringify({
-      runtimeReportable: { ...category([]), paths: "src/core/a.ts" },
-      typeOnly: category([]),
+      typeOnly: { ...category([]), paths: "src/core/a.ts" },
       separatelyExercisedEntrypoint: category([]),
     }),
     JSON.stringify({
-      runtimeReportable: { ...category([]), paths: ["src/core/a.ts", 1] },
+      typeOnly: { ...category([]), paths: ["src/core/a.ts", 1] },
+      separatelyExercisedEntrypoint: category([]),
+    }),
+    JSON.stringify({
+      runtimeReportable: category(["src/core/a.ts"]),
       typeOnly: category([]),
       separatelyExercisedEntrypoint: category([]),
     }),
@@ -319,31 +317,25 @@ Deno.test("coverage ownership rejects invalid categories and paths", () => {
     "src/core/a.js",
   ];
   for (const path of invalidPaths) {
-    const result = parseCoverageOwnership(
-      ownershipText([path]),
-      [path],
-    );
+    const result = parseCoverageOwnership(ownershipText([path]), [path]);
     assertEquals(result.ok, false, path);
     if (!result.ok) assertEquals(result.error.tag, "manifest");
   }
 });
 
-Deno.test("coverage ownership rejects new and duplicate source paths", () => {
-  const unclassified = parseCoverageOwnership(
+Deno.test("coverage ownership treats an unlisted source path as runtime", () => {
+  const result = parseCoverageOwnership(
     ownershipText(["src/core/a.ts"]),
     ["src/core/a.ts", "src/core/new.ts"],
   );
-  assertEquals(unclassified.ok, false);
-  if (!unclassified.ok) {
-    assertEquals(unclassified.error.tag, "inventory");
-    assertEquals(
-      unclassified.error.message,
-      "unclassified source files: src/core/new.ts",
-    );
-  }
+  assert(result.ok);
+  assertEquals(result.value.runtimePaths, ["src/core/new.ts"]);
+  assertEquals(result.value.typeOnlyPaths, ["src/core/a.ts"]);
+});
 
+Deno.test("coverage ownership rejects absent and duplicate source paths", () => {
   const absent = parseCoverageOwnership(
-    ownershipText(["src/core/a.ts", "src/core/absent.ts"]),
+    ownershipText(["src/core/absent.ts"]),
     ["src/core/a.ts"],
   );
   assertEquals(absent.ok, false);
@@ -356,12 +348,8 @@ Deno.test("coverage ownership rejects new and duplicate source paths", () => {
   }
 
   const duplicate = JSON.stringify({
-    runtimeReportable: category(["src/core/a.ts"]),
     typeOnly: category(["src/core/a.ts"], "deno task check"),
-    separatelyExercisedEntrypoint: category(
-      [],
-      "playground browser acceptance",
-    ),
+    separatelyExercisedEntrypoint: category(["src/core/a.ts"]),
   });
   const duplicated = parseCoverageOwnership(duplicate, ["src/core/a.ts"]);
   assertEquals(duplicated.ok, false);

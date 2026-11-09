@@ -61,7 +61,10 @@ export type Summary = {
 /** The result of the `deno coverage` run: how it ended. */
 export type ReportOutcome = "pass" | "floor" | "failed";
 
-/** The coverage owner of each production TypeScript file. */
+/**
+ * The coverage owner of each production TypeScript file. The manifest lists
+ * only the exceptions; every other production file is a runtime path.
+ */
 export type CoverageOwnership = {
   readonly runtimePaths: readonly string[];
   readonly typeOnlyPaths: readonly string[];
@@ -85,11 +88,7 @@ type ManifestCategory = {
   readonly paths: readonly string[];
 };
 
-const MANIFEST_KEYS = [
-  "runtimeReportable",
-  "typeOnly",
-  "separatelyExercisedEntrypoint",
-] as const;
+const MANIFEST_KEYS = ["typeOnly", "separatelyExercisedEntrypoint"] as const;
 const COUNTERS = ["FNF", "FNH", "BRF", "BRH", "LF", "LH"] as const;
 type Counter = (typeof COUNTERS)[number];
 
@@ -152,7 +151,8 @@ function manifestPath(nativePath: string): string {
 
 /**
  * Parses the ownership manifest and compares it with the source inventory.
- * Every production file must occur once in one ownership category.
+ * Each listed exception must be a source file that occurs once. Every other
+ * source file is a runtime path.
  */
 export function parseCoverageOwnership(
   text: string,
@@ -198,25 +198,19 @@ export function parseCoverageOwnership(
     }
   }
   const inventory = new Set(sourcePaths);
-  const unclassified = sourcePaths.filter((path) => !seen.has(path));
   const absent = [...seen].filter((path) => !inventory.has(path));
-  if (unclassified.length > 0 || absent.length > 0) {
-    const details = [
-      unclassified.length > 0
-        ? `unclassified source files: ${unclassified.join(", ")}`
-        : "",
-      absent.length > 0
-        ? `manifest paths without source files: ${absent.join(", ")}`
-        : "",
-    ].filter((detail) => detail !== "").join("; ");
-    return validationError("inventory", details);
+  if (absent.length > 0) {
+    return validationError(
+      "inventory",
+      `manifest paths without source files: ${absent.join(", ")}`,
+    );
   }
   return {
     ok: true,
     value: {
-      runtimePaths: categories[0].paths,
-      typeOnlyPaths: categories[1].paths,
-      separatePaths: categories[2].paths,
+      runtimePaths: sourcePaths.filter((path) => !seen.has(path)),
+      typeOnlyPaths: categories[0].paths,
+      separatePaths: categories[1].paths,
     },
   };
 }
@@ -414,7 +408,9 @@ export function validateCoverageReport(
   if (missing.length > 0) {
     return validationError(
       "report",
-      `required runtime modules have no LCOV record: ${missing.join(", ")}`,
+      `required runtime modules have no LCOV record: ${
+        missing.join(", ")
+      } (list a type-only module in fixtures/coverage/ownership.json)`,
     );
   }
   return { ok: true, value: { recordCount: reported.size } };

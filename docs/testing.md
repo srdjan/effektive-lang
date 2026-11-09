@@ -105,12 +105,13 @@ It compares emitted companion text, maps, span tables, and independent validatio
 `deno task coverage` runs both suites with coverage, and it includes child processes through `DENO_COVERAGE_DIR`. It prints a table by directory and the 20 lowest files. The task exits 1 when a floor fails. `deno.json` holds the floors under `coverage.thresholds`.
 
 The coverage gate reads `fixtures/coverage/ownership.json` before it runs the suites.
-The manifest assigns every production TypeScript file to one verification owner.
-The gate compares the manifest with the current `src/` and `playground/src/` inventory.
-The gate rejects a new file until the manifest assigns its owner.
+The manifest lists only the exceptions: the type-only modules and the browser startup modules.
+The gate counts every other file under `src/` and `playground/src/` as a runtime module.
+The gate rejects a manifest path that has no source file.
 The inventory rejects symbolic links inside production directories.
 
-Runtime-reportable modules require one complete LCOV record with valid aggregate counters.
+Each runtime module requires one complete LCOV record with valid aggregate counters.
+A new type-only module fails the gate until the manifest lists it.
 The gate rejects missing modules, duplicate aliases, foreign paths, unfinished records, and invalid counters.
 The type check owns modules that contain only types.
 Playground browser acceptance owns the two DOM startup modules.
