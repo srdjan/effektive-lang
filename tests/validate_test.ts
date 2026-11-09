@@ -982,6 +982,32 @@ Deno.test("the forged fixtures number at least eight and cover every area", () =
   }
 });
 
+Deno.test("the forged fixtures carry the pinned validation codes", () => {
+  assertEquals(FORGED.map(({ file, code }) => ({ file, code })), [
+    { file: "identity-unknown-reference.json", code: "validation/001" },
+    { file: "identity-unknown-capability.json", code: "validation/001" },
+    { file: "identity-undeclared-export.json", code: "validation/001" },
+    { file: "identity-duplicate-declaration.json", code: "validation/001" },
+    { file: "types-recorded-string.json", code: "validation/002" },
+    { file: "types-literal-as-int.json", code: "validation/002" },
+    { file: "types-identity-mismatch.json", code: "validation/002" },
+    { file: "types-binary-identity-result.json", code: "validation/002" },
+    { file: "types-sealed-literal-foreign.json", code: "validation/002" },
+    { file: "types-record-into-tagged.json", code: "validation/002" },
+    { file: "types-untagged-name-pattern.json", code: "validation/002" },
+    { file: "contracts-dropped-failure.json", code: "validation/003" },
+    { file: "contracts-body-exceeds-declaration.json", code: "validation/003" },
+    { file: "execution-node-pure.json", code: "validation/004" },
+    { file: "execution-function-pure.json", code: "validation/004" },
+    { file: "recovery-absent-handler.json", code: "validation/005" },
+    { file: "control-retry-negative.json", code: "validation/006" },
+    { file: "control-provide-job-with-parameter.json", code: "validation/006" },
+    { file: "initialization-constant-perform.json", code: "validation/007" },
+    { file: "serialization-unsorted-set.json", code: "validation/008" },
+    { file: "serialization-span-past-end.json", code: "validation/008" },
+    { file: "serialization-unknown-source.json", code: "validation/008" },
+  ]);
+});
 for (const fixture of FORGED) {
   Deno.test(`mutation fixture ${fixture.file} is rejected with ${fixture.code}`, () => {
     const ir = fixture.ir as ModuleIR;
