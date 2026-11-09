@@ -59,7 +59,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   infer_contracts.ts InputContractResolver: origins, demands, deferred calls, tagged issues, and finite worklist resolution with an explicit TypeTable.
   modes.ts       The mode fixed point of recursive groups.
   graph.ts       Strongly connected components of an integer graph.
-  initialization.ts Eager dependency graph of module constants, the reference edges, and the cycle diagnostics.
+  initialization.ts The reference edges of the declarations of a module and the initialization cycle diagnostics.
   interface.ts   Module interfaces, their hashes, and the reachable modules. Also fnv1a64, the synchronous content hash.
   analyze.ts     Public entry: load a project, resolve it, collect diagnostics.
   db.ts          Program: revisions, parse memo, check memo with module cutoff, and lazy IR. Also diffFiles: the set and remove lists that turn one file map into another, for Program.update.
@@ -140,14 +140,14 @@ src/host/      The host adapters that the command-line tool and the language ser
   outputs.ts     writeGenerated: the write of the .ts and .ts.map files, shared by build and the language server.
   save_round.ts  runSaveRound: the removal of stale outputs and the write, with the removal rule of each caller.
   ports.ts       The port types that io.ts and log.ts share: FileFailure and EventLog.
-  log.ts         The event log: EventLog port, LogFs port, file adapter with SHA-256 blobs and seven-day rotation, memory adapter.
+  log.ts         The event log: LogFs port, file adapter with SHA-256 blobs and seven-day rotation, memory adapter.
   log_schema.ts  The log schema: envelope, the data type of each record kind, session file name, envelope parsing. Data and pure code only.
 src/lsp/       The language server. See "Language server".
   main.ts        The stdio entry: reads frames, writes frames, and ends the process.
   server.ts      LanguageServer: lifecycle, dispatch, and the flush schedule.
   projects.ts    Project discovery, the overlay's tagged update state, diagnostic flushes and disk-only save rounds.
   handler.ts     The types of a request handler: ServerContext, RequestFailure, and RequestHandler.
-  features.ts    The handlers: hover, definition, symbols, generated text, save, stats, references, validated versioned rename and actions, completion, and semantic tokens.
+  features.ts    The handlers: hover, definition, symbols, generated text, save, stats, references, validated versioned rename and actions, completion, signature help, semantic tokens, and inlay hints.
   generated_texts.ts  GeneratedTexts: the subscriptions and received results of the generated-text protocol.
   jsonrpc.ts     Content-Length frames and the message shapes.
   protocol.ts    The subset of the protocol: types, the narrowing of incoming params, and the names of the custom methods, shared with the client.
@@ -294,7 +294,7 @@ project file. Every other problem is a diagnostic. `checkAnalysis(analysis)`
 does the same for an analysis that exists already.
 
 For each module, the result holds `declarations`, `functions`, `constants`,
-`modes`, `initialization`, `interface`, `hash`, and `diagnostics`. A module sees
+`modes`, `interface`, `hash`, and `diagnostics`. A module sees
 the finished interfaces of the modules that it imports. These interfaces carry
 the computed execution modes. The `modes` map holds the invocation mode of every
 function.
@@ -323,9 +323,8 @@ Lowering gives the IR node `nominal`. A constructor pattern for a
 tagged record has a `tagged` pattern fact, and a match over tagged records and
 errors uses a tagged domain.
 
-A module constant needs a pure initializer with empty sets. The `initialization`
-value lists the constants in a safe order. It also lists the dependencies of
-each constant and every dependency cycle.
+A module constant needs a pure initializer with empty sets. A dependency cycle
+that holds a constant, directly or through functions, gives `module/004`.
 
 `sourceHoverAt(revision, path, offset)` returns source contract text for the innermost checked node at
 an offset. A function name gives its signature, for example
@@ -388,8 +387,9 @@ the node, for example `declarations[2].body.arguments[0]`.
 `lowerProject` returns. It reads the source texts from the parse trees of the
 project. A module that did not lower has no entry in the result. The validator
 is a test oracle. No entry point (`frontend.ts`, `typescript.ts`, or `mod.ts`)
-exports `validateProject`, and no product path loads it. Tests and
-`bench/m2.ts` import it from `src/core/validate_project.ts`. The commands
+exports `validateProject`, and no product path loads it. Tests,
+`bench/m2.ts`, and `scripts/behavior_corpus.ts` import it from
+`src/core/validate_project.ts`. The commands
 `check`, `build`, and `watch`, the language server, and the playground do not
 run it. The test `tests/core_boundary_slow_test.ts` checks this with the module
 graph of each product entry point.
@@ -522,7 +522,7 @@ has no map decoder: the tests read a map with `tests/support/source_map_decoder.
 
 `parseDenoCheck(text, root)` reads the text that `deno check` prints. It returns
 the TypeScript diagnostics, each with a root-relative file, a one-based line and
-column, the TypeScript code, and the message. Lines that belong to no diagnostic
+column, the TypeScript code, the message, and the detail lines. Lines that belong to no diagnostic
 go to `other`.
 
 `mapTscDiagnostic(diagnostic, tables, hosts)` maps one diagnostic. The `tables`
@@ -608,7 +608,9 @@ Measurement M4 records memory over edits; it does not establish a byte bound.
 `src/core/mod.ts` re-exports the program and the pipeline functions. It also
 re-exports the span table and source map builders, the `deno check` parser and
 mapper, and the diagnostic types with `describeCode`. The IR types are in the
-list too.
+list too. No entry point exports `parse`, `printTree`, `fileModeOf`,
+`analyzeProject`, `checkAnalysis`, `checkModuleDeclarations`, `buildInterface`,
+or `validateModule`. The package keeps each in its source module only.
 
 ## Using the command line
 
