@@ -1,7 +1,6 @@
 // Concrete TypeScript orchestration. Frontend queries do not import this module.
 import type { Revision } from "./db.ts";
 import type { ModuleIR } from "./ir.ts";
-import type { Result } from "./result.ts";
 import type { LowerError } from "./lower.ts";
 import {
   declarationTypeText,
@@ -17,7 +16,7 @@ import {
   type SourceMapV3,
 } from "./emit/sourcemap.ts";
 import { sourceHoverAt } from "./editor.ts";
-import type { Span } from "./source.ts";
+import type { Result, Span } from "./source.ts";
 
 export type EmitProjectError =
   | EmitError

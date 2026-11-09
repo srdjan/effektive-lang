@@ -1,6 +1,6 @@
 import type { Span } from "./ir.ts";
 import { addLinear, differenceShape, type Linear } from "./linear.ts";
-import type { Result } from "./result.ts";
+import type { Result } from "./source.ts";
 import {
   and,
   comparison,

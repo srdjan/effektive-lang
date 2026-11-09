@@ -8,7 +8,7 @@
 
 import { canonicalJsonIndented } from "./content_id.ts";
 import type { ModuleIR } from "./ir.ts";
-import type { Result } from "./result.ts";
+import type { Result } from "./source.ts";
 import { compareText } from "./util.ts";
 
 type SerializeError =

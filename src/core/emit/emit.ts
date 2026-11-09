@@ -4,7 +4,7 @@ import { fieldHelperDeclarations } from "./fields.ts";
 // the project configuration. It is synchronous and pure: the caller writes files.
 
 import type { Declaration, ModuleIR, TypeDecl } from "../ir.ts";
-import type { Result } from "../result.ts";
+import type { Result } from "../source.ts";
 import {
   fileNameOf,
   generatedHeader,

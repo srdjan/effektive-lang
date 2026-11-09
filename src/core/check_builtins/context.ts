@@ -5,7 +5,7 @@
 
 import type { DiagnosticCode } from "../diagnostics.ts";
 import type { LocalId } from "../ir.ts";
-import type { Result } from "../result.ts";
+import type { Result } from "../source.ts";
 import type { Target } from "../resolve.ts";
 import type { NodeId, SyntaxTree } from "../syntax.ts";
 import { type EffectSet, PURE_EFFECTS } from "../effect_set.ts";

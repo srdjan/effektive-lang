@@ -258,7 +258,6 @@ Deno.test("coverage ownership classifies the production source inventory", async
     "src/core/body_env.ts",
     "src/core/emit/emitted_module.ts",
     "src/core/emit/families/context.ts",
-    "src/core/result.ts",
     "src/host/io.ts",
     "src/host/ports.ts",
     "src/lsp/handler.ts",

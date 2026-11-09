@@ -1,4 +1,4 @@
-import type { Result } from "./result.ts";
+import type { Result } from "./source.ts";
 
 /** An integer written without a precision-losing JavaScript number. */
 type DecimalInteger = string;

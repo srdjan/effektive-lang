@@ -57,7 +57,6 @@ import type {
   TypeId,
   ValueId,
 } from "./ir.ts";
-import type { Result } from "./result.ts";
 import {
   isOptionConstructorName,
   optionConstructorOf,
@@ -65,7 +64,7 @@ import {
   type PreludeName,
   type Target,
 } from "./resolve.ts";
-import type { Span } from "./source.ts";
+import type { Result, Span } from "./source.ts";
 import {
   kindOf,
   type NodeId,

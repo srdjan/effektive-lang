@@ -2,9 +2,13 @@
 // with an exclusive end, as JavaScript strings index them.
 
 import type { Span } from "./ir.ts";
-import type { Result } from "./result.ts";
 
-export type { Result, Span };
+export type { Span };
+
+/** Expected compiler failures are data. */
+export type Result<A, E> =
+  | { readonly ok: true; readonly value: A }
+  | { readonly ok: false; readonly error: E };
 
 export interface SourceEdit {
   readonly span: Span;

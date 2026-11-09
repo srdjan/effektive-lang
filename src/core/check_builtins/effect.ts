@@ -8,7 +8,7 @@ import {
   type LogLevel,
   TIMEOUT_ERROR_ID,
 } from "../ir.ts";
-import type { Result } from "../result.ts";
+import type { Result } from "../source.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
 import { literalOf, recordFieldParts } from "../syntax_queries.ts";
 import {

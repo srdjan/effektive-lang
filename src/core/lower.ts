@@ -58,7 +58,7 @@ import type {
   ValueId,
 } from "./ir.ts";
 import { DURATION_ID } from "./ir.ts";
-import type { Result } from "./result.ts";
+import type { Result } from "./source.ts";
 import { TokenKind } from "./lex.ts";
 import { exportRuleOf, type ModuleInfo, planImports } from "./project.ts";
 import type { ModuleResolution, Target } from "./resolve.ts";
