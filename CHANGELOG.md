@@ -2,10 +2,6 @@
 
 ## Unreleased
 
-- The editor and the playground color `from` as a keyword only before a module path, and as a name everywhere else.
-  Before, the editor colored `from` as a name in an import, and the playground colored it as a keyword in every position.
-- A type message prints a name in a `fails`, `with`, or `provides` list as `module#Name` when another name in the message has the same short name.
-  Before, two different errors named `E` from two modules printed as the same `E`.
 - The language server removes a project when its last open document closes after its `effektive.json` was deleted, and it clears the lists that the project published.
   Before, the project stayed, its configuration error stayed on the deleted `effektive.json`, and requests for the document opened again were answered from that project.
 - The language server keeps a generated TypeScript view subscribed when its module moves to another project, and it also subscribes the view of a document that has no project yet.
@@ -14,6 +10,13 @@
   Before, each open view kept its old text after a server crash.
 - The VS Code client registers the Show Generated TypeScript command also when the language server cannot start, and the view then says that the server is not running.
   Before, VS Code reported that the command was not found.
+
+## 0.15.5 - 2026-11-08
+
+- The editor and the playground color `from` as a keyword only before a module path, and as a name everywhere else.
+  Before, the editor colored `from` as a name in an import, and the playground colored it as a keyword in every position.
+- A type message prints a name in a `fails`, `with`, or `provides` list as `module#Name` when another name in the message has the same short name.
+  Before, two different errors named `E` from two modules printed as the same `E`.
 
 ## 0.15.4 - 2026-11-07
 
