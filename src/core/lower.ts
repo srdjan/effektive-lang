@@ -137,17 +137,6 @@ interface ModuleContext {
 
 const EMPTY_EFFECTS: Effects = { failures: [], requirements: [] };
 
-function identifiersOf(tree: SyntaxTree): ReadonlySet<string> {
-  const lexed = tree.lexed;
-  const names = new Set<string>();
-  for (let t = 0; t < lexed.count; t++) {
-    if (lexed.kinds[t] === TokenKind.Ident) {
-      names.add(lexed.text.slice(lexed.starts[t], lexed.ends[t]));
-    }
-  }
-  return names;
-}
-
 function setOf(expr: Expr): EffectSet {
   return {
     failures: expr.effects.failures,
@@ -996,17 +985,6 @@ class BodyLowerer {
     );
   }
 
-  private fieldValue(field: NodeId): Expr {
-    const parts = this.fieldParts(field);
-    if (parts.value !== undefined) return this.expr(parts.value);
-    // A shorthand field `{ id }` reads the variable `id`. The checker keeps its sets on the field node.
-    return {
-      kind: "reference",
-      target: this.valueTarget(parts.labelNode),
-      ...this.annotation(field),
-    };
-  }
-
   /**
    * The `on` option of `schemaDefaultKey` selects the operation and is not
    * part of the IR. Rebuild the options record without it, or drop the record.
@@ -1046,10 +1024,16 @@ class BodyLowerer {
   private recordFields(
     fields: readonly NodeId[],
   ): { readonly name: string; readonly value: Expr }[] {
-    return fields.map((field) => ({
-      name: this.fieldParts(field).label,
-      value: this.fieldValue(field),
-    }));
+    return fields.map((field) => {
+      const parts = this.fieldParts(field);
+      // A shorthand field `{ id }` reads the variable `id`. The checker keeps its sets on the field node.
+      const value: Expr = parts.value !== undefined ? this.expr(parts.value) : {
+        kind: "reference",
+        target: this.valueTarget(parts.labelNode),
+        ...this.annotation(field),
+      };
+      return { name: parts.label, value };
+    });
   }
 
   private record(node: NodeId): Expr {
@@ -1666,13 +1650,20 @@ export function lowerModule(
   }
   const imports = lowerImports(checked, info, resolution, module);
   if (!imports.ok) return imports;
+  const lexed = checkedModule.tree.lexed;
+  const identifiers = new Set<string>();
+  for (let t = 0; t < lexed.count; t++) {
+    if (lexed.kinds[t] === TokenKind.Ident) {
+      identifiers.add(lexed.text.slice(lexed.starts[t], lexed.ends[t]));
+    }
+  }
   const ctx: ModuleContext = {
     module,
     tree: checkedModule.tree,
     types: checked.table,
     targets: resolution.targets,
     builtins: new Map(),
-    identifiers: identifiersOf(checkedModule.tree),
+    identifiers,
   };
   try {
     const declarations = lowerDeclarations(checked, checkedModule, ctx);
