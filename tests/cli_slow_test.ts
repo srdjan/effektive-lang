@@ -16,20 +16,9 @@ import {
 
 const REPOSITORY = new URL("../", import.meta.url).pathname;
 
-async function effektive(args: readonly string[]): Promise<Run> {
-  const output = await new Deno.Command(Deno.execPath(), {
-    // Runs on a folder of this repository, so it writes no session log there.
-    args: ["task", "effektive", ...args, "--no-log"],
-    cwd: REPOSITORY,
-    env: { NO_COLOR: "1" },
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  return {
-    code: output.code,
-    stdout: new TextDecoder().decode(output.stdout),
-    stderr: new TextDecoder().decode(output.stderr),
-  };
+function effektive(args: readonly string[]): Promise<Run> {
+  // Runs on a folder of this repository, so it writes no session log there.
+  return deno(REPOSITORY, ["task", "effektive", ...args, "--no-log"]);
 }
 
 function withTemporary<T>(body: (dir: string) => Promise<T>): Promise<T> {
@@ -440,25 +429,18 @@ const invalid = await Effect.runPromise(Effect.flip(main("")));
 console.log(JSON.stringify({ value, missing: missing._tag, invalid: invalid.message }));
 `,
     );
-    const output = await new Deno.Command(Deno.execPath(), {
-      args: [
-        "run",
-        "--allow-read",
-        "--allow-env",
-        "--frozen",
-        "--config",
-        "deno.json",
-        "--check",
-        "run.ts",
-      ],
-      cwd: dir,
-      env: { NO_COLOR: "1" },
-      stdout: "piped",
-      stderr: "piped",
-    }).output();
-    const stderr = new TextDecoder().decode(output.stderr);
-    assertEquals(output.code, 0, stderr);
-    const result = JSON.parse(new TextDecoder().decode(output.stdout).trim());
+    const output = await deno(dir, [
+      "run",
+      "--allow-read",
+      "--allow-env",
+      "--frozen",
+      "--config",
+      "deno.json",
+      "--check",
+      "run.ts",
+    ]);
+    assertEquals(output.code, 0, output.stderr);
+    const result = JSON.parse(output.stdout.trim());
     assertEquals(result, {
       value: "hello from Effect\n",
       missing: "files#FileReadError",
@@ -532,15 +514,15 @@ const value = await Effect.runPromise(load().pipe(Effect.provide(Live)));
 console.log(JSON.stringify({ value, closes }));
 `,
     );
-    const run = await new Deno.Command(Deno.execPath(), {
-      args: ["run", "--config", "deno.json", "--check", "run.ts"],
-      cwd: dir,
-      env: { NO_COLOR: "1" },
-      stdout: "piped",
-      stderr: "piped",
-    }).output();
-    assertEquals(run.code, 0, new TextDecoder().decode(run.stderr));
-    assertEquals(JSON.parse(new TextDecoder().decode(run.stdout).trim()), {
+    const run = await deno(dir, [
+      "run",
+      "--config",
+      "deno.json",
+      "--check",
+      "run.ts",
+    ]);
+    assertEquals(run.code, 0, run.stderr);
+    assertEquals(JSON.parse(run.stdout.trim()), {
       value: "hello",
       closes: 1,
     });

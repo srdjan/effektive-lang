@@ -11,6 +11,7 @@ import {
   memoryHost,
 } from "../src/core/mod.ts";
 import { validateProject } from "../src/core/validate_project.ts";
+import { deno } from "./process_helpers.ts";
 
 /** The fields of the JSON that `main.ts` prints. Each application prints its own subset. */
 interface Report {
@@ -207,22 +208,10 @@ for (const app of APPLICATIONS) {
           ...runtimeTests,
         ], ["run", "--frozen", "main.ts"]]
       ) {
-        const result = await new Deno.Command(Deno.execPath(), {
-          args,
-          cwd: dir,
-          stdout: "piped",
-          stderr: "piped",
-        }).output();
-        assertEquals(
-          result.code,
-          0,
-          new TextDecoder().decode(result.stderr) +
-            new TextDecoder().decode(result.stdout),
-        );
+        const result = await deno(dir, args);
+        assertEquals(result.code, 0, result.stderr + result.stdout);
         if (args[0] === "run") {
-          const report: Report = JSON.parse(
-            new TextDecoder().decode(result.stdout),
-          );
+          const report: Report = JSON.parse(result.stdout);
           app.verify(report);
         }
       }

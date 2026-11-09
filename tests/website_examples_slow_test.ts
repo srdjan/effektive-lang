@@ -8,7 +8,7 @@
 
 import { assertEquals } from "@std/assert";
 import { copyDirectory } from "./helpers.ts";
-import { type Run, withTemporaryDirectory } from "./process_helpers.ts";
+import { deno, type Run, withTemporaryDirectory } from "./process_helpers.ts";
 
 const REPOSITORY = new URL("../", import.meta.url).pathname;
 const EXAMPLES = new URL(
@@ -34,19 +34,8 @@ function examplesExist(): boolean {
   }
 }
 
-async function effektive(args: readonly string[]): Promise<Run> {
-  const output = await new Deno.Command(Deno.execPath(), {
-    args: ["task", "effektive", ...args, "--no-log"],
-    cwd: REPOSITORY,
-    env: { NO_COLOR: "1" },
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
-  return {
-    code: output.code,
-    stdout: new TextDecoder().decode(output.stdout),
-    stderr: new TextDecoder().decode(output.stderr),
-  };
+function effektive(args: readonly string[]): Promise<Run> {
+  return deno(REPOSITORY, ["task", "effektive", ...args, "--no-log"]);
 }
 
 /** The diagnostic lines of a run: every line that holds ` error ` or ` warning `. */

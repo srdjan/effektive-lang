@@ -2,6 +2,7 @@
 // with `git archive` and runs the corpus runner in the exported tree.
 
 import { assertEquals, assertStringIncludes } from "@std/assert";
+import { deno } from "./process_helpers.ts";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 
@@ -55,25 +56,20 @@ Deno.test("the comparison of HEAD with HEAD on the edit sequences exits with 0",
 });
 
 Deno.test("a revision that does not exist gives exit status 2", async () => {
-  const output = await new Deno.Command(Deno.execPath(), {
-    args: [
-      "run",
-      "--allow-read",
-      "--allow-write",
-      "--allow-run=git,tar,deno",
-      "scripts/behavior_compare.ts",
-      "no-such-revision-0000",
-      "HEAD",
-      "--only",
-      "edits/",
-    ],
-    cwd: ROOT,
-    stdout: "piped",
-    stderr: "piped",
-  }).output();
+  const output = await deno(ROOT, [
+    "run",
+    "--allow-read",
+    "--allow-write",
+    "--allow-run=git,tar,deno",
+    "scripts/behavior_compare.ts",
+    "no-such-revision-0000",
+    "HEAD",
+    "--only",
+    "edits/",
+  ]);
   assertEquals(output.code, 2);
   assertStringIncludes(
-    new TextDecoder().decode(output.stderr),
+    output.stderr,
     "cannot export no-such-revision-0000",
   );
 });
