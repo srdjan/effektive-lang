@@ -27,7 +27,6 @@ import {
   effectIds,
   referencedIds,
 } from "./referenced_ids.ts";
-import { fnv1a64 } from "./hash.ts";
 import type {
   DeclarationId,
   ErrorDecl,
@@ -74,6 +73,23 @@ export function stripSpans(value: unknown): unknown {
     result[key] = stripSpans(record[key]);
   }
   return result;
+}
+
+// A small synchronous content hash: FNV-1a with 64 bits, over UTF-16 code
+// units. The incremental model uses it to compare header text, body text, and
+// interface payloads. It is not a cryptographic hash. Builtin specialization
+// uses SHA-256 (sha256.ts).
+const OFFSET_BASIS = 0xcbf29ce484222325n;
+const PRIME = 0x100000001b3n;
+
+/** FNV-1a 64 over the UTF-16 code units of `text`. Returns 16 lowercase hex digits. */
+export function fnv1a64(text: string): string {
+  let hash = OFFSET_BASIS;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= BigInt(text.charCodeAt(i));
+    hash = BigInt.asUintN(64, hash * PRIME);
+  }
+  return hash.toString(16).padStart(16, "0");
 }
 
 /** FNV-1a 64 of the canonical JSON of an interface payload with its spans. */

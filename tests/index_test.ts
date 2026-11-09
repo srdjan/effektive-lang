@@ -1,7 +1,7 @@
 // Tests for the declaration index and the content hash.
 
 import { assert, assertEquals } from "@std/assert";
-import { fnv1a64 } from "../src/core/hash.ts";
+import { fnv1a64 } from "../src/core/interface.ts";
 import { buildIndex, type DeclEntry } from "../src/core/declaration_index.ts";
 import { parse } from "../src/core/parse.ts";
 import { FIXTURES } from "./helpers.ts";

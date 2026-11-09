@@ -47,10 +47,9 @@ import {
   type ModuleStep,
 } from "./check_project.ts";
 import type { Diagnostic } from "./diagnostics.ts";
-import { fnv1a64 } from "./hash.ts";
 import { moduleOfId, nameOfId } from "./ids.ts";
 import type { DeclEntry } from "./declaration_index.ts";
-import { payloadHash } from "./interface.ts";
+import { fnv1a64, payloadHash } from "./interface.ts";
 import type { ModuleIR } from "./ir.ts";
 import { type LowerError, lowerModule } from "./lower.ts";
 import {

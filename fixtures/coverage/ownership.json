@@ -74,7 +74,6 @@
       "src/core/emit/walk.ts",
       "src/core/frontend.ts",
       "src/core/graph.ts",
-      "src/core/hash.ts",
       "src/core/content_id.ts",
       "src/core/ids.ts",
       "src/core/infer_contracts.ts",

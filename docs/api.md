@@ -17,7 +17,6 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   syntax.ts      Syntax tree types and the printer.
   syntax_queries.ts Pure child, type/pattern-kind, literal, operator, arrow-body and initializer queries shared by the front end.
   parse.ts       Parser with recovery.
-  hash.ts        Synchronous content hash (FNV-1a 64).
   declaration_index.ts Declaration index of one file: names, kinds, export flags, spans, and methods.
   paths.ts       Path helpers and the generated-file header: joinPath, normalizeRelative, moduleNameOf, generatedPathOf, sourceMapPathOf, modulePathsOf, fileNameOf, generatedHeader, generatedSourceOf, the extension tests, fileModeOf, relativeSpecifier, and the prelude and host label tests.
   project_config.ts effektive.json reader, its validation, and the import-rule globs.
@@ -62,7 +61,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   modes.ts       The mode fixed point of recursive groups.
   graph.ts       Strongly connected components of an integer graph.
   initialization.ts Eager dependency graph of module constants, the reference edges, and the cycle diagnostics.
-  interface.ts   Module interfaces, their hashes, and the reachable modules.
+  interface.ts   Module interfaces, their hashes, and the reachable modules. Also fnv1a64, the synchronous content hash.
   analyze.ts     Public entry: load a project, resolve it, collect diagnostics.
   db.ts          Program: revisions, parse memo, check memo with module cutoff, and lazy IR. Also diffFiles: the set and remove lists that turn one file map into another, for Program.update.
   editor.ts      sourceHoverAt, definitionAt, and documentSymbols over a revision.
