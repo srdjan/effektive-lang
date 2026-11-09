@@ -34,10 +34,21 @@ Each unit edits only its own files, so the units run in parallel worktrees. The 
 
 ## Progress
 
+Status: complete on 2026-11-09. The orchestrator checked each diff against the code and spot-checked the cited lines. `deno task check` at `ca13e8e` exited 0 with 3,019 fast and 301 slow tests passed. The later commits change only documents, and `tests/docs_test.ts` passed after each one.
+
 | Unit | State | Commits |
 | --- | --- | --- |
-| DAU1 | running | - |
-| DAU2 | running | - |
-| DAU3 | running | - |
-| DAU4 | running | - |
-| DAU5 | running | - |
+| DAU1 | done: seven claims of `docs/api.md` corrected | `5358971` |
+| DAU2 | done at its turn budget: three claims corrected; lines 202 to 555 of `docs/language-rules.md` went to DAU2b | `b93c5a2`, `01b708b` |
+| DAU2b | done: each rule with a diagnostic or an emitted form in lines 202 to 555 probed; one claim cut | `b3d89b6` |
+| DAU3 | done: six claims corrected in three documents | `2a568ee`, `54e2622`, `82f1aea` |
+| DAU4 | done: one claim of `docs/logging.md` corrected | `07b7e6e` |
+| DAU5 | done: drifted line references and two facts corrected in 12 solution notes | twelve commits, `4d81e86` to `f26255e` |
+
+## Findings
+
+- DA1: `.gitignore` kept the exception `!fixtures/emit/scopes/host.ts` for a directory that the explicit scope removal deleted on 2026-11-02. `ca13e8e` removes it.
+- DA2: these claims stay as written, because a check needs a long run or an outside source: "about 11,000 sites" for a full mutation run and "30,000 random cases" in `docs/testing.md`, and the Node.js versions in `docs/installation.md`, which come from the engines of outside packages.
+- DA3: dated measurements stay as recorded. `docs/development.md` gives 454 records in 0.78 s on 2026-11-02, and a run on 2026-11-09 gave 465 records in 0.75 s. `docs/measurements.md` records the Ref update with Effect 4.0.5, and the bench now imports 4.1.2. A run on 2026-11-09 gave numbers close to the record.
+- DA4: rows of `docs/language-rules.md` that describe only Effect runtime behavior were not probed. The self-capture rows rely on `tests/schema_recursive_adapters_test.ts` and `tests/schema_constructor_recursive_test.ts`.
+- DA5: the link audit reports 109 broken links, all in `docs/archive/`. They point at probe files that the archived plans deleted, and the archive stays unchanged.
