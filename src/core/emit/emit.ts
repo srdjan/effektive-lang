@@ -86,16 +86,12 @@ function erased<D extends Declaration | TypeDecl>(d: D): D {
     : d;
 }
 
-function normalized(ir: ModuleIR): ModuleIR {
-  return {
-    ...ir,
-    imports: ir.imports.map((i) => ({ ...i, types: i.types.map(erased) })),
-    declarations: ir.declarations.map(erased),
-  };
-}
-
 function build(source: ModuleIR, context: EmitContext): EmittedModule {
-  const ir = normalized(source);
+  const ir: ModuleIR = {
+    ...source,
+    imports: source.imports.map((i) => ({ ...i, types: i.types.map(erased) })),
+    declarations: source.declarations.map(erased),
+  };
   const scope = new ModuleState(ir, context.config);
   const exported = exportedIds(ir);
   const emitter = new DeclarationEmitter(

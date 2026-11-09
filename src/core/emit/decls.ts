@@ -684,18 +684,6 @@ export class DeclarationEmitter {
     throw internal("unreachable type in a host check");
   }
 
-  /** The type that a provided method checks: its result, or the element of a result stream. */
-  private checkedType(
-    result: Type,
-  ): { readonly type: Type; readonly stream: boolean } | undefined {
-    const resolved = this.scope.resolve(result);
-    const stream = resolved.kind === "stream";
-    const type = resolved.kind === "stream" ? resolved.element : result;
-    return this.checkKind(type, new Set()) === "tagged"
-      ? { type, stream }
-      : undefined;
-  }
-
   /**
    * The wrapped value of a host provider, or undefined when no method of its
    * services needs a check: each provided service is rebuilt with every method
@@ -714,10 +702,18 @@ export class DeclarationEmitter {
       return declaration;
     });
     const planned = services.map((service) =>
-      service.methods.map((method) => ({
-        method,
-        checked: this.checkedType(method.type.result),
-      }))
+      service.methods.map((method) => {
+        // A method checks its result, or the element of a result stream.
+        const resolved = this.scope.resolve(method.type.result);
+        const stream = resolved.kind === "stream";
+        const type = resolved.kind === "stream"
+          ? resolved.element
+          : method.type.result;
+        const checked = this.checkKind(type, new Set()) === "tagged"
+          ? { type, stream }
+          : undefined;
+        return { method, checked };
+      })
     );
     if (!planned.some((methods) => methods.some((m) => m.checked))) {
       return undefined;

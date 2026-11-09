@@ -1,7 +1,6 @@
 // Emission of the Effect builtins: defer, race-all, the retry and repeat forms,
 // timeout, sleep, now, log, random, uninterruptible, and run.
 
-import type { LogLevel } from "../../ir.ts";
 import {
   at,
   callArguments,
@@ -113,10 +112,6 @@ function guardedDuration(
   ]);
 }
 
-function severityOf(level: LogLevel): string {
-  return level.charAt(0).toUpperCase() + level.slice(1);
-}
-
 export function effectLeaf(
   c: ExprCore,
   e: ExprOf<EffectLeafKind>,
@@ -133,7 +128,10 @@ export function effectLeaf(
     case "log": {
       // `annotateLogs(effect, record)` evaluates the message, then the fields, once.
       const entry = emitted([
-        `${effect}.logWithLevel("${severityOf(e.level)}")`,
+        // The Effect severity is the level name with a capital first letter.
+        `${effect}.logWithLevel("${
+          e.level.charAt(0).toUpperCase() + e.level.slice(1)
+        }")`,
         callArguments([children[0]]),
       ]);
       return children[1] === undefined ? entry : emitted([

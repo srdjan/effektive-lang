@@ -177,18 +177,13 @@ export function callArguments(args: readonly Emitted[]): Doc {
   ]);
 }
 
-/** The text of a concurrency limit: a number, or `"unbounded"` with its quotes. */
-function concurrencyText(limit: number | "unbounded"): string {
-  return limit === "unbounded" ? '"unbounded"' : String(limit);
-}
-
 /** The options argument `{ concurrency: n }`, or no argument when the program sets no limit. */
 export function concurrencyArguments(
   limit: number | "unbounded" | undefined,
 ): Emitted[] {
-  return limit === undefined
-    ? []
-    : [emitted(`{ concurrency: ${concurrencyText(limit)} }`)];
+  return limit === undefined ? [] : [emitted(
+    `{ concurrency: ${limit === "unbounded" ? '"unbounded"' : limit} }`,
+  )];
 }
 
 export type Mode = "pure" | "gen";

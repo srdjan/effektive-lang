@@ -552,18 +552,6 @@ export class ModuleState
     names.set(exported, { local, typeOnly });
   }
 
-  /** The companion module path of each host interface module, by module name. */
-  private companionPaths(): Map<string, string> {
-    const paths = new Map<string, string>();
-    for (const host of this.config.host.values()) {
-      const path = normalizeRelative(host.interfacePath);
-      if (path !== undefined) {
-        paths.set(moduleNameOf(path), generatedPathOf(path));
-      }
-    }
-    return paths;
-  }
-
   /**
    * The import groups of the module, in print order: `effect`, other generated
    * modules, and host modules. It closes the state: a later allocation is an
@@ -581,7 +569,14 @@ export class ModuleState
   /** Imports of other generated modules, sorted by specifier. */
   private moduleImports(): ImportGroup[] {
     const groups: ImportGroup[] = [];
-    const companions = this.companionPaths();
+    // The companion module path of each host interface module, by module name.
+    const companions = new Map<string, string>();
+    for (const host of this.config.host.values()) {
+      const path = normalizeRelative(host.interfacePath);
+      if (path !== undefined) {
+        companions.set(moduleNameOf(path), generatedPathOf(path));
+      }
+    }
     for (const [module, names] of this.foreignImports) {
       groups.push({
         specifier: relativeSpecifier(
