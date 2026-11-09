@@ -198,12 +198,20 @@ export function callWith(callee: Doc, arg: Doc): Doc {
   ];
 }
 
-/** Keep a declaration's value beside `=` when its opening fits. */
+/**
+ * Keep a declaration's value beside `=` when its opening fits. When the prefix
+ * is too long for its own line, its groups break and the value follows the
+ * last line of the prefix.
+ */
 export function assignment(prefix: Doc, value: Doc): Doc {
   return alt([ifFits(
     [prefix, " = ", group(value, true), ";"],
     [prefix, " = ", value],
-    [prefix, " =", indent([hard, value])],
+    ifFits(
+      [prefix, " ="],
+      [prefix, " =", indent([hard, value])],
+      [prefix, " = ", value],
+    ),
   )]);
 }
 
