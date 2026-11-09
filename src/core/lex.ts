@@ -154,7 +154,7 @@ export const OPERATOR_KINDS: ReadonlySet<TokenKind> = new Set([
  * `startsDeclaration` marks the words that the parser accepts as the first
  * word of a declaration when a name follows.
  */
-export type ContextualRole =
+type ContextualRole =
   | "declaration"
   | "modifier"
   | "clause"

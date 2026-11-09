@@ -13,7 +13,7 @@ import type { Span } from "./source.ts";
 import { isTypeKind } from "./syntax_queries.ts";
 import { effectText, showType } from "./type_show.ts";
 
-export interface InlayHint {
+interface InlayHint {
   readonly position: number;
   /** Holds only the inferred contract part. */
   readonly label: string;

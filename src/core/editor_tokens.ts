@@ -30,7 +30,7 @@ export const SEMANTIC_TOKEN_TYPES = [
   "operator",
 ] as const;
 export const SEMANTIC_TOKEN_MODIFIERS = ["declaration", "readonly"] as const;
-export interface SemanticClassification {
+interface SemanticClassification {
   readonly span: Span;
   readonly type: (typeof SEMANTIC_TOKEN_TYPES)[number];
   readonly modifiers: readonly (typeof SEMANTIC_TOKEN_MODIFIERS)[number][];

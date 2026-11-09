@@ -19,12 +19,12 @@ import type { TypeNode, TypeRef } from "./types.ts";
 
 type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
 
-export interface SignatureParameter {
+interface SignatureParameter {
   readonly label: string;
   readonly documentation?: string;
 }
 
-export interface SignatureHelp {
+interface SignatureHelp {
   readonly label: string;
   readonly parameters: readonly SignatureParameter[];
   readonly activeParameter: number;

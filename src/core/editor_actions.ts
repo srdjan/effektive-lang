@@ -10,7 +10,7 @@ import { diagnosticInside, resultEndOf } from "./editor_hints.ts";
 import { childrenOf, kindOf, SyntaxKind } from "./syntax.ts";
 import { functionParts } from "./syntax_queries.ts";
 
-export interface ContractAction {
+interface ContractAction {
   readonly title: string;
   readonly function: string;
   readonly edits: readonly SourceEdit[];

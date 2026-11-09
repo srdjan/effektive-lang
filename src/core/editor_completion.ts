@@ -19,7 +19,7 @@ import {
 import type { TypeRef } from "./types.ts";
 import { compareText } from "./util.ts";
 
-export interface Completion {
+interface Completion {
   readonly label: string;
   readonly kind:
     | "variable"

@@ -3,7 +3,7 @@
 
 import { compareSpans, type Span } from "./source.ts";
 
-export type Category =
+type Category =
   | "syntax"
   | "unknown-name"
   | "type-mismatch"

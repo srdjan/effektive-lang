@@ -25,7 +25,7 @@ export interface SymbolOccurrence {
   readonly shorthand: boolean;
 }
 
-export interface LocalScope {
+interface LocalScope {
   readonly identity: string;
   readonly name: string;
   readonly declaration: Span;
@@ -33,7 +33,7 @@ export interface LocalScope {
   readonly parameter: boolean;
 }
 
-export interface SymbolIndex {
+interface SymbolIndex {
   readonly occurrences: readonly SymbolOccurrence[];
   readonly byIdentity: ReadonlyMap<string, readonly SymbolOccurrence[]>;
   readonly byPath: ReadonlyMap<string, readonly SymbolOccurrence[]>;

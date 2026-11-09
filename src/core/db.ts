@@ -108,7 +108,7 @@ export function diffFiles(
  * Cumulative counts of the expensive queries of a program (design measurement
  * M3). A memo hit does not count.
  */
-export interface QueryCounts {
+interface QueryCounts {
   /** Parses that missed the parse memo. */
   readonly parses: number;
   /** Modules checked again, whatever the reason. */

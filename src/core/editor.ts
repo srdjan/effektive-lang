@@ -33,7 +33,7 @@ function covers(range: Range, offset: number, afterEnd: boolean): boolean {
 
 const PASSES: readonly boolean[] = [false, true];
 
-export interface SourceHover {
+interface SourceHover {
   readonly span: Span;
   readonly contract: string;
   /** Only on a module-level function or constant name. */

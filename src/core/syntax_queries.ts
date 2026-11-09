@@ -239,7 +239,7 @@ export function arrowBody(tree: SyntaxTree, node: NodeId): NodeId | undefined {
  * signature): its parameter list, its first type child, and its `fails` and
  * `with` clauses. Each part is undefined when the parser wrote none.
  */
-export interface FunctionParts {
+interface FunctionParts {
   readonly paramList: NodeId | undefined;
   readonly result: NodeId | undefined;
   readonly fails: NodeId | undefined;
@@ -271,7 +271,7 @@ export function paramNodes(
 }
 
 /** The name node and the first other child (the written type) of a Param node. */
-export interface ParamParts {
+interface ParamParts {
   readonly name: NodeId | undefined;
   readonly type: NodeId | undefined;
 }
@@ -283,7 +283,7 @@ export function paramParts(tree: SyntaxTree, param: NodeId): ParamParts {
 }
 
 /** The base expression and the member Name node of a FieldExpr. */
-export interface MemberAccessParts {
+interface MemberAccessParts {
   readonly base: NodeId | undefined;
   readonly member: NodeId | undefined;
 }
@@ -340,7 +340,7 @@ export function argNodes(tree: SyntaxTree, node: NodeId): NodeId[] {
 }
 
 /** The left value of a PipeExpr and its first PipeStage child. */
-export interface PipeParts {
+interface PipeParts {
   readonly left: NodeId | undefined;
   readonly stage: NodeId | undefined;
 }
@@ -354,7 +354,7 @@ export function pipeParts(tree: SyntaxTree, node: NodeId): PipeParts {
 }
 
 /** The qualified callee name of a PipeStage and its written arguments. The left value is not among them. */
-export interface StageParts {
+interface StageParts {
   readonly callee: NodeId | undefined;
   readonly args: NodeId[];
 }

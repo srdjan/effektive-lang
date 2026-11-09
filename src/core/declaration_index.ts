@@ -57,7 +57,7 @@ interface ImportName {
   readonly span: Span;
 }
 
-export type ImportRole = "ordinary" | "service";
+type ImportRole = "ordinary" | "service";
 
 export interface ImportEntry {
   readonly role: ImportRole;

@@ -58,7 +58,7 @@ export interface ModuleInfo {
 }
 
 /** One import of a module as the lowerer binds it. */
-export interface PlannedImport {
+interface PlannedImport {
   /** The `Import.module` value, or undefined when the import could not be linked. */
   readonly label: string | undefined;
   /** The name of the imported module, or undefined when the import could not be linked. */
@@ -106,7 +106,7 @@ export function planImports(info: ModuleInfo): readonly PlannedImport[] {
   return planned;
 }
 
-export type ExportRule = "declared" | "every-declaration";
+type ExportRule = "declared" | "every-declaration";
 
 /**
  * The companion module of a `.effi` file exports every declaration, because the host module
