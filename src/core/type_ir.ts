@@ -232,7 +232,7 @@ export function functionTypeToIr(
 }
 
 /** What a graph of imported declarations supplies to the table. */
-export interface DefinitionSource {
+interface DefinitionSource {
   readonly types: readonly {
     readonly id: TypeId;
     readonly opaque?: boolean;

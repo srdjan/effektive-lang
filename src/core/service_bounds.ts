@@ -22,7 +22,7 @@ import type { BodyTable } from "./tables.ts";
 import type { TypeReader, TypeRef } from "./types.ts";
 
 /** A checked function, as far as the bound reads it. */
-export interface BoundedFunction {
+interface BoundedFunction {
   readonly signature: Pick<
     FunctionSignature,
     "name" | "nameSpan" | "parameters"
@@ -35,13 +35,13 @@ export interface BoundedFunction {
 }
 
 /** A checked constant, as far as the bound reads it. */
-export interface BoundedConstant {
+interface BoundedConstant {
   readonly signature: Pick<ConstantSignature, "name" | "nameSpan">;
   readonly type: TypeRef;
   readonly table: BodyTable;
 }
 
-export interface ServiceBoundInput {
+interface ServiceBoundInput {
   readonly info: Pick<ModuleInfo, "tree" | "index">;
   readonly resolution: ModuleResolution;
   /** The services that the module declares. */

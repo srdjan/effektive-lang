@@ -64,7 +64,7 @@ export interface EffectContext extends
  * The Effect element type of an array of Effect values, or undefined after a
  * diagnostic (`name` needs an array of Effect values). Used by `race`.
  */
-export function effectArrayMember(
+function effectArrayMember(
   c: Pick<EffectContext, "table" | "isError" | "report">,
   name: string,
   jobs: NodeInfo,

@@ -522,7 +522,7 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
 }
 
 /** What a module sees of the modules that it reaches, among those that are checked so far. */
-export interface ReachedModules {
+interface ReachedModules {
   readonly reached: readonly string[];
   readonly graphs: ReadonlyMap<string, TypeGraph>;
   readonly interfaces: ReadonlyMap<string, ModuleInterface>;
@@ -574,7 +574,7 @@ function withInterface(
  * solved modes. The reached modules moved their spans, so the interface payload
  * carries new spans. The module is not checked again.
  */
-export function refreshInterface(
+function refreshInterface(
   previous: ModuleStep,
   seen: ReachedModules,
 ): ModuleStep {
@@ -667,7 +667,7 @@ export type ModuleDecision =
  * policy keeps its steps. A decision type `D` lets the policy carry its own
  * data from `decide` to `settled` of the same module.
  */
-export interface ModulePolicy<D extends ModuleDecision = ModuleDecision> {
+interface ModulePolicy<D extends ModuleDecision = ModuleDecision> {
   /** Called before each module, with the modules that it reaches among those done. */
   decide(
     name: string,

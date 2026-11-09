@@ -1,7 +1,7 @@
 import type { Term } from "./predicates.ts";
 
 /** One term of a linear integer expression with its non-zero or zero coefficient. */
-export interface LinearTerm {
+interface LinearTerm {
   readonly term: Term;
   readonly coefficient: bigint;
 }

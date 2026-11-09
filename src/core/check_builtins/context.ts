@@ -19,7 +19,7 @@ export interface Arg {
 }
 
 /** The builtins that take a concurrency option record. */
-export type ConcurrencyOperation = "traverse" | "all" | "mapEffect";
+type ConcurrencyOperation = "traverse" | "all" | "mapEffect";
 
 export interface BuiltinContext {
   readonly table: TypeTable;
