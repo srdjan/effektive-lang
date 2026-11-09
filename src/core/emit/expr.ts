@@ -13,13 +13,11 @@ import {
 import type {
   Arm,
   DefectHandler,
-  ErrorId,
   Expr,
   Field,
   FunctionType,
   Handler,
   LocalId,
-  Parameter,
   Pattern,
   Step,
   Type,
@@ -366,10 +364,6 @@ function leadingBrace(e: Emitted, min: number): boolean {
   return e.prec >= min && e.brace;
 }
 
-function asStatement(e: Emitted): Doc {
-  return e.brace ? ["(", e.doc, ")"] : e.doc;
-}
-
 /** `left === right`. When it does not fit, `right` moves down two levels, as `deno fmt` prints it. */
 function equality(left: string, right: Doc): Doc {
   return group([left, " ===", indent(indent([line, right]))]);
@@ -423,7 +417,12 @@ export class ExprEmitter implements ExprCore {
   /** A TypeScript expression that is valid inside a generator body. */
   inGen(e: Expr, expected?: Type): Emitted {
     if (e.execution === "pure") return this.pure(e, expected);
-    return this.tag(e, this.genNode(e, expected));
+    return this.tag(
+      e,
+      this.isLeaf(e)
+        ? this.leafEffect(e, true)
+        : this.structural(e, "gen", expected),
+    );
   }
 
   /** A TypeScript expression of type `Effect.Effect<...>`. */
@@ -782,7 +781,9 @@ export class ExprEmitter implements ExprCore {
               f.name,
               f.value,
               kid,
-              this.errorFieldType(e.error, f.name),
+              declaration?.kind === "error"
+                ? declaration.fields.find((g) => g.name === f.name)?.type
+                : undefined,
             )
           ),
           [],
@@ -910,12 +911,6 @@ export class ExprEmitter implements ExprCore {
     if (resolved.kind !== "named") return undefined;
     const declaration = this.scope.typeLevelDeclaration(resolved.id);
     return declaration?.kind === "type" ? taggedFields(declaration) : undefined;
-  }
-
-  private errorFieldType(error: ErrorId, name: string): Type | undefined {
-    const declaration = this.scope.typeLevelDeclaration(error);
-    if (declaration?.kind !== "error") return undefined;
-    return declaration.fields.find((f) => f.name === name)?.type;
   }
 
   private safeRecord(object: Emitted, type: Type): Emitted {
@@ -1115,7 +1110,10 @@ export class ExprEmitter implements ExprCore {
       ),
       false,
     );
-    const type: FunctionType = this.closureType(e);
+    const type = e.type;
+    if (type.kind !== "function") {
+      throw internal("a closure node has a type that is not a function type");
+    }
     if (type.execution === "effect" || forceEffect) {
       return this.arrowEmitted(parameters, {
         kind: "expr",
@@ -1132,13 +1130,6 @@ export class ExprEmitter implements ExprCore {
       kind: "expr",
       body: this.fit(e.body, type.result, "pure"),
     });
-  }
-
-  private closureType(e: Extract<Expr, { kind: "closure" }>): FunctionType {
-    if (e.type.kind !== "function") {
-      throw internal("a closure node has a type that is not a function type");
-    }
-    return e.type;
   }
 
   // -------------------------------------------------------------- calls
@@ -1243,7 +1234,12 @@ export class ExprEmitter implements ExprCore {
         ";",
       ];
     }
-    return [asStatement(value(step.value)), ";"];
+    // A statement that starts with `{` would parse as a block, so it gets parentheses.
+    const statement = value(step.value);
+    return [
+      statement.brace ? ["(", statement.doc, ")"] : statement.doc,
+      ";",
+    ];
   }
 
   private nestedBlock(
@@ -1330,7 +1326,12 @@ export class ExprEmitter implements ExprCore {
   ): Emitted {
     const selector = this.scope.temp();
     const armDoc = (arm: Arm): Doc => {
-      const binding = this.armBinding(arm.pattern);
+      if (arm.pattern.kind === "some") {
+        throw internal(
+          "a Some pattern in a match that is not an option match",
+        );
+      }
+      const binding = patternBinding(arm.pattern);
       const inner = body(arm);
       if (binding === null) return at(inner, PREC.conditional);
       return [
@@ -1386,15 +1387,6 @@ export class ExprEmitter implements ExprCore {
       ")",
       ifBroke(bodyGroup, indent(args), args),
     ]);
-  }
-
-  private armBinding(pattern: Pattern): Parameter | null {
-    if (pattern.kind === "some") {
-      throw internal(
-        "a Some pattern in a match that is not an option match",
-      );
-    }
-    return patternBinding(pattern);
   }
 
   private armTest(
@@ -1489,11 +1481,6 @@ export class ExprEmitter implements ExprCore {
       return this.genCall(this.blockStatements(e, true, expected));
     }
     return this.genCall([this.returnStatement(e, expected, "gen")]);
-  }
-
-  private genNode(e: Expr, expected: Type | undefined): Emitted {
-    if (this.isLeaf(e)) return this.leafEffect(e, true);
-    return this.structural(e, "gen", expected);
   }
 
   private isLeaf(e: Expr): boolean {
