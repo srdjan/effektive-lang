@@ -36,7 +36,7 @@ For example, `getRef` is recognized in `resolve.ts`. Its row in `REF_ROWS`
 
 `tables.ts` declares that fact. `lower.ts` builds its operand, the independent
 validator recomputes the element and effects, `emit/shape.ts` records its child,
-and `emit/calls.ts` selects `Ref.get`. Arity and wrong-input regressions live in
+and `emit/calls.ts` selects `SynchronizedRef.get`. Arity and wrong-input regressions live in
 `tests/builtin_arity_test.ts` and `tests/builtin_report_sites_test.ts`. This trace
 is a worked example, not a fixed count of sites for every builtin.
 
