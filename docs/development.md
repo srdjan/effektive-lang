@@ -13,7 +13,7 @@ Run every command from the repository root.
 | `deno task check`             | Runs the format check, the lint, the type check, the fast tests, and the slow tests.                                                                    |
 | `deno task test`              | Runs the fast tests in parallel. It skips files named `*_slow_test.ts`.                                                                                 |
 | `deno task test:slow`         | Runs only files named `*_slow_test.ts`, in parallel. They run `deno check`, `deno fmt`, and `deno run` with a fresh `DENO_DIR` that the task removes after. A warm-up `deno bundle` first installs esbuild in that `DENO_DIR`, so that concurrent bundles in the tests do not race.          |
-| `deno task golden:update`     | Writes `fixtures/golden/<module>.ts` again from `fixtures/examples` and `fixtures/emit/traverse`, and the companion module `golden/host/providers.effi.ts`. Also writes `fixtures/ir/examples-baseline.json`, the IR snapshot of the examples. |
+| `deno task golden:update`     | Writes `fixtures/golden/<module>.ts` again from `fixtures/examples` and `fixtures/emit/traverse`, and the companion module `golden/host/providers.effi.ts`. Also writes `fixtures/ir/examples-baseline.json`, the IR snapshot of the examples and two more cases. |
 | `deno task surface:update`    | Writes `fixtures/surface/cli.json` and `fixtures/surface/lsp.json` again from the current build: the command-line output and the language server replies that `tests/surface_test.ts` compares. Run it only after a deliberate change of that output. |
 | `deno task lex:update`        | Writes `fixtures/lex/snapshot.json` again from the current lexer. Run it only after a deliberate change of the lexer output.                            |
 | `deno task site:ir`           | Writes `../effektive/public/typed-ir.ts` from `src/core/ir.ts` and the type declarations of `src/core/predicates.ts` that it needs. Give a path to write to another file. Run it after a change of `ir.ts`. |
@@ -93,7 +93,7 @@ layering rules. The file-level map of `src/` is in
 | `src/lsp/`        | The language server.                                                                                                                                                                                                                                                   |
 | `editors/vscode/` | The VS Code client. It is plain JavaScript with no build step.                                                                                                                                                                                                         |
 | `playground/`     | The browser playground. The page is in `src/`, the build in `build.ts`.                                                                                                                                                                                                |
-| `scripts/`        | The scripts that the tasks run: golden files, mutation fixtures, behavior comparison, the lexer snapshot, the measure scripts, packaging, and the VS Code smoke test.                                                                                                     |
+| `scripts/`        | The scripts that the tasks run: golden files, the surface and lexer snapshots, behavior comparison, mutation, coverage, the log tools, the measure scripts, the release, packaging, and the VS Code smoke test.                                                                                                     |
 | `tests/`          | Deno tests and test helpers.                                                                                                                                                                                                                                           |
 | `bench/`          | The measurement harnesses. They are not part of the core.                                                                                                                                                                                           |
 | `fixtures/`       | Input files for the tests.                                                                                                                                                                                                                                             |
@@ -112,7 +112,7 @@ The directories of `fixtures/` are these.
 | `golden/`             | The expected emitted TypeScript of each example and the host companion. It also contains the separate `traverse` golden module.                                                                             |
 | `emit/`               | Inputs of the emitter tests: `contextual-options.eff` and the `schema-*.eff` files (19 single-file programs), and the project directories `forms/`, `host-checks/`, `host-companion/`, `nominal-operators/`, `sinks/`, `traverse/`, and `unmatched/`. Only `traverse/` also has a golden module. |
 | `host-boundary/`      | A wrong host module, captured `deno check` output, and `manifest.json`.                                                                                                                                    |
-| `ir/`                 | `examples-baseline.json`, the IR, emitted text, source map, and interface hash of the examples, which `golden:update` writes, and the log example in `example/` with its IR fixture.                                                                                                                                                                        |
+| `ir/`                 | `examples-baseline.json`, the IR, emitted text, source map, and interface hash of the examples, a resource case, and the `empty-effect.eff` and `tagged.eff` programs, which `golden:update` writes. It also holds the log example in `example/` with its IR fixture.                                                                                                                                                                        |
 | `applications/`       | The application fixtures include three gate applications, the order-lifecycle witness for types with identity, and the portable-publisher witness for memory and SQLite. |
 | `tutorial/`           | The project that `docs/tutorial.md` quotes. `tests/tutorial_test.ts` and `tests/tutorial_slow_test.ts` keep the two equal.                                                                                     |
 | `host-adapter-files/` | A project with a typed host adapter for `effect/FileSystem`.                                                                                                                                               |
@@ -152,8 +152,7 @@ token. The marker goes above the incomplete line.
 
 The files `fixtures/parse/recovery-*.eff` use the same markers. The files
 `fixtures/parse/ok-*` and the files in `fixtures/examples/` must parse with no
-diagnostics. The project files `fixtures/examples/effektive.json` and
-`fixtures/ir/effektive.json` set the module roots.
+diagnostics. The project file `fixtures/examples/effektive.json` registers the host interface of the examples.
 
 ## Target lock
 
