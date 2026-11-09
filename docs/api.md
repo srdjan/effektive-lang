@@ -135,10 +135,9 @@ src/cli/       The command-line tool. The Layout section of development.md says 
 src/host/      The host adapters that the command-line tool and the language server share.
   generation.ts  A tagged generation result over the revision's four lazy queries; the narrow source port of file writing.
   io.ts          The ports: file system, deno check runner, and watch source.
-  deno_io.ts     The real ports: Deno file system, log file system, subprocess, and Deno.watchFs.
+  deno_io.ts     The real ports: Deno file system, log file system, subprocess, and Deno.watchFs with the debouncing of its events.
   workspace.ts   Source/configuration walks and separate local target-check inputs.
   disk_program.ts DiskProgram: the program of the files on disk; one read, one diff, one update for the CLI session and the language server.
-  events.ts      Debouncing of file system events.
   outputs.ts     writeGenerated: the write of the .ts and .ts.map files, shared by build and the language server.
   save_round.ts  runSaveRound: the removal of stale outputs and the write, with the removal rule of each caller.
   ports.ts       The port types that io.ts and log.ts share: FileFailure and EventLog.

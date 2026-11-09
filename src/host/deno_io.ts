@@ -3,7 +3,6 @@
 // `main.ts` call Deno APIs.
 
 import { errorMessage, type ReadError, type Result } from "../core/mod.ts";
-import { debounceBatches } from "./events.ts";
 import type {
   DenoCheckRequest,
   DenoCheckRun,
@@ -186,6 +185,49 @@ async function denoCheck(
 const WATCH_DEBOUNCE_MS = 100;
 /** A fallback rescan when the platform does not deliver file system events. */
 const WATCH_POLL_MS = 1_000;
+
+/**
+ * Debouncing of file system events. An editor save often gives several events
+ * in a row. This joins the events that arrive within `delayMs` of the previous
+ * one into one batch of sorted, unique paths.
+ */
+export async function* debounceBatches(
+  source: AsyncIterable<readonly string[]>,
+  delayMs: number,
+): AsyncGenerator<readonly string[]> {
+  const iterator = source[Symbol.asyncIterator]();
+  try {
+    let pending: Promise<IteratorResult<readonly string[]>> | undefined;
+    while (true) {
+      pending ??= iterator.next();
+      const first = await pending;
+      pending = undefined;
+      if (first.done) return;
+      const batch = new Set<string>(first.value);
+      let ended = false;
+      while (true) {
+        pending = iterator.next();
+        let id: ReturnType<typeof setTimeout> | undefined;
+        const quiet = new Promise<"quiet">((resolve) => {
+          id = setTimeout(() => resolve("quiet"), delayMs);
+        });
+        const raced = await Promise.race([pending, quiet]);
+        clearTimeout(id);
+        if (raced === "quiet") break;
+        pending = undefined;
+        if (raced.done) {
+          ended = true;
+          break;
+        }
+        for (const path of raced.value) batch.add(path);
+      }
+      yield [...batch].sort();
+      if (ended) return;
+    }
+  } finally {
+    await iterator.return?.();
+  }
+}
 
 async function* sourceEvents(root: string): AsyncGenerator<readonly string[]> {
   const absolute = denoFs.absolute(root);

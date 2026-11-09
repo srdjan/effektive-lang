@@ -3,7 +3,7 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { parseArgs, replayArguments } from "../src/cli/args.ts";
-import { debounceBatches } from "../src/host/events.ts";
+import { debounceBatches } from "../src/host/deno_io.ts";
 import { formatDiagnostics } from "../src/cli/format.ts";
 import { main } from "../src/cli/main.ts";
 import { isWorkspaceInput } from "../src/host/workspace.ts";
