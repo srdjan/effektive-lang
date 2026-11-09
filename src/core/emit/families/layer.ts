@@ -10,7 +10,7 @@ import type { ExprCore } from "./context.ts";
 
 type LayerStructuralKind = "layer";
 
-export type LayerLeafKind = LeafOf<"provide">;
+type LayerLeafKind = LeafOf<"provide">;
 
 export function layerStructural(
   c: ExprCore,

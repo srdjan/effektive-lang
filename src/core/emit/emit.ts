@@ -194,7 +194,7 @@ function emitFailureAsResult<T, E>(
 }
 
 /** No backend type text exists: the declaration is missing, or it is neither a function nor a constant. */
-export type NoDeclarationType = { readonly tag: "unavailable" };
+type NoDeclarationType = { readonly tag: "unavailable" };
 
 /** One line, as the emitter prints the declaration header, without the width limit. */
 const FLAT_WIDTH = 1_000_000;

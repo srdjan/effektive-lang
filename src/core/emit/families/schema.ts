@@ -20,7 +20,7 @@ import type { ExprCore } from "./context.ts";
 
 type SchemaStructuralKind = "schema";
 
-export type SchemaLeafKind = LeafOf<
+type SchemaLeafKind = LeafOf<
   "schema-make" | "schema-decode" | "schema-encode"
 >;
 

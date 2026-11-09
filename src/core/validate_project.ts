@@ -26,7 +26,7 @@ import { isRecord } from "./validate/guards.ts";
 import { PRELUDE_MODULE } from "./validate/world_table.ts";
 
 /** The part of a project that the validator reads: its modules. */
-export type ProjectModules = Pick<Project, "modules">;
+type ProjectModules = Pick<Project, "modules">;
 
 /** The prefix of a host import. It names a host module and has no producer IR. */
 const HOST_PREFIX = "host:";

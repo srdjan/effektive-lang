@@ -130,14 +130,14 @@ export class TypeScriptOutputs {
 }
 
 /** The generated text that a client shows for one module. */
-export interface GeneratedOutput {
+interface GeneratedOutput {
   readonly text: string;
   /** True when the text comes from an earlier emit, because the newest emit failed. */
   readonly stale: boolean;
 }
 
 /** The new last good text of a module and the output to show after one emit. */
-export interface OutputStep {
+interface OutputStep {
   readonly lastGood: string | undefined;
   /** `null`: no emit of the module has ever succeeded. */
   readonly output: GeneratedOutput | null;

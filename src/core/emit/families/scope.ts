@@ -20,7 +20,7 @@ function releaseWithOutcome(c: ExprCore, release: ClosureExpr): Emitted {
   return emitted(c.arrow(`(${resource}, ${exit})`, call), PREC.yield);
 }
 
-export type ScopeLeafKind = LeafOf<"fork-scoped" | "with-resource">;
+type ScopeLeafKind = LeafOf<"fork-scoped" | "with-resource">;
 
 export function scopeLeaf(
   c: ExprCore,

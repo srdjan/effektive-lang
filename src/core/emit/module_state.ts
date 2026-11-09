@@ -88,7 +88,7 @@ interface HelperNames {
 export type HelperKey = keyof HelperNames;
 
 /** The key of a module-level field helper. The key names the helper in the emitted text. */
-export type FieldHelperKey =
+type FieldHelperKey =
   | "record"
   | "optionalField"
   | "suppliedFields"

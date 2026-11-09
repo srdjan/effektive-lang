@@ -18,7 +18,7 @@ import type { ExprCore } from "./context.ts";
 
 type EffectStructuralKind = "defer" | "retry-schedule" | "race-all";
 
-export type EffectLeafKind = LeafOf<
+type EffectLeafKind = LeafOf<
   | "retry"
   | "retry-with-schedule"
   | "run"
