@@ -15,7 +15,11 @@
 
 import { fileNameOf, relativeSpecifier } from "../paths.ts";
 import { lineIndexOf, lineStarts, type Result } from "../source.ts";
-import { recordAtOffset, type SpanTable, zeroBasedPosition } from "./spans.ts";
+import {
+  recordIndexAtOffset,
+  type SpanTable,
+  zeroBasedPosition,
+} from "./spans.ts";
 
 // ------------------------------------------------------------------ base64 VLQ
 
@@ -58,6 +62,13 @@ export type SourceMapError = {
   readonly source: string;
 };
 
+/** A source of the map: its place in `sources`, its text, and its line starts. */
+interface SourceInfo {
+  readonly index: number;
+  readonly text: string;
+  readonly starts: Uint32Array;
+}
+
 interface SourceMapOptions {
   /** Add the source texts as `sourcesContent`. Default: false. */
   readonly includeContent?: boolean;
@@ -73,20 +84,23 @@ export function buildSourceMap(
   sourceTexts: ReadonlyMap<string, string>,
   options: SourceMapOptions = {},
 ): Result<SourceMapV3, SourceMapError> {
-  const sourceIndex = new Map<string, number>();
+  const infoOf = new Map<string, SourceInfo>();
+  // The source of each record, in the order of `table.records`.
+  const recordInfo: SourceInfo[] = [];
   for (const record of table.records) {
     const source = record.span.source;
-    if (sourceIndex.has(source)) continue;
-    if (!sourceTexts.has(source)) {
-      return { ok: false, error: { tag: "missing-source", source } };
+    let info = infoOf.get(source);
+    if (info === undefined) {
+      const text = sourceTexts.get(source);
+      if (text === undefined) {
+        return { ok: false, error: { tag: "missing-source", source } };
+      }
+      info = { index: infoOf.size, text, starts: lineStarts(text) };
+      infoOf.set(source, info);
     }
-    sourceIndex.set(source, sourceIndex.size);
+    recordInfo.push(info);
   }
-  const sources = [...sourceIndex.keys()];
-  const sourceLineStarts = new Map<string, Uint32Array>();
-  for (const source of sources) {
-    sourceLineStarts.set(source, lineStarts(sourceTexts.get(source) ?? ""));
-  }
+  const sources = [...infoOf.keys()];
 
   const points = new Set<number>();
   for (const record of table.records) {
@@ -114,22 +128,20 @@ export function buildSourceMap(
       previousGenerated = 0;
       lastTarget = undefined;
     }
-    const record = recordAtOffset(table, point);
-    if (record === undefined) {
+    const recordIndex = recordIndexAtOffset(table, point);
+    if (recordIndex < 0) {
       if (lastTarget === undefined) continue;
       lines[generatedLine].push(encodeVlq(generatedColumn - previousGenerated));
       previousGenerated = generatedColumn;
       lastTarget = undefined;
       continue;
     }
-    const source = record.span.source;
-    const text = sourceTexts.get(source) ?? "";
+    const { index, text, starts } = recordInfo[recordIndex];
     const target = zeroBasedPosition(
-      sourceLineStarts.get(source) ?? new Uint32Array([0]),
+      starts,
       text.length,
-      record.span.start,
+      table.records[recordIndex].span.start,
     );
-    const index = sourceIndex.get(source) ?? 0;
     const key = `${index}:${target.line}:${target.column}`;
     if (key === lastTarget) continue;
     lines[generatedLine].push(
@@ -161,7 +173,7 @@ export function buildSourceMap(
     ok: true,
     value: {
       ...base,
-      sourcesContent: sources.map((s) => sourceTexts.get(s) ?? ""),
+      sourcesContent: [...infoOf.values()].map((info) => info.text),
     },
   };
 }

@@ -129,6 +129,12 @@ export function recordAtOffset(
   table: SpanTable,
   offset: number,
 ): SpanRecord | undefined {
+  const found = recordIndexAtOffset(table, offset);
+  return found < 0 ? undefined : table.records[found];
+}
+
+/** The index in `table.records` of that record, or -1 when no record contains the offset. */
+export function recordIndexAtOffset(table: SpanTable, offset: number): number {
   const records = table.records;
   let lo = 0;
   let hi = records.length - 1;
@@ -146,7 +152,7 @@ export function recordAtOffset(
   while (found >= 0 && records[found].end <= offset) {
     found = table.parents[found];
   }
-  return found < 0 ? undefined : records[found];
+  return found;
 }
 
 /** The source span of the innermost record that contains a generated offset. */
