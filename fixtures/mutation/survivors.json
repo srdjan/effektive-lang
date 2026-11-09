@@ -1249,5 +1249,14 @@
     "operator": "comparison",
     "class": "equivalent",
     "reason": "With <=, the test also accepts index 0. Only node 0 gets index 0, because the loop visits it first at n = 0 while every index is -1. At every later n, index[n] is -1 or at least 1, so the visits are the same."
+  },
+  {
+    "file": "src/core/emit/expr.ts",
+    "declaration": "ExprEmitter.isOptionalField",
+    "offset": 81,
+    "text": "depth >= 64",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The walk never reaches depth 64. Only a member that is a named union alias deepens it: a union nested 70 levels inline emits Option.fromUndefinedOr(u.x). declaration/012 rejects a chain of 64 such aliases (U64 is nested deeper than 128 levels), and a chain of 63 emits the option read. So >= and > give the same result."
   }
 ]
