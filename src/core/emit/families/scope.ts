@@ -1,4 +1,4 @@
-// Emission of the Scope builtins: forkScoped and withResource.
+// Emission of the Scope builtins: forkScoped and the `using` block.
 
 import { at, callArguments, type Emitted, emitted, PREC } from "../emitted.ts";
 import { internal } from "../failure.ts";

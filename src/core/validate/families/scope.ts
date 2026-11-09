@@ -1,5 +1,5 @@
 // Validation of the Scope builtins: scoped, forkScoped, the explicit scope operations,
-// and withResource. This file also holds the borrow walk of a function parameter.
+// and the `using` block. This file also holds the borrow walk of a function parameter.
 
 import {
   type ErrorId,

@@ -143,7 +143,8 @@ The explicit scope handles were done and then removed on 2026-11-02 by the
 [simplification rebase](archive/plans/2026-11-02-simplification-rebase.md), because no
 application used them. They were `makeScope`, `provideScope`,
 `addScopeFinalizer`, `closeScope`, and the `CloseableScope` type. `scoped`,
-`forkScoped`, and `withResource` stay.
+`forkScoped`, and the `using` block stay. The prelude name `withResource`
+was removed on 2026-11-09.
 
 The table lists the open items. Each item keeps its first number. The open items
 have no implementation commitment, and their forms are candidates, not accepted

@@ -137,13 +137,13 @@ export function withResourceCall(
   args: readonly Arg[],
   expected: TypeRef | undefined,
 ): NodeInfo {
-  const acquire = c.callback("withResource", args[0], [], undefined, true);
+  const acquire = c.callback("using", args[0], [], undefined, true);
   const opaque = opaqueHandle(c, acquire.result);
   if (!opaque) {
     operationRecord(c, acquire.result, args[0].node);
   }
   const use = c.callback(
-    "withResource",
+    "using",
     args[1],
     [acquire.result],
     expected,
@@ -151,7 +151,7 @@ export function withResourceCall(
   );
   const useFailures = c.functionOf(use.info.type)?.failures ?? [];
   const release = c.callback(
-    "withResource",
+    "using",
     args[2],
     releaseWantsOutcome(c, args[2])
       ? [acquire.result, outcomeType(c.table, use.result, useFailures)]
