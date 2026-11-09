@@ -12,11 +12,11 @@ import { isRecord } from "./guards.ts";
 import { AREA, moduleSpan, type Report } from "./report.ts";
 
 function isSortedUnique(items: readonly unknown[]): boolean {
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
+  let previous: string | undefined;
+  for (const item of items) {
     if (typeof item !== "string") return false;
-    const previous = items[i - 1];
-    if (i > 0 && typeof previous === "string" && previous >= item) return false;
+    if (previous !== undefined && previous >= item) return false;
+    previous = item;
   }
   return true;
 }
