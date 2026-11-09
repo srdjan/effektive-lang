@@ -140,8 +140,7 @@ export function checkSerialization(
         );
       }
       if (key === "span") {
-        const span = asSpan(child);
-        if (span === undefined) {
+        if (nodeSpan === undefined) {
           report.add(
             AREA.serialization,
             at,
@@ -149,7 +148,7 @@ export function checkSerialization(
             here,
           );
         } else {
-          checkSpan(span, at, payload);
+          checkSpan(nodeSpan, at, payload);
         }
         continue;
       }
