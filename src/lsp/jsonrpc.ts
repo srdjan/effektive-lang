@@ -89,30 +89,18 @@ function indexOfBytes(
   return -1;
 }
 
-function lowerAscii(byte: number): number {
-  return byte >= 65 && byte <= 90 ? byte + 32 : byte;
-}
-
 /** Index of `Content-Length:` in any ASCII case at or after `from`, or -1. */
 function indexOfLengthName(haystack: Uint8Array, from: number): number {
   const last = haystack.length - LENGTH_NAME.length;
   outer: for (let i = from; i <= last; i++) {
     for (let j = 0; j < LENGTH_NAME.length; j++) {
-      if (lowerAscii(haystack[i + j]) !== LENGTH_NAME.charCodeAt(j)) {
-        continue outer;
-      }
+      const byte = haystack[i + j];
+      const lower = byte >= 65 && byte <= 90 ? byte + 32 : byte;
+      if (lower !== LENGTH_NAME.charCodeAt(j)) continue outer;
     }
     return i;
   }
   return -1;
-}
-
-function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
-  if (a.length === 0) return b;
-  const joined = new Uint8Array(a.length + b.length);
-  joined.set(a, 0);
-  joined.set(b, a.length);
-  return joined;
 }
 
 /** Reads the header block. Returns the body length in bytes. */
@@ -146,17 +134,6 @@ function parseHeader(block: Uint8Array): Result<number, FrameError> {
     : { ok: true, value: length };
 }
 
-function decodeBody(body: Uint8Array): Result<unknown, FrameError> {
-  try {
-    return { ok: true, value: JSON.parse(textDecoder.decode(body)) };
-  } catch (error) {
-    return {
-      ok: false,
-      error: { tag: "bad-json", message: errorMessage(error) },
-    };
-  }
-}
-
 /** Splits a byte stream into messages. Holds the bytes of a partial frame. */
 export class FrameDecoder {
   #buffer: Uint8Array = new Uint8Array(0);
@@ -164,7 +141,14 @@ export class FrameDecoder {
 
   /** Adds a chunk. Returns the messages that the chunk completed, in order. */
   push(chunk: Uint8Array): Result<unknown, FrameError>[] {
-    this.#buffer = concat(this.#buffer, chunk);
+    if (this.#buffer.length === 0) {
+      this.#buffer = chunk;
+    } else {
+      const joined = new Uint8Array(this.#buffer.length + chunk.length);
+      joined.set(this.#buffer, 0);
+      joined.set(chunk, this.#buffer.length);
+      this.#buffer = joined;
+    }
     const out: Result<unknown, FrameError>[] = [];
     for (;;) {
       if (this.#skipping) {
@@ -204,7 +188,14 @@ export class FrameDecoder {
       if (this.#buffer.length < frameEnd) return out;
       const body = this.#buffer.subarray(bodyStart, frameEnd);
       this.#buffer = this.#buffer.subarray(frameEnd);
-      out.push(decodeBody(body));
+      try {
+        out.push({ ok: true, value: JSON.parse(textDecoder.decode(body)) });
+      } catch (error) {
+        out.push({
+          ok: false,
+          error: { tag: "bad-json", message: errorMessage(error) },
+        });
+      }
     }
   }
 

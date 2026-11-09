@@ -19,7 +19,6 @@ import {
 } from "@std/path";
 import type { HostFs } from "../host/io.ts";
 import { DiskProgram } from "../host/disk_program.ts";
-import type { HeldReason } from "../host/outputs.ts";
 import { ownedByRoot, runSaveRound } from "../host/save_round.ts";
 import { isWorkspaceInput, readWorkspace } from "../host/workspace.ts";
 import {
@@ -175,15 +174,6 @@ interface ProjectSetPorts {
   flushed(project: ProjectState, revision: Revision): void;
 }
 
-function sameTexts(
-  a: ReadonlyMap<string, string>,
-  b: ReadonlyMap<string, string>,
-): boolean {
-  if (a.size !== b.size) return false;
-  for (const [path, text] of a) if (b.get(path) !== text) return false;
-  return true;
-}
-
 /** The root-relative path of the source file `absolute` under `root`, or undefined. */
 function sourcePathUnder(root: string, absolute: string): string | undefined {
   const path = relative(root, absolute);
@@ -224,18 +214,6 @@ function groupDiagnostics(
     else list.push(converted);
   }
   return groups;
-}
-
-/** Why a module is not written, for the log. */
-function heldMessage(name: string, reason: HeldReason): string {
-  switch (reason.tag) {
-    case "diagnostics":
-      return `${name} is not written: it has ${reason.count} diagnostics`;
-    case "import":
-      return `${name} is not written: it imports ${reason.target}, which is not written`;
-    case "lowering":
-      return `${name} is not written: it cannot be lowered`;
-  }
 }
 
 export class ProjectSet {
@@ -559,7 +537,9 @@ export class ProjectSet {
       return;
     }
     const workspace = read.value.files;
-    if (!sameTexts(project.disk, workspace)) {
+    const sameTexts = project.disk.size === workspace.size &&
+      [...project.disk].every(([path, text]) => workspace.get(path) === text);
+    if (!sameTexts) {
       // The overlay program must see the new disk text at the next flush.
       project.disk = workspace;
       project.dirty = true;
@@ -595,7 +575,19 @@ export class ProjectSet {
     for (const [name, why] of round.held) {
       if (!owns(name)) continue;
       held.add(name);
-      const reason = heldMessage(name, why);
+      let reason: string;
+      switch (why.tag) {
+        case "diagnostics":
+          reason = `${name} is not written: it has ${why.count} diagnostics`;
+          break;
+        case "import":
+          reason =
+            `${name} is not written: it imports ${why.target}, which is not written`;
+          break;
+        case "lowering":
+          reason = `${name} is not written: it cannot be lowered`;
+          break;
+      }
       if (session.heldReasons.get(name) === reason) continue;
       session.heldReasons.set(name, reason);
       log(3, reason);

@@ -259,10 +259,6 @@ function fail<T>(error: string): Narrowed<T> {
   return { ok: false, error };
 }
 
-function isIndex(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value >= 0;
-}
-
 function isInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value);
 }
@@ -340,7 +336,11 @@ const uri = primitive(
   "a non-empty string",
 );
 const integer = primitive(isInteger, "an integer");
-const index = primitive(isIndex, "a non-negative integer");
+const index = primitive(
+  (value): value is number =>
+    typeof value === "number" && Number.isInteger(value) && value >= 0,
+  "a non-negative integer",
+);
 const fileChangeType = primitive(
   (value): value is FileChangeTypeValue =>
     value === 1 || value === 2 || value === 3,
