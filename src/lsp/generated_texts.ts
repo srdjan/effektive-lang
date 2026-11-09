@@ -72,8 +72,9 @@ export class GeneratedTexts {
       entry = { lastGood: undefined, received: undefined };
       this.#entries.set(uri, entry);
     }
-    const revision = found?.project.lastGood;
-    if (found === undefined || revision === undefined) return null;
+    if (found === undefined) return null;
+    const revision = found.project.lastGood;
+    if (revision === undefined) return null;
     const result = this.#current(
       revision,
       found.path,

@@ -107,10 +107,11 @@ function cursorOf(
   current = false,
 ): Cursor | undefined {
   const found = ctx.projects.forRequest(params.textDocument.uri);
-  if (current && found?.project.configError !== undefined) return undefined;
-  const revision = found?.project.lastGood;
-  if (found === undefined || revision === undefined) return undefined;
+  if (found === undefined) return undefined;
   const { project, path } = found;
+  if (current && project.configError !== undefined) return undefined;
+  const revision = project.lastGood;
+  if (revision === undefined) return undefined;
   const text = revision.sourceTexts().get(path);
   if (text === undefined) return undefined;
   if (current) {
