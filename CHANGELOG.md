@@ -6,6 +6,8 @@
   Before, the editor colored `from` as a name in an import, and the playground colored it as a keyword in every position.
 - A type message prints a name in a `fails`, `with`, or `provides` list as `module#Name` when another name in the message has the same short name.
   Before, two different errors named `E` from two modules printed as the same `E`.
+- The language server removes a project when its last open document closes after its `effektive.json` was deleted, and it clears the lists that the project published.
+  Before, the project stayed, its configuration error stayed on the deleted `effektive.json`, and requests for the document opened again were answered from that project.
 
 ## 0.15.4 - 2026-11-07
 

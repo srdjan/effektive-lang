@@ -377,6 +377,8 @@ export class ProjectSet {
     // reached `disk`. Read the file again.
     this.#reread(project, path);
     project.dirty = true;
+    // A project without `effektive.json` dies with its last open document.
+    this.#forgetCleared(this.#removeDeadProjects());
   }
 
   /** Reads one file of a project from disk again. A missing file leaves `disk`. */

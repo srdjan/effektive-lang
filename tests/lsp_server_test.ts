@@ -970,6 +970,21 @@ Deno.test("a deleted root effektive.json keeps its open document and publishes t
   );
 });
 
+Deno.test("closing the last document of a project without effektive.json removes the project and clears its lists", () => {
+  const h = started();
+  h.deliver(didOpen(MAIN, 1, MAIN_TEXT));
+  h.files.delete(`${ROOT}/effektive.json`);
+  h.deliver(watched({ uri: uriOf(`${ROOT}/effektive.json`), type: 3 }));
+  h.clearSent();
+  h.deliver(didClose(MAIN));
+  assertEquals(h.server.projects.projects().map((p) => p.root), []);
+  assertEquals(h.published().map(summary), [
+    [uriOf(`${ROOT}/effektive.json`), undefined, 0],
+  ]);
+  h.deliver(didOpen(MAIN, 2, MAIN_TEXT));
+  assertEquals(h.server.projects.lookup(MAIN), undefined);
+});
+
 Deno.test("a document opened before its effektive.json exists joins the new project with its unsaved text", () => {
   const x = uriOf(`${REBIND_ROOT}/x.eff`);
   const h = makeHarness({ files: { [`${REBIND_ROOT}/x.eff`]: REBIND_OK } });
