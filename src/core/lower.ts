@@ -308,6 +308,14 @@ class BodyLowerer {
     return this.body.facts.get(node);
   }
 
+  private factOf<K extends FactKind>(node: NodeId, kind: K): FactOf<K> {
+    const fact = this.fact(node);
+    if (fact?.kind !== kind) {
+      throw internal(`no ${kind} fact at ${this.describe(node)}`);
+    }
+    return fact as FactOf<K>;
+  }
+
   private describe(node: NodeId): string {
     const span = this.span(node);
     return `${span.source}:${span.start}-${span.end}`;
@@ -450,10 +458,7 @@ class BodyLowerer {
       case SyntaxKind.RecordExpr:
         return this.record(node);
       case SyntaxKind.ListExpr: {
-        const fact = this.fact(node);
-        if (fact?.kind !== "list") {
-          throw internal(`no list fact at ${this.describe(node)}`);
-        }
+        const fact = this.factOf(node, "list");
         return {
           kind: fact.shape,
           elements: this.kids(node).map((child) => this.expr(child)),
@@ -509,10 +514,7 @@ class BodyLowerer {
         "resource region",
         node,
       );
-      const fact = this.fact(region);
-      if (fact?.kind !== "arrow") {
-        throw internal("missing implicit resource callback");
-      }
+      const fact = this.factOf(region, "arrow");
       const source = fact.parameters[0];
       const outcome = fact.parameters[1];
       const outcomeName = kidsOfKind(this.ctx.tree, region, SyntaxKind.Name)[0];
@@ -557,10 +559,7 @@ class BodyLowerer {
   }
 
   private closure(node: NodeId): Expr {
-    const fact = this.fact(node);
-    if (fact?.kind !== "arrow") {
-      throw internal(`no arrow fact at ${this.describe(node)}`);
-    }
+    const fact = this.factOf(node, "arrow");
     const params = paramNodes(
       this.ctx.tree,
       functionParts(this.ctx.tree, node).paramList,
@@ -853,10 +852,7 @@ class BodyLowerer {
   }
 
   private field(node: NodeId): Expr {
-    const fact = this.fact(node);
-    if (fact?.kind !== "field") {
-      throw internal(`no field fact at ${this.describe(node)}`);
-    }
+    const fact = this.factOf(node, "field");
     const base = this.required(this.kids(node)[0], "the record", node);
     return {
       kind: "get",
@@ -1111,10 +1107,7 @@ class BodyLowerer {
   }
 
   private recordBinding(node: NodeId): Step[] {
-    const fact = this.fact(node);
-    if (fact?.kind !== "record-binding") {
-      throw internal("missing record binding fact");
-    }
+    const fact = this.factOf(node, "record-binding");
     const init = this.kids(node).at(-1)!;
     const captured = this.parameter(
       fact.captured.id,
@@ -1149,10 +1142,7 @@ class BodyLowerer {
 
   /** A `const` in a block. The binding span covers the name and its annotation. */
   private binding(node: NodeId): Step {
-    const fact = this.fact(node);
-    if (fact?.kind !== "binding") {
-      throw internal(`no binding fact at ${this.describe(node)}`);
-    }
+    const fact = this.factOf(node, "binding");
     const parts = this.kids(node);
     const nameNode = this.required(
       parts.find((k) => kindOf(this.ctx.tree, k) === SyntaxKind.Name),
@@ -1189,10 +1179,7 @@ class BodyLowerer {
 
   private optionFallback(node: NodeId): Expr {
     const [left, right] = this.kids(node);
-    const fact = this.fact(node);
-    if (fact?.kind !== "option-fallback") {
-      throw internal("missing Option fallback fact");
-    }
+    const fact = this.factOf(node, "option-fallback");
     const span = this.span(node);
     const binding = this.parameter(
       fact.binding.id,
@@ -1244,10 +1231,7 @@ class BodyLowerer {
   }
 
   private pattern(node: NodeId): Pattern {
-    const fact = this.fact(node);
-    if (fact?.kind !== "pattern") {
-      throw internal(`no pattern fact at ${this.describe(node)}`);
-    }
+    const fact = this.factOf(node, "pattern");
     const pattern = fact.pattern;
     const span = this.span(node);
     const names = kidsOfKind(this.ctx.tree, node, SyntaxKind.Name);
@@ -1394,10 +1378,7 @@ class BodyLowerer {
   }
 
   private defectHandler(node: NodeId): DefectHandler {
-    const fact = this.fact(node);
-    if (fact?.kind !== "handler") {
-      throw internal(`no handler fact at ${this.describe(node)}`);
-    }
+    const fact = this.factOf(node, "handler");
     const parts = this.kids(node);
     const bodyNode = parts.filter((k) =>
       kindOf(this.ctx.tree, k) !== SyntaxKind.Name
@@ -1413,10 +1394,7 @@ class BodyLowerer {
   }
 
   private handler(node: NodeId): Handler {
-    const fact = this.fact(node);
-    if (fact?.kind !== "handler") {
-      throw internal(`no handler fact at ${this.describe(node)}`);
-    }
+    const fact = this.factOf(node, "handler");
     const parts = this.kids(node);
     const nameNodes = parts.filter((k) =>
       kindOf(this.ctx.tree, k) === SyntaxKind.Name
