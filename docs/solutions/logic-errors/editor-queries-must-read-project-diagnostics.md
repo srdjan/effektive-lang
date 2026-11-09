@@ -48,7 +48,7 @@ diagnosticInside(revision, module.path, signature.span);
 
 ## Why This Works
 
-`CheckedModule.diagnostics` holds the declaration and body diagnostics of one module (`src/core/check_project.ts:122-123`). The resolver reports name errors to the project list only. `CheckedProject.diagnostics` holds all diagnostics of the project (`src/core/check_project.ts:132-133`), and `Revision.diagnostics` returns that list (`src/core/db.ts:152-155`). A syntax error inside a function also leaves the module list empty, but the declaration is then broken, and each query skips a broken declaration through the module index. Lowering already reads both lists before it accepts a module (`src/core/lower.ts:1711-1714`).
+`CheckedModule.diagnostics` holds the declaration and body diagnostics of one module (`src/core/check_project.ts:113-114`). The resolver reports name errors to the project list only. `CheckedProject.diagnostics` holds all diagnostics of the project (`src/core/check_project.ts:123-124`), and `Revision.diagnostics` returns that list (`src/core/db.ts:174-177`). A syntax error inside a function also leaves the module list empty, but the declaration is then broken, and each query skips a broken declaration through the module index. Lowering already reads both lists before it accepts a module: `CheckedProject.blocked` (`src/core/check_project.ts:126-130`) counts them, and lowering reads it at `src/core/lower.ts:1601-1604`.
 
 ## Prevention
 
