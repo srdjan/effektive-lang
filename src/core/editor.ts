@@ -151,17 +151,16 @@ function hoverPass(
   const found = innermostNode(
     module.tree,
     tables.flatMap((table) =>
-      [...table.info.keys()].map((node) => ({ node, table }))
+      [...table.info].map(([node, info]) => ({ node, info }))
     ),
     (candidate) => candidate.node,
     offset,
     afterEnd,
   );
   if (found === undefined) return undefined;
-  const info = found.table.info.get(found.node);
-  if (info === undefined) return undefined;
+  const { node, info } = found;
   return {
-    span: nodeSpan(module.tree, found.node),
+    span: nodeSpan(module.tree, node),
     contract: cleanErrors(
       `${showType(table, info.type)}${
         effectText(info.failures, info.requirements)
@@ -208,16 +207,13 @@ export function definitionAt(
   for (const afterEnd of PASSES) {
     const best = innermostNode(
       tree,
-      resolution.targets.keys(),
-      (node) => node,
+      resolution.targets,
+      ([node]) => node,
       offset,
       afterEnd,
     );
     if (best === undefined) continue;
-    const target = resolution.targets.get(best);
-    return target === undefined
-      ? undefined
-      : declarationOf(revision, module.module, target);
+    return declarationOf(revision, module.module, best[1]);
   }
   return undefined;
 }

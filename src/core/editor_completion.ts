@@ -1,5 +1,6 @@
 import { isIdentPart, TokenKind } from "./lex.ts";
 import type { Revision } from "./db.ts";
+import type { ModuleInfo } from "./project.ts";
 import { declarationOf, occurrenceAt, symbolIndex } from "./editor_index.ts";
 import { isTypeKind, kidsOf, nameTextOf } from "./syntax_queries.ts";
 import {
@@ -370,9 +371,8 @@ function addContextNames(
 
 function serviceImportCompletions(
   site: Site,
+  info: ModuleInfo,
 ): readonly Completion[] | undefined {
-  const info = site.revision.moduleInfo(site.module);
-  if (info === undefined) return undefined;
   const index = info.index.imports.findIndex((entry) =>
     entry.role === "service" && entry.span.start <= site.offset &&
     site.offset <= entry.span.end
@@ -410,7 +410,7 @@ export function completionsAt(
   const { tree } = info;
   if (insideCommentOrString(tree, offset)) return [];
   const site = siteAt(revision, path, offset, info.name, tree);
-  const serviceImports = serviceImportCompletions(site);
+  const serviceImports = serviceImportCompletions(site, info);
   if (serviceImports !== undefined) return serviceImports;
   let bindingNode = containingNode(tree, offset);
   while (
