@@ -95,8 +95,7 @@ export function solveModeGroup<R>(
     const result = round(solved);
     const next = new Map(solved);
     let changed = false;
-    for (const id of pending) {
-      const before = solved.get(id) ?? PURE;
+    for (const [id, before] of solved) {
       const after = join(before, result.computed.get(id) ?? PURE);
       if (!same(after, before)) changed = true;
       next.set(id, after);
