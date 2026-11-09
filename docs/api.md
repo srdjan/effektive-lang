@@ -126,13 +126,12 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     decls.ts       Declarations, their order, the export rule, and predicateDoc: exact integer comparisons that print a refinement predicate.
     walk.ts        Traversals of the IR.
 src/cli/       The command-line tool. The Layout section of development.md says where Deno APIs may appear.
-  main.ts        main(args, io) returns the exit code, the watch loop over an injected event source, and the printing of a build outcome: diagnostics on stdout, the rest on stderr. The last lines wire the real io.
+  main.ts        main(args, io) returns the exit code, the watch loop over an injected event source, the rounds of `check --fix`, and the printing of a build outcome: diagnostics on stdout, the rest on stderr. The last lines wire the real io.
   args.ts        The command line: commands, root, and flags.
   session.ts     One project directory and one program: sync, then build.
   build.ts       One build: write the files, run deno check.
   tsc.ts         The generated deno check configuration and the mapping of its output.
   format.ts      The output line of a diagnostic.
-  fix.ts         The rounds of `check --fix`: the contract quick fix applied to all modules.
 src/host/      The host adapters that the command-line tool and the language server share.
   generation.ts  A tagged generation result over the revision's four lazy queries; the narrow source port of file writing.
   io.ts          The ports: file system, deno check runner, and watch source.

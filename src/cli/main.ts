@@ -10,7 +10,15 @@
 // error is an unexpected throw. It gets its own code so that it never reads as
 // a diagnostic.
 
-import { errorMessage } from "../core/mod.ts";
+import {
+  applySourceEdits,
+  compareText,
+  contractActionsAt,
+  errorMessage,
+  reviseWithEdits,
+  type Revision,
+  type SourceEdit,
+} from "../core/mod.ts";
 import { parseArgs, type ProjectCommand, USAGE } from "./args.ts";
 import type { BuildOptions, BuildOutcome } from "./build.ts";
 import { denoIo } from "../host/deno_io.ts";
@@ -19,7 +27,6 @@ import type { HostIo } from "../host/io.ts";
 import { noLog } from "../host/log.ts";
 import { emit } from "../host/log_schema.ts";
 import type { EventLog } from "../host/ports.ts";
-import { fixContracts, type FixOutcome } from "./fix.ts";
 import { Session, type SyncResult } from "./session.ts";
 
 const EXIT_OK = 0;
@@ -247,6 +254,51 @@ async function runProject(
   const outcome = await session.build(revision, options, []);
   printOutcome(io, outcome, revision.moduleNames().length, fixed?.summary);
   return outcome.failed || fixed?.failed === true ? EXIT_DIAGNOSTICS : EXIT_OK;
+}
+
+interface FixOutcome {
+  /** The new text of each `.eff` file that changed, by root-relative path. */
+  readonly texts: ReadonlyMap<string, string>;
+  /** The number of distinct functions that received an edit, over all rounds. */
+  readonly functions: number;
+}
+
+/**
+ * Adds the missing entries to the written `fails` and `with` clauses of
+ * functions. An omitted `fails` clause is inferred, so it never misses an
+ * entry. An exported function with no `with` clause misses its services. A
+ * round applies the actions of all modules and checks the edited inputs again.
+ * The loop ends after a round that changes no text. A fix in one module can
+ * make a closed caller in another module miss an entry, and the next round
+ * fixes that caller.
+ */
+function fixContracts(first: Revision): FixOutcome {
+  const original = first.inputs();
+  const functions = new Set<string>();
+  let revision = first;
+  while (true) {
+    const inputs = revision.inputs();
+    const edits: SourceEdit[] = [];
+    const touched: string[] = [];
+    for (const path of [...inputs.keys()].sort(compareText)) {
+      const text = inputs.get(path) ?? "";
+      const actions = contractActionsAt(revision, path, 0, text.length, true);
+      const own = actions.flatMap((a) => a.edits);
+      if (applySourceEdits(text, own) === text) continue;
+      edits.push(...own);
+      for (const action of actions) touched.push(action.function);
+    }
+    if (touched.length === 0) break;
+    const updated = reviseWithEdits(revision, edits);
+    if (!updated.ok) break;
+    for (const id of touched) functions.add(id);
+    revision = updated.value;
+  }
+  const texts = new Map<string, string>();
+  for (const [path, text] of revision.inputs()) {
+    if (original.get(path) !== text) texts.set(path, text);
+  }
+  return { texts, functions: functions.size };
 }
 
 /** Writes each fixed file once. A failed write prints a message and counts as a failure. */

@@ -11,7 +11,6 @@
       "playground/src/replay.ts",
       "src/cli/args.ts",
       "src/cli/build.ts",
-      "src/cli/fix.ts",
       "src/cli/format.ts",
       "src/cli/main.ts",
       "src/cli/session.ts",
