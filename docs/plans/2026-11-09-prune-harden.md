@@ -2,7 +2,7 @@
 
 Prefixes: PH (items), PHD (decisions for the user), PHF (findings of the adversarial reviews: PHF-A from codex astra, PHF-F from Fable), PHU (units).
 
-Date: 2026-11-09. Base: `6ae0538` on local `main`. Status: accepted on 2026-11-09. The user answered "as recommended": PHD1 (a), PHD2 (a), and the execution of units PHU1 to PHU12. The acceptance authorizes one commit for each unit on local `main`, and one separate commit in `../effektive` for PHU12. It does not authorize a push, a release, or a version change. Section 11 holds the progress. The evidence is in [2026-11-09-prune-harden-evidence/](2026-11-09-prune-harden-evidence/).
+Date: 2026-11-09. Base: `6ae0538` on local `main`. Status: accepted on 2026-11-09. The user answered "as recommended": PHD1 (a), PHD2 (a), and the execution of units PHU1 to PHU12. The acceptance authorizes one commit for each unit on local `main`, and one separate commit in `../effektive` for PHU12. It does not authorize a push, a release, or a version change. Section 11 holds the progress. Units PHU1 to PHU12 are complete, and PHU10 was rejected by measurement. PHD7 (two new layout defects) is open. The evidence is in [2026-11-09-prune-harden-evidence/](2026-11-09-prune-harden-evidence/).
 
 The user asked for a list of unnecessary complexity, and for ways to reduce the design to a minimum without loss of functionality. This is the cleanup step before more features. The list ends with adversarial reviews and empirical checks.
 
@@ -89,6 +89,10 @@ PH7 (missing tests for reachable branches). The LCOV counts are from Fable (M). 
 - `src/core/emit/expr.ts:1534-1547` (9 of 14) and `src/core/resolve.ts:336-346` (6 of 11): composite arguments in `isTrivial`, and the arms of `describeKind`.
 Change: before each test, run the input through the CLI and record the diagnostic. Then write one literal test or one error fixture with the marker convention, and run `deno task mutate` on the module.
 
+PH21 (closure chains in call arguments that `deno fmt` rewrites). Found by Opus after PHU2, from an open item of the PHU2 handback. Reproduced (M). A local function `xs |> map((alpha: IntVal) => (beta: IntVal) => ({ leftSideWithLongName: alpha, rightSideWithLongName: beta, totalWithLongName: alpha + beta }))` builds with 0 diagnostics. The emitter puts each head on its own line, and `deno fmt` joins them: `(alpha) => (beta: IntVal) => ({`. This breaks design record D12. Probable cause: `chainDocOf` (`src/core/emit/expr.ts`) measures an object body flat, as `chainDeclaration` did before PHU2. Not confirmed: the check is a trace of the chosen layout.
+
+PH22 (a long type argument in a pipeline temporary that `deno fmt` rewrites). Found by the PH21 probe. Reproduced (M). When `pairs(xs)` of PH21 starts a pipeline, the annotation of `$p1` breaks inside the object type of `ReadonlyArray<(a: IntVal) => { ... }>`, and the value moves below the `=`. `deno fmt` breaks the type argument list and keeps `= pairs(xs);` on the line. This breaks D12. Cause: not read.
+
 ## 5. Pruning items
 
 PH8 (generated validator fixtures). Pilot `8e884a8`. `fixtures/validate/` holds 13,646 lines in 23 files. `scripts/validate_fixtures.ts` builds each file from a lowered program and one mutation, and `tests/validate_test.ts:1011` asserts that the files equal `buildFixtures()`. Change: the tests iterate `buildFixtures()`. `behavior:compare` runs the head revision's builder into the exported head tree before both runs, so that both revisions read the same forged inputs and `readForged` stays the same (PHF-F2). A tree that still holds the files uses them. Two oracles must stay (PHF-A3):
@@ -125,6 +129,10 @@ PHD1 (`withResource` is a second spelling of `using`). This reopens a rejected i
 PHD2 (builtins that no application calls). On 2026-11-02 the reason to keep `now`, `run`, `all`, and `log` was a corpus count. That count is false (M): each match in the applications is a service method (`Clock.now()`, `Users.all()`, `consumer.run()`) or a user export named `log`. Other uses exist outside the applications: the website specification calls `log("ready")` and documents `now()` (`effektive-spec.html:64,288,292,1419`), and `fixtures/ir/empty-effect.eff:2` calls `run(defer(...))` (M, PHF-F6). The `borrow` modifier, the duration pattern, and `try ... finally` without `using` also have no application use. A removal loses functionality, so it is outside the stated goal. Line ranges give a candidate scope, not a measured saving: `log` 232 lines, `all` 146, `run` 65, `now` about 13.
 (a) Keep all of them, and correct the false count in the record. Recommended by Opus and both reviewers.
 (b) Remove `log`, `all`, `run`, and `now` in a later pass, one pilot for each group, with the website and the IR fixture changed in the same unit.
+
+PHD7 (the two layout defects found during execution, PH21 and PH22). The approval covered PHU1 to PHU12, so these items need a decision. Both change only the layout of the emitted TypeScript, not its behavior.
+(a) Fix both now as unit PHU13: one test that fails first for each item, then the fix, with the golden files unchanged. Recommended by Opus: both break D12, and PH21 is the same defect class as PH2.
+(b) Add both to the open items in `docs/status.md`, and archive this plan.
 
 ## 7. Checked and kept
 
@@ -246,6 +254,7 @@ Each unit starts from local `main`, keeps the rules of the deeper-modules plan (
 | PHU10 | PH15, PH19 | Sonnet | `src/lsp/projects.ts`, `src/core/service_bounds.ts`, `src/core/check_expr.ts`, `src/core/contract_origins.ts` | Gate equal; mutate on the two modules; no change of order. | 40 |
 | PHU11 | PH14 | Sonnet | `tests/` | The test count stays; net lines are negative. | 40 |
 | PHU12 | PHD1 (a), if approved | Sonnet | from pilot `aadb6b1`, plus the message rename; then the website | Gate; website strict checks. | 40 |
+| PHU13 | PH21, PH22, if PHD7 (a) | Sonnet | `src/core/emit/expr.ts`, the type layout, `fixtures/emit/forms/forms.eff` | `tests/emit_slow_test.ts` fails before each fix and passes after it; the golden files do not change. | 50 |
 
 Order: PHU1 to PHU4 first (defects), then PHU5 to PHU9, then PHU10 to PHU12. PHU1, PHU2, PHU4, and PHU6 touch different files and can run in parallel worktrees.
 
@@ -254,22 +263,27 @@ Order: PHU1 to PHU4 first (defects), then PHU5 to PHU9, then PHU10 to PHU12. PHU
 | Unit | State | Commit |
 | --- | --- | --- |
 | PHU1 | done: test fails with exit 0 before the fix | `277fe30` |
-| PHU2 | running | - |
+| PHU2 | done: `tests/emit_slow_test.ts` fails before the fix; the review found and fixed a second layout defect (below) | `5a6879c`, `e6f1884`, `0c7673b` |
 | PHU3 | done: test fails with exit 3 before the fix | `db6b34c` |
 | PHU4 | done: five tests fail before their fixes | `7da7c7e` |
 | PHU5 | done for PH4 and PH17; PH18 dropped (below) | `08602e2` |
 | PHU6 | done: five of six ranges get hits; `describeKind` keeps its arms (below) | `58fcac2` |
-| PHU7 | running | - |
+| PHU7 | done: `behavior:compare c214f6b` exit 0, all records equal | `61d9d62`, `b4604e2`, `3b32358`, `25fe8e9` |
 | PHU8 | done: `deno task coverage` on `main` exit 0, lines 97.54%, branches 95.53%, functions 99.45% | `3233bf4` |
 | PHU9 | done: `behavior:compare db6b34c` exit 0, 461 records equal | `3cf3b2c`, `a775b39`, `2ed22ef`, `e53ac90` |
 | PHU10 | rejected by measurement (below) | none |
-| PHU11 | open | - |
-| PHU12 | running | - |
+| PHU11 | done: five of six groups kept, net -118 lines; the pass counts of each changed file are equal | `0a18bb1`, `181ccae`, `0223aa6`, `6aa566f`, `d5864ef`, `52e920b` |
+| PHU12 | done; website draft 0.77 is `061349a` in `../effektive` | `8198890`, `e00cd82` |
 
-`deno task check` on `main` at `58fcac2`: exit 0, 3,022 fast and 301 slow tests passed.
+`deno task check` on `main` at `58fcac2`: exit 0, 3,022 fast and 301 slow tests passed. At `7b93f36` and at `52e920b`: exit 0, 3,018 fast and 301 slow tests passed. The fast count fell by 4 at `8198890`, which removed the tests of `withResource`.
 
 Corrections found during execution:
 - PH18 is dropped. The three records are live evidence: six live links cite them, including `docs/status.md:68`, which the reviews missed, and archived documents hold 26 references. The move would break those references and serve no reader.
 - `docs/solutions/workflow-issues/behavior-capture-hold-tests-constant.md` already had a status line (line 23). Only the pipeline note needed one.
 - PHU6 reported that the arms of `describeKind` (`src/core/resolve.ts:336-346`) are unreachable. That is false for `local` and `builtin`: `serviceRef` (`resolve.ts:847`) uses `describeKind`, and the new PH7 tests print "`s` is a local binding, not a service" and "`map` is a builtin function, not a service". No arm is removed.
 - PH15 and PH19 do not pay. Trial edits measured PH15 at +1 net lines in the best form and +12 with comments, and PH19 at +13, because the two span builders share only one `map` and use different messages. The trial patches are in `~/.claude/scratch/prune-2026-11-09/`.
+- The PHU2 change printed the prefix of a local binding outside its layout choice. The printer then broke a type annotation that fits on one line: the `adder` of `wideLocalChain` took seven lines. `behavior:compare 25fe8e9` showed `emit/forms#forms` changed, and a build of the old `forms.eff` with both compilers showed the cause. `0c7673b` measures a prefix that fits with each layout, with a test that fails first. After it, the old `forms.eff` emits the base output byte for byte, and the one changed record comes from the five added closures.
+- PHU12 expected a reachable `withResource` message for `using`. None exists: `0670bf5` deleted the check, and the parser and `implicitArrow` make the two callback messages unreachable. The rename only keeps the labels from naming a removed builtin.
+- Two mutation survivors in `src/core/emit/expr.ts` were not in the register. They are older than this work, and a sample found them after the site count changed. Both are equivalent, with probes as evidence: the depth guard of `isOptionalField` (`7b93f36`) and the internal guard of `optionMatch` (`51d3e67`).
+- PHU11 merged one `diagnosticsOf` copy whose failure message differs from the shared form for a project that cannot load. All other behavior is equal, so the merge stays. Five converted process sites now pass `NO_COLOR=1`, which changes only color output.
+- The website keeps `effektive-validation.txt:152`, which names `withResource` in the dated record of draft 0.3.
