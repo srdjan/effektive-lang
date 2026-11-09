@@ -461,6 +461,25 @@ Deno.test("a generated view of a document without a project updates after the do
   assertEquals(h.notifications("effektive/generatedChanged"), [{ uri: x }]);
 });
 
+Deno.test("a generated TypeScript request for a URI that is not a file gets null", () => {
+  const h = started();
+  assertEquals(generated(h, 1, "untitled:Untitled-1"), null);
+});
+
+Deno.test("a subscribed document without a project does not stop generatedChanged of another project", () => {
+  const x = uriOf("/work/other/x.eff");
+  const h = makeHarness({
+    files: { ...exampleFilesAt(ROOT), "/work/other/x.eff": Y_ONE },
+  });
+  h.start();
+  h.deliver(didOpen(x, 1, Y_ONE), didOpen(MAIN, 1, MAIN_TEXT));
+  assertEquals(generated(h, 1, x), null);
+  assert(generated(h, 2) !== null);
+  h.clearSent();
+  h.deliver(didChangeFull(MAIN, 2, MAIN_TEXT.replace('"u1"', '"u2"')));
+  assertEquals(h.notifications("effektive/generatedChanged"), [{ uri: MAIN }]);
+});
+
 Deno.test("generated TypeScript of a host interface file is its companion module", () => {
   const h = started();
   h.deliver(didOpen(PROVIDERS, 1, PROVIDERS_TEXT));
