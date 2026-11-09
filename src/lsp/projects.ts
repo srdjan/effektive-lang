@@ -674,10 +674,10 @@ export class ProjectSet {
       (path) => used.get(path) ?? wanted.get(path) ?? "",
     );
     const listOf = (path: string): Diagnostic[] => groups.get(path) ?? [];
-    const openPaths = [...project.open.keys()].sort(compareText);
-    for (const path of openPaths) {
-      const document = project.open.get(path);
-      if (document === undefined) continue;
+    const openDocuments = [...project.open].sort(([a], [b]) =>
+      compareText(a, b)
+    );
+    for (const [path, document] of openDocuments) {
       const newVersion = project.publishedVersions.get(path) !==
         document.version;
       this.#publishList(
