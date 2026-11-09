@@ -82,7 +82,7 @@ Opus reviewed each unit diff line by line and cherry-picked it into `main`. Opus
 
 ### Kept on purpose
 
-After the four units, 29 try blocks remained. The second pass below removed 26 of them, and 3 remain; see [the try ledger](2026-11-09-deeper-modules-evidence/try-blocks.md).
+After the four units, 29 try blocks remained. The second pass below removed 28 of them, and 1 remains; see [the try ledger](2026-11-09-deeper-modules-evidence/try-blocks.md).
 
 The units kept a one-use helper in these cases: it is an entry of a dispatch table, a grammar production, a type guard that narrows, a generic that carries correlated typing, or a body with early returns. A helper also stayed when a declaration with a register row calls it. Each unit handback lists its kept helpers with the reason.
 
@@ -94,13 +94,14 @@ The first pass found no other redundant check. The second pass below read every 
 
 The goal hook found two gaps after the first pass. First, no unit had read every check site. Second, the try blocks had no ledger. Opus ran a second pass on 2026-11-09.
 
-Opus judged each try block and wrote [the try ledger](2026-11-09-deeper-modules-evidence/try-blocks.md). The whole-word count is 31 at `de8d0e5` and 3 now:
+Opus judged each try block and wrote [the try ledger](2026-11-09-deeper-modules-evidence/try-blocks.md). The whole-word count is 31 at `de8d0e5` and 1 now:
 
 - `e16f546` removed four blocks in `src/host/deno_io.ts`.
 - `e9abd5e` added `caught` to `src/core/source.ts`. This function returns the value of a call, or its thrown value, as a `Result`. Twenty catch sites now use it.
 - `1a55b60` removed the release chain of the watch iterators, because the process exit closes the watcher.
+- The last change replaced the async try blocks of `main` and `denoCheck` with promise rejection handlers.
 
-The three kept blocks are `caught`, the async boundary of `main`, and the subprocess call of `denoCheck`. The ledger gives the test or the measurement that needs each one.
+The kept block is `caught`.
 
 Six Sonnet auditors read every site of eight census patterns:
 

@@ -2,7 +2,7 @@
 
 This ledger records each try block under `src/` after the deeper-modules work, with its decision. Opus wrote it on 2026-11-09.
 
-The census command is `git grep -n -E '(^|[^A-Za-z0-9_])try \{' -- 'src/*.ts'`. The pattern needs `try` as a whole word, because `try \{` alone also matches names such as `DeclEntry {`. A second census, `git grep -n -E '\.catch\(|\.then\([^)]*,' -- 'src/*.ts'`, finds no promise rejection handler.
+The census command is `git grep -n -E '(^|[^A-Za-z0-9_])try \{' -- 'src/*.ts'`. The pattern needs `try` as a whole word, because `try \{` alone also matches names such as `DeclEntry {`. A second census, `git grep -n -E '\.catch\(|\.then\(' -- 'src/*.ts'`, finds the two promise rejection handlers that replaced the last async try blocks.
 
 | Revision | Try blocks |
 | --- | --- |
@@ -11,6 +11,7 @@ The census command is `git grep -n -E '(^|[^A-Za-z0-9_])try \{' -- 'src/*.ts'`. 
 | `e16f546` (after the first adapter pass) | 25 |
 | `e9abd5e` (one catch site for synchronous throws) | 6 |
 | `1a55b60` (no release chain in the watch path) | 3 |
+| after this change (no async try blocks) | 1 |
 
 ## Removed
 
@@ -25,6 +26,8 @@ The census command is `git grep -n -E '(^|[^A-Za-z0-9_])try \{' -- 'src/*.ts'`. 
 | `src/cli/main.ts`, try/finally of the watch loop | `1a55b60` | The loop ends at the end of the events, when the iterator has already finished, or by a throw. After a throw, `main` returns exit 3 and the entry point calls `Deno.exit`, which closes the watcher. |
 | `src/host/deno_io.ts`, try/finally of `debounceBatches` | `1a55b60` | It called `return` on its source. Only the watch loop called `return` on it, and that call is gone. The source has finished on every other path. The two `debounceBatches` tests still pass. |
 | `src/host/deno_io.ts`, try/finally of `sourceEvents` | `1a55b60` | It closed the watcher. The process exit closes the watcher on every path that leaves the generator. |
+| `src/cli/main.ts`, the boundary of `main` | this change | `main` returns `execute(...).catch(...)`. `execute` is async, so a throw in it rejects the promise. The test "an unexpected throw is an internal error with exit code 3" still passes. |
+| `src/host/deno_io.ts`, the catch of `denoCheck` | this change | `attempt` takes the throw when `Deno.Command` cannot start, and the second callback of `then` takes a later rejection of `output`. A run with a missing working directory still returned `{"ok":false,"error":{"message":"Failed to spawn ... No such cwd ..."}}`. |
 
 The 20 synchronous sites of `e9abd5e`:
 
@@ -38,6 +41,4 @@ The 20 synchronous sites of `e9abd5e`:
 
 | Site | Kind | Why it cannot go |
 | --- | --- | --- |
-| `src/core/source.ts:19` | catch | `caught` is the one place that turns a synchronous throw into a `Result`. JavaScript has no other way to catch a throw. |
-| `src/cli/main.ts:158` | catch | `execute` is asynchronous, so `caught` cannot take its throw. The test "an unexpected throw is an internal error with exit code 3" in `tests/cli_test.ts` needs this boundary. A promise `.catch` would be the same catch in another form. |
-| `src/host/deno_io.ts:154` | catch | `Deno.Command` throws at once when it cannot start the process, and `output` rejects on a later failure. A run with a missing working directory returned `{"ok":false,"error":{"message":"Failed to spawn ... No such cwd ..."}}`. Without the catch, the CLI would give exit 3 and not the note `cannot run deno check`. |
+| `src/core/source.ts:19` | catch | `caught` is the one place that turns a synchronous throw into a `Result`. A synchronous throw has no handler other than a try block. |

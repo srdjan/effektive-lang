@@ -150,19 +150,17 @@ function isSyncFailure(synced: SyncResult): synced is SyncFailure {
   return synced.tag === "read-error" || synced.tag === "config-error";
 }
 
-export async function main(
+export function main(
   args: readonly string[],
   io: HostIo,
 ): Promise<number> {
   const opened: { log?: EventLog } = {};
-  try {
-    return await execute(args, io, opened);
-  } catch (error) {
+  return execute(args, io, opened).catch((error: unknown) => {
     const message = errorMessage(error);
     io.stderr(`effektive: internal error: ${message}\n`);
     if (opened.log !== undefined) emit(opened.log, "cli.error", { message });
     return EXIT_INTERNAL;
-  }
+  });
 }
 
 async function execute(

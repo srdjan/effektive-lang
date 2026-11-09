@@ -148,26 +148,31 @@ async function denoCheck(
   if (!made.ok) return made;
   const config = `${made.value}/deno.json`;
   const lock = `${made.value}/deno.lock`;
-  let run: Result<DenoCheckRun, FileFailure>;
   // `Deno.Command` throws at once when it cannot start the process, and its
-  // `output` promise rejects on a later failure. One catch takes both.
-  try {
+  // `output` promise rejects on a later failure.
+  const started = attempt(() => {
     Deno.writeTextFileSync(config, request.config);
     Deno.writeTextFileSync(lock, request.lock);
-    const output = await new Deno.Command("deno", {
+    return new Deno.Command("deno", {
       args: ["check", `--lock=${lock}`, "--config", config, ...request.files],
       cwd: request.cwd,
       env: { NO_COLOR: "1" },
       stdout: "piped",
       stderr: "piped",
     }).output();
-    run = {
-      ok: true,
-      value: { code: output.code, stderr: decoder.decode(output.stderr) },
-    };
-  } catch (e) {
-    run = { ok: false, error: { message: errorMessage(e) } };
-  }
+  });
+  const run = started.ok
+    ? await started.value.then(
+      (output): Result<DenoCheckRun, FileFailure> => ({
+        ok: true,
+        value: { code: output.code, stderr: decoder.decode(output.stderr) },
+      }),
+      (e: unknown): Result<DenoCheckRun, FileFailure> => ({
+        ok: false,
+        error: { message: errorMessage(e) },
+      }),
+    )
+    : started;
   // When the removal fails, the system removes the temporary directory later.
   attempt(() => Deno.removeSync(made.value, { recursive: true }));
   return run;
