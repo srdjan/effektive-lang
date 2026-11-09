@@ -86,7 +86,6 @@ const PRELUDE = {
   run: { shadowable: true },
   scoped: { shadowable: true },
   forkScoped: { shadowable: true },
-  withResource: { shadowable: false },
   unfold: { shadowable: false },
   mapEffect: { shadowable: false },
   sinkForEach: { shadowable: false },

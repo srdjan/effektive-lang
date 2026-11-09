@@ -163,7 +163,6 @@ type SpecialKind =
   | "retry"
   | "log"
   | "schema"
-  | "with-resource"
   | "take-sink"
   | "buffer-stream"
   | "layer"
@@ -665,8 +664,6 @@ class BodyLowerer {
         };
       case "schema":
         return this.invokeSchema(fact, args, arg, annotation);
-      case "with-resource":
-        return this.invokeWithResource(arg, annotation);
       case "log":
         return this.invokeLog(fact, node, args, arg, annotation);
       case "take-sink":
@@ -778,26 +775,6 @@ class BodyLowerer {
         ),
         ...annotation,
       };
-  }
-
-  private invokeWithResource(arg: ArgumentAt, annotation: Annotation): Expr {
-    const acquire = arg(0);
-    const use = arg(1);
-    const release = arg(2);
-    if (
-      acquire.kind !== "closure" || use.kind !== "closure" ||
-      release.kind !== "closure" ||
-      use.parameters[0] === undefined || release.parameters[0] === undefined
-    ) {
-      throw internal("withResource needs inline scoped closures");
-    }
-    return {
-      kind: "with-resource",
-      acquire,
-      use,
-      release,
-      ...annotation,
-    };
   }
 
   private invokeLog(

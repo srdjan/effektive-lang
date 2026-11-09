@@ -365,7 +365,7 @@ Deno.test("build --tsc accepts scoped operation records", async () => {
       [
         "service Files { open(): { read: () => Text, close: () => void } }",
         "export const load = (): Text with Files.open =>",
-        "  withResource(() => Files.open(), (file) => file.read(), (file) => file.close())",
+        "  using (file = Files.open()) { file.read() } finally { file.close() }",
         "",
         "type Text = string",
         "",
@@ -494,7 +494,7 @@ Deno.test("opaque host handles pass only through borrowed scoped methods", async
         'import { Handle, Text, Files } from "host:files"',
         "const readBorrowed = (borrow handle: Handle): Text with Files.read => Files.read(handle)",
         "export const load = (): Text with Files.open | Files.read | Files.close =>",
-        "  withResource(() => Files.open(), (handle) => readBorrowed(handle), (handle) => Files.close(handle))",
+        "  using (handle = Files.open()) { readBorrowed(handle) } finally { Files.close(handle) }",
         "",
       ].join("\n"),
     );

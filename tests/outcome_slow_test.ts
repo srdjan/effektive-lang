@@ -52,7 +52,7 @@ export const resource = (): Int fails Stop with Files.open | Log.next | Log.seen
 export const resourceOk = (): Int with Files.open | Log.seen | Log.defect =>
   using (f = Files.open()) { f.read() } finally (o) { settle(o) }
 export const callForm = (): Int with Files.open | Log.seen | Log.defect =>
-  withResource(() => Files.open(), (f) => f.read(), (f, o) => settle(o))
+  using (f = Files.open()) { f.read() } finally (o) { settle(o) }
 export const maskedBound = (): Int fails TimeoutError with Log.seen =>
   timeout(() => try { sleep(5s)
  1 } finally (o) { sleep(30ms)
@@ -134,7 +134,7 @@ console.log(JSON.stringify(out));
   });
 });
 
-Deno.test("using and withResource finalizers see the outcome of the use block", async () => {
+Deno.test("using finalizers see the outcome of the use block", async () => {
   const result = await compileAndRun(
     SOURCE,
     `${PRELUDE}

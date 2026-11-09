@@ -174,27 +174,16 @@ const ROWS: readonly SiteRow[] = [
   },
   // ---- resources and borrowed handles
   {
-    builtin: "withResource",
+    builtin: "using",
     change: "acquire an int instead of a record of operations",
     host: true,
     valid:
-      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text with Files.open | Files.read | Files.close =>\n  withResource(() => Files.open(), (handle) => Files.read(handle), (handle) => Files.close(handle))\n',
+      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text with Files.open | Files.read | Files.close =>\n  using (handle = Files.open()) { Files.read(handle) } finally { Files.close(handle) }\n',
     invalid:
-      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text with Files.close =>\n  withResource(() => 1, (handle) => "x", (handle) => {})\n',
+      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text with Files.close =>\n  using (handle = 1) { "x" } finally {  }\n',
     code: "type-mismatch/010",
     fragment:
       "acquisition must return a nonempty record of required operations",
-  },
-  {
-    builtin: "withResource",
-    change: "pass the use callback as a named function",
-    host: true,
-    valid:
-      'import { Handle, Text, Files } from "host:files"\nconst a = (): Text with Files.open | Files.read | Files.close =>\n  withResource(() => Files.open(), (handle) => Files.read(handle), (handle) => Files.close(handle))\n',
-    invalid:
-      'import { Handle, Text, Files } from "host:files"\nconst use = (handle: Handle): Text => "x"\nconst a = (): Text with Files.open | Files.close =>\n  withResource(() => Files.open(), use, (handle) => Files.close(handle))\n',
-    code: "type-mismatch/010",
-    fragment: "withResource requires three inline arrow callbacks",
   },
   {
     builtin: "borrow parameter",

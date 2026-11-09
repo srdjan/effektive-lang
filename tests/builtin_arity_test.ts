@@ -90,7 +90,6 @@ const ARITY_ROWS: readonly ArityRow[] = [
   ...fixed("run", 1),
   ...fixed("scoped", 1),
   ...fixed("forkScoped", 1),
-  ...fixed("withResource", 3),
   ...fixed("unfold", 2),
   ...bounded(
     "mapEffect",

@@ -1,6 +1,6 @@
 // The reference walkers of the validator (src/core/validate/expr.ts). Two
 // checks follow a binding through a closure body and report each use that the
-// rules forbid: a borrowed handle (`withResource` over an opaque type) and a
+// rules forbid: a borrowed handle (`using` over an opaque type) and a
 // self reference in a recursive Schema body (`schemaRecursive`). A missed child expression
 // hides a use, so each test puts a reference at many places of a body and
 // pins which uses the validator reports. A use is named by the start offset
@@ -209,17 +209,23 @@ export service Files {
 import { Handle, Text, Files } from "host:files"
 const readBorrowed = (borrow handle: Handle): Text with Files.read => Files.read(handle)
 export const load = (): Text with Files.open | Files.read | Files.close =>
-  withResource(() => Files.open(), (handle) => readBorrowed(handle), (handle) => Files.close(handle))
+  using (handle = Files.open()) { readBorrowed(handle) } finally { Files.close(handle) }
 `,
   };
   const base = lower(files, "main.eff");
   const load = base.ir.declarations.find((d) => d.name === "load");
   assert(load?.kind === "function" && load.body.kind === "with-resource");
   const [use, release] = [load.body.use, load.body.release];
-  assert(use.kind === "closure" && use.body.kind === "call");
-  assert(release.kind === "closure" && release.body.kind === "perform");
-  const call = use.body;
-  const perform = release.body;
+  assert(
+    use.kind === "closure" && use.body.kind === "block" &&
+      use.body.result.kind === "call",
+  );
+  assert(
+    release.kind === "closure" && release.body.kind === "block" &&
+      release.body.result.kind === "perform",
+  );
+  const call = use.body.result;
+  const perform = release.body.result;
   const index = base.ir.declarations.indexOf(load);
   const found = probe(
     base,

@@ -260,7 +260,7 @@ Deno.test("with-resource validation rejects scoped escape and channel mutation",
 error Stop = {}
 service Files { open(): { read: () => Text fails Stop, close: () => void } }
 const load = (): Text fails Stop with Files.open =>
-  withResource(() => Files.open(), (file) => file.read(), (file) => file.close())
+  using (file = Files.open()) { file.read() } finally { file.close() }
 type Text = string
 `);
   assertEquals(codesOf(lowered.ir, lowered.sources), []);
@@ -274,8 +274,11 @@ type Text = string
   const two = escaped.declarations.find((d) => d.name === "load");
   assert(two?.kind === "function" && two.body.kind === "with-resource");
   const use = two.body.use;
-  assert(use.kind === "closure" && use.body.kind === "call");
-  const operation = use.body.callee;
+  assert(
+    use.kind === "closure" && use.body.kind === "block" &&
+      use.body.result.kind === "call",
+  );
+  const operation = use.body.result.callee;
   assert(operation.kind === "get" && operation.record.kind === "reference");
   (use as { body: typeof operation.record }).body = operation.record;
   assert(codesOf(escaped, lowered.sources).includes("validation/006"));
@@ -647,7 +650,7 @@ type Int = int
 error Stop = {}
 service Files { open(): { read: () => Text fails Stop, close: () => void } }
 export const load = (): Text fails Stop with Files.open =>
-  withResource(() => Files.open(), (file) => file.read(), (file) => file.close())
+  using (file = Files.open()) { file.read() } finally { file.close() }
 type Text = string
 `,
   },
@@ -813,7 +816,7 @@ export service Files {
 import { Handle, Text, Files } from "host:files"
 const readBorrowed = (borrow handle: Handle): Text with Files.read => Files.read(handle)
 export const load = (): Text with Files.open | Files.read | Files.close =>
-  withResource(() => Files.open(), (handle) => readBorrowed(handle), (handle) => Files.close(handle))
+  using (handle = Files.open()) { readBorrowed(handle) } finally { Files.close(handle) }
 `,
   };
   const checked = checkProject(memoryHost(files), "", ["main.eff"]);
@@ -2306,7 +2309,7 @@ Deno.test("show prints a Schema make input after the requirement sets", () => {
 Deno.test("IR v4 scoped callbacks validate runtime shape, parameter arity and types", () => {
   const { ir, sources } = lowerText(`type Int = int
 service Jobs { open(): { read: () => Int, close: () => void } }
-const run = (): Int with Jobs.open => withResource(() => Jobs.open(), (job) => job.read(), (job) => job.close())
+const run = (): Int with Jobs.open => using (job = Jobs.open()) { job.read() } finally { job.close() }
 `);
   const index = decl(ir, "run");
   for (

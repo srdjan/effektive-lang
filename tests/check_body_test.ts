@@ -160,7 +160,7 @@ Deno.test("takeSink rejects invalid counts, erased leftovers, pipelines, and bor
       ["type-mismatch/010"],
     ],
     [
-      "service Jobs { open(): { read: () => Int, close: () => void } }\nconst bad = (s: Stream<Int>) => withResource(() => Jobs.open(), (job) => { runStream(transduceStream(s, sinkForEach((n: Int) => job.close())), takeSink(1)) }, (job) => job.close())",
+      "service Jobs { open(): { read: () => Int, close: () => void } }\nconst bad = (s: Stream<Int>) => using (job = Jobs.open()) { runStream(transduceStream(s, sinkForEach((n: Int) => job.close())), takeSink(1)) } finally { job.close() }",
       ["type-mismatch/010"],
     ],
   ];
@@ -207,7 +207,7 @@ Deno.test("Sink leftover graphs reach private aliases, update hashes, and reject
   );
 });
 
-Deno.test("withResource combines acquisition, use, and release contracts", () => {
+Deno.test("using combines acquisition, use, and release contracts", () => {
   const project = checkText(`
 error OpenError = {}
 error ReadError = {}
@@ -216,7 +216,7 @@ service Files {
   open(): { read: () => Text fails ReadError, close: () => void fails CloseError } fails OpenError
 }
 const load = (): Text fails OpenError | ReadError | CloseError with Files.open =>
-  withResource(() => Files.open(), (file) => file.read(), (file) => file.close())
+  using (file = Files.open()) { file.read() } finally { file.close() }
 type Text = string
 `);
   assertEquals(messages(project), []);
@@ -498,20 +498,20 @@ const bad = (): void fails Stop =>
   );
 });
 
-Deno.test("withResource rejects escaped operation records and fields", () => {
+Deno.test("using rejects escaped operation records and fields", () => {
   const prefix =
     `service Files { open(): { read: () => Text, close: () => void } }\n`;
   for (
     const use of [
       "file",
-      "{ const saved = { saved: file }; saved }",
+      "const saved = { saved: file }; saved",
       "file.read",
-      "{ const copy = file; copy.read() }",
+      "const copy = file; copy.read()",
       "() => file.read()",
     ]
   ) {
     const project = checkText(
-      `${prefix}const bad = () => withResource(() => Files.open(), (file) => ${use}, (file) => file.close())\ntype Text = string`,
+      `${prefix}const bad = () => using (file = Files.open()) { ${use} } finally { file.close() }\ntype Text = string`,
     );
     assert(
       messages(project).some((m) =>
@@ -522,10 +522,10 @@ Deno.test("withResource rejects escaped operation records and fields", () => {
   }
 });
 
-Deno.test("withResource rejects operation records and results containing capabilities", () => {
+Deno.test("using rejects operation records and results containing capabilities", () => {
   const programs = [
-    `service Files { open(): { bad: () => () => Text } }\nconst bad = () => withResource(() => Files.open(), (file) => file.bad(), (file) => file.bad())\ntype Text = string`,
-    `service Files { open(): { read: () => Text, close: () => void } }\nconst bad = () => withResource(() => Files.open(), (file) => () => file.read(), (file) => file.close())\ntype Text = string`,
+    `service Files { open(): { bad: () => () => Text } }\nconst bad = () => using (file = Files.open()) { file.bad() } finally { file.bad() }\ntype Text = string`,
+    `service Files { open(): { read: () => Text, close: () => void } }\nconst bad = () => using (file = Files.open()) { () => file.read() } finally { file.close() }\ntype Text = string`,
   ];
   for (const program of programs) {
     const project = checkText(program);
@@ -1946,9 +1946,9 @@ export service Files {
 import { Handle, Text, Files } from "host:files"
 const readBorrowed = (borrow handle: Handle): Text with Files.read => Files.read(handle)
 const good = (): Text with Files.open | Files.read | Files.close =>
-  withResource(() => Files.open(), (handle) => readBorrowed(handle), (handle) => Files.close(handle))
+  using (handle = Files.open()) { readBorrowed(handle) } finally { Files.close(handle) }
 const bad = (): Text with Files.open | Files.plain | Files.close =>
-  withResource(() => Files.open(), (handle) => Files.plain(handle), (handle) => Files.close(handle))
+  using (handle = Files.open()) { Files.plain(handle) } finally { Files.close(handle) }
 `,
   };
   const project = checkFiles(files, ["main.eff"]);
@@ -1958,7 +1958,7 @@ const bad = (): Text with Files.open | Files.plain | Files.close =>
     "main.eff": `
 import { Handle, Text, Files } from "host:files"
 const bad = (): Handle with Files.open | Files.close =>
-  withResource(() => Files.open(), (handle) => handle, (handle) => Files.close(handle))
+  using (handle = Files.open()) { handle } finally { Files.close(handle) }
 `,
   }, ["main.eff"]);
   assert(codes(escaped).includes("type-mismatch/010"));

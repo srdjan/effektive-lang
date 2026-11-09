@@ -41,11 +41,11 @@ export const d = (n: Cents): Cents => n * 2
   assert(!output.includes("Cents.make"));
 });
 
-Deno.test("withResource emits acquireUseRelease with suspended callbacks", () => {
+Deno.test("using emits acquireUseRelease with suspended callbacks", () => {
   const output = oneModule(`
 service Files { open(): { read: () => Text, close: () => void } }
 export const load = (): Text with Files.open =>
-  withResource(() => Files.open(), (file) => file.read(), (file) => file.close())
+  using (file = Files.open()) { file.read() } finally { file.close() }
 type Text = string
 `);
   assertStringIncludes(output, "Effect.acquireUseRelease(");

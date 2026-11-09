@@ -88,13 +88,13 @@ Deno.test("a poisoned resource use result keeps its data-only report", () => {
   assertChecks(
     `export type Int = int
 service Jobs { open(): { read: () => Int, close: () => void } }
-export const f = (): Int with Jobs.open => withResource(() => Jobs.open(), (job) => Missing, (job) => job.close())
+export const f = (): Int with Jobs.open => using (job = Jobs.open()) { Missing } finally { job.close() }
 `,
     [
       [
         "type-mismatch/010",
         "the use result must be data only",
-        "(job) => Missing",
+        "{ Missing }",
       ],
       ["unknown-name/001", "unknown name `Missing`", "Missing"],
     ],

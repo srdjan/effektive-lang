@@ -1,5 +1,5 @@
 // Outcome-aware cleanup: `try` with `finally`, `using` with an outcome
-// binding, and `withResource` with a two-parameter release. Runtime behavior is in
+// binding. Runtime behavior is in
 // outcome_slow_test.ts.
 
 import { assert, assertEquals } from "@std/assert";
@@ -183,19 +183,6 @@ export const a = (): Fn => try { () => 1 } finally ${binding}{ }
   ]);
 });
 
-Deno.test("a withResource release may take the outcome as a second parameter", () => {
-  const text = `${HEAD}type Handle = { wait: () => Int }
-export service Pool { open(): Handle }
-export const a = (): Int with Pool.open =>
-  withResource(() => Pool.open(), (h) => h.wait(), (h, outcome) => { })
-`;
-  assertEquals(diagnosticsOf(text), []);
-  assertEquals(
-    diagnosticsOf(text.replace("(h, outcome)", "(h, outcome, extra)")),
-    ["type-mismatch/004 the callback of `withResource` takes 1 parameter, but the function takes 3"],
-  );
-});
-
 // ------------------------------------------------------------------ validator
 
 const SOURCE = `${HEAD}type Handle = { wait: () => Int }
@@ -204,7 +191,7 @@ export const guarded = (): Int fails Stop with Log.next | Log.note =>
   try { Log.next() } finally (out) { Log.note(1) }
 export const plain = (): Int with Log.note => try { 1 } finally { Log.note(1) }
 export const resource = (): Int with Pool.open =>
-  withResource(() => Pool.open(), (h) => h.wait(), (h, outcome) => { })
+  using (h = Pool.open()) { h.wait() } finally (outcome) {  }
 `;
 
 function findAll<K extends Expr["kind"]>(

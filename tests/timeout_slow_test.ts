@@ -15,7 +15,7 @@ export const piped = (): Int fails TimeoutError => (() => 8) |> timeout(1s)
 export const slow = (): Int with Files.open | Files.mark =>
   try {
     timeout(
-      () => withResource(() => Files.open(), (file) => file.wait(), (file) => file.close()),
+      () => using (file = Files.open()) { file.wait() } finally { file.close() },
       20ms
     )
   } catch {

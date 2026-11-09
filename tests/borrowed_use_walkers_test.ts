@@ -1,6 +1,6 @@
 // Tests for the two checks of a borrowed local in src/core/check_expr.ts: a
-// scoped operation record (`withResource` over a record) and a borrowed host
-// handle (`withResource` over an opaque type or a `borrow` parameter). Each row
+// scoped operation record (`using` over a record) and a borrowed host
+// handle (`using` over an opaque type or a `borrow` parameter). Each row
 // gives a program and the number of reports of the check's message. Every test runs through the public entry `checkProject`.
 
 import { assert, assertEquals } from "@std/assert";
@@ -36,29 +36,29 @@ const RECORD_ROWS: readonly Row[] = [
   { name: "call an operation", body: "file.read()", reports: 0 },
   {
     name: "call two operations",
-    body: "{ file.read(); file.read() }",
+    body: "file.read(); file.read()",
     reports: 0,
   },
   { name: "return the record", body: "file", reports: 1 },
   { name: "read a field without a call", body: "file.read", reports: 1 },
   {
     name: "copy the record",
-    body: "{ const copy = file; copy.read() }",
+    body: "const copy = file; copy.read()",
     reports: 1,
   },
   {
     name: "call inside an arrow",
-    body: "{ const later = () => file.read(); later() }",
+    body: "const later = () => file.read(); later()",
     reports: 1,
   },
   {
     name: "field of a field",
-    body: "{ const saved = { saved: file }; saved }",
+    body: "const saved = { saved: file }; saved",
     reports: 1,
   },
   {
     name: "one good use and one bad use",
-    body: "{ file.read(); file }",
+    body: "file.read(); file",
     reports: 1,
   },
 ];
@@ -68,7 +68,7 @@ for (const row of RECORD_ROWS) {
     const text = `
 type Text = string
 service Files { open(): { read: () => Text, close: () => void } }
-const probe = () => withResource(() => Files.open(), (file) => ${row.body}, (file) => file.close())
+const probe = () => using (file = Files.open()) { ${row.body} } finally { file.close() }
 `;
     assertEquals(reportsOf(single(text), "m.eff", RECORD), row.reports);
   });
@@ -106,7 +106,7 @@ const HANDLE_ROWS: readonly Row[] = [
   { name: "borrowed method", body: "Files.read(handle)", reports: 0 },
   {
     name: "borrowed method twice",
-    body: "{ Files.read(handle); Files.read(handle) }",
+    body: "Files.read(handle); Files.read(handle)",
     reports: 0,
   },
   { name: "borrow function", body: "borrowed(handle)", reports: 0 },
@@ -125,26 +125,26 @@ const HANDLE_ROWS: readonly Row[] = [
   { name: "return the handle", body: "handle", reports: 1 },
   {
     name: "use inside an arrow",
-    body: "{ const later = () => Files.read(handle); later() }",
+    body: "const later = () => Files.read(handle); later()",
     reports: 1,
   },
   {
     name: "copy the handle",
-    body: "{ const copy = handle; Files.read(copy) }",
+    body: "const copy = handle; Files.read(copy)",
     reports: 1,
   },
   {
     name: "one good use and one bad use",
-    body: "{ Files.read(handle); Files.plain(handle) }",
+    body: "Files.read(handle); Files.plain(handle)",
     reports: 1,
   },
 ];
 
 for (const row of HANDLE_ROWS) {
-  Deno.test(`borrowed handle in withResource: ${row.name}`, () => {
+  Deno.test(`borrowed handle in using: ${row.name}`, () => {
     const main =
       `const probe = (): Text with Files.open | Files.read | Files.plain | Files.both | Files.second | Files.close =>
-  withResource(() => Files.open(), (handle) => ${row.body}, (handle) => Files.close(handle))`;
+  using (handle = Files.open()) { ${row.body} } finally { Files.close(handle) }`;
     assertEquals(
       reportsOf(handleProject(main), "main.eff", HANDLE),
       row.reports,

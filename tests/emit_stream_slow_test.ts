@@ -264,7 +264,7 @@ Deno.test("stream pull releases a scoped operation on failure and interruption",
       [
         "export error Stop = {}",
         "export service Source { open(state: Int): { next: () => Option<[Int, Int]> fails Stop, close: () => void } }",
-        "const numbers = unfold(0, (state) => withResource(() => Source.open(state), (source) => source.next(), (source) => source.close()))",
+        "const numbers = unfold(0, (state) => using (source = Source.open(state)) { source.next() } finally { source.close() })",
         "const sink = sinkForEach((value: Int) => {})",
         "export const main = (): void fails Stop with Source.open => runStream(numbers, sink)",
         "type Int = int",

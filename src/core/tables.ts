@@ -107,7 +107,6 @@ export type NodeFact =
   | { readonly kind: "uninterruptible" }
   | { readonly kind: "run" }
   | { readonly kind: "scoped" | "fork-scoped" }
-  | { readonly kind: "with-resource" }
   | { readonly kind: "unfold" }
   | {
     readonly kind: "map-effect";

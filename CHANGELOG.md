@@ -10,6 +10,8 @@
   Before, each open view kept its old text after a server crash.
 - The VS Code client registers the Show Generated TypeScript command also when the language server cannot start, and the view then says that the server is not running.
   Before, VS Code reported that the command was not found.
+- The prelude no longer has the name `withResource`. Use `using (r = acquire()) { use } finally { release }`.
+  Before, `withResource(() => acquire(), r => use, r => release)` was a second spelling of the same operation. A call now gives `unknown-name/001`.
 
 ## 0.15.5 - 2026-11-08
 

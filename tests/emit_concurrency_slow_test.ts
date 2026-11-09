@@ -7,7 +7,7 @@ import { assertEquals } from "@std/assert";
 import { runScript } from "./process_helpers.ts";
 import { build, withTemporary } from "./emit_slow_helpers.ts";
 
-Deno.test("withResource releases after success, typed failure, and interruption", async () => {
+Deno.test("using releases after success, typed failure, and interruption", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(
@@ -18,9 +18,9 @@ Deno.test("withResource releases after success, typed failure, and interruption"
         "  open(): { read: () => Text fails Stop, wait: () => void, close: () => void }",
         "}",
         "export const load = (): Text fails Stop with Files.open =>",
-        "  withResource(() => Files.open(), (file) => file.read(), (file) => file.close())",
+        "  using (file = Files.open()) { file.read() } finally { file.close() }",
         "export const block = (): void with Files.open =>",
-        "  withResource(() => Files.open(), (file) => file.wait(), (file) => file.close())",
+        "  using (file = Files.open()) { file.wait() } finally { file.close() }",
         "type Text = string",
         "",
       ].join("\n"),
@@ -95,7 +95,7 @@ Deno.test("bounded traverse limits jobs and waits for scoped finalizers", async 
         "  open(n: Int): { work: () => Int fails Stop, close: () => void }",
         "}",
         "export const bounded = (xs: Int[]): Int[] fails Stop with Jobs.open =>",
-        "  traverse(xs, (n) => withResource(() => Jobs.open(n), (job) => job.work(), (job) => job.close()), { concurrency: 2 })",
+        "  traverse(xs, (n) => using (job = Jobs.open(n)) { job.work() } finally { job.close() }, { concurrency: 2 })",
         "type Int = int",
         "",
       ].join("\n"),
@@ -195,7 +195,7 @@ Deno.test("unbounded traverse starts every job and waits for scoped finalizers",
         "  open(n: Int): { work: () => Int fails Stop, close: () => void }",
         "}",
         "export const unbounded = (xs: Int[]): Int[] fails Stop with Jobs.open =>",
-        '  traverse(xs, (n) => withResource(() => Jobs.open(n), (job) => job.work(), (job) => job.close()), { concurrency: "unbounded" })',
+        '  traverse(xs, (n) => using (job = Jobs.open(n)) { job.work() } finally { job.close() }, { concurrency: "unbounded" })',
         "export const all = (): Int[] =>",
         '  traverse([defer(() => 1), defer(() => 2)], (job) => run(job), { concurrency: "unbounded" })',
         "type Int = int",

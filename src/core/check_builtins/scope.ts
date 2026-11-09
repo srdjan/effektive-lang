@@ -9,7 +9,6 @@ import {
   type ValueId,
 } from "../ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
-import { functionParts } from "../syntax_queries.ts";
 import { combine, EFFECT_ONLY, without } from "../effect_set.ts";
 import type { NodeInfo } from "../tables.ts";
 import { dataOnly, type TypeRef } from "../types.ts";
@@ -127,16 +126,9 @@ export function outcomeType(
   ]);
 }
 
-/** The number of parameters that a written release callback declares. */
+/** Whether the written release clause binds the outcome of the use block. */
 function releaseWantsOutcome(c: ScopeContext, arg: Arg): boolean {
-  if (arg.pre !== undefined) return false;
-  const kind = kindOf(c.tree, arg.node);
-  if (kind === SyntaxKind.ResourceRelease) {
-    return c.kids(arg.node).some((k) => kindOf(c.tree, k) === SyntaxKind.Name);
-  }
-  if (kind !== SyntaxKind.ArrowExpr) return false;
-  const list = functionParts(c.tree, arg.node).paramList;
-  return list !== undefined && c.kids(list).length === 2;
+  return c.kids(arg.node).some((k) => kindOf(c.tree, k) === SyntaxKind.Name);
 }
 
 export function withResourceCall(
@@ -145,23 +137,6 @@ export function withResourceCall(
   args: readonly Arg[],
   expected: TypeRef | undefined,
 ): NodeInfo {
-  for (const arg of args) {
-    if (
-      arg.pre !== undefined ||
-      ![
-        SyntaxKind.ArrowExpr,
-        SyntaxKind.ResourceAcquire,
-        SyntaxKind.ResourceUse,
-        SyntaxKind.ResourceRelease,
-      ].includes(kindOf(c.tree, arg.node))
-    ) {
-      c.report(
-        "type-mismatch/010",
-        "withResource requires three inline arrow callbacks",
-        arg.node,
-      );
-    }
-  }
   const acquire = c.callback("withResource", args[0], [], undefined, true);
   const opaque = opaqueHandle(c, acquire.result);
   if (!opaque) {
@@ -353,10 +328,5 @@ export const SCOPE_ROWS = {
   forkScoped: {
     prologue: piped(1, "effect", { fact: "key" }),
     handle: (c, node, _name, args) => forkScopedCall(c, node, args),
-  },
-  withResource: {
-    prologue: piped(3, "pure", { fact: "key" }),
-    handle: (c, node, _name, args, expected) =>
-      withResourceCall(c, node, args, expected),
   },
 } satisfies Partial<Rows<PreludeCallName, ScopeContext>>;

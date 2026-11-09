@@ -280,7 +280,7 @@ Deno.test("record destructuring rejects unsupported shapes, duplicates and scope
   const escaped = checked(
     `type Int = int
 service Files { open(): { read: () => Int, close: () => void } }
-const read = () => withResource(() => Files.open(), file => { const { read } = file; read() }, file => file.close())
+const read = () => using (file = Files.open()) { const { read } = file; read() } finally { file.close() }
 `,
     false,
   );
@@ -330,21 +330,14 @@ Deno.test("destructured names support shorthand rename expansion, field completi
   );
 });
 
-Deno.test("resource expressions match explicit callbacks, preserve empty-channel execution, and accept acquisition blocks", () => {
+Deno.test("resource expressions preserve empty-channel execution, and accept acquisition blocks", () => {
   const prefix =
     `type Int = int\nservice Jobs { open(): { read: () => Int, close: () => void } }\n`;
-  equivalent(
-    prefix +
-      "export const run = (): Int with Jobs.open => using (job = Jobs.open()) { job.read() } finally { job.close() }",
-    prefix +
-      "export const run = (): Int with Jobs.open => withResource(() => Jobs.open(), job => { job.read() }, job => { job.close() })",
-  );
-  const revision = equivalent(
+  const revision = checked(
     prefix +
       "export const run = (): Int with Jobs.open => using (job = { const temporary = 1; Jobs.open() }) { job.read() } finally { job.close() }",
-    prefix +
-      "export const run = (): Int with Jobs.open => withResource(() => { const temporary = 1; Jobs.open() }, job => { job.read() }, job => { job.close() })",
   );
+  assert(revision.lowered("m")?.ok);
   assert(
     revision.checkedModule("m")?.functions.get("value:m#run")?.mode !== "pure",
   );
