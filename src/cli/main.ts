@@ -34,10 +34,6 @@ const EXIT_DIAGNOSTICS = 1;
 const EXIT_USAGE = 2;
 const EXIT_INTERNAL = 3;
 
-function rechecked(names: readonly string[]): string {
-  return names.length === 0 ? "none" : names.join(", ");
-}
-
 function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
@@ -70,17 +66,6 @@ function printOutcome(
       plural(outcome.diagnosticCount, "diagnostic")
     }${wrote}${fixes}\n`,
   );
-}
-
-function optionsOf(command: ProjectCommand): BuildOptions {
-  switch (command.kind) {
-    case "build":
-      return { write: true, tsc: command.tsc };
-    case "watch":
-      return { write: true, tsc: command.tsc };
-    case "check":
-      return { write: false, tsc: false };
-  }
 }
 
 /**
@@ -132,7 +117,10 @@ async function watchLoop(
           io.stderr(`${note}\n`);
         }
         previous = outcome.modules;
-        io.stderr(`rechecked: ${rechecked(synced.revision.rechecked)}\n`);
+        const names = synced.revision.rechecked;
+        io.stderr(
+          `rechecked: ${names.length === 0 ? "none" : names.join(", ")}\n`,
+        );
         printOutcome(io, outcome, synced.revision.moduleNames().length);
       }
     }
@@ -226,7 +214,9 @@ async function runProject(
     command.kind === "watch" && command.tsc,
     log,
   );
-  const options = optionsOf(command);
+  const options: BuildOptions = command.kind === "check"
+    ? { write: false, tsc: false }
+    : { write: true, tsc: command.tsc };
   // A project that cannot start is a configuration error. A later break in watch mode only prints.
   const synced = session.sync();
   if (isSyncFailure(synced)) {
