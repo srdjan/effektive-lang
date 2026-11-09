@@ -399,6 +399,42 @@ const bad = (): Text fails SchemaError => entry({ name: "ok", extra: 1 })
   assert(codes(project).includes("type-mismatch/005"));
 });
 
+Deno.test("a checked parameter accepts a union, a union target, and a tuple that hold unknown", () => {
+  const project = checkText(`
+type Text = string
+type Pair = [Text, Text]
+type Named = { name: Text }
+const consume = (value: Named): Text => value.name
+const consumeU = (value: Text | Named): Text => "x"
+const consumeP = (value: Pair): Text => "y"
+export const entry = (input): Text fails SchemaError => consume(input)
+export const entryU = (input): Text fails SchemaError => consumeU(input)
+export const entryP = (input): Text fails SchemaError => consumeP(input)
+const fromUnion = (input: { name: unknown } | { name: Text }): Text fails SchemaError => entry(input)
+const toUnion = (input: { name: unknown }): Text fails SchemaError => entryU(input)
+const fromTuple = (input: [unknown, Text]): Text fails SchemaError => entryP(input)
+`);
+  assertEquals(project.diagnostics.map((d) => d.code), []);
+});
+
+Deno.test("a checked parameter rejects a short tuple and a tuple with a wrong element", () => {
+  const project = checkText(`
+type Text = string
+type Pair = [Text, Text]
+const consumeP = (value: Pair): Text => "y"
+export const entryP = (input): Text fails SchemaError => consumeP(input)
+const shortTuple = (input: [unknown]): Text fails SchemaError => entryP(input)
+const wrongTuple = (input: [unknown, { a: Text }]): Text fails SchemaError => entryP(input)
+`);
+  assertEquals(
+    project.diagnostics.map((d) => `${d.code} ${d.message}`),
+    [
+      "type-mismatch/003 argument 1 has type [unknown], but Pair is expected",
+      "type-mismatch/003 argument 1 has type [unknown, { a: Text }], but Pair is expected",
+    ],
+  );
+});
+
 Deno.test("publishes inferred input contracts through module interfaces", () => {
   const project = checkFiles({
     "dep.eff": `

@@ -338,3 +338,50 @@ Deno.test("a chain of 10000 modules links without overflowing the stack", () => 
   assertEquals(project.order[0], `m${count - 1}`);
   assertEquals(project.order[count - 1], "m0");
 });
+
+Deno.test("an imports entry that is not an object is an error value", () => {
+  const result = parseConfig('{"imports":[1]}');
+  assert(!result.ok);
+  assertEquals(result.error, {
+    tag: "invalid-shape",
+    path: "effektive.json",
+    message: "imports entry 1 must be an object",
+  });
+});
+
+function configDiagnostics(text: string) {
+  const result = parseConfig(text);
+  assert(result.ok, text);
+  return result.value.diagnostics.map((d) => ({
+    code: d.code,
+    message: d.message,
+    key: text.slice(d.span.start, d.span.end),
+  }));
+}
+
+Deno.test("an unknown imports key is a module diagnostic on the key", () => {
+  assertEquals(
+    configDiagnostics(
+      '{"imports":[{"from":"a/**","allow":["b/**"],"extra":1}]}',
+    ),
+    [{
+      code: "module/001",
+      message: "unknown key `extra` in imports entry 1",
+      key: '"extra"',
+    }],
+  );
+});
+
+Deno.test("a host module outside the project root is a module diagnostic", () => {
+  assertEquals(
+    configDiagnostics(
+      '{"host":{"p":{"interface":"./p.effi","module":"../x.ts"}}}',
+    ),
+    [{
+      code: "module/001",
+      message:
+        "the module of host entry `p` must be a path inside the project root",
+      key: '"module"',
+    }],
+  );
+});

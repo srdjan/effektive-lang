@@ -1,0 +1,17 @@
+type Int = int
+
+service S {
+  put(x: Int): Int
+}
+
+const a = (n: Int): Int =>
+  // error: unknown-name/001
+  n |> Nope.put
+
+const b = (s: Int): Int =>
+  // error: unknown-name/004
+  1 |> s.put
+
+const c = (n: Int): Int =>
+  // error: unknown-name/004
+  n |> map.put

@@ -1479,6 +1479,23 @@
       }
     ]
   },
+  "errors-syntax-opaque-in-eff": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "syntax-opaque-in-eff.eff:2:1: error syntax/012: an opaque type belongs in a host interface file\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 1 diagnostic\n"
+      }
+    ]
+  },
   "errors-syntax-option-fallback-logical": {
     "args": [
       "check",
@@ -2220,6 +2237,31 @@
       {
         "kind": "stderr",
         "text": "2 modules, 2 diagnostics\n"
+      }
+    ]
+  },
+  "errors-unknown-name-pipeline-service": {
+    "args": [
+      "check",
+      "/proj"
+    ],
+    "code": 1,
+    "events": [
+      {
+        "kind": "stdout",
+        "text": "unknown-name-pipeline-service.eff:9:8: error unknown-name/001: unknown service `Nope`\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-pipeline-service.eff:13:8: error unknown-name/004: `s` is a local binding, not a service\n"
+      },
+      {
+        "kind": "stdout",
+        "text": "unknown-name-pipeline-service.eff:17:8: error unknown-name/004: `map` is a builtin function, not a service\n"
+      },
+      {
+        "kind": "stderr",
+        "text": "1 module, 3 diagnostics\n"
       }
     ]
   },

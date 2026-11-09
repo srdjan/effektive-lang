@@ -1139,3 +1139,32 @@ type Int = int
     "const scale: Int = 2;\n\nconst base: Int = 21;\n\nconst total: Int = double(base);",
   );
 });
+
+Deno.test("composite pure arguments before an effectful argument keep their place", () => {
+  const output = oneModule(`
+type Int = int
+type Id = string
+type Rec = { a: Int }
+service S {
+  put(a: Int[], b: Int): Int
+  tag(a: Id, b: Int): Int
+  rec(a: Rec, b: [Int, Int], c: Rec, d: Option<Int>, e: Int, f: Int): Int
+}
+service T {
+  get(): Int
+}
+export const f = (r: Rec): Int with S.put | T.get => S.put([1, 2], T.get())
+export const h = (): Int with S.tag | T.get => S.tag(Id("x"), T.get())
+export const g = (r: Rec): Int with S.rec | T.get =>
+  S.rec({ a: 1 }, [1, 2], { ...r, a: 2 }, Some(1), r.a, T.get())
+`);
+  assertStringIncludes(
+    output,
+    "const $t0: Int = yield* T.use(($s) => $s.get());\n    return yield* S.use(($s) => $s.put([1, 2], $t0));",
+  );
+  assertStringIncludes(output, '$s.tag("x", $t0)');
+  assertStringIncludes(
+    output,
+    "$s.rec({ a: 1 }, [1, 2], { ...r, a: 2 }, Option.some<Int>(1), r.a, $t0)",
+  );
+});
