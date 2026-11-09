@@ -87,7 +87,12 @@ export class RefinementValidator {
 
   addLocal(parameter: Parameter, init?: Expr): void {
     this.locals.set(parameter.id, parameter.type);
-    if (init === undefined || !quiet(init)) return;
+    // Only a quiet initializer, which is pure and has no failure or requirement, aliases.
+    if (
+      init === undefined || init.execution !== "pure" ||
+      init.effects.failures.length !== 0 ||
+      init.effects.requirements.length !== 0
+    ) return;
     this.aliases.push(
       ...this.aliasEquations(parameter.id, parameter.type, init),
     );
@@ -253,7 +258,11 @@ export class RefinementValidator {
       );
       return;
     }
-    const goal = this.substituteValue(predicate, expression);
+    const goal = substitute(
+      predicate,
+      (term) =>
+        this.linearAt(expression, termPath(term), term.kind === "length"),
+    );
     if (goal === undefined) {
       this.invalid(
         path,
@@ -280,7 +289,9 @@ export class RefinementValidator {
     }
     const maxSteps = Math.min(QUERY_STEPS, this.remainingSteps);
     const assumptions = canonicalAnd([
-      ...this.typeAssumptions(),
+      ...[...this.locals].flatMap(([id, type]) =>
+        typeAssumptionsAt(this.ctx, type, [id])
+      ),
       ...this.aliases,
       ...this.branches,
     ]);
@@ -306,16 +317,6 @@ export class RefinementValidator {
     this.ctx.report.add(AREA.types, `${path}.proofs`, message, expression.span);
   }
 
-  private typeAssumptions(): Predicate[] {
-    const assumptions: Predicate[] = [];
-    for (const [id, type] of this.locals) {
-      for (const assumption of typeAssumptionsAt(this.ctx, type, [id])) {
-        assumptions.push(assumption);
-      }
-    }
-    return assumptions;
-  }
-
   private aliasEquations(id: LocalId, type: Type, init: Expr): Predicate[] {
     const result: Predicate[] = [];
     for (const path of proofPaths(this.ctx, type)) {
@@ -326,17 +327,6 @@ export class RefinementValidator {
       if (equal !== undefined) result.push(equal);
     }
     return result;
-  }
-
-  private substituteValue(
-    predicate: Predicate,
-    expression: Expr,
-  ): Predicate | undefined {
-    return substitute(
-      predicate,
-      (term) =>
-        this.linearAt(expression, termPath(term), term.kind === "length"),
-    );
   }
 
   private linearAt(
@@ -871,12 +861,6 @@ function compareJson(left: Predicate, right: Predicate): number {
   const a = JSON.stringify(left);
   const b = JSON.stringify(right);
   return a < b ? -1 : a > b ? 1 : 0;
-}
-
-function quiet(expression: Expr): boolean {
-  return expression.execution === "pure" &&
-    expression.effects.failures.length === 0 &&
-    expression.effects.requirements.length === 0;
 }
 
 function mentionsAny(predicate: Predicate, ids: readonly string[]): boolean {

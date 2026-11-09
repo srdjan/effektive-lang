@@ -140,12 +140,6 @@ function checkedResult(active: Active): Comp {
   return { kind: "checked", active };
 }
 
-/** A concurrency limit is `unbounded` or a positive safe integer. Undefined selects the default. */
-function validConcurrency(value: number | "unbounded" | undefined): boolean {
-  return value === undefined || value === "unbounded" ||
-    (Number.isSafeInteger(value) && value > 0);
-}
-
 /** Equality can match unknown values and the runtime base of types with identity. */
 function tagMayEqual(
   env: TypeEnv,
@@ -710,7 +704,12 @@ export class BodyValidator implements ValidatorCore {
     path: string,
     name: string,
   ): void {
-    if (validConcurrency(e.concurrency)) return;
+    // A limit is `unbounded` or a positive safe integer. Undefined selects the default.
+    const limit = e.concurrency;
+    if (
+      limit === undefined || limit === "unbounded" ||
+      (Number.isSafeInteger(limit) && limit > 0)
+    ) return;
     this.add(
       AREA.control,
       `${path}.concurrency`,

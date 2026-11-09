@@ -18,7 +18,7 @@ import {
   normalizeDiagnostics,
 } from "./diagnostics.ts";
 import type { LowerError } from "./lower.ts";
-import type { Declaration, Import, ModuleIR } from "./ir.ts";
+import type { Import, ModuleIR } from "./ir.ts";
 import type { Result } from "./source.ts";
 import type { Project } from "./project.ts";
 import { validateModule } from "./validate/index.ts";
@@ -27,15 +27,6 @@ import { PRELUDE_MODULE } from "./validate/world_table.ts";
 
 /** The part of a project that the validator reads: its modules. */
 export type ProjectModules = Pick<Project, "modules">;
-
-/** The source texts of a project, keyed by the root-relative paths that spans use. */
-function projectSources(project: ProjectModules): ReadonlyMap<string, string> {
-  const sources = new Map<string, string>();
-  for (const info of project.modules.values()) {
-    sources.set(info.path, info.tree.text);
-  }
-  return sources;
-}
 
 /** The prefix of a host import. It names a host module and has no producer IR. */
 const HOST_PREFIX = "host:";
@@ -99,18 +90,19 @@ function knownDeclarations(producer: ModuleIR): ReadonlyMap<string, Json> {
   const add = (id: string, declaration: Json) => {
     if (!known.has(id)) known.set(id, declaration);
   };
-  for (const d of producer.declarations) add(d.id, payloadOf(d));
+  for (const d of producer.declarations) {
+    // A value keeps its identity, name, and type in an import payload.
+    add(
+      d.id,
+      d.kind === "function" || d.kind === "constant"
+        ? { id: d.id, name: d.name, type: d.type }
+        : d,
+    );
+  }
   for (const imp of producer.imports) {
     for (const [id, entry] of payloadEntries(imp)) add(id, entry);
   }
   return known;
-}
-
-/** The form that an import payload holds for a declaration. A value keeps its identity, name, and type. */
-function payloadOf(declaration: Declaration): Json {
-  return declaration.kind === "function" || declaration.kind === "constant"
-    ? { id: declaration.id, name: declaration.name, type: declaration.type }
-    : declaration;
 }
 
 /** The entries of an import payload, each with its identity. */
@@ -121,11 +113,6 @@ function payloadEntries(imp: Import): readonly (readonly [string, Json])[] {
     ...imp.services.map((s) => [s.id, s] as const),
     ...imp.values.map((v) => [v.id, v] as const),
   ];
-}
-
-/** The module part of a declaration identity such as `type:lib#Count`. */
-function ownerOf(id: string): string | undefined {
-  return /^[^:#]+:([^#]+)#/.exec(id)?.[1];
 }
 
 /**
@@ -156,7 +143,9 @@ function importDifference(
   const known = knownDeclarations(producer);
   for (const [id, entry] of payloadEntries(imp)) {
     const found = known.get(id);
-    if (found === undefined && ownerOf(id) !== imp.module) continue;
+    // The owner is the module part of an identity such as `type:lib#Count`.
+    const owner = /^[^:#]+:([^#]+)#/.exec(id)?.[1];
+    if (found === undefined && owner !== imp.module) continue;
     const difference = firstDifference(entry, found, id);
     if (difference !== undefined) return difference;
   }
@@ -172,7 +161,11 @@ export function validateProject(
   project: ProjectModules,
   lowered: ReadonlyMap<string, Result<ModuleIR, LowerError>>,
 ): ReadonlyMap<string, readonly Diagnostic[]> {
-  const sources = projectSources(project);
+  // The source texts, keyed by the root-relative paths that spans use.
+  const sources = new Map<string, string>();
+  for (const info of project.modules.values()) {
+    sources.set(info.path, info.tree.text);
+  }
   const result = new Map<string, readonly Diagnostic[]>();
   for (const [name, module] of lowered) {
     if (!module.ok) continue;

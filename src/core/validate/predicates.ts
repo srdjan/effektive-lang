@@ -85,7 +85,8 @@ function checkBranch(
   counter: Counter,
 ): Result<true, CertificateError> {
   while (task.pending.length > 0) {
-    if (!take(counter)) return { ok: false, error: { tag: "limit" } };
+    if (counter.remaining === 0) return { ok: false, error: { tag: "limit" } };
+    counter.remaining--;
     const signed = task.pending.pop();
     if (signed === undefined) break;
     const node = signed.predicate;
@@ -300,12 +301,6 @@ function isUnsatProof(value: unknown): value is UnsatProof {
   return isRecord(value) &&
     (value.kind === "false" || value.kind === "split" ||
       value.kind === "negative-cycle");
-}
-
-function take(counter: Counter): boolean {
-  if (counter.remaining === 0) return false;
-  counter.remaining--;
-  return true;
 }
 
 function takeCount(counter: Counter, count: number): boolean {
