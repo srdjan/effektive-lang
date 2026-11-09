@@ -323,6 +323,8 @@ interface ChainOptions {
   readonly splitDown: ((separator: Doc) => Doc) | undefined;
   /** One head for each line, the body on the last line when it fits, else below it. */
   readonly splitAdaptive: (separator: Doc) => Doc;
+  /** `split` with the object body of a brace body broken. Absent for any other body. */
+  readonly broken: ((separator: Doc) => Doc) | undefined;
 }
 
 function chainOptions(chain: Chain): ChainOptions {
@@ -337,6 +339,12 @@ function chainOptions(chain: Chain): ChainOptions {
       split: (separator) => nestHeads(heads, last, separator),
       splitDown: undefined,
       splitAdaptive: (separator) => nestHeads(heads, last, separator),
+      broken: tail.kind === "block" ? undefined : (separator) =>
+        nestHeads(
+          heads,
+          [" (", group(tail.body.doc, true), ")"],
+          separator,
+        ),
     };
   }
   const body = tail.body;
@@ -348,6 +356,7 @@ function chainOptions(chain: Chain): ChainOptions {
     splitDown: (separator) => nestHeads(heads, down, separator),
     splitAdaptive: (separator) =>
       nestHeads(heads, group(indent([line, flush(body)])), separator),
+    broken: undefined,
   };
 }
 
@@ -357,6 +366,49 @@ function chainDocOf(chain: Chain): Doc {
   const split = options.splitAdaptive(hard);
   if (options.bodyDown === undefined) return alt([options.oneLine, split]);
   return alt([options.oneLine, options.bodyDown, split]);
+}
+
+/**
+ * `const name = <chain>`. A chain that does not fit moves below the `=`. When
+ * some head does not fit there, each head gets a line of its own.
+ */
+function chainDeclaration(prefix: Doc, chain: Chain): Doc {
+  const options = chainOptions(chain);
+  if (options.bodyDown === undefined) {
+    // A block or an object body. The object breaks inside its braces when the
+    // line is too long, so a flat measure of the whole chain would reject a
+    // layout that `deno fmt` keeps. Each layout is tried with the object on
+    // the line, then broken.
+    const { broken } = options;
+    const layouts: Doc[] = [[" ", options.oneLine]];
+    if (broken !== undefined) layouts.push([" ", broken(" ")]);
+    layouts.push(indent([through, options.oneLine]));
+    if (broken !== undefined) layouts.push(indent([through, broken(" ")]));
+    layouts.push(indent([through, options.split(through)]));
+    if (broken !== undefined) {
+      layouts.push(indent([through, broken(through)]));
+    }
+    return [
+      prefix,
+      " =",
+      layouts.reduceRight<Doc>(
+        (otherwise, layout) => ifFits(layout, layout, otherwise),
+        [" ", options.splitAdaptive(hard)],
+      ),
+    ];
+  }
+  const choices: Doc[] = [[" ", options.oneLine]];
+  if (options.bodyDown !== undefined) choices.push([" ", options.bodyDown]);
+  choices.push(indent([through, options.oneLine]));
+  if (options.bodyDown !== undefined) {
+    choices.push(indent([through, options.bodyDown]));
+  }
+  choices.push(indent([through, options.split(through)]));
+  if (options.splitDown !== undefined) {
+    choices.push(indent([through, options.splitDown(through)]));
+  }
+  choices.push([" ", options.splitAdaptive(hard)]);
+  return [prefix, " =", alt(choices)];
 }
 
 /** True when the doc that `at(e, min)` prints starts with `{`. */
@@ -529,21 +581,10 @@ export class ExprEmitter implements ExprCore {
     if (body.chain === undefined) {
       return assignment(prefix, this.arrow(parameters, body));
     }
-    const options = chainOptions(
+    return chainDeclaration(
+      prefix,
       this.chainOf(parameters, { kind: "expr", body }),
     );
-    const choices: Doc[] = [[" ", options.oneLine]];
-    if (options.bodyDown !== undefined) choices.push([" ", options.bodyDown]);
-    choices.push(indent([through, options.oneLine]));
-    if (options.bodyDown !== undefined) {
-      choices.push(indent([through, options.bodyDown]));
-    }
-    choices.push(indent([through, options.split(through)]));
-    if (options.splitDown !== undefined) {
-      choices.push(indent([through, options.splitDown(through)]));
-    }
-    choices.push([" ", options.splitAdaptive(hard)]);
-    return [prefix, " =", alt(choices)];
   }
 
   // -------------------------------------------------------------- spans
@@ -1223,16 +1264,18 @@ export class ExprEmitter implements ExprCore {
   private step(step: Step, mode: Mode): Doc {
     const value = this.kid(mode);
     if (step.kind === "bind") {
+      const prefix: Doc = [
+        "const ",
+        step.binding.name,
+        ": ",
+        typeDoc(this.scope, step.binding.type),
+      ];
+      const bound = value(step.value, step.binding.type);
+      // A curried closure lays out like a declaration of the module.
       return [
-        assignment(
-          [
-            "const ",
-            step.binding.name,
-            ": ",
-            typeDoc(this.scope, step.binding.type),
-          ],
-          free(value(step.value, step.binding.type)),
-        ),
+        bound.chain !== undefined
+          ? chainDeclaration(prefix, bound.chain)
+          : assignment(prefix, free(bound)),
         ";",
       ];
     }

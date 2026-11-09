@@ -292,6 +292,31 @@ export const wideElseIf = (alphaValueNumberOne: IntVal, betaValueNumberTwo: IntV
 
 const wideFoldChain = (xs: IntVal[]) => xs |> fold((q: IntVal) => q, (accumulatorValueNumberOneXXXXXXXXXXXXXXXXX, currentValueNumberTwoXXXXXXXXXXXXXXXXXXXXXX) => (q: IntVal) => q + 1)
 
+export const localCurryBlock = (n: IntVal): IntVal => {
+  const f = (a: IntVal) => (b: IntVal) => { const s = a + b; s + n }
+  f(1)(2)
+}
+
+export const localCurryObject = (n: IntVal): IntVal => {
+  const pairer = (a: IntVal) => (b: IntVal) => ({ left: a, right: b })
+  pairer(1)(n).left
+}
+
+export const localCurryWideObject = (n: IntVal): IntVal => {
+  const pairerWithLongerName = (alpha: IntVal) => (beta: IntVal) => ({ leftSide: alpha, rightSide: beta, total: alpha + beta })
+  pairerWithLongerName(1)(n).leftSide
+}
+
+export const localCurryLongBlock = (n: IntVal): IntVal => {
+  const f = (alpha: IntVal) => (beta: IntVal) => { const s = alpha + beta; const longer = s * alpha + beta * s + alpha * alpha + beta * beta + s * s * alpha * beta; longer + n }
+  f(1)(2)
+}
+
+export const localCurryThree = (n: IntVal): IntVal => {
+  const aVeryLongNameForAClosureThatKeepsGoing = (alphaParameterNameLong: IntVal) => (betaParameterNameLong: IntVal) => (gammaParameterNameLong: IntVal) => ({ leftSide: alphaParameterNameLong, rightSide: betaParameterNameLong })
+  aVeryLongNameForAClosureThatKeepsGoing(1)(2)(n).leftSide
+}
+
 type IntVal = int
 type NumVal = number
 type StrVal = string
