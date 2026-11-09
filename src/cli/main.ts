@@ -128,19 +128,15 @@ async function watchLoop(
   await round(first);
   const iterator = events[Symbol.asyncIterator]();
   let next = iterator.next();
-  try {
-    io.stderr(`watching ${session.root}\n`);
-    while (true) {
-      const event = await next;
-      if (event.done) break;
-      if (event.value.length > 0) {
-        emit(log, "cli.change", { paths: event.value });
-      }
-      await round(session.sync());
-      next = iterator.next();
+  io.stderr(`watching ${session.root}\n`);
+  while (true) {
+    const event = await next;
+    if (event.done) return;
+    if (event.value.length > 0) {
+      emit(log, "cli.change", { paths: event.value });
     }
-  } finally {
-    await iterator.return?.();
+    await round(session.sync());
+    next = iterator.next();
   }
 }
 

@@ -188,68 +188,60 @@ export async function* debounceBatches(
   delayMs: number,
 ): AsyncGenerator<readonly string[]> {
   const iterator = source[Symbol.asyncIterator]();
-  try {
-    let pending: Promise<IteratorResult<readonly string[]>> | undefined;
+  let pending: Promise<IteratorResult<readonly string[]>> | undefined;
+  while (true) {
+    pending ??= iterator.next();
+    const first = await pending;
+    pending = undefined;
+    if (first.done) return;
+    const batch = new Set<string>(first.value);
+    let ended = false;
     while (true) {
-      pending ??= iterator.next();
-      const first = await pending;
+      pending = iterator.next();
+      let id: ReturnType<typeof setTimeout> | undefined;
+      const quiet = new Promise<"quiet">((resolve) => {
+        id = setTimeout(() => resolve("quiet"), delayMs);
+      });
+      const raced = await Promise.race([pending, quiet]);
+      clearTimeout(id);
+      if (raced === "quiet") break;
       pending = undefined;
-      if (first.done) return;
-      const batch = new Set<string>(first.value);
-      let ended = false;
-      while (true) {
-        pending = iterator.next();
-        let id: ReturnType<typeof setTimeout> | undefined;
-        const quiet = new Promise<"quiet">((resolve) => {
-          id = setTimeout(() => resolve("quiet"), delayMs);
-        });
-        const raced = await Promise.race([pending, quiet]);
-        clearTimeout(id);
-        if (raced === "quiet") break;
-        pending = undefined;
-        if (raced.done) {
-          ended = true;
-          break;
-        }
-        for (const path of raced.value) batch.add(path);
+      if (raced.done) {
+        ended = true;
+        break;
       }
-      yield [...batch].sort();
-      if (ended) return;
+      for (const path of raced.value) batch.add(path);
     }
-  } finally {
-    await iterator.return?.();
+    yield [...batch].sort();
+    if (ended) return;
   }
 }
 
 async function* sourceEvents(root: string): AsyncGenerator<readonly string[]> {
   const absolute = denoFs.absolute(root);
   const prefix = absolute.endsWith("/") ? absolute : `${absolute}/`;
-  const watcher = Deno.watchFs(absolute, { recursive: true });
-  const iterator = watcher[Symbol.asyncIterator]();
+  const iterator = Deno.watchFs(absolute, { recursive: true })
+    [Symbol.asyncIterator]();
   let pending = iterator.next();
-  try {
-    while (true) {
-      let timeout: ReturnType<typeof setTimeout> | undefined;
-      const poll = new Promise<"poll">((resolve) => {
-        timeout = setTimeout(() => resolve("poll"), WATCH_POLL_MS);
-      });
-      const result = await Promise.race([pending, poll]);
-      clearTimeout(timeout);
-      if (result === "poll") {
-        // The watch loop rescans, but an unchanged project prints nothing.
-        yield [];
-        continue;
-      }
-      if (result.done) return;
-      pending = iterator.next();
-      const relative = result.value.paths
-        .filter((path) => path.startsWith(prefix))
-        .map((path) => path.slice(prefix.length))
-        .filter((path) => isWorkspaceInput(path) || isTargetPath(path));
-      if (relative.length > 0) yield relative;
+  while (true) {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const poll = new Promise<"poll">((resolve) => {
+      timeout = setTimeout(() => resolve("poll"), WATCH_POLL_MS);
+    });
+    const result = await Promise.race([pending, poll]);
+    clearTimeout(timeout);
+    if (result === "poll") {
+      // The watch loop rescans, but an unchanged project prints nothing.
+      yield [];
+      continue;
     }
-  } finally {
-    watcher.close();
+    if (result.done) return;
+    pending = iterator.next();
+    const relative = result.value.paths
+      .filter((path) => path.startsWith(prefix))
+      .map((path) => path.slice(prefix.length))
+      .filter((path) => isWorkspaceInput(path) || isTargetPath(path));
+    if (relative.length > 0) yield relative;
   }
 }
 
