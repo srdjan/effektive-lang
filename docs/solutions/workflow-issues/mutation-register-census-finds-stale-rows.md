@@ -20,7 +20,7 @@ tags: [mutation, survivor-register, stale-row, census, worktree]
 
 A row of `fixtures/mutation/survivors.json` identifies its mutant by file, declaration, offset, operator, and text (`keyOf`, `scripts/mutate.ts:368`). The offset counts from the start of the declaration. A row is stale when it does not match exactly one site (`scripts/mutate.ts:420`).
 
-`deno task mutate` checks staleness only for the files that the run scans (`scripts/mutate.ts:33`). A row of a file that nobody mutates again can thus stay stale for a long time.
+`deno task mutate` checks staleness only for the files that the run scans (`scripts/mutate.ts:418-419`). A row of a file that nobody mutates again can thus stay stale for a long time.
 
 Plan KN (`docs/archive/plans/2026-11-07-untangle-knots.md`) refactored 13 knots. After each refactor, two questions came up. Did the refactor move a register row? Did a stale row that a run printed exist before the change? A whole-module mutation run answers these questions for one file only, and it takes minutes.
 
