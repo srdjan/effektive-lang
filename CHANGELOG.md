@@ -10,6 +10,10 @@
   Before, the project stayed, its configuration error stayed on the deleted `effektive.json`, and requests for the document opened again were answered from that project.
 - The language server keeps a generated TypeScript view subscribed when its module moves to another project, and it also subscribes the view of a document that has no project yet.
   Before, the view stopped updating after the move, and the view of a document without a project kept "No generated TypeScript yet" after the document joined a project.
+- The VS Code client makes each open generated TypeScript view fetch its text again after the language server restarts.
+  Before, each open view kept its old text after a server crash.
+- The VS Code client registers the Show Generated TypeScript command also when the language server cannot start, and the view then says that the server is not running.
+  Before, VS Code reported that the command was not found.
 
 ## 0.15.4 - 2026-11-07
 

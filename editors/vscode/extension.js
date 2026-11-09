@@ -7,7 +7,7 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 const REQUIRED_DENO_VERSION = "2.9.8";
 const vscode = require("vscode");
-const { LanguageClient } = require("vscode-languageclient/node");
+const { LanguageClient, State } = require("vscode-languageclient/node");
 
 // These values must equal the exports of src/lsp/methods.ts.
 const GENERATED_TYPESCRIPT_METHOD = "effektive/generatedTypeScript";
@@ -176,6 +176,16 @@ async function showGeneratedTypeScript() {
 function activate(context) {
   const config = vscode.workspace.getConfiguration("effektive");
   const { entry, options } = serverOptions();
+  // The command and the view exist on every path, so an early stop shows a clear text.
+  const provider = new GeneratedContentProvider(() => client);
+  context.subscriptions.push(
+    provider,
+    vscode.workspace.registerTextDocumentContentProvider(
+      GENERATED_SCHEME,
+      provider,
+    ),
+    vscode.commands.registerCommand(SHOW_COMMAND, showGeneratedTypeScript),
+  );
   if (!fs.existsSync(entry)) {
     vscode.window.showErrorMessage(
       `Effektive: the language server was not found at ${entry}. ` +
@@ -215,7 +225,6 @@ function activate(context) {
     },
   );
 
-  const provider = new GeneratedContentProvider(() => client);
   client.onNotification(GENERATED_CHANGED_METHOD, (params) => {
     if (params && typeof params.uri === "string") {
       provider.fire(virtualUriOf(vscode.Uri.parse(params.uri)));
@@ -224,12 +233,15 @@ function activate(context) {
 
   context.subscriptions.push(
     outputChannel,
-    provider,
-    vscode.workspace.registerTextDocumentContentProvider(
-      GENERATED_SCHEME,
-      provider,
-    ),
-    vscode.commands.registerCommand(SHOW_COMMAND, showGeneratedTypeScript),
+    // A restarted server has no subscriptions. Fetching each open view subscribes it again.
+    client.onDidChangeState((event) => {
+      if (event.newState !== State.Running) return;
+      for (const document of vscode.workspace.textDocuments) {
+        if (document.uri.scheme === GENERATED_SCHEME) {
+          provider.fire(document.uri);
+        }
+      }
+    }),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (SERVER_SETTINGS.some((name) => event.affectsConfiguration(name))) {
         vscode.window

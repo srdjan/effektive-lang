@@ -260,6 +260,11 @@ function activateClient(
   const notifications = new Map<string, (params: unknown) => void>();
   const opened: FakeUri[] = [];
   const fired: FakeUri[] = [];
+  const textDocuments: { uri: FakeUri }[] = [];
+  const stateListeners: ((event: unknown) => void)[] = [];
+  const providers = new Map<string, {
+    provideTextDocumentContent(uri: FakeUri): Promise<string>;
+  }>();
   const editor: { document?: { languageId: string; uri: FakeUri } } = {};
   class Client {
     constructor(
@@ -274,6 +279,10 @@ function activateClient(
     onNotification(method: string, handler: (params: unknown) => void) {
       notifications.set(method, handler);
     }
+    onDidChangeState(listener: (event: unknown) => void) {
+      stateListeners.push(listener);
+      return { dispose() {} };
+    }
     start() {
       return Promise.resolve();
     }
@@ -285,7 +294,16 @@ function activateClient(
         get: (name: string, fallback: unknown) => settings[name] ?? fallback,
       }),
       createFileSystemWatcher: () => ({}),
-      registerTextDocumentContentProvider: () => ({}),
+      textDocuments,
+      registerTextDocumentContentProvider: (
+        scheme: string,
+        provider: {
+          provideTextDocumentContent(uri: FakeUri): Promise<string>;
+        },
+      ) => {
+        providers.set(scheme, provider);
+        return {};
+      },
       openTextDocument: (uri: FakeUri) => {
         opened.push(uri);
         return Promise.resolve({ languageId: "typescript" });
@@ -339,7 +357,10 @@ function activateClient(
       if (name === "path") return path;
       if (name === "vscode") return vscode;
       if (name === "vscode-languageclient/node") {
-        return { LanguageClient: Client };
+        return {
+          LanguageClient: Client,
+          State: { Stopped: 1, Running: 2, Starting: 3 },
+        };
       }
       if (name === "child_process") {
         return {
@@ -363,6 +384,11 @@ function activateClient(
     opened,
     fired,
     editor,
+    textDocuments,
+    providers,
+    changeState: (event: unknown) => {
+      for (const listener of stateListeners) listener(event);
+    },
   };
 }
 
@@ -425,6 +451,25 @@ Deno.test("missing or incompatible Deno prevents startup with an actionable erro
   }
 });
 
+Deno.test("the Show command opens a not-running view when Deno is missing", async () => {
+  const client = activateClient({}, new Error("ENOENT"));
+  const show = client.commands.get("effektive.showGeneratedTypeScript");
+  assert(show !== undefined, "the command must be registered");
+  client.editor.document = {
+    languageId: "effektive",
+    uri: fakeUri({ scheme: "file", path: "/work/app/users.eff", query: "" }),
+  };
+  await show();
+  const virtual = client.opened.at(-1);
+  const provider = client.providers.get(GENERATED_SCHEME);
+  assert(virtual !== undefined, "the command must open a virtual document");
+  assert(provider !== undefined, "the content provider must be registered");
+  assertEquals(
+    await provider.provideTextDocumentContent(virtual),
+    "// The Effektive language server is not running.",
+  );
+});
+
 Deno.test("the generated view maps .eff to .ts and .effi to .effi.ts", async () => {
   const client = activateClient({}, REQUIRED_DENO_VERSION);
   const show = client.commands.get("effektive.showGeneratedTypeScript");
@@ -459,6 +504,24 @@ Deno.test("a generatedChanged notification refreshes the .effi.ts view", () => {
   assert(changed !== undefined, "the notification must have a handler");
   changed({ uri: "/work/app/host.effi" });
   assertEquals(client.fired.map((uri) => uri.path), ["/work/app/host.effi.ts"]);
+});
+
+Deno.test("a restarted server makes each open generated view fetch again", () => {
+  const client = activateClient({}, REQUIRED_DENO_VERSION);
+  client.textDocuments.push(
+    {
+      uri: fakeUri({
+        scheme: GENERATED_SCHEME,
+        path: "/work/app/users.ts",
+        query: "",
+      }),
+    },
+    {
+      uri: fakeUri({ scheme: "file", path: "/work/app/users.eff", query: "" }),
+    },
+  );
+  client.changeState({ oldState: 3, newState: 2 });
+  assertEquals(client.fired.map((uri) => uri.path), ["/work/app/users.ts"]);
 });
 
 Deno.test("the client sends the initialization defaults of the server", () => {
