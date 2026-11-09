@@ -389,7 +389,7 @@
   {
     "file": "scripts/behavior_compare.ts",
     "declaration": "records",
-    "offset": 861,
+    "offset": 956,
     "text": "!ran.ok",
     "operator": "negate-if",
     "class": "slow-only",
@@ -398,7 +398,7 @@
   {
     "file": "scripts/behavior_compare.ts",
     "declaration": "<module>",
-    "offset": 11596,
+    "offset": 12698,
     "text": "done.ok",
     "operator": "negate-if",
     "class": "slow-only",
