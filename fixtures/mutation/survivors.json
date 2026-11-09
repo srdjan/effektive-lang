@@ -1258,5 +1258,14 @@
     "operator": "comparison",
     "class": "equivalent",
     "reason": "The walk never reaches depth 64. Only a member that is a named union alias deepens it: a union nested 70 levels inline emits Option.fromUndefinedOr(u.x). declaration/012 rejects a chain of 64 such aliases (U64 is nested deeper than 128 levels), and a chain of 63 emits the option read. So >= and > give the same result."
+  },
+  {
+    "file": "src/core/emit/expr.ts",
+    "declaration": "ExprEmitter.optionMatch",
+    "offset": 411,
+    "text": "none === undefined || some === undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The internal-error guard is unreachable. missingOf (check_patterns.ts) reports pattern/001 for an option match without Some(_) or None, and a probe with only a Some arm reports that the match needs None. lowerModule returns a diagnostics error for a blocked module, so emitProject never emits such a match."
   }
 ]
