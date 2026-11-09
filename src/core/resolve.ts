@@ -241,10 +241,6 @@ function asPrelude(name: string): PreludeName | undefined {
   return PRELUDE_NAMES.has(name) ? name as PreludeName : undefined;
 }
 
-function asBuiltinType(name: string): BuiltinTypeName | undefined {
-  return BUILTIN_TYPES.find((builtin) => builtin === name);
-}
-
 export type Target =
   | { readonly kind: "type"; readonly id: TypeId }
   | { readonly kind: "error"; readonly id: ErrorId }
@@ -741,7 +737,7 @@ class Resolver {
       this.set(nameNode, { kind: "error", id: effectError });
       return;
     }
-    const builtin = asBuiltinType(name);
+    const builtin = BUILTIN_TYPES.find((candidate) => candidate === name);
     if (builtin !== undefined) {
       this.set(nameNode, { kind: "builtin-type", name: builtin });
       return;
@@ -1041,23 +1037,20 @@ class Resolver {
           this.clause(kid);
         }
         break;
-      case "const":
-        this.resolveConstParts(node, decl.nameNode);
+      case "const": {
+        // The type annotation and the initializer of a top-level const.
+        const rest = kidsOf(this.tree, node).filter((k) => k !== decl.nameNode);
+        for (const kid of rest) {
+          if (isTypeKind(kindOf(this.tree, kid))) this.resolveType(kid);
+        }
+        const init = rest[rest.length - 1];
+        if (init !== undefined && !isTypeKind(kindOf(this.tree, init))) {
+          this.expr(init, "value");
+        }
         break;
+      }
     }
     this.scope = undefined;
-  }
-
-  /** The type annotation and the initializer of a top-level const. */
-  private resolveConstParts(node: NodeId, nameNode: NodeId): void {
-    const rest = kidsOf(this.tree, node).filter((k) => k !== nameNode);
-    for (const kid of rest) {
-      if (isTypeKind(kindOf(this.tree, kid))) this.resolveType(kid);
-    }
-    const init = rest[rest.length - 1];
-    if (init !== undefined && !isTypeKind(kindOf(this.tree, init))) {
-      this.expr(init, "value");
-    }
   }
 
   private expr(node: NodeId, position: Position): void {
@@ -1408,13 +1401,6 @@ class Resolver {
   }
 }
 
-function resolveModule(
-  project: Project,
-  info: ModuleInfo,
-): ModuleResolution {
-  return new Resolver(info, project).run();
-}
-
 /** Resolves every module of the project. The map follows the topological order. */
 export function resolveProject(
   project: Project,
@@ -1422,7 +1408,7 @@ export function resolveProject(
   const result = new Map<string, ModuleResolution>();
   for (const name of project.order) {
     const info = project.modules.get(name);
-    if (info !== undefined) result.set(name, resolveModule(project, info));
+    if (info !== undefined) result.set(name, new Resolver(info, project).run());
   }
   return result;
 }
