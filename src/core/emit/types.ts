@@ -18,7 +18,6 @@ import {
   type Doc,
   group,
   ifBreak,
-  ifFits,
   indent,
   join,
   line,
@@ -48,18 +47,6 @@ export function typeArguments(args: readonly Doc[]): Doc {
     soft,
     ">",
   ]);
-}
-
-/**
- * The type argument of a one-argument type. `deno fmt` keeps a record type
- * beside the brackets. It breaks the brackets around any other type that does
- * not fit. The break is a choice of the printer, not a group, so the
- * parameters of a signature break before it.
- */
-function singleArgument(element: Type, inner: Doc): Doc {
-  const beside: Doc = ["<", inner, ">"];
-  if (element.kind === "record") return beside;
-  return ifFits(beside, beside, ["<", indent([soft, inner]), soft, ">"]);
 }
 
 function unionDoc(members: readonly Doc[]): Doc {
@@ -175,10 +162,7 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
     case "named":
       return scope.nameOf(type.id);
     case "array":
-      return [
-        "ReadonlyArray",
-        singleArgument(type.element, typeDoc(scope, type.element)),
-      ];
+      return [`ReadonlyArray<`, typeDoc(scope, type.element), ">"];
     case "tuple":
       return type.elements.length === 0 ? "readonly []" : [
         "readonly [",
@@ -187,15 +171,13 @@ export function typeDoc(scope: EmitNames, type: Type): Doc {
       ];
     case "option": {
       const option = scope.effect("Option");
-      return [
-        `${option}.Option`,
-        singleArgument(type.element, typeDoc(scope, type.element)),
-      ];
+      return [`${option}.Option<`, typeDoc(scope, type.element), ">"];
     }
     case "ref":
       return [
-        `${scope.effect("SynchronizedRef")}.SynchronizedRef`,
-        singleArgument(type.element, typeDoc(scope, type.element)),
+        `${scope.effect("SynchronizedRef")}.SynchronizedRef<`,
+        typeDoc(scope, type.element),
+        ">",
       ];
     case "retry-schedule":
       return [
@@ -344,11 +326,9 @@ export function encodedTypeDoc(
       ];
     case "array":
       return [
-        "ReadonlyArray",
-        singleArgument(
-          type.element,
-          encodedTypeDoc(scope, type.element, recursive),
-        ),
+        "ReadonlyArray<",
+        encodedTypeDoc(scope, type.element, recursive),
+        ">",
       ];
     case "tuple":
       return type.elements.length === 0 ? "readonly []" : [

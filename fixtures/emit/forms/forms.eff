@@ -321,10 +321,6 @@ export const localCurryThree = (n: IntVal): IntVal => {
   aVeryLongNameForAClosureThatKeepsGoing(1)(2)(n).leftSide
 }
 
-const sumMaker = (n: IntVal) => (m: IntVal) => ({ leftSideWithLongName: n, rightSideWithLongName: m, totalWithLongName: n + m })
-const sumMakers = (xs: IntVal[]) => xs |> map((n: IntVal) => sumMaker(n))
-export const firstLefts = (xs: IntVal[]): IntVal[] => sumMakers(xs) |> map((f) => f(1).leftSideWithLongName)
-
 type IntVal = int
 type NumVal = number
 type StrVal = string

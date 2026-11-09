@@ -931,25 +931,6 @@ Deno.test("an arrow chain that is too long moves below the equals sign", () => {
   );
 });
 
-Deno.test("a type argument that is too long breaks the brackets and keeps the value beside the equals sign", () => {
-  const forms = emitFiles(projectFiles("emit/forms"), ["forms.eff"]).get(
-    "forms",
-  );
-  assert(forms !== undefined);
-  assertStringIncludes(
-    forms.text,
-    "  const $p1: ReadonlyArray<\n    (a: IntVal) => {\n      readonly leftSideWithLongName: IntVal;\n      readonly rightSideWithLongName: IntVal;\n      readonly totalWithLongName: IntVal;\n    }\n  > = sumMakers(xs);",
-  );
-  // A signature breaks its parameters before the brackets of its result type.
-  const short = oneModule(
-    "type Name = string\ntype User = { name: Name }\nexport const activeNames = (users: User[]): Name[] => users |> map((u) => u.name)\n",
-  );
-  assertStringIncludes(
-    short,
-    "export const activeNames = (\n  users: ReadonlyArray<User>,\n): ReadonlyArray<Name> => {",
-  );
-});
-
 Deno.test("a match with three arms prints one flat chain of conditionals", () => {
   const forms = emitFiles(projectFiles("emit/forms"), ["forms.eff"]).get(
     "forms",
