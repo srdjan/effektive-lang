@@ -397,13 +397,13 @@ function chainDeclaration(prefix: Doc, chain: Chain): Doc {
       ),
     ];
   }
-  const choices: Doc[] = [[" ", options.oneLine]];
-  if (options.bodyDown !== undefined) choices.push([" ", options.bodyDown]);
-  choices.push(indent([through, options.oneLine]));
-  if (options.bodyDown !== undefined) {
-    choices.push(indent([through, options.bodyDown]));
-  }
-  choices.push(indent([through, options.split(through)]));
+  const choices: Doc[] = [
+    [" ", options.oneLine],
+    [" ", options.bodyDown],
+    indent([through, options.oneLine]),
+    indent([through, options.bodyDown]),
+    indent([through, options.split(through)]),
+  ];
   if (options.splitDown !== undefined) {
     choices.push(indent([through, options.splitDown(through)]));
   }
