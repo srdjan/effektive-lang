@@ -1,6 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
 import { lowerProject } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import {
   assertRejected,
@@ -9,7 +8,7 @@ import {
   declarationPath,
   PURE_CONSTANT,
 } from "./schema_diagnostics.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 const fixture = Deno.readTextFileSync(
   new URL("../fixtures/emit/schema-constructor-optional.eff", import.meta.url),
@@ -19,15 +18,7 @@ const checked = (source = fixture) => checkModule(source, "main.eff");
 
 Deno.test("optional adapters retain target make inputs and invariant field types", () => {
   const project = checked();
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("optional constructor inputs keep required keys, complete Options and decoded defaults", () => {

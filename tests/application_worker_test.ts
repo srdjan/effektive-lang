@@ -1,7 +1,7 @@
-import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { assert } from "@std/assert";
+import { checkProject, memoryHost } from "../src/core/mod.ts";
 import { assertDiagnostics, type Expected } from "./schema_diagnostics.ts";
+import { assertValidProject } from "./helpers.ts";
 
 const base = new URL(
   "../fixtures/applications/scheduled-worker/",
@@ -24,15 +24,7 @@ function checked(source = files["worker.eff"]) {
 
 Deno.test("scheduled worker composes retry, repetition and resource lifetimes in source", () => {
   const project = checked();
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("scheduled worker contracts reject lost channels", () => {

@@ -8,6 +8,7 @@ import {
   declarationPath,
   PURE_CONSTANT,
 } from "./schema_diagnostics.ts";
+import { assertValidProject } from "./helpers.ts";
 
 const fixture = Deno.readTextFileSync(
   new URL("../fixtures/emit/schema-constructor-order.eff", import.meta.url),
@@ -31,15 +32,7 @@ function checked(source = fixture) {
 
 Deno.test("field adapter order preserves unary defaults, selects target defaults and resets Option defaults", () => {
   const project = checked();
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("adapter order rejects false flags, duplicate defaults and incompatible input presence", () => {

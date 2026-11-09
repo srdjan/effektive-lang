@@ -1,6 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
 import { lowerProject } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import {
   assertDiagnostics,
@@ -9,7 +8,7 @@ import {
   type Expected,
   PURE_CONSTANT,
 } from "./schema_diagnostics.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 const fixture = Deno.readTextFileSync(
   new URL("../fixtures/emit/schema-recursive-wire.eff", import.meta.url),
@@ -18,15 +17,7 @@ const checked = (source = fixture) => checkModule(source, "main.eff");
 
 Deno.test("recursive Schemas preserve independent D, E, M and wire services", () => {
   const project = checked();
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("recursive wire types reject erased encoded axes and wrong nested data", () => {

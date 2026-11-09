@@ -38,6 +38,7 @@ import type {
   ValueId,
 } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { validateProject } from "../src/core/validate_project.ts";
 import {
   childrenOf,
   hasProblem,
@@ -714,6 +715,19 @@ export function diagnosticsOf(source: string): string[] {
   );
   assert(checked.ok);
   return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
+}
+
+/** Asserts that `project` has no diagnostics, lowers, and passes the project validator. */
+export function assertValidProject(project: CheckedProject): void {
+  assertEquals(project.diagnostics, []);
+  const lowered = lowerProject(project);
+  for (const result of lowered.values()) {
+    assert(result.ok, JSON.stringify(result));
+  }
+  for (
+    const diagnostics of validateProject(project.analysis.project, lowered)
+      .values()
+  ) assertEquals(diagnostics, []);
 }
 
 /**
