@@ -1,19 +1,8 @@
 // Tests for rule R1: a primitive type node can occur only inside a type or
 // error declaration. Each test runs through the public entry `checkProject`.
 
-import { assert, assertEquals } from "@std/assert";
-import { checkProject, memoryHost } from "../src/core/frontend.ts";
-
-/** Checks one module `m.eff` and returns its diagnostics as `code message` lines. */
-function diagnosticsOf(text: string): string[] {
-  const result = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(result.ok, JSON.stringify(result));
-  return result.value.diagnostics.map((d) => `${d.code} ${d.message}`);
-}
+import { assertEquals } from "@std/assert";
+import { diagnosticsOf } from "./helpers.ts";
 
 Deno.test("a string parameter outside a type declaration gives declaration/013 with the exact message", () => {
   assertEquals(
