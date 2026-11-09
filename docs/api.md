@@ -10,7 +10,7 @@ and the repository layout.
 ```
 src/core/      The core library. It is synchronous and does no I/O. Program memoizes its queries.
   ir.ts          Typed IR model. This file is the authored contract. The sibling repository effektive publishes a copy.
-  source.ts      The Result type of an expected failure, SourceHost, line tables, positions, and span helpers.
+  source.ts      The Result type of an expected failure, caught (the one catch of a synchronous throw), SourceHost, line tables, positions, and span helpers.
   diagnostics.ts Diagnostic type, the registry of codes, sort and dedupe.
   lex.ts         Lexer: typed arrays of tokens plus trivia.
   syntax.ts      Syntax tree types and the printer.

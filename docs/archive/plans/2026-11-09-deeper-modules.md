@@ -82,7 +82,7 @@ Opus reviewed each unit diff line by line and cherry-picked it into `main`. Opus
 
 ### Kept on purpose
 
-The 29 remaining try blocks were boundaries or resource releases. A later pass removed four more; see [the try ledger](2026-11-09-deeper-modules-evidence/try-blocks.md). They wrap a Deno API, `JSON.parse`, `new URL`, `decodeURIComponent`, or a port that throws. Others turn an internal failure into a result, or release an iterator, a timer, a watcher, or a temporary directory.
+After the four units, 29 try blocks remained. The second pass below removed 26 of them, and 3 remain; see [the try ledger](2026-11-09-deeper-modules-evidence/try-blocks.md).
 
 The units kept a one-use helper in these cases: it is an entry of a dispatch table, a grammar production, a type guard that narrows, a generic that carries correlated typing, or a body with early returns. A helper also stayed when a declaration with a register row calls it. Each unit handback lists its kept helpers with the reason.
 
@@ -94,9 +94,28 @@ The first pass found no other redundant check. The second pass below read every 
 
 The goal hook found two gaps after the first pass. First, no unit had read every check site. Second, the try blocks had no ledger. Opus ran a second pass on 2026-11-09.
 
-Opus judged each try block, removed four in `src/host/deno_io.ts` (`e16f546`), and wrote [the try ledger](2026-11-09-deeper-modules-evidence/try-blocks.md). The whole-word count is 31 at `de8d0e5` and 25 now.
+Opus judged each try block and wrote [the try ledger](2026-11-09-deeper-modules-evidence/try-blocks.md). The whole-word count is 31 at `de8d0e5` and 3 now:
 
-Four Sonnet auditors read every site of five census patterns: a fallback after a map lookup, a `typeof` test, an `isRecord` test, an exit on `=== undefined`, and an internal throw. Each auditor wrote a ledger with one row for each site. The validator is out of scope, because it is a test oracle that must check IR that can be malformed.
+- `e16f546` removed four blocks in `src/host/deno_io.ts`.
+- `e9abd5e` added `caught` to `src/core/source.ts`. This function returns the value of a call, or its thrown value, as a `Result`. Twenty catch sites now use it.
+- `1a55b60` removed the release chain of the watch iterators, because the process exit closes the watcher.
+
+The three kept blocks are `caught`, the async boundary of `main`, and the subprocess call of `denoCheck`. The ledger gives the test or the measurement that needs each one.
+
+Six Sonnet auditors read every site of eight census patterns:
+
+- a fallback after a map lookup
+- a `typeof` test
+- an `isRecord` test
+- an exit on `=== undefined`
+- an internal throw
+- `.has` followed by `.get`
+- `Array.isArray`
+- `instanceof`
+
+Each auditor wrote a ledger with one row for each site. RC1 to RC4 used the first five patterns outside the validator. RC5 used all eight in the validator. RC6 used the last three outside the validator.
+
+A census by type then covered all of `src/`. It found each `?.`, `??`, and `null` or `undefined` comparison whose operand type cannot be nullish. It found 137 sites: 125 read an array element, and Opus judged the other 12. No site was redundant; see [the type census](2026-11-09-deeper-modules-evidence/checks-types.md).
 
 | Unit | Area | Ledger rows | Removed or restructured |
 | --- | --- | --- | --- |
@@ -104,6 +123,8 @@ Four Sonnet auditors read every site of five census patterns: a fallback after a
 | RC2 | front end, program, editor queries | 81 | 8 ([ledger](2026-11-09-deeper-modules-evidence/checks-RC2.md)) |
 | RC3 | checker, refinements, lowering, types | 170 | 3 ([ledger](2026-11-09-deeper-modules-evidence/checks-RC3.md)) |
 | RC4 | emitter and `typescript.ts` | 79 | 10 ([ledger](2026-11-09-deeper-modules-evidence/checks-RC4.md)) |
+| RC5 | `src/core/validate/`, `validate_project.ts` | 109 | 2 ([ledger](2026-11-09-deeper-modules-evidence/checks-RC5.md)) |
+| RC6 | `.has`, `Array.isArray`, and `instanceof` outside the validator | 161 | 0 ([ledger](2026-11-09-deeper-modules-evidence/checks-RC6.md)) |
 
 These are the main changes:
 
@@ -114,12 +135,21 @@ These are the main changes:
 - `buildSourceMap` stores the text and the line starts of each source with its record, so five fallbacks are gone.
 - `liftedFrom` returns the function type, so `fit` needs no second lookup and no internal throw.
 - `TypeScriptOutputs` returns the lowered module with its cache entry, so a non-null assertion is gone.
+- The validator serialization walk reuses the span that it parsed for a node, and `isSortedUnique` carries the previous item as a string.
 
-The kept sites check an entry point or a value that can really be absent, give a default for a missing key in a multimap, or guard a fact in a side table. A fact in a side table cannot reach the reader through the types. No site was changed to a non-null assertion or a cast.
+Most kept sites check one of these:
 
-| Check after the second pass | Result |
+- an entry point
+- a value that can really be absent
+- a default for a missing key in a multimap
+- a fact in a side table, which cannot reach the reader through the types
+
+In the validator, each kept site is the first check of IR that can be forged. Each kept `.has` reads a different map than the `.get` after it. Each kept `Array.isArray` or `instanceof` tests outside input, a thrown value, or a real union. No site was changed to a non-null assertion or a cast.
+
+| Check at `1a55b60` | Result |
 | --- | --- |
 | `deno task check` | exit 0: 3005 fast and 296 slow tests passed |
-| `deno task behavior:compare de8d0e5 HEAD` | exit 0: 461 records equal, 0 changed |
-| `deno task mutate --seed 1 --sample 1 src/lsp/projects.ts` | exit 0: 0 stale rows, 0 unregistered survivors |
-| `deno task coverage` | exit 0: lines 97.47%, branches 95.49%, functions 99.26%; the floors are 97, 95, and 99 |
+| `deno task behavior:compare de8d0e5 HEAD` | exit 0: 461 records equal, 0 changed. The first run stopped with exit 139, a crash of `deno`, on a machine with a load average of 60. The rerun passed. |
+| `deno task mutate --seed 1 --sample 1 src/lsp/projects.ts` (at `7ae2d4f`) | exit 0: 0 stale rows, 0 unregistered survivors |
+| `deno task mutate --seed 1 --sample 1 src/core/project_config.ts` | exit 0: 0 stale rows, 0 unregistered survivors |
+| `deno task coverage` | exit 0: lines 97.50%, branches 95.47%, functions 99.26%; the floors are 97, 95, and 99 |
