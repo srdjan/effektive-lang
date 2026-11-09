@@ -66,25 +66,31 @@ export class TypeScriptOutputs {
     return { emits: this.emits };
   }
 
-  private entry(revision: Revision, name: string): OutputEntry | undefined {
+  private entry(
+    revision: Revision,
+    name: string,
+  ): {
+    readonly lowered: Result<ModuleIR, LowerError>;
+    readonly output: OutputEntry;
+  } | undefined {
     const lowered = revision.lowered(name);
     if (lowered === undefined) return undefined;
-    let entry = this.entries.get(lowered);
-    if (entry === undefined) {
-      entry = {};
-      this.entries.set(lowered, entry);
+    let output = this.entries.get(lowered);
+    if (output === undefined) {
+      output = {};
+      this.entries.set(lowered, output);
     }
-    return entry;
+    return { lowered, output };
   }
 
   emitted(
     revision: Revision,
     name: string,
   ): Result<EmittedModule, EmitProjectError> | undefined {
-    const entry = this.entry(revision, name);
-    if (entry === undefined) return undefined;
+    const found = this.entry(revision, name);
+    if (found === undefined) return undefined;
+    const { lowered, output: entry } = found;
     if (entry.emitted === undefined) {
-      const lowered = revision.lowered(name)!;
       this.emits++;
       entry.emitted = lowered.ok
         ? emitModule(lowered.value, { config: revision.config })
@@ -100,7 +106,7 @@ export class TypeScriptOutputs {
     revision: Revision,
     name: string,
   ): Result<SpanTable, EmitProjectError> | undefined {
-    const entry = this.entry(revision, name);
+    const entry = this.entry(revision, name)?.output;
     const emitted = this.emitted(revision, name);
     if (entry === undefined || emitted === undefined) return undefined;
     if (entry.table === undefined) {
@@ -116,7 +122,7 @@ export class TypeScriptOutputs {
     revision: Revision,
     name: string,
   ): Result<SourceMapV3, EmitProjectError | SourceMapError> | undefined {
-    const entry = this.entry(revision, name);
+    const entry = this.entry(revision, name)?.output;
     const table = this.spanTable(revision, name);
     if (entry === undefined || table === undefined) return undefined;
     if (entry.map === undefined) {
