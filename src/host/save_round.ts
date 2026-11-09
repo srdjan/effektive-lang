@@ -18,13 +18,13 @@ import {
 } from "./outputs.ts";
 
 /** What a round does with a module whose output removal failed. */
-export type RemovalRule =
+type RemovalRule =
   /** Keep the module in `modules`, so that the next round tries again (LSP). */
   | "retry"
   /** Drop the module, so that no later round tries again (CLI watch). */
   | "forget";
 
-export interface SaveRoundInput {
+interface SaveRoundInput {
   readonly fs: HostFs;
   readonly root: string;
   readonly revision: Revision;
@@ -44,7 +44,7 @@ export interface ModuleRemoval {
   readonly notes: readonly string[];
 }
 
-export interface SaveRound {
+interface SaveRound {
   /** Pass this as `previous` to the next round. */
   readonly modules: readonly string[];
   /** One entry per module that left, in the order of `previous`. */

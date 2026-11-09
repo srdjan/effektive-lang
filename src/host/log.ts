@@ -95,7 +95,7 @@ export interface LogFs {
   remove(path: string): Result<void, FileFailure>;
 }
 
-export interface FileLogOptions extends LogClock {
+interface FileLogOptions extends LogClock {
   readonly fs: LogFs;
   readonly projectDir: string;
   readonly surface: Surface;

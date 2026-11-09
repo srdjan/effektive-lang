@@ -15,7 +15,7 @@ import type { HostFs } from "./io.ts";
 import { readWorkspace } from "./workspace.ts";
 
 /** The files of one read, with their difference from the last update. */
-export interface DiskRead {
+interface DiskRead {
   readonly files: ReadonlyMap<string, string>;
   readonly set: ReadonlyMap<string, string>;
   readonly remove: readonly string[];

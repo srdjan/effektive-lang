@@ -10,7 +10,7 @@ import type { FileFailure } from "./ports.ts";
 
 export type Surface = "cli" | "lsp" | "playground";
 
-export const SURFACES: readonly Surface[] = ["cli", "lsp", "playground"];
+const SURFACES: readonly Surface[] = ["cli", "lsp", "playground"];
 
 /** One line of a session file. */
 export interface Envelope {
@@ -41,53 +41,53 @@ export interface LoggedDiagnostic {
   readonly message: string;
 }
 
-export interface CliStartData {
+interface CliStartData {
   readonly args: readonly string[];
   readonly command: "check" | "build" | "watch";
   readonly root: string;
 }
 
 /** A source file that the session read or lost. A `target` file is a host module. */
-export type CliInputData =
+type CliInputData =
   | { readonly path: string; readonly hash: string; readonly target?: true }
   | { readonly path: string; readonly removed: true; readonly target?: true };
 
-export interface CliPhaseData {
+interface CliPhaseData {
   readonly name: "sync" | "build";
   readonly ms: number;
 }
 
-export interface CliDiagnosticsData {
+interface CliDiagnosticsData {
   readonly items: readonly LoggedDiagnostic[];
 }
 
-export interface CliOutputData {
+interface CliOutputData {
   readonly path: string;
   readonly bytes: number;
   readonly hash: string;
 }
 
-export interface CliTscData {
+interface CliTscData {
   readonly code: number;
   readonly ms: number;
 }
 
-export interface CliChangeData {
+interface CliChangeData {
   readonly paths: readonly string[];
 }
 
-export interface MessageData {
+interface MessageData {
   readonly message: string;
 }
 
-export interface CliEndData {
+interface CliEndData {
   readonly code: number;
   readonly ms: number;
 }
 
 // ------------------------------------------------------------------ lsp
 
-export type LspInData =
+type LspInData =
   | {
     readonly error: {
       readonly tag: "bad-header" | "bad-json";
@@ -96,11 +96,11 @@ export type LspInData =
   }
   | { readonly message: unknown };
 
-export interface LspOutData {
+interface LspOutData {
   readonly message: unknown;
 }
 
-export type LspFsData =
+type LspFsData =
   | { readonly op: "readText"; readonly path: string; readonly hash: string }
   | {
     readonly op: "readText";
@@ -140,17 +140,17 @@ export type LspFsData =
   | { readonly op: "list"; readonly path: string; readonly error: FileFailure }
   | { readonly op: "absolute"; readonly path: string; readonly result: string };
 
-export interface LspTimingData {
+interface LspTimingData {
   readonly method: string;
   readonly id: string | number;
   readonly ms: number;
 }
 
-export interface LspErrorData {
+interface LspErrorData {
   readonly text: string;
 }
 
-export interface LspExitData {
+interface LspExitData {
   readonly code: number;
 }
 
@@ -260,12 +260,10 @@ export interface LogData {
 
 export type LogKind = keyof LogData;
 
-export type CliKind = Extract<LogKind, `cli.${string}`>;
 export type LspKind = Extract<LogKind, `lsp.${string}`>;
-export type PgKind = Extract<LogKind, `pg.${string}`>;
 
 /** The part of the `EventLog` port that `emit` needs. */
-export interface Appender {
+interface Appender {
   append(kind: string, data: unknown): void;
 }
 
@@ -296,7 +294,7 @@ export function isAnyKind(
 // ------------------------------------------------------------------ session file
 
 /** The form of a session ID. */
-export const SESSION_ID =
+const SESSION_ID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const SESSION_FILE = new RegExp(
@@ -313,7 +311,7 @@ export function sessionFileName(
   return `${surface}-${day}-${session}.jsonl`;
 }
 
-export interface SessionFileName {
+interface SessionFileName {
   readonly surface: Surface;
   /** The start day, `YYYYMMDD`. */
   readonly day: string;
@@ -340,7 +338,7 @@ export function parseSessionFileName(
  * tolerance for logs on disk: any surface, any kind name, and the shapes of
  * older builds.
  */
-export type EnvelopePolicy = "browser" | "replay";
+type EnvelopePolicy = "browser" | "replay";
 
 function browserEnvelope(
   value: Readonly<Record<string, unknown>>,

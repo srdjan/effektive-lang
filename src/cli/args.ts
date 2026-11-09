@@ -40,7 +40,7 @@ export const USAGE = [
   "",
 ].join("\n");
 
-export const NO_LOG_FLAG = "--no-log";
+const NO_LOG_FLAG = "--no-log";
 
 /** The flag that adds the `deno check` stage to `build` and `watch`. */
 export const TSC_FLAG = "--tsc";

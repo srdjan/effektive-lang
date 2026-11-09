@@ -52,7 +52,7 @@ export type HeldReason =
   /** The module cannot be lowered. */
   | { readonly tag: "lowering" };
 
-export interface WritePlan {
+interface WritePlan {
   /**
    * The modules that a build writes, in the order of `revision.moduleNames()`.
    * A module that imports a module that is not written is not written either,
