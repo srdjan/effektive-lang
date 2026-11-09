@@ -9,7 +9,7 @@ Opus measured these values at `36d61d8` on 2026-11-09:
 | Measure | Value |
 | --- | --- |
 | Source modules under `src/` | 157 |
-| Lines with `try {` under `src/` | 41 |
+| Try blocks under `src/` | 31 (an earlier count of 41 also matched names such as `DeclEntry {`) |
 | Exported names that no other file names | 70 |
 | Private functions and methods with one use in their file | 392 (76 of them have 10 lines or fewer) |
 | Fast suite | 3005 passed, 0 failed, 4 seconds |
@@ -66,7 +66,7 @@ Opus reviewed each unit diff line by line and cherry-picked it into `main`. Opus
 | Measure | `de8d0e5` | `c1d0f15` |
 | --- | --- | --- |
 | Source modules under `src/` | 157 | 149 |
-| Lines with `try {` under `src/` | 41 | 39 |
+| Try blocks under `src/` | 31 | 29 |
 | Exported names that no other file names | 70 | 0 |
 | Lines that start with `export` | 1000 | 923 |
 | Functions and methods | 1485 | 1425 |
@@ -82,7 +82,7 @@ Opus reviewed each unit diff line by line and cherry-picked it into `main`. Opus
 
 ### Kept on purpose
 
-The 39 remaining try blocks are boundaries or resource releases. They wrap a Deno API, `JSON.parse`, `new URL`, `decodeURIComponent`, or a port that throws. Others turn an internal failure into a result, or release an iterator, a timer, a watcher, or a temporary directory.
+The 29 remaining try blocks were boundaries or resource releases. A later pass removed four more; see [the try ledger](2026-11-09-deeper-modules-evidence/try-blocks.md). They wrap a Deno API, `JSON.parse`, `new URL`, `decodeURIComponent`, or a port that throws. Others turn an internal failure into a result, or release an iterator, a timer, a watcher, or a temporary directory.
 
 The units kept a one-use helper in these cases: it is an entry of a dispatch table, a grammar production, a type guard that narrows, a generic that carries correlated typing, or a body with early returns. A helper also stayed when a declaration with a register row calls it. Each unit handback lists its kept helpers with the reason.
 
