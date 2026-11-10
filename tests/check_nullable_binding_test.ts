@@ -178,3 +178,15 @@ Deno.test("a binding arm is a refinement path for a constructor proof", () => {
     [],
   );
 });
+
+Deno.test("a declared error name as a bare arm keeps the constructor message", () => {
+  assertEquals(
+    diagnosticsOf(
+      `${TYPES}error Stop = {}\nexport const f = (s: MaybeInt): Int =>\n  match s {\n    null => 0,\n    Stop => 1\n  }\n`,
+    ),
+    [
+      "pattern/001 the match is not exhaustive; it needs _",
+      "pattern/004 a constructor pattern needs a binding, as in `Some(x)` or `E(x)`",
+    ],
+  );
+});
