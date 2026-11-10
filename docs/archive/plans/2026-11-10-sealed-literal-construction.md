@@ -1,14 +1,15 @@
 # Sealed literal construction fix (N4)
 
 Date: 2026-11-10. Base: `b9d8ad2` on local `main`. Author: Opus.
-Status: on 2026-11-10 the user accepted option (a) of SCD1 and approved execution
-without a separate plan validation.
+Status: done. On 2026-11-10 the user accepted option (a) of SCD1 and approved execution
+without a separate plan validation. SCU1 is `e76c32e`, with a validation test in
+`91599e0`.
 
 Prefixes: SC (shapes), SCD (decisions), SCU (units).
 
 ## Defect
 
-Row N4 of the [completeness review](2026-11-10-completeness-review.md) records the
+Row N4 of the [completeness review](../../plans/2026-11-10-completeness-review.md) records the
 defect. The rule "Sealed type authority" of `docs/language-rules.md` gives the declaring
 module construction authority, and it rejects foreign construction and unnamed flow-in.
 A literal in another module breaks this rule: `check`, the validator, and `build --tsc`
@@ -91,6 +92,17 @@ owner's exported constructor or function.
 The specification already states the rule. `../effektive/public/effektive-spec.html`
 says that other modules "cannot construct values" of a sealed type. So SCU1 brings the
 compiler into line with the specification, and the specification text does not change.
+
+## Result
+
+Each 0-diagnostic row of the measurement table now gives one `sealed/001` with the
+constructor message. A literal with a spread at a foreign sealed type gives `sealed/001`
+and its two earlier `type-mismatch/003` diagnostics. A record spread at a foreign sealed
+type still gives only `sealed/002`, because the update check runs first. The validator
+rejects a forged array, tuple, and record with `validation/002`. Directed mutation found
+one survivor: no test validated a declaring module that constructs its sealed types by
+literal. `91599e0` adds that test. `deno task check` passed with 3,224 fast and 322 slow
+tests, and no existing fixture or website example changed.
 
 ## Out of scope
 
