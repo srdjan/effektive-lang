@@ -45,6 +45,7 @@ Opus measured these on 2026-11-10.
 | FA2 | Conversion of a computed pure callback to an Effect callback moves the computation into the wrapper. `make(x)` then runs at each callback call, not at construction: the emitted code is `() => Effect.succeed(make(x)())`. A defect such as integer overflow moves to another program point, possibly outside the surrounding recovery scope, and the computation repeats at each call. | Emitted code (Opus); runtime trace (astra) | Medium |
 | FA4 | A source file named `-main.eff` passes `check`. `build --tsc` then fails with `unexpected argument '-m' found`, because `src/host/deno_io.ts:161-163` passes file names to `deno check` without `--` or `./`. | `check` 0 diagnostics; `build --tsc` fails (Opus, astra) | Low |
 | N1 | A function with four parameters and a function-type result, such as `(first: Int, second: Int, third: Int, fourth: Int): () => Int`, passes `check`. `build` exits 0 and writes TypeScript that does not parse: the broken function type prints its empty parameter list as `(\n  ,\n)`. `--tsc` gives `SyntaxError: Expected '=>', got ':'`. Found by Fable during the plan validation. | `build` output (Opus, Fable) | High |
+| N2 | A long signature whose result type is a function type with one parameter, or a long inline record, breaks inside the result type, and `Option<() => Int>[]` breaks as `Effect.Effect<\n Int\n>>>`. The text is valid TypeScript, and `deno fmt` keeps it, but `deno fmt` of the flat form breaks elsewhere. Layout only, in the family of PH23 and PH24. Found by the FCU6 and FCU1 executors. | Executor reports; fixture `fixtures/emit/lift-containers/` (Opus) | Low |
 | FF9, FA5 | `docs/tutorial.md:105` says that the compiler does not infer the parameter types of an export. An export with an omitted parameter type builds without a diagnostic and emits `n: unknown` with a checked input. Only the result type is mandatory. | `build` of `(n): N => n * 2` (Opus, Fable, astra) | Low |
 | FC5 (doc part) | The order lifecycle row of `docs/status.md:53` says "Percent pricing is not possible". Both reviewers built it through the duration type: `Cents((subtotal * 90 * 1ms) / 100)`. The sentence is too strong. The workaround is not a good language form. | Reviewer runs (Fable, astra) | Low |
 | FC14 (doc part) | `docs/api.md` "Known limits" says "Nested projects are not supported". Since 0.15.4 the server rebinds documents and transfers diagnostic ownership to a nested project (`src/lsp/projects.ts:479-497`, `649-651`). The outer disk walk still reads inner files. The sentence needs that qualification. | 10 nested tests pass (astra) | Low |
@@ -151,9 +152,9 @@ subset under the existing exception. (c) Keep the gaps as a record.
 | Decision | State | Commits and checks |
 | --- | --- | --- |
 | FCD1 | Done. | `126d98d` (heading); website `7b52c43` (stamp). `deno task check` exited 0 with 3,019 fast and 301 slow tests passed. Website `deno task test` exited 0 with 12 tests passed. |
-| FCD2 | In progress. | FCU4 done: `bbfda0c`. FCU1, FCU2, FCU3a, FCU3b, and FCU6 open; see "Defect plan". |
+| FCD2 | In progress. | FCU4 `bbfda0c`, FCU1 `712efa2`, FCU6 `eb8c9bf`. Directed mutation of the FCU1 lines: 3 sites, 3 killed. FCU2, FCU3a, and FCU3b open; see "Defect plan". |
 | FCD3 | Done. | `3808b91`. |
-| FCD4 | Done in this repository: `1a9004a` (FCU5), hooks active in this clone. The website hook is open. | |
+| FCD4 | Done. | `1a9004a` (FCU5) and `8148cb8` (mutation: 16 sites, 16 killed); website `8a6cc82`. Both clones have `core.hooksPath .githooks`. |
 | FCD5 | Plan written: [core data operations](2026-11-10-core-data-operations.md), decisions COD1 to COD4 wait for the user. | |
 
 Refinement of FA1 by Opus on 2026-11-10: a record literal and `Some` already lift a pure
