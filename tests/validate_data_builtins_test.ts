@@ -192,3 +192,24 @@ export const f = (d: Duration, x: Num): Int => round(x)
     ],
   );
 });
+
+Deno.test("a Duration argument of div is rejected", () => {
+  const source = `type Int = int
+export const f = (d: Duration, a: Int, b: Int): Int => div(a, b)
+`;
+  assertEquals(
+    forgedModule(source, (ir) => {
+      const f = (ir as Mutable<ModuleIR>).declarations.find((d) =>
+        d.kind === "function"
+      );
+      assert(f?.kind === "function" && f.body.kind === "call");
+      const argument = f.body.arguments[0];
+      assert(argument.kind === "reference");
+      argument.target = "local:m#f/d";
+      argument.type = { kind: "named", id: "type:effect/Duration" };
+    }),
+    [
+      "validation/002 declarations[1].body.arguments[0]: div does not take a closed unit argument of type Duration",
+    ],
+  );
+});
