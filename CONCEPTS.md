@@ -116,6 +116,12 @@ The declaration uses `sealed type Name = T`. Other modules can pass, compare, an
 The source restriction does not isolate generated TypeScript from unsound host code.
 _Avoid: sealed nominal type_
 
+### Closed unit
+
+A builtin type with identity over `int`, such as `Duration` or `Instant`, that no unnamed number fits.
+
+A value of a closed unit widens to `int`. Its arithmetic follows its own operator rules, so `Duration + Duration` gives a `Duration` and `Duration + 3` is a type mismatch. The numeric data builtins and `text` reject a closed unit argument. The checker and the independent validator both enforce each of these rules.
+
 ### Pure function type
 
 A function type that requires pure execution and empty failure and requirement sets.
