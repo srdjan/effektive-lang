@@ -92,6 +92,6 @@ Deno.test("a pure closure in a nested array literal is wrapped", () => {
 Deno.test("a pure function value after an effect in an array literal is wrapped", () => {
   assertStringIncludes(
     emit(CONTAINER_PROGRAM),
-    "return [yield* mk(), () => Effect.succeed(pm()())];",
+    "return [yield* mk(), (($t0) => () => Effect.succeed($t0()))(pm())];",
   );
 });

@@ -105,6 +105,14 @@ import {
   tokenOfId,
 } from "../ids.ts";
 
+/** Whether `e` reads a function that exists already: a name, a field of a stable value, or a block with only that value. Evaluating it more than once does no work. */
+function isStableValue(e: Expr): boolean {
+  return e.kind === "reference" || e.kind === "literal" ||
+    e.kind === "closure" ||
+    (e.kind === "get" && isStableValue(e.record)) ||
+    (e.kind === "block" && e.steps.length === 0 && isStableValue(e.result));
+}
+
 function binaryPrecedence(operator: string): number {
   switch (operator) {
     case "||":
@@ -682,7 +690,9 @@ export class ExprEmitter implements ExprCore {
    * effect function type (spec: the checker allows it), so the emitter wraps
    * its result: `(a) => Effect.succeed(f(a))`. Every other value stays as it is.
    *
-   * A pure-mode `e` gets one wrap of its whole value. An effect-mode block,
+   * A pure-mode `e` that computes a function binds its value once, where the
+   * source writes it, and the wrap calls that value. A name, a closure, and a
+   * field read of a name need no binding. An effect-mode block,
    * `if`, or `match` gives the slot type to its results, so that each result
    * gets its own wrap after the effects of the block run. Any other effect-mode
    * `e` binds its value once: `(($f) => (a) => Effect.succeed($f(a)))(yield* e)`.
@@ -706,7 +716,13 @@ export class ExprEmitter implements ExprCore {
     }
     const plain = mode === "gen" ? this.inGen(e) : this.pure(e);
     if (e.kind === "closure") return this.tag(e, this.closure(e, true, true));
-    return this.lift(from, at(plain, PREC.member));
+    if (isStableValue(e)) return this.lift(from, at(plain, PREC.member));
+    const bound = this.scope.temp();
+    const lifted = this.lift(from, bound);
+    return emitted(
+      ["(", this.arrow(`(${bound})`, lifted), ")", callArguments([plain])],
+      PREC.member,
+    );
   }
 
   /** `(a) => Effect.succeed(callee(a))` for a pure function type `from`. */

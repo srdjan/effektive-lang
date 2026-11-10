@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A computed pure function at an expected Effect function type runs once, where the source writes it, and only its call is wrapped.
+  Before, the emitter moved the computation into the wrapper, so it ran at each call of the result, and a defect such as `int overflow` happened at the call instead of at construction.
 - `build` writes valid TypeScript for a long signature whose result is a function type without parameters, such as `(): () => Int`.
   Before, the empty parameter list printed as a comma on its own line, and the generated file did not parse.
 - A pure function in an array or tuple literal at an expected Effect function type is wrapped as an Effect function, as in a record field.
