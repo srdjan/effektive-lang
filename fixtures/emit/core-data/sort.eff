@@ -1,0 +1,26 @@
+type Int = int
+type Ints = Int[]
+type Num = number
+type Nums = Num[]
+type Text = string
+type Texts = Text[]
+type Cents = int
+type Prices = Cents[]
+type Name = string
+type Names = Name[]
+type Durations = Duration[]
+type Row = { k: Int, tag: Text }
+type Rows = Row[]
+
+export const ints = (xs: Ints): Ints => sort(xs)
+export const nums = (xs: Nums): Nums => sort(xs)
+export const texts = (xs: Texts): Texts => sort(xs)
+export const durations = (ds: Durations): Durations => sort(ds)
+export const prices = (ps: Prices): Prices => sort(ps)
+export const names = (ns: Names): Names => sort(ns)
+export const byK = (rows: Rows): Rows => sort(rows, (r) => r.k)
+export const byTag = (rows: Rows): Rows => sort(rows, (r) => r.tag)
+export const piped = (xs: Ints): Ints => xs |> sort
+export const pipedKey = (rows: Rows): Rows => rows |> sort((r) => r.k)
+export const literal = (): Ints => sort([3, 1, 2])
+export const withNaN = (): Nums => sort([2, 0 / 0, 1])

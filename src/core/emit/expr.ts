@@ -1397,6 +1397,18 @@ export class ExprEmitter implements ExprCore {
         if (args.length !== 1) throw internal("len needs one argument");
         return emitted([at(kid(args[0]), PREC.member), ".length"]);
       }
+      case "sort": {
+        if (args.length !== 1 && args.length !== 2) {
+          throw internal("sort needs one or two arguments");
+        }
+        return emitted([
+          this.scope.sort(),
+          callArguments([
+            kid(args[0]),
+            ...(args.length === 2 ? [this.callback(args[1], kid)] : []),
+          ]),
+        ]);
+      }
       case "all":
       case "traverse":
         throw internal(`the builtin ${name} has no emission form`);
@@ -1819,6 +1831,7 @@ export class ExprEmitter implements ExprCore {
               text: [1],
               len: [1],
               at: [2],
+              sort: [1, 2],
               concat: [],
             };
             if (!counts[builtin].includes(children.length)) {
@@ -1885,6 +1898,7 @@ export class ExprEmitter implements ExprCore {
               case "text":
               case "len":
               case "at":
+              case "sort":
               case "concat":
                 // A pure builtin is not a leaf: `builtinCall` prints it.
                 throw internal(`the builtin ${builtin} is not an effect leaf`);

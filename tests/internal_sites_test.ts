@@ -343,12 +343,12 @@ Deno.test("a builtin with no emission form gives an internal emission error", ()
   );
   assert(call.kind === "call" && call.callee.kind === "reference");
   Object.assign(call.callee, {
-    target: call.callee.target.replace("/map/", "/sort/"),
+    target: call.callee.target.replace("/map/", "/shuffle/"),
   });
   assertEquals(emitError(forged), {
     tag: "internal",
     module: "main",
-    message: "the builtin sort has no emission form",
+    message: "the builtin shuffle has no emission form",
   });
 });
 

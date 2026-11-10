@@ -1,5 +1,6 @@
 // Collection checking. Prelude dispatch retains arity and lowering-fact policy.
 import type { NodeId } from "../syntax.ts";
+import { isOrderable } from "../check_binary.ts";
 import { combine } from "../effect_set.ts";
 import type { NodeInfo } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
@@ -25,6 +26,7 @@ export interface CollectionContext extends
     BuiltinContext,
     | "table"
     | "argInfo"
+    | "assignable"
     | "callback"
     | "finish"
     | "fits"
@@ -307,6 +309,82 @@ function foldCall(
   );
 }
 
+/**
+ * `sort` takes an array and an optional pure key function. The element, or the
+ * key without a key function, must be orderable. The instance keeps the unfolded
+ * array type, so the result fits an array of an identity.
+ */
+function sortCall(
+  c: CollectionContext,
+  node: NodeId,
+  args: readonly Arg[],
+): NodeInfo {
+  const table = c.table;
+  const xs = c.argInfo(args[0]);
+  const unfolded = table.unfold(xs.type);
+  const shape = table.node(unfolded);
+  const array = shape.kind === "array" && c.assignable(xs.type, unfolded)
+    ? shape
+    : undefined;
+  if (array === undefined && !c.isError(xs.type)) {
+    c.report(
+      "type-mismatch/003",
+      `the argument has type ${
+        showType(table, xs.type)
+      }, but an array is expected`,
+      args[0].node,
+    );
+  }
+  const element = array?.element ?? table.error;
+  const parameters: TypeRef[] = [unfolded];
+  const infos: NodeInfo[] = [xs];
+  if (args[1] === undefined) {
+    if (array !== undefined && !isOrderable(table, element)) {
+      c.report(
+        "type-mismatch/003",
+        `the argument has type ${
+          showType(table, xs.type)
+        }, but an array of an orderable type is expected`,
+        args[0].node,
+      );
+    }
+  } else {
+    const key = c.callback("sort", args[1], [element], undefined);
+    if (!c.isError(key.result) && !isOrderable(table, key.result)) {
+      c.report(
+        "type-mismatch/003",
+        `the key has type ${
+          showType(table, key.result)
+        }, but an orderable type is expected`,
+        args[1].node,
+      );
+    }
+    parameters.push(table.function({
+      execution: "pure",
+      parameters: [element],
+      result: key.result,
+      failures: [],
+      requirements: [],
+    }));
+    infos.push(key.info);
+  }
+  c.fact(node, {
+    kind: "builtin",
+    name: "sort",
+    ir: functionTypeToIr(
+      table,
+      table.function({
+        execution: "pure",
+        parameters,
+        result: unfolded,
+        failures: [],
+        requirements: [],
+      }),
+    ),
+  });
+  return c.finish(node, unfolded, combine(infos));
+}
+
 function arrayElement(
   c: CollectionContext,
   name: string,
@@ -380,6 +458,13 @@ export const COLLECTION_ROWS = {
   map: {
     prologue: piped(2, "pure"),
     handle: (c, node, _name, args) => mapCall(c, node, args),
+  },
+  sort: {
+    prologue: optionalLast(
+      1,
+      "`sort` takes an array and an optional key function",
+    ),
+    handle: (c, node, _name, args) => sortCall(c, node, args),
   },
   filter: {
     prologue: piped(2, "pure"),

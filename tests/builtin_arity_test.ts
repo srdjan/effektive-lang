@@ -151,6 +151,11 @@ const ARITY_ROWS: readonly ArityRow[] = [
   ...fixed("text", 1),
   ...fixed("len", 1),
   ...fixed("at", 2),
+  ...bounded(
+    "sort",
+    1,
+    "`sort` takes an array and an optional key function",
+  ),
 ];
 
 function arityMessages(call: string): string[] {

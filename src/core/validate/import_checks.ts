@@ -3,7 +3,14 @@
 
 import type { FunctionType, Import, ModuleIR, Span, Type } from "../ir.ts";
 import { AREA, moduleSpan } from "./report.ts";
-import { isNever, same, unfold } from "./typing.ts";
+import {
+  comparisonClass,
+  isNever,
+  isNumericClass,
+  isStringClass,
+  same,
+  unfold,
+} from "./typing.ts";
 import { invocationOf, isQuiet, sameSet } from "./sets.ts";
 import {
   type BuiltinName,
@@ -57,6 +64,8 @@ function checkBuiltinShape(
       return checkAtShape(env, type, wrong);
     case "concat":
       return checkConcatShape(env, type, wrong);
+    case "sort":
+      return checkSortShape(env, type, wrong);
     default:
       return checkCallbackShape(ctx, name, type, path, span, wrong);
   }
@@ -157,6 +166,45 @@ function checkConcatShape(
       parameter.kind === "array" && same(env, parameter, type.result)
     )
   ) wrong("takes one or more arrays of the result type");
+  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
+    wrong("is pure, with no failure and no requirement");
+  }
+}
+
+/** `sort` is `(E[]) => E[]` or `(E[], (E) => K) => E[]`. E, or K with a key, is orderable. Pure, no failure or requirement. */
+function checkSortShape(
+  env: World["env"],
+  type: FunctionType,
+  wrong: (what: string) => void,
+): void {
+  const count = type.parameters.length;
+  const first = count === 1 || count === 2
+    ? unfold(env, type.parameters[0])
+    : undefined;
+  if (first === undefined || first.kind !== "array") {
+    wrong("takes an array and an optional key function");
+    return;
+  }
+  if (!same(env, type.result, first)) wrong("returns the array type");
+  const key = count === 2 ? unfold(env, type.parameters[1]) : undefined;
+  if (key !== undefined) {
+    if (
+      key.kind !== "function" || key.parameters.length !== 1 ||
+      !same(env, key.parameters[0], first.element) ||
+      key.execution !== "pure" ||
+      !isQuiet(invocationOf(key))
+    ) {
+      wrong("takes a pure key function of the element");
+      return;
+    }
+  }
+  const ordered = key === undefined ? first.element : key.result;
+  const cls = comparisonClass(env, ordered);
+  if (
+    cls === undefined || !(isNumericClass(env, cls) || isStringClass(env, cls))
+  ) {
+    wrong("orders by a number or a string");
+  }
   if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
     wrong("is pure, with no failure and no requirement");
   }

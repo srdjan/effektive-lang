@@ -127,7 +127,7 @@
       "patterns": [
         {
           "name": "support.function.builtin.effektive",
-          "match": "\\b(?:map|filter|fold|traverse|all|div|trunc|floor|round|ceil|text|len|at|retry|repeat|timeout|sleep|now|log|random|randomInt|uninterruptible|retrySchedule|schema|schemaArray|schemaStruct|schemaOptionalKey|schemaNullToMissingKey|schemaOptionFromOptionalKey|schemaDefaultKey|schemaConstructorDefault|schemaOptionalTransform|schemaOptionalFromRequired|schemaUnion|schemaTransform|schemaRecursive|schemaDecode|schemaEncode|schemaMake|forkScoped|scoped|provide|defer|run|unfold|mapEffect|sinkForEach|takeSink|transduceStream|runStream|bufferStream|race|makeRef|getRef|setRef|updateRef|layer|mergeLayers|fail)\\b"
+          "match": "\\b(?:map|filter|fold|traverse|all|div|trunc|floor|round|ceil|text|len|at|sort|retry|repeat|timeout|sleep|now|log|random|randomInt|uninterruptible|retrySchedule|schema|schemaArray|schemaStruct|schemaOptionalKey|schemaNullToMissingKey|schemaOptionFromOptionalKey|schemaDefaultKey|schemaConstructorDefault|schemaOptionalTransform|schemaOptionalFromRequired|schemaUnion|schemaTransform|schemaRecursive|schemaDecode|schemaEncode|schemaMake|forkScoped|scoped|provide|defer|run|unfold|mapEffect|sinkForEach|takeSink|transduceStream|runStream|bufferStream|race|makeRef|getRef|setRef|updateRef|layer|mergeLayers|fail)\\b"
         },
         {
           "name": "support.constant.builtin.effektive",

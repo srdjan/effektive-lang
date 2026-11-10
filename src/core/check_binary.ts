@@ -144,6 +144,13 @@ function isStringClass(table: TypeTable, cls: string): boolean {
   return classChain(table, cls).includes("string");
 }
 
+/** Whether a type has a total order that `<` accepts: a number or a string class. */
+export function isOrderable(table: TypeTable, ref: TypeRef): boolean {
+  const cls = comparisonClass(table, ref);
+  return cls !== undefined &&
+    (isNumericClass(table, cls) || isStringClass(table, cls));
+}
+
 /** The closed unit class of a comparison class, or undefined for another class. */
 function closedUnitClass(cls: string | undefined): string | undefined {
   return cls !== undefined && cls.startsWith(IDENTITY_CLASS) &&

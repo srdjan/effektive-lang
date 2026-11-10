@@ -78,6 +78,42 @@ export function atDeclaration(scope: ModuleState): Doc {
   ];
 }
 
+/**
+ * `function $sort`: a stable copy of an array in ascending order of the element or of
+ * its key, which is a number or a string. NaN sorts after every number, and two NaN are equal.
+ */
+export function sortDeclaration(scope: ModuleState): Doc {
+  const name = scope.sort();
+  return [
+    `function ${name}<T extends number | string>(xs: ReadonlyArray<T>): T[];`,
+    hard,
+    `function ${name}<T, K extends number | string>(`,
+    indent([hard, "xs: ReadonlyArray<T>,", hard, "key: (x: T) => K,"]),
+    hard,
+    "): T[];",
+    hard,
+    `function ${name}<T, K extends number | string>(`,
+    indent([hard, "xs: ReadonlyArray<T>,", hard, "key?: (x: T) => K,"]),
+    hard,
+    "): T[] ",
+    braces([
+      "const of = key ?? ((x: T) => x as unknown as K);",
+      [
+        "return [...xs].sort((a, b) => ",
+        braces([
+          "const x = of(a);",
+          "const y = of(b);",
+          "if (x < y) return -1;",
+          "if (x > y) return 1;",
+          "if (x === y || (x !== x && y !== y)) return 0;",
+          "return x !== x ? 1 : -1;",
+        ]),
+        ");",
+      ],
+    ]),
+  ];
+}
+
 /** `const $unmatched = ...` */
 export function unmatchedDeclaration(scope: ModuleState): Doc {
   const name = scope.unmatched();

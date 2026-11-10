@@ -17,6 +17,7 @@ const BUILTIN_NAMES = [
   "text",
   "len",
   "at",
+  "sort",
   "concat",
 ] as const;
 export type BuiltinName = typeof BUILTIN_NAMES[number];

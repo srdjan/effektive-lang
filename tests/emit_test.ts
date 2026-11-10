@@ -1684,3 +1684,113 @@ export const run = (jobs: Jobs, job: Job): Effect.Effect<Ints> =>
 `,
   );
 });
+
+Deno.test("sort emits the $sort helper", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), [
+    "sort.eff",
+  ]).get("sort");
+  assert(emitted !== undefined, "module sort was not emitted");
+  assertEquals(
+    emitted.text,
+    `// Generated from sort.eff by the Effektive compiler. Do not edit.
+
+import { Schema } from "effect";
+
+const $Int = Schema.Finite.check(
+  Schema.makeFilter(
+    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+  ),
+);
+
+function $sort<T extends number | string>(xs: ReadonlyArray<T>): T[];
+function $sort<T, K extends number | string>(
+  xs: ReadonlyArray<T>,
+  key: (x: T) => K,
+): T[];
+function $sort<T, K extends number | string>(
+  xs: ReadonlyArray<T>,
+  key?: (x: T) => K,
+): T[] {
+  const of = key ?? ((x: T) => x as unknown as K);
+  return [...xs].sort((a, b) => {
+    const x = of(a);
+    const y = of(b);
+    if (x < y) return -1;
+    if (x > y) return 1;
+    if (x === y || (x !== x && y !== y)) return 0;
+    return x !== x ? 1 : -1;
+  });
+}
+
+export const Int = $Int;
+export type Int = typeof Int.Type;
+
+export const Ints = Schema.Array(Int);
+export type Ints = typeof Ints.Type;
+
+export const Num = Schema.Number;
+export type Num = typeof Num.Type;
+
+export const Nums = Schema.Array(Num);
+export type Nums = typeof Nums.Type;
+
+export const Text = Schema.String;
+export type Text = typeof Text.Type;
+
+export const Texts = Schema.Array(Text);
+export type Texts = typeof Texts.Type;
+
+export const Cents = $Int;
+export type Cents = typeof Cents.Type;
+
+export const Prices = Schema.Array(Cents);
+export type Prices = typeof Prices.Type;
+
+export const Name = Schema.String;
+export type Name = typeof Name.Type;
+
+export const Names = Schema.Array(Name);
+export type Names = typeof Names.Type;
+
+export const Durations = Schema.Array($Int);
+export type Durations = typeof Durations.Type;
+
+export const Row = Schema.Struct({ k: Int, tag: Text });
+export type Row = typeof Row.Type;
+
+export const Rows = Schema.Array(Row);
+export type Rows = typeof Rows.Type;
+
+export const ints = (xs: Ints): Ints => $sort(xs);
+
+export const nums = (xs: Nums): Nums => $sort(xs);
+
+export const texts = (xs: Texts): Texts => $sort(xs);
+
+export const durations = (ds: Durations): Durations => $sort(ds);
+
+export const prices = (ps: Prices): Prices => $sort(ps);
+
+export const names = (ns: Names): Names => $sort(ns);
+
+export const byK = (rows: Rows): Rows => $sort(rows, (r) => r.k);
+
+export const byTag = (rows: Rows): Rows => $sort(rows, (r) => r.tag);
+
+export const piped = (xs: Ints): Ints => {
+  const $p1: Ints = xs;
+  return $sort($p1);
+};
+
+export const pipedKey = (rows: Rows): Rows => {
+  const $p1: Rows = rows;
+  return $sort($p1, (r) => r.k);
+};
+
+export const literal = (): Ints => $sort([3, 1, 2]);
+
+export const withNaN = (): Nums => $sort([2, 0 / 0, 1]);
+//# sourceMappingURL=sort.ts.map
+`,
+  );
+});

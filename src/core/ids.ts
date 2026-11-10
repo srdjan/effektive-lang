@@ -107,6 +107,7 @@ const BUILTIN_INSTANCE_NAMES = [
   "text",
   "len",
   "at",
+  "sort",
   "concat",
 ] as const;
 

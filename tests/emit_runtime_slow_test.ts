@@ -1066,3 +1066,83 @@ console.log(JSON.stringify({
     });
   });
 });
+
+Deno.test("sort orders by value, keeps equal keys in input order, and leaves the argument unchanged", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/core-data/", FIXTURES), dir);
+    build(dir, ["sort.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import * as M from "./sort.ts";
+
+const input = [3, 1, 2];
+const rows = [
+  { k: 2, tag: "x" },
+  { k: 1, tag: "y" },
+  { k: 2, tag: "z" },
+  { k: 1, tag: "w" },
+];
+const withNaN = M.withNaN();
+console.log(JSON.stringify({
+  literal: M.literal(),
+  ints: M.ints(input),
+  input,
+  texts: M.texts(["b", "a", "B"]),
+  names: M.names(["b", "a", "B"]),
+  nums: M.nums([1.5, -2, 0.5]),
+  durations: M.durations([30, 10, 20]),
+  prices: M.prices([300, 100, 200]),
+  byK: M.byK(rows),
+  rows,
+  byTag: M.byTag(rows),
+  piped: M.piped([9, 7, 8]),
+  pipedKey: M.pipedKey(rows),
+  empty: M.ints([]),
+  nanFirstTwo: withNaN.slice(0, 2),
+  nanLength: withNaN.length,
+  nanLast: Number.isNaN(withNaN[2]),
+}));
+`,
+    );
+    assertEquals(result, {
+      literal: [1, 2, 3],
+      ints: [1, 2, 3],
+      input: [3, 1, 2],
+      texts: ["B", "a", "b"],
+      names: ["B", "a", "b"],
+      nums: [-2, 0.5, 1.5],
+      durations: [10, 20, 30],
+      prices: [100, 200, 300],
+      byK: [
+        { k: 1, tag: "y" },
+        { k: 1, tag: "w" },
+        { k: 2, tag: "x" },
+        { k: 2, tag: "z" },
+      ],
+      rows: [
+        { k: 2, tag: "x" },
+        { k: 1, tag: "y" },
+        { k: 2, tag: "z" },
+        { k: 1, tag: "w" },
+      ],
+      byTag: [
+        { k: 1, tag: "w" },
+        { k: 2, tag: "x" },
+        { k: 1, tag: "y" },
+        { k: 2, tag: "z" },
+      ],
+      piped: [7, 8, 9],
+      pipedKey: [
+        { k: 1, tag: "y" },
+        { k: 1, tag: "w" },
+        { k: 2, tag: "x" },
+        { k: 2, tag: "z" },
+      ],
+      empty: [],
+      nanFirstTwo: [1, 2],
+      nanLength: 3,
+      nanLast: true,
+    });
+  });
+});

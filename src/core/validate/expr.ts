@@ -1420,7 +1420,7 @@ export class BodyValidator implements ValidatorCore {
     const callbackIndex = builtin === "fold" ? 2 : 1;
     const callbackCount = builtin === "traverse"
       ? outs.length === 2 || outs.length === 3
-      : builtin === "map" || builtin === "filter"
+      : builtin === "map" || builtin === "filter" || builtin === "sort"
       ? outs.length === 2
       : builtin === "fold" && outs.length === 3;
     if (builtin !== undefined && callbackCount) {

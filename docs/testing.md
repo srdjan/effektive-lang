@@ -95,6 +95,7 @@ A property test generates its inputs from a literal table of seeds, with `makeRa
 | `tests/predicates_property_test.ts` | Brute force confirms each `proved` and `disproved` result on a bounded domain. `verifyCertificate` accepts each certificate. `and` and `or` obey the identity and absorption laws. | The test does not judge an `unknown` result. |
 | `tests/acceptance_property_slow_test.ts` | After seeded token edits, a program that the checker accepts lowers, validates, and emits. | The edits stay near the input programs. Only `.eff` files change. |
 | `tests/division_property_slow_test.ts` | Four seeds and the safe integer limits give pairs to `div` and `%` in one subprocess. In BigInt, `div(a, b) * b + a % b` is `a`, `\|a % b\|` is less than `\|b\|`, and a nonzero `a % b` has the sign of `a`. No result is `-0`, and a zero divisor throws "division by zero" in both. | Only `int` values reach the two wrappers. The test does not judge the rounding builtins. |
+| `tests/sort_property_slow_test.ts` | Four seeds give 120 arrays of records with few distinct keys to a keyed `sort` and to a plain `sort` in one subprocess. The result is a permutation of the input, the key sequence is ordered, records with equal keys keep their input order, and the argument is unchanged. | Only `int` keys reach the wrappers. A NaN key and a `string` key are in the runtime test only. |
 
 A property that fails is a finding about the compiler until the evidence shows otherwise. Do not weaken the property, and do not filter out the input.
 

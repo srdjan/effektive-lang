@@ -615,3 +615,61 @@ Deno.test("an instance of concat with a requirement is rejected", () => {
     ],
   );
 });
+
+const SORT_SOURCE = `type Int = int
+type Row = { k: Int }
+type Rows = Row[]
+export const f = (rows: Rows): Rows => sort(rows, (r) => r.k)
+`;
+
+Deno.test("the lowered sort program is valid, and its instance has the exact type", () => {
+  const type = instance(loweredModule(SORT_SOURCE), "sort");
+  assertEquals(
+    [type.parameters.length, type.parameters[1], type.execution],
+    [
+      2,
+      {
+        kind: "function",
+        parameters: [{ kind: "named", id: "type:m#Row" }],
+        result: { kind: "named", id: "type:m#Int" },
+        execution: "pure",
+        effects: { failures: [], requirements: [] },
+      },
+      "pure",
+    ],
+  );
+});
+
+Deno.test("a sort instance with a boolean key is rejected", () => {
+  assertEquals(
+    forgedBuiltin(SORT_SOURCE, "sort", (type) => {
+      const key = type.parameters[1];
+      assert(key.kind === "function");
+      key.result = BOOLEAN;
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin sort orders by a number or a string",
+      "validation/002 declarations[3].body.arguments[1]: the argument has type (type:m#Row) => type:m#Int [pure], which does not fit the parameter (type:m#Row) => boolean [pure]",
+    ],
+  );
+});
+
+Deno.test("a call of sort with an effectful key closure is rejected", () => {
+  assertEquals(
+    forgedModule(SORT_SOURCE, (ir) => {
+      const f = (ir as Mutable<ModuleIR>).declarations.find((d) =>
+        d.kind === "function"
+      );
+      assert(f?.kind === "function" && f.body.kind === "call");
+      const closure = f.body.arguments[1];
+      assert(closure.kind === "closure" && closure.type.kind === "function");
+      closure.type.execution = "effect";
+      closure.type.effects = { failures: ["error:m#Boom"], requirements: [] };
+    }),
+    [
+      "validation/003 declarations[3].body: sort must invoke the callback with its declared failures and requirements",
+      "validation/001 declarations[3].body.arguments[1].type.effects.failures[0]: the failure error:m#Boom is not a declared error",
+      "validation/002 declarations[3].body.arguments[1]: the argument has type (type:m#Row) => type:m#Int fails error:m#Boom [effect], which does not fit the parameter (type:m#Row) => type:m#Int [pure]",
+    ],
+  );
+});

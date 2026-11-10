@@ -38,6 +38,7 @@ import {
   outcomeDeclaration,
   remainderDeclaration,
   roundDeclaration,
+  sortDeclaration,
   unmatchedDeclaration,
 } from "./helper_declarations.ts";
 
@@ -126,6 +127,7 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
     ["divide", () => divideDeclaration(scope)],
     ["round", () => roundDeclaration(scope)],
     ["at", () => atDeclaration(scope)],
+    ["sort", () => sortDeclaration(scope)],
     ["unmatched", () => unmatchedDeclaration(scope)],
     ["hostCheck", () => hostCheckDeclaration(scope)],
     ["outcome", () => outcomeDeclaration(scope)],
