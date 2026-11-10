@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 import { Cause, Effect, Exit, Schema } from "effect";
-import { Cents, Fixed, InvalidTransition, Sum } from "./contracts.ts";
+import { Cents, Fixed, InvalidTransition, Percent, Sum } from "./contracts.ts";
 import {
   cancel,
   cancelAny,
@@ -75,6 +75,17 @@ Deno.test("price evaluates a rule tree built in TypeScript", () => {
     ],
   });
   assertEquals(price(rule, pending.total), 57);
+});
+
+Deno.test("price evaluates a percent rule", () => {
+  const rule = Percent.make({ percent: 15 });
+  assertEquals(price(rule, pending.total), 150);
+});
+
+Deno.test("price rounds a percent rule half away from zero", () => {
+  const rule = Percent.make({ percent: 15 });
+  assertEquals(price(rule, Cents.make(10)), 2);
+  assertEquals(price(rule, Cents.make(30)), 5);
 });
 
 Deno.test("fromInput decodes valid input into Pending", () => {

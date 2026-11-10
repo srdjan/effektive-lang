@@ -8,7 +8,7 @@ pricing with `type` declarations that have identity.
 `contracts.eff` declares the four order states as tagged records: `Pending`,
 `Paid`, `Shipped`, and `Cancelled`. It also declares the error
 `InvalidTransition` and a recursive pricing rule tree: `Fixed`, `Times`,
-`Capped`, and `Sum`. `orders.eff` imports these declarations, so tagged
+`Percent`, `Capped`, and `Sum`. `orders.eff` imports these declarations, so tagged
 records cross a module boundary.
 
 Each state has a runtime `_tag` that includes the module name, for example
@@ -37,13 +37,14 @@ deno test --allow-all tests/application_slow_test.ts
 ```
 
 The pricing rules use `Times = { factor: Count }`. The price of `Times` is the
-base price times the factor. A percent rule is not possible, because `/` always
-gives `number` and the prelude has no rounding function.
+base price times the factor. The percent rule `Percent = { percent: Count }`
+prices `round(base * Cents(p.percent) / 100)`. The `/` gives `number`, and the
+builtin `round` gives an `int`, with a half rounded away from zero.
 
-`runtime_test.ts` runs nine compiled cases. They cover each transition, each
+`runtime_test.ts` runs eleven compiled cases. They cover each transition, each
 `stateOf` and `describe` result, `isOpen`, and the `InvalidTransition` failure.
 They also price the sample rule from source and one rule that TypeScript builds
-with `make`. They decode valid and invalid input, check that the encoded form
+with `make`. Two cases price the percent rule, one of them with a half that rounds up. They decode valid and invalid input, check that the encoded form
 keeps `_tag`, and check the rejected decode of a wrong `_tag`.
 
 See [the plan](../../../docs/archive/plans/2026-10-23-nominal-examples.md) for the

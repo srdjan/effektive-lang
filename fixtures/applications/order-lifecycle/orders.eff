@@ -1,4 +1,4 @@
-import { OrderId, Cents, Text, Bool, StateName, Receipt, Tracking, Reason, Pending, Paid, Shipped, Cancelled, Order, InvalidTransition, Fixed, Times, Capped, Sum, Rule, OrderInput } from "./contracts.eff"
+import { OrderId, Cents, Text, Bool, StateName, Receipt, Tracking, Reason, Pending, Paid, Shipped, Cancelled, Order, InvalidTransition, Fixed, Times, Percent, Capped, Sum, Rule, OrderInput } from "./contracts.eff"
 
 const inputSchema: Schema<OrderInput> = schema()
 const orderSchema: Schema<Order> = schema()
@@ -65,6 +65,7 @@ export const price = (rule: Rule, base: Cents): Cents =>
   match rule {
     Fixed(f) => f.amount,
     Times(t) => base * Cents(t.factor),
+    Percent(p) => round(base * Cents(p.percent) / 100),
     Capped(c) => min(price(c.rule, base), c.cap),
     Sum(s) => s.parts |> fold(0, (acc, part) => acc + price(part, base))
   }

@@ -19,8 +19,9 @@ export error InvalidTransition = { id: OrderId, state: StateName }
 
 export type Fixed = { amount: Cents }
 export type Times = { factor: Count }
+export type Percent = { percent: Count }
 export type Capped = { rule: Rule, cap: Cents }
 export type Sum = { parts: Rule[] }
-export type Rule = Fixed | Times | Capped | Sum
+export type Rule = Fixed | Times | Percent | Capped | Sum
 
 export type OrderInput = { id: Text, total: Count }
