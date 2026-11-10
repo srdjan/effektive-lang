@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 import { checkProject, memoryHost } from "../src/core/mod.ts";
+import { assertValidProject } from "./helpers.ts";
 
 const CONFIG = { "effektive.json": "{}" };
 
@@ -90,4 +91,21 @@ export const g = (t: Text): Card => ({ title: t })
     }),
     [],
   );
+});
+
+Deno.test("the declaring module constructs its sealed types by literal, and the program validates", () => {
+  const result = checkProject(
+    memoryHost({
+      ...CONFIG,
+      "lib.eff": LIB +
+        `export const bag = (a: Int): Bag => [a]
+export const pair = (a: Int): Pair => [a, a]
+export const card = (t: Text): Card => ({ title: t })
+`,
+    }),
+    "",
+    ["lib.eff"],
+  );
+  assert(result.ok, JSON.stringify(result));
+  assertValidProject(result.value);
 });
