@@ -5,8 +5,8 @@ Status: on 2026-11-10 the user accepted COD1 (a), COD2 (a), COD3 (a), and COD4 (
 nine items are selected. Phase 1 (CO1 to CO5) is done: "Phase 1 result" below gives the
 commits and the checks. "Phase 2 execution plan" below is validated, and its decisions are
 accepted, and phase 2 is done. "Phase 3 execution plan" below has accepted decisions
-CQD1 to CQD5 and is validated. The user approved execution on 2026-11-10. So this plan
-stays in `docs/plans/`.
+CQD1 to CQD5, and phase 3 is done: "Phase 3 result" below gives the commits. CO8 stays
+deferred by CPD4. So the plan is complete and is in `docs/archive/plans/`.
 
 Prefixes: CO (items), COD (decisions), COU (phase 1 units), COV (phase 1 validation
 findings), CPD (phase 2 decisions), CPR (phase 2 shared rules), CPU (phase 2 units),
@@ -15,7 +15,7 @@ CQU (phase 3 units), CQV (phase 3 validation findings).
 
 ## Origin and target change
 
-The [completeness review](2026-11-10-completeness-review.md) found that source has no
+The [completeness review](../../plans/2026-11-10-completeness-review.md) found that source has no
 integer remainder, no exact integer division, no rounding, no number-to-text conversion,
 no text or array length, no array index or append, no sort, no tuple read, no
 consumption of a nullable primitive union, and no unary operators (FF1 to FF5, FF7, FC5,
@@ -399,7 +399,7 @@ option (a) of CPD1, CPD2, CPD3, and CPD4, and approved execution. Units CPU1 to 
 carry out CO6 and CO7. CO8 is deferred. The "Phase 2 result" section records the
 commits.
 
-The N3 fix ([constant comparison plan](../archive/plans/2026-11-10-constant-comparison.md), unit CCU1)
+The N3 fix ([constant comparison plan](2026-11-10-constant-comparison.md), unit CCU1)
 also edits `src/core/emit/expr.ts`. So CCU1 and the phase 2 units run one after another,
 not in parallel (CPV2). The line numbers below are at `3452650`.
 
@@ -963,6 +963,33 @@ The website `deno task test` and `deno task typecheck` pass. The compiler tests
 
 Opus updates `docs/status.md`, row FF5 of the completeness review, and the status line
 of this plan after CQU2.
+
+### Phase 3 result
+
+CQU1 is `d13707c`, with website `249b10a` for IR version 10. CQU2 is `1c404b3`. CQU3 is
+website `920443b`, draft 0.80. The first directed mutation run on the CQU1 lines
+sampled 58 sites: 50 killed, 8 survived. `33a2208` adds tests for six survivors and
+registers two as equivalent: the result of `reach` after a binding arm, and a pattern
+name without text. A second run on every changed logic line of phase 3 sampled 64
+sites and left one survivor. The mutation tool replaces the operator token, so
+`type || error || unresolved` became `type || error && unresolved`. A test of a
+declared error name as a bare arm kills it. `deno task coverage` passed the floors with
+lines 97.76%, branches 95.67%, and functions 99.55%.
+
+Opus changed one executor result during review: CQU1 got the block-constant case
+`fromBlock`, because the fixture tested only a module constant.
+
+Four facts differ from the plan text. The `nullable` domain also holds the subject
+type, because `describeDomain` prints its name. The validator words its new rule as
+"a binding arm needs ...", with three faults, and each fault gives `validation/002`.
+CQU1 added a second fixture, `nullable-use.eff`, for a subject type from another
+module. A nullable `??` emits as `(($t0: T) => $t0 === null ? d : (($option997) =>
+$option997)($t0))(x)`. That text is correct, and a shorter `x ?? d` form stays out of
+scope.
+
+The validator accepts a forged `bind` on `boolean | null`, where the checker uses
+literal arms. The binding type is still correct there, so this is wider than the
+checker and not unsound.
 
 ### Out of scope for phase 3
 
