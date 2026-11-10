@@ -673,3 +673,99 @@ Deno.test("a call of sort with an effectful key closure is rejected", () => {
     ],
   );
 });
+
+const NOKEY_SOURCE = `type Int = int
+type Ints = int[]
+export const f = (xs: Ints): Ints => sort(xs)
+`;
+
+Deno.test("a sort instance without a key is valid, and its element must be orderable", () => {
+  assertEquals(forgedBuiltin(NOKEY_SOURCE, "sort", () => {}), []);
+  assertEquals(
+    forgedBuiltin(NOKEY_SOURCE, "sort", (type) => {
+      type.parameters[0] = { kind: "array", element: BOOLEAN };
+      type.result = { kind: "array", element: BOOLEAN };
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin sort orders by a number or a string",
+      "validation/002 declarations[2].body.type: expected boolean[], recorded int[]",
+      "validation/002 declarations[2].body: the body type boolean[] does not fit the declared result type:m#Ints",
+      "validation/002 declarations[2].body.arguments[0]: the argument has type type:m#Ints, which does not fit the parameter boolean[]",
+    ],
+  );
+});
+
+Deno.test("a sort instance with three parameters or a non-array first parameter is rejected", () => {
+  assertEquals(
+    forgedBuiltin(SORT_SOURCE, "sort", (type) => {
+      type.parameters.push(INT);
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin sort takes an array and an optional key function",
+      "validation/002 declarations[3].body.arguments: the function takes 3 arguments, the call has 2",
+    ],
+  );
+  assertEquals(
+    forgedBuiltin(SORT_SOURCE, "sort", (type) => {
+      type.parameters[0] = INT;
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin sort takes an array and an optional key function",
+      "validation/002 declarations[3].body.arguments[0]: the argument has type type:m#Rows, which does not fit the parameter int",
+    ],
+  );
+});
+
+Deno.test("a sort key that is not a function of the element is rejected", () => {
+  assertEquals(
+    forgedBuiltin(SORT_SOURCE, "sort", (type) => {
+      type.parameters[1] = INT;
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin sort takes a pure key function of the element",
+      "validation/002 declarations[3].body.arguments[1]: the argument has type (type:m#Row) => type:m#Int [pure], which does not fit the parameter int",
+    ],
+  );
+  assertEquals(
+    forgedBuiltin(SORT_SOURCE, "sort", (type) => {
+      const key = type.parameters[1];
+      assert(key.kind === "function");
+      key.parameters = [...key.parameters, INT];
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin sort takes a pure key function of the element",
+      "validation/002 declarations[3].body.arguments[1]: the argument has type (type:m#Row) => type:m#Int [pure], which does not fit the parameter (type:m#Row, int) => type:m#Int [pure]",
+    ],
+  );
+  assertEquals(
+    forgedBuiltin(SORT_SOURCE, "sort", (type) => {
+      const key = type.parameters[1];
+      assert(key.kind === "function");
+      key.parameters = [NUMBER];
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin sort takes a pure key function of the element",
+      "validation/002 declarations[3].body.arguments[1]: the argument has type (type:m#Row) => type:m#Int [pure], which does not fit the parameter (number) => type:m#Int [pure]",
+    ],
+  );
+});
+
+Deno.test("an instance of sort with a requirement is rejected", () => {
+  assertEquals(
+    forgedBuiltin(SORT_SOURCE, "sort", (type) => {
+      type.effects = { failures: [], requirements: ["cap:m#Clock.now"] };
+    }),
+    [
+      "validation/001 imports[0].values[0].type.effects.requirements[0]: the requirement cap:m#Clock.now is not a declared service method",
+      "validation/002 imports[0].values[0].type: a pure function type must have empty failure and requirement rows",
+      "validation/002 imports[0].values[0].type: the builtin sort is pure, with no failure and no requirement",
+      "validation/004 declarations[3].type.execution: expected effect, recorded pure",
+      "validation/001 declarations[3].body.callee.type.effects.requirements[0]: the requirement cap:m#Clock.now is not a declared service method",
+      "validation/002 declarations[3].body.callee.type: a pure function type must have empty failure and requirement rows",
+      "validation/003 declarations[3].body.effects.requirements: expected [cap:m#Clock.now], recorded []",
+      "validation/003 declarations[3].body: sort must invoke the callback with its declared failures and requirements",
+      "validation/003 declarations[3].body: the body requires [cap:m#Clock.now], which the declared requirements [] do not list",
+      "validation/004 declarations[3].body.execution: expected effect, recorded pure",
+    ],
+  );
+});
