@@ -1,10 +1,12 @@
 # Core data operations: selection plan
 
 Date: 2026-11-10. Base: `3808b91` on local `main`. Author: Opus.
-Status: draft. It waits for the user decisions COD1 to COD4. No implementation is
-authorized.
+Status: on 2026-11-10 the user accepted COD1 (a), COD2 (a), COD3 (a), and COD4 (a). All
+nine items are selected. Phase 1 is authorized, and the "Phase 1 execution plan" below
+carries it out. Phases 2 and 3 each need a detail plan and a user approval before
+implementation.
 
-Prefixes: CO (items), COD (decisions).
+Prefixes: CO (items), COD (decisions), COU (phase 1 units).
 
 ## Origin and target change
 
@@ -158,3 +160,124 @@ COD4 (conversion to text). (a) The builtin `text(x)`. Recommended: the conversio
 visible, and the lexer does not change. (b) Accept `string + number` with an implicit
 conversion. (c) String interpolation. This changes the lexical core, which the
 specification excludes today.
+
+## Phase 1 execution plan
+
+Base: `cf33c4b`. Author: Opus. Units COU1 to COU6 carry out CO1 to CO5.
+
+The units run one after another in the main tree, because they share the parser, the
+checker, the lowering, the emitter, and the validator. A Sonnet executor does each
+unit. The executor writes a failing test first, makes it pass, runs `deno task check`,
+and hands back without a commit. Opus reviews the diff line by line, runs the gate,
+runs `deno task mutate --only` on the changed logic lines, and commits the unit.
+
+### Shared rules
+
+- P1 (shadowable names). Each new builtin is a prelude name with `shadowable: true` in
+  `src/core/resolve.ts:73`. Ten fixtures bind `text` as a module constant, for example
+  `fixtures/emit/schema-constructor.eff:15`, and they must still compile.
+- P2 (builtin instances). `div`, `trunc`, `floor`, `round`, `ceil`, `text`, and `len`
+  reuse the path of the collection builtins. A checker family row records the fact
+  `{ kind: "builtin", name, ir }` (`src/core/check_builtins/collections.ts:156`).
+  Lowering makes a `call` of a `$builtin/<name>/<hash>` reference
+  (`src/core/lower.ts:633`). The emitter prints the call in `builtinCall`
+  (`src/core/emit/expr.ts:1274`). No IR expression kind is added.
+- P3 (IR version 9). COU2 adds `%` to the binary operator union (`src/core/ir.ts:230`)
+  and raises the IR version from 8 to 9 once, in the way that `9a097a0` raised it to 8.
+  The new builtin instance names of COU3 and COU4 use the same version. The validator
+  rejects version 8.
+- P4 (faults are defects). An `int` remainder or a `div` by zero throws
+  `RangeError("division by zero")`. A rounding result that is NaN, infinite, or outside
+  the safe integers throws `RangeError("int overflow")` through `$int`.
+- P5 (no negative zero). An `int` result of `%`, `div`, or a rounding builtin is never
+  `-0`. For example, `-6 % 3` and `ceil(-0.5)` give `0`, and `Object.is(result, 0)` is
+  true.
+- P6 (identity fit). A plain `int` or `string` result fits an untagged identity through
+  the existing rule at `src/core/types.ts:975`. So `const c: Cents = round(x)` checks
+  with no new rule. Each unit has one test of this fit.
+- P7 (documents). Each unit adds its rows to `docs/language-rules.md` and an entry
+  under `## Unreleased` in `CHANGELOG.md`. COU6 updates the website.
+
+### Units
+
+| Unit | Item | Model | Files | Acceptance check | Turns |
+| --- | --- | --- | --- | --- | --- |
+| COU1 | CO1 unary `-` and `!` | Sonnet | `src/core/parse.ts:1433-1451`, the syntax kinds, the checker of the new node, `src/core/lower.ts`, the literal pattern rule, editor token and census tables that list syntax kinds, tests, a fixture | See COU1 below | 60 |
+| COU2 | CO2 `%`, IR version 9 | Sonnet | `src/core/lex.ts`, `src/core/parse.ts`, `src/core/check_binary.ts`, `src/core/ir.ts`, `src/core/lower.ts`, the validator binary rule, `src/core/emit/expr.ts:1133`, `src/core/emit/helper_declarations.ts`, the files of `9a097a0`, `editors/vscode/syntaxes/effektive.tmLanguage.json`, the playground highlighter, tests, a fixture | See COU2 below | 80 |
+| COU3 | CO3 `div` and rounding | Sonnet | `src/core/resolve.ts`, a new family file `src/core/check_builtins/numbers.ts` and `registry.ts`, `src/core/ids.ts:96`, `src/core/validate/builtins.ts`, `src/core/emit/expr.ts` (`builtinCall` and the counts at 1707), `src/core/emit/helper_declarations.ts`, tests, a fixture | See COU3 below | 80 |
+| COU4 | CO4 `text`, CO5 `len` | Sonnet | The COU3 files, and `src/core/predicate_source.ts:239` | See COU4 below | 60 |
+| COU5 | Phase 1 witness and status | Sonnet | `fixtures/applications/order-lifecycle/` (`orders.eff`, `README.md`, `runtime_test.ts`, the generated files), `docs/status.md` | See COU5 below | 40 |
+| COU6 | Website | Sonnet | `../effektive/public/effektive-spec.html` (both tabs), `../effektive/public/typed-ir.ts` through `deno task site:ir`, an example in `../effektive/public/effektive-examples/` when one fits | See COU6 below | 60 |
+
+COU1 (unary `-` and `!`). `-e` binds tighter than `*`, so `-a * b` is `(0 - a) * b`.
+The checker types `-e` as `0 - e`, and lowering makes the IR `binary` `-` with a literal
+`0` on the left. So `-x` for `x = 0` gives `0`, not `-0`. `!e` needs a `boolean` and
+lowers to the IR `binary` `===` with a literal `false` on the right. A diagnostic for a
+wrong operand names the unary operator. `+e` keeps `syntax/010`. A `Duration` operand
+gives the mismatch of `0 - d`, and the language rules row says to write `0ms - d`. A
+`match` literal pattern accepts `-` before a numeric literal, as a negative literal. No
+IR change. The check: a fixture with `-x`, `-(a * b)`, `- -x`, `!flag`, and a `match`
+arm `-1 =>`; a golden emit file; a runtime test with the exact values `-5`, `0` (with
+`Object.is`), `false`, and the matched arm; the old `syntax/010` tests for `-` and `!`
+become success tests; `deno task check` exits 0.
+
+COU2 (`%`). The lexer gets a `%` token. `%` has the precedence of `*` and is left
+associative. Two `int` operands give `int`, and the identity rule of `*` applies
+(`adoptedNumericIdentity`, `src/core/check_binary.ts:447`), so `Cents % 7` gives
+`Cents`. Two `number` operands, or one `int` and one `number`, give `number`. A
+`Duration` or `Instant` operand gives a type mismatch through new rows of the unit table.
+The sign follows the dividend, as in JavaScript. An `int` remainder emits a new helper
+`$rem(a, b)` that throws for `b === 0` and returns `a % b + 0`. A `number` remainder emits
+`a % b`. The validator learns `%`. The IR version goes to 9 with the mechanical changes of
+`9a097a0`. The TextMate grammar and the playground highlighter learn `%`. The check: a
+fixture and a golden file; a runtime test with the exact values `7 % 3 = 1`,
+`-7 % 3 = -1`, `7 % -3 = 1`, `-6 % 3 = 0` (with `Object.is`), `7.5 % 2 = 1.5`, and the
+defect message "division by zero"; a test that `5s % 2` gives the mismatch code; a test
+that the validator rejects version 8; a forged validator fixture with a wrong `%`
+operand type; `deno task check` exits 0.
+
+COU3 (`div` and rounding). `trunc`, `floor`, `round`, and `ceil` take one `number` (an
+`int` or a number identity widens) and give `int`. `round` rounds half away from zero
+(COD3). Emission: `trunc`, `floor`, and `ceil` emit `$int(Math.<name>(x) + 0)`. `round`
+emits `$int` of a helper that gives `-Math.round(-x) + 0` for `x < 0` and
+`Math.round(x) + 0` otherwise, because `Math.round(-0)` is `-0`. `div(a, b)` takes two `int` values and gives the quotient truncated toward
+zero, the partner of `%`. It emits a helper that throws for `b === 0` and returns
+`Number(BigInt(a) / BigInt(b))`. BigInt division is exact by construction, so the
+helper needs no float correction. The check: a fixture and a golden file; a runtime test
+with the exact values `div(7, 2) = 3`, `div(-7, 2) = -3`, `div(7, -2) = -3`,
+`div(9007199254740991, 2) = 4503599627370495`, `trunc(-2.7) = -2`, `floor(-2.5) = -3`,
+`ceil(-0.5) = 0` (with `Object.is`), `round(2.5) = 3`, `round(-2.5) = -3`,
+`round(0.49999999999999994) = 0`, and the defect messages for `div(1, 0)` and
+`round(1e300)`; a property test after `docs/testing.md` "Property tests" that checks
+`div(a, b) * b + a % b === a` in BigInt, `|a % b| < |b|`, and the sign rule on seeded
+pairs that include the safe integer limits, with literal outcome counts; the P6 fit
+test; a module constant named `round` still compiles; `deno task check` exits 0.
+
+COU4 (`text` and `len`). `text(x)` takes one `int`, `number`, `boolean`, or an identity
+over one of them, and gives `string`. It emits `String(x)`, so it gives the JavaScript
+form, for example `"1e+21"`. `len(x)` takes one `string`, one array, or an identity over
+one of them, and gives `int`. It counts UTF-16 code units, as the predicate `len` does,
+and emits `x.length`. A refinement predicate `len` keeps its meaning. The check: a
+fixture and a golden file; a runtime test with the exact values `text(42) = "42"`,
+`text(-1.5) = "-1.5"`, `text(true) = "true"`, `len("héllo") = 5`, `len("😀") = 2`, and
+`len([1, 2, 3]) = 3`; `"n=" + text(n)` checks; `text("a")` gives a type mismatch; a
+refined type with `where len(x) > 0` still checks next to a value `len`; the existing
+fixtures that bind `text` still compile; `deno task check` exits 0.
+
+COU5 (witness and status). The order lifecycle application gets a percent rule that
+uses `div` or `round`, and no duration form. The README sentence "A percent rule is not
+possible" changes. `runtime_test.ts` gets one exact-value case for the new rule.
+`docs/status.md` replaces the percent sentence and records phase 1 as done. The check:
+`deno test --allow-all tests/application_slow_test.ts` passes; `deno task check` exits 0.
+
+COU6 (website). The specification states `%`, the unary operators, and the seven
+builtins, with an Effect-TS tab for each new example. `typed-ir.ts` shows IR version 9.
+The check: the compiler builds each changed Effektive example; the website
+`deno task test` and `deno task typecheck` exit 0. The website edits get their own
+commit in `../effektive`.
+
+### Out of scope for phase 1
+
+A negative literal in a type position, unary `-` on a `Duration`, `%` on a unit, text
+formatting with a fixed number of decimals, and a descending sort. Each waits for an
+example.
