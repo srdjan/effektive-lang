@@ -3,11 +3,13 @@
 Date: 2026-11-10. Base: `3808b91` on local `main`. Author: Opus.
 Status: on 2026-11-10 the user accepted COD1 (a), COD2 (a), COD3 (a), and COD4 (a). All
 nine items are selected. Phase 1 (CO1 to CO5) is done: "Phase 1 result" below gives the
-commits and the checks. Phases 2 and 3 each need a detail plan and a user approval before
+commits and the checks. "Phase 2 execution plan" below is a draft that waits for a Fable
+validation and a user approval. Phase 3 needs a detail plan and a user approval before
 implementation. So this plan stays in `docs/plans/`.
 
 Prefixes: CO (items), COD (decisions), COU (phase 1 units), COV (phase 1 validation
-findings).
+findings), CPD (phase 2 decisions), CPR (phase 2 shared rules), CPU (phase 2 units),
+CPV (phase 2 validation findings).
 
 ## Origin and target change
 
@@ -382,4 +384,105 @@ on a narrowed constant pass `check` but fail `build --tsc` with TS2367.
 
 A negative literal in a type position, unary `-` on a `Duration`, `%` on a unit, text
 formatting with a fixed number of decimals, and a descending sort. Each waits for an
+example.
+
+## Phase 2 execution plan
+
+Base: `28bb822`. Author: Opus. Status: draft. Fable validates it, and then the user
+decides CPD1 to CPD4 and approves the plan. No code changes before that approval.
+Units CPU1 to CPU5 carry out CO6 and CO7. CO8 depends on CPD4.
+
+### Facts that changed the items
+
+Opus checked these facts with scratch builds on 2026-11-10.
+
+- An inline `all([defer(() => 1), defer(() => "a")])` fails with `type-mismatch/012`,
+  also when the result type is `[Int, Text]`. A tuple comes only from a value that
+  already has a tuple type. So the premise of CO8, "`all([...])` returns a tuple", is
+  true only for such a value.
+- `const { n, t } = all({ n: defer(() => 1), t: defer(() => "a") })` builds with `--tsc`
+  and 0 diagnostics. So the record form covers the case that CO8 names.
+- `len(p)` of a tuple `p` gives `type-mismatch/003` "string or an array is expected".
+  `at` and `sort` take an array in the same way.
+- `0 / 0` builds as a `number`, so a `sort` key can be NaN.
+- `a < b` checks for two `Duration` values. The operators `<`, `<=`, `>`, and `>=` order
+  only numeric classes today (`src/core/check_binary.ts:400-413`), so no source form
+  orders strings yet.
+- No builtin returns `Option` today. `at` is the first.
+- `fixtures/applications/stream-processor/processor.eff:15` counts a batch with
+  `fold(0, (count, _item) => count + 1)`. Phase 1 added `len` for this case.
+
+### Decisions CPD1 to CPD4
+
+- CPD1, `at` with a negative index. (a) `at(xs, -1)` gives `None`, as every index
+  outside the array does. **Recommended**, because one rule covers every bad index.
+  (b) A negative index counts from the end, as JavaScript `Array.prototype.at` does.
+- CPD2, spread positions. (a) A spread can stand at any position, and a literal can
+  hold several spreads: `[x, ...xs]`, `[...xs, x]`, and `[...xs, ...ys]`.
+  **Recommended**, because prepend and concatenation need the same form. (b) Only the
+  append form `[...xs, x]`.
+- CPD3, a NaN key in `sort`. (a) NaN sorts after every other number, and two NaN keys
+  are equal, so the order stays stable and complete. **Recommended**, because the result
+  is then defined for every input. (b) A NaN key is a defect, `RangeError("NaN sort
+  key")`. (c) The order is not specified, as in JavaScript.
+- CPD4, CO8 tuple reads. (a) Defer CO8 until an example needs a tuple read. The record
+  form of `all` with record destructuring covers the named case. **Recommended**,
+  because it removes the only IR kind of phase 2. (b) Tuple destructuring
+  `const [a, b] = p` for a value of tuple type only, with a new IR kind `element`.
+  (c) Option (b), and `all` also infers a tuple from an inline list literal, so
+  `const [n, t] = all([one, two])` checks.
+
+The units below assume option (a) of each decision. Another option changes the named
+unit before execution.
+
+### Shared rules
+
+The phase 1 rules P1, P2, P2b, P4, P6, P7, and P8 apply unchanged. These rules replace
+or add to them.
+
+- CPR1 (instance types). `at` is `(E[], int) => Option<E>`. `sort` is `(E[]) => E[]` or
+  `(E[], pure (E) => K) => E[]`. E without a key, or K with a key, must be a type that
+  `<` orders (an `int`, a `number`, a closed unit, or a type with identity over one of
+  them), or `string`, or a type with identity over `string`. A boolean key gives a type
+  mismatch, as `<` does. The internal instance `concat` is `(E[], E[], ...) => E[]`
+  with one or more parameters. It is not a prelude name, so source `concat(...)` stays
+  an unknown name. Each instance is pure, with empty effect sets.
+- CPR2 (closed units). An index of `at` that is a closed unit gives a type mismatch, so
+  `at` joins `UNITLESS_BUILTINS` in `src/core/validate/expr.ts`. `sort` accepts a closed
+  unit element or key, because sorting does not change a value.
+- CPR3 (IR). Phase 2 adds no IR expression kind. The instance names `at`, `sort`, and
+  `concat` change the wire contract (`src/core/validate/import_checks.ts:289-297`).
+  The IR version stays 9 by the rule of `docs/status.md:62`, because no release came
+  after `99fb296`. Each unit extends the version 9 line under `## Unreleased` in
+  `CHANGELOG.md:15`.
+- CPR4 (emission). `at(xs, i)` prints `$at(xs, i)`. `sort` prints `$sort(xs)` or
+  `$sort(xs, key)`. A helper copies the array, so the argument does not change.
+  `concat` prints one array literal: an array literal argument prints its elements, and
+  any other argument prints as `...value`. So `[...xs, x]` prints `[...xs, x]`. The new
+  helpers follow the `$div` registration (`src/core/emit/helper_declarations.ts`,
+  `module_state.ts`, `src/core/emit/emit.ts:121-130`). The order of `$sort` is
+  `a < b ? -1 : a > b ? 1 : 0` with the NaN rule of CPD3. JavaScript sort is stable.
+- CPR5 (fixtures). Each unit adds one `.eff` file to `fixtures/emit/core-data/`, with an
+  exact emit test in `tests/emit_test.ts` and exact runtime values in
+  `tests/emit_runtime_slow_test.ts`. CPU3 adds a property test.
+
+### Units
+
+The units run one after another in the main tree, with the review order of phase 1
+(COV13): the executor writes a failing test first and hands back without a commit. Opus
+reviews the diff, runs `deno task check`, commits, and runs `deno task mutate --only`
+on the changed logic lines, `deno task rules:unfired`, and `deno task coverage`.
+
+| Unit | Item | Model | Files | Acceptance check | Turns |
+| --- | --- | --- | --- | --- | --- |
+| CPU1 | CO6 `at` | Sonnet | P2 sites; `src/core/check_builtins/collections.ts` (follow `lenCall` in `data.ts:121-143` for the array parameter); `$at` helper sites; `src/core/validate/expr.ts` `UNITLESS_BUILTINS` | `fixtures/emit/core-data/at.eff`. `at([10, 20, 30], 1)` gives `Some(20)`; the indexes `3` and `-1` give `None`. A tuple argument, a `string` index, and a `Duration` index each give the exact checker diagnostic. A forged instance with a wrong type gives `validation/002`. `const c: Cents = ...` of the element type checks. | 60 |
+| CPU2 | CO6 spread | Sonnet | `src/core/parse.ts` list literal (`1436-1441`) with a new `SyntaxKind.SpreadElement`; every `ListExpr` consumer: `resolve.ts:1145-1153`, `check_expr.ts` `listExpr` (`1567-1639`) and `markCheckedSlots` (`824`), `check_refinements.ts:287`, `infer_inputs.ts:235`, `requirement_provenance.ts:185`, `check_builtins/schema.ts:595,1182`; `lower.ts:462-469`; the `concat` instance at the P2 sites, without a `PRELUDE` entry | `fixtures/emit/core-data/spread.eff`. `[0, ...[1, 2], 3]` gives `[0, 1, 2, 3]`, and `[...xs, ...ys]` gives the joined array. A spread of a non-array, a spread where the expected type is a tuple, and a spread element of another element type each give the exact diagnostic. A refinement over the length of a literal with a spread does not count the spread as one element. The emitted text has no `concat` name. | 80 |
+| CPU3 | CO7 `sort` | Sonnet | P2 sites; `collections.ts` (follow `mapCall` `222-243` for the key callback); `check_binary.ts:82-109` `comparisonClass` (export it, or reuse its validator twin `validate/typing.ts:815-853`); `validate/import_checks.ts` `checkCallbackShape` (`171-264`) and the callback rule `validate/expr.ts:1419-1453`; `$sort` helper sites | `fixtures/emit/core-data/sort.eff`. `sort([3, 1, 2])` gives `[1, 2, 3]`; `sort(["b", "a", "B"])` gives `["B", "a", "b"]`; a keyed sort of records with equal keys keeps their input order; `sort([2, 0 / 0, 1])` gives `[1, 2, NaN]`; the argument is unchanged after the call. A boolean element, an effectful key, and a tuple argument each give the exact diagnostic. A new `tests/sort_property_slow_test.ts`, in the pattern of `tests/division_property_slow_test.ts`, shows a permutation, an ordered key sequence, and stability. | 70 |
+| CPU4 | Witness and status | Sonnet | `fixtures/applications/stream-processor/processor.eff:15` and its generated files; `docs/status.md`; rows FF3/FC6 and FF4 of `docs/plans/2026-11-10-completeness-review.md`; `docs/language-rules.md:729-738` | The processor uses `len(batch) > 0`, and its runtime test passes unchanged. Status rows name the phase 2 commits. Row FF4 gives the CPD4 result and the facts above. | 40 |
+| CPU5 | Website | Sonnet | `../effektive/public/effektive-spec.html` (both tabs); `../effektive/public/effektive-examples/stream-processor/`; the draft number in the files that COU6 changed | One checked example for `at`, `sort`, and spread. The website `deno task test` and `deno task typecheck` pass. The compiler tests `website_examples_slow_test` and `ir_site_slow_test` pass. | 60 |
+
+### Out of scope for phase 2
+
+A descending sort option, a sort with a comparison function, index syntax `xs[i]`, a
+spread in a tuple, string order for `<`, and `at` on a string. Each waits for an
 example.
