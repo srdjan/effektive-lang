@@ -640,7 +640,9 @@ is `865e6a7`, and CPU3 is `6a35c93`. Follow-up commits killed the directed mutat
 survivors: `89c6612` for CPU1, `d4a9673` and `3dcf595` for CPU2, and `4cb9c5d` for CPU3.
 Two commits deleted code that no test can observe: `8cfb28e` (a count guard that
 `concat` never reaches) and `07e3fb8` (a key execution test that `isQuiet` already
-makes). No survivor is registered. CPU4 is the commit that adds this section.
+makes). No survivor is registered. CPU4 is `4e2f8a8`. CPU5 is website `68c9a2d`, draft
+0.79. Opus kept the service headers of the website stream processor example and changed
+only its batch count to `len`.
 
 Opus changed three executor results during review. CPU1 got a runtime case for a
 `null` element, which gives `Some(null)`. CPU2 got tests that show a literal with a
