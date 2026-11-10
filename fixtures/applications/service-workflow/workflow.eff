@@ -1,13 +1,14 @@
-import { Request, Receipt, InvalidOrder, CatalogFailure, StoreFailure, Catalog, Store } from "./contracts.eff"
-import { StoreLive, Runtime } from "host:store"
+imports Catalog from "./contracts.eff"
+imports Runtime from "host:store"
+import { Request, Receipt, InvalidOrder, CatalogFailure, StoreFailure, Store } from "./contracts.eff"
+import { StoreLive } from "host:store"
 
 const requestSchema: Schema<Request> = schema()
 const storageRetry: RetrySchedule<StoreFailure> =
   retrySchedule((error, attempt) =>
     if (error.kind === "Transient" && attempt <= 2) { Some(attempt * 5ms) } else { None })
 
-export const submit = (input: unknown): Receipt
-  with Catalog | Runtime => {
+export const submit = (input: unknown): Receipt => {
     const request = schemaDecode(requestSchema, input)
     if (request.sku === "" || request.quantity < 1 || request.quantity > 100) {
       fail(InvalidOrder({ reason: "request" }))

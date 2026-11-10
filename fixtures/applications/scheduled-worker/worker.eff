@@ -1,4 +1,6 @@
-import { Int, Policy, Report, JobFailure, InvalidPolicy, Jobs, Clock } from "./contracts.eff"
+imports Jobs from "./contracts.eff"
+imports Clock from "./contracts.eff"
+import { Int, Policy, Report, JobFailure, InvalidPolicy } from "./contracts.eff"
 
 const policySchema: Schema<Policy> = schema()
 
@@ -31,8 +33,7 @@ const cycle = (policy: Policy, completed: Int, last: Option<Int>): Report =>
     cycle(policy, count, Some(value))
   }
 
-export const runWorker = (input: unknown): Report
-  with Jobs | Clock => {
+export const runWorker = (input: unknown): Report => {
     const policy = schemaDecode(policySchema, input)
     if (policy.runs < 0 || policy.delayMillis < 0ms || policy.retries < 0 || policy.retryMillis < 0ms) {
       fail(InvalidPolicy({}))

@@ -29,7 +29,12 @@ Deno.test("stream processor rejects erased exported failure, service and result 
   const source = files["processor.eff"];
   const start = source.indexOf("export const runProcessor");
   const prefix = source.slice(0, start);
-  const exported = source.slice(start);
+  // The service headers bound the requirements, so a written `with` clause is
+  // an optional checked bound. Each case below changes that written bound.
+  const exported = source.slice(start).replace(
+    "(): void =>",
+    "(): void\n  with " + services.join(" | ") + " =>",
+  );
   for (const failure of failures) {
     const erased = exported.replace(
       "with " + services.join(" | "),

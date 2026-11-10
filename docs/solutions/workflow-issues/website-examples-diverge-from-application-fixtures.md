@@ -48,7 +48,11 @@ confirm that only the intended lines changed. When a plan says "copy", read it a
 
 ## Prevention
 
-The root cause is two owners of one example. A fix that stops the repeat is one source
-of truth: either the fixtures adopt the service headers of `d7a1095`, so a copy is
-safe, or a test asserts that each website example and its fixture are the same. Either
-change edits product files, so it needs a decision of the user.
+The root cause was two owners of one example. On 2026-11-10 the user chose one source
+form: the three fixtures adopted the service headers of the website copies. After that
+change, each website example matched its fixture. The fixture contract tests add a
+written `with` clause before they change it, because the clause is now an optional
+checked bound.
+
+No test asserts that the pairs stay the same. So a later website-only edit can make
+them differ again. Before a copy in either direction, run `diff` on the pair.

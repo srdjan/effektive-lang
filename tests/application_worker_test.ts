@@ -28,10 +28,16 @@ Deno.test("scheduled worker composes retry, repetition and resource lifetimes in
 });
 
 Deno.test("scheduled worker contracts reject lost channels", () => {
+  // The service headers bound the requirements, so a written `with` clause is
+  // an optional checked bound. Each case below changes that written bound.
+  const bounded = files["worker.eff"].replace(
+    "(input: unknown): Report => {",
+    "(input: unknown): Report\n  with Jobs | Clock => {",
+  );
   const cases: readonly (readonly [string, string, readonly Expected[]])[] = [
     [
       "lost JobFailure",
-      files["worker.eff"].replace(
+      bounded.replace(
         "(input: unknown): Report\n  with Jobs | Clock => {",
         "(input: unknown): Report\n  fails SchemaError | InvalidPolicy\n  with Jobs | Clock => {",
       ),
@@ -42,7 +48,7 @@ Deno.test("scheduled worker contracts reject lost channels", () => {
     ],
     [
       "lost Clock.wait",
-      files["worker.eff"].replace(
+      bounded.replace(
         "with Jobs | Clock => {",
         "with Jobs => {",
       ),

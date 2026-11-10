@@ -1,4 +1,7 @@
-import { Int, Item, InputFailure, TransformFailure, OutputFailure, Input, Transform, Output } from "./contracts.eff"
+imports Input from "./contracts.eff"
+imports Transform from "./contracts.eff"
+imports Output from "./contracts.eff"
+import { Int, Item, InputFailure, TransformFailure, OutputFailure } from "./contracts.eff"
 
 const convert = (item: Item) =>
   try { { id: item.id, value: Transform.apply(item), recovered: false } } catch {
@@ -28,8 +31,7 @@ const withOutput = (input: Int) =>
       consumer.close()
     }
 
-export const runProcessor = (): void
-  with Input | Transform | Output =>
+export const runProcessor = (): void =>
   using (source = {
       const input = Input.open()
       {

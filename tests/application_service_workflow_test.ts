@@ -24,6 +24,12 @@ Deno.test("service workflow validates and retains provider requirements while di
   assertValidProject(project);
 });
 Deno.test("service workflow rejects erased result, failure and retained service contracts", () => {
+  // The service headers bound the requirements, so a written `with` clause is
+  // an optional checked bound. Each case below changes that written bound.
+  const bounded = files["workflow.eff"].replace(
+    "(input: unknown): Receipt =>",
+    "(input: unknown): Receipt\n  with Catalog | Runtime =>",
+  );
   for (
     const [error, remaining] of [
       ["SchemaError", "InvalidOrder | CatalogFailure | StoreFailure"],
@@ -32,7 +38,7 @@ Deno.test("service workflow rejects erased result, failure and retained service 
       ["StoreFailure", "SchemaError | InvalidOrder | CatalogFailure"],
     ]
   ) {
-    const source = files["workflow.eff"].replace(
+    const source = bounded.replace(
       "with Catalog | Runtime",
       "fails " + remaining + "\n  with Catalog | Runtime",
     );
@@ -44,7 +50,7 @@ Deno.test("service workflow rejects erased result, failure and retained service 
     );
   }
   for (const service of ["Catalog", "Runtime"]) {
-    const source = files["workflow.eff"].replace(
+    const source = bounded.replace(
       "with Catalog | Runtime",
       "with " +
         (service === "Catalog" ? "Runtime" : "Catalog"),
