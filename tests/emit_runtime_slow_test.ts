@@ -261,6 +261,85 @@ console.log(JSON.stringify({
   });
 });
 
+Deno.test("div truncates toward zero, and the rounding builtins give an int with no -0", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/core-data/", FIXTURES), dir);
+    build(dir, ["numbers.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import * as M from "./numbers.ts";
+
+function message(run: () => number): string {
+  try {
+    run();
+    return "no throw";
+  } catch (e) {
+    return e instanceof RangeError ? e.message : "other";
+  }
+}
+console.log(JSON.stringify({
+  quotient: [
+    M.quotient(7, 2),
+    M.quotient(-7, 2),
+    M.quotient(7, -2),
+    M.quotient(9007199254740991, 2),
+  ],
+  share: M.share(250),
+  cut: M.cut(1999),
+  area: M.area(-7, 2),
+  whole: [M.whole(-2.7), M.whole(2.7)],
+  down: [M.down(-2.5), M.down(2.5)],
+  up: [M.up(-2.5), M.up(2.5)],
+  near: [M.near(2.5), M.near(-2.5), M.near(0.49999999999999994), M.near(-2.4)],
+  toCents: M.toCents(19.99),
+  nearPiped: M.nearPiped(3),
+  nested: M.nested(5.5),
+  ceilIsPositiveZero: Object.is(M.up(-0.5), 0),
+  truncIsPositiveZero: Object.is(M.whole(-0.4), 0),
+  floorIsPositiveZero: Object.is(M.down(-0), 0),
+  roundIsPositiveZero: [Object.is(M.near(-0.4), 0), Object.is(M.near(-0), 0)],
+  quotientIsPositiveZero: Object.is(M.quotient(-1, 2), 0),
+  quotientByZero: message(() => M.quotient(1, 0)),
+  zeroByZero: message(() => M.quotient(0, 0)),
+  roundOverflow: message(() => M.near(1e300)),
+  roundNaN: message(() => M.near(NaN)),
+  roundInfinity: message(() => M.near(-Infinity)),
+  truncOverflow: message(() => M.whole(1e300)),
+  floorNaN: message(() => M.down(NaN)),
+  ceilInfinity: message(() => M.up(Infinity)),
+}));
+`,
+    );
+    assertEquals(result, {
+      quotient: [3, -3, -3, 4503599627370495],
+      share: 225,
+      cut: 19,
+      area: -7,
+      whole: [-2, 2],
+      down: [-3, 2],
+      up: [-2, 3],
+      near: [3, -3, 0, -2],
+      toCents: 20,
+      nearPiped: 5,
+      nested: 3,
+      ceilIsPositiveZero: true,
+      truncIsPositiveZero: true,
+      floorIsPositiveZero: true,
+      roundIsPositiveZero: [true, true],
+      quotientIsPositiveZero: true,
+      quotientByZero: "division by zero",
+      zeroByZero: "division by zero",
+      roundOverflow: "int overflow",
+      roundNaN: "int overflow",
+      roundInfinity: "int overflow",
+      truncOverflow: "int overflow",
+      floorNaN: "int overflow",
+      ceilInfinity: "int overflow",
+    });
+  });
+});
+
 Deno.test("a data value with a missing optional prototype-named field nests in another data value", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");

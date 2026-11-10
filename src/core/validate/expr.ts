@@ -1441,6 +1441,27 @@ export class BodyValidator implements ValidatorCore {
         }
       }
     }
+    if (
+      builtin === "div" || builtin === "trunc" || builtin === "floor" ||
+      builtin === "round" || builtin === "ceil"
+    ) {
+      // A closed unit widens to `int`, but these builtins do not take one.
+      outs.forEach((out, i) => {
+        if (
+          isDurationType(this.env, out.type) ||
+          isInstantType(this.env, out.type)
+        ) {
+          this.add(
+            AREA.types,
+            `${path}.arguments[${i}]`,
+            `${builtin} does not take a closed unit argument of type ${
+              show(out.type)
+            }`,
+            e.arguments[i].span,
+          );
+        }
+      });
+    }
     if (builtin === "all" && outs.length === 2) {
       const options = e.arguments[1];
       if (!isConcurrencyOption(options)) {

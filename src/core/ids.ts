@@ -92,13 +92,18 @@ export function bodyLocalId(declaration: ValueId, name: string): LocalId {
   return `local:${declaration}/${name}`;
 }
 
-/** The collection builtins whose closed instances the IR names in a call. */
+/** The builtins whose closed instances the IR names in a call. */
 const BUILTIN_INSTANCE_NAMES = [
   "all",
   "traverse",
   "map",
   "filter",
   "fold",
+  "div",
+  "trunc",
+  "floor",
+  "round",
+  "ceil",
 ] as const;
 
 export type BuiltinInstanceName = typeof BUILTIN_INSTANCE_NAMES[number];
@@ -120,7 +125,7 @@ export function builtinInstanceName(id: string): string | undefined {
   return rest.split("/")[1];
 }
 
-/** The typed name, or undefined when `name` is not a collection builtin. */
+/** The typed name, or undefined when `name` is not a builtin instance name. */
 export function asBuiltinInstanceName(
   name: string | undefined,
 ): BuiltinInstanceName | undefined {

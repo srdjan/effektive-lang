@@ -143,6 +143,11 @@ const ARITY_ROWS: readonly ArityRow[] = [
     2,
     "`traverse` takes two arguments and an optional concurrency record",
   ),
+  ...fixed("div", 2),
+  ...fixed("trunc", 1),
+  ...fixed("floor", 1),
+  ...fixed("round", 1),
+  ...fixed("ceil", 1),
 ];
 
 function arityMessages(call: string): string[] {

@@ -39,8 +39,41 @@ function checkBuiltinShape(
   }
   const wrong = (what: string): void =>
     report.add(AREA.types, path, `the builtin ${name} ${what}`, span);
-  if (name === "all") checkAllShape(env, type, wrong);
-  else checkCallbackShape(ctx, name, type, path, span, wrong);
+  switch (name) {
+    case "all":
+      return checkAllShape(env, type, wrong);
+    case "div":
+      return checkDataShape(env, type, 2, "int", wrong);
+    case "trunc":
+    case "floor":
+    case "round":
+    case "ceil":
+      return checkDataShape(env, type, 1, "number", wrong);
+    default:
+      return checkCallbackShape(ctx, name, type, path, span, wrong);
+  }
+}
+
+/** `div` is `(int, int) => int`, and a rounding builtin is `(number) => int`, each pure with no failure or requirement. */
+function checkDataShape(
+  env: World["env"],
+  type: FunctionType,
+  count: number,
+  parameter: "int" | "number",
+  wrong: (what: string) => void,
+): void {
+  const primitive = (name: "int" | "number"): Type => ({
+    kind: "primitive",
+    name,
+  });
+  if (
+    type.parameters.length !== count ||
+    type.parameters.some((p) => !same(env, p, primitive(parameter)))
+  ) wrong(`takes ${count} ${parameter} parameter${count === 1 ? "" : "s"}`);
+  if (!same(env, type.result, primitive("int"))) wrong("returns an int");
+  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
+    wrong("is pure, with no failure and no requirement");
+  }
 }
 
 function checkAllShape(
@@ -93,7 +126,7 @@ function checkAllShape(
 
 function checkCallbackShape(
   ctx: Ctx,
-  name: Exclude<BuiltinName, "all">,
+  name: "map" | "filter" | "fold" | "traverse",
   type: FunctionType,
   path: string,
   span: Span,

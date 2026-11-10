@@ -1,4 +1,4 @@
-// The declarations of the generated helpers of a module: `$int`, `$rem`, `$unmatched`,
+// The declarations of the generated helpers of a module: `$int`, `$rem`, `$div`, `$round`, `$unmatched`,
 // `$Int`, `$hostCheck`, and `$outcome`. Each one reads the name of its helper
 // from the module state, so the call registers the name and its imports.
 import {
@@ -34,6 +34,32 @@ export function remainderDeclaration(scope: ModuleState): Doc {
     braces([
       'if (right === 0) throw new RangeError("division by zero");',
       "return left % right + 0;",
+    ]),
+    ";",
+  ];
+}
+
+/** `const $div = ...`: the quotient of two `int` values, truncated toward zero and exact. */
+export function divideDeclaration(scope: ModuleState): Doc {
+  const name = scope.divide();
+  return [
+    `const ${name} = (left: number, right: number): number => `,
+    braces([
+      'if (right === 0) throw new RangeError("division by zero");',
+      "return Number(BigInt(left) / BigInt(right));",
+    ]),
+    ";",
+  ];
+}
+
+/** `const $round = ...`: `Math.round` with the half rounded away from zero and no `-0`. */
+export function roundDeclaration(scope: ModuleState): Doc {
+  const name = scope.round();
+  return [
+    `const ${name} = (value: number): number => `,
+    braces([
+      "if (value < 0) return -Math.round(-value) + 0;",
+      "return Math.round(value) + 0;",
     ]),
     ";",
   ];

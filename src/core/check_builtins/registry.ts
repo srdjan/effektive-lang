@@ -4,6 +4,7 @@
 
 import type { BuiltinContext } from "./context.ts";
 import { COLLECTION_ROWS, type CollectionContext } from "./collections.ts";
+import { DATA_ROWS, type DataContext } from "./data.ts";
 import { EFFECT_ROWS, type EffectContext } from "./effect.ts";
 import { LAYER_ROWS, type LayerContext } from "./layer.ts";
 import { REF_ROWS } from "./ref.ts";
@@ -16,6 +17,7 @@ import { STREAM_ROWS, type StreamContext } from "./stream.ts";
 type FamilyContext =
   & BuiltinContext
   & CollectionContext
+  & DataContext
   & EffectContext
   & LayerContext
   & ScopeContext
@@ -25,6 +27,7 @@ type FamilyContext =
 /** The family row tables by family name, for the test of the key sets. */
 export const FAMILY_ROW_TABLES = {
   collections: COLLECTION_ROWS,
+  data: DATA_ROWS,
   effect: EFFECT_ROWS,
   layer: LAYER_ROWS,
   ref: REF_ROWS,
@@ -37,6 +40,7 @@ export const FAMILY_ROW_TABLES = {
 // `satisfies` clause on this table breaks it.
 export const FAMILY_ROWS: Rows<PreludeCallName, FamilyContext> = {
   ...COLLECTION_ROWS,
+  ...DATA_ROWS,
   ...EFFECT_ROWS,
   ...LAYER_ROWS,
   ...REF_ROWS,

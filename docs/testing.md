@@ -94,6 +94,7 @@ A property test generates its inputs from a literal table of seeds, with `makeRa
 | `tests/type_laws_property_test.ts` | Each generated type fits itself in the checker and validator. Plain assignment is transitive. Checker and validator results agree on generated pairs. | Generated pairs can omit rare shapes. Directed tests cover selected nominal, function, fiber, sealed, schema, and null boundaries. |
 | `tests/predicates_property_test.ts` | Brute force confirms each `proved` and `disproved` result on a bounded domain. `verifyCertificate` accepts each certificate. `and` and `or` obey the identity and absorption laws. | The test does not judge an `unknown` result. |
 | `tests/acceptance_property_slow_test.ts` | After seeded token edits, a program that the checker accepts lowers, validates, and emits. | The edits stay near the input programs. Only `.eff` files change. |
+| `tests/division_property_slow_test.ts` | Four seeds and the safe integer limits give pairs to `div` and `%` in one subprocess. In BigInt, `div(a, b) * b + a % b` is `a`, `\|a % b\|` is less than `\|b\|`, and a nonzero `a % b` has the sign of `a`. No result is `-0`, and a zero divisor throws "division by zero" in both. | Only `int` values reach the two wrappers. The test does not judge the rounding builtins. |
 
 A property that fails is a finding about the compiler until the evidence shows otherwise. Do not weaken the property, and do not filter out the input.
 

@@ -30,11 +30,13 @@ import {
   ModuleState,
 } from "./module_state.ts";
 import {
+  divideDeclaration,
   hostCheckDeclaration,
   intFunctionDeclaration,
   intSchemaDeclaration,
   outcomeDeclaration,
   remainderDeclaration,
+  roundDeclaration,
   unmatchedDeclaration,
 } from "./helper_declarations.ts";
 
@@ -120,6 +122,8 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
     ["intSchema", () => intSchemaDeclaration(scope)],
     ["intFunction", () => intFunctionDeclaration(scope)],
     ["remainder", () => remainderDeclaration(scope)],
+    ["divide", () => divideDeclaration(scope)],
+    ["round", () => roundDeclaration(scope)],
     ["unmatched", () => unmatchedDeclaration(scope)],
     ["hostCheck", () => hostCheckDeclaration(scope)],
     ["outcome", () => outcomeDeclaration(scope)],

@@ -3,7 +3,18 @@
 import type { Expr, Type } from "../ir.ts";
 import { same, type TypeEnv, unfold } from "./typing.ts";
 
-const BUILTIN_NAMES = ["map", "filter", "fold", "all", "traverse"] as const;
+const BUILTIN_NAMES = [
+  "map",
+  "filter",
+  "fold",
+  "all",
+  "traverse",
+  "div",
+  "trunc",
+  "floor",
+  "round",
+  "ceil",
+] as const;
 export type BuiltinName = typeof BUILTIN_NAMES[number];
 export type BuiltinCallName = BuiltinName | "other";
 

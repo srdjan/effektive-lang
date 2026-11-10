@@ -81,6 +81,8 @@ interface HelperNames {
   intSchema?: string;
   intFunction?: string;
   remainder?: string;
+  divide?: string;
+  round?: string;
   unmatched?: string;
   hostCheck?: string;
   outcome?: OutcomeNames;
@@ -103,6 +105,8 @@ export interface EmitNames {
   intSchemaName(): string;
   intFunction(): string;
   remainder(): string;
+  divide(): string;
+  round(): string;
   unmatched(): string;
   outcome(): OutcomeNames;
   hostCheck(): string;
@@ -393,6 +397,16 @@ export class ModuleState
   /** The helper `$rem` that an `int` remainder calls. */
   remainder(): string {
     return this.helpers.remainder ??= this.fresh("$rem");
+  }
+
+  /** The helper `$div` that `div` calls. */
+  divide(): string {
+    return this.helpers.divide ??= this.fresh("$div");
+  }
+
+  /** The helper `$round` that `round` calls. */
+  round(): string {
+    return this.helpers.round ??= this.fresh("$round");
   }
 
   /** The helper `$unmatched` that a match calls for a value outside its type. */

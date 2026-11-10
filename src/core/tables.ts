@@ -140,7 +140,7 @@ export type NodeFact =
   }
   /** A bracket literal, classified by its checked contextual type. */
   | { readonly kind: "list"; readonly shape: "array" | "tuple" }
-  /** A collection builtin with its closed function type. */
+  /** A builtin instance with its closed function type. */
   | {
     readonly kind: "builtin";
     readonly name: BuiltinInstanceName;

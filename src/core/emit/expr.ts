@@ -1310,6 +1310,31 @@ export class ExprEmitter implements ExprCore {
           callArguments([this.callback(args[2], kid), kid(args[1])]),
         ]);
       }
+      case "div": {
+        if (args.length !== 2) throw internal("div needs two arguments");
+        return emitted([
+          this.scope.divide(),
+          callArguments([kid(args[0]), kid(args[1])]),
+        ]);
+      }
+      case "round": {
+        if (args.length !== 1) throw internal("round needs one argument");
+        return this.intCall(emitted([
+          this.scope.round(),
+          callArguments([kid(args[0])]),
+        ]));
+      }
+      case "trunc":
+      case "floor":
+      case "ceil": {
+        if (args.length !== 1) throw internal(`${name} needs one argument`);
+        // `+ 0` turns the `-0` of `Math.ceil(-0.5)` into `0`.
+        return this.intCall(emitted([
+          `Math.${name}`,
+          callArguments([kid(args[0])]),
+          " + 0",
+        ], PREC.additive));
+      }
       case "all":
       case "traverse":
         throw internal(`the builtin ${name} has no emission form`);
@@ -1717,6 +1742,11 @@ export class ExprEmitter implements ExprCore {
               map: [2],
               filter: [2],
               fold: [3],
+              div: [2],
+              trunc: [1],
+              floor: [1],
+              round: [1],
+              ceil: [1],
             };
             if (!counts[builtin].includes(children.length)) {
               throw internal(`${builtin} has an invalid argument count`);
@@ -1774,6 +1804,13 @@ export class ExprEmitter implements ExprCore {
                   ...(third === undefined ? [] : [", ", free(third)]),
                   ")",
                 ]);
+              case "div":
+              case "trunc":
+              case "floor":
+              case "round":
+              case "ceil":
+                // A pure builtin is not a leaf: `builtinCall` prints it.
+                throw internal(`the builtin ${builtin} is not an effect leaf`);
             }
           }
         }

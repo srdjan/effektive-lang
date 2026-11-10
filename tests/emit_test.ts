@@ -1354,3 +1354,83 @@ export const nested = (a: Int, b: Int, c: Int): Int => $rem(a, $rem(b, c));
 `,
   );
 });
+
+Deno.test("div and the rounding builtins emit a helper or a Math call inside $int", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), [
+    "numbers.eff",
+  ]).get("numbers");
+  assert(emitted !== undefined, "module numbers was not emitted");
+  assertEquals(
+    emitted.text,
+    `// Generated from numbers.eff by the Effektive compiler. Do not edit.
+
+import { Schema } from "effect";
+
+const $Int = Schema.Finite.check(
+  Schema.makeFilter(
+    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+  ),
+);
+
+const $int = (value: number): number => {
+  if (!Number.isSafeInteger(value)) throw new RangeError("int overflow");
+  return value;
+};
+
+const $rem = (left: number, right: number): number => {
+  if (right === 0) throw new RangeError("division by zero");
+  return left % right + 0;
+};
+
+const $div = (left: number, right: number): number => {
+  if (right === 0) throw new RangeError("division by zero");
+  return Number(BigInt(left) / BigInt(right));
+};
+
+const $round = (value: number): number => {
+  if (value < 0) return -Math.round(-value) + 0;
+  return Math.round(value) + 0;
+};
+
+export const Int = $Int;
+export type Int = typeof Int.Type;
+
+export const Num = Schema.Number;
+export type Num = typeof Num.Type;
+
+export const Cents = $Int;
+export type Cents = typeof Cents.Type;
+
+export const quotient = (a: Int, b: Int): Int => $div(a, b);
+
+export const share = (subtotal: Int): Int => {
+  const $p1: Int = $int(subtotal * 90);
+  return $div($p1, 100);
+};
+
+export const cut = (c: Cents): Int => $div(c, 100);
+
+export const toCents = (x: Num): Cents => $int($round(x));
+
+export const whole = (x: Num): Int => $int(Math.trunc(x) + 0);
+
+export const down = (x: Num): Int => $int(Math.floor(x) + 0);
+
+export const near = (x: Num): Int => $int($round(x));
+
+export const up = (x: Num): Int => $int(Math.ceil(x) + 0);
+
+export const nearPiped = (x: Num): Int => {
+  const $p1: Num = x * 1.5;
+  return $int($round($p1));
+};
+
+export const area = (a: Int, b: Int): Int =>
+  $int($int($div(a, b) * b) + $rem(a, b));
+
+export const nested = (x: Num): Int =>
+  $int(Math.floor($int(Math.ceil(x) + 0) / 2) + 0);
+//# sourceMappingURL=numbers.ts.map
+`,
+  );
+});

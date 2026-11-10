@@ -1,0 +1,15 @@
+type Int = int
+type Num = number
+type Cents = int
+
+export const quotient = (a: Int, b: Int): Int => div(a, b)
+export const share = (subtotal: Int): Int => subtotal * 90 |> div(100)
+export const cut = (c: Cents): Int => div(c, 100)
+export const toCents = (x: Num): Cents => round(x)
+export const whole = (x: Num): Int => trunc(x)
+export const down = (x: Num): Int => floor(x)
+export const near = (x: Num): Int => round(x)
+export const up = (x: Num): Int => ceil(x)
+export const nearPiped = (x: Num): Int => x * 1.5 |> round
+export const area = (a: Int, b: Int): Int => div(a, b) * b + a % b
+export const nested = (x: Num): Int => floor(ceil(x) / 2)
