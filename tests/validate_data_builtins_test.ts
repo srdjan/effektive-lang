@@ -750,6 +750,19 @@ Deno.test("a sort key that is not a function of the element is rejected", () => 
   );
 });
 
+Deno.test("a sort key with effect execution is rejected", () => {
+  assertEquals(
+    forgedBuiltin(SORT_SOURCE, "sort", (type) => {
+      const key = type.parameters[1];
+      assert(key.kind === "function");
+      key.execution = "effect";
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin sort takes a pure key function of the element",
+    ],
+  );
+});
+
 Deno.test("an instance of sort with a requirement is rejected", () => {
   assertEquals(
     forgedBuiltin(SORT_SOURCE, "sort", (type) => {

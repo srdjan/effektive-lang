@@ -191,7 +191,6 @@ function checkSortShape(
     if (
       key.kind !== "function" || key.parameters.length !== 1 ||
       !same(env, key.parameters[0], first.element) ||
-      key.execution !== "pure" ||
       !isQuiet(invocationOf(key))
     ) {
       wrong("takes a pure key function of the element");
