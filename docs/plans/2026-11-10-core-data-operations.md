@@ -2,11 +2,12 @@
 
 Date: 2026-11-10. Base: `3808b91` on local `main`. Author: Opus.
 Status: on 2026-11-10 the user accepted COD1 (a), COD2 (a), COD3 (a), and COD4 (a). All
-nine items are selected. Phase 1 is authorized, and the "Phase 1 execution plan" below
-carries it out. Phases 2 and 3 each need a detail plan and a user approval before
-implementation.
+nine items are selected. Phase 1 (CO1 to CO5) is done: "Phase 1 result" below gives the
+commits and the checks. Phases 2 and 3 each need a detail plan and a user approval before
+implementation. So this plan stays in `docs/plans/`.
 
-Prefixes: CO (items), COD (decisions), COU (phase 1 units).
+Prefixes: CO (items), COD (decisions), COU (phase 1 units), COV (phase 1 validation
+findings).
 
 ## Origin and target change
 
@@ -230,13 +231,13 @@ survivor or an unfired rule gets a test in a follow-up commit.
 | Unit | Item | Model | Files | Acceptance check | Turns |
 | --- | --- | --- | --- | --- | --- |
 | COU2a | IR version 9, done in `99fb296` and website `d81866e` | Sonnet | The version sites of COV12, `../effektive/public/typed-ir.ts` (`deno task site:ir`), `../effektive/public/log.ir.json`, `../effektive/public/effektive-spec.html:898` | See COU2a | 30 |
-| COU1a | CO1 unary expressions | Sonnet | `src/core/parse.ts`, `src/core/syntax.ts`, `src/core/resolve.ts:1138-1147`, `src/core/infer_inputs.ts:207-230`, `src/core/check_expr.ts`, `src/core/check_refinements.ts`, `src/core/predicate_source.ts`, `src/core/lower.ts`, `src/core/diagnostics.ts:64-66`, `fixtures/errors/syntax-unary-operator.eff`, `fixtures/surface/cli.json`, `tests/check_body_test.ts:293`, `tests/helpers.ts:297-327`, `tests/parse_test.ts` | See COU1a | 60 |
-| COU1b | CO1 negative literal pattern | Sonnet | `src/core/parse.ts:1754-1757` and `1787-1790`, `src/core/syntax_queries.ts` (`literalOf`, `numberTextOf`), `src/core/check_patterns.ts`, `src/core/check_refinements.ts` (`matchLiteral`) | See COU1b | 40 |
-| COU2b | CO2 `%` | Sonnet | `src/core/lex.ts`, `fixtures/lex/snapshot.json`, `src/core/syntax_queries.ts:102-135`, `src/core/parse.ts:89-91`, `src/core/check_binary.ts`, `src/core/ir.ts:230`, `src/core/lower.ts`, `src/core/validate/expr.ts:1941` and `2051-2077`, `src/core/emit/expr.ts:1133`, the helper sites of P2, the TextMate grammar, the website IR files | See COU2b | 70 |
-| COU3 | CO3 `div` and rounding | Sonnet | The P2 sites | See COU3 | 80 |
-| COU4 | CO4 `text`, CO5 `len` | Sonnet | The P2 sites | See COU4 | 60 |
-| COU5 | Phase 1 witness and status | Sonnet | `fixtures/applications/order-lifecycle/` (`contracts.eff`, `orders.eff`, `README.md`, `runtime_test.ts`, the generated files), `docs/status.md`, `docs/plans/2026-11-10-completeness-review.md` | See COU5 | 40 |
-| COU6 | Website | Sonnet | `../effektive/public/effektive-spec.html` (both tabs), `../effektive/public/effektive-examples/order-lifecycle/` | See COU6 | 60 |
+| COU1a | CO1 unary expressions, done in `d7f510e` | Sonnet | `src/core/parse.ts`, `src/core/syntax.ts`, `src/core/resolve.ts:1138-1147`, `src/core/infer_inputs.ts:207-230`, `src/core/check_expr.ts`, `src/core/check_refinements.ts`, `src/core/predicate_source.ts`, `src/core/lower.ts`, `src/core/diagnostics.ts:64-66`, `fixtures/errors/syntax-unary-operator.eff`, `fixtures/surface/cli.json`, `tests/check_body_test.ts:293`, `tests/helpers.ts:297-327`, `tests/parse_test.ts` | See COU1a | 60 |
+| COU1b | CO1 negative literal pattern, done in `6181d41` | Sonnet | `src/core/parse.ts:1754-1757` and `1787-1790`, `src/core/syntax_queries.ts` (`literalOf`, `numberTextOf`), `src/core/check_patterns.ts`, `src/core/check_refinements.ts` (`matchLiteral`) | See COU1b | 40 |
+| COU2b | CO2 `%`, done in `d9d638d` and website `0a1fe61` | Sonnet | `src/core/lex.ts`, `fixtures/lex/snapshot.json`, `src/core/syntax_queries.ts:102-135`, `src/core/parse.ts:89-91`, `src/core/check_binary.ts`, `src/core/ir.ts:230`, `src/core/lower.ts`, `src/core/validate/expr.ts:1941` and `2051-2077`, `src/core/emit/expr.ts:1133`, the helper sites of P2, the TextMate grammar, the website IR files | See COU2b | 70 |
+| COU3 | CO3 `div` and rounding, done in `b726c86` | Sonnet | The P2 sites | See COU3 | 80 |
+| COU4 | CO4 `text`, CO5 `len`, done in `e3a8e04` | Sonnet | The P2 sites | See COU4 | 60 |
+| COU5 | Phase 1 witness and status, done in `965e3d4` | Sonnet | `fixtures/applications/order-lifecycle/` (`contracts.eff`, `orders.eff`, `README.md`, `runtime_test.ts`, the generated files), `docs/status.md`, `docs/plans/2026-11-10-completeness-review.md` | See COU5 | 40 |
+| COU6 | Website, done in website `b8c7685` | Sonnet | `../effektive/public/effektive-spec.html` (both tabs), `../effektive/public/effektive-examples/order-lifecycle/` | See COU6 | 60 |
 
 COU2a (IR version 9). The mechanical raise of `9a097a0`, at the sites of COV12. Do not
 change the six document versions `version: 8` in `tests/lsp_editor_test.ts`. Run
@@ -360,6 +361,22 @@ a proof sketch and 2,000,000 seeded pairs with no mismatch. The BigInt form stay
 because it is exact by construction. Its cost needs a measurement if `div` runs in a
 loop. COV20 corrects two references: `adoptedNumericIdentity` is defined at
 `src/core/check_binary.ts:53`, and `docs/architecture.md` has no IR version rule.
+
+### Phase 1 result
+
+Each unit row above names its commit. Follow-up commits killed the directed mutation
+survivors: `4c638ed` and `f4b6db0` for COU1a, `04e1dd0` for COU1b, and `0395551` and
+`ed557a3` for COU3. COU1a and COU1b registered two equivalent mutants. `ab0ba8f` tests a
+validator rejection site that was already unfired at `cf33c4b`. After `965e3d4`,
+`deno task rules:unfired` reports no site, and `deno task check` passes.
+
+`deno task coverage` failed four times in the main tree with "no LCOV record:
+src/lsp/main.ts", at load averages from 29 to 67. A fifth run at `965e3d4`, which started
+at load 22, passed every floor: lines 97.74%, branches 95.66%, functions 99.55%. So the
+phase 1 code does not cause the failure. High load is the probable cause.
+
+One defect is open. Row N3 of the completeness review records that `!true` and `!local`
+on a narrowed constant pass `check` but fail `build --tsc` with TS2367.
 
 ### Out of scope for phase 1
 
