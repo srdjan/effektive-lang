@@ -290,7 +290,7 @@ Deno.test("traverse requires a positive bound or the unbounded literal", () => {
   for (
     const [option, code] of [
       ["{ concurrency: 0 }", "type-mismatch/010"],
-      ["{ concurrency: -1 }", "syntax/010"],
+      ["{ concurrency: -1 }", "type-mismatch/010"],
       ["{ concurrency: 1.5 }", "type-mismatch/010"],
       ["{ concurrency: 9007199254740992 }", "type-mismatch/010"],
       ['{ concurrency: "infinite" }', "type-mismatch/010"],

@@ -62,7 +62,8 @@ export const DIAGNOSTIC_CODES = {
       "The parser found a token that cannot start or continue a construct.",
   },
   "syntax/010": {
-    description: "A unary operator is used. Version 0 has no unary operators.",
+    description:
+      "A unary `+` is used, or a block item after the first starts with `-`. The unary operators are `-` and `!`.",
   },
   "syntax/011": {
     description: "A pattern is not one of the supported flat forms.",

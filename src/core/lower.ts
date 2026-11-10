@@ -28,6 +28,7 @@ import {
   type RecordFieldParts,
   recordFieldParts,
   stageParts,
+  unaryOperatorOf,
 } from "./syntax_queries.ts";
 import { solvedSignatureType } from "./signatures.ts";
 import type {
@@ -450,6 +451,8 @@ class BodyLowerer {
         return this.field(node);
       case SyntaxKind.BinaryExpr:
         return this.binary(node);
+      case SyntaxKind.UnaryExpr:
+        return this.unary(node);
       case SyntaxKind.OptionFallbackExpr:
         return this.optionFallback(node);
       case SyntaxKind.PipeExpr:
@@ -851,6 +854,38 @@ class BodyLowerer {
       operator,
       left: this.expr(this.required(kids[0], "the left operand", node)),
       right: this.expr(this.required(kids[1], "the right operand", node)),
+      ...this.annotation(node),
+    };
+  }
+
+  /**
+   * `-e` lowers as `0 - e`, and `!e` as `e === false`. The literal takes the
+   * span of the operator.
+   */
+  private unary(node: NodeId): Expr {
+    const { operator, token } = this.required(
+      unaryOperatorOf(this.ctx.tree, node),
+      "the operator",
+      node,
+    );
+    const operand = this.expr(
+      this.required(this.kids(node)[0], "the operand", node),
+    );
+    const minus = operator === "-";
+    const literal: Expr = {
+      kind: "literal",
+      value: minus ? 0 : false,
+      ...this.annotationWith(
+        minus ? this.ctx.types.int : this.ctx.types.boolean,
+        PURE_EFFECTS,
+        this.span(token),
+      ),
+    };
+    return {
+      kind: "binary",
+      operator: minus ? "-" : "===",
+      left: minus ? literal : operand,
+      right: minus ? operand : literal,
       ...this.annotation(node),
     };
   }

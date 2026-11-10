@@ -1,9 +1,16 @@
-// error: syntax/010
-const negative = -1
-// error: syntax/010
-const negated = !true
+type Int = int
 // error: syntax/010
 const plus = +1
-// error: syntax/010
+const negative = -1
+const negated = !true
 const inner = 2 - -3
 const fine = 0 - 1
+const later = (price: Int, discount: Int): Int => {
+  const total = price
+  // error: syntax/010
+  - discount
+}
+const grouped = (price: Int, discount: Int): Int => {
+  const total = price
+  (-discount)
+}

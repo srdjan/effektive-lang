@@ -27,6 +27,7 @@ import {
   memberAccessParts,
   nameTextOf,
   operatorOf,
+  unaryOperatorOf,
   unparen,
 } from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
@@ -309,6 +310,18 @@ export class RefinementChecker {
     const path = this.pathOf(inner);
     if (path !== undefined && this.integerPath(path)) {
       return linearForPath(path, false);
+    }
+    if (kindOf(this.tree, inner) === SyntaxKind.UnaryExpr) {
+      // `-e` reads as `0 - e`. `!e` gives no fact.
+      const [operand] = kidsOf(this.tree, inner);
+      if (
+        operand === undefined ||
+        unaryOperatorOf(this.tree, inner)?.operator !== "-"
+      ) return undefined;
+      const value = this.linear(operand);
+      return value === undefined
+        ? undefined
+        : addLinear({ terms: new Map(), offset: 0n }, value, -1n);
     }
     if (kindOf(this.tree, inner) !== SyntaxKind.BinaryExpr) return undefined;
     const operator = operatorOf(this.tree, inner);

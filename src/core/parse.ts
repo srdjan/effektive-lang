@@ -1310,7 +1310,7 @@ class Parser {
 
   private parseBinary(minPrecedence: number): void {
     const cp = this.checkpoint();
-    this.parsePostfix();
+    this.parseUnary();
     let links = 0;
     while (true) {
       const k = this.kind();
@@ -1324,6 +1324,22 @@ class Parser {
       this.wrap(cp, SyntaxKind.BinaryExpr);
     }
     this.leaveLinks(links);
+  }
+
+  /** `-e` and `!e` bind tighter than `*` and looser than a call or a field. */
+  private parseUnary(): void {
+    const k = this.kind();
+    if (k !== TokenKind.Minus && k !== TokenKind.Bang) {
+      this.parsePostfix();
+      return;
+    }
+    if (!this.enter()) return;
+    this.begin();
+    this.tok();
+    this.skipNl();
+    this.parseUnary();
+    this.end(SyntaxKind.UnaryExpr);
+    this.leave();
   }
 
   private parsePostfix(): void {
@@ -1430,29 +1446,26 @@ class Parser {
       case TokenKind.KwTry:
         this.parseTry();
         return;
-      case TokenKind.Minus:
       case TokenKind.Plus:
-      case TokenKind.Bang: {
-        this.begin();
-        const hint = k === TokenKind.Minus
-          ? "; write `0 - x` for a negative value"
-          : k === TokenKind.Bang
-          ? "; write `x === false` for a negation"
-          : "";
-        this.report(
-          "syntax/010",
-          `unary operator ${describeTokenKind(k)} is not supported${hint}`,
-          this.starts[this.pos],
-          this.ends[this.pos],
-        );
-        this.tok();
-        this.parsePostfix();
-        this.end(SyntaxKind.Error);
+        this.parseRefusedUnary("unary operator `+` is not supported");
         return;
-      }
       default:
         this.missing("an expression");
     }
+  }
+
+  /** Reports `syntax/010` for the operator at the cursor, and skips its operand. */
+  private parseRefusedUnary(message: string): void {
+    this.begin();
+    this.report(
+      "syntax/010",
+      message,
+      this.starts[this.pos],
+      this.ends[this.pos],
+    );
+    this.tok();
+    this.parsePostfix();
+    this.end(SyntaxKind.Error);
   }
 
   private parseUsing(): void {
@@ -1544,11 +1557,19 @@ class Parser {
   private parseBlock(): void {
     this.begin();
     const group = this.open("sig");
+    let first = true;
     this.parseSeparated(() => {
+      const leading = first;
+      first = false;
       if (this.kind() === TokenKind.KwConst) {
         this.begin();
         this.parseConstBody(false);
         this.end(SyntaxKind.ConstDecl);
+      } else if (!leading && this.kind() === TokenKind.Minus) {
+        // A newline ends the previous item, so this `-` would read as two statements.
+        this.parseRefusedUnary(
+          "a block item cannot start with `-`; put `-` at the end of the previous line, or write `(-x)`",
+        );
       } else {
         this.parseExpr();
       }

@@ -314,6 +314,13 @@ export function sexp(tree: SyntaxTree, node: NodeId): string {
         sexp(tree, kids[1])
       })`;
     }
+    case SyntaxKind.UnaryExpr: {
+      const op = [...childrenOf(tree, node)].find((c) =>
+        kindOf(tree, c) === SyntaxKind.Token &&
+        tree.lexed.kinds[tree.tokens[c]] !== TokenKind.Newline
+      );
+      return `(${nodeText(tree, op!)}${sexp(tree, kids[0])})`;
+    }
     case SyntaxKind.PipeExpr:
       return `(${sexp(tree, kids[0])} |> ${sexp(tree, kids[1])})`;
     case SyntaxKind.PipeStage:

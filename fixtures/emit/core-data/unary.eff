@@ -1,0 +1,17 @@
+type Int = int
+type Num = number
+type Flag = boolean
+type Cents = int
+type Sym = int where n => n >= -5 && n <= 5
+
+export const negate = (x: Int): Int => -x
+export const subtract = (x: Int): Int => 0 - x
+export const invert = (b: Flag): Flag => !b
+export const compare = (b: Flag): Flag => b === false
+export const negateCents = (c: Cents): Cents => -c
+export const negateNumber = (n: Num): Num => -n
+export const scale = (a: Int, b: Int): Int => -a * b
+export const twice = (x: Int): Int => - -x
+export const gap = (a: Int, b: Int): Int => a - -b
+export const mirror = (s: Sym): Sym => -s
+export const below = (x: Int): Int => { -x }

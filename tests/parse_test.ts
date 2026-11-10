@@ -642,3 +642,48 @@ Deno.test("a rejected with or finally keyword still forms the method node", () =
     "finally(): string",
   );
 });
+
+Deno.test("unary operators bind tighter than `*` and looser than postfix forms", () => {
+  const table: [string, string][] = [
+    ["-a", "(-a)"],
+    ["!a", "(!a)"],
+    ["-a * b", "((-a) * b)"],
+    ["-a.b", "(-a.b)"],
+    ["-f(x)", "(-f(x))"],
+    ["!a === b", "((!a) === b)"],
+    ["!a && b", "((!a) && b)"],
+    ["a - -b", "(a - (-b))"],
+    ["- -x", "(-(-x))"],
+    ["!!x", "(!(!x))"],
+    ["-x |> f", "((-x) |> f)"],
+    ["-(a + b)", "(-(a + b))"],
+    ["a * -b + c", "((a * (-b)) + c)"],
+    ["-\n  a", "(-a)"],
+  ];
+  for (const [source, expected] of table) {
+    const tree = parseClean(`const x = ${source}`);
+    assertEquals(sexp(tree, constInitializer(tree, "x")), expected, source);
+    assertEquals(countKind(tree, SyntaxKind.UnaryExpr) > 0, true, source);
+  }
+});
+
+Deno.test("a unary plus keeps syntax/010", () => {
+  const result = parseChecked("const x = +1");
+  assertEquals(result.diagnostics.map(show), [
+    "10-11 syntax/010 unary operator `+` is not supported",
+  ]);
+});
+
+Deno.test("a block item after the first cannot start with a unary minus", () => {
+  const source =
+    "const f = (): int => {\n  const total = price\n  - discount\n}";
+  const result = parseChecked(source);
+  assertEquals(result.diagnostics.map(show), [
+    "47-48 syntax/010 a block item cannot start with `-`; put `-` at the end of the previous line, or write `(-x)`",
+  ]);
+  parseClean("const f = (): int => {\n  -x\n}");
+  parseClean(
+    "const f = (): int => {\n  const total = price -\n  discount\n  (-total)\n}",
+  );
+  parseClean("const f = (): int => {\n  const total = price\n  !flag\n}");
+});

@@ -62,6 +62,7 @@ export enum SyntaxKind {
   ArgList,
   FieldExpr,
   BinaryExpr,
+  UnaryExpr,
   PipeExpr,
   PipeStage,
   RecordExpr,

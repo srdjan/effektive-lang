@@ -137,6 +137,45 @@ console.log(JSON.stringify({
   });
 });
 
+Deno.test("unary operators compute on the base value at run time", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/core-data/", FIXTURES), dir);
+    build(dir, ["unary.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import * as M from "./unary.ts";
+console.log(JSON.stringify({
+  negate: M.negate(5),
+  negateZeroIsZero: Object.is(M.negate(0), 0),
+  negateNegative: M.negate(-5),
+  invert: [M.invert(true), M.invert(false)],
+  negateNumber: M.negateNumber(2.5),
+  scale: M.scale(2, 3),
+  twice: M.twice(4),
+  gap: M.gap(1, 2),
+  mirror: M.mirror(-5),
+  below: M.below(7),
+  negateCents: M.negateCents(250),
+}));
+`,
+    );
+    assertEquals(result, {
+      negate: -5,
+      negateZeroIsZero: true,
+      negateNegative: 5,
+      invert: [false, true],
+      negateNumber: -2.5,
+      scale: -6,
+      twice: 4,
+      gap: 3,
+      mirror: 5,
+      below: -7,
+      negateCents: -250,
+    });
+  });
+});
+
 Deno.test("a data value with a missing optional prototype-named field nests in another data value", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");

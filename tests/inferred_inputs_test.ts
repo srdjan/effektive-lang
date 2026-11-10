@@ -96,6 +96,20 @@ const explicit = (input: unknown): Text => consume(input.name)
   );
 });
 
+Deno.test("infers an input from a unary operand as from 0 - input", () => {
+  const project = checkText(`
+type Int = int
+const negated = (input): Int => -input
+const subtracted = (input): Int => 0 - input
+`);
+  assertEquals(codes(project), []);
+  assertEquals(parameterTypes(project, "m", "negated"), ["Int"]);
+  assertEquals(
+    parameterTypes(project, "m", "negated"),
+    parameterTypes(project, "m", "subtracted"),
+  );
+});
+
 Deno.test("infers from explicit result and local annotation contexts", () => {
   const project = checkText(`
 type Int = int

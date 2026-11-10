@@ -225,6 +225,21 @@ export function operatorOf(
   return undefined;
 }
 
+export type UnaryOperator = "-" | "!";
+
+/** The operator and its token node of a unary expression. */
+export function unaryOperatorOf(
+  tree: SyntaxTree,
+  node: NodeId,
+): { readonly operator: UnaryOperator; readonly token: NodeId } | undefined {
+  for (const child of childrenOf(tree, node)) {
+    const kind = tokenKindOf(tree, child);
+    if (kind === TokenKind.Minus) return { operator: "-", token: child };
+    if (kind === TokenKind.Bang) return { operator: "!", token: child };
+  }
+  return undefined;
+}
+
 /** The last arrow child outside its parameters, clauses and result type. */
 export function arrowBody(tree: SyntaxTree, node: NodeId): NodeId | undefined {
   return kidsOf(tree, node).filter((child) => {

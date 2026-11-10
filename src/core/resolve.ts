@@ -1137,6 +1137,7 @@ class Resolver {
         return;
       case SyntaxKind.ParenExpr:
       case SyntaxKind.BinaryExpr:
+      case SyntaxKind.UnaryExpr:
       case SyntaxKind.OptionFallbackExpr:
       case SyntaxKind.ArgList:
       case SyntaxKind.ListExpr:

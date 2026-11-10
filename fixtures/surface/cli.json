@@ -1663,23 +1663,15 @@
     "events": [
       {
         "kind": "stdout",
-        "text": "syntax-unary-operator.eff:2:18: error syntax/010: unary operator `-` is not supported; write `0 - x` for a negative value\n"
+        "text": "syntax-unary-operator.eff:3:14: error syntax/010: unary operator `+` is not supported\n"
       },
       {
         "kind": "stdout",
-        "text": "syntax-unary-operator.eff:4:17: error syntax/010: unary operator `!` is not supported; write `x === false` for a negation\n"
-      },
-      {
-        "kind": "stdout",
-        "text": "syntax-unary-operator.eff:6:14: error syntax/010: unary operator `+` is not supported\n"
-      },
-      {
-        "kind": "stdout",
-        "text": "syntax-unary-operator.eff:8:19: error syntax/010: unary operator `-` is not supported; write `0 - x` for a negative value\n"
+        "text": "syntax-unary-operator.eff:11:3: error syntax/010: a block item cannot start with `-`; put `-` at the end of the previous line, or write `(-x)`\n"
       },
       {
         "kind": "stderr",
-        "text": "1 module, 4 diagnostics\n"
+        "text": "1 module, 2 diagnostics\n"
       }
     ]
   },

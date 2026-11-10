@@ -1192,3 +1192,67 @@ export const g = (r: Rec): Int with S.rec | T.get =>
     "$s.rec({ a: 1 }, [1, 2], { ...r, a: 2 }, Option.some<Int>(1), r.a, $t0)",
   );
 });
+
+Deno.test("unary operators emit as the binary operators that they stand for", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), ["unary.eff"]).get(
+    "unary",
+  );
+  assert(emitted !== undefined, "module unary was not emitted");
+  assertEquals(
+    emitted.text,
+    `// Generated from unary.eff by the Effektive compiler. Do not edit.
+
+import { Schema } from "effect";
+
+const $Int = Schema.Finite.check(
+  Schema.makeFilter(
+    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+  ),
+);
+
+const $int = (value: number): number => {
+  if (!Number.isSafeInteger(value)) throw new RangeError("int overflow");
+  return value;
+};
+
+export const Int = $Int;
+export type Int = typeof Int.Type;
+
+export const Num = Schema.Number;
+export type Num = typeof Num.Type;
+
+export const Flag = Schema.Boolean;
+export type Flag = typeof Flag.Type;
+
+export const Cents = $Int;
+export type Cents = typeof Cents.Type;
+
+export const Sym =
+  $Int.check(Schema.makeFilter(($t0) => ((0n - BigInt($t0) <= 5n) && (BigInt($t0) - 0n <= 5n)) || "expected Sym"));
+export type Sym = typeof Sym.Type;
+
+export const negate = (x: Int): Int => $int(0 - x);
+
+export const subtract = (x: Int): Int => $int(0 - x);
+
+export const invert = (b: Flag): Flag => b === false;
+
+export const compare = (b: Flag): Flag => b === false;
+
+export const negateCents = (c: Cents): Cents => $int(0 - c);
+
+export const negateNumber = (n: Num): Num => 0 - n;
+
+export const scale = (a: Int, b: Int): Int => $int($int(0 - a) * b);
+
+export const twice = (x: Int): Int => $int(0 - $int(0 - x));
+
+export const gap = (a: Int, b: Int): Int => $int(a - $int(0 - b));
+
+export const mirror = (s: Sym): Sym => $int(0 - s);
+
+export const below = (x: Int): Int => $int(0 - x);
+//# sourceMappingURL=unary.ts.map
+`,
+  );
+});

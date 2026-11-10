@@ -27,6 +27,7 @@ import {
   operatorOf,
   paramNodes,
   paramParts,
+  unaryOperatorOf,
   unparen,
 } from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
@@ -89,6 +90,12 @@ function compilePredicate(
     const text = nodeText(context.tree, inner);
     if (text === "true") return { ok: true, value: constant(true) };
     if (text === "false") return { ok: true, value: constant(false) };
+  }
+  if (
+    kind === SyntaxKind.UnaryExpr &&
+    unaryOperatorOf(context.tree, inner)?.operator === "!"
+  ) {
+    return fail(context.tree, inner, "a refinement does not support `!`");
   }
   if (kind !== SyntaxKind.BinaryExpr) {
     return fail(
@@ -167,6 +174,27 @@ function compileLinear(
       return fail(context.tree, inner, "a refinement needs integer literals");
     }
     return { ok: true, value: { terms: new Map(), offset: BigInt(text) } };
+  }
+  if (kindOf(context.tree, inner) === SyntaxKind.UnaryExpr) {
+    // `-e` reads as `0 - e`.
+    if (unaryOperatorOf(context.tree, inner)?.operator === "!") {
+      return fail(context.tree, inner, "a refinement does not support `!`");
+    }
+    const [operandNode] = kidsOf(context.tree, inner);
+    if (operandNode === undefined) {
+      return fail(
+        context.tree,
+        inner,
+        "the refinement expression is incomplete",
+      );
+    }
+    const operand = compileLinear(context, operandNode);
+    return operand.ok
+      ? {
+        ok: true,
+        value: addLinear({ terms: new Map(), offset: 0n }, operand.value, -1n),
+      }
+      : operand;
   }
   if (kindOf(context.tree, inner) === SyntaxKind.BinaryExpr) {
     const operator = operatorOf(context.tree, inner);

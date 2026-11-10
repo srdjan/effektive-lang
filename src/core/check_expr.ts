@@ -21,6 +21,7 @@ import {
 import {
   argNodes,
   arrowBody,
+  type BinaryOperator,
   functionParts,
   initOf,
   isArithmeticOperator,
@@ -38,6 +39,7 @@ import {
   pipeParts,
   recordFieldParts,
   stageParts,
+  unaryOperatorOf,
   unparen,
 } from "./syntax_queries.ts";
 import { isBoolean, operatorResult } from "./check_binary.ts";
@@ -588,6 +590,8 @@ class BodyChecker
         return this.fieldExpr(node);
       case SyntaxKind.BinaryExpr:
         return this.binary(node);
+      case SyntaxKind.UnaryExpr:
+        return this.unary(node);
       case SyntaxKind.OptionFallbackExpr:
         return this.optionFallback(node, expected);
       case SyntaxKind.PipeExpr:
@@ -2017,13 +2021,64 @@ class BodyChecker
     }
     const right = this.expr(kids[1], equality ? left.type : undefined);
     this.refinements.restore(branch);
-    const eff = combine([left, right]);
+    return this.operatorInfo(
+      node,
+      operator,
+      operator,
+      left.type,
+      right.type,
+      combine([left, right]),
+      () => {
+        const [leftText, rightText] = showTypes(
+          this.table,
+          left.type,
+          right.type,
+        );
+        return `operands of type ${leftText} and ${rightText}`;
+      },
+    );
+  }
+
+  /** `-e` has the type of `0 - e`, and `!e` has the type of `e === false`. */
+  private unary(node: NodeId): NodeInfo {
+    const [operandNode] = this.kids(node);
+    const parts = unaryOperatorOf(this.tree, node);
+    if (parts === undefined || operandNode === undefined) {
+      return this.errorInfo(node);
+    }
+    const operand = this.expr(operandNode);
+    const minus = parts.operator === "-";
+    const fixed = this.primitiveOf(minus ? 0 : false);
+    return this.operatorInfo(
+      node,
+      minus ? "-" : "===",
+      parts.operator,
+      minus ? fixed : operand.type,
+      minus ? operand.type : fixed,
+      combine([operand]),
+      () => `an operand of type ${this.show(operand.type)}`,
+    );
+  }
+
+  /**
+   * Reports an operator mismatch and records the node. `display` is the
+   * operator in the message, and `operands` describes the operand types.
+   */
+  private operatorInfo(
+    node: NodeId,
+    operator: BinaryOperator,
+    display: string,
+    left: TypeRef,
+    right: TypeRef,
+    eff: EffectSet,
+    operands: () => string,
+  ): NodeInfo {
     const result = operatorResult(
       this.table,
       this.module,
       operator,
-      left.type,
-      right.type,
+      left,
+      right,
     );
     if (result.sealed !== undefined) {
       this.report(
@@ -2034,14 +2089,9 @@ class BodyChecker
         node,
       );
     } else if (result.mismatch) {
-      const [leftText, rightText] = showTypes(
-        this.table,
-        left.type,
-        right.type,
-      );
       this.report(
         "type-mismatch/007",
-        `the operator \`${operator}\` does not accept operands of type ${leftText} and ${rightText}`,
+        `the operator \`${display}\` does not accept ${operands()}`,
         node,
       );
     }

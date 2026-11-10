@@ -72,6 +72,11 @@ Deno.test("syntax-error recovery still reports a refinement diagnostic", () => {
       "the refinement expression is incomplete",
     ],
     [
+      `${INT_WHERE} n => n > -`,
+      "expected an expression, found end of file",
+      "the refinement expression is incomplete",
+    ],
+    [
       `${INT_WHERE} n => n > n.`,
       "expected a name, found end of line",
       "the refinement field path is incomplete",
@@ -129,6 +134,22 @@ Deno.test("a body must be a Boolean connective or an integer comparison", () => 
   for (const [declaration, message] of rows) {
     assertEquals(rejection(declaration), [["declaration/018", message]]);
   }
+});
+
+Deno.test("a refinement does not support `!`", () => {
+  const message = "a refinement does not support `!`";
+  const rows: readonly string[] = [
+    `${INT_WHERE} n => !(n > 0)`,
+    `${INT_WHERE} n => n > 0 && !(n > 5)`,
+    `${INT_WHERE} n => !true`,
+  ];
+  for (const declaration of rows) {
+    assertEquals(rejection(declaration), [["declaration/018", message]]);
+  }
+  assertEquals(rejection(`${INT_WHERE} n => !n > 0`), [[
+    "declaration/018",
+    message,
+  ]]);
 });
 
 Deno.test("an integer expression allows literals, `+`, and `-` only", () => {
@@ -292,6 +313,18 @@ Deno.test("accepted predicates normalize to literal difference constraints", () 
     [
       `${INT_WHERE} n => 3 > n`,
       { kind: "difference", left: input, right: zero, maximum: "2" },
+    ],
+    [
+      `${INT_WHERE} n => n >= -5`,
+      { kind: "difference", left: zero, right: input, maximum: "5" },
+    ],
+    [
+      `${INT_WHERE} n => -n > 0`,
+      { kind: "difference", left: input, right: zero, maximum: "-1" },
+    ],
+    [
+      `${INT_WHERE} n => 0 - -n > 0`,
+      { kind: "difference", left: zero, right: input, maximum: "-1" },
     ],
     [
       `${INT_WHERE} n => n + 99999999999999999999 > 0`,

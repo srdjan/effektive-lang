@@ -28,6 +28,7 @@ import {
   paramParts,
   pipeParts,
   stageParts,
+  unaryOperatorOf,
   unparen,
 } from "./syntax_queries.ts";
 import { kindOf, type NodeId, nodeSpan, SyntaxKind } from "./syntax.ts";
@@ -219,6 +220,8 @@ class InputEngine {
         return this.pipe(node, expected);
       case SyntaxKind.BinaryExpr:
         return this.binary(node, expected);
+      case SyntaxKind.UnaryExpr:
+        return this.unary(node, expected);
       case SyntaxKind.Block:
         return this.block(node, expected);
       case SyntaxKind.IfExpr:
@@ -421,6 +424,21 @@ class InputEngine {
         ? expected
         : undefined;
     operands.forEach((operand) => this.visit(operand, contextual));
+    return expected;
+  }
+
+  /** `-e` reads as `0 - e`, and `!e` as `e === false`. */
+  private unary(
+    node: NodeId,
+    expected: TypeRef | undefined,
+  ): TypeRef | undefined {
+    const contextual = unaryOperatorOf(this.tree, node)?.operator === "-" &&
+        this.resolver.isConcrete(expected)
+      ? expected
+      : undefined;
+    kidsOf(this.tree, node).forEach((operand) =>
+      this.visit(operand, contextual)
+    );
     return expected;
   }
 
