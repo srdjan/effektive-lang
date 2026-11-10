@@ -1,4 +1,4 @@
-import { assert } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import { checkProject, memoryHost } from "../src/core/mod.ts";
 import { assertValidProject } from "./helpers.ts";
 const base = new URL(
@@ -69,5 +69,18 @@ Deno.test("service workflow rejects erased result, failure and retained service 
         "(input: unknown): Receipt[]",
       ),
     ).diagnostics.some((d) => d.category === "type-mismatch"),
+  );
+});
+
+Deno.test("service workflow rejects a service that no imports header bounds", () => {
+  const source = files["workflow.eff"].replace(
+    'imports Runtime from "host:store"\n',
+    'import { Runtime } from "host:store"\n',
+  );
+  assertEquals(
+    checked(source).diagnostics.map((d) => `${d.code} ${d.message}`),
+    [
+      "requirement-contract/002 `submit` requires undeclared service methods Runtime.database",
+    ],
   );
 });

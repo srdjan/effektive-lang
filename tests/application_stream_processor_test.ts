@@ -1,4 +1,4 @@
-import { assert } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import { checkProject, memoryHost } from "../src/core/mod.ts";
 import { assertValidProject } from "./helpers.ts";
 const base = new URL(
@@ -64,5 +64,20 @@ Deno.test("stream processor rejects erased exported failure, service and result 
     checked(prefix + exported.replace("(): void", "(): Int")).diagnostics.some((
       d,
     ) => d.category === "type-mismatch"),
+  );
+});
+
+Deno.test("stream processor rejects a service that no imports header bounds", () => {
+  const source = files["processor.eff"].replace(
+    'imports Output from "./contracts.eff"\n',
+    'import { Output } from "./contracts.eff"\n',
+  );
+  assertEquals(
+    checked(source).diagnostics.map((d) => `${d.code} ${d.message}`),
+    [
+      "requirement-contract/002 `process` requires undeclared service methods Output.write",
+      "requirement-contract/002 `withOutput` requires undeclared service methods Output.close, Output.open, Output.write",
+      "requirement-contract/002 `runProcessor` requires undeclared service methods Output.close, Output.open, Output.write",
+    ],
   );
 });

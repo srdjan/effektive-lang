@@ -1,4 +1,4 @@
-import { assert } from "@std/assert";
+import { assert, assertEquals } from "@std/assert";
 import { checkProject, memoryHost } from "../src/core/mod.ts";
 import { assertDiagnostics, type Expected } from "./schema_diagnostics.ts";
 import { assertValidProject } from "./helpers.ts";
@@ -78,4 +78,18 @@ Deno.test("scheduled worker contracts reject lost channels", () => {
       label,
     );
   }
+});
+
+Deno.test("scheduled worker rejects a service that no imports header bounds", () => {
+  const source = files["worker.eff"].replace(
+    'imports Clock from "./contracts.eff"\n',
+    'import { Clock } from "./contracts.eff"\n',
+  );
+  assertEquals(
+    checked(source).diagnostics.map((d) => `${d.code} ${d.message}`),
+    [
+      "requirement-contract/002 `cycle` requires undeclared service methods Clock.wait",
+      "requirement-contract/002 `runWorker` requires undeclared service methods Clock.wait",
+    ],
+  );
 });
