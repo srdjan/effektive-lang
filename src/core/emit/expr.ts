@@ -93,7 +93,12 @@ import {
   type Treatment,
   UPDATE_REF_EFFECT,
 } from "./calls.ts";
-import { evaluatedChildren, type ExprOf, isLeafExpr } from "./shape.ts";
+import {
+  evaluatedChildren,
+  type ExprOf,
+  isLeafExpr,
+  isStableValue,
+} from "./shape.ts";
 import { patternBinding } from "./walk.ts";
 import {
   asBuiltinInstanceName,
@@ -104,13 +109,6 @@ import {
   shortName,
   tokenOfId,
 } from "../ids.ts";
-
-/** Whether `e` reads a function that exists already: a name, a field of a stable value, or a block with only that value. Evaluating it more than once does no work. */
-function isStableValue(e: Expr): boolean {
-  return e.kind === "reference" || e.kind === "closure" ||
-    (e.kind === "get" && isStableValue(e.record)) ||
-    (e.kind === "block" && e.steps.length === 0 && isStableValue(e.result));
-}
 
 function binaryPrecedence(operator: string): number {
   switch (operator) {
@@ -1813,7 +1811,7 @@ export class ExprEmitter implements ExprCore {
       case "with-resource":
         return scopeLeaf(this, e, children);
       case "provide":
-        return layerLeaf(this, e);
+        return layerLeaf(this, e, children);
       case "catch":
         return this.catchEffect(e);
       case "ensure":

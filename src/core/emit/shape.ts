@@ -6,6 +6,7 @@
 // list (`validate/expr_walk.ts` exprChildren) and must not import this module.
 
 import type { Expr } from "../ir.ts";
+import type { Emitted } from "./emitted.ts";
 
 type ExprKind = Expr["kind"];
 
@@ -55,6 +56,28 @@ const effectful = (operands: readonly Expr[]): Expr[] =>
   operands.filter((x) => x.execution === "effect");
 const pure = (operands: readonly Expr[]): Expr[] =>
   operands.filter((x) => x.execution !== "effect");
+
+/**
+ * The emitted value of each operand that the table hoists, in operand order,
+ * and undefined for an operand that stays deferred. `children` holds the
+ * hoisted operands in the same order.
+ */
+export function hoistedOperands(
+  operands: readonly Expr[],
+  children: readonly Emitted[],
+): (Emitted | undefined)[] {
+  let next = 0;
+  return operands.map((x) =>
+    x.execution === "effect" ? children[next++] : undefined
+  );
+}
+
+/** Whether `e` reads a function that exists already: a name, a field of a stable value, or a block with only that value. Evaluating it more than once does no work. */
+export function isStableValue(e: Expr): boolean {
+  return e.kind === "reference" || e.kind === "closure" ||
+    (e.kind === "get" && isStableValue(e.record)) ||
+    (e.kind === "block" && e.steps.length === 0 && isStableValue(e.result));
+}
 
 /** The operands of `repeat` in source order: the job, then the options when present. */
 export const repeatOperands = (e: ExprOf<"repeat">): Expr[] =>
@@ -162,8 +185,8 @@ const ROWS = {
     leaf: "leaf",
   },
   timeout: {
-    children: (e) => [e.durationMs],
-    deferred: (e) => [e.job],
+    children: (e) => [...effectful([e.job]), e.durationMs],
+    deferred: (e) => pure([e.job]),
     leaf: "leaf",
   },
   repeat: {
@@ -180,13 +203,13 @@ const ROWS = {
   random: { children: () => [], leaf: "leaf" },
   "random-int": { children: (e) => [e.min, e.max], leaf: "leaf" },
   uninterruptible: {
-    children: () => [],
-    deferred: (e) => [e.job],
+    children: (e) => effectful([e.job]),
+    deferred: (e) => pure([e.job]),
     leaf: "leaf",
   },
   provide: {
-    children: () => [],
-    deferred: (e) => [e.provider, e.job],
+    children: (e) => effectful([e.provider, e.job]),
+    deferred: (e) => pure([e.provider, e.job]),
     leaf: "leaf",
   },
   binary: { children: (e) => [e.left, e.right], leaf: "structural" },

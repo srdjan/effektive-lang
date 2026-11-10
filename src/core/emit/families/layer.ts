@@ -4,7 +4,7 @@ import { bracketed, type Doc } from "../doc.ts";
 import { callArguments, type Emitted, emitted } from "../emitted.ts";
 import { fieldKey } from "../fields.ts";
 import { internal } from "../failure.ts";
-import type { ExprOf, LeafOf } from "../shape.ts";
+import { type ExprOf, hoistedOperands, type LeafOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
@@ -70,11 +70,16 @@ export function layerStructural(
   ]);
 }
 
-export function layerLeaf(c: ExprCore, e: ExprOf<LayerLeafKind>): Emitted {
+export function layerLeaf(
+  c: ExprCore,
+  e: ExprOf<LayerLeafKind>,
+  children: readonly Emitted[],
+): Emitted {
   const effect = c.scope.effect("Effect");
-  const job = c.suspended(e.job);
+  const [provider, hoisted] = hoistedOperands([e.provider, e.job], children);
+  const job = c.suspended(e.job, hoisted);
   return emitted([
     `${effect}.provide`,
-    callArguments([job, c.pure(e.provider)]),
+    callArguments([job, provider ?? c.pure(e.provider)]),
   ]);
 }

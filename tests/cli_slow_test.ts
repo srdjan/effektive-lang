@@ -344,7 +344,7 @@ Deno.test("build --tsc accepts a pure function in every array and tuple position
   });
 });
 
-Deno.test("build --tsc accepts an effectful job or option of retry, repeat, and retrySchedule", async () => {
+Deno.test("build --tsc accepts an effectful operand of the builtins that run it later", async () => {
   await withTemporary(async (dir) => {
     copyDirectory(new URL("emit/effectful-operands/", FIXTURES), dir);
     const built = await effektive(["build", dir, "--tsc"]);

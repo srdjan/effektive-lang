@@ -11,9 +11,14 @@ import {
   type Mode,
   PREC,
 } from "../emitted.ts";
-import type { Expr } from "../../ir.ts";
 import { resolvedAs } from "../type_query.ts";
-import { type ExprOf, type LeafOf, repeatOperands } from "../shape.ts";
+import {
+  type ExprOf,
+  hoistedOperands,
+  isStableValue,
+  type LeafOf,
+  repeatOperands,
+} from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
@@ -32,21 +37,6 @@ type EffectLeafKind = LeafOf<
   | "random-int"
   | "uninterruptible"
 >;
-
-/**
- * The emitted value of each operand that the shape table hoists, in operand
- * order, and undefined for an operand that stays deferred. `children` holds
- * only the hoisted operands.
- */
-function hoistedOperands(
-  operands: readonly Expr[],
-  children: readonly Emitted[],
-): (Emitted | undefined)[] {
-  let next = 0;
-  return operands.map((x) =>
-    x.execution === "effect" ? children[next++] : undefined
-  );
-}
 
 export function effectStructural(
   c: ExprCore,
@@ -76,9 +66,11 @@ export function effectStructural(
         "retry schedule has wrong type",
       );
       const error = typeDoc(c.scope, type.error);
-      // An effectful step expression runs once, where the source writes it.
-      // The returned schedule applies the value, so it cannot run the step.
-      const stepName = e.step.execution === "effect" ? c.scope.temp() : null;
+      // A step expression that computes its callback runs once, where the
+      // source writes it. The returned schedule applies the value on each
+      // attempt, so it cannot run the expression. A stable step stays inline.
+      const bound = e.step.execution === "effect" || !isStableValue(e.step);
+      const stepName = bound ? c.scope.temp() : null;
       const step = stepName === null ? c.pure(e.step) : emitted(stepName);
       const metadata = c.scope.temp();
       const decision = c.scope.temp();
@@ -205,17 +197,24 @@ export function effectLeaf(
           callArguments([job, options ?? c.pure(e.options)]),
         ]);
     }
-    case "timeout":
-      return guardedDuration(c, children[0], (ms) =>
+    case "timeout": {
+      const hoisted = e.job.execution === "effect";
+      return guardedDuration(c, children[hoisted ? 1 : 0], (ms) =>
         emitted([
           `${effect}.timeout`,
-          callArguments([c.suspended(e.job), ms]),
+          callArguments([
+            c.suspended(e.job, hoisted ? children[0] : undefined),
+            ms,
+          ]),
         ]));
-    case "uninterruptible":
+    }
+    case "uninterruptible": {
+      const [job] = hoistedOperands([e.job], children);
       return emitted([
         `${effect}.uninterruptible`,
-        callArguments([c.suspended(e.job)]),
+        callArguments([c.suspended(e.job, job)]),
       ]);
+    }
     case "sleep":
       return guardedDuration(
         c,

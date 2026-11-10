@@ -30,3 +30,24 @@ export const repeatJob = (): Int => repeat(mkE(), { times: 0 })
 export const repeatForever = (): never => repeat(mkE())
 export const repeatUntil = (): Int => repeat(() => 1, { until: chooseN() })
 export const scheduleStep = (): RetrySchedule<E> => retrySchedule(mkStep())
+
+service Clock { now(): Int }
+const live = layer(Clock, () => ({ now: () => 1 }))
+const mkL = (): Layer<Clock> => { sleep(1ms)
+  layer(Clock, () => ({ now: () => 1 })) }
+const mkJ = (): () => Int with Clock.now => { sleep(1ms)
+  () => Clock.now() }
+const stepOf = (n: Int): pure (error: E, attempt: Int) => Option<Duration> =>
+  (error: E, attempt: Int) => None
+const stepNone = (error: E, attempt: Int): Option<Duration> => None
+
+export const timeoutJob = (): Int fails TimeoutError => timeout(mkE(), 1s)
+export const uninterruptibleJob = (): Int => uninterruptible(mkE())
+export const provideJob = (): Int => provide(live, mkJ())
+export const provideLayer = (): Int => provide(mkL(), () => Clock.now())
+export const provideBoth = (): Int => provide(mkL(), mkJ())
+export const scheduleComputedStep = (n: Int): RetrySchedule<E> => retrySchedule(stepOf(n))
+export const scheduleNamedStep = (): RetrySchedule<E> => retrySchedule(stepNone)
+export const usingResource = (): Int =>
+  using (job = { sleep(1ms)
+    { read: () => 1, close: () => sleep(1ms) } }) { job.read() } finally { job.close() }
