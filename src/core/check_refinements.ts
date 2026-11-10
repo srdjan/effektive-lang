@@ -285,6 +285,12 @@ export class RefinementChecker {
         return { terms: new Map(), offset: BigInt(literal.length) };
       }
       if (kindOf(this.tree, inner) === SyntaxKind.ListExpr) {
+        // A spread has no known length, so the literal has no linear form.
+        if (
+          kidsOf(this.tree, inner).some((kid) =>
+            kindOf(this.tree, kid) === SyntaxKind.SpreadElement
+          )
+        ) return undefined;
         return {
           terms: new Map(),
           offset: BigInt(kidsOf(this.tree, inner).length),

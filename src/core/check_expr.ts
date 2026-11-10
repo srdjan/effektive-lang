@@ -114,6 +114,7 @@ import {
 } from "./types.ts";
 import { sortedUnique } from "./util.ts";
 import { showType, showTypes } from "./type_show.ts";
+import { functionTypeToIr } from "./type_ir.ts";
 import { bodyLocalId, isReservedErrorId, isTypeId, shortName } from "./ids.ts";
 import {
   type Arg,
@@ -1570,8 +1571,26 @@ class BodyChecker
       ? undefined
       : table.node(table.unfold(expected));
     const elements = this.kids(node);
+    const spread = (element: NodeId): boolean =>
+      kindOf(this.tree, element) === SyntaxKind.SpreadElement;
+    const spreadValue = (element: NodeId): NodeId =>
+      spread(element) ? this.kids(element)[0] : element;
     if (expected !== undefined && target?.kind === "tuple") {
       this.fact(node, { kind: "list", shape: "tuple" });
+      const firstSpread = elements.find(spread);
+      if (firstSpread !== undefined) {
+        this.report(
+          "type-mismatch/012",
+          `a spread gives an array, but the tuple ${
+            showType(table, table.unfold(expected))
+          } is expected`,
+          firstSpread,
+        );
+        const infos = elements.map((element) =>
+          this.expr(spreadValue(element))
+        );
+        return this.finish(node, expected, combine(infos));
+      }
       if (elements.length !== target.elements.length) {
         this.report(
           "type-mismatch/012",
@@ -1593,18 +1612,72 @@ class BodyChecker
 
     this.fact(node, { kind: "list", shape: "array" });
     const hint = target?.kind === "array" ? target.element : undefined;
+    // The element type of each child. A spread gives the element type of its array.
     const infos = elements.map((element, i) => {
-      const info = this.expr(element, hint);
-      if (hint !== undefined) {
-        this.fits(element, info.type, hint, `array element ${i + 1}`);
+      if (!spread(element)) {
+        const info = this.expr(element, hint);
+        if (hint !== undefined) {
+          this.fits(element, info.type, hint, `array element ${i + 1}`);
+        }
+        return { info, element: info.type, spread: false };
       }
-      return info;
+      const value = spreadValue(element);
+      const info = this.expr(value, hint === undefined ? undefined : expected);
+      const unfolded = table.unfold(info.type);
+      const array = table.node(unfolded);
+      if (this.isError(info.type)) {
+        return { info, element: table.error, spread: true };
+      }
+      if (array.kind !== "array" || !this.assignable(info.type, unfolded)) {
+        this.report(
+          "type-mismatch/003",
+          `the spread has type ${
+            showType(table, info.type)
+          }, but an array is expected`,
+          value,
+        );
+        return { info, element: table.error, spread: true };
+      }
+      if (hint !== undefined) {
+        this.fits(
+          value,
+          info.type,
+          table.array(hint),
+          `spread element ${i + 1}`,
+        );
+      }
+      return { info, element: array.element, spread: true };
     });
+    const combined = combine(infos.map(({ info }) => info));
+    const record = (element: TypeRef): void => {
+      if (!elements.some(spread)) return;
+      const array = table.array(element);
+      this.fact(node, {
+        kind: "list",
+        shape: "array",
+        concat: functionTypeToIr(
+          table,
+          table.function({
+            execution: "pure",
+            parameters: elements.map(() => array),
+            result: array,
+            failures: [],
+            requirements: [],
+          }),
+        ),
+      });
+    };
     if (hint !== undefined && expected !== undefined) {
+      record(hint);
+      if (elements.some(spread)) {
+        // The instance `concat` gives the unfolded array type. It has no
+        // proven length, so the caller rejects a refined expected type.
+        return this.finish(node, table.array(hint), combined);
+      }
       if (this.refinementBase(expected) !== undefined) {
         this.requireRefinement(node, expected, "the list");
       }
-      return this.finish(node, expected, combine(infos));
+      return this.finish(node, expected, combined);
     }
     if (infos.length === 0) {
       this.report(
@@ -1614,9 +1687,9 @@ class BodyChecker
       );
       return this.finish(node, table.array(table.error), PURE_EFFECTS);
     }
-    let element = this.widen(infos[0].type);
+    let element = this.widen(infos[0].element);
     for (let i = 1; i < infos.length; i++) {
-      const next = this.widen(infos[i].type);
+      const next = this.widen(infos[i].element);
       if (this.isError(element) || this.isError(next)) {
         element = table.error;
       } else if (this.assignable(next, element)) {
@@ -1627,15 +1700,20 @@ class BodyChecker
         const [nextText, elementText] = showTypes(table, next, element);
         this.report(
           "type-mismatch/012",
-          `list element ${
-            i + 1
-          } has type ${nextText}, which has no common array element type with ${elementText}`,
+          infos[i].spread
+            ? `spread element ${
+              i + 1
+            } has element type ${nextText}, which has no common array element type with ${elementText}`
+            : `list element ${
+              i + 1
+            } has type ${nextText}, which has no common array element type with ${elementText}`,
           elements[i],
         );
         element = table.error;
       }
     }
-    return this.finish(node, table.array(element), combine(infos));
+    record(element);
+    return this.finish(node, table.array(element), combined);
   }
 
   /** The value of a field: an expression, or the variable of a shorthand field. */

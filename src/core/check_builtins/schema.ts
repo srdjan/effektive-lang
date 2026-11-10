@@ -602,6 +602,24 @@ function schemaUnionCall(c: SchemaContext, call: SchemaCall): NodeInfo {
     return c.finish(node, c.table.error, combine([input]));
   }
   const elements = c.kids(list);
+  const spread = elements.find((element) =>
+    kindOf(c.tree, element) === SyntaxKind.SpreadElement
+  );
+  if (spread !== undefined) {
+    c.report(
+      "type-mismatch/003",
+      "`schemaUnion` takes a list literal of schemas without a spread",
+      spread,
+    );
+    const infos = elements.map((element) =>
+      c.expr(
+        kindOf(c.tree, element) === SyntaxKind.SpreadElement
+          ? c.kids(element)[0]
+          : element,
+      )
+    );
+    return c.finish(node, c.table.error, combine(infos));
+  }
   c.fact(list, { kind: "list", shape: "tuple" });
   const infos = elements.map((element) => c.expr(element));
   const input = c.finish(

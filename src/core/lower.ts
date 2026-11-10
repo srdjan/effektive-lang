@@ -461,6 +461,7 @@ class BodyLowerer {
         return this.record(node);
       case SyntaxKind.ListExpr: {
         const fact = this.factOf(node, "list");
+        if (fact.concat !== undefined) return this.concat(node, fact.concat);
         return {
           kind: fact.shape,
           elements: this.kids(node).map((child) => this.expr(child)),
@@ -813,6 +814,41 @@ class BodyLowerer {
       kind: "reference",
       target: this.valueTarget(calleeNode),
       ...this.annotation(calleeNode),
+    };
+  }
+
+  /**
+   * A list literal with a spread is a call of the instance `concat`. A spread
+   * child is its value, and each other child is a one-element array.
+   */
+  private concat(node: NodeId, type: FunctionType): Expr {
+    const span = this.span(node);
+    const args = this.kids(node).map((child, i): Expr => {
+      if (kindOf(this.ctx.tree, child) === SyntaxKind.SpreadElement) {
+        return this.expr(this.kids(child)[0]);
+      }
+      const element = this.expr(child);
+      return {
+        kind: "array",
+        elements: [element],
+        type: type.parameters[i],
+        execution: element.execution,
+        effects: element.effects,
+        span: element.span,
+      };
+    });
+    return {
+      kind: "call",
+      callee: {
+        kind: "reference",
+        target: this.specialize("concat", type),
+        type,
+        execution: "pure",
+        effects: EMPTY_EFFECTS,
+        span,
+      },
+      arguments: args,
+      ...this.annotation(node),
     };
   }
 

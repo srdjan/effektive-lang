@@ -733,3 +733,23 @@ Deno.test("a minus before a pattern that is not a number gives syntax/011", () =
     assertEquals(parseChecked(source).diagnostics.map(show), expected, source);
   }
 });
+
+Deno.test("a list literal holds a spread at any position, and several spreads", () => {
+  for (
+    const [source, kinds] of [
+      ["[x, ...xs]", ["NameExpr", "SpreadElement"]],
+      ["[...xs, x]", ["SpreadElement", "NameExpr"]],
+      ["[...xs, ...ys]", ["SpreadElement", "SpreadElement"]],
+      ["[0, ...[1, 2], 3,]", ["LiteralExpr", "SpreadElement", "LiteralExpr"]],
+    ] as const
+  ) {
+    const tree = parseClean(`const a = ${source}`);
+    assertEquals(
+      kindsOfChildren(tree, constInitializer(tree, "a")),
+      [...kinds],
+      source,
+    );
+  }
+  const broken = parseChecked("const a = [...]\n");
+  assertEquals(broken.diagnostics.map((d) => d.code), ["syntax/008"]);
+});

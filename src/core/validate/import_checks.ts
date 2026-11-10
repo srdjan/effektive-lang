@@ -55,6 +55,8 @@ function checkBuiltinShape(
       return checkLenShape(env, type, wrong);
     case "at":
       return checkAtShape(env, type, wrong);
+    case "concat":
+      return checkConcatShape(env, type, wrong);
     default:
       return checkCallbackShape(ctx, name, type, path, span, wrong);
   }
@@ -138,6 +140,23 @@ function checkAtShape(
     array?.kind !== "array" ||
     !same(env, type.result.element, array.element)
   ) wrong("returns an option of the element");
+  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
+    wrong("is pure, with no failure and no requirement");
+  }
+}
+
+/** `concat` is `(E[], ...) => E[]`: each parameter is the result array type. Pure, no failure or requirement. */
+function checkConcatShape(
+  env: World["env"],
+  type: FunctionType,
+  wrong: (what: string) => void,
+): void {
+  if (
+    type.parameters.length === 0 || type.result.kind !== "array" ||
+    !type.parameters.every((parameter) =>
+      parameter.kind === "array" && same(env, parameter, type.result)
+    )
+  ) wrong("takes one or more arrays of the result type");
   if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
     wrong("is pure, with no failure and no requirement");
   }

@@ -1642,3 +1642,45 @@ export const head = (xs: Maybes): Option.Option<Maybe> => $at(xs, 0);
 `,
   );
 });
+
+Deno.test("a list literal with a spread emits one array literal", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), [
+    "spread.eff",
+  ]).get("spread");
+  assert(emitted !== undefined, "module spread was not emitted");
+  assertEquals(
+    emitted.text,
+    `// Generated from spread.eff by the Effektive compiler. Do not edit.
+
+import { Effect, Schema } from "effect";
+
+const $Int = Schema.Finite.check(
+  Schema.makeFilter(
+    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+  ),
+);
+
+export const Int = $Int;
+export type Int = typeof Int.Type;
+
+export const Ints = Schema.Array($Int);
+export type Ints = typeof Ints.Type;
+
+export type Job = Effect.Effect<Int>;
+
+export type Jobs = ReadonlyArray<Job>;
+
+export const middle = (): Ints => [0, 1, 2, 3];
+
+export const joined = (xs: Ints, ys: Ints): Ints => [...xs, ...ys];
+
+export const prepend = (x: Int, xs: Ints): Ints => [x, ...xs];
+
+export const append = (xs: Ints, x: Int): Ints => [...xs, x];
+
+export const run = (jobs: Jobs, job: Job): Effect.Effect<Ints> =>
+  Effect.all([...jobs, job]);
+//# sourceMappingURL=spread.ts.map
+`,
+  );
+});

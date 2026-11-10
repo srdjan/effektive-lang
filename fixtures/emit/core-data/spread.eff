@@ -1,0 +1,10 @@
+type Int = int
+type Ints = int[]
+type Job = Effect<Int>
+type Jobs = Job[]
+
+export const middle = (): Ints => [0, ...[1, 2], 3]
+export const joined = (xs: Ints, ys: Ints): Ints => [...xs, ...ys]
+export const prepend = (x: Int, xs: Ints): Ints => [x, ...xs]
+export const append = (xs: Ints, x: Int): Ints => [...xs, x]
+export const run = (jobs: Jobs, job: Job): Ints => all([...jobs, job])

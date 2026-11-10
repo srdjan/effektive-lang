@@ -107,6 +107,7 @@ const BUILTIN_INSTANCE_NAMES = [
   "text",
   "len",
   "at",
+  "concat",
 ] as const;
 
 export type BuiltinInstanceName = typeof BUILTIN_INSTANCE_NAMES[number];

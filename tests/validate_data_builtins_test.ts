@@ -551,3 +551,28 @@ Deno.test("an instance of at with a requirement is rejected", () => {
     ],
   );
 });
+
+const CONCAT_SOURCE = `type Int = int
+type Ints = int[]
+export const f = (xs: Ints, x: Int): Ints => [...xs, x]
+`;
+
+Deno.test("the lowered spread program is valid, and its concat instance has the exact type", () => {
+  const type = instance(loweredModule(CONCAT_SOURCE), "concat");
+  assertEquals(
+    [type.parameters, type.result, type.execution],
+    [[INTS, INTS], INTS, "pure"],
+  );
+});
+
+Deno.test("a concat instance with a parameter that is not an array is rejected", () => {
+  assertEquals(
+    forgedBuiltin(CONCAT_SOURCE, "concat", (type) => {
+      type.parameters[1] = NUMBER;
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin concat takes one or more arrays of the result type",
+      "validation/002 declarations[2].body.arguments[1]: the argument has type int[], which does not fit the parameter number",
+    ],
+  );
+});

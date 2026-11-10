@@ -138,8 +138,16 @@ export type NodeFact =
      */
     readonly options: { readonly on: string } | undefined;
   }
-  /** A bracket literal, classified by its checked contextual type. */
-  | { readonly kind: "list"; readonly shape: "array" | "tuple" }
+  /**
+   * A bracket literal, classified by its checked contextual type. A literal
+   * with a spread has `concat`, the closed type of the internal instance
+   * `concat`: one array parameter for each child.
+   */
+  | {
+    readonly kind: "list";
+    readonly shape: "array" | "tuple";
+    readonly concat?: FunctionType;
+  }
   /** A builtin instance with its closed function type. */
   | {
     readonly kind: "builtin";

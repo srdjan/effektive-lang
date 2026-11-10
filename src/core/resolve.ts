@@ -1149,6 +1149,7 @@ class Resolver {
       case SyntaxKind.OptionFallbackExpr:
       case SyntaxKind.ArgList:
       case SyntaxKind.ListExpr:
+      case SyntaxKind.SpreadElement:
       case SyntaxKind.IfExpr:
         for (const kid of kidsOf(this.tree, node)) this.expr(kid, "value");
         return;

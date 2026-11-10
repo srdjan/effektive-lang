@@ -257,7 +257,12 @@ export function transferredRequirements(
       case SyntaxKind.ListExpr: {
         const elements = kidsOf(tree, node);
         if (elements.length === 0) addType(root);
-        for (const element of elements) addValue(element, nextTrail, root);
+        for (const element of elements) {
+          const value = kindOf(tree, element) === SyntaxKind.SpreadElement
+            ? kidsOf(tree, element)[0]
+            : element;
+          addValue(value, nextTrail, root);
+        }
         return;
       }
       case SyntaxKind.Block:

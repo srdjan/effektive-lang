@@ -1377,6 +1377,22 @@ export class ExprEmitter implements ExprCore {
           callArguments([kid(args[0]), kid(args[1])]),
         ]);
       }
+      case "concat": {
+        // A list literal with a spread prints as one array literal.
+        if (args.length === 0) throw internal("concat needs an argument");
+        const parts = args.flatMap((arg): Doc[] =>
+          arg.kind === "array"
+            ? arg.elements.map((x) =>
+              flush(kid(x, this.elementType(arg.type, 0)))
+            )
+            : [["...", at(kid(arg), PREC.member)]]
+        );
+        return emitted(
+          bracketed("[", "]", parts, false),
+          PREC.member,
+          { huggable: true, bracket: true },
+        );
+      }
       case "len": {
         if (args.length !== 1) throw internal("len needs one argument");
         return emitted([at(kid(args[0]), PREC.member), ".length"]);
@@ -1803,8 +1819,10 @@ export class ExprEmitter implements ExprCore {
               text: [1],
               len: [1],
               at: [2],
+              concat: [],
             };
-            if (!counts[builtin].includes(children.length)) {
+            const counted = counts[builtin];
+            if (counted.length > 0 && !counted.includes(children.length)) {
               throw internal(`${builtin} has an invalid argument count`);
             }
             const [first, second, third] = children;
@@ -1868,6 +1886,7 @@ export class ExprEmitter implements ExprCore {
               case "text":
               case "len":
               case "at":
+              case "concat":
                 // A pure builtin is not a leaf: `builtinCall` prints it.
                 throw internal(`the builtin ${builtin} is not an effect leaf`);
             }

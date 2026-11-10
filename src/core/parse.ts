@@ -1435,7 +1435,13 @@ class Parser {
         return;
       case TokenKind.LBracket: {
         this.begin();
-        this.parseDelimited(TokenKind.RBracket, () => this.parseExpr());
+        this.parseDelimited(TokenKind.RBracket, () => {
+          if (this.kind() !== TokenKind.DotDotDot) return this.parseExpr();
+          this.begin();
+          this.tok();
+          this.parseExpr();
+          this.end(SyntaxKind.SpreadElement);
+        });
         this.end(SyntaxKind.ListExpr);
         return;
       }

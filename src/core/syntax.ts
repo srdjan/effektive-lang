@@ -70,6 +70,7 @@ export enum SyntaxKind {
   RecordField,
   ShorthandField,
   SpreadField,
+  SpreadElement,
   Block,
   IfExpr,
   MatchExpr,

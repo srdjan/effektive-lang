@@ -1035,3 +1035,34 @@ console.log(JSON.stringify({
     });
   });
 });
+
+Deno.test("a spread joins the elements and the arrays in source order", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/core-data/", FIXTURES), dir);
+    build(dir, ["spread.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect } from "effect";
+import * as M from "./spread.ts";
+
+console.log(JSON.stringify({
+  middle: M.middle(),
+  joined: M.joined([1, 2], [3]),
+  joinedEmpty: M.joined([], []),
+  prepend: M.prepend(0, [1, 2]),
+  append: M.append([1, 2], 3),
+  run: await Effect.runPromise(M.run([Effect.succeed(1), Effect.succeed(2)], Effect.succeed(3))),
+}));
+`,
+    );
+    assertEquals(result, {
+      middle: [0, 1, 2, 3],
+      joined: [1, 2, 3],
+      joinedEmpty: [],
+      prepend: [0, 1, 2],
+      append: [1, 2, 3],
+      run: [1, 2, 3],
+    });
+  });
+});
