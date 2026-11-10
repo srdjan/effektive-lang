@@ -44,6 +44,7 @@ Opus measured these on 2026-11-10.
 | FA3 | `retry` and `repeat` reject an effectful job or option expression during emission after `check` accepts it. Source: `retry(make(), { times: 0 })`, where `make` sleeps and returns a callback. `build` prints `cannot emit main: pure() received an effect-mode call node`, followed by "1 module, 0 diagnostics". Binding the factory result first works. | `check` 0 diagnostics; `build` internal error (Opus, astra) | Medium |
 | FA2 | Conversion of a computed pure callback to an Effect callback moves the computation into the wrapper. `make(x)` then runs at each callback call, not at construction: the emitted code is `() => Effect.succeed(make(x)())`. A defect such as integer overflow moves to another program point, possibly outside the surrounding recovery scope, and the computation repeats at each call. | Emitted code (Opus); runtime trace (astra) | Medium |
 | FA4 | A source file named `-main.eff` passes `check`. `build --tsc` then fails with `unexpected argument '-m' found`, because `src/host/deno_io.ts:161-163` passes file names to `deno check` without `--` or `./`. | `check` 0 diagnostics; `build --tsc` fails (Opus, astra) | Low |
+| N1 | A function with four parameters and a function-type result, such as `(first: Int, second: Int, third: Int, fourth: Int): () => Int`, passes `check`. `build` exits 0 and writes TypeScript that does not parse: the broken function type prints its empty parameter list as `(\n  ,\n)`. `--tsc` gives `SyntaxError: Expected '=>', got ':'`. Found by Fable during the plan validation. | `build` output (Opus, Fable) | High |
 | FF9, FA5 | `docs/tutorial.md:105` says that the compiler does not infer the parameter types of an export. An export with an omitted parameter type builds without a diagnostic and emits `n: unknown` with a checked input. Only the result type is mandatory. | `build` of `(n): N => n * 2` (Opus, Fable, astra) | Low |
 | FC5 (doc part) | The order lifecycle row of `docs/status.md:53` says "Percent pricing is not possible". Both reviewers built it through the duration type: `Cents((subtotal * 90 * 1ms) / 100)`. The sentence is too strong. The workaround is not a good language form. | Reviewer runs (Fable, astra) | Low |
 | FC14 (doc part) | `docs/api.md` "Known limits" says "Nested projects are not supported". Since 0.15.4 the server rebinds documents and transfers diagnostic ownership to a nested project (`src/lsp/projects.ts:479-497`, `649-651`). The outer disk walk still reads inner files. The sentence needs that qualification. | 10 nested tests pass (astra) | Low |
@@ -150,10 +151,10 @@ subset under the existing exception. (c) Keep the gaps as a record.
 | Decision | State | Commits and checks |
 | --- | --- | --- |
 | FCD1 | Done. | `126d98d` (heading); website `7b52c43` (stamp). `deno task check` exited 0 with 3,019 fast and 301 slow tests passed. Website `deno task test` exited 0 with 12 tests passed. |
-| FCD2 | Open. | The plan is in the section "Defect plan". |
-| FCD3 | Open. | |
-| FCD4 | Open. | |
-| FCD5 | Open. | |
+| FCD2 | In progress. | FCU4 done: `bbfda0c`. FCU1, FCU2, FCU3a, FCU3b, and FCU6 open; see "Defect plan". |
+| FCD3 | Done. | `3808b91`. |
+| FCD4 | Done in this repository: `1a9004a` (FCU5), hooks active in this clone. The website hook is open. | |
+| FCD5 | Plan written: [core data operations](2026-11-10-core-data-operations.md), decisions COD1 to COD4 wait for the user. | |
 
 Refinement of FA1 by Opus on 2026-11-10: a record literal and `Some` already lift a pure
 callback at an expected Effect callback type, and pass `--tsc`
@@ -161,3 +162,43 @@ callback at an expected Effect callback type, and pass `--tsc`
 not. A pure callback array through a binding gets `type-mismatch/003`, as the rule at
 `docs/language-rules.md:613` requires. So the defect is in the emitter only: array and
 tuple literals must pass the expected element type to each element, as records do.
+
+## Defect plan
+
+Units FCU1 to FCU5 carry out FCD2 (FA1 to FA4) and FCD4. Each executor writes a failing
+test first and confirms that it fails for the reason of the defect. Executors do not
+commit, do not edit `CHANGELOG.md`, and do not run `git checkout`, `git restore`, or
+`git stash`. Opus reviews each diff, writes the changelog entry, runs `deno task check`,
+commits, and runs `deno task mutate --only <path:line>` on the changed logic lines.
+
+FCU1, FCU2, FCU3a, and FCU3b change the emitter, so they run one after another in this
+order. FCU6 changes the layout printer and runs in parallel with FCU1. FCU4 and FCU5 ran
+in parallel and are done.
+
+Fable validated FCU1 to FCU3 on 2026-11-10
+(`~/.claude/scratch/assess/fcu-validation.md`, reproducers in
+`~/.claude/scratch/assess/evidence/fable-fcu/`). The three causes are correct, but each
+unit was too narrow. FA1 occurs in 17 positions. FA2 also occurs for a pure block at a
+lifted slot. FA3 also occurs for `timeout`, `uninterruptible`, `provide`, and the
+`retrySchedule` step. The table includes these changes. Fable also found N1, which Opus
+reproduced: `export const make = (first: Int, second: Int, third: Int, fourth: Int): () => Int => () => first`
+passes `check`, and `build` exits 0 but writes `): (\n  ,\n) => Effect.Effect<Int> =>`,
+which does not parse.
+
+FCU4 correction by Opus: the executor used a `--` separator. After `--`, `deno check`
+ignores the file names and checks every file, so five website example tests failed.
+Opus replaced it with a `./` prefix and added an unrelated file with a type error to the
+test.
+
+| Unit | Defect | Model | Files | Acceptance check | Turns |
+| --- | --- | --- | --- | --- | --- |
+| FCU1 | FA1 | Sonnet | `src/core/emit/expr.ts` (array and tuple literal children, near lines 752-764), `tests/emit_lift_slot_test.ts` | The element type comes from `expected` when it is an array or tuple, else from the type of the literal node, as the record case does (`fieldType(expected ?? e.type, ...)`). The 17 positions of the validation report each emit the lift and pass `build --tsc`. Each new test fails before the fix. | 40 |
+| FCU2 | FA2 | Sonnet | `src/core/emit/expr.ts` (`fit`, near lines 707-709), one test file | A converted computed callback, and a pure block at a lifted slot, evaluate once, at construction. Defect-point runtime checks for a lifted return, `defer`, `traverse` over `[]`, and a block arm. Reviewed golden changes are permitted. | 40 |
+| FCU3a | FA3 | Sonnet | `src/core/emit/shape.ts` (near lines 107-110 and 145-171), `src/core/emit/expr.ts` (near lines 1814-1820), `src/core/emit/families/effect.ts` (near lines 165-175), one test file | Effectful job and option expressions of `retry`, `repeat` (also without options), the `schedule` option, and the `retrySchedule` step build and pass `--tsc`. `retry(mkP(), { times: 0 })` with a pure callback from an effectful factory works. A runtime test counts factory runs (1) and job runs (3), equal to the bind-first control. The FCU2 runtime checks pass again. | 40 |
+| FCU3b | FA3 | Sonnet | `src/core/emit/families/effect.ts` (near line 63), `src/core/emit/families/layer.ts` (near lines 75-78), one test file | Effectful job expressions of `timeout`, `uninterruptible`, and `provide`, and an effectful layer expression of `provide`, build and pass `--tsc` with the bind-first runtime result. | 35 |
+| FCU4 | FA4 | Sonnet | `src/host/deno_io.ts` (near lines 161-163), `tests/cli_slow_test.ts` | A project with `-main.eff` passes `build --tsc` with exit 0. | 25 |
+| FCU6 | N1 | Sonnet | the layout printer of function types (`src/core/emit/`, not `expr.ts`), `tests/emit_slow_test.ts` or `fixtures/emit/forms/forms.eff` | A function with four parameters and a result type `() => Int` emits valid TypeScript. `build` never writes TypeScript that does not parse. | 30 |
+| FCU5 | FCD4, this repository | Sonnet | `.githooks/pre-commit`, `.githooks/post-commit`, `scripts/version_hook.ts`, `scripts/release.ts` (export `describe`), `tests/version_hook_slow_test.ts`, `docs/development.md` | In a temporary repository, a bare version commit made with `git commit -am`, and one made with `git commit deno.json -m`, both commit the changelog heading and leave a clean status. A bump with an empty Unreleased fails the commit. A commit without a version change does not start Deno. | 40 |
+
+Opus adds the website hook after FCU5, as shell only, and checks it in a scratch
+repository.

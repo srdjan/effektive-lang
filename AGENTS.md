@@ -46,6 +46,8 @@ Exception, accepted 2026-10-24: a compiler or syntax change can make source more
 
 Change accepted 2026-11-04: a module with service headers infers an export's omitted `with` clause. Each service header bounds the module's external service dependencies. A written `with` clause remains an optional checked bound.
 
+Change accepted 2026-11-10: a core data operation can be selected without an application blocker. Core data operations are integer arithmetic, text, arrays, tuples, nullable unions, and unary operators. The [selection plan](docs/plans/2026-11-10-core-data-operations.md) lists the candidates. Implementation needs a user approval of each selection.
+
 Exception, accepted 2026-10-27: Effektive hides the verbosity of Effect. Expose an Effect feature in source only when it carries user intent that the compiler cannot infer. Use every other Effect feature inside the transpiler only. Prefer to extend an existing source form over adding a builtin name. The candidate list is in [docs/status.md](docs/status.md#effect-4-features-to-surface-in-source).
 
 The website and canonical spec are in the sibling repository `../effektive/public/`.

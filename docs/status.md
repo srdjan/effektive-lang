@@ -110,6 +110,7 @@ its failure set and states its services with `with`. The
 [export failures plan](archive/plans/2026-11-03-inferred-export-failures.md) records it.
 On 2026-11-04 the user accepted a third terse change. A module with service headers
 infers each export's requirements within an explicit external service bound.
+On 2026-11-10 the user accepted a change of the target for core data operations: decision FCD5 of the [completeness review](plans/2026-11-10-completeness-review.md). The [selection plan](plans/2026-11-10-core-data-operations.md) lists the candidates. No item is selected yet.
 First check equivalent existing source compositions. Record a minimal witness, intended
 contract, observed diagnostic or behavior, and the required failure,
 cancellation, and cleanup semantics. No item has an automatic priority or
