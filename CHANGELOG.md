@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.15.6 - 2026-11-09
+
 - The language server removes a project when its last open document closes after its `effektive.json` was deleted, and it clears the lists that the project published.
   Before, the project stayed, its configuration error stayed on the deleted `effektive.json`, and requests for the document opened again were answered from that project.
 - The language server keeps a generated TypeScript view subscribed when its module moves to another project, and it also subscribes the view of a document that has no project yet.
