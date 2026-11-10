@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `x ?? d` accepts a nullable union such as `type MaybeInt = Int | null`. It gives `x` when `x` is not `null`, and it evaluates the fallback `d` only for `null`. It lowers to the same IR as `match x { null => d, v => v }`, so it accepts the subjects that the binding arm accepts: `Mode = "a" | "b" | null` and `boolean | null` stay rejected. Any other left operand gives `type-mismatch/010` "the left operand of `??` must be an Option or a nullable union".
+  Before, `??` accepted only an Option, and `x ?? 0` on `Int | null` gave `type-mismatch/010` "the left operand of `??` must be an Option".
 - The IR wire version is 10, and the validator rejects version 9. Version 10 adds the pattern `bind`, the binding arm of a `match` on a nullable union such as `Int | null`.
 
 ## 0.15.7 - 2026-11-10

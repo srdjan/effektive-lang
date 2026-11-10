@@ -1189,6 +1189,11 @@ console.log(JSON.stringify({
   flag: [M.flag(null), M.flag(true), M.flag(false)],
   mode: [M.mode(null), M.mode("a"), M.mode("b")],
   modeNil: [M.modeNil(null), M.modeNil("a"), M.modeNil("b")],
+  orZeroNull: M.orZero(null),
+  orZeroFive: M.orZero(5),
+  orZeroZero: M.orZero(0),
+  orCentsNull: M.orCents(null),
+  orCentsSome: M.orCents(250),
 }));
 `,
     );
@@ -1217,6 +1222,53 @@ console.log(JSON.stringify({
       flag: [0, 1, 2],
       mode: [0, 1, 2],
       modeNil: [0, 1, 2],
+      orZeroNull: 0,
+      orZeroFive: 5,
+      orZeroZero: 0,
+      orCentsNull: 0,
+      orCentsSome: 250,
+    });
+  });
+});
+
+Deno.test("a fallback on a nullable union runs only for null", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/main.eff`,
+      [
+        "service Counter { next(): Int }",
+        "export const orNext = (x: MaybeInt): Int with Counter.next => x ?? Counter.next()",
+        "type Int = int",
+        "type MaybeInt = Int | null",
+        "",
+      ].join("\n"),
+    );
+    build(dir, ["main.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Effect, Layer } from "effect";
+import { Counter, orNext } from "./main.ts";
+
+let calls = 0;
+const Live = Layer.succeed(Counter)({
+  next: () => Effect.sync(() => ++calls),
+});
+const run = (x: number | null) => Effect.runSync(orNext(x).pipe(Effect.provide(Live)));
+const five = run(5);
+const zero = run(0);
+const afterValues = calls;
+const none = run(null);
+console.log(JSON.stringify({ five, zero, afterValues, none, calls }));
+`,
+    );
+    assertEquals(result, {
+      five: 5,
+      zero: 0,
+      afterValues: 0,
+      none: 1,
+      calls: 1,
     });
   });
 });

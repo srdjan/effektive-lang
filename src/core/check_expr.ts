@@ -2777,13 +2777,18 @@ class BodyChecker
     const [left, right] = this.kids(node);
     if (left === undefined || right === undefined) return this.errorInfo(node);
     const subject = this.expr(left);
-    const element = this.table.optionElementOf(subject.type);
+    const domain = domainOf(this.table, subject.type);
+    const element = domain.kind === "option"
+      ? domain.element
+      : domain.kind === "nullable"
+      ? domain.rest
+      : undefined;
     const fallback = this.expr(right, expected);
     if (element === undefined) {
       if (!this.isError(subject.type)) {
         this.report(
           "type-mismatch/010",
-          "the left operand of `??` must be an Option",
+          "the left operand of `??` must be an Option or a nullable union",
           left,
         );
       }
@@ -2794,6 +2799,7 @@ class BodyChecker
     const id: LocalId = bodyLocalId(this.body.declaration, name);
     this.fact(node, {
       kind: "option-fallback",
+      subject: domain.kind === "option" ? "option" : "nullable",
       binding: { id, name, type: element },
     });
     const type = this.joinResults([{ node: left, type: element }, {

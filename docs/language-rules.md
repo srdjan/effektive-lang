@@ -722,9 +722,15 @@ states its result type. Module rules determine requirement inference. Both
 spellings support the same editor queries.
 
 `option ?? fallback` is lazy Option unwrapping: `Some` returns its payload;
-`None` evaluates the fallback. It evaluates the subject once, unfolds aliases,
+`None` evaluates the fallback. `x ?? fallback` on a nullable union, such as
+`type MaybeInt = Int | null`, returns `x` when it is not `null` and evaluates the
+fallback only for `null`. It lowers to `match x { null => fallback, v => v }`, so
+it accepts the subjects that the binding arm accepts. A literal-only union with
+`null`, such as `"a" | "b" | null`, and `boolean | null` are not accepted. Any
+other left operand gives `type-mismatch/010`, "the left operand of `??` must be an
+Option or a nullable union". The operator evaluates the subject once, unfolds aliases,
 and uses match branch joins and contextual result types, including `None` and
-`never` branches. It does not unwrap null or typed failures. `??` associates to
+`never` branches. It does not unwrap typed failures. `??` associates to
 the right, below logical operators and above pipelines. Parenthesize operands
 when mixing `??` with `&&` or `||` at one expression level (`syntax/015`).
 The checker records the synthesized binding and annotations; lowering produces

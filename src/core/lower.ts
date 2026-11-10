@@ -1235,24 +1235,30 @@ class BodyLowerer {
       fact.binding.type,
       this.span(left),
     );
+    const taken: Arm = {
+      pattern: fact.subject === "option"
+        ? { kind: "some", binding, span }
+        : { kind: "bind", binding, span },
+      body: {
+        kind: "reference",
+        target: binding.id,
+        ...this.annotationWith(
+          fact.binding.type,
+          PURE_EFFECTS,
+          this.span(left),
+        ),
+      },
+    };
+    const absent: Arm = {
+      pattern: fact.subject === "option"
+        ? { kind: "none", span }
+        : { kind: "literal", value: null, span },
+      body: this.expr(right),
+    };
     return {
       kind: "match",
       subject: this.expr(left),
-      arms: [
-        {
-          pattern: { kind: "some", binding, span },
-          body: {
-            kind: "reference",
-            target: binding.id,
-            ...this.annotationWith(
-              fact.binding.type,
-              PURE_EFFECTS,
-              this.span(left),
-            ),
-          },
-        },
-        { pattern: { kind: "none", span }, body: this.expr(right) },
-      ],
+      arms: fact.subject === "option" ? [taken, absent] : [absent, taken],
       ...this.annotation(node),
     };
   }

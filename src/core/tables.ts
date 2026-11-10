@@ -80,7 +80,12 @@ export type NodeFact =
       readonly local: NodeId;
     }[];
   }
-  | { readonly kind: "option-fallback"; readonly binding: ArrowParameterFact }
+  | {
+    readonly kind: "option-fallback";
+    /** Which left operand the fallback unwraps: an Option or a nullable union. */
+    readonly subject: "option" | "nullable";
+    readonly binding: ArrowParameterFact;
+  }
   /** An ordinary call of a function value. Also a pipeline stage that calls one. */
   | { readonly kind: "call" }
   /** A service operation: `S.m(args)` or a stage `x |> S.m`. */

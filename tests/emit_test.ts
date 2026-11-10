@@ -1949,6 +1949,14 @@ export const longName = (
       MaybeAnItemWithAVeryLongNameThatPushesTheSelectorAnnotationPastTheLimit,
   ) => $t0 === null ? 0 : ((n) => n.r)($t0))(x);
 
+export const orZero = (x: MaybeInt): Int =>
+  (($t0: MaybeInt) => $t0 === null ? 0 : (($option997) => $option997)($t0))(x);
+
+export const orCents = (c: MaybeCents): Cents =>
+  (($t0: MaybeCents) => $t0 === null ? 0 : (($option1027) => $option1027)($t0))(
+    c,
+  );
+
 const nothing: MaybeItem = null;
 //# sourceMappingURL=nullable.ts.map
 `,

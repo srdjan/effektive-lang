@@ -109,3 +109,7 @@ export const longName = (
     null => 0,
     n => n.r
   }
+
+export const orZero = (x: MaybeInt): Int => x ?? 0
+
+export const orCents = (c: MaybeCents): Cents => c ?? 0
