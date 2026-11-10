@@ -163,118 +163,202 @@ specification excludes today.
 
 ## Phase 1 execution plan
 
-Base: `cf33c4b`. Author: Opus. Units COU1 to COU6 carry out CO1 to CO5.
+Base: `cf33c4b`. Author: Opus. Validation: Fable on 2026-11-10 at `114aede`, findings
+COV1 to COV26 (2 blockers, 13 changes, 11 notes). This revision applies every change.
+Units COU1a to COU6 carry out CO1 to CO5.
 
 The units run one after another in the main tree, because they share the parser, the
 checker, the lowering, the emitter, and the validator. A Sonnet executor does each
 unit. The executor writes a failing test first, makes it pass, runs `deno task check`,
-and hands back without a commit. Opus reviews the diff line by line, runs the gate,
-runs `deno task mutate --only` on the changed logic lines, and commits the unit.
+and hands back without a commit. Opus reviews the diff line by line and runs the gate.
+Then Opus commits the unit, and runs `deno task mutate --only` on the changed logic
+lines, `deno task rules:unfired`, and `deno task coverage` in the main tree (COV13). A
+survivor or an unfired rule gets a test in a follow-up commit.
 
 ### Shared rules
 
 - P1 (shadowable names). Each new builtin is a prelude name with `shadowable: true` in
-  `src/core/resolve.ts:73`. Ten fixtures bind `text` as a module constant, for example
-  `fixtures/emit/schema-constructor.eff:15`, and they must still compile.
+  `src/core/resolve.ts:73`. Fourteen fixture files bind `text` as a module constant,
+  for example `fixtures/emit/schema-constructor.eff:15`, and they must still compile.
 - P2 (builtin instances). `div`, `trunc`, `floor`, `round`, `ceil`, `text`, and `len`
-  reuse the path of the collection builtins. A checker family row records the fact
-  `{ kind: "builtin", name, ir }` (`src/core/check_builtins/collections.ts:156`).
-  Lowering makes a `call` of a `$builtin/<name>/<hash>` reference
-  (`src/core/lower.ts:633`). The emitter prints the call in `builtinCall`
-  (`src/core/emit/expr.ts:1274`). No IR expression kind is added.
-- P3 (IR version 9). COU2 adds `%` to the binary operator union (`src/core/ir.ts:230`)
-  and raises the IR version from 8 to 9 once, in the way that `9a097a0` raised it to 8.
-  The new builtin instance names of COU3 and COU4 use the same version. The validator
-  rejects version 8.
+  reuse the path of the collection builtins: the fact `{ kind: "builtin", name, ir }`,
+  a `call` of a `$builtin/<name>/<hash>` reference, and an emission case. No IR
+  expression kind is added. A new name is registered at these sites (COV9):
+  `src/core/resolve.ts:73`; a family row in a new file `src/core/check_builtins/data.ts`
+  and in `registry.ts` (`FAMILY_ROW_TABLES`, `FAMILY_ROWS`, `FamilyContext`);
+  `src/core/ids.ts:96`; `src/core/emit/expr.ts` `builtinCall` and the `counts` record
+  at line 1707, with a `throw internal(...)` case in the `switch (builtin)` below it;
+  `src/core/validate/builtins.ts:6`; a shape rule in
+  `src/core/validate/import_checks.ts` `checkBuiltinShape`; an arity row in
+  `tests/builtin_arity_test.ts`; `editors/vscode/syntaxes/effektive.tmLanguage.json:130`;
+  the file map and the prelude list of `docs/api.md`. A new emitter helper also needs
+  `src/core/emit/module_state.ts` and `src/core/emit/emit.ts:120`. Completion and the
+  playground highlighter read `PRELUDE_NAMES` and need no edit.
+- P2a (instance types). `div` is `(int, int) => int`. Each rounding builtin is
+  `(number) => int`. `text` is `(number) => string` or `(boolean) => string`. `len` is
+  `(string) => int` or `(E[]) => int` with the unfolded array type. The validator shape
+  rule accepts exactly these types, pure, with empty effect sets. A forged fixture in
+  `scripts/validate_fixtures.ts` shows each rejection.
+- P2b (pipeline). Each new builtin uses the `piped` prologue, so `n |> text` and
+  `subtotal * 90 |> div(100)` check. A bare builtin name is not a value, so a user
+  writes `map(xs, (x) => round(x))` (COV11).
+- P3 (IR version 9). COU2a raises the IR version from 8 to 9. COU2b adds `%` to the
+  binary operator union. The new builtin instance names of COU3 and COU4 change the
+  wire contract too (`src/core/validate/import_checks.ts:289-297`), and they use the
+  same version, if no release happens between COU2a and COU4 (COV24). Each additive
+  change raised the version before (CHANGELOG versions 5, 6, 7, and `9a097a0`).
 - P4 (faults are defects). An `int` remainder or a `div` by zero throws
   `RangeError("division by zero")`. A rounding result that is NaN, infinite, or outside
   the safe integers throws `RangeError("int overflow")` through `$int`.
 - P5 (no negative zero). An `int` result of `%`, `div`, or a rounding builtin is never
   `-0`. For example, `-6 % 3` and `ceil(-0.5)` give `0`, and `Object.is(result, 0)` is
-  true.
-- P6 (identity fit). A plain `int` or `string` result fits an untagged identity through
-  the existing rule at `src/core/types.ts:975`. So `const c: Cents = round(x)` checks
-  with no new rule. Each unit has one test of this fit.
+  true. The existing `$int(0 * -5)` still gives `-0`, and a `number` remainder can give
+  `-0` or `NaN`. The language rules state both facts (COV18).
+- P6 (identity fit). A plain `int` or `string` result fits an untagged identity that
+  has no predicate and that the module owns (`src/core/types.ts:975-984`). So
+  `const c: Cents = round(x)` checks, and `const p: Pos = round(x)` is rejected for a
+  refined `Pos`. Each unit tests both cases.
 - P7 (documents). Each unit adds its rows to `docs/language-rules.md` and an entry
-  under `## Unreleased` in `CHANGELOG.md`. COU6 updates the website.
+  under `## Unreleased` in `CHANGELOG.md`.
+- P8 (fixtures). Each unit adds one `.eff` file to one project directory
+  `fixtures/emit/core-data/`. A fast emit test asserts the exact emitted text, and
+  `tests/emit_runtime_slow_test.ts` holds the runtime cases. The `emit/` row of
+  `docs/development.md:113` names the directory (COV14).
 
 ### Units
 
 | Unit | Item | Model | Files | Acceptance check | Turns |
 | --- | --- | --- | --- | --- | --- |
-| COU1 | CO1 unary `-` and `!` | Sonnet | `src/core/parse.ts:1433-1451`, the syntax kinds, the checker of the new node, `src/core/lower.ts`, the literal pattern rule, editor token and census tables that list syntax kinds, tests, a fixture | See COU1 below | 60 |
-| COU2 | CO2 `%`, IR version 9 | Sonnet | `src/core/lex.ts`, `src/core/parse.ts`, `src/core/check_binary.ts`, `src/core/ir.ts`, `src/core/lower.ts`, the validator binary rule, `src/core/emit/expr.ts:1133`, `src/core/emit/helper_declarations.ts`, the files of `9a097a0`, `editors/vscode/syntaxes/effektive.tmLanguage.json`, the playground highlighter, tests, a fixture | See COU2 below | 80 |
-| COU3 | CO3 `div` and rounding | Sonnet | `src/core/resolve.ts`, a new family file `src/core/check_builtins/numbers.ts` and `registry.ts`, `src/core/ids.ts:96`, `src/core/validate/builtins.ts`, `src/core/emit/expr.ts` (`builtinCall` and the counts at 1707), `src/core/emit/helper_declarations.ts`, tests, a fixture | See COU3 below | 80 |
-| COU4 | CO4 `text`, CO5 `len` | Sonnet | The COU3 files, and `src/core/predicate_source.ts:239` | See COU4 below | 60 |
-| COU5 | Phase 1 witness and status | Sonnet | `fixtures/applications/order-lifecycle/` (`orders.eff`, `README.md`, `runtime_test.ts`, the generated files), `docs/status.md` | See COU5 below | 40 |
-| COU6 | Website | Sonnet | `../effektive/public/effektive-spec.html` (both tabs), `../effektive/public/typed-ir.ts` through `deno task site:ir`, an example in `../effektive/public/effektive-examples/` when one fits | See COU6 below | 60 |
+| COU2a | IR version 9 | Sonnet | The version sites of COV12, `../effektive/public/typed-ir.ts` (`deno task site:ir`), `../effektive/public/log.ir.json`, `../effektive/public/effektive-spec.html:898` | See COU2a | 30 |
+| COU1a | CO1 unary expressions | Sonnet | `src/core/parse.ts`, `src/core/syntax.ts`, `src/core/resolve.ts:1138-1147`, `src/core/infer_inputs.ts:207-230`, `src/core/check_expr.ts`, `src/core/check_refinements.ts`, `src/core/predicate_source.ts`, `src/core/lower.ts`, `src/core/diagnostics.ts:64-66`, `fixtures/errors/syntax-unary-operator.eff`, `fixtures/surface/cli.json`, `tests/check_body_test.ts:293`, `tests/helpers.ts:297-327`, `tests/parse_test.ts` | See COU1a | 60 |
+| COU1b | CO1 negative literal pattern | Sonnet | `src/core/parse.ts:1754-1757` and `1787-1790`, `src/core/syntax_queries.ts` (`literalOf`, `numberTextOf`), `src/core/check_patterns.ts`, `src/core/check_refinements.ts` (`matchLiteral`) | See COU1b | 40 |
+| COU2b | CO2 `%` | Sonnet | `src/core/lex.ts`, `fixtures/lex/snapshot.json`, `src/core/syntax_queries.ts:102-135`, `src/core/parse.ts:89-91`, `src/core/check_binary.ts`, `src/core/ir.ts:230`, `src/core/lower.ts`, `src/core/validate/expr.ts:1941` and `2051-2077`, `src/core/emit/expr.ts:1133`, the helper sites of P2, the TextMate grammar, the website IR files | See COU2b | 70 |
+| COU3 | CO3 `div` and rounding | Sonnet | The P2 sites | See COU3 | 80 |
+| COU4 | CO4 `text`, CO5 `len` | Sonnet | The P2 sites | See COU4 | 60 |
+| COU5 | Phase 1 witness and status | Sonnet | `fixtures/applications/order-lifecycle/` (`contracts.eff`, `orders.eff`, `README.md`, `runtime_test.ts`, the generated files), `docs/status.md`, `docs/plans/2026-11-10-completeness-review.md` | See COU5 | 40 |
+| COU6 | Website | Sonnet | `../effektive/public/effektive-spec.html` (both tabs), `../effektive/public/effektive-examples/order-lifecycle/` | See COU6 | 60 |
 
-COU1 (unary `-` and `!`). `-e` binds tighter than `*`, so `-a * b` is `(0 - a) * b`.
-The checker types `-e` as `0 - e`, and lowering makes the IR `binary` `-` with a literal
-`0` on the left. So `-x` for `x = 0` gives `0`, not `-0`. `!e` needs a `boolean` and
-lowers to the IR `binary` `===` with a literal `false` on the right. A diagnostic for a
-wrong operand names the unary operator. `+e` keeps `syntax/010`. A `Duration` operand
-gives the mismatch of `0 - d`, and the language rules row says to write `0ms - d`. A
-`match` literal pattern accepts `-` before a numeric literal, as a negative literal. No
-IR change. The check: a fixture with `-x`, `-(a * b)`, `- -x`, `!flag`, and a `match`
-arm `-1 =>`; a golden emit file; a runtime test with the exact values `-5`, `0` (with
-`Object.is`), `false`, and the matched arm; the old `syntax/010` tests for `-` and `!`
-become success tests; `deno task check` exits 0.
+COU2a (IR version 9). The mechanical raise of `9a097a0`, at the sites of COV12. Do not
+change the six document versions `version: 8` in `tests/lsp_editor_test.ts`. Run
+`deno task site:ir`, copy `fixtures/ir/example/log.ir.json` to the website, and change
+the version sentence of `effektive-spec.html:898`. The website files get their own
+commit in `../effektive`. The check: the validator rejects version 8; `deno task check`
+exits 0, including `tests/ir_site_slow_test.ts`; the website `deno task test` and
+`deno task typecheck` exit 0.
 
-COU2 (`%`). The lexer gets a `%` token. `%` has the precedence of `*` and is left
-associative. Two `int` operands give `int`, and the identity rule of `*` applies
-(`adoptedNumericIdentity`, `src/core/check_binary.ts:447`), so `Cents % 7` gives
-`Cents`. Two `number` operands, or one `int` and one `number`, give `number`. A
-`Duration` or `Instant` operand gives a type mismatch through new rows of the unit table.
-The sign follows the dividend, as in JavaScript. An `int` remainder emits a new helper
-`$rem(a, b)` that throws for `b === 0` and returns `a % b + 0`. A `number` remainder emits
-`a % b`. The validator learns `%`. The IR version goes to 9 with the mechanical changes of
-`9a097a0`. The TextMate grammar and the playground highlighter learn `%`. The check: a
-fixture and a golden file; a runtime test with the exact values `7 % 3 = 1`,
-`-7 % 3 = -1`, `7 % -3 = 1`, `-6 % 3 = 0` (with `Object.is`), `7.5 % 2 = 1.5`, and the
-defect message "division by zero"; a test that `5s % 2` gives the mismatch code; a test
-that the validator rejects version 8; a forged validator fixture with a wrong `%`
-operand type; `deno task check` exits 0.
+COU1a (unary expressions). `-e` binds tighter than `*`. The checker types `-e` as
+`0 - e`, and lowering makes the IR `binary` `-` with a literal `0` on the left. So `-x`
+for `x = 0` gives `0`, not `-0`. `!e` needs a `boolean` and lowers to the IR `binary`
+`===` with a literal `false` on the right. A diagnostic for a wrong operand names the
+unary operator. `+e` keeps `syntax/010`. A `Duration` operand gives the mismatch of
+`0 - d`. A refined operand needs a proof, so `-p` for a refined `Pos` is rejected and
+the user writes `-Int(p)` (COV5). The refinement checker reads `-e` as `0 - e` in
+`linear`, gives no fact for `!e`, and applies `preserveRefinement` to the unary node
+(COV4). The block rule of D1 applies (COV2). The predicate rule of D2 applies (COV6).
+The `syntax/010` description in `src/core/diagnostics.ts` changes, and
+`deno task surface:update` runs. The check: precedence tests for `-a * b`, `-a.b`,
+`-f(x)`, `!a === b`, `!a && b`, `a - -b`, and `-x |> f`; the D1 test; the D2 tests;
+`(s: Sym): Sym => -s` and `const t: Temp = -5` check, validate, and build;
+`(n) => -n` infers `n`; `{ concurrency: -1 }` gives the literal-option error; the P8
+fixture and runtime values `-5`, `0` (with `Object.is`), and `false`;
+`deno task check` exits 0.
 
-COU3 (`div` and rounding). `trunc`, `floor`, `round`, and `ceil` take one `number` (an
-`int` or a number identity widens) and give `int`. `round` rounds half away from zero
-(COD3). Emission: `trunc`, `floor`, and `ceil` emit `$int(Math.<name>(x) + 0)`. `round`
-emits `$int` of a helper that gives `-Math.round(-x) + 0` for `x < 0` and
-`Math.round(x) + 0` otherwise, because `Math.round(-0)` is `-0`. `div(a, b)` takes two `int` values and gives the quotient truncated toward
-zero, the partner of `%`. It emits a helper that throws for `b === 0` and returns
-`Number(BigInt(a) / BigInt(b))`. BigInt division is exact by construction, so the
-helper needs no float correction. The check: a fixture and a golden file; a runtime test
-with the exact values `div(7, 2) = 3`, `div(-7, 2) = -3`, `div(7, -2) = -3`,
+COU1b (negative literal pattern). A pattern and a record pattern field accept `-`
+before a numeric literal as a negative literal. The check: arms `-1 =>` and
+`{ n: -1 } =>`; `-5s`, `-"a"`, and `-true` as a pattern give `syntax/011`; arms `0` and
+`-0` give the duplicate-arm diagnostic; a runtime value of the matched arm;
+`deno task check` exits 0.
+
+COU2b (`%`). Append `Percent` at the end of `TokenKind`, and add it to `TOKEN_NAMES`,
+`OPERATOR_KINDS`, and the single-character table. Run `deno task lex:update`. `%` has
+the precedence of `*` and is left associative. The typing follows `*` (D3): two `int`
+operands give `int`; the same identity twice gives `int`; an identity and an unnamed
+value give the identity, so `Cents % 7` gives `Cents`; two different identities give
+`type-mismatch/007`; a refined identity needs a proof; `number` with `int` or `number`
+gives `number`. Three new rows of the unit table make `Duration % Duration`,
+`Duration % numeric`, and `numeric % Duration` a mismatch. `Instant` needs no row. The
+validator gives the same mismatch in `durationArithmetic`, and its operator parameter
+types learn `%`. The sign follows the dividend. An `int` remainder emits a new helper
+`$rem(a, b)` that throws for `b === 0` and returns `a % b + 0`. A `number` remainder
+emits `a % b`. Run `deno task site:ir` again for the website IR file. The check: tests
+for `Cents % Cents`, `Cents % Count`, `5s % 2`, `5s % 3s`, and `2 % 5s`; a forged
+validator fixture with a wrong `%` operand; the P8 fixture; runtime values
+`7 % 3 = 1`, `-7 % 3 = -1`, `7 % -3 = 1`, `-6 % 3 = 0` (with `Object.is`),
+`7.5 % 2 = 1.5`, and the defect "division by zero"; `deno task check` exits 0.
+
+COU3 (`div` and rounding). `trunc`, `floor`, `round`, and `ceil` take one `number` and
+give `int`. `round` rounds half away from zero (COD3). `trunc`, `floor`, and `ceil` emit
+`$int(Math.<name>(x) + 0)`. `round` emits `$int` of a helper that gives
+`-Math.round(-x) + 0` for `x < 0` and `Math.round(x) + 0` otherwise, because
+`Math.round(-0)` is `-0`. `div(a, b)` takes two `int` values and gives the quotient
+truncated toward zero, the partner of `%`. It emits a helper that throws for `b === 0`
+and returns `Number(BigInt(a) / BigInt(b))`. The argument rule of D4 applies (COV10).
+A foreign sealed value does not widen, so it is rejected. The check: the P8 fixture;
+runtime values `div(7, 2) = 3`, `div(-7, 2) = -3`, `div(7, -2) = -3`,
 `div(9007199254740991, 2) = 4503599627370495`, `trunc(-2.7) = -2`, `floor(-2.5) = -3`,
 `ceil(-0.5) = 0` (with `Object.is`), `round(2.5) = 3`, `round(-2.5) = -3`,
-`round(0.49999999999999994) = 0`, and the defect messages for `div(1, 0)` and
-`round(1e300)`; a property test after `docs/testing.md` "Property tests" that checks
-`div(a, b) * b + a % b === a` in BigInt, `|a % b| < |b|`, and the sign rule on seeded
-pairs that include the safe integer limits, with literal outcome counts; the P6 fit
-test; a module constant named `round` still compiles; `deno task check` exits 0.
+`round(0.49999999999999994) = 0`, and the defects of `div(1, 0)` and `round(1e300)`; a
+property test in a `*_slow_test.ts` that compiles one program and runs seeded pairs in
+one subprocess, after `docs/testing.md` "Property tests", and checks
+`div(a, b) * b + a % b === a` in BigInt, `|a % b| < |b|`, and the sign rule, with the
+safe integer limits and literal outcome counts; the P6 tests; a pipeline case; a module
+constant named `round` still compiles; `deno task check` exits 0.
 
-COU4 (`text` and `len`). `text(x)` takes one `int`, `number`, `boolean`, or an identity
-over one of them, and gives `string`. It emits `String(x)`, so it gives the JavaScript
-form, for example `"1e+21"`. `len(x)` takes one `string`, one array, or an identity over
-one of them, and gives `int`. It counts UTF-16 code units, as the predicate `len` does,
-and emits `x.length`. A refinement predicate `len` keeps its meaning. The check: a
-fixture and a golden file; a runtime test with the exact values `text(42) = "42"`,
-`text(-1.5) = "-1.5"`, `text(true) = "true"`, `len("héllo") = 5`, `len("😀") = 2`, and
+COU4 (`text` and `len`). `text(x)` takes one `int`, `number`, or `boolean`, or an
+identity over one of them, and gives `string`. It emits `String(x)`, so it gives the
+JavaScript form, for example `"1e+21"`. `len(x)` takes one `string` or one array, or
+an identity over one of them, and gives `int`. It counts UTF-16 code units, as the
+predicate `len` does, and emits `x.length`. The argument rule of D4 applies. A
+refinement predicate `len` stays syntactic, so a module constant `len` shadows only
+the value builtin, and a value `len(x)` gives no refinement fact (COV22). The check:
+the P8 fixture; runtime values `text(42) = "42"`, `text(-1.5) = "-1.5"`,
+`text(true) = "true"`, `len("héllo") = 5` with a composed `é`, `len("😀") = 2`, and
 `len([1, 2, 3]) = 3`; `"n=" + text(n)` checks; `text("a")` gives a type mismatch; a
 refined type with `where len(x) > 0` still checks next to a value `len`; the existing
-fixtures that bind `text` still compile; `deno task check` exits 0.
+fixtures that bind `text` still compile; a pipeline case; `deno task check` exits 0.
 
-COU5 (witness and status). The order lifecycle application gets a percent rule that
-uses `div` or `round`, and no duration form. The README sentence "A percent rule is not
-possible" changes. `runtime_test.ts` gets one exact-value case for the new rule.
-`docs/status.md` replaces the percent sentence and records phase 1 as done. The check:
-`deno test --allow-all tests/application_slow_test.ts` passes; `deno task check` exits 0.
+COU5 (witness and status). The order lifecycle application gets a percent rule in
+`contracts.eff` and `orders.eff` that uses `div` or `round`, and no duration form. The
+README sentence "A percent rule is not possible" changes. `runtime_test.ts` gets one
+exact-value case. `docs/status.md` replaces the percent sentence and records phase 1 as
+done. The completeness ledger marks FF1, FF2, FF7, and FC5. The check:
+`deno test --allow-all tests/application_slow_test.ts` passes; `deno task check`
+exits 0.
 
 COU6 (website). The specification states `%`, the unary operators, and the seven
-builtins, with an Effect-TS tab for each new example. `typed-ir.ts` shows IR version 9.
-The check: the compiler builds each changed Effektive example; the website
-`deno task test` and `deno task typecheck` exit 0. The website edits get their own
-commit in `../effektive`.
+builtins, with an Effect-TS tab for each new example and a new draft entry. The order
+lifecycle sources and README are copied to the website example. The check: the
+compiler builds each changed Effektive example; the website `deno task test` and
+`deno task typecheck` exit 0. The website edits get their own commit in `../effektive`.
+
+### Decisions D1 to D4
+
+They wait for the user. COU2a does not depend on them.
+
+D1 (unary `-` at the start of a block item, COV2). (a) A block item that is not the
+first item cannot start with unary `-`. It keeps `syntax/010` with the hint "put `-` at
+the end of the previous line, or write `(-x)`". Recommended: today the same source
+gives `syntax/010`, so no program changes its meaning. (b) No block item can start with
+unary `-`. (c) Accept the hazard and document it.
+
+D2 (`-` and `!` in a refinement predicate, COV6). (a) `compileLinear` reads `-e` as
+`0 - e`, and `!e` gets the message "a refinement does not support `!`". Recommended.
+(b) Both forms get a specific unsupported message.
+
+D3 (the type of `Cents % Cents`, COV8). (a) Plain `int`, the rule of `*`. Recommended:
+fewer parts. (b) `Cents`, the rule of `+` and `-`.
+
+D4 (a `Duration` or `Instant` argument of the new builtins, COV10). (a) `div`, the
+rounding builtins, `text`, and `len` reject it with a type mismatch, as `%` does.
+Recommended. (b) Accept it through widening.
+
+### Notes from the validation
+
+COV17 corrects CO3: `Math.trunc(a / b)` is probably exact for safe integers. Fable gives
+a proof sketch and 2,000,000 seeded pairs with no mismatch. The BigInt form stays,
+because it is exact by construction. Its cost needs a measurement if `div` runs in a
+loop. COV20 corrects two references: `adoptedNumericIdentity` is defined at
+`src/core/check_binary.ts:53`, and `docs/architecture.md` has no IR version rule.
 
 ### Out of scope for phase 1
 
