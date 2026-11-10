@@ -388,29 +388,39 @@ example.
 
 ## Phase 2 execution plan
 
-Base: `28bb822`. Author: Opus. Status: draft. Fable validates it, and then the user
-decides CPD1 to CPD4 and approves the plan. No code changes before that approval.
-Units CPU1 to CPU5 carry out CO6 and CO7. CO8 depends on CPD4.
+Base: `28bb822`. Author: Opus. Validation: Fable on 2026-11-10 at `3452650`, findings
+CPV1 to CPV18 (1 blocker, 11 changes, 6 notes). This revision applies every change and
+the plan text of the notes CPV15 and CPV16. Status: the user decides CPD1 to CPD4 and
+approves the plan. No code changes before that approval. Units CPU1 to CPU5 carry out
+CO6 and CO7. CO8 depends on CPD4.
+
+The N3 fix ([constant comparison plan](2026-11-10-constant-comparison.md), unit CCU1)
+also edits `src/core/emit/expr.ts`. So CCU1 and the phase 2 units run one after another,
+not in parallel (CPV2). The line numbers below are at `3452650`.
 
 ### Facts that changed the items
 
-Opus checked these facts with scratch builds on 2026-11-10.
+Opus checked these facts with scratch builds on 2026-11-10, and Fable confirmed them
+(CPV1).
 
 - An inline `all([defer(() => 1), defer(() => "a")])` fails with `type-mismatch/012`,
   also when the result type is `[Int, Text]`. A tuple comes only from a value that
-  already has a tuple type. So the premise of CO8, "`all([...])` returns a tuple", is
-  true only for such a value.
+  already has a tuple type: `all(p)` with `p: [Effect<Int>, Effect<Text>]` checks. So
+  the premise of CO8, "`all([...])` returns a tuple", is true only for such a value.
 - `const { n, t } = all({ n: defer(() => 1), t: defer(() => "a") })` builds with `--tsc`
   and 0 diagnostics. So the record form covers the case that CO8 names.
 - `len(p)` of a tuple `p` gives `type-mismatch/003` "string or an array is expected".
   `at` and `sort` take an array in the same way.
 - `0 / 0` builds as a `number`, so a `sort` key can be NaN.
-- `a < b` checks for two `Duration` values. The operators `<`, `<=`, `>`, and `>=` order
-  only numeric classes today (`src/core/check_binary.ts:400-413`), so no source form
-  orders strings yet.
-- No builtin returns `Option` today. `at` is the first.
+- `a < b` checks for two `Duration` values and for two `Instant` values, and both emit
+  as `number`. `<` on two `string` values gives `type-mismatch/007`, because `<`, `<=`,
+  `>`, and `>=` order only numeric classes (`src/core/check_binary.ts:400-413`).
+- No builtin returns `Option` today. `at` is the first. `o ?? 0` and a `match` with
+  `Some` and `None` already check on an `Option<Int>`.
 - `fixtures/applications/stream-processor/processor.eff:15` counts a batch with
   `fold(0, (count, _item) => count + 1)`. Phase 1 added `len` for this case.
+- No fixture, playground example, or website example uses `at`, `sort`, or `concat` as
+  a name (CPV18).
 
 ### Decisions CPD1 to CPD4
 
@@ -426,45 +436,97 @@ Opus checked these facts with scratch builds on 2026-11-10.
   is then defined for every input. (b) A NaN key is a defect, `RangeError("NaN sort
   key")`. (c) The order is not specified, as in JavaScript.
 - CPD4, CO8 tuple reads. (a) Defer CO8 until an example needs a tuple read. The record
-  form of `all` with record destructuring covers the named case. **Recommended**,
-  because it removes the only IR kind of phase 2. (b) Tuple destructuring
-  `const [a, b] = p` for a value of tuple type only, with a new IR kind `element`.
-  (c) Option (b), and `all` also infers a tuple from an inline list literal, so
-  `const [n, t] = all([one, two])` checks.
+  form of `all` with record destructuring covers the named case. A value of tuple type
+  still has no read form, so row FF4 stays open. **Recommended**, because it removes the
+  only IR kind of phase 2. (b) Tuple destructuring `const [a, b] = p` for a value of
+  tuple type only, with a new IR kind `element`. (c) Option (b), and `all` also infers a
+  tuple from an inline list literal, so `const [n, t] = all([one, two])` checks. Option
+  (c) needs new inference, because `all` does not pass an expected tuple type to an
+  inline list (CPV16).
 
 The units below assume option (a) of each decision. Another option changes the named
 unit before execution.
 
 ### Shared rules
 
-The phase 1 rules P1, P2, P2b, P4, P6, P7, and P8 apply unchanged. These rules replace
-or add to them.
+The phase 1 rules P1, P2, P4, P6, P7, and P8 apply. One line of P2 has moved: the
+`counts` record is now at `src/core/emit/expr.ts:1747` (CPV2). These rules replace or
+add to them.
 
 - CPR1 (instance types). `at` is `(E[], int) => Option<E>`. `sort` is `(E[]) => E[]` or
-  `(E[], pure (E) => K) => E[]`. E without a key, or K with a key, must be a type that
-  `<` orders (an `int`, a `number`, a closed unit, or a type with identity over one of
-  them), or `string`, or a type with identity over `string`. A boolean key gives a type
-  mismatch, as `<` does. The internal instance `concat` is `(E[], E[], ...) => E[]`
-  with one or more parameters. It is not a prelude name, so source `concat(...)` stays
-  an unknown name. Each instance is pure, with empty effect sets.
+  `(E[], pure (E) => K) => E[]`. An orderable type is an `int`, a `number`, a closed
+  unit, a `string`, a union of string literals or of number literals, or a type with
+  identity over one of them. E without a key, or K with a key, must be orderable. A
+  boolean, a nullable union such as `Int | null`, and a union of two identities are not
+  orderable, as `<` rejects them (CPV10). The internal instance `concat` is
+  `(E[], E[], ...) => E[]`, with one parameter for each child of the literal. It is not a
+  prelude name, so source `concat(...)` stays `unknown-name/001` (CPV3). Each instance is
+  pure, with empty effect sets.
 - CPR2 (closed units). An index of `at` that is a closed unit gives a type mismatch, so
-  `at` joins `UNITLESS_BUILTINS` in `src/core/validate/expr.ts`. `sort` accepts a closed
-  unit element or key, because sorting does not change a value.
+  `at` joins `UNITLESS_BUILTINS` (`src/core/validate/expr.ts:20-27`). Its message
+  follows `div`: "... but int is expected" (CPV9). `sort` accepts a closed unit element
+  or key, because sorting does not change a value.
 - CPR3 (IR). Phase 2 adds no IR expression kind. The instance names `at`, `sort`, and
   `concat` change the wire contract (`src/core/validate/import_checks.ts:289-297`).
   The IR version stays 9 by the rule of `docs/status.md:62`, because no release came
   after `99fb296`. Each unit extends the version 9 line under `## Unreleased` in
   `CHANGELOG.md:15`.
-- CPR4 (emission). `at(xs, i)` prints `$at(xs, i)`. `sort` prints `$sort(xs)` or
-  `$sort(xs, key)`. A helper copies the array, so the argument does not change.
-  `concat` prints one array literal: an array literal argument prints its elements, and
-  any other argument prints as `...value`. So `[...xs, x]` prints `[...xs, x]`. The new
-  helpers follow the `$div` registration (`src/core/emit/helper_declarations.ts`,
-  `module_state.ts`, `src/core/emit/emit.ts:121-130`). The order of `$sort` is
-  `a < b ? -1 : a > b ? 1 : 0` with the NaN rule of CPD3. JavaScript sort is stable.
-- CPR5 (fixtures). Each unit adds one `.eff` file to `fixtures/emit/core-data/`, with an
+- CPR4 (arity and pipeline). `at` uses `piped(2, "pure")`, so `xs |> at(0)` checks.
+  `sort` takes one or two arguments, so it uses
+  `optionalLast(1, "`sort` takes an array and an optional key function")`
+  (`src/core/check_builtins/rows.ts:120-131`), and its arity test row uses `bounded`
+  (CPV8). `xs |> sort` and `xs |> sort((x) => x.k)` check.
+- CPR5 (key callback). The `sort` key does not follow `mapCall`, which allows effects
+  (`src/core/check_builtins/collections.ts:229`). It omits `allowEffects`, as
+  `src/core/check_builtins/schema.ts:517` does, and does not use `callbackFunction`. So
+  an effectful key gives `execution-mode/001` "the callback of `sort` must be pure with
+  empty failure and requirement sets" (`src/core/check_expr.ts:1420-1425`). The
+  validator selects its callback rule by name (`src/core/validate/expr.ts:1419-1423`),
+  so `sort` must join that rule. The checker exports one predicate
+  `isOrderable(table, ref)` from `check_binary.ts`: `comparisonClass` is defined, and
+  `isNumericClass` or `isStringClass` holds. The validator shape rule uses
+  `comparisonClass`, `isNumericClass`, and `isStringClass` of
+  `src/core/validate/typing.ts:815-883`, which are already exported (CPV8).
+- CPR6 (emission). `at(xs, i)` prints `$at(xs, i)`. `$at` is
+  `<T>(xs: ReadonlyArray<T>, i: number): Option.Option<T>`. It tests
+  `i >= 0 && i < xs.length` and gives `Option.some(xs[i])`, else `Option.none()`. It
+  does not use a nullish test, because an element can be `null`. It gets the `Option`
+  name through `scope.effect("Option")`, as `hostCheckDeclaration` gets `Schema`
+  (`src/core/emit/helper_declarations.ts:103-108`) (CPV6). `sort` prints `$sort(xs)` or
+  `$sort(xs, key)`. `$sort` constrains the element or the key to `number | string`, so
+  the strict check of `deno run --check` accepts its `<` (CPV17). It copies the array,
+  so the argument does not change. Its order gives -1 for `a < b`, 1 for `a > b`, and 0
+  for equal values. NaN against NaN gives 0, NaN against a number gives 1, and a number
+  against NaN gives -1 (CPD3 (a), CPV15). JavaScript sort is stable. The new helpers
+  follow the `$div` registration (`helper_declarations.ts`, `module_state.ts`,
+  `src/core/emit/emit.ts:121-130`).
+- CPR7 (spread lowering, CPV5). A list literal with no spread stays an `array` node, so
+  no existing golden file changes. For a literal with a spread:
+  - The checker records the `list` fact (`src/core/tables.ts:141`) with a new optional
+    field `concat: FunctionType`, the closed type of the instance. `lower.ts:462` reads
+    the `list` fact, so a `builtin` fact on a `ListExpr` would throw.
+  - The instance has one parameter for each child of the literal, each of the unfolded
+    type `E[]`. A spread child lowers to its value. Each other child lowers to a
+    one-element `array` node. That node takes its type from the instance parameter, and
+    its `execution`, `effects`, and `span` from the child. The callee reference uses the
+    span of the list.
+  - The emitter prints one array literal. It prints the elements of an `array` argument
+    and `...value` for each other argument. It gives each element the element type as
+    the expected type, as `src/core/emit/expr.ts:772-780` does. So `[...xs, x]` prints
+    `[...xs, x]`, and no `concat` name appears. A pure builtin call prints an effectful
+    child inline, so the source order holds.
+  - The `counts` row of `concat` is `[]`, and `concat` joins the cases that are not an
+    effect leaf.
+  - The validator shape rule accepts one or more parameters, each an array type that is
+    the same as the result, pure, with empty effect sets.
+- CPR8 (tests). Each unit adds one `.eff` file to `fixtures/emit/core-data/`, with an
   exact emit test in `tests/emit_test.ts` and exact runtime values in
-  `tests/emit_runtime_slow_test.ts`. CPU3 adds a property test.
+  `tests/emit_runtime_slow_test.ts`. The runtime tests print with `JSON.stringify`, so
+  an `Option` result asserts `Option.isSome` and its value, or `Option.isNone`, and a
+  NaN asserts `Number.isNaN` (CPV12). Each rejection test asserts the exact code and
+  message below. A new message gets its row in `docs/language-rules.md`, or
+  `deno task rules:unfired` fails (CPV13). Each forged validator fixture gives
+  `validation/002`.
 
 ### Units
 
@@ -473,13 +535,100 @@ The units run one after another in the main tree, with the review order of phase
 reviews the diff, runs `deno task check`, commits, and runs `deno task mutate --only`
 on the changed logic lines, `deno task rules:unfired`, and `deno task coverage`.
 
-| Unit | Item | Model | Files | Acceptance check | Turns |
-| --- | --- | --- | --- | --- | --- |
-| CPU1 | CO6 `at` | Sonnet | P2 sites; `src/core/check_builtins/collections.ts` (follow `lenCall` in `data.ts:121-143` for the array parameter); `$at` helper sites; `src/core/validate/expr.ts` `UNITLESS_BUILTINS` | `fixtures/emit/core-data/at.eff`. `at([10, 20, 30], 1)` gives `Some(20)`; the indexes `3` and `-1` give `None`. A tuple argument, a `string` index, and a `Duration` index each give the exact checker diagnostic. A forged instance with a wrong type gives `validation/002`. `const c: Cents = ...` of the element type checks. | 60 |
-| CPU2 | CO6 spread | Sonnet | `src/core/parse.ts` list literal (`1436-1441`) with a new `SyntaxKind.SpreadElement`; every `ListExpr` consumer: `resolve.ts:1145-1153`, `check_expr.ts` `listExpr` (`1567-1639`) and `markCheckedSlots` (`824`), `check_refinements.ts:287`, `infer_inputs.ts:235`, `requirement_provenance.ts:185`, `check_builtins/schema.ts:595,1182`; `lower.ts:462-469`; the `concat` instance at the P2 sites, without a `PRELUDE` entry | `fixtures/emit/core-data/spread.eff`. `[0, ...[1, 2], 3]` gives `[0, 1, 2, 3]`, and `[...xs, ...ys]` gives the joined array. A spread of a non-array, a spread where the expected type is a tuple, and a spread element of another element type each give the exact diagnostic. A refinement over the length of a literal with a spread does not count the spread as one element. The emitted text has no `concat` name. | 80 |
-| CPU3 | CO7 `sort` | Sonnet | P2 sites; `collections.ts` (follow `mapCall` `222-243` for the key callback); `check_binary.ts:82-109` `comparisonClass` (export it, or reuse its validator twin `validate/typing.ts:815-853`); `validate/import_checks.ts` `checkCallbackShape` (`171-264`) and the callback rule `validate/expr.ts:1419-1453`; `$sort` helper sites | `fixtures/emit/core-data/sort.eff`. `sort([3, 1, 2])` gives `[1, 2, 3]`; `sort(["b", "a", "B"])` gives `["B", "a", "b"]`; a keyed sort of records with equal keys keeps their input order; `sort([2, 0 / 0, 1])` gives `[1, 2, NaN]`; the argument is unchanged after the call. A boolean element, an effectful key, and a tuple argument each give the exact diagnostic. A new `tests/sort_property_slow_test.ts`, in the pattern of `tests/division_property_slow_test.ts`, shows a permutation, an ordered key sequence, and stability. | 70 |
-| CPU4 | Witness and status | Sonnet | `fixtures/applications/stream-processor/processor.eff:15` and its generated files; `docs/status.md`; rows FF3/FC6 and FF4 of `docs/plans/2026-11-10-completeness-review.md`; `docs/language-rules.md:729-738` | The processor uses `len(batch) > 0`, and its runtime test passes unchanged. Status rows name the phase 2 commits. Row FF4 gives the CPD4 result and the facts above. | 40 |
-| CPU5 | Website | Sonnet | `../effektive/public/effektive-spec.html` (both tabs); `../effektive/public/effektive-examples/stream-processor/`; the draft number in the files that COU6 changed | One checked example for `at`, `sort`, and spread. The website `deno task test` and `deno task typecheck` pass. The compiler tests `website_examples_slow_test` and `ir_site_slow_test` pass. | 60 |
+#### CPU1: CO6 `at` (Sonnet, 60 turns)
+
+Files: the P2 sites; `atCall` in `src/core/check_builtins/data.ts` next to `lenCall`
+(`121-143`), because `isClosedUnit` and `instanceCall` are private to that file (CPV6);
+the `$at` helper sites; `UNITLESS_BUILTINS` in `src/core/validate/expr.ts`.
+
+Acceptance, in `fixtures/emit/core-data/at.eff`:
+- `at([10, 20, 30], 1)` is `Some(20)`. The indexes `3` and `-1` give `None`.
+- `at(xs, 0) ?? 0`, a `match` with `Some` and `None`, and `xs |> at(0)` check and give
+  exact values.
+- `at(cents, 0)` with `cents: Cents[]` fits `Option<Cents>`. `at(ints, 0)` with
+  `ints: Int[]` at `Option<Cents>` gives `type-mismatch/003`.
+- `type-mismatch/003` "the argument has type Pair, but an array is expected" for a tuple
+  argument. `type-mismatch/003` "... but int is expected" for a `string` index and for a
+  `Duration` index.
+- A forged `at` instance with a wrong type, and a forged call with a `Duration` index,
+  each give `validation/002`.
+
+#### CPU2: CO6 spread (Sonnet, 80 turns)
+
+Files: `src/core/parse.ts` list literal (`1436-1441`) with a new
+`SyntaxKind.SpreadElement`; every `ListExpr` consumer: `src/core/resolve.ts:1145-1155`
+(its default returns silently, so it needs a case), `src/core/check_expr.ts` `listExpr`
+(`1567-1639`) and `markCheckedSlots` (`824`), `src/core/check_refinements.ts:287`,
+`src/core/infer_inputs.ts:235`, `src/core/requirement_provenance.ts:257-262`,
+`src/core/check_builtins/schema.ts:595,1182`; `src/core/tables.ts:141`;
+`src/core/lower.ts:462-469`; the `concat` instance at the P2 sites, without a `PRELUDE`
+entry. The lexer already has `...`, so the TextMate grammar and the playground
+highlighter need no edit (CPV7).
+
+Acceptance, in `fixtures/emit/core-data/spread.eff`:
+- `[0, ...[1, 2], 3]` gives `[0, 1, 2, 3]`, and `[...xs, ...ys]` gives the joined
+  array. `all([...jobs, job])` checks and runs. The emitted text has no `concat` name.
+- `[...missing]` gives `unknown-name/001`.
+- A parameter without a type, used as `[...xs, 1]`, gives `type-mismatch/003` "the spread
+  has type unknown, but an array is expected", as `len(xs)` gives today.
+- `type-mismatch/003` "the spread has type Int, but an array is expected" for a spread
+  of a non-array.
+- `type-mismatch/012` "a spread gives an array, but the tuple [Int, Int] is expected" for
+  a spread where the expected type is a tuple.
+- `type-mismatch/012` "spread element 2 has element type Text, which has no common array
+  element type with Int" for a spread of another element type.
+- A spread in the list of `schemaUnion` gives `type-mismatch/003` "`schemaUnion` takes
+  a list literal of schemas without a spread", and no internal error.
+- `const v: NonEmpty = [1, ...ys]` gives `type-mismatch/013` "the function body does
+  not prove the required refinement NonEmpty", because a literal with a spread has no
+  proven length.
+- A forged `concat` instance whose parameter is not an array gives `validation/002`.
+
+#### CPU3: CO7 `sort` (Sonnet, 70 turns)
+
+Files: the P2 sites; `sortCall` in `src/core/check_builtins/collections.ts`, with the key
+callback of CPR5; `isOrderable` in `src/core/check_binary.ts`;
+`src/core/validate/import_checks.ts` `checkCallbackShape` (`171-264`) and the callback
+rule in `src/core/validate/expr.ts:1419-1453`; the `$sort` helper sites.
+
+Acceptance, in `fixtures/emit/core-data/sort.eff`:
+- `sort([3, 1, 2])` gives `[1, 2, 3]`. `sort(["b", "a", "B"])` gives `["B", "a", "b"]`.
+  A keyed sort of records with equal keys keeps their input order. `sort([2, 0 / 0, 1])`
+  gives `1` and `2` first, and `Number.isNaN` holds for the third value. The argument is
+  unchanged after the call.
+- `sort` of `Duration[]`, `sort` of `Cents[]` that fits `Cents[]`, `sort` of `Name[]`,
+  a keyed sort with a `string` key, `xs |> sort`, and `xs |> sort((x) => x.k)` check
+  and give exact values (CPV14).
+- `type-mismatch/003` "the argument has type Flag[], but an array of an orderable type
+  is expected" for a boolean element. `type-mismatch/003` "the key has type Flag, but an
+  orderable type is expected" for a boolean key. `type-mismatch/003` "the argument has
+  type Pair, but an array is expected" for a tuple argument. `execution-mode/001` for an
+  effectful key.
+- A forged `sort` instance with a `boolean` key type, and a forged call with an
+  effectful key closure, each give `validation/002`.
+- A new `tests/sort_property_slow_test.ts`, in the pattern of
+  `tests/division_property_slow_test.ts`, shows a permutation, an ordered key sequence,
+  and stability.
+
+#### CPU4: witness and status (Sonnet, 40 turns)
+
+Files: `fixtures/applications/stream-processor/processor.eff:15` and its generated
+files; `docs/status.md`; rows FF3/FC6 and FF4 of
+`docs/plans/2026-11-10-completeness-review.md`.
+
+Acceptance: the processor uses `len(batch) > 0`, and its runtime test passes unchanged.
+The status rows name the phase 2 commits. Row FF4 says "open, deferred by CPD4" and
+gives the facts above (CPV16).
+
+#### CPU5: website (Sonnet, 60 turns)
+
+Files: `../effektive/public/effektive-spec.html` (both tabs);
+`../effektive/public/effektive-examples/stream-processor/`; the draft number in the
+files that COU6 changed.
+
+Acceptance: one checked example for `at`, `sort`, and spread. The website
+`deno task test` and `deno task typecheck` pass. The compiler tests
+`website_examples_slow_test` and `ir_site_slow_test` pass.
 
 ### Out of scope for phase 2
 
