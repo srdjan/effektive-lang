@@ -1304,11 +1304,20 @@ Deno.test("a comparison of constants widens a literal, so TypeScript accepts it"
 
 import { Schema } from "effect";
 
+const $Int = Schema.Finite.check(
+  Schema.makeFilter(
+    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+  ),
+);
+
 export const Flag = Schema.Boolean;
 export type Flag = typeof Flag.Type;
 
 const Tag = Schema.Literals(["a", "b"]);
 type Tag = typeof Tag.Type;
+
+export const Int = $Int;
+export type Int = typeof Int.Type;
 
 export const numbers = (): Flag => (1 as number) === 2;
 
@@ -1337,6 +1346,15 @@ export const flagsEqual = (): Flag => {
   const on: Flag = true as Flag;
   const off: Flag = false as Flag;
   return on === off;
+};
+
+export const below = (): Flag => 1 < 2;
+
+export const leftLiteral = (n: Int): Flag => 1 === n;
+
+export const intIsFour = (): Flag => {
+  const n: Int = 3;
+  return n === 4;
 };
 //# sourceMappingURL=constant-comparison.ts.map
 `,

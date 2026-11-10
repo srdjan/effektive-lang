@@ -966,6 +966,9 @@ console.log(JSON.stringify({
   flagIsNot: M.flagIsNot(),
   tagIsB: M.tagIsB(),
   flagsEqual: M.flagsEqual(),
+  below: M.below(),
+  leftLiteral: M.leftLiteral(1),
+  intIsFour: M.intIsFour(),
 }));
 `,
     );
@@ -978,6 +981,9 @@ console.log(JSON.stringify({
       flagIsNot: false,
       tagIsB: false,
       flagsEqual: false,
+      below: true,
+      leftLiteral: true,
+      intIsFour: false,
     });
   });
 });

@@ -1,5 +1,6 @@
 type Flag = boolean
 type Tag = "a" | "b"
+type Int = int
 
 export const numbers = (): Flag => 1 === 2
 export const negated = (): Flag => !true
@@ -21,4 +22,10 @@ export const flagsEqual = (): Flag => {
   const on: Flag = true
   const off: Flag = false
   on === off
+}
+export const below = (): Flag => 1 < 2
+export const leftLiteral = (n: Int): Flag => 1 === n
+export const intIsFour = (): Flag => {
+  const n: Int = 3
+  n === 4
 }
