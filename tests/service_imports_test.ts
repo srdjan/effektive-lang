@@ -488,6 +488,7 @@ export const forward = (
   Allowed.tuple([input.job, input.other])
   Allowed.list([input.job, input.other])
   Allowed.list(jobs)
+  Allowed.list([...jobs, input.job])
 }
 `,
   });

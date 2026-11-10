@@ -25,6 +25,16 @@ Deno.test("a spread can stand at any position and a literal can hold several", (
   assertEquals(body("", "[0, ...[1, 2], 3]", "Ints"), []);
   assertEquals(body("xs: Ints", "[...xs, 1]", "Int[]"), []);
   assertEquals(body("xs: Ints", "[...xs]", "Ints"), []);
+  assertEquals(body("", "[1, ...[]]", "Ints"), []);
+});
+
+Deno.test("each child of a literal with an expected array type must fit it", () => {
+  assertEquals(body("t: Text", "[1, t]", "Ints"), [
+    "type-mismatch/003 array element 2 has type Text, but Int is expected",
+  ]);
+  assertEquals(body("ts: Texts", "[...ts]", "Ints"), [
+    "type-mismatch/003 spread element 1 has type Texts, but Int[] is expected",
+  ]);
 });
 
 Deno.test("a spread of a missing name is unknown-name/001", () => {
@@ -66,6 +76,15 @@ Deno.test("a spread in the list of schemaUnion is type-mismatch/003", () => {
     ),
     [
       "type-mismatch/003 `schemaUnion` takes a list literal of schemas without a spread",
+    ],
+  );
+  assertEquals(
+    diagnosticsOf(
+      `${TYPES}const a: Schema<Text> = schema()\nconst u = schemaUnion([...[a, 1 + "x"], a])\n`,
+    ),
+    [
+      "type-mismatch/003 `schemaUnion` takes a list literal of schemas without a spread",
+      "type-mismatch/007 the operator `+` does not accept operands of type int and string",
     ],
   );
 });
