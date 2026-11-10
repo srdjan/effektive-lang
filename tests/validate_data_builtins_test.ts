@@ -509,3 +509,45 @@ export const f = (xs: Ints, d: Duration, i: Int): Option<Int> => at(xs, i)
     ],
   );
 });
+
+Deno.test("an at instance with a number array parameter or an int result is rejected", () => {
+  assertEquals(
+    forgedBuiltin(AT_SOURCE, "at", (type) => {
+      type.parameters[0] = NUMBER;
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin at returns an option of the element",
+      "validation/002 imports[0].values[0].type: the builtin at takes an array and an int parameter",
+      "validation/002 declarations[2].body.arguments[0]: the argument has type type:m#Ints, which does not fit the parameter number",
+    ],
+  );
+  assertEquals(
+    forgedBuiltin(AT_SOURCE, "at", (type) => {
+      type.result = INT;
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin at returns an option of the element",
+      "validation/002 declarations[2].body.type: expected int, recorded Option<int>",
+      "validation/002 declarations[2].body: the body type int does not fit the declared result Option<type:m#Int>",
+    ],
+  );
+});
+
+Deno.test("an instance of at with a requirement is rejected", () => {
+  assertEquals(
+    forgedBuiltin(AT_SOURCE, "at", (type) => {
+      type.effects = { failures: [], requirements: ["cap:m#Clock.now"] };
+    }),
+    [
+      "validation/001 imports[0].values[0].type.effects.requirements[0]: the requirement cap:m#Clock.now is not a declared service method",
+      "validation/002 imports[0].values[0].type: a pure function type must have empty failure and requirement rows",
+      "validation/002 imports[0].values[0].type: the builtin at is pure, with no failure and no requirement",
+      "validation/004 declarations[2].type.execution: expected effect, recorded pure",
+      "validation/001 declarations[2].body.callee.type.effects.requirements[0]: the requirement cap:m#Clock.now is not a declared service method",
+      "validation/002 declarations[2].body.callee.type: a pure function type must have empty failure and requirement rows",
+      "validation/003 declarations[2].body.effects.requirements: expected [cap:m#Clock.now], recorded []",
+      "validation/003 declarations[2].body: the body requires [cap:m#Clock.now], which the declared requirements [] do not list",
+      "validation/004 declarations[2].body.execution: expected effect, recorded pure",
+    ],
+  );
+});
