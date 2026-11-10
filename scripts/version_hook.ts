@@ -50,10 +50,8 @@ async function complete(): Promise<Result<string | undefined, string>> {
         "version hook: CHANGELOG.md has edits that are not staged. Stage or stash the changelog edits first.",
     };
   }
-  const configured = Deno.env.get("EFFEKTIVE_HOOK_DATE");
-  const date = configured === undefined || configured === ""
-    ? new Date().toISOString().slice(0, 10)
-    : configured;
+  const date = Deno.env.get("EFFEKTIVE_HOOK_DATE") ??
+    new Date().toISOString().slice(0, 10);
   const texts = releaseTexts(
     staged.value,
     headConfig.value,

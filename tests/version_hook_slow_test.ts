@@ -71,8 +71,23 @@ Deno.test("git commit -am completes a bare version commit", () =>
     Deno.writeTextFileSync(`${dir}/deno.json`, BUMPED_CONFIG);
     const commit = await git(dir, ["commit", "-q", "-am", "v0.2.0"]);
     assertEquals(commit.code, 0, commit.stderr);
+    assertEquals(
+      commit.stderr,
+      "version hook: CHANGELOG.md has the new heading ## 0.2.0 - 2026-11-10\n",
+    );
     assertEquals(await committed(dir, "CHANGELOG.md"), RELEASED_CHANGELOG);
     assertEquals((await git(dir, ["status", "--porcelain"])).stdout, "");
+  }));
+
+Deno.test("a version commit whose changelog has the heading already keeps it", () =>
+  withTemporaryDirectory("version-hook-", async (dir) => {
+    await repository(dir, CHANGELOG);
+    Deno.writeTextFileSync(`${dir}/deno.json`, BUMPED_CONFIG);
+    Deno.writeTextFileSync(`${dir}/CHANGELOG.md`, RELEASED_CHANGELOG);
+    const commit = await git(dir, ["commit", "-q", "-am", "v0.2.0"]);
+    assertEquals(commit.code, 0, commit.stderr);
+    assertEquals(commit.stderr, "");
+    assertEquals(await committed(dir, "CHANGELOG.md"), RELEASED_CHANGELOG);
   }));
 
 Deno.test("a path-limited commit completes a bare version commit", () =>
