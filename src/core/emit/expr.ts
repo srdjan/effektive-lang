@@ -107,8 +107,7 @@ import {
 
 /** Whether `e` reads a function that exists already: a name, a field of a stable value, or a block with only that value. Evaluating it more than once does no work. */
 function isStableValue(e: Expr): boolean {
-  return e.kind === "reference" || e.kind === "literal" ||
-    e.kind === "closure" ||
+  return e.kind === "reference" || e.kind === "closure" ||
     (e.kind === "get" && isStableValue(e.record)) ||
     (e.kind === "block" && e.steps.length === 0 && isStableValue(e.result));
 }

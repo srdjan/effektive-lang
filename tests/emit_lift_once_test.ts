@@ -52,6 +52,18 @@ Deno.test("a named pure function in a function result is not bound", () => {
   );
 });
 
+Deno.test("a field read of a pure function in a function result is not bound", () => {
+  const output = emit(
+    HEAD +
+      `type R = { f: pure () => Int }
+export const main = (r: R): () => Int => r.f\n`,
+  );
+  assertStringIncludes(
+    output,
+    "export const main = (r: R): () => Effect.Effect<Int> => () =>\n  Effect.succeed(r.f());",
+  );
+});
+
 Deno.test("named pure functions in the branches of a pure if are wrapped, not bound", () => {
   const output = emit(
     HEAD +
