@@ -229,7 +229,7 @@ survivor or an unfired rule gets a test in a follow-up commit.
 
 | Unit | Item | Model | Files | Acceptance check | Turns |
 | --- | --- | --- | --- | --- | --- |
-| COU2a | IR version 9 | Sonnet | The version sites of COV12, `../effektive/public/typed-ir.ts` (`deno task site:ir`), `../effektive/public/log.ir.json`, `../effektive/public/effektive-spec.html:898` | See COU2a | 30 |
+| COU2a | IR version 9, done in `99fb296` and website `d81866e` | Sonnet | The version sites of COV12, `../effektive/public/typed-ir.ts` (`deno task site:ir`), `../effektive/public/log.ir.json`, `../effektive/public/effektive-spec.html:898` | See COU2a | 30 |
 | COU1a | CO1 unary expressions | Sonnet | `src/core/parse.ts`, `src/core/syntax.ts`, `src/core/resolve.ts:1138-1147`, `src/core/infer_inputs.ts:207-230`, `src/core/check_expr.ts`, `src/core/check_refinements.ts`, `src/core/predicate_source.ts`, `src/core/lower.ts`, `src/core/diagnostics.ts:64-66`, `fixtures/errors/syntax-unary-operator.eff`, `fixtures/surface/cli.json`, `tests/check_body_test.ts:293`, `tests/helpers.ts:297-327`, `tests/parse_test.ts` | See COU1a | 60 |
 | COU1b | CO1 negative literal pattern | Sonnet | `src/core/parse.ts:1754-1757` and `1787-1790`, `src/core/syntax_queries.ts` (`literalOf`, `numberTextOf`), `src/core/check_patterns.ts`, `src/core/check_refinements.ts` (`matchLiteral`) | See COU1b | 40 |
 | COU2b | CO2 `%` | Sonnet | `src/core/lex.ts`, `fixtures/lex/snapshot.json`, `src/core/syntax_queries.ts:102-135`, `src/core/parse.ts:89-91`, `src/core/check_binary.ts`, `src/core/ir.ts:230`, `src/core/lower.ts`, `src/core/validate/expr.ts:1941` and `2051-2077`, `src/core/emit/expr.ts:1133`, the helper sites of P2, the TextMate grammar, the website IR files | See COU2b | 70 |
@@ -333,7 +333,8 @@ compiler builds each changed Effektive example; the website `deno task test` and
 
 ### Decisions D1 to D4
 
-They wait for the user. COU2a does not depend on them.
+On 2026-11-10 the user accepted option (a) of D1, D2, D3, and D4. COU2a did not depend
+on them.
 
 D1 (unary `-` at the start of a block item, COV2). (a) A block item that is not the
 first item cannot start with unary `-`. It keeps `syntax/010` with the hint "put `-` at
