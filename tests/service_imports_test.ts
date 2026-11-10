@@ -551,6 +551,7 @@ export service Allowed {
     fresh: Effect<Int, never, Users.read>
   }): void
   publishPending(input: { pending: Effect<Int, never, Users.read> }): void
+  publishList(jobs: Effect<Int, never, Users.read>[]): void
 }
 export const pending: Effect<Int, never, Users.read> = defer(() => Users.read())
 export const replace = (
@@ -571,6 +572,10 @@ export const replace = (
   fresh: Effect<Int, never, Users.read>
 }): void => Allowed.publishRecord({ ...input, fresh: pending })`,
     `export const forward = (): void => Allowed.publishPending({ pending })`,
+    `export const forward = (): void => Allowed.publishList([pending])`,
+    `export const forward = (
+  jobs: Effect<Int, never, Users.read>[]
+): void => Allowed.publishList([...jobs, pending])`,
     `export const forward = (input: {
   inherited: Effect<Int, never, Users.read>,
   fresh: Effect<Int, never, Users.read>
