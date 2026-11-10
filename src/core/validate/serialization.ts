@@ -38,11 +38,11 @@ export function checkSerialization(
 ): void {
   const fallback: Span = moduleSpan(ir);
   const own = new Set<string>(ir.sources);
-  if (ir.format !== "light-functional-ir" || ir.version !== 8) {
+  if (ir.format !== "light-functional-ir" || ir.version !== 9) {
     report.add(
       AREA.serialization,
       "format",
-      `expected the format light-functional-ir version 8, recorded ${
+      `expected the format light-functional-ir version 9, recorded ${
         String(ir.format)
       } version ${String(ir.version)}`,
       fallback,

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The IR wire version is 9, and the validator rejects version 8. Version 9 will add the binary operator `%` and new builtin instance names.
 - `build` accepts an effectful expression as the job or an option of `retry` and `repeat`, and as the step of `retrySchedule`. The expression runs once, before the builtin starts.
   Before, `check` accepted such a program, for example `retry(make(), { times: 0 })` with an effectful `make`, but `build` stopped with "pure() received an effect-mode call node".
 - `build` accepts an effectful expression as the job of `timeout` and `uninterruptible`, and as the layer or the job of `provide`. The expression runs once, before the builtin starts.

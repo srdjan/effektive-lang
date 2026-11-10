@@ -1104,7 +1104,7 @@
           "sources": [
             "collections.eff"
           ],
-          "version": 8
+          "version": 9
         },
         "emitted": {
           "module": "collections",
@@ -1585,7 +1585,7 @@
           "sources": [
             "host/providers.effi"
           ],
-          "version": 8
+          "version": 9
         },
         "emitted": {
           "module": "host/providers",
@@ -1783,7 +1783,7 @@
           "sources": [
             "log.eff"
           ],
-          "version": 8
+          "version": 9
         },
         "emitted": {
           "module": "log",
@@ -2862,7 +2862,7 @@
           "sources": [
             "main.eff"
           ],
-          "version": 8
+          "version": 9
         },
         "emitted": {
           "module": "main",
@@ -4352,7 +4352,7 @@
           "sources": [
             "pay.eff"
           ],
-          "version": 8
+          "version": 9
         },
         "emitted": {
           "module": "pay",
@@ -6479,7 +6479,7 @@
           "sources": [
             "users.eff"
           ],
-          "version": 8
+          "version": 9
         },
         "emitted": {
           "module": "users",
@@ -7105,7 +7105,7 @@
           "sources": [
             "users-service.eff"
           ],
-          "version": 8
+          "version": 9
         },
         "emitted": {
           "module": "users-service",
@@ -8492,7 +8492,7 @@
           "sources": [
             "m.eff"
           ],
-          "version": 8
+          "version": 9
         },
         "emitted": {
           "module": "m",
@@ -8957,7 +8957,7 @@
           "sources": [
             "empty-effect.eff"
           ],
-          "version": 8
+          "version": 9
         },
         "emitted": {
           "module": "empty-effect",
@@ -9446,7 +9446,7 @@
           "sources": [
             "tagged.eff"
           ],
-          "version": 8
+          "version": 9
         },
         "emitted": {
           "module": "tagged",

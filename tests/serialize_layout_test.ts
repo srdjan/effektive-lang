@@ -4,7 +4,7 @@ import { type ModuleIR, serializeModule } from "../src/core/mod.ts";
 Deno.test("serializeModule indents nested containers and writes empty ones inline", () => {
   const module: ModuleIR = {
     format: "light-functional-ir",
-    version: 8,
+    version: 9,
     module: "m",
     sources: [],
     imports: [],
@@ -32,7 +32,7 @@ Deno.test("serializeModule indents nested containers and writes empty ones inlin
   "imports": [],
   "module": "m",
   "sources": [],
-  "version": 8
+  "version": 9
 }
 `,
   });

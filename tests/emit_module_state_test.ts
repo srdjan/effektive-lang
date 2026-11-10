@@ -5,7 +5,7 @@ import type { ModuleIR } from "../src/core/ir.ts";
 
 const ir: ModuleIR = {
   format: "light-functional-ir",
-  version: 8,
+  version: 9,
   module: "main",
   sources: ["main.eff"],
   imports: [],
