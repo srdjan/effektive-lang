@@ -56,7 +56,8 @@ const effectful = (operands: readonly Expr[]): Expr[] =>
 const pure = (operands: readonly Expr[]): Expr[] =>
   operands.filter((x) => x.execution !== "effect");
 
-const repeatOperands = (e: ExprOf<"repeat">): Expr[] =>
+/** The operands of `repeat` in source order: the job, then the options when present. */
+export const repeatOperands = (e: ExprOf<"repeat">): Expr[] =>
   e.options === null ? [e.job] : [e.job, e.options];
 
 const ROWS = {

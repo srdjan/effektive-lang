@@ -13,7 +13,7 @@ import {
 } from "../emitted.ts";
 import type { Expr } from "../../ir.ts";
 import { resolvedAs } from "../type_query.ts";
-import type { ExprOf, LeafOf } from "../shape.ts";
+import { type ExprOf, type LeafOf, repeatOperands } from "../shape.ts";
 import { typeDoc } from "../types.ts";
 import type { ExprCore } from "./context.ts";
 
@@ -196,10 +196,7 @@ export function effectLeaf(
       ]);
     }
     case "repeat": {
-      const [jobValue, options] = hoistedOperands(
-        e.options === null ? [e.job] : [e.job, e.options],
-        children,
-      );
+      const [jobValue, options] = hoistedOperands(repeatOperands(e), children);
       const job = c.suspended(e.job, jobValue);
       return e.options === null
         ? emitted([`${effect}.forever`, callArguments([job])])
