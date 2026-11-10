@@ -152,3 +152,29 @@ Deno.test("Some as an arm is a constructor pattern and not a binding", () => {
     ],
   );
 });
+
+Deno.test("a type name as a bare arm keeps the constructor message", () => {
+  assertEquals(matching("Shape", "    Circle => 0,\n    _ => 1"), [
+    "pattern/004 a constructor pattern needs a binding, as in `Some(x)` or `E(x)`",
+  ]);
+});
+
+Deno.test("a union of a primitive and a non-null literal is not nullable", () => {
+  assertEquals(
+    diagnosticsOf(
+      `${TYPES}type IntOrA = Int | "a"\nexport const f = (s: IntOrA): Int =>\n  match s {\n    _ => 1\n  }\n`,
+    ),
+    [
+      "pattern/004 a match cannot take a value of type IntOrA; version 0 matches options, errors, tagged records, records with a literal discriminator field, literals, primitives, and nullable unions",
+    ],
+  );
+});
+
+Deno.test("a binding arm is a refinement path for a constructor proof", () => {
+  assertEquals(
+    diagnosticsOf(
+      `${TYPES}type Pos = int where n => n > 0\nexport const f = (s: MaybeInt): Pos =>\n  match s {\n    null => Pos(1),\n    n => if (n > 0) { Pos(n) } else { Pos(1) }\n  }\n`,
+    ),
+    [],
+  );
+});

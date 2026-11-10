@@ -75,3 +75,29 @@ Deno.test("a bind arm on a subject with a null that another member hides is reje
     ],
   );
 });
+
+Deno.test("a bind arm after a literal arm other than null is rejected", () => {
+  assertEquals(
+    forgedModule(SOURCE, (ir) => {
+      const pattern = allExprs(ir, "match")[0].arms[0].pattern;
+      (pattern as unknown as { value: unknown }).value = 1;
+    }),
+    [
+      "validation/002 declarations[5].body.arms[1].pattern: a binding arm needs an earlier arm with the pattern null; the subject has type type:m#MaybeInt",
+    ],
+  );
+});
+
+Deno.test("a bind arm on a union with a non-null literal member is rejected", () => {
+  assertEquals(
+    forgedModule(
+      SOURCE.replace("type Both", 'type IntOrA = Int | "a"\ntype Both'),
+      forgeSubject("type:m#IntOrA"),
+    ),
+    [
+      "validation/002 declarations[6].type.parameters[0]: expected type:m#IntOrA, recorded type:m#MaybeInt",
+      "validation/002 declarations[6].body.arms[0].pattern: the literal null does not belong to the subject of type type:m#IntOrA",
+      "validation/002 declarations[6].body.arms[1].pattern: a binding arm needs a subject with a null member; the subject has type type:m#IntOrA",
+    ],
+  );
+});

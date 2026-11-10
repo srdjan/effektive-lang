@@ -1285,5 +1285,23 @@
     "operator": "logical",
     "class": "equivalent",
     "reason": "The operand is never undefined (see BodyChecker.unary). With && the guard also lets a ! node through, but the operand of ! is boolean, and linear gives undefined for a boolean literal, path, comparison, or connective, so the result is undefined either way."
+  },
+  {
+    "file": "src/core/check_patterns.ts",
+    "declaration": "reach",
+    "offset": 485,
+    "text": "return false;",
+    "operator": "boolean-return",
+    "class": "equivalent",
+    "reason": "After a binding arm, reach returns before it adds a key. Its result only guards two writes: the wildcard path reports an extra pattern/002 only when missingOf is empty, which never holds for a nullable domain because it always lists _, and bindingArm sets state.binding to \"bound\", which an earlier binding arm already set. So true and false give the same diagnostics."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.isConstructorName",
+    "offset": 133,
+    "text": "return true;",
+    "operator": "boolean-return",
+    "class": "equivalent",
+    "reason": "The guard runs when a Name node of a NamePattern has no text. The parser builds a NamePattern only from an identifier token, so the name always has text. With false, declareLocal also returns early for a name without text, so no binding or diagnostic differs."
   }
 ]
