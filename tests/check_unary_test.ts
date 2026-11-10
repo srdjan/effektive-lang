@@ -195,3 +195,10 @@ Deno.test("-e and !e in refinement proofs", () => {
     ],
   );
 });
+
+Deno.test("a unary chain deeper than the nesting limit is reported, not checked", () => {
+  const chain = "-".repeat(600);
+  assertEquals(body("x: Int", `${chain}x`, "Int"), [
+    "syntax/009 unexpected `-`; nesting is too deep",
+  ]);
+});

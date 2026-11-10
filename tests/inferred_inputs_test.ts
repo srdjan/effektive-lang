@@ -110,6 +110,16 @@ const subtracted = (input): Int => 0 - input
   );
 });
 
+Deno.test("infers no input from a negated operand, as from input === false", () => {
+  const project = checkText(`
+type Flag = boolean
+const negated = (input): Flag => !input
+const compared = (input): Flag => input === false
+`);
+  assertEquals(codes(project), ["type-mismatch/007", "type-mismatch/007"]);
+  assertEquals(parameterTypes(project, "m", "negated"), ["unknown"]);
+});
+
 Deno.test("infers from explicit result and local annotation contexts", () => {
   const project = checkText(`
 type Int = int

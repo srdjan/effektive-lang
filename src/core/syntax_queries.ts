@@ -227,16 +227,16 @@ export function operatorOf(
 
 export type UnaryOperator = "-" | "!";
 
-/** The operator and its token node of a unary expression. */
+/** The operator and its token node of a unary expression. The parser puts the operator first. */
 export function unaryOperatorOf(
   tree: SyntaxTree,
   node: NodeId,
 ): { readonly operator: UnaryOperator; readonly token: NodeId } | undefined {
-  for (const child of childrenOf(tree, node)) {
-    const kind = tokenKindOf(tree, child);
-    if (kind === TokenKind.Minus) return { operator: "-", token: child };
-    if (kind === TokenKind.Bang) return { operator: "!", token: child };
-  }
+  const token = childrenOf(tree, node)[0];
+  if (token === undefined) return undefined;
+  const kind = tokenKindOf(tree, token);
+  if (kind === TokenKind.Minus) return { operator: "-", token };
+  if (kind === TokenKind.Bang) return { operator: "!", token };
   return undefined;
 }
 

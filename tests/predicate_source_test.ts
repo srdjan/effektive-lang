@@ -152,6 +152,13 @@ Deno.test("a refinement does not support `!`", () => {
   ]]);
 });
 
+Deno.test("a unary minus is not a whole predicate", () => {
+  assertEquals(rejection(`${INT_WHERE} n => -n`), [[
+    "declaration/018",
+    "a refinement supports Boolean connectives and integer comparisons",
+  ]]);
+});
+
 Deno.test("an integer expression allows literals, `+`, and `-` only", () => {
   const operators = "a refinement integer expression supports only `+` and `-`";
   const literals = "a refinement needs integer literals";
