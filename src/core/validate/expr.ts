@@ -1770,10 +1770,17 @@ export class BodyValidator implements ValidatorCore {
         };
         const rest = all.filter((m) => !isNull(m));
         const hidden = rest.some((m) => members(env, m).some(isNull));
+        // A literal-only union, such as `boolean | null`, keeps its literal arms.
+        const literalOnly = members(env, subject).every((m) =>
+          m.kind === "literal" ||
+          (m.kind === "primitive" && m.name === "boolean")
+        );
         const fault = rest.length === all.length
           ? "needs a subject with a null member"
           : hidden
           ? "needs a subject in which no other member hides a null"
+          : literalOnly
+          ? "needs a subject with a member that is not a literal"
           : !nullSeen
           ? "needs an earlier arm with the pattern null"
           : undefined;

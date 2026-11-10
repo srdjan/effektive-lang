@@ -101,3 +101,16 @@ Deno.test("a bind arm on a union with a non-null literal member is rejected", ()
     ],
   );
 });
+
+Deno.test("a bind arm on a literal-only union with null is rejected", () => {
+  assertEquals(
+    forgedModule(
+      SOURCE.replace("type Both", "type MaybeBool = boolean | null\ntype Both"),
+      forgeSubject("type:m#MaybeBool"),
+    ),
+    [
+      "validation/002 declarations[6].type.parameters[0]: expected type:m#MaybeBool, recorded type:m#MaybeInt",
+      "validation/002 declarations[6].body.arms[1].pattern: a binding arm needs a subject with a member that is not a literal; the subject has type type:m#MaybeBool",
+    ],
+  );
+});
