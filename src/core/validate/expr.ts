@@ -16,6 +16,15 @@ import {
   isConcurrencyOption,
 } from "./builtins.ts";
 
+/** The builtins that do not take a closed unit argument, although a closed unit widens to `int`. */
+const UNITLESS_BUILTINS: ReadonlySet<BuiltinCallName | undefined> = new Set([
+  "div",
+  "trunc",
+  "floor",
+  "round",
+  "ceil",
+]);
+
 import type {
   ConstantDecl,
   Effects,
@@ -1441,11 +1450,7 @@ export class BodyValidator implements ValidatorCore {
         }
       }
     }
-    if (
-      builtin === "div" || builtin === "trunc" || builtin === "floor" ||
-      builtin === "round" || builtin === "ceil"
-    ) {
-      // A closed unit widens to `int`, but these builtins do not take one.
+    if (UNITLESS_BUILTINS.has(builtin)) {
       outs.forEach((out, i) => {
         if (
           isDurationType(this.env, out.type) ||
