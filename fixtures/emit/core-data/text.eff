@@ -1,0 +1,19 @@
+type Int = int
+type Num = number
+type Text = string
+type Flag = boolean
+type Ints = int[]
+type Cents = int
+type Name = string
+
+export const fromInt = (n: Int): Text => text(n)
+export const fromNumber = (x: Num): Text => text(x)
+export const fromFlag = (f: Flag): Text => text(f)
+export const fromCents = (c: Cents): Text => text(c)
+export const label = (n: Int): Text => "n=" + text(n)
+export const size = (s: Text): Int => len(s)
+export const count = (xs: Ints): Int => len(xs)
+export const nameSize = (n: Name): Int => len(n)
+export const textPiped = (n: Int): Text => n |> text
+export const lenPiped = (xs: Ints): Int => xs |> len
+export const joined = (a: Text, b: Text): Int => len(a + b)

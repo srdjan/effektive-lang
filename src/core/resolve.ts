@@ -129,6 +129,8 @@ const PRELUDE = {
   floor: { shadowable: true },
   round: { shadowable: true },
   ceil: { shadowable: true },
+  text: { shadowable: true },
+  len: { shadowable: true },
 } as const satisfies Record<string, PreludeEntry>;
 
 export type PreludeName = keyof typeof PRELUDE;

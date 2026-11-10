@@ -340,6 +340,56 @@ console.log(JSON.stringify({
   });
 });
 
+Deno.test("text gives the JavaScript form of a number or a boolean, and len counts UTF-16 code units", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/core-data/", FIXTURES), dir);
+    build(dir, ["text.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import * as M from "./text.ts";
+
+console.log(JSON.stringify({
+  int: M.fromInt(42),
+  negative: M.fromNumber(-1.5),
+  flag: [M.fromFlag(true), M.fromFlag(false)],
+  large: M.fromNumber(1e21),
+  sum: M.fromNumber(0.1 + 0.2),
+  cents: M.fromCents(1999),
+  label: M.label(7),
+  piped: M.textPiped(5),
+  accented: M.size("h\\u00e9llo"),
+  decomposed: M.size("he\\u0301llo"),
+  emoji: M.size("\\u{1F600}"),
+  empty: M.size(""),
+  array: M.count([1, 2, 3]),
+  name: M.nameSize("abc"),
+  lenPiped: M.lenPiped([4, 5]),
+  joined: M.joined("ab", "cde"),
+}));
+`,
+    );
+    assertEquals(result, {
+      int: "42",
+      negative: "-1.5",
+      flag: ["true", "false"],
+      large: "1e+21",
+      sum: "0.30000000000000004",
+      cents: "1999",
+      label: "n=7",
+      piped: "5",
+      accented: 5,
+      decomposed: 6,
+      emoji: 2,
+      empty: 0,
+      array: 3,
+      name: 3,
+      lenPiped: 2,
+      joined: 5,
+    });
+  });
+});
+
 Deno.test("a data value with a missing optional prototype-named field nests in another data value", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");

@@ -23,6 +23,7 @@ const UNITLESS_BUILTINS: ReadonlySet<BuiltinCallName | undefined> = new Set([
   "floor",
   "round",
   "ceil",
+  "text",
 ]);
 
 import type {

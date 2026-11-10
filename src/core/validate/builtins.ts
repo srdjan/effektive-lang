@@ -14,6 +14,8 @@ const BUILTIN_NAMES = [
   "floor",
   "round",
   "ceil",
+  "text",
+  "len",
 ] as const;
 export type BuiltinName = typeof BUILTIN_NAMES[number];
 export type BuiltinCallName = BuiltinName | "other";

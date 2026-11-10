@@ -1,6 +1,8 @@
-// The validator accepts exactly the instance types of `div` and the rounding
-// builtins: `div` is `(int, int) => int`, a rounding builtin is
-// `(number) => int`, and each is pure with empty effect sets. Each row forges
+// The validator accepts exactly the instance types of `div`, the rounding
+// builtins, `text`, and `len`: `div` is `(int, int) => int`, a rounding builtin
+// is `(number) => int`, `text` is `(number) => string` or `(boolean) => string`,
+// `len` is `(string) => int` or `(E[]) => int`, and each is pure with empty
+// effect sets. Each row forges
 // the type of one prelude import value in a lowered program, and requires the
 // exact diagnostics of `validateModule`.
 
@@ -210,6 +212,234 @@ export const f = (d: Duration, a: Int, b: Int): Int => div(a, b)
     }),
     [
       "validation/002 declarations[1].body.arguments[0]: div does not take a closed unit argument of type Duration",
+    ],
+  );
+});
+
+const STRING: Type = { kind: "primitive", name: "string" };
+const BOOLEAN: Type = { kind: "primitive", name: "boolean" };
+const INTS: Type = { kind: "array", element: INT };
+
+const TEXT_SOURCE = `type Int = int
+type Text = string
+export const f = (n: Int): Text => text(n)
+`;
+const LEN_SOURCE = `type Int = int
+type Text = string
+export const f = (s: Text): Int => len(s)
+`;
+const LEN_ARRAY_SOURCE = `type Int = int
+type Ints = int[]
+export const f = (xs: Ints): Int => len(xs)
+`;
+
+function forgedBuiltin(
+  source: string,
+  name: string,
+  change: (type: Mutable<Extract<Type, { kind: "function" }>>) => void,
+): string[] {
+  return forgedModule(source, (ir) => change(instance(ir, name)));
+}
+
+Deno.test("the lowered text and len programs are valid, and their instances have the exact types", () => {
+  const types = (source: string, name: string): unknown[] => {
+    const type = instance(loweredModule(source), name);
+    return [type.parameters, type.result, type.execution];
+  };
+  assertEquals(types(TEXT_SOURCE, "text"), [[NUMBER], STRING, "pure"]);
+  assertEquals(
+    types(
+      `type Flag = boolean
+type Text = string
+export const f = (b: Flag): Text => text(b)
+`,
+      "text",
+    ),
+    [[BOOLEAN], STRING, "pure"],
+  );
+  assertEquals(types(LEN_SOURCE, "len"), [[STRING], INT, "pure"]);
+  assertEquals(types(LEN_ARRAY_SOURCE, "len"), [[INTS], INT, "pure"]);
+});
+
+Deno.test("text with a wrong parameter count is rejected", () => {
+  assertEquals(
+    forgedBuiltin(TEXT_SOURCE, "text", (type) => {
+      type.parameters = [NUMBER, NUMBER];
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin text takes 1 number or boolean parameter",
+      "validation/002 declarations[2].body.arguments: the function takes 2 arguments, the call has 1",
+    ],
+  );
+});
+
+Deno.test("text with an int parameter is rejected", () => {
+  assertEquals(
+    forgedBuiltin(TEXT_SOURCE, "text", (type) => {
+      type.parameters = [INT];
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin text takes 1 number or boolean parameter",
+    ],
+  );
+});
+
+Deno.test("text with a string parameter is rejected", () => {
+  assertEquals(
+    forgedBuiltin(TEXT_SOURCE, "text", (type) => {
+      type.parameters = [STRING];
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin text takes 1 number or boolean parameter",
+      "validation/002 declarations[2].body.arguments[0]: the argument has type type:m#Int, which does not fit the parameter string",
+    ],
+  );
+});
+
+Deno.test("text with an int result is rejected", () => {
+  assertEquals(
+    forgedBuiltin(TEXT_SOURCE, "text", (type) => {
+      type.result = INT;
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin text returns a string",
+      "validation/002 declarations[2].body.type: expected int, recorded string",
+      "validation/002 declarations[2].body: the body type int does not fit the declared result type:m#Text",
+    ],
+  );
+});
+
+Deno.test("an effectful instance of text is rejected", () => {
+  assertEquals(
+    forgedBuiltin(TEXT_SOURCE, "text", (type) => {
+      type.execution = "effect";
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin text is pure, with no failure and no requirement",
+      "validation/004 declarations[2].type.execution: expected effect, recorded pure",
+      "validation/004 declarations[2].body.execution: expected effect, recorded pure",
+    ],
+  );
+});
+
+Deno.test("an instance of text with a failure is rejected", () => {
+  assertEquals(
+    forgedBuiltin(TEXT_SOURCE, "text", (type) => {
+      type.effects = { failures: ["error:m#Boom"], requirements: [] };
+    }),
+    [
+      "validation/001 imports[0].values[0].type.effects.failures[0]: the failure error:m#Boom is not a declared error",
+      "validation/002 imports[0].values[0].type: a pure function type must have empty failure and requirement rows",
+      "validation/002 imports[0].values[0].type: the builtin text is pure, with no failure and no requirement",
+      "validation/003 declarations[2].type.effects.failures: an inferred contract equals the body: expected [error:m#Boom], recorded []",
+      "validation/004 declarations[2].type.execution: expected effect, recorded pure",
+      "validation/001 declarations[2].body.callee.type.effects.failures[0]: the failure error:m#Boom is not a declared error",
+      "validation/002 declarations[2].body.callee.type: a pure function type must have empty failure and requirement rows",
+      "validation/003 declarations[2].body.effects.failures: expected [error:m#Boom], recorded []",
+      "validation/004 declarations[2].body.execution: expected effect, recorded pure",
+    ],
+  );
+});
+
+Deno.test("len with a wrong parameter count is rejected", () => {
+  assertEquals(
+    forgedBuiltin(LEN_SOURCE, "len", (type) => {
+      type.parameters = [STRING, STRING];
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin len takes 1 string or array parameter",
+      "validation/002 declarations[2].body.arguments: the function takes 2 arguments, the call has 1",
+    ],
+  );
+});
+
+Deno.test("len with a number parameter is rejected", () => {
+  assertEquals(
+    forgedBuiltin(LEN_SOURCE, "len", (type) => {
+      type.parameters = [NUMBER];
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin len takes 1 string or array parameter",
+      "validation/002 declarations[2].body.arguments[0]: the argument has type type:m#Text, which does not fit the parameter number",
+    ],
+  );
+});
+
+Deno.test("len with a tuple parameter is rejected", () => {
+  assertEquals(
+    forgedBuiltin(LEN_SOURCE, "len", (type) => {
+      type.parameters = [{ kind: "tuple", elements: [INT, INT] }];
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin len takes 1 string or array parameter",
+      "validation/002 declarations[2].body.arguments[0]: the argument has type type:m#Text, which does not fit the parameter [int, int]",
+    ],
+  );
+});
+
+Deno.test("len with a number result is rejected", () => {
+  assertEquals(
+    forgedBuiltin(LEN_ARRAY_SOURCE, "len", (type) => {
+      type.result = NUMBER;
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin len returns an int",
+      "validation/002 declarations[2].body.type: expected number, recorded int",
+      "validation/002 declarations[2].body: the body type number does not fit the declared result type:m#Int",
+    ],
+  );
+});
+
+Deno.test("an effectful instance of len is rejected", () => {
+  assertEquals(
+    forgedBuiltin(LEN_SOURCE, "len", (type) => {
+      type.execution = "effect";
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin len is pure, with no failure and no requirement",
+      "validation/004 declarations[2].type.execution: expected effect, recorded pure",
+      "validation/004 declarations[2].body.execution: expected effect, recorded pure",
+    ],
+  );
+});
+
+Deno.test("an instance of len with a requirement is rejected", () => {
+  assertEquals(
+    forgedBuiltin(LEN_SOURCE, "len", (type) => {
+      type.effects = { failures: [], requirements: ["cap:m#Clock.now"] };
+    }),
+    [
+      "validation/001 imports[0].values[0].type.effects.requirements[0]: the requirement cap:m#Clock.now is not a declared service method",
+      "validation/002 imports[0].values[0].type: a pure function type must have empty failure and requirement rows",
+      "validation/002 imports[0].values[0].type: the builtin len is pure, with no failure and no requirement",
+      "validation/004 declarations[2].type.execution: expected effect, recorded pure",
+      "validation/001 declarations[2].body.callee.type.effects.requirements[0]: the requirement cap:m#Clock.now is not a declared service method",
+      "validation/002 declarations[2].body.callee.type: a pure function type must have empty failure and requirement rows",
+      "validation/003 declarations[2].body.effects.requirements: expected [cap:m#Clock.now], recorded []",
+      "validation/003 declarations[2].body: the body requires [cap:m#Clock.now], which the declared requirements [] do not list",
+      "validation/004 declarations[2].body.execution: expected effect, recorded pure",
+    ],
+  );
+});
+
+Deno.test("a Duration argument of text is rejected, as the checker rejects it", () => {
+  const source = `type Int = int
+type Text = string
+export const f = (d: Duration, n: Int): Text => text(n)
+`;
+  assertEquals(
+    forgedModule(source, (ir) => {
+      const f = (ir as Mutable<ModuleIR>).declarations.find((d) =>
+        d.kind === "function"
+      );
+      assert(f?.kind === "function" && f.body.kind === "call");
+      const argument = f.body.arguments[0];
+      assert(argument.kind === "reference");
+      argument.target = "local:m#f/d";
+      argument.type = { kind: "named", id: "type:effect/Duration" };
+    }),
+    [
+      "validation/002 declarations[2].body.arguments[0]: text does not take a closed unit argument of type Duration",
     ],
   );
 });

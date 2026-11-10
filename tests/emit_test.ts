@@ -1434,3 +1434,73 @@ export const nested = (x: Num): Int =>
 `,
   );
 });
+
+Deno.test("text emits String and len emits the length member", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), [
+    "text.eff",
+  ]).get("text");
+  assert(emitted !== undefined, "module text was not emitted");
+  assertEquals(
+    emitted.text,
+    `// Generated from text.eff by the Effektive compiler. Do not edit.
+
+import { Schema } from "effect";
+
+const $Int = Schema.Finite.check(
+  Schema.makeFilter(
+    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+  ),
+);
+
+export const Int = $Int;
+export type Int = typeof Int.Type;
+
+export const Num = Schema.Number;
+export type Num = typeof Num.Type;
+
+export const Text = Schema.String;
+export type Text = typeof Text.Type;
+
+export const Flag = Schema.Boolean;
+export type Flag = typeof Flag.Type;
+
+export const Ints = Schema.Array($Int);
+export type Ints = typeof Ints.Type;
+
+export const Cents = $Int;
+export type Cents = typeof Cents.Type;
+
+export const Name = Schema.String;
+export type Name = typeof Name.Type;
+
+export const fromInt = (n: Int): Text => String(n);
+
+export const fromNumber = (x: Num): Text => String(x);
+
+export const fromFlag = (f: Flag): Text => String(f);
+
+export const fromCents = (c: Cents): Text => String(c);
+
+export const label = (n: Int): Text => "n=" + String(n);
+
+export const size = (s: Text): Int => s.length;
+
+export const count = (xs: Ints): Int => xs.length;
+
+export const nameSize = (n: Name): Int => n.length;
+
+export const textPiped = (n: Int): Text => {
+  const $p1: Int = n;
+  return String($p1);
+};
+
+export const lenPiped = (xs: Ints): Int => {
+  const $p1: Ints = xs;
+  return $p1.length;
+};
+
+export const joined = (a: Text, b: Text): Int => (a + b).length;
+//# sourceMappingURL=text.ts.map
+`,
+  );
+});

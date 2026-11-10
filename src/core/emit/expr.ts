@@ -1335,6 +1335,14 @@ export class ExprEmitter implements ExprCore {
           " + 0",
         ], PREC.additive));
       }
+      case "text": {
+        if (args.length !== 1) throw internal("text needs one argument");
+        return emitted(["String", callArguments([kid(args[0])])]);
+      }
+      case "len": {
+        if (args.length !== 1) throw internal("len needs one argument");
+        return emitted([at(kid(args[0]), PREC.member), ".length"]);
+      }
       case "all":
       case "traverse":
         throw internal(`the builtin ${name} has no emission form`);
@@ -1747,6 +1755,8 @@ export class ExprEmitter implements ExprCore {
               floor: [1],
               round: [1],
               ceil: [1],
+              text: [1],
+              len: [1],
             };
             if (!counts[builtin].includes(children.length)) {
               throw internal(`${builtin} has an invalid argument count`);
@@ -1809,6 +1819,8 @@ export class ExprEmitter implements ExprCore {
               case "floor":
               case "round":
               case "ceil":
+              case "text":
+              case "len":
                 // A pure builtin is not a leaf: `builtinCall` prints it.
                 throw internal(`the builtin ${builtin} is not an effect leaf`);
             }

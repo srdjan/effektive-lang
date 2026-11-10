@@ -49,6 +49,10 @@ function checkBuiltinShape(
     case "round":
     case "ceil":
       return checkDataShape(env, type, 1, "number", wrong);
+    case "text":
+      return checkTextShape(env, type, wrong);
+    case "len":
+      return checkLenShape(env, type, wrong);
     default:
       return checkCallbackShape(ctx, name, type, path, span, wrong);
   }
@@ -71,6 +75,46 @@ function checkDataShape(
     type.parameters.some((p) => !same(env, p, primitive(parameter)))
   ) wrong(`takes ${count} ${parameter} parameter${count === 1 ? "" : "s"}`);
   if (!same(env, type.result, primitive("int"))) wrong("returns an int");
+  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
+    wrong("is pure, with no failure and no requirement");
+  }
+}
+
+/** `text` is `(number) => string` or `(boolean) => string`, pure with no failure or requirement. */
+function checkTextShape(
+  env: World["env"],
+  type: FunctionType,
+  wrong: (what: string) => void,
+): void {
+  const primitive = (name: "number" | "boolean" | "string"): Type => ({
+    kind: "primitive",
+    name,
+  });
+  if (
+    type.parameters.length !== 1 ||
+    !(same(env, type.parameters[0], primitive("number")) ||
+      same(env, type.parameters[0], primitive("boolean")))
+  ) wrong("takes 1 number or boolean parameter");
+  if (!same(env, type.result, primitive("string"))) wrong("returns a string");
+  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
+    wrong("is pure, with no failure and no requirement");
+  }
+}
+
+/** `len` is `(string) => int` or `(E[]) => int`, pure with no failure or requirement. */
+function checkLenShape(
+  env: World["env"],
+  type: FunctionType,
+  wrong: (what: string) => void,
+): void {
+  if (
+    type.parameters.length !== 1 ||
+    !(type.parameters[0].kind === "array" ||
+      same(env, type.parameters[0], { kind: "primitive", name: "string" }))
+  ) wrong("takes 1 string or array parameter");
+  if (!same(env, type.result, { kind: "primitive", name: "int" })) {
+    wrong("returns an int");
+  }
   if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
     wrong("is pure, with no failure and no requirement");
   }
