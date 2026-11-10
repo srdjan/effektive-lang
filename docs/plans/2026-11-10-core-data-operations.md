@@ -5,7 +5,7 @@ Status: on 2026-11-10 the user accepted COD1 (a), COD2 (a), COD3 (a), and COD4 (
 nine items are selected. Phase 1 (CO1 to CO5) is done: "Phase 1 result" below gives the
 commits and the checks. "Phase 2 execution plan" below is validated, and its decisions are
 accepted, and phase 2 is done. "Phase 3 execution plan" below has accepted decisions
-CQD1 to CQD4 and is validated. Its implementation waits for CQD5 and a user go-ahead. So this plan
+CQD1 to CQD5 and is validated. The user approved execution on 2026-11-10. So this plan
 stays in `docs/plans/`.
 
 Prefixes: CO (items), COD (decisions), COU (phase 1 units), COV (phase 1 validation
@@ -678,8 +678,8 @@ example.
 Base: `aada289` (release 0.15.7). Author: Opus. Validation: Fable on 2026-11-10 at
 `307980b`, findings CQV1 to CQV17 (3 blockers, 9 changes, 5 notes). This revision
 applies each blocker and change, and the plan text of the notes. Status: on 2026-11-10
-the user accepted option (a) of CQD1, CQD2, CQD3, and CQD4. CQD5 waits for the user.
-Execution waits for a user go-ahead. Units CQU1 to CQU3 carry out CO9. The line
+the user accepted option (a) of CQD1, CQD2, CQD3, CQD4, and CQD5, and approved
+execution. Units CQU1 to CQU3 carry out CO9. The line
 numbers below are at `aada289`.
 
 ### Facts that changed the item
