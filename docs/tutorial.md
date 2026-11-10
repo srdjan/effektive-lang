@@ -102,7 +102,7 @@ The `|>` operator gives the value on its left to the stage on its right. `filter
 
 The callback `book => book.copies > 0` has one parameter without parentheses. This form is correct for one parameter without a type annotation. The compiler gets the type of `book` from `filter`. A parameter with an annotation, or two or more parameters, needs parentheses, as in `(sum, amount) => sum + amount`.
 
-An exported function writes its parameter types and its result type. Other modules use these types, so the compiler does not infer them.
+An exported function must write its result type. It can omit a parameter type. The compiler then infers the input requirements from the body and checks the input when the function runs. That check adds `SchemaError` to the inferred failures. This tutorial writes each parameter type. [Inferred input contracts](inferred-input-contracts.md) gives the rule.
 
 ## Step 4: call a service
 

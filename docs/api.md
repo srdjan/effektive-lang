@@ -947,8 +947,10 @@ text return `null`. Document symbols parse the file on its own, and
 - The server has no cancellation inside the core. `Program.update` runs as one
   synchronous call, and the server handles one message at a time. Section 3 of
   the [language server plan](archive/plans/2026-10-16-lsp.md) explains the reason. Measurement M1 measures the stall.
-- Nested projects are not supported. The disk walk of an outer project also
-  reads the files of an inner project, so one file can belong to two programs. A
+- Nested projects have partial support. Each open document belongs to its
+  nearest project, and only the owning project publishes the diagnostics of a
+  closed file. The disk walk of an outer project also reads the files of an
+  inner project, so one file can belong to two programs. A
   save round of the outer project does not write or remove the outputs of the
   inner project. The `build` and `watch` commands follow the same rule.
 - An `.effi` file that no `.eff` module imports is not in the module graph. For
