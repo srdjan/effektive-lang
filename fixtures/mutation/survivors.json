@@ -1267,5 +1267,23 @@
     "operator": "logical",
     "class": "equivalent",
     "reason": "The internal-error guard is unreachable. missingOf (check_patterns.ts) reports pattern/001 for an option match without Some(_) or None, and a probe with only a Some arm reports that the match needs None. lowerModule returns a diagnostics error for a blocked module, so emitProject never emits such a match."
+  },
+  {
+    "file": "src/core/check_expr.ts",
+    "declaration": "BodyChecker.unary",
+    "offset": 143,
+    "text": "parts === undefined || operandNode === undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The parser starts each UnaryExpr with its operator token, and a missing operand becomes a Missing node, so neither side of the guard is ever true and || equals &&. The test 'a unary chain deeper than the nesting limit is reported, not checked' in tests/check_unary_test.ts runs 600 nested minus signs and still reaches no undefined operand."
+  },
+  {
+    "file": "src/core/check_refinements.ts",
+    "declaration": "RefinementChecker.linear",
+    "offset": 776,
+    "text": "operand === undefined ||\n        unaryOperatorOf(this.tree, inner)?.operator !== \"-\"",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The operand is never undefined (see BodyChecker.unary). With && the guard also lets a ! node through, but the operand of ! is boolean, and linear gives undefined for a boolean literal, path, comparison, or connective, so the result is undefined either way."
   }
 ]
