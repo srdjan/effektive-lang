@@ -4,12 +4,14 @@ Date: 2026-11-10. Base: `3808b91` on local `main`. Author: Opus.
 Status: on 2026-11-10 the user accepted COD1 (a), COD2 (a), COD3 (a), and COD4 (a). All
 nine items are selected. Phase 1 (CO1 to CO5) is done: "Phase 1 result" below gives the
 commits and the checks. "Phase 2 execution plan" below is validated, and its decisions are
-accepted. Its execution waits for a user go-ahead. Phase 3 needs a detail plan and a user approval before
-implementation. So this plan stays in `docs/plans/`.
+accepted, and phase 2 is done. "Phase 3 execution plan" below is a draft. Its decisions
+CQD1 to CQD3 wait for the user, and implementation needs a user approval. So this plan
+stays in `docs/plans/`.
 
 Prefixes: CO (items), COD (decisions), COU (phase 1 units), COV (phase 1 validation
 findings), CPD (phase 2 decisions), CPR (phase 2 shared rules), CPU (phase 2 units),
-CPV (phase 2 validation findings).
+CPV (phase 2 validation findings), CQD (phase 3 decisions), CQR (phase 3 shared rules),
+CQU (phase 3 units), CQV (phase 3 validation findings).
 
 ## Origin and target change
 
@@ -670,3 +672,180 @@ a list literal constructs a foreign sealed array type.
 A descending sort option, a sort with a comparison function, index syntax `xs[i]`, a
 spread in a tuple, string order for `<`, and `at` on a string. Each waits for an
 example.
+
+## Phase 3 execution plan
+
+Base: `aada289` (release 0.15.7). Author: Opus. Validation: not done. Status: draft. The
+decisions CQD1 to CQD3 wait for the user. Units CQU1 to CQU3 carry out CO9. The line
+numbers below are at `aada289`.
+
+### Facts that changed the item
+
+Opus checked these facts with a scratch project on 2026-11-10.
+
+- `match x { null => 0, _ => 1 }` on `type MaybeInt = Int | null` gives `pattern/004` "a
+  match cannot take a value of type MaybeInt; version 0 matches options, errors, ...".
+  `domainOf` (`src/core/patterns.ts:90-151`) returns `unsupported`, because the members
+  are not all literals and not one primitive.
+- `match x { null => 0, _ => 1 }` on `type MaybeShape = Shape | null`, with `Shape` a
+  union of two tagged records, gives the `mixed` diagnostic `pattern/004`.
+- A literal-only union with `null`, such as `type Mode = "a" | "b" | null`, already
+  matches with literal arms and `null`. Such a union has identity (`docs/language-rules.md:51`).
+  A union with a non-literal member, such as `Int | null`, is a transparent alias
+  (`docs/language-rules.md:52`), so `flattenIdentityMembers` sees its `null` member.
+- A bare name arm `n => 1` gives `unknown-name/001` "unknown error `n`". The resolver
+  sends a `NamePattern` to `ctorRef` (`src/core/resolve.ts:789-803,1371-1375`), which
+  knows only `None`, `Some`, types, and errors.
+- `x ?? 0` on `Int | null` gives `type-mismatch/010` "the left operand of `??` must be
+  an Option" (`src/core/check_expr.ts:2773-2804`). `??` on an Option lowers to an IR
+  `match` with a `some` and a `none` arm (`src/core/lower.ts:1228-1258`).
+- The emitter prints a match that is not an option match as a selector chain
+  (`src/core/emit/expr.ts:1533-1602`), and a binding arm as `((n) => body)(selector)`.
+  A scratch file shows that `deno run --check` accepts
+  `(($s) => $s === null ? 0 : ((n) => n + 1)($s))(x)` for `x: number | null`:
+  TypeScript narrows the selector after the `null` test and types `n` from it.
+- Release 0.15.7 shipped IR version 9 (`src/core/ir.ts:323`,
+  `src/core/validate/serialization.ts:41`). A new pattern kind changes the wire form, so
+  phase 3 raises the version to 10 by the rule of `docs/status.md`.
+- No gate application and no website example consumes a nullable union.
+  `../effektive/public/effektive-examples/core1.eff` declares one.
+
+### Decisions CQD1 to CQD3
+
+- CQD1, the form that reads the value. (a) A binding arm in `match`: `null => d` and
+  then `n => f(n)`, where `n` gets the subject type without `null`. This is the CO9
+  candidate. It extends `match`, and it adds no builtin name. A misspelled constructor
+  such as `Nnoe` becomes a binding, so the checker rejects a binding arm in every other
+  place with a message that names this cause. **Recommended.** (b) A builtin `option(x)`
+  from `T | null` to `Option<T>`, emitted as `Option.fromNullable(x)`. The existing
+  `Some` and `None` arms and `??` then apply. It needs no pattern, resolver, or validator
+  rule, but each use adds a call, and AGENTS.md prefers an extended form to a new name.
+- CQD2, `??` on a nullable union. (a) `x ?? d` accepts a nullable union. It lowers to the
+  same match as `match x { null => d, v => v }`, so it adds no IR kind of its own. The
+  result type joins the type without `null` and the fallback. **Recommended**, because a
+  default value is the most frequent use, and TypeScript users expect this form. (b) Only
+  `match` reads a nullable union.
+- CQD3, the subjects that take a binding arm. (a) Every subject whose members include
+  `null` and at least one member that is not a literal: `Int | null`, `Cents | null`,
+  `Item | null` for a record, `Shape | null` for tagged records, and `Int | Text | null`.
+  The binding gets the other members. **Recommended**, because the rule has no exception
+  list. (b) Only `null` with one primitive or one identity over a primitive, as the CO9
+  title says. Every other nullable union keeps `pattern/004`.
+
+The units below follow option (a) of each decision.
+
+### Shared rules
+
+The phase 1 rules P1, P2, P4, P6, P7, and P8 and the phase 2 rule CPR8 (tests) apply.
+These rules add to them.
+
+- CQR1 (domain). `domainOf` gets a new kind `{ kind: "nullable"; rest: TypeRef }`. It
+  applies when the identity members include `null` and the other members are not all
+  literals. It comes before the nominal test, so `Shape | null` is `nullable`, not
+  `mixed`. `rest` is the union of the identity members without `null`, so
+  `Cents | null` gives `Cents`. A literal-only union with `null` stays `literals`.
+  `describeDomain` gives "the nullable union T", with T the shown subject type.
+- CQR2 (arms). A `nullable` subject takes three arm forms: the literal `null`, `_`, and
+  a binding `n`. A binding arm must come after the `null` arm. It matches every value
+  except `null`, and its local has the type `rest`. An arm after a binding arm is
+  unreachable. Every other pattern gives `pattern/003` with the new domain text. The
+  coverage message lists `null` and `_` for what is missing.
+- CQR3 (resolver). In `pattern` (`src/core/resolve.ts:1368`), a `NamePattern` whose name
+  is `None`, `Some`, a type, or an error keeps `ctorRef`. Every other name declares a
+  local, as the binding of `Some(x)` does. So a binding can shadow a module constant.
+  A reserved prelude name or a target name gives `declaration/002`, as for every local.
+- CQR4 (IR). The IR `Pattern` union (`src/core/ir.ts:126-133`) gets
+  `{ kind: "bind"; binding: Parameter; span: Span }`. The IR version becomes 10 in
+  `ir.ts`, `validate/serialization.ts`, and every place that writes the version. One new
+  `CHANGELOG.md` line under `## Unreleased` says that version 10 adds the pattern `bind`
+  and that the validator rejects version 9.
+- CQR5 (validator). The validator does not trust the checker. In `matchExpr`
+  (`src/core/validate/expr.ts:1659`), a `bind` pattern needs an earlier arm with the
+  literal pattern `null`, and its binding type must be `same` as the subject without
+  its `null` member. The validator builds that type from its own `identityMembers`.
+  Each fault gives `validation/002`.
+- CQR6 (emission). `patternBinding` (`src/core/emit/walk.ts:15`) returns the binding of
+  `bind`. In `selectorMatch` and `armTest` (`src/core/emit/expr.ts:1533,1604`), a `bind`
+  arm has no test, as `_` has none, so a final `bind` arm is the else branch. The output
+  is `(($s) => $s === null ? d : ((n) => body)($s))(x)` in the form that `deno fmt`
+  keeps. `build --tsc` must pass for each new fixture.
+
+### Units
+
+The units run one after another in the main tree, with the review order of phase 2: the
+executor writes a failing test first and hands back without a commit. Opus reviews the
+diff, runs `deno task check`, commits, and runs `deno task mutate --only` on the changed
+logic lines, `deno task rules:unfired`, and `deno task coverage`.
+
+#### CQU1: binding arm (Sonnet, 100 turns)
+
+Files: `src/core/resolve.ts`; `src/core/patterns.ts`; `src/core/check_patterns.ts`
+(`missingOf`, `pattern`, `reach`, `describeDomain`); `src/core/tables.ts` (`PatternFact`
+kind `bind`); `src/core/check_expr.ts` (`match`: the subject message at `2817` and the
+refinement local of a `bind` binding at `2866`); `src/core/lower.ts` (`pattern` at
+`1286`); `src/core/ir.ts`; `src/core/validate/expr.ts`;
+`src/core/validate/serialization.ts`; `src/core/emit/walk.ts`; `src/core/emit/expr.ts`;
+`docs/language-rules.md` (the row "null in matches and equality" and the rows of
+`pattern/004`); `CHANGELOG.md`.
+
+Acceptance, in `fixtures/emit/core-data/nullable.eff`:
+- `match x { null => 0, n => n + 1 }` on `Int | null` gives `0` for `null` and `3` for
+  `2`. The same match on `Cents | null` fits a `Cents` result for `n`.
+- A binding arm on `Shape | null` gives `n: Shape`, and a nested match on `n` with
+  `Circle(c)` and `Square(s)` arms checks and gives exact values.
+- `null => 0, _ => 1` on `Int | null` checks. `match x { null => 0 }` gives
+  `pattern/001` "the match is not exhaustive; it needs _".
+- `n => 1, null => 0` gives `pattern/004` "a binding arm must come after the `null`
+  arm". An arm after `n => ...` gives `pattern/002` "this arm is unreachable, because an
+  earlier binding arm matches every value except null".
+- `Nnoe => 0` in a match on an Option gives `pattern/004` "`Nnoe` is not a constructor;
+  a binding arm applies only after the `null` arm of a nullable union".
+- `Circle(c) => 0` on `Shape | null` gives `pattern/003` "`Circle` does not belong to the
+  subject (the nullable union MaybeShape)".
+- The subject message of `pattern/004` lists nullable unions.
+- A forged `bind` pattern without an earlier `null` arm, and a forged `bind` binding of
+  the type `Int | null`, each give `validation/002`. A version 9 IR gives the existing
+  version error.
+- An LSP hover on `n` shows its type without `null`. The existing hover tests show the
+  pattern.
+
+The executor writes each message exactly as above. If a message must change, the
+executor reports the reason in the handback.
+
+#### CQU2: `??` on a nullable union (Sonnet, 50 turns)
+
+Files: `src/core/check_expr.ts` (`optionFallback` at `2773`); `src/core/tables.ts` (the
+`option-fallback` fact gets a field that says which subject kind it has); `src/core/lower.ts`
+(`optionFallback` at `1228`); `docs/language-rules.md`; `CHANGELOG.md`.
+
+Acceptance, in `fixtures/emit/core-data/nullable.eff`:
+- `x ?? 0` on `Int | null` gives `0` for `null` and `5` for `5`. `c ?? 0` on
+  `Cents | null` fits `Cents`.
+- An effectful fallback runs only for `null`. The runtime test shows this with a counter
+  or a failure that does not occur for a value.
+- `x ?? 0` on `Int` gives `type-mismatch/010` "the left operand of `??` must be an
+  Option or a nullable union". The existing Option tests keep their exact text, so
+  the executor updates each test that asserts the old message.
+- The lowered IR is the match of CQU1, so the validator needs no new rule. A test shows
+  that the IR of `x ?? 0` has the arms `literal null` and `bind`.
+
+#### CQU3: website (Sonnet, 60 turns)
+
+Files: `../effektive/public/effektive-spec.html` (both tabs: the match section and the
+`??` row); one example in `../effektive/public/effektive-examples/`; the draft number in
+the files that COU6 changed.
+
+Acceptance: one checked example for the binding arm and for `??` on a nullable union.
+The website `deno task test` and `deno task typecheck` pass. The compiler tests
+`website_examples_slow_test` and `ir_site_slow_test` pass.
+
+Opus updates `docs/status.md`, row FF5 of the completeness review, and the status line
+of this plan after CQU2.
+
+### Out of scope for phase 3
+
+Flow narrowing after `x === null` in `if`. A binding arm in a literal-only union with
+`null`, such as `Mode`, because literal arms already cover it. Tagged or error arms in
+the same match as `null`: the source nests a match in the binding arm. A binding arm on
+a subject without `null`. A shorter emitted form `x ?? d` for a nullable `??`. Each
+waits for an example.
