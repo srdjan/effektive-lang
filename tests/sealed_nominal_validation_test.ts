@@ -16,6 +16,8 @@ export type Flag = boolean
 export type Input = unknown
 export type Positive = int
 export type Article = { title: Text }
+export type Bag = Text[]
+export type Pair = [Text, Text]
 type PrivateRecord = { title: Text }
 export type HiddenRecord = PrivateRecord
 export const positiveSchema: Schema<Positive> = schema()
@@ -36,7 +38,7 @@ function lowerConsumer(source: string): {
       "effektive.json": "{}",
       "lib.eff": LIBRARY,
       "main.eff": `
-import { Int, Text, Flag, Input, Positive, Article, HiddenRecord, positiveSchema } from "./lib.eff"
+import { Int, Text, Flag, Input, Positive, Article, Bag, Pair, HiddenRecord, positiveSchema } from "./lib.eff"
 ${source}
 `,
     }),
@@ -58,7 +60,9 @@ function sealImportedTypes(module: ModuleIR): void {
   for (const declaration of imported.types) {
     if (
       declaration.definition.kind === "nominal" &&
-      ["Positive", "Article", "PrivateRecord"].includes(declaration.name)
+      ["Positive", "Article", "Bag", "Pair", "PrivateRecord"].includes(
+        declaration.name,
+      )
     ) {
       const definition: unknown = declaration.definition;
       assertMutable(definition);
@@ -99,6 +103,26 @@ Deno.test("validator rejects forged sealed authority operations", () => {
     assert(
       diagnostics.some((diagnostic) => diagnostic.code === "validation/002"),
       `${source}: ${JSON.stringify(diagnostics)}`,
+    );
+  }
+});
+
+Deno.test("validator rejects a forged literal at a foreign sealed type", () => {
+  const cases = [
+    "export const bad = (value: Text): Bag => [value]",
+    "export const bad = (value: Text): Pair => [value, value]",
+    "export const bad = (value: Text): Article => ({ title: value })",
+  ];
+  for (const source of cases) {
+    const diagnostics = forgedDiagnostics(source);
+    assertEquals(
+      diagnostics.map((diagnostic) => diagnostic.code),
+      ["validation/002"],
+      source,
+    );
+    assertStringIncludes(
+      diagnostics[0].message,
+      "the module cannot construct the foreign sealed type",
     );
   }
 });

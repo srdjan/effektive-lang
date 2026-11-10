@@ -965,10 +965,27 @@ export class BodyValidator implements ValidatorCore {
     }
   }
 
+  /** A literal at a foreign sealed type is a construction by a module that cannot make one. */
+  private requireSealedLiteralOwner(
+    e: Extract<Expr, { kind: "record" | "array" | "tuple" }>,
+    path: string,
+  ): void {
+    const sealed = sealedRootOf(this.env, e.type);
+    if (sealed !== undefined && !ownsSealed(this.env, sealed)) {
+      this.add(
+        AREA.types,
+        `${path}.type`,
+        `the module cannot construct the foreign sealed type ${sealed}`,
+        e.span,
+      );
+    }
+  }
+
   private recordLike(
     e: Extract<Expr, { kind: "record" }>,
     path: string,
   ): Comp {
+    this.requireSealedLiteralOwner(e, path);
     const outs = e.fields.map((f, i) =>
       this.check(f.value, `${path}.fields[${i}].value`)
     );
@@ -999,6 +1016,7 @@ export class BodyValidator implements ValidatorCore {
     e: Extract<Expr, { kind: "array" }>,
     path: string,
   ): Comp {
+    this.requireSealedLiteralOwner(e, path);
     const outs = e.elements.map((x, i) =>
       this.check(x, `${path}.elements[${i}]`)
     );
@@ -1039,6 +1057,7 @@ export class BodyValidator implements ValidatorCore {
     e: Extract<Expr, { kind: "tuple" }>,
     path: string,
   ): Comp {
+    this.requireSealedLiteralOwner(e, path);
     const outs = e.elements.map((x, i) =>
       this.check(x, `${path}.elements[${i}]`)
     );

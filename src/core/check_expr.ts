@@ -1562,11 +1562,24 @@ class BodyChecker
     ) {
       return this.recordUpdate(node, first, fields.slice(1));
     }
+    this.requireSealedLiteralOwner(node, expected);
     return this.recordConstruction(node, fields, expected);
+  }
+
+  /** A literal at a foreign sealed type is a construction, so `sealed/001` applies. */
+  private requireSealedLiteralOwner(
+    node: NodeId,
+    expected: TypeRef | undefined,
+  ): void {
+    const sealed = expected === undefined
+      ? undefined
+      : this.table.sealedRootOf(expected);
+    if (sealed !== undefined) this.requireSealedOwner(node, sealed);
   }
 
   private listExpr(node: NodeId, expected: TypeRef | undefined): NodeInfo {
     const table = this.table;
+    this.requireSealedLiteralOwner(node, expected);
     const target = expected === undefined
       ? undefined
       : table.node(table.unfold(expected));
