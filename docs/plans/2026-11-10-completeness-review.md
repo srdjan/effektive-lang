@@ -152,7 +152,7 @@ subset under the existing exception. (c) Keep the gaps as a record.
 | Decision | State | Commits and checks |
 | --- | --- | --- |
 | FCD1 | Done. | `126d98d` (heading); website `7b52c43` (stamp). `deno task check` exited 0 with 3,019 fast and 301 slow tests passed. Website `deno task test` exited 0 with 12 tests passed. |
-| FCD2 | In progress. | FCU4 `bbfda0c`, FCU1 `712efa2`, FCU6 `eb8c9bf`. Directed mutation of the FCU1 lines: 3 sites, 3 killed. FCU2, FCU3a, and FCU3b open; see "Defect plan". |
+| FCD2 | Done. | FCU4 `bbfda0c`, FCU1 `712efa2`, FCU6 `eb8c9bf`, FCU2 `bee453a` and `719158e`, FCU3a `840a01d` and `f720e1a`, FCU3b `ada94f4`. Directed mutation: FCU1 3 sites, 3 killed; the FCU2 and FCU3a runs left 3 survivors, which `719158e` and `f720e1a` removed; FCU3b 5 sites, 5 killed. `deno task check` exited 0 at `ada94f4` with 3,039 fast and 311 slow tests passed. N2 stays recorded only. |
 | FCD3 | Done. | `3808b91`. |
 | FCD4 | Done. | `1a9004a` (FCU5) and `8148cb8` (mutation: 16 sites, 16 killed); website `8a6cc82`. Both clones have `core.hooksPath .githooks`. |
 | FCD5 | Plan written: [core data operations](2026-11-10-core-data-operations.md), decisions COD1 to COD4 wait for the user. | |
