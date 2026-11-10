@@ -27,8 +27,12 @@ export const instantMinus = (i: Instant, d: Duration): Instant => i - d
 export const durationPlus = (d: Duration, e: Duration): Duration => d + e
 export const durationTimes = (d: Duration, n: Int): Duration => d * n
 export const durationOver = (d: Duration, n: Int): Duration => d / n
+export const remainder = (a: Int, b: Int): Int => a % b
+export const numberRemainder = (a: Num, b: Num): Num => a % b
+export const textRemainder = (a: Text, b: Text): Text => a + b
 `;
 
+const FLAG: Type = { kind: "named", id: "type:m#Flag" };
 const INT: Type = { kind: "named", id: "type:m#Int" };
 const NUM: Type = { kind: "named", id: "type:m#Num" };
 const DURATION: Type = { kind: "named", id: "type:effect/Duration" };
@@ -182,6 +186,70 @@ Deno.test("integer / Duration is a mismatch", () => {
   );
 });
 
+Deno.test("% of two different identities is a mismatch", () => {
+  assertEquals(forged((ir) => forgeParameter(ir, "numberRemainder", 1, INT)), [
+    "validation/002 declarations[15].body: the operator % does not accept operands of type type:m#Num and type:m#Int",
+    "validation/002 declarations[15].body.right.type: expected type:m#Int, recorded type:m#Num",
+  ]);
+});
+
+Deno.test("% on two strings is a mismatch", () => {
+  assertEquals(forged((ir) => forgeOperator(ir, "textRemainder", "%")), [
+    "validation/002 declarations[16].body: the operator % does not accept operands of type type:m#Text and type:m#Text",
+  ]);
+});
+
+Deno.test("% on a boolean operand is a mismatch", () => {
+  assertEquals(forged((ir) => forgeParameter(ir, "remainder", 1, FLAG)), [
+    "validation/002 declarations[14].body: the operator % does not accept operands of type type:m#Int and type:m#Flag",
+    "validation/002 declarations[14].body.right.type: expected type:m#Flag, recorded type:m#Int",
+  ]);
+});
+
+Deno.test("Duration % Duration is a mismatch, not a Duration", () => {
+  assertEquals(forged((ir) => forgeOperator(ir, "durationPlus", "%")), [
+    "validation/002 declarations[11].body: the operator % does not accept operands of type Duration and Duration",
+  ]);
+});
+
+Deno.test("Duration % int is a mismatch", () => {
+  assertEquals(forged((ir) => forgeOperator(ir, "durationTimes", "%")), [
+    "validation/002 declarations[12].body: the operator % does not accept operands of type Duration and type:m#Int",
+  ]);
+});
+
+Deno.test("int % Duration is a mismatch", () => {
+  assertEquals(
+    forged((ir) => {
+      forgeParameter(ir, "remainder", 1, DURATION);
+    }),
+    [
+      "validation/002 declarations[14].body: the operator % does not accept operands of type type:m#Int and Duration",
+      "validation/002 declarations[14].body.right.type: expected Duration, recorded type:m#Int",
+    ],
+  );
+});
+
+Deno.test("Instant % Duration is a mismatch", () => {
+  assertEquals(
+    forged((ir) => {
+      forgeOperator(ir, "instantMinus", "%");
+    }),
+    [
+      "validation/002 declarations[10].body: the operator % does not accept operands of type Instant and Duration",
+    ],
+  );
+});
+
+Deno.test("a % of two int values with a recorded number type is rejected", () => {
+  assertEquals(
+    forged((ir) => Object.assign(bodyOf(ir, "remainder"), { type: NUM })),
+    [
+      "validation/002 declarations[14].body.type: expected int, recorded type:m#Num",
+    ],
+  );
+});
+
 const SEALED_LIBRARY = `export sealed type Positive = int
 `;
 
@@ -193,6 +261,7 @@ export const plus = (a: Int, b: Int): Int => a + b
 export const minus = (a: Int, b: Int): Int => a - b
 export const times = (a: Int, b: Int): Int => a * b
 export const over = (a: Int, b: Int): Num => a / b
+export const rest = (a: Int, b: Int): Int => a % b
 `;
 
 const POSITIVE: Type = { kind: "named", id: "type:lib#Positive" };
@@ -216,6 +285,7 @@ Deno.test("arithmetic rejects a foreign sealed operand in each operator", () => 
   forgeParameter(ir, "minus", 0, POSITIVE);
   forgeParameter(ir, "times", 0, POSITIVE);
   forgeParameter(ir, "over", 1, POSITIVE);
+  forgeParameter(ir, "rest", 0, POSITIVE);
   const sources = new Map([["main.eff", SEALED_CONSUMER]]);
   assertEquals(
     validateModule(ir, sources).map((d) => `${d.code} ${d.message}`),
@@ -232,6 +302,9 @@ Deno.test("arithmetic rejects a foreign sealed operand in each operator", () => 
       "validation/002 declarations[6].body: arithmetic cannot use a foreign sealed type",
       "validation/002 declarations[6].body: the operator / does not accept operands of type type:main#Int and type:lib#Positive",
       "validation/002 declarations[6].body.right.type: expected type:lib#Positive, recorded type:main#Int",
+      "validation/002 declarations[7].body.left.type: expected type:lib#Positive, recorded type:main#Int",
+      "validation/002 declarations[7].body: arithmetic cannot use a foreign sealed type",
+      "validation/002 declarations[7].body: the operator % does not accept operands of type type:lib#Positive and type:main#Int",
     ],
   );
 });

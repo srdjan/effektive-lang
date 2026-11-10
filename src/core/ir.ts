@@ -227,7 +227,7 @@ export type Expr =
   | Node<{ kind: "provide"; provider: Expr; job: Expr }>
   | Node<{
       kind: "binary";
-      operator: "+" | "-" | "*" | "/" | "===" | "!==" | "<" | "<=" | ">" | ">=" | "&&" | "||";
+      operator: "+" | "-" | "*" | "/" | "%" | "===" | "!==" | "<" | "<=" | ">" | ">=" | "&&" | "||";
       left: Expr;
       right: Expr;
     }>;

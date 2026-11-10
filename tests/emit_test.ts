@@ -1292,3 +1292,65 @@ export const below = (x: Int): Int => $int(0 - x);
 `,
   );
 });
+
+Deno.test("an int % emits the $rem helper, and a number % emits the plain operator", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), [
+    "remainder.eff",
+  ]).get("remainder");
+  assert(emitted !== undefined, "module remainder was not emitted");
+  assertEquals(
+    emitted.text,
+    `// Generated from remainder.eff by the Effektive compiler. Do not edit.
+
+import { Schema } from "effect";
+
+const $Int = Schema.Finite.check(
+  Schema.makeFilter(
+    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+  ),
+);
+
+const $int = (value: number): number => {
+  if (!Number.isSafeInteger(value)) throw new RangeError("int overflow");
+  return value;
+};
+
+const $rem = (left: number, right: number): number => {
+  if (right === 0) throw new RangeError("division by zero");
+  return left % right + 0;
+};
+
+export const Int = $Int;
+export type Int = typeof Int.Type;
+
+export const Num = Schema.Number;
+export type Num = typeof Num.Type;
+
+export const Cents = $Int;
+export type Cents = typeof Cents.Type;
+
+export const rest = (a: Int, b: Int): Int => $rem(a, b);
+
+export const restCents = (a: Cents, b: Cents): Int => $rem(a, b);
+
+export const cents = (a: Int, b: Int): Cents => $rem(a, b);
+
+export const odd = (c: Cents): Cents => $rem(c, 2);
+
+export const wrap = (c: Cents): Cents => $rem(7, c);
+
+export const fraction = (a: Num, b: Num): Num => a % b;
+
+export const mixed = (a: Num): Num => a % 2;
+
+export const sum = (a: Int, b: Int, c: Int): Int => $int(a + $rem(b, c));
+
+export const chain = (a: Int, b: Int, c: Int): Int => $int($rem(a, b) * c);
+
+export const fractionChain = (a: Num, b: Num, c: Num): Num => a % b * c;
+
+export const nested = (a: Int, b: Int, c: Int): Int => $rem(a, $rem(b, c));
+//# sourceMappingURL=remainder.ts.map
+`,
+  );
+});

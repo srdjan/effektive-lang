@@ -1,4 +1,4 @@
-// The declarations of the generated helpers of a module: `$int`, `$unmatched`,
+// The declarations of the generated helpers of a module: `$int`, `$rem`, `$unmatched`,
 // `$Int`, `$hostCheck`, and `$outcome`. Each one reads the name of its helper
 // from the module state, so the call registers the name and its imports.
 import {
@@ -21,6 +21,19 @@ export function intFunctionDeclaration(scope: ModuleState): Doc {
     braces([
       'if (!Number.isSafeInteger(value)) throw new RangeError("int overflow");',
       "return value;",
+    ]),
+    ";",
+  ];
+}
+
+/** `const $rem = ...`: the remainder of an `int`, which gives no `-0` and no `NaN`. */
+export function remainderDeclaration(scope: ModuleState): Doc {
+  const name = scope.remainder();
+  return [
+    `const ${name} = (left: number, right: number): number => `,
+    braces([
+      'if (right === 0) throw new RangeError("division by zero");',
+      "return left % right + 0;",
     ]),
     ";",
   ];

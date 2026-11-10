@@ -203,6 +203,64 @@ console.log(JSON.stringify({
   });
 });
 
+Deno.test("an int remainder takes the sign of the dividend, never gives -0, and throws on a zero divisor", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/core-data/", FIXTURES), dir);
+    build(dir, ["remainder.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import * as M from "./remainder.ts";
+
+function message(run: () => number): string {
+  try {
+    run();
+    return "no throw";
+  } catch (e) {
+    return e instanceof RangeError ? e.message : "other";
+  }
+}
+console.log(JSON.stringify({
+  positive: M.rest(7, 3),
+  negativeDividend: M.rest(-7, 3),
+  negativeDivisor: M.rest(7, -3),
+  exact: M.rest(-6, 3),
+  exactIsPositiveZero: Object.is(M.rest(-6, 3), 0),
+  cents: [M.cents(7, 3), M.restCents(8, 5), M.odd(5), M.wrap(4)],
+  sum: M.sum(1, 7, 4),
+  chain: M.chain(7, 4, 2),
+  nested: M.nested(10, 7, 4),
+  fraction: M.fraction(7.5, 2),
+  mixed: M.mixed(7.5),
+  fractionChain: M.fractionChain(7.5, 2, 3),
+  numberZeroIsNaN: Object.is(M.fraction(1, 0), NaN),
+  numberNegativeZero: Object.is(M.fraction(-5.5, 5.5), -0),
+  intByZero: message(() => M.rest(7, 0)),
+  centsByZero: message(() => M.wrap(0)),
+}));
+`,
+    );
+    assertEquals(result, {
+      positive: 1,
+      negativeDividend: -1,
+      negativeDivisor: 1,
+      exact: 0,
+      exactIsPositiveZero: true,
+      cents: [1, 3, 1, 3],
+      sum: 4,
+      chain: 6,
+      nested: 1,
+      fraction: 1.5,
+      mixed: 1.5,
+      fractionChain: 4.5,
+      numberZeroIsNaN: true,
+      numberNegativeZero: true,
+      intByZero: "division by zero",
+      centsByZero: "division by zero",
+    });
+  });
+});
+
 Deno.test("a data value with a missing optional prototype-named field nests in another data value", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");

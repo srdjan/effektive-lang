@@ -104,6 +104,7 @@ export type BinaryOperator =
   | "-"
   | "*"
   | "/"
+  | "%"
   | "==="
   | "!=="
   | "<"
@@ -113,14 +114,14 @@ export type BinaryOperator =
   | "&&"
   | "||";
 
-/** The operators of the arithmetic class: `+ - * /`. */
-export type ArithmeticOperator = "+" | "-" | "*" | "/";
+/** The operators of the arithmetic class: `+ - * / %`. */
+export type ArithmeticOperator = "+" | "-" | "*" | "/" | "%";
 
 export function isArithmeticOperator(
   operator: BinaryOperator | undefined,
 ): operator is ArithmeticOperator {
   return operator === "+" || operator === "-" || operator === "*" ||
-    operator === "/";
+    operator === "/" || operator === "%";
 }
 
 const OPERATORS: ReadonlyMap<TokenKind, BinaryOperator> = new Map([
@@ -128,6 +129,7 @@ const OPERATORS: ReadonlyMap<TokenKind, BinaryOperator> = new Map([
   [TokenKind.Minus, "-"],
   [TokenKind.Star, "*"],
   [TokenKind.Slash, "/"],
+  [TokenKind.Percent, "%"],
   [TokenKind.EqEqEq, "==="],
   [TokenKind.BangEqEq, "!=="],
   [TokenKind.Lt, "<"],

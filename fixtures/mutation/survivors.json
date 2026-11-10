@@ -20,7 +20,7 @@
   {
     "file": "src/core/check_binary.ts",
     "declaration": "operatorResult",
-    "offset": 3167,
+    "offset": 3181,
     "text": "isNumericClass(table, l) && isNumericClass(table, r)",
     "operator": "logical",
     "class": "equivalent",
@@ -299,7 +299,7 @@
   {
     "file": "src/core/validate/expr.ts",
     "declaration": "BodyValidator.binary",
-    "offset": 4162,
+    "offset": 4200,
     "text": "isNumericClass(env, l) && isNumericClass(env, r)",
     "operator": "logical",
     "class": "equivalent",

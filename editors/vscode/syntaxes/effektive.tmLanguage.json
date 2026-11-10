@@ -163,7 +163,7 @@
         },
         {
           "name": "keyword.operator.arithmetic.effektive",
-          "match": "[-+*/]"
+          "match": "[-+*/%]"
         },
         {
           "name": "keyword.operator.type.union.effektive",

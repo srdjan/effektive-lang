@@ -169,6 +169,9 @@ Deno.test("an integer expression allows literals, `+`, and `-` only", () => {
     [`${INT_WHERE} n => n * 2 > 0`, operators],
     [`${INT_WHERE} n => n > 1 + 2 * 3`, operators],
     [`${INT_WHERE} n => 1 * 2 > n`, operators],
+    [`${INT_WHERE} n => n % 2 > 0`, operators],
+    [`${INT_WHERE} n => n > 5 % 2`, operators],
+    [`${INT_WHERE} n => n > 1 + 4 % 3`, operators],
   ];
   for (const [declaration, message] of rows) {
     assertEquals(rejection(declaration), [["declaration/018", message]]);

@@ -1920,7 +1920,7 @@ export class BodyValidator implements ValidatorCore {
     const r = comparisonClass(env, right.type);
     if (
       (e.operator === "+" || e.operator === "-" || e.operator === "*" ||
-        e.operator === "/") &&
+        e.operator === "/" || e.operator === "%") &&
       (foreignSealedOf(env, left.type) !== undefined ||
         foreignSealedOf(env, right.type) !== undefined)
     ) {
@@ -1973,7 +1973,8 @@ export class BodyValidator implements ValidatorCore {
       case "+":
       case "-":
       case "*":
-      case "/": {
+      case "/":
+      case "%": {
         const instant = this.instantArithmetic(
           e.operator,
           left.type,
@@ -2025,7 +2026,7 @@ export class BodyValidator implements ValidatorCore {
    * "mismatch" for every mix that the table does not list.
    */
   private instantArithmetic(
-    operator: "+" | "-" | "*" | "/",
+    operator: "+" | "-" | "*" | "/" | "%",
     left: Type,
     right: Type,
   ): Type | "mismatch" | undefined {
@@ -2046,10 +2047,11 @@ export class BodyValidator implements ValidatorCore {
 
   /**
    * The arithmetic of `Duration`: undefined when the general rules decide, and
-   * "mismatch" when a bare number meets a `Duration` in `+` or `-`.
+   * "mismatch" when a bare number meets a `Duration` in `+` or `-`, and for `%`
+   * with a `Duration` operand.
    */
   private durationArithmetic(
-    operator: "+" | "-" | "*" | "/",
+    operator: "+" | "-" | "*" | "/" | "%",
     left: Type,
     right: Type,
   ): Type | "mismatch" | undefined {
@@ -2058,6 +2060,7 @@ export class BodyValidator implements ValidatorCore {
     const r = isDurationType(env, right);
     if (!l && !r) return undefined;
     const duration: Type = { kind: "named", id: DURATION_ID };
+    if (operator === "%") return "mismatch";
     if (l && r) {
       if (operator === "/") return NUMBER;
       return operator === "*" ? undefined : duration;

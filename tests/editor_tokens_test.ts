@@ -35,6 +35,21 @@ Deno.test("lexical classification marks the equals sign as an operator and an un
   ]);
 });
 
+Deno.test("lexical classification marks % as an operator", () => {
+  const text = "const x = 7 % 3";
+  const classes = semanticClassifications(undefined, "m.eff", text).map((c) =>
+    `${text.slice(c.span.start, c.span.end)}:${c.type}`
+  );
+  assertEquals(classes, [
+    "const:keyword",
+    "x:variable",
+    "=:operator",
+    "7:number",
+    "%:operator",
+    "3:number",
+  ]);
+});
+
 Deno.test("lexical classification marks from as a keyword before a module path and as a name elsewhere", () => {
   const importText = 'import { a } from "./a.eff"';
   const imported = semanticClassifications(undefined, "m.eff", importText).map((

@@ -55,6 +55,7 @@ export enum TokenKind {
   QuestionQuestion,
   KwFinally,
   KwWith,
+  Percent,
 }
 
 export enum TriviaKind {
@@ -136,6 +137,7 @@ export const OPERATOR_KINDS: ReadonlySet<TokenKind> = new Set([
   TokenKind.Minus,
   TokenKind.Star,
   TokenKind.Slash,
+  TokenKind.Percent,
   TokenKind.Bang,
 ]);
 
@@ -313,6 +315,7 @@ const TOKEN_NAMES: Readonly<Record<TokenKind, string>> = {
   [TokenKind.Minus]: "`-`",
   [TokenKind.Star]: "`*`",
   [TokenKind.Slash]: "`/`",
+  [TokenKind.Percent]: "`%`",
   [TokenKind.Bang]: "`!`",
   [TokenKind.Unknown]: "unknown character",
   [TokenKind.KwImport]: "`import`",
@@ -396,6 +399,7 @@ for (
     ["+", TokenKind.Plus],
     ["-", TokenKind.Minus],
     ["*", TokenKind.Star],
+    ["%", TokenKind.Percent],
   ] as const
 ) SINGLE[ch.charCodeAt(0)] = kind + 1;
 

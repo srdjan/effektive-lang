@@ -194,7 +194,7 @@ Deno.test("operators include the pipe and the arrow", () => {
     ["|>", "operator"],
     ["=>", "operator"],
   ]);
-  assertEquals(slices("a === b !== c <= d && e || f | g - h * i / j !k"), [
+  assertEquals(slices("a === b !== c <= d && e || f | g - h * i / j % k !l"), [
     ["===", "operator"],
     ["!==", "operator"],
     ["<=", "operator"],
@@ -204,6 +204,7 @@ Deno.test("operators include the pipe and the arrow", () => {
     ["-", "operator"],
     ["*", "operator"],
     ["/", "operator"],
+    ["%", "operator"],
     ["!", "operator"],
   ]);
 });

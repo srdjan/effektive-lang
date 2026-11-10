@@ -278,6 +278,24 @@ const UNIT_ARITHMETIC: readonly UnitArithmetic[] = [
         result: "mismatch",
       },
       {
+        operator: "%",
+        left: DURATION_ID,
+        right: DURATION_ID,
+        result: "mismatch",
+      },
+      {
+        operator: "%",
+        left: DURATION_ID,
+        right: "numeric",
+        result: "mismatch",
+      },
+      {
+        operator: "%",
+        left: "numeric",
+        right: DURATION_ID,
+        result: "mismatch",
+      },
+      {
         operator: "*",
         left: DURATION_ID,
         right: "integral",
@@ -418,7 +436,8 @@ export function operatorResult(
     case "+":
     case "-":
     case "*":
-    case "/": {
+    case "/":
+    case "%": {
       // An error operand hides whether the result is int or number.
       if (either) return { type: table.error, mismatch: false };
       const sealed = table.foreignSealedOf(module, left) ??

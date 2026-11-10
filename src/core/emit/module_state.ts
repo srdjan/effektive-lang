@@ -80,6 +80,7 @@ interface OutcomeNames {
 interface HelperNames {
   intSchema?: string;
   intFunction?: string;
+  remainder?: string;
   unmatched?: string;
   hostCheck?: string;
   outcome?: OutcomeNames;
@@ -101,6 +102,7 @@ export interface EmitNames {
   encodedMirrorName(id: DeclarationId): string;
   intSchemaName(): string;
   intFunction(): string;
+  remainder(): string;
   unmatched(): string;
   outcome(): OutcomeNames;
   hostCheck(): string;
@@ -386,6 +388,11 @@ export class ModuleState
 
   intFunction(): string {
     return this.helpers.intFunction ??= this.fresh("$int");
+  }
+
+  /** The helper `$rem` that an `int` remainder calls. */
+  remainder(): string {
+    return this.helpers.remainder ??= this.fresh("$rem");
   }
 
   /** The helper `$unmatched` that a match calls for a value outside its type. */

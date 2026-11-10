@@ -89,6 +89,7 @@ function binaryPrecedence(k: TokenKind): number {
       return 5;
     case TokenKind.Star:
     case TokenKind.Slash:
+    case TokenKind.Percent:
       return 6;
     default:
       return 0;

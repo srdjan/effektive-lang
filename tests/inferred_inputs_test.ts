@@ -110,6 +110,19 @@ const subtracted = (input): Int => 0 - input
   );
 });
 
+Deno.test("infers an input from a % operand as from a * operand", () => {
+  const project = checkText(`
+type Int = int
+const remainder = (input): Int => input % 7
+const product = (input): Int => input * 7
+const flipped = (input): Int => 7 % input
+`);
+  assertEquals(codes(project), []);
+  assertEquals(parameterTypes(project, "m", "remainder"), ["Int"]);
+  assertEquals(parameterTypes(project, "m", "product"), ["Int"]);
+  assertEquals(parameterTypes(project, "m", "flipped"), ["Int"]);
+});
+
 Deno.test("infers no input from a negated operand, as from input === false", () => {
   const project = checkText(`
 type Flag = boolean

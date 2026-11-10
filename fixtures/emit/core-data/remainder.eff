@@ -1,0 +1,15 @@
+type Int = int
+type Num = number
+type Cents = int
+
+export const rest = (a: Int, b: Int): Int => a % b
+export const restCents = (a: Cents, b: Cents): Int => a % b
+export const cents = (a: Int, b: Int): Cents => a % b
+export const odd = (c: Cents): Cents => c % 2
+export const wrap = (c: Cents): Cents => 7 % c
+export const fraction = (a: Num, b: Num): Num => a % b
+export const mixed = (a: Num): Num => a % 2
+export const sum = (a: Int, b: Int, c: Int): Int => a + b % c
+export const chain = (a: Int, b: Int, c: Int): Int => a % b * c
+export const fractionChain = (a: Num, b: Num, c: Num): Num => a % b * c
+export const nested = (a: Int, b: Int, c: Int): Int => a % (b % c)

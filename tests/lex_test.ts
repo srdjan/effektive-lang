@@ -76,6 +76,18 @@ Deno.test("operators and punctuation", () => {
   );
 });
 
+Deno.test("% is one operator token", () => {
+  assertEquals(kindsOf("a % b%c"), [
+    TokenKind.Ident,
+    TokenKind.Percent,
+    TokenKind.Ident,
+    TokenKind.Percent,
+    TokenKind.Ident,
+    TokenKind.Eof,
+  ]);
+  assertEquals(codes("a % b"), []);
+});
+
 Deno.test("== and != are reported, with a hint, as unknown tokens", () => {
   const lexed = lex("t.eff", "a == b != c");
   assertEquals(lexed.diagnostics.map((d) => d.code), [

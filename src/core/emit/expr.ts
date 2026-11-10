@@ -1111,6 +1111,13 @@ export class ExprEmitter implements ExprCore {
     e: Extract<Expr, { kind: "binary" }>,
     kid: Kid,
   ): Emitted {
+    // An `int` remainder never joins a run of `*`: the helper call is an operand.
+    if (e.operator === "%" && isIntType(this.scope.resolve(e.type))) {
+      return emitted([
+        this.scope.remainder(),
+        callArguments([kid(e.left), kid(e.right)]),
+      ]);
+    }
     const prec = binaryPrecedence(e.operator);
     const left = kid(e.left);
     const right = at(kid(e.right), prec + 1);

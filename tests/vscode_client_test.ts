@@ -153,7 +153,7 @@ Deno.test("the grammar names the scope and every lexer keyword", () => {
     "from",
   ];
   const matchers = collectMatches(grammar).map((match) => new RegExp(match));
-  for (const token of [...words, "|>", "=>"]) {
+  for (const token of [...words, "|>", "=>", "%"]) {
     assert(
       matchers.some((matcher) => matcher.exec(token)?.[0] === token),
       `the grammar must match the whole token "${token}"`,

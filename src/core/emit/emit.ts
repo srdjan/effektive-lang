@@ -34,6 +34,7 @@ import {
   intFunctionDeclaration,
   intSchemaDeclaration,
   outcomeDeclaration,
+  remainderDeclaration,
   unmatchedDeclaration,
 } from "./helper_declarations.ts";
 
@@ -118,6 +119,7 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
   const helperDeclarations: readonly (readonly [HelperKey, () => Doc])[] = [
     ["intSchema", () => intSchemaDeclaration(scope)],
     ["intFunction", () => intFunctionDeclaration(scope)],
+    ["remainder", () => remainderDeclaration(scope)],
     ["unmatched", () => unmatchedDeclaration(scope)],
     ["hostCheck", () => hostCheckDeclaration(scope)],
     ["outcome", () => outcomeDeclaration(scope)],
