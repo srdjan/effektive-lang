@@ -121,3 +121,12 @@ Deno.test("a negative literal arm gives the refinement fact s === -5", () => {
     "type-mismatch/013 the arithmetic result does not satisfy the required refinement Sym",
   ]);
 });
+
+Deno.test("a negative form that is not a number gives only its syntax error", () => {
+  assertEquals(matching("Int", '    -"a" => "a",\n    _ => "c"'), [
+    "syntax/011 a negative pattern must be a number literal, as in `-1` or `-1.5`",
+  ]);
+  assertEquals(matching("Int", '    - => "a",\n    _ => "c"'), [
+    "syntax/011 a negative pattern must be a number literal, as in `-1` or `-1.5`",
+  ]);
+});
