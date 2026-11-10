@@ -1,7 +1,8 @@
 # Constant comparison fix (N3)
 
 Date: 2026-11-10. Base: `89e895e` on local `main`. Author: Opus.
-Status: waiting for the user to choose an option of CCD1. No code changes before then.
+Status: on 2026-11-10 the user accepted option (a) of CCD1. The user has not approved
+execution. CCU1 waits for a user go-ahead, and no code changes before then.
 
 Prefixes: CC (shapes), CCD (decisions), CCU (units).
 
@@ -49,6 +50,8 @@ Not affected: a module constant, a parameter, a constant of type `string`, `int`
 
 ## Decision CCD1
 
+Accepted on 2026-11-10: option (a).
+
 - (a) The emitter widens. In a block `const` of shape CC2, the emitter writes the value as
   `<literal> as <type>`. In a comparison of shape CC1, the emitter writes the left operand
   as `(<literal> as <primitive>)`. The source rules, the diagnostics, the IR, and the
@@ -69,8 +72,7 @@ Not affected: a module constant, a parameter, a constant of type `string`, `int`
 | CCU1 | Sonnet | `src/core/emit/expr.ts` (`step` near line 1354 and `binary` near line 1110, with `this.scope.resolve`), a new fixture `fixtures/emit/core-data/constant-comparison.eff` and its golden file, `tests/emit_test.ts`, `tests/emit_runtime_slow_test.ts`, which copies `fixtures/emit/core-data/` and runs `deno check` and `deno run` on the output | The fixture holds CC1 and CC2 in each measured form and builds with `--tsc` and 0 diagnostics. Its runtime test gives the exact values. No other golden file changes. `deno task check` passes. Directed mutation of the changed lines leaves no unregistered survivor. | 40 |
 
 The executor writes the failing `build --tsc` test first and confirms TS2367. After the
-commit, Opus updates row N3 of the completeness review. Option (b) or (c) needs a revised
-unit list before execution.
+commit, Opus updates row N3 of the completeness review.
 
 ## Out of scope
 

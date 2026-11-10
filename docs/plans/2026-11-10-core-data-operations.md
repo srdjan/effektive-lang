@@ -3,8 +3,8 @@
 Date: 2026-11-10. Base: `3808b91` on local `main`. Author: Opus.
 Status: on 2026-11-10 the user accepted COD1 (a), COD2 (a), COD3 (a), and COD4 (a). All
 nine items are selected. Phase 1 (CO1 to CO5) is done: "Phase 1 result" below gives the
-commits and the checks. "Phase 2 execution plan" below is a draft that waits for a Fable
-validation and a user approval. Phase 3 needs a detail plan and a user approval before
+commits and the checks. "Phase 2 execution plan" below is validated, and its decisions are
+accepted. Its execution waits for a user go-ahead. Phase 3 needs a detail plan and a user approval before
 implementation. So this plan stays in `docs/plans/`.
 
 Prefixes: CO (items), COD (decisions), COU (phase 1 units), COV (phase 1 validation
@@ -113,6 +113,8 @@ Descending order is `sort(xs, x => 0 - key)` for numbers. A descending option wa
 an example. Size: medium.
 
 ### CO8 Tuple reads (FF4)
+
+Deferred on 2026-11-10 by CPD4 (a). It waits for an example that needs a tuple read.
 
 Today `const [a, b] = p` gives `syntax/008`, and a tuple pattern gives `syntax/011`.
 `all([...])` returns a tuple, so a user must use the record form of `all`. Candidate:
@@ -390,9 +392,10 @@ example.
 
 Base: `28bb822`. Author: Opus. Validation: Fable on 2026-11-10 at `3452650`, findings
 CPV1 to CPV18 (1 blocker, 11 changes, 6 notes). This revision applies every change and
-the plan text of the notes CPV15 and CPV16. Status: the user decides CPD1 to CPD4 and
-approves the plan. No code changes before that approval. Units CPU1 to CPU5 carry out
-CO6 and CO7. CO8 depends on CPD4.
+the plan text of the notes CPV15 and CPV16. Status: on 2026-11-10 the user accepted
+option (a) of CPD1, CPD2, CPD3, and CPD4. The user has not approved execution, so no
+code changes before a user go-ahead. Units CPU1 to CPU5 carry out CO6 and CO7. CO8 is
+deferred.
 
 The N3 fix ([constant comparison plan](2026-11-10-constant-comparison.md), unit CCU1)
 also edits `src/core/emit/expr.ts`. So CCU1 and the phase 2 units run one after another,
@@ -444,8 +447,8 @@ Opus checked these facts with scratch builds on 2026-11-10, and Fable confirmed 
   (c) needs new inference, because `all` does not pass an expected tuple type to an
   inline list (CPV16).
 
-The units below assume option (a) of each decision. Another option changes the named
-unit before execution.
+The units below follow option (a) of each decision. The execution order is CCU1, then
+CPU1, CPU2, CPU3, CPU4, and CPU5.
 
 ### Shared rules
 
