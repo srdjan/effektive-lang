@@ -657,6 +657,14 @@ expected array type gives the `type-mismatch/003` message "spread element N has 
 T, but U[] is expected". The `type-mismatch/012` message of the plan fires only when the
 element type is inferred.
 
+The plan named `markCheckedSlots` as a CPU2 site, and it did not change. It marks the
+children of a list for a checked host parameter, but not the value inside a spread. So
+a spread value at a checked parameter gets the strict fit. A looser fit would also need
+a run-time check of each spread element.
+
+The review found the defect N4 of the completeness review, which existed before phase 2:
+a list literal constructs a foreign sealed array type.
+
 ### Out of scope for phase 2
 
 A descending sort option, a sort with a comparison function, index syntax `xs[i]`, a
