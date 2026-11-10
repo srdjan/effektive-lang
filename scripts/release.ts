@@ -96,7 +96,7 @@ export function releaseTexts(
   };
 }
 
-function describe(error: ReleaseError): string {
+export function describe(error: ReleaseError): string {
   switch (error.tag) {
     case "bad-version":
       return `release: "${error.version}" is not a version of the form X.Y.Z`;

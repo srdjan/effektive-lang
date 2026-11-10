@@ -216,6 +216,12 @@ The history shows this path for each version. It has no release tag.
 4. Commit with the subject `vX.Y.Z`. The task never commits. Never push: the
    maintainer pushes.
 
+The hooks in `.githooks/` complete a bare version commit. When a commit
+changes `version` in `deno.json` and `CHANGELOG.md` has no heading for it, the
+pre-commit hook moves the entries of "Unreleased" under the new heading and
+stages `CHANGELOG.md`. Each clone
+activates the hooks once with `git config core.hooksPath .githooks`.
+
 ## Root lock
 
 The key `lock` in `deno.json` freezes `deno.lock`. A task fails when an import

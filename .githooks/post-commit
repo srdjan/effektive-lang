@@ -1,0 +1,10 @@
+#!/bin/sh
+# Repairs the index after a path-limited commit that the pre-commit hook
+# completed. The hook stages CHANGELOG.md in a temporary index, so the real
+# index still shows the old text. The reset makes it equal to HEAD.
+
+marker="$(git rev-parse --git-dir)/version-hook-staged"
+if [ -f "$marker" ]; then
+  git reset -q -- CHANGELOG.md
+  rm -f "$marker"
+fi

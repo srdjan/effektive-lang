@@ -186,6 +186,7 @@ scripts/       Scripts that the tasks run.
                measure_functions.ts counts the same for each function.
                measure_kernel.ts holds the counting rules that both measure scripts share.
                release.ts moves the Unreleased changelog entries under a new version heading, sets the version in deno.json, and runs the check and the coverage task.
+               version_hook.ts is the script of the pre-commit hook: it moves the Unreleased entries under the heading of a new version when a commit changes the version and the changelog has no heading for it.
                package.ts builds deterministic local CLI/server bundles and a complete VSIX.
                package_vscode_smoke.ts tests the installed VSIX in isolated editor directories.
 tests/         Deno tests and test helpers.

@@ -1,0 +1,22 @@
+#!/bin/sh
+# Completes a bare version commit. When a commit changes `version` in deno.json
+# and the CHANGELOG.md has no heading for it, the hook moves the entries of
+# "Unreleased" under that heading and stages CHANGELOG.md.
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+
+version_of() {
+  sed -n 's/^  "version": "\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)".*$/\1/p' | head -n 1
+}
+
+head_version=$(git show HEAD:deno.json 2>/dev/null | version_of)
+staged_version=$(git show :deno.json 2>/dev/null | version_of)
+
+if [ -z "$head_version" ] || [ -z "$staged_version" ] ||
+  [ "$head_version" = "$staged_version" ]; then
+  exit 0
+fi
+
+exec deno run --quiet --no-prompt --allow-read --allow-write \
+  --allow-run=git --allow-env=EFFEKTIVE_HOOK_DATE \
+  --config "$root/deno.json" "$root/scripts/version_hook.ts"
