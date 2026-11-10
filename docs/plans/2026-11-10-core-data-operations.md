@@ -5,7 +5,7 @@ Status: on 2026-11-10 the user accepted COD1 (a), COD2 (a), COD3 (a), and COD4 (
 nine items are selected. Phase 1 (CO1 to CO5) is done: "Phase 1 result" below gives the
 commits and the checks. "Phase 2 execution plan" below is validated, and its decisions are
 accepted, and phase 2 is done. "Phase 3 execution plan" below is a draft. Its decisions
-CQD1 to CQD3 wait for the user, and implementation needs a user approval. So this plan
+CQD1 to CQD4 wait for the user, and implementation needs a user approval. So this plan
 stays in `docs/plans/`.
 
 Prefixes: CO (items), COD (decisions), COU (phase 1 units), COV (phase 1 validation
@@ -676,7 +676,7 @@ example.
 ## Phase 3 execution plan
 
 Base: `aada289` (release 0.15.7). Author: Opus. Validation: not done. Status: draft. The
-decisions CQD1 to CQD3 wait for the user. Units CQU1 to CQU3 carry out CO9. The line
+decisions CQD1 to CQD4 wait for the user. Units CQU1 to CQU3 carry out CO9. The line
 numbers below are at `aada289`.
 
 ### Facts that changed the item
@@ -709,8 +709,25 @@ Opus checked these facts with a scratch project on 2026-11-10.
   phase 3 raises the version to 10 by the rule of `docs/status.md`.
 - No gate application and no website example consumes a nullable union.
   `../effektive/public/effektive-examples/core1.eff` declares one.
+- `type Nil = null` has identity, and the language rules tell users to write `Nil` in
+  annotations. `match` on `Int | Nil` gives the same `pattern/004` as `Int | null`. In
+  `type M = Mode | Int`, the `null` is inside the identity `Mode`, and `match` gives
+  `pattern/004` too.
+- A block constant `const s: MaybeItem = null` emits as `const s: MaybeItem = null`,
+  and TypeScript narrows `s` to `null`. Then the selector
+  `(($s) => $s === null ? 0 : ((n) => n.r)($s))(s)` fails `deno check` with TS2339
+  "Property 'r' does not exist on type 'never'". With the annotated selector
+  `($s: MaybeItem) => ...`, the same text passes. This is the family of N3.
+- `tests/ir_site_slow_test.ts` compares `../effektive/public/typed-ir.ts` byte for byte
+  with the text that `scripts/site_ir.ts` generates from `src/core/ir.ts`, and it
+  compares `../effektive/public/log.ir.json` with `fixtures/ir/example/log.ir.json`. So
+  each change of `ir.ts` needs a paired website commit, as `99fb296` and website
+  `d81866e` did for version 9.
+- No test or error fixture expects `unknown-name/001` for a bare-name arm.
+  `fixtures/errors/pattern-nominal-subject.eff:48` has `Circle => "bare"`, and `Circle`
+  is a type, so it keeps `pattern/004`.
 
-### Decisions CQD1 to CQD3
+### Decisions CQD1 to CQD4
 
 - CQD1, the form that reads the value. (a) A binding arm in `match`: `null => d` and
   then `n => f(n)`, where `n` gets the subject type without `null`. This is the CO9
@@ -718,32 +735,46 @@ Opus checked these facts with a scratch project on 2026-11-10.
   such as `Nnoe` becomes a binding, so the checker rejects a binding arm in every other
   place with a message that names this cause. **Recommended.** (b) A builtin `option(x)`
   from `T | null` to `Option<T>`, emitted as `Option.fromNullable(x)`. The existing
-  `Some` and `None` arms and `??` then apply. It needs no pattern, resolver, or validator
-  rule, but each use adds a call, and AGENTS.md prefers an extended form to a new name.
-- CQD2, `??` on a nullable union. (a) `x ?? d` accepts a nullable union. It lowers to the
-  same match as `match x { null => d, v => v }`, so it adds no IR kind of its own. The
-  result type joins the type without `null` and the fallback. **Recommended**, because a
+  `Some` and `None` arms and `??` then apply. It needs no pattern or resolver rule. The
+  instance name changes the wire contract, so it also raises the IR version, and it
+  needs a validator shape rule (CPR3). Each use adds a call, and AGENTS.md prefers an
+  extended form to a new name.
+- CQD2, `??` on a nullable union. (a) `x ?? d` accepts each subject that CQR1 calls
+  `nullable`. A literal-only union with `null`, such as `Mode`, keeps
+  `type-mismatch/010`. It lowers to the same match as `match x { null => d, v => v }`,
+  so it adds no IR kind of its own. The result type joins the type without `null` and
+  the fallback. **Recommended**, because a
   default value is the most frequent use, and TypeScript users expect this form. (b) Only
   `match` reads a nullable union.
 - CQD3, the subjects that take a binding arm. (a) Every subject whose members include
   `null` and at least one member that is not a literal: `Int | null`, `Cents | null`,
   `Item | null` for a record, `Shape | null` for tagged records, and `Int | Text | null`.
-  The binding gets the other members. **Recommended**, because the rule has no exception
-  list. (b) Only `null` with one primitive or one identity over a primitive, as the CO9
+  The binding gets the other members. The one exception is a `null` inside another
+  identity, as in `Mode | Int` (CQR1). **Recommended**, because the rule needs no list
+  of member kinds. (b) Only `null` with one primitive or one identity over a primitive, as the CO9
   title says. Every other nullable union keeps `pattern/004`.
+- CQD4, validation of this plan. (a) A Fable subagent validates the plan before
+  execution, as for phase 2, and Opus resolves each finding CQV before CQU1 starts.
+  **Recommended**, because AGENTS.md asks for a reviewer before a non-trivial plan runs.
+  (b) Execution starts after the user accepts CQD1 to CQD3.
 
 The units below follow option (a) of each decision.
 
 ### Shared rules
 
-The phase 1 rules P1, P2, P4, P6, P7, and P8 and the phase 2 rule CPR8 (tests) apply.
-These rules add to them.
+The phase 1 rules P7 (documents) and P8 (fixtures) and the phase 2 rule CPR8 (tests)
+apply. The rules P1, P2, P4, and P6 are about builtin names and `int` results, and phase 3
+adds neither. These rules add to them.
 
-- CQR1 (domain). `domainOf` gets a new kind `{ kind: "nullable"; rest: TypeRef }`. It
-  applies when the identity members include `null` and the other members are not all
-  literals. It comes before the nominal test, so `Shape | null` is `nullable`, not
-  `mixed`. `rest` is the union of the identity members without `null`, so
-  `Cents | null` gives `Cents`. A literal-only union with `null` stays `literals`.
+- CQR1 (domain). `domainOf` gets a new kind `{ kind: "nullable"; rest: TypeRef }`. A
+  null member is an identity member (`flattenIdentityMembers`) whose unfolded node is
+  the literal `null`, so both `null` and `Nil` count. The kind applies when the subject
+  has a null member and the other members are not all literals. It comes before the
+  nominal test, so `Shape | null` is `nullable`, not `mixed`. `rest` is the union of the
+  identity members that are not null members, so `Cents | null` and `Cents | Nil` give
+  `Cents`. A literal-only union with `null` stays `literals`. When another identity
+  member hides `null` in its body, as `Mode` does in `Mode | Int`, the subject keeps
+  `pattern/004`, because `rest` cannot drop that `null` and keep the identity.
   `describeDomain` gives "the nullable union T", with T the shown subject type.
 - CQR2 (arms). A `nullable` subject takes three arm forms: the literal `null`, `_`, and
   a binding `n`. A binding arm must come after the `null` arm. It matches every value
@@ -755,20 +786,29 @@ These rules add to them.
   local, as the binding of `Some(x)` does. So a binding can shadow a module constant.
   A reserved prelude name or a target name gives `declaration/002`, as for every local.
 - CQR4 (IR). The IR `Pattern` union (`src/core/ir.ts:126-133`) gets
-  `{ kind: "bind"; binding: Parameter; span: Span }`. The IR version becomes 10 in
-  `ir.ts`, `validate/serialization.ts`, and every place that writes the version. One new
-  `CHANGELOG.md` line under `## Unreleased` says that version 10 adds the pattern `bind`
-  and that the validator rejects version 9.
+  `{ kind: "bind"; binding: Parameter; span: Span }`. The IR version becomes 10 at the
+  sites that `99fb296` changed: `src/core/ir.ts`, `src/core/lower.ts`,
+  `src/core/validate/serialization.ts`, `fixtures/ir/example/log.ir.json`,
+  `fixtures/ir/examples-baseline.json`, the four tests, and the version sentence in
+  `docs/api.md`, `docs/architecture.md`, `docs/inferred-input-contracts.md`, and
+  `docs/status.md`. One new `CHANGELOG.md` line under `## Unreleased` says that version
+  10 adds the pattern `bind` and that the validator rejects version 9. The paired
+  website change follows website `d81866e`: `scripts/site_ir.ts` regenerates
+  `../effektive/public/typed-ir.ts`, `../effektive/public/log.ir.json` copies the
+  fixture, and the specification sentence names version 10. Opus commits the two
+  repositories at the same time, so `ir_site_slow_test` passes at each compiler commit.
 - CQR5 (validator). The validator does not trust the checker. In `matchExpr`
   (`src/core/validate/expr.ts:1659`), a `bind` pattern needs an earlier arm with the
   literal pattern `null`, and its binding type must be `same` as the subject without
-  its `null` member. The validator builds that type from its own `identityMembers`.
-  Each fault gives `validation/002`.
+  its null members. The validator builds that type from its own `identityMembers`, with
+  the null-member rule of CQR1. Each fault gives `validation/002`.
 - CQR6 (emission). `patternBinding` (`src/core/emit/walk.ts:15`) returns the binding of
   `bind`. In `selectorMatch` and `armTest` (`src/core/emit/expr.ts:1533,1604`), a `bind`
-  arm has no test, as `_` has none, so a final `bind` arm is the else branch. The output
-  is `(($s) => $s === null ? d : ((n) => body)($s))(x)` in the form that `deno fmt`
-  keeps. `build --tsc` must pass for each new fixture.
+  arm has no test, as `_` has none, so a final `bind` arm is the else branch. A match
+  with a `bind` arm annotates the selector parameter with the subject type, so a
+  narrowed block constant does not make the binding `never`. The output is
+  `(($s: MaybeInt) => $s === null ? d : ((n) => body)($s))(x)` in the form that
+  `deno fmt` keeps. `build --tsc` must pass for each new fixture.
 
 ### Units
 
@@ -777,7 +817,7 @@ executor writes a failing test first and hands back without a commit. Opus revie
 diff, runs `deno task check`, commits, and runs `deno task mutate --only` on the changed
 logic lines, `deno task rules:unfired`, and `deno task coverage`.
 
-#### CQU1: binding arm (Sonnet, 100 turns)
+#### CQU1: binding arm (Sonnet, 110 turns)
 
 Files: `src/core/resolve.ts`; `src/core/patterns.ts`; `src/core/check_patterns.ts`
 (`missingOf`, `pattern`, `reach`, `describeDomain`); `src/core/tables.ts` (`PatternFact`
@@ -785,12 +825,17 @@ kind `bind`); `src/core/check_expr.ts` (`match`: the subject message at `2817` a
 refinement local of a `bind` binding at `2866`); `src/core/lower.ts` (`pattern` at
 `1286`); `src/core/ir.ts`; `src/core/validate/expr.ts`;
 `src/core/validate/serialization.ts`; `src/core/emit/walk.ts`; `src/core/emit/expr.ts`;
-`docs/language-rules.md` (the row "null in matches and equality" and the rows of
-`pattern/004`); `CHANGELOG.md`.
+`docs/language-rules.md` (the row "null in matches and equality", the row "Match by
+name limits" at line 90, and the rows of `pattern/004`); `CHANGELOG.md`; the version
+sites of CQR4; the website files of CQR4, without a website commit.
 
 Acceptance, in `fixtures/emit/core-data/nullable.eff`:
 - `match x { null => 0, n => n + 1 }` on `Int | null` gives `0` for `null` and `3` for
-  `2`. The same match on `Cents | null` fits a `Cents` result for `n`.
+  `2`. The same match on `Cents | null` fits a `Cents` result for `n`, and the same
+  match on `Int | Nil` checks.
+- A block constant `const s: MaybeItem = null`, followed by a match with a binding arm
+  that reads `n.r`, passes `build --tsc` and gives the `null` arm value.
+- `match` on `Mode | Int` keeps the `pattern/004` subject message.
 - A binding arm on `Shape | null` gives `n: Shape`, and a nested match on `n` with
   `Circle(c)` and `Square(s)` arms checks and gives exact values.
 - `null => 0, _ => 1` on `Int | null` checks. `match x { null => 0 }` gives
@@ -820,7 +865,8 @@ Files: `src/core/check_expr.ts` (`optionFallback` at `2773`); `src/core/tables.t
 
 Acceptance, in `fixtures/emit/core-data/nullable.eff`:
 - `x ?? 0` on `Int | null` gives `0` for `null` and `5` for `5`. `c ?? 0` on
-  `Cents | null` fits `Cents`.
+  `Cents | null` fits `Cents`. `m ?? "a"` on `Mode` gives `type-mismatch/010` with the
+  message below.
 - An effectful fallback runs only for `null`. The runtime test shows this with a counter
   or a failure that does not occur for a value.
 - `x ?? 0` on `Int` gives `type-mismatch/010` "the left operand of `??` must be an
