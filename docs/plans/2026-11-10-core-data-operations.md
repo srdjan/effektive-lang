@@ -393,9 +393,9 @@ example.
 Base: `28bb822`. Author: Opus. Validation: Fable on 2026-11-10 at `3452650`, findings
 CPV1 to CPV18 (1 blocker, 11 changes, 6 notes). This revision applies every change and
 the plan text of the notes CPV15 and CPV16. Status: on 2026-11-10 the user accepted
-option (a) of CPD1, CPD2, CPD3, and CPD4. The user has not approved execution, so no
-code changes before a user go-ahead. Units CPU1 to CPU5 carry out CO6 and CO7. CO8 is
-deferred.
+option (a) of CPD1, CPD2, CPD3, and CPD4, and approved execution. Units CPU1 to CPU5
+carry out CO6 and CO7. CO8 is deferred. The "Phase 2 result" section records the
+commits.
 
 The N3 fix ([constant comparison plan](../archive/plans/2026-11-10-constant-comparison.md), unit CCU1)
 also edits `src/core/emit/expr.ts`. So CCU1 and the phase 2 units run one after another,
@@ -632,6 +632,28 @@ files that COU6 changed.
 Acceptance: one checked example for `at`, `sort`, and spread. The website
 `deno task test` and `deno task typecheck` pass. The compiler tests
 `website_examples_slow_test` and `ir_site_slow_test` pass.
+
+### Phase 2 result
+
+CCU1 ran first, in `3d1f53a`, with mutation tests in `0b6e562`. CPU1 is `ebc2fec`, CPU2
+is `865e6a7`, and CPU3 is `6a35c93`. Follow-up commits killed the directed mutation
+survivors: `89c6612` for CPU1, `d4a9673` and `3dcf595` for CPU2, and `4cb9c5d` for CPU3.
+Two commits deleted code that no test can observe: `8cfb28e` (a count guard that
+`concat` never reaches) and `07e3fb8` (a key execution test that `isQuiet` already
+makes). No survivor is registered. CPU4 is the commit that adds this section.
+
+Opus changed three executor results during review. CPU1 got a runtime case for a
+`null` element, which gives `Some(null)`. CPU2 got tests that show a literal with a
+spread does not prove a refined argument or field. CPU3 got tests that reject a union
+of two identities and a record element, and accept a union of number literals.
+
+Two facts differ from the plan text. A literal with a spread at an expected array type
+has the unfolded type `E[]`, because the validator compares the call type with the
+`concat` result. So `const v: NonEmpty = [1, ...ys]` reports "the constant does not
+prove the required refinement NonEmpty". A spread of another element type at an
+expected array type gives the `type-mismatch/003` message "spread element N has type
+T, but U[] is expected". The `type-mismatch/012` message of the plan fires only when the
+element type is inferred.
 
 ### Out of scope for phase 2
 
