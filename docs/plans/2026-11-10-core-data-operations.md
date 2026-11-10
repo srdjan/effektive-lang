@@ -4,8 +4,8 @@ Date: 2026-11-10. Base: `3808b91` on local `main`. Author: Opus.
 Status: on 2026-11-10 the user accepted COD1 (a), COD2 (a), COD3 (a), and COD4 (a). All
 nine items are selected. Phase 1 (CO1 to CO5) is done: "Phase 1 result" below gives the
 commits and the checks. "Phase 2 execution plan" below is validated, and its decisions are
-accepted, and phase 2 is done. "Phase 3 execution plan" below is a draft. Its decisions
-CQD1 to CQD4 wait for the user, and implementation needs a user approval. So this plan
+accepted, and phase 2 is done. "Phase 3 execution plan" below has accepted decisions
+CQD1 to CQD4. Its implementation waits for a validation and a user go-ahead. So this plan
 stays in `docs/plans/`.
 
 Prefixes: CO (items), COD (decisions), COU (phase 1 units), COV (phase 1 validation
@@ -675,8 +675,9 @@ example.
 
 ## Phase 3 execution plan
 
-Base: `aada289` (release 0.15.7). Author: Opus. Validation: not done. Status: draft. The
-decisions CQD1 to CQD4 wait for the user. Units CQU1 to CQU3 carry out CO9. The line
+Base: `aada289` (release 0.15.7). Author: Opus. Validation: Fable, in progress. Status:
+on 2026-11-10 the user accepted option (a) of CQD1, CQD2, CQD3, and CQD4. Execution
+waits for the validation and a user go-ahead. Units CQU1 to CQU3 carry out CO9. The line
 numbers below are at `aada289`.
 
 ### Facts that changed the item
