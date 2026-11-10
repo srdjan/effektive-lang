@@ -159,7 +159,18 @@ async function denoCheck(
     Deno.writeTextFileSync(config, request.config);
     Deno.writeTextFileSync(lock, request.lock);
     return new Deno.Command("deno", {
-      args: ["check", `--lock=${lock}`, "--config", config, ...request.files],
+      // A file name that starts with a hyphen gets `./`, so `deno check` does
+      // not read it as an option. A `--` separator would not work: after it,
+      // `deno check` ignores the names and checks every file.
+      args: [
+        "check",
+        `--lock=${lock}`,
+        "--config",
+        config,
+        ...request.files.map((file) =>
+          file.startsWith("-") ? `./${file}` : file
+        ),
+      ],
       cwd: request.cwd,
       env: { NO_COLOR: "1" },
       stdout: "piped",

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `build --tsc` checks a project with a source file whose name starts with a hyphen, such as `-main.eff`.
+  Before, `deno check` read the generated file name as an option and failed with "unexpected argument".
+
 ## 0.15.6 - 2026-11-09
 
 - The language server removes a project when its last open document closes after its `effektive.json` was deleted, and it clears the lists that the project published.

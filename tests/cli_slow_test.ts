@@ -259,6 +259,28 @@ Deno.test("build --tsc accepts an effectful retry pipeline", async () => {
   });
 });
 
+Deno.test("build --tsc accepts a source file whose name starts with a hyphen", async () => {
+  await withTemporary(async (dir) => {
+    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+    Deno.writeTextFileSync(
+      `${dir}/-main.eff`,
+      "type Int = int\nexport const main = (): Int => 1\n",
+    );
+    // `deno check` must check only the listed files, not this one.
+    Deno.writeTextFileSync(
+      `${dir}/unrelated.ts`,
+      'export const n: number = "x";\n',
+    );
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(built.code, 0, `${built.stdout}\n${built.stderr}`);
+    assertEquals(built.stdout, "");
+    assert(
+      built.stderr.includes("1 module, 0 diagnostics, wrote 2 files\n"),
+      built.stderr,
+    );
+  });
+});
+
 Deno.test("build --tsc accepts a nominal value widened to its base and compared with it", async () => {
   await withTemporary(async (dir) => {
     copyDirectory(new URL("emit/nominal-operators/", FIXTURES), dir);
