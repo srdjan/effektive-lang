@@ -4,6 +4,8 @@
 
 - The unary operators `-e` and `!e` work in expressions. They bind tighter than `*` and looser than a call or a field. `-e` has the type of `0 - e` and compiles to it, so `-x` for `x = 0` is `0`. `!e` needs a `boolean` and compiles to `e === false`. A `Duration` operand and an unproven refined operand are rejected as `0 - d` and `0 - p` are. A block item after the first cannot start with `-`, because a newline ends the previous item. In a refinement, `-e` reads as `0 - e`, and `!e` is rejected.
   Before, `-x` and `!x` gave `syntax/010` with the hints "write `0 - x`" and "write `x === false`". A unary `+` still gives `syntax/010`.
+- A `match` pattern can be a negative number literal, such as `-1 =>` or `-1.5 =>`, and so can the value of a record pattern field. The pattern matches as the positive literal does, and `-0` is `0`, so the arms `0` and `-0` are duplicates. A `-` before a duration, a string, a boolean, or another token gives `syntax/011`.
+  Before, `-1 =>` as a pattern gave `syntax/011`, and the source could not match a negative number.
 - The IR wire version is 9, and the validator rejects version 8. Version 9 will add the binary operator `%` and new builtin instance names.
 - `build` accepts an effectful expression as the job or an option of `retry` and `repeat`, and as the step of `retrySchedule`. The expression runs once, before the builtin starts.
   Before, `check` accepted such a program, for example `retry(make(), { times: 0 })` with an effectful `make`, but `build` stopped with "pure() received an effect-mode call node".

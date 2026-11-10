@@ -1193,6 +1193,42 @@ export const g = (r: Rec): Int with S.rec | T.get =>
   );
 });
 
+Deno.test("a negative literal pattern emits the strict comparison with the negative value", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), [
+    "negative-pattern.eff",
+  ]).get("negative-pattern");
+  assert(emitted !== undefined, "module negative-pattern was not emitted");
+  assertEquals(
+    emitted.text,
+    `// Generated from negative-pattern.eff by the Effektive compiler. Do not edit.
+
+import { Schema } from "effect";
+
+const $Int = Schema.Finite.check(
+  Schema.makeFilter(
+    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+  ),
+);
+
+export const Int = $Int;
+export type Int = typeof Int.Type;
+
+export const Num = Schema.Number;
+export type Num = typeof Num.Type;
+
+export const Text = Schema.String;
+export type Text = typeof Text.Type;
+
+export const sign = (n: Int): Text =>
+  (($t0) => $t0 === -1 ? "negative one" : $t0 === 0 ? "zero" : "other")(n);
+
+export const half = (x: Num): Text =>
+  (($t0) => $t0 === -1.5 ? "minus one and a half" : "other")(x);
+//# sourceMappingURL=negative-pattern.ts.map
+`,
+  );
+});
+
 Deno.test("unary operators emit as the binary operators that they stand for", () => {
   const emitted = emitFiles(projectFiles("emit/core-data"), ["unary.eff"]).get(
     "unary",

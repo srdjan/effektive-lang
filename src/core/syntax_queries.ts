@@ -192,18 +192,31 @@ export function isDurationLiteral(tree: SyntaxTree, node: NodeId): boolean {
   return text !== undefined && isDurationText(text);
 }
 
+/**
+ * The value of a literal node. A pattern literal can start with `-`, which
+ * negates a number that has no duration suffix. Any other `-` form has no value.
+ */
 export function literalOf(
   tree: SyntaxTree,
   node: NodeId,
 ): string | number | boolean | null | undefined {
+  let negative = false;
   for (const child of childrenOf(tree, node)) {
     if (kindOf(tree, child) !== SyntaxKind.Token) continue;
     const kind = tree.lexed.kinds[tree.tokens[child]] as TokenKind;
     const text = nodeText(tree, child);
+    if (kind === TokenKind.Minus) {
+      negative = true;
+      continue;
+    }
+    if (negative && (kind !== TokenKind.Number || isDurationText(text))) {
+      return undefined;
+    }
     if (kind === TokenKind.String) return decodeString(text);
     if (kind === TokenKind.Number) {
       const value = numberValue(text);
-      return Number.isFinite(value) ? value : undefined;
+      if (!Number.isFinite(value)) return undefined;
+      return negative ? 0 - value : value;
     }
     if (kind === TokenKind.KwTrue) return true;
     if (kind === TokenKind.KwFalse) return false;

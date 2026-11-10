@@ -1,0 +1,16 @@
+type Int = int
+type Num = number
+type Text = string
+
+export const sign = (n: Int): Text =>
+  match n {
+    -1 => "negative one",
+    0 => "zero",
+    _ => "other"
+  }
+
+export const half = (x: Num): Text =>
+  match x {
+    -1.5 => "minus one and a half",
+    _ => "other"
+  }

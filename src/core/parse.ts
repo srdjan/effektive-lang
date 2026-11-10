@@ -25,6 +25,7 @@ import {
   type ContextualWord,
   describeTokenKind,
   isDeclarationStartWord,
+  isDurationText,
   isKeywordKind,
   isWord,
   lex,
@@ -1743,6 +1744,35 @@ class Parser {
     this.problem("syntax/011", message, false);
   }
 
+  /**
+   * A literal token, or `-` and a number. A negative duration, a negative
+   * non-number, and a `-` alone give one syntax/011. The node keeps the `-` and
+   * the token that follows it, so one bad pattern gives one problem.
+   */
+  private parseLiteralPattern(): void {
+    this.begin();
+    if (this.kind() === TokenKind.Minus) {
+      this.tok();
+      const next = this.kind();
+      if (
+        next === TokenKind.Number &&
+        !isDurationText(
+          this.text.slice(this.starts[this.pos], this.ends[this.pos]),
+        )
+      ) {
+        this.tok();
+      } else {
+        this.invalidPattern(
+          "a negative pattern must be a number literal, as in `-1` or `-1.5`",
+        );
+        if (next === TokenKind.Ident || this.isLiteralKind(next)) this.tok();
+      }
+    } else {
+      this.tok();
+    }
+    this.end(SyntaxKind.LiteralPattern);
+  }
+
   private parsePattern(): void {
     const k = this.kind();
     if (k === TokenKind.Ident) {
@@ -1772,10 +1802,8 @@ class Parser {
         this.parseName("member");
         this.end(SyntaxKind.NamePattern);
       }
-    } else if (this.isLiteralKind(k)) {
-      this.begin();
-      this.tok();
-      this.end(SyntaxKind.LiteralPattern);
+    } else if (this.isLiteralKind(k) || k === TokenKind.Minus) {
+      this.parseLiteralPattern();
     } else if (k === TokenKind.LBrace) {
       this.begin();
       this.parseDelimited(TokenKind.RBrace, () => this.parsePatternField());
@@ -1805,10 +1833,8 @@ class Parser {
       } else {
         this.missing("`:`");
       }
-      if (this.isLiteralKind(this.kind())) {
-        this.begin();
-        this.tok();
-        this.end(SyntaxKind.LiteralPattern);
+      if (this.isLiteralKind(this.kind()) || this.kind() === TokenKind.Minus) {
+        this.parseLiteralPattern();
       } else {
         this.invalidPattern("a field in a record pattern must match a literal");
         this.skipJunk(

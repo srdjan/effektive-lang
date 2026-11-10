@@ -176,6 +176,33 @@ console.log(JSON.stringify({
   });
 });
 
+Deno.test("a negative literal pattern selects its arm at run time", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/core-data/", FIXTURES), dir);
+    build(dir, ["negative-pattern.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import * as M from "./negative-pattern.ts";
+console.log(JSON.stringify({
+  minusOne: M.sign(-1),
+  zero: M.sign(0),
+  one: M.sign(1),
+  minusOneAndHalf: M.half(-1.5),
+  oneAndHalf: M.half(1.5),
+}));
+`,
+    );
+    assertEquals(result, {
+      minusOne: "negative one",
+      zero: "zero",
+      one: "other",
+      minusOneAndHalf: "minus one and a half",
+      oneAndHalf: "other",
+    });
+  });
+});
+
 Deno.test("a data value with a missing optional prototype-named field nests in another data value", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");

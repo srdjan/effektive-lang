@@ -687,3 +687,42 @@ Deno.test("a block item after the first cannot start with a unary minus", () => 
   );
   parseClean("const f = (): int => {\n  const total = price\n  !flag\n}");
 });
+
+Deno.test("a pattern and a record pattern field accept a negative number literal", () => {
+  const table: [string, number][] = [
+    ["const f = (x: int): int => match x {\n  -1 => 1,\n  _ => 2\n}", 1],
+    ["const f = (x: number): int => match x {\n  -1.5 => 1,\n  _ => 2\n}", 1],
+    ["const f = (x: int): int => match x {\n  - 1 => 1,\n  _ => 2\n}", 1],
+    ["const f = (s: Shape): int => match s {\n  { n: -1, ...r } => 1\n}", 1],
+  ];
+  for (const [source, count] of table) {
+    const tree = parseClean(source);
+    assertEquals(countKind(tree, SyntaxKind.LiteralPattern), count, source);
+  }
+});
+
+Deno.test("a minus before a pattern that is not a number gives syntax/011", () => {
+  const table: [string, string[]][] = [
+    ["const f = (x: int): int => match x {\n  -5s => 1,\n  _ => 2\n}", [
+      "40-42 syntax/011 a negative pattern must be a number literal, as in `-1` or `-1.5`",
+    ]],
+    ['const f = (x: int): int => match x {\n  -"a" => 1,\n  _ => 2\n}', [
+      "40-43 syntax/011 a negative pattern must be a number literal, as in `-1` or `-1.5`",
+    ]],
+    ["const f = (x: int): int => match x {\n  -true => 1,\n  _ => 2\n}", [
+      "40-44 syntax/011 a negative pattern must be a number literal, as in `-1` or `-1.5`",
+    ]],
+    ["const f = (x: int): int => match x {\n  -y => 1,\n  _ => 2\n}", [
+      "40-41 syntax/011 a negative pattern must be a number literal, as in `-1` or `-1.5`",
+    ]],
+    [
+      "const f = (s: Shape): int => match s {\n  { n: -5s, ...r } => 1\n}",
+      [
+        "47-49 syntax/011 a negative pattern must be a number literal, as in `-1` or `-1.5`",
+      ],
+    ],
+  ];
+  for (const [source, expected] of table) {
+    assertEquals(parseChecked(source).diagnostics.map(show), expected, source);
+  }
+});
