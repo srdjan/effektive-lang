@@ -1554,6 +1554,18 @@ Deno.test("recovery: a tag with two handlers is rejected", () => {
   );
 });
 
+Deno.test("types: a handler binding has the type of its error", () => {
+  assertEquals(
+    mutated(
+      FORMS,
+      "forms",
+      (ir, base) =>
+        setAt(ir, `${base("lookup2")}.body.handlers[0].binding.type`, INT),
+    ),
+    ["validation/002"],
+  );
+});
+
 Deno.test("recovery: handler results fit the recorded type of the catch", () => {
   const codes = mutated(
     FORMS,
