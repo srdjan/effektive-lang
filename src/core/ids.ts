@@ -106,6 +106,7 @@ const BUILTIN_INSTANCE_NAMES = [
   "ceil",
   "text",
   "len",
+  "at",
 ] as const;
 
 export type BuiltinInstanceName = typeof BUILTIN_INSTANCE_NAMES[number];

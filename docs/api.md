@@ -40,7 +40,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     rows.ts        The row shape of a builtin: its prologue and its handler, and the prologue helpers.
     registry.ts    FAMILY_ROWS: the rows of all families, composed once.
     collections.ts Collection callbacks, traversal and grouped effects through a family-specific context.
-    data.ts        The pure data builtins `div`, `trunc`, `floor`, `round`, `ceil`, `text`, and `len`: argument types, the closed unit rule, and the builtin instance fact.
+    data.ts        The pure data builtins `div`, `trunc`, `floor`, `round`, `ceil`, `text`, `len`, and `at`: argument types, the closed unit rule, and the builtin instance fact.
     effect.ts      Effect construction, execution, failures and retry options through EffectContext.
     layer.ts       Layer construction, merging and provision through LayerContext.
     ref.ts         Mutable reference construction, reads, writes and pure update callbacks.
@@ -310,7 +310,7 @@ fact such as `call`, `perform`, `error-construction`, `identity-construction`,
 `some`, `fail`, `retry`, `provide`, or
 `builtin`. The type `NodeFact` in `src/core/tables.ts` lists every kind. A
 `builtin` fact carries the closed function type of a builtin instance: a
-collection operation, `div`, a rounding builtin, `text`, or `len`. A
+collection operation, `div`, a rounding builtin, `text`, `len`, or `at`. A
 bracket literal has a fact that selects array or tuple IR. A field read, an
 arrow, a block binding, a pattern, and a catch handler have facts too.
 
@@ -366,7 +366,7 @@ The IR holds the declarations in source order, the sorted export identities, and
 one `Import` for each import declaration. The `module` of an `Import` is the
 module name for a relative import. It is the import string, such as
 `host:providers`, for a host import. A module that uses `map`, `filter`, `fold`,
-`all`, `traverse`, `div`, `trunc`, `floor`, `round`, `ceil`, `text`, or `len`
+`all`, `traverse`, `div`, `trunc`, `floor`, `round`, `ceil`, `text`, `len`, or `at`
 has one more `Import` with the module `effektive:prelude`.
 
 Each distinct closed instance of a builtin gets the identity

@@ -83,6 +83,7 @@ interface HelperNames {
   remainder?: string;
   divide?: string;
   round?: string;
+  at?: string;
   unmatched?: string;
   hostCheck?: string;
   outcome?: OutcomeNames;
@@ -107,6 +108,7 @@ export interface EmitNames {
   remainder(): string;
   divide(): string;
   round(): string;
+  at(): string;
   unmatched(): string;
   outcome(): OutcomeNames;
   hostCheck(): string;
@@ -402,6 +404,11 @@ export class ModuleState
   /** The helper `$div` that `div` calls. */
   divide(): string {
     return this.helpers.divide ??= this.fresh("$div");
+  }
+
+  /** The helper `$at` that `at` calls. */
+  at(): string {
+    return this.helpers.at ??= this.fresh("$at");
   }
 
   /** The helper `$round` that `round` calls. */

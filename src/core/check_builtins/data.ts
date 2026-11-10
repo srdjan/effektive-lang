@@ -142,6 +142,56 @@ function lenCall(c: DataContext, node: NodeId, arg: Arg): NodeInfo {
   ]);
 }
 
+/**
+ * `at` takes an array and an `int` index and gives an `Option` of the element.
+ * The instance keeps the unfolded array type, so it names the element type. A
+ * closed unit does not widen to the index parameter.
+ */
+function atCall(
+  c: DataContext,
+  node: NodeId,
+  array: Arg,
+  index: Arg,
+): NodeInfo {
+  const table = c.table;
+  const arrayInfo = c.argInfo(array);
+  const unfolded = table.unfold(arrayInfo.type);
+  const unfoldedNode = table.node(unfolded);
+  const parameter = unfoldedNode.kind === "array" &&
+      c.assignable(arrayInfo.type, unfolded)
+    ? unfolded
+    : undefined;
+  if (parameter === undefined) {
+    c.report(
+      "type-mismatch/003",
+      `the argument has type ${
+        showType(table, arrayInfo.type)
+      }, but an array is expected`,
+      array.node,
+    );
+  }
+  const indexInfo = c.argInfo(index, table.int);
+  if (isClosedUnit(table, indexInfo.type)) {
+    const [found, expected] = showTypes(table, indexInfo.type, table.int);
+    c.report(
+      "type-mismatch/003",
+      `the argument has type ${found}, but ${expected} is expected`,
+      index.node,
+    );
+  } else c.fits(index.node, indexInfo.type, table.int, "the argument");
+  const element = unfoldedNode.kind === "array"
+    ? unfoldedNode.element
+    : table.int;
+  return instanceCall(
+    c,
+    node,
+    "at",
+    [parameter ?? table.array(table.int), table.int],
+    table.option(element),
+    [arrayInfo, indexInfo],
+  );
+}
+
 export const DATA_ROWS = {
   div: {
     prologue: piped(2, "pure"),
@@ -170,5 +220,9 @@ export const DATA_ROWS = {
   len: {
     prologue: piped(1, "pure"),
     handle: (c, node, _name, args) => lenCall(c, node, args[0]),
+  },
+  at: {
+    prologue: piped(2, "pure"),
+    handle: (c, node, _name, args) => atCall(c, node, args[0], args[1]),
   },
 } satisfies Partial<Rows<PreludeCallName, DataContext>>;

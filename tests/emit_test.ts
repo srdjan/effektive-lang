@@ -1572,3 +1572,73 @@ export const joined = (a: Text, b: Text): Int => (a + b).length;
 `,
   );
 });
+
+Deno.test("at emits the $at helper", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), [
+    "at.eff",
+  ]).get("at");
+  assert(emitted !== undefined, "module at was not emitted");
+  assertEquals(
+    emitted.text,
+    `// Generated from at.eff by the Effektive compiler. Do not edit.
+
+import { Option, Schema } from "effect";
+
+const $Int = Schema.Finite.check(
+  Schema.makeFilter(
+    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+  ),
+);
+
+const $int = (value: number): number => {
+  if (!Number.isSafeInteger(value)) throw new RangeError("int overflow");
+  return value;
+};
+
+const $at = <T>(xs: ReadonlyArray<T>, i: number): Option.Option<T> => {
+  return i >= 0 && i < xs.length ? Option.some(xs[i]!) : Option.none();
+};
+
+export const Int = $Int;
+export type Int = typeof Int.Type;
+
+export const Ints = Schema.Array($Int);
+export type Ints = typeof Ints.Type;
+
+export const Cents = $Int;
+export type Cents = typeof Cents.Type;
+
+export const Prices = Schema.Array(Cents);
+export type Prices = typeof Prices.Type;
+
+export const Maybe = Schema.Union([Int, Schema.Null]);
+export type Maybe = typeof Maybe.Type;
+
+export const Maybes = Schema.Array(Maybe);
+export type Maybes = typeof Maybes.Type;
+
+export const pick = (xs: Ints, i: Int): Option.Option<Int> => $at(xs, i);
+
+export const second = (): Option.Option<Int> => $at([10, 20, 30], 1);
+
+export const first = (xs: Ints): Int =>
+  Option.match($at(xs, 0), {
+    onNone: () => 0,
+    onSome: ($option167) => $option167,
+  });
+
+export const priced = (ps: Prices): Option.Option<Cents> => $at(ps, 0);
+
+export const piped = (xs: Ints): Option.Option<Int> => {
+  const $p1: Ints = xs;
+  return $at($p1, 0);
+};
+
+export const describe = (xs: Ints, i: Int): Int =>
+  Option.match($at(xs, i), { onNone: () => $int(0 - 1), onSome: (v) => v });
+
+export const head = (xs: Maybes): Option.Option<Maybe> => $at(xs, 0);
+//# sourceMappingURL=at.ts.map
+`,
+  );
+});

@@ -443,3 +443,69 @@ export const f = (d: Duration, n: Int): Text => text(n)
     ],
   );
 });
+
+const AT_SOURCE = `type Int = int
+type Ints = int[]
+export const f = (xs: Ints, i: Int): Option<Int> => at(xs, i)
+`;
+
+Deno.test("the lowered at program is valid, and its instance has the exact type", () => {
+  const type = instance(loweredModule(AT_SOURCE), "at");
+  assertEquals(
+    [type.parameters, type.result, type.execution],
+    [[INTS, INT], { kind: "option", element: INT }, "pure"],
+  );
+});
+
+Deno.test("an at instance with a wrong type is rejected", () => {
+  assertEquals(
+    forgedBuiltin(AT_SOURCE, "at", (type) => {
+      type.parameters[1] = NUMBER;
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin at takes an array and an int parameter",
+    ],
+  );
+  assertEquals(
+    forgedBuiltin(AT_SOURCE, "at", (type) => {
+      type.result = { kind: "option", element: NUMBER };
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin at returns an option of the element",
+      "validation/002 declarations[2].body.type: expected Option<number>, recorded Option<int>",
+      "validation/002 declarations[2].body: the body type Option<number> does not fit the declared result Option<type:m#Int>",
+    ],
+  );
+  assertEquals(
+    forgedBuiltin(AT_SOURCE, "at", (type) => {
+      type.execution = "effect";
+    }),
+    [
+      "validation/002 imports[0].values[0].type: the builtin at is pure, with no failure and no requirement",
+      "validation/004 declarations[2].type.execution: expected effect, recorded pure",
+      "validation/004 declarations[2].body.execution: expected effect, recorded pure",
+    ],
+  );
+});
+
+Deno.test("a Duration index of at is rejected, as the checker rejects it", () => {
+  const source = `type Int = int
+type Ints = int[]
+export const f = (xs: Ints, d: Duration, i: Int): Option<Int> => at(xs, i)
+`;
+  assertEquals(
+    forgedModule(source, (ir) => {
+      const f = (ir as Mutable<ModuleIR>).declarations.find((d) =>
+        d.kind === "function"
+      );
+      assert(f?.kind === "function" && f.body.kind === "call");
+      const argument = f.body.arguments[1];
+      assert(argument.kind === "reference");
+      argument.target = "local:m#f/d";
+      argument.type = { kind: "named", id: "type:effect/Duration" };
+    }),
+    [
+      "validation/002 declarations[2].body.arguments[1]: at does not take a closed unit argument of type Duration",
+    ],
+  );
+});

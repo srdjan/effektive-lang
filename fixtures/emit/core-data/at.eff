@@ -1,0 +1,18 @@
+type Int = int
+type Ints = int[]
+type Cents = int
+type Prices = Cents[]
+
+export const pick = (xs: Ints, i: Int): Option<Int> => at(xs, i)
+export const second = (): Option<Int> => at([10, 20, 30], 1)
+export const first = (xs: Ints): Int => at(xs, 0) ?? 0
+export const priced = (ps: Prices): Option<Cents> => at(ps, 0)
+export const piped = (xs: Ints): Option<Int> => xs |> at(0)
+export const describe = (xs: Ints, i: Int): Int =>
+  match at(xs, i) {
+    Some(v) => v,
+    None => -1,
+  }
+type Maybe = Int | null
+type Maybes = Maybe[]
+export const head = (xs: Maybes): Option<Maybe> => at(xs, 0)

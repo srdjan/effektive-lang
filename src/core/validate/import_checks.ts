@@ -53,6 +53,8 @@ function checkBuiltinShape(
       return checkTextShape(env, type, wrong);
     case "len":
       return checkLenShape(env, type, wrong);
+    case "at":
+      return checkAtShape(env, type, wrong);
     default:
       return checkCallbackShape(ctx, name, type, path, span, wrong);
   }
@@ -115,6 +117,27 @@ function checkLenShape(
   if (!same(env, type.result, { kind: "primitive", name: "int" })) {
     wrong("returns an int");
   }
+  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
+    wrong("is pure, with no failure and no requirement");
+  }
+}
+
+/** `at` is `(E[], int) => Option<E>`, pure with no failure or requirement. */
+function checkAtShape(
+  env: World["env"],
+  type: FunctionType,
+  wrong: (what: string) => void,
+): void {
+  const [array, index] = type.parameters;
+  if (
+    type.parameters.length !== 2 || array.kind !== "array" ||
+    !same(env, index, { kind: "primitive", name: "int" })
+  ) wrong("takes an array and an int parameter");
+  if (
+    type.result.kind !== "option" ||
+    array?.kind !== "array" ||
+    !same(env, type.result.element, array.element)
+  ) wrong("returns an option of the element");
   if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
     wrong("is pure, with no failure and no requirement");
   }

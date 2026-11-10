@@ -65,6 +65,19 @@ export function roundDeclaration(scope: ModuleState): Doc {
   ];
 }
 
+/** `const $at = ...`: `Some` of the element at an index in range, else `None`. An element can be `null`. */
+export function atDeclaration(scope: ModuleState): Doc {
+  const name = scope.at();
+  const option = scope.effect("Option");
+  return [
+    `const ${name} = <T>(xs: ReadonlyArray<T>, i: number): ${option}.Option<T> => `,
+    braces([
+      `return i >= 0 && i < xs.length ? ${option}.some(xs[i]!) : ${option}.none();`,
+    ]),
+    ";",
+  ];
+}
+
 /** `const $unmatched = ...` */
 export function unmatchedDeclaration(scope: ModuleState): Doc {
   const name = scope.unmatched();

@@ -30,6 +30,7 @@ import {
   ModuleState,
 } from "./module_state.ts";
 import {
+  atDeclaration,
   divideDeclaration,
   hostCheckDeclaration,
   intFunctionDeclaration,
@@ -124,6 +125,7 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
     ["remainder", () => remainderDeclaration(scope)],
     ["divide", () => divideDeclaration(scope)],
     ["round", () => roundDeclaration(scope)],
+    ["at", () => atDeclaration(scope)],
     ["unmatched", () => unmatchedDeclaration(scope)],
     ["hostCheck", () => hostCheckDeclaration(scope)],
     ["outcome", () => outcomeDeclaration(scope)],

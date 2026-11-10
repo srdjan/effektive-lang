@@ -390,6 +390,54 @@ console.log(JSON.stringify({
   });
 });
 
+Deno.test("at gives Some for an index in range and None for an index out of range", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/core-data/", FIXTURES), dir);
+    build(dir, ["at.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import { Option } from "effect";
+import * as M from "./at.ts";
+
+const show = (o: Option.Option<number>) =>
+  Option.isSome(o) ? { some: o.value } : { none: true };
+
+console.log(JSON.stringify({
+  second: show(M.second()),
+  three: show(M.pick([10, 20, 30], 3)),
+  negative: show(M.pick([10, 20, 30], -1)),
+  last: show(M.pick([10, 20, 30], 2)),
+  empty: show(M.pick([], 0)),
+  firstOf: M.first([7, 8]),
+  firstOfEmpty: M.first([]),
+  priced: show(M.priced([1999])),
+  piped: show(M.piped([4, 5])),
+  matchSome: M.describe([5, 6], 1),
+  matchNone: M.describe([5, 6], 2),
+  matchNegative: M.describe([5, 6], -1),
+  nullElement: Option.isSome(M.head([null, 1])) ? { some: Option.getOrThrow(M.head([null, 1])) } : { none: true },
+}));
+`,
+    );
+    assertEquals(result, {
+      second: { some: 20 },
+      three: { none: true },
+      negative: { none: true },
+      last: { some: 30 },
+      empty: { none: true },
+      firstOf: 7,
+      firstOfEmpty: 0,
+      priced: { some: 1999 },
+      piped: { some: 4 },
+      matchSome: 6,
+      matchNone: -1,
+      matchNegative: -1,
+      nullElement: { some: null },
+    });
+  });
+});
+
 Deno.test("a data value with a missing optional prototype-named field nests in another data value", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");

@@ -150,6 +150,7 @@ const ARITY_ROWS: readonly ArityRow[] = [
   ...fixed("ceil", 1),
   ...fixed("text", 1),
   ...fixed("len", 1),
+  ...fixed("at", 2),
 ];
 
 function arityMessages(call: string): string[] {
