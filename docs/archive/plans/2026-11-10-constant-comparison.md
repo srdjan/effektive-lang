@@ -1,14 +1,14 @@
 # Constant comparison fix (N3)
 
 Date: 2026-11-10. Base: `89e895e` on local `main`. Author: Opus.
-Status: on 2026-11-10 the user accepted option (a) of CCD1. The user has not approved
-execution. CCU1 waits for a user go-ahead, and no code changes before then.
+Status: done. On 2026-11-10 the user accepted option (a) of CCD1 and approved execution.
+CCU1 is done. The commit that moved this plan to the archive holds the fix.
 
 Prefixes: CC (shapes), CCD (decisions), CCU (units).
 
 ## Defect
 
-Row N3 of the [completeness review](2026-11-10-completeness-review.md) records the
+Row N3 of the [completeness review](../../plans/2026-11-10-completeness-review.md) records the
 defect. `check` accepts some comparisons, but `build --tsc` rejects the emitted text with
 TS2367: "This comparison appears to be unintentional because the types 'true' and 'false'
 have no overlap". So `check` and the TypeScript output disagree. The defect existed
@@ -73,6 +73,15 @@ Accepted on 2026-11-10: option (a).
 
 The executor writes the failing `build --tsc` test first and confirms TS2367. After the
 commit, Opus updates row N3 of the completeness review.
+
+## Result
+
+The emitter writes `(1 as number) === 2` for CC1 and `const on: Flag = true as Flag;` for
+CC2. The cast of CC2 names the declared type, not the primitive. The fixture
+`fixtures/emit/core-data/constant-comparison.eff` holds each measured form. Before the
+fix, its runtime test failed with seven TS2367 errors. After the fix, it passes, and no
+other expected emitted text changed. `deno task check` passed with 3,169 fast and 318
+slow tests.
 
 ## Out of scope
 

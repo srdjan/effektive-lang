@@ -1,0 +1,24 @@
+type Flag = boolean
+type Tag = "a" | "b"
+
+export const numbers = (): Flag => 1 === 2
+export const negated = (): Flag => !true
+export const texts = (): Flag => "x" === "y"
+export const differ = (): Flag => 1 !== 2
+export const flagIsOff = (): Flag => {
+  const on: Flag = true
+  on === false
+}
+export const flagIsNot = (): Flag => {
+  const on: Flag = true
+  !on
+}
+export const tagIsB = (): Flag => {
+  const t: Tag = "a"
+  t === "b"
+}
+export const flagsEqual = (): Flag => {
+  const on: Flag = true
+  const off: Flag = false
+  on === off
+}

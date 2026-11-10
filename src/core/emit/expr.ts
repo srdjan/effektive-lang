@@ -110,6 +110,15 @@ import {
   tokenOfId,
 } from "../ids.ts";
 
+type PrimitiveLiteral = Extract<Expr, { kind: "literal" }> & {
+  readonly value: string | number | boolean;
+};
+
+/** A boolean, number, or string literal; a unit literal is excluded. */
+function isPrimitiveLiteral(e: Expr): e is PrimitiveLiteral {
+  return e.kind === "literal" && e.value !== null;
+}
+
 function binaryPrecedence(operator: string): number {
   switch (operator) {
     case "||":
@@ -951,6 +960,16 @@ export class ExprEmitter implements ExprCore {
         resolved.members.some((m) => this.admitsLiteral(m)));
   }
 
+  /**
+   * True for a union type: TypeScript narrows a constant of that type to the
+   * type of its literal value, and a later comparison fails TS2367.
+   */
+  private narrowsOnDeclaration(type: Type): boolean {
+    const resolved = this.scope.resolve(type);
+    return resolved.kind === "union" ||
+      (resolved.kind === "primitive" && resolved.name === "boolean");
+  }
+
   private literal(value: string | number | boolean | null): Doc {
     if (value === null) return "undefined";
     if (typeof value === "string") return JSON.stringify(value);
@@ -1119,7 +1138,19 @@ export class ExprEmitter implements ExprCore {
       ]);
     }
     const prec = binaryPrecedence(e.operator);
-    const left = kid(e.left);
+    // TypeScript rejects a comparison of two literals with no overlap (TS2367),
+    // so the left literal widens to its primitive type.
+    const widen = (e.operator === "===" || e.operator === "!==") &&
+      isPrimitiveLiteral(e.right);
+    const left = widen && isPrimitiveLiteral(e.left)
+      ? emitted([
+        "(",
+        this.literal(e.left.value),
+        " as ",
+        typeof e.left.value,
+        ")",
+      ])
+      : kid(e.left);
     const right = at(kid(e.right), prec + 1);
     // A left operand of the same level joins the run; `at` adds no parentheses.
     const run: Run = left.run !== undefined && left.prec === prec &&
@@ -1360,7 +1391,14 @@ export class ExprEmitter implements ExprCore {
         ": ",
         typeDoc(this.scope, step.binding.type, true),
       ];
-      const bound = value(step.value, step.binding.type);
+      const bound = isPrimitiveLiteral(step.value) &&
+          this.narrowsOnDeclaration(step.binding.type)
+        ? emitted([
+          this.literal(step.value.value),
+          " as ",
+          typeDoc(this.scope, step.binding.type, true),
+        ])
+        : value(step.value, step.binding.type);
       // A curried closure lays out like a declaration of the module.
       return [
         bound.chain !== undefined

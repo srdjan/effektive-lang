@@ -947,3 +947,37 @@ console.log(JSON.stringify({
     assertEquals(result, { closure: 2, named: 2 });
   });
 });
+
+Deno.test("a comparison of constants and of literal-union constants type-checks and gives the right result", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/core-data/", FIXTURES), dir);
+    build(dir, ["constant-comparison.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import * as M from "./constant-comparison.ts";
+
+console.log(JSON.stringify({
+  numbers: M.numbers(),
+  negated: M.negated(),
+  texts: M.texts(),
+  differ: M.differ(),
+  flagIsOff: M.flagIsOff(),
+  flagIsNot: M.flagIsNot(),
+  tagIsB: M.tagIsB(),
+  flagsEqual: M.flagsEqual(),
+}));
+`,
+    );
+    assertEquals(result, {
+      numbers: false,
+      negated: false,
+      texts: false,
+      differ: true,
+      flagIsOff: false,
+      flagIsNot: false,
+      tagIsB: false,
+      flagsEqual: false,
+    });
+  });
+});

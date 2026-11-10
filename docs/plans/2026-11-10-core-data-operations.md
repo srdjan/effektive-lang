@@ -397,7 +397,7 @@ option (a) of CPD1, CPD2, CPD3, and CPD4. The user has not approved execution, s
 code changes before a user go-ahead. Units CPU1 to CPU5 carry out CO6 and CO7. CO8 is
 deferred.
 
-The N3 fix ([constant comparison plan](2026-11-10-constant-comparison.md), unit CCU1)
+The N3 fix ([constant comparison plan](../archive/plans/2026-11-10-constant-comparison.md), unit CCU1)
 also edits `src/core/emit/expr.ts`. So CCU1 and the phase 2 units run one after another,
 not in parallel (CPV2). The line numbers below are at `3452650`.
 

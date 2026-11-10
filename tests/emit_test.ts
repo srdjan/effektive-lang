@@ -1293,6 +1293,56 @@ export const below = (x: Int): Int => $int(0 - x);
   );
 });
 
+Deno.test("a comparison of constants widens a literal, so TypeScript accepts it", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), [
+    "constant-comparison.eff",
+  ]).get("constant-comparison");
+  assert(emitted !== undefined, "module constant-comparison was not emitted");
+  assertEquals(
+    emitted.text,
+    `// Generated from constant-comparison.eff by the Effektive compiler. Do not edit.
+
+import { Schema } from "effect";
+
+export const Flag = Schema.Boolean;
+export type Flag = typeof Flag.Type;
+
+const Tag = Schema.Literals(["a", "b"]);
+type Tag = typeof Tag.Type;
+
+export const numbers = (): Flag => (1 as number) === 2;
+
+export const negated = (): Flag => (true as boolean) === false;
+
+export const texts = (): Flag => ("x" as string) === "y";
+
+export const differ = (): Flag => (1 as number) !== 2;
+
+export const flagIsOff = (): Flag => {
+  const on: Flag = true as Flag;
+  return on === false;
+};
+
+export const flagIsNot = (): Flag => {
+  const on: Flag = true as Flag;
+  return on === false;
+};
+
+export const tagIsB = (): Flag => {
+  const t: Tag = "a" as Tag;
+  return t === "b";
+};
+
+export const flagsEqual = (): Flag => {
+  const on: Flag = true as Flag;
+  const off: Flag = false as Flag;
+  return on === off;
+};
+//# sourceMappingURL=constant-comparison.ts.map
+`,
+  );
+});
+
 Deno.test("an int % emits the $rem helper, and a number % emits the plain operator", () => {
   const emitted = emitFiles(projectFiles("emit/core-data"), [
     "remainder.eff",
