@@ -344,6 +344,17 @@ Deno.test("build --tsc accepts a pure function in every array and tuple position
   });
 });
 
+Deno.test("build --tsc accepts an effectful job or option of retry, repeat, and retrySchedule", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/effectful-operands/", FIXTURES), dir);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
+    assertEquals(built.code, 0, `${built.stdout}\n${built.stderr}`);
+    assertEquals(built.stdout, "");
+    assert(built.stderr.includes("1 module, 0 diagnostics"), built.stderr);
+  });
+});
+
 Deno.test("build --tsc accepts array and tuple literals", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");

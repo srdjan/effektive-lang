@@ -1839,11 +1839,18 @@ export class ExprEmitter implements ExprCore {
     }
   }
 
-  /** `Effect.suspend(job)`. A pure job is lifted, because `suspend` needs an effect. */
-  suspended(job: Expr): Emitted {
+  /**
+   * `Effect.suspend(job)`. A pure job is lifted, because `suspend` needs an
+   * effect. `hoisted` is the temporary that holds an effectful job expression:
+   * the lift wraps its name and does not run the expression again.
+   */
+  suspended(job: Expr, hoisted?: Emitted): Emitted {
     const effect = this.scope.effect("Effect");
     const from = this.functionTypeOf(job.type);
-    const value = from !== undefined && from.execution === "pure"
+    const pureJob = from !== undefined && from.execution === "pure";
+    const value = hoisted !== undefined
+      ? pureJob ? this.lift(from, at(hoisted, PREC.member)) : hoisted
+      : pureJob
       ? this.fit(job, { ...from, execution: "effect" }, "pure")
       : this.pure(job);
     return emitted([`${effect}.suspend`, callArguments([value])]);

@@ -45,6 +45,20 @@ interface Shape<E extends Expr> {
 
 type ShapeTable = { readonly [K in ExprKind]: Shape<ExprOf<K>> };
 
+/**
+ * An operand that a builtin runs later, such as a job, still runs its own
+ * expression first when that expression has effects. `retry(make(), ...)` calls
+ * `make` once, before `retry` starts. The effectful operands are evaluated
+ * children, and the pure operands stay deferred.
+ */
+const effectful = (operands: readonly Expr[]): Expr[] =>
+  operands.filter((x) => x.execution === "effect");
+const pure = (operands: readonly Expr[]): Expr[] =>
+  operands.filter((x) => x.execution !== "effect");
+
+const repeatOperands = (e: ExprOf<"repeat">): Expr[] =>
+  e.options === null ? [e.job] : [e.job, e.options];
+
 const ROWS = {
   literal: { children: () => [], leaf: "structural" },
   null: { children: () => [], leaf: "structural" },
@@ -105,8 +119,8 @@ const ROWS = {
   "merge-layers": { children: (e) => [e.left, e.right], leaf: "structural" },
   "retry-schedule": { children: (e) => [e.step], leaf: "structural" },
   "retry-with-schedule": {
-    children: () => [],
-    deferred: (e) => [e.job, e.options],
+    children: (e) => effectful([e.job, e.options]),
+    deferred: (e) => pure([e.job, e.options]),
     leaf: "leaf",
   },
   schema: { children: (e) => e.arguments, leaf: "structural" },
@@ -141,15 +155,19 @@ const ROWS = {
     deferred: (e) => [e.body, e.finalizer],
     leaf: "leaf",
   },
-  retry: { children: () => [], deferred: (e) => [e.job], leaf: "leaf" },
+  retry: {
+    children: (e) => effectful([e.job]),
+    deferred: (e) => pure([e.job]),
+    leaf: "leaf",
+  },
   timeout: {
     children: (e) => [e.durationMs],
     deferred: (e) => [e.job],
     leaf: "leaf",
   },
   repeat: {
-    children: () => [],
-    deferred: (e) => e.options === null ? [e.job] : [e.job, e.options],
+    children: (e) => effectful(repeatOperands(e)),
+    deferred: (e) => pure(repeatOperands(e)),
     leaf: "leaf",
   },
   sleep: { children: (e) => [e.durationMs], leaf: "leaf" },

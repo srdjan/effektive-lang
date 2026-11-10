@@ -1,0 +1,32 @@
+type Int = int
+type Bool = boolean
+error E = { code: Int }
+
+const mkE = (): () => Int => { sleep(1ms)
+  () => 1 }
+const mkP = (): pure () => Int => { sleep(1ms)
+  () => 1 }
+const mkF = (): () => Int fails E => { sleep(1ms)
+  () => fail(E({ code: 1 })) }
+const chooseE = (): (e: E) => Bool => { sleep(1ms)
+  (e: E) => false }
+const chooseN = (): (n: Int) => Bool => { sleep(1ms)
+  (n: Int) => false }
+const pick = (): pure (e: E) => Bool => { sleep(1ms)
+  (e: E) => false }
+const mkS = (): RetrySchedule<E> => { sleep(1ms)
+  retrySchedule((error: E, attempt: Int) => None) }
+const mkStep = (): pure (error: E, attempt: Int) => Option<Duration> => { sleep(1ms)
+  (error: E, attempt: Int) => None }
+const failing = (): Int fails E => fail(E({ code: 1 }))
+
+export const retryJobEffectCallback = (): Int => retry(mkE(), { times: 0 })
+export const retryJobPureCallback = (): Int => retry(mkP(), { times: 0 })
+export const retryWhile = (): Int fails E => retry(mkF(), { while: chooseE() })
+export const retryTimesWhile = (): Int fails E => retry(failing, { times: 1, while: pick() })
+export const retryUntilJob = (): Int fails E => retry(mkF(), { until: (e: E) => true })
+export const retryScheduleOption = (): Int fails E => retry(failing, { schedule: mkS() })
+export const repeatJob = (): Int => repeat(mkE(), { times: 0 })
+export const repeatForever = (): never => repeat(mkE())
+export const repeatUntil = (): Int => repeat(() => 1, { until: chooseN() })
+export const scheduleStep = (): RetrySchedule<E> => retrySchedule(mkStep())

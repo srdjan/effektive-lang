@@ -24,7 +24,7 @@ export interface ExprCore {
     direction: "decoded" | "encoded" | "make",
     unknownInput?: boolean,
   ): Emitted;
-  suspended(job: Expr): Emitted;
+  suspended(job: Expr, hoisted?: Emitted): Emitted;
   closure(
     e: Extract<Expr, { kind: "closure" }>,
     annotate: boolean,

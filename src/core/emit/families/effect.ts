@@ -11,6 +11,7 @@ import {
   type Mode,
   PREC,
 } from "../emitted.ts";
+import type { Expr } from "../../ir.ts";
 import { resolvedAs } from "../type_query.ts";
 import type { ExprOf, LeafOf } from "../shape.ts";
 import { typeDoc } from "../types.ts";
@@ -31,6 +32,21 @@ type EffectLeafKind = LeafOf<
   | "random-int"
   | "uninterruptible"
 >;
+
+/**
+ * The emitted value of each operand that the shape table hoists, in operand
+ * order, and undefined for an operand that stays deferred. `children` holds
+ * only the hoisted operands.
+ */
+function hoistedOperands(
+  operands: readonly Expr[],
+  children: readonly Emitted[],
+): (Emitted | undefined)[] {
+  let next = 0;
+  return operands.map((x) =>
+    x.execution === "effect" ? children[next++] : undefined
+  );
+}
 
 export function effectStructural(
   c: ExprCore,
@@ -60,10 +76,13 @@ export function effectStructural(
         "retry schedule has wrong type",
       );
       const error = typeDoc(c.scope, type.error);
-      const step = c.pure(e.step);
+      // An effectful step expression runs once, where the source writes it.
+      // The returned schedule applies the value, so it cannot run the step.
+      const stepName = e.step.execution === "effect" ? c.scope.temp() : null;
+      const step = stepName === null ? c.pure(e.step) : emitted(stepName);
       const metadata = c.scope.temp();
       const decision = c.scope.temp();
-      return emitted([
+      const built = emitted([
         `${schedule}.fromStepWithMetadata<`,
         error,
         `, number, never, never, never, never>(${effect}.succeed((${metadata}: ${schedule}.InputMetadata<`,
@@ -74,6 +93,10 @@ export function effectStructural(
         `if (${decision}.value < 0) throw new RangeError("negative retry delay"); `,
         `return ${effect}.succeed([${metadata}.attempt, ${duration}.millis(${decision}.value)] as [number, ${duration}.Duration]); }))`,
       ]);
+      return stepName === null ? built : emitted(
+        ["((", stepName, ") => ", free(built), ")(", free(kid(e.step)), ")"],
+        PREC.member,
+      );
     }
     case "race-all": {
       const effect = c.scope.effect("Effect");
@@ -155,24 +178,34 @@ export function effectLeaf(
     case "run":
       return children[0];
     case "retry": {
-      const job = c.suspended(e.job);
+      const [hoisted] = hoistedOperands([e.job], children);
+      const job = c.suspended(e.job, hoisted);
       const options = emitted(`{ times: ${e.times} }`, PREC.member, {
         huggable: true,
       });
       return emitted([`${effect}.retry`, callArguments([job, options])]);
     }
-    case "retry-with-schedule":
+    case "retry-with-schedule": {
+      const [jobValue, options] = hoistedOperands([e.job, e.options], children);
       return emitted([
         `${effect}.retry`,
-        callArguments([c.suspended(e.job), c.pure(e.options)]),
+        callArguments([
+          c.suspended(e.job, jobValue),
+          options ?? c.pure(e.options),
+        ]),
       ]);
+    }
     case "repeat": {
-      const job = c.suspended(e.job);
+      const [jobValue, options] = hoistedOperands(
+        e.options === null ? [e.job] : [e.job, e.options],
+        children,
+      );
+      const job = c.suspended(e.job, jobValue);
       return e.options === null
         ? emitted([`${effect}.forever`, callArguments([job])])
         : emitted([
           `${effect}.repeat`,
-          callArguments([job, c.pure(e.options)]),
+          callArguments([job, options ?? c.pure(e.options)]),
         ]);
     }
     case "timeout":
