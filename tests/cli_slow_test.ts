@@ -333,6 +333,17 @@ Deno.test("build --tsc accepts stored Effect values", async () => {
   });
 });
 
+Deno.test("build --tsc accepts a pure function in every array and tuple position of an effect function type", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/lift-containers/", FIXTURES), dir);
+    const built = await effektive(["build", dir, "--tsc"]);
+    assertEquals(validationProblems(dir), []);
+    assertEquals(built.code, 0, `${built.stdout}\n${built.stderr}`);
+    assertEquals(built.stdout, "");
+    assert(built.stderr.includes("1 module, 0 diagnostics"), built.stderr);
+  });
+});
+
 Deno.test("build --tsc accepts array and tuple literals", async () => {
   await withTemporary(async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");

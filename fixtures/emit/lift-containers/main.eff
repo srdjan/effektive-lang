@@ -1,0 +1,54 @@
+type Int = int
+type Bool = boolean
+type R = { f: () => Int, n: Int }
+type Fs = (() => Int)[]
+error E = { code: Int }
+
+const one = (): Int => 1
+const take = (fs: (() => Int)[]): Int => 1
+const risky = (): Int fails E => fail(E({ code: 1 }))
+const eff = (): Int => { sleep(1ms)
+  1 }
+const mk = (): () => Int => { sleep(1ms)
+  () => 1 }
+const pm = (): pure () => Int => () => 1
+const keep = (): pure () => Int => () => 1
+
+const stored: (() => Int)[] = [() => 1]
+export const moduleBinding = (): (() => Int)[] => stored
+
+export const direct = (): (() => Int)[] => [() => 1]
+export const directTuple = (): [() => Int, Int] => [() => 1, 2]
+export const named = (): (() => Int)[] => [one]
+export const nested = (): (() => Int)[][] => [[() => 1]]
+export const option = (): Option<(() => Int)[]> => Some([() => 1])
+export const field = (): { fs: (() => Int)[] } => ({ fs: [() => 1] })
+export const tupleInTuple = (): [(() => Int)[], Int] => [[() => 1], 2]
+export const mixed = (): [Int, () => Int] => [1, () => 2]
+export const argument = (): Int => take([() => 1])
+export const aliased = (): Fs => [() => 1]
+export const annotated = (): (() => Int)[] => {
+  const fs: (() => Int)[] = [() => 1]
+  fs
+}
+export const blockResult = (): (() => Int)[] => {
+  const n = 1
+  [() => n]
+}
+export const branch = (c: Bool): (() => Int)[] => if (c) { [() => 1] } else { [() => 2] }
+export const arm = (o: Option<Int>): (() => Int)[] =>
+  match o {
+    Some(n) => [() => n],
+    None => [() => 0],
+  }
+export const guarded = (): (() => Int)[] =>
+  try { const n = risky()
+    [() => n] } catch { E(e) => [() => e.code] }
+export const fallback = (o: Option<(() => Int)[]>): (() => Int)[] => o ?? [() => 1]
+export const closureResult = (): pure () => (() => Int)[] => () => [() => 1]
+export const afterEffect = (): (() => Int)[] => { const n = eff()
+  [keep(), () => n] }
+export const effectElement = (): (() => Int)[] => [mk(), pm()]
+export const controlRecord = (): { f: () => Int }[] => [{ f: () => 1 }]
+export const controlOption = (): Option<() => Int>[] => [Some(() => 1)]
+export const update = (r: R): R => ({ ...r, f: () => 1 })

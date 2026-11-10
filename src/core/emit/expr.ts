@@ -759,7 +759,14 @@ export class ExprEmitter implements ExprCore {
       case "array":
       case "tuple":
         return emitted(
-          bracketed("[", "]", e.elements.map((x) => flush(kid(x))), false),
+          bracketed(
+            "[",
+            "]",
+            e.elements.map((x, i) =>
+              flush(kid(x, this.elementType(expected ?? e.type, i)))
+            ),
+            false,
+          ),
           PREC.member,
           { huggable: true, bracket: true },
         );
@@ -964,6 +971,13 @@ export class ExprEmitter implements ExprCore {
       return name === "__proto__" ? property(fieldKey(name), name) : name;
     }
     return property(fieldKey(name), free(kid(value, expected)));
+  }
+
+  /** The type of the element at `index` of an array or tuple type, seen through aliases. */
+  private elementType(type: Type, index: number): Type | undefined {
+    const resolved = this.scope.resolve(type);
+    if (resolved.kind === "array") return resolved.element;
+    return resolved.kind === "tuple" ? resolved.elements[index] : undefined;
   }
 
   private fieldType(type: Type, name: string): Type | undefined {

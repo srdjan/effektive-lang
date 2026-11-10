@@ -46,3 +46,52 @@ Deno.test("an effect-mode call with a pure function type binds its value once", 
   assertStringIncludes(output, "Effect.succeed($");
   assert(!output.includes("=> mk();"), "the call is not lifted");
 });
+
+const CONTAINER_PROGRAM = [
+  "type Int = int",
+  "const one = (): Int => 1",
+  "const mk = (): () => Int => { sleep(1ms)",
+  "  () => 1 }",
+  "const pm = (): pure () => Int => () => 1",
+  "export const direct = (): (() => Int)[] => [() => 1]",
+  "export const pair = (): [() => Int, Int] => [() => 1, 2]",
+  "export const named = (): (() => Int)[] => [one]",
+  "export const nested = (): (() => Int)[][] => [[() => 1]]",
+  "export const elem = (): (() => Int)[] => [mk(), pm()]",
+  "",
+].join("\n");
+
+Deno.test("a pure closure in an array literal of effect function elements is wrapped", () => {
+  assertStringIncludes(
+    emit(CONTAINER_PROGRAM),
+    "=> [\n  () => Effect.succeed(1),\n];",
+  );
+});
+
+Deno.test("a pure closure in a tuple literal of an effect function element is wrapped", () => {
+  assertStringIncludes(
+    emit(CONTAINER_PROGRAM),
+    "=> [\n  () => Effect.succeed(1),\n  2,\n];",
+  );
+});
+
+Deno.test("a named pure function in an array literal of effect function elements is wrapped", () => {
+  assertStringIncludes(
+    emit(CONTAINER_PROGRAM),
+    "=> [\n  () => Effect.succeed(one()),\n];",
+  );
+});
+
+Deno.test("a pure closure in a nested array literal is wrapped", () => {
+  assertStringIncludes(
+    emit(CONTAINER_PROGRAM),
+    "=> [[() => Effect.succeed(1)]];",
+  );
+});
+
+Deno.test("a pure function value after an effect in an array literal is wrapped", () => {
+  assertStringIncludes(
+    emit(CONTAINER_PROGRAM),
+    "return [yield* mk(), () => Effect.succeed(pm()())];",
+  );
+});
