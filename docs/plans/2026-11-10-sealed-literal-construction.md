@@ -1,8 +1,8 @@
 # Sealed literal construction fix (N4)
 
 Date: 2026-11-10. Base: `b9d8ad2` on local `main`. Author: Opus.
-Status: draft. Decision SCD1 waits for the user. The user has not approved execution,
-and no code changes before then.
+Status: on 2026-11-10 the user accepted option (a) of SCD1 and approved execution
+without a separate plan validation.
 
 Prefixes: SC (shapes), SCD (decisions), SCU (units).
 
@@ -62,7 +62,7 @@ so it is the wrong test for SC1. The validator helper `sealedRootOf` in
 
 ## Decision SCD1
 
-The diagnostic of SC1.
+Accepted on 2026-11-10: option (a). The diagnostic of SC1.
 
 - (a) `sealed/001` with the message of the constructor: "only the declaring module can
   construct the sealed type `Bag`". The validator gives `validation/002` with the
