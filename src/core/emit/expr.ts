@@ -1821,8 +1821,7 @@ export class ExprEmitter implements ExprCore {
               at: [2],
               concat: [],
             };
-            const counted = counts[builtin];
-            if (counted.length > 0 && !counted.includes(children.length)) {
+            if (!counts[builtin].includes(children.length)) {
               throw internal(`${builtin} has an invalid argument count`);
             }
             const [first, second, third] = children;
