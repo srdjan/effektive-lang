@@ -725,7 +725,9 @@ spellings support the same editor queries.
 `None` evaluates the fallback. `x ?? fallback` on a nullable union, such as
 `type MaybeInt = Int | null`, returns `x` when it is not `null` and evaluates the
 fallback only for `null`. It lowers to `match x { null => fallback, v => v }`, so
-it accepts the subjects that the binding arm accepts. A literal-only union with
+it accepts the subjects that the binding arm accepts. The emitter prints that
+match as the TypeScript `x ?? fallback`, which also replaces `undefined`; source
+values are never `undefined`, so this differs only for unsound host data. A literal-only union with
 `null`, such as `"a" | "b" | null`, and `boolean | null` are not accepted. Any
 other left operand gives `type-mismatch/010`, "the left operand of `??` must be an
 Option or a nullable union". The operator evaluates the subject once, unfolds aliases,

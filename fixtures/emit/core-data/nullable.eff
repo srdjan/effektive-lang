@@ -10,6 +10,7 @@ export type MaybeInt = Int | null
 type MaybeCents = Cents | null
 type MaybeItem = Item | null
 type MaybeShape = Shape | null
+type Flag = boolean
 type MaybeBool = boolean | null
 type M2 = "a" | "b"
 type MaybeM2 = M2 | null
@@ -113,3 +114,14 @@ export const longName = (
 export const orZero = (x: MaybeInt): Int => x ?? 0
 
 export const orCents = (c: MaybeCents): Cents => c ?? 0
+
+export const orIf = (x: MaybeInt, b: Flag): Int => x ?? if (b) { 1 } else { 2 }
+
+export const orPlus = (x: MaybeInt): Int => (x ?? 0) + 1
+
+export const orNested = (x: MaybeInt, y: MaybeInt): Int => x ?? (y ?? 0)
+
+export const orBlock = (): Int => {
+  const s: MaybeInt = null
+  s ?? 3
+}

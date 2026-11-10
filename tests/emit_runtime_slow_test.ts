@@ -1194,6 +1194,10 @@ console.log(JSON.stringify({
   orZeroZero: M.orZero(0),
   orCentsNull: M.orCents(null),
   orCentsSome: M.orCents(250),
+  orIf: [M.orIf(null, true), M.orIf(null, false), M.orIf(0, true), M.orIf(4, false)],
+  orPlus: [M.orPlus(null), M.orPlus(4)],
+  orNested: [M.orNested(null, null), M.orNested(null, 6), M.orNested(2, 6), M.orNested(0, 6)],
+  orBlock: M.orBlock(),
 }));
 `,
     );
@@ -1227,6 +1231,10 @@ console.log(JSON.stringify({
       orZeroZero: 0,
       orCentsNull: 0,
       orCentsSome: 250,
+      orIf: [1, 2, 0, 4],
+      orPlus: [1, 5],
+      orNested: [0, 6, 2, 0],
+      orBlock: 3,
     });
   });
 });

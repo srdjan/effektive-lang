@@ -1865,6 +1865,9 @@ type MaybeItem = typeof MaybeItem.Type;
 export const MaybeShape = Schema.Union([Shape, Schema.Null]);
 export type MaybeShape = typeof MaybeShape.Type;
 
+export const Flag = Schema.Boolean;
+export type Flag = typeof Flag.Type;
+
 export const MaybeBool = Schema.Union([Schema.Boolean, Schema.Null]);
 export type MaybeBool = typeof MaybeBool.Type;
 
@@ -1888,11 +1891,9 @@ export type MaybeAnItemWithAVeryLongNameThatPushesTheSelectorAnnotationPastTheLi
 export const next = (x: MaybeInt): Int =>
   (($t0: MaybeInt) => $t0 === null ? 0 : ((n) => $int(n + 1))($t0))(x);
 
-export const price = (c: MaybeCents): Cents =>
-  (($t0: MaybeCents) => $t0 === null ? 0 : ((n) => n)($t0))(c);
+export const price = (c: MaybeCents): Cents => c ?? 0;
 
-export const orNil = (x: IntOrNil): Int =>
-  (($t0: IntOrNil) => $t0 === null ? 0 : ((n) => n)($t0))(x);
+export const orNil = (x: IntOrNil): Int => x ?? 0;
 
 export const fromConstant = (): Int =>
   (($t0: MaybeItem) => $t0 === null ? 0 : ((n) => n.r)($t0))(nothing);
@@ -1949,13 +1950,20 @@ export const longName = (
       MaybeAnItemWithAVeryLongNameThatPushesTheSelectorAnnotationPastTheLimit,
   ) => $t0 === null ? 0 : ((n) => n.r)($t0))(x);
 
-export const orZero = (x: MaybeInt): Int =>
-  (($t0: MaybeInt) => $t0 === null ? 0 : (($option997) => $option997)($t0))(x);
+export const orZero = (x: MaybeInt): Int => x ?? 0;
 
-export const orCents = (c: MaybeCents): Cents =>
-  (($t0: MaybeCents) => $t0 === null ? 0 : (($option1027) => $option1027)($t0))(
-    c,
-  );
+export const orCents = (c: MaybeCents): Cents => c ?? 0;
+
+export const orIf = (x: MaybeInt, b: Flag): Int => x ?? (b ? 1 : 2);
+
+export const orPlus = (x: MaybeInt): Int => $int((x ?? 0) + 1);
+
+export const orNested = (x: MaybeInt, y: MaybeInt): Int => x ?? (y ?? 0);
+
+export const orBlock = (): Int => {
+  const s: MaybeInt = null;
+  return s ?? 3;
+};
 
 const nothing: MaybeItem = null;
 //# sourceMappingURL=nullable.ts.map

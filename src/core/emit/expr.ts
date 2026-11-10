@@ -1488,6 +1488,9 @@ export class ExprEmitter implements ExprCore {
       effectful
         ? this.asEffect(arm.body, slot)
         : this.fit(arm.body, slot, "pure");
+    if (!effectful && this.isCoalesce(e, slot)) {
+      return this.coalesce(subject, body(e.arms[0]));
+    }
     const optionLike =
       e.arms.every((a) =>
         a.pattern.kind === "some" || a.pattern.kind === "none" ||
@@ -1499,6 +1502,39 @@ export class ExprEmitter implements ExprCore {
       ? this.optionMatch(e.arms, subject, body)
       : this.selectorMatch(e.arms, subject, e.subject.type, body);
     return effectful ? this.yieldOf(result) : result;
+  }
+
+  /**
+   * `null => d, n => n` on a nullable union. The binding arm returns its
+   * binding, and `fit` leaves a reference unchanged unless it lifts a pure
+   * function to an effect function type.
+   */
+  private isCoalesce(
+    e: Extract<Expr, { kind: "match" }>,
+    slot: Type | undefined,
+  ): boolean {
+    if (e.arms.length !== 2) return false;
+    const [absent, taken] = e.arms;
+    const binding = taken.pattern.kind === "bind"
+      ? taken.pattern.binding.id
+      : undefined;
+    return absent.pattern.kind === "literal" && absent.pattern.value === null &&
+      binding !== undefined && taken.body.kind === "reference" &&
+      taken.body.target === binding &&
+      this.liftedFrom(taken.body, slot) === undefined;
+  }
+
+  /** `subject ?? fallback`. Both operands bind tighter than `??` in JavaScript, which forbids a bare `||` or `&&` beside it. */
+  private coalesce(subject: Emitted, fallback: Emitted): Emitted {
+    const run: Run = {
+      operands: [at(subject, PREC.equality), at(fallback, PREC.equality)],
+      operators: ["??"],
+      inner: [],
+      top: undefined,
+    };
+    return emitted(runDoc(run, 1), PREC.conditional, {
+      brace: leadingBrace(subject, PREC.equality),
+    });
   }
 
   private optionMatch(
