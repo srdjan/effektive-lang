@@ -64,3 +64,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | DMU (units), DMM (merges) | [`docs/archive/plans/2026-11-09-deeper-modules.md`](../archive/plans/2026-11-09-deeper-modules.md) | Fewer and deeper modules, smaller interfaces, and fewer try blocks |
 | PH (items), PHD (decisions), PHF (review findings), PHU (units) | [`docs/archive/plans/2026-11-09-prune-harden.md`](../archive/plans/2026-11-09-prune-harden.md) | Pruning and hardening list before more features, with adversarial reviews and pilots |
 | DA (findings), DAU (units) | [`docs/archive/plans/2026-11-09-docs-audit.md`](../archive/plans/2026-11-09-docs-audit.md) | Audit of the live documentation against the code |
+| FC (draft findings), FF (Fable findings), FA (astra findings), FCD (decisions) | [`docs/plans/2026-11-10-completeness-review.md`](2026-11-10-completeness-review.md) | Feature completeness review with two independent reviewers |
