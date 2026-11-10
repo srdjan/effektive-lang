@@ -151,13 +151,7 @@ function functionTypeDoc(scope: EmitNames, type: FunctionType): Doc {
     ? effectTypeDoc(scope, result, type.effects)
     : result;
   return [
-    group([
-      "(",
-      indent([soft, join([",", line], parameters)]),
-      ifBreak(","),
-      soft,
-      ")",
-    ]),
+    bracketed("(", ")", parameters, false),
     " => ",
     returns,
   ];

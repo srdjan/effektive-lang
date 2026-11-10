@@ -329,3 +329,5 @@ type IntVal = int
 type NumVal = number
 type StrVal = string
 type BoolVal = boolean
+
+export const mk = (a: IntVal, b: IntVal, c: IntVal, d: IntVal, e: IntVal): () => IntVal => () => a

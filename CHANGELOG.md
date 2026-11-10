@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `build` writes valid TypeScript for a long signature whose result is a function type without parameters, such as `(): () => Int`.
+  Before, the empty parameter list printed as a comma on its own line, and the generated file did not parse.
 - A pure function in an array or tuple literal at an expected Effect function type is wrapped as an Effect function, as in a record field.
   Before, `build --tsc` failed on a program such as `[() => 1]` at `(() => Int)[]`, and a run failed with "Not a valid effect".
 - `build --tsc` checks a project with a source file whose name starts with a hyphen, such as `-main.eff`.
