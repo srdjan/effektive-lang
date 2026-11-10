@@ -1102,6 +1102,12 @@ console.log(JSON.stringify({
   nanFirstTwo: withNaN.slice(0, 2),
   nanLength: withNaN.length,
   nanLast: Number.isNaN(withNaN[2]),
+  nanKeys: M.byNum([
+    { k: 0 / 0, tag: "a" },
+    { k: 1, tag: "b" },
+    { k: 0 / 0, tag: "c" },
+    { k: -1, tag: "d" },
+  ]).map((p) => p.tag),
 }));
 `,
     );
@@ -1143,6 +1149,7 @@ console.log(JSON.stringify({
       nanFirstTwo: [1, 2],
       nanLength: 3,
       nanLast: true,
+      nanKeys: ["d", "b", "a", "c"],
     });
   });
 });

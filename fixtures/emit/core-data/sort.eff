@@ -11,6 +11,8 @@ type Names = Name[]
 type Durations = Duration[]
 type Row = { k: Int, tag: Text }
 type Rows = Row[]
+type Point = { k: Num, tag: Text }
+type Points = Point[]
 
 export const ints = (xs: Ints): Ints => sort(xs)
 export const nums = (xs: Nums): Nums => sort(xs)
@@ -24,3 +26,4 @@ export const piped = (xs: Ints): Ints => xs |> sort
 export const pipedKey = (rows: Rows): Rows => rows |> sort((r) => r.k)
 export const literal = (): Ints => sort([3, 1, 2])
 export const withNaN = (): Nums => sort([2, 0 / 0, 1])
+export const byNum = (ps: Points): Points => sort(ps, (p) => p.k)

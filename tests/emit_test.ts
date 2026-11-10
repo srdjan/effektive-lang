@@ -1761,6 +1761,12 @@ export type Row = typeof Row.Type;
 export const Rows = Schema.Array(Row);
 export type Rows = typeof Rows.Type;
 
+export const Point = Schema.Struct({ k: Num, tag: Text });
+export type Point = typeof Point.Type;
+
+export const Points = Schema.Array(Point);
+export type Points = typeof Points.Type;
+
 export const ints = (xs: Ints): Ints => $sort(xs);
 
 export const nums = (xs: Nums): Nums => $sort(xs);
@@ -1790,6 +1796,8 @@ export const pipedKey = (rows: Rows): Rows => {
 export const literal = (): Ints => $sort([3, 1, 2]);
 
 export const withNaN = (): Nums => $sort([2, 0 / 0, 1]);
+
+export const byNum = (ps: Points): Points => $sort(ps, (p) => p.k);
 //# sourceMappingURL=sort.ts.map
 `,
   );
