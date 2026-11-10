@@ -3,7 +3,7 @@
 ## Unreleased
 
 - A record, array, or tuple literal at a sealed type that another module declares is a construction, so it gives `sealed/001`, as the explicit constructor `Bag([a])` does. This holds for the empty `[]` and for a literal nested in an array, a record field, or `Some(...)`. The validator rejects a forged one with `validation/002`.
-  Before, `(a: int): Bag => [a]` in a module that does not declare `Bag` gave 0 diagnostics, and the module constructed the sealed type without its authority.
+  Before, `(a: Int): Bag => [a]` in a module that does not declare `Bag` gave 0 diagnostics, and the module constructed the sealed type without its authority.
 - The unary operators `-e` and `!e` work in expressions. They bind tighter than `*` and looser than a call or a field. `-e` has the type of `0 - e` and compiles to it, so `-x` for `x = 0` is `0`. `!e` needs a `boolean` and compiles to `e === false`. A `Duration` operand and an unproven refined operand are rejected as `0 - d` and `0 - p` are. A block item after the first cannot start with `-`, because a newline ends the previous item. In a refinement, `-e` reads as `0 - e`, and `!e` is rejected.
   Before, `-x` and `!x` gave `syntax/010` with the hints "write `0 - x`" and "write `x === false`". A unary `+` still gives `syntax/010`.
 - A `match` pattern can be a negative number literal, such as `-1 =>` or `-1.5 =>`, and so can the value of a record pattern field. The pattern matches as the positive literal does, and `-0` is `0`, so the arms `0` and `-0` are duplicates. A `-` before a duration, a string, a boolean, or another token gives `syntax/011`.
