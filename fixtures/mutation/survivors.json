@@ -281,7 +281,7 @@
   {
     "file": "src/core/validate/expr.ts",
     "declaration": "BodyValidator.pattern",
-    "offset": 2441,
+    "offset": 3587,
     "text": "ms.length > 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -290,7 +290,7 @@
   {
     "file": "src/core/validate/expr.ts",
     "declaration": "BodyValidator.pattern",
-    "offset": 3199,
+    "offset": 4345,
     "text": "return false;",
     "operator": "boolean-return",
     "class": "equivalent",

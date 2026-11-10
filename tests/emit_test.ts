@@ -1802,3 +1802,167 @@ export const byNum = (ps: Points): Points => $sort(ps, (p) => p.k);
 `,
   );
 });
+
+Deno.test("a binding arm in a nullable match emits a typed selector", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), [
+    "nullable.eff",
+  ]).get("nullable");
+  assert(emitted !== undefined, "module nullable was not emitted");
+  assertEquals(
+    emitted.text,
+    `// Generated from nullable.eff by the Effektive compiler. Do not edit.
+
+import { Schema } from "effect";
+
+const $Int = Schema.Finite.check(
+  Schema.makeFilter(
+    (value) => Number.isSafeInteger(value) || "expected a safe integer",
+  ),
+);
+
+const $int = (value: number): number => {
+  if (!Number.isSafeInteger(value)) throw new RangeError("int overflow");
+  return value;
+};
+
+const $unmatched = (_value: never): never => {
+  throw new TypeError("a match received a value outside its type");
+};
+
+export const Int = $Int;
+export type Int = typeof Int.Type;
+
+export const Cents = $Int;
+export type Cents = typeof Cents.Type;
+
+const Text = Schema.String;
+type Text = typeof Text.Type;
+
+export const Nil = Schema.Null;
+export type Nil = typeof Nil.Type;
+
+export const Item = Schema.Struct({ r: Int });
+export type Item = typeof Item.Type;
+
+export const Circle = Schema.TaggedStruct("nullable#Circle", { radius: Int });
+export type Circle = typeof Circle.Type;
+
+export const Square = Schema.TaggedStruct("nullable#Square", { side: Int });
+export type Square = typeof Square.Type;
+
+export const Shape = Schema.Union([Circle, Square]);
+export type Shape = typeof Shape.Type;
+
+export const MaybeInt = Schema.Union([Int, Schema.Null]);
+export type MaybeInt = typeof MaybeInt.Type;
+
+export const MaybeCents = Schema.Union([Cents, Schema.Null]);
+export type MaybeCents = typeof MaybeCents.Type;
+
+const MaybeItem = Schema.Union([Item, Schema.Null]);
+type MaybeItem = typeof MaybeItem.Type;
+
+export const MaybeShape = Schema.Union([Shape, Schema.Null]);
+export type MaybeShape = typeof MaybeShape.Type;
+
+export const MaybeBool = Schema.Union([Schema.Boolean, Schema.Null]);
+export type MaybeBool = typeof MaybeBool.Type;
+
+export const M2 = Schema.Literals(["a", "b"]);
+export type M2 = typeof M2.Type;
+
+export const MaybeM2 = Schema.Union([M2, Schema.Null]);
+export type MaybeM2 = typeof MaybeM2.Type;
+
+export const IntOrNil = Schema.Union([Int, Nil]);
+export type IntOrNil = typeof IntOrNil.Type;
+
+export const M2OrNil = Schema.Union([M2, Nil]);
+export type M2OrNil = typeof M2OrNil.Type;
+
+export const MaybeAnItemWithAVeryLongNameThatPushesTheSelectorAnnotationPastTheLimit =
+  Schema.Union([Item, Schema.Null]);
+export type MaybeAnItemWithAVeryLongNameThatPushesTheSelectorAnnotationPastTheLimit =
+  typeof MaybeAnItemWithAVeryLongNameThatPushesTheSelectorAnnotationPastTheLimit.Type;
+
+export const next = (x: MaybeInt): Int =>
+  (($t0: MaybeInt) => $t0 === null ? 0 : ((n) => $int(n + 1))($t0))(x);
+
+export const price = (c: MaybeCents): Cents =>
+  (($t0: MaybeCents) => $t0 === null ? 0 : ((n) => n)($t0))(c);
+
+export const orNil = (x: IntOrNil): Int =>
+  (($t0: IntOrNil) => $t0 === null ? 0 : ((n) => n)($t0))(x);
+
+export const fromConstant = (): Int =>
+  (($t0: MaybeItem) => $t0 === null ? 0 : ((n) => n.r)($t0))(nothing);
+
+export const fromBlock = (): Int => {
+  const s: MaybeItem = null;
+  return (($t0: MaybeItem) => $t0 === null ? 0 : ((n) => n.r)($t0))(s);
+};
+
+const measure = (s: Shape): Int =>
+  (($t0) =>
+    $t0._tag === "nullable#Circle"
+      ? ((c) => c.radius)($t0)
+      : $t0._tag === "nullable#Square"
+      ? ((q) => q.side)($t0)
+      : $unmatched($t0))(s);
+
+export const shaped = (s: MaybeShape): Int =>
+  (($t0: MaybeShape) => $t0 === null ? 0 : ((n) => measure(n))($t0))(s);
+
+export const shapedNested = (s: MaybeShape): Int =>
+  (($t0: MaybeShape) =>
+    $t0 === null
+      ? 0
+      : ((n) =>
+        (($t1) =>
+          $t1._tag === "nullable#Circle"
+            ? ((c) => c.radius)($t1)
+            : $t1._tag === "nullable#Square"
+            ? ((q) => q.side)($t1)
+            : $unmatched($t1))(n))($t0))(s);
+
+export const wild = (x: MaybeInt): Int => (($t0) => $t0 === null ? 0 : 1)(x);
+
+export const flag = (b: MaybeBool): Int =>
+  (($t0) =>
+    $t0 === null ? 0 : $t0 === true ? 1 : $t0 === false ? 2 : $unmatched($t0))(
+      b,
+    );
+
+export const mode = (m: MaybeM2): Int =>
+  (($t0) =>
+    $t0 === null ? 0 : $t0 === "a" ? 1 : $t0 === "b" ? 2 : $unmatched($t0))(m);
+
+export const modeNil = (m: M2OrNil): Int =>
+  (($t0) =>
+    $t0 === null ? 0 : $t0 === "a" ? 1 : $t0 === "b" ? 2 : $unmatched($t0))(m);
+
+export const longName = (
+  x: MaybeAnItemWithAVeryLongNameThatPushesTheSelectorAnnotationPastTheLimit,
+): Int =>
+  ((
+    $t0:
+      MaybeAnItemWithAVeryLongNameThatPushesTheSelectorAnnotationPastTheLimit,
+  ) => $t0 === null ? 0 : ((n) => n.r)($t0))(x);
+
+const nothing: MaybeItem = null;
+//# sourceMappingURL=nullable.ts.map
+`,
+  );
+});
+
+Deno.test("a binding arm on a type from another module annotates the selector with the imported name", () => {
+  const emitted = emitFiles(projectFiles("emit/core-data"), [
+    "nullable.eff",
+    "nullable-use.eff",
+  ]).get("nullable-use");
+  assert(emitted !== undefined, "module nullable-use was not emitted");
+  assertStringIncludes(
+    emitted.text,
+    "export const plusTen = (x: MaybeInt): Int =>\n  (($t0: MaybeInt) => $t0 === null ? 0 : ((n) => $int(n + 10))($t0))(x);",
+  );
+});

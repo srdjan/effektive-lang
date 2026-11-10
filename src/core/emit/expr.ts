@@ -1562,7 +1562,8 @@ export class ExprEmitter implements ExprCore {
     if (final < 0) throw internal("a match has no arm");
     // The last arm builds its body before its test, as the other arms do not.
     const finalDoc = armDoc(arms[final]);
-    const finalWildcard = arms[final].pattern.kind === "wildcard";
+    const finalWildcard = arms[final].pattern.kind === "wildcard" ||
+      arms[final].pattern.kind === "bind";
     let last: Doc = finalWildcard
       ? finalDoc
       : [this.scope.unmatched(), "(", selector, ")"];
@@ -1587,8 +1588,18 @@ export class ExprEmitter implements ExprCore {
     // When the body of the selector moves down, `deno fmt` also indents the
     // arguments of the call by one more level.
     const bodyGroup: GroupId = {};
+    // A binding arm reads the narrowed selector, so the parameter has the type of
+    // the subject: a narrowed block constant would make the binding `never`.
+    const parameter: Doc = arms.some((a) => a.pattern.kind === "bind")
+      ? bracketed(
+        "(",
+        ")",
+        [property(selector, typeDoc(this.scope, subjectType))],
+        false,
+      )
+      : `(${selector})`;
     const callee = this.arrow(
-      `(${selector})`,
+      parameter,
       emitted(chain, PREC.conditional),
       bodyGroup,
     );
@@ -1608,6 +1619,7 @@ export class ExprEmitter implements ExprCore {
   ): ArmTest | undefined {
     switch (pattern.kind) {
       case "wildcard":
+      case "bind":
         return undefined;
       case "literal":
         return armEquality(

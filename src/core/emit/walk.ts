@@ -14,6 +14,7 @@ import { isValueId } from "../ids.ts";
 
 export function patternBinding(pattern: Pattern): Parameter | null {
   switch (pattern.kind) {
+    case "bind":
     case "some":
     case "error":
     case "nominal":

@@ -34,7 +34,7 @@ Deno.test("emitter alias resolution reaches deep targets and stops at cycles, br
   });
   const ir: ModuleIR = {
     format: "light-functional-ir",
-    version: 9,
+    version: 10,
     module: "main",
     sources: ["main.eff"],
     imports: [],

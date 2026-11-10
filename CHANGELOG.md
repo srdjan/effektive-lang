@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The IR wire version is 10, and the validator rejects version 9. Version 10 adds the pattern `bind`, the binding arm of a `match` on a nullable union such as `Int | null`.
+
 ## 0.15.7 - 2026-11-10
 
 - A record, array, or tuple literal at a sealed type that another module declares is a construction, so it gives `sealed/001`, as the explicit constructor `Bag([a])` does. This holds for the empty `[]` and for a literal nested in an array, a record field, or `Some(...)`. The validator rejects a forged one with `validation/002`.

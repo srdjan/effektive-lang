@@ -127,7 +127,7 @@ files through `SourceHost`. Seven tests enforce the rules.
    `validate/expr_walk.ts` also stay separate.
 3. The typed IR is the contract between the checker and every later stage.
    `ir.ts` is the authored contract. The sibling `typed-ir.ts` is a published
-   standalone copy that `deno task site:ir` generates. The IR node `nominal` is part of IR version 9 (and of
+   standalone copy that `deno task site:ir` generates. The IR node `nominal` is part of IR version 10 (and of
    earlier versions).
 4. Emitted text is byte-identical across refactors. The golden files in
    `fixtures/golden/` changes only when the emitted text changes on purpose. Run

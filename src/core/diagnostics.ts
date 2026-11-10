@@ -202,11 +202,11 @@ export const DIAGNOSTIC_CODES = {
   },
   "pattern/001": {
     description:
-      "A match does not cover every value of its subject. Unbounded primitives need a final wildcard.",
+      "A match does not cover every value of its subject. Unbounded primitives and nullable unions need a final wildcard or binding arm.",
   },
   "pattern/002": {
     description:
-      "A match arm can never run, because an earlier arm or a wildcard already matches its values.",
+      "A match arm can never run, because an earlier arm, a wildcard, or a binding arm already matches its values.",
   },
   "pattern/003": {
     description:
@@ -214,7 +214,7 @@ export const DIAGNOSTIC_CODES = {
   },
   "pattern/004": {
     description:
-      "A pattern is malformed for its use, or the subject has a type that version 0 cannot match.",
+      "A pattern is malformed for its use, a binding arm is misplaced or has no nullable subject, or the subject has a type that version 0 cannot match.",
   },
   "declaration/001": {
     description:

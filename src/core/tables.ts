@@ -40,6 +40,8 @@ export type PatternFact =
     readonly text: string;
   }
   | { readonly kind: "none" }
+  /** A bare name arm of a nullable match: it matches every value except null. */
+  | { readonly kind: "bind"; readonly binding: LocalId | undefined }
   | { readonly kind: "some"; readonly binding: LocalId | undefined }
   | {
     readonly kind: "error";

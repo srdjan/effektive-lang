@@ -1292,6 +1292,12 @@ class BodyLowerer {
         return { kind: "duration", millis: pattern.millis, span };
       case "none":
         return { kind: "none", span };
+      case "bind":
+        return {
+          kind: "bind",
+          binding: this.bindingOf(pattern.binding, names[0]),
+          span,
+        };
       case "some":
         return {
           kind: "some",
@@ -1704,7 +1710,7 @@ export function lowerModule(
     ok: true,
     value: {
       format: "light-functional-ir",
-      version: 9,
+      version: 10,
       module,
       sources: [checkedModule.path],
       imports: prelude === undefined

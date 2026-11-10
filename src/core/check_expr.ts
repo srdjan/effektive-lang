@@ -2817,7 +2817,7 @@ class BodyChecker
         "pattern/004",
         `a match cannot take a value of type ${
           this.show(subject.type)
-        }; version 0 matches options, errors, tagged records, records with a literal discriminator field, literals, and primitives`,
+        }; version 0 matches options, errors, tagged records, records with a literal discriminator field, literals, primitives, and nullable unions`,
         subjectNode,
       );
     } else if (domain.kind === "mixed") {
@@ -2831,6 +2831,7 @@ class BodyChecker
     }
     const state: MatchState = {
       wildcard: false,
+      binding: undefined,
       covered: new Set(),
       tagField: undefined,
     };
@@ -2864,6 +2865,7 @@ class BodyChecker
             if (matched !== undefined) excluded.push(not(matched));
           }
           const binding = fact.pattern.kind === "some" ||
+              fact.pattern.kind === "bind" ||
               fact.pattern.kind === "error" || fact.pattern.kind === "tagged"
             ? fact.pattern.binding
             : fact.pattern.kind === "tag"
@@ -2895,7 +2897,9 @@ class BodyChecker
       this.refinements.restore(refinementScope);
     }
     this.refinements.join(successful);
-    if (!state.wildcard) checkCoverage(this, node, domain, state, arms.length);
+    if (!state.wildcard && state.binding === undefined) {
+      checkCoverage(this, node, domain, state, arms.length);
+    }
     const type = expected !== undefined && this.refinementBase(expected)
       ? expected
       : this.joinResults(branches, expected);

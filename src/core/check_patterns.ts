@@ -33,6 +33,11 @@ export interface PatternContext {
 
 export interface MatchState {
   wildcard: boolean;
+  /**
+   * A binding arm of a nullable match: "bound" when it matches every value except
+   * null, "misplaced" when it came before the `null` arm and a diagnostic rejected it.
+   */
+  binding: "bound" | "misplaced" | undefined;
   readonly covered: Set<string>;
   /** The discriminator field of a tagged match, once an arm names it. */
   tagField: string | undefined;
@@ -66,6 +71,10 @@ function missingOf(
           missing.push(describeLiteral(value));
         }
       }
+      return missing;
+    case "nullable":
+      if (!state.covered.has("L:null")) missing.push("null");
+      missing.push("_");
       return missing;
     case "open":
       return ["_"];
@@ -119,6 +128,14 @@ function reach(
     c.report(
       "pattern/002",
       "this arm is unreachable, because an earlier `_` arm matches every value",
+      node,
+    );
+    return false;
+  }
+  if (state.binding === "bound") {
+    c.report(
+      "pattern/002",
+      "this arm is unreachable, because an earlier binding arm matches every value except null",
       node,
     );
     return false;
@@ -209,6 +226,8 @@ export function pattern(
           foreign(c, node, "`None`", domain);
         }
         patternFact(c, node, { kind: "none" });
+      } else if (target?.kind === "local") {
+        bindingArm(c, node, names[0], domain, state, silent);
       } else {
         if (target !== undefined && target.kind !== "unresolved") {
           c.report(
@@ -296,7 +315,9 @@ export function pattern(
         return;
       }
       let fits = false;
-      if (domain.kind === "literals") {
+      if (domain.kind === "nullable") {
+        fits = value === null;
+      } else if (domain.kind === "literals") {
         fits = domain.values.includes(value);
       } else if (domain.kind === "open" && domain.duration !== true) {
         fits = literalFitsPrimitive(value, domain.primitive);
@@ -315,6 +336,45 @@ export function pattern(
     default:
       patternFact(c, node, { kind: "invalid" });
   }
+}
+
+/** A bare name arm. It binds the subject without `null`, after the `null` arm of a nullable union. */
+function bindingArm(
+  c: PatternContext,
+  node: NodeId,
+  nameNode: NodeId,
+  domain: Domain,
+  state: MatchState,
+  silent: boolean,
+): void {
+  if (domain.kind !== "nullable") {
+    if (!silent) {
+      c.report(
+        "pattern/004",
+        `\`${
+          nameTextOf(c.tree, nameNode)
+        }\` is not a constructor; a binding arm applies only after the \`null\` arm of a nullable union`,
+        node,
+      );
+    }
+    bindLocal(c, nameNode, c.table.error);
+    patternFact(c, node, { kind: "invalid" });
+    return;
+  }
+  if (!state.covered.has("L:null")) {
+    c.report(
+      "pattern/004",
+      "a binding arm must come after the `null` arm",
+      node,
+    );
+    state.binding = "misplaced";
+    bindLocal(c, nameNode, c.table.error);
+    patternFact(c, node, { kind: "invalid" });
+    return;
+  }
+  if (reach(c, node, state, undefined)) state.binding = "bound";
+  const binding = bindLocal(c, nameNode, domain.rest);
+  patternFact(c, node, { kind: "bind", binding });
 }
 
 function recordPattern(
@@ -443,6 +503,8 @@ function describeDomain(table: TypeTable, domain: Domain): string {
       return `${domain.ids.every(isErrorId) ? "the errors" : "the names"} ${
         namesOf(table, domain.ids).join(" | ")
       }`;
+    case "nullable":
+      return `the nullable union ${showTypes(table, domain.subject)[0]}`;
     case "tagged":
       return "a tagged record union";
     case "literals":

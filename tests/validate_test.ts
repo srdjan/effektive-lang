@@ -437,7 +437,7 @@ function codesOf(ir: unknown, sources: ReadonlyMap<string, string>): string[] {
   ].sort();
 }
 
-for (const version of [1, 2, 3, 4, 8]) {
+for (const version of [1, 2, 3, 4, 8, 9]) {
   Deno.test(`version ${version} IR is rejected with the required wire version`, () => {
     const lowered = lowerText("type Count = int\nconst one = (): Count => 1");
     const previous = copy(lowered.ir) as unknown as { version: number };
@@ -449,7 +449,7 @@ for (const version of [1, 2, 3, 4, 8]) {
     assert(
       diagnostics.some((diagnostic) =>
         diagnostic.code === "validation/008" &&
-        diagnostic.message.includes("light-functional-ir version 9") &&
+        diagnostic.message.includes("light-functional-ir version 10") &&
         diagnostic.message.includes(`version ${version}`)
       ),
     );

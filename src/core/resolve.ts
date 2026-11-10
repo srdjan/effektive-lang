@@ -783,6 +783,20 @@ class Resolver {
   }
 
   /**
+   * A bare name in a pattern is a constructor when it is `None`, `Some`, a type, an
+   * error, or an unresolved name. Every other name is a binding.
+   */
+  private isConstructorName(nameNode: NodeId): boolean {
+    const name = nameTextOf(this.tree, nameNode);
+    if (name === undefined) return true;
+    const prelude = asPrelude(name);
+    if (prelude !== undefined && optionRole(prelude) !== undefined) return true;
+    if (EFFECT_ERROR_IDS.has(name)) return true;
+    const kind = this.namespace.get(name)?.target.kind;
+    return kind === "type" || kind === "error" || kind === "unresolved";
+  }
+
+  /**
    * A constructor name in a pattern: `Some`, `None`, an error, or a type. The
    * checker tells a nominal type from an alias.
    */
@@ -1370,7 +1384,8 @@ class Resolver {
     switch (kind) {
       case SyntaxKind.NamePattern:
         for (const name of kidsOfKind(this.tree, node, SyntaxKind.Name)) {
-          this.ctorRef(name);
+          if (this.isConstructorName(name)) this.ctorRef(name);
+          else this.declareLocal(name, false);
         }
         return;
       case SyntaxKind.CtorPattern: {

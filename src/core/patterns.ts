@@ -31,6 +31,15 @@ export type Domain =
   | { readonly kind: "tagged"; readonly members: readonly TaggedMember[] }
   /** A closed set of literal values, including `boolean`. */
   | { readonly kind: "literals"; readonly values: readonly LiteralValue[] }
+  /**
+   * A union with a `null` member and a member that is not a literal. The arms are
+   * `null`, `_`, and a binding that has the type `rest`, the union without `null`.
+   */
+  | {
+    readonly kind: "nullable";
+    readonly subject: TypeRef;
+    readonly rest: TypeRef;
+  }
   /** An unbounded primitive. A complete match needs `_`. */
   | {
     readonly kind: "open";
@@ -87,6 +96,29 @@ function unique(values: readonly LiteralValue[]): LiteralValue[] {
   return result;
 }
 
+function isNull(table: TypeTable, ref: TypeRef): boolean {
+  const node = table.node(table.unfold(ref));
+  return node.kind === "literal" && node.value === null;
+}
+
+/**
+ * The `nullable` domain of a subject, or undefined. A null member is an identity
+ * member that unfolds to the literal `null`. A literal-only union keeps its literal
+ * arms, and an identity member that hides a `null` in its body keeps no domain.
+ */
+function nullableOf(table: TypeTable, subject: TypeRef): Domain | undefined {
+  const members = flattenIdentityMembers(table, subject);
+  const rest = members.filter((m) => !isNull(table, m));
+  if (rest.length === members.length) return undefined;
+  if (literalValuesOf(table, subject) !== undefined) return undefined;
+  if (
+    rest.some((m) => flattenMembers(table, m).some((p) => isNull(table, p)))
+  ) {
+    return undefined;
+  }
+  return { kind: "nullable", subject, rest: table.union(rest) };
+}
+
 export function domainOf(table: TypeTable, subject: TypeRef): Domain {
   const members = flattenMembers(table, subject);
   const nodes = members.map((m) => table.node(m));
@@ -95,6 +127,9 @@ export function domainOf(table: TypeTable, subject: TypeRef): Domain {
   if (nodes.length === 1 && nodes[0].kind === "option") {
     return { kind: "option", element: nodes[0].element };
   }
+
+  const nullable = nullableOf(table, subject);
+  if (nullable !== undefined) return nullable;
 
   // A tagged record is a name here, so the walk stops at each identity.
   const named = flattenIdentityMembers(table, subject).map((m) =>

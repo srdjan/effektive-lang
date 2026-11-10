@@ -1108,7 +1108,7 @@
     "events": [
       {
         "kind": "stdout",
-        "text": "pattern-unsupported-subject.eff:3:9: error pattern/004: a match cannot take a value of type Int[]; version 0 matches options, errors, tagged records, records with a literal discriminator field, literals, and primitives\n"
+        "text": "pattern-unsupported-subject.eff:3:9: error pattern/004: a match cannot take a value of type Int[]; version 0 matches options, errors, tagged records, records with a literal discriminator field, literals, primitives, and nullable unions\n"
       },
       {
         "kind": "stderr",

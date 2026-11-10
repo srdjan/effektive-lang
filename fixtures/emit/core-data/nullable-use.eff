@@ -1,0 +1,7 @@
+import { Int, MaybeInt } from "./nullable.eff"
+
+export const plusTen = (x: MaybeInt): Int =>
+  match x {
+    null => 0,
+    n => n + 10
+  }

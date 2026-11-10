@@ -1662,11 +1662,20 @@ export class BodyValidator implements ValidatorCore {
     const parts: Out[] = [subject];
     const successful: ReturnType<RefinementValidator["snapshot"]>[] = [];
     const excluded: ReturnType<RefinementValidator["condition"]>[] = [];
+    let nullSeen = false;
     e.arms.forEach((arm, i) => {
       const at = `${path}.arms[${i}]`;
       const branch = this.refinements.snapshot();
       for (const fact of excluded) this.refinements.addBranch(fact);
-      const added = this.pattern(arm.pattern, subject.type, `${at}.pattern`);
+      const added = this.pattern(
+        arm.pattern,
+        subject.type,
+        `${at}.pattern`,
+        nullSeen,
+      );
+      if (arm.pattern.kind === "literal" && arm.pattern.value === null) {
+        nullSeen = true;
+      }
       if (arm.pattern.kind === "literal" || arm.pattern.kind === "duration") {
         const matched = this.refinements.literalMatch(
           e.subject,
@@ -1690,7 +1699,12 @@ export class BodyValidator implements ValidatorCore {
     return checkedResult(combine(parts));
   }
 
-  private pattern(p: Pattern, subject: Type, path: string): string[] {
+  private pattern(
+    p: Pattern,
+    subject: Type,
+    path: string,
+    nullSeen: boolean,
+  ): string[] {
     const env = this.env;
     const added: string[] = [];
     const bind = (binding: Parameter, expected: Type | undefined): void => {
@@ -1746,6 +1760,34 @@ export class BodyValidator implements ValidatorCore {
       case "none":
         if (unfolded.kind !== "option") foreign("None");
         return added;
+      case "bind": {
+        // A binding arm matches every value except null, so the subject needs a
+        // null member and the binding takes the other members.
+        const all = identityMembers(env, subject);
+        const isNull = (m: Type): boolean => {
+          const u = unfold(env, m);
+          return u.kind === "literal" && u.value === null;
+        };
+        const rest = all.filter((m) => !isNull(m));
+        const hidden = rest.some((m) => members(env, m).some(isNull));
+        const fault = rest.length === all.length
+          ? "needs a subject with a null member"
+          : hidden
+          ? "needs a subject in which no other member hides a null"
+          : !nullSeen
+          ? "needs an earlier arm with the pattern null"
+          : undefined;
+        if (fault !== undefined) {
+          this.add(
+            AREA.types,
+            path,
+            `a binding arm ${fault}; the subject has type ${show(subject)}`,
+            p.span,
+          );
+        }
+        bind(p.binding, fault === undefined ? unionOf(env, rest) : undefined);
+        return added;
+      }
       case "some":
         if (unfolded.kind !== "option") {
           foreign("Some");

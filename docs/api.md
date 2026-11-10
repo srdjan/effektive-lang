@@ -353,7 +353,7 @@ declarations, and its IR exports each of them. Its providers are not lowered.
 `lowerProject(checked)` does this for every `.eff` and `.effi` module. Pass the
 result to `emitProject` to get each generated module and each companion module.
 
-The IR has the `version` 9. A type declaration has the definition kind `alias`
+The IR has the `version` 10. A type declaration has the definition kind `alias`
 or `nominal`. A `nominal` definition has a `base` type. The flag `tagged` marks
 a tagged record, and its base is a record. An expression has the node
 `nominal` for a construction of a type with identity, and a match arm has the

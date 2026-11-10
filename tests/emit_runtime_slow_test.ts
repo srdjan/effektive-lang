@@ -1153,3 +1153,70 @@ console.log(JSON.stringify({
     });
   });
 });
+
+Deno.test("a binding arm takes the value of a nullable union without null", async () => {
+  await withTemporary(async (dir) => {
+    copyDirectory(new URL("emit/core-data/", FIXTURES), dir);
+    build(dir, ["nullable.eff", "nullable-use.eff"]);
+    const result = await runScript(
+      dir,
+      `
+import * as M from "./nullable.ts";
+import * as U from "./nullable-use.ts";
+
+console.log(JSON.stringify({
+  plusTenNull: U.plusTen(null),
+  plusTenSome: U.plusTen(5),
+  longNull: M.longName(null),
+  longSome: M.longName({ r: 9 }),
+  nextNull: M.next(null),
+  nextTwo: M.next(2),
+  nextZero: M.next(0),
+  priceNull: M.price(null),
+  priceSome: M.price(250),
+  orNilNull: M.orNil(null),
+  orNilSome: M.orNil(7),
+  fromConstant: M.fromConstant(),
+  fromBlock: M.fromBlock(),
+  shapedNull: M.shaped(null),
+  shapedCircle: M.shaped({ _tag: "nullable#Circle", radius: 4 }),
+  shapedSquare: M.shaped({ _tag: "nullable#Square", side: 5 }),
+  nestedNull: M.shapedNested(null),
+  nestedCircle: M.shapedNested({ _tag: "nullable#Circle", radius: 6 }),
+  nestedSquare: M.shapedNested({ _tag: "nullable#Square", side: 7 }),
+  wildNull: M.wild(null),
+  wildSome: M.wild(3),
+  flag: [M.flag(null), M.flag(true), M.flag(false)],
+  mode: [M.mode(null), M.mode("a"), M.mode("b")],
+  modeNil: [M.modeNil(null), M.modeNil("a"), M.modeNil("b")],
+}));
+`,
+    );
+    assertEquals(result, {
+      plusTenNull: 0,
+      plusTenSome: 15,
+      longNull: 0,
+      longSome: 9,
+      nextNull: 0,
+      nextTwo: 3,
+      nextZero: 1,
+      priceNull: 0,
+      priceSome: 250,
+      orNilNull: 0,
+      orNilSome: 7,
+      fromConstant: 0,
+      fromBlock: 0,
+      shapedNull: 0,
+      shapedCircle: 4,
+      shapedSquare: 5,
+      nestedNull: 0,
+      nestedCircle: 6,
+      nestedSquare: 7,
+      wildNull: 0,
+      wildSome: 1,
+      flag: [0, 1, 2],
+      mode: [0, 1, 2],
+      modeNil: [0, 1, 2],
+    });
+  });
+});
