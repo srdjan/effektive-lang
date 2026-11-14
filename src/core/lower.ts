@@ -1229,6 +1229,8 @@ class BodyLowerer {
     const [left, right] = this.kids(node);
     const fact = this.factOf(node, "option-fallback");
     const span = this.span(node);
+    // The subject lowers first, so its pipeline bindings number before those of the fallback.
+    const subject = this.expr(left);
     const binding = this.parameter(
       fact.binding.id,
       fact.binding.name,
@@ -1257,7 +1259,7 @@ class BodyLowerer {
     };
     return {
       kind: "match",
-      subject: this.expr(left),
+      subject,
       arms: fact.subject === "option" ? [taken, absent] : [absent, taken],
       ...this.annotation(node),
     };

@@ -16,6 +16,7 @@ import type { Expr, ModuleIR, Span } from "../src/core/ir.ts";
 import { walkExpr } from "../src/core/emit/walk.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import {
+  allExprs,
   checkModule as checkText,
   diskHost,
   EXAMPLE_ENTRIES,
@@ -836,4 +837,20 @@ const scheduled = () => retry(() => Jobs.next(), { schedule: policy })
   assertEquals(functionBody(ir, "counted").kind, "retry");
   assertEquals(functionBody(ir, "scheduled").kind, "retry-with-schedule");
   assertEquals(validateModule(ir, new Map([["m.eff", text]])), []);
+});
+
+Deno.test("a fallback numbers the pipeline bindings of its left operand before those of its right operand", () => {
+  const text = `type Ints = int[]
+export const f = (xs: Ints, ys: Ints): Ints =>
+  Some(xs |> map(x => x + 1)) ?? (ys |> map(y => y + 2))
+`;
+  const checked = checkText(text);
+  assertEquals(checked.diagnostics, []);
+  const ir = lowered(checked, "m");
+  assertEquals(
+    allExprs(ir, "block").map((block) =>
+      (block.steps[0] as unknown as { binding: { name: string } }).binding.name
+    ),
+    ["$p1", "$p2"],
+  );
 });
