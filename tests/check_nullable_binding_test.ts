@@ -58,7 +58,9 @@ Deno.test("a match without a binding or wildcard arm is not exhaustive", () => {
   assertEquals(matching("MaybeInt", "    null => 0"), [
     "pattern/001 the match is not exhaustive; it needs _",
   ]);
-  assertEquals(matching("MaybeInt", "    1 => 0, _ => 1").length, 1);
+  assertEquals(matching("MaybeInt", "    1 => 0, _ => 1"), [
+    "pattern/003 1 does not belong to the subject (the nullable union MaybeInt)",
+  ]);
 });
 
 Deno.test("a binding arm before the null arm is rejected once", () => {

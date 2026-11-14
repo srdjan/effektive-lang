@@ -33,10 +33,8 @@ Deno.test("a bind arm with the binding type of the whole subject is rejected", (
   assertEquals(
     forgedModule(SOURCE, (ir) => {
       const match = allExprs(ir, "match")[0];
-      const pattern = match.arms[1].pattern;
-      if (pattern.kind === "bind") {
-        (pattern.binding as { type: unknown }).type = match.subject.type;
-      }
+      (match.arms[1].pattern as unknown as { binding: { type: unknown } })
+        .binding.type = match.subject.type;
     }),
     [
       "validation/002 declarations[5].body.arms[1].pattern.binding.type: expected type:m#Int, recorded type:m#MaybeInt",
