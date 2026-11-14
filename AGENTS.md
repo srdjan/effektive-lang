@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-This codebase is yours: what it's for and how it's built are your call, and you'll keep building on it.
+This codebase is yours to maintain: how it's built is your call, and you'll keep building on it. What it is for and which features it gets follow [Feature Selection & Completion](#feature-selection--completion).
 
 ## Project Structure & Module Organization
 
