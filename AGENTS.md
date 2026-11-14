@@ -30,7 +30,7 @@ When a plan is complete, the commit that completes it moves the plan and its evi
 
 Before a large task, the orchestrator writes an orchestration plan for subagents. A task is large when it changes more than three files, has two or more independent units, or needs a search across many files. The orchestrator does a smaller task directly, without subagents.
 
-The strongest available model orchestrates. It writes the plan, dispatches each unit, reviews each result, and runs the verification commands. A cheaper model executes each self-contained unit. A strong reviewer model validates a non-trivial plan before execution starts. The model names for each tool are in the global instructions of that tool.
+The strongest available model orchestrates. It writes the plan, dispatches each unit, reviews each result, and runs the verification commands. A cheaper model executes each self-contained unit. A strong reviewer model validates a plan only when the user asks. The model names for each tool are in the global instructions of that tool.
 
 The plan names each unit, its model, its files, its acceptance check, and its turn budget. Each dispatch carries all the context that the executor needs, because the executor cannot see the conversation. When an executor reaches its turn budget, the executor stops and hands back its status and open items. The orchestrator then splits the unit. Each executor returns a short handback: the changed files, the check results, and the open issues. It does not return file contents or full logs.
 
