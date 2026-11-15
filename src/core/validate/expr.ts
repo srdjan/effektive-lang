@@ -561,56 +561,44 @@ export class BodyValidator implements ValidatorCore {
         d.body.span,
       );
     }
-    const declared = d.type.effects;
     // A written set bounds the body from above. An inferred set equals the body.
-    if (d.written.fails) {
-      const extraF = minus(activeBody.failures, declared.failures);
-      if (extraF.length > 0) {
-        this.add(
-          AREA.contracts,
-          `${path}.body`,
-          `the body can fail with ${
-            list(extraF)
-          }, which the declared failures ${
-            list(declared.failures)
-          } do not list`,
-          d.body.span,
-        );
-      }
-    } else if (!sameSet(declared.failures, activeBody.failures)) {
-      this.add(
-        AREA.contracts,
-        `${path}.type.effects.failures`,
-        `an inferred contract equals the body: expected ${
-          list(activeBody.failures)
-        }, recorded ${list(declared.failures)}`,
-        d.span,
-      );
-    }
-    if (d.written.uses) {
-      const extraR = minus(body.requirements, declared.requirements);
-      if (extraR.length > 0) {
-        this.add(
-          AREA.contracts,
-          `${path}.body`,
-          `the body requires ${list(extraR)}, which the declared requirements ${
-            list(declared.requirements)
-          } do not list`,
-          d.body.span,
-        );
-      }
-    } else if (!sameSet(declared.requirements, body.requirements)) {
-      this.add(
-        AREA.contracts,
-        `${path}.type.effects.requirements`,
-        `an inferred contract equals the body: expected ${
-          list(body.requirements)
-        }, recorded ${list(declared.requirements)}`,
-        d.span,
-      );
-    }
+    this.checkContractSet(d, activeBody, path, "failures", "can fail with");
+    this.checkContractSet(d, activeBody, path, "requirements", "requires");
     this.checkExecution(d.type, activeBody, path, d.span);
     this.refinements.audit(d.body, `${path}.body`, exprChildren);
+  }
+
+  /** Checks one declared set of a function against the set of its body. `verb` names what the body does with the set. */
+  private checkContractSet(
+    d: FunctionDecl,
+    body: Effects,
+    path: string,
+    key: "failures" | "requirements",
+    verb: string,
+  ): void {
+    const declared = d.type.effects[key];
+    if (d.written[key === "failures" ? "fails" : "uses"]) {
+      const extra = minus(body[key], declared);
+      if (extra.length > 0) {
+        this.add(
+          AREA.contracts,
+          `${path}.body`,
+          `the body ${verb} ${list(extra)}, which the declared ${key} ${
+            list(declared)
+          } do not list`,
+          d.body.span,
+        );
+      }
+    } else if (!sameSet(declared, body[key])) {
+      this.add(
+        AREA.contracts,
+        `${path}.type.effects.${key}`,
+        `an inferred contract equals the body: expected ${
+          list(body[key])
+        }, recorded ${list(declared)}`,
+        d.span,
+      );
+    }
   }
 
   checkConstant(d: ConstantDecl, path: string): void {
