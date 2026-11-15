@@ -1460,15 +1460,7 @@ export class BodyValidator implements ValidatorCore {
         );
       }
       if (builtin === "traverse" && outs.length === 3) {
-        const options = e.arguments[2];
-        if (!isConcurrencyOption(options)) {
-          this.add(
-            AREA.control,
-            `${path}.arguments[2]`,
-            "traverse needs a positive safe integer or unbounded concurrency literal",
-            options?.span ?? e.span,
-          );
-        }
+        this.checkConcurrencyLiteral(builtin, 2, e, path);
       }
     }
     if (UNITLESS_BUILTINS.has(builtin)) {
@@ -1489,19 +1481,28 @@ export class BodyValidator implements ValidatorCore {
       });
     }
     if (builtin === "all" && outs.length === 2) {
-      const options = e.arguments[1];
-      if (!isConcurrencyOption(options)) {
-        this.add(
-          AREA.control,
-          `${path}.arguments[1]`,
-          "all needs a positive safe integer or unbounded concurrency literal",
-          options?.span ?? e.span,
-        );
-      }
+      this.checkConcurrencyLiteral(builtin, 1, e, path);
     }
     return derivedResult(
       fn.result,
       combine([callee, ...outs, invocationOf(fn)]),
+    );
+  }
+
+  /** Reports an options argument that is not a concurrency literal. */
+  private checkConcurrencyLiteral(
+    name: "traverse" | "all",
+    index: number,
+    e: Extract<Expr, { kind: "call" }>,
+    path: string,
+  ): void {
+    const options = e.arguments[index];
+    if (isConcurrencyOption(options)) return;
+    this.add(
+      AREA.control,
+      `${path}.arguments[${index}]`,
+      `${name} needs a positive safe integer or unbounded concurrency literal`,
+      options?.span ?? e.span,
     );
   }
 
