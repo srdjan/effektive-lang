@@ -1384,5 +1384,95 @@
     "operator": "comparison",
     "class": "equivalent",
     "reason": "A CtorPattern always has a first Name. The parser builds it at one site, and it calls parseName for the constructor before it builds the node. So names is never empty and the >= form never runs on an empty list. The log copy saw no empty list in 19169 inputs. No forced probe applies: ctorRef on an undefined node reads an unrelated node, so the empty case is unreachable, not harmless."
+  },
+  {
+    "file": "src/core/editor_index.ts",
+    "declaration": "localScope",
+    "offset": 146,
+    "text": "parent >= 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "Parser.end builds a node after its children, so a parent node id is above the id of each child, and the id of a child is not below 0. So no parent id is 0. The only negative parent id is -1, the id of the root. The > form differs from the >= form only for the id 0. The probe analyzed 7844 inputs (each fixtures project whole, each file whole, at 20 prefixes, and with up to 40 lines deleted, and 10 generated inputs) and 4137548 nodes in 7893 trees. It found no parent id of 0 and no parent id at or below its child id. A copy that logs the case evaluated this site 60897 times and saw the id 0 in none. The output of the mutant copy matched the source copy for every input: occurrences, local scopes, classifications, occurrenceAt and referencesAt at the edges of each name. As a check of the probe, a copy that raised the bound of the walk to 1000000 changed 4992 output lines. The case cannot be forced, because no tree has a parent id of 0."
+  },
+  {
+    "file": "src/core/editor_index.ts",
+    "declaration": "localScope",
+    "offset": 341,
+    "text": "parent >= 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "Parser.end builds a node after its children, so a parent node id is above the id of each child, and the id of a child is not below 0. So no parent id is 0. The only negative parent id is -1, the id of the root. The > form differs from the >= form only for the id 0. The probe analyzed 7844 inputs (each fixtures project whole, each file whole, at 20 prefixes, and with up to 40 lines deleted, and 10 generated inputs) and 4137548 nodes in 7893 trees. It found no parent id of 0 and no parent id at or below its child id. A copy that logs the case evaluated this site 60897 times and saw the id 0 in none. The output of the mutant copy matched the source copy for every input: occurrences, local scopes, classifications, occurrenceAt and referencesAt at the edges of each name. As a check of the probe, a copy that raised the bound of the walk to 1000000 changed 4992 output lines. The case cannot be forced, because no tree has a parent id of 0."
+  },
+  {
+    "file": "src/core/editor_index.ts",
+    "declaration": "localScope",
+    "offset": 413,
+    "text": "parent >= 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "Parser.end builds a node after its children, so a parent node id is above the id of each child, and the id of a child is not below 0. So no parent id is 0. The only negative parent id is -1, the id of the root. The > form differs from the >= form only for the id 0. The probe analyzed 7844 inputs (each fixtures project whole, each file whole, at 20 prefixes, and with up to 40 lines deleted, and 10 generated inputs) and 4137548 nodes in 7893 trees. It found no parent id of 0 and no parent id at or below its child id. A copy that logs the case evaluated this site 167877 times and saw the id 0 in none. The output of the mutant copy matched the source copy for every input: occurrences, local scopes, classifications, occurrenceAt and referencesAt at the edges of each name. As a check of the probe, a copy that raised the bound of the walk to 1000000 changed 4992 output lines. The case cannot be forced, because no tree has a parent id of 0."
+  },
+  {
+    "file": "src/core/editor_index.ts",
+    "declaration": "localScope",
+    "offset": 813,
+    "text": "parent >= 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "Parser.end builds a node after its children, so a parent node id is above the id of each child, and the id of a child is not below 0. So no parent id is 0. The only negative parent id is -1, the id of the root. The > form differs from the >= form only for the id 0. The probe analyzed 7844 inputs (each fixtures project whole, each file whole, at 20 prefixes, and with up to 40 lines deleted, and 10 generated inputs) and 4137548 nodes in 7893 trees. It found no parent id of 0 and no parent id at or below its child id. A copy that logs the case evaluated this site 60897 times and saw the id 0 in none. The output of the mutant copy matched the source copy for every input: occurrences, local scopes, classifications, occurrenceAt and referencesAt at the edges of each name. As a check of the probe, a copy that raised the bound of the walk to 1000000 changed 4992 output lines. The case cannot be forced, because no tree has a parent id of 0."
+  },
+  {
+    "file": "src/core/editor_index.ts",
+    "declaration": "localScope",
+    "offset": 885,
+    "text": "binding >= 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "Parser.end builds a node after its children, so a parent node id is above the id of each child, and the id of a child is not below 0. The binding is -1, or the id of the grandparent of the binding field, which is above the field id and so at least 2. So no binding id is 0. The only negative parent id is -1, the id of the root. The > form differs from the >= form only for the id 0. The probe analyzed 7844 inputs (each fixtures project whole, each file whole, at 20 prefixes, and with up to 40 lines deleted, and 10 generated inputs) and 4137548 nodes in 7893 trees. It found no id of 0 and no parent id at or below its child id. A copy that logs the case evaluated this site 60897 times and saw the binding id 0 in none. The output of the mutant copy matched the source copy for every input: occurrences, local scopes, classifications, occurrenceAt and referencesAt at the edges of each name. As a check of the probe, a copy that raised the bound of the walk to 1000000 changed 4992 output lines. The case cannot be forced, because no tree has a parent id of 0."
+  },
+  {
+    "file": "src/core/editor_index.ts",
+    "declaration": "symbolIndex",
+    "offset": 1518,
+    "text": "parent >= 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "Parser.end builds a node after its children, so a parent node id is above the id of each child, and the id of a child is not below 0. So no parent id is 0. The only negative parent id is -1, the id of the root. The > form differs from the >= form only for the id 0. The probe analyzed 7844 inputs (each fixtures project whole, each file whole, at 20 prefixes, and with up to 40 lines deleted, and 10 generated inputs) and 4137548 nodes in 7893 trees. It found no parent id of 0 and no parent id at or below its child id. A copy that logs the case evaluated this site 704897 times and saw the id 0 in none. The output of the mutant copy matched the source copy for every input: occurrences, local scopes, classifications, occurrenceAt and referencesAt at the edges of each name. As a check of the probe, a copy that raised the bound of the walk to 1000000 changed 4992 output lines. The case cannot be forced, because no tree has a parent id of 0."
+  },
+  {
+    "file": "src/core/editor_index.ts",
+    "declaration": "symbolIndex",
+    "offset": 1974,
+    "text": "parent >= 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "Parser.end builds a node after its children, so a parent node id is above the id of each child, and the id of a child is not below 0. So no parent id is 0. The only negative parent id is -1, the id of the root. The > form differs from the >= form only for the id 0. The probe analyzed 7844 inputs (each fixtures project whole, each file whole, at 20 prefixes, and with up to 40 lines deleted, and 10 generated inputs) and 4137548 nodes in 7893 trees. It found no parent id of 0 and no parent id at or below its child id. A copy that logs the case evaluated this site 704897 times and saw the id 0 in none. The output of the mutant copy matched the source copy for every input: occurrences, local scopes, classifications, occurrenceAt and referencesAt at the edges of each name. As a check of the probe, a copy that raised the bound of the walk to 1000000 changed 4992 output lines. The case cannot be forced, because no tree has a parent id of 0."
+  },
+  {
+    "file": "src/core/editor_index.ts",
+    "declaration": "symbolIndex",
+    "offset": 2512,
+    "text": "a.span.start - b.span.start || a.span.end - b.span.end",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The sort runs on occurrences whose span text passes isIdentifier, so each span is one run of identifier characters. Two different occurrences cannot overlap or touch, and they never share a start with different ends. The && form returns the end difference for spans with different starts and 0 for spans with the same start. That has the sign of the source result when the spans are disjoint, and spans with the same start and the same end give 0 in both forms. So the forms differ only for spans that share a start with different ends, or that overlap. The probe analyzed 7844 inputs and 704897 occurrences. It found 0 touching pairs, 0 overlapping pairs that are not identical, and 0 pairs with the same start and different ends. A copy that logs the comparator saw 1553777 calls and 0 whose sign differed from the || form. The output of the mutant copy matched the source copy for every input. The case cannot be forced, because the spans of two occurrences cannot share a start with different ends."
+  },
+  {
+    "file": "src/core/editor_index.ts",
+    "declaration": "occurrenceAt",
+    "offset": 233,
+    "text": "offset < o.span.end",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The <= form differs from the < form only when an occurrence A ends at the offset and another occurrence B comes first in the list and holds the offset inside its span. The source reaches A with its second find. So A and B would overlap or touch. Occurrence spans are runs of identifier characters, so they never do. The probe analyzed 7844 inputs and 704897 occurrences. It found 0 touching pairs and 0 overlapping pairs that are not identical. A copy that logs the case saw 2114691 evaluations where the two forms of the test disagree, at the end of a name. The output of the mutant copy matched the source copy for every input, at the edges of each name and at every 13th offset. As a check of the probe, a copy that changed the test of the start of the span changed 7554 output lines."
+  },
+  {
+    "file": "src/core/editor_index.ts",
+    "declaration": "occurrenceAt",
+    "offset": 303,
+    "text": "o.span.start < offset",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "In the second find the end of the span equals the offset, and an end is never below its start. So start <= offset always holds, and the <= form differs from the < form only for a span with start equal to end. The symbol index keeps only the occurrences whose text passes isIdentifier, and that function rejects the empty text. So no occurrence has an empty span. The probe found 0 empty spans in 704897 occurrences. A copy that logs the case saw 0 evaluations where the two forms disagree, in 1688773650 evaluations. The output of the mutant copy matched the source copy for every input. The case cannot be forced, because an empty span never enters the index."
   }
 ]
