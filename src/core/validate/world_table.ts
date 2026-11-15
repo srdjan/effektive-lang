@@ -57,8 +57,6 @@ export function buildWorld(ir: ModuleIR): World {
         addFirst(services, d.id, d);
         break;
       case "function":
-        addFirst(values, d.id, d.type);
-        break;
       case "constant":
         addFirst(values, d.id, d.type);
         break;

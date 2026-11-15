@@ -237,8 +237,6 @@ export function checkDeclarationHeaders(ctx: Ctx, ir: ModuleIR): void {
         checkServiceDecl(ctx, d, path, seenMethods);
         break;
       case "function":
-        checkDeclaredType(ctx, d.type, `${path}.type`, d.span);
-        break;
       case "constant":
         checkDeclaredType(ctx, d.type, `${path}.type`, d.span);
         break;
