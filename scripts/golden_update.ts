@@ -25,16 +25,12 @@ for (const module of [...emitExamples().values(), ...traverse.values()]) {
   console.log(`wrote fixtures/golden/${module.path}`);
 }
 
-const resourceCase = Deno.readTextFileSync(
-  new URL("../fixtures/ir/resource-case.eff", import.meta.url),
-);
-
 const irFile = (name: string) =>
   Deno.readTextFileSync(new URL(`../fixtures/ir/${name}`, import.meta.url));
 
 const baseline = [
   exampleFiles(),
-  { "effektive.json": "{}", "m.eff": resourceCase },
+  { "effektive.json": "{}", "m.eff": irFile("resource-case.eff") },
   {
     "effektive.json": "{}",
     "empty-effect.eff": irFile("empty-effect.eff"),
