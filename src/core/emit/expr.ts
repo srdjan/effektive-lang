@@ -102,7 +102,6 @@ import {
 import { patternBinding } from "./walk.ts";
 import {
   asBuiltinInstanceName,
-  type BuiltinInstanceName,
   builtinInstanceName,
   isLocalId,
   knownBuiltinInstanceName,
@@ -1865,22 +1864,26 @@ export class ExprEmitter implements ExprCore {
         if (e.callee.kind === "reference") {
           const builtin = knownBuiltinInstanceName(e.callee.target);
           if (builtin !== undefined) {
-            const counts: Record<BuiltinInstanceName, readonly number[]> = {
+            switch (builtin) {
+              case "div":
+              case "trunc":
+              case "floor":
+              case "round":
+              case "ceil":
+              case "text":
+              case "len":
+              case "at":
+              case "sort":
+              case "concat":
+                // A pure builtin is not a leaf: `builtinCall` prints it.
+                throw internal(`the builtin ${builtin} is not an effect leaf`);
+            }
+            const counts: Record<typeof builtin, readonly number[]> = {
               all: [1, 2],
               traverse: [2, 3],
               map: [2],
               filter: [2],
               fold: [3],
-              div: [2],
-              trunc: [1],
-              floor: [1],
-              round: [1],
-              ceil: [1],
-              text: [1],
-              len: [1],
-              at: [2],
-              sort: [1, 2],
-              concat: [],
             };
             if (!counts[builtin].includes(children.length)) {
               throw internal(`${builtin} has an invalid argument count`);
@@ -1938,18 +1941,6 @@ export class ExprEmitter implements ExprCore {
                   ...(third === undefined ? [] : [", ", free(third)]),
                   ")",
                 ]);
-              case "div":
-              case "trunc":
-              case "floor":
-              case "round":
-              case "ceil":
-              case "text":
-              case "len":
-              case "at":
-              case "sort":
-              case "concat":
-                // A pure builtin is not a leaf: `builtinCall` prints it.
-                throw internal(`the builtin ${builtin} is not an effect leaf`);
             }
           }
         }
