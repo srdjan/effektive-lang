@@ -2667,7 +2667,7 @@ class BodyChecker
       const binding = bindingTarget?.kind === "local"
         ? bindingTarget.id
         : undefined;
-      if (isDefect && errorNode !== undefined) {
+      if (isDefect) {
         if (defectSeen) {
           this.report(
             "failure-contract/003",
@@ -2686,16 +2686,14 @@ class BodyChecker
             `the error \`${shortName(error)}\` already has a handler`,
             errorNode,
           );
-        } else if (!protectedSet.has(error)) {
-          if (!bodyHadErrors) {
-            this.report(
-              "failure-contract/002",
-              `the protected block cannot fail with \`${shortName(error)}\``,
-              errorNode,
-            );
-          }
-        } else {
+        } else if (protectedSet.has(error)) {
           handled.add(error);
+        } else if (!bodyHadErrors) {
+          this.report(
+            "failure-contract/002",
+            `the protected block cannot fail with \`${shortName(error)}\``,
+            errorNode,
+          );
         }
       }
       if (isDefect && bindingNode !== undefined) {
