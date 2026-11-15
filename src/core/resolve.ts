@@ -608,25 +608,37 @@ class Resolver {
     return binding;
   }
 
+  /** The module binding that a name expression names, when it is a service. */
+  private serviceBinding(nameExpr: NodeId): Binding | undefined {
+    const found = this.lookupValue(
+      nodeText(this.tree, nameExpr),
+      this.span(nameExpr),
+    );
+    return found?.tag === "module" && found.binding.target.kind === "service"
+      ? found.binding
+      : undefined;
+  }
+
   private lookupValue(name: string, useSpan: Span): Found | undefined {
     const passed: Scope[] = [];
-    for (let s = this.scope; s !== undefined; s = s.parent) {
-      const binding = s.names.get(name);
-      if (binding !== undefined) {
-        for (const p of passed) {
-          if (!p.outerUses.has(name)) p.outerUses.set(name, useSpan);
-        }
-        return { tag: "local", binding };
-      }
-      passed.push(s);
-    }
     let found: Found | undefined;
-    const moduleBinding = this.namespace.get(name);
-    if (moduleBinding !== undefined) {
-      found = { tag: "module", binding: moduleBinding };
-    } else {
-      const builtin = asPrelude(name);
-      if (builtin !== undefined) found = { tag: "builtin", name: builtin };
+    for (
+      let s = this.scope;
+      s !== undefined && found === undefined;
+      s = s.parent
+    ) {
+      const binding = s.names.get(name);
+      if (binding !== undefined) found = { tag: "local", binding };
+      else passed.push(s);
+    }
+    if (found === undefined) {
+      const moduleBinding = this.namespace.get(name);
+      if (moduleBinding !== undefined) {
+        found = { tag: "module", binding: moduleBinding };
+      } else {
+        const builtin = asPrelude(name);
+        if (builtin !== undefined) found = { tag: "builtin", name: builtin };
+      }
     }
     if (found !== undefined) {
       for (const p of passed) {
@@ -947,13 +959,7 @@ class Resolver {
         return;
       case SyntaxKind.RecordType:
         for (const field of kidsOfKind(this.tree, node, SyntaxKind.FieldType)) {
-          for (const kid of kidsOf(this.tree, field)) {
-            if (kindOf(this.tree, kid) === SyntaxKind.Name) {
-              this.fieldLabel(kid);
-            } else {
-              this.resolveType(kid);
-            }
-          }
+          this.labelsAndTypes(field, false);
         }
         return;
       case SyntaxKind.FunctionType:
@@ -1002,10 +1008,16 @@ class Resolver {
   /** Parameter names in a signature without a body are labels. Their types resolve. */
   private labelParams(paramList: NodeId): void {
     for (const param of kidsOfKind(this.tree, paramList, SyntaxKind.Param)) {
-      for (const kid of kidsOf(this.tree, param)) {
-        if (kindOf(this.tree, kid) === SyntaxKind.Name) this.fieldLabel(kid);
-        else this.resolveType(kid);
-      }
+      this.labelsAndTypes(param, false);
+    }
+  }
+
+  /** A name child becomes a local or a field label. Any other child is a type. */
+  private labelsAndTypes(node: NodeId, local: boolean): void {
+    for (const kid of kidsOf(this.tree, node)) {
+      if (kindOf(this.tree, kid) !== SyntaxKind.Name) this.resolveType(kid);
+      else if (local) this.declareLocal(kid, false);
+      else this.fieldLabel(kid);
     }
   }
 
@@ -1103,15 +1115,9 @@ class Resolver {
             first !== undefined &&
             kindOf(this.tree, first) === SyntaxKind.NameExpr
           ) {
-            const found = this.lookupValue(
-              nodeText(this.tree, first),
-              this.span(first),
-            );
-            if (
-              found?.tag === "module" && found.binding.target.kind === "service"
-            ) {
-              this.set(first, found.binding.target);
-            } else this.expr(first, "value");
+            const service = this.serviceBinding(first);
+            if (service !== undefined) this.set(first, service.target);
+            else this.expr(first, "value");
           } else if (first !== undefined) this.expr(first, "value");
           for (const arg of args.slice(1)) this.expr(arg, "value");
           return;
@@ -1177,15 +1183,11 @@ class Resolver {
     const { base, member } = memberAccessParts(this.tree, node);
     if (base === undefined) return;
     if (kindOf(this.tree, base) === SyntaxKind.NameExpr) {
-      const baseName = nodeText(this.tree, base);
-      const found = this.lookupValue(baseName, this.span(base));
-      if (
-        found !== undefined && found.tag === "module" &&
-        found.binding.target.kind === "service"
-      ) {
-        this.set(base, found.binding.target);
+      const service = this.serviceBinding(base);
+      if (service !== undefined) {
+        this.set(base, service.target);
         if (member === undefined) return;
-        const cap = this.methodRef(found.binding, member);
+        const cap = this.methodRef(service, member);
         if (cap !== undefined) this.set(node, cap);
         else this.unresolved(node, nameTextOf(this.tree, member) ?? "");
         return;
@@ -1266,13 +1268,7 @@ class Resolver {
       const kind = kindOf(this.tree, kid);
       if (kind === SyntaxKind.ParamList) {
         for (const param of kidsOfKind(this.tree, kid, SyntaxKind.Param)) {
-          for (const part of kidsOf(this.tree, param)) {
-            if (kindOf(this.tree, part) === SyntaxKind.Name) {
-              this.declareLocal(part, false);
-            } else {
-              this.resolveType(part);
-            }
-          }
+          this.labelsAndTypes(param, true);
         }
       } else if (
         kind === SyntaxKind.FailsClause || kind === SyntaxKind.WithClause
