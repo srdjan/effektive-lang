@@ -1,7 +1,14 @@
 // Checks of the declaration headers: identities, kinds, exports, services,
 // type declarations, and error declarations.
 
-import type { ErrorDecl, ModuleIR, ServiceDecl, TypeDecl } from "../ir.ts";
+import type {
+  ErrorDecl,
+  Field,
+  ModuleIR,
+  ServiceDecl,
+  Span,
+  TypeDecl,
+} from "../ir.ts";
 import { AREA, moduleSpan } from "./report.ts";
 import { checkRefinementDeclaration } from "./refinements.ts";
 import type { Ctx } from "./world_table.ts";
@@ -150,12 +157,11 @@ export function checkTypeDecl(ctx: Ctx, d: TypeDecl, path: string): void {
     d.definition.kind === "nominal" && d.definition.tagged === true &&
     d.definition.base.kind === "record"
   ) {
-    const { fields } = d.definition.base;
-    const at = `${path}.definition.base.fields`;
-    checkFieldNames(ctx, fields, at, d.span, true);
-    checkDeferredFields(ctx, fields, at, d.span);
-    fields.forEach((f, i) =>
-      checkDeclaredType(ctx, f.type, `${at}[${i}].type`, d.span)
+    checkDeclarationFields(
+      ctx,
+      d.definition.base.fields,
+      `${path}.definition.base.fields`,
+      d.span,
     );
     return;
   }
@@ -168,12 +174,32 @@ export function checkTypeDecl(ctx: Ctx, d: TypeDecl, path: string): void {
   checkDeclaredType(ctx, type, at, d.span);
 }
 
-export function checkErrorDecl(ctx: Ctx, d: ErrorDecl, path: string): void {
-  checkFieldNames(ctx, d.fields, `${path}.fields`, d.span, true);
-  checkDeferredFields(ctx, d.fields, `${path}.fields`, d.span);
-  d.fields.forEach((f, i) =>
-    checkDeclaredType(ctx, f.type, `${path}.fields[${i}].type`, d.span)
+/** Checks the fields of a tagged record or an error: the reserved name _tag, the names, and the types. */
+function checkDeclarationFields(
+  ctx: Ctx,
+  fields: readonly Field[],
+  at: string,
+  span: Span,
+): void {
+  fields.forEach((f, i) => {
+    if (f.name === "_tag") {
+      ctx.report.add(
+        AREA.types,
+        `${at}[${i}]`,
+        "the field name _tag is reserved for generated tags",
+        span,
+      );
+    }
+  });
+  checkFieldNames(ctx, fields, at, span);
+  checkDeferredFields(ctx, fields, at, span);
+  fields.forEach((f, i) =>
+    checkDeclaredType(ctx, f.type, `${at}[${i}].type`, span)
   );
+}
+
+export function checkErrorDecl(ctx: Ctx, d: ErrorDecl, path: string): void {
+  checkDeclarationFields(ctx, d.fields, `${path}.fields`, d.span);
 }
 
 export function checkDeclarationHeaders(ctx: Ctx, ir: ModuleIR): void {

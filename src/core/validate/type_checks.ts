@@ -203,18 +203,9 @@ export function checkFieldNames(
   fields: readonly Field[],
   path: string,
   span: Span,
-  tagReserved = false,
 ): void {
   const seen = new Set<string>();
   fields.forEach((f, i) => {
-    if (tagReserved && f.name === "_tag") {
-      ctx.report.add(
-        AREA.types,
-        `${path}[${i}]`,
-        "the field name _tag is reserved for generated tags",
-        span,
-      );
-    }
     if (seen.has(f.name)) {
       ctx.report.add(
         AREA.types,
