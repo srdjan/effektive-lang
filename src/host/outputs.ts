@@ -124,8 +124,8 @@ function namesSource(
 }
 
 /**
- * Emits the named modules of the revision. With `write` true, it writes the
- * generated file and its map under `root` for each module whose text changed:
+ * Emits the named modules of the revision. It writes the generated file and its
+ * map under `root` for each module whose text changed:
  * `<module>.ts` for `.eff`, `<module>.effi.ts` for `.effi`. A module with
  * diagnostics is skipped without a note: the caller reports it. The caller also leaves out the modules that failed validation.
  */
@@ -134,7 +134,6 @@ export function writeGenerated(
   root: string,
   source: GeneratedSource,
   names: readonly string[],
-  write: boolean,
 ): GeneratedOutputs {
   const written: string[] = [];
   const generated: string[] = [];
@@ -174,59 +173,57 @@ export function writeGenerated(
       }
     }
     const { emitted, table, map } = output;
-    if (write) {
-      const outputs: [string, string][] = [
-        [emitted.path, emitted.text],
-        [sourceMapPathOf(emitted.path), serializeSourceMap(map)],
-      ];
-      const targets: [string, string, string][] = [];
-      let blocked = false;
-      for (const [path, text] of outputs) {
-        const target = containedProjectPath(fs, root, path);
-        if (!target.ok) {
-          notes.push(`error: cannot write ${path}: ${target.error.message}`);
-          failed = true;
-          blocked = true;
-          break;
-        }
-        targets.push([path, text, target.value]);
-      }
-      if (blocked) continue;
-      // The `.ts` file decides for the pair. A file that this source did not
-      // generate stays, with its map unwritten and the module left out. The
-      // header can name the source from another project root.
-      const owner = generatedSourceOf(emitted.text);
-      const existing = fs.readText(targets[0][2]);
-      if (!existing.ok && existing.error.tag === "unreadable") {
-        notes.push(
-          `error: cannot read ${emitted.path}: ${existing.error.message}`,
-        );
+    const outputs: [string, string][] = [
+      [emitted.path, emitted.text],
+      [sourceMapPathOf(emitted.path), serializeSourceMap(map)],
+    ];
+    const targets: [string, string, string][] = [];
+    let blocked = false;
+    for (const [path, text] of outputs) {
+      const target = containedProjectPath(fs, root, path);
+      if (!target.ok) {
+        notes.push(`error: cannot write ${path}: ${target.error.message}`);
         failed = true;
-        continue;
+        blocked = true;
+        break;
       }
-      if (
-        existing.ok && existing.value !== emitted.text &&
-        (owner === undefined ||
-          !namesSource(fs, root, owner, generatedSourceOf(existing.value)))
-      ) {
-        notes.push(
-          `error: cannot write ${emitted.path}: the file exists and is not generated from ${
-            owner ?? name
-          }. Move or delete it.`,
-        );
+      targets.push([path, text, target.value]);
+    }
+    if (blocked) continue;
+    // The `.ts` file decides for the pair. A file that this source did not
+    // generate stays, with its map unwritten and the module left out. The
+    // header can name the source from another project root.
+    const owner = generatedSourceOf(emitted.text);
+    const existing = fs.readText(targets[0][2]);
+    if (!existing.ok && existing.error.tag === "unreadable") {
+      notes.push(
+        `error: cannot read ${emitted.path}: ${existing.error.message}`,
+      );
+      failed = true;
+      continue;
+    }
+    if (
+      existing.ok && existing.value !== emitted.text &&
+      (owner === undefined ||
+        !namesSource(fs, root, owner, generatedSourceOf(existing.value)))
+    ) {
+      notes.push(
+        `error: cannot write ${emitted.path}: the file exists and is not generated from ${
+          owner ?? name
+        }. Move or delete it.`,
+      );
+      failed = true;
+      continue;
+    }
+    for (const [path, text, full] of targets) {
+      const old = path === emitted.path ? existing : fs.readText(full);
+      if (old.ok && old.value === text) continue;
+      const result = fs.writeText(full, text);
+      if (result.ok) {
+        written.push(path);
+      } else {
+        notes.push(`error: cannot write ${path}: ${result.error.message}`);
         failed = true;
-        continue;
-      }
-      for (const [path, text, full] of targets) {
-        const old = path === emitted.path ? existing : fs.readText(full);
-        if (old.ok && old.value === text) continue;
-        const result = fs.writeText(full, text);
-        if (result.ok) {
-          written.push(path);
-        } else {
-          notes.push(`error: cannot write ${path}: ${result.error.message}`);
-          failed = true;
-        }
       }
     }
     generated.push(emitted.path);

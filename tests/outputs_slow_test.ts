@@ -39,7 +39,7 @@ function generated(path: string): GeneratedSource {
 }
 
 function write(root: string, path: string) {
-  return writeGenerated(denoFs, root, generated(path), ["m"], true);
+  return writeGenerated(denoFs, root, generated(path), ["m"]);
 }
 
 Deno.test("writeGenerated rejects external output links before writing either file", async () => {

@@ -50,7 +50,6 @@ Deno.test("writeGenerated refuses failed inspections without changing files", ()
     "/project",
     source(ready),
     ["m"],
-    true,
   );
   assertEquals(output.failed, true);
   assertEquals(output.written, []);
@@ -70,7 +69,6 @@ Deno.test("writeGenerated refuses paths outside the root-relative module contrac
       "/project",
       source({ kind: "ready", emitted: { ...emitted, path }, table, map }),
       ["m"],
-      true,
     );
     assertEquals(output.failed, true, path);
     assertEquals(output.written, [], path);
@@ -184,7 +182,6 @@ Deno.test("writeGenerated skips absent or diagnosed modules and reports each gen
       "/project",
       source(result),
       ["m"],
-      true,
     );
     assertEquals(output.notes, note === undefined ? [] : [note]);
     assertEquals(output.failed, note !== undefined);
@@ -212,7 +209,6 @@ Deno.test("writeGenerated reports every non-diagnostic lowering failure", () => 
       "/project",
       source({ kind: "lower", error }),
       ["m"],
-      true,
     );
     assertEquals(output.notes, [`error: cannot lower ${message}`]);
     assert(output.failed);
@@ -228,7 +224,7 @@ Deno.test("writeGenerated continues after failure, preserves names and writes on
         ? { kind: "map", error: { tag: "missing-source", source: "bad.eff" } }
         : ready,
   };
-  const first = writeGenerated(io.io.fs, "/project", input, ["bad", "m"], true);
+  const first = writeGenerated(io.io.fs, "/project", input, ["bad", "m"]);
   assertEquals(first.generated, ["m.ts"]);
   assertEquals(first.written, ["m.ts", "m.ts.map"]);
   assertEquals(first.tables.get("m.ts"), table);
@@ -238,26 +234,20 @@ Deno.test("writeGenerated continues after failure, preserves names and writes on
     "/project",
     source(ready),
     ["m"],
-    true,
   );
   assertEquals(second.written, []);
   assertEquals(second.notes, []);
   assertEquals(second.failed, false);
 });
 
-Deno.test("writeGenerated dry runs and partial write failures retain output metadata", () => {
+Deno.test("writeGenerated retains output metadata after a partial write failure", () => {
   const io = memoryIo({});
-  const dry = writeGenerated(io.io.fs, "/project", source(ready), ["m"], false);
-  assertEquals(dry.generated, ["m.ts"]);
-  assertEquals(dry.written, []);
-  assertEquals(io.files.size, 0);
   io.unwritable.add("/project/m.ts.map");
   const failed = writeGenerated(
     io.io.fs,
     "/project",
     source(ready),
     ["m"],
-    true,
   );
   assertEquals(failed.generated, ["m.ts"]);
   assertEquals(failed.written, ["m.ts"]);
@@ -267,7 +257,7 @@ Deno.test("writeGenerated dry runs and partial write failures retain output meta
   assert(failed.failed);
   io.unwritable.clear();
   assertEquals(
-    writeGenerated(io.io.fs, "/project", source(ready), ["m"], true).written,
+    writeGenerated(io.io.fs, "/project", source(ready), ["m"]).written,
     ["m.ts.map"],
   );
 });
@@ -310,7 +300,6 @@ function writeOver(files: Record<string, string>) {
     "/project",
     source(ready),
     ["m"],
-    true,
   );
   return { io, output };
 }
@@ -377,7 +366,7 @@ Deno.test("writeGenerated writes nothing when the .ts file cannot be read", () =
         }
         : io.io.fs.readText(path),
   };
-  const output = writeGenerated(fs, "/project", source(ready), ["m"], true);
+  const output = writeGenerated(fs, "/project", source(ready), ["m"]);
   assertEquals(output.notes, ["error: cannot read m.ts: io error"]);
   assert(output.failed);
   assertEquals(io.files.size, 0);
@@ -402,7 +391,6 @@ function writeAt(
     root,
     source({ kind: "ready", emitted: module, table, map }),
     ["m"],
-    true,
   );
   return { io, output };
 }

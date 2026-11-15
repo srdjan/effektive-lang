@@ -89,7 +89,6 @@ export function runSaveRound(input: SaveRoundInput): SaveRound {
     root,
     generationSource(revision, input.outputs),
     writable.filter(owns),
-    true,
   );
   return { modules: [...names, ...kept], removals, held, outputs };
 }
