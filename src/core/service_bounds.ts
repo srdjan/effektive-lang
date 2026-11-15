@@ -9,7 +9,7 @@
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import { contractOrigins } from "./contract_origins.ts";
 import { serviceOfCapability, shortName } from "./ids.ts";
-import type { CapabilityId, ServiceId } from "./ir.ts";
+import type { CapabilityId, LocalId, ServiceId } from "./ir.ts";
 import type { ModuleInfo } from "./project.ts";
 import {
   producedRequirements,
@@ -80,7 +80,18 @@ export function serviceBoundDiagnostics(
   const allowed = allowedServiceIds(input);
   if (allowed === undefined) return [];
   const diagnostics: Diagnostic[] = [];
-  const missing = (requirements: Iterable<CapabilityId>): CapabilityId[] => {
+  const undeclared = (
+    initial: Iterable<CapabilityId>,
+    produced: TypeRef,
+    body: BodyTable,
+    parameters: readonly (LocalId | undefined)[],
+  ): CapabilityId[] => {
+    const requirements = new Set<CapabilityId>(initial);
+    producedRequirements(table, produced, requirements);
+    transferredRequirements(
+      { table, tree: info.tree, resolution, body, parameters },
+      requirements,
+    );
     const found = new Set<CapabilityId>();
     for (const capability of requirements) {
       const service = serviceOfCapability(capability);
@@ -89,16 +100,12 @@ export function serviceBoundDiagnostics(
     return [...found].sort();
   };
   for (const fn of input.functions) {
-    const requirements = new Set<CapabilityId>(fn.requirements);
-    producedRequirements(table, fn.result, requirements);
-    transferredRequirements({
-      table,
-      tree: info.tree,
-      resolution,
-      body: fn.table,
-      parameters: fn.signature.parameters.map((parameter) => parameter.id),
-    }, requirements);
-    const extra = missing(requirements);
+    const extra = undeclared(
+      fn.requirements,
+      fn.result,
+      fn.table,
+      fn.signature.parameters.map((parameter) => parameter.id),
+    );
     if (extra.length === 0) continue;
     const related = extra.flatMap((capability) =>
       fn.bodyNode === undefined ? [] : contractOrigins(
@@ -121,16 +128,7 @@ export function serviceBoundDiagnostics(
     ));
   }
   for (const constant of input.constants) {
-    const requirements = new Set<CapabilityId>();
-    producedRequirements(table, constant.type, requirements);
-    transferredRequirements({
-      table,
-      tree: info.tree,
-      resolution,
-      body: constant.table,
-      parameters: [],
-    }, requirements);
-    const extra = missing(requirements);
+    const extra = undeclared([], constant.type, constant.table, []);
     if (extra.length === 0) continue;
     diagnostics.push(makeDiagnostic(
       "requirement-contract/002",
