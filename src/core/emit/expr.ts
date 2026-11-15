@@ -331,19 +331,30 @@ function nestHeads(
  * a line of its own at the indentation of the chain, after the first. A head
  * whose parameter list does not fit on its line breaks the list.
  */
-interface ChainOptions {
-  readonly oneLine: Doc;
-  /** Heads on the first line and the body below. Absent for a block or object body. */
-  readonly bodyDown: Doc | undefined;
-  /** One head for each line, the body after the last head. */
-  readonly split: (separator: Doc) => Doc;
-  /** One head for each line, the body below the last head. Absent like `bodyDown`. */
-  readonly splitDown: ((separator: Doc) => Doc) | undefined;
-  /** One head for each line, the body on the last line when it fits, else below it. */
-  readonly splitAdaptive: (separator: Doc) => Doc;
-  /** `split` with the object body of a brace body broken. Absent for any other body. */
-  readonly broken: ((separator: Doc) => Doc) | undefined;
-}
+type ChainOptions =
+  & {
+    readonly oneLine: Doc;
+    /** One head for each line, the body after the last head. */
+    readonly split: (separator: Doc) => Doc;
+    /** One head for each line, the body on the last line when it fits, else below it. */
+    readonly splitAdaptive: (separator: Doc) => Doc;
+  }
+  & (
+    | {
+      /** Heads on the first line and the body below. */
+      readonly bodyDown: Doc;
+      /** One head for each line, the body below the last head. */
+      readonly splitDown: (separator: Doc) => Doc;
+      readonly broken: undefined;
+    }
+    | {
+      /** A block or object body has no body-down layout. */
+      readonly bodyDown: undefined;
+      readonly splitDown: undefined;
+      /** `split` with the object body of a brace body broken. Absent for a block. */
+      readonly broken: ((separator: Doc) => Doc) | undefined;
+    }
+  );
 
 function chainOptions(chain: Chain): ChainOptions {
   const { heads, tail } = chain;
@@ -440,10 +451,10 @@ function chainLayouts(
     indent([through, options.bodyDown]),
     indent([through, options.split(through)]),
   ];
-  if (options.splitDown !== undefined) {
-    choices.push(indent([through, options.splitDown(through)]));
-  }
-  choices.push([" ", options.splitAdaptive(hard)]);
+  choices.push(
+    indent([through, options.splitDown(through)]),
+    [" ", options.splitAdaptive(hard)],
+  );
   return alt(choices.map(declare));
 }
 
