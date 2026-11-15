@@ -10,6 +10,7 @@ import type {
 import type { Predicate, Term } from "../predicates.ts";
 import { verifyCertificate } from "./predicates.ts";
 import { AREA } from "./report.ts";
+import { invocationOf, isQuiet } from "./sets.ts";
 import { MAX_DEPTH } from "./type_children.ts";
 import {
   fieldsOf,
@@ -88,11 +89,7 @@ export class RefinementValidator {
   addLocal(parameter: Parameter, init?: Expr): void {
     this.locals.set(parameter.id, parameter.type);
     // Only a quiet initializer, which is pure and has no failure or requirement, aliases.
-    if (
-      init === undefined || init.execution !== "pure" ||
-      init.effects.failures.length !== 0 ||
-      init.effects.requirements.length !== 0
-    ) return;
+    if (init === undefined || !isQuiet(invocationOf(init))) return;
     this.aliases.push(
       ...this.aliasEquations(parameter.id, parameter.type, init),
     );
