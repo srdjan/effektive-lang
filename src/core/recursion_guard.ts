@@ -27,54 +27,55 @@ export function literalTagOf(
   return undefined;
 }
 
+/** Whether a type names the id at any depth, not through a tuple or a function. */
+export function containsNamed(part: Type, id: TypeId): boolean {
+  switch (part.kind) {
+    case "named":
+      return part.id === id;
+    case "array":
+    case "option":
+      return containsNamed(part.element, id);
+    case "record":
+      return part.fields.some((field) => containsNamed(field.type, id));
+    case "union":
+      return part.members.some((member) => containsNamed(member, id));
+    case "primitive":
+    case "literal":
+    case "tuple":
+    case "ref":
+    case "retry-schedule":
+    case "schema":
+    case "effect":
+    case "stream":
+    case "sink":
+    case "function":
+    case "provider":
+      return false;
+    default: {
+      const unreachable: never = part;
+      return unreachable;
+    }
+  }
+}
+
 /** A single recursive data alias needs an array, optional key, or tagged terminal choice. */
 export function guardedRecord(
   type: Type,
   id: TypeId,
   tagOf: (type: Type) => string | undefined,
 ): boolean {
-  const containsSelf = (part: Type): boolean => {
-    switch (part.kind) {
-      case "named":
-        return part.id === id;
-      case "array":
-      case "option":
-        return containsSelf(part.element);
-      case "record":
-        return part.fields.some((field) => containsSelf(field.type));
-      case "union":
-        return part.members.some(containsSelf);
-      case "primitive":
-      case "literal":
-      case "tuple":
-      case "ref":
-      case "retry-schedule":
-      case "schema":
-      case "effect":
-      case "stream":
-      case "sink":
-      case "function":
-      case "provider":
-        return false;
-      default: {
-        const unreachable: never = part;
-        return unreachable;
-      }
-    }
-  };
-  const tagged = type.kind === "union" && type.members.length >= 2 &&
-    type.members.every((member) => member.kind === "record") &&
-    type.members.some((member) => !containsSelf(member));
-  const tagNames = tagged && type.kind === "union"
-    ? (type.members[0] as Extract<Type, { kind: "record" }>).fields
+  const members = type.kind === "union" ? type.members : [];
+  const records = members.filter((member) => member.kind === "record");
+  const tagged = records.length >= 2 && records.length === members.length &&
+    records.some((member) => !containsNamed(member, id));
+  const tagNames = tagged
+    ? records[0].fields
       .filter((field) => !field.optional && tagOf(field.type) !== undefined)
       .map((field) => field.name)
     : [];
-  const hasDistinctTag = type.kind === "union" && tagNames.some((name) => {
-    const fields = type.members.map((member) =>
-      member.kind === "record"
-        ? member.fields.find((field) => field.name === name)
-        : undefined
+  const hasDistinctTag = tagNames.some((name) => {
+    const fields = records.map((member) =>
+      member.fields.find((field) => field.name === name)
     );
     return fields.every((field) =>
       field !== undefined && !field.optional &&

@@ -21,6 +21,7 @@ import type {
   ValueId,
 } from "../ir.ts";
 import { isCycle, stronglyConnectedComponents } from "../graph.ts";
+import { containsNamed } from "../recursion_guard.ts";
 import { declarationReferencedIds } from "../referenced_ids.ts";
 import {
   assignment,
@@ -273,7 +274,7 @@ export class DeclarationEmitter {
       (grouped !== undefined ||
         ((d.definition.type.kind === "record" ||
           d.definition.type.kind === "union") &&
-          this.containsNamed(d.definition.type, d.id)))
+          containsNamed(d.definition.type, d.id)))
     ) {
       const recursive = grouped ?? new Set([d.id]);
       const schema = this.scope.effect("Schema");
@@ -345,36 +346,6 @@ export class DeclarationEmitter {
       predicateDoc(d.predicate, input),
       ` || ${JSON.stringify(`expected ${d.name}`)}))`,
     ];
-  }
-
-  private containsNamed(type: Type, id: string): boolean {
-    switch (type.kind) {
-      case "named":
-        return type.id === id;
-      case "array":
-      case "option":
-        return this.containsNamed(type.element, id);
-      case "record":
-        return type.fields.some((field) => this.containsNamed(field.type, id));
-      case "union":
-        return type.members.some((member) => this.containsNamed(member, id));
-      case "tuple":
-      case "primitive":
-      case "literal":
-      case "ref":
-      case "retry-schedule":
-      case "schema":
-      case "effect":
-      case "stream":
-      case "sink":
-      case "function":
-      case "provider":
-        return false;
-      default: {
-        const unreachable: never = type;
-        return unreachable;
-      }
-    }
   }
 
   /**
