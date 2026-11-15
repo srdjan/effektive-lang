@@ -194,13 +194,9 @@ function flatten(
 ): Type[] {
   const unfolded = step(env, type);
   if (unfolded.kind === "union" && depth < MAX_DEPTH) {
-    const out: Type[] = [];
-    for (const member of unfolded.members) {
-      for (const flat of flatten(env, member, depth + 1, step)) {
-        out.push(flat);
-      }
-    }
-    return out;
+    return unfolded.members.flatMap((member) =>
+      flatten(env, member, depth + 1, step)
+    );
   }
   return [unfolded];
 }
