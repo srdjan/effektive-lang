@@ -6,7 +6,12 @@ import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
 import { checkProject, lowerProject } from "../src/core/frontend.ts";
 import type { Project, SourceHost } from "../src/core/frontend.ts";
 import { emitProject, type EmittedModule } from "../src/core/typescript.ts";
-import { copyDirectory, EXAMPLE_ENTRIES, FIXTURES } from "./helpers.ts";
+import {
+  copyDirectory,
+  EXAMPLE_ENTRIES,
+  FIXTURES,
+  readHostText,
+} from "./helpers.ts";
 import { deno, withTemporaryDirectory } from "./process_helpers.ts";
 
 const DENO_CONFIG = JSON.stringify(
@@ -20,23 +25,7 @@ const DENO_CONFIG = JSON.stringify(
 
 /** A host that reads from the file system. Paths are absolute. */
 export const fileHost: SourceHost = {
-  readText(path: string) {
-    try {
-      return { ok: true, value: Deno.readTextFileSync(path) };
-    } catch (e) {
-      if (e instanceof Deno.errors.NotFound) {
-        return { ok: false, error: { tag: "not-found", path } };
-      }
-      return {
-        ok: false,
-        error: {
-          tag: "unreadable",
-          path,
-          message: e instanceof Error ? e.message : String(e),
-        },
-      };
-    }
-  },
+  readText: (path) => readHostText(path, () => Deno.readTextFileSync(path)),
 };
 
 export interface Built {

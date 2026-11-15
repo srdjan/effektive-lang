@@ -20,6 +20,7 @@ import {
 import {
   type CheckedProject,
   checkProject,
+  errorMessage,
   lineStarts,
   lowerProject,
   memoryHost,
@@ -371,29 +372,32 @@ export function constInitializer(tree: SyntaxTree, name: string): NodeId {
   throw new Error(`no const named ${name}`);
 }
 
+/**
+ * The `readText` result of a host: the text that `read` returns, a `not-found`
+ * error when the file is missing, else an `unreadable` error.
+ */
+export function readHostText(
+  path: string,
+  read: () => string,
+): ReturnType<SourceHost["readText"]> {
+  try {
+    return { ok: true, value: read() };
+  } catch (e) {
+    if (e instanceof Deno.errors.NotFound) {
+      return { ok: false, error: { tag: "not-found", path } };
+    }
+    return {
+      ok: false,
+      error: { tag: "unreadable", path, message: errorMessage(e) },
+    };
+  }
+}
+
 /** A host that reads files under `fixtures/`. Paths are relative to that directory. */
 export function diskHost(): SourceHost {
   return {
-    readText(path: string) {
-      try {
-        return {
-          ok: true,
-          value: Deno.readTextFileSync(new URL(path, FIXTURES)),
-        };
-      } catch (e) {
-        if (e instanceof Deno.errors.NotFound) {
-          return { ok: false, error: { tag: "not-found", path } };
-        }
-        return {
-          ok: false,
-          error: {
-            tag: "unreadable",
-            path,
-            message: e instanceof Error ? e.message : String(e),
-          },
-        };
-      }
-    },
+    readText: (path) =>
+      readHostText(path, () => Deno.readTextFileSync(new URL(path, FIXTURES))),
   };
 }
 
