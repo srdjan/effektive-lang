@@ -98,19 +98,10 @@ export function parseArgs(args: readonly string[]): Result<Command, string> {
         value: { kind: "check", root, fix: flags.has("--fix"), log },
       };
     case "build":
-      return {
-        ok: true,
-        value: {
-          kind: "build",
-          root,
-          tsc: flags.has(TSC_FLAG),
-          log,
-        },
-      };
     case "watch":
       return {
         ok: true,
-        value: { kind: "watch", root, tsc: flags.has(TSC_FLAG), log },
+        value: { kind: name, root, tsc: flags.has(TSC_FLAG), log },
       };
   }
 }
