@@ -302,11 +302,7 @@ export class ProjectSet {
       }
       return;
     }
-    const { project, path } = found;
-    project.open.set(path, { uri, version, text });
-    project.publishedVersions.delete(path);
-    project.dirty = true;
-    this.#documents.set(uri, found);
+    this.#attach(found, uri, version, text);
   }
 
   didChange(params: DidChangeParams): void {
@@ -324,6 +320,32 @@ export class ProjectSet {
     const document = found.project.open.get(found.path);
     if (document === undefined) return;
     if (this.#applyChange(document, params)) found.project.dirty = true;
+  }
+
+  /** Opens a document in its project and marks the project dirty. */
+  #attach(
+    found: DocumentRef,
+    uri: string,
+    version: number,
+    text: string,
+  ): void {
+    const { project, path } = found;
+    project.open.set(path, { uri, version, text });
+    project.publishedVersions.delete(path);
+    project.dirty = true;
+    this.#documents.set(uri, found);
+  }
+
+  /**
+   * Closes a document in its project and marks the project dirty. The watcher
+   * ignores an open document, so a save while it was open never reached `disk`.
+   * Read the file again.
+   */
+  #detach({ project, path }: DocumentRef): void {
+    project.open.delete(path);
+    project.publishedVersions.delete(path);
+    this.#reread(project, path);
+    project.dirty = true;
   }
 
   /** Applies a change to an open document. Returns false for a stale version. */
@@ -350,13 +372,7 @@ export class ProjectSet {
       return;
     }
     this.#documents.delete(uri);
-    const { project, path } = found;
-    project.open.delete(path);
-    project.publishedVersions.delete(path);
-    // The watcher ignores an open document, so a save while it was open never
-    // reached `disk`. Read the file again.
-    this.#reread(project, path);
-    project.dirty = true;
+    this.#detach(found);
     // A project without `effektive.json` dies with its last open document.
     this.#forgetCleared(this.#removeDeadProjects());
   }
@@ -430,23 +446,13 @@ export class ProjectSet {
       if (found === undefined || found.project === old.project) continue;
       const document = old.project.open.get(old.path);
       if (document === undefined) continue;
-      old.project.open.delete(old.path);
-      old.project.publishedVersions.delete(old.path);
-      this.#reread(old.project, old.path);
-      old.project.dirty = true;
-      const { version, text } = document;
-      found.project.open.set(found.path, { uri, version, text });
-      found.project.publishedVersions.delete(found.path);
-      found.project.dirty = true;
-      this.#documents.set(uri, found);
+      this.#detach(old);
+      this.#attach(found, uri, document.version, document.text);
     }
     for (const [uri, { version, text }] of [...this.#orphans]) {
       const found = this.#discover(uri);
       if (found === undefined) continue;
-      found.project.open.set(found.path, { uri, version, text });
-      found.project.publishedVersions.delete(found.path);
-      found.project.dirty = true;
-      this.#documents.set(uri, found);
+      this.#attach(found, uri, version, text);
       this.#orphans.delete(uri);
     }
   }
