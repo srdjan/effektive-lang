@@ -194,15 +194,6 @@ export function transduceStream(
   e: Extract<Expr, { kind: "transduce-stream" }>,
   path: string,
 ): Comp {
-  return sinkTransformStream(c, e, path, "transduceStream");
-}
-
-function sinkTransformStream(
-  c: ValidatorCore,
-  e: Extract<Expr, { kind: "transduce-stream" }>,
-  path: string,
-  name: "transduceStream",
-): Comp {
   const stream = c.check(e.stream, `${path}.stream`);
   const sink = c.check(e.sink, `${path}.sink`);
   const source = unfold(c.env, stream.type);
@@ -215,7 +206,7 @@ function sinkTransformStream(
     c.add(
       AREA.types,
       path,
-      `${name} needs compatible input and replayable Sink leftovers`,
+      "transduceStream needs compatible input and replayable Sink leftovers",
       e.span,
     );
     return c.poison();
