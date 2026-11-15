@@ -155,7 +155,7 @@ export class ProjectState {
 }
 
 /** A document that belongs to a project. */
-interface DocumentRef {
+export interface DocumentRef {
   readonly project: ProjectState;
   /** The root-relative path. */
   readonly path: string;
@@ -691,8 +691,7 @@ export class ProjectSet {
         project,
         path,
         listOf(path),
-        { uri: document.uri, version: document.version },
-        newVersion,
+        { uri: document.uri, version: document.version, force: newVersion },
       );
     }
     const closed = new Set([...groups.keys(), ...project.published.keys()]);
@@ -704,19 +703,24 @@ export class ProjectSet {
   }
 
   /**
-   * Publishes one list when `force` is set or when it differs from the list
-   * last published for the path. An open document passes its own URI and
-   * version. A closed file gets a URI from its path and no version.
+   * Publishes one list when `open.force` is set or when it differs from the list
+   * last published for the path. An open document passes its own URI, version,
+   * and `force`. A closed file gets a URI from its path and no version.
    */
   #publishList(
     project: ProjectState,
     path: string,
     list: readonly Diagnostic[],
-    open?: { readonly uri: string; readonly version: number },
-    force = false,
+    open?: {
+      readonly uri: string;
+      readonly version: number;
+      readonly force: boolean;
+    },
   ): void {
     const json = JSON.stringify(list);
-    if (!force && json === (project.published.get(path) ?? "[]")) return;
+    if (
+      open?.force !== true && json === (project.published.get(path) ?? "[]")
+    ) return;
     const uri = open?.uri ?? pathToUri(joinPath(project.root, path));
     if (uri === undefined) return;
     project.published.set(path, json);

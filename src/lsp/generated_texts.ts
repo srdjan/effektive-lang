@@ -8,18 +8,12 @@
 import { isModulePath, type Revision } from "../core/mod.ts";
 import { stepOutput, type TypeScriptOutputs } from "../core/typescript.ts";
 import { uriToPath } from "./positions.ts";
-import type { ProjectState } from "./projects.ts";
+import type { DocumentRef, ProjectState } from "./projects.ts";
 import {
   GENERATED_CHANGED_METHOD,
   type GeneratedChangedParams,
   type GeneratedTypeScriptResult,
 } from "./protocol.ts";
-
-/** The project of a URI and the path of the module in that project. */
-export interface LocatedModule {
-  readonly project: ProjectState;
-  readonly path: string;
-}
 
 interface GeneratedEntry {
   /** The text of the newest emit that succeeded in this server session. */
@@ -39,7 +33,7 @@ export class GeneratedTexts {
   readonly #entries = new Map<string, GeneratedEntry>();
 
   constructor(
-    private readonly locate: (uri: string) => LocatedModule | undefined,
+    private readonly locate: (uri: string) => DocumentRef | undefined,
   ) {}
 
   #current(
@@ -63,7 +57,7 @@ export class GeneratedTexts {
    */
   request(
     uri: string,
-    found: LocatedModule | undefined,
+    found: DocumentRef | undefined,
   ): GeneratedTypeScriptResult | null {
     const path = found?.path ?? uriToPath(uri);
     if (path === undefined || !isModulePath(path)) return null;

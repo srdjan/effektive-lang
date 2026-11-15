@@ -1,8 +1,7 @@
 import type { HostFs } from "../host/io.ts";
 import type { Result } from "../core/mod.ts";
 import type { GeneratedTypeScriptResult } from "./protocol.ts";
-import type { LocatedModule } from "./generated_texts.ts";
-import type { ProjectSet } from "./projects.ts";
+import type { DocumentRef, ProjectSet } from "./projects.ts";
 
 /** What a handler reads of the generated TypeScript of the subscribed modules. */
 export interface GeneratedSource {
@@ -12,7 +11,7 @@ export interface GeneratedSource {
    */
   request(
     uri: string,
-    found: LocatedModule | undefined,
+    found: DocumentRef | undefined,
   ): GeneratedTypeScriptResult | null;
 }
 
