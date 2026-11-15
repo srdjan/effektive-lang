@@ -36,14 +36,13 @@ function movedOffset(
 function keyOf(
   d: Diagnostic,
   edits: readonly SourceEdit[],
-  move: boolean,
 ): string {
   const { source, start, end } = d.span;
   return JSON.stringify([
     d.code,
     source,
-    move ? movedOffset(start, source, edits, false) : start,
-    move ? movedOffset(end, source, edits, true) : end,
+    movedOffset(start, source, edits, false),
+    movedOffset(end, source, edits, true),
   ]);
 }
 
@@ -76,8 +75,8 @@ export function diagnosticDelta(
   after: readonly Diagnostic[],
   edits: readonly SourceEdit[],
 ): DiagnosticDelta {
-  const beforeKeys = before.map((d) => keyOf(d, edits, true));
-  const afterKeys = after.map((d) => keyOf(d, edits, false));
+  const beforeKeys = before.map((d) => keyOf(d, edits));
+  const afterKeys = after.map((d) => keyOf(d, []));
   return {
     added: unmatched(after, afterKeys, counts(beforeKeys)),
     removed: unmatched(before, beforeKeys, counts(afterKeys)),
