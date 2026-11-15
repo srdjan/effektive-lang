@@ -6,13 +6,9 @@
 
 import { checkProject, lowerProject } from "../src/core/mod.ts";
 import { AREA, validateModule } from "../src/core/validate/index.ts";
-import { diskHost, EXAMPLE_ENTRIES } from "../tests/helpers.ts";
+import { diskHost, EXAMPLE_ENTRIES, isRecord } from "../tests/helpers.ts";
 
 type Obj = Record<string, unknown>;
-
-function isObj(value: unknown): value is Obj {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function segments(path: string): (string | number)[] {
   const out: (string | number)[] = [];
@@ -29,7 +25,7 @@ function at(root: unknown, path: string): unknown {
       if (!Array.isArray(current)) throw new Error(`${path}: not an array`);
       current = current[key];
     } else {
-      if (!isObj(current)) throw new Error(`${path}: not an object`);
+      if (!isRecord(current)) throw new Error(`${path}: not an object`);
       current = current[key];
     }
   }
@@ -38,7 +34,7 @@ function at(root: unknown, path: string): unknown {
 
 function obj(root: unknown, path: string): Obj {
   const value = at(root, path);
-  if (!isObj(value)) throw new Error(`${path}: not an object`);
+  if (!isRecord(value)) throw new Error(`${path}: not an object`);
   return value;
 }
 
@@ -69,7 +65,7 @@ function clone(value: unknown): unknown {
 
 function declIndex(ir: unknown, name: string): number {
   const index = arr(ir, "declarations").findIndex((d) =>
-    isObj(d) && d.name === name
+    isRecord(d) && d.name === name
   );
   if (index < 0) throw new Error(`no declaration ${name}`);
   return index;
@@ -283,10 +279,12 @@ const MUTATIONS: readonly Mutation[] = [
     sources: MAIN,
     apply(ir) {
       const imports = arr(ir, "imports");
-      const users = imports.findIndex((i) => isObj(i) && i.module === "users");
+      const users = imports.findIndex((i) =>
+        isRecord(i) && i.module === "users"
+      );
       const types = arr(ir, `imports[${users}].types`);
       const t = types.findIndex((x) =>
-        isObj(x) && x.id === "type:users-service#UserId"
+        isRecord(x) && x.id === "type:users-service#UserId"
       );
       const path = `imports[${users}].types[${t}].definition`;
       setAt(ir, `${path}.sealed`, true);
@@ -480,10 +478,12 @@ const MUTATIONS: readonly Mutation[] = [
     sources: MAIN,
     apply(ir) {
       const imports = arr(ir, "imports");
-      const users = imports.findIndex((i) => isObj(i) && i.module === "users");
+      const users = imports.findIndex((i) =>
+        isRecord(i) && i.module === "users"
+      );
       const values = arr(ir, `imports[${users}].values`);
       const v = values.findIndex((x) =>
-        isObj(x) && x.id === "value:users#getUser"
+        isRecord(x) && x.id === "value:users#getUser"
       );
       const path = `imports[${users}].values[${v}].type.effects.failures`;
       arr(ir, path).reverse();
