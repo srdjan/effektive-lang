@@ -272,6 +272,26 @@ class InputEngine {
     return this.resolver.fieldType(baseType, name) ?? expected;
   }
 
+  private expectedArgument(
+    fn: CallableEvidence,
+    index: number,
+  ): TypeRef | undefined {
+    return fn.checked?.[index] ? this.table.unknown : fn.parameters[index];
+  }
+
+  /** The type that a type constructor expects of its first argument. */
+  private constructorInput(
+    id: Extract<Target, { kind: "type" }>["id"],
+    argument: NodeId,
+  ): TypeRef | undefined {
+    const record = this.table.taggedRecordOf(id);
+    return record === undefined &&
+        this.table.predicateOf(id) !== undefined &&
+        this.originOf(argument) !== undefined
+      ? this.table.named(id)
+      : record ?? this.table.identityBaseOf(id);
+  }
+
   private call(
     node: NodeId,
     expected: TypeRef | undefined,
@@ -280,23 +300,15 @@ class InputEngine {
     const args = argNodes(this.tree, node);
     if (callee === undefined) return undefined;
     const target = this.targets.get(callee);
-    let type: TypeRef | undefined;
     if (target?.kind === "type") {
-      const record = this.table.taggedRecordOf(target.id);
-      type = record ?? this.table.identityBaseOf(target.id);
       if (args[0] !== undefined) {
-        const input = record === undefined &&
-            this.table.predicateOf(target.id) !== undefined &&
-            this.originOf(args[0]) !== undefined
-          ? this.table.named(target.id)
-          : type;
-        this.visit(args[0], input);
+        this.visit(args[0], this.constructorInput(target.id, args[0]));
       }
       args.slice(1).forEach((argument) => this.visit(argument));
       return this.table.named(target.id);
     }
     if (target?.kind === "error") {
-      type = this.table.errorRecordOf(target.id);
+      const type = this.table.errorRecordOf(target.id);
       if (args[0] !== undefined) this.visit(args[0], type);
       args.slice(1).forEach((argument) => this.visit(argument));
       return this.table.named(target.id);
@@ -318,12 +330,7 @@ class InputEngine {
       if (origin !== undefined) {
         this.resolver.defer(origin, callee, (evidence) => {
           args.forEach((argument, index) =>
-            this.visit(
-              argument,
-              evidence.checked?.[index]
-                ? this.table.unknown
-                : evidence.parameters[index],
-            )
+            this.visit(argument, this.expectedArgument(evidence, index))
           );
         });
       }
@@ -331,10 +338,7 @@ class InputEngine {
       return undefined;
     }
     args.forEach((argument, index) =>
-      this.visit(
-        argument,
-        fn.checked?.[index] ? this.table.unknown : fn.parameters[index],
-      )
+      this.visit(argument, this.expectedArgument(fn, index))
     );
     return fn.result;
   }
@@ -348,13 +352,7 @@ class InputEngine {
     const { callee, args } = stageParts(this.tree, stage);
     const target = callee === undefined ? undefined : this.targets.get(callee);
     if (target?.kind === "type") {
-      const record = this.table.taggedRecordOf(target.id);
-      const input = record === undefined &&
-          this.table.predicateOf(target.id) !== undefined &&
-          this.originOf(left) !== undefined
-        ? this.table.named(target.id)
-        : record ?? this.table.identityBaseOf(target.id);
-      this.visit(left, input);
+      this.visit(left, this.constructorInput(target.id, left));
       args.forEach((argument) => this.visit(argument));
       return this.table.named(target.id);
     }
@@ -373,12 +371,7 @@ class InputEngine {
       if (callee !== undefined && origin !== undefined) {
         this.resolver.defer(origin, callee, (evidence) => {
           [left, ...args].forEach((argument, index) =>
-            this.visit(
-              argument,
-              evidence.checked?.[index]
-                ? this.table.unknown
-                : evidence.parameters[index],
-            )
+            this.visit(argument, this.expectedArgument(evidence, index))
           );
         });
       }
@@ -386,15 +379,9 @@ class InputEngine {
       args.forEach((argument) => this.visit(argument));
       return undefined;
     }
-    this.visit(
-      left,
-      fn.checked?.[0] ? this.table.unknown : fn.parameters[0],
-    );
+    this.visit(left, this.expectedArgument(fn, 0));
     args.forEach((argument, index) =>
-      this.visit(
-        argument,
-        fn.checked?.[index + 1] ? this.table.unknown : fn.parameters[index + 1],
-      )
+      this.visit(argument, this.expectedArgument(fn, index + 1))
     );
     return fn.result;
   }
