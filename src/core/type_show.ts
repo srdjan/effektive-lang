@@ -1,8 +1,7 @@
 // Readable forms of types for messages. They are not a serialization format.
 
 import { moduleOfId, shortName } from "./ids.ts";
-import { CLOSED_UNIT_IDS } from "./ir.ts";
-import type { TypeReader, TypeRef } from "./types.ts";
+import type { SchemaPresence, TypeReader, TypeRef } from "./types.ts";
 
 /** Ids that `print` meets, in types and in id lists, and the ids that it prints as `module#Name`. */
 interface Names {
@@ -47,10 +46,17 @@ function declaredName(id: string): string {
 /** An id as `print` shows it: `module#Name` when another id shares its name. */
 function idText(names: Names, id: string): string {
   names.shown?.add(id);
-  return names.qualified.has(id) && !CLOSED_UNIT_IDS.has(id)
+  return names.qualified.has(id)
     ? `${moduleOfId(id) ?? ""}#${declaredName(id)}`
     : shortName(id);
 }
+
+const SCHEMA_NAMES: Record<SchemaPresence, string> = {
+  "required": "Schema",
+  "optional": "SchemaOptional",
+  "encoded-optional": "SchemaEncodedOptional",
+  "decoded-optional": "SchemaDecodedOptional",
+};
 
 /** Ids joined with ` | `. */
 function listText(names: Names, ids: readonly string[]): string {
@@ -92,19 +98,13 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
     case "retry-schedule":
       return `RetrySchedule<${print(table, names, node.error)}>`;
     case "schema":
-      return `${
-        node.presence === "optional"
-          ? "SchemaOptional"
-          : node.presence === "encoded-optional"
-          ? "SchemaEncodedOptional"
-          : node.presence === "decoded-optional"
-          ? "SchemaDecodedOptional"
-          : "Schema"
-      }${node.constructorDefault === true ? "ConstructorDefault" : ""}<${
-        print(table, names, node.decoded)
-      }, ${print(table, names, node.encoded)}, ${
-        listText(names, node.decodeRequirements) || "never"
-      }, ${listText(names, node.encodeRequirements) || "never"}${
+      return `${SCHEMA_NAMES[node.presence]}${
+        node.constructorDefault === true ? "ConstructorDefault" : ""
+      }<${print(table, names, node.decoded)}, ${
+        print(table, names, node.encoded)
+      }, ${listText(names, node.decodeRequirements) || "never"}, ${
+        listText(names, node.encodeRequirements) || "never"
+      }${
         node.makeInput === undefined
           ? ""
           : `, ${print(table, names, node.makeInput)}`
@@ -130,16 +130,15 @@ function print(table: TypeReader, names: Names, ref: TypeRef): string {
     case "function": {
       const parameters = node.parameters.map((p) => print(table, names, p))
         .join(", ");
-      const fails = node.failures.length === 0
-        ? ""
-        : ` fails ${listText(names, node.failures)}`;
-      const withText = node.requirements.length === 0
-        ? ""
-        : ` with ${listText(names, node.requirements)}`;
       const execution = node.execution === "pure" ? "pure " : "";
       return `${execution}(${parameters}) => ${
         print(table, names, node.result)
-      }${fails}${withText}`;
+      }${
+        effectSuffix(
+          listText(names, node.failures),
+          listText(names, node.requirements),
+        )
+      }`;
     }
     case "provider":
       return `provider provides ${listText(names, node.provides)}`;
@@ -153,11 +152,14 @@ export function effectText(
   failures: readonly string[],
   requirements: readonly string[],
 ): string {
-  const fails = failures.length === 0
-    ? ""
-    : ` fails ${failures.map(shortName).join(" | ")}`;
-  const withText = requirements.length === 0
-    ? ""
-    : ` with ${requirements.map(shortName).join(" | ")}`;
-  return fails + withText;
+  return effectSuffix(
+    failures.map(shortName).join(" | "),
+    requirements.map(shortName).join(" | "),
+  );
+}
+
+/** The suffix of two printed sets. An empty set adds no text. */
+function effectSuffix(failures: string, requirements: string): string {
+  return (failures === "" ? "" : ` fails ${failures}`) +
+    (requirements === "" ? "" : ` with ${requirements}`);
 }
