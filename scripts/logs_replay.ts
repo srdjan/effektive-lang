@@ -16,18 +16,14 @@
 // - playground: every `pg.compile` and `pg.error`.
 
 import { equal } from "@std/assert/equal";
-import {
-  isRecord,
-  joinPath,
-  type ReadError,
-  sha256Hex,
-} from "../src/core/mod.ts";
+import { isRecord, joinPath, sha256Hex } from "../src/core/mod.ts";
 import type { Result } from "../src/core/mod.ts";
 import { parseArgs, replayArguments, TSC_FLAG } from "../src/cli/args.ts";
 import { main } from "../src/cli/main.ts";
-import type { DirectoryEntry, HostIo } from "../src/host/io.ts";
+import type { HostIo } from "../src/host/io.ts";
 import type { FileFailure } from "../src/host/ports.ts";
 import { memoryLog } from "../src/host/log.ts";
+import { memoryFs } from "../tests/cli_helpers.ts";
 import {
   type Envelope,
   isAnyKind,
@@ -128,58 +124,6 @@ function compare(
 }
 
 // ------------------------------------------------------------------ cli
-
-/** A file system in a map, as the CLI needs it. Paths are the ones the CLI builds. */
-function memoryFs(files: Map<string, string>): HostIo["fs"] {
-  const prefixOf = (dir: string): string =>
-    dir === "." || dir === "" ? "" : dir.replace(/\/+$/, "") + "/";
-  const kind = (path: string): "file" | "directory" | "missing" => {
-    if (files.has(path)) return "file";
-    const prefix = prefixOf(path);
-    for (const key of files.keys()) {
-      if (key.startsWith(prefix) && key !== path) return "directory";
-    }
-    return "missing";
-  };
-  return {
-    readText(path): Result<string, ReadError> {
-      const text = files.get(path);
-      return text === undefined
-        ? { ok: false, error: { tag: "not-found", path } }
-        : { ok: true, value: text };
-    },
-    writeText(path, text): Result<void, FileFailure> {
-      files.set(path, text);
-      return { ok: true, value: undefined };
-    },
-    remove(path): Result<void, FileFailure> {
-      files.delete(path);
-      return { ok: true, value: undefined };
-    },
-    entryKind: (path) => ({
-      ok: true,
-      value: kind(path) === "missing" ? "missing" : "other",
-    }),
-    kind,
-    list(path): Result<readonly DirectoryEntry[], FileFailure> {
-      const prefix = prefixOf(path);
-      const found = new Map<string, boolean>();
-      for (const key of files.keys()) {
-        if (!key.startsWith(prefix)) continue;
-        const rest = key.slice(prefix.length);
-        const slash = rest.indexOf("/");
-        if (slash < 0) found.set(rest, false);
-        else found.set(rest.slice(0, slash), true);
-      }
-      return {
-        ok: true,
-        value: [...found].map(([name, isDirectory]) => ({ name, isDirectory })),
-      };
-    },
-    absolute: (path) =>
-      path === "." ? "/mem" : path.startsWith("/") ? path : `/mem/${path}`,
-  };
-}
 
 const CLI_KINDS: ReadonlySet<LogKind> = new Set<LogKind>([
   "cli.diagnostics",

@@ -35,6 +35,70 @@ export interface MemoryOptions {
   readonly code?: number;
 }
 
+/**
+ * A file system in a map, as the CLI needs it. A write or a removal of a path
+ * in `unwritable` fails.
+ */
+export function memoryFs(
+  files: Map<string, string>,
+  unwritable: ReadonlySet<string> = new Set(),
+): HostIo["fs"] {
+  const prefixOf = (dir: string): string =>
+    dir === "." || dir === "" ? "" : dir.replace(/\/+$/, "") + "/";
+  const kind = (path: string): "file" | "directory" | "missing" => {
+    if (files.has(path)) return "file";
+    const prefix = prefixOf(path);
+    for (const key of files.keys()) {
+      if (key.startsWith(prefix) && key !== path) return "directory";
+    }
+    return "missing";
+  };
+  return {
+    readText(path): Result<string, ReadError> {
+      const text = files.get(path);
+      return text === undefined
+        ? { ok: false, error: { tag: "not-found", path } }
+        : { ok: true, value: text };
+    },
+    writeText(path, text): Result<void, FileFailure> {
+      if (unwritable.has(path)) {
+        return { ok: false, error: { message: "permission denied" } };
+      }
+      files.set(path, text);
+      return { ok: true, value: undefined };
+    },
+    remove(path): Result<void, FileFailure> {
+      if (unwritable.has(path)) {
+        return { ok: false, error: { message: "permission denied" } };
+      }
+      files.delete(path);
+      return { ok: true, value: undefined };
+    },
+    entryKind: (path) => ({
+      ok: true,
+      value: kind(path) === "missing" ? "missing" : "other",
+    }),
+    kind,
+    list(path): Result<readonly DirectoryEntry[], FileFailure> {
+      const prefix = prefixOf(path);
+      const found = new Map<string, boolean>();
+      for (const key of files.keys()) {
+        if (!key.startsWith(prefix)) continue;
+        const rest = key.slice(prefix.length);
+        const slash = rest.indexOf("/");
+        if (slash < 0) found.set(rest, false);
+        else found.set(rest.slice(0, slash), true);
+      }
+      return {
+        ok: true,
+        value: [...found].map(([name, isDirectory]) => ({ name, isDirectory })),
+      };
+    },
+    absolute: (path) =>
+      path === "." ? "/mem" : path.startsWith("/") ? path : `/mem/${path}`,
+  };
+}
+
 /** Makes an in-memory io. `files` maps full paths (root included) to texts. */
 export function memoryIo(
   files: Readonly<Record<string, string>>,
@@ -52,8 +116,6 @@ export function memoryIo(
     denoCheckStderr: options.stderr ?? "",
     denoCheckCode: options.code ?? 0,
   };
-  const prefixOf = (dir: string): string =>
-    dir === "." || dir === "" ? "" : dir.replace(/\/+$/, "") + "/";
   const io: HostIo = {
     stdout: (text) => {
       state.out.push(text);
@@ -61,64 +123,7 @@ export function memoryIo(
     stderr: (text) => {
       state.err.push(text);
     },
-    fs: {
-      readText(path: string): Result<string, ReadError> {
-        const text = map.get(path);
-        return text === undefined
-          ? { ok: false, error: { tag: "not-found", path } }
-          : { ok: true, value: text };
-      },
-      writeText(path: string, text: string): Result<void, FileFailure> {
-        if (state.unwritable.has(path)) {
-          return { ok: false, error: { message: "permission denied" } };
-        }
-        map.set(path, text);
-        return { ok: true, value: undefined };
-      },
-      remove(path: string): Result<void, FileFailure> {
-        if (state.unwritable.has(path)) {
-          return { ok: false, error: { message: "permission denied" } };
-        }
-        map.delete(path);
-        return { ok: true, value: undefined };
-      },
-      entryKind(path: string) {
-        return {
-          ok: true as const,
-          value: map.has(path) || io.fs.kind(path) !== "missing"
-            ? "other" as const
-            : "missing" as const,
-        };
-      },
-      kind(path: string) {
-        if (map.has(path)) return "file";
-        const prefix = prefixOf(path);
-        for (const key of map.keys()) {
-          if (key.startsWith(prefix) && key !== path) return "directory";
-        }
-        return "missing";
-      },
-      list(path: string): Result<readonly DirectoryEntry[], FileFailure> {
-        const prefix = prefixOf(path);
-        const found = new Map<string, boolean>();
-        for (const key of map.keys()) {
-          if (!key.startsWith(prefix)) continue;
-          const rest = key.slice(prefix.length);
-          const slash = rest.indexOf("/");
-          if (slash < 0) found.set(rest, false);
-          else found.set(rest.slice(0, slash), true);
-        }
-        return {
-          ok: true,
-          value: [...found].map(([name, isDirectory]) => ({
-            name,
-            isDirectory,
-          })),
-        };
-      },
-      absolute: (path) =>
-        path === "." ? "/mem" : path.startsWith("/") ? path : `/mem/${path}`,
-    },
+    fs: memoryFs(map, state.unwritable),
     denoCheck(request): Promise<Result<DenoCheckRun, FileFailure>> {
       state.checks.push(request);
       return Promise.resolve({
