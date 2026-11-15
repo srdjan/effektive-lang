@@ -53,7 +53,7 @@ function isWordToken(
   word: ContextualWord,
 ): boolean {
   return node !== undefined && tokenKindOf(tree, node) === TokenKind.Ident &&
-    tree.text.slice(tree.starts[node], tree.ends[node]) === word;
+    nodeText(tree, node) === word;
 }
 
 /** The index of the leading word child of a node: the first child, or the one after `export`. */
@@ -96,7 +96,7 @@ export function nameTextOf(
   if (first === undefined || tokenKindOf(tree, first) !== TokenKind.Ident) {
     return undefined;
   }
-  return tree.text.slice(tree.starts[first], tree.ends[first]);
+  return nodeText(tree, first);
 }
 
 export type BinaryOperator =
@@ -181,8 +181,7 @@ export function numberTextOf(
   node: NodeId,
 ): string | undefined {
   for (const child of childrenOf(tree, node)) {
-    if (kindOf(tree, child) !== SyntaxKind.Token) continue;
-    if (tree.lexed.kinds[tree.tokens[child]] !== TokenKind.Number) continue;
+    if (tokenKindOf(tree, child) !== TokenKind.Number) continue;
     return nodeText(tree, child);
   }
   return undefined;
@@ -204,8 +203,8 @@ export function literalOf(
 ): string | number | boolean | null | undefined {
   let negative = false;
   for (const child of childrenOf(tree, node)) {
-    if (kindOf(tree, child) !== SyntaxKind.Token) continue;
-    const kind = tree.lexed.kinds[tree.tokens[child]] as TokenKind;
+    const kind = tokenKindOf(tree, child);
+    if (kind === undefined) continue;
     const text = nodeText(tree, child);
     if (kind === TokenKind.Minus) {
       negative = true;
@@ -232,8 +231,8 @@ export function operatorOf(
   node: NodeId,
 ): BinaryOperator | undefined {
   for (const child of childrenOf(tree, node)) {
-    if (kindOf(tree, child) !== SyntaxKind.Token) continue;
-    const kind = tree.lexed.kinds[tree.tokens[child]] as TokenKind;
+    const kind = tokenKindOf(tree, child);
+    if (kind === undefined) continue;
     const operator = OPERATORS.get(kind);
     if (operator !== undefined) return operator;
   }
