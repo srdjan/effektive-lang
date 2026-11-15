@@ -487,9 +487,7 @@ export class TypeLowerer {
       // The first child is the token of the type word.
       const wordToken = childrenOf(this.tree, node)[0];
       const flags = TYPE_WORDS.get(nodeText(this.tree, wordToken))?.schema;
-      const optionalKey = flags?.optionalKey === true;
-      const encodedOptionalKey = flags?.encodedOptionalKey === true;
-      const decodedOptionalKey = flags?.decodedOptionalKey === true;
+      const presence = flags?.presence ?? "required";
       const constructorDefault = flags?.constructorDefault === true;
       const encoded = typeNodes[1] === undefined
         ? first
@@ -520,13 +518,7 @@ export class TypeLowerer {
           decodeRequirements,
           encodeRequirements,
           {
-            presence: optionalKey
-              ? "optional"
-              : encodedOptionalKey
-              ? "encoded-optional"
-              : decodedOptionalKey
-              ? "decoded-optional"
-              : "required",
+            presence,
             makeInput: makeInput.ref,
             constructorDefault,
           },
@@ -537,9 +529,13 @@ export class TypeLowerer {
           encoded: encoded.ir,
           decodeRequirements,
           encodeRequirements,
-          ...(optionalKey ? { optionalKey: true as const } : {}),
-          ...(encodedOptionalKey ? { encodedOptionalKey: true as const } : {}),
-          ...(decodedOptionalKey ? { decodedOptionalKey: true as const } : {}),
+          ...(presence === "optional" ? { optionalKey: true as const } : {}),
+          ...(presence === "encoded-optional"
+            ? { encodedOptionalKey: true as const }
+            : {}),
+          ...(presence === "decoded-optional"
+            ? { decodedOptionalKey: true as const }
+            : {}),
           ...(makeInput.ref === first.ref ? {} : { makeInput: makeInput.ir }),
           ...(constructorDefault ? { constructorDefault: true as const } : {}),
         },

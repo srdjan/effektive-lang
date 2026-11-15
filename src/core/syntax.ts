@@ -5,6 +5,7 @@
 
 import type { Lexed } from "./lex.ts";
 import { caught, type Span } from "./source.ts";
+import type { SchemaPresence } from "./types.ts";
 
 export type NodeId = number;
 
@@ -100,9 +101,7 @@ export enum SyntaxKind {
 
 /** The key and constructor options that one Schema type word selects. */
 interface SchemaFlags {
-  readonly optionalKey: boolean;
-  readonly encodedOptionalKey: boolean;
-  readonly decodedOptionalKey: boolean;
+  readonly presence: SchemaPresence;
   readonly constructorDefault: boolean;
 }
 
@@ -149,20 +148,13 @@ const SCHEMA_SLOTS: readonly TypeSlot[] = [
 ];
 
 function schemaWord(
-  optionalKey: boolean,
-  encodedOptionalKey: boolean,
-  decodedOptionalKey: boolean,
+  presence: SchemaPresence,
   constructorDefault: boolean,
 ): TypeWord {
   return {
     kind: SyntaxKind.SchemaType,
     slots: SCHEMA_SLOTS,
-    schema: {
-      optionalKey,
-      encodedOptionalKey,
-      decodedOptionalKey,
-      constructorDefault,
-    },
+    schema: { presence, constructorDefault },
   };
 }
 
@@ -190,19 +182,19 @@ export const TYPE_WORDS: ReadonlyMap<string, TypeWord> = new Map([
       slots: [slot("provides"), slot("fails"), slot("with")],
     },
   ],
-  ["Schema", schemaWord(false, false, false, false)],
-  ["SchemaOptional", schemaWord(true, false, false, false)],
-  ["SchemaEncodedOptional", schemaWord(false, true, false, false)],
-  ["SchemaDecodedOptional", schemaWord(false, false, true, false)],
-  ["SchemaConstructorDefault", schemaWord(false, false, false, true)],
-  ["SchemaOptionalConstructorDefault", schemaWord(true, false, false, true)],
+  ["Schema", schemaWord("required", false)],
+  ["SchemaOptional", schemaWord("optional", false)],
+  ["SchemaEncodedOptional", schemaWord("encoded-optional", false)],
+  ["SchemaDecodedOptional", schemaWord("decoded-optional", false)],
+  ["SchemaConstructorDefault", schemaWord("required", true)],
+  ["SchemaOptionalConstructorDefault", schemaWord("optional", true)],
   [
     "SchemaEncodedOptionalConstructorDefault",
-    schemaWord(false, true, false, true),
+    schemaWord("encoded-optional", true),
   ],
   [
     "SchemaDecodedOptionalConstructorDefault",
-    schemaWord(false, false, true, true),
+    schemaWord("decoded-optional", true),
   ],
 ]);
 
