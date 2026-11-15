@@ -76,7 +76,7 @@ import {
   type Run,
 } from "./emitted.ts";
 import { internal } from "./failure.ts";
-import type { ExprScope } from "./module_state.ts";
+import type { ExprScope, FieldHelperKey } from "./module_state.ts";
 import { resolvedAs } from "./type_query.ts";
 import { methodOfCapability, serviceOfCapability } from "./identity.ts";
 import {
@@ -723,16 +723,16 @@ export class ExprEmitter implements ExprCore {
       if (e.kind === "block" || e.kind === "if" || e.kind === "match") {
         return plain;
       }
-      const bound = this.scope.temp();
-      const lifted = this.lift(from, bound);
-      return emitted(
-        ["(", this.arrow(`(${bound})`, lifted), ")", callArguments([plain])],
-        PREC.member,
-      );
+      return this.bindLifted(from, plain);
     }
     const plain = mode === "gen" ? this.inGen(e) : this.pure(e);
     if (e.kind === "closure") return this.tag(e, this.closure(e, true, true));
     if (isStableValue(e)) return this.lift(from, at(plain, PREC.member));
+    return this.bindLifted(from, plain);
+  }
+
+  /** `((f) => (a) => Effect.succeed(f(a)))(plain)`: binds the value once and lifts it. */
+  private bindLifted(from: FunctionType, plain: Emitted): Emitted {
     const bound = this.scope.temp();
     const lifted = this.lift(from, bound);
     return emitted(
@@ -1039,12 +1039,21 @@ export class ExprEmitter implements ExprCore {
     if (!this.recordFieldsOf(type)?.some((f) => prototypeField(f.name))) {
       return object;
     }
+    return this.helperCall("record", type, [object]);
+  }
+
+  /** `$helper<T>(args)`, a call of a field helper typed with `type`. */
+  private helperCall(
+    key: FieldHelperKey,
+    type: Type,
+    args: readonly Emitted[],
+  ): Emitted {
     return emitted([
-      this.scope.fieldHelper("record"),
+      this.scope.fieldHelper(key),
       "<",
       typeDoc(this.scope, type),
       ">",
-      callArguments([object]),
+      callArguments(args),
     ]);
   }
 
@@ -1056,13 +1065,9 @@ export class ExprEmitter implements ExprCore {
   ): Emitted {
     if (!needsFieldAdapter(this.scope, type)) return input;
     const adapter = fieldAdapter(this.scope, type, direction);
-    return unknownInput ? emitted([adapter, callArguments([input])]) : emitted([
-      this.scope.fieldHelper("record"),
-      "<",
-      typeDoc(this.scope, type),
-      ">",
-      callArguments([input, emitted(adapter)]),
-    ]);
+    return unknownInput
+      ? emitted([adapter, callArguments([input])])
+      : this.helperCall("record", type, [input, emitted(adapter)]);
   }
 
   objectLiteral(
@@ -1099,12 +1104,9 @@ export class ExprEmitter implements ExprCore {
         "option",
         "optional read has a non-option type",
       );
-      return emitted([
-        this.scope.fieldHelper("optionalField"),
-        "<",
-        typeDoc(this.scope, resultType.element),
-        ">",
-        callArguments([record, emitted(JSON.stringify(e.field))]),
+      return this.helperCall("optionalField", resultType.element, [
+        record,
+        emitted(JSON.stringify(e.field)),
       ]);
     }
     return emitted(access, PREC.member, {
