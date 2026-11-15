@@ -43,6 +43,7 @@ import {
   rangeConverter,
   spanToRange,
 } from "./positions.ts";
+import { ErrorCodes } from "./jsonrpc.ts";
 import type {
   CodeActionParams,
   DocumentSymbol,
@@ -70,7 +71,7 @@ function answer(value: unknown): Answer {
 const stale = (): Answer => ({
   ok: false,
   error: {
-    code: -32801,
+    code: ErrorCodes.contentModified,
     message:
       "The document changed; request this edit again using the current text.",
   },
@@ -396,9 +397,10 @@ export function renameRequest(
     cursor.offset,
     params.newName,
   );
-  return result.ok
-    ? answer(workspaceEdit(cursor, result.value))
-    : { ok: false, error: { code: -32602, message: result.error } };
+  return result.ok ? answer(workspaceEdit(cursor, result.value)) : {
+    ok: false,
+    error: { code: ErrorCodes.invalidParams, message: result.error },
+  };
 }
 
 const completionKinds = {

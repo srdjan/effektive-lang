@@ -41,16 +41,18 @@ import {
   rangeConverter,
   uriToPath,
 } from "./positions.ts";
-import type {
-  Diagnostic,
-  DidChangeParams,
-  DidOpenParams,
-  FileEvent,
-  PublishDiagnosticsParams,
+import {
+  type Diagnostic,
+  type DidChangeParams,
+  type DidOpenParams,
+  FileChangeType,
+  type FileEvent,
+  type LogMessageParams,
+  type PublishDiagnosticsParams,
 } from "./protocol.ts";
 
 /** The `type` of a `window/logMessage`. */
-export type LogType = 1 | 2 | 3 | 4;
+export type LogType = LogMessageParams["type"];
 
 /** One open document of a project. */
 interface OpenDocument {
@@ -390,7 +392,7 @@ export class ProjectSet {
         const path = sourcePathUnder(project.root, absolute);
         if (path === undefined) continue;
         if (project.open.has(path)) continue;
-        if (event.type === 3) {
+        if (event.type === FileChangeType.Deleted) {
           const disk = new Map(project.disk);
           disk.delete(path);
           project.disk = disk;

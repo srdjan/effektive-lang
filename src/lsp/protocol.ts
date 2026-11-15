@@ -79,7 +79,7 @@ export const FileChangeType = {
   Deleted: 3,
 } as const;
 
-type FileChangeTypeValue = 1 | 2 | 3;
+type FileChangeTypeValue = typeof FileChangeType[keyof typeof FileChangeType];
 
 /** The symbol kinds of the protocol. */
 export const SymbolKind = {
