@@ -108,7 +108,7 @@ Deviation: the acceptance check needs `deno task mutate` to exit 0 on each modul
 
 | ID | Item | Owner |
 | --- | --- | --- |
-| FYO1 | 4 survivors in `scripts/behavior_compare.ts` (`exportRevisionTree`, `materializeForged` twice, `records`) and 17 in `src/core/resolve.ts` have no test and no row. Each needs a test, or a row with a probe. | The user decides whether a plan takes them. |
+| FYO1 | 4 survivors in `scripts/behavior_compare.ts` (`exportRevisionTree`, `materializeForged` twice, `records`) and 17 in `src/core/resolve.ts` have no test and no row. Each needs a test, or a row with a probe. | Done: [OS1 and OS2](2026-11-15-old-survivors.md). |
 | FYO2 | FY128 stays open, because no input reaches that line without a compiler defect. | None until a reaching input exists. |
 | FYO3 | FY131-FY135 change behavior, so FYD3 keeps them out of this pass. | The user decides. |
 
@@ -116,7 +116,7 @@ Deviation: the acceptance check needs `deno task mutate` to exit 0 on each modul
 
 These are suggestions only. No unit implements them without approval.
 
-FYA1 (call the existing `nodeText`): three sites slice node text by hand. They are `src/core/declaration_index.ts:182`, `src/core/editor_hints.ts:54`, and `src/core/editor_index.ts:125`. `nodeText` in `src/core/syntax.ts` already does this. This is a reuse of an existing helper, not a new concept.
+FYA1 (call the existing `nodeText`): three sites slice node text by hand. They are `src/core/declaration_index.ts:182`, `src/core/editor_hints.ts:54`, and `src/core/editor_index.ts:125`. `nodeText` in `src/core/syntax.ts` already does this. This is a reuse of an existing helper, not a new concept. The user approved it, and [OS4](2026-11-15-old-survivors.md) does it.
 
 FYA2 (`inScope(body)` in the resolver): five sites in `src/core/resolve.ts` save a scope, open a new scope, and restore the old one. This is FY47. A helper adds a closure at each scope, so a benchmark of the resolver walk must come first.
 
