@@ -184,7 +184,10 @@ class InputEngine {
       const inner = kidsOf(this.tree, node)[0];
       return inner === undefined ? undefined : this.originOf(inner);
     }
-    if (kind === SyntaxKind.NameExpr || kind === SyntaxKind.Name) {
+    if (
+      kind === SyntaxKind.NameExpr || kind === SyntaxKind.Name ||
+      kind === SyntaxKind.QualifiedName
+    ) {
       const target = this.targets.get(node);
       return target?.kind === "local"
         ? this.resolver.origin(target.id)
@@ -396,6 +399,19 @@ class InputEngine {
       ? undefined
       : this.callableEvidence(callee, calleeType);
     if (fn === undefined) {
+      const origin = callee === undefined ? undefined : this.originOf(callee);
+      if (callee !== undefined && origin !== undefined) {
+        this.resolver.defer(origin, callee, (evidence) => {
+          [left, ...args].forEach((argument, index) =>
+            this.visit(
+              argument,
+              evidence.checked?.[index]
+                ? this.table.unknown
+                : evidence.parameters[index],
+            )
+          );
+        });
+      }
       this.visit(left);
       args.forEach((argument) => this.visit(argument));
       return undefined;

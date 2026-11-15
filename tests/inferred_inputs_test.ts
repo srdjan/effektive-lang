@@ -568,6 +568,35 @@ const chained = (higher, callback, value): Int => {
   assertLoweredValid(project);
 });
 
+Deno.test("resolves a deferred inferred callback in a pipe stage as in a call", () => {
+  const project = checkText(`
+type Int = int
+type Fn = (value: Int) => Int
+type Pair = (value: Int, extra: Int) => Int
+const piped = (callback, value): Int => {
+  const fn: Fn = callback
+  value |> callback
+}
+const staged = (callback, value, extra): Int => {
+  const fn: Pair = callback
+  value |> callback(extra)
+}
+`);
+  assertEquals(project.diagnostics, []);
+  assertEquals(parameterTypes(project, "m", "piped"), ["Fn", "Int"]);
+  assertEquals(parameterTypes(project, "m", "staged"), ["Pair", "Int", "Int"]);
+  assertLoweredValid(project);
+});
+
+Deno.test("requires an annotation for an unresolved inferred callback in a pipe stage", () => {
+  const project = checkText(`
+type Int = int
+const piped = (callback): Int => 1 |> callback
+`);
+  assertEquals(parameterTypes(project, "m", "piped"), ["unknown"]);
+  assertEquals(codes(project), ["type-mismatch/008", "type-mismatch/011"]);
+});
+
 Deno.test("keeps deferred callback diagnostics and local identities independent", () => {
   const unresolved = checkText(`
 type Int = int

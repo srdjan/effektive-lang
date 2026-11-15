@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A pipeline stage whose callee is an inferred parameter uses the recovered callback contract, as a call does. In `(callback, value): Int => { const fn: Fn = callback; value |> callback }` with `type Fn = (value: Int) => Int`, `value` gets the type `Int`. A stage callee whose contract the compiler cannot recover gives `type-mismatch/011`, which asks for a type annotation.
+  Before, `value` stayed `unknown` and gave `type-mismatch/003`, and the unresolved stage callee gave only `type-mismatch/008`.
+
 ## 0.15.8 - 2026-11-11
 
 - `x ?? d` accepts a nullable union such as `type MaybeInt = Int | null`. It gives `x` when `x` is not `null`, and it evaluates the fallback `d` only for `null`. It lowers to the same IR as `match x { null => d, v => v }`, and the TypeScript output is `x ?? d`, so it accepts the subjects that the binding arm accepts: `Mode = "a" | "b" | null` and `boolean | null` stay rejected. Any other left operand gives `type-mismatch/010` "the left operand of `??` must be an Option or a nullable union".
