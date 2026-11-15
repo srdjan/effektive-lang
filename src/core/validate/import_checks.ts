@@ -75,6 +75,16 @@ function checkBuiltinShape(
   }
 }
 
+/** A builtin shape is pure, with no failure and no requirement. */
+function requirePure(
+  type: FunctionType,
+  wrong: (what: string) => void,
+): void {
+  if (!isQuiet(invocationOf(type))) {
+    wrong("is pure, with no failure and no requirement");
+  }
+}
+
 /** `div` is `(int, int) => int`, and a rounding builtin is `(number) => int`, each pure with no failure or requirement. */
 function checkDataShape(
   env: World["env"],
@@ -89,9 +99,7 @@ function checkDataShape(
     type.parameters.some((p) => !same(env, p, expected))
   ) wrong(`takes ${count} ${parameter} parameter${count === 1 ? "" : "s"}`);
   if (!same(env, type.result, INT)) wrong("returns an int");
-  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
-    wrong("is pure, with no failure and no requirement");
-  }
+  requirePure(type, wrong);
 }
 
 /** `text` is `(number) => string` or `(boolean) => string`, pure with no failure or requirement. */
@@ -106,9 +114,7 @@ function checkTextShape(
       same(env, type.parameters[0], BOOLEAN))
   ) wrong("takes 1 number or boolean parameter");
   if (!same(env, type.result, STRING)) wrong("returns a string");
-  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
-    wrong("is pure, with no failure and no requirement");
-  }
+  requirePure(type, wrong);
 }
 
 /** `len` is `(string) => int` or `(E[]) => int`, pure with no failure or requirement. */
@@ -125,9 +131,7 @@ function checkLenShape(
   if (!same(env, type.result, INT)) {
     wrong("returns an int");
   }
-  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
-    wrong("is pure, with no failure and no requirement");
-  }
+  requirePure(type, wrong);
 }
 
 /** `at` is `(E[], int) => Option<E>`, pure with no failure or requirement. */
@@ -146,9 +150,7 @@ function checkAtShape(
     array?.kind !== "array" ||
     !same(env, type.result.element, array.element)
   ) wrong("returns an option of the element");
-  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
-    wrong("is pure, with no failure and no requirement");
-  }
+  requirePure(type, wrong);
 }
 
 /** `concat` is `(E[], ...) => E[]`: each parameter is the result array type. Pure, no failure or requirement. */
@@ -163,9 +165,7 @@ function checkConcatShape(
       parameter.kind === "array" && same(env, parameter, type.result)
     )
   ) wrong("takes one or more arrays of the result type");
-  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
-    wrong("is pure, with no failure and no requirement");
-  }
+  requirePure(type, wrong);
 }
 
 /** `sort` is `(E[]) => E[]` or `(E[], (E) => K) => E[]`. E, or K with a key, is orderable. Pure, no failure or requirement. */
@@ -201,9 +201,7 @@ function checkSortShape(
   ) {
     wrong("orders by a number or a string");
   }
-  if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
-    wrong("is pure, with no failure and no requirement");
-  }
+  requirePure(type, wrong);
 }
 
 function checkAllShape(
