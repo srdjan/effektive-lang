@@ -20,7 +20,8 @@ import {
   type LspBenchError,
   type LspInputName,
   type Session,
-  Workspace,
+  succeed,
+  withWorkspace,
 } from "./lsp_script.ts";
 import {
   DISTRIBUTION_HEADER,
@@ -86,8 +87,7 @@ export async function runM1(
   const started = performance.now();
   const rows: M1Row[] = [];
   for (const entry of config.inputs) {
-    const workspace = new Workspace();
-    try {
+    const ran = await withWorkspace(async (workspace) => {
       const input = loadInput(entry.input, config.seed);
       const a = await workspace.open(input, config.timeoutMs);
       if (!a.ok) return a;
@@ -123,11 +123,9 @@ export async function runM1(
           });
         }
       }
-      const done = await workspace.finish();
-      if (!done.ok) return done;
-    } finally {
-      await workspace.dispose();
-    }
+      return succeed(null);
+    });
+    if (!ran.ok) return ran;
   }
   return {
     ok: true,

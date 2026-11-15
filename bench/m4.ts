@@ -9,7 +9,8 @@ import {
   type LspBenchError,
   type LspInput,
   type StepStats,
-  Workspace,
+  succeed,
+  withWorkspace,
 } from "./lsp_script.ts";
 import { fixed, table } from "./stats.ts";
 import { byTurn } from "./pairs.ts";
@@ -131,8 +132,7 @@ export async function runM4(
   }
   const rows: M4Row[] = [];
   for (const steps of config.stepCounts) {
-    const workspace = new Workspace();
-    try {
+    const ran = await withWorkspace(async (workspace) => {
       const input = loadInput(config.size, config.seed);
       const paths = sessionDocuments(input, openDocuments);
       if (paths.length !== openDocuments) {
@@ -201,8 +201,6 @@ export async function runM4(
           },
         };
       }
-      const done = await workspace.finish();
-      if (!done.ok) return done;
       const samplesA = memorySamplesA.map((sample) => sample.rss);
       const samplesB = memorySamplesB.map((sample) => sample.rss);
       rows.push({
@@ -236,9 +234,9 @@ export async function runM4(
         lastA: samplesA[samplesA.length - 1] ?? NaN,
         lastB: samplesB[samplesB.length - 1] ?? NaN,
       });
-    } finally {
-      await workspace.dispose();
-    }
+      return succeed(null);
+    });
+    if (!ran.ok) return ran;
   }
   return {
     ok: true,

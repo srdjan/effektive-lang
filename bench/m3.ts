@@ -14,7 +14,8 @@ import {
   type LspBenchError,
   type LspInputName,
   type StepStats,
-  Workspace,
+  succeed,
+  withWorkspace,
 } from "./lsp_script.ts";
 import { fixed, summarize, table } from "./stats.ts";
 
@@ -74,8 +75,7 @@ export async function runM3(
   const started = performance.now();
   const rows: M3Row[] = [];
   for (const entry of config.inputs) {
-    const workspace = new Workspace();
-    try {
+    const ran = await withWorkspace(async (workspace) => {
       const input = loadInput(entry.input, config.seed);
       const opened = await workspace.open(input, config.timeoutMs);
       if (!opened.ok) return opened;
@@ -95,11 +95,9 @@ export async function runM3(
         }
         rows.push({ input: entry.input, kind, steps });
       }
-      const done = await workspace.finish();
-      if (!done.ok) return done;
-    } finally {
-      await workspace.dispose();
-    }
+      return succeed(null);
+    });
+    if (!ran.ok) return ran;
   }
   return {
     ok: true,

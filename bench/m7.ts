@@ -35,7 +35,8 @@ import {
   type LspBenchError,
   type LspInput,
   type Session,
-  Workspace,
+  succeed,
+  withWorkspace,
 } from "./lsp_script.ts";
 import { sessionDocuments } from "./m4.ts";
 import {
@@ -224,8 +225,7 @@ export async function runM7(
     // Cold: a fresh pair of servers for each pair of samples.
     const cold: Pair[] = [];
     for (let turn = 0; turn < preset.coldPairs; turn++) {
-      const workspace = new Workspace();
-      try {
+      const ran = await withWorkspace(async (workspace) => {
         const a = await workspace.open(
           input,
           config.timeoutMs,
@@ -250,17 +250,14 @@ export async function runM7(
         const gateTwo = checkOutput(second, undefined, "cold save");
         if (!gateTwo.ok) return gateTwo;
         cold.push(byTurn(turn, one.value, two.value));
-        const done = await workspace.finish();
-        if (!done.ok) return done;
-      } finally {
-        await workspace.dispose();
-      }
+        return succeed(null);
+      });
+      if (!ran.ok) return ran;
     }
     rows.push(row(preset.size, "cold", 1, cold));
 
     // Warm scenarios on one pair of servers, with the edit target open.
-    const workspace = new Workspace();
-    try {
+    const warm = await withWorkspace(async (workspace) => {
       const a = await workspace.open(input, config.timeoutMs, undefined, on);
       if (!a.ok) return a;
       const b = await workspace.open(input, config.timeoutMs, undefined, on);
@@ -290,15 +287,12 @@ export async function runM7(
           ),
         );
       }
-      const done = await workspace.finish();
-      if (!done.ok) return done;
-    } finally {
-      await workspace.dispose();
-    }
+      return succeed(null);
+    });
+    if (!warm.ok) return warm;
 
     // Save All on its own pair, with every module open.
-    const all = new Workspace();
-    try {
+    const saveAll = await withWorkspace(async (all) => {
       const paths = allModules(input);
       const a = await all.open(input, config.timeoutMs, paths, on);
       if (!a.ok) return a;
@@ -317,11 +311,9 @@ export async function runM7(
       );
       if (!pairs.ok) return pairs;
       rows.push(row(preset.size, "save all", a.value.openCount, pairs.value));
-      const done = await all.finish();
-      if (!done.ok) return done;
-    } finally {
-      await all.dispose();
-    }
+      return succeed(null);
+    });
+    if (!saveAll.ok) return saveAll;
   }
   return {
     ok: true,

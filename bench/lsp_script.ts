@@ -61,7 +61,7 @@ function fail<T>(error: LspBenchError): Result<T, LspBenchError> {
   return { ok: false, error };
 }
 
-function succeed<T>(value: T): Result<T, LspBenchError> {
+export function succeed<T>(value: T): Result<T, LspBenchError> {
   return { ok: true, value };
 }
 
@@ -781,5 +781,23 @@ export class Workspace {
     for (const dir of this.#dirs.splice(0)) {
       Deno.removeSync(dir, { recursive: true });
     }
+  }
+}
+
+/**
+ * Runs `body` on a new `Workspace`, finishes the sessions when `body` succeeds,
+ * and disposes the workspace on every path, including a throw.
+ */
+export async function withWorkspace<T>(
+  body: (workspace: Workspace) => Promise<Result<T, LspBenchError>>,
+): Promise<Result<T, LspBenchError>> {
+  const workspace = new Workspace();
+  try {
+    const result = await body(workspace);
+    if (!result.ok) return result;
+    const done = await workspace.finish();
+    return done.ok ? result : done;
+  } finally {
+    await workspace.dispose();
   }
 }
