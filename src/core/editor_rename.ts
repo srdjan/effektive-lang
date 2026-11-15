@@ -79,7 +79,6 @@ export function reviseWithEdits(
 function movedSpan(
   span: Span,
   edits: readonly SourceEdit[],
-  bindingUse: boolean,
 ): Span {
   let shift = 0;
   for (
@@ -89,7 +88,7 @@ function movedSpan(
     ) => a.span.start - b.span.start)
   ) {
     if (sameSpan(edit.span, span)) {
-      const prefix = bindingUse && edit.text.includes(": ")
+      const prefix = edit.text.includes(": ")
         ? edit.text.lastIndexOf(": ") + 2
         : 0;
       return {
@@ -157,7 +156,7 @@ export function renameAt(
   }
   const nextIndex = symbolIndex(next);
   const matching = (old: SymbolOccurrence): SymbolOccurrence | undefined => {
-    const at = movedSpan(old.span, edits, true);
+    const at = movedSpan(old.span, edits);
     return nextIndex.byPath.get(at.source)?.find((o) => sameSpan(at, o.span));
   };
   for (const old of index.occurrences) {
@@ -174,7 +173,7 @@ export function renameAt(
         current.declaration !== undefined || current.identity !== old.identity
       ) return { ok: false, error: "The rename would capture another name." };
     } else if (
-      !sameSpan(movedSpan(old.declaration, edits, true), current.declaration)
+      !sameSpan(movedSpan(old.declaration, edits), current.declaration)
     ) {
       return {
         ok: false,
