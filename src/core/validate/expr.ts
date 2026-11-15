@@ -1014,6 +1014,34 @@ export class BodyValidator implements ValidatorCore {
     return checkedResult(combine(outs));
   }
 
+  /** Reports each element that does not fit the target type that `target` gives for its index. */
+  private checkElements(
+    e: { readonly elements: readonly Expr[] },
+    outs: readonly Out[],
+    target: (index: number) => Type,
+    path: string,
+  ): void {
+    outs.forEach((o, i) => {
+      if (
+        !this.accepts(
+          e.elements[i],
+          o.type,
+          target(i),
+          `${path}.elements[${i}]`,
+        )
+      ) {
+        this.add(
+          AREA.types,
+          `${path}.elements[${i}]`,
+          `the element has type ${show(o.type)}, which does not fit ${
+            show(target(i))
+          }`,
+          e.elements[i].span,
+        );
+      }
+    });
+  }
+
   private arrayLike(
     e: Extract<Expr, { kind: "array" }>,
     path: string,
@@ -1031,25 +1059,7 @@ export class BodyValidator implements ValidatorCore {
         e.span,
       );
     } else {
-      outs.forEach((o, i) => {
-        if (
-          !this.accepts(
-            e.elements[i],
-            o.type,
-            target.element,
-            `${path}.elements[${i}]`,
-          )
-        ) {
-          this.add(
-            AREA.types,
-            `${path}.elements[${i}]`,
-            `the element has type ${show(o.type)}, which does not fit ${
-              show(target.element)
-            }`,
-            e.elements[i].span,
-          );
-        }
-      });
+      this.checkElements(e, outs, () => target.element, path);
     }
     this.refinements.retain(e, e.type, path);
     return checkedResult(combine(outs));
@@ -1074,25 +1084,7 @@ export class BodyValidator implements ValidatorCore {
         e.span,
       );
     } else {
-      outs.forEach((o, i) => {
-        if (
-          !this.accepts(
-            e.elements[i],
-            o.type,
-            target.elements[i],
-            `${path}.elements[${i}]`,
-          )
-        ) {
-          this.add(
-            AREA.types,
-            `${path}.elements[${i}]`,
-            `the element has type ${show(o.type)}, which does not fit ${
-              show(target.elements[i])
-            }`,
-            e.elements[i].span,
-          );
-        }
-      });
+      this.checkElements(e, outs, (i) => target.elements[i], path);
     }
     this.refinements.retain(e, e.type, path);
     return checkedResult(combine(outs));
