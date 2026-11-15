@@ -1035,6 +1035,15 @@
     "reason": "The mutant differs only when `:effect/` starts at index 0. Every identity type in ir.ts starts with a non-empty kind before its colon, such as `error:effect/SchemaError`, so `:effect/` is never at index 0."
   },
   {
+    "file": "src/core/declaration_index.ts",
+    "declaration": "isArrowConst",
+    "offset": 193,
+    "text": "eq < 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The mutant differs only when the Eq token is the first child of a ConstDecl. parseDeclaration and parseConstBody in parse.ts consume an optional export keyword and the const keyword before the Eq token, so it is never first. A probe parsed 21124 inputs: each fixture whole, at every 11th prefix, and with each line deleted, plus generated const headers. It compared isArrow of every declaration from buildIndex. No input had the Eq token first, and the mutant gave the same output. A control mutant of the value filter differed on 23 inputs."
+  },
+  {
     "file": "src/core/resolve.ts",
     "declaration": "Resolver.expr",
     "offset": 914,
