@@ -166,9 +166,9 @@ _Avoid: mutation fixture, which is a forged IR in `scripts/validate_fixtures.ts`
 
 ### Survivor register
 
-The file `fixtures/mutation/survivors.json`, with one row for each survivor that the project accepts, and the reason.
+The tracked list of the survivors that the project accepts, with one row and one reason for each survivor.
 
-`deno task mutate` exits 1 for a survivor with no row. It also exits 1 for a stale row: a row of a scanned file that does not match exactly one site. A row of a file that no run scans can stay stale.
+A mutation run fails for a survivor with no row, and for a stale row: a row that does not match exactly one site. The slow test suite finds each stale row, in every file. Only a mutation run finds a survivor with no row, so a module can keep such survivors from before a change.
 _Avoid: ignore list_
 
 ### Property test
