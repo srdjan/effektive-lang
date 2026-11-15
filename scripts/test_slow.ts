@@ -8,28 +8,18 @@
 // "failed to copy esbuild binary". So one bundle of a stub installs esbuild
 // first. A failed warm-up prints its error, and the tests then run as before.
 
-import { withTempDir } from "./lib.ts";
+import { runProcess, withTempDir } from "./lib.ts";
 
 const code = await withTempDir("effektive-slow-deno-dir-", async (denoDir) => {
   const stub = `${denoDir}/warm-up.ts`;
   Deno.writeTextFileSync(stub, "export {};\n");
-  const warmUp = await new Deno.Command(Deno.execPath(), {
-    args: [
-      "bundle",
-      "--no-config",
-      "--quiet",
-      "-o",
-      `${denoDir}/warm-up.js`,
-      stub,
-    ],
-    env: { DENO_DIR: denoDir },
-    stdout: "null",
-    stderr: "piped",
-  }).output();
+  const warmUp = await runProcess(
+    Deno.execPath(),
+    ["bundle", "--no-config", "--quiet", "-o", `${denoDir}/warm-up.js`, stub],
+    { env: { DENO_DIR: denoDir }, stdout: "null" },
+  );
   if (!warmUp.success) {
-    console.error(
-      `warm-up deno bundle failed:\n${new TextDecoder().decode(warmUp.stderr)}`,
-    );
+    console.error(`warm-up deno bundle failed:\n${warmUp.stderr}`);
   }
   const child = new Deno.Command(Deno.execPath(), {
     args: [
