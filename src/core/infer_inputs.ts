@@ -60,7 +60,7 @@ export function inferFunctionInputs(
     inferred: parameter.inferred,
     type: parameter.type.ref,
   }));
-  return inferInputs(
+  return inferArrowInputs(
     benv,
     roots,
     bodyNode,
@@ -68,43 +68,24 @@ export function inferFunctionInputs(
   );
 }
 
+interface InputParameter {
+  readonly id: LocalId | undefined;
+  readonly name: string;
+  readonly inferred: boolean;
+  readonly type: TypeRef;
+}
+
 /** Infers omitted arrow parameters before the ordinary body checker checks the arrow. */
 export function inferArrowInputs(
   benv: BodyEnv,
-  parameters: readonly {
-    readonly id: LocalId | undefined;
-    readonly name: string;
-    readonly type: TypeRef;
-    readonly inferred: boolean;
-  }[],
-  bodyNode: NodeId | undefined,
-  result: TypeRef | undefined,
-  outerLocals: ReadonlyMap<LocalId, TypeRef>,
-): InputInference {
-  return inferInputs(
-    benv,
-    parameters,
-    bodyNode,
-    result,
-    outerLocals,
-  );
-}
-
-function inferInputs(
-  benv: BodyEnv,
-  parameters: readonly {
-    readonly id: LocalId | undefined;
-    readonly name: string;
-    readonly inferred: boolean;
-    readonly type: TypeRef;
-  }[],
+  parameters: readonly InputParameter[],
   bodyNode: NodeId | undefined,
   result: TypeRef | undefined,
   outerLocals: ReadonlyMap<LocalId, TypeRef> = new Map(),
 ): InputInference {
   const engine = new InputEngine(benv, parameters, outerLocals);
   if (bodyNode !== undefined) engine.visit(bodyNode, result);
-  return engine.finish(parameters);
+  return engine.finish();
 }
 
 class InputEngine {
@@ -119,12 +100,7 @@ class InputEngine {
 
   constructor(
     private readonly benv: BodyEnv,
-    parameters: readonly {
-      readonly id: LocalId | undefined;
-      readonly name: string;
-      readonly inferred: boolean;
-      readonly type: TypeRef;
-    }[],
+    private readonly parameters: readonly InputParameter[],
     outerLocals: ReadonlyMap<LocalId, TypeRef>,
   ) {
     this.tree = benv.env.tree;
@@ -146,14 +122,8 @@ class InputEngine {
     }
   }
 
-  finish(
-    parameters: readonly {
-      readonly id: LocalId | undefined;
-      readonly type: TypeRef;
-      readonly inferred: boolean;
-    }[],
-  ): InputInference {
-    const resolution = this.resolver.finish(parameters);
+  finish(): InputInference {
+    const resolution = this.resolver.finish(this.parameters);
     const diagnostics = resolution.issues.map((issue) => {
       if (issue.kind === "unresolved-call") {
         return makeDiagnostic(
