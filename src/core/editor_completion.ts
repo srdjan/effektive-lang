@@ -1,7 +1,12 @@
 import { isIdentPart, TokenKind } from "./lex.ts";
 import type { Revision } from "./db.ts";
 import type { ModuleInfo } from "./project.ts";
-import { declarationOf, occurrenceAt, symbolIndex } from "./editor_index.ts";
+import {
+  bodyTablesOf,
+  declarationOf,
+  occurrenceAt,
+  symbolIndex,
+} from "./editor_index.ts";
 import { isTypeKind, kidsOf, nameTextOf } from "./syntax_queries.ts";
 import {
   BUILTIN_TYPE_NAMES,
@@ -140,12 +145,7 @@ function recordBindingCompletions(
         : [nameTextOf(tree, label)];
     }),
   );
-  const checked = revision.checkedModule(site.module);
-  const tables = [
-    ...(checked?.functions.values() ?? []),
-    ...(checked?.constants.values() ?? []),
-  ].map((value) => value.table);
-  for (const table of tables) {
+  for (const table of bodyTablesOf(revision.checkedModule(site.module))) {
     const fact = table.facts.get(declaration);
     if (fact?.kind !== "record-binding") continue;
     return filter(
@@ -193,13 +193,8 @@ function memberCompletions(
     const methods = binding?.service?.entry.methodList ?? [];
     return filter(methods.map((m) => make(m.name, "method")));
   }
-  const checked = revision.checkedModule(site.module);
   const fields = new Set<string>();
-  const tables = [
-    ...[...(checked?.functions.values() ?? [])].map((f) => f.table),
-    ...[...(checked?.constants.values() ?? [])].map((c) => c.table),
-  ];
-  for (const table of tables) {
+  for (const table of bodyTablesOf(revision.checkedModule(site.module))) {
     for (const [node, nodeInfo] of table.info) {
       if (
         tree.ends[node] !== baseEnd || kindOf(tree, node) === SyntaxKind.Token

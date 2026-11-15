@@ -2,6 +2,7 @@
 // body tables and keeps LSP wire types outside the core.
 import { isSourcePath } from "./paths.ts";
 import type { Revision } from "./db.ts";
+import { bodyTablesOf } from "./editor_index.ts";
 import { moduleOfId } from "./ids.ts";
 import type { LocalId } from "./ir.ts";
 import { TokenKind } from "./lex.ts";
@@ -48,7 +49,6 @@ function parameterNames(
   module: string,
   tree: SyntaxTree,
   callee: NodeId,
-  count: number,
 ): readonly string[] {
   let currentModule = module;
   let currentTree = tree;
@@ -97,7 +97,6 @@ function parameterNames(
         : aliasTargetNode(revision, currentModule, currentTree, init);
       continue;
     }
-    if (target.kind !== "value") break;
     const owner = moduleOfId(target.id);
     const checked = owner === undefined
       ? undefined
@@ -120,7 +119,7 @@ function parameterNames(
       constant.initNode,
     );
   }
-  return Array.from({ length: count }, (_, index) => `arg${index + 1}`);
+  return [];
 }
 
 function containsCursor(
@@ -161,11 +160,7 @@ export function signatureHelpAt(
   const module = revision.checkedModuleAt(path);
   if (module === undefined || !isSourcePath(path)) return undefined;
   const { tree } = module;
-  const checked = revision.checkedModule(module.module);
-  const tables = checked === undefined ? [] : [
-    ...[...checked.functions.values()].map((fn) => fn.table),
-    ...[...checked.constants.values()].map((constant) => constant.table),
-  ];
+  const tables = bodyTablesOf(module);
   let best:
     | {
       readonly callee: NodeId;
@@ -206,7 +201,6 @@ export function signatureHelpAt(
     module.module,
     tree,
     best.callee,
-    best.fn.parameters.length,
   );
   const parameters = best.fn.parameters.map((type, index) => {
     const contract = showType(revision.types, type);

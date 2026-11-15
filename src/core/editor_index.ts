@@ -1,8 +1,10 @@
 // Resolver identities and declaration anchors shared by editor queries. The
 // cache belongs to a Revision; retaining a Program does not retain old indices.
+import type { CheckedModule } from "./check_project.ts";
 import type { Revision } from "./db.ts";
 import { isIdentifier } from "./lex.ts";
 import { methodOfCapability, serviceOfCapability } from "./ids.ts";
+import type { BodyTable } from "./tables.ts";
 import { type Target, targetText } from "./resolve.ts";
 import type { Span } from "./source.ts";
 import { compareText } from "./util.ts";
@@ -14,6 +16,16 @@ import {
   SyntaxKind,
   type SyntaxTree,
 } from "./syntax.ts";
+
+/** The body tables of the functions, then the constants, of a checked module. */
+export function bodyTablesOf(
+  module: CheckedModule | undefined,
+): readonly BodyTable[] {
+  return [
+    ...(module?.functions.values() ?? []),
+    ...(module?.constants.values() ?? []),
+  ].map((body) => body.table);
+}
 
 export interface SymbolOccurrence {
   readonly identity: string;

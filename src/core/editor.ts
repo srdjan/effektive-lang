@@ -9,7 +9,7 @@ import type { CheckedModule, FunctionBody } from "./check_project.ts";
 import type { Revision } from "./db.ts";
 import { shortName } from "./ids.ts";
 import type { DeclEntry, FileIndex } from "./declaration_index.ts";
-import { declarationOf, symbolIndex } from "./editor_index.ts";
+import { bodyTablesOf, declarationOf, symbolIndex } from "./editor_index.ts";
 import { parseFileFresh } from "./project.ts";
 import type { Span } from "./source.ts";
 import { type NodeId, nodeSpan, type SyntaxTree } from "./syntax.ts";
@@ -144,13 +144,9 @@ function hoverPass(
       declaration: undefined,
     };
   }
-  const tables = [
-    ...[...module.functions.values()].map((fn) => fn.table),
-    ...[...module.constants.values()].map((constant) => constant.table),
-  ];
   const found = innermostNode(
     module.tree,
-    tables.flatMap((table) =>
+    bodyTablesOf(module).flatMap((table) =>
       [...table.info].map(([node, info]) => ({ node, info }))
     ),
     (candidate) => candidate.node,
