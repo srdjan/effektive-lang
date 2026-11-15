@@ -1,8 +1,8 @@
 # Fresh-eyes review, 2026-11-15
 
-This ledger records the findings of a fresh-eyes cleanup review of the whole repository, and the plan that applies them. It uses the prefixes FY (findings), FYD (decisions), and FYU (units). Each finding is a candidate change that keeps behavior, unless it is in the behavior-changing section.
+This ledger records the findings of a fresh-eyes cleanup review of the whole repository, and the plan that applies them. It uses the prefixes FY (findings), FYD (decisions), FYU (units), FYO (open items), and FYA (abstraction candidates). Each finding is a candidate change that keeps behavior, unless it is in the behavior-changing section.
 
-Status: the plan is written and waits for approval. No code change has started.
+Status: complete. The user approved the plan on 2026-11-15. All ten units are on local `main`. The [results](#results) section records each unit, each skipped item, and the checks.
 
 ## Decisions
 
@@ -63,6 +63,64 @@ FYU1-FYU7 run at the same time. If FYU8 confirms a defect and the fix changes th
 After FYU10, Opus does Step 4 of the fresh-eyes method: it lists abstraction candidates that occur 3 or more times. It does not implement them without approval.
 
 When the plan is complete, the completing commit moves this file to `docs/archive/plans/` and updates the registry path.
+
+## Results
+
+The ten units added 88 commits after the plan commit `327cc9f`. Opus reviewed each unit diff line by line. Opus ran the fast gate at each unit commit in the unit worktree, and each run exited 0. Then each unit landed on `main` with `git cherry-pick`.
+
+| Unit | Commits | Result |
+| --- | --- | --- |
+| FYU1 | 9, and review fix `cbae13a` | All items except FY104. FY104 is skipped: the rows do not have the shape that `optionalLast` reads. The review fix renames the `matched` record of `match` (FY20), because a block in the same loop declares `matched` for the literal condition. |
+| FYU2 | 21 | All items. The FY129 tests confirm the six gaps and cover them. |
+| FYU3 | 12 | All items. |
+| FYU4 | 8, and review fix `9a5ade8` | All items except FY47. FY47 is skipped: `inScope(body)` adds a closure for each scope of the resolver walk, and nobody measured that cost. The review fix removes a boolean parameter that FY46 added to `labelsAndTypes`, and it keeps the `if` chain of `parseDeclaration` instead of the FY49 switch. |
+| FYU5 | 10 | All items except FY100. FY100 is skipped: a record argument would copy 8 fields on each call. |
+| FYU6 | 16 | All items except FY2 and FY128. FY2 is not a finding: `tests/playground_compile_test.ts:278` passes the outputs argument. FY128 stays open: no input reaches that line without a compiler defect. |
+| FYU7 | 7 | All items. |
+| FYU8 | 1 (`ddae077`) | FY130 is a confirmed defect. A pipe stage callee is a `QualifiedName` node, and `originOf` did not accept it. So `value \|> callback` did not defer to the recovered callback contract, as a call does. Two tests in `tests/inferred_inputs_test.ts` failed before the fix and pass after it. The fix has a `CHANGELOG.md` entry. The website specification needs no change, because its input inference rules do not separate a pipe stage from a call. |
+| FYU9 | 2 | All items. |
+| FYU10 | this section, the register refresh, and the FY32 test | See the deviations below. |
+
+FY32 merged the concurrency-literal checks of `traverse` and `all` into one helper, and no test asserted their messages. FYU10 adds two rows to `tests/validate_rejections_test.ts` that assert the exact messages. The rows pass at `17a1265^`, before the merge, and at `HEAD`.
+
+Deviation: the FYU10 acceptance check needs `deno task check` to exit 0 on `main` after each unit. Opus ran `deno task check` after FYU7 and FYU5 landed together. From then on, the register census in `tests/mutate_slow_test.ts` failed, because the units moved registered mutation sites. The other tests passed. The register refresh at the end fixes the census.
+
+The register refresh is `d0cced7`. Six register declarations had changed sites: `sameModes`, `contractActionsAt`, `failsClauseActionsAt`, `guardedRecord`, `Resolver.expr`, and the `<module>` rows of `scripts/behavior_compare.ts`. The refresh moves 15 rows and deletes 4 rows whose code is gone. It adds 2 `equivalent` rows for the merged arrow header guard and the `missingEntries` guard of `contractActionsAt`. A differential probe supports the 2 new rows. It ran each guard 336 times over 179 fixture sources and 2592 generated headers. No term was true, and each mutant gave the same 77,019 output rows. Reasons that cited line numbers now name functions.
+
+`deno task mutate --seed 1 --sample all` ran on each module at `HEAD` and at `327cc9f`. The times are from the `HEAD` run on a quiet machine.
+
+| Module | Sites | Survivors at `HEAD` | Without a row after the refresh | Without a row at `327cc9f` | Time |
+| --- | --- | --- | --- | --- | --- |
+| `src/core/db.ts` | 56 | 4 | 0 | 0 | 45 s |
+| `src/core/recursion_guard.ts` | 49 | 4 | 0 | 0 | 44 s |
+| `src/core/editor_hints.ts` | 42 | 0 | 0 | not run | 32 s |
+| `src/core/editor_actions.ts` | 107 | 16 | 0 | 0 | 98 s |
+| `scripts/behavior_compare.ts` | 50 | 10 | 4 | 4 | 46 s |
+| `src/core/resolve.ts` | 331 | 19 | 17 | 19 | 130 s |
+
+Deviation: the acceptance check needs `deno task mutate` to exit 0 on each module with a touched register declaration. It exits 1 on `scripts/behavior_compare.ts` and `src/core/resolve.ts`. The survivors without a row in those modules are the same sites at `327cc9f`, so this pass added none. The cleanup removed 2 such survivors from `resolve.ts`. The remaining 21 survivors are open item FYO1 (survivors that existed before this pass).
+
+`deno task behavior:compare c5c6840 HEAD` exits 0 with 497 equal records and no changed, missing, or added record. FY130 changes no record, because no fixture has a pipe stage with an inferred callback. The FY130 tests cover that case.
+
+`deno task check` exits 0 at `d2c0ea0`, with 3278 fast tests and 324 slow tests.
+
+## Open items
+
+| ID | Item | Owner |
+| --- | --- | --- |
+| FYO1 | 4 survivors in `scripts/behavior_compare.ts` (`exportRevisionTree`, `materializeForged` twice, `records`) and 17 in `src/core/resolve.ts` have no test and no row. Each needs a test, or a row with a probe. | The user decides whether a plan takes them. |
+| FYO2 | FY128 stays open, because no input reaches that line without a compiler defect. | None until a reaching input exists. |
+| FYO3 | FY131-FY135 change behavior, so FYD3 keeps them out of this pass. | The user decides. |
+
+## Abstraction candidates (Step 4)
+
+These are suggestions only. No unit implements them without approval.
+
+FYA1 (call the existing `nodeText`): three sites slice node text by hand. They are `src/core/declaration_index.ts:182`, `src/core/editor_hints.ts:54`, and `src/core/editor_index.ts:125`. `nodeText` in `src/core/syntax.ts` already does this. This is a reuse of an existing helper, not a new concept.
+
+FYA2 (`inScope(body)` in the resolver): five sites in `src/core/resolve.ts` save a scope, open a new scope, and restore the old one. This is FY47. A helper adds a closure at each scope, so a benchmark of the resolver walk must come first.
+
+No other candidate meets the three criteria. The repeated Result literals (`{ ok: false, error }`, 70 sites) are short and explicit, so a helper would add a concept with no gain in clarity.
 
 ## Method and evidence limits
 
