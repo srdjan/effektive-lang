@@ -369,6 +369,21 @@ Deno.test("semantic classifications retain UTF-16 spans and lexical fallback on 
   );
 });
 
+Deno.test("lexical fallback on stale text marks an error, a service, and a service method name", () => {
+  const loaded = new Program("").update({
+    set: { "effektive.json": "{}", "m.eff": "type Int = int\n" },
+  });
+  assert(loaded.ok);
+  const fresh = "error Boom = {}\nservice Clock { now(): int }\nconst z = (\n";
+  const tokens = semanticClassifications(loaded.value, "m.eff", fresh);
+  const at = (word: string) =>
+    tokens.find((t) => t.span.start === fresh.indexOf(word));
+  assertEquals(at("Boom")?.type, "class");
+  assertEquals(at("Clock")?.type, "interface");
+  assertEquals(at("now")?.type, "method");
+  assertEquals(at("now")?.modifiers, ["declaration", "readonly"]);
+});
+
 Deno.test("contract actions derive and validate missing effects while preserving existing entries", () => {
   for (
     const [text, expected] of [
