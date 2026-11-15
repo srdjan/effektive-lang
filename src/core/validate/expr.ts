@@ -36,6 +36,7 @@ import type {
   Execution,
   Expr,
   FunctionDecl,
+  FunctionType,
   Parameter,
   Pattern,
   Span,
@@ -1317,12 +1318,12 @@ export class BodyValidator implements ValidatorCore {
   private checkArguments(
     args: readonly Expr[],
     outs: readonly Out[],
-    parameters: readonly Type[],
-    checked: readonly boolean[] | undefined,
+    fn: FunctionType,
     path: string,
     span: Span,
     builtin: BuiltinCallName | undefined,
   ): void {
+    const { parameters, checked } = fn;
     if (outs.length !== parameters.length) {
       this.add(
         AREA.types,
@@ -1404,8 +1405,7 @@ export class BodyValidator implements ValidatorCore {
     this.checkArguments(
       e.arguments,
       outs,
-      fn.parameters,
-      fn.checked,
+      fn,
       path,
       e.span,
       builtin,
@@ -1498,8 +1498,7 @@ export class BodyValidator implements ValidatorCore {
     this.checkArguments(
       e.arguments,
       outs,
-      fn.parameters,
-      fn.checked,
+      fn,
       path,
       e.span,
       undefined,
