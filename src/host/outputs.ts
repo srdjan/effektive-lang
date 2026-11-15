@@ -8,6 +8,7 @@ import {
   joinPath,
   type LowerError,
   modulePathsOf,
+  type Result,
   type Revision,
   serializeSourceMap,
   sourceMapPathOf,
@@ -123,6 +124,23 @@ function namesSource(
     joinPath(resolved.replaceAll("\\", "/"), source).endsWith(`/${header}`);
 }
 
+/** Resolves each root-relative path under `root`, or names the first path that fails. */
+function containedPaths(
+  fs: HostFs,
+  root: string,
+  paths: readonly string[],
+): Result<string[], { readonly path: string; readonly message: string }> {
+  const full: string[] = [];
+  for (const path of paths) {
+    const target = containedProjectPath(fs, root, path);
+    if (!target.ok) {
+      return { ok: false, error: { path, message: target.error.message } };
+    }
+    full.push(target.value);
+  }
+  return { ok: true, value: full };
+}
+
 /**
  * Emits the named modules of the revision. It writes the generated file and its
  * map under `root` for each module whose text changed:
@@ -177,19 +195,18 @@ export function writeGenerated(
       [emitted.path, emitted.text],
       [sourceMapPathOf(emitted.path), serializeSourceMap(map)],
     ];
-    const targets: [string, string, string][] = [];
-    let blocked = false;
-    for (const [path, text] of outputs) {
-      const target = containedProjectPath(fs, root, path);
-      if (!target.ok) {
-        notes.push(`error: cannot write ${path}: ${target.error.message}`);
-        failed = true;
-        blocked = true;
-        break;
-      }
-      targets.push([path, text, target.value]);
+    const contained = containedPaths(fs, root, outputs.map(([path]) => path));
+    if (!contained.ok) {
+      const { path, message } = contained.error;
+      notes.push(`error: cannot write ${path}: ${message}`);
+      failed = true;
+      continue;
     }
-    if (blocked) continue;
+    const targets = outputs.map(([path, text], i): [string, string, string] => [
+      path,
+      text,
+      contained.value[i],
+    ]);
     // The `.ts` file decides for the pair. A file that this source did not
     // generate stays, with its map unwritten and the module left out. The
     // header can name the source from another project root.
@@ -269,21 +286,15 @@ export function removeStaleOutputs(
       }
       // The map goes first. When it fails, the `.ts` file keeps the header that
       // proves ownership, so a later call can retry. A missing file counts as removed.
-      const targets: [string, string][] = [];
-      let blocked = false;
-      for (const target of [sourceMapPathOf(path), path]) {
-        const contained = containedProjectPath(fs, root, target);
-        if (!contained.ok) {
-          notes.push(
-            `error: cannot remove ${target}: ${contained.error.message}`,
-          );
-          blocked = true;
-          break;
-        }
-        targets.push([target, contained.value]);
+      const names = [sourceMapPathOf(path), path];
+      const contained = containedPaths(fs, root, names);
+      if (!contained.ok) {
+        const { path: target, message } = contained.error;
+        notes.push(`error: cannot remove ${target}: ${message}`);
+        continue;
       }
-      if (blocked) continue;
-      for (const [target, full] of targets) {
+      for (const [i, target] of names.entries()) {
+        const full = contained.value[i];
         const existed = fs.kind(full) !== "missing";
         const result = fs.remove(full);
         if (result.ok) {
