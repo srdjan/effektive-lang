@@ -149,11 +149,6 @@ export function provide(
   );
   return derivedResult(
     fn.result,
-    combine([
-      combine([provider, job]),
-      invocation,
-      acquisition,
-      EFFECT_ONLY,
-    ]),
+    combine([provider, job, invocation, acquisition, EFFECT_ONLY]),
   );
 }
