@@ -244,13 +244,7 @@ export class ModuleState
       }
       for (const binding of imported.bindings) {
         this.bound.set(binding.target, binding.name);
-        const use = () =>
-          this.addImport(
-            moduleOfId(binding.target),
-            nameOfId(binding.target),
-            binding.name,
-            this.isTypeOnly(binding.target),
-          );
+        const use = () => this.addImport(binding.target, binding.name);
         // A companion module prints only the imports that its declarations use.
         if (isInterfacePath(this.source)) {
           this.unusedImports.set(binding.target, use);
@@ -298,12 +292,7 @@ export class ModuleState
           this.hostDeclarations.set(specifier, names);
         } else {
           // The companion module of the interface owns every other declaration.
-          this.addImport(
-            moduleOfId(binding.target),
-            nameOfId(binding.target),
-            binding.name,
-            this.isTypeOnly(binding.target),
-          );
+          this.addImport(binding.target, binding.name);
         }
       }
     }
@@ -563,7 +552,7 @@ export class ModuleState
     if (foreign?.kind === "type" && foreign.opaque === true) {
       this.importOpaque(moduleOfId(id), exported, name);
     } else {
-      this.addImport(moduleOfId(id), exported, name, this.isTypeOnly(id));
+      this.addImport(id, name);
     }
     return name;
   }
@@ -572,19 +561,16 @@ export class ModuleState
     return this.hosts.get(id);
   }
 
-  private addImport(
-    module: string,
-    exported: string,
-    local: string,
-    typeOnly: boolean,
-  ): void {
+  private addImport(id: DeclarationId, local: string): void {
+    const module = moduleOfId(id);
+    const exported = nameOfId(id);
     this.assertOpen(`${exported} is imported`);
     let names = this.foreignImports.get(module);
     if (names === undefined) {
       names = new Map();
       this.foreignImports.set(module, names);
     }
-    names.set(exported, { local, typeOnly });
+    names.set(exported, { local, typeOnly: this.isTypeOnly(id) });
   }
 
   /**
