@@ -2858,7 +2858,7 @@ class BodyChecker
     };
     if (subject.mode === "effect") this.refinements.clearDerivedFacts();
     const excluded: ReturnType<RefinementChecker["condition"]>[] = [];
-    const matched: BranchArms = {
+    const results: BranchArms = {
       infos: [subject],
       branches: [],
       successful: [],
@@ -2900,15 +2900,15 @@ class BodyChecker
         this.refinements.restore(refinementScope);
         continue;
       }
-      const info = this.armBody(bodyNode, expected, matched);
+      const info = this.armBody(bodyNode, expected, results);
       this.finish(arm, info.type, info);
       this.refinements.restore(refinementScope);
     }
-    this.refinements.join(matched.successful);
+    this.refinements.join(results.successful);
     if (!state.wildcard && state.binding === undefined) {
       checkCoverage(this, node, domain, state, arms.length);
     }
-    return this.joinArms(node, expected, matched);
+    return this.joinArms(node, expected, results);
   }
 }
 
