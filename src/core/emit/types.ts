@@ -169,6 +169,40 @@ export function hasSchemaMetadata(
     type.decodedOptionalKey === true;
 }
 
+/** The readonly record type that prints each field type with `print`. */
+function recordTypeDoc(
+  type: Extract<Type, { readonly kind: "record" }>,
+  print: (type: Type) => Doc,
+): Doc {
+  if (type.fields.length === 0) return "{}";
+  const fields = type.fields.map((f) => [
+    "readonly ",
+    f.name,
+    f.optional ? "?" : "",
+    ": ",
+    print(f.type),
+  ]);
+  return group([
+    "{",
+    indent([line, join([";", line], fields)]),
+    ifBreak(";"),
+    line,
+    "}",
+  ]);
+}
+
+/** The readonly tuple type that prints each element type with `print`. */
+function tupleTypeDoc(
+  type: Extract<Type, { readonly kind: "tuple" }>,
+  print: (type: Type) => Doc,
+): Doc {
+  return type.elements.length === 0 ? "readonly []" : [
+    "readonly [",
+    join(", ", type.elements.map(print)),
+    "]",
+  ];
+}
+
 export function typeDoc(
   scope: EmitNames,
   type: Type,
@@ -195,11 +229,7 @@ export function typeDoc(
         ),
       ];
     case "tuple":
-      return type.elements.length === 0 ? "readonly []" : [
-        "readonly [",
-        join(", ", type.elements.map((t) => typeDoc(scope, t))),
-        "]",
-      ];
+      return tupleTypeDoc(type, (t) => typeDoc(scope, t));
     case "option": {
       const option = scope.effect("Option");
       return [
@@ -255,23 +285,8 @@ export function typeDoc(
         '" })',
       ];
     }
-    case "record": {
-      if (type.fields.length === 0) return "{}";
-      const fields = type.fields.map((f) => [
-        "readonly ",
-        f.name,
-        f.optional ? "?" : "",
-        ": ",
-        typeDoc(scope, f.type),
-      ]);
-      return group([
-        "{",
-        indent([line, join([";", line], fields)]),
-        ifBreak(";"),
-        line,
-        "}",
-      ]);
-    }
+    case "record":
+      return recordTypeDoc(type, (t) => typeDoc(scope, t));
     case "union":
       return unionDoc(
         type.members.map((m) => {
@@ -372,37 +387,15 @@ export function encodedTypeDoc(
         ">",
       ];
     case "tuple":
-      return type.elements.length === 0 ? "readonly []" : [
-        "readonly [",
-        join(
-          ", ",
-          type.elements.map((t) => encodedTypeDoc(scope, t, recursive)),
-        ),
-        "]",
-      ];
+      return tupleTypeDoc(type, (t) => encodedTypeDoc(scope, t, recursive));
     case "option":
       return [
         `${scope.effect("Option")}.Option<`,
         encodedTypeDoc(scope, type.element, recursive),
         ">",
       ];
-    case "record": {
-      if (type.fields.length === 0) return "{}";
-      const fields = type.fields.map((f) => [
-        "readonly ",
-        f.name,
-        f.optional ? "?" : "",
-        ": ",
-        encodedTypeDoc(scope, f.type, recursive),
-      ]);
-      return group([
-        "{",
-        indent([line, join([";", line], fields)]),
-        ifBreak(";"),
-        line,
-        "}",
-      ]);
-    }
+    case "record":
+      return recordTypeDoc(type, (t) => encodedTypeDoc(scope, t, recursive));
     case "union":
       return unionDoc(
         type.members.map((m) => encodedTypeDoc(scope, m, recursive)),
