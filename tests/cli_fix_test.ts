@@ -190,3 +190,24 @@ Deno.test("check --fix writes requirements when the users module removes its ser
   assert(fixed.includes("(id: UserId): Name with Users.find =>"));
   assert(fixed.includes("(): Name[] with Users.all =>"));
 });
+
+Deno.test("check --fix reports a fixed file that cannot be written and exits 1", async () => {
+  const m = memoryIo(under(ROOT, {
+    ...CONFIG,
+    "a.eff": SERVICE +
+      "export const load = (id: Id): Id => Store.find(id)\n",
+  }));
+  m.unwritable.add(`${ROOT}/a.eff`);
+  const code = await main(["check", ROOT, "--fix", "--no-log"], m.io);
+  assertEquals(code, 1);
+  assertEquals(
+    m.out.join(""),
+    "a.eff:6:37: error requirement-contract/001: the body requires Store.find, which the `with` clause does not list\n" +
+      "a.eff:6:37: note: requires `Store.find` here\n",
+  );
+  assertEquals(
+    m.err.join(""),
+    "effektive: cannot write a.eff: permission denied\n" +
+      "1 module, 1 diagnostic, fixed 1 function in 0 files\n",
+  );
+});

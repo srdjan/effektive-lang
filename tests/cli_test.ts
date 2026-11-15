@@ -522,6 +522,19 @@ Deno.test("build --tsc sends output that is not a diagnostic to stderr", async (
   assert(r.stderr.includes("error: Module not found"), r.stderr);
 });
 
+Deno.test("build --tsc names the exit code when deno check fails without output", async () => {
+  const r = await run(
+    ["build", ROOT, "--tsc"],
+    under(ROOT, exampleFiles()),
+    (m) => {
+      m.denoCheckCode = 3;
+    },
+  );
+  assertEquals(r.code, 1);
+  assertEquals(r.stdout, "");
+  assert(r.stderr.includes("error: deno check exited with code 3\n"), r.stderr);
+});
+
 Deno.test("build --tsc skips deno check when the build has an error", async () => {
   const files = {
     [`${ROOT}/effektive.json`]: "{}",
