@@ -85,6 +85,8 @@ const needy = layer(Clock, () => {
 })
 const both = mergeLayers(clockLive, logLive)
 const one = (): Int => 1
+const traversed = (): Int[] => traverse([1, 2], (n) => n + 1, { concurrency: 2 })
+const gathered = () => all([defer(() => 1), defer(() => 2)], { concurrency: 2 })
 `;
 
 const FAMILIES_SOURCE = `type Int = int
@@ -905,6 +907,28 @@ const ROWS: readonly Row[] = [
     },
     expected: [
       "validation/006 declarations[4].body.concurrency: mapEffect concurrency must be a positive safe integer or unbounded",
+    ],
+  },
+  {
+    name: "a traverse concurrency that is not a positive integer",
+    program: "effects",
+    change: (ir) => {
+      const call = find(fn(ir, "traversed").body, "call");
+      Object.assign(find(call.arguments[2], "literal"), { value: 0 });
+    },
+    expected: [
+      "validation/006 declarations[14].body.arguments[2]: traverse needs a positive safe integer or unbounded concurrency literal",
+    ],
+  },
+  {
+    name: "an all concurrency that is not a positive integer",
+    program: "effects",
+    change: (ir) => {
+      const call = find(fn(ir, "gathered").body, "call");
+      Object.assign(find(call.arguments[1], "literal"), { value: 0 });
+    },
+    expected: [
+      "validation/006 declarations[15].body.arguments[1]: all needs a positive safe integer or unbounded concurrency literal",
     ],
   },
   {
