@@ -399,7 +399,6 @@ export function schemaLeaf(
         children[1],
         inputType,
         e.kind === "schema-decode" ? "encoded" : "decoded",
-        e.kind === "schema-decode",
       );
       return emitted([
         `${schema}.${

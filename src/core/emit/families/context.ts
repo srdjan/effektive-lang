@@ -20,7 +20,6 @@ export interface ExprCore {
     input: Emitted,
     type: Type,
     direction: "decoded" | "encoded" | "make",
-    unknownInput?: boolean,
   ): Emitted;
   suspended(job: Expr, hoisted?: Emitted): Emitted;
   closure(

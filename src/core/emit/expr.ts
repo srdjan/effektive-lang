@@ -1061,11 +1061,10 @@ export class ExprEmitter implements ExprCore {
     input: Emitted,
     type: Type,
     direction: "decoded" | "encoded" | "make",
-    unknownInput = false,
   ): Emitted {
     if (!needsFieldAdapter(this.scope, type)) return input;
     const adapter = fieldAdapter(this.scope, type, direction);
-    return unknownInput
+    return direction === "encoded"
       ? emitted([adapter, callArguments([input])])
       : this.helperCall("record", type, [input, emitted(adapter)]);
   }
@@ -1142,8 +1141,9 @@ export class ExprEmitter implements ExprCore {
     e: Extract<Expr, { kind: "binary" }>,
     kid: Kid,
   ): Emitted {
+    const isInt = isIntType(this.scope.resolve(e.type));
     // An `int` remainder never joins a run of `*`: the helper call is an operand.
-    if (e.operator === "%" && isIntType(this.scope.resolve(e.type))) {
+    if (e.operator === "%" && isInt) {
       return emitted([
         this.scope.remainder(),
         callArguments([kid(e.left), kid(e.right)]),
@@ -1181,11 +1181,11 @@ export class ExprEmitter implements ExprCore {
       };
     const arithmetic = e.operator === "+" || e.operator === "-" ||
       e.operator === "*";
-    if (arithmetic && isIntType(this.scope.resolve(e.type))) {
+    if (arithmetic && isInt) {
       return this.intCall(emitted(runDoc(run, 1), prec));
     }
     // Only `Duration / int` divides to an `int`: it truncates toward zero.
-    if (e.operator === "/" && isIntType(this.scope.resolve(e.type))) {
+    if (e.operator === "/" && isInt) {
       return this.intCall(
         emitted(["Math.trunc", callArguments([emitted(runDoc(run, 1), prec)])]),
       );
