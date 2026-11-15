@@ -1321,5 +1321,59 @@
     "operator": "boolean-return",
     "class": "equivalent",
     "reason": "The guard runs when a Name node of a NamePattern has no text. The parser builds a NamePattern only from an identifier token, so the name always has text. With false, declareLocal also returns early for a name without text, so no binding or diagnostic differs."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.resolveDecl",
+    "offset": 1401,
+    "text": "init !== undefined && !isTypeKind(kindOf(this.tree, init))",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The guard only decides whether to call expr on the last child of a top-level const. For an undefined node or a type kind, expr takes its default branch and does nothing, because kindOf gives undefined for an undefined node and no type kind is an expression kind. With || the extra calls reach only those nodes. The probe analyzed 19169 inputs: each fixtures file whole, at every 11th prefix, and with each line deleted. A copy that logs each time the two forms differ saw 2046 such cases. The output of the mutant copy matched the source copy in all of them."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.expr",
+    "offset": 473,
+    "text": "kids.length > 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "With >=, an empty CallExpr calls expr on an undefined node, and expr does nothing for it: kindOf gives undefined and the switch takes its default branch. The parser wraps the callee to make a CallExpr, so the node always has a child, and the log copy saw no empty CallExpr in 19169 inputs. A forced probe emptied kids in two copies, with > and with >=. The outputs matched on all 19169 inputs, so the empty case has no effect."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.expr",
+    "offset": 1610,
+    "text": "kids.length > 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "With >=, an empty PipeExpr calls expr on an undefined node, and expr does nothing for it: kindOf gives undefined and the switch takes its default branch. The parser wraps the left operand to make a PipeExpr, so the node always has a child, and the log copy saw no empty PipeExpr in 19169 inputs. A forced probe emptied kids in two copies, with > and with >=. The outputs matched on all 19169 inputs, so the empty case has no effect."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.expr",
+    "offset": 2049,
+    "text": "kids.length > 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "With >=, a MatchExpr without children calls expr on an undefined node, and expr does nothing for it: kindOf gives undefined and the switch takes its default branch. Error recovery can build such a node. The probe analyzed 19169 inputs: each fixtures file whole, at every 11th prefix, and with each line deleted. A copy that logs each time the two forms differ saw 23 empty MatchExpr nodes. The output of the mutant copy matched the source copy in all of them."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.blockConst",
+    "offset": 404,
+    "text": "kindOf(this.tree, field) === SyntaxKind.BindingField &&\n          names[0] !== undefined",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "With ||, a shorthand field {a} gets fieldLabel on its name. The next statement, declareLocal on the same name node, sets a local target for it and replaces the field target. Every path of declareLocal that has a name sets that target, and a block always has a scope. A BindingField always has a first name, because the parser calls parseName before it. The probe analyzed 19169 inputs: each fixtures file whole, at every 11th prefix, and with each line deleted. A copy that logs each time the two forms differ saw 2319 shorthand fields. The output of the mutant copy matched the source copy in all of them."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.pattern",
+    "offset": 464,
+    "text": "names.length > 0",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "A CtorPattern always has a first Name. The parser builds it at one site, and it calls parseName for the constructor before it builds the node. So names is never empty and the >= form never runs on an empty list. The log copy saw no empty list in 19169 inputs. No forced probe applies: ctorRef on an undefined node reads an unrelated node, so the empty case is unreachable, not harmless."
   }
 ]
