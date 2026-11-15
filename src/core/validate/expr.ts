@@ -660,25 +660,15 @@ export class BodyValidator implements ValidatorCore {
     };
     if (comp.kind === "poisoned") return { ...recorded, type };
     const active = comp.active;
-    if (!sameSet(recorded.failures, active.failures)) {
-      this.add(
-        AREA.contracts,
-        `${path}.effects.failures`,
-        `expected ${list(active.failures)}, recorded ${
-          list(recorded.failures)
-        }`,
-        e.span,
-      );
-    }
-    if (!sameSet(recorded.requirements, active.requirements)) {
-      this.add(
-        AREA.contracts,
-        `${path}.effects.requirements`,
-        `expected ${list(active.requirements)}, recorded ${
-          list(recorded.requirements)
-        }`,
-        e.span,
-      );
+    for (const key of ["failures", "requirements"] as const) {
+      if (!sameSet(recorded[key], active[key])) {
+        this.add(
+          AREA.contracts,
+          `${path}.effects.${key}`,
+          `expected ${list(active[key])}, recorded ${list(recorded[key])}`,
+          e.span,
+        );
+      }
     }
     if (recorded.execution !== active.execution) {
       this.add(
