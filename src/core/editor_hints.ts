@@ -25,18 +25,35 @@ interface InlayHint {
  * clause. It is -1 when the header has none of these.
  */
 export function resultEndOf(tree: SyntaxTree, functionNode: NodeId): number {
+  const arrow = arrowHeaderOf(tree, functionNode)?.arrow;
   let position = -1;
-  for (const child of childrenOf(tree, functionNode)) {
-    if (kindOf(tree, child) !== SyntaxKind.ArrowExpr) continue;
-    for (const part of childrenOf(tree, child)) {
-      const kind = kindOf(tree, part);
-      if (
-        kind === SyntaxKind.ParamList || kind === SyntaxKind.FailsClause ||
-        isTypeKind(kind)
-      ) position = Math.max(position, tree.ends[part]);
-    }
+  for (const part of arrow === undefined ? [] : childrenOf(tree, arrow)) {
+    const kind = kindOf(tree, part);
+    if (
+      kind === SyntaxKind.ParamList || kind === SyntaxKind.FailsClause ||
+      isTypeKind(kind)
+    ) position = Math.max(position, tree.ends[part]);
   }
   return position;
+}
+
+/**
+ * The arrow expression of a function node and its `=>` token, or undefined
+ * when the node has no arrow. The token is undefined when the source is broken.
+ */
+export function arrowHeaderOf(
+  tree: SyntaxTree,
+  functionNode: NodeId,
+): { readonly arrow: NodeId; readonly token: NodeId | undefined } | undefined {
+  let arrow: NodeId | undefined;
+  for (const child of childrenOf(tree, functionNode)) {
+    if (kindOf(tree, child) === SyntaxKind.ArrowExpr) arrow = child;
+  }
+  if (arrow === undefined) return undefined;
+  const token = [...childrenOf(tree, arrow)].find((n) =>
+    tree.text.slice(tree.starts[n], tree.ends[n]) === "=>"
+  );
+  return { arrow, token };
 }
 
 /**

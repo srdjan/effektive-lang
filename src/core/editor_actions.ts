@@ -1,19 +1,42 @@
 // Contract edits come from checked body effect sets, never diagnostic prose.
 import { isSourcePath } from "./paths.ts";
+import type { FunctionBody } from "./check_project.ts";
 import type { Revision } from "./db.ts";
 import { diagnosticDelta } from "./diagnostic_delta.ts";
 import type { SourceEdit } from "./source.ts";
 import { reviseWithEdits } from "./editor_rename.ts";
 import { capabilityOfService } from "./ids.ts";
 import { EFFECT_ERROR_IDS } from "./resolve.ts";
-import { diagnosticInside, resultEndOf } from "./editor_hints.ts";
-import { childrenOf, kindOf, SyntaxKind } from "./syntax.ts";
+import {
+  arrowHeaderOf,
+  diagnosticInside,
+  resultEndOf,
+} from "./editor_hints.ts";
 import { functionParts } from "./syntax_queries.ts";
 
 interface ContractAction {
   readonly title: string;
   readonly function: string;
   readonly edits: readonly SourceEdit[];
+}
+
+/** The failures and requirements that the body needs and the written clauses lack. */
+function missingEntries(
+  fn: FunctionBody,
+  body: NonNullable<FunctionBody["body"]>,
+): { readonly failures: readonly string[]; readonly uses: readonly string[] } {
+  const { signature } = fn;
+  return {
+    // An open set has no clause to extend, so it never misses an entry.
+    failures: signature.written.fails
+      ? [...new Set([...body.failures, ...fn.failures])].filter((id) =>
+        !signature.failures.includes(id)
+      )
+      : [],
+    uses: signature.written.uses
+      ? body.requirements.filter((id) => !signature.requirements.includes(id))
+      : [],
+  };
 }
 
 function effectName(
@@ -106,15 +129,10 @@ export function contractActionsAt(
     if (
       diagnosticInside(revision, module.path, signature.span, CONTRACT_CODES)
     ) continue;
-    // An open set has no clause to extend, so it never misses an entry.
-    const missingFailures = signature.written.fails
-      ? [...new Set([...body.failures, ...fn.failures])].filter((id) =>
-        !signature.failures.includes(id)
-      )
-      : [];
-    const missingUses = signature.written.uses
-      ? body.requirements.filter((id) => !signature.requirements.includes(id))
-      : [];
+    const { failures: missingFailures, uses: missingUses } = missingEntries(
+      fn,
+      body,
+    );
     if (missingFailures.length === 0 && missingUses.length === 0) continue;
     const failureNames = missingFailures.map((id) =>
       effectName(revision, module.module, id)
@@ -122,18 +140,11 @@ export function contractActionsAt(
     const useNames = requirementNames(revision, module.module, missingUses);
     if ([...failureNames, ...useNames].some((n) => n === undefined)) continue;
     const { tree } = module;
-    let arrow = -1;
-    for (const child of childrenOf(tree, signature.node)) {
-      if (kindOf(tree, child) === SyntaxKind.ArrowExpr) arrow = child;
-    }
-    if (arrow < 0) continue;
-    const children = [...childrenOf(tree, arrow)];
-    const { fails, uses } = functionParts(tree, arrow);
+    const header = arrowHeaderOf(tree, signature.node);
+    if (header === undefined || header.token === undefined) continue;
+    const { token } = header;
+    const { fails, uses } = functionParts(tree, header.arrow);
     const text = tree.text;
-    const token = children.find((n) =>
-      text.slice(tree.starts[n], tree.ends[n]) === "=>"
-    );
-    if (token === undefined) continue;
     const edits: SourceEdit[] = [];
     const clauseEdit = (
       clause: number | undefined,
@@ -180,19 +191,11 @@ export function contractActionsAt(
     if (!checked.ok) continue;
     const changedFunction = checked.value.checkedModule(module.module)
       ?.functions.get(signature.id);
-    if (
-      changedFunction === undefined || changedFunction.body === undefined ||
-      (changedFunction.signature.written.fails &&
-        [...changedFunction.body.failures, ...changedFunction.failures].some((
-          id,
-        ) => !changedFunction.signature.failures.includes(id))) ||
-      (changedFunction.signature.written.uses &&
-        changedFunction.body.requirements.some((id) =>
-          !changedFunction.signature.requirements.includes(id)
-        ))
-    ) {
+    if (changedFunction === undefined || changedFunction.body === undefined) {
       continue;
     }
+    const remaining = missingEntries(changedFunction, changedFunction.body);
+    if (remaining.failures.length > 0 || remaining.uses.length > 0) continue;
     const delta = diagnosticDelta(
       revision.diagnostics,
       checked.value.diagnostics,
@@ -236,14 +239,7 @@ export function failsClauseActionsAt(
   const { tree } = module;
   for (const fn of module.functions.values()) {
     const { signature } = fn;
-    let arrow = -1;
-    for (const child of childrenOf(tree, signature.node)) {
-      if (kindOf(tree, child) === SyntaxKind.ArrowExpr) arrow = child;
-    }
-    if (arrow < 0) continue;
-    const token = [...childrenOf(tree, arrow)].find((n) =>
-      tree.text.slice(tree.starts[n], tree.ends[n]) === "=>"
-    );
+    const token = arrowHeaderOf(tree, signature.node)?.token;
     if (
       token === undefined || start < signature.span.start ||
       start > tree.ends[token]
