@@ -38,7 +38,7 @@
 // then carries the new spans.
 
 import { type Analysis, analyzeProject } from "./analyze.ts";
-import type { ModeMap } from "./signatures.ts";
+import type { Solved } from "./modes.ts";
 import {
   type CheckedModule,
   type CheckedProject,
@@ -50,7 +50,7 @@ import type { Diagnostic } from "./diagnostics.ts";
 import { moduleOfId, nameOfId } from "./ids.ts";
 import type { DeclEntry } from "./declaration_index.ts";
 import { fnv1a64, payloadHash } from "./interface.ts";
-import type { ModuleIR } from "./ir.ts";
+import type { ModuleIR, ValueId } from "./ir.ts";
 import { type LowerError, lowerModule } from "./lower.ts";
 import {
   type FileParser,
@@ -455,11 +455,14 @@ export interface RevisionDelta {
   readonly modeChanged: string[];
 }
 
-function sameModes(a: ModeMap | undefined, b: ModeMap | undefined): boolean {
+function sameModes(
+  a: ReadonlyMap<ValueId, Solved> | undefined,
+  b: ReadonlyMap<ValueId, Solved> | undefined,
+): boolean {
   if (a === undefined || b === undefined) return a === b;
   if (a.size !== b.size) return false;
-  for (const [id, mode] of a) {
-    if (b.get(id) !== mode) return false;
+  for (const [id, solved] of a) {
+    if (b.get(id)?.mode !== solved.mode) return false;
   }
   return true;
 }
@@ -484,7 +487,7 @@ export function revisionDelta(
     if (previous.interfaceHash(name) !== next.interfaceHash(name)) {
       interfaceChanged.push(name);
     }
-    if (!sameModes(before.modes, next.checkedModule(name)?.modes)) {
+    if (!sameModes(before.solved, next.checkedModule(name)?.solved)) {
       modeChanged.push(name);
     }
   }

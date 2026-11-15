@@ -114,7 +114,7 @@ function checkDeclarations(
 function computedModes(analysis: Analysis): ModeMap {
   const modes = new Map<ValueId, Execution>();
   for (const module of checkAnalysis(analysis).modules.values()) {
-    for (const [id, mode] of module.modes) modes.set(id, mode);
+    for (const [id, solved] of module.solved) modes.set(id, solved.mode);
   }
   return modes;
 }

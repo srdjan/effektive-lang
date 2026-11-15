@@ -16,7 +16,6 @@ import {
   type ConstantSignature,
   type FunctionSignature,
   isPendingMode,
-  type ModeMap,
   type ModuleDeclarations,
   signatureType,
   type SolvedLookup,
@@ -46,7 +45,7 @@ import {
   type ModuleInterface,
   reachableModules,
 } from "./interface.ts";
-import type { CapabilityId, Execution, Type as IrType, ValueId } from "./ir.ts";
+import type { CapabilityId, Type as IrType, ValueId } from "./ir.ts";
 import {
   recursiveAnnotationDiagnostic,
   type Solved,
@@ -87,8 +86,6 @@ interface ModuleBodies {
   readonly functions: ReadonlyMap<ValueId, FunctionBody>;
   /** In source order. */
   readonly constants: ReadonlyMap<ValueId, ConstantBody>;
-  /** The invocation mode of every function. */
-  readonly modes: ModeMap;
   /** The mode and the effect sets of every function, in source order. */
   readonly solved: ReadonlyMap<ValueId, Solved>;
   /** Body, mode, and initialization diagnostics of the module, sorted. */
@@ -103,7 +100,6 @@ export interface CheckedModule {
   readonly declarations: ModuleDeclarations;
   readonly functions: ReadonlyMap<ValueId, FunctionBody>;
   readonly constants: ReadonlyMap<ValueId, ConstantBody>;
-  readonly modes: ModeMap;
   /** The mode and the effect sets of every function, in source order. */
   readonly solved: ReadonlyMap<ValueId, Solved>;
   /** An error value only when the mode map lacks an entry, which cannot happen after body checking. */
@@ -495,14 +491,12 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
   const { functions, constants } = values.bodies();
   const orderedFunctions = new Map<ValueId, FunctionBody>();
   const orderedConstants = new Map<ValueId, ConstantBody>();
-  const orderedModes = new Map<ValueId, Execution>();
   const orderedSolved = new Map<ValueId, Solved>();
   for (const entry of entries) {
     const id = entry.signature.id;
     const fn = functions.get(id);
     if (fn !== undefined) {
       orderedFunctions.set(id, fn);
-      orderedModes.set(id, fn.mode);
       orderedSolved.set(id, {
         mode: fn.mode,
         failures: fn.failures,
@@ -515,7 +509,6 @@ function checkModuleBodies(args: CheckArguments): ModuleBodies {
   return {
     functions: orderedFunctions,
     constants: orderedConstants,
-    modes: orderedModes,
     solved: orderedSolved,
     diagnostics: normalizeDiagnostics(diagnostics),
   };
@@ -640,7 +633,6 @@ export function checkModuleStep(
       declarations,
       functions: bodies.functions,
       constants: bodies.constants,
-      modes: bodies.modes,
       solved: bodies.solved,
       diagnostics: normalizeDiagnostics([
         ...declarations.diagnostics,

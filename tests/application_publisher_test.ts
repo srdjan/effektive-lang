@@ -34,7 +34,9 @@ Deno.test("portable publisher checks, lowers, and independently validates its so
   ]);
   const domain = result.value.modules.get("domain");
   assert(domain);
-  for (const mode of domain.modes.values()) assertEquals(mode, "pure");
+  for (const solved of domain.solved.values()) {
+    assertEquals(solved.mode, "pure");
+  }
   const lowered = lowerProject(result.value);
   for (const module of lowered.values()) {
     assert(module.ok, JSON.stringify(module));

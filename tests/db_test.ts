@@ -532,10 +532,16 @@ Deno.test("revisionDelta: a mode flip appears in both lists", () => {
   const program = new Program("");
   const pure = updated(program, { "effektive.json": "{}", "m.eff": FLIP_PURE });
   assertEquals(pure.diagnostics, []);
-  assertEquals([...pure.checkedModule("m")!.modes.values()], ["pure"]);
+  assertEquals(
+    [...pure.checkedModule("m")!.solved.values()].map((s) => s.mode),
+    ["pure"],
+  );
   const effect = updated(program, { "m.eff": FLIP_EFFECT });
   assertEquals(effect.diagnostics, []);
-  assertEquals([...effect.checkedModule("m")!.modes.values()], ["effect"]);
+  assertEquals(
+    [...effect.checkedModule("m")!.solved.values()].map((s) => s.mode),
+    ["effect"],
+  );
   assertEquals(revisionDelta(pure, effect), {
     interfaceChanged: ["m"],
     modeChanged: ["m"],

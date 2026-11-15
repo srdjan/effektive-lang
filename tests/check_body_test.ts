@@ -624,7 +624,7 @@ Deno.test("the computed modes equal the modes that the plan names", () => {
   const project = examples();
   const computed = new Map<ValueId, Execution>();
   for (const module of project.modules.values()) {
-    for (const [id, mode] of module.modes) computed.set(id, mode);
+    for (const [id, solved] of module.solved) computed.set(id, solved.mode);
   }
   assertEquals(
     [...computed].sort(),
@@ -1121,11 +1121,11 @@ const b = (xs: Int[]): Int[] => xs |> map(loud)
   };
   const project = checkFiles(files, ["main.eff"]);
   assertEquals(
-    project.modules.get("lib")!.modes.get("value:lib#double" as ValueId),
+    project.modules.get("lib")!.solved.get("value:lib#double" as ValueId)?.mode,
     "pure",
   );
   assertEquals(
-    project.modules.get("lib")!.modes.get("value:lib#loud" as ValueId),
+    project.modules.get("lib")!.solved.get("value:lib#loud" as ValueId)?.mode,
     "effect",
   );
   assertEquals(messages(project), []);
