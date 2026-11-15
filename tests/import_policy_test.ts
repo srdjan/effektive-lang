@@ -179,6 +179,52 @@ Deno.test("import rules reject malformed configuration and glob patterns", () =>
   }
 });
 
+Deno.test("an exact host label in an allow list admits only that host", () => {
+  const files = {
+    "platform/clock.effi": CLOCK_INTERFACE,
+    "adapter/clock.eff": 'import { Clock } from "host:clock"\n',
+  };
+  assertEquals(
+    diagnostics({
+      "effektive.json": config([{ from: "adapter/**", allow: ["host:clock"] }]),
+      ...files,
+    }, ["adapter/clock.eff"]),
+    [],
+  );
+  assertEquals(
+    diagnostics({
+      "effektive.json": config([{ from: "adapter/**", allow: ["host:other"] }]),
+      ...files,
+    }, ["adapter/clock.eff"]).map((diagnostic) => diagnostic.code),
+    ["module/005"],
+  );
+});
+
+Deno.test("an empty or partial host label in an allow list is malformed", () => {
+  const emptyKey = checkProject(
+    memoryHost({
+      "effektive.json": JSON.stringify({
+        imports: [{ from: "domain/**", allow: ["host:"] }],
+      }),
+    }),
+    "",
+    [],
+  );
+  assert(!emptyKey.ok);
+  assertEquals(emptyKey.error.tag, "invalid-shape");
+  const partialKey = checkProject(
+    memoryHost({
+      "effektive.json": JSON.stringify({
+        imports: [{ from: "domain/**", allow: ["host:cl*"] }],
+      }),
+    }),
+    "",
+    [],
+  );
+  assert(!partialKey.ok);
+  assertEquals(partialKey.error.tag, "invalid-shape");
+});
+
 Deno.test("a configuration edit invalidates cached import diagnostics", () => {
   const allowed = config([
     { from: "feature/**", allow: ["domain/model"] },
