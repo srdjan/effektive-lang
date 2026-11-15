@@ -959,7 +959,7 @@ class Resolver {
         return;
       case SyntaxKind.RecordType:
         for (const field of kidsOfKind(this.tree, node, SyntaxKind.FieldType)) {
-          this.labelsAndTypes(field, false);
+          this.labelsAndTypes(field);
         }
         return;
       case SyntaxKind.FunctionType:
@@ -1008,16 +1008,15 @@ class Resolver {
   /** Parameter names in a signature without a body are labels. Their types resolve. */
   private labelParams(paramList: NodeId): void {
     for (const param of kidsOfKind(this.tree, paramList, SyntaxKind.Param)) {
-      this.labelsAndTypes(param, false);
+      this.labelsAndTypes(param);
     }
   }
 
-  /** A name child becomes a local or a field label. Any other child is a type. */
-  private labelsAndTypes(node: NodeId, local: boolean): void {
+  /** A name child is a field label. Any other child is a type. */
+  private labelsAndTypes(node: NodeId): void {
     for (const kid of kidsOf(this.tree, node)) {
-      if (kindOf(this.tree, kid) !== SyntaxKind.Name) this.resolveType(kid);
-      else if (local) this.declareLocal(kid, false);
-      else this.fieldLabel(kid);
+      if (kindOf(this.tree, kid) === SyntaxKind.Name) this.fieldLabel(kid);
+      else this.resolveType(kid);
     }
   }
 
@@ -1268,7 +1267,13 @@ class Resolver {
       const kind = kindOf(this.tree, kid);
       if (kind === SyntaxKind.ParamList) {
         for (const param of kidsOfKind(this.tree, kid, SyntaxKind.Param)) {
-          this.labelsAndTypes(param, true);
+          for (const part of kidsOf(this.tree, param)) {
+            if (kindOf(this.tree, part) === SyntaxKind.Name) {
+              this.declareLocal(part, false);
+            } else {
+              this.resolveType(part);
+            }
+          }
         }
       } else if (
         kind === SyntaxKind.FailsClause || kind === SyntaxKind.WithClause

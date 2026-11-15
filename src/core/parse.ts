@@ -766,32 +766,25 @@ class Parser {
       kind = SyntaxKind.ConstDecl;
       this.parseConstBody(true);
     } else if (k === TokenKind.Ident && this.isDeclarationWord(this.pos)) {
-      switch (
-        this.text.slice(this.starts[this.pos], this.ends[this.pos])
-      ) {
-        case "type":
-          kind = SyntaxKind.TypeDecl;
-          this.parseTypeBody();
-          break;
-        case "opaque":
-          kind = SyntaxKind.TypeDecl;
-          this.parseOpaqueTypeBody();
-          break;
-        case "sealed":
-          kind = SyntaxKind.TypeDecl;
-          this.parseSealedTypeBody();
-          break;
-        case "error":
-          kind = SyntaxKind.ErrorDecl;
-          this.parseErrorBody();
-          break;
-        case "service":
-          kind = SyntaxKind.ServiceDecl;
-          this.parseServiceBody();
-          break;
-        default:
-          kind = SyntaxKind.ProviderDecl;
-          this.parseProviderBody();
+      const word = this.text.slice(this.starts[this.pos], this.ends[this.pos]);
+      if (word === "type") {
+        kind = SyntaxKind.TypeDecl;
+        this.parseTypeBody();
+      } else if (word === "opaque") {
+        kind = SyntaxKind.TypeDecl;
+        this.parseOpaqueTypeBody();
+      } else if (word === "sealed") {
+        kind = SyntaxKind.TypeDecl;
+        this.parseSealedTypeBody();
+      } else if (word === "error") {
+        kind = SyntaxKind.ErrorDecl;
+        this.parseErrorBody();
+      } else if (word === "service") {
+        kind = SyntaxKind.ServiceDecl;
+        this.parseServiceBody();
+      } else {
+        kind = SyntaxKind.ProviderDecl;
+        this.parseProviderBody();
       }
     } else {
       this.missing("a declaration");
