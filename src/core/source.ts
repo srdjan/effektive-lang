@@ -2,6 +2,7 @@
 // with an exclusive end, as JavaScript strings index them.
 
 import type { Span } from "./ir.ts";
+import { compareText } from "./util.ts";
 
 export type { Span };
 
@@ -105,7 +106,8 @@ export function positionOf(
 
 /** Orders by source, then start, then end. */
 export function compareSpans(a: Span, b: Span): number {
-  if (a.source !== b.source) return a.source < b.source ? -1 : 1;
+  const bySource = compareText(a.source, b.source);
+  if (bySource !== 0) return bySource;
   if (a.start !== b.start) return a.start - b.start;
   return a.end - b.end;
 }

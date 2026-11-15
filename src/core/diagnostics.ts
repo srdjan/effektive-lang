@@ -2,6 +2,7 @@
 // A part registers only the codes that it emits.
 
 import { compareSpans, type Span } from "./source.ts";
+import { compareText } from "./util.ts";
 
 type Category =
   | "syntax"
@@ -403,13 +404,10 @@ export function makeDiagnostic(
 export function sortDiagnostics(
   diagnostics: readonly Diagnostic[],
 ): Diagnostic[] {
-  return [...diagnostics].sort((a, b) => {
-    const bySpan = compareSpans(a.span, b.span);
-    if (bySpan !== 0) return bySpan;
-    if (a.code !== b.code) return a.code < b.code ? -1 : 1;
-    if (a.message !== b.message) return a.message < b.message ? -1 : 1;
-    return 0;
-  });
+  return [...diagnostics].sort((a, b) =>
+    compareSpans(a.span, b.span) || compareText(a.code, b.code) ||
+    compareText(a.message, b.message)
+  );
 }
 
 /** Removes diagnostics with equal code, span, and message. Keeps the first of each. */
