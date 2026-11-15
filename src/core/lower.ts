@@ -773,10 +773,7 @@ class BodyLowerer {
       : {
         kind: "schema",
         op: fact.op,
-        arguments: this.schemaArguments(
-          fact,
-          args.map((_, i) => arg(i)),
-        ),
+        arguments: this.schemaArguments(fact, args),
         ...annotation,
       };
   }
