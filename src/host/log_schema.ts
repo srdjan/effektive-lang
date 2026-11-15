@@ -33,7 +33,7 @@ export interface Envelope {
 
 /** One diagnostic as the session log records it. Positions are one-based. */
 export interface LoggedDiagnostic {
-  readonly source: "effektive" | "validate" | "tsc";
+  readonly source: "effektive" | "tsc";
   readonly code?: string;
   readonly path?: string;
   readonly start?: { readonly line: number; readonly column: number };

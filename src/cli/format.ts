@@ -157,15 +157,14 @@ export function formatTscMappings(
   return located.sort(compareLocated).flatMap(lines);
 }
 
-/** The log items of Effektive or validation diagnostics, in the order given. */
+/** The log items of Effektive diagnostics, in the order given. */
 export function loggedDiagnostics(
   diagnostics: readonly Diagnostic[],
   textOf: TextOf,
-  source: "effektive" | "validate",
 ): LoggedDiagnostic[] {
   const positions = new Positions(textOf);
   return diagnostics.map((d) => ({
-    source,
+    source: "effektive",
     code: d.code,
     path: d.span.source,
     start: positions.of(d.span.source, d.span.start),

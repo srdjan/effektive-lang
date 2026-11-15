@@ -67,7 +67,6 @@ export async function buildRevision(
   const items: LoggedDiagnostic[] = loggedDiagnostics(
     revision.diagnostics,
     textOf,
-    "effektive",
   );
 
   let generated: string[] = [];
