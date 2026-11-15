@@ -550,7 +550,7 @@ export class ExprEmitter implements ExprCore {
   }
 
   /** `Effect.gen(function* () { ... })` */
-  genCall(statements: readonly Doc[]): Emitted {
+  private genCall(statements: readonly Doc[]): Emitted {
     const effect = this.scope.effect("Effect");
     return emitted([`${effect}.gen(function* () `, braces(statements), ")"]);
   }
@@ -1295,7 +1295,7 @@ export class ExprEmitter implements ExprCore {
     );
   }
 
-  callback(arg: Expr, kid: Kid): Emitted {
+  private callback(arg: Expr, kid: Kid): Emitted {
     return arg.kind === "closure"
       ? this.tag(arg, this.closure(arg, false))
       : kid(arg);
