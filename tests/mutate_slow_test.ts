@@ -504,3 +504,18 @@ Deno.test("each row of the survivor register matches exactly one current site", 
   );
   assertEquals(matchRegister(sites, [], register.value, files).stale, []);
 });
+
+// A line number in a reason goes stale when code moves, so a reason names
+// functions and types instead.
+Deno.test("no reason of the survivor register cites a line number", () => {
+  const register = parseRegister(
+    Deno.readTextFileSync("fixtures/mutation/survivors.json"),
+  );
+  assert(register.ok);
+  assertEquals(
+    register.value
+      .filter((row) => /\.ts:\d/.test(row.reason))
+      .map((row) => `${row.file} ${row.declaration} ${row.offset}`),
+    [],
+  );
+});
