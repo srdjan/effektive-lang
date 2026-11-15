@@ -1,7 +1,12 @@
 import type { Revision } from "./db.ts";
 import type { FileIndex } from "./declaration_index.ts";
 import type { Diagnostic } from "./diagnostics.ts";
-import { symbolIndex, type SymbolOccurrence } from "./editor_index.ts";
+import {
+  DECLARATION_KINDS,
+  isArrowDeclaration,
+  symbolIndex,
+  type SymbolOccurrence,
+} from "./editor_index.ts";
 import {
   contextualWordsOf,
   isFromKeyword,
@@ -95,13 +100,9 @@ function resolvedKind(
         ? "parameter"
         : "variable";
     case "value": {
-      const declaration = occurrence.declaration;
-      const entry = declaration === undefined
-        ? undefined
-        : revision.moduleInfoAt(declaration.source)?.index.decls.find((d) =>
-          d.nameSpan.start === declaration.start
-        );
-      return entry?.isArrow ? "function" : "variable";
+      return isArrowDeclaration(revision, occurrence.declaration)
+        ? "function"
+        : "variable";
     }
     default:
       return "variable";
@@ -200,28 +201,22 @@ export function semanticClassifications(
   }
   // Declarations recovered from otherwise broken regions can still be marked.
   if (matching === undefined && fileIndex !== undefined) {
-    const names = new Set(
-      fileIndex.decls.flatMap((d) => [
-        d.nameSpan.start,
-        ...d.methodList.map((m) => m.nameSpan.start),
-      ]),
-    );
-    for (let i = 0; i < output.length; i++) {
-      if (names.has(output[i].span.start)) {
-        const declaration = fileIndex.decls.find((d) =>
-          d.nameSpan.start === output[i].span.start
+    const types = new Map<number, SemanticClassification["type"]>();
+    for (const d of fileIndex.decls) {
+      if (!types.has(d.nameSpan.start)) {
+        types.set(
+          d.nameSpan.start,
+          DECLARATION_KINDS.get(d.kind) ??
+            (d.isArrow ? "function" : "variable"),
         );
-        const type = declaration?.kind === "type"
-          ? "type"
-          : declaration?.kind === "error"
-          ? "class"
-          : declaration?.kind === "service"
-          ? "interface"
-          : declaration?.isArrow
-          ? "function"
-          : declaration === undefined
-          ? "method"
-          : "variable";
+      }
+      for (const m of d.methodList) {
+        if (!types.has(m.nameSpan.start)) types.set(m.nameSpan.start, "method");
+      }
+    }
+    for (let i = 0; i < output.length; i++) {
+      const type = types.get(output[i].span.start);
+      if (type !== undefined) {
         output[i] = {
           ...output[i],
           type,

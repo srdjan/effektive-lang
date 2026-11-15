@@ -27,6 +27,27 @@ export function bodyTablesOf(
   ].map((body) => body.table);
 }
 
+/** The editor kind of a type, error, or service declaration. Other kinds need the declaration. */
+export const DECLARATION_KINDS: ReadonlyMap<
+  string,
+  "type" | "class" | "interface"
+> = new Map([
+  ["type", "type"],
+  ["error", "class"],
+  ["service", "interface"],
+]);
+
+/** True when the name span `declaration` names a const whose value is an arrow. */
+export function isArrowDeclaration(
+  revision: Revision,
+  declaration: Span | undefined,
+): boolean {
+  return declaration !== undefined &&
+    revision.moduleInfoAt(declaration.source)?.index.decls.find((d) =>
+        d.nameSpan.start === declaration.start
+      )?.isArrow === true;
+}
+
 export interface SymbolOccurrence {
   readonly identity: string;
   readonly target: Target;

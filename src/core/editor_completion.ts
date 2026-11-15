@@ -3,7 +3,9 @@ import type { Revision } from "./db.ts";
 import type { ModuleInfo } from "./project.ts";
 import {
   bodyTablesOf,
+  DECLARATION_KINDS,
   declarationOf,
+  isArrowDeclaration,
   occurrenceAt,
   symbolIndex,
 } from "./editor_index.ts";
@@ -298,24 +300,12 @@ function namespaceCompletions(
     if (context === "with" && kind !== "service") continue;
     if (context === "value" && kind === "service") continue;
     const origin = declarationOf(revision, site.module, binding.target);
-    const declaration = origin === undefined
-      ? undefined
-      : revision.moduleInfoAt(origin.source)?.index.decls.find((d) =>
-        d.nameSpan.start === origin.start
-      );
     values.set(
       name,
       make(
         name,
-        kind === "type"
-          ? "type"
-          : kind === "error"
-          ? "class"
-          : kind === "service"
-          ? "interface"
-          : declaration?.isArrow
-          ? "function"
-          : "variable",
+        DECLARATION_KINDS.get(kind) ??
+          (isArrowDeclaration(revision, origin) ? "function" : "variable"),
       ),
     );
   }
