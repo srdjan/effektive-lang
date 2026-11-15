@@ -95,35 +95,43 @@ interface Cursor {
   readonly text: string;
 }
 
-/**
- * The cursor of a position request, or undefined when there is no good revision
- * or text. With `current`, the project must have no configuration error, and the
- * revision text must equal the open or disk text and the requested document
- * version. Hover and definition do not ask for this check.
- */
+/** The cursor of a position request, or undefined when there is no good revision or text. */
 function cursorOf(
   params: EditorPositionParams,
   ctx: ServerContext,
-  current = false,
 ): Cursor | undefined {
   const found = ctx.projects.forRequest(params.textDocument.uri);
   if (found === undefined) return undefined;
   const { project, path } = found;
-  if (current && project.configError !== undefined) return undefined;
   const revision = project.lastGood;
   if (revision === undefined) return undefined;
   const text = revision.sourceTexts().get(path);
   if (text === undefined) return undefined;
-  if (current) {
-    const open = project.open.get(path);
-    if (
-      (open?.text ?? project.disk.get(path)) !== text ||
-      params.documentVersion !== undefined &&
-        open?.version !== params.documentVersion
-    ) return undefined;
-  }
   const offset = positionToOffset(text, lineStarts(text), params.position);
   return { project, revision, path, offset, text };
+}
+
+/**
+ * The cursor of a position request on a current revision. The project must have
+ * no configuration error, and the revision text must equal the open or disk text
+ * and the requested document version. Hover and definition do not ask for this
+ * check.
+ */
+function currentCursorOf(
+  params: EditorPositionParams,
+  ctx: ServerContext,
+): Cursor | undefined {
+  const cursor = cursorOf(params, ctx);
+  if (cursor === undefined) return undefined;
+  const { project, path, text } = cursor;
+  if (project.configError !== undefined) return undefined;
+  const open = project.open.get(path);
+  if (
+    (open?.text ?? project.disk.get(path)) !== text ||
+    params.documentVersion !== undefined &&
+      open?.version !== params.documentVersion
+  ) return undefined;
+  return cursor;
 }
 
 /** The location of a span, or undefined when the text or the URI is not known. */
@@ -285,7 +293,6 @@ export function statsRequest(
 
 function freshProject(cursor: Cursor, ctx: ServerContext): boolean {
   const { project, revision } = cursor;
-  if (project.configError !== undefined) return false;
   const config = project.open.get(CONFIG_FILE)?.text;
   const diskConfig = config === undefined
     ? ctx.fs.readText(joinPath(project.root, CONFIG_FILE))
@@ -339,7 +346,7 @@ export function referencesRequest(
   params: ReferencesParams,
   ctx: ServerContext,
 ): Answer {
-  const cursor = cursorOf(params, ctx, true);
+  const cursor = currentCursorOf(params, ctx);
   if (cursor === undefined) return answer([]);
   const rangeOf = spanRanges(cursor.revision);
   return answer(
@@ -358,7 +365,7 @@ export function prepareRenameRequest(
   params: EditorPositionParams,
   ctx: ServerContext,
 ): Answer {
-  const cursor = cursorOf(params, ctx, true);
+  const cursor = currentCursorOf(params, ctx);
   if (cursor === undefined || !freshProject(cursor, ctx)) return stale();
   const prepared = prepareRenameAt(
     cursor.revision,
@@ -381,7 +388,7 @@ export function renameRequest(
   params: RenameParams,
   ctx: ServerContext,
 ): Answer {
-  const cursor = cursorOf(params, ctx, true);
+  const cursor = currentCursorOf(params, ctx);
   if (cursor === undefined || !freshProject(cursor, ctx)) return stale();
   const result = renameAt(
     cursor.revision,
@@ -408,7 +415,7 @@ export function completionRequest(
   params: EditorPositionParams,
   ctx: ServerContext,
 ): Answer {
-  const cursor = cursorOf(params, ctx, true);
+  const cursor = currentCursorOf(params, ctx);
   if (cursor === undefined) return answer({ isIncomplete: false, items: [] });
   const starts = lineStarts(cursor.text);
   return answer({
@@ -430,7 +437,7 @@ export function signatureHelpRequest(
   params: EditorPositionParams,
   ctx: ServerContext,
 ): Answer {
-  const cursor = cursorOf(params, ctx, true);
+  const cursor = currentCursorOf(params, ctx);
   if (cursor === undefined) return answer(null);
   const found = signatureHelpAt(
     cursor.revision,
@@ -500,10 +507,9 @@ export function codeActionRequest(
   params: CodeActionParams,
   ctx: ServerContext,
 ): Answer {
-  const cursor = cursorOf(
+  const cursor = currentCursorOf(
     { ...params, position: params.range.start },
     ctx,
-    true,
   );
   if (cursor === undefined || !freshProject(cursor, ctx)) return answer([]);
   const end = positionToOffset(
@@ -542,10 +548,9 @@ export function inlayHintRequest(
   params: InlayHintParams,
   ctx: ServerContext,
 ): Answer {
-  const cursor = cursorOf(
+  const cursor = currentCursorOf(
     { ...params, position: params.range.start },
     ctx,
-    true,
   );
   if (cursor === undefined) return answer([]);
   const { text } = cursor;
