@@ -123,7 +123,7 @@ export function mapElements(
     element: fn.result,
     effects: row.pure
       ? source.effects
-      : { ...unionEffects(source.effects, fn.effects) },
+      : unionEffects(source.effects, fn.effects),
   }, combine([stream, transform]));
 }
 
@@ -223,9 +223,7 @@ function sinkTransformStream(
   return derivedResult({
     kind: "stream",
     element: consumer.result,
-    effects: {
-      ...unionEffects(source.effects, consumer.effects),
-    },
+    effects: unionEffects(source.effects, consumer.effects),
   }, combine([stream, sink]));
 }
 

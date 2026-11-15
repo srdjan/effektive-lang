@@ -452,9 +452,7 @@ export function race(
   return derivedResult({
     kind: "effect",
     result: aFitsB ? b.result : a.result,
-    effects: {
-      ...unionEffects(a.effects, b.effects),
-    },
+    effects: unionEffects(a.effects, b.effects),
   }, combine([left, right]));
 }
 

@@ -109,9 +109,7 @@ export function mergeLayers(
     provides: sortedUnique([...a.provides, ...b.provides]),
     acquisition: {
       execution: "effect",
-      effects: {
-        ...unionEffects(a.acquisition.effects, b.acquisition.effects),
-      },
+      effects: unionEffects(a.acquisition.effects, b.acquisition.effects),
     },
   }, combine([left, right]));
 }
