@@ -897,31 +897,19 @@ class ModuleChecker {
 
     // A binding type annotation that is a function type of the same arity supplies
     // the types that the arrow does not write.
-    let bindingFn: {
-      type: FunctionType;
-      parameters: readonly TypeRef[];
-      result: TypeRef;
-    } | undefined;
     const bindingFunction = binding === undefined
       ? undefined
       : this.functionOfBinding(binding);
-    if (
-      bindingFunction !== undefined &&
-      bindingFunction.node.parameters.length === written.length
-    ) {
-      bindingFn = {
-        type: bindingFunction.ir,
-        parameters: bindingFunction.node.parameters,
-        result: bindingFunction.node.result,
-      };
-    }
+    const bindingFn = bindingFunction?.node.parameters.length === written.length
+      ? bindingFunction
+      : undefined;
     const parameters: ParameterSignature[] = written.map((p, i) => {
       if (p.annotated || bindingFn === undefined) return p;
       return {
         ...p,
         type: {
-          ref: bindingFn.parameters[i],
-          ir: bindingFn.type.parameters[i],
+          ref: bindingFn.node.parameters[i],
+          ir: bindingFn.ir.parameters[i],
         },
       };
     });
@@ -943,9 +931,9 @@ class ModuleChecker {
       annotation = "arrow";
       closedParts = { result: true, fails: false, uses: false };
     } else if (bindingFn !== undefined) {
-      result = { ref: bindingFn.result, ir: bindingFn.type.result };
-      failures = [...bindingFn.type.effects.failures];
-      requirements = [...bindingFn.type.effects.requirements];
+      result = { ref: bindingFn.node.result, ir: bindingFn.ir.result };
+      failures = [...bindingFn.ir.effects.failures];
+      requirements = [...bindingFn.ir.effects.requirements];
       annotation = "binding";
       closedParts = { result: true, fails: true, uses: true };
     }
@@ -962,21 +950,22 @@ class ModuleChecker {
     }
 
     if (!entry.broken && binding !== undefined) {
-      this.checkBindingFits(arrow, binding, parameters, result, {
-        failures,
-        requirements,
-      }, entry.exported);
+      this.checkBindingFits(
+        arrow,
+        binding,
+        bindingFunction,
+        parameters,
+        result,
+        { failures, requirements },
+        entry.exported,
+      );
     }
-    if (!entry.broken) {
-      if (entry.exported) {
-        if (!explicit) {
-          lowerer.report(
-            "declaration/005",
-            `the exported function \`${entry.name}\` needs a result annotation`,
-            entry.nameSpan,
-          );
-        }
-      }
+    if (!entry.broken && entry.exported && !explicit) {
+      lowerer.report(
+        "declaration/005",
+        `the exported function \`${entry.name}\` needs a result annotation`,
+        entry.nameSpan,
+      );
     }
     return {
       kind: "function",
@@ -988,7 +977,7 @@ class ModuleChecker {
       result,
       failures,
       requirements,
-      ...(bindingFn?.type.execution === "pure"
+      ...(bindingFn?.ir.execution === "pure"
         ? { expectedExecution: "pure" as const }
         : {}),
     };
@@ -1018,6 +1007,7 @@ class ModuleChecker {
   private checkBindingFits(
     arrow: NodeId,
     binding: Lowered,
+    fn: { node: FunctionNode; ir: FunctionType } | undefined,
     parameters: readonly ParameterSignature[],
     result: Lowered | undefined,
     effects: {
@@ -1027,7 +1017,6 @@ class ModuleChecker {
     exported: boolean,
   ): void {
     const expected = showType(this.table, binding.ref);
-    const fn = this.functionOfBinding(binding);
     if (fn === undefined) {
       this.lowerer.report(
         "type-mismatch/003",
