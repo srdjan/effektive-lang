@@ -405,6 +405,42 @@
     "reason": "The mutant keeps the exported trees after the command. tests/behavior_compare_slow_test.ts kills it: it sets TMPDIR and asserts that no exported tree remains. Checked by hand on a copy."
   },
   {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "exportRevisionTree",
+    "offset": 326,
+    "text": "exported.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant reverses the result of an export. tests/behavior_compare_slow_test.ts kills it: the run of HEAD against HEAD and the missing revision test both fail. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "materializeForged",
+    "offset": 109,
+    "text": "filled === undefined",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant skips the fill on the first call, so materializeForged returns undefined and the read of forged.ok throws. tests/behavior_compare_slow_test.ts kills it: both of its tests fail with exit status 1. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "materializeForged",
+    "offset": 109,
+    "text": "filled === undefined",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "The mutant skips the fill on the first call, so materializeForged returns undefined and the read of forged.ok throws. tests/behavior_compare_slow_test.ts kills it: both of its tests fail with exit status 1. Checked by hand on a copy."
+  },
+  {
+    "file": "scripts/behavior_compare.ts",
+    "declaration": "records",
+    "offset": 274,
+    "text": "!forged.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant returns the forged fixture directory in place of the records of a run. tests/behavior_compare_slow_test.ts kills it: the run of HEAD against HEAD fails. Checked by hand on a copy."
+  },
+  {
     "file": "scripts/mutate.ts",
     "declaration": "selectSample",
     "offset": 133,
