@@ -94,7 +94,7 @@ export interface LexSnapshot {
   readonly random: string;
 }
 
-export function buildSnapshot(random: readonly string[]): LexSnapshot {
+function buildSnapshot(random: readonly string[]): LexSnapshot {
   return {
     seed: SEED,
     randomCount: random.length,

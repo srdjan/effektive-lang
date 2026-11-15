@@ -12,13 +12,13 @@ import type { Result } from "../src/core/mod.ts";
 export const ROOT = resolve(dirname(fromFileUrl(import.meta.url)), "..");
 
 /** The permission flags of the fast suite. Flags of a caller follow them. */
-export const FAST_SUITE_PERMISSIONS: readonly string[] = [
+const FAST_SUITE_PERMISSIONS: readonly string[] = [
   "--allow-read",
   "--parallel",
 ];
 
 /** The test selection of the fast suite: no slow test, the `tests/` directory. */
-export const FAST_SUITE_SELECTION: readonly string[] = [
+const FAST_SUITE_SELECTION: readonly string[] = [
   "--ignore=**/*_slow_test.ts",
   "tests/",
 ];

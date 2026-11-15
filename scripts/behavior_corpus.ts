@@ -291,7 +291,7 @@ const HOST_INTERFACE = "export type Tick = int\n" +
   "export service Clock { now(): Tick }\n";
 
 /** The edit sequences. The case names start with `edits/`. */
-export const EDIT_SEQUENCES: readonly Sequence[] = [
+const EDIT_SEQUENCES: readonly Sequence[] = [
   {
     name: "type-error-then-revert",
     steps: [
@@ -373,7 +373,7 @@ function entriesOf(files: Files): string[] {
 }
 
 /** The projects under `fixtures`, found by the rules of the plan SR10. */
-export function readProjects(fixtures: string): ProjectCase[] {
+function readProjects(fixtures: string): ProjectCase[] {
   const projects: ProjectCase[] = [];
   const walk = (dir: string, loose: boolean): void => {
     const names = [...Deno.readDirSync(`${fixtures}/${dir}`)]
@@ -417,7 +417,7 @@ export function readProjects(fixtures: string): ProjectCase[] {
 }
 
 /** The forged IR files of `fixtures/validate`, with the sources of the manifest. */
-export function readForged(fixtures: string): ForgedCase[] {
+function readForged(fixtures: string): ForgedCase[] {
   const manifest: unknown = JSON.parse(
     Deno.readTextFileSync(`${fixtures}/validate/manifest.json`),
   );
@@ -449,7 +449,7 @@ export function readForged(fixtures: string): ForgedCase[] {
 }
 
 /** The whole corpus of a head tree. */
-export function readCorpus(fixtures: string): Corpus {
+function readCorpus(fixtures: string): Corpus {
   return {
     projects: readProjects(fixtures),
     forged: readForged(fixtures),

@@ -120,7 +120,7 @@ function readTree(
 const NO_FILES: Readonly<Record<string, string>> = {};
 
 /** The literal command-line cases over the examples and the usage. */
-export function fixedCliCases(): readonly CliCase[] {
+function fixedCliCases(): readonly CliCase[] {
   const examples = exampleFiles();
   return [
     { name: "examples-check", args: ["check", ROOT], files: examples },
@@ -150,7 +150,7 @@ export function fixedCliCases(): readonly CliCase[] {
  * One `check` case for each entry of `fixtures/errors/`. A single file runs as a
  * one-file project with an empty `effektive.json`. A directory is a project.
  */
-export function errorCliCases(): readonly CliCase[] {
+function errorCliCases(): readonly CliCase[] {
   return listErrorCases().map((c) => ({
     name: `errors-${c.name}`,
     args: ["check", ROOT],

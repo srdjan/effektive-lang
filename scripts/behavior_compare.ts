@@ -194,7 +194,7 @@ export function safeName(name: string): string {
 }
 
 /** The text of a record, formatted for reading when it holds JSON. */
-export function prettyText(text: string): string {
+function prettyText(text: string): string {
   const parsed: unknown = JSON.parse(text);
   return typeof parsed === "string" ? parsed : JSON.stringify(parsed, null, 2);
 }

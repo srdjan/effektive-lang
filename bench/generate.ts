@@ -24,7 +24,7 @@ export type SizeName = keyof typeof SIZES;
 export const SIZE_NAMES: readonly SizeName[] = ["small", "medium", "large"];
 
 /** The most feature declarations in one feature module. */
-export const DECLARATIONS_PER_MODULE = 60;
+const DECLARATIONS_PER_MODULE = 60;
 
 export interface GenerateOptions {
   /** The number of declarations in the feature modules. At least 8. */

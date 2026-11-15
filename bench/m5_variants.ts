@@ -55,7 +55,7 @@ export interface VariantOutcome {
   readonly skipped: readonly Skipped[];
 }
 
-export const VARIANT_NAMES = {
+const VARIANT_NAMES = {
   tsc: `tsc ${TYPESCRIPT_VERSION} cold process`,
   service: `ts.LanguageService ${TYPESCRIPT_VERSION} warm`,
   tsgo: `tsgo ${TSGO_VERSION} cold process`,
