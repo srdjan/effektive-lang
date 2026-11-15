@@ -2099,6 +2099,17 @@ type Int = int
   assertEquals(fn(project, "m", "f").mode, "effect");
 });
 
+Deno.test("a protected block with an error hides the unreachable handler diagnostic", () => {
+  const project = checkText(`
+error A = { m: string }
+const f = (): Int => try { unknownName() } catch { A(a) => 2 }
+type Int = int
+`);
+  assertEquals(messages(project), [
+    "unknown-name/001 unknown name `unknownName`",
+  ]);
+});
+
 // ------------------------------------------------------------------ match
 
 Deno.test("match on an option needs Some and None", () => {
