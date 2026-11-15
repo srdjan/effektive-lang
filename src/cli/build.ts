@@ -3,22 +3,25 @@
 
 import type { TypeScriptOutputs } from "../core/typescript.ts";
 import type { Diagnostic, Revision, SpanTable } from "../core/mod.ts";
-import { formatDiagnostics, loggedDiagnostics, type TextOf } from "./format.ts";
-import type { HostIo } from "../host/io.ts";
+import { formatDiagnostics, loggedDiagnostics } from "./format.ts";
 import type { LoggedDiagnostic } from "../host/log_schema.ts";
-import type { EventLog } from "../host/ports.ts";
 import {
   type ModuleRemoval,
   ownedByRoot,
   runSaveRound,
 } from "../host/save_round.ts";
-import { runTsc } from "./tsc.ts";
+import { runTsc, type TscContext } from "./tsc.ts";
 
 export interface BuildOptions {
   /** Write the generated file and its map for each module without an error whose imported modules are also written. */
   readonly write: boolean;
   /** Run `deno check` over the written files and the host modules. */
   readonly tsc: boolean;
+}
+
+export interface BuildContext extends TscContext {
+  /** The output cache that the build reads and fills. */
+  readonly outputCache: TypeScriptOutputs;
 }
 
 export interface BuildOutcome {
@@ -47,15 +50,12 @@ export interface BuildOutcome {
  * that left are removed first, and a failed removal is not tried again.
  */
 export async function buildRevision(
-  io: HostIo,
-  root: string,
+  context: BuildContext,
   revision: Revision,
-  textOf: TextOf,
   options: BuildOptions,
   previous: readonly string[],
-  outputCache: TypeScriptOutputs,
-  log: EventLog,
 ): Promise<BuildOutcome> {
+  const { io, root, textOf, outputCache } = context;
   const notes: string[] = [];
   const diagnostics: Diagnostic[] = [...revision.diagnostics];
   let failed = false;
@@ -100,13 +100,10 @@ export async function buildRevision(
       notes.push("deno check skipped: the build has errors");
     } else {
       const outcome = await runTsc(
-        io,
-        root,
+        context,
         revision.config,
         generated,
         tables,
-        textOf,
-        log,
       );
       for (const message of outcome.lines) {
         lines.push(message);

@@ -53,18 +53,23 @@ interface TscOutcome {
   readonly failed: boolean;
 }
 
+/** What a build and its `deno check` run share. */
+export interface TscContext {
+  readonly io: HostIo;
+  readonly root: string;
+  readonly textOf: TextOf;
+  readonly log: EventLog;
+}
+
 /**
  * Runs `deno check` over `generated` (root-relative paths) and over the host
  * modules of the configuration. `tables` maps each generated path to its span table.
  */
 export async function runTsc(
-  io: HostIo,
-  root: string,
+  { io, root, textOf, log }: TscContext,
   config: ProjectConfig,
   generated: readonly string[],
   tables: ReadonlyMap<string, SpanTable>,
-  textOf: TextOf,
-  log: EventLog,
 ): Promise<TscOutcome> {
   const hosts = hostModulePaths(config);
   const files = [...new Set([...generated, ...hosts.keys()])];

@@ -43,8 +43,8 @@ export class Session {
   constructor(
     private readonly io: HostIo,
     readonly root: string,
-    private readonly trackTargets = false,
-    private readonly log: EventLog = noLog,
+    private readonly trackTargets: boolean,
+    private readonly log: EventLog,
   ) {
     this.disk = new DiskProgram(root);
   }
@@ -128,14 +128,16 @@ export class Session {
   ): Promise<BuildOutcome> {
     const started = performance.now();
     const outcome = await buildRevision(
-      this.io,
-      this.root,
+      {
+        io: this.io,
+        root: this.root,
+        textOf: this.textOf,
+        outputCache: this.outputs,
+        log: this.log,
+      },
       revision,
-      this.textOf,
       options,
       previous,
-      this.outputs,
-      this.log,
     );
     if (this.log !== noLog) {
       for (const path of outcome.written) {
