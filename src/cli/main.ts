@@ -196,6 +196,13 @@ async function execute(
   return code;
 }
 
+/** Logs and prints a project that cannot start, and returns its exit code. */
+function usageFailure(io: HostIo, log: EventLog, message: string): number {
+  emit(log, "cli.error", { message });
+  io.stderr(`effektive: ${message}\n`);
+  return EXIT_USAGE;
+}
+
 async function runProject(
   io: HostIo,
   command: ProjectCommand,
@@ -214,9 +221,7 @@ async function runProject(
   // A project that cannot start is a configuration error. A later break in watch mode only prints.
   const synced = session.sync();
   if (isSyncFailure(synced)) {
-    emit(log, "cli.error", { message: synced.message });
-    io.stderr(`effektive: ${synced.message}\n`);
-    return EXIT_USAGE;
+    return usageFailure(io, log, synced.message);
   }
   if (command.kind === "watch") {
     await watchLoop(io, session, synced, io.watch(root), options, log);
@@ -230,9 +235,7 @@ async function runProject(
   // diagnostics print the lines and columns of the fixed text.
   const again = fixed === undefined ? synced : session.sync();
   if (isSyncFailure(again)) {
-    emit(log, "cli.error", { message: again.message });
-    io.stderr(`effektive: ${again.message}\n`);
-    return EXIT_USAGE;
+    return usageFailure(io, log, again.message);
   }
   const revision = "revision" in again ? again.revision : synced.revision;
   const outcome = await session.build(revision, options, []);
