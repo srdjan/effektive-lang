@@ -112,7 +112,7 @@ import {
   type TypeRef,
   type TypeTable,
 } from "./types.ts";
-import { sortedUnique } from "./util.ts";
+import { arityMessage, sortedUnique } from "./util.ts";
 import { showType, showTypes } from "./type_show.ts";
 import { functionTypeToIr } from "./type_ir.ts";
 import { bodyLocalId, isReservedErrorId, isTypeId, shortName } from "./ids.ts";
@@ -725,26 +725,23 @@ class BodyChecker
         calleeKind === SyntaxKind.FieldExpr
       ? this.targets.get(callee)
       : undefined;
-    return this.invoke(node, callee, target, false, args, expected);
+    // A callee without a target is an ordinary expression that evaluates to a function.
+    return target === undefined
+      ? this.apply(node, this.expr(callee), args)
+      : this.invoke(node, callee, target, args, expected);
   }
 
   /**
    * Checks a call. `callee` is the callee expression or, for a pipeline stage, the
-   * qualified name. A target of `undefined` on an expression callee means the
-   * callee is an ordinary expression that evaluates to a function.
+   * qualified name.
    */
   private invoke(
     node: NodeId,
     callee: NodeId,
-    target: Target | undefined,
-    stage: boolean,
+    target: Target,
     args: readonly Arg[],
     expected: TypeRef | undefined,
   ): NodeInfo {
-    if (target === undefined) {
-      if (stage) return this.unresolvedCall(node, args);
-      return this.apply(node, this.expr(callee), args);
-    }
     switch (target.kind) {
       case "builtin":
         return this.builtinCall(node, target.name, args, expected);
@@ -785,6 +782,24 @@ class BodyChecker
         return unreachable;
       }
     }
+  }
+
+  /**
+   * Checks the arguments without a hint, reports `diagnostic` when it is given,
+   * and finishes the call with the error type.
+   */
+  private rejectCall(
+    node: NodeId,
+    args: readonly Arg[],
+    diagnostic:
+      | { readonly code: DiagnosticCode; readonly message: string }
+      | undefined,
+  ): NodeInfo {
+    const infos = args.map((a) => this.argInfo(a));
+    if (diagnostic !== undefined) {
+      this.report(diagnostic.code, diagnostic.message, node);
+    }
+    return this.finish(node, this.table.error, combine(infos));
   }
 
   /** The callee could not be resolved. The arguments still get checked. */
@@ -920,9 +935,12 @@ class BodyChecker
     if (args.length !== fn.parameters.length) {
       this.report(
         "type-mismatch/004",
-        `the function takes ${fn.parameters.length} argument${
-          fn.parameters.length === 1 ? "" : "s"
-        }, but ${args.length} ${args.length === 1 ? "is" : "are"} given`,
+        arityMessage(
+          "the function",
+          "argument",
+          fn.parameters.length,
+          args.length,
+        ),
         node,
       );
     }
@@ -983,13 +1001,10 @@ class BodyChecker
     args: readonly Arg[],
   ): NodeInfo {
     if (isReservedErrorId(id)) {
-      const infos = args.map((arg) => this.argInfo(arg));
-      this.report(
-        "type-mismatch/010",
-        `${shortName(id)} cannot be constructed directly`,
-        node,
-      );
-      return this.finish(node, this.table.error, combine(infos));
+      return this.rejectCall(node, args, {
+        code: "type-mismatch/010",
+        message: `${shortName(id)} cannot be constructed directly`,
+      });
     }
     this.fact(node, { kind: "error-construction", error: id });
     const record = this.table.errorRecordOf(id);
@@ -1040,28 +1055,24 @@ class BodyChecker
     args: readonly Arg[],
   ): NodeInfo {
     if (this.table.isOpaque(id)) {
-      const infos = args.map((a) => this.argInfo(a));
-      this.report(
-        "type-mismatch/010",
-        "an opaque type cannot be constructed in source",
-        node,
-      );
-      return this.finish(node, this.table.error, combine(infos));
+      return this.rejectCall(node, args, {
+        code: "type-mismatch/010",
+        message: "an opaque type cannot be constructed in source",
+      });
     }
     const base = this.table.identityBaseOf(id);
     if (base === undefined) {
-      const infos = args.map((a) => this.argInfo(a));
       // A body that did not parse has the error type, so its uses report nothing more.
-      if (!this.hasErrorRecord(this.table.named(id))) {
-        this.report(
-          "type-mismatch/010",
-          `\`${
+      return this.rejectCall(
+        node,
+        args,
+        this.hasErrorRecord(this.table.named(id)) ? undefined : {
+          code: "type-mismatch/010",
+          message: `\`${
             shortName(id)
           }\` has no identity; only a type with identity is a constructor`,
-          node,
-        );
-      }
-      return this.finish(node, this.table.error, combine(infos));
+        },
+      );
     }
     this.requireSealedOwner(node, id);
     this.fact(node, { kind: "identity-construction", identity: id });
@@ -1128,13 +1139,10 @@ class BodyChecker
       if (optionRole(name) === "some") {
         return this.someCall(node, name, args, expected);
       }
-      const infos = args.map((a) => this.argInfo(a));
-      this.report(
-        "type-mismatch/008",
-        `\`${name}\` is a value, not a function`,
-        node,
-      );
-      return this.finish(node, this.table.error, combine(infos));
+      return this.rejectCall(node, args, {
+        code: "type-mismatch/008",
+        message: `\`${name}\` is a value, not a function`,
+      });
     }
     return this.preludeCall(node, name, args, expected);
   }
@@ -1200,9 +1208,7 @@ class BodyChecker
     this.report(
       "type-mismatch/004",
       usage ??
-        `\`${name}\` takes ${expectedCount} argument${
-          expectedCount === 1 ? "" : "s"
-        }, but ${args.length} ${args.length === 1 ? "is" : "are"} given`,
+        arityMessage(`\`${name}\``, "argument", expectedCount, args.length),
       node,
     );
     return false;
@@ -1456,14 +1462,10 @@ class BodyChecker
       ...stageArgs.map((n) => ({ node: n })),
     ];
     if (this.checkedSlots.has(node)) this.checkedSlots.add(stage);
-    const q = this.invoke(
-      stage,
-      qualified,
-      this.targets.get(qualified),
-      true,
-      args,
-      expected,
-    );
+    const target = this.targets.get(qualified);
+    const q = target === undefined
+      ? this.unresolvedCall(stage, args)
+      : this.invoke(stage, qualified, target, args, expected);
     if (quiet) return this.finish(node, q.type, q);
     this.body.stageSets.set(stage, {
       failures: q.failures,

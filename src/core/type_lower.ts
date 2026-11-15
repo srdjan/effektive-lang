@@ -19,7 +19,7 @@ import {
   TYPE_WORDS,
 } from "./syntax.ts";
 import { dataOnly, type TypeRef } from "./types.ts";
-import { sortedUnique } from "./util.ts";
+import { arityMessage, sortedUnique } from "./util.ts";
 import { showType } from "./type_show.ts";
 import { isErrorId } from "./ids.ts";
 import {
@@ -327,9 +327,7 @@ export class TypeLowerer {
     for (const arg of args) this.lower(arg);
     this.report(
       "type-mismatch/001",
-      `\`${name}\` takes ${expected} type argument${
-        expected === 1 ? "" : "s"
-      }, but ${args.length} ${args.length === 1 ? "is" : "are"} given`,
+      arityMessage(`\`${name}\``, "type argument", expected, args.length),
       this.span(node),
     );
   }

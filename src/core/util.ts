@@ -21,3 +21,15 @@ export function isRecord(
 ): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+/** The text of an arity diagnostic, for example "`f` takes 1 argument, but 2 are given". */
+export function arityMessage(
+  subject: string,
+  noun: string,
+  expected: number,
+  given: number,
+): string {
+  return `${subject} takes ${expected} ${noun}${
+    expected === 1 ? "" : "s"
+  }, but ${given} ${given === 1 ? "is" : "are"} given`;
+}
