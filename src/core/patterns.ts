@@ -86,14 +86,7 @@ function literalValuesOf(
 }
 
 function unique(values: readonly LiteralValue[]): LiteralValue[] {
-  const seen = new Set<LiteralValue>();
-  const result: LiteralValue[] = [];
-  for (const value of values) {
-    if (seen.has(value)) continue;
-    seen.add(value);
-    result.push(value);
-  }
-  return result;
+  return [...new Set(values)];
 }
 
 function isNull(table: TypeTable, ref: TypeRef): boolean {
