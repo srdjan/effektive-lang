@@ -24,6 +24,15 @@ type SchemaLeafKind = LeafOf<
   "schema-make" | "schema-decode" | "schema-encode"
 >;
 
+/** The `Schema` member that wraps one argument, for each operation that only wraps it. */
+const SINGLE_ARGUMENT_NAMES = {
+  "array": "Array",
+  "struct": "Struct",
+  "optional-key": "optionalKey",
+  "option-from-optional-key": "OptionFromOptionalKey",
+  "union": "Union",
+} as const;
+
 export function schemaStructural(
   c: ExprCore,
   e: ExprOf<SchemaStructuralKind>,
@@ -82,12 +91,14 @@ export function schemaStructural(
       ]);
     }
     case "array":
-    case "struct": {
+    case "struct":
+    case "optional-key":
+    case "option-from-optional-key":
+    case "union":
       return withSchemaView(emitted([
-        `${schema}.${e.op === "array" ? "Array" : "Struct"}`,
+        `${schema}.${SINGLE_ARGUMENT_NAMES[e.op]}`,
         callArguments([kid(args[0])]),
       ]));
-    }
     case "null-to-missing-key": {
       const getter = c.scope.effect("SchemaGetter");
       const option = c.scope.effect("Option");
@@ -106,18 +117,6 @@ export function schemaStructural(
         " })))(",
         free(kid(args[0])),
         ")",
-      ]));
-    }
-    case "optional-key": {
-      return withSchemaView(emitted([
-        `${schema}.optionalKey`,
-        callArguments([kid(args[0])]),
-      ]));
-    }
-    case "option-from-optional-key": {
-      return withSchemaView(emitted([
-        `${schema}.OptionFromOptionalKey`,
-        callArguments([kid(args[0])]),
       ]));
     }
     case "default-key":
@@ -266,11 +265,6 @@ export function schemaStructural(
         encodeResult,
         ") }))",
       ]));
-    }
-    case "union": {
-      return withSchemaView(
-        emitted([`${schema}.Union`, callArguments([kid(args[0])])]),
-      );
     }
     case "recursive": {
       const body = c.scope.temp();
