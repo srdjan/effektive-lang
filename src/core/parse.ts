@@ -455,6 +455,10 @@ class Parser {
     );
   }
 
+  private reportAtToken(code: DiagnosticCode, message: string): void {
+    this.report(code, message, this.starts[this.pos], this.ends[this.pos]);
+  }
+
   /**
    * Reports a syntax problem at the current token, once. It stays silent when the
    * lexer already reported the token, or when an earlier problem has the same
@@ -762,25 +766,32 @@ class Parser {
       kind = SyntaxKind.ConstDecl;
       this.parseConstBody(true);
     } else if (k === TokenKind.Ident && this.isDeclarationWord(this.pos)) {
-      const word = this.text.slice(this.starts[this.pos], this.ends[this.pos]);
-      if (word === "type") {
-        kind = SyntaxKind.TypeDecl;
-        this.parseTypeBody();
-      } else if (word === "opaque") {
-        kind = SyntaxKind.TypeDecl;
-        this.parseOpaqueTypeBody();
-      } else if (word === "sealed") {
-        kind = SyntaxKind.TypeDecl;
-        this.parseSealedTypeBody();
-      } else if (word === "error") {
-        kind = SyntaxKind.ErrorDecl;
-        this.parseErrorBody();
-      } else if (word === "service") {
-        kind = SyntaxKind.ServiceDecl;
-        this.parseServiceBody();
-      } else {
-        kind = SyntaxKind.ProviderDecl;
-        this.parseProviderBody();
+      switch (
+        this.text.slice(this.starts[this.pos], this.ends[this.pos])
+      ) {
+        case "type":
+          kind = SyntaxKind.TypeDecl;
+          this.parseTypeBody();
+          break;
+        case "opaque":
+          kind = SyntaxKind.TypeDecl;
+          this.parseOpaqueTypeBody();
+          break;
+        case "sealed":
+          kind = SyntaxKind.TypeDecl;
+          this.parseSealedTypeBody();
+          break;
+        case "error":
+          kind = SyntaxKind.ErrorDecl;
+          this.parseErrorBody();
+          break;
+        case "service":
+          kind = SyntaxKind.ServiceDecl;
+          this.parseServiceBody();
+          break;
+        default:
+          kind = SyntaxKind.ProviderDecl;
+          this.parseProviderBody();
       }
     } else {
       this.missing("a declaration");
@@ -790,11 +801,9 @@ class Parser {
 
   private parseConstBody(topLevel: boolean): void {
     if (topLevel && this.mode === "effi") {
-      this.report(
+      this.reportAtToken(
         "syntax/012",
         "a host interface file cannot contain `const`",
-        this.starts[this.pos],
-        this.ends[this.pos],
       );
     }
     this.tok();
@@ -872,11 +881,9 @@ class Parser {
 
   private parseOpaqueTypeBody(): void {
     if (this.mode !== "effi") {
-      this.report(
+      this.reportAtToken(
         "syntax/012",
         "an opaque type belongs in a host interface file",
-        this.starts[this.pos],
-        this.ends[this.pos],
       );
     }
     this.tok();
@@ -928,11 +935,9 @@ class Parser {
 
   private parseProviderBody(): void {
     if (this.mode !== "effi") {
-      this.report(
+      this.reportAtToken(
         "syntax/013",
         "a provider declaration is allowed only in a host interface file (.effi)",
-        this.starts[this.pos],
-        this.ends[this.pos],
       );
     }
     this.tok();
@@ -1004,11 +1009,9 @@ class Parser {
     if (k === TokenKind.Ident) {
       const word = this.parserCheckedWordAt(this.pos);
       if (role === "binding" && word !== undefined) {
-        this.report(
+        this.reportAtToken(
           "syntax/007",
           `\`${word}\` is a reserved word and cannot be a name`,
-          this.starts[this.pos],
-          this.ends[this.pos],
         );
       }
       this.tok();
@@ -1408,11 +1411,9 @@ class Parser {
         this.begin();
         const word = this.parserCheckedWordAt(this.pos);
         if (word !== undefined) {
-          this.report(
+          this.reportAtToken(
             "syntax/007",
             `\`${word}\` is a reserved word and cannot be a name`,
-            this.starts[this.pos],
-            this.ends[this.pos],
           );
         }
         this.tok();
@@ -1465,12 +1466,7 @@ class Parser {
   /** Reports `syntax/010` for the operator at the cursor, and skips its operand. */
   private parseRefusedUnary(message: string): void {
     this.begin();
-    this.report(
-      "syntax/010",
-      message,
-      this.starts[this.pos],
-      this.ends[this.pos],
-    );
+    this.reportAtToken("syntax/010", message);
     this.tok();
     this.parsePostfix();
     this.end(SyntaxKind.Error);
@@ -1541,11 +1537,9 @@ class Parser {
     if (this.kind() !== TokenKind.LBrace) {
       this.parseExpr();
     } else if (this.startsRecordLiteral()) {
-      this.report(
+      this.reportAtToken(
         "syntax/016",
         "a record literal body needs parentheses: `({ ... })`",
-        this.starts[this.pos],
-        this.ends[this.pos],
       );
       this.parseRecordExpr();
     } else {
@@ -1598,11 +1592,9 @@ class Parser {
       const k = this.kind();
       if (k === TokenKind.DotDotDot) {
         if (index > 0) {
-          this.report(
+          this.reportAtToken(
             "syntax/014",
             "a spread must be the first field and appear only once",
-            this.starts[this.pos],
-            this.ends[this.pos],
           );
         }
         this.begin();
