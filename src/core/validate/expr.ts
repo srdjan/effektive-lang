@@ -883,7 +883,13 @@ export class BodyValidator implements ValidatorCore {
 
   /** Checks field values against declared fields. Used by records, updates, and errors. */
   private checkFieldValues(
-    fields: readonly { readonly name: string; readonly value: Expr }[],
+    e: {
+      readonly fields: readonly {
+        readonly name: string;
+        readonly value: Expr;
+      }[];
+      readonly span: Span;
+    },
     outs: readonly Out[],
     declared: readonly {
       readonly name: string;
@@ -891,15 +897,14 @@ export class BodyValidator implements ValidatorCore {
       readonly optional: boolean;
     }[],
     path: string,
-    span: Span,
     requireAll: boolean,
     what: string,
   ): void {
     const seen = new Set<string>();
-    fields.forEach((f, i) => {
+    e.fields.forEach((f, i) => {
       const at = `${path}.fields[${i}]`;
       if (seen.has(f.name)) {
-        this.add(AREA.types, at, `the field ${f.name} appears twice`, span);
+        this.add(AREA.types, at, `the field ${f.name} appears twice`, e.span);
         return;
       }
       seen.add(f.name);
@@ -909,7 +914,7 @@ export class BodyValidator implements ValidatorCore {
           AREA.types,
           at,
           `${what} has no field ${f.name}`,
-          span,
+          e.span,
         );
         return;
       }
@@ -939,7 +944,7 @@ export class BodyValidator implements ValidatorCore {
           AREA.types,
           path,
           `the construction is missing the required fields ${list(missing)}`,
-          span,
+          e.span,
         );
       }
     }
@@ -979,11 +984,10 @@ export class BodyValidator implements ValidatorCore {
       );
     } else {
       this.checkFieldValues(
-        e.fields,
+        e,
         outs,
         target.fields,
         path,
-        e.span,
         true,
         `the record type ${show(e.type)}`,
       );
@@ -1127,11 +1131,10 @@ export class BodyValidator implements ValidatorCore {
       return checkedResult(active);
     }
     this.checkFieldValues(
-      e.fields,
+      e,
       outs,
       fields,
       path,
-      e.span,
       false,
       `the record type ${show(base.type)}`,
     );
@@ -1233,11 +1236,10 @@ export class BodyValidator implements ValidatorCore {
       return checkedResult(active);
     }
     this.checkFieldValues(
-      e.fields,
+      e,
       outs,
       decl.fields,
       path,
-      e.span,
       true,
       `the error ${e.error}`,
     );
