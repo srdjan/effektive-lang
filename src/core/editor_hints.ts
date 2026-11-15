@@ -6,6 +6,7 @@ import {
   childrenOf,
   kindOf,
   type NodeId,
+  nodeText,
   SyntaxKind,
   type SyntaxTree,
 } from "./syntax.ts";
@@ -51,7 +52,7 @@ export function arrowHeaderOf(
   }
   if (arrow === undefined) return undefined;
   const token = [...childrenOf(tree, arrow)].find((n) =>
-    tree.text.slice(tree.starts[n], tree.ends[n]) === "=>"
+    nodeText(tree, n) === "=>"
   );
   return { arrow, token };
 }

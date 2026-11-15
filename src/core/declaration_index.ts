@@ -16,6 +16,7 @@ import {
   kindOf,
   type NodeId,
   nodeSpan,
+  nodeText,
   SyntaxKind,
   type SyntaxTree,
 } from "./syntax.ts";
@@ -179,7 +180,7 @@ function indexImport(tree: SyntaxTree, node: NodeId): ImportEntry {
     } else if (tokenKindOf(tree, child) === TokenKind.String) {
       specifierSpan = nodeSpan(tree, child);
       specifier = decodeString(
-        tree.text.slice(tree.starts[child], tree.ends[child]),
+        nodeText(tree, child),
       );
     }
   }

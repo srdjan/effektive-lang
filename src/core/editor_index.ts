@@ -13,6 +13,7 @@ import {
   kindOf,
   type NodeId,
   nodeSpan,
+  nodeText,
   SyntaxKind,
   type SyntaxTree,
 } from "./syntax.ts";
@@ -122,7 +123,7 @@ function localScope(
   ) parent = tree.parents[parent];
   return {
     identity,
-    name: tree.text.slice(tree.starts[node], tree.ends[node]),
+    name: nodeText(tree, node),
     declaration: nodeSpan(tree, node),
     scope: parent >= 0
       ? {
