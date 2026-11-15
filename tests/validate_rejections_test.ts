@@ -100,6 +100,13 @@ type Score = int
 const scored = (): Score => 1
 `;
 
+const STREAMS_SOURCE = `type Int = int
+type Pairs = Sink<Int, Int[], never, never, Int>
+const taken: Pairs = takeSink(2)
+const buffered = (source: Stream<Int>): Stream<Int> => bufferStream(source, { capacity: 2 })
+const mapped = (source: Stream<Int>): Stream<Int> => mapEffect(source, (n: Int): Int => n + 1, { concurrency: 2 })
+`;
+
 const PROGRAMS = {
   core: {
     files: {
@@ -117,6 +124,10 @@ const PROGRAMS = {
   },
   families: {
     files: { "effektive.json": "{}", "m.eff": FAMILIES_SOURCE },
+    entry: "m.eff",
+  },
+  streams: {
+    files: { "effektive.json": "{}", "m.eff": STREAMS_SOURCE },
     entry: "m.eff",
   },
 } as const satisfies Readonly<Record<string, Program>>;
@@ -860,6 +871,60 @@ const ROWS: readonly Row[] = [
     },
     expected: [
       "validation/002 declarations[7].body: schema runner needs an ordinary Schema value",
+    ],
+  },
+  {
+    name: "a takeSink count that is not a positive integer",
+    program: "streams",
+    change: (ir) => {
+      Object.assign(constant(ir, "taken").value, { count: 0 });
+    },
+    expected: [
+      "validation/006 declarations[2].value: takeSink needs a positive safe integer count",
+    ],
+  },
+  {
+    name: "a bufferStream capacity that is not a positive integer",
+    program: "streams",
+    change: (ir) => {
+      Object.assign(find(fn(ir, "buffered").body, "buffer-stream"), {
+        capacity: 0,
+      });
+    },
+    expected: [
+      "validation/006 declarations[3].body: bufferStream capacity must be a positive safe integer",
+    ],
+  },
+  {
+    name: "a mapEffect concurrency that is not a positive integer",
+    program: "streams",
+    change: (ir) => {
+      Object.assign(find(fn(ir, "mapped").body, "map-effect"), {
+        concurrency: 0,
+      });
+    },
+    expected: [
+      "validation/006 declarations[4].body.concurrency: mapEffect concurrency must be a positive safe integer or unbounded",
+    ],
+  },
+  {
+    name: "an IR format that is not the current one",
+    program: "streams",
+    change: (ir) => {
+      Object.assign(ir, { format: "other-ir", version: 9 });
+    },
+    expected: [
+      "validation/008 format: expected the format light-functional-ir version 10, recorded other-ir version 9",
+    ],
+  },
+  {
+    name: "a span with a fractional offset",
+    program: "streams",
+    change: (ir) => {
+      Object.assign(fn(ir, "buffered").span, { start: 1.5 });
+    },
+    expected: [
+      "validation/008 declarations[3].span: a span has integer offsets",
     ],
   },
   // ---------------------------------------------------------------- serialization.ts

@@ -456,3 +456,38 @@ type Box = { e: Either | Stop }
     assertEquals(messages(plain.ir, plain.sources), [], name);
   }
 });
+
+/** Gives each integer literal of `root` the value 0, which fails a positive proof. */
+function zeroLiterals(root: Expr): void {
+  for (const literal of expressions(root)) {
+    if (literal.kind !== "literal") continue;
+    Object.assign(literal, { value: 0, type: { kind: "literal", value: 0 } });
+  }
+}
+
+Deno.test("independent validation stops after the aggregate proof step limit", () => {
+  const lowered = lower(`
+type Positive = int where n => n > 0
+const many = (): Positive[] => [Positive(1), Positive(1), Positive(1), Positive(1), Positive(1), Positive(1), Positive(1), Positive(1), Positive(1), Positive(1), Positive(1), Positive(1), Positive(1), Positive(1)]
+`);
+  const forged = structuredClone(lowered.ir);
+  const many = forged.declarations.find((d) => d.kind === "function");
+  assert(many?.kind === "function");
+  zeroLiterals(many.body);
+  assertEquals(messages(forged, lowered.sources), [
+    "declarations[1].body.elements[0].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[1].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[2].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[3].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[4].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[5].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[6].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[7].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[8].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[9].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[10].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[11].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[12].value.proofs: the proof certificate is invalid: invalid-certificate",
+    "declarations[1].body.elements[13].value.proofs: the aggregate proof validation limit is exhausted",
+  ]);
+});
