@@ -305,12 +305,11 @@ export class LanguageServer {
     if (this.#phase !== "running") return;
     if (this.#projects.dirtyProjects().length === 0) return;
     const wait = this.#options.debounceMs;
+    this.#cancelPending();
     if (wait === 0) {
-      this.#cancelPending();
       this.#contain("flush", () => this.#projects.flushDirty());
       return;
     }
-    this.#cancelPending();
     this.#cancelFlush = this.ports.schedule(() => {
       this.#cancelFlush = undefined;
       if (this.#phase !== "running") return;
@@ -398,7 +397,6 @@ export class LanguageServer {
       return;
     }
     if (this.#phase !== "running") return;
-    if (method === "initialized" || method.startsWith("$/")) return;
     const handler = NOTIFICATION_HANDLERS.get(method);
     if (handler === undefined) return;
     this.#contain(method, () => {
