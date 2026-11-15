@@ -199,6 +199,21 @@ const WATCH_DEBOUNCE_MS = 100;
 /** A fallback rescan when the platform does not deliver file system events. */
 const WATCH_POLL_MS = 1_000;
 
+/** Waits for `pending`, or gives `timeout` after `ms` milliseconds. */
+async function raceTimeout<T, Timeout extends string>(
+  pending: Promise<T>,
+  ms: number,
+  timeout: Timeout,
+): Promise<T | Timeout> {
+  let id: ReturnType<typeof setTimeout> | undefined;
+  const timer = new Promise<Timeout>((resolve) => {
+    id = setTimeout(() => resolve(timeout), ms);
+  });
+  const result = await Promise.race([pending, timer]);
+  clearTimeout(id);
+  return result;
+}
+
 /**
  * Debouncing of file system events. An editor save often gives several events
  * in a row. This joins the events that arrive within `delayMs` of the previous
@@ -219,12 +234,7 @@ export async function* debounceBatches(
     let ended = false;
     while (true) {
       pending = iterator.next();
-      let id: ReturnType<typeof setTimeout> | undefined;
-      const quiet = new Promise<"quiet">((resolve) => {
-        id = setTimeout(() => resolve("quiet"), delayMs);
-      });
-      const raced = await Promise.race([pending, quiet]);
-      clearTimeout(id);
+      const raced = await raceTimeout(pending, delayMs, "quiet");
       if (raced === "quiet") break;
       pending = undefined;
       if (raced.done) {
@@ -245,12 +255,7 @@ async function* sourceEvents(root: string): AsyncGenerator<readonly string[]> {
     [Symbol.asyncIterator]();
   let pending = iterator.next();
   while (true) {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    const poll = new Promise<"poll">((resolve) => {
-      timeout = setTimeout(() => resolve("poll"), WATCH_POLL_MS);
-    });
-    const result = await Promise.race([pending, poll]);
-    clearTimeout(timeout);
+    const result = await raceTimeout(pending, WATCH_POLL_MS, "poll");
     if (result === "poll") {
       // The watch loop rescans, but an unchanged project prints nothing.
       yield [];
