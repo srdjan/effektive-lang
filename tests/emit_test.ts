@@ -1982,3 +1982,36 @@ Deno.test("a binding arm on a type from another module annotates the selector wi
     "export const plusTen = (x: MaybeInt): Int =>\n  (($t0: MaybeInt) => $t0 === null ? 0 : ((n) => $int(n + 10))($t0))(x);",
   );
 });
+
+Deno.test("a tag arm on a union with a member that lacks the field guards the test with an in check", () => {
+  const output = oneModule(`
+type Int = int
+export type Shape = { kind: "a", n: Int } | { m: Int }
+export const f = (s: Shape): Int =>
+  match s {
+    { kind: "a", ...c } => c.n,
+    _ => 0
+  }
+`);
+  assertStringIncludes(
+    output,
+    '(($t0) => "kind" in $t0 && $t0.kind === "a" ? ((c) => c.n)($t0) : 0)(s);',
+  );
+});
+
+Deno.test("a long guarded tag test breaks after the in check and indents the comparison", () => {
+  const output = oneModule(`
+type Int = int
+export type Shape = { discriminatorFieldWithLongName: "alphaVariantWithLongValue", n: Int } | { discriminatorFieldWithLongName: "betaVariantWithLongValue", n: Int } | { m: Int }
+export const f = (s: Shape): Int =>
+  match s {
+    { discriminatorFieldWithLongName: "alphaVariantWithLongValue", ...c } => c.n,
+    { discriminatorFieldWithLongName: "betaVariantWithLongValue", ...c } => c.n,
+    _ => 0
+  }
+`);
+  assertStringIncludes(
+    output,
+    '(($t0) =>\n    "discriminatorFieldWithLongName" in $t0 &&\n      $t0.discriminatorFieldWithLongName === "alphaVariantWithLongValue"\n      ? ((c) => c.n)($t0)\n      : "discriminatorFieldWithLongName" in $t0 &&\n          $t0.discriminatorFieldWithLongName === "betaVariantWithLongValue"\n      ? ((c) => c.n)($t0)\n      : 0)(s);',
+  );
+});
