@@ -31,7 +31,7 @@ import {
   type ProjectConfig,
   readConfig,
 } from "./project_config.ts";
-import type { FileMode, SyntaxTree } from "./syntax.ts";
+import type { SyntaxTree } from "./syntax.ts";
 import { compareText } from "./util.ts";
 
 interface ImportLink {
@@ -49,7 +49,6 @@ export interface ModuleInfo {
   readonly name: string;
   /** The root-relative path. Diagnostic spans use it as their source. */
   readonly path: string;
-  readonly mode: FileMode;
   readonly tree: SyntaxTree;
   readonly parseDiagnostics: readonly Diagnostic[];
   readonly index: FileIndex;
@@ -113,7 +112,7 @@ type ExportRule = "declared" | "every-declaration";
  * needs each one. Any other module exports what it declares as exported.
  */
 export function exportRuleOf(info: ModuleInfo): ExportRule {
-  return info.mode === "effi" ? "every-declaration" : "declared";
+  return info.tree.mode === "effi" ? "every-declaration" : "declared";
 }
 
 export interface Project {
@@ -345,7 +344,6 @@ class Loader {
       this.modules.set(name, {
         name,
         path,
-        mode: parsed.tree.mode,
         tree: parsed.tree,
         parseDiagnostics: parsed.diagnostics,
         index,

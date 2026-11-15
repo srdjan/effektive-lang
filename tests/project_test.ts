@@ -160,7 +160,7 @@ Deno.test("the host import links to the interface file and keeps the import stri
       ["host/providers", "host:providers", true],
     ],
   );
-  assertEquals(result.value.modules.get("host/providers")!.mode, "effi");
+  assertEquals(result.value.modules.get("host/providers")!.tree.mode, "effi");
   assertEquals(
     result.value.modules.get("host/providers")!.path,
     "host/providers.effi",
