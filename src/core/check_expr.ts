@@ -161,6 +161,13 @@ interface Contract {
   readonly requirements: readonly CapabilityId[] | undefined;
 }
 
+/** The branch results of an `if` or `match` that `joinArms` combines. */
+interface BranchArms {
+  readonly infos: NodeInfo[];
+  readonly branches: { node: NodeId; type: TypeRef }[];
+  readonly successful: ReturnType<RefinementChecker["snapshot"]>[];
+}
+
 interface BodyOutcome {
   /** The info of the body expression. Absent when the body is missing. */
   readonly body: NodeInfo | undefined;
@@ -2287,11 +2294,6 @@ class BodyChecker
       bodyNode,
       contract,
       context?.result,
-      {
-        result: resultNode !== undefined,
-        fails: failsNode !== undefined,
-        uses: usesNode !== undefined,
-      },
     );
     this.refinements.restore(refinementScope);
     return result;
@@ -2309,13 +2311,7 @@ class BodyChecker
     );
     const facts: ArrowParameterFact[] = [];
     if (parameters.length > 0 && nameNode !== undefined) {
-      const target = this.targets.get(nameNode);
-      const id = target?.kind === "local" ? target.id : undefined;
-      const type = parameters[0];
-      if (id !== undefined) this.body.locals.set(id, type);
-      if (id !== undefined) this.refinements.addLocal(id, type);
-      this.finish(nameNode, type, PURE_EFFECTS);
-      facts.push({ id, name: nameTextOf(this.tree, nameNode) ?? "", type });
+      facts.push(this.outcomeParameter(nameNode, parameters[0]));
     }
     const outcomeNode = this.kids(node).find((k) =>
       kindOf(this.tree, k) === SyntaxKind.Name
@@ -2329,7 +2325,6 @@ class BodyChecker
       this.kids(node).at(-1),
       { result: undefined, failures: undefined, requirements: undefined },
       hint,
-      { result: false, fails: false, uses: false },
     );
     this.refinements.restore(refinementScope);
     return result;
@@ -2353,12 +2348,12 @@ class BodyChecker
     bodyNode: NodeId | undefined,
     contract: Contract,
     hint: TypeRef | undefined,
-    written: {
-      readonly result: boolean;
-      readonly fails: boolean;
-      readonly uses: boolean;
-    },
   ): NodeInfo {
+    const written = {
+      result: contract.result !== undefined,
+      fails: contract.failures !== undefined,
+      uses: contract.requirements !== undefined,
+    };
     const run = this.checkBody(bodyNode, contract, hint);
     const type = this.table.function({
       execution: run.mode,
@@ -2588,9 +2583,11 @@ class BodyChecker
       );
     }
     if (cond.mode === "effect") this.refinements.clearDerivedFacts();
-    const successful: ReturnType<RefinementChecker["snapshot"]>[] = [];
-    const infos: NodeInfo[] = [cond];
-    const branches: { node: NodeId; type: TypeRef }[] = [];
+    const arms: BranchArms = {
+      infos: [cond],
+      branches: [],
+      successful: [],
+    };
     const conditionFact = this.refinements.condition(condition);
     for (const [index, branch] of kids.slice(1, 3).entries()) {
       const refinementScope = this.refinements.snapshot();
@@ -2599,25 +2596,44 @@ class BodyChecker
           ? not(conditionFact)
           : conditionFact,
       );
-      const info = this.expr(branch, expected);
-      if (
-        kindOf(this.tree, branch) !== SyntaxKind.Block &&
-        expected !== undefined && this.refinementBase(expected) !== undefined
-      ) {
-        this.fits(branch, info.type, expected, "the branch");
-      }
-      infos.push(info);
-      branches.push({ node: branch, type: info.type });
-      if (this.table.unfold(info.type) !== this.table.never) {
-        successful.push(this.refinements.snapshot());
-      }
+      this.armBody(branch, expected, arms);
       this.refinements.restore(refinementScope);
     }
-    this.refinements.join(successful);
+    this.refinements.join(arms.successful);
+    return this.joinArms(node, expected, arms);
+  }
+
+  /** Checks one branch body of an `if` or `match` and records it in `arms`. */
+  private armBody(
+    bodyNode: NodeId,
+    expected: TypeRef | undefined,
+    arms: BranchArms,
+  ): NodeInfo {
+    const info = this.expr(bodyNode, expected);
+    if (
+      kindOf(this.tree, bodyNode) !== SyntaxKind.Block &&
+      expected !== undefined && this.refinementBase(expected) !== undefined
+    ) {
+      this.fits(bodyNode, info.type, expected, "the branch");
+    }
+    arms.infos.push(info);
+    arms.branches.push({ node: bodyNode, type: info.type });
+    if (this.table.unfold(info.type) !== this.table.never) {
+      arms.successful.push(this.refinements.snapshot());
+    }
+    return info;
+  }
+
+  /** The type and effects of an `if` or `match` from its checked branches. */
+  private joinArms(
+    node: NodeId,
+    expected: TypeRef | undefined,
+    arms: BranchArms,
+  ): NodeInfo {
     const type = expected !== undefined && this.refinementBase(expected)
       ? expected
-      : this.joinResults(branches, expected);
-    return this.finish(node, type, combine(infos));
+      : this.joinResults(arms.branches, expected);
+    return this.finish(node, type, combine(arms.infos));
   }
 
   private tryExpr(node: NodeId, expected: TypeRef | undefined): NodeInfo {
@@ -2840,10 +2856,12 @@ class BodyChecker
       tagField: undefined,
     };
     if (subject.mode === "effect") this.refinements.clearDerivedFacts();
-    const successful: ReturnType<RefinementChecker["snapshot"]>[] = [];
     const excluded: ReturnType<RefinementChecker["condition"]>[] = [];
-    const infos: NodeInfo[] = [subject];
-    const branches: { node: NodeId; type: TypeRef }[] = [];
+    const matched: BranchArms = {
+      infos: [subject],
+      branches: [],
+      successful: [],
+    };
     for (const arm of arms) {
       const refinementScope = this.refinements.snapshot();
       for (const fact of excluded) this.refinements.addBranch(fact);
@@ -2868,11 +2886,7 @@ class BodyChecker
             this.refinements.addBranch(matched);
             if (matched !== undefined) excluded.push(not(matched));
           }
-          const binding = fact.pattern.kind === "some" ||
-              fact.pattern.kind === "bind" ||
-              fact.pattern.kind === "error" || fact.pattern.kind === "tagged"
-            ? fact.pattern.binding
-            : fact.pattern.kind === "tag"
+          const binding = "binding" in fact.pattern
             ? fact.pattern.binding ?? undefined
             : undefined;
           if (binding !== undefined) {
@@ -2885,29 +2899,15 @@ class BodyChecker
         this.refinements.restore(refinementScope);
         continue;
       }
-      const info = this.expr(bodyNode, expected);
-      if (
-        kindOf(this.tree, bodyNode) !== SyntaxKind.Block &&
-        expected !== undefined && this.refinementBase(expected) !== undefined
-      ) {
-        this.fits(bodyNode, info.type, expected, "the branch");
-      }
-      infos.push(info);
-      branches.push({ node: bodyNode, type: info.type });
+      const info = this.armBody(bodyNode, expected, matched);
       this.finish(arm, info.type, info);
-      if (this.table.unfold(info.type) !== this.table.never) {
-        successful.push(this.refinements.snapshot());
-      }
       this.refinements.restore(refinementScope);
     }
-    this.refinements.join(successful);
+    this.refinements.join(matched.successful);
     if (!state.wildcard && state.binding === undefined) {
       checkCoverage(this, node, domain, state, arms.length);
     }
-    const type = expected !== undefined && this.refinementBase(expected)
-      ? expected
-      : this.joinResults(branches, expected);
-    return this.finish(node, type, combine(infos));
+    return this.joinArms(node, expected, matched);
   }
 }
 
