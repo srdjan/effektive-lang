@@ -21,7 +21,8 @@ import type { LowerError } from "./lower.ts";
 import type { Import, ModuleIR } from "./ir.ts";
 import type { Result } from "./source.ts";
 import type { Project } from "./project.ts";
-import { validateModule } from "./validate/index.ts";
+import { AREA, validateModule } from "./validate/index.ts";
+import { fallbackSpan } from "./validate/prelude.ts";
 import { isRecord } from "./validate/guards.ts";
 import { PRELUDE_MODULE } from "./validate/world_table.ts";
 
@@ -170,17 +171,13 @@ export function validateProject(
   for (const [name, module] of lowered) {
     if (!module.ok) continue;
     const diagnostics = validateModule(module.value, sources);
-    const at = {
-      source: project.modules.get(name)?.path ?? name,
-      start: 0,
-      end: 0,
-    };
+    const at = fallbackSpan(project.modules.get(name)?.path ?? name);
     const found: Diagnostic[] = [];
     const recorded = module.value?.module;
     if (recorded !== name) {
       found.push(
         makeDiagnostic(
-          "validation/001",
+          AREA.identity,
           `module: expected the lowered module ${name}, recorded ${recorded}`,
           at,
         ),
