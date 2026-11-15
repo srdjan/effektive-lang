@@ -292,24 +292,15 @@ export function hasProblem(tree: SyntaxTree, node: NodeId): boolean {
 export function printTree(tree: SyntaxTree): string {
   const { lexed } = tree;
   const out: string[] = [];
-  const stack: NodeId[] = [tree.root];
-  for (
-    let current = stack.pop();
-    current !== undefined;
-    current = stack.pop()
-  ) {
-    const kind = kindOf(tree, current);
-    if (kind === SyntaxKind.Token) {
-      const t = tree.tokens[current];
-      const firstTrivia = t === 0 ? 0 : lexed.triviaEnd[t - 1];
-      for (let k = firstTrivia; k < lexed.triviaEnd[t]; k++) {
-        out.push(tree.text.slice(lexed.trivia.starts[k], lexed.trivia.ends[k]));
-      }
-      out.push(tree.text.slice(lexed.starts[t], lexed.ends[t]));
-    } else {
-      const kids = childrenOf(tree, current);
-      for (let i = kids.length - 1; i >= 0; i--) stack.push(kids[i]);
+  walk(tree, tree.root, (node) => {
+    if (kindOf(tree, node) !== SyntaxKind.Token) return;
+    const t = tree.tokens[node];
+    const firstTrivia = t === 0 ? 0 : lexed.triviaEnd[t - 1];
+    for (let k = firstTrivia; k < lexed.triviaEnd[t]; k++) {
+      out.push(tree.text.slice(lexed.trivia.starts[k], lexed.trivia.ends[k]));
     }
-  }
+    out.push(tree.text.slice(lexed.starts[t], lexed.ends[t]));
+    return false;
+  });
   return out.join("");
 }
