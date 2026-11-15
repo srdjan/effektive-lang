@@ -97,13 +97,6 @@ export interface Playground {
   hover(path: string, offset: number): PlaygroundHover | undefined;
 }
 
-/** The module name of each `.eff` and `.effi` file, as `sourceModuleOf` in the LSP. */
-function sourceModulesOf(revision: Revision): ReadonlyMap<string, string> {
-  const paths = new Map<string, string>();
-  for (const info of revision.moduleInfos()) paths.set(info.path, info.name);
-  return paths;
-}
-
 function diagnosticsOf(
   revision: Revision,
 ): Record<string, PlaygroundDiagnostic[]> {
@@ -153,7 +146,7 @@ export function createPlayground(
       }
       const revision = updated.value;
       const outputs: Record<string, PlaygroundOutput | null> = {};
-      for (const [path, name] of sourceModulesOf(revision)) {
+      for (const { path, name } of revision.moduleInfos()) {
         const step = stepOutput(
           lastGoodText.get(path),
           outputCache.emitted(revision, name),
