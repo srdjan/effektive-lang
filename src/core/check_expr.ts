@@ -168,6 +168,13 @@ interface BranchArms {
   readonly successful: ReturnType<RefinementChecker["snapshot"]>[];
 }
 
+/** The labels, literal values, and known name types that pick a record target. */
+interface RecordScan {
+  readonly labels: readonly string[];
+  readonly literals: ReadonlyMap<string, LiteralValue>;
+  readonly known: ReadonlyMap<string, TypeRef>;
+}
+
 interface BodyOutcome {
   /** The info of the body expression. Absent when the body is missing. */
   readonly body: NodeInfo | undefined;
@@ -1761,9 +1768,7 @@ class BodyChecker
    */
   private recordTarget(
     expected: TypeRef | undefined,
-    labels: readonly string[],
-    literals: ReadonlyMap<string, LiteralValue>,
-    known: ReadonlyMap<string, TypeRef>,
+    { labels, literals, known }: RecordScan,
   ): RecordTarget | undefined {
     if (expected === undefined) return undefined;
     const table = this.table;
@@ -1844,11 +1849,7 @@ class BodyChecker
   /** The labels, literal values, and known name types that pick a record target. */
   private prescanRecordFields(
     partsList: readonly (ReturnType<typeof recordFieldParts>)[],
-  ): {
-    readonly labels: readonly string[];
-    readonly literals: ReadonlyMap<string, LiteralValue>;
-    readonly known: ReadonlyMap<string, TypeRef>;
-  } {
+  ): RecordScan {
     const labels = partsList.flatMap((p) => p === undefined ? [] : [p.label]);
     const literals = new Map<string, LiteralValue>();
     const known = new Map<string, TypeRef>();
@@ -1881,10 +1882,8 @@ class BodyChecker
       node: f,
       parts: recordFieldParts(this.tree, f),
     }));
-    const { labels, literals, known } = this.prescanRecordFields(
-      parsed.map((p) => p.parts),
-    );
-    const picked = this.recordTarget(expected, labels, literals, known);
+    const scan = this.prescanRecordFields(parsed.map((p) => p.parts));
+    const picked = this.recordTarget(expected, scan);
     // A record literal does not pick a tagged variant, so it has no target.
     let target: Exclude<RecordTarget, { kind: "variants" }> | undefined;
     switch (picked?.kind) {
