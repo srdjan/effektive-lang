@@ -154,12 +154,19 @@ function reach(
   return true;
 }
 
+/** A subject that an earlier diagnostic rejected: its arms report nothing more. */
+function isSilent(domain: Domain): boolean {
+  return domain.kind === "error" || domain.kind === "mixed" ||
+    domain.kind === "unsupported";
+}
+
 function foreign(
   c: PatternContext,
   node: NodeId,
   what: string,
   domain: Domain,
 ): void {
+  if (isSilent(domain)) return;
   c.report(
     "pattern/003",
     `${what} does not belong to the subject (${
@@ -197,8 +204,6 @@ export function pattern(
 ): void {
   const kind = kindOf(c.tree, node);
   const names = c.kidsOfKind(node, SyntaxKind.Name);
-  const silent = domain.kind === "error" || domain.kind === "mixed" ||
-    domain.kind === "unsupported";
   switch (kind) {
     case SyntaxKind.WildcardPattern: {
       if (reach(c, node, state, undefined)) {
@@ -222,12 +227,12 @@ export function pattern(
       if (optionConstructorOf(target) === "none") {
         if (domain.kind === "option") {
           reach(c, node, state, "none");
-        } else if (!silent) {
+        } else {
           foreign(c, node, "`None`", domain);
         }
         patternFact(c, node, { kind: "none" });
       } else if (target?.kind === "local") {
-        bindingArm(c, node, names[0], domain, state, silent);
+        bindingArm(c, node, names[0], domain, state);
       } else {
         if (target !== undefined && target.kind !== "unresolved") {
           c.report(
@@ -250,7 +255,7 @@ export function pattern(
         if (domain.kind === "option") {
           element = domain.element;
           reach(c, node, state, "some");
-        } else if (!silent) {
+        } else {
           foreign(c, node, "`Some`", domain);
         }
         const binding = bindLocal(c, bindingNode, element);
@@ -272,7 +277,7 @@ export function pattern(
         if (domain.kind === "nominal" && domain.ids.includes(target.id)) {
           type = c.table.named(target.id);
           reach(c, node, state, `N:${target.id}`);
-        } else if (!silent) {
+        } else {
           foreign(c, node, `\`${namesOf(c.table, [target.id])[0]}\``, domain);
         }
         const binding = bindLocal(c, bindingNode, type);
@@ -308,7 +313,7 @@ export function pattern(
           domain.duration === true;
         if (fitsDuration) {
           reach(c, node, state, `L:${JSON.stringify(value)}`);
-        } else if (!silent) {
+        } else {
           foreign(c, node, text, domain);
         }
         patternFact(c, node, { kind: "duration", millis: value, text });
@@ -324,14 +329,14 @@ export function pattern(
       }
       if (fits) {
         reach(c, node, state, `L:${JSON.stringify(value)}`);
-      } else if (!silent) {
+      } else {
         foreign(c, node, describeLiteral(value), domain);
       }
       patternFact(c, node, { kind: "literal", value });
       return;
     }
     case SyntaxKind.RecordPattern:
-      recordPattern(c, node, domain, state, silent);
+      recordPattern(c, node, domain, state);
       return;
     default:
       patternFact(c, node, { kind: "invalid" });
@@ -345,10 +350,9 @@ function bindingArm(
   nameNode: NodeId,
   domain: Domain,
   state: MatchState,
-  silent: boolean,
 ): void {
   if (domain.kind !== "nullable") {
-    if (!silent) {
+    if (!isSilent(domain)) {
       c.report(
         "pattern/004",
         `\`${
@@ -382,7 +386,6 @@ function recordPattern(
   node: NodeId,
   domain: Domain,
   state: MatchState,
-  silent: boolean,
 ): void {
   const parts = c.kids(node);
   const fields = parts.filter((k) =>
@@ -410,7 +413,6 @@ function recordPattern(
     );
   }
   if (domain.kind !== "tagged") {
-    if (silent) return invalid();
     foreign(c, node, "a tagged record pattern", domain);
     return invalid();
   }
