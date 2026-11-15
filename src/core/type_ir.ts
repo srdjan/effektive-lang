@@ -1,8 +1,7 @@
 // Conversion between IR type trees and interned types. Each function reads or
 // writes through the public methods of one `TypeTable`.
 
-import type { ErrorId, Field, FunctionType, Type, TypeId } from "./ir.ts";
-import type { Predicate } from "./predicates.ts";
+import type { ErrorId, Field, FunctionType, Type, TypeDecl } from "./ir.ts";
 import { guardedRecord, literalTagOf } from "./recursion_guard.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 import { canonicalJson } from "./content_id.ts";
@@ -233,19 +232,10 @@ export function functionTypeToIr(
 
 /** What a graph of imported declarations supplies to the table. */
 interface DefinitionSource {
-  readonly types: readonly {
-    readonly id: TypeId;
-    readonly opaque?: boolean;
-    readonly predicate?: Predicate;
-    readonly definition:
-      | { readonly kind: "alias"; readonly type: Type }
-      | {
-        readonly kind: "nominal";
-        readonly base: Type;
-        readonly tagged?: true;
-        readonly sealed?: true;
-      };
-  }[];
+  readonly types: readonly Pick<
+    TypeDecl,
+    "id" | "opaque" | "predicate" | "definition"
+  >[];
   readonly errors: readonly {
     readonly id: ErrorId;
     readonly fields: readonly Field[];
