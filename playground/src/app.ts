@@ -31,6 +31,7 @@ import {
   editData,
   endData,
   errorData,
+  EXPLORER_FROM,
   hoverData,
   type Layout,
   layoutData,
@@ -39,6 +40,7 @@ import {
   selectData,
   startData,
   viewData,
+  WIDE_FROM,
 } from "./events.ts";
 import { createPageLog, type PageLog } from "./log_client.ts";
 import {
@@ -57,10 +59,10 @@ import { play, stepsOf } from "./replay.ts";
 const CURSOR_PAUSE_MS = 300;
 
 /** The width at which the wide layout starts. `app.css` uses the same value. */
-const WIDE_QUERY = "(min-width: 720px)";
+const WIDE_QUERY = `(min-width: ${WIDE_FROM}px)`;
 
 /** The width at which the file tabs become a vertical explorer. */
-const EXPLORER_QUERY = "(min-width: 1024px)";
+const EXPLORER_QUERY = `(min-width: ${EXPLORER_FROM}px)`;
 
 type ViewName = "source" | "problems" | "output";
 

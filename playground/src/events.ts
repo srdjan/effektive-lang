@@ -23,8 +23,8 @@ import { outputState, type ProblemItem, tabCounts } from "./model.ts";
 export type { EditChange, Layout };
 
 /** The widths where the wide layout and the explorer start. `app.css` agrees. */
-const WIDE_FROM = 720;
-const EXPLORER_FROM = 1024;
+export const WIDE_FROM = 720;
+export const EXPLORER_FROM = 1024;
 
 export function layoutOf(width: number): Layout {
   return width < WIDE_FROM
