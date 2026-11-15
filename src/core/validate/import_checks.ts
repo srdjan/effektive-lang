@@ -4,11 +4,15 @@
 import type { FunctionType, Import, ModuleIR, Span, Type } from "../ir.ts";
 import { AREA, moduleSpan } from "./report.ts";
 import {
+  BOOLEAN,
   comparisonClass,
+  INT,
   isNever,
   isNumericClass,
   isStringClass,
+  NUMBER,
   same,
+  STRING,
   unfold,
 } from "./typing.ts";
 import { invocationOf, isQuiet, sameSet } from "./sets.ts";
@@ -79,15 +83,12 @@ function checkDataShape(
   parameter: "int" | "number",
   wrong: (what: string) => void,
 ): void {
-  const primitive = (name: "int" | "number"): Type => ({
-    kind: "primitive",
-    name,
-  });
+  const expected = parameter === "int" ? INT : NUMBER;
   if (
     type.parameters.length !== count ||
-    type.parameters.some((p) => !same(env, p, primitive(parameter)))
+    type.parameters.some((p) => !same(env, p, expected))
   ) wrong(`takes ${count} ${parameter} parameter${count === 1 ? "" : "s"}`);
-  if (!same(env, type.result, primitive("int"))) wrong("returns an int");
+  if (!same(env, type.result, INT)) wrong("returns an int");
   if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
     wrong("is pure, with no failure and no requirement");
   }
@@ -99,16 +100,12 @@ function checkTextShape(
   type: FunctionType,
   wrong: (what: string) => void,
 ): void {
-  const primitive = (name: "number" | "boolean" | "string"): Type => ({
-    kind: "primitive",
-    name,
-  });
   if (
     type.parameters.length !== 1 ||
-    !(same(env, type.parameters[0], primitive("number")) ||
-      same(env, type.parameters[0], primitive("boolean")))
+    !(same(env, type.parameters[0], NUMBER) ||
+      same(env, type.parameters[0], BOOLEAN))
   ) wrong("takes 1 number or boolean parameter");
-  if (!same(env, type.result, primitive("string"))) wrong("returns a string");
+  if (!same(env, type.result, STRING)) wrong("returns a string");
   if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
     wrong("is pure, with no failure and no requirement");
   }
@@ -123,9 +120,9 @@ function checkLenShape(
   if (
     type.parameters.length !== 1 ||
     !(type.parameters[0].kind === "array" ||
-      same(env, type.parameters[0], { kind: "primitive", name: "string" }))
+      same(env, type.parameters[0], STRING))
   ) wrong("takes 1 string or array parameter");
-  if (!same(env, type.result, { kind: "primitive", name: "int" })) {
+  if (!same(env, type.result, INT)) {
     wrong("returns an int");
   }
   if (type.execution !== "pure" || !isQuiet(invocationOf(type))) {
@@ -142,7 +139,7 @@ function checkAtShape(
   const [array, index] = type.parameters;
   if (
     type.parameters.length !== 2 || array.kind !== "array" ||
-    !same(env, index, { kind: "primitive", name: "int" })
+    !same(env, index, INT)
   ) wrong("takes an array and an int parameter");
   if (
     type.result.kind !== "option" ||
@@ -339,7 +336,7 @@ function checkCallbackShape(
       return;
     case "filter":
       if (
-        !same(env, callback.result, { kind: "primitive", name: "boolean" }) ||
+        !same(env, callback.result, BOOLEAN) ||
         isNever(callback.result) || !same(env, type.result, first)
       ) {
         wrong("returns the array type with a boolean predicate");

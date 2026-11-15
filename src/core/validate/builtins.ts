@@ -1,7 +1,7 @@
 // Builtin metadata and collection shapes used only by the independent validator.
 
 import type { Expr, Type } from "../ir.ts";
-import { same, type TypeEnv, unfold } from "./typing.ts";
+import { INT, same, STRING, type TypeEnv, unfold } from "./typing.ts";
 
 const BUILTIN_NAMES = [
   "map",
@@ -107,8 +107,7 @@ export function isConcurrencyType(env: TypeEnv, type: Type): boolean {
     ? options.fields[0]
     : undefined;
   return field?.name === "concurrency" && !field.optional &&
-    (same(env, field.type, { kind: "primitive", name: "int" }) ||
-      same(env, field.type, { kind: "primitive", name: "string" }));
+    (same(env, field.type, INT) || same(env, field.type, STRING));
 }
 
 export function isConcurrencyOption(options: Expr | undefined): boolean {
