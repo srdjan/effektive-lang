@@ -1986,8 +1986,6 @@ export class BodyValidator implements ValidatorCore {
     return fn;
   }
 
-  // The argument readers share one rule: a missing argument gives undefined.
-
   private binary(e: Extract<Expr, { kind: "binary" }>, path: string): Comp {
     const env = this.env;
     const left = this.check(e.left, `${path}.left`);
