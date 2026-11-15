@@ -3,7 +3,7 @@
 // type groups. The body checker uses `TypeLowerer` for annotations inside bodies.
 
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
-import type { CapabilityId, ErrorId, Execution, Field, TypeId } from "./ir.ts";
+import type { CapabilityId, ErrorId, Field, TypeId } from "./ir.ts";
 import { DURATION_ID, INSTANT_ID } from "./ir.ts";
 import { TokenKind } from "./lex.ts";
 import type { Target } from "./resolve.ts";
@@ -35,7 +35,6 @@ import {
   type Lowered,
   loweredFunction,
   type ParameterSignature,
-  type SignatureType,
   type TypeEnv,
 } from "./signatures.ts";
 
@@ -465,12 +464,11 @@ export class TypeLowerer {
         this.span(node),
       );
     }
-    return this.functionOf(
-      execution,
+    return loweredFunction(
+      this.env.table,
+      { mode: execution, failures, requirements },
       parameters.map((p) => p.type),
       result,
-      failures,
-      requirements,
       parameters.map((p) => p.borrow),
     );
   }
@@ -624,25 +622,6 @@ export class TypeLowerer {
         },
       },
     };
-  }
-
-  functionOf(
-    execution: Execution,
-    parameters: readonly Lowered[],
-    result: Lowered,
-    failures: readonly ErrorId[],
-    requirements: readonly CapabilityId[],
-    borrows?: readonly boolean[],
-  ): SignatureType {
-    return loweredFunction(
-      this.env.table,
-      execution,
-      parameters,
-      result,
-      failures,
-      requirements,
-      borrows,
-    );
   }
 
   /** The parameters of a parameter list. An omitted annotation starts as unknown. */

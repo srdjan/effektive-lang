@@ -74,6 +74,7 @@ import {
   checkedInputFlags,
   type FunctionSignature,
   type Lowered,
+  loweredFunction,
   type ModuleDeclarations,
   type ParameterSignature,
   type ProviderSignature,
@@ -771,12 +772,11 @@ class ModuleChecker {
         ? this.lowerer.errorLowered()
         : this.lowerer.lower(resultNode);
       const failures = this.lowerer.failures(fails);
-      const type = this.lowerer.functionOf(
-        "effect",
+      const type = loweredFunction(
+        this.table,
+        { mode: "effect", failures, requirements: [] },
         parameters.map((p) => p.type),
         result,
-        failures,
-        [],
       );
       const capability: CapabilityId = capabilityId(
         this.env.module,

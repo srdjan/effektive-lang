@@ -253,11 +253,9 @@ export function signatureType(
     ok: true,
     value: loweredFunction(
       table,
-      contract.value.mode,
+      contract.value,
       signature.parameters.map((p) => p.type),
       result,
-      contract.value.failures,
-      contract.value.requirements,
       signature.parameters.map((p) => p.borrow),
       checkedInputFlags(signature, table),
     ),
@@ -301,16 +299,15 @@ export function signatureFunctionRef(
 /** A function type as an interned type and an IR tree. The sets are sorted and unique. */
 export function loweredFunction(
   table: TypeTable,
-  execution: Execution,
+  contract: Pick<Solved, "mode" | "failures" | "requirements">,
   parameters: readonly Lowered[],
   result: Lowered,
-  failures: readonly ErrorId[],
-  requirements: readonly CapabilityId[],
   borrows?: readonly boolean[],
   checked?: readonly boolean[],
 ): SignatureType {
-  const failureSet = sortedUnique(failures);
-  const requirementSet = sortedUnique(requirements);
+  const execution = contract.mode;
+  const failureSet = sortedUnique(contract.failures);
+  const requirementSet = sortedUnique(contract.requirements);
   const borrowed = borrows?.some(Boolean) ? { borrows } : {};
   const validated = checked?.some(Boolean) ? { checked } : {};
   return {
