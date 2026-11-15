@@ -325,28 +325,14 @@ export function withResource(
       e.use.span,
     );
   }
-  if (opaque) {
-    borrowedReferences(
-      c,
-      e.use.body,
-      e.use.parameters[0].id,
-      `${path}.use.body`,
-    );
-    borrowedReferences(
-      c,
-      e.release.body,
-      e.release.parameters[0].id,
-      `${path}.release.body`,
-    );
-  } else {
-    scopedReferences(c, e.use.body, e.use.parameters[0].id, `${path}.use.body`);
-    scopedReferences(
-      c,
-      e.release.body,
-      e.release.parameters[0].id,
-      `${path}.release.body`,
-    );
-  }
+  const references = opaque ? borrowedReferences : scopedReferences;
+  references(c, e.use.body, e.use.parameters[0].id, `${path}.use.body`);
+  references(
+    c,
+    e.release.body,
+    e.release.parameters[0].id,
+    `${path}.release.body`,
+  );
   return derivedResult(
     u.result,
     combine([
