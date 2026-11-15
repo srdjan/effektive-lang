@@ -523,26 +523,32 @@ export function codeActionRequest(
   const wanted = (kind: string): boolean =>
     only === undefined ||
     only.some((entry) => kind === entry || kind.startsWith(`${entry}.`));
+  const asActions = (
+    actions: readonly {
+      readonly title: string;
+      readonly edits: readonly SourceEdit[];
+    }[],
+    kind: string,
+  ) =>
+    actions.map((action) => ({
+      title: action.title,
+      kind,
+      edit: workspaceEdit(cursor, action.edits),
+    }));
   // Each kind checks an edited project, so a kind that `only` removes is skipped.
-  const fixes =
-    (wanted("quickfix")
+  const fixes = asActions(
+    wanted("quickfix")
       ? contractActionsAt(cursor.revision, cursor.path, cursor.offset, end)
-      : []).map((action) => ({
-        title: action.title,
-        kind: "quickfix",
-        edit: workspaceEdit(cursor, action.edits),
-      }));
-  const rewrites =
-    (wanted("refactor.rewrite")
-      ? failsClauseActionsAt(cursor.revision, cursor.path, cursor.offset)
-      : []).map((action) => ({
-        title: action.title,
-        kind: "refactor.rewrite",
-        edit: workspaceEdit(cursor, action.edits),
-      }));
-  return answer(
-    [...fixes, ...rewrites],
+      : [],
+    "quickfix",
   );
+  const rewrites = asActions(
+    wanted("refactor.rewrite")
+      ? failsClauseActionsAt(cursor.revision, cursor.path, cursor.offset)
+      : [],
+    "refactor.rewrite",
+  );
+  return answer([...fixes, ...rewrites]);
 }
 
 /** Kind 1 (Type): the label states an inferred contract. */
