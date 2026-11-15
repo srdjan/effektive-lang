@@ -44,6 +44,29 @@ export function classifyBuiltinCall(
     : BUILTIN_NAMES.find((known) => known === name) ?? "other";
 }
 
+/** The position of the callback and the valid parameter counts of a callback builtin. */
+interface CallbackShape {
+  readonly index: number;
+  readonly counts: readonly number[];
+}
+
+export type CallbackBuiltin = "map" | "filter" | "sort" | "fold" | "traverse";
+
+export const CALLBACK_SHAPES: Readonly<Record<CallbackBuiltin, CallbackShape>> =
+  {
+    map: { index: 1, counts: [2] },
+    filter: { index: 1, counts: [2] },
+    sort: { index: 1, counts: [2] },
+    fold: { index: 2, counts: [3] },
+    traverse: { index: 1, counts: [2, 3] },
+  };
+
+export function isCallbackBuiltin(
+  name: BuiltinCallName | undefined,
+): name is CallbackBuiltin {
+  return name !== undefined && name in CALLBACK_SHAPES;
+}
+
 export function builtinInfo(id: string, name: string): BuiltinInfo {
   const match = typeof id === "string" ? BUILTIN_ID.exec(id) : null;
   const known = BUILTIN_NAMES.find((known) => known === match?.[2]);

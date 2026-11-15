@@ -12,7 +12,9 @@
 
 import {
   type BuiltinCallName,
+  CALLBACK_SHAPES,
   classifyBuiltinCall,
+  isCallbackBuiltin,
   isConcurrencyOption,
 } from "./builtins.ts";
 
@@ -1436,14 +1438,14 @@ export class BodyValidator implements ValidatorCore {
       e.span,
       builtin,
     );
-    const callbackIndex = builtin === "fold" ? 2 : 1;
-    const callbackCount = builtin === "traverse"
-      ? outs.length === 2 || outs.length === 3
-      : builtin === "map" || builtin === "filter" || builtin === "sort"
-      ? outs.length === 2
-      : builtin === "fold" && outs.length === 3;
-    if (builtin !== undefined && callbackCount) {
-      const callback = asFunction(this.env, outs[callbackIndex].type);
+    if (
+      isCallbackBuiltin(builtin) &&
+      CALLBACK_SHAPES[builtin].counts.includes(outs.length)
+    ) {
+      const callback = asFunction(
+        this.env,
+        outs[CALLBACK_SHAPES[builtin].index].type,
+      );
       const effectful = builtin === "traverse" ||
         (callback !== undefined && !isQuiet(invocationOf(callback)));
       if (

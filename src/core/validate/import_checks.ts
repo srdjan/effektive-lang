@@ -18,6 +18,7 @@ import {
 import { invocationOf, isQuiet, sameSet } from "./sets.ts";
 import {
   type BuiltinName,
+  CALLBACK_SHAPES,
   containerEntries,
   isConcurrencyType,
   rebuildContainer,
@@ -263,12 +264,7 @@ function checkCallbackShape(
   const { report } = ctx;
   const env = ctx.world.env;
   const count = type.parameters.length;
-  const validCount = name === "fold"
-    ? count === 3
-    : name === "traverse"
-    ? count === 2 || count === 3
-    : count === 2;
-  if (!validCount) {
+  if (!CALLBACK_SHAPES[name].counts.includes(count)) {
     wrong(`has an invalid parameter count ${count}`);
     return;
   }
@@ -282,8 +278,7 @@ function checkCallbackShape(
     wrong("takes an array as its first parameter");
     return;
   }
-  const callbackIndex = name === "fold" ? 2 : 1;
-  const callbackType = type.parameters[callbackIndex];
+  const callbackType = type.parameters[CALLBACK_SHAPES[name].index];
   const callback = unfold(env, callbackType);
   if (callback.kind !== "function") {
     wrong("takes a function as its last parameter");
