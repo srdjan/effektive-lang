@@ -240,7 +240,7 @@ export function operatorOf(
   return undefined;
 }
 
-export type UnaryOperator = "-" | "!";
+type UnaryOperator = "-" | "!";
 
 /** The operator and its token node of a unary expression. The parser puts the operator first. */
 export function unaryOperatorOf(
