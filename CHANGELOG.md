@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.15.9 - 2026-11-15
+
 - A pipeline stage whose callee is an inferred parameter uses the recovered callback contract, as a call does. In `(callback, value): Int => { const fn: Fn = callback; value |> callback }` with `type Fn = (value: Int) => Int`, `value` gets the type `Int`. A stage callee whose contract the compiler cannot recover gives `type-mismatch/011`, which asks for a type annotation.
   Before, `value` stayed `unknown` and gave `type-mismatch/003`, and the unresolved stage callee gave only `type-mismatch/008`.
 - The generated pipeline bindings of `a ?? b` follow source order: the bindings of `a` number before those of `b`. In `Some(xs |> map(x => x + 1)) ?? (ys |> map(y => y + 2))`, the binding of `xs` is `$p1` and the binding of `ys` is `$p2`.
