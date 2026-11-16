@@ -513,3 +513,120 @@ Deno.test("coverage validation rejects unfinished records", () => {
     false,
   );
 });
+
+const OWNERSHIP_TEXT_CASES: readonly (readonly [string, string])[] = [
+  [
+    "{",
+    "ownership JSON is invalid: Expected property name or '}' in JSON at position 1 (line 1 column 2)",
+  ],
+  ["null", "ownership must be an object"],
+  ["{}", "ownership keys must be typeOnly, separatelyExercisedEntrypoint"],
+  [
+    JSON.stringify({
+      typeOnly: null,
+      separatelyExercisedEntrypoint: category([]),
+    }),
+    "typeOnly must be an object",
+  ],
+  [
+    JSON.stringify({
+      typeOnly: { ...category([]), reason: " " },
+      separatelyExercisedEntrypoint: category([]),
+    }),
+    "typeOnly.reason must not be empty",
+  ],
+  [
+    JSON.stringify({
+      typeOnly: { ...category([]), owner: "" },
+      separatelyExercisedEntrypoint: category([]),
+    }),
+    "typeOnly.owner must not be empty",
+  ],
+  [
+    JSON.stringify({
+      typeOnly: category([]),
+      separatelyExercisedEntrypoint: { ...category([]), paths: [1] },
+    }),
+    "separatelyExercisedEntrypoint.paths must contain strings",
+  ],
+  [
+    ownershipText(["tests/a.ts"]),
+    "ownership path is not canonical production TypeScript: tests/a.ts",
+  ],
+  [
+    JSON.stringify({
+      typeOnly: category(["src/core/a.ts"]),
+      separatelyExercisedEntrypoint: category(["src/core/a.ts"]),
+    }),
+    "duplicate ownership path: src/core/a.ts",
+  ],
+];
+
+Deno.test("coverage ownership rejects with the exact message", () => {
+  for (const [text, message] of OWNERSHIP_TEXT_CASES) {
+    const result = parseCoverageOwnership(text, ["src/core/a.ts"]);
+    assertEquals(result.ok, false, text);
+    if (!result.ok) assertEquals(result.error.message, message);
+  }
+});
+
+const REPORT_MESSAGE_CASES: readonly (readonly [string, string])[] = [
+  ["SF:", "empty SF path"],
+  ["end_of_record", "end_of_record has no SF path"],
+  ["LF:1", "LF has no SF path"],
+  [
+    `SF:${testPath("src/core/a.ts")}\nSF:${testPath("src/core/b.ts")}`,
+    `unfinished LCOV record: ${testPath("src/core/a.ts")}`,
+  ],
+  [
+    `SF:${testPath("src/core/a.ts")}`,
+    `unfinished LCOV record: ${testPath("src/core/a.ts")}`,
+  ],
+  [
+    `SF:${testPath("src/core/a.ts")}\nend_of_record`,
+    `${testPath("src/core/a.ts")} has no FNF counter`,
+  ],
+  [
+    `SF:${testPath("src/core/a.ts")}\nLF:1\nLF:1`,
+    `${testPath("src/core/a.ts")} has duplicate LF counters`,
+  ],
+  [
+    completeRecord(testPath("src/core/a.ts"), { LF: "1.5" }),
+    `${testPath("src/core/a.ts")} has invalid LF: 1.5`,
+  ],
+  [
+    completeRecord(testPath("src/core/a.ts"), { FNF: "1", FNH: "2" }),
+    `${testPath("src/core/a.ts")} has FNH above FNF`,
+  ],
+  [
+    completeRecord("src/core/a.ts"),
+    "non-canonical SF path: src/core/a.ts",
+  ],
+  [
+    completeRecord(testPath("tests/a_test.ts")),
+    "unclassified or foreign LCOV path: tests/a_test.ts",
+  ],
+  [
+    [
+      completeRecord(testPath("src/core/a.ts")),
+      completeRecord(toFileUrl(testPath("src/core/a.ts")).href),
+    ].join("\n"),
+    "duplicate LCOV path or alias: src/core/a.ts",
+  ],
+  [
+    "",
+    "required runtime modules have no LCOV record: src/core/a.ts (list a type-only module in fixtures/coverage/ownership.json)",
+  ],
+];
+
+Deno.test("coverage validation rejects with the exact message", () => {
+  for (const [report, message] of REPORT_MESSAGE_CASES) {
+    const result = validateCoverageReport(
+      report,
+      TEST_ROOT,
+      ownershipFor(["src/core/a.ts"]),
+    );
+    assertEquals(result.ok, false, report);
+    if (!result.ok) assertEquals(result.error.message, message);
+  }
+});

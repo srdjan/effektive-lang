@@ -135,7 +135,55 @@ Deno.test("cli: a watch session is unsupported", async () => {
   m.script = [() => ["ok.eff"]];
   await main(["watch", CLI_ROOT], m.io);
   const outcome = await replay(m.logs[0]);
-  assertEquals(outcome.tag, "unsupported");
+  assertEquals(outcome, {
+    tag: "unsupported",
+    reason: "watch sessions (cli.change) are not supported yet",
+  });
+});
+
+Deno.test("cli: a start event without arguments is unsupported", async () => {
+  const recorded = await recordCli(OK_PROJECT, ["check", CLI_ROOT]);
+  const index = recorded.events.findIndex((e) => e.kind === "cli.start");
+  const outcome = await replay({
+    blobs: recorded.blobs,
+    events: changed(recorded.events, index, { args: [] }),
+  });
+  assertEquals(outcome, {
+    tag: "unsupported",
+    reason: "cli.start holds no arguments",
+  });
+});
+
+Deno.test("cli: arguments that name no project command are unsupported", async () => {
+  const recorded = await recordCli(OK_PROJECT, ["check", CLI_ROOT]);
+  const index = recorded.events.findIndex((e) => e.kind === "cli.start");
+  const outcome = await replay({
+    blobs: recorded.blobs,
+    events: changed(recorded.events, index, { args: ["--help"] }),
+  });
+  assertEquals(outcome, {
+    tag: "unsupported",
+    reason: "the logged arguments do not name a project command",
+  });
+});
+
+Deno.test("a session without events is unsupported", async () => {
+  assertEquals(await replaySession([], () => undefined), {
+    tag: "unsupported",
+    reason: "the session has no events",
+  });
+});
+
+Deno.test("a session that mixes surfaces is unsupported", async () => {
+  const cli = await recordCli(OK_PROJECT, ["check", CLI_ROOT]);
+  const playground = recordPlayground([]);
+  assertEquals(
+    await replaySession(
+      [cli.events[0], playground.events[0]],
+      () => undefined,
+    ),
+    { tag: "unsupported", reason: "the session mixes surfaces" },
+  );
 });
 
 Deno.test("cli: a check --fix session is unsupported", async () => {
@@ -166,7 +214,10 @@ Deno.test("cli: a session that used the removed --validate flag is unsupported",
 Deno.test("cli: a missing blob is unsupported", async () => {
   const recorded = await recordCli(OK_PROJECT, ["check", CLI_ROOT]);
   const outcome = await replaySession(recorded.events, () => undefined);
-  assertEquals(outcome.tag, "unsupported");
+  assertEquals(outcome, {
+    tag: "unsupported",
+    reason: "missing blob for effektive.json",
+  });
 });
 
 // ---- Language server
@@ -375,7 +426,19 @@ Deno.test("playground: a changed compile is a difference, and changed examples a
       examples: "x",
     }),
   });
-  assertEquals(moved.tag, "unsupported");
+  assertEquals(moved, {
+    tag: "unsupported",
+    reason: "the examples changed since the session was recorded",
+  });
+});
+
+Deno.test("playground: a session without pg.start is unsupported", async () => {
+  const recorded = recordPlayground([]);
+  const events = recorded.events.filter((e) => e.kind !== "pg.start");
+  assertEquals(await replaySession(events, () => undefined), {
+    tag: "unsupported",
+    reason: "the session has no pg.start",
+  });
 });
 
 // ---- The replay name

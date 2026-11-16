@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { releaseTexts } from "../scripts/release.ts";
+import { describe, releaseTexts } from "../scripts/release.ts";
 
 const CONFIG = `{
   "name": "@x/y",
@@ -177,3 +177,26 @@ for (const c of CASES) {
     );
   });
 }
+
+Deno.test("describe writes one text for each release error", () => {
+  assertEquals(
+    describe({ tag: "bad-version", version: "1.0" }),
+    'release: "1.0" is not a version of the form X.Y.Z',
+  );
+  assertEquals(
+    describe({ tag: "no-unreleased-heading" }),
+    "release: CHANGELOG.md has no `## Unreleased` heading",
+  );
+  assertEquals(
+    describe({ tag: "empty-unreleased" }),
+    "release: Unreleased has no entries in CHANGELOG.md",
+  );
+  assertEquals(
+    describe({ tag: "no-config-version" }),
+    'release: deno.json has no `  "version": "X.Y.Z"` line',
+  );
+  assertEquals(
+    describe({ tag: "not-rising", version: "0.9.8", current: "0.9.9" }),
+    "release: 0.9.8 does not rise above 0.9.9",
+  );
+});
