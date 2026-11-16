@@ -5,7 +5,7 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { checkProject, emitProject, memoryHost } from "../src/core/mod.ts";
-import { deno } from "./process_helpers.ts";
+import { deno, withTemporaryDirectory } from "./process_helpers.ts";
 import { assertValidProject } from "./helpers.ts";
 
 /** The fields of the JSON that `main.ts` prints. Each application prints its own subset. */
@@ -158,8 +158,7 @@ for (const app of APPLICATIONS) {
     );
     assert(project.ok, JSON.stringify(project));
     const lowered = assertValidProject(project.value);
-    const dir = Deno.makeTempDirSync({ prefix: app.prefix });
-    try {
+    await withTemporaryDirectory(app.prefix, async (dir) => {
       Deno.writeTextFileSync(
         `${dir}/deno.json`,
         Deno.readTextFileSync(new URL("deno.json", base)),
@@ -200,8 +199,6 @@ for (const app of APPLICATIONS) {
           app.verify(report);
         }
       }
-    } finally {
-      Deno.removeSync(dir, { recursive: true });
-    }
+    });
   });
 }
