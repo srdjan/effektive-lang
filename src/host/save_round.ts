@@ -80,7 +80,7 @@ export function runSaveRound(input: SaveRoundInput): SaveRound {
   const kept: string[] = [];
   for (const name of input.previous) {
     if (present.has(name) || !owns(name)) continue;
-    const { removed, notes } = removeStaleOutputs(fs, root, [name]);
+    const { removed, notes } = removeStaleOutputs(fs, root, name);
     removals.push({ name, removed, notes });
     if (input.removal === "retry" && notes.length > 0) kept.push(name);
   }

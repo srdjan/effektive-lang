@@ -14,12 +14,12 @@ Deno.test("removeStaleOutputs keeps the .ts file when its map cannot be removed"
     [`${ROOT}/gone.ts.map`]: "{}",
   });
   m.unwritable.add(`${ROOT}/gone.ts.map`);
-  const first = removeStaleOutputs(m.io.fs, ROOT, ["gone"]);
+  const first = removeStaleOutputs(m.io.fs, ROOT, "gone");
   assertEquals(first.removed, []);
   assertEquals(first.notes.length, 1);
   assertEquals(m.files.has(`${ROOT}/gone.ts`), true);
   m.unwritable.delete(`${ROOT}/gone.ts.map`);
-  const second = removeStaleOutputs(m.io.fs, ROOT, ["gone"]);
+  const second = removeStaleOutputs(m.io.fs, ROOT, "gone");
   assertEquals(second.removed, ["gone.ts.map", "gone.ts"]);
   assertEquals(second.notes, []);
   assertEquals(m.files.size, 0);
@@ -27,7 +27,7 @@ Deno.test("removeStaleOutputs keeps the .ts file when its map cannot be removed"
 
 Deno.test("removeStaleOutputs removes the .ts file when its map is missing", () => {
   const m = memoryIo({ [`${ROOT}/gone.ts`]: `${HEADER}\nexport {}\n` });
-  const result = removeStaleOutputs(m.io.fs, ROOT, ["gone"]);
+  const result = removeStaleOutputs(m.io.fs, ROOT, "gone");
   assertEquals(result.removed, ["gone.ts"]);
   assertEquals(result.notes, []);
   assertEquals(m.files.size, 0);
@@ -42,9 +42,12 @@ Deno.test("removeStaleOutputs removes the companion module of a left interface, 
     [`${ROOT}/kept.effi.ts`]: "export const mine = 1;\n",
     [`${ROOT}/kept.effi.ts.map`]: "{}",
   });
-  const result = removeStaleOutputs(m.io.fs, ROOT, ["gone", "kept"]);
-  assertEquals(result.removed, ["gone.effi.ts.map", "gone.effi.ts"]);
-  assertEquals(result.notes, []);
+  const gone = removeStaleOutputs(m.io.fs, ROOT, "gone");
+  const kept = removeStaleOutputs(m.io.fs, ROOT, "kept");
+  assertEquals(gone.removed, ["gone.effi.ts.map", "gone.effi.ts"]);
+  assertEquals(gone.notes, []);
+  assertEquals(kept.removed, []);
+  assertEquals(kept.notes, []);
   assertEquals([...m.files.keys()].sort(), [
     `${ROOT}/kept.effi.ts`,
     `${ROOT}/kept.effi.ts.map`,
@@ -57,7 +60,7 @@ Deno.test("removeStaleOutputs removes an output that the outer project root wrot
       "// Generated from sub/gone.eff by the Effektive compiler. Do not edit.\nexport {}\n",
     "/work/sub/gone.ts.map": "{}",
   });
-  const result = removeStaleOutputs(m.io.fs, "/work/sub", ["gone"]);
+  const result = removeStaleOutputs(m.io.fs, "/work/sub", "gone");
   assertEquals(result.removed, ["gone.ts.map", "gone.ts"]);
   assertEquals(result.notes, []);
   assertEquals([...m.files.keys()], []);
@@ -69,7 +72,7 @@ Deno.test("removeStaleOutputs keeps an output whose header names another file wi
       "// Generated from zzz/sub/gone.eff by the Effektive compiler. Do not edit.\nexport {}\n",
     "/work/sub/gone.ts.map": "{}",
   });
-  const result = removeStaleOutputs(m.io.fs, "/work/sub", ["gone"]);
+  const result = removeStaleOutputs(m.io.fs, "/work/sub", "gone");
   assertEquals(result.removed, []);
   assertEquals([...m.files.keys()].sort(), [
     "/work/sub/gone.ts",
@@ -83,7 +86,7 @@ Deno.test("removeStaleOutputs keeps an output whose header is a suffix that does
       "// Generated from ub/gone.eff by the Effektive compiler. Do not edit.\nexport {}\n",
     "/work/sub/gone.ts.map": "{}",
   });
-  const result = removeStaleOutputs(m.io.fs, "/work/sub", ["gone"]);
+  const result = removeStaleOutputs(m.io.fs, "/work/sub", "gone");
   assertEquals(result.removed, []);
   assertEquals([...m.files.keys()].sort(), [
     "/work/sub/gone.ts",

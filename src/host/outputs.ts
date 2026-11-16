@@ -243,8 +243,8 @@ export function writeGenerated(
 }
 
 /**
- * Removes the outputs of modules that left the project. A module that left has
- * no known mode, so each named module tries `<module>.ts` for `<module>.eff` and
+ * Removes the outputs of a module that left the project. A module that left has
+ * no known mode, so it tries `<module>.ts` for `<module>.eff` and
  * `<module>.effi.ts` for `<module>.effi`, each with its `.map`. A `.ts` file goes
  * only when its first line is the emitter header of that source, so a
  * hand-written file at the same path stays. The header can name the source from
@@ -255,47 +255,45 @@ export function writeGenerated(
 export function removeStaleOutputs(
   fs: HostFs,
   root: string,
-  modules: readonly string[],
+  module: string,
 ): { readonly removed: string[]; readonly notes: string[] } {
   const removed: string[] = [];
   const notes: string[] = [];
-  for (const module of modules) {
-    for (const source of modulePathsOf(module)) {
-      const path = generatedPathOf(source);
-      const output = containedProjectPath(fs, root, path);
-      if (!output.ok) {
-        notes.push(`error: cannot remove ${path}: ${output.error.message}`);
-        continue;
+  for (const source of modulePathsOf(module)) {
+    const path = generatedPathOf(source);
+    const output = containedProjectPath(fs, root, path);
+    if (!output.ok) {
+      notes.push(`error: cannot remove ${path}: ${output.error.message}`);
+      continue;
+    }
+    const read = fs.readText(output.value);
+    if (!read.ok) {
+      if (read.error.tag === "unreadable") {
+        notes.push(`error: cannot read ${path}: ${read.error.message}`);
       }
-      const read = fs.readText(output.value);
-      if (!read.ok) {
-        if (read.error.tag === "unreadable") {
-          notes.push(`error: cannot read ${path}: ${read.error.message}`);
-        }
-        continue;
-      }
-      if (!namesSource(fs, root, source, generatedSourceOf(read.value))) {
-        continue;
-      }
-      // The map goes first. When it fails, the `.ts` file keeps the header that
-      // proves ownership, so a later call can retry. A missing file counts as removed.
-      const names = [sourceMapPathOf(path), path];
-      const contained = containedPaths(fs, root, names);
-      if (!contained.ok) {
-        const { path: target, message } = contained.error;
-        notes.push(`error: cannot remove ${target}: ${message}`);
-        continue;
-      }
-      for (const [i, target] of names.entries()) {
-        const full = contained.value[i];
-        const existed = fs.kind(full) !== "missing";
-        const result = fs.remove(full);
-        if (result.ok) {
-          if (existed) removed.push(target);
-        } else {
-          notes.push(`error: cannot remove ${target}: ${result.error.message}`);
-          break;
-        }
+      continue;
+    }
+    if (!namesSource(fs, root, source, generatedSourceOf(read.value))) {
+      continue;
+    }
+    // The map goes first. When it fails, the `.ts` file keeps the header that
+    // proves ownership, so a later call can retry. A missing file counts as removed.
+    const names = [sourceMapPathOf(path), path];
+    const contained = containedPaths(fs, root, names);
+    if (!contained.ok) {
+      const { path: target, message } = contained.error;
+      notes.push(`error: cannot remove ${target}: ${message}`);
+      continue;
+    }
+    for (const [i, target] of names.entries()) {
+      const full = contained.value[i];
+      const existed = fs.kind(full) !== "missing";
+      const result = fs.remove(full);
+      if (result.ok) {
+        if (existed) removed.push(target);
+      } else {
+        notes.push(`error: cannot remove ${target}: ${result.error.message}`);
+        break;
       }
     }
   }

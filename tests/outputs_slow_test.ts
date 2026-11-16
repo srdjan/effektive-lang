@@ -120,7 +120,7 @@ Deno.test("writeGenerated rejects external output links before writing either fi
     Deno.writeTextFileSync(`${outside}/stale/m.ts`, stale.emitted.text);
     Deno.writeTextFileSync(`${outside}/stale/m.ts.map`, "outside map\n");
     Deno.symlinkSync(`${outside}/stale`, `${root}/stale-parent`);
-    const removed = removeStaleOutputs(denoFs, root, ["stale-parent/m"]);
+    const removed = removeStaleOutputs(denoFs, root, "stale-parent/m");
     assertEquals(removed.removed, []);
     assertEquals(denoFs.kind(`${outside}/stale/m.ts`), "file");
     assertEquals(denoFs.kind(`${outside}/stale/m.ts.map`), "file");
