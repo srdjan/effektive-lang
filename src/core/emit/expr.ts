@@ -702,19 +702,15 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       };
     }
     const doc = spanned(e.span, result.doc);
-    const taggedFlush = result.flush === undefined
-      ? undefined
-      : spanned(e.span, result.flush);
+    const tagged: Emitted = result.flush === undefined
+      ? { ...result, doc: doc }
+      : { ...result, flush: spanned(e.span, result.flush), doc: doc };
     if (result.condChain !== undefined) {
       const condChain: CondChain = { ...result.condChain, self: e.span };
-      return taggedFlush === undefined
-        ? { ...result, doc: doc, condChain: condChain }
-        : { ...result, flush: taggedFlush, doc: doc, condChain: condChain };
+      return { ...tagged, condChain: condChain };
     }
     if (result.chain === undefined) {
-      return taggedFlush === undefined
-        ? { ...result, doc: doc }
-        : { ...result, flush: taggedFlush, doc: doc };
+      return tagged;
     }
     const first = result.chain.heads[0];
     const rest = result.chain.heads.slice(1);
@@ -722,9 +718,7 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       heads: [{ doc: first.doc, span: e.span }, ...rest],
       tail: result.chain.tail,
     };
-    return taggedFlush === undefined
-      ? { ...result, doc: doc, chain: chain }
-      : { ...result, flush: taggedFlush, doc: doc, chain: chain };
+    return { ...tagged, chain: chain };
   }
   function exprEmitterKid(mode: Mode): Kid {
     return (e, expected) => exprEmitterFit(e, expected, mode);

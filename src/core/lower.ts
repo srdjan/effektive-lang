@@ -1649,20 +1649,13 @@ function BodyLowerer(
   }
   function bodyLowererHandler(node: NodeId): Handler {
     const fact = bodyLowererFactOf(node, "handler");
-    const parts = bodyLowererKids(node);
-    const nameNodes = parts.filter((k) =>
-      kindOf(bodyLowererCtx.tree, k) === SyntaxKind.Name
-    );
-    const bodyNode = parts.filter((k) =>
-      kindOf(bodyLowererCtx.tree, k) !== SyntaxKind.Name
-    ).pop();
+    const error = bodyLowererRequired(fact.error, "the handled error", node);
+    const defect = bodyLowererDefectHandler(node);
     return {
-      error: bodyLowererRequired(fact.error, "the handled error", node),
-      binding: bodyLowererBindingOf(fact.binding, nameNodes[1]),
-      body: bodyLowererExpr(
-        bodyLowererRequired(bodyNode, "the handler body", node),
-      ),
-      span: bodyLowererSpan(node),
+      error: error,
+      binding: defect.binding,
+      body: defect.body,
+      span: defect.span,
     };
   }
   return { expr: bodyLowererExpr };
@@ -1774,19 +1767,9 @@ function lowerDeclarations(
     readonly declaration: Declaration;
   }[] = [];
   const decls = module.declarations;
-  for (const declaration of decls.types) {
-    found[found.length] = {
-      start: declaration.span.start,
-      declaration: declaration,
-    };
-  }
-  for (const declaration of decls.errors) {
-    found[found.length] = {
-      start: declaration.span.start,
-      declaration: declaration,
-    };
-  }
-  for (const declaration of decls.services) {
+  for (
+    const declaration of [...decls.types, ...decls.errors, ...decls.services]
+  ) {
     found[found.length] = {
       start: declaration.span.start,
       declaration: declaration,
