@@ -33,3 +33,16 @@ Deno.test("generatedSourceOf rejects other first lines", () => {
     undefined,
   );
 });
+
+Deno.test("generatedSourceOf rejects a source without a stem or with a line terminator", () => {
+  assertEquals(generatedSourceOf(generatedHeader(".eff")), undefined);
+  assertEquals(generatedSourceOf(generatedHeader(".effi")), undefined);
+  assertEquals(generatedSourceOf(generatedHeader("a\rb.eff")), undefined);
+  assertEquals(generatedSourceOf(generatedHeader("a\u2028b.eff")), undefined);
+  assertEquals(generatedSourceOf(generatedHeader("a\u2029b.eff")), undefined);
+});
+
+Deno.test("generatedSourceOf reads a one-character stem", () => {
+  assertEquals(generatedSourceOf(generatedHeader("..eff")), "..eff");
+  assertEquals(generatedSourceOf(generatedHeader("a.effi")), "a.effi");
+});

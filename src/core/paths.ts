@@ -137,10 +137,16 @@ export function generatedHeader(source: PathText): SourceText {
 
 const HEADER_PREFIX = "// Generated from ";
 const HEADER_SUFFIX = " by the Effektive compiler. Do not edit.";
+/** The line terminators that a header source cannot hold, apart from `\n`. */
+const LINE_TERMINATORS: readonly string[] = ["\r", "\u2028", "\u2029"];
 
 /**
  * The source that the first line of `text` names, when that line is exactly a
  * generated header. One trailing `\r` is ignored. Otherwise undefined.
+ *
+ * The source is a `.eff` or `.effi` path with a nonempty stem and no line
+ * terminator. This is the language of the former pattern
+ * `^// Generated from (.+\.effi?) by the Effektive compiler\. Do not edit\.$`.
  */
 export function generatedSourceOf(text: SourceText): OptionalPath {
   const firstLine = text.split("\n", 1)[0];
@@ -149,5 +155,11 @@ export function generatedSourceOf(text: SourceText): OptionalPath {
     return undefined;
   }
   const source = line.slice(HEADER_PREFIX.length, -HEADER_SUFFIX.length);
-  return source.length > 0 && isModulePath(source) ? source : undefined;
+  const extension = isInterfacePath(source)
+    ? INTERFACE_EXTENSION
+    : SOURCE_EXTENSION;
+  const hasStem = isModulePath(source) && source.length > extension.length;
+  return hasStem && !LINE_TERMINATORS.some((t) => source.includes(t))
+    ? source
+    : undefined;
 }
