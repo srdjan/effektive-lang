@@ -9,9 +9,11 @@
 
 import type { CapabilityId, ErrorId, Execution, TypeId } from "./ir.ts";
 import {
+  childTypes,
   DURATION_ID,
   INSTANT_ID,
   isClosedUnitId,
+  isContainerKind,
   isDeferredKind,
   SCHEMA_ERROR_ID,
   SCHEMA_ISSUE_ID,
@@ -1440,14 +1442,7 @@ export function dataOnly(
         !(rejects.unit && type.name === "unit");
     }
     if (type.kind === "literal") return true;
-    if (type.kind === "record") {
-      return type.fields.every((field) => visit(field.type));
-    }
-    if (type.kind === "array" || type.kind === "option") {
-      return visit(type.element);
-    }
-    if (type.kind === "tuple") return type.elements.every(visit);
-    if (type.kind === "union") return type.members.every(visit);
+    if (isContainerKind(type)) return childTypes(type).every(visit);
     if (type.kind === "named") {
       if (
         rejects.reserved &&
@@ -1524,14 +1519,7 @@ export function containsDeferredType(
         : table.aliasOf(type.id);
       return alias !== undefined && visit(alias);
     }
-    if (type.kind === "record") {
-      return type.fields.some((field) => visit(field.type));
-    }
-    if (type.kind === "array" || type.kind === "option") {
-      return visit(type.element);
-    }
-    if (type.kind === "tuple") return type.elements.some(visit);
-    if (type.kind === "union") return type.members.some(visit);
+    if (isContainerKind(type)) return childTypes(type).some(visit);
     if (
       type.kind === "primitive" || type.kind === "literal" ||
       type.kind === "error"
@@ -1564,14 +1552,7 @@ export function containsOpaqueType(
       const alias = table.aliasOf(type.id);
       return alias !== undefined && visit(alias);
     }
-    if (type.kind === "record") {
-      return type.fields.some((field) => visit(field.type));
-    }
-    if (type.kind === "array" || type.kind === "option") {
-      return visit(type.element);
-    }
-    if (type.kind === "tuple") return type.elements.some(visit);
-    if (type.kind === "union") return type.members.some(visit);
+    if (isContainerKind(type)) return childTypes(type).some(visit);
     if (
       type.kind === "primitive" || type.kind === "literal" ||
       type.kind === "error" || isDeferredKind(type)

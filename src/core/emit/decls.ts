@@ -14,7 +14,7 @@ import type {
   TypeDecl,
   ValueId,
 } from "../ir.ts";
-import { isDeferredKind } from "../ir.ts";
+import { childTypes, isDeferredKind } from "../ir.ts";
 import { trueFlag } from "../util.ts";
 import { isCycle, stronglyConnectedComponents } from "../graph.ts";
 import { containsNamed } from "../recursion_guard.ts";
@@ -677,12 +677,7 @@ export function DeclarationEmitter(scope: ModuleState): DeclarationEmitter {
         ? declarationEmitterCheckKind(declaration.definition.type, seen)
         : "plain";
     }
-    if (type.kind === "record") return all(type.fields.map((f) => f.type));
-    if (type.kind === "array" || type.kind === "option") {
-      return all([type.element]);
-    }
-    if (type.kind === "tuple") return all(type.elements);
-    return all(type.members);
+    return all(childTypes(type));
   }
   function declarationEmitterWrappedProvider(
     host: {

@@ -13,6 +13,7 @@ import type {
   TypeDecl,
 } from "../ir.ts";
 import {
+  childTypes,
   isClosedUnitId,
   isDeferredKind,
   SCHEMA_ERROR_ID,
@@ -510,16 +511,7 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     }
     if (type.kind === "primitive" || type.kind === "literal") return false;
     if (type.kind === "named") return moduleStateIsTypeOnly(type.id);
-    if (type.kind === "record") {
-      return type.fields.some((f) => moduleStateContainsFunction(f.type));
-    }
-    if (type.kind === "array" || type.kind === "option") {
-      return moduleStateContainsFunction(type.element);
-    }
-    if (type.kind === "tuple") {
-      return type.elements.some((t) => moduleStateContainsFunction(t));
-    }
-    return type.members.some((t) => moduleStateContainsFunction(t));
+    return childTypes(type).some((t) => moduleStateContainsFunction(t));
   }
   function moduleStateNameOf(id: DeclarationId): string {
     // `Duration` and `Instant` are numbers of milliseconds at run time.

@@ -134,6 +134,36 @@ export function isDeferredKind<T extends { readonly kind: string }>(
   return Object.hasOwn(DEFERRED_KINDS, node.kind);
 }
 
+/** The kinds of a record, an array, an option, a tuple, and a union: the kinds whose children are types. */
+export type ContainerKind = "record" | "array" | "option" | "tuple" | "union";
+/** A node of a `ContainerKind`, in an IR `Type` or a checker `TypeNode`. `C` is the child type. */
+export type ContainerNode<C> =
+  | { readonly kind: "record"; readonly fields: readonly { readonly type: C }[] }
+  | { readonly kind: "array"; readonly element: C }
+  | { readonly kind: "option"; readonly element: C }
+  | { readonly kind: "tuple"; readonly elements: readonly C[] }
+  | { readonly kind: "union"; readonly members: readonly C[] };
+const CONTAINER_KINDS: Record<ContainerKind, true> = {
+  "record": true,
+  "array": true,
+  "option": true,
+  "tuple": true,
+  "union": true,
+};
+/** True for a node of a `ContainerKind`. After this guard fails, a chain of `kind ===` tests over the rest of the kinds is exhaustive. */
+export function isContainerKind<T extends { readonly kind: string }>(
+  node: T,
+): node is Extract<T, { readonly kind: ContainerKind }> {
+  return Object.hasOwn(CONTAINER_KINDS, node.kind);
+}
+/** The child types of a container node, in order: the fields of a record, the element, the elements, or the members. */
+export function childTypes<C>(node: ContainerNode<C>): readonly C[] {
+  if (node.kind === "record") return node.fields.map((field) => field.type);
+  if (node.kind === "array" || node.kind === "option") return [node.element];
+  if (node.kind === "tuple") return node.elements;
+  return node.members;
+}
+
 export type Parameter = {
   readonly id: LocalId;
   readonly name: string;
