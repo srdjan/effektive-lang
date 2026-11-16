@@ -208,7 +208,12 @@ Deno.test("M4 refuses a count that is not a positive integer or more documents t
       message: "M4 document and step counts must be positive integers",
     },
   } as const;
-  const base = { seed: 1, size: "small", timeoutMs: 1000 } as const;
+  const base = {
+    seed: 1,
+    size: "small",
+    timeoutMs: 1000,
+    openDocuments: 3,
+  } as const;
   assertEquals(
     await runM4({ ...base, stepCounts: [1], openDocuments: 0 }),
     counts,

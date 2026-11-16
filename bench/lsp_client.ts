@@ -22,9 +22,6 @@ import { pathToUri } from "../src/lsp/positions.ts";
 
 type Timer = ReturnType<typeof setTimeout>;
 
-/** The default time limit of a request, a wait, or the exit, in milliseconds. */
-const DEFAULT_TIMEOUT_MS = 60_000;
-
 /** The kinds of client failure. */
 export type LspClientErrorTag =
   | "timeout"
@@ -68,9 +65,9 @@ export interface LspClientOptions {
    * The working directory of the server process. It is also the `rootUri` of
    * `initialize`, so the server logs into this folder.
    */
-  readonly cwd?: string;
+  readonly cwd: string;
   /** The limit of each request, wait, and exit, in milliseconds. */
-  readonly timeoutMs?: number;
+  readonly timeoutMs: number;
 }
 
 /** A running server with a continuous reader on its stdout and stderr. */
@@ -90,11 +87,9 @@ export class LspClient {
   #closed = false;
   #stderrTail = "";
 
-  constructor(options: LspClientOptions = {}) {
-    this.#timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    this.#rootUri = options.cwd === undefined
-      ? null
-      : pathToUri(options.cwd) ?? null;
+  constructor(options: LspClientOptions) {
+    this.#timeoutMs = options.timeoutMs;
+    this.#rootUri = pathToUri(options.cwd) ?? null;
     this.#process = new Deno.Command(options.executable ?? "deno", {
       args: [
         "run",
@@ -104,7 +99,7 @@ export class LspClient {
         join(ROOT, "deno.json"),
         join(ROOT, "src/lsp/main.ts"),
       ],
-      ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+      cwd: options.cwd,
       stdin: "piped",
       stdout: "piped",
       stderr: "piped",

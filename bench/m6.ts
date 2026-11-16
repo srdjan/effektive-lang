@@ -32,8 +32,8 @@ function row(label: string, pairs: readonly Pair[]): string[] {
   ];
 }
 
-function stageRows(prefix: string, stages: readonly StageResult[]): string[][] {
-  return stages.map((s) => row(`${prefix}${s.stage}`, s.pairs));
+function stageRows(stages: readonly StageResult[]): string[][] {
+  return stages.map((s) => row(s.stage, s.pairs));
 }
 
 /** The noise floor report of one run. `m5` is optional. */
@@ -50,7 +50,7 @@ export function formatM6(m2: M2Result, m5?: M5Result): string {
   for (const size of m2.sizes) {
     out.push("");
     out.push(`M2 size ${size.name} (${size.declarations} declarations)`);
-    const rows = stageRows("", size.stages);
+    const rows = stageRows(size.stages);
     for (const step of size.steps) {
       rows.push(row(`${step.kind} update`, step.update.pairs));
       rows.push(row(`${step.kind} emit`, step.emit.pairs));

@@ -22,8 +22,8 @@ export interface M4Config {
   readonly size: SizeName;
   /** The step counts N of the rows. Each row starts a fresh pair of servers. */
   readonly stepCounts: readonly number[];
-  /** Documents held open concurrently; defaults to three. */
-  readonly openDocuments?: number;
+  /** Documents held open concurrently. */
+  readonly openDocuments: number;
   /**
    * Run the servers with `writeOnSave` true. Each step then writes the edited
    * text to disk and sends `didSave` after its diagnostics, so each server
@@ -116,7 +116,7 @@ export async function runM4(
   config: M4Config,
 ): Promise<Result<M4Result, LspBenchError>> {
   const started = performance.now();
-  const openDocuments = config.openDocuments ?? 3;
+  const openDocuments = config.openDocuments;
   const writeOnSave = config.writeOnSave ?? false;
   const sessionOptions = { writeOnSave, saveOnStep: writeOnSave };
   if (

@@ -294,7 +294,6 @@ export class Session {
   readonly #client: LspClient;
   readonly #input: LspInput;
   readonly #uri: string;
-  readonly #timeoutMs: number;
   readonly #dir: string;
   readonly #saveOnStep: boolean;
   #text: string;
@@ -311,7 +310,6 @@ export class Session {
     client: LspClient,
     input: LspInput,
     uri: string,
-    timeoutMs: number,
     dir: string,
     saveOnStep: boolean,
   ) {
@@ -320,7 +318,6 @@ export class Session {
     this.#client = client;
     this.#input = input;
     this.#uri = uri;
-    this.#timeoutMs = timeoutMs;
     this.#text = input.files.get(input.editPath) ?? "";
     this.#editCounts.set(input.editPath, 0);
   }
@@ -335,9 +332,7 @@ export class Session {
     timeoutMs: number,
     openPaths: readonly string[] = [input.editPath],
     options: SessionOptions = {},
-  ): Promise<
-    Result<{ session: Session; client: LspClient }, LspBenchError>
-  > {
+  ): Promise<Result<Session, LspBenchError>> {
     const writeOnSave = options.writeOnSave ?? false;
     const saveOnStep = options.saveOnStep ?? false;
     if (saveOnStep && !writeOnSave) {
@@ -357,7 +352,6 @@ export class Session {
       client,
       input,
       uri,
-      timeoutMs,
       dir,
       saveOnStep,
     );
@@ -366,7 +360,7 @@ export class Session {
       for (const path of new Set([input.editPath, ...openPaths])) {
         const documentUri = new URL(`file://${dir}/${path}`).href;
         const text = input.files.get(path) ?? "";
-        const first = client.waitForDiagnostics(documentUri, 1, timeoutMs);
+        const first = client.waitForDiagnostics(documentUri, 1);
         first.catch(() => {});
         await client.notify("textDocument/didOpen", {
           textDocument: {
@@ -389,7 +383,7 @@ export class Session {
           session.#editCounts.set(path, 0);
         }
       }
-      return succeed({ session, client });
+      return succeed(session);
     } catch (e) {
       await client.dispose();
       return fail(serverError(e));
@@ -477,11 +471,7 @@ export class Session {
     text: string,
     diskPath: string | undefined,
   ): Promise<{ readonly params: unknown; readonly elapsed: number }> {
-    const waiting = this.#client.waitForDiagnostics(
-      uri,
-      version,
-      this.#timeoutMs,
-    );
+    const waiting = this.#client.waitForDiagnostics(uri, version);
     waiting.catch(() => {});
     if (diskPath !== undefined) this.#writeDisk(diskPath, text);
     const start = performance.now();
@@ -560,11 +550,7 @@ export class Session {
       });
     }
     const waits = edits.map((edit) => {
-      const waiting = this.#client.waitForDiagnostics(
-        edit.uri,
-        edit.version,
-        this.#timeoutMs,
-      );
+      const waiting = this.#client.waitForDiagnostics(edit.uri, edit.version);
       waiting.catch(() => {});
       return waiting;
     });
@@ -714,6 +700,11 @@ export class Session {
     }
   }
 
+  /** Ends the server process. It is safe to call after `finish`. */
+  async dispose(): Promise<void> {
+    await this.#client.dispose();
+  }
+
   /** Shuts the server down. The exit code must be 0 and stdout must be all frames. */
   async finish(): Promise<Result<null, LspBenchError>> {
     try {
@@ -741,7 +732,6 @@ export class Session {
  */
 export class Workspace {
   readonly #dirs: string[] = [];
-  readonly #clients: LspClient[] = [];
   readonly #sessions: Session[] = [];
 
   /** Writes a copy of the input to a new temporary directory and starts a session on it. */
@@ -762,9 +752,8 @@ export class Workspace {
       options,
     );
     if (!started.ok) return started;
-    this.#clients.push(started.value.client);
-    this.#sessions.push(started.value.session);
-    return succeed(started.value.session);
+    this.#sessions.push(started.value);
+    return succeed(started.value);
   }
 
   /** Opens two sessions on the same input. Side A opens first. */
@@ -790,8 +779,7 @@ export class Workspace {
   }
 
   async dispose(): Promise<void> {
-    for (const client of this.#clients.splice(0)) await client.dispose();
-    this.#sessions.length = 0;
+    for (const session of this.#sessions.splice(0)) await session.dispose();
     for (const dir of this.#dirs.splice(0)) {
       Deno.removeSync(dir, { recursive: true });
     }
