@@ -497,6 +497,17 @@ const make = (input): User => User(input)
   assertEquals(parameterTypes(project, "m", "make"), ["{ name: Text }"]);
 });
 
+Deno.test("infers a refined input from a call and from a pipe into the refined type", () => {
+  const project = checkText(`
+type Positive = int where n => n > 0
+const called = (input): Positive => Positive(input)
+const piped = (input): Positive => input |> Positive
+`);
+  assertEquals(codes(project), []);
+  assertEquals(parameterTypes(project, "m", "called"), ["Positive"]);
+  assertEquals(parameterTypes(project, "m", "piped"), ["Positive"]);
+});
+
 Deno.test("does not select an input type from an operator alone", () => {
   const project = checkText(`
 const ambiguous = (input) => input + 1
