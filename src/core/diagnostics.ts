@@ -366,14 +366,15 @@ export type Diagnostic = {
   readonly related?: readonly RelatedSpan[];
 };
 
-export function registeredCodes(): readonly DiagnosticCode[] {
-  const keys = Object.keys(DIAGNOSTIC_CODES);
-  return keys.filter((key): key is DiagnosticCode => keys.includes(key));
+type DiagnosticCodes = readonly DiagnosticCode[];
+
+export function registeredCodes(): DiagnosticCodes {
+  return Object.keys(DIAGNOSTIC_CODES) as DiagnosticCodes;
 }
 
 export function categoryOf(code: DiagnosticCode): Category {
-  // The cast is sound: the `satisfies` clause on DIAGNOSTIC_CODES requires
-  // each key to start with `${Category}/`.
+  // The cast is sound: each key of DIAGNOSTIC_CODES starts with `${Category}/`.
+  // `tests/diagnostics_test.ts` checks it.
   return code.slice(0, code.indexOf("/")) as Category;
 }
 
@@ -386,19 +387,10 @@ export function makeDiagnostic(
   message: DiagnosticText,
   span: Span,
 ): Diagnostic {
-  return diagnostic(code, message, span, undefined);
+  return makeDiagnosticWithRelated(code, message, span, undefined);
 }
 
 export function makeDiagnosticWithRelated(
-  code: DiagnosticCode,
-  message: DiagnosticText,
-  span: Span,
-  related: readonly RelatedSpan[] | undefined,
-): Diagnostic {
-  return diagnostic(code, message, span, related);
-}
-
-function diagnostic(
   code: DiagnosticCode,
   message: DiagnosticText,
   span: Span,
