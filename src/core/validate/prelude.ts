@@ -3,20 +3,18 @@
 // identities Duration and Instant. One table seeds the world of a module and
 // answers whether an error identity is reserved.
 
-import type {
-  ErrorDecl,
-  ErrorId,
-  ModuleIR,
-  Span,
-  TypeDecl,
-  TypeId,
-} from "../ir.ts";
 import {
   DURATION_ID,
+  type ErrorDecl,
+  type ErrorId,
   INSTANT_ID,
+  type ModuleIR,
   SCHEMA_ERROR_ID,
   SCHEMA_ISSUE_ID,
+  type Span,
   TIMEOUT_ERROR_ID,
+  type TypeDecl,
+  type TypeId,
 } from "../ir.ts";
 
 export type ReservedErrorId =

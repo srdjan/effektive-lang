@@ -1,8 +1,7 @@
 // Validation of the Ref operations: makeRef, getRef, setRef, and updateRef.
 
-import type { ValidationPath } from "../report.ts";
+import { AREA, type ValidationPath } from "../report.ts";
 import type { Expr } from "../../ir.ts";
-import { AREA } from "../report.ts";
 import { combine, EFFECT_ONLY, invocationOf } from "../sets.ts";
 import { asFunction, fits, unfold, UNIT } from "../typing.ts";
 import { flagCore, streamState, type ValidatorCore } from "./context.ts";

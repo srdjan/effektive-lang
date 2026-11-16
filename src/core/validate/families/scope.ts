@@ -1,7 +1,7 @@
 // Validation of the Scope builtins: scoped, forkScoped, the explicit scope operations,
 // and the `using` block. This file also holds the borrow walk of a function parameter.
 
-import type { ValidationPath, ValidationText } from "../report.ts";
+import { AREA, type ValidationPath, type ValidationText } from "../report.ts";
 import { isTrue } from "../guards.ts";
 import {
   type ErrorId,
@@ -11,7 +11,6 @@ import {
   type Span,
   type Type,
 } from "../../ir.ts";
-import { AREA } from "../report.ts";
 import {
   combine,
   EFFECT_ONLY,

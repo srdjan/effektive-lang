@@ -1,10 +1,14 @@
-import { hasProperty } from "../runtime.ts";
 // Checks of the declaration headers: identities, kinds, exports, services,
 // type declarations, and error declarations.
 
-import type { Report, ValidationPath } from "./report.ts";
+import {
+  AREA,
+  moduleSpan,
+  type Report,
+  type ValidationPath,
+} from "./report.ts";
 import { isTrue } from "./guards.ts";
-import { emptySet, setFrom } from "../runtime.ts";
+import { emptySet, hasProperty, setFrom } from "../runtime.ts";
 import type {
   ErrorDecl,
   Field,
@@ -13,7 +17,6 @@ import type {
   Span,
   TypeDecl,
 } from "../ir.ts";
-import { AREA, moduleSpan } from "./report.ts";
 import { checkRefinementDeclaration } from "./refinements.ts";
 import { type Ctx, flag } from "./world_table.ts";
 import {

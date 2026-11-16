@@ -1,12 +1,17 @@
 // Checks of the types inside declarations: every identity in a type resolves,
 // and no record type repeats a field name.
 
-import type { ValidationFlag, ValidationPath } from "./report.ts";
+import { AREA, type ValidationFlag, type ValidationPath } from "./report.ts";
 import { isTrue } from "./guards.ts";
 import { emptySet, setFrom } from "../runtime.ts";
-import type { Field, FunctionType, Span, Type } from "../ir.ts";
-import { SCHEMA_ERROR_ID, SCOPE_CAPABILITY } from "../ir.ts";
-import { AREA } from "./report.ts";
+import {
+  type Field,
+  type FunctionType,
+  SCHEMA_ERROR_ID,
+  SCOPE_CAPABILITY,
+  type Span,
+  type Type,
+} from "../ir.ts";
 import {
   containsRefinement,
   dataOnly,

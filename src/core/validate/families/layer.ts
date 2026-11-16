@@ -1,9 +1,8 @@
 // Validation of the Layer builtins: layer, mergeLayers, and provide.
 
-import type { ValidationPath } from "../report.ts";
+import { AREA, type ValidationPath } from "../report.ts";
 import { setFrom } from "../../runtime.ts";
 import type { Expr } from "../../ir.ts";
-import { AREA } from "../report.ts";
 import {
   type Active,
   combine,

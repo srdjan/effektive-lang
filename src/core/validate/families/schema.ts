@@ -1,7 +1,7 @@
 // Validation of the Schema builtins: the Schema constructors and the make, decode, and encode
 // operations. The table of the constructors sits here.
 
-import type { ValidationPath } from "../report.ts";
+import { AREA, type ValidationPath } from "../report.ts";
 import { isTrue } from "../guards.ts";
 import { emptyMap, setFrom } from "../../runtime.ts";
 import {
@@ -11,7 +11,6 @@ import {
   SCHEMA_ISSUE_ID,
   type Type,
 } from "../../ir.ts";
-import { AREA } from "../report.ts";
 import { exprChildren } from "../expr_walk.ts";
 import {
   combine,

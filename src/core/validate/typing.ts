@@ -22,8 +22,15 @@
 import type { ValidationFlag, ValidationText } from "./report.ts";
 import { isTrue } from "./guards.ts";
 import { emptySet, indices } from "../runtime.ts";
-import type { Execution, Field, FunctionType, Type } from "../ir.ts";
-import { DURATION_ID, INSTANT_ID, isClosedUnitId } from "../ir.ts";
+import {
+  DURATION_ID,
+  type Execution,
+  type Field,
+  type FunctionType,
+  INSTANT_ID,
+  isClosedUnitId,
+  type Type,
+} from "../ir.ts";
 import { isReservedError } from "./prelude.ts";
 import { effectsFit, isSubset, sameSet, sortedUnique } from "./sets.ts";
 import { MAX_DEPTH, typeChildren } from "./type_children.ts";

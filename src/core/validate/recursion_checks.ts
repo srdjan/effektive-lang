@@ -6,8 +6,7 @@ import { emptyMap, emptySet, indices, mapFrom, setFrom } from "../runtime.ts";
 import type { ModuleIR, Type } from "../ir.ts";
 import { AREA, type Report } from "./report.ts";
 import { dataOnly } from "./typing.ts";
-import { MAX_DEPTH } from "./type_children.ts";
-import { typeChildren } from "./type_children.ts";
+import { MAX_DEPTH, typeChildren } from "./type_children.ts";
 import { type Ctx, flag, type World } from "./world_table.ts";
 
 function collectOwnTargets(

@@ -1,9 +1,8 @@
 // Validation of the Stream builtins: the sources, the element operators, the sinks,
 // and the Stream runners. The tables of the operator kinds sit here.
 
-import type { ValidationPath } from "../report.ts";
+import { AREA, type ValidationPath } from "../report.ts";
 import type { Expr } from "../../ir.ts";
-import { AREA } from "../report.ts";
 import {
   combine,
   invocationOf,

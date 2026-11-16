@@ -1,4 +1,4 @@
-import type { ValidationPath } from "./report.ts";
+import { AREA, type ValidationPath } from "./report.ts";
 import { isTrue } from "./guards.ts";
 import {
   bigInteger,
@@ -19,7 +19,6 @@ import type {
 } from "../ir.ts";
 import type { Predicate, Term } from "../predicates.ts";
 import { verifyCertificate } from "./predicates.ts";
-import { AREA } from "./report.ts";
 import { invocationOf, isQuiet } from "./sets.ts";
 import { MAX_DEPTH } from "./type_children.ts";
 import {

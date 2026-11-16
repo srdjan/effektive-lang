@@ -32,24 +32,22 @@ const UNITLESS_BUILTINS: readonly (BuiltinCallName | undefined)[] = [
   "at",
 ];
 
-import type {
-  ConstantDecl,
-  Effects,
-  ErrorId,
-  Execution,
-  Expr,
-  FunctionDecl,
-  FunctionType,
-  Parameter,
-  Pattern,
-  Span,
-  Type,
-} from "../ir.ts";
 import {
+  type ConstantDecl,
   DURATION_ID,
+  type Effects,
+  type ErrorId,
+  type Execution,
+  type Expr,
+  type FunctionDecl,
+  type FunctionType,
   INSTANT_ID,
   isClosedUnitId,
+  type Parameter,
+  type Pattern,
   SCHEMA_ERROR_ID,
+  type Span,
+  type Type,
 } from "../ir.ts";
 import { AREA, type AreaCode, type Report } from "./report.ts";
 import {

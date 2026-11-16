@@ -1,6 +1,6 @@
 // Validation of the effect builtins: retry, repeat, timeout, sleep, retrySchedule, defer, run, and race.
 
-import type { ValidationPath } from "../report.ts";
+import { AREA, type ValidationPath } from "../report.ts";
 import { emptySet } from "../../runtime.ts";
 import {
   DURATION_ID,
@@ -11,7 +11,6 @@ import {
 } from "../../ir.ts";
 
 const DURATION: Type = { kind: "named", id: DURATION_ID };
-import { AREA } from "../report.ts";
 import {
   type Active,
   combine,
