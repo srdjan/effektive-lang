@@ -96,7 +96,6 @@ async function watchLoop(
         io.stderr(`error: ${synced.message}\n`);
         return;
       case "host-change": {
-        if (!options.tsc) return;
         const outcome = await session.build(synced.revision, options, []);
         io.stderr("host inputs changed; rechecked: (none)\n");
         printOutcome(io, outcome, synced.revision.moduleNames().length);

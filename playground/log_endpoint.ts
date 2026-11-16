@@ -26,7 +26,7 @@ export interface LogRequest {
 }
 
 export interface Refusal {
-  readonly status: 400 | 403 | 411 | 413 | 415 | 405;
+  readonly status: 400 | 403 | 413 | 415 | 405;
   readonly message: string;
 }
 

@@ -62,17 +62,6 @@ async function gzipSize(bytes: Uint8Array<ArrayBuffer>): Promise<number> {
   return (await new Response(stream).arrayBuffer()).byteLength;
 }
 
-/** Lists the files below `dir` as absolute paths. */
-function listFiles(dir: string): string[] {
-  const files: string[] = [];
-  for (const entry of Deno.readDirSync(dir)) {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory) files.push(...listFiles(path));
-    else files.push(path);
-  }
-  return files;
-}
-
 function copyDirectory(from: string, to: string): string[] {
   Deno.mkdirSync(to, { recursive: true });
   const written: string[] = [];

@@ -158,7 +158,6 @@ export function writeGenerated(
   const generated: string[] = [];
   const tables = new Map<string, SpanTable>();
   const notes: string[] = [];
-  let failed = false;
   for (const name of names) {
     const output = source.generated(name);
     switch (output.kind) {
@@ -168,21 +167,18 @@ export function writeGenerated(
         notes.push(
           `error: cannot lower ${describeLowerError(output.error)}`,
         );
-        failed = true;
         continue;
       case "emit": {
         const why = output.error.tag === "lowering"
           ? describeLowerError(output.error.error)
           : output.error.message;
         notes.push(`error: cannot emit ${name}: ${why}`);
-        failed = true;
         continue;
       }
       case "map":
         notes.push(
           `error: cannot build the source map of ${name}: source ${output.error.source} is missing`,
         );
-        failed = true;
         continue;
       case "ready":
         break;
@@ -200,7 +196,6 @@ export function writeGenerated(
     if (!contained.ok) {
       const { path, message } = contained.error;
       notes.push(`error: cannot write ${path}: ${message}`);
-      failed = true;
       continue;
     }
     const targets = outputs.map(([path, text], i): [string, string, string] => [
@@ -217,7 +212,6 @@ export function writeGenerated(
       notes.push(
         `error: cannot read ${emitted.path}: ${existing.error.message}`,
       );
-      failed = true;
       continue;
     }
     if (
@@ -230,7 +224,6 @@ export function writeGenerated(
           owner ?? name
         }. Move or delete it.`,
       );
-      failed = true;
       continue;
     }
     for (const [path, text, full] of targets) {
@@ -241,13 +234,12 @@ export function writeGenerated(
         written.push(path);
       } else {
         notes.push(`error: cannot write ${path}: ${result.error.message}`);
-        failed = true;
       }
     }
     generated.push(emitted.path);
     tables.set(emitted.path, table);
   }
-  return { written, generated, tables, notes, failed };
+  return { written, generated, tables, notes, failed: notes.length > 0 };
 }
 
 /**

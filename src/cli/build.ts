@@ -3,7 +3,7 @@
 // also write the generated files and run `deno check`.
 
 import type { TypeScriptOutputs } from "../core/typescript.ts";
-import type { Diagnostic, Revision, SpanTable } from "../core/mod.ts";
+import type { Revision, SpanTable } from "../core/mod.ts";
 import { formatDiagnostics, loggedDiagnostics } from "./format.ts";
 import type { LoggedDiagnostic } from "../host/log_schema.ts";
 import {
@@ -58,7 +58,7 @@ export async function buildRevision(
 ): Promise<BuildOutcome> {
   const { io, root, textOf, outputCache } = context;
   const notes: string[] = [];
-  const diagnostics: Diagnostic[] = [...revision.diagnostics];
+  const diagnostics = revision.diagnostics;
   let failed = false;
   const written: string[] = [];
   const lines: string[] = [];
