@@ -309,21 +309,14 @@ function runDoc(run: Run, tail: number): Doc {
 function nestHeads(
   heads: readonly ChainHead[],
   last: Doc,
-  separator: Doc | undefined,
-  i: number | undefined,
+  separator: Doc,
 ): Doc {
-  const resolvedSeparator = separator ?? " ";
-  const resolvedIndex = i ?? 0;
-  const head = heads[resolvedIndex];
-  const inner: Doc = resolvedIndex === heads.length - 1
-    ? [head.doc, " =>", last]
-    : [
-      head.doc,
-      " =>",
-      resolvedSeparator,
-      nestHeads(heads, last, resolvedSeparator, resolvedIndex + 1),
-    ];
-  return head.span === undefined ? inner : spanned(head.span, inner);
+  return heads.reduceRight<Doc>((inner, head, i) => {
+    const doc: Doc = i === heads.length - 1
+      ? [head.doc, " =>", last]
+      : [head.doc, " =>", separator, inner];
+    return head.span === undefined ? doc : spanned(head.span, doc);
+  }, last);
 }
 /**
  * The layouts of an arrow chain. `deno fmt` keeps a chain on one line when it
@@ -362,35 +355,31 @@ function chainOptions(chain: Chain): ChainOptions {
       ? [" ", braces(tail.statements)]
       : [" (", tail.body.doc, ")"];
     return {
-      oneLine: nestHeads(heads, last, undefined, undefined),
+      oneLine: nestHeads(heads, last, " "),
       bodyDown: undefined,
-      split: (separator) => nestHeads(heads, last, separator, undefined),
+      split: (separator) => nestHeads(heads, last, separator),
       splitDown: undefined,
-      splitAdaptive: (separator) =>
-        nestHeads(heads, last, separator, undefined),
+      splitAdaptive: (separator) => nestHeads(heads, last, separator),
       broken: tail.kind === "block" ? undefined : (separator) =>
         nestHeads(
           heads,
           [" (", group(tail.body.doc, true, undefined), ")"],
           separator,
-          undefined,
         ),
     };
   }
   const body = tail.body;
   const down: Doc = indent([hard, flush(body)]);
   return {
-    oneLine: nestHeads(heads, [" ", body.doc], undefined, undefined),
-    bodyDown: nestHeads(heads, down, undefined, undefined),
-    split: (separator) =>
-      nestHeads(heads, [" ", body.doc], separator, undefined),
-    splitDown: (separator) => nestHeads(heads, down, separator, undefined),
+    oneLine: nestHeads(heads, [" ", body.doc], " "),
+    bodyDown: nestHeads(heads, down, " "),
+    split: (separator) => nestHeads(heads, [" ", body.doc], separator),
+    splitDown: (separator) => nestHeads(heads, down, separator),
     splitAdaptive: (separator) =>
       nestHeads(
         heads,
         group(indent([line, flush(body)]), undefined, undefined),
         separator,
-        undefined,
       ),
     broken: undefined,
   };
@@ -551,7 +540,7 @@ export type ExprEmitter = {
       kind: "closure";
     }>,
     annotate: boolean,
-    forceEffect: boolean | undefined,
+    forceEffect: boolean,
   ) => Emitted;
   readonly effectCallback: (arg: Expr) => Emitted;
   readonly suspended: (job: Expr, hoisted: Emitted | undefined) => Emitted;
@@ -979,12 +968,12 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       ]);
     }
     if (e.kind === "closure") {
-      return exprEmitterClosure(e, true, undefined);
+      return exprEmitterClosure(e, true, false);
     }
     if (
       e.kind === "defer" || e.kind === "retry-schedule" || e.kind === "race-all"
     ) {
-      return effectStructural(exprEmitterSelf, e, kid, mode);
+      return effectStructural(exprEmitterSelf, e, kid);
     }
     if (
       e.kind === "unfold" || e.kind === "map-effect" ||
@@ -1333,9 +1322,8 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       kind: "closure";
     }>,
     annotate: boolean,
-    forceEffect: boolean | undefined,
+    forceEffect: boolean,
   ): Emitted {
-    const resolvedForceEffect = forceEffect ?? false;
     const parameters = bracketed(
       "(",
       ")",
@@ -1350,7 +1338,7 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     if (type.kind !== "function") {
       return internal("a closure node has a type that is not a function type");
     }
-    if (type.execution === "effect" || resolvedForceEffect) {
+    if (type.execution === "effect" || forceEffect) {
       return exprEmitterArrowEmitted(parameters, {
         kind: "expr",
         body: exprEmitterAsEffect(e.body, type.result),
@@ -1404,7 +1392,7 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
   }
   function exprEmitterCallback(arg: Expr, kid: Kid): Emitted {
     return arg.kind === "closure"
-      ? exprEmitterTag(arg, exprEmitterClosure(arg, false, undefined))
+      ? exprEmitterTag(arg, exprEmitterClosure(arg, false, false))
       : kid(arg, undefined);
   }
   function exprEmitterEffectCallback(arg: Expr): Emitted {

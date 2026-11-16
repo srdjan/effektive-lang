@@ -2,7 +2,7 @@
 // context and never import `expr.ts`.
 import type { Expr, FunctionType, Type } from "../../ir.ts";
 import type { Doc, GroupId } from "../doc.ts";
-import type { Emitted, Mode } from "../emitted.ts";
+import type { Emitted } from "../emitted.ts";
 import type { ExprScope } from "../module_state.ts";
 /**
  * The operations that the builtin families use from the expression emitter.
@@ -11,7 +11,6 @@ import type { ExprScope } from "../module_state.ts";
 export type ExprCore = {
   readonly scope: ExprScope;
   pure(e: Expr, expected: Type | undefined): Emitted;
-  fit(e: Expr, expected: Type | undefined, mode: Mode): Emitted;
   effectCallback(arg: Expr): Emitted;
   arrow(parameters: Doc, body: Emitted, bodyGroup: GroupId | undefined): Doc;
   adaptedInput(
@@ -25,7 +24,7 @@ export type ExprCore = {
       kind: "closure";
     }>,
     annotate: boolean,
-    forceEffect: boolean | undefined,
+    forceEffect: boolean,
   ): Emitted;
   objectLiteral(fields: readonly Doc[], spreads: readonly Doc[]): Emitted;
   functionTypeOf(type: Type): FunctionType | undefined;

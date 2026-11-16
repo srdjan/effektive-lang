@@ -124,8 +124,7 @@ export function schemaStructural(
     const fallback = c.pure(args[1], undefined);
     const callback = args[1].type;
     const effectful = isEffectfulCallback(callback);
-    const issueFailure = callback.kind === "function" &&
-      callback.effects.failures.includes(SCHEMA_ISSUE_ID);
+    const issueFailure = schemaIssueMode(args, 1);
     const deferred: Doc = [
       `${effect}.${effectful ? "suspend" : "sync"}(() => `,
       at(fallback, PREC.member),
@@ -298,6 +297,13 @@ export function schemaStructural(
     const option = c.scope.effect("Option");
     const value = c.scope.temp();
     const result = c.scope.temp();
+    const names: ConversionNames = {
+      value: value,
+      result: result,
+      effect: effect,
+      option: option,
+      issue: issue,
+    };
     return withSchemaView(plainEmitted([
       at(source, PREC.member),
       ".pipe(",
@@ -305,27 +311,9 @@ export function schemaStructural(
       free(target),
       ", ",
       `${transformation}.transformEffect({ decode: `,
-      schemaConversion(
-        decode,
-        schemaIssueMode(args, 2),
-        isEffectfulCallback(args[2].type),
-        value,
-        result,
-        effect,
-        option,
-        issue,
-      ),
+      schemaConversion(decode, args, 2, names),
       ", encode: ",
-      schemaConversion(
-        encode,
-        schemaIssueMode(args, 3),
-        isEffectfulCallback(args[3].type),
-        value,
-        result,
-        effect,
-        option,
-        issue,
-      ),
+      schemaConversion(encode, args, 3, names),
       " })))",
     ]));
   }
@@ -392,16 +380,27 @@ function schemaIssueMode(args: readonly Expr[], index: number): boolean {
     type.effects.failures.includes(SCHEMA_ISSUE_ID);
 }
 
+/** The identifiers that the two conversions of a `transform` share. */
+type ConversionNames = {
+  readonly value: string;
+  readonly result: string;
+  readonly effect: string;
+  readonly option: string;
+  readonly issue: string;
+};
 function schemaConversion(
   callback: Emitted,
-  issueMode: boolean,
-  effectful: boolean,
-  value: string,
-  result: string,
-  effect: string,
-  option: string,
-  issue: string,
+  args: readonly Expr[],
+  index: number,
+  names: ConversionNames,
 ): Doc {
+  const value = names.value;
+  const result = names.result;
+  const effect = names.effect;
+  const option = names.option;
+  const issue = names.issue;
+  const issueMode = schemaIssueMode(args, index);
+  const effectful = isEffectfulCallback(args[index].type);
   if (issueMode) {
     return ["(", value, ") => ", at(callback, PREC.member), "(", value, ")"];
   }

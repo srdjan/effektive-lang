@@ -7,7 +7,6 @@ import {
   emitted,
   free,
   type Kid,
-  type Mode,
   plainEmitted,
   PREC,
 } from "../emitted.ts";
@@ -39,13 +38,12 @@ export function effectStructural(
   c: ExprCore,
   e: ExprOf<EffectStructuralKind>,
   kid: Kid,
-  mode: Mode,
 ): Emitted {
   if (e.kind === "defer") {
     const effect = c.scope.effect("Effect");
     const from = c.functionTypeOf(e.job.type);
     const job = from !== undefined && from.execution === "pure"
-      ? c.fit(e.job, { ...from, execution: "effect" }, mode)
+      ? kid(e.job, { ...from, execution: "effect" })
       : kid(e.job, undefined);
     return plainEmitted([`${effect}.suspend`, callArguments([job])]);
   }
