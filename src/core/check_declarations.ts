@@ -448,16 +448,13 @@ function createModuleChecker(
   /** Returns true when the type body gives the declaration an identity. */
   function hasIdentity(body: TypeRef): boolean {
     const node = table.node(body);
-    {
-      const kind_1 = node.kind;
-      if (kind_1 === "named" || kind_1 === "error") {
-        return false;
-      } else if (kind_1 === "union") {
-        return node.members.every((m) => table.node(m).kind === "literal");
-      } else {
-        return true;
-      }
+    if (node.kind === "named" || node.kind === "error") {
+      return false;
     }
+    if (node.kind === "union") {
+      return node.members.every((m) => table.node(m).kind === "literal");
+    }
+    return true;
   }
 
   /** Adds tags to local record identities that a valid transparent union lists. */
@@ -498,19 +495,7 @@ function createModuleChecker(
         continue;
       }
       const at = infos.findIndex((info) => info.id === record.id);
-      const found = infos[at];
-      const name = found.name;
-      const nameSpan = found.nameSpan;
-      const start = found.start;
-      const refs = found.refs;
-      infos[at] = {
-        name: name,
-        nameSpan: nameSpan,
-        start: start,
-        refs: refs,
-        kind: "tagged",
-        id: record.id,
-      };
+      infos[at] = { ...infos[at], kind: "tagged", id: record.id };
       checker = tagRecord(record);
     }
     return checker;
@@ -628,13 +613,9 @@ function createModuleChecker(
     typeInfos: readonly TypeNodeInfo[],
   ): ReadonlySet<TypeId> {
     let guardedAliases = emptySet<TypeId>();
-    let infos = emptyMap<string, TypeNodeInfo>();
-    for (const info of typeInfos) {
-      infos = infos.set(info.id, info);
-    }
     // The search starts from the declarations in source order, and follows the
     // references of each one in text order.
-    const nodes = [...infos.values()];
+    const nodes = typeInfos;
     let indexOfId = emptyMap<string, number>();
     for (const indexedNode of nodes.entries()) {
       const n = indexedNode[0];
@@ -1022,7 +1003,6 @@ function createModuleChecker(
         },
       };
     });
-    const explicit = resultNode !== undefined || bindingFn !== undefined;
     let result: Lowered | undefined;
     let failures: ErrorId[] = [];
     let requirements: CapabilityId[] = [];
@@ -1072,7 +1052,7 @@ function createModuleChecker(
         entry.exported,
       );
     }
-    if (!entry.broken && entry.exported && !explicit) {
+    if (!entry.broken && entry.exported && annotation === "none") {
       lowerer = lowerer.report(
         "declaration/005",
         `the exported function \`${entry.name}\` needs a result annotation`,

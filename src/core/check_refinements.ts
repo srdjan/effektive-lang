@@ -145,11 +145,7 @@ export function RefinementChecker(
       return self;
     }
     for (const equation of aliasEquations(id, type, init)) {
-      {
-        const _appendTarget1 = aliases;
-        const _appendValue2 = equation;
-        _appendTarget1[_appendTarget1.length] = _appendValue2;
-      }
+      aliases[aliases.length] = equation;
     }
     return self;
   }
@@ -164,20 +160,12 @@ export function RefinementChecker(
       const left = linearForPath([id, ...path.path], path.length);
       const right = linearForPath([record, field, ...path.path], path.length);
       const equal = compare(left, "===", right);
-      if (equal !== undefined) {
-        const _appendTarget3 = aliases;
-        const _appendValue4 = equal;
-        _appendTarget3[_appendTarget3.length] = _appendValue4;
-      }
+      if (equal !== undefined) aliases[aliases.length] = equal;
     }
     return self;
   }
   function addBranch(predicate: Predicate | undefined): RefinementChecker {
-    if (predicate !== undefined) {
-      const _appendTarget5 = branches;
-      const _appendValue6 = predicate;
-      _appendTarget5[_appendTarget5.length] = _appendValue6;
-    }
+    if (predicate !== undefined) branches[branches.length] = predicate;
     return self;
   }
   function clearDerivedFacts(): RefinementChecker {
@@ -310,11 +298,7 @@ export function RefinementChecker(
       }
       const left = linearForPath([id, ...path.path], path.length);
       const equal = compare(left, "===", right);
-      if (equal !== undefined) {
-        const _appendTarget7 = result;
-        const _appendValue8 = equal;
-        _appendTarget7[_appendTarget7.length] = _appendValue8;
-      }
+      if (equal !== undefined) result[result.length] = equal;
     }
     return result;
   }
@@ -472,11 +456,7 @@ export function RefinementChecker(
           if (field === undefined || field.optional) {
             return false;
           }
-          {
-            const _appendTarget9 = next;
-            const _appendValue10 = field.type;
-            _appendTarget9[_appendTarget9.length] = _appendValue10;
-          }
+          next[next.length] = field.type;
         }
       }
       types = next;
@@ -548,11 +528,7 @@ function typeAssumptionsAt(
         (term) =>
           linearForPath([...path, ...termPath(term)], term.kind === "length"),
       );
-      if (compiled !== undefined) {
-        const _appendTarget11 = assumptions;
-        const _appendValue12 = compiled;
-        _appendTarget11[_appendTarget11.length] = _appendValue12;
-      }
+      if (compiled !== undefined) assumptions[assumptions.length] = compiled;
     }
     const base = table.nominalBodyOf(id);
     return base === undefined
@@ -641,44 +617,40 @@ function substitute(
   predicate: Predicate,
   value: (term: Term) => Linear | undefined,
 ): Predicate | undefined {
-  {
-    const kind_1 = predicate.kind;
-    if (kind_1 === "constant") {
-      return predicate;
-    } else if (kind_1 === "not") {
-      const operand = substitute(predicate.operand, value);
-      return operand === undefined ? undefined : not(operand);
-    } else if (kind_1 === "and" || kind_1 === "or") {
-      const operands: Predicate[] = [];
-      for (const item of predicate.operands) {
-        const compiled = substitute(item, value);
-        if (compiled === undefined) {
-          return undefined;
-        }
-        {
-          const _appendTarget13 = operands;
-          const _appendValue14 = compiled;
-          _appendTarget13[_appendTarget13.length] = _appendValue14;
-        }
-      }
-      return predicate.kind === "and"
-        ? canonicalAnd(operands)
-        : canonicalPredicate({ kind: "or", operands: operands });
-    } else if (kind_1 === "difference") {
-      const left: Linear | undefined = predicate.left.kind === "zero"
-        ? { terms: emptyMap(), offset: 0n }
-        : value(predicate.left);
-      const right: Linear | undefined = predicate.right.kind === "zero"
-        ? { terms: emptyMap(), offset: 0n }
-        : value(predicate.right);
-      if (left === undefined || right === undefined) {
+  if (predicate.kind === "constant") {
+    return predicate;
+  }
+  if (predicate.kind === "not") {
+    const operand = substitute(predicate.operand, value);
+    return operand === undefined ? undefined : not(operand);
+  }
+  if (predicate.kind === "and" || predicate.kind === "or") {
+    const operands: Predicate[] = [];
+    for (const item of predicate.operands) {
+      const compiled = substitute(item, value);
+      if (compiled === undefined) {
         return undefined;
       }
-      return difference(
-        addLinear(left, right, -1n),
-        bigInteger(predicate.maximum),
-      );
+      operands[operands.length] = compiled;
     }
+    return predicate.kind === "and"
+      ? canonicalAnd(operands)
+      : canonicalPredicate({ kind: "or", operands: operands });
+  }
+  if (predicate.kind === "difference") {
+    const left: Linear | undefined = predicate.left.kind === "zero"
+      ? { terms: emptyMap(), offset: 0n }
+      : value(predicate.left);
+    const right: Linear | undefined = predicate.right.kind === "zero"
+      ? { terms: emptyMap(), offset: 0n }
+      : value(predicate.right);
+    if (left === undefined || right === undefined) {
+      return undefined;
+    }
+    return difference(
+      addLinear(left, right, -1n),
+      bigInteger(predicate.maximum),
+    );
   }
 }
 function difference(linear: Linear, maximum: bigint): Predicate | undefined {
@@ -714,11 +686,7 @@ function compare(
     if (bound === undefined) {
       return undefined;
     }
-    {
-      const _appendTarget15 = defined;
-      const _appendValue16 = bound;
-      _appendTarget15[_appendTarget15.length] = _appendValue16;
-    }
+    defined[defined.length] = bound;
   }
   if (join === "single") {
     return defined[0];
@@ -784,19 +752,17 @@ function withinScope(
   predicate: Predicate,
   known: ReadonlySet<string>,
 ): boolean {
-  {
-    const kind_2 = predicate.kind;
-    if (kind_2 === "constant") {
-      return true;
-    } else if (kind_2 === "difference") {
-      return [predicate.left, predicate.right].every((term) => {
-        const path = termPath(term);
-        return path.length === 0 || known.has(path[0]);
-      });
-    } else if (kind_2 === "not") {
-      return withinScope(predicate.operand, known);
-    } else {
-      return predicate.operands.every((part) => withinScope(part, known));
-    }
+  if (predicate.kind === "constant") {
+    return true;
   }
+  if (predicate.kind === "difference") {
+    return [predicate.left, predicate.right].every((term) => {
+      const path = termPath(term);
+      return path.length === 0 || known.has(path[0]);
+    });
+  }
+  if (predicate.kind === "not") {
+    return withinScope(predicate.operand, known);
+  }
+  return predicate.operands.every((part) => withinScope(part, known));
 }

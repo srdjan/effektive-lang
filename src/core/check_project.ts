@@ -39,7 +39,7 @@ import { inferFunctionInputs, withInferredInputs } from "./infer_inputs.ts";
 import type { BodyEnv, ProofBudget } from "./body_env.ts";
 import { newProofBudget } from "./check_refinements.ts";
 import { type Diagnostic, normalizeDiagnostics } from "./diagnostics.ts";
-import { serviceOfCapability } from "./ids.ts";
+import { type ModuleName, serviceOfCapability } from "./ids.ts";
 import { serviceBoundDiagnostics } from "./service_bounds.ts";
 import { isCycle, stronglyConnectedComponents } from "./graph.ts";
 import { arrowBody, initOf, kidsOf } from "./syntax_queries.ts";
@@ -58,15 +58,13 @@ import {
   solveModeGroup,
   unsettledGroupDiagnostic,
 } from "./modes.ts";
-import type { ModuleInfo } from "./project.ts";
+import type { ModuleInfo, ProjectRoot } from "./project.ts";
 import type { ConfigError } from "./project_config.ts";
 import type { Result, SourceHost } from "./source.ts";
 import { kindOf, type NodeId, SyntaxKind, type SyntaxTree } from "./syntax.ts";
 import type { BodyTable } from "./tables.ts";
 import { type TypeRef, TypeTable } from "./types.ts";
 import { functionTypeFromIr, typeFromIr } from "./type_ir.ts";
-type ModuleName = string;
-type ProjectRoot = string;
 type EntryPaths = readonly string[];
 export type FunctionBody = Omit<FunctionRun, "diagnostics"> & {
   readonly kind: "function";
@@ -142,7 +140,6 @@ type Entry = FunctionEntry | ConstantEntry;
 type CheckArguments = {
   readonly info: ModuleInfo;
   readonly resolution: ModuleResolution;
-  readonly module: string;
   readonly declarations: ModuleDeclarations & {
     readonly values: ReadonlyMap<ValueId, ValueSignature>;
   };
@@ -202,23 +199,19 @@ function collectEntries(args: CheckArguments): Entry[] {
       broken: info.index.byName.get(signature.name)?.broken ?? false,
       references: [...references],
     };
-    {
-      const _appendTarget1 = entries;
-      const _appendValue2: Entry = signature.kind === "function"
-        ? {
-          ...common,
-          kind: "function",
-          signature: signature,
-          bodyNode: bodyNode,
-        }
-        : {
-          ...common,
-          kind: "constant",
-          signature: signature,
-          initNode: initNode,
-        };
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
-    }
+    entries[entries.length] = signature.kind === "function"
+      ? {
+        ...common,
+        kind: "function",
+        signature: signature,
+        bodyNode: bodyNode,
+      }
+      : {
+        ...common,
+        kind: "constant",
+        signature: signature,
+        initNode: initNode,
+      };
   }
   return entries;
 }
@@ -296,21 +289,17 @@ function moduleValues(
         const type = importedTypes.get(id);
         return type === undefined ? table.error : typeFromIr(table, type);
       }
-      {
-        const kind_1 = signature.kind;
-        if (kind_1 === "function") {
-          if (!signature.written.result) {
-            return inferred.get(id) ?? table.error;
-          }
-          const type = signatureType(table, signature, view);
-          return type.ok ? type.value.ref : table.error;
-        } else if (kind_1 === "constant") {
-          return signature.type?.ref ?? constantTypes.get(id) ?? table.error;
-        } else if (kind_1 === "provider") {
-          return signature.type.ref;
+      if (signature.kind === "function") {
+        if (!signature.written.result) {
+          return inferred.get(id) ?? table.error;
         }
+        const type = signatureType(table, signature, view);
+        return type.ok ? type.value.ref : table.error;
       }
-      return table.error;
+      if (signature.kind === "constant") {
+        return signature.type?.ref ?? constantTypes.get(id) ?? table.error;
+      }
+      return signature.type.ref;
     }
     return value;
   }
@@ -325,11 +314,7 @@ function moduleValues(
   function publish(run: Run, recursive: boolean): ModuleValues {
     if (!run.entry.broken) {
       for (const diagnostic of run.run.diagnostics) {
-        {
-          const _appendTarget3 = diagnostics;
-          const _appendValue4 = diagnostic;
-          _appendTarget3[_appendTarget3.length] = _appendValue4;
-        }
+        diagnostics[diagnostics.length] = diagnostic;
       }
     }
     if (run.kind === "function") {
@@ -402,7 +387,7 @@ function moduleValues(
  * diagnostics go to `diagnostics` in the order of the components.
  */
 function scheduleRuns(
-  entries: Entry[],
+  entries: readonly Entry[],
   edges: readonly (readonly number[])[],
   initialValues: ModuleValues,
   signatures: Map<ValueId, ValueSignature>,
@@ -444,16 +429,11 @@ function scheduleRuns(
           benv.env.table,
         );
         const finalized: FunctionEntry = { ...entry, signature: signature };
-        entries[component[0]] = finalized;
         members = [finalized];
         signatures = signatures.set(signature.id, signature);
         if (!entry.broken) {
           for (const diagnostic of inference.diagnostics) {
-            {
-              const _appendTarget5 = diagnostics;
-              const _appendValue6 = diagnostic;
-              _appendTarget5[_appendTarget5.length] = _appendValue6;
-            }
+            diagnostics[diagnostics.length] = diagnostic;
           }
         }
       }
@@ -470,25 +450,17 @@ function scheduleRuns(
         (!signature.written.result ||
           signature.parameters.some((parameter) => parameter.inferred))
       ) {
-        {
-          const _appendTarget7 = diagnostics;
-          const _appendValue8 = recursiveAnnotationDiagnostic(
-            signature.name,
-            signature.nameSpan,
-          );
-          _appendTarget7[_appendTarget7.length] = _appendValue8;
-        }
+        diagnostics[diagnostics.length] = recursiveAnnotationDiagnostic(
+          signature.name,
+          signature.nameSpan,
+        );
       }
     }
     const pending: ValueId[] = [];
     for (const member of members) {
       const signature = member.signature;
       if (signature.kind === "function" && isPendingMode(signature)) {
-        {
-          const _appendTarget9 = pending;
-          const _appendValue10 = signature.id;
-          _appendTarget9[_appendTarget9.length] = _appendValue10;
-        }
+        pending[pending.length] = signature.id;
       }
     }
     const solution = solveModeGroup(pending, (assumed) => {
@@ -514,14 +486,10 @@ function scheduleRuns(
     values = values.settle(solution.solved);
     if (!solution.settled) {
       const first = members[0].signature;
-      {
-        const _appendTarget11 = diagnostics;
-        const _appendValue12 = unsettledGroupDiagnostic(
-          first.name,
-          first.nameSpan,
-        );
-        _appendTarget11[_appendTarget11.length] = _appendValue12;
-      }
+      diagnostics[diagnostics.length] = unsettledGroupDiagnostic(
+        first.name,
+        first.nameSpan,
+      );
     }
     for (const run of solution.results) {
       values = values.publish(run, true);
@@ -556,11 +524,7 @@ function checkModuleBodies(
     nameSpan: entry.signature.nameSpan,
   })));
   for (const diagnostic of initialization) {
-    {
-      const _appendTarget13 = diagnostics;
-      const _appendValue14 = diagnostic;
-      _appendTarget13[_appendTarget13.length] = _appendValue14;
-    }
+    diagnostics[diagnostics.length] = diagnostic;
   }
   // Source order for the maps, whatever order the components ran in.
   const bodies = values.bodies();
@@ -691,7 +655,6 @@ export function checkModuleStep(
     {
       info: info,
       resolution: resolution,
-      module: name,
       declarations: declarations,
       proofBudget: activeProofBudget,
       interfaces: seen.interfaces,
@@ -757,15 +720,9 @@ export interface ModulePolicy<D extends ModuleDecision = ModuleDecision> {
     decision: D,
   ): ModulePolicy<D>;
 }
-function checkEveryModuleDecision(): ModuleDecision {
-  return { kind: "check" };
-}
-function checkEveryModuleSettled(): ModulePolicy {
-  return CHECK_EVERY_MODULE;
-}
 const CHECK_EVERY_MODULE: ModulePolicy = {
-  decide: checkEveryModuleDecision,
-  settled: checkEveryModuleSettled,
+  decide: () => ({ kind: "check" }),
+  settled: () => CHECK_EVERY_MODULE,
 };
 /**
  * Runs the modules of an analyzed project in topological order. A module sees
@@ -799,20 +756,13 @@ export function driveProject<D extends ModuleDecision>(
     } else {
       step = decision.step;
     }
-    const nextPolicy = policy.settled(name, step, decision);
-    if (nextPolicy !== undefined) {
-      policy = nextPolicy;
-    }
+    policy = policy.settled(name, step, decision);
     graphs = graphs.set(name, step.graph);
     if (step.checked.interface.ok) {
       interfaces = interfaces.set(name, step.checked.interface.value);
     }
     for (const diagnostic of step.checked.diagnostics) {
-      {
-        const _appendTarget15 = diagnostics;
-        const _appendValue16 = diagnostic;
-        _appendTarget15[_appendTarget15.length] = _appendValue16;
-      }
+      diagnostics[diagnostics.length] = diagnostic;
     }
     modules = modules.set(name, step.checked);
   }

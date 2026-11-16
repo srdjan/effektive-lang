@@ -16,7 +16,7 @@ import { optionConstructorOf, type Target, targetText } from "./resolve.ts";
 import { kindOf, type NodeId, SyntaxKind, type SyntaxTree } from "./syntax.ts";
 import { literalOf, nameTextOf, numberTextOf } from "./syntax_queries.ts";
 import { isDurationText } from "./lex.ts";
-import type { BodyTable, NodeFact, PatternFact } from "./tables.ts";
+import type { NodeFact, PatternFact } from "./tables.ts";
 import { literalFitsPrimitive, type TypeRef, type TypeTable } from "./types.ts";
 import { showTypes } from "./type_show.ts";
 import { emptySet } from "./runtime.ts";
@@ -25,7 +25,6 @@ export type PatternContext = {
   readonly tree: SyntaxTree;
   readonly table: TypeTable;
   readonly targets: ReadonlyMap<NodeId, Target>;
-  readonly body: Pick<BodyTable, "locals">;
   recordLocal(local: LocalId, type: TypeRef): PatternContext;
   kids(node: NodeId): NodeId[];
   kidsOfKind(node: NodeId, kind: SyntaxKind): NodeId[];

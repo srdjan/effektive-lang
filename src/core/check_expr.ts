@@ -277,7 +277,6 @@ type BodyChecker =
     readonly sink: readonly Diagnostic[];
     readonly addDiagnostic: (diagnostic: Diagnostic) => BodyChecker;
     readonly body: BodyTable;
-    readonly refinements: RefinementChecker;
     readonly recordLocal: (local: LocalId, type: TypeRef) => BodyChecker;
     readonly report: (
       code: DiagnosticCode,
@@ -2841,11 +2840,8 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
           ? not(conditionFact)
           : conditionFact,
       );
-      const checkedArm = armBody(branch, expected, arms);
-      const branchInfo = checkedArm.info;
-      arms = checkedArm.arms;
+      arms = armBody(branch, expected, arms).arms;
       refinements = refinements.restore(refinementScope);
-      if (branchInfo.type === table.never) continue;
     }
     refinements = refinements.join(arms.successful());
     return joinArms(node, expected, arms);
@@ -3171,7 +3167,6 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     sink: sink,
     addDiagnostic: addDiagnostic,
     body: bodyTable,
-    refinements: refinements,
     recordLocal: recordLocal,
     recordRefinementLocal: recordRefinementLocal,
     tree: tree,
