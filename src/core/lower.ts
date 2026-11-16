@@ -132,7 +132,7 @@ type BuiltinInstance = {
 };
 type BuiltinInstances = {
   readonly get: (id: ValueId) => BuiltinInstance | undefined;
-  readonly set: (id: ValueId, instance: BuiltinInstance) => BuiltinInstances;
+  readonly claim: (id: ValueId, instance: BuiltinInstance) => BuiltinInstance;
   readonly values: () => ReadonlyMap<ValueId, BuiltinInstance>;
 };
 function BuiltinInstances(): BuiltinInstances {
@@ -140,19 +140,18 @@ function BuiltinInstances(): BuiltinInstances {
   function get(id: ValueId): BuiltinInstance | undefined {
     return values.get(id);
   }
-  function set(id: ValueId, instance: BuiltinInstance): BuiltinInstances {
+  function claim(id: ValueId, instance: BuiltinInstance): BuiltinInstance {
     values = values.set(id, instance);
-    return owner;
+    return instance;
   }
   function readonlyValues(): ReadonlyMap<ValueId, BuiltinInstance> {
     return values;
   }
-  const owner: BuiltinInstances = {
+  return {
     get: get,
-    set: set,
+    claim: claim,
     values: readonlyValues,
   };
-  return owner;
 }
 /** What the lowering of every body of one module shares. */
 type ModuleContext = {
@@ -955,15 +954,9 @@ function BodyLowerer(
     const json = canonicalJson(type);
     const hash = sha256Hex(json).slice(0, 12);
     const id: ValueId = builtinInstanceId(bodyLowererCtx.module, name, hash);
-    const known = bodyLowererCtx.builtins.get(id);
-    if (known === undefined) {
-      if (
-        bodyLowererCtx.builtins.set(id, { type: type }) !==
-          bodyLowererCtx.builtins
-      ) {
-        return internal("the builtin owner changed while registering an entry");
-      }
-    } else if (canonicalJson(known.type) !== json) {
+    const known = bodyLowererCtx.builtins.get(id) ??
+      bodyLowererCtx.builtins.claim(id, { type: type });
+    if (canonicalJson(known.type) !== json) {
       // The 12-digit hash is a truncation, so two types could share an id.
       return internal(`two builtin instance types share the id ${id}`);
     }

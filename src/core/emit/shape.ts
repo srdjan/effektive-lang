@@ -254,9 +254,8 @@ const SHAPE_ROWS: ShapeTable = {
 export type LeafOf<K extends LeafKind> = K;
 /** The expressions that the emitter always prints as leaf effects. */
 type LeafExpr = ExprOf<LeafKind>;
-const TABLE: ShapeTable = SHAPE_ROWS;
 function rowChildren<K extends ExprKind>(kind: K, expr: ExprOf<K>): Expr[] {
-  const row = TABLE[kind];
+  const row = SHAPE_ROWS[kind];
   const deferred = row.deferred;
   return [
     ...row.children(expr),
@@ -264,7 +263,7 @@ function rowChildren<K extends ExprKind>(kind: K, expr: ExprOf<K>): Expr[] {
   ];
 }
 function rowEvaluated<K extends ExprKind>(kind: K, expr: ExprOf<K>): Expr[] {
-  const row = TABLE[kind];
+  const row = SHAPE_ROWS[kind];
   return row.leaf === "structural" ? [] : [...row.children(expr)];
 }
 /** The direct sub-expressions of `expr`, in evaluation order. */
@@ -280,5 +279,5 @@ export function evaluatedChildren(expr: Expr): Expr[] {
 }
 /** True when the table marks the kind as a leaf. A call is not one: see `LeafRule`. */
 export function isLeafExpr(expr: Expr): expr is LeafExpr {
-  return TABLE[expr.kind].leaf === "leaf";
+  return SHAPE_ROWS[expr.kind].leaf === "leaf";
 }

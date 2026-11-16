@@ -5,8 +5,7 @@ import {
   sensitiveField,
   taggedFields,
 } from "./fields.ts";
-// The expression scheme: `pure`, `inGen`, and
-// `asEffect`, the leaf and hoist rules, the control forms, and the parentheses
+// The expression scheme: `pure`, `asEffect`, the leaf and hoist rules, the control forms, and the parentheses
 // around `yield*`.
 import type {
   Arm,
@@ -574,7 +573,6 @@ function isIntType(type: Type): boolean {
 export type ExprEmitter = {
   readonly scope: ExprScope;
   readonly pure: (e: Expr, expected: Type | undefined) => Emitted;
-  readonly inGen: (e: Expr, expected: Type | undefined) => Emitted;
   readonly asEffect: (e: Expr, expected: Type | undefined) => Emitted;
   readonly blockStatements: (
     block: Extract<Expr, {
@@ -583,11 +581,6 @@ export type ExprEmitter = {
     gen: boolean,
     expected: Type | undefined,
   ) => Doc[];
-  readonly returnStatement: (
-    result: Expr,
-    expected: Type | undefined,
-    mode: Mode,
-  ) => Doc;
   readonly arrow: (
     parameters: Doc,
     body: Emitted,
@@ -1725,9 +1718,6 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         );
       }
     }
-    if (name === "all" || name === "traverse") {
-      return internal(`the builtin ${name} has no emission form`);
-    }
     return internal(`the builtin ${name} has no emission form`);
   }
   function exprEmitterStep(step: Step, mode: Mode): Doc {
@@ -2593,10 +2583,8 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
   const exprEmitterSelf: ExprEmitter = {
     scope: exprEmitterScope,
     pure: exprEmitterPure,
-    inGen: exprEmitterInGen,
     asEffect: exprEmitterAsEffect,
     blockStatements: exprEmitterBlockStatements,
-    returnStatement: exprEmitterReturnStatement,
     arrow: exprEmitterArrow,
     arrowBlock: exprEmitterArrowBlock,
     arrowDeclaration: exprEmitterArrowDeclaration,

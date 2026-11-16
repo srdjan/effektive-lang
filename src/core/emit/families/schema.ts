@@ -401,56 +401,45 @@ export function schemaLeaf(
   e: ExprOf<SchemaLeafKind>,
   children: readonly Emitted[],
 ): Emitted {
-  if (
-    e.kind === "schema-make" || e.kind === "schema-decode" ||
-    e.kind === "schema-encode"
-  ) {
-    {
-      if (e.kind === "schema-make") {
-        return emitted(
-          member(
-            at(children[0], PREC.member),
-            "makeEffect",
-            callArguments([
-              c.adaptedInput(children[1], e.input.type, "make"),
-            ]),
-          ),
-          undefined,
-          undefined,
-        );
-      }
-      const schema = c.scope.effect("Schema");
-      const schemaType = c.scope.resolve(e.schema.type);
-      let inputType = e.input.type;
-      if (schemaType.kind === "schema") {
-        inputType = e.kind === "schema-decode"
-          ? schemaType.encoded
-          : schemaType.decoded;
-      }
-      const input = c.adaptedInput(
-        children[1],
-        inputType,
-        e.kind === "schema-decode" ? "encoded" : "decoded",
-      );
-      return emitted(
-        [
-          `${schema}.${
-            e.kind === "schema-decode" ? "decodeUnknownEffect" : "encodeEffect"
-          }(`,
-          free(children[0]),
-          ")(",
-          free(input),
-          ")",
-        ],
-        undefined,
-        undefined,
-      );
-    }
+  if (e.kind === "schema-make") {
+    return emitted(
+      member(
+        at(children[0], PREC.member),
+        "makeEffect",
+        callArguments([
+          c.adaptedInput(children[1], e.input.type, "make"),
+        ]),
+      ),
+      undefined,
+      undefined,
+    );
   }
-  {
-    const unreachable: never = e;
-    return unreachable;
+  const schema = c.scope.effect("Schema");
+  const schemaType = c.scope.resolve(e.schema.type);
+  let inputType = e.input.type;
+  if (schemaType.kind === "schema") {
+    inputType = e.kind === "schema-decode"
+      ? schemaType.encoded
+      : schemaType.decoded;
   }
+  const input = c.adaptedInput(
+    children[1],
+    inputType,
+    e.kind === "schema-decode" ? "encoded" : "decoded",
+  );
+  return emitted(
+    [
+      `${schema}.${
+        e.kind === "schema-decode" ? "decodeUnknownEffect" : "encodeEffect"
+      }(`,
+      free(children[0]),
+      ")(",
+      free(input),
+      ")",
+    ],
+    undefined,
+    undefined,
+  );
 }
 /**
  * True for a function type that runs as an effect. Unlike `isEffectfulFunction`,

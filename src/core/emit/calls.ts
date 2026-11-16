@@ -7,7 +7,6 @@ import type { Expr } from "../ir.ts";
 import type { EffectModule } from "./type_query.ts";
 import type { ExprOf } from "./shape.ts";
 export type Callee = {
-  readonly kind: "method";
   readonly module: EffectModule;
   readonly method: string;
 };
@@ -36,19 +35,19 @@ export const OPERAND_CALLS: {
   readonly [K in OperandCallKind]: OperandCall<ExprOf<K>>;
 } = {
   "map-stream": {
-    callee: { kind: "method", module: "Stream", method: "map" },
+    callee: { module: "Stream", method: "map" },
     operands: (e) => [[e.stream, "value"], [e.transform, "callback"]],
   },
   "sink-for-each": {
-    callee: { kind: "method", module: "Sink", method: "forEach" },
+    callee: { module: "Sink", method: "forEach" },
     operands: (e) => [[e.consume, "effect-callback"]],
   },
   "merge-layers": {
-    callee: { kind: "method", module: "Layer", method: "merge" },
+    callee: { module: "Layer", method: "merge" },
     operands: (e) => [[e.left, "value"], [e.right, "value"]],
   },
   race: {
-    callee: { kind: "method", module: "Effect", method: "race" },
+    callee: { module: "Effect", method: "race" },
     operands: (e) => [[e.left, "value"], [e.right, "value"]],
   },
 };
@@ -66,19 +65,17 @@ type LeafCallKind =
   | "update-ref";
 /** `updateRef` with an effectful callback. */
 export const UPDATE_REF_EFFECT: Callee = {
-  kind: "method",
   module: "SynchronizedRef",
   method: "updateEffect",
 };
 export const LEAF_CALLS: { readonly [K in LeafCallKind]: Callee } = {
-  fail: { kind: "method", module: "Effect", method: "fail" },
-  scoped: { kind: "method", module: "Effect", method: "scoped" },
-  "run-stream": { kind: "method", module: "Stream", method: "run" },
-  "make-ref": { kind: "method", module: "SynchronizedRef", method: "make" },
-  "get-ref": { kind: "method", module: "SynchronizedRef", method: "get" },
-  "set-ref": { kind: "method", module: "SynchronizedRef", method: "set" },
+  fail: { module: "Effect", method: "fail" },
+  scoped: { module: "Effect", method: "scoped" },
+  "run-stream": { module: "Stream", method: "run" },
+  "make-ref": { module: "SynchronizedRef", method: "make" },
+  "get-ref": { module: "SynchronizedRef", method: "get" },
+  "set-ref": { module: "SynchronizedRef", method: "set" },
   "update-ref": {
-    kind: "method",
     module: "SynchronizedRef",
     method: "update",
   },
