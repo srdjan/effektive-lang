@@ -197,6 +197,45 @@ Deno.test("builtin import payloads pin shape errors for every builtin name", () 
       "the builtin all requires a concurrency options record",
     ],
     [
+      "all",
+      "all([defer(() => 1)], { concurrency: 2 })",
+      {
+        ...base,
+        execution: "effect",
+        parameters: [{
+          kind: "record",
+          fields: [{
+            name: "a",
+            type: { kind: "effect", result: int, effects: quiet },
+            optional: true,
+          }],
+        }, { kind: "record", fields: [] }],
+      },
+      "validation/002",
+      "the builtin all requires every record field to be present",
+    ],
+    [
+      "all",
+      "all([defer(() => 1)], { concurrency: 2 })",
+      { ...base, execution: "effect", parameters: [array] },
+      "validation/002",
+      "the builtin all requires an Effect at every position",
+    ],
+    [
+      "map",
+      "map([1], (n) => n + 1)",
+      { ...base, parameters: [int, unary] },
+      "validation/002",
+      "the builtin map takes an array as its first parameter",
+    ],
+    [
+      "map",
+      "map([1], (n) => n + 1)",
+      { ...base, parameters: [array, int] },
+      "validation/002",
+      "the builtin map takes a function as its last parameter",
+    ],
+    [
       "traverse",
       "traverse([1], (n) => n + 1, { concurrency: 2 })",
       {

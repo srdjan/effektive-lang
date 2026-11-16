@@ -87,6 +87,8 @@ const both = mergeLayers(clockLive, logLive)
 const one = (): Int => 1
 const traversed = (): Int[] => traverse([1, 2], (n) => n + 1, { concurrency: 2 })
 const gathered = () => all([defer(() => 1), defer(() => 2)], { concurrency: 2 })
+type Text = string
+const logged = (message: Text): void => log(message, { fields: { n: 1 } })
 `;
 
 const FAMILIES_SOURCE = `type Int = int
@@ -758,6 +760,66 @@ const ROWS: readonly Row[] = [
       "validation/002 declarations[8].body: race needs two Effect values",
     ],
   },
+  {
+    name: "a log with a level that does not exist",
+    program: "effects",
+    change: (ir) => {
+      Object.assign(find(fn(ir, "logged").body, "log"), { level: "loud" });
+    },
+    expected: [
+      "validation/006 declarations[17].body.level: log needs a level of trace, debug, info, warn, error, fatal, recorded loud",
+    ],
+  },
+  {
+    name: "a log whose fields are not a record",
+    program: "effects",
+    change: (ir) => {
+      const node = find(fn(ir, "logged").body, "log");
+      node.fields = structuredClone(node.message);
+    },
+    expected: [
+      "validation/002 declarations[17].body.fields: log needs a record of fields, found type:m#Text",
+    ],
+  },
+  {
+    name: "a log field that is not data",
+    program: "effects",
+    change: (ir) => {
+      const record = find(fn(ir, "logged").body, "record");
+      record.type = illegal({
+        kind: "record",
+        fields: [{
+          name: "n",
+          type: {
+            kind: "function",
+            parameters: [],
+            result: INT,
+            execution: "pure",
+            effects: { failures: [], requirements: [] },
+          },
+          optional: false,
+        }],
+      });
+    },
+    expected: [
+      "validation/002 declarations[17].body.fields: log field n must be data, found () => int [pure]",
+      "validation/002 declarations[17].body.fields.fields[0].value: the value of n has type int, which does not fit () => int [pure]",
+    ],
+  },
+  {
+    name: "a race of Effects with unrelated success types",
+    program: "effects",
+    change: (ir) => {
+      const right = find(find(fn(ir, "raced").body, "race").right, "defer");
+      const job = find(right, "closure");
+      Object.assign(job.body, { type: STRING, value: illegal("s") });
+      closureType(job).result = STRING;
+      Object.assign(right.type, { result: STRING });
+    },
+    expected: [
+      "validation/002 declarations[8].body: race needs compatible success types",
+    ],
+  },
   // ---------------------------------------------------------------- layer.ts
   {
     name: "a layer of a service that is not declared",
@@ -952,6 +1014,111 @@ const ROWS: readonly Row[] = [
     ],
   },
   // ---------------------------------------------------------------- serialization.ts
+  {
+    name: "a span that starts before the source",
+    program: "streams",
+    change: (ir) => {
+      Object.assign(fn(ir, "buffered").span, { start: -1 });
+    },
+    expected: [
+      "validation/008 declarations[3].span: a span needs 0 <= start <= end, recorded -1..189",
+    ],
+  },
+  {
+    name: "a span that ends before it starts",
+    program: "streams",
+    change: (ir) => {
+      Object.assign(fn(ir, "buffered").span, { start: 5, end: 4 });
+    },
+    expected: [
+      "validation/008 declarations[3].span: a span needs 0 <= start <= end, recorded 5..4",
+    ],
+  },
+  {
+    name: "a span in a source that the module does not list",
+    program: "streams",
+    change: (ir) => {
+      Object.assign(fn(ir, "buffered").span, { source: "other.eff" });
+    },
+    expected: [
+      "validation/008 declarations[3].span: the source other.eff is not listed in the sources of the module",
+    ],
+  },
+  {
+    name: "a span in a listed source without a supplied text",
+    program: "streams",
+    change: (ir) => {
+      ir.sources.push("other.eff");
+      Object.assign(fn(ir, "buffered").span, { source: "other.eff" });
+    },
+    expected: [
+      "validation/008 sources[1]: the source other.eff is not among the supplied source texts",
+      "validation/008 declarations[3].span: the source other.eff is not among the supplied source texts",
+    ],
+  },
+  {
+    name: "a span that ends after the source text",
+    program: "streams",
+    change: (ir) => {
+      Object.assign(fn(ir, "buffered").span, { end: 100000 });
+    },
+    expected: [
+      "validation/008 declarations[3].span: the span 97..100000 ends after the end of m.eff, which has 305 code units",
+    ],
+  },
+  {
+    name: "an export that the module does not declare",
+    program: "core",
+    change: (ir) => {
+      ir.exports = [illegal("value:m#missing")];
+    },
+    expected: [
+      "validation/001 exports[0]: the export value:m#missing is not declared in this module",
+    ],
+  },
+  {
+    name: "a sealed type in a host interface",
+    program: "core",
+    change: (ir) => {
+      Object.assign(hostImport(ir).types[1].definition, {
+        kind: "nominal",
+        base: STRING,
+        sealed: true,
+      });
+    },
+    expected: [
+      "validation/002 imports[0].types[1].definition.sealed: a sealed type cannot be declared in a host interface",
+    ],
+  },
+  {
+    name: "a provider of a method that no service declares",
+    program: "effects",
+    change: (ir) => {
+      const type = constant(ir, "clockLive").type;
+      assert(type.kind === "provider");
+      type.provides = [illegal("cap:m#Clock.missing")];
+    },
+    expected: [
+      "validation/001 declarations[9].type.provides[0]: the provided capability cap:m#Clock.missing is not a declared service method",
+      "validation/002 declarations[9].value: the initializer type provider provides cap:m#Clock.now [effect] does not fit the constant type provider provides cap:m#Clock.missing [effect]",
+      "validation/002 declarations[12].value.type: expected provider provides cap:m#Clock.missing | cap:m#Log.write [effect], recorded provider provides cap:m#Clock.now | cap:m#Log.write [effect]",
+      "validation/002 declarations[12].value: the initializer type provider provides cap:m#Clock.missing | cap:m#Log.write [effect] does not fit the constant type provider provides cap:m#Clock.now | cap:m#Log.write [effect]",
+      "validation/002 declarations[12].value.left.type: expected provider provides cap:m#Clock.missing [effect], recorded provider provides cap:m#Clock.now [effect]",
+    ],
+  },
+  {
+    name: "mergeLayers of two layers that provide one service",
+    program: "effects",
+    change: (ir) => {
+      const merge = find(constant(ir, "both").value, "merge-layers");
+      merge.right = structuredClone(merge.left);
+    },
+    expected: [
+      "validation/002 declarations[12].value.type: expected provider provides cap:m#Clock.now [effect], recorded provider provides cap:m#Clock.now | cap:m#Log.write [effect]",
+      "validation/002 declarations[12].value: the initializer type provider provides cap:m#Clock.now [effect] does not fit the constant type provider provides cap:m#Clock.now | cap:m#Log.write [effect]",
+      "validation/006 declarations[12].value: mergeLayers cannot provide one service twice",
+    ],
+  },
   {
     name: "a span without an end offset",
     program: "core",

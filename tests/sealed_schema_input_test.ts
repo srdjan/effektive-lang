@@ -183,3 +183,51 @@ export const changed: Schema<Int, Positive> = schemaTransform(
     JSON.stringify(diagnostics),
   );
 });
+
+/** Validates `body` in a consumer of `SEALED_LIBRARY` whose `Positive` is forged sealed after the check. */
+function forgedSealedMessages(body: string): readonly string[] {
+  const openLibrary = SEALED_LIBRARY.replace("sealed type", "type");
+  const checked = checkConsumer(openLibrary, body);
+  assertEquals(checked.diagnostics, []);
+  const lowered = lowerProject(checked);
+  const libraryResult = lowered.get("lib");
+  const consumerResult = lowered.get("main");
+  assert(libraryResult?.ok && consumerResult?.ok);
+  const library = structuredClone(libraryResult.value);
+  const consumer = structuredClone(consumerResult.value);
+  Object.assign(positiveDefinition(library), { sealed: true });
+  Object.assign(positiveDefinition(consumer), { sealed: true });
+  const forged = new Map(lowered);
+  forged.set("lib", { ok: true, value: library });
+  forged.set("main", { ok: true, value: consumer });
+  return (validateProject(checked.analysis.project, forged).get("main") ?? [])
+    .map((diagnostic) => `${diagnostic.code} ${diagnostic.message}`);
+}
+
+Deno.test("validator words the foreign sealed schema operations", () => {
+  assertEquals(
+    forgedSealedMessages(
+      `export const decoded = (input: unknown): Positive fails SchemaError => schemaDecode(positiveSchema, input)`,
+    ),
+    ["validation/002 declarations[0].body: a foreign module cannot decode or make a sealed type"],
+  );
+  assertEquals(
+    forgedSealedMessages(
+      `export const derived: Schema<Positive> = schema()`,
+    ),
+    ["validation/002 declarations[0].value: a foreign module cannot derive a Schema that decodes to a sealed type"],
+  );
+  assertEquals(
+    forgedSealedMessages(
+      `const ints: Schema<Int> = schema()
+const optionalInts: SchemaOptional<Int> = schemaOptionalKey(ints)
+export const changed: SchemaDecodedOptional<Int, Positive> = schemaOptionalFromRequired(
+  positiveSchema,
+  optionalInts,
+  (value: Positive): Option<Int> => Some(0),
+  (value: Option<Int>): Positive => one
+)`,
+    ),
+    ["validation/002 declarations[2].value: a foreign module cannot pass a sealed type to a schema transformation callback"],
+  );
+});
