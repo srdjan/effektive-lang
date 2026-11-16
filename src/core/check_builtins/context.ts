@@ -146,9 +146,5 @@ export type FactView = {
 };
 
 export type LocalUseView = {
-  localUses(
-    body: NodeId,
-    id: LocalId,
-    shorthand: boolean,
-  ): readonly LocalUse[];
+  localUses(body: NodeId, id: LocalId): readonly LocalUse[];
 };

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A scoped operation record or a borrowed handle in a shorthand record field gives `type-mismatch/010`, as the explicit field does. In `using (file = Files.open()) { const saved = { file }; saved } finally { file.close() }`, the field `{ file }` is an aggregate, and the record must not escape through it. The same holds for `{ handle }` with a borrowed handle or a `borrow` parameter.
+  Before, `{ file }` gave no diagnostic, while `{ file: file }` gave `type-mismatch/010`.
+
 ## 0.15.9 - 2026-11-15
 
 - A pipeline stage whose callee is an inferred parameter uses the recovered callback contract, as a call does. In `(callback, value): Int => { const fn: Fn = callback; value |> callback }` with `type Fn = (value: Int) => Int`, `value` gets the type `Int`. A stage callee whose contract the compiler cannot recover gives `type-mismatch/011`, which asks for a type annotation.

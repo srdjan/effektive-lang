@@ -1499,14 +1499,10 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
 
   /**
    * The uses of a local in `body`, in syntax order. Each use has its two nearest
-   * ancestors and tells whether an arrow function encloses it. With `shorthand`,
-   * the name in a shorthand field such as `{ id }` also counts as a use.
+   * ancestors and tells whether an arrow function encloses it. The name in a
+   * shorthand field such as `{ id }` also counts as a use.
    */
-  function localUses(
-    body: NodeId,
-    id: LocalId,
-    shorthand: boolean,
-  ): LocalUse[] {
+  function localUses(body: NodeId, id: LocalId): LocalUse[] {
     let uses: LocalUse[] = [];
     function visit(
       node: NodeId,
@@ -1518,7 +1514,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
       const target = targets.get(node);
       if (
         (kind === SyntaxKind.NameExpr ||
-          (shorthand && kind === SyntaxKind.Name && parent !== undefined &&
+          (kind === SyntaxKind.Name && parent !== undefined &&
             kindOf(tree, parent) === SyntaxKind.ShorthandField)) &&
         target?.kind === "local" && target.id === id
       ) {

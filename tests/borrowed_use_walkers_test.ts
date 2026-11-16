@@ -57,6 +57,11 @@ const RECORD_ROWS: readonly Row[] = [
     reports: 1,
   },
   {
+    name: "shorthand field",
+    body: "const saved = { file }; saved",
+    reports: 1,
+  },
+  {
     name: "one good use and one bad use",
     body: "file.read(); file",
     reports: 1,
@@ -134,6 +139,16 @@ const HANDLE_ROWS: readonly Row[] = [
     reports: 1,
   },
   {
+    name: "field of a record",
+    body: "const saved = { saved: handle }; Files.read(handle)",
+    reports: 1,
+  },
+  {
+    name: "shorthand field",
+    body: "const saved = { handle }; Files.read(handle)",
+    reports: 1,
+  },
+  {
     name: "one good use and one bad use",
     body: "Files.read(handle); Files.plain(handle)",
     reports: 1,
@@ -156,6 +171,11 @@ const PARAMETER_ROWS: readonly Row[] = [
   { name: "borrowed method", body: "Files.read(handle)", reports: 0 },
   { name: "plain method", body: "Files.plain(handle)", reports: 1 },
   { name: "return the handle", body: '{ handle; "x" }', reports: 1 },
+  {
+    name: "shorthand field",
+    body: '{ const saved = { handle }; "x" }',
+    reports: 1,
+  },
   {
     name: "use inside an arrow",
     body: "{ const later = () => Files.read(handle); later() }",

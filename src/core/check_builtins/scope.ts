@@ -253,7 +253,7 @@ function scopedUses(
   body: NodeId,
   id: LocalId,
 ): ScopeContext {
-  for (const use of c.localUses(body, id, false)) {
+  for (const use of c.localUses(body, id)) {
     const node = use.node;
     const parent = use.parent;
     const grandparent = use.grandparent;
@@ -321,7 +321,7 @@ function scopedBorrowUses(
   body: NodeId,
   id: LocalId,
 ): ScopeContext {
-  for (const use of c.localUses(body, id, false)) {
+  for (const use of c.localUses(body, id)) {
     const node = use.node;
     const parent = use.parent;
     const grandparent = use.grandparent;

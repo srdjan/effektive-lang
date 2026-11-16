@@ -96,6 +96,7 @@ When the plan is complete, the completing commit moves this file to `docs/archiv
 | Unit | Commits | Result |
 | --- | --- | --- |
 | FZU1 | 1 | FZ90 is fixed. `tests/proof_budget_slow_test.ts` took 7 minutes 16 seconds before the fix, at a load average of 6 to 12. It took 3.4 seconds after the fix on `main`, at a load average of 17.8. `deno task check` exits 0 in 46.5 seconds: 3312 fast tests passed and 6 ignored, 326 slow tests passed, and the slow suite took 31 seconds. Before the fix the slow suite took about 8 minutes. |
+| FZU2 | 1 | FZ91 is fixed. Three new rows in `tests/borrowed_use_walkers_test.ts` (scoped record, borrowed handle, `borrow` parameter, each with `{ x }`) gave 0 reports where 1 is expected. They pass after `localUses` always counts a shorthand field. The `shorthand` parameter is gone. A fourth new row, `{ saved: handle }`, passed before and after. The website rule already forbids an escape through an aggregate, so it needs no change. |
 
 ## Method and evidence limits
 
