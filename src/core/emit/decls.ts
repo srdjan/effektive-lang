@@ -268,19 +268,12 @@ export function constantTypeDoc(scope: ModuleState, d: ConstantDecl): Doc {
   return typeDoc(scope, d.type, undefined);
 }
 export type DeclarationEmitter = {
-  readonly expr: ExprEmitter;
-  readonly scope: ModuleState;
-  readonly exported: ReadonlySet<DeclarationId>;
   readonly declaration: (declaration: Declaration) => Doc;
   readonly hostAssertions: () => Doc[];
 };
-export function DeclarationEmitter(
-  scope: ModuleState,
-  exported: ReadonlySet<DeclarationId>,
-  groups: ReadonlyMap<DeclarationId, ReadonlySet<DeclarationId>>,
-): DeclarationEmitter {
-  const declarationEmitterGroups = groups;
-  const declarationEmitterExported = exported;
+export function DeclarationEmitter(scope: ModuleState): DeclarationEmitter {
+  const declarationEmitterGroups = recursiveGroups(scope.ir);
+  const declarationEmitterExported = exportedIds(scope.ir);
   let declarationEmitterScope = scope;
   const declarationEmitterExpr = ExprEmitter(scope);
   function declarationEmitterExportKeyword(id: DeclarationId): string {
@@ -465,9 +458,7 @@ export function DeclarationEmitter(
         f.optional ? member(schema, "optionalKey", callWith("", inner)) : inner,
       );
     });
-    const object: Doc = fields.length === 0
-      ? "{}"
-      : bracketed("{", "}", fields, true);
+    const object: Doc = bracketed("{", "}", fields, true);
     return group(
       [
         "(",
@@ -554,7 +545,7 @@ export function DeclarationEmitter(
       typeDoc(declarationEmitterScope, m.type, undefined),
       ";",
     ]);
-    const members: Doc = methods.length === 0 ? "{}" : braces(methods);
+    const members: Doc = braces(methods);
     const keyword = declarationEmitterExportKeyword(d.id);
     const argumentsDoc: Doc =
       `  extends ${context}.Service<${d.name}, {`.length > LINE_WIDTH
@@ -916,9 +907,6 @@ export function DeclarationEmitter(
     return result;
   }
   return {
-    expr: declarationEmitterExpr,
-    scope: declarationEmitterScope,
-    exported: declarationEmitterExported,
     declaration: declarationEmitterDeclaration,
     hostAssertions: declarationEmitterHostAssertions,
   };

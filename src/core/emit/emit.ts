@@ -16,11 +16,9 @@ import { bracketed, type Doc, hard, render, spanned } from "./doc.ts";
 import {
   constantTypeDoc,
   DeclarationEmitter,
-  exportedIds,
   functionHeaderDoc,
   orderConstants,
   orderTypeLevel,
-  recursiveGroups,
 } from "./decls.ts";
 import type { EmittedModule, HostAssertionRecord } from "./emitted_module.ts";
 import {
@@ -110,8 +108,7 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
     declarations: source.declarations.map(erased),
   };
   const scope = ModuleState(ir, context.config);
-  const exported = exportedIds(ir);
-  const emitter = DeclarationEmitter(scope, exported, recursiveGroups(ir));
+  const emitter = DeclarationEmitter(scope);
   // An opaque type has no value: the host module declares it.
   const typeLevel = orderTypeLevel(ir).filter((d) =>
     !(d.kind === "type" && trueFlag(d.opaque))

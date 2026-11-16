@@ -124,14 +124,6 @@ export interface TypeLookup {
   ): TypeDecl | ErrorDecl | ServiceDecl | undefined;
 }
 /**
- * What `emit.ts` reads when all allocation is done. `finish` is the only way to
- * the import lists; after it, an allocation is an internal failure.
- */
-interface ImportLedger {
-  finish(): ImportGroup[];
-  usesHelper(key: HelperKey): boolean;
-}
-/**
  * What the expression emitter, the type printers, and the field adapters read.
  * It has no import ledger and no `resetTemporaries`.
  */
@@ -144,7 +136,6 @@ export type ExprScope =
     "locals" | "hostBinding" | "fieldAdapters" | "fieldHelpers"
   >;
 export type ModuleState = {
-  readonly module: string;
   readonly source: string;
   readonly path: string;
   readonly locals: ReadonlyMap<`local:${string}`, string>;
@@ -157,7 +148,6 @@ export type ModuleState = {
   ) => string;
   readonly fieldHelper: (key: FieldHelperKey) => string;
   readonly ir: ModuleIR;
-  readonly config: ProjectConfig;
   readonly fresh: (base: string) => string;
   readonly temp: () => string;
   readonly resetTemporaries: () => ModuleState;
@@ -180,7 +170,6 @@ export type ModuleState = {
   ) => TypeDecl | ErrorDecl | ServiceDecl | undefined;
   readonly isTypeOnly: (id: DeclarationId) => boolean;
   readonly resolve: (type: Type) => Type;
-  readonly containsFunction: (type: Type) => boolean;
   readonly nameOf: (id: DeclarationId) => string;
   readonly hostBinding: (id: DeclarationId) => HostBinding | undefined;
   readonly finish: () => ImportGroup[];
@@ -672,16 +661,15 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     if (!moduleStateIsOpen()) {
       return internal(`${exported} is imported after the imports are final`);
     }
-    let names = moduleStateForeignImports.get(module);
-    if (names === undefined) {
-      names = emptyMap();
-      moduleStateForeignImports = moduleStateForeignImports.set(module, names);
-    }
-    names = names.set(exported, {
-      local: local,
-      typeOnly: moduleStateIsTypeOnly(id),
-    });
-    return moduleStateForeignImports.set(module, names);
+    const names = moduleStateForeignImports.get(module) ??
+      emptyMap<string, ImportedName>();
+    return moduleStateForeignImports.set(
+      module,
+      names.set(exported, {
+        local: local,
+        typeOnly: moduleStateIsTypeOnly(id),
+      }),
+    );
   }
   function moduleStateFinish(): ImportGroup[] {
     moduleStateFinished = true;
@@ -769,7 +757,6 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     }).sort((a, b) => compareText(a.specifier, b.specifier));
   }
   const moduleStateSelf: ModuleState = {
-    module: moduleStateModule,
     source: moduleStateSource,
     path: moduleStatePath,
     locals: moduleStateLocals,
@@ -779,7 +766,6 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     fieldAdapter: moduleStateFieldAdapter,
     fieldHelper: moduleStateFieldHelper,
     ir: moduleStateIr,
-    config: moduleStateConfig,
     fresh: moduleStateFresh,
     temp: moduleStateTemp,
     resetTemporaries: moduleStateResetTemporaries,
@@ -800,7 +786,6 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     typeLevelDeclaration: moduleStateTypeLevelDeclaration,
     isTypeOnly: moduleStateIsTypeOnly,
     resolve: moduleStateResolve,
-    containsFunction: moduleStateContainsFunction,
     nameOf: moduleStateNameOf,
     hostBinding: moduleStateHostBinding,
     finish: moduleStateFinish,
