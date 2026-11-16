@@ -158,26 +158,18 @@ export function parseDenoCheck(
       return undefined;
     }
     if (current.location === undefined) {
-      {
-        const _appendTarget1 = other;
-        const _appendValue2 = `TS${current.code}: ${current.message}`;
-        _appendTarget1[_appendTarget1.length] = _appendValue2;
-      }
+      other[other.length] = `TS${current.code}: ${current.message}`;
     } else {
-      {
-        const _appendTarget3 = diagnostics;
-        const _appendValue4 = {
-          file: current.location.file.startsWith(prefix)
-            ? current.location.file.slice(prefix.length)
-            : current.location.file,
-          line: current.location.line,
-          column: current.location.column,
-          code: current.code,
-          message: current.message,
-          detail: current.detail.join("\n"),
-        };
-        _appendTarget3[_appendTarget3.length] = _appendValue4;
-      }
+      diagnostics[diagnostics.length] = {
+        file: current.location.file.startsWith(prefix)
+          ? current.location.file.slice(prefix.length)
+          : current.location.file,
+        line: current.location.line,
+        column: current.location.column,
+        code: current.code,
+        message: current.message,
+        detail: current.detail.join("\n"),
+      };
     }
     return undefined;
   }
@@ -221,11 +213,7 @@ export function parseDenoCheck(
     if (raw.trim() === "" || isProgress(raw) || isSummary(raw)) {
       continue;
     }
-    {
-      const _appendTarget7 = other;
-      const _appendValue8 = raw;
-      _appendTarget7[_appendTarget7.length] = _appendValue8;
-    }
+    other[other.length] = raw;
   }
   open = close(open);
   return { diagnostics: diagnostics, other: other };

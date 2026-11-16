@@ -70,16 +70,8 @@ export function buildSpanTable(
       records[index].end > record.start
     );
     open.length = containing + 1;
-    {
-      const _appendTarget1 = parents;
-      const _appendValue2 = open.length === 0 ? -1 : open[open.length - 1];
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
-    }
-    {
-      const _appendTarget3 = open;
-      const _appendValue4 = i;
-      _appendTarget3[_appendTarget3.length] = _appendValue4;
-    }
+    parents[parents.length] = open.length === 0 ? -1 : open[open.length - 1];
+    open[open.length] = i;
   }
   return {
     path: emitted.path,

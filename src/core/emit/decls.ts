@@ -151,11 +151,7 @@ export function orderTypeLevel(ir: ModuleIR): TypeLevel[] {
       state = visit(dependency);
     }
     state = state.set(declaration.id, "done");
-    {
-      const _appendTarget1 = ordered;
-      const _appendValue2 = declaration;
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
-    }
+    ordered[ordered.length] = declaration;
     return state;
   }
   for (const declaration of group) {
@@ -217,11 +213,7 @@ export function orderConstants(ir: ModuleIR): ConstantDecl[] {
       }
     }
     state = state.set(constant.id, "done");
-    {
-      const _appendTarget5 = ordered;
-      const _appendValue6 = constant;
-      _appendTarget5[_appendTarget5.length] = _appendValue6;
-    }
+    ordered[ordered.length] = constant;
     return state;
   }
   for (const constant of constants) {
@@ -603,49 +595,35 @@ export function DeclarationEmitter(scope: ModuleState): DeclarationEmitter {
         const parameter = parameterEntry[1];
         if (d.type.checked[index]) {
           const decoded = declarationEmitterScope.temp();
-          {
-            const _appendTarget7 = statements;
-            const _appendValue8 = [
-              "const ",
-              decoded,
-              " = yield* ",
-              `${schema}.decodeUnknownEffect(`,
-              `${schema}.toType(`,
-              schemaDoc(declarationEmitterScope, parameter.type, undefined),
-              '), { onExcessProperty: "error" })(',
-              parameter.name,
-              ");",
-            ];
-            _appendTarget7[_appendTarget7.length] = _appendValue8;
-          }
-          {
-            const _appendTarget9 = argumentsDoc;
-            const _appendValue10 = decoded;
-            _appendTarget9[_appendTarget9.length] = _appendValue10;
-          }
+          statements[statements.length] = [
+            "const ",
+            decoded,
+            " = yield* ",
+            `${schema}.decodeUnknownEffect(`,
+            `${schema}.toType(`,
+            schemaDoc(declarationEmitterScope, parameter.type, undefined),
+            '), { onExcessProperty: "error" })(',
+            parameter.name,
+            ");",
+          ];
+          argumentsDoc[argumentsDoc.length] = decoded;
         } else {
-          const _appendTarget11 = argumentsDoc;
-          const _appendValue12 = parameter.name;
-          _appendTarget11[_appendTarget11.length] = _appendValue12;
+          argumentsDoc[argumentsDoc.length] = parameter.name;
         }
       }
       const typedHeader = functionHeaderDoc(declarationEmitterScope, {
         ...d,
         type: { ...d.type, checked: d.parameters.map(() => false) },
       }, "always");
-      {
-        const _appendTarget13 = statements;
-        const _appendValue14 = [
-          "return yield* ((",
-          typedHeader,
-          " => ",
-          at(body, 0),
-          ")(",
-          join(", ", argumentsDoc),
-          "));",
-        ];
-        _appendTarget13[_appendTarget13.length] = _appendValue14;
-      }
+      statements[statements.length] = [
+        "return yield* ((",
+        typedHeader,
+        " => ",
+        at(body, 0),
+        ")(",
+        join(", ", argumentsDoc),
+        "));",
+      ];
       const checkedBody = [
         `${effect}.gen(function* () {`,
         indent([hard, join(hard, statements)]),
@@ -770,29 +748,25 @@ export function DeclarationEmitter(scope: ModuleState): DeclarationEmitter {
             `${host.local}$${method.name}`,
           );
           const label = `${nameOfId(service.id)}.${method.name}`;
-          {
-            const _appendTarget15 = checks;
-            const _appendValue16 = [
-              assignment(`const ${check}`, [
-                declarationEmitterScope.hostCheck(),
-                bracketed("(", ")", [
-                  schemaDoc(declarationEmitterScope, checked.type, undefined),
-                  JSON.stringify(label),
-                  // A missing optional field named as on `Object.prototype` needs a copy without a prototype.
-                  ...(needsFieldAdapter(declarationEmitterScope, checked.type)
-                    ? [
-                      declarationEmitterScope.fieldAdapter(
-                        checked.type,
-                        "decoded",
-                      ),
-                    ]
-                    : []),
-                ], false),
-              ], undefined),
-              ";",
-            ];
-            _appendTarget15[_appendTarget15.length] = _appendValue16;
-          }
+          checks[checks.length] = [
+            assignment(`const ${check}`, [
+              declarationEmitterScope.hostCheck(),
+              bracketed("(", ")", [
+                schemaDoc(declarationEmitterScope, checked.type, undefined),
+                JSON.stringify(label),
+                // A missing optional field named as on `Object.prototype` needs a copy without a prototype.
+                ...(needsFieldAdapter(declarationEmitterScope, checked.type)
+                  ? [
+                    declarationEmitterScope.fieldAdapter(
+                      checked.type,
+                      "decoded",
+                    ),
+                  ]
+                  : []),
+              ], false),
+            ], undefined),
+            ";",
+          ];
           if (checked.stream) {
             const stream = declarationEmitterScope.effect("Stream");
             body = [
@@ -877,11 +851,7 @@ export function DeclarationEmitter(scope: ModuleState): DeclarationEmitter {
       const wrapped = declarationEmitterWrappedProvider(host, provider);
       if (wrapped !== undefined) {
         for (const check of wrapped.checks) {
-          {
-            const _appendTarget17 = result;
-            const _appendValue18 = check;
-            _appendTarget17[_appendTarget17.length] = _appendValue18;
-          }
+          result[result.length] = check;
         }
       }
       const data = {
@@ -890,17 +860,13 @@ export function DeclarationEmitter(scope: ModuleState): DeclarationEmitter {
         exported: host.exported,
         key: host.key,
       };
-      {
-        const _appendTarget19 = result;
-        const _appendValue20 = marked(data, [
-          `const ${host.hostName}: `,
-          typeDoc(declarationEmitterScope, provider, undefined),
-          " = ",
-          wrapped === undefined ? host.local : wrapped.value,
-          ";",
-        ]);
-        _appendTarget19[_appendTarget19.length] = _appendValue20;
-      }
+      result[result.length] = marked(data, [
+        `const ${host.hostName}: `,
+        typeDoc(declarationEmitterScope, provider, undefined),
+        " = ",
+        wrapped === undefined ? host.local : wrapped.value,
+        ";",
+      ]);
     }
     return result;
   }

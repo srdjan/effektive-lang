@@ -92,11 +92,7 @@ export function buildSourceMap(
       info = { index: infoOf.size, text: text, starts: lineStarts(text) };
       infoOf = infoOf.set(source, info);
     }
-    {
-      const _appendTarget1 = recordInfo;
-      const _appendValue2 = info;
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
-    }
+    recordInfo[recordInfo.length] = info;
   }
   const sources = [...infoOf.keys()];
   let points = emptySet<number>();
@@ -133,11 +129,9 @@ export function buildSourceMap(
       if (lastTarget === undefined) {
         continue;
       }
-      {
-        const _appendTarget3 = lines[generatedLine];
-        const _appendValue4 = encodeVlq(generatedColumn - previousGenerated);
-        _appendTarget3[_appendTarget3.length] = _appendValue4;
-      }
+      lines[generatedLine][lines[generatedLine].length] = encodeVlq(
+        generatedColumn - previousGenerated,
+      );
       previousGenerated = generatedColumn;
       lastTarget = undefined;
       continue;
@@ -155,14 +149,11 @@ export function buildSourceMap(
     if (key === lastTarget) {
       continue;
     }
-    {
-      const _appendTarget5 = lines[generatedLine];
-      const _appendValue6 = encodeVlq(generatedColumn - previousGenerated) +
-        encodeVlq(index - previousSource) +
-        encodeVlq(target.line - previousLine) +
-        encodeVlq(target.column - previousColumn);
-      _appendTarget5[_appendTarget5.length] = _appendValue6;
-    }
+    lines[generatedLine][lines[generatedLine].length] =
+      encodeVlq(generatedColumn - previousGenerated) +
+      encodeVlq(index - previousSource) +
+      encodeVlq(target.line - previousLine) +
+      encodeVlq(target.column - previousColumn);
     previousGenerated = generatedColumn;
     previousSource = index;
     previousLine = target.line;

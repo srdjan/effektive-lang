@@ -408,11 +408,9 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
       moduleStateTemporaries = moduleStateTemporaries + 1;
       if (!moduleStateTaken.has(candidate)) {
         moduleStateTaken = moduleStateTaken.add(candidate);
-        {
-          const _appendTarget1 = moduleStateDeclarationTemporaries;
-          const _appendValue2 = candidate;
-          _appendTarget1[_appendTarget1.length] = _appendValue2;
-        }
+        moduleStateDeclarationTemporaries[
+          moduleStateDeclarationTemporaries.length
+        ] = candidate;
         return candidate;
       }
     }
@@ -689,25 +687,21 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     for (const moduleEntry of moduleStateForeignImports) {
       const module = moduleEntry[0];
       const names = moduleEntry[1];
-      {
-        const _appendTarget3 = groups;
-        const _appendValue4 = {
-          specifier: relativeSpecifier(
-            moduleStatePath,
-            companions.get(module) ?? `${module}.ts`,
-          ),
-          names: [...names].map((nameEntry) => {
-            const exported = nameEntry[0];
-            const imported = nameEntry[1];
-            return {
-              exported: exported,
-              local: imported.local,
-              typeOnly: imported.typeOnly,
-            };
-          }).sort((a, b) => compareImportNames(a.exported, b.exported)),
-        };
-        _appendTarget3[_appendTarget3.length] = _appendValue4;
-      }
+      groups[groups.length] = {
+        specifier: relativeSpecifier(
+          moduleStatePath,
+          companions.get(module) ?? `${module}.ts`,
+        ),
+        names: [...names].map((nameEntry) => {
+          const exported = nameEntry[0];
+          const imported = nameEntry[1];
+          return {
+            exported: exported,
+            local: imported.local,
+            typeOnly: imported.typeOnly,
+          };
+        }).sort((a, b) => compareImportNames(a.exported, b.exported)),
+      };
     }
     return groups.sort((a, b) => compareText(a.specifier, b.specifier));
   }

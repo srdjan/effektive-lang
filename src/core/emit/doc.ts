@@ -194,15 +194,9 @@ export function join(separator: Doc, docs: readonly Doc[]): Doc {
   for (const i of indices(docs.length)) {
     const d = docs[i];
     if (i > 0) {
-      const _appendTarget1 = out;
-      const _appendValue2 = separator;
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
+      out[out.length] = separator;
     }
-    {
-      const _appendTarget3 = out;
-      const _appendValue4 = d;
-      _appendTarget3[_appendTarget3.length] = _appendValue4;
-    }
+    out[out.length] = d;
   }
   return out;
 }
@@ -434,15 +428,11 @@ export function render(
         left = left - d.length;
       } else if (isList(d)) {
         for (const i of reverseIndices(d.length)) {
-          {
-            const _appendTarget7 = cmds;
-            const _appendValue8 = {
-              indent: cmd.indent,
-              mode: cmd.mode,
-              doc: d[i],
-            };
-            _appendTarget7[_appendTarget7.length] = _appendValue8;
-          }
+          cmds[cmds.length] = {
+            indent: cmd.indent,
+            mode: cmd.mode,
+            doc: d[i],
+          };
         }
       } else {
         if (d.k === "line") {
@@ -461,55 +451,37 @@ export function render(
         if (d.k === "group") {
           {
             const mode: Mode = d.brk || hasHard(d.d) ? "break" : cmd.mode;
-            {
-              const _appendTarget9 = cmds;
-              const _appendValue10 = {
-                indent: cmd.indent,
-                mode: mode,
-                doc: d.d,
-              };
-              _appendTarget9[_appendTarget9.length] = _appendValue10;
-            }
+            cmds[cmds.length] = {
+              indent: cmd.indent,
+              mode: mode,
+              doc: d.d,
+            };
             continue;
           }
         }
         if (d.k === "indent") {
-          {
-            const _appendTarget11 = cmds;
-            const _appendValue12 = {
-              indent: cmd.indent + INDENT_WIDTH,
-              mode: cmd.mode,
-              doc: d.d,
-            };
-            _appendTarget11[_appendTarget11.length] = _appendValue12;
-          }
+          cmds[cmds.length] = {
+            indent: cmd.indent + INDENT_WIDTH,
+            mode: cmd.mode,
+            doc: d.d,
+          };
           continue;
         }
         if (d.k === "span" || d.k === "mark") {
-          {
-            const _appendTarget13 = cmds;
-            const _appendValue14 = {
-              indent: cmd.indent,
-              mode: cmd.mode,
-              doc: d.d,
-            };
-            _appendTarget13[_appendTarget13.length] = _appendValue14;
-          }
+          cmds[cmds.length] = {
+            indent: cmd.indent,
+            mode: cmd.mode,
+            doc: d.d,
+          };
           continue;
         }
         if (d.k === "fill") {
           for (const i of reverseIndices(d.parts.length)) {
-            {
-              const _appendTarget15 = cmds;
-              const _appendValue16 = {
-                indent: i === 0
-                  ? cmd.indent
-                  : cmd.indent + INDENT_WIDTH * d.tail,
-                mode: cmd.mode,
-                doc: d.parts[i],
-              };
-              _appendTarget15[_appendTarget15.length] = _appendValue16;
-            }
+            cmds[cmds.length] = {
+              indent: i === 0 ? cmd.indent : cmd.indent + INDENT_WIDTH * d.tail,
+              mode: cmd.mode,
+              doc: d.parts[i],
+            };
           }
           continue;
         }
@@ -523,59 +495,43 @@ export function render(
           continue;
         }
         if (d.k === "ifbroke") {
-          {
-            const _appendTarget17 = cmds;
-            const _appendValue18 = {
-              indent: cmd.indent,
-              mode: cmd.mode,
-              doc: broke.has(d.id) ? d.broken : d.flat,
-            };
-            _appendTarget17[_appendTarget17.length] = _appendValue18;
-          }
+          cmds[cmds.length] = {
+            indent: cmd.indent,
+            mode: cmd.mode,
+            doc: broke.has(d.id) ? d.broken : d.flat,
+          };
           continue;
         }
         if (d.k === "ifbreak") {
-          {
-            const _appendTarget19 = cmds;
-            const _appendValue20 = {
-              indent: cmd.indent,
-              mode: cmd.mode,
-              doc: cmd.mode === "break" ? d.broken : d.flat,
-            };
-            _appendTarget19[_appendTarget19.length] = _appendValue20;
-          }
+          cmds[cmds.length] = {
+            indent: cmd.indent,
+            mode: cmd.mode,
+            doc: cmd.mode === "break" ? d.broken : d.flat,
+          };
           continue;
         }
         if (d.k === "alt") {
-          {
-            const _appendTarget21 = cmds;
-            const _appendValue22 = {
-              indent: cmd.indent,
-              mode: cmd.mode,
-              doc: cmd.mode === "break"
-                ? d.options[d.options.length - 1]
-                : d.options[0],
-            };
-            _appendTarget21[_appendTarget21.length] = _appendValue22;
-          }
+          cmds[cmds.length] = {
+            indent: cmd.indent,
+            mode: cmd.mode,
+            doc: cmd.mode === "break"
+              ? d.options[d.options.length - 1]
+              : d.options[0],
+          };
           continue;
         }
         if (d.k === "iffits") {
-          {
-            const _appendTarget23 = cmds;
-            const _appendValue24 = {
-              indent: cmd.indent,
-              mode: cmd.mode,
-              doc: fits(
-                  { indent: cmd.indent, mode: "flat", doc: d.probe },
-                  [],
-                  left,
-                )
-                ? d.whenFits
-                : d.otherwise,
-            };
-            _appendTarget23[_appendTarget23.length] = _appendValue24;
-          }
+          cmds[cmds.length] = {
+            indent: cmd.indent,
+            mode: cmd.mode,
+            doc: fits(
+                { indent: cmd.indent, mode: "flat", doc: d.probe },
+                [],
+                left,
+              )
+              ? d.whenFits
+              : d.otherwise,
+          };
           continue;
         }
         if (d.k === "endspan" || d.k === "endmark") {
@@ -586,20 +542,12 @@ export function render(
     return left >= 0;
   }
   function write(s: string): number {
-    {
-      const _appendTarget25 = out;
-      const _appendValue26 = s;
-      _appendTarget25[_appendTarget25.length] = _appendValue26;
-    }
+    out[out.length] = s;
     column = column + s.length;
     return offset + s.length;
   }
   function newline(spaces: number): number {
-    {
-      const _appendTarget27 = out;
-      const _appendValue28 = "\n" + " ".repeat(spaces);
-      _appendTarget27[_appendTarget27.length] = _appendValue28;
-    }
+    out[out.length] = "\n" + " ".repeat(spaces);
     column = spaces;
     return offset + 1 + spaces;
   }
@@ -611,15 +559,11 @@ export function render(
     }
     if (isList(d)) {
       for (const i of reverseIndices(d.length)) {
-        {
-          const _appendTarget29 = stack;
-          const _appendValue30 = {
-            indent: cmd.indent,
-            mode: cmd.mode,
-            doc: d[i],
-          };
-          _appendTarget29[_appendTarget29.length] = _appendValue30;
-        }
+        stack[stack.length] = {
+          indent: cmd.indent,
+          mode: cmd.mode,
+          doc: d[i],
+        };
       }
       continue;
     }
@@ -642,103 +586,71 @@ export function render(
           if (mode === "break" && d.id !== undefined) {
             broke = broke.add(d.id);
           }
-          {
-            const _appendTarget31 = stack;
-            const _appendValue32 = {
-              indent: cmd.indent,
-              mode: mode,
-              doc: d.d,
-            };
-            _appendTarget31[_appendTarget31.length] = _appendValue32;
-          }
+          stack[stack.length] = {
+            indent: cmd.indent,
+            mode: mode,
+            doc: d.d,
+          };
           continue;
         }
         remeasure = false;
         const flat: Cmd = { indent: cmd.indent, mode: "flat", doc: d.d };
         const forced = d.brk || hasHard(d.d);
         if (!forced && fits(flat, stack, width - column)) {
-          {
-            const _appendTarget33 = stack;
-            const _appendValue34 = flat;
-            _appendTarget33[_appendTarget33.length] = _appendValue34;
-          }
+          stack[stack.length] = flat;
         } else {
           if (d.id !== undefined) {
             broke = broke.add(d.id);
           }
-          {
-            const _appendTarget35 = stack;
-            const _appendValue36: Cmd = {
-              indent: cmd.indent,
-              mode: "break",
-              doc: d.d,
-            };
-            _appendTarget35[_appendTarget35.length] = _appendValue36;
-          }
+          stack[stack.length] = {
+            indent: cmd.indent,
+            mode: "break",
+            doc: d.d,
+          };
         }
         continue;
       }
     }
     if (d.k === "ifbroke") {
-      {
-        const _appendTarget37 = stack;
-        const _appendValue38 = {
-          indent: cmd.indent,
-          mode: cmd.mode,
-          doc: broke.has(d.id) ? d.broken : d.flat,
-        };
-        _appendTarget37[_appendTarget37.length] = _appendValue38;
-      }
+      stack[stack.length] = {
+        indent: cmd.indent,
+        mode: cmd.mode,
+        doc: broke.has(d.id) ? d.broken : d.flat,
+      };
       continue;
     }
     if (d.k === "indent") {
-      {
-        const _appendTarget39 = stack;
-        const _appendValue40 = {
-          indent: cmd.indent + INDENT_WIDTH,
-          mode: cmd.mode,
-          doc: d.d,
-        };
-        _appendTarget39[_appendTarget39.length] = _appendValue40;
-      }
+      stack[stack.length] = {
+        indent: cmd.indent + INDENT_WIDTH,
+        mode: cmd.mode,
+        doc: d.d,
+      };
       continue;
     }
     if (d.k === "fill") {
       {
         if (cmd.mode === "flat" && !remeasure) {
-          {
-            const _appendTarget41 = stack;
-            const _appendValue42: Cmd = {
-              indent: cmd.indent,
-              mode: "flat",
-              doc: d.parts,
-            };
-            _appendTarget41[_appendTarget41.length] = _appendValue42;
-          }
+          stack[stack.length] = {
+            indent: cmd.indent,
+            mode: "flat",
+            doc: d.parts,
+          };
           continue;
         }
         remeasure = false;
         if (d.parts.length === 0) {
           continue;
         }
-        {
-          const _appendTarget43 = stack;
-          const _appendValue44: Cmd = {
-            indent: cmd.indent,
-            mode: cmd.mode,
-            doc: { k: "fillstep", fill: d, i: 1 },
-          };
-          _appendTarget43[_appendTarget43.length] = _appendValue44;
-        }
-        {
-          const _appendTarget45 = stack;
-          const _appendValue46 = {
-            indent: cmd.indent,
-            mode: cmd.mode,
-            doc: group(d.parts[0], undefined, undefined),
-          };
-          _appendTarget45[_appendTarget45.length] = _appendValue46;
-        }
+        stack[stack.length] = {
+          indent: cmd.indent,
+          mode: cmd.mode,
+          doc: { k: "fillstep", fill: d, i: 1 },
+        };
+        stack[stack.length] = {
+          indent: cmd.indent,
+          mode: cmd.mode,
+          doc: group(d.parts[0], undefined, undefined),
+        };
         continue;
       }
     }
@@ -758,33 +670,21 @@ export function render(
           doc: [separator, content],
         };
         const onLine = fits(flatPair, lastContent ? stack : [], width - column);
-        {
-          const _appendTarget47 = stack;
-          const _appendValue48: Cmd = {
-            indent: cmd.indent,
-            mode: cmd.mode,
-            doc: { k: "fillstep", fill: d.fill, i: d.i + 2 },
-          };
-          _appendTarget47[_appendTarget47.length] = _appendValue48;
-        }
-        {
-          const _appendTarget49 = stack;
-          const _appendValue50: Cmd = {
-            indent: deeper,
-            mode: "break",
-            doc: group(content, undefined, undefined),
-          };
-          _appendTarget49[_appendTarget49.length] = _appendValue50;
-        }
-        {
-          const _appendTarget51 = stack;
-          const _appendValue52: Cmd = {
-            indent: deeper,
-            mode: onLine ? "flat" : "break",
-            doc: separator,
-          };
-          _appendTarget51[_appendTarget51.length] = _appendValue52;
-        }
+        stack[stack.length] = {
+          indent: cmd.indent,
+          mode: cmd.mode,
+          doc: { k: "fillstep", fill: d.fill, i: d.i + 2 },
+        };
+        stack[stack.length] = {
+          indent: deeper,
+          mode: "break",
+          doc: group(content, undefined, undefined),
+        };
+        stack[stack.length] = {
+          indent: deeper,
+          mode: onLine ? "flat" : "break",
+          doc: separator,
+        };
         continue;
       }
     }
@@ -793,45 +693,33 @@ export function render(
       continue;
     }
     if (d.k === "spanclose") {
-      {
-        const _appendTarget53 = spans;
-        const _appendValue54 = {
-          start: openSpans.get(d.id) ?? offset,
-          end: offset,
-          span: d.span,
-        };
-        _appendTarget53[_appendTarget53.length] = _appendValue54;
-      }
+      spans[spans.length] = {
+        start: openSpans.get(d.id) ?? offset,
+        end: offset,
+        span: d.span,
+      };
       continue;
     }
     if (d.k === "ifbreak") {
-      {
-        const _appendTarget55 = stack;
-        const _appendValue56 = {
-          indent: cmd.indent,
-          mode: cmd.mode,
-          doc: cmd.mode === "break" ? d.broken : d.flat,
-        };
-        _appendTarget55[_appendTarget55.length] = _appendValue56;
-      }
+      stack[stack.length] = {
+        indent: cmd.indent,
+        mode: cmd.mode,
+        doc: cmd.mode === "break" ? d.broken : d.flat,
+      };
       continue;
     }
     if (d.k === "iffits") {
-      {
-        const _appendTarget57 = stack;
-        const _appendValue58 = {
-          indent: cmd.indent,
-          mode: cmd.mode,
-          doc: fits(
-              { indent: cmd.indent, mode: "flat", doc: d.probe },
-              [],
-              width - column,
-            )
-            ? d.whenFits
-            : d.otherwise,
-        };
-        _appendTarget57[_appendTarget57.length] = _appendValue58;
-      }
+      stack[stack.length] = {
+        indent: cmd.indent,
+        mode: cmd.mode,
+        doc: fits(
+            { indent: cmd.indent, mode: "flat", doc: d.probe },
+            [],
+            width - column,
+          )
+          ? d.whenFits
+          : d.otherwise,
+      };
       continue;
     }
     if (d.k === "alt") {
@@ -839,15 +727,11 @@ export function render(
         const options = d.options;
         const last = options[options.length - 1];
         if (cmd.mode === "flat" && !remeasure) {
-          {
-            const _appendTarget59 = stack;
-            const _appendValue60: Cmd = {
-              indent: cmd.indent,
-              mode: "flat",
-              doc: options[0],
-            };
-            _appendTarget59[_appendTarget59.length] = _appendValue60;
-          }
+          stack[stack.length] = {
+            indent: cmd.indent,
+            mode: "flat",
+            doc: options[0],
+          };
           continue;
         }
         remeasure = false;
@@ -857,11 +741,7 @@ export function render(
           doc: options[0],
         };
         if (fits(first, stack, width - column)) {
-          {
-            const _appendTarget61 = stack;
-            const _appendValue62 = first;
-            _appendTarget61[_appendTarget61.length] = _appendValue62;
-          }
+          stack[stack.length] = first;
           continue;
         }
         let chosen: Cmd | undefined;
@@ -877,71 +757,43 @@ export function render(
             break;
           }
         }
-        {
-          const _appendTarget63 = stack;
-          const _appendValue64 = chosen ??
-            { indent: cmd.indent, mode: "break", doc: last };
-          _appendTarget63[_appendTarget63.length] = _appendValue64;
-        }
+        stack[stack.length] = chosen ??
+          { indent: cmd.indent, mode: "break", doc: last };
         continue;
       }
     }
     if (d.k === "span") {
-      {
-        const _appendTarget65 = stack;
-        const _appendValue66: Cmd = {
-          indent: cmd.indent,
-          mode: cmd.mode,
-          doc: { k: "endspan", span: d.span, start: offset },
-        };
-        _appendTarget65[_appendTarget65.length] = _appendValue66;
-      }
-      {
-        const _appendTarget67 = stack;
-        const _appendValue68 = {
-          indent: cmd.indent,
-          mode: cmd.mode,
-          doc: d.d,
-        };
-        _appendTarget67[_appendTarget67.length] = _appendValue68;
-      }
+      stack[stack.length] = {
+        indent: cmd.indent,
+        mode: cmd.mode,
+        doc: { k: "endspan", span: d.span, start: offset },
+      };
+      stack[stack.length] = {
+        indent: cmd.indent,
+        mode: cmd.mode,
+        doc: d.d,
+      };
       continue;
     }
     if (d.k === "endspan") {
-      {
-        const _appendTarget69 = spans;
-        const _appendValue70 = { start: d.start, end: offset, span: d.span };
-        _appendTarget69[_appendTarget69.length] = _appendValue70;
-      }
+      spans[spans.length] = { start: d.start, end: offset, span: d.span };
       continue;
     }
     if (d.k === "mark") {
-      {
-        const _appendTarget71 = stack;
-        const _appendValue72: Cmd = {
-          indent: cmd.indent,
-          mode: cmd.mode,
-          doc: { k: "endmark", data: d.data, start: offset },
-        };
-        _appendTarget71[_appendTarget71.length] = _appendValue72;
-      }
-      {
-        const _appendTarget73 = stack;
-        const _appendValue74 = {
-          indent: cmd.indent,
-          mode: cmd.mode,
-          doc: d.d,
-        };
-        _appendTarget73[_appendTarget73.length] = _appendValue74;
-      }
+      stack[stack.length] = {
+        indent: cmd.indent,
+        mode: cmd.mode,
+        doc: { k: "endmark", data: d.data, start: offset },
+      };
+      stack[stack.length] = {
+        indent: cmd.indent,
+        mode: cmd.mode,
+        doc: d.d,
+      };
       continue;
     }
     if (d.k === "endmark") {
-      {
-        const _appendTarget75 = marks;
-        const _appendValue76 = { data: d.data, start: d.start, end: offset };
-        _appendTarget75[_appendTarget75.length] = _appendValue76;
-      }
+      marks[marks.length] = { data: d.data, start: d.start, end: offset };
       continue;
     }
   }

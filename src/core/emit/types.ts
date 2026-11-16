@@ -93,11 +93,7 @@ function requirementUnion(
   const services = servicesOf(capabilities);
   const names: Doc[] = services.map((id) => scope.nameOf(id));
   if (capabilities.includes(SCOPE_CAPABILITY)) {
-    {
-      const _appendTarget1 = names;
-      const _appendValue2 = `${scope.effect("Scope")}.Scope`;
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
-    }
+    names[names.length] = `${scope.effect("Scope")}.Scope`;
   }
   return names.length === 0 ? undefined : unionDoc(names);
 }
@@ -133,16 +129,10 @@ function deferredArguments(
   const requirements = requirementUnion(scope, effects.requirements);
   const args: Doc[] = [...results];
   if (failures !== undefined || requirements !== undefined) {
-    {
-      const _appendTarget3 = args;
-      const _appendValue4 = failures ?? "never";
-      _appendTarget3[_appendTarget3.length] = _appendValue4;
-    }
+    args[args.length] = failures ?? "never";
   }
   if (requirements !== undefined) {
-    const _appendTarget5 = args;
-    const _appendValue6 = requirements;
-    _appendTarget5[_appendTarget5.length] = _appendValue6;
+    args[args.length] = requirements;
   }
   return typeArguments(args);
 }
