@@ -6,10 +6,10 @@ import { describeLspBenchError } from "../bench/lsp_script.ts";
 import { runM7 } from "../bench/m7.ts";
 import { runVariants } from "../bench/m5_variants.ts";
 import { writeTarget } from "../bench/m5_target.ts";
+import { withTemporaryDirectory } from "./process_helpers.ts";
 
-Deno.test("writeTarget adds the mark comment to the marked file only", () => {
-  const dir = Deno.makeTempDirSync({ prefix: "effektive-bench-target-" });
-  try {
+Deno.test("writeTarget adds the mark comment to the marked file only", async () => {
+  await withTemporaryDirectory("effektive-bench-target-", (dir) => {
     writeTarget(dir, {
       name: "two files",
       files: new Map([["app.ts", "export const a = 1;\n"], [
@@ -26,9 +26,8 @@ Deno.test("writeTarget adds the mark comment to the marked file only", () => {
       Deno.readTextFileSync(`${dir}/lib.ts`),
       "export const b = 2;\n",
     );
-  } finally {
-    Deno.removeSync(dir, { recursive: true });
-  }
+    return Promise.resolve();
+  });
 });
 
 Deno.test("M7 times one cold save for each side of each cold pair", async () => {
