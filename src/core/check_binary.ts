@@ -2,13 +2,12 @@
 // the type table and decide the result type of an operator and whether the
 // operands fit. `BodyChecker.binary` checks the operands, reports a mismatch,
 // and records the node.
-import { isErrorId, isTypeId } from "./ids.ts";
+import { isErrorId, isTypeId, type ModuleName } from "./ids.ts";
 import { DURATION_ID, INSTANT_ID, isClosedUnitId, type TypeId } from "./ir.ts";
 import { flattenIdentityMembers } from "./patterns.ts";
 import type { ArithmeticOperator, BinaryOperator } from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 import { indices } from "./runtime.ts";
-type ModuleName = string;
 type TypeMatch = boolean;
 function isError(table: TypeTable, ref: TypeRef): boolean {
   return table.node(ref).kind === "error";
@@ -61,18 +60,17 @@ function adoptedNumericIdentity(
 ): TypeId | undefined {
   const l = numericIdentity(table, left);
   const r = numericIdentity(table, right);
-  if ((l === undefined) === (r === undefined)) {
+  if (l !== undefined && r !== undefined) {
     return undefined;
   }
   const named = l ?? r;
   // `Duration` and `Instant` have their own operator rules.
-  if (named !== undefined && isClosedUnitId(named)) {
+  if (named === undefined || isClosedUnitId(named)) {
     return undefined;
   }
   const unnamed = l === undefined ? left : right;
-  const body = named === undefined ? undefined : table.identityBaseOf(named);
-  return named !== undefined && body !== undefined &&
-      table.isAssignableIn(module, unnamed, body)
+  const body = table.identityBaseOf(named);
+  return body !== undefined && table.isAssignableIn(module, unnamed, body)
     ? named
     : undefined;
 }
