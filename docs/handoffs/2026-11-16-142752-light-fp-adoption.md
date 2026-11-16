@@ -18,7 +18,7 @@ The user requested retained implementation knowledge, with a possible skill afte
 No skill has been created. Initial lessons appear below.
 The pause remains active until the user resumes work.
 
-The plan authority is [the adoption plan](../plans/2026-11-16-light-fp-adoption.md).
+The plan authority is [the adoption plan](../archive/plans/2026-11-16-light-fp-adoption.md).
 The plan also contains the worklog and ownership of each unit.
 Repository instructions remain in [AGENTS.md](../../AGENTS.md) and `/Users/srdjans/AGENTS.md`.
 The user's conversation instructions also apply, including Sol executors with high effort and local commits after complete checks.

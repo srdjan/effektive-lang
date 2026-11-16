@@ -15,7 +15,7 @@ The user accepted the full compiler migration, including function factories and 
 The source language, diagnostics, emitted output, and existing expected test values must remain unchanged.
 The user requested retained implementation knowledge for a possible later skill. No skill exists.
 
-The plan authority is [the adoption plan](../plans/2026-11-16-light-fp-adoption.md).
+The plan authority is [the adoption plan](../archive/plans/2026-11-16-light-fp-adoption.md).
 The plan also owns the worklog and executor units.
 The working knowledge reference is [the subset notebook](../light-fp-subset.md).
 The earlier handover at `2026-11-16-142752-light-fp-adoption.md` describes an older checkpoint.

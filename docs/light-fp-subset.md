@@ -1,8 +1,8 @@
 # Working with the Light FP TypeScript subset
 
-These notes record the ongoing `0.8.0` migration. They are not a completed skill.
-The [adoption plan](plans/2026-11-16-light-fp-adoption.md) owns execution and acceptance.
-Examples below passed focused checks. The integrated migration remains incomplete.
+These notes record the completed `0.8.0` migration. They are not a skill.
+The [adoption plan](archive/plans/2026-11-16-light-fp-adoption.md) records execution, acceptance, and evidence limits.
+The focused examples, full compiler gate, and bounded mutation sweep pass.
 
 ## Own mutable collections explicitly
 

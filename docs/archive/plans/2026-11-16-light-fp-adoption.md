@@ -1,5 +1,9 @@
 # Light FP lint 0.8.0 adoption
 
+Status: complete locally on `lint/light-fp-0.8.0`.
+The user owns branch review and merge approval.
+The completion evidence and its limits appear at the end of this plan.
+
 This file owns the plan and worklog. LFA means Light FP adoption.
 
 ## Objective and constraints
@@ -397,7 +401,7 @@ The user requested a pause on 2026-11-16.
 All active executors stopped. No implementation may continue until the user resumes work.
 The user also requested retained knowledge about the Light FP TypeScript subset for a later skill.
 The handover preserves initial lessons, rejected approaches, evidence limits, and remaining caller migrations.
-Handover: [docs/handoffs/2026-11-16-142752-light-fp-adoption.md](../handoffs/2026-11-16-142752-light-fp-adoption.md).
+Handover: [docs/handoffs/2026-11-16-142752-light-fp-adoption.md](../../handoffs/2026-11-16-142752-light-fp-adoption.md).
 No commit, push, or merge occurred. The migration remains incomplete.
 
 ### Resumed checkpoint
@@ -483,7 +487,7 @@ Main owns caller changes outside the file.
 The TypeLowerer factory now returns an owning capability from report operations.
 It requires the explicit related argument, which can be undefined.
 
-Implementation notes now live in [docs/light-fp-subset.md](../light-fp-subset.md).
+Implementation notes now live in [docs/light-fp-subset.md](../../light-fp-subset.md).
 These working notes preserve verified patterns, counterexamples, and evidence limits for a possible later skill.
 The existing regression tests carry the boolean and lexer lessons directly.
 No separate solved-problem document or skill is needed for those tests.
@@ -669,7 +673,7 @@ Acceptance requires the original completion result and rejection of the exact sa
 ### Paused checkpoint, 2026-11-16 16:49:40 UTC
 
 The user paused work. All executors finished. No owned command or server remains active.
-The current handover is [docs/handoffs/2026-11-16-164940-light-fp-adoption.md](../handoffs/2026-11-16-164940-light-fp-adoption.md).
+The current handover is [docs/handoffs/2026-11-16-164940-light-fp-adoption.md](../../handoffs/2026-11-16-164940-light-fp-adoption.md).
 
 Compiler commit `76d63bf` passes the full gate: 3,305 fast tests and 325 slow tests.
 Website commit `ca14f82` passes its tests and strict panels. Both original main checkouts remain clean.
@@ -773,3 +777,48 @@ The same six fast tests remain ignored. The slow suite takes 8 minutes 19 second
 The complete log is `demos/light-fp-lint/full-check-documentation-dependency.log`.
 No source or test changed between the two successful full gates.
 The corrective commit includes all five reviewed documentation files, including the missing handoff.
+
+### Final committed mutation sweep
+
+The corrective documentation commit is `b093f304f8b7df4a0776f04543a195a43a0afa21`.
+Its source, tests, scripts, configuration, and corpus match source candidate `03e24539` exactly.
+The archived mutation smoke passes at this commit: one lexer sample is killed in eight seconds.
+
+The full sweep uses seed 11, one sample per module, two workers, and the default fast suite.
+It samples all 117 listed modules, which contain 12,671 eligible mutation sites.
+All 117 samples are killed. No sample survives or times out.
+No unregistered survivor or stale row remains. The command exits zero in 83.490 seconds.
+This bounded run does not exhaust the eligible sites.
+
+The exact command and module list are in `demos/light-fp-lint/mutation-sweep-b093f304-receipt.json`.
+The independent count reconciliation is `demos/light-fp-lint/mutation-sweep-b093f304-report.json`.
+The readable report is `demos/light-fp-lint/mutation-sweep-b093f304-report.md`.
+The raw output is `demos/light-fp-lint/mutation-sweep-b093f304-full.log`.
+The register retains its 156 reviewed rows. No new row was added.
+
+### Completion scope
+
+All adoption units pass their technical acceptance checks within the stated evidence limits.
+The compiler retains all `0.8.0` rules. Original tasks, exclusions, and format settings remain unchanged.
+The migration adds no blanket suppression or dependency-age configuration override.
+The seven reviewed inert-initialization exceptions remain the only `pure-module` line exceptions.
+
+The complete gate passes 3,312 fast tests and 325 slow tests, with six fast tests ignored and zero failures.
+All 497 behavior records match the original compiler. The final committed mutation sweep kills all 117 samples.
+The completion commit archives this plan, updates the registry and incoming links, and updates the notebook's status.
+The completion full gate also passes format, lint, repository-wide type checks, 3,312 fast tests, and 325 slow tests.
+The same six fast tests remain ignored. No test fails.
+The slow suite takes 7 minutes 44 seconds. The log is `demos/light-fp-lint/full-check-completion.log`.
+All four documentation tests also pass against the working tree and its prospective archive.
+All three relative links from the archived plan resolve. All four incoming documents use the archive path.
+The finishing changes contain documentation only. Source, tests, scripts, configuration, and corpus still match mutation-tested `b093f304`.
+
+The earlier parser timing limitation remains: loaded paired samples favor the original, without an isolated regression ratio.
+Coverage did not run. Native Windows behavior remains unverified.
+Public recovery tests do not prove unexpected check-stage rollback after the class-specific prototype test was retired.
+The browser checks recorded above apply to `76d63bf`; this finishing unit changes no screen or interaction.
+
+The companion website remains at `ca14f8218a1e47ca50bf19cd77e4658ae9dede96`.
+Both original main checkouts remain outside this run's writes.
+No skill was created. No release, push, or merge occurred.
+The user owns branch review and merge approval. Parser timing remains a review item.
