@@ -229,9 +229,6 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
     const refined = refinedTarget(target);
     if (refined === undefined) return "not-required";
     const found = unfoldTransparentType(ctx, source);
-    if (
-      found.kind === "named" && found.id === refined.id
-    ) return "not-required";
     if (found.kind === "named") return "not-required";
     const base = identityBody(ctx.world.env, refined.id);
     if (base === undefined || !fits(ctx.world.env, found, base)) {
