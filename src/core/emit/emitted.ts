@@ -99,6 +99,10 @@ export function emitted(
     huggable: flags.huggable ?? false,
   };
 }
+/** A printed expression with the default precedence and no flags. */
+export function plainEmitted(doc: Doc): Emitted {
+  return emitted(doc, undefined, undefined);
+}
 /** The doc of `e` for a position that starts on a line of its own. */
 export function flush(e: Emitted): Doc {
   return e.flush ?? e.doc;

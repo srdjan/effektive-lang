@@ -8,6 +8,7 @@ import {
   free,
   type Kid,
   type Mode,
+  plainEmitted,
   PREC,
 } from "../emitted.ts";
 import { resolvedAs } from "../type_query.ts";
@@ -47,11 +48,7 @@ export function effectStructural(
       const job = from !== undefined && from.execution === "pure"
         ? c.fit(e.job, { ...from, execution: "effect" }, mode)
         : kid(e.job, undefined);
-      return emitted(
-        [`${effect}.suspend`, callArguments([job])],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([`${effect}.suspend`, callArguments([job])]);
     }
   }
   if (e.kind === "retry-schedule") {
@@ -75,24 +72,20 @@ export function effectStructural(
       const stepName = bound ? c.scope.temp() : null;
       const step = stepName === null
         ? c.pure(e.step, undefined)
-        : emitted(stepName, undefined, undefined);
+        : plainEmitted(stepName);
       const metadata = c.scope.temp();
       const decision = c.scope.temp();
-      const built = emitted(
-        [
-          `${schedule}.fromStepWithMetadata<`,
-          error,
-          `, number, never, never, never, never>(${effect}.succeed((${metadata}: ${schedule}.InputMetadata<`,
-          error,
-          `>) => { const ${decision} = `,
-          at(step, PREC.member),
-          `(${metadata}.input, ${metadata}.attempt); if (${option}.isNone(${decision})) return ${cause}.done(${metadata}.attempt); `,
-          `if (${decision}.value < 0) throw new RangeError("negative retry delay"); `,
-          `return ${effect}.succeed([${metadata}.attempt, ${duration}.millis(${decision}.value)] as [number, ${duration}.Duration]); }))`,
-        ],
-        undefined,
-        undefined,
-      );
+      const built = plainEmitted([
+        `${schedule}.fromStepWithMetadata<`,
+        error,
+        `, number, never, never, never, never>(${effect}.succeed((${metadata}: ${schedule}.InputMetadata<`,
+        error,
+        `>) => { const ${decision} = `,
+        at(step, PREC.member),
+        `(${metadata}.input, ${metadata}.attempt); if (${option}.isNone(${decision})) return ${cause}.done(${metadata}.attempt); `,
+        `if (${decision}.value < 0) throw new RangeError("negative retry delay"); `,
+        `return ${effect}.succeed([${metadata}.attempt, ${duration}.millis(${decision}.value)] as [number, ${duration}.Duration]); }))`,
+      ]);
       return stepName === null ? built : emitted(
         [
           "((",
@@ -113,15 +106,11 @@ export function effectStructural(
       const effect = c.scope.effect("Effect");
       const jobs = c.scope.temp();
       // The array is evaluated at the call, like the operands of `race(left, right)`.
-      return emitted(
-        [
-          `((${jobs}) => ${jobs}.length === 0 ? ${effect}.die(new RangeError("race of no jobs")) : ${effect}.raceAll(${jobs}))(`,
-          free(kid(e.jobs, undefined)),
-          ")",
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        `((${jobs}) => ${jobs}.length === 0 ? ${effect}.die(new RangeError("race of no jobs")) : ${effect}.raceAll(${jobs}))(`,
+        free(kid(e.jobs, undefined)),
+        ")",
+      ]);
     }
   }
   {
@@ -140,17 +129,13 @@ function guardedDuration(
 ): Emitted {
   const effect = c.scope.effect("Effect");
   const ms = c.scope.temp();
-  return emitted(
-    [
-      `${effect}.suspend(() => { const ${ms}: number = `,
-      free(duration),
-      `; if (${ms} < 0) throw new RangeError("negative duration"); return `,
-      free(build(emitted(ms, undefined, undefined))),
-      `; })`,
-    ],
-    undefined,
-    undefined,
-  );
+  return plainEmitted([
+    `${effect}.suspend(() => { const ${ms}: number = `,
+    free(duration),
+    `; if (${ms} < 0) throw new RangeError("negative duration"); return `,
+    free(build(emitted(ms, undefined, undefined))),
+    `; })`,
+  ]);
 }
 export function effectLeaf(
   c: ExprCore,
@@ -158,38 +143,26 @@ export function effectLeaf(
   children: readonly Emitted[],
 ): Emitted {
   if (e.kind === "now") {
-    return emitted(
-      `${c.scope.effect("Clock")}.currentTimeMillis`,
-      undefined,
-      undefined,
-    );
+    return plainEmitted(`${c.scope.effect("Clock")}.currentTimeMillis`);
   }
   if (e.kind === "random") {
-    return emitted(`${c.scope.effect("Random")}.next`, undefined, undefined);
+    return plainEmitted(`${c.scope.effect("Random")}.next`);
   }
   const effect = c.scope.effect("Effect");
   if (e.kind === "log") {
     {
       // `annotateLogs(effect, record)` evaluates the message, then the fields, once.
-      const entry = emitted(
-        [
-          // The Effect severity is the level name with a capital first letter.
-          `${effect}.logWithLevel("${
-            e.level.charAt(0).toUpperCase() + e.level.slice(1)
-          }")`,
-          callArguments([children[0]]),
-        ],
-        undefined,
-        undefined,
-      );
-      return children[1] === undefined ? entry : emitted(
-        [
-          `${effect}.annotateLogs`,
-          callArguments([entry, children[1]]),
-        ],
-        undefined,
-        undefined,
-      );
+      const entry = plainEmitted([
+        // The Effect severity is the level name with a capital first letter.
+        `${effect}.logWithLevel("${
+          e.level.charAt(0).toUpperCase() + e.level.slice(1)
+        }")`,
+        callArguments([children[0]]),
+      ]);
+      return children[1] === undefined ? entry : plainEmitted([
+        `${effect}.annotateLogs`,
+        callArguments([entry, children[1]]),
+      ]);
     }
   }
   if (e.kind === "random-int") {
@@ -198,17 +171,13 @@ export function effectLeaf(
       const random = c.scope.effect("Random");
       const min = c.scope.temp();
       const max = c.scope.temp();
-      return emitted(
-        [
-          `${effect}.suspend(() => { const ${min}: number = `,
-          free(children[0]),
-          `; const ${max}: number = `,
-          free(children[1]),
-          `; if (!(${max} > ${min})) throw new RangeError("randomInt needs max greater than min"); return ${random}.nextIntBetween(${min}, ${max}, { halfOpen: true }); })`,
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        `${effect}.suspend(() => { const ${min}: number = `,
+        free(children[0]),
+        `; const ${max}: number = `,
+        free(children[1]),
+        `; if (!(${max} > ${min})) throw new RangeError("randomInt needs max greater than min"); return ${random}.nextIntBetween(${min}, ${max}, { halfOpen: true }); })`,
+      ]);
     }
   }
   if (e.kind === "run") {
@@ -221,11 +190,7 @@ export function effectLeaf(
       const options = emitted(`{ times: ${e.times} }`, PREC.member, {
         huggable: true,
       });
-      return emitted(
-        [`${effect}.retry`, callArguments([job, options])],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([`${effect}.retry`, callArguments([job, options])]);
     }
   }
   if (e.kind === "retry-with-schedule") {
@@ -233,17 +198,13 @@ export function effectLeaf(
       const operands = hoistedOperands([e.job, e.options], children);
       const jobValue = operands[0];
       const options = operands[1];
-      return emitted(
-        [
-          `${effect}.retry`,
-          callArguments([
-            c.suspended(e.job, jobValue),
-            options ?? c.pure(e.options, undefined),
-          ]),
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        `${effect}.retry`,
+        callArguments([
+          c.suspended(e.job, jobValue),
+          options ?? c.pure(e.options, undefined),
+        ]),
+      ]);
     }
   }
   if (e.kind === "repeat") {
@@ -253,57 +214,44 @@ export function effectLeaf(
       const options = operands[1];
       const job = c.suspended(e.job, jobValue);
       return e.options === null
-        ? emitted(
-          [`${effect}.forever`, callArguments([job])],
-          undefined,
-          undefined,
-        )
-        : emitted(
-          [
-            `${effect}.repeat`,
-            callArguments([job, options ?? c.pure(e.options, undefined)]),
-          ],
-          undefined,
-          undefined,
-        );
+        ? plainEmitted([`${effect}.forever`, callArguments([job])])
+        : plainEmitted([
+          `${effect}.repeat`,
+          callArguments([job, options ?? c.pure(e.options, undefined)]),
+        ]);
     }
   }
   if (e.kind === "timeout") {
     {
       const hoisted = e.job.execution === "effect";
-      return guardedDuration(c, children[hoisted ? 1 : 0], (ms) =>
-        emitted(
-          [
+      return guardedDuration(
+        c,
+        children[hoisted ? 1 : 0],
+        (ms) =>
+          plainEmitted([
             `${effect}.timeout`,
             callArguments([
               c.suspended(e.job, hoisted ? children[0] : undefined),
               ms,
             ]),
-          ],
-          undefined,
-          undefined,
-        ));
+          ]),
+      );
     }
   }
   if (e.kind === "uninterruptible") {
     {
       const job = hoistedOperands([e.job], children)[0];
-      return emitted(
-        [
-          `${effect}.uninterruptible`,
-          callArguments([c.suspended(e.job, job)]),
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        `${effect}.uninterruptible`,
+        callArguments([c.suspended(e.job, job)]),
+      ]);
     }
   }
   if (e.kind === "sleep") {
     return guardedDuration(
       c,
       children[0],
-      (ms) =>
-        emitted([`${effect}.sleep`, callArguments([ms])], undefined, undefined),
+      (ms) => plainEmitted([`${effect}.sleep`, callArguments([ms])]),
     );
   }
   {

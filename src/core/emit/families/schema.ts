@@ -6,9 +6,9 @@ import {
   at,
   callArguments,
   type Emitted,
-  emitted,
   free,
   type Kid,
+  plainEmitted,
   PREC,
 } from "../emitted.ts";
 import { internal } from "../failure.ts";
@@ -36,17 +36,13 @@ export function schemaStructural(
   const resultType = c.scope.resolve(e.type);
   function withSchemaView(value: Emitted): Emitted {
     return resultType.kind === "schema" && hasSchemaMetadata(resultType)
-      ? emitted(
-        [
-          `${schema}.make<`,
-          typeDoc(c.scope, resultType, undefined),
-          ">(",
-          at(value, PREC.member),
-          ".ast)",
-        ],
-        undefined,
-        undefined,
-      )
+      ? plainEmitted([
+        `${schema}.make<`,
+        typeDoc(c.scope, resultType, undefined),
+        ">(",
+        at(value, PREC.member),
+        ".ast)",
+      ])
       : value;
   }
   if (e.op === "constructor-default") {
@@ -60,28 +56,24 @@ export function schemaStructural(
       const effect = c.scope.effect("Effect");
       const callback = c.pure(args[1], undefined);
       const effectful = isEffectfulCallback(args[1].type);
-      return withSchemaView(emitted(
-        [
-          `${schema}.make<(`,
-          typeDoc(c.scope, sourceType, undefined),
-          ' & { readonly "~type.make.in": ',
-          typeDoc(
-            c.scope,
-            sourceType.makeInput ?? sourceType.decoded,
-            undefined,
-          ),
-          ` } & ${schema}.WithoutConstructorDefault)>(`,
-          at(kid(args[0], undefined), PREC.member),
-          ".ast).pipe(",
-          `${schema}.withConstructorDefault(${effect}.${
-            effectful ? "suspend" : "sync"
-          }(() => `,
-          at(callback, PREC.member),
-          "())))",
-        ],
-        undefined,
-        undefined,
-      ));
+      return withSchemaView(plainEmitted([
+        `${schema}.make<(`,
+        typeDoc(c.scope, sourceType, undefined),
+        ' & { readonly "~type.make.in": ',
+        typeDoc(
+          c.scope,
+          sourceType.makeInput ?? sourceType.decoded,
+          undefined,
+        ),
+        ` } & ${schema}.WithoutConstructorDefault)>(`,
+        at(kid(args[0], undefined), PREC.member),
+        ".ast).pipe(",
+        `${schema}.withConstructorDefault(${effect}.${
+          effectful ? "suspend" : "sync"
+        }(() => `,
+        at(callback, PREC.member),
+        "())))",
+      ]));
     }
   }
   if (e.op === "identity") {
@@ -92,29 +84,21 @@ export function schemaStructural(
         "schema",
         "schema identity has wrong type",
       );
-      return emitted(
-        [
-          `${schema}.toType(`,
-          schemaDoc(c.scope, type.decoded, undefined),
-          ")",
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        `${schema}.toType(`,
+        schemaDoc(c.scope, type.decoded, undefined),
+        ")",
+      ]);
     }
   }
   if (
     e.op === "array" || e.op === "struct" || e.op === "optional-key" ||
     e.op === "option-from-optional-key" || e.op === "union"
   ) {
-    return withSchemaView(emitted(
-      [
-        `${schema}.${SINGLE_ARGUMENT_NAMES[e.op]}`,
-        callArguments([kid(args[0], undefined)]),
-      ],
-      undefined,
-      undefined,
-    ));
+    return withSchemaView(plainEmitted([
+      `${schema}.${SINGLE_ARGUMENT_NAMES[e.op]}`,
+      callArguments([kid(args[0], undefined)]),
+    ]));
   }
   if (e.op === "null-to-missing-key") {
     {
@@ -122,24 +106,20 @@ export function schemaStructural(
       const option = c.scope.effect("Option");
       const source = c.scope.temp();
       const value = c.scope.temp();
-      return withSchemaView(emitted(
-        [
-          "((",
-          source,
-          ": ",
-          typeDoc(c.scope, args[0].type, undefined),
-          ") => ",
-          `${schema}.optionalKey(${schema}.NullOr(${source})).pipe(`,
-          `${schema}.decodeTo(${schema}.optionalKey(${schema}.toType(${source})), { `,
-          `decode: ${getter}.transformOptional(${option}.filter((${value}) => ${value} !== null)), `,
-          `encode: ${getter}.transformOptional((${value}) => ${value})`,
-          " })))(",
-          free(kid(args[0], undefined)),
-          ")",
-        ],
-        undefined,
-        undefined,
-      ));
+      return withSchemaView(plainEmitted([
+        "((",
+        source,
+        ": ",
+        typeDoc(c.scope, args[0].type, undefined),
+        ") => ",
+        `${schema}.optionalKey(${schema}.NullOr(${source})).pipe(`,
+        `${schema}.decodeTo(${schema}.optionalKey(${schema}.toType(${source})), { `,
+        `decode: ${getter}.transformOptional(${option}.filter((${value}) => ${value} !== null)), `,
+        `encode: ${getter}.transformOptional((${value}) => ${value})`,
+        " })))(",
+        free(kid(args[0], undefined)),
+        ")",
+      ]));
     }
   }
   if (
@@ -188,47 +168,37 @@ export function schemaStructural(
         const omit = options?.kind === "record" &&
           options.fields[0].value.kind === "literal" &&
           options.fields[0].value.value === "omit";
-        return withSchemaView(emitted(
-          [
-            "((",
-            source,
-            ": ",
-            typeDoc(c.scope, args[0].type, undefined),
-            ") => ",
-            `${schema}.optionalKey(${schema}.NullOr(${source})).pipe(`,
-            `${schema}.decodeTo(${schema}.toType(${source}), { `,
-            `decode: ${getter}.transformOptionalEffect((${value}) => { `,
-            `const ${issue} = ${option}.filter(${value}, (${value}) => ${value} !== null); `,
-            `return ${option}.isSome(${issue}) ? ${effect}.succeed(${issue}) : ${effect}.map(`,
-            issueDefault,
-            `, ${option}.some); }), `,
-            `encode: ${getter}.${omit ? "omit" : "passthrough"}() })))`,
-            "(",
-            free(kid(args[0], undefined)),
-            ")",
-          ],
-          undefined,
-          undefined,
-        ));
+        return withSchemaView(plainEmitted([
+          "((",
+          source,
+          ": ",
+          typeDoc(c.scope, args[0].type, undefined),
+          ") => ",
+          `${schema}.optionalKey(${schema}.NullOr(${source})).pipe(`,
+          `${schema}.decodeTo(${schema}.toType(${source}), { `,
+          `decode: ${getter}.transformOptionalEffect((${value}) => { `,
+          `const ${issue} = ${option}.filter(${value}, (${value}) => ${value} !== null); `,
+          `return ${option}.isSome(${issue}) ? ${effect}.succeed(${issue}) : ${effect}.map(`,
+          issueDefault,
+          `, ${option}.some); }), `,
+          `encode: ${getter}.${omit ? "omit" : "passthrough"}() })))`,
+          "(",
+          free(kid(args[0], undefined)),
+          ")",
+        ]));
       }
-      return withSchemaView(emitted(
-        [
-          at(kid(args[0], undefined), PREC.member),
-          ".pipe(",
-          `${schema}.${
-            e.op === "default-encoded-key"
-              ? "withDecodingDefaultKey"
-              : "withDecodingDefaultTypeKey"
-          }(`,
-          defaultValue,
-          ...(args[2] === undefined
-            ? []
-            : [", ", free(kid(args[2], undefined))]),
-          "))",
-        ],
-        undefined,
-        undefined,
-      ));
+      return withSchemaView(plainEmitted([
+        at(kid(args[0], undefined), PREC.member),
+        ".pipe(",
+        `${schema}.${
+          e.op === "default-encoded-key"
+            ? "withDecodingDefaultKey"
+            : "withDecodingDefaultTypeKey"
+        }(`,
+        defaultValue,
+        ...(args[2] === undefined ? [] : [", ", free(kid(args[2], undefined))]),
+        "))",
+      ]));
     }
   }
   if (e.op === "optional-transform") {
@@ -236,23 +206,19 @@ export function schemaStructural(
       const getter = c.scope.effect("SchemaGetter");
       const decode = c.pure(args[2], undefined);
       const encode = c.pure(args[3], undefined);
-      return withSchemaView(emitted(
-        [
-          at(kid(args[0], undefined), PREC.member),
-          ".pipe(",
-          `${schema}.decodeTo(`,
-          free(kid(args[1], undefined)),
-          ", { decode: ",
-          `${getter}.${schemaGetterName(args, 2)}(`,
-          free(decode),
-          "), encode: ",
-          `${getter}.${schemaGetterName(args, 3)}(`,
-          free(encode),
-          ") }))",
-        ],
-        undefined,
-        undefined,
-      ));
+      return withSchemaView(plainEmitted([
+        at(kid(args[0], undefined), PREC.member),
+        ".pipe(",
+        `${schema}.decodeTo(`,
+        free(kid(args[1], undefined)),
+        ", { decode: ",
+        `${getter}.${schemaGetterName(args, 2)}(`,
+        free(decode),
+        "), encode: ",
+        `${getter}.${schemaGetterName(args, 3)}(`,
+        free(encode),
+        ") }))",
+      ]));
     }
   }
   if (e.op === "optional-from-required") {
@@ -282,32 +248,28 @@ export function schemaStructural(
           encodeValue,
           "))",
         ];
-      return withSchemaView(emitted(
-        [
-          at(kid(args[0], undefined), PREC.member),
-          ".pipe(",
-          `${schema}.decodeTo(`,
-          free(kid(args[1], undefined)),
-          ", { decode: ",
-          `${getter}.transformOptionalEffect((${decodeValue}) => `,
-          `${option}.isSome(${decodeValue}) ? `,
-          `${effect}.${decodeEffectful ? "suspend" : "sync"}(() => `,
-          at(decode, PREC.member),
-          "(",
-          decodeValue,
-          `.value)) : ${effect}.fail(new ${issue}.InvalidValue({ message: `,
-          '"required encoded key is missing"',
-          " })))",
-          ", encode: ",
-          `${getter}.${
-            encodeEffectful ? "transformOptionalEffect" : "transformOptional"
-          }((${encodeValue}) => `,
-          encodeResult,
-          ") }))",
-        ],
-        undefined,
-        undefined,
-      ));
+      return withSchemaView(plainEmitted([
+        at(kid(args[0], undefined), PREC.member),
+        ".pipe(",
+        `${schema}.decodeTo(`,
+        free(kid(args[1], undefined)),
+        ", { decode: ",
+        `${getter}.transformOptionalEffect((${decodeValue}) => `,
+        `${option}.isSome(${decodeValue}) ? `,
+        `${effect}.${decodeEffectful ? "suspend" : "sync"}(() => `,
+        at(decode, PREC.member),
+        "(",
+        decodeValue,
+        `.value)) : ${effect}.fail(new ${issue}.InvalidValue({ message: `,
+        '"required encoded key is missing"',
+        " })))",
+        ", encode: ",
+        `${getter}.${
+          encodeEffectful ? "transformOptionalEffect" : "transformOptional"
+        }((${encodeValue}) => `,
+        encodeResult,
+        ") }))",
+      ]));
     }
   }
   if (e.op === "recursive") {
@@ -316,31 +278,27 @@ export function schemaStructural(
       const self = c.scope.temp();
       const callback = c.pure(args[0], undefined);
       const type = typeDoc(c.scope, e.type, undefined);
-      return emitted(
-        [
-          "(() => { let ",
-          body,
-          ": ",
-          type,
-          "; const ",
-          self,
-          ": ",
-          type,
-          ` = ${schema}.suspend(() => `,
-          body,
-          "); ",
-          body,
-          " = ",
-          at(callback, PREC.member),
-          "(",
-          self,
-          "); return ",
-          self,
-          "; })()",
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        "(() => { let ",
+        body,
+        ": ",
+        type,
+        "; const ",
+        self,
+        ": ",
+        type,
+        ` = ${schema}.suspend(() => `,
+        body,
+        "); ",
+        body,
+        " = ",
+        at(callback, PREC.member),
+        "(",
+        self,
+        "); return ",
+        self,
+        "; })()",
+      ]);
     }
   }
   if (e.op === "transform") {
@@ -355,40 +313,36 @@ export function schemaStructural(
       const option = c.scope.effect("Option");
       const value = c.scope.temp();
       const result = c.scope.temp();
-      return withSchemaView(emitted(
-        [
-          at(source, PREC.member),
-          ".pipe(",
-          `${schema}.decodeTo(`,
-          free(target),
-          ", ",
-          `${transformation}.transformEffect({ decode: `,
-          schemaConversion(
-            decode,
-            schemaIssueMode(args, 2),
-            isEffectfulCallback(args[2].type),
-            value,
-            result,
-            effect,
-            option,
-            issue,
-          ),
-          ", encode: ",
-          schemaConversion(
-            encode,
-            schemaIssueMode(args, 3),
-            isEffectfulCallback(args[3].type),
-            value,
-            result,
-            effect,
-            option,
-            issue,
-          ),
-          " })))",
-        ],
-        undefined,
-        undefined,
-      ));
+      return withSchemaView(plainEmitted([
+        at(source, PREC.member),
+        ".pipe(",
+        `${schema}.decodeTo(`,
+        free(target),
+        ", ",
+        `${transformation}.transformEffect({ decode: `,
+        schemaConversion(
+          decode,
+          schemaIssueMode(args, 2),
+          isEffectfulCallback(args[2].type),
+          value,
+          result,
+          effect,
+          option,
+          issue,
+        ),
+        ", encode: ",
+        schemaConversion(
+          encode,
+          schemaIssueMode(args, 3),
+          isEffectfulCallback(args[3].type),
+          value,
+          result,
+          effect,
+          option,
+          issue,
+        ),
+        " })))",
+      ]));
     }
   }
   {
@@ -402,17 +356,13 @@ export function schemaLeaf(
   children: readonly Emitted[],
 ): Emitted {
   if (e.kind === "schema-make") {
-    return emitted(
-      member(
-        at(children[0], PREC.member),
-        "makeEffect",
-        callArguments([
-          c.adaptedInput(children[1], e.input.type, "make"),
-        ]),
-      ),
-      undefined,
-      undefined,
-    );
+    return plainEmitted(member(
+      at(children[0], PREC.member),
+      "makeEffect",
+      callArguments([
+        c.adaptedInput(children[1], e.input.type, "make"),
+      ]),
+    ));
   }
   const schema = c.scope.effect("Schema");
   const schemaType = c.scope.resolve(e.schema.type);
@@ -427,19 +377,15 @@ export function schemaLeaf(
     inputType,
     e.kind === "schema-decode" ? "encoded" : "decoded",
   );
-  return emitted(
-    [
-      `${schema}.${
-        e.kind === "schema-decode" ? "decodeUnknownEffect" : "encodeEffect"
-      }(`,
-      free(children[0]),
-      ")(",
-      free(input),
-      ")",
-    ],
-    undefined,
-    undefined,
-  );
+  return plainEmitted([
+    `${schema}.${
+      e.kind === "schema-decode" ? "decodeUnknownEffect" : "encodeEffect"
+    }(`,
+    free(children[0]),
+    ")(",
+    free(input),
+    ")",
+  ]);
 }
 /**
  * True for a function type that runs as an effect. Unlike `isEffectfulFunction`,

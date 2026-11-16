@@ -1,5 +1,12 @@
 // Emission of the Scope builtins: forkScoped and the `using` block.
-import { at, callArguments, type Emitted, emitted, PREC } from "../emitted.ts";
+import {
+  at,
+  callArguments,
+  type Emitted,
+  emitted,
+  plainEmitted,
+  PREC,
+} from "../emitted.ts";
 import { internal } from "../failure.ts";
 import type { ExprOf, LeafOf } from "../shape.ts";
 import type { ExprCore } from "./context.ts";
@@ -8,21 +15,17 @@ import type { ClosureExpr } from "../../ir.ts";
 function releaseWithOutcome(c: ExprCore, release: ClosureExpr): Emitted {
   const resource = c.scope.temp();
   const exit = c.scope.temp();
-  const call = emitted(
-    [
-      at(c.closure(release, true, true), PREC.member),
-      callArguments([
-        emitted(resource, undefined, undefined),
-        emitted(
-          `${c.scope.outcome().make}(${exit})`,
-          undefined,
-          undefined,
-        ),
-      ]),
-    ],
-    undefined,
-    undefined,
-  );
+  const call = plainEmitted([
+    at(c.closure(release, true, true), PREC.member),
+    callArguments([
+      emitted(resource, undefined, undefined),
+      emitted(
+        `${c.scope.outcome().make}(${exit})`,
+        undefined,
+        undefined,
+      ),
+    ]),
+  ]);
   return emitted(
     c.arrow(`(${resource}, ${exit})`, call, undefined),
     PREC.yield,
@@ -37,21 +40,17 @@ export function scopeLeaf(
 ): Emitted {
   const effect = c.scope.effect("Effect");
   if (e.kind === "fork-scoped") {
-    return emitted(
-      [
-        `${effect}.as`,
-        callArguments([
-          emitted(
-            [`${effect}.forkScoped`, callArguments([children[0]])],
-            undefined,
-            undefined,
-          ),
-          emitted("undefined", undefined, undefined),
-        ]),
-      ],
-      undefined,
-      undefined,
-    );
+    return plainEmitted([
+      `${effect}.as`,
+      callArguments([
+        emitted(
+          [`${effect}.forkScoped`, callArguments([children[0]])],
+          undefined,
+          undefined,
+        ),
+        emitted("undefined", undefined, undefined),
+      ]),
+    ]);
   }
   if (e.kind === "with-resource") {
     {
@@ -66,22 +65,18 @@ export function scopeLeaf(
       const release = e.release.parameters.length === 2
         ? releaseWithOutcome(c, e.release)
         : c.closure(e.release, false, true);
-      return emitted(
-        [
-          `${effect}.acquireUseRelease`,
-          callArguments([
-            emitted(
-              [`${effect}.suspend`, callArguments([acquire])],
-              undefined,
-              undefined,
-            ),
-            use,
-            release,
-          ]),
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        `${effect}.acquireUseRelease`,
+        callArguments([
+          emitted(
+            [`${effect}.suspend`, callArguments([acquire])],
+            undefined,
+            undefined,
+          ),
+          use,
+          release,
+        ]),
+      ]);
     }
   }
   {

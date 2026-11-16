@@ -68,6 +68,7 @@ import {
   free,
   type Kid,
   type Mode,
+  plainEmitted,
   PREC,
   type Run,
 } from "./emitted.ts";
@@ -675,11 +676,11 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
   }
   function exprEmitterGenCall(statements: readonly Doc[]): Emitted {
     const effect = exprEmitterScope.effect("Effect");
-    return emitted(
-      [`${effect}.gen(function* () `, braces(statements), ")"],
-      undefined,
-      undefined,
-    );
+    return plainEmitted([
+      `${effect}.gen(function* () `,
+      braces(statements),
+      ")",
+    ]);
   }
   function exprEmitterArrow(
     parameters: Doc,
@@ -875,16 +876,8 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       false,
     );
     const effect = exprEmitterScope.effect("Effect");
-    const call = emitted(
-      [callee, "(", join(", ", names), ")"],
-      undefined,
-      undefined,
-    );
-    const body = emitted(
-      [`${effect}.succeed`, callArguments([call])],
-      undefined,
-      undefined,
-    );
+    const call = plainEmitted([callee, "(", join(", ", names), ")"]);
+    const body = plainEmitted([`${effect}.succeed`, callArguments([call])]);
     return exprEmitterArrowEmitted(parameters, { kind: "expr", body: body });
   }
   function exprEmitterStructural(
@@ -897,7 +890,7 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     }
     const kid = exprEmitterKid(mode);
     if (e.kind === "null") {
-      return emitted("null", undefined, undefined);
+      return plainEmitted("null");
     }
     if (e.kind === "literal") {
       // TypeScript widens a literal that a generated function returns, such
@@ -909,10 +902,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
           PREC.relational,
           undefined,
         )
-        : emitted(exprEmitterLiteral(e.value), undefined, undefined);
+        : plainEmitted(exprEmitterLiteral(e.value));
     }
     if (e.kind === "reference") {
-      return emitted(exprEmitterReference(e.target), undefined, undefined);
+      return plainEmitted(exprEmitterReference(e.target));
     }
     if (e.kind === "record") {
       {
@@ -991,17 +984,13 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         // A widened record value keeps its `_tag`, which `make` rejects. A
         // record literal has none. Every other argument gets the copy.
         const argument = record !== undefined && e.value.kind !== "record"
-          ? emitted(
-            [
-              exprEmitterScope.fieldHelper("untagged"),
-              "<",
-              typeDoc(exprEmitterScope, record, undefined),
-              ">",
-              callArguments([kid(e.value, undefined)]),
-            ],
-            undefined,
-            undefined,
-          )
+          ? plainEmitted([
+            exprEmitterScope.fieldHelper("untagged"),
+            "<",
+            typeDoc(exprEmitterScope, record, undefined),
+            ">",
+            callArguments([kid(e.value, undefined)]),
+          ])
           : kid(e.value, undefined);
         // `make` reads a missing optional field through the prototype chain,
         // so a nested data value with such a field needs a copy without one.
@@ -1013,15 +1002,11 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
             fields: fields,
           }, "make")
           : argument;
-        return emitted(
-          member(
-            exprEmitterScope.nameOf(e.nominal),
-            "make",
-            callArguments([value]),
-          ),
-          undefined,
-          undefined,
-        );
+        return plainEmitted(member(
+          exprEmitterScope.nameOf(e.nominal),
+          "make",
+          callArguments([value]),
+        ));
       }
     }
     if (e.kind === "some") {
@@ -1035,22 +1020,18 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         );
         // Keep the checked context through generic wrappers and lifted callbacks.
         // Inferring `some` can widen tuple payloads and record discriminants.
-        return emitted(
-          [
-            `${option}.some<`,
-            typeDoc(exprEmitterScope, resolved.element, undefined),
-            ">",
-            callArguments([kid(e.value, resolved.element)]),
-          ],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          `${option}.some<`,
+          typeDoc(exprEmitterScope, resolved.element, undefined),
+          ">",
+          callArguments([kid(e.value, resolved.element)]),
+        ]);
       }
     }
     if (e.kind === "none") {
       {
         const option = exprEmitterScope.effect("Option");
-        return emitted(`${option}.none()`, undefined, undefined);
+        return plainEmitted(`${option}.none()`);
       }
     }
     if (e.kind === "error") {
@@ -1072,19 +1053,13 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
           ),
           [],
         );
-        return emitted(
-          [
-            "new ",
-            exprEmitterScope.nameOf(e.error),
-            callArguments([
-              shape === undefined
-                ? object
-                : exprEmitterSafeRecord(object, shape),
-            ]),
-          ],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          "new ",
+          exprEmitterScope.nameOf(e.error),
+          callArguments([
+            shape === undefined ? object : exprEmitterSafeRecord(object, shape),
+          ]),
+        ]);
       }
     }
     if (e.kind === "closure") {
@@ -1137,7 +1112,7 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     const operands = row.operands(e).map((operand) =>
       exprEmitterOperand(operand[0], operand[1], kid)
     );
-    return emitted([callee, callArguments(operands)], undefined, undefined);
+    return plainEmitted([callee, callArguments(operands)]);
   }
   function exprEmitterOperand(
     e: Expr,
@@ -1234,17 +1209,13 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     type: Type,
     args: readonly Emitted[],
   ): Emitted {
-    return emitted(
-      [
-        exprEmitterScope.fieldHelper(key),
-        "<",
-        typeDoc(exprEmitterScope, type, undefined),
-        ">",
-        callArguments(args),
-      ],
-      undefined,
-      undefined,
-    );
+    return plainEmitted([
+      exprEmitterScope.fieldHelper(key),
+      "<",
+      typeDoc(exprEmitterScope, type, undefined),
+      ">",
+      callArguments(args),
+    ]);
   }
   function exprEmitterAdaptedInput(
     input: Emitted,
@@ -1256,10 +1227,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     }
     const adapter = exprEmitterScope.fieldAdapter(type, direction);
     return direction === "encoded"
-      ? emitted([adapter, callArguments([input])], undefined, undefined)
+      ? plainEmitted([adapter, callArguments([input])])
       : exprEmitterHelperCall("record", type, [
         input,
-        emitted(adapter, undefined, undefined),
+        plainEmitted(adapter),
       ]);
   }
   function exprEmitterObjectLiteral(
@@ -1286,14 +1257,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     if (exprEmitterIsOptionalField(e.record.type, e.field, undefined)) {
       const option = exprEmitterScope.effect("Option");
       if (!sensitiveField(e.field)) {
-        return emitted(
-          [
-            `${option}.fromUndefinedOr`,
-            callArguments([emitted(access, undefined, undefined)]),
-          ],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          `${option}.fromUndefinedOr`,
+          callArguments([emitted(access, undefined, undefined)]),
+        ]);
       }
       const resultType = resolvedAs(
         exprEmitterScope,
@@ -1303,7 +1270,7 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       );
       return exprEmitterHelperCall("optionalField", resultType.element, [
         record,
-        emitted(JSON.stringify(e.field), undefined, undefined),
+        plainEmitted(JSON.stringify(e.field)),
       ]);
     }
     return emitted(access, PREC.member, {
@@ -1344,14 +1311,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     const isInt = isIntType(exprEmitterScope.resolve(e.type));
     // An `int` remainder never joins a run of `*`: the helper call is an operand.
     if (e.operator === "%" && isInt) {
-      return emitted(
-        [
-          exprEmitterScope.remainder(),
-          callArguments([kid(e.left, undefined), kid(e.right, undefined)]),
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        exprEmitterScope.remainder(),
+        callArguments([kid(e.left, undefined), kid(e.right, undefined)]),
+      ]);
     }
     const prec = binaryPrecedence(e.operator);
     // TypeScript rejects a comparison of two literals with no overlap (TS2367),
@@ -1359,17 +1322,13 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     const widen = (e.operator === "===" || e.operator === "!==") &&
       isPrimitiveLiteral(e.right);
     const left = widen && isPrimitiveLiteral(e.left)
-      ? emitted(
-        [
-          "(",
-          exprEmitterLiteral(e.left.value),
-          " as ",
-          typeof e.left.value,
-          ")",
-        ],
-        undefined,
-        undefined,
-      )
+      ? plainEmitted([
+        "(",
+        exprEmitterLiteral(e.left.value),
+        " as ",
+        typeof e.left.value,
+        ")",
+      ])
       : kid(e.left, undefined);
     const right = at(kid(e.right, undefined), prec + 1);
     // A left operand of the same level joins the run; `at` adds no parentheses.
@@ -1395,14 +1354,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     // Only `Duration / int` divides to an `int`: it truncates toward zero.
     if (e.operator === "/" && isInt) {
       return exprEmitterIntCall(
-        emitted(
-          [
-            "Math.trunc",
-            callArguments([emitted(runDoc(run, 1), prec, undefined)]),
-          ],
-          undefined,
-          undefined,
-        ),
+        plainEmitted([
+          "Math.trunc",
+          callArguments([emitted(runDoc(run, 1), prec, undefined)]),
+        ]),
       );
     }
     return emitted(runDoc(run, 1), prec, {
@@ -1411,11 +1366,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     });
   }
   function exprEmitterIntCall(body: Emitted): Emitted {
-    return emitted(
-      [exprEmitterScope.intFunction(), callArguments([body])],
-      undefined,
-      undefined,
-    );
+    return plainEmitted([
+      exprEmitterScope.intFunction(),
+      callArguments([body]),
+    ]);
   }
   function exprEmitterConditional(
     e: Extract<Expr, {
@@ -1561,15 +1515,11 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         if (args.length !== 2) {
           return internal(`${name} needs two arguments`);
         }
-        return emitted(
-          [
-            at(kid(args[0], undefined), PREC.member),
-            `.${name}`,
-            callArguments([exprEmitterCallback(args[1], kid)]),
-          ],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          at(kid(args[0], undefined), PREC.member),
+          `.${name}`,
+          callArguments([exprEmitterCallback(args[1], kid)]),
+        ]);
       }
     }
     if (name === "fold") {
@@ -1580,19 +1530,15 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         const generic = e.type.kind === "primitive"
           ? ""
           : typeArguments([typeDoc(exprEmitterScope, e.type, undefined)]);
-        return emitted(
-          [
-            at(kid(args[0], undefined), PREC.member),
-            ".reduce",
-            generic,
-            callArguments([
-              exprEmitterCallback(args[2], kid),
-              kid(args[1], undefined),
-            ]),
-          ],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          at(kid(args[0], undefined), PREC.member),
+          ".reduce",
+          generic,
+          callArguments([
+            exprEmitterCallback(args[2], kid),
+            kid(args[1], undefined),
+          ]),
+        ]);
       }
     }
     if (name === "div") {
@@ -1600,14 +1546,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         if (args.length !== 2) {
           return internal("div needs two arguments");
         }
-        return emitted(
-          [
-            exprEmitterScope.divide(),
-            callArguments([kid(args[0], undefined), kid(args[1], undefined)]),
-          ],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          exprEmitterScope.divide(),
+          callArguments([kid(args[0], undefined), kid(args[1], undefined)]),
+        ]);
       }
     }
     if (name === "round") {
@@ -1615,14 +1557,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         if (args.length !== 1) {
           return internal("round needs one argument");
         }
-        return exprEmitterIntCall(emitted(
-          [
-            exprEmitterScope.round(),
-            callArguments([kid(args[0], undefined)]),
-          ],
-          undefined,
-          undefined,
-        ));
+        return exprEmitterIntCall(plainEmitted([
+          exprEmitterScope.round(),
+          callArguments([kid(args[0], undefined)]),
+        ]));
       }
     }
     if (name === "trunc" || name === "floor" || name === "ceil") {
@@ -1647,11 +1585,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         if (args.length !== 1) {
           return internal("text needs one argument");
         }
-        return emitted(
-          ["String", callArguments([kid(args[0], undefined)])],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          "String",
+          callArguments([kid(args[0], undefined)]),
+        ]);
       }
     }
     if (name === "at") {
@@ -1659,14 +1596,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         if (args.length !== 2) {
           return internal("at needs two arguments");
         }
-        return emitted(
-          [
-            exprEmitterScope.at(),
-            callArguments([kid(args[0], undefined), kid(args[1], undefined)]),
-          ],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          exprEmitterScope.at(),
+          callArguments([kid(args[0], undefined), kid(args[1], undefined)]),
+        ]);
       }
     }
     if (name === "concat") {
@@ -1693,11 +1626,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         if (args.length !== 1) {
           return internal("len needs one argument");
         }
-        return emitted(
-          [at(kid(args[0], undefined), PREC.member), ".length"],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          at(kid(args[0], undefined), PREC.member),
+          ".length",
+        ]);
       }
     }
     if (name === "sort") {
@@ -1705,17 +1637,13 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         if (args.length !== 1 && args.length !== 2) {
           return internal("sort needs one or two arguments");
         }
-        return emitted(
-          [
-            exprEmitterScope.sort(),
-            callArguments([
-              kid(args[0], undefined),
-              ...(args.length === 2 ? [exprEmitterCallback(args[1], kid)] : []),
-            ]),
-          ],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          exprEmitterScope.sort(),
+          callArguments([
+            kid(args[0], undefined),
+            ...(args.length === 2 ? [exprEmitterCallback(args[1], kid)] : []),
+          ]),
+        ]);
       }
     }
     return internal(`the builtin ${name} has no emission form`);
@@ -1731,15 +1659,11 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       ];
       const bound = isPrimitiveLiteral(step.value) &&
           exprEmitterNarrowsOnDeclaration(step.binding.type)
-        ? emitted(
-          [
-            exprEmitterLiteral(step.value.value),
-            " as ",
-            typeDoc(exprEmitterScope, step.binding.type, true),
-          ],
-          undefined,
-          undefined,
-        )
+        ? plainEmitted([
+          exprEmitterLiteral(step.value.value),
+          " as ",
+          typeDoc(exprEmitterScope, step.binding.type, true),
+        ])
         : value(step.value, step.binding.type);
       // A curried closure lays out like a declaration of the module.
       return [
@@ -1772,15 +1696,11 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         exprEmitterGenCall(exprEmitterBlockStatements(e, true, slot)),
       );
     }
-    return emitted(
-      [
-        "(() => ",
-        braces(exprEmitterBlockStatements(e, false, slot)),
-        ")()",
-      ],
-      undefined,
-      undefined,
-    );
+    return plainEmitted([
+      "(() => ",
+      braces(exprEmitterBlockStatements(e, false, slot)),
+      ")()",
+    ]);
   }
   function exprEmitterYieldOf(effect: Emitted): Emitted {
     return emitted(
@@ -1873,17 +1793,13 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         exprEmitterArrow(`(${someBinding})`, body(some), undefined),
       ],
     ], true);
-    return emitted(
-      [
-        `${option}.match`,
-        callArguments([
-          subject,
-          emitted(handlers, PREC.member, { huggable: true }),
-        ]),
-      ],
-      undefined,
-      undefined,
-    );
+    return plainEmitted([
+      `${option}.match`,
+      callArguments([
+        subject,
+        emitted(handlers, PREC.member, { huggable: true }),
+      ]),
+    ]);
   }
   function exprEmitterSelectorMatch(
     arms: readonly Arm[],
@@ -1970,16 +1886,12 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       bodyGroup,
     );
     const args = callArguments([subject]);
-    return emitted(
-      [
-        "(",
-        callee,
-        ")",
-        ifBroke(bodyGroup, indent(args), args),
-      ],
-      undefined,
-      undefined,
-    );
+    return plainEmitted([
+      "(",
+      callee,
+      ")",
+      ifBroke(bodyGroup, indent(args), args),
+    ]);
   }
   function exprEmitterArmTest(
     pattern: Pattern,
@@ -2053,14 +1965,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
   function exprEmitterEffectNode(e: Expr, expected: Type | undefined): Emitted {
     if (e.execution === "pure") {
       const effect = exprEmitterScope.effect("Effect");
-      return emitted(
-        [
-          `${effect}.succeed`,
-          callArguments([exprEmitterFit(e, expected, "pure")]),
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        `${effect}.succeed`,
+        callArguments([exprEmitterFit(e, expected, "pure")]),
+      ]);
     }
     if (
       exprEmitterIsLeaf(e) && exprEmitterLiftedFrom(e, expected) === undefined
@@ -2173,7 +2081,7 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         ];
         _appendTarget40[_appendTarget40.length] = _appendValue41;
       }
-      return emitted(name, undefined, undefined);
+      return plainEmitted(name);
     });
     {
       const _appendTarget42 = statements;
@@ -2227,78 +2135,58 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
               if (fn === undefined || items?.kind !== "array") {
                 return internal("filter has no array parameter");
               }
-              return emitted(
-                [
-                  `${effect}.filter`,
-                  typeArguments([
-                    typeDoc(exprEmitterScope, items.element, undefined),
-                    ...channelTypeArguments(exprEmitterScope, fn.effects),
-                  ]),
-                  "(",
-                  free(second),
-                  ")(",
-                  free(first),
-                  ")",
-                ],
-                undefined,
-                undefined,
-              );
+              return plainEmitted([
+                `${effect}.filter`,
+                typeArguments([
+                  typeDoc(exprEmitterScope, items.element, undefined),
+                  ...channelTypeArguments(exprEmitterScope, fn.effects),
+                ]),
+                "(",
+                free(second),
+                ")(",
+                free(first),
+                ")",
+              ]);
             }
           }
           if (builtin === "fold") {
             // The source evaluates the initial value at the call, which
             // runs at once. Effectful children are already bound to
             // temporaries, so the thunk only wraps a pure expression.
-            return emitted(
-              [
-                `${effect}.reduce(`,
-                free(first),
-                ", ",
-                exprEmitterArrow("()", second, undefined),
-                ", ",
-                free(third),
-                ")",
-              ],
-              undefined,
-              undefined,
-            );
+            return plainEmitted([
+              `${effect}.reduce(`,
+              free(first),
+              ", ",
+              exprEmitterArrow("()", second, undefined),
+              ", ",
+              free(third),
+              ")",
+            ]);
           }
           if (builtin === "all") {
-            return emitted(
-              [
-                `${effect}.all(`,
-                free(first),
-                ...(second === undefined ? [] : [", ", free(second)]),
-                ")",
-              ],
-              undefined,
-              undefined,
-            );
+            return plainEmitted([
+              `${effect}.all(`,
+              free(first),
+              ...(second === undefined ? [] : [", ", free(second)]),
+              ")",
+            ]);
           }
           if (builtin === "map" || builtin === "traverse") {
-            return emitted(
-              [
-                `${effect}.forEach(`,
-                free(first),
-                ", ",
-                free(second),
-                ...(third === undefined ? [] : [", ", free(third)]),
-                ")",
-              ],
-              undefined,
-              undefined,
-            );
+            return plainEmitted([
+              `${effect}.forEach(`,
+              free(first),
+              ", ",
+              free(second),
+              ...(third === undefined ? [] : [", ", free(third)]),
+              ")",
+            ]);
           }
         }
       }
-      return emitted(
-        [
-          at(children[0], PREC.member),
-          callArguments(children.slice(1)),
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        at(children[0], PREC.member),
+        callArguments(children.slice(1)),
+      ]);
     }
     if (e.kind === "perform") {
       {
@@ -2306,27 +2194,19 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
           serviceOfCapability(e.capability),
         );
         const parameter = exprEmitterScope.serviceParameter();
-        const call = emitted(
-          [
-            parameter,
-            ".",
-            methodOfCapability(e.capability),
-            callArguments(children),
-          ],
-          undefined,
-          undefined,
-        );
+        const call = plainEmitted([
+          parameter,
+          ".",
+          methodOfCapability(e.capability),
+          callArguments(children),
+        ]);
         const bodyGroup: GroupId = {};
         const arrow = emitted(
           exprEmitterArrow(`(${parameter})`, call, bodyGroup),
           PREC.yield,
           { huggable: true, bodyGroup: bodyGroup },
         );
-        return emitted(
-          member(service, "use", callArguments([arrow])),
-          undefined,
-          undefined,
-        );
+        return plainEmitted(member(service, "use", callArguments([arrow])));
       }
     }
     if (
@@ -2358,31 +2238,23 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     }
     if (e.kind === "update-ref") {
       {
-        return emitted(
-          [
-            exprEmitterCalleeText(
-              exprEmitterIsEffectfulFunction(e.transform.type)
-                ? UPDATE_REF_EFFECT
-                : LEAF_CALLS["update-ref"],
-            ),
-            callArguments(children),
-          ],
-          undefined,
-          undefined,
-        );
+        return plainEmitted([
+          exprEmitterCalleeText(
+            exprEmitterIsEffectfulFunction(e.transform.type)
+              ? UPDATE_REF_EFFECT
+              : LEAF_CALLS["update-ref"],
+          ),
+          callArguments(children),
+        ]);
       }
     }
     // The remaining leaf kinds call a function on their children. A kind
     // that has neither a case above nor a row in LEAF_CALLS fails to
     // compile here.
-    return emitted(
-      [
-        exprEmitterCalleeText(LEAF_CALLS[e.kind]),
-        callArguments(children),
-      ],
-      undefined,
-      undefined,
-    );
+    return plainEmitted([
+      exprEmitterCalleeText(LEAF_CALLS[e.kind]),
+      callArguments(children),
+    ]);
   }
   function exprEmitterSuspended(
     job: Expr,
@@ -2401,11 +2273,7 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     } else {
       value = exprEmitterPure(job, undefined);
     }
-    return emitted(
-      [`${effect}.suspend`, callArguments([value])],
-      undefined,
-      undefined,
-    );
+    return plainEmitted([`${effect}.suspend`, callArguments([value])]);
   }
   function exprEmitterHandlerEntry(
     key: string,
@@ -2430,47 +2298,35 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     const effect = exprEmitterScope.effect("Effect");
     const body = exprEmitterAsEffect(e.body, undefined);
     if (e.finalizer.parameters.length === 0) {
-      return emitted(
-        [
-          `${effect}.ensuring`,
-          callArguments([
-            body,
-            exprEmitterAsEffect(e.finalizer.body, undefined),
-          ]),
-        ],
-        undefined,
-        undefined,
-      );
-    }
-    const exit = exprEmitterScope.temp();
-    const call = emitted(
-      [
-        at(exprEmitterClosure(e.finalizer, true, true), PREC.member),
-        callArguments([
-          emitted(
-            `${exprEmitterScope.outcome().make}(${exit})`,
-            undefined,
-            undefined,
-          ),
-        ]),
-      ],
-      undefined,
-      undefined,
-    );
-    return emitted(
-      [
-        `${effect}.onExit`,
+      return plainEmitted([
+        `${effect}.ensuring`,
         callArguments([
           body,
-          exprEmitterArrowEmitted(`(${exit})`, {
-            kind: "expr",
-            body: call,
-          }),
+          exprEmitterAsEffect(e.finalizer.body, undefined),
         ]),
-      ],
-      undefined,
-      undefined,
-    );
+      ]);
+    }
+    const exit = exprEmitterScope.temp();
+    const call = plainEmitted([
+      at(exprEmitterClosure(e.finalizer, true, true), PREC.member),
+      callArguments([
+        emitted(
+          `${exprEmitterScope.outcome().make}(${exit})`,
+          undefined,
+          undefined,
+        ),
+      ]),
+    ]);
+    return plainEmitted([
+      `${effect}.onExit`,
+      callArguments([
+        body,
+        exprEmitterArrowEmitted(`(${exit})`, {
+          kind: "expr",
+          body: call,
+        }),
+      ]),
+    ]);
   }
   function exprEmitterCatchEffect(
     e: Extract<Expr, {
@@ -2482,15 +2338,11 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       ? []
       : [exprEmitterDefectRecovery(e.defect)];
     if (e.handlers.length === 0 && e.defect !== undefined) {
-      return emitted(
-        [
-          at(exprEmitterAsEffect(e.body, undefined), PREC.member),
-          ".pipe",
-          callArguments(defect),
-        ],
-        undefined,
-        undefined,
-      );
+      return plainEmitted([
+        at(exprEmitterAsEffect(e.body, undefined), PREC.member),
+        ".pipe",
+        callArguments(defect),
+      ]);
     }
     const issueHandler = e.handlers.find((h) => h.error === SCHEMA_ISSUE_ID);
     const tagged = e.handlers.filter((h) => h.error !== SCHEMA_ISSUE_ID);
@@ -2504,81 +2356,65 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     const table = emitted(bracketed("{", "}", handlers, true), PREC.member, {
       huggable: true,
     });
-    const catchTags = emitted(
-      [
-        `${effect}.catchTags`,
-        callArguments([table]),
-      ],
-      undefined,
-      undefined,
-    );
+    const catchTags = plainEmitted([
+      `${effect}.catchTags`,
+      callArguments([table]),
+    ]);
     const rest = issueHandler === undefined || tagged.length === 0
       ? ""
       : exprEmitterScope.temp();
     const predicate = issueHandler === undefined ? "" : exprEmitterScope.temp();
-    const recovery = issueHandler === undefined ? catchTags : emitted(
-      [
-        `${effect}.catchIf`,
-        callArguments([
-          emitted(
-            `(${predicate}): ${predicate} is typeof ${predicate} & ${
-              exprEmitterScope.effect("SchemaIssue")
-            }.Issue => ${
-              exprEmitterScope.effect("SchemaIssue")
-            }.isIssue(${predicate})`,
-            undefined,
-            undefined,
-          ),
-          exprEmitterArrowEmitted(`(${issueHandler.binding.name})`, {
+    const recovery = issueHandler === undefined ? catchTags : plainEmitted([
+      `${effect}.catchIf`,
+      callArguments([
+        emitted(
+          `(${predicate}): ${predicate} is typeof ${predicate} & ${
+            exprEmitterScope.effect("SchemaIssue")
+          }.Issue => ${
+            exprEmitterScope.effect("SchemaIssue")
+          }.isIssue(${predicate})`,
+          undefined,
+          undefined,
+        ),
+        exprEmitterArrowEmitted(`(${issueHandler.binding.name})`, {
+          kind: "expr",
+          body: exprEmitterAsEffect(issueHandler.body, undefined),
+        }),
+        ...(tagged.length === 0 ? [] : [
+          exprEmitterArrowEmitted(`(${rest})`, {
             kind: "expr",
-            body: exprEmitterAsEffect(issueHandler.body, undefined),
+            body: emitted(
+              [
+                `${effect}.fail(${rest}).pipe`,
+                callArguments([catchTags]),
+              ],
+              undefined,
+              undefined,
+            ),
           }),
-          ...(tagged.length === 0 ? [] : [
-            exprEmitterArrowEmitted(`(${rest})`, {
-              kind: "expr",
-              body: emitted(
-                [
-                  `${effect}.fail(${rest}).pipe`,
-                  callArguments([catchTags]),
-                ],
-                undefined,
-                undefined,
-              ),
-            }),
-          ]),
         ]),
-      ],
-      undefined,
-      undefined,
-    );
-    return emitted(
-      [
-        at(exprEmitterAsEffect(e.body, undefined), PREC.member),
-        ".pipe",
-        callArguments([recovery, ...defect]),
-      ],
-      undefined,
-      undefined,
-    );
+      ]),
+    ]);
+    return plainEmitted([
+      at(exprEmitterAsEffect(e.body, undefined), PREC.member),
+      ".pipe",
+      callArguments([recovery, ...defect]),
+    ]);
   }
   function exprEmitterDefectRecovery(h: DefectHandler): Emitted {
     const d = exprEmitterScope.temp();
-    return emitted(
-      [
-        `${exprEmitterScope.effect("Effect")}.catchDefect`,
-        callArguments([
-          exprEmitterArrowEmitted(`(${d})`, {
-            kind: "block",
-            statements: [
-              `const ${h.binding.name} = { message: ${defectMessage(d)} };`,
-              ["return ", flush(exprEmitterAsEffect(h.body, undefined)), ";"],
-            ],
-          }),
-        ]),
-      ],
-      undefined,
-      undefined,
-    );
+    return plainEmitted([
+      `${exprEmitterScope.effect("Effect")}.catchDefect`,
+      callArguments([
+        exprEmitterArrowEmitted(`(${d})`, {
+          kind: "block",
+          statements: [
+            `const ${h.binding.name} = { message: ${defectMessage(d)} };`,
+            ["return ", flush(exprEmitterAsEffect(h.body, undefined)), ";"],
+          ],
+        }),
+      ]),
+    ]);
   }
   const exprEmitterSelf: ExprEmitter = {
     scope: exprEmitterScope,

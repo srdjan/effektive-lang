@@ -1,6 +1,11 @@
 // Emission of the layer builtins: a source layer and provide.
 import { bracketed, type Doc } from "../doc.ts";
-import { callArguments, type Emitted, emitted } from "../emitted.ts";
+import {
+  callArguments,
+  type Emitted,
+  emitted,
+  plainEmitted,
+} from "../emitted.ts";
 import { fieldKey } from "../fields.ts";
 import { internal } from "../failure.ts";
 import { type ExprOf, hoistedOperands, type LeafOf } from "../shape.ts";
@@ -45,54 +50,38 @@ export function layerStructural(
       ]),
       false,
     );
-    const invoke = emitted(
-      [
-        instance,
-        ".",
-        method.name,
-        callArguments(
-          names.map((name) => emitted(name, undefined, undefined)),
-        ),
-      ],
-      undefined,
-      undefined,
-    );
+    const invoke = plainEmitted([
+      instance,
+      ".",
+      method.name,
+      callArguments(
+        names.map((name) => emitted(name, undefined, undefined)),
+      ),
+    ]);
     const body = source.execution === "pure"
-      ? emitted(
-        [`${effect}.succeed`, callArguments([invoke])],
-        undefined,
-        undefined,
-      )
+      ? plainEmitted([`${effect}.succeed`, callArguments([invoke])])
       : invoke;
     return [fieldKey(method.name), ": ", c.arrow(parameters, body, undefined)];
   });
   const assembled = c.objectLiteral(fields, []);
-  const mapped = emitted(
-    [
-      `${effect}.map`,
-      callArguments([
-        c.suspended(e.acquire, undefined),
-        emitted(
-          c.arrow(`(${instance})`, assembled, undefined),
-          undefined,
-          undefined,
-        ),
-      ]),
-    ],
-    undefined,
-    undefined,
-  );
-  return emitted(
-    [
-      `${layer}.effect`,
-      callArguments([
-        emitted(c.scope.nameOf(e.service), undefined, undefined),
-        mapped,
-      ]),
-    ],
-    undefined,
-    undefined,
-  );
+  const mapped = plainEmitted([
+    `${effect}.map`,
+    callArguments([
+      c.suspended(e.acquire, undefined),
+      emitted(
+        c.arrow(`(${instance})`, assembled, undefined),
+        undefined,
+        undefined,
+      ),
+    ]),
+  ]);
+  return plainEmitted([
+    `${layer}.effect`,
+    callArguments([
+      emitted(c.scope.nameOf(e.service), undefined, undefined),
+      mapped,
+    ]),
+  ]);
 }
 export function layerLeaf(
   c: ExprCore,
@@ -104,12 +93,8 @@ export function layerLeaf(
   const provider = operands[0];
   const hoisted = operands[1];
   const job = c.suspended(e.job, hoisted);
-  return emitted(
-    [
-      `${effect}.provide`,
-      callArguments([job, provider ?? c.pure(e.provider, undefined)]),
-    ],
-    undefined,
-    undefined,
-  );
+  return plainEmitted([
+    `${effect}.provide`,
+    callArguments([job, provider ?? c.pure(e.provider, undefined)]),
+  ]);
 }
