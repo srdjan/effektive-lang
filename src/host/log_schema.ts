@@ -271,28 +271,19 @@ export function isAnyKind(event: {
   return names.has(event.kind);
 }
 // ------------------------------------------------------------------ session file
-/** The form of a session ID. */
 type LogMatch = boolean;
 type LogValue = unknown;
 type LogText = string;
+/** True when `text` has the form of a session ID: lowercase hex in 8-4-4-4-12 groups. */
 function isSessionId(text: string): boolean {
   const format = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
-  if (text.length !== format.length) {
-    return false;
-  }
-  let index = 0;
-  for (const slot of format) {
-    const char = text[index];
-    if (slot === "-") {
-      if (char !== "-") {
-        return false;
-      }
-    } else if (!(char >= "0" && char <= "9") && !(char >= "a" && char <= "f")) {
-      return false;
-    }
-    index = index + 1;
-  }
-  return true;
+  return text.length === format.length &&
+    [...format].every((slot, index) => {
+      const char = text[index];
+      return slot === "-"
+        ? char === "-"
+        : (char >= "0" && char <= "9") || (char >= "a" && char <= "f");
+    });
 }
 /** The file name of a session: `<surface>-<YYYYMMDD>-<session>.jsonl`. */
 export function sessionFileName(
@@ -347,16 +338,15 @@ function isTime(t: unknown): t is string {
 function browserEnvelope(
   value: Readonly<Record<string, unknown>>,
 ): Envelope | undefined {
-  const binding1 = value;
-  const v = binding1.v;
-  const t = binding1.t;
-  const ms = binding1.ms;
-  const surface = binding1.surface;
-  const session = binding1.session;
-  const seq = binding1.seq;
-  const build = binding1.build;
-  const kind = binding1.kind;
-  const data = binding1.data;
+  const v = value.v;
+  const t = value.t;
+  const ms = value.ms;
+  const surface = value.surface;
+  const session = value.session;
+  const seq = value.seq;
+  const build = value.build;
+  const kind = value.kind;
+  const data = value.data;
   if (
     v === 1 && isTime(t) && typeof ms === "number" &&
     Number.isFinite(ms) && surface === "playground" &&
@@ -382,15 +372,14 @@ function browserEnvelope(
 function isReplayEnvelope(
   value: Readonly<Record<string, unknown>>,
 ): value is Readonly<Record<string, unknown>> & Envelope {
-  const binding2 = value;
-  const v = binding2.v;
-  const t = binding2.t;
-  const ms = binding2.ms;
-  const surface = binding2.surface;
-  const session = binding2.session;
-  const seq = binding2.seq;
-  const build = binding2.build;
-  const kind = binding2.kind;
+  const v = value.v;
+  const t = value.t;
+  const ms = value.ms;
+  const surface = value.surface;
+  const session = value.session;
+  const seq = value.seq;
+  const build = value.build;
+  const kind = value.kind;
   return v === 1 && isTime(t) &&
     typeof ms === "number" && typeof surface === "string" &&
     SURFACES.some((s) => s === surface) && typeof session === "string" &&
