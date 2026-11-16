@@ -84,15 +84,15 @@ export function serviceBoundDiagnostics(
   const info = input.info;
   const resolution = input.resolution;
   const table = input.table;
-  const allowed = allowedServiceIds(input);
-  if (allowed === undefined) return [];
+  const bound = allowedServiceIds(input);
+  if (bound === undefined) return [];
+  const allowed: ReadonlySet<ServiceId> = bound;
   const diagnostics: Diagnostic[] = [];
   function undeclared(
     initial: Iterable<CapabilityId>,
     produced: TypeRef,
     body: BodyTable,
     parameters: readonly (LocalId | undefined)[],
-    allowedServices: ReadonlySet<ServiceId>,
   ): CapabilityId[] {
     let requirements = setFrom<CapabilityId>(initial);
     requirements = producedRequirements(
@@ -114,7 +114,7 @@ export function serviceBoundDiagnostics(
     let found = emptySet<CapabilityId>();
     for (const capability of requirements) {
       const service = serviceOfCapability(capability);
-      if (service !== undefined && !allowedServices.has(service)) {
+      if (service !== undefined && !allowed.has(service)) {
         found = found.add(capability);
       }
     }
@@ -126,7 +126,6 @@ export function serviceBoundDiagnostics(
       fn.result,
       fn.table,
       fn.signature.parameters.map((parameter) => parameter.id),
-      allowed,
     );
     if (extra.length === 0) continue;
     const related = extra.flatMap((capability) =>
@@ -150,7 +149,7 @@ export function serviceBoundDiagnostics(
     );
   }
   for (const constant of input.constants) {
-    const extra = undeclared([], constant.type, constant.table, [], allowed);
+    const extra = undeclared([], constant.type, constant.table, []);
     if (extra.length === 0) continue;
     diagnostics[diagnostics.length] = makeDiagnostic(
       "requirement-contract/002",
