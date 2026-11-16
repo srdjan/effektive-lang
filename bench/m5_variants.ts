@@ -187,7 +187,7 @@ async function loadTypeScript(): Promise<Result<TsApi, string>> {
   }
 }
 
-interface Service {
+export interface Service {
   /** Edits the marked file and returns the milliseconds to get every diagnostic, or an error. */
   check(mark: string): Result<number, string>;
   dispose(): void;
@@ -259,7 +259,21 @@ function createService(
 
 type Sampler = (mark: string) => Promise<Result<number, string>>;
 
-async function sampleVariant(
+/**
+ * Each call of the sampler runs one side. A turn is two calls. Side A runs
+ * first on an even turn and side B runs first on an odd turn, as `byTurn`
+ * maps the results back. The sampler needs 0 warm-ups to keep this count.
+ */
+export function alternatingSampler(a: Service, b: Service): Sampler {
+  let call = 0;
+  return (mark) => {
+    const order = byTurn(Math.floor(call / 2), a, b);
+    const side = order[call++ % 2];
+    return Promise.resolve(side.check(mark));
+  };
+}
+
+export async function sampleVariant(
   sampler: Sampler,
   config: VariantConfig,
   name: string,
@@ -441,17 +455,7 @@ async function runVariantsIn(
             }`,
           });
         } else {
-          let turn = 0;
-          const sides = [a.value, b.value];
-          // Each call of the sampler runs the next side. The pair order alternates.
-          const sampler: Sampler = (mark) => {
-            const side = sides[turn++ % 2];
-            return Promise.resolve(
-              side === undefined
-                ? { ok: false, error: "no side" }
-                : side.check(mark),
-            );
-          };
+          const sampler = alternatingSampler(a.value, b.value);
           const measured = await sampleVariant(
             sampler,
             { ...config, warmups: 0 },
