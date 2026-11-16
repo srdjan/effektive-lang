@@ -454,95 +454,106 @@ function BodyLowerer(
   }
   function bodyLowererExpr(node: NodeId): Expr {
     const tree = bodyLowererCtx.tree;
-    {
-      const kind = kindOf(tree, node);
-      if (kind === SyntaxKind.LiteralExpr) {
-        const value = literalOf(tree, node);
-        if (value === undefined) {
-          return internal(
-            `a literal has no value at ${bodyLowererDescribe(node)}`,
-          );
-        }
-        if (value === null) {
-          return { ...bodyLowererAnnotation(node), kind: "null" };
-        }
-        const literal: Expr = {
-          ...bodyLowererAnnotation(node),
-          kind: "literal",
-          value: value,
-        };
-        if (!isDurationLiteral(tree, node)) {
-          return literal;
-        }
-        // A duration literal is the `Duration` of its millisecond value.
-        const valueAnnotation = bodyLowererAnnotationWith(
-          bodyLowererCtx.types.int,
-          bodyLowererInfo(node),
-          bodyLowererSpan(node),
-        );
-        return {
-          ...bodyLowererAnnotation(node),
-          kind: "nominal",
-          nominal: DURATION_ID,
-          value: {
-            ...literal,
-            type: valueAnnotation.type,
-            execution: valueAnnotation.execution,
-            effects: valueAnnotation.effects,
-            span: valueAnnotation.span,
-          },
-        };
-      } else if (kind === SyntaxKind.NameExpr) {
-        return bodyLowererName(node);
-      } else if (kind === SyntaxKind.ParenExpr) {
-        const inner = bodyLowererKids(node)[0];
-        return bodyLowererExpr(
-          bodyLowererRequired(inner, "a parenthesized value", node),
-        );
-      } else if (kind === SyntaxKind.ArrowExpr) {
-        return bodyLowererClosure(node);
-      } else if (kind === SyntaxKind.UsingExpr) {
-        return bodyLowererUsing(node);
-      } else if (kind === SyntaxKind.CallExpr) {
-        return bodyLowererCall(node);
-      } else if (kind === SyntaxKind.FieldExpr) {
-        return bodyLowererField(node);
-      } else if (kind === SyntaxKind.BinaryExpr) {
-        return bodyLowererBinary(node);
-      } else if (kind === SyntaxKind.UnaryExpr) {
-        return bodyLowererUnary(node);
-      } else if (kind === SyntaxKind.OptionFallbackExpr) {
-        return bodyLowererOptionFallback(node);
-      } else if (kind === SyntaxKind.PipeExpr) {
-        return bodyLowererPipeline(node);
-      } else if (kind === SyntaxKind.RecordExpr) {
-        return bodyLowererRecord(node);
-      } else if (kind === SyntaxKind.ListExpr) {
-        const fact = bodyLowererFactOf(node, "list");
-        if (fact.concat !== undefined) {
-          return bodyLowererConcat(node, fact.concat);
-        }
-        return {
-          ...bodyLowererAnnotation(node),
-          kind: fact.shape,
-          elements: bodyLowererKids(node).map((child) =>
-            bodyLowererExpr(child)
-          ),
-        };
-      } else if (kind === SyntaxKind.Block) {
-        return bodyLowererBlock(node);
-      } else if (kind === SyntaxKind.IfExpr) {
-        return bodyLowererIfExpr(node);
-      } else if (kind === SyntaxKind.MatchExpr) {
-        return bodyLowererMatch(node);
-      } else if (kind === SyntaxKind.TryExpr) {
-        return bodyLowererTryExpr(node);
-      } else {
+    const kind = kindOf(tree, node);
+    if (kind === SyntaxKind.LiteralExpr) {
+      const value = literalOf(tree, node);
+      if (value === undefined) {
         return internal(
-          `cannot lower the node at ${bodyLowererDescribe(node)}`,
+          `a literal has no value at ${bodyLowererDescribe(node)}`,
         );
       }
+      if (value === null) {
+        return { ...bodyLowererAnnotation(node), kind: "null" };
+      }
+      const literal: Expr = {
+        ...bodyLowererAnnotation(node),
+        kind: "literal",
+        value: value,
+      };
+      if (!isDurationLiteral(tree, node)) {
+        return literal;
+      }
+      // A duration literal is the `Duration` of its millisecond value.
+      const valueAnnotation = bodyLowererAnnotationWith(
+        bodyLowererCtx.types.int,
+        bodyLowererInfo(node),
+        bodyLowererSpan(node),
+      );
+      return {
+        ...bodyLowererAnnotation(node),
+        kind: "nominal",
+        nominal: DURATION_ID,
+        value: {
+          ...literal,
+          type: valueAnnotation.type,
+          execution: valueAnnotation.execution,
+          effects: valueAnnotation.effects,
+          span: valueAnnotation.span,
+        },
+      };
     }
+    if (kind === SyntaxKind.NameExpr) {
+      return bodyLowererName(node);
+    }
+    if (kind === SyntaxKind.ParenExpr) {
+      const inner = bodyLowererKids(node)[0];
+      return bodyLowererExpr(
+        bodyLowererRequired(inner, "a parenthesized value", node),
+      );
+    }
+    if (kind === SyntaxKind.ArrowExpr) {
+      return bodyLowererClosure(node);
+    }
+    if (kind === SyntaxKind.UsingExpr) {
+      return bodyLowererUsing(node);
+    }
+    if (kind === SyntaxKind.CallExpr) {
+      return bodyLowererCall(node);
+    }
+    if (kind === SyntaxKind.FieldExpr) {
+      return bodyLowererField(node);
+    }
+    if (kind === SyntaxKind.BinaryExpr) {
+      return bodyLowererBinary(node);
+    }
+    if (kind === SyntaxKind.UnaryExpr) {
+      return bodyLowererUnary(node);
+    }
+    if (kind === SyntaxKind.OptionFallbackExpr) {
+      return bodyLowererOptionFallback(node);
+    }
+    if (kind === SyntaxKind.PipeExpr) {
+      return bodyLowererPipeline(node);
+    }
+    if (kind === SyntaxKind.RecordExpr) {
+      return bodyLowererRecord(node);
+    }
+    if (kind === SyntaxKind.ListExpr) {
+      const fact = bodyLowererFactOf(node, "list");
+      if (fact.concat !== undefined) {
+        return bodyLowererConcat(node, fact.concat);
+      }
+      return {
+        ...bodyLowererAnnotation(node),
+        kind: fact.shape,
+        elements: bodyLowererKids(node).map((child) => bodyLowererExpr(child)),
+      };
+    }
+    if (kind === SyntaxKind.Block) {
+      return bodyLowererBlock(node);
+    }
+    if (kind === SyntaxKind.IfExpr) {
+      return bodyLowererIfExpr(node);
+    }
+    if (kind === SyntaxKind.MatchExpr) {
+      return bodyLowererMatch(node);
+    }
+    if (kind === SyntaxKind.TryExpr) {
+      return bodyLowererTryExpr(node);
+    }
+    return internal(
+      `cannot lower the node at ${bodyLowererDescribe(node)}`,
+    );
   }
   function bodyLowererValueTarget(nameNode: NodeId): LocalId | ValueId {
     const target = bodyLowererCtx.targets.get(nameNode);
@@ -711,101 +722,107 @@ function BodyLowerer(
     function arg(i: number): Expr {
       return bodyLowererRequired(args[i], `argument ${i + 1}`, node);
     }
-    {
-      const factKind = fact.kind;
-      if (factKind === "call") {
-        return {
-          ...annotation,
-          kind: "call",
-          callee: bodyLowererRequired(callee, "the callee", node),
-          arguments: args,
-        };
-      } else if (factKind === "perform") {
-        return {
-          ...annotation,
-          kind: "perform",
-          capability: fact.capability,
-          arguments: args,
-        };
-      } else if (factKind === "builtin") {
-        const id = bodyLowererSpecialize(fact.name, fact.ir);
-        return {
-          ...annotation,
-          kind: "call",
-          callee: {
-            kind: "reference",
-            target: id,
-            type: fact.ir,
-            execution: "pure",
-            effects: EMPTY_EFFECTS,
-            span: bodyLowererSpan(calleeNode),
-          },
-          arguments: args,
-        };
-      } else if (factKind === "error-construction") {
-        return bodyLowererInvokeErrorConstruction(
-          fact,
-          argNodes,
-          pre,
-          annotation,
-        );
-      } else if (factKind === "identity-construction") {
-        return {
-          ...annotation,
-          kind: "nominal",
-          nominal: fact.identity,
-          value: arg(0),
-        };
-      } else if (factKind === "retry") {
-        return {
-          ...annotation,
-          kind: "retry",
-          job: arg(0),
-          times: bodyLowererRequired(fact.times, "the retry count", node),
-        };
-      } else if (factKind === "schema") {
-        return bodyLowererInvokeSchema(fact, args, arg, annotation);
-      } else if (factKind === "log") {
-        return bodyLowererInvokeLog(fact, node, args, arg, annotation);
-      } else if (factKind === "take-sink") {
-        return {
-          ...annotation,
-          kind: "take-sink",
-          count: bodyLowererRequired(fact.count, "the sink count", node),
-        };
-      } else if (factKind === "buffer-stream") {
-        return {
-          ...annotation,
-          kind: "buffer-stream",
-          stream: arg(0),
-          capacity: bodyLowererRequired(
-            fact.capacity,
-            "the stream buffer capacity",
-            node,
-          ),
-        };
-      } else if (
-        factKind === "none" || factKind === "list" || factKind === "field" ||
-        factKind === "arrow" || factKind === "binding" ||
-        factKind === "pattern" || factKind === "handler" ||
-        factKind === "finalizer" || factKind === "option-fallback" ||
-        factKind === "record-binding"
-      ) {
-        return internal(
-          `the fact ${fact.kind} is no call at ${bodyLowererDescribe(node)}`,
-        );
-      } else {
-        // Every other fact kind has a row in POSITIONAL_BUILDERS. A kind
-        // without a row, or without a case above, fails to compile here.
-        return {
-          ...positionalBody(fact.kind, fact, arg),
-          type: annotation.type,
-          execution: annotation.execution,
-          effects: annotation.effects,
-          span: annotation.span,
-        };
-      }
+    if (fact.kind === "call") {
+      return {
+        ...annotation,
+        kind: "call",
+        callee: bodyLowererRequired(callee, "the callee", node),
+        arguments: args,
+      };
     }
+    if (fact.kind === "perform") {
+      return {
+        ...annotation,
+        kind: "perform",
+        capability: fact.capability,
+        arguments: args,
+      };
+    }
+    if (fact.kind === "builtin") {
+      const id = bodyLowererSpecialize(fact.name, fact.ir);
+      return {
+        ...annotation,
+        kind: "call",
+        callee: {
+          kind: "reference",
+          target: id,
+          type: fact.ir,
+          execution: "pure",
+          effects: EMPTY_EFFECTS,
+          span: bodyLowererSpan(calleeNode),
+        },
+        arguments: args,
+      };
+    }
+    if (fact.kind === "error-construction") {
+      return bodyLowererInvokeErrorConstruction(
+        fact,
+        argNodes,
+        pre,
+        annotation,
+      );
+    }
+    if (fact.kind === "identity-construction") {
+      return {
+        ...annotation,
+        kind: "nominal",
+        nominal: fact.identity,
+        value: arg(0),
+      };
+    }
+    if (fact.kind === "retry") {
+      return {
+        ...annotation,
+        kind: "retry",
+        job: arg(0),
+        times: bodyLowererRequired(fact.times, "the retry count", node),
+      };
+    }
+    if (fact.kind === "schema") {
+      return bodyLowererInvokeSchema(fact, args, arg, annotation);
+    }
+    if (fact.kind === "log") {
+      return bodyLowererInvokeLog(fact, node, args, arg, annotation);
+    }
+    if (fact.kind === "take-sink") {
+      return {
+        ...annotation,
+        kind: "take-sink",
+        count: bodyLowererRequired(fact.count, "the sink count", node),
+      };
+    }
+    if (fact.kind === "buffer-stream") {
+      return {
+        ...annotation,
+        kind: "buffer-stream",
+        stream: arg(0),
+        capacity: bodyLowererRequired(
+          fact.capacity,
+          "the stream buffer capacity",
+          node,
+        ),
+      };
+    }
+    if (
+      fact.kind === "none" || fact.kind === "list" || fact.kind === "field" ||
+      fact.kind === "arrow" || fact.kind === "binding" ||
+      fact.kind === "pattern" || fact.kind === "handler" ||
+      fact.kind === "finalizer" || fact.kind === "option-fallback" ||
+      fact.kind === "record-binding"
+    ) {
+      return internal(
+        `the fact ${fact.kind} is no call at ${bodyLowererDescribe(node)}`,
+      );
+    }
+    // Every other fact kind has a row in POSITIONAL_BUILDERS. A kind
+    // without a row, or without a case above, fails to compile here.
+    return {
+      ...positionalBody(fact.kind, fact, arg),
+      type: annotation.type,
+      execution: annotation.execution,
+      effects: annotation.effects,
+      span: annotation.span,
+    };
   }
   function bodyLowererInvokeLayer(
     fact: FactOf<"layer">,
@@ -1439,60 +1456,66 @@ function BodyLowerer(
     const pattern = fact.pattern;
     const span = bodyLowererSpan(node);
     const names = kidsOfKind(bodyLowererCtx.tree, node, SyntaxKind.Name);
-    {
-      const kind = pattern.kind;
-      if (kind === "wildcard") {
-        return { kind: "wildcard", span: span };
-      } else if (kind === "literal") {
-        return { kind: "literal", value: pattern.value, span: span };
-      } else if (kind === "duration") {
-        return { kind: "duration", millis: pattern.millis, span: span };
-      } else if (kind === "none") {
-        return { kind: "none", span: span };
-      } else if (kind === "bind") {
-        return {
-          kind: "bind",
-          binding: bodyLowererBindingOf(pattern.binding, names[0]),
-          span: span,
-        };
-      } else if (kind === "some") {
-        return {
-          kind: "some",
-          binding: bodyLowererBindingOf(pattern.binding, names[1]),
-          span: span,
-        };
-      } else if (kind === "error") {
-        return {
-          kind: "error",
-          error: pattern.error,
-          binding: bodyLowererBindingOf(pattern.binding, names[1]),
-          span: span,
-        };
-      } else if (kind === "tagged") {
-        return {
-          kind: "nominal",
-          nominal: pattern.tagged,
-          binding: bodyLowererBindingOf(pattern.binding, names[1]),
-          span: span,
-        };
-      } else if (kind === "tag") {
-        const spread =
-          kidsOfKind(bodyLowererCtx.tree, node, SyntaxKind.SpreadPattern)[0];
-        const spreadName = spread === undefined
-          ? undefined
-          : kidsOfKind(bodyLowererCtx.tree, spread, SyntaxKind.Name)[0];
-        return {
-          kind: "tag",
-          field: pattern.field,
-          value: pattern.value,
-          binding: pattern.binding === null
-            ? null
-            : bodyLowererBindingOf(pattern.binding, spreadName),
-          span: span,
-        };
-      } else if (kind === "invalid") {
-        return internal(`an invalid pattern at ${bodyLowererDescribe(node)}`);
-      }
+    if (pattern.kind === "wildcard") {
+      return { kind: "wildcard", span: span };
+    }
+    if (pattern.kind === "literal") {
+      return { kind: "literal", value: pattern.value, span: span };
+    }
+    if (pattern.kind === "duration") {
+      return { kind: "duration", millis: pattern.millis, span: span };
+    }
+    if (pattern.kind === "none") {
+      return { kind: "none", span: span };
+    }
+    if (pattern.kind === "bind") {
+      return {
+        kind: "bind",
+        binding: bodyLowererBindingOf(pattern.binding, names[0]),
+        span: span,
+      };
+    }
+    if (pattern.kind === "some") {
+      return {
+        kind: "some",
+        binding: bodyLowererBindingOf(pattern.binding, names[1]),
+        span: span,
+      };
+    }
+    if (pattern.kind === "error") {
+      return {
+        kind: "error",
+        error: pattern.error,
+        binding: bodyLowererBindingOf(pattern.binding, names[1]),
+        span: span,
+      };
+    }
+    if (pattern.kind === "tagged") {
+      return {
+        kind: "nominal",
+        nominal: pattern.tagged,
+        binding: bodyLowererBindingOf(pattern.binding, names[1]),
+        span: span,
+      };
+    }
+    if (pattern.kind === "tag") {
+      const spread =
+        kidsOfKind(bodyLowererCtx.tree, node, SyntaxKind.SpreadPattern)[0];
+      const spreadName = spread === undefined
+        ? undefined
+        : kidsOfKind(bodyLowererCtx.tree, spread, SyntaxKind.Name)[0];
+      return {
+        kind: "tag",
+        field: pattern.field,
+        value: pattern.value,
+        binding: pattern.binding === null
+          ? null
+          : bodyLowererBindingOf(pattern.binding, spreadName),
+        span: span,
+      };
+    }
+    if (pattern.kind === "invalid") {
+      return internal(`an invalid pattern at ${bodyLowererDescribe(node)}`);
     }
     return internal(`an unknown pattern at ${bodyLowererDescribe(node)}`);
   }

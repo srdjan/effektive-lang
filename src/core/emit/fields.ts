@@ -36,8 +36,7 @@ function needsFieldAdapterIn(
   type: Type,
   seen: ReadonlySet<string>,
 ): boolean {
-  const kind_1 = type.kind;
-  if (kind_1 === "named") {
+  if (type.kind === "named") {
     if (seen.has(type.id)) {
       return false;
     }
@@ -48,27 +47,32 @@ function needsFieldAdapterIn(
     }
     return declaration?.kind === "type" &&
       needsFieldAdapterIn(scope, definitionType(declaration), next);
-  } else if (kind_1 === "record") {
+  }
+  if (type.kind === "record") {
     return type.fields.some((f) =>
       prototypeField(f.name) || needsFieldAdapterIn(scope, f.type, seen)
     );
-  } else if (kind_1 === "option" || kind_1 === "array") {
+  }
+  if (type.kind === "option" || type.kind === "array") {
     return needsFieldAdapterIn(scope, type.element, seen);
-  } else if (kind_1 === "tuple") {
+  }
+  if (type.kind === "tuple") {
     return type.elements.some((t) => needsFieldAdapterIn(scope, t, seen));
-  } else if (kind_1 === "union") {
+  }
+  if (type.kind === "union") {
     return type.members.some((t) => needsFieldAdapterIn(scope, t, seen));
-  } else if (
-    kind_1 === "primitive" || kind_1 === "literal" || kind_1 === "ref" ||
-    kind_1 === "retry-schedule" || kind_1 === "schema" ||
-    kind_1 === "effect" || kind_1 === "stream" || kind_1 === "sink" ||
-    kind_1 === "function" || kind_1 === "provider"
+  }
+  if (
+    type.kind === "primitive" || type.kind === "literal" ||
+    type.kind === "ref" || type.kind === "retry-schedule" ||
+    type.kind === "schema" || type.kind === "effect" ||
+    type.kind === "stream" || type.kind === "sink" ||
+    type.kind === "function" || type.kind === "provider"
   ) {
     return false;
-  } else {
-    const unreachable: never = type;
-    return unreachable;
   }
+  const unreachable: never = type;
+  return unreachable;
 }
 function adapterBody(
   scope: ExprScope,
@@ -80,7 +84,6 @@ function adapterBody(
       ? `${scope.fieldAdapter(child, direction)}(${value})`
       : value;
   }
-  let fields: readonly Field[];
   if (type.kind === "named") {
     const d = scope.typeLevelDeclaration(type.id);
     if (d?.kind === "type") {
@@ -90,23 +93,25 @@ function adapterBody(
     // nominal identity schemas: never clone their instances, because class
     // validation and recovery rely on that identity.
     return "return value;";
-  } else if (type.kind === "record") {
-    fields = type.fields;
-  } else if (type.kind === "option") {
+  }
+  if (type.kind === "option") {
     const option = scope.effect("Option");
     return `return ${option}.isOption(value) ? ${option}.map(value, item => ${
       apply(type.element, "item")
     }) : value;`;
-  } else if (type.kind === "array") {
+  }
+  if (type.kind === "array") {
     return `return globalThis.Array.isArray(value) ? value.map(item => ${
       apply(type.element, "item")
     }) : value;`;
-  } else if (type.kind === "tuple") {
+  }
+  if (type.kind === "tuple") {
     return `return globalThis.Array.isArray(value) ? value.map((item, index) => { switch (index) { ${
       type.elements.map((t, i) => `case ${i}: return ${apply(t, "item")};`)
         .join(" ")
     } default: return item; } }) : value;`;
-  } else if (type.kind === "union") {
+  }
+  if (type.kind === "union") {
     // Discriminated records select their declared branch; other members adapt
     // only their own fields, so sequential adaptation preserves unrelated data.
     const branches = type.members.map((member) => {
@@ -126,11 +131,14 @@ function adapterBody(
     return branches.every((b) => b !== undefined)
       ? `${branches.join("\n")}\nreturn value;`
       : `return ${type.members.reduce((v, t) => apply(t, v), "value")};`;
-  } else {
+  }
+  if (type.kind !== "record") {
     return "return value;";
   }
   const record = scope.fieldHelper("record");
-  const transformations = fields.filter((f) => needsFieldAdapter(scope, f.type))
+  const transformations = type.fields.filter((f) =>
+    needsFieldAdapter(scope, f.type)
+  )
     .map((f) => {
       const key = JSON.stringify(f.name);
       return `if (globalThis.Object.hasOwn(out, ${key})) globalThis.Object.defineProperty(out, ${key}, { value: ${
