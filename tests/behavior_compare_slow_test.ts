@@ -2,9 +2,10 @@
 // with `git archive` and runs the corpus runner in the exported tree.
 
 import { assertEquals, assertStringIncludes } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { deno } from "./process_helpers.ts";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+const ROOT = fromFileUrl(new URL("..", import.meta.url));
 
 Deno.test("the comparison of HEAD with HEAD on the edit sequences exits with 0", async () => {
   const out = Deno.makeTempDirSync({ prefix: "effektive-compare-slow-" });

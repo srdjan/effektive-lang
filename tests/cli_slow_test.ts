@@ -3,6 +3,7 @@
 // files work in a temporary directory. Nothing is written under fixtures/.
 
 import { assert, assertEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { decodeMappings } from "./support/source_map_decoder.ts";
 import { tscConfig, tscLock } from "../src/cli/tsc.ts";
 import { validationProblems } from "./validate_helpers.ts";
@@ -14,7 +15,7 @@ import {
   withTemporaryDirectory,
 } from "./process_helpers.ts";
 
-const REPOSITORY = new URL("../", import.meta.url).pathname;
+const REPOSITORY = fromFileUrl(new URL("../", import.meta.url));
 
 function effektive(args: readonly string[]): Promise<Run> {
   // Runs on a folder of this repository, so it writes no session log there.

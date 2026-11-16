@@ -4,6 +4,7 @@
 // `behavior_compare_slow_test.ts` runs the whole command.
 
 import { assert, assertEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import {
   canonicalJson,
   type Corpus,
@@ -27,7 +28,7 @@ import {
   USAGE,
 } from "../scripts/behavior_compare.ts";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+const ROOT = fromFileUrl(new URL("..", import.meta.url));
 
 const SMALL: Corpus = {
   projects: [

@@ -4,6 +4,7 @@
 // fixtures/.
 
 import { assert, assertEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { FIXTURES, listFixtures } from "./helpers.ts";
 import { deno, runScript } from "./process_helpers.ts";
 import {
@@ -108,7 +109,7 @@ Deno.test("deno fmt does not exclude the golden files, and it accepts them uncha
     !excluded.some((entry) => String(entry).startsWith("fixtures/golden")),
     "deno.json excludes the golden files from deno fmt",
   );
-  const root = new URL("../", import.meta.url).pathname;
+  const root = fromFileUrl(new URL("../", import.meta.url));
   const run = await deno(root, ["fmt", "--check", "fixtures/golden"]);
   assertEquals(run.code, 0, `deno fmt --check failed:\n${run.stderr}`);
   const goldenCount = listFixtures("golden", /\.ts$/).length;

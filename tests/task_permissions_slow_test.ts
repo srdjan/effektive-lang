@@ -1,8 +1,9 @@
 // Regression for tasks that restrict subprocess access to PATH's `deno`.
 import { assert, assertEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { withTemporaryDirectory } from "./process_helpers.ts";
 
-const repository = new URL("../", import.meta.url).pathname;
+const repository = fromFileUrl(new URL("../", import.meta.url));
 
 Deno.test("actual build task checks targets through canonical and symlinked Deno", async () => {
   await withTemporaryDirectory("effektive-path-", async (dir) => {

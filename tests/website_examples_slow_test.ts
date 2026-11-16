@@ -7,10 +7,11 @@
 // It never writes into the website copy. It is ignored when the sibling is absent.
 
 import { assertEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { copyDirectory } from "./helpers.ts";
 import { deno, type Run, withTemporaryDirectory } from "./process_helpers.ts";
 
-const REPOSITORY = new URL("../", import.meta.url).pathname;
+const REPOSITORY = fromFileUrl(new URL("../", import.meta.url));
 const EXAMPLES = new URL(
   "../../effektive/public/effektive-examples/",
   import.meta.url,

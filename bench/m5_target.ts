@@ -3,6 +3,7 @@
 // synthetic projects, as maps of TypeScript files, and the error values of the
 // measurement. Nothing here runs a type check.
 
+import { fromFileUrl } from "@std/path";
 import { errorMessage, Program, type Result } from "../src/core/mod.ts";
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 import { generateProject, readTree, writeFiles } from "./generate.ts";
@@ -90,7 +91,7 @@ function emitSources(
 
 /** The six examples and the companion module, emitted, with `users-live.ts`. The gate compares them with the golden files. */
 export function exampleTarget(): Result<Target, M5Error> {
-  const fixtures = new URL("../fixtures/", import.meta.url).pathname;
+  const fixtures = fromFileUrl(new URL("../fixtures/", import.meta.url));
   let tree: Map<string, string>;
   try {
     tree = readTree(`${fixtures}examples`);

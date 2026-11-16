@@ -4,12 +4,13 @@
 // of a block runs once, and the returned function gives the right value.
 
 import { assert, assertEquals } from "@std/assert";
+import { fromFileUrl } from "@std/path";
 import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
 import { LIFT_PROGRAMS } from "./lift_slot_programs.ts";
 import { deno, runScript } from "./process_helpers.ts";
 import { validationProblems } from "./validate_helpers.ts";
 
-const CLI = new URL("../src/cli/main.ts", import.meta.url).pathname;
+const CLI = fromFileUrl(new URL("../src/cli/main.ts", import.meta.url));
 
 async function withProgram<T>(
   text: string,
