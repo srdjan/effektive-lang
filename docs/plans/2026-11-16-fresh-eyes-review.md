@@ -30,6 +30,14 @@ On 2026-11-16 the user answered "as recommended". That answer selects option (a)
 | FZD5 | FZ93, the pipe form of an error constructor infers a different input type than the call form | (a) Write a failing test, then give the pipe form the error-constructor branch, as FY130 did for a callback. (b) Leave it. | (a) |
 | FZD6 | FZ100-FZ114, the behavior-changing candidates | (a) Keep them out of this pass, in this ledger. (b) Decide each one now. | (a) |
 
+During FZU16 the orchestrator asked three more questions. The user did not answer within 60 seconds, so the orchestrator took the recommended option (a) of each. The user can still reverse each one.
+
+| ID | Decision | Options | Decided |
+| --- | --- | --- | --- |
+| FZD7 | Scope of the register refresh. A full run of the 3366 sites of the 14 modules with stale rows takes about 80-100 minutes, measured at 1.45-1.72 s per site with 4 workers. `src/core/recursion_guard.ts` had 28 unregistered survivors at `a8d1e655` already. | (a) Update or delete each stale row, run the tool only on the changed lines and on the declarations with stale rows (877 mutants), register only the survivors that the cleanup created, and list the older ones. (b) Full runs at HEAD. (c) Full runs at HEAD and at the base, and a row for every survivor. | (a), by default |
+| FZD8 | The test gaps that the executors skipped: the rest of FZ123 and FZ124, and the network part of FZ130 | (a) Record them as open. (b) One more Sonnet unit for FZ123 and FZ124. | (a), by default |
+| FZD9 | The two rename texts of `editor_rename.ts` that no probe reached | (a) Keep both checks. (b) Delete the proved one. (c) Delete both. | (a), by default |
+
 ## Plan
 
 This document is the plan authority. The plan applies FZD1 (a): every cleanup finding apart from the rejected proposals and the rows marked "low". The excluded low rows are FZ10, FZ94, FZ96, FZ131, the `export` removals of FZ58, and the `interface.ts` part of FZ115. FZ97-FZ99 need a measurement first, so they stay open. FZ100-FZ109 stay out (FZD6).
