@@ -30,7 +30,7 @@ function forgedFacts(
   );
 }
 
-/** The project with the first selected fact in the first function that has one changed. */
+/** The project with the first selected fact of each function changed. At least one function must have a selected fact. */
 function forged(
   text: string,
   select: (fact: Fact) => boolean,
