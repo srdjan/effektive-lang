@@ -84,38 +84,31 @@ export function unfiredExitCode(formatted: readonly string[]): number {
   return formatted.length > 1 ? 1 : 0;
 }
 
-async function run(
-  args: string[],
-): Promise<{ ok: boolean; stdout: string; stderr: string }> {
-  const output = await runProcess("deno", args, { cwd: ROOT });
-  return { ok: output.success, stdout: output.stdout, stderr: output.stderr };
-}
-
 async function main(): Promise<number> {
   return await withTempDir("rules-unfired-", async (dir) => {
-    const suite = await run([
+    const suite = await runProcess("deno", [
       "test",
       ...fastSuiteArgs([
         // The floors in deno.json are for the whole project, not for this suite.
         "--coverage-raw-data-only",
         `--coverage=${dir}`,
       ]),
-    ]);
-    if (!suite.ok) {
+    ], { cwd: ROOT });
+    if (!suite.success) {
       console.error(
         `rules:unfired: the fast suite failed\n${suite.stdout}${suite.stderr}`,
       );
       return 1;
     }
-    const report = await run([
+    const report = await runProcess("deno", [
       "coverage",
       "--lcov",
       // The floors in deno.json are for the whole project, not for this subset.
       "--threshold=1",
       `--include=${VALIDATE_DIR}`,
       dir,
-    ]);
-    if (!report.ok) {
+    ], { cwd: ROOT });
+    if (!report.success) {
       console.error(`rules:unfired: deno coverage failed\n${report.stderr}`);
       return 1;
     }

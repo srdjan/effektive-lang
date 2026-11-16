@@ -27,13 +27,19 @@ export const HARNESS_MEMORY = { rss: 123_456, heapUsed: 78_901 } as const;
 /** Where the harness puts the example project. */
 export const ROOT = "/work/examples";
 
-function readTree(url: URL, prefix: string, out: Record<string, string>): void {
+/** Every file under a fixtures directory, by path relative to it. */
+export function readTree(
+  url: URL,
+  prefix: string,
+  out: Record<string, string>,
+): Record<string, string> {
   for (const entry of Deno.readDirSync(url)) {
     const child = new URL(entry.name + (entry.isDirectory ? "/" : ""), url);
     const name = `${prefix}${entry.name}`;
     if (entry.isDirectory) readTree(child, `${name}/`, out);
     else out[name] = Deno.readTextFileSync(child);
   }
+  return out;
 }
 
 let cachedExamples: Record<string, string> | undefined;

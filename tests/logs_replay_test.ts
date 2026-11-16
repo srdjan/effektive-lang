@@ -20,8 +20,8 @@ import {
 import { outputSaving, outputState } from "../playground/src/model.ts";
 import { isReplayName } from "../playground/log_endpoint.ts";
 import { applyChanges } from "../playground/src/replay.ts";
-import { loadExamples, replaySession } from "../scripts/logs_replay.ts";
-import { FIXTURES } from "./helpers.ts";
+import { replaySession } from "../scripts/logs_replay.ts";
+import { exampleFiles, FIXTURES } from "./helpers.ts";
 import { memoryIo } from "./cli_helpers.ts";
 import {
   didChangeFull,
@@ -345,7 +345,7 @@ function recordPlayground(
   edits: readonly { path: string; from: number; to: number; insert: string }[],
 ): Recorded {
   const log = memoryLog("playground");
-  const files = loadExamples();
+  const files = exampleFiles();
   const session = createPlayground(files, { now: () => 0 });
   const texts: Record<string, string> = { ...files };
   let active = "main.eff";

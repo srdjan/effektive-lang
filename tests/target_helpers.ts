@@ -12,11 +12,11 @@ import {
   emitProject,
   type EmitProjectError,
   type EmittedModule,
-  lowerProject,
   memoryHost,
   type Result,
 } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { assertValidProject } from "./helpers.ts";
+import { withTemporaryDirectory } from "./process_helpers.ts";
 
 /**
  * Checks the source project `files` with the entries `entries`, lowers it,
@@ -36,17 +36,7 @@ export function compileStrictTarget(
     entries,
   );
   assert(project.ok, JSON.stringify(project));
-  assertEquals(project.value.diagnostics, []);
-  const lowered = lowerProject(project.value);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(
-      project.value.analysis.project,
-      lowered,
-    ).values()
-  ) assertEquals(diagnostics, []);
+  const lowered = assertValidProject(project.value);
   return runStrictTarget(
     emitProject(lowered, { config: project.value.analysis.project.config }),
     run,
@@ -87,8 +77,7 @@ export async function runStrictTarget(
   prefix: string,
   extraFiles: Readonly<Record<string, string>> = {},
 ): Promise<string> {
-  const dir = Deno.makeTempDirSync({ prefix });
-  try {
+  return await withTemporaryDirectory(prefix, async (dir) => {
     Deno.writeTextFileSync(
       `${dir}/deno.json`,
       JSON.stringify({
@@ -124,7 +113,5 @@ export async function runStrictTarget(
       stdout = decoder.decode(result.stdout);
     }
     return stdout;
-  } finally {
-    Deno.removeSync(dir, { recursive: true });
-  }
+  });
 }

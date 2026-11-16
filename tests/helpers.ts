@@ -718,17 +718,14 @@ export function hostBoundaryManifest(): readonly HostBoundaryFixture[] {
 
 /** Check one `m.eff` module and return each diagnostic as `code message`. */
 export function diagnosticsOf(source: string): string[] {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
+  return checkModule(source).diagnostics.map((d) => `${d.code} ${d.message}`);
 }
 
-/** Asserts that `project` has no diagnostics, lowers, and passes the project validator. */
-export function assertValidProject(project: CheckedProject): void {
+/**
+ * Asserts that `project` has no diagnostics, lowers, and passes the project
+ * validator. Returns the lowered modules.
+ */
+export function assertValidProject(project: CheckedProject) {
   assertEquals(project.diagnostics, []);
   const lowered = lowerProject(project);
   for (const result of lowered.values()) {
@@ -738,6 +735,7 @@ export function assertValidProject(project: CheckedProject): void {
     const diagnostics of validateProject(project.analysis.project, lowered)
       .values()
   ) assertEquals(diagnostics, []);
+  return lowered;
 }
 
 /**
@@ -745,14 +743,9 @@ export function assertValidProject(project: CheckedProject): void {
  * module IR so that a test can forge it.
  */
 export function loweredModule(source: string): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const module = lowerProject(checked.value).get("m");
+  const checked = checkModule(source);
+  assertEquals(checked.diagnostics, []);
+  const module = lowerProject(checked).get("m");
   assert(module?.ok, JSON.stringify(module));
   assertEquals(validateModule(module.value, new Map([["m.eff", source]])), []);
   return structuredClone(module.value);

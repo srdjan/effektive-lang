@@ -21,6 +21,7 @@ import {
   exampleUri,
   makeHarness,
   notification,
+  readTree,
   request,
   ROOT as LSP_ROOT,
   watched,
@@ -101,21 +102,6 @@ export async function runCliCase(c: CliCase): Promise<CliRecord> {
   };
   const code = await main(c.args, io);
   return { args: c.args, code, events };
-}
-
-/** Every file under a fixtures directory, by path relative to it. */
-function readTree(
-  url: URL,
-  prefix: string,
-  out: Record<string, string>,
-): Record<string, string> {
-  for (const entry of Deno.readDirSync(url)) {
-    const child = new URL(entry.name + (entry.isDirectory ? "/" : ""), url);
-    const name = `${prefix}${entry.name}`;
-    if (entry.isDirectory) readTree(child, `${name}/`, out);
-    else out[name] = Deno.readTextFileSync(child);
-  }
-  return out;
 }
 
 const NO_FILES: Readonly<Record<string, string>> = {};

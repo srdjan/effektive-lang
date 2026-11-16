@@ -16,7 +16,13 @@
 // changed or is missing. 2 for a usage error or a failed run. With one
 // revision, the command writes the records of that revision and exits with 0.
 
-import { type Kind, KINDS, type Rec, type Res } from "./behavior_corpus.ts";
+import {
+  type Kind,
+  KINDS,
+  type Rec,
+  type Res,
+  selects,
+} from "./behavior_corpus.ts";
 import { exportRevision, runChecked } from "./lib.ts";
 
 export interface Options {
@@ -79,19 +85,15 @@ function keyOf(r: Rec): string {
   return `${r.kind}\u0000${r.name}`;
 }
 
-function selected(r: Rec, only: readonly string[]): boolean {
-  return only.length === 0 || only.some((p) => r.name.startsWith(p));
-}
-
 /** Compares two record sets by kind and case name. `only` keeps the names that start with a prefix. */
 export function compareRecords(
   base: readonly Rec[],
   head: readonly Rec[],
   only: readonly string[] = [],
 ): Comparison {
-  const baseRecords = base.filter((r) => selected(r, only));
+  const baseRecords = base.filter((r) => selects(r.name, only));
   const headRecords = new Map(
-    head.filter((r) => selected(r, only)).map((r) => [keyOf(r), r]),
+    head.filter((r) => selects(r.name, only)).map((r) => [keyOf(r), r]),
   );
   const tally = new Map<Kind, { -readonly [K in keyof KindCounts]: number }>(
     KINDS.map((k) => [k, { equal: 0, changed: 0, missing: 0, added: 0 }]),

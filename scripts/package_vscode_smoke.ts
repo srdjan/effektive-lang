@@ -7,19 +7,9 @@ import { packageRelease } from "./package.ts";
 const DEFAULT_CODE =
   "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code";
 
-async function checked(
-  command: string,
-  args: string[],
-  cwd: string,
-  env: Record<string, string>,
-): Promise<void> {
-  const result = await runProcess(command, args, { cwd, env });
-  if (!result.success) throw new Error(result.stderr + result.stdout);
-}
-
 async function installedEditorSmoke(
   code: string,
-  features = true,
+  features: boolean,
 ): Promise<void> {
   const temporary = Deno.makeTempDirSync({
     prefix: "evsc-",
@@ -76,20 +66,18 @@ async function installedEditorSmoke(
       EFFEKTIVE_TEST_EXTENSIONS: extensions,
       EFFEKTIVE_TEST_FEATURES: String(features),
     };
-    await checked(
-      code,
-      [
-        "--user-data-dir",
-        userData,
-        "--extensions-dir",
-        extensions,
-        "--install-extension",
-        artifacts[2],
-        "--force",
-      ],
-      project,
-      env,
-    );
+    const installed = await runProcess(code, [
+      "--user-data-dir",
+      userData,
+      "--extensions-dir",
+      extensions,
+      "--install-extension",
+      artifacts[2],
+      "--force",
+    ], { cwd: project, env });
+    if (!installed.success) {
+      throw new Error(installed.stderr + installed.stdout);
+    }
     for (const phase of ["initial", "restart"]) {
       const resultFile = join(temporary, `${phase}.json`);
       const application = Deno.build.os === "darwin"

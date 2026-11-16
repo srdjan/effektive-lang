@@ -133,6 +133,13 @@ function countBy(keys: readonly string[]): [string, number][] {
   return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
+/** Appends `value` to the list of `key`, and starts the list when `key` is new. */
+function appendTo<K, V>(map: Map<K, V[]>, key: K, value: V): void {
+  const list = map.get(key);
+  if (list === undefined) map.set(key, [value]);
+  else list.push(value);
+}
+
 const section = (title: string, body: string): string =>
   `## ${title}\n\n${body}\n`;
 
@@ -158,10 +165,7 @@ type DocEvent =
 function docEvents(events: readonly Envelope[]): Map<string, DocEvent[]> {
   const docs = new Map<string, DocEvent[]>();
   const add = (key: string | undefined, event: DocEvent) => {
-    if (key === undefined) return;
-    const list = docs.get(key);
-    if (list === undefined) docs.set(key, [event]);
-    else list.push(event);
+    if (key !== undefined) appendTo(docs, key, event);
   };
   for (const e of events) {
     const d = record(e.data);
@@ -196,7 +200,7 @@ function docEvents(events: readonly Envelope[]): Map<string, DocEvent[]> {
 function sessionsSection(files: readonly LogFile[], options: ReportOptions) {
   const rows = countBy(
     files.map((f) => `${f.events[0].surface} | ${f.events[0].build}`),
-  ).map(([key, count]) => `${key} | ${count}`);
+  );
   const times = files.flatMap((f) => f.events.map((e) => Date.parse(e.t)));
   const lines = [
     `Window: ${
@@ -214,11 +218,7 @@ function sessionsSection(files: readonly LogFile[], options: ReportOptions) {
   );
   return section(
     "Sessions",
-    `${
-      lines.join("\n")
-    }\n\n| Surface | Build | Sessions |\n| --- | --- | --- |\n${
-      rows.map((r) => `| ${r} |`).join("\n")
-    }`,
+    `${lines.join("\n")}\n\n${table(["Surface", "Build", "Sessions"], rows)}`,
   );
 }
 
@@ -298,11 +298,7 @@ function diagnosticsLatency(files: readonly LogFile[]): number[] {
         /^textDocument\/did(Change|Open)$/.test(String(message.method))
       ) {
         const uri = str(record(params.textDocument).uri);
-        if (uri !== undefined) {
-          const list = pending.get(uri);
-          if (list === undefined) pending.set(uri, [e.ms]);
-          else list.push(e.ms);
-        }
+        if (uri !== undefined) appendTo(pending, uri, e.ms);
       } else if (
         isKind(e, "lsp.out") &&
         message.method === "textDocument/publishDiagnostics"
@@ -321,10 +317,7 @@ function diagnosticsLatency(files: readonly LogFile[]): number[] {
 function latencySection(files: readonly LogFile[]) {
   const ops = new Map<string, number[]>();
   const add = (name: string, value: unknown) => {
-    if (typeof value !== "number") return;
-    const list = ops.get(name);
-    if (list === undefined) ops.set(name, [value]);
-    else list.push(value);
+    if (typeof value === "number") appendTo(ops, name, value);
   };
   for (const e of files.flatMap((f) => f.events)) {
     const d = record(e.data);

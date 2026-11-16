@@ -528,16 +528,12 @@ export function summarizeLcov(lcov: string, root: string): Summary {
   return { groups, lowest, total: row("total", total) };
 }
 
-function pad(text: string, width: number): string {
-  return text.padEnd(width);
-}
-
 function table(title: string, rows: readonly Row[]): string[] {
   const width = Math.max(title.length, ...rows.map((r) => r.name.length));
-  const out = [`${pad(title, width)}  Lines %  Branch %`];
+  const out = [`${title.padEnd(width)}  Lines %  Branch %`];
   for (const r of rows) {
     out.push(
-      `${pad(r.name, width)}  ${r.linePct.toFixed(2).padStart(7)}  ${
+      `${r.name.padEnd(width)}  ${r.linePct.toFixed(2).padStart(7)}  ${
         r.branchPct.toFixed(2).padStart(8)
       }`,
     );
@@ -568,16 +564,6 @@ export function reportOutcome(ok: boolean, stderr: string): ReportOutcome {
   return stderr.includes(FLOOR_MESSAGE) ? "floor" : "failed";
 }
 
-type Run = { ok: boolean; stdout: string; stderr: string };
-
-async function run(
-  args: string[],
-  env: Record<string, string> = {},
-): Promise<Run> {
-  const output = await runProcess("deno", args, { cwd: ROOT, env });
-  return { ok: output.success, stdout: output.stdout, stderr: output.stderr };
-}
-
 async function main(): Promise<number> {
   const sources = await productionSourcePaths(ROOT);
   if (!sources.ok) {
@@ -602,21 +588,21 @@ async function main(): Promise<number> {
   return await withTempDir("coverage-", async (dir) => {
     const fast = join(dir, "fast");
     const slow = join(dir, "slow");
-    const fastRun = await run([
+    const fastRun = await runProcess("deno", [
       "test",
       ...fastSuiteArgs([
         // Without this flag, `deno test` applies the floors to one suite alone.
         "--coverage-raw-data-only",
         `--coverage=${fast}`,
       ]),
-    ]);
-    if (!fastRun.ok) {
+    ], { cwd: ROOT });
+    if (!fastRun.success) {
       console.error(
         `coverage: the fast suite failed\n${fastRun.stdout}${fastRun.stderr}`,
       );
       return 1;
     }
-    const slowRun = await run([
+    const slowRun = await runProcess("deno", [
       "run",
       "--allow-run",
       "--allow-read",
@@ -624,21 +610,21 @@ async function main(): Promise<number> {
       "scripts/test_slow.ts",
       "--coverage-raw-data-only",
       `--coverage=${slow}`,
-    ], { DENO_COVERAGE_DIR: slow });
-    if (!slowRun.ok) {
+    ], { cwd: ROOT, env: { DENO_COVERAGE_DIR: slow } });
+    if (!slowRun.success) {
       console.error(
         `coverage: the slow suite failed\n${slowRun.stdout}${slowRun.stderr}`,
       );
       return 1;
     }
-    const report = await run([
+    const report = await runProcess("deno", [
       "coverage",
       "--lcov",
       `--include=${includePattern(ROOT)}`,
       fast,
       slow,
-    ]);
-    const outcome = reportOutcome(report.ok, report.stderr);
+    ], { cwd: ROOT });
+    const outcome = reportOutcome(report.success, report.stderr);
     // `deno coverage --lcov` prints the report also when a floor fails.
     if (outcome === "failed" || !report.stdout.includes("SF:")) {
       console.error(`coverage: deno coverage failed\n${report.stderr}`);

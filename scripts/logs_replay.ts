@@ -24,6 +24,7 @@ import type { HostIo } from "../src/host/io.ts";
 import type { FileFailure } from "../src/host/ports.ts";
 import { memoryLog } from "../src/host/log.ts";
 import { memoryFs } from "../tests/cli_helpers.ts";
+import { exampleFiles } from "../tests/helpers.ts";
 import {
   type Envelope,
   isAnyKind,
@@ -33,7 +34,6 @@ import {
 } from "../src/host/log_schema.ts";
 import type { FrameError } from "../src/lsp/jsonrpc.ts";
 import { LanguageServer, type ServerPorts } from "../src/lsp/server.ts";
-import { EXAMPLE_FILES, REPOSITORY_ROOT } from "../playground/build.ts";
 import { createPlayground } from "../playground/src/compile.ts";
 import { compileData, errorData } from "../playground/src/events.ts";
 import { outputSaving, outputState } from "../playground/src/model.ts";
@@ -391,17 +391,6 @@ function replayLsp(
 
 // ------------------------------------------------------------------ playground
 
-/** The bundled examples, read the way `playground/build.ts` reads them. */
-export function loadExamples(): Record<string, string> {
-  const examples: Record<string, string> = {};
-  for (const path of EXAMPLE_FILES) {
-    examples[path] = Deno.readTextFileSync(
-      `${REPOSITORY_ROOT}/fixtures/examples/${path}`,
-    );
-  }
-  return examples;
-}
-
 /** The message that `app.ts` shows and logs for an error of the facade. */
 function errorText(tag: string, message: string): string {
   return tag === "config"
@@ -422,7 +411,7 @@ function replayPlayground(events: readonly Envelope[]): ReplayOutcome {
   if (start === undefined || !isRecord(start.data)) {
     return unsupported("the session has no pg.start");
   }
-  const examples = loadExamples();
+  const examples = exampleFiles();
   if (start.data.examples !== sha256Hex(JSON.stringify(examples))) {
     return unsupported("the examples changed since the session was recorded");
   }
