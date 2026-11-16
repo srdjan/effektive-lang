@@ -209,3 +209,21 @@ Deno.test("a bad frame logs an error and events before initialize wait for it", 
   });
   assertEquals(log.events.length, 2);
 });
+
+Deno.test("events before initialize stop at 1000 and the later ones are dropped", () => {
+  const log = memoryLog("lsp");
+  const wire = new WireLog(() => log);
+  for (let n = 0; n < 1001; n++) wire.frame({ ok: true, value: { n } });
+  wire.frame({
+    ok: true,
+    value: {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { rootUri: uriOf(ROOT) },
+    },
+  });
+  assertEquals(log.events.length, 1000);
+  assertEquals(log.events[0].data, { message: { n: 0 } });
+  assertEquals(log.events[999].data, { message: { n: 999 } });
+});

@@ -351,3 +351,44 @@ Deno.test("classify: an invalid request keeps its id for the -32600 response", (
   const noId = classifyMessage(42);
   assert(noId.tag === "invalid" && noId.id === null);
 });
+
+Deno.test("classify: each invalid value gives its reason", () => {
+  assertEquals(classifyMessage(42), {
+    tag: "invalid",
+    id: null,
+    reason: "the message is not an object",
+  });
+  assertEquals(classifyMessage({ jsonrpc: "2.0", id: 1, method: 5 }), {
+    tag: "invalid",
+    id: 1,
+    reason: "method must be a string",
+  });
+  assertEquals(classifyMessage({ jsonrpc: "2.0", id: {}, method: "m" }), {
+    tag: "invalid",
+    id: null,
+    reason: "a request id must be a string or a number",
+  });
+  assertEquals(classifyMessage({ jsonrpc: "2.0" }), {
+    tag: "invalid",
+    id: null,
+    reason: "the message has no method and no id",
+  });
+  assertEquals(classifyMessage({ jsonrpc: "2.0", id: {}, result: 1 }), {
+    tag: "invalid",
+    id: null,
+    reason: "a response id must be a string, a number, or null",
+  });
+  assertEquals(classifyMessage({ jsonrpc: "2.0", id: 2 }), {
+    tag: "invalid",
+    id: 2,
+    reason: "a response has exactly one of result and error",
+  });
+  assertEquals(
+    classifyMessage({ jsonrpc: "2.0", id: 3, error: { code: "x" } }),
+    {
+      tag: "invalid",
+      id: 3,
+      reason: "error must hold a numeric code and a string message",
+    },
+  );
+});

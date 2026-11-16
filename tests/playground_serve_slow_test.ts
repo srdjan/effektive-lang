@@ -71,3 +71,57 @@ Deno.test("the session map holds at most 256 sessions", async () => {
   assertEquals(sessions.has("s0"), false);
   assertEquals(sessions.has("s1"), true);
 });
+
+const replay = (name: string, host = "127.0.0.1:8790") =>
+  new Request(`http://127.0.0.1:8790/replay/${name}`, {
+    method: "GET",
+    headers: { Host: host },
+  });
+
+const REPLAY_NAME = `playground-20261026-${SESSION}.jsonl`;
+
+Deno.test("GET /replay serves a session file as NDJSON", async () => {
+  const logs = tempLogs();
+  Deno.writeTextFileSync(`${logs}/${REPLAY_NAME}`, '{"kind":"pg.start"}\n');
+  const response = await route(replay(REPLAY_NAME), logs, new Map());
+  assertEquals(response.status, 200);
+  assertEquals(
+    response.headers.get("Content-Type"),
+    "application/x-ndjson",
+  );
+  assertEquals(await response.text(), '{"kind":"pg.start"}\n');
+});
+
+Deno.test("GET /replay refuses a foreign Host with 403", async () => {
+  const logs = tempLogs();
+  Deno.writeTextFileSync(`${logs}/${REPLAY_NAME}`, "x\n");
+  const response = await route(
+    replay(REPLAY_NAME, "evil.example:8790"),
+    logs,
+    new Map(),
+  );
+  assertEquals(response.status, 403);
+  assertEquals(await response.text(), "wrong host");
+});
+
+Deno.test("GET /replay refuses a bad or traversing name with 400", async () => {
+  const logs = tempLogs();
+  const names = ["notes.txt", "..%2Fsecret.jsonl", "%E0%A4%A"];
+  const responses = await Promise.all(
+    names.map((name) => route(replay(name), logs, new Map())),
+  );
+  const statuses = responses.map((response) => response.status);
+  assertEquals(statuses, [400, 400, 400]);
+});
+
+Deno.test("GET /replay gives 404 for a missing file and for no log folder", async () => {
+  const logs = tempLogs();
+  assertEquals(
+    (await route(replay(REPLAY_NAME), logs, new Map())).status,
+    404,
+  );
+  assertEquals(
+    (await route(replay(REPLAY_NAME), undefined, new Map())).status,
+    404,
+  );
+});
