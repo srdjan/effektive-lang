@@ -8,7 +8,7 @@ import { AREA, type Report } from "./report.ts";
 import { dataOnly } from "./typing.ts";
 import { MAX_DEPTH } from "./type_children.ts";
 import { typeChildren } from "./type_children.ts";
-import type { Ctx, World } from "./world_table.ts";
+import { type Ctx, flag, type World } from "./world_table.ts";
 
 function collectOwnTargets(
   own: ReadonlySet<string>,
@@ -336,15 +336,13 @@ export function checkRecursion(ctx: Ctx, ir: ModuleIR): Report {
       if (at !== undefined && !reported.has(id)) {
         reported = reported.add(id);
         const decl = ir.declarations[at];
-        currentCtx = {
-          ...currentCtx,
-          report: currentCtx.report.add(
-            AREA.types,
-            `declarations[${at}]`,
-            `the type ${id} refers to itself; version 0 has no recursive types`,
-            decl.span,
-          ),
-        };
+        currentCtx = flag(
+          currentCtx,
+          AREA.types,
+          `declarations[${at}]`,
+          `the type ${id} refers to itself; version 0 has no recursive types`,
+          decl.span,
+        );
       }
       return currentCtx;
     }

@@ -15,7 +15,7 @@ import type {
 } from "../ir.ts";
 import { AREA, moduleSpan } from "./report.ts";
 import { checkRefinementDeclaration } from "./refinements.ts";
-import type { Ctx } from "./world_table.ts";
+import { type Ctx, flag } from "./world_table.ts";
 import {
   checkDeclaredType,
   checkDeferredFields,
@@ -44,81 +44,69 @@ export function checkServiceDecl(
     const j = entry[0];
     const at = `${path}.methods[${j}]`;
     if (m.id !== `cap:${base}.${m.name}`) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.identity,
-          `${at}.id`,
-          `expected the capability identity cap:${base}.${m.name}, recorded ${m.id}`,
-          m.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${at}.id`,
+        `expected the capability identity cap:${base}.${m.name}, recorded ${m.id}`,
+        m.span,
+      );
     }
     if (seenMethods.has(m.id)) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.identity,
-          `${at}.id`,
-          `the capability ${m.id} is declared twice`,
-          m.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${at}.id`,
+        `the capability ${m.id} is declared twice`,
+        m.span,
+      );
     }
     seenMethods = seenMethods.add(m.id);
     ctx = checkDeclaredType(ctx, m.type, `${at}.type`, m.span);
     if (m.type.checked?.some(Boolean)) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.contracts,
-          `${at}.type.checked`,
-          "a service method cannot claim checked entry validation",
-          m.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.contracts,
+        `${at}.type.checked`,
+        "a service method cannot claim checked entry validation",
+        m.span,
+      );
     }
     if (m.borrows !== undefined) {
       if (m.borrows.length !== m.type.parameters.length) {
-        ctx = {
-          ...ctx,
-          report: ctx.report.add(
-            AREA.types,
-            `${at}.borrows`,
-            "borrow flags must match method parameters",
-            m.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${at}.borrows`,
+          "borrow flags must match method parameters",
+          m.span,
+        );
       }
       for (const entry of m.borrows.entries()) {
         const borrow = entry[1];
         const index = entry[0];
         if (!borrow) continue;
         if (!m.span.source.endsWith(".effi")) {
-          ctx = {
-            ...ctx,
-            report: ctx.report.add(
-              AREA.types,
-              `${at}.borrows[${index}]`,
-              "a service borrow parameter belongs in a host interface",
-              m.span,
-            ),
-          };
+          ctx = flag(
+            ctx,
+            AREA.types,
+            `${at}.borrows[${index}]`,
+            "a service borrow parameter belongs in a host interface",
+            m.span,
+          );
         }
         const parameter = m.type.parameters[index];
         if (
           parameter?.kind !== "named" ||
           !isTrue(ctx.world.types.get(parameter.id)?.opaque)
         ) {
-          ctx = {
-            ...ctx,
-            report: ctx.report.add(
-              AREA.types,
-              `${at}.borrows[${index}]`,
-              "a borrow parameter needs an opaque type",
-              m.span,
-            ),
-          };
+          ctx = flag(
+            ctx,
+            AREA.types,
+            `${at}.borrows[${index}]`,
+            "a borrow parameter needs an opaque type",
+            m.span,
+          );
         }
       }
     }
@@ -140,52 +128,44 @@ export function checkTypeDecl(
     hasSealed &&
     (d.definition.kind !== "nominal" || !isTrue(sealed))
   ) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.types,
-        `${path}.definition.sealed`,
-        "sealed must be true and belongs only to a type with identity",
-        d.span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.types,
+      `${path}.definition.sealed`,
+      "sealed must be true and belongs only to a type with identity",
+      d.span,
+    );
   }
   if (
     hasProperty(d.definition, "tagged") &&
     (d.definition.kind !== "nominal" || !isTrue(d.definition.tagged) ||
       d.definition.base.kind !== "record")
   ) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.types,
-        `${path}.definition.tagged`,
-        "tagged must be true and belongs only to a nominal definition over a record",
-        d.span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.types,
+      `${path}.definition.tagged`,
+      "tagged must be true and belongs only to a nominal definition over a record",
+      d.span,
+    );
   }
   if (isTrue(sealed) && d.span.source.endsWith(".effi")) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.types,
-        `${path}.definition.sealed`,
-        "a sealed type cannot be declared in a host interface",
-        d.span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.types,
+      `${path}.definition.sealed`,
+      "a sealed type cannot be declared in a host interface",
+      d.span,
+    );
   }
   if (isTrue(d.opaque) && !d.span.source.endsWith(".effi")) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.types,
-        `${path}.opaque`,
-        "an opaque type belongs in a host interface",
-        d.span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.types,
+      `${path}.opaque`,
+      "an opaque type belongs in a host interface",
+      d.span,
+    );
   }
   if (
     isTrue(d.opaque) &&
@@ -193,15 +173,13 @@ export function checkTypeDecl(
       d.definition.base.kind !== "primitive" ||
       d.definition.base.name !== "unknown")
   ) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.types,
-        `${path}.definition`,
-        "an opaque type needs an unknown nominal base",
-        d.span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.types,
+      `${path}.definition`,
+      "an opaque type needs an unknown nominal base",
+      d.span,
+    );
   }
   if (
     d.definition.kind === "nominal" && isTrue(d.definition.tagged) &&
@@ -234,15 +212,13 @@ function checkDeclarationFields(
     const f = entry[1];
     const i = entry[0];
     if (f.name === "_tag") {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.types,
-          `${at}[${i}]`,
-          "the field name _tag is reserved for generated tags",
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${at}[${i}]`,
+        "the field name _tag is reserved for generated tags",
+        span,
+      );
     }
   }
   ctx = checkFieldNames(ctx, fields, at, span);
@@ -272,26 +248,22 @@ export function checkDeclarationHeaders(ctx: Ctx, ir: ModuleIR): Report {
     const path = `declarations[${i}]`;
     const expected = `${KIND_PREFIX[d.kind]}${ir.module}#${d.name}`;
     if (d.id !== expected) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.identity,
-          `${path}.id`,
-          `expected the identity ${expected}, recorded ${d.id}`,
-          d.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.id`,
+        `expected the identity ${expected}, recorded ${d.id}`,
+        d.span,
+      );
     }
     if (seen.has(d.id)) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.identity,
-          `${path}.id`,
-          `the identity ${d.id} is declared twice`,
-          d.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.id`,
+        `the identity ${d.id} is declared twice`,
+        d.span,
+      );
     }
     seen = seen.add(d.id);
     if (d.kind === "type") ctx = checkTypeDecl(ctx, d, path);
@@ -307,26 +279,22 @@ export function checkDeclarationHeaders(ctx: Ctx, ir: ModuleIR): Report {
     const i = entry[0];
     const span = moduleSpan(ir);
     if (!declared.has(id)) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.identity,
-          `exports[${i}]`,
-          `the export ${id} is not declared in this module`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `exports[${i}]`,
+        `the export ${id} is not declared in this module`,
+        span,
+      );
     }
     if (exported.has(id)) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.identity,
-          `exports[${i}]`,
-          `the export ${id} appears twice`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `exports[${i}]`,
+        `the export ${id} appears twice`,
+        span,
+      );
     }
     exported = exported.add(id);
   }

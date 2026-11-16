@@ -24,7 +24,7 @@ import {
   isConcurrencyType,
   rebuildContainer,
 } from "./builtins.ts";
-import { type Ctx, PRELUDE_MODULE, type World } from "./world_table.ts";
+import { type Ctx, flag, PRELUDE_MODULE, type World } from "./world_table.ts";
 import { checkDeclaredType } from "./type_checks.ts";
 import {
   checkErrorDecl,
@@ -380,38 +380,32 @@ function checkImport(
         colon >= 0 && hash > colon &&
         id.slice(colon + 1, hash) === ir.module
       ) {
-        current = {
-          ...current,
-          report: current.report.add(
-            AREA.identity,
-            at,
-            `an import payload cannot claim this module's identity ${id}`,
-            s,
-          ),
-        };
+        current = flag(
+          current,
+          AREA.identity,
+          at,
+          `an import payload cannot claim this module's identity ${id}`,
+          s,
+        );
       }
     }
     if (ids.has(id)) {
-      current = {
-        ...current,
-        report: current.report.add(
-          AREA.identity,
-          at,
-          `the payload declares ${id} twice`,
-          s,
-        ),
-      };
+      current = flag(
+        current,
+        AREA.identity,
+        at,
+        `the payload declares ${id} twice`,
+        s,
+      );
     }
     if (own.has(id)) {
-      current = {
-        ...current,
-        report: current.report.add(
-          AREA.identity,
-          at,
-          `the payload declares ${id}, which this module declares itself`,
-          s,
-        ),
-      };
+      current = flag(
+        current,
+        AREA.identity,
+        at,
+        `the payload declares ${id}, which this module declares itself`,
+        s,
+      );
     }
     ids = ids.add(id);
     return current;
@@ -446,30 +440,26 @@ function checkImport(
     const id = entry[1];
     const j = entry[0];
     if (!ids.has(id)) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.identity,
-          `${path}.exports[${j}]`,
-          `the module ${imp.module} exports ${id}, which its payload does not declare`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.exports[${j}]`,
+        `the module ${imp.module} exports ${id}, which its payload does not declare`,
+        span,
+      );
     }
   }
   for (const entry of imp.bindings.entries()) {
     const b = entry[1];
     const j = entry[0];
     if (!exported.has(b.target)) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.identity,
-          `${path}.bindings[${j}].target`,
-          `the binding ${b.name} targets ${b.target}, which the module ${imp.module} does not export`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.bindings[${j}].target`,
+        `the binding ${b.name} targets ${b.target}, which the module ${imp.module} does not export`,
+        span,
+      );
     }
   }
   if (imp.module !== PRELUDE_MODULE) return ctx;
@@ -477,26 +467,22 @@ function checkImport(
     imp.bindings.length > 0 || imp.types.length > 0 ||
     imp.errors.length > 0 || imp.services.length > 0
   ) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.identity,
-        path,
-        "the prelude import has no bindings, types, errors, or services",
-        span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.identity,
+      path,
+      "the prelude import has no bindings, types, errors, or services",
+      span,
+    );
   }
   if (!sameSet(imp.exports, imp.values.map((v) => v.id))) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.identity,
-        `${path}.exports`,
-        "the prelude import exports exactly the builtin ids of its values",
-        span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.identity,
+      `${path}.exports`,
+      "the prelude import exports exactly the builtin ids of its values",
+      span,
+    );
   }
   for (const entry of imp.values.entries()) {
     const v = entry[1];
@@ -504,27 +490,23 @@ function checkImport(
     const at = `${path}.values[${j}]`;
     const identity = world.builtinInfo.get(v.id)?.identity;
     if (identity === undefined || identity.module !== ir.module) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.identity,
-          `${at}.id`,
-          `a builtin identity has the form value:${ir.module}#$builtin/<name>/<hash>, recorded ${v.id}`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${at}.id`,
+        `a builtin identity has the form value:${ir.module}#$builtin/<name>/<hash>, recorded ${v.id}`,
+        span,
+      );
       continue;
     }
     if (v.name !== v.id.slice(v.id.indexOf("#") + 1)) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.identity,
-          `${at}.name`,
-          `the builtin name is the text after # in its identity, recorded ${v.name}`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${at}.name`,
+        `the builtin name is the text after # in its identity, recorded ${v.name}`,
+        span,
+      );
     }
     ctx = checkBuiltinShape(ctx, identity.name, v.type, `${at}.type`, span);
   }

@@ -30,7 +30,7 @@ import {
   ownsSealed,
   unfold,
 } from "./typing.ts";
-import type { Ctx } from "./world_table.ts";
+import { type Ctx, flag } from "./world_table.ts";
 
 const QUERY_STEPS = 8_192;
 const AGGREGATE_STEPS = 100_000;
@@ -308,17 +308,15 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
     consumedProofs = consumedProofs.set(expression, consumed);
     for (const proof of proofs) consumed = consumed.add(proof);
     if (proofs.length !== 1) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.types,
-          `${path}.proofs`,
-          proofs.length === 0
-            ? `a value adopted as ${target} needs one proof`
-            : `a value adopted as ${target} has duplicate proofs`,
-          expression.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.proofs`,
+        proofs.length === 0
+          ? `a value adopted as ${target} needs one proof`
+          : `a value adopted as ${target} has duplicate proofs`,
+        expression.span,
+      );
       return ctx;
     }
     const proof = proofs[0];
@@ -399,15 +397,13 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
     expression: Expr,
     message: string,
   ): Ctx {
-    return {
-      ...current,
-      report: current.report.add(
-        AREA.types,
-        `${path}.proofs`,
-        message,
-        expression.span,
-      ),
-    };
+    return flag(
+      current,
+      AREA.types,
+      `${path}.proofs`,
+      message,
+      expression.span,
+    );
   }
 
   function aliasEquations(id: LocalId, type: Type, init: Expr): Predicate[] {
@@ -565,28 +561,24 @@ export function checkRefinementDeclaration(
   const predicate = declaration.predicate;
   if (predicate === undefined) return ctx;
   if (declaration.span.source.endsWith(".effi")) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.types,
-        `${path}.predicate`,
-        "host interfaces must expose unrefined data",
-        declaration.span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.types,
+      `${path}.predicate`,
+      "host interfaces must expose unrefined data",
+      declaration.span,
+    );
   }
   if (
     isTrue(declaration.opaque) || declaration.definition.kind !== "nominal"
   ) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.types,
-        `${path}.predicate`,
-        "a predicate belongs only to a non-opaque type with identity",
-        declaration.span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.types,
+      `${path}.predicate`,
+      "a predicate belongs only to a non-opaque type with identity",
+      declaration.span,
+    );
     return ctx;
   }
   const problem = predicateProblem(
@@ -596,15 +588,7 @@ export function checkRefinementDeclaration(
     0,
   );
   if (problem !== undefined) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.types,
-        `${path}.predicate`,
-        problem,
-        declaration.span,
-      ),
-    };
+    ctx = flag(ctx, AREA.types, `${path}.predicate`, problem, declaration.span);
   }
   return ctx;
 }

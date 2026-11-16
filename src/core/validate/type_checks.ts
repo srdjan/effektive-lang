@@ -14,7 +14,7 @@ import {
   type TypeEnv,
 } from "./typing.ts";
 import { MAX_DEPTH, typeChildren, walkTypeBounded } from "./type_children.ts";
-import type { Ctx } from "./world_table.ts";
+import { type Ctx, flag } from "./world_table.ts";
 
 /**
  * Checks that every identity in a type resolves: named types, failure
@@ -252,15 +252,13 @@ export function checkFieldNames(
     const f = entry[1];
     const i = entry[0];
     if (seen.has(f.name)) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.types,
-          `${path}[${i}]`,
-          `the field ${f.name} appears twice`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}[${i}]`,
+        `the field ${f.name} appears twice`,
+        span,
+      );
     }
     seen = seen.add(f.name);
   }
@@ -320,15 +318,13 @@ export function checkDeferredFields(
     const f = entry[1];
     const i = entry[0];
     if (containsDeferred(ctx.world.env, f.type, undefined, undefined)) {
-      ctx = {
-        ...ctx,
-        report: ctx.report.add(
-          AREA.types,
-          `${path}[${i}].type`,
-          `the field ${f.name} has a function or deferred type, which a tagged record or error declaration cannot hold`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}[${i}].type`,
+        `the field ${f.name} has a function or deferred type, which a tagged record or error declaration cannot hold`,
+        span,
+      );
     }
   }
   return ctx;
@@ -365,15 +361,13 @@ export function checkDeclaredType(
   if (
     span.source.endsWith(".effi") && containsRefinement(ctx.world.env, type)
   ) {
-    ctx = {
-      ...ctx,
-      report: ctx.report.add(
-        AREA.types,
-        path,
-        "host interfaces must expose unrefined data",
-        span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.types,
+      path,
+      "host interfaces must expose unrefined data",
+      span,
+    );
   }
   ctx = checkTypeIds(ctx, type, path, span).ctx;
   return checkRecordFields(ctx, type, path, span);
