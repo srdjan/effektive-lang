@@ -369,6 +369,22 @@ function narrowParamsRecord(
     : fail(`${method}: params must be an object`);
 }
 
+/** A boolean option. An absent value gives the default; a wrong type adds a warning. */
+function booleanOption(
+  options: Readonly<Record<string, unknown>>,
+  name: string,
+  fallback: boolean,
+  warnings: string[],
+): boolean {
+  const value = options[name];
+  if (value === undefined) return fallback;
+  if (typeof value === "boolean") return value;
+  warnings.push(
+    `initializationOptions.${name} must be a boolean; using ${fallback}`,
+  );
+  return fallback;
+}
+
 /**
  * Initialization options. An invalid value never fails the message: the option
  * takes its default and the warning list says why.
@@ -398,24 +414,13 @@ function narrowOptions(value: unknown): {
       );
     }
   }
-  let writeOnSave = defaults.writeOnSave;
-  if (value.writeOnSave !== undefined) {
-    if (typeof value.writeOnSave === "boolean") writeOnSave = value.writeOnSave;
-    else {
-      warnings.push(
-        `initializationOptions.writeOnSave must be a boolean; using ${defaults.writeOnSave}`,
-      );
-    }
-  }
-  let log = defaults.log;
-  if (value.log !== undefined) {
-    if (typeof value.log === "boolean") log = value.log;
-    else {
-      warnings.push(
-        `initializationOptions.log must be a boolean; using ${defaults.log}`,
-      );
-    }
-  }
+  const writeOnSave = booleanOption(
+    value,
+    "writeOnSave",
+    defaults.writeOnSave,
+    warnings,
+  );
+  const log = booleanOption(value, "log", defaults.log, warnings);
   return { options: { debounceMs, writeOnSave, log }, warnings };
 }
 

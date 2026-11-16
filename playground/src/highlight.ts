@@ -39,20 +39,6 @@ type HighlightRange = {
 
 type HighlightText = string;
 
-/** Words that are keywords at the start of a line or after `export`. */
-function declarationWords(): ReadonlySet<string> {
-  return contextualWordsOf(["declaration"]);
-}
-
-/**
- * Words that are keywords wherever they appear as a name: the clause words. The
- * positional words `where` and `using`, the modifiers, `imports`, and `from`
- * have their own rules below.
- */
-function clauseWords(): ReadonlySet<string> {
-  return contextualWordsOf(["clause"]);
-}
-
 function isCapitalized(word: string): boolean {
   const first = word.charCodeAt(0);
   return first >= 0x41 && first <= 0x5a;
@@ -164,8 +150,12 @@ function isWhereFunctionSuffix(text: string): boolean {
 /** The ranges of `text`, sorted by `from`. */
 export function highlightTokens(text: HighlightText): HighlightRange[] {
   const lexed = lex("", text);
-  const declaration = declarationWords();
-  const clause = clauseWords();
+  // Keywords at the start of a line or after `export`.
+  const declaration = contextualWordsOf(["declaration"]);
+  // Keywords wherever they appear as a name: the clause words. The positional
+  // words `where` and `using`, the modifiers, `imports`, and `from` have their
+  // own rules below.
+  const clause = contextualWordsOf(["clause"]);
   const pureTypeOpeners = functionTypeOpeners(lexed.kinds, lexed.count);
   const serviceImports = serviceImportOpeners(
     text,

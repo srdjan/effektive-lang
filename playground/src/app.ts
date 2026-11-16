@@ -14,6 +14,7 @@ import {
   errorMessage,
   generatedPathOf,
   isInterfacePath,
+  type Result,
 } from "../../src/core/mod.ts";
 import { BUILD } from "../../src/host/log.ts";
 import { emit } from "../../src/host/log_schema.ts";
@@ -74,13 +75,9 @@ const REGION_IDS: Readonly<Record<ViewName, string>> = {
   output: "output-region",
 };
 
-type CompileResult =
-  | { readonly ok: true; readonly value: PlaygroundResult }
-  | { readonly ok: false; readonly error: PlaygroundError };
+type CompileResult = Result<PlaygroundResult, PlaygroundError>;
 
-type LoadResult =
-  | { readonly ok: true; readonly files: Record<string, string> }
-  | { readonly ok: false; readonly message: string };
+type LoadResult = Result<Record<string, string>, string>;
 
 function isTextRecord(value: unknown): value is Record<string, string> {
   return typeof value === "object" && value !== null &&
@@ -101,21 +98,21 @@ async function loadExamples(): Promise<LoadResult> {
     if (!response.ok) {
       return {
         ok: false,
-        message: `examples.json: ${response.status} ${response.statusText}`,
+        error: `examples.json: ${response.status} ${response.statusText}`,
       };
     }
     const data: unknown = await response.json();
     if (!isTextRecord(data)) {
-      return { ok: false, message: "examples.json: unexpected content" };
+      return { ok: false, error: "examples.json: unexpected content" };
     }
     if (!(DEFAULT_TAB in data)) {
-      return { ok: false, message: `examples.json: missing ${DEFAULT_TAB}` };
+      return { ok: false, error: `examples.json: missing ${DEFAULT_TAB}` };
     }
-    return { ok: true, files: data };
+    return { ok: true, value: data };
   } catch (error) {
     return {
       ok: false,
-      message: `examples.json: ${errorMessage(error)}`,
+      error: `examples.json: ${errorMessage(error)}`,
     };
   }
 }
@@ -218,7 +215,7 @@ async function main(): Promise<void> {
   const saving = element("saving");
   const loading = element("loading");
   const errorRegion = element("error-region");
-  const errorMessage = element("error-message");
+  const failureMessage = element("error-message");
   const reload = element("reload");
   const filesNav = element("files");
   const fileTabs = element("file-tabs");
@@ -243,7 +240,7 @@ async function main(): Promise<void> {
 
   function showFailure(message: string): void {
     loading.hidden = true;
-    errorMessage.textContent = message;
+    failureMessage.textContent = message;
     reload.hidden = false;
     errorRegion.hidden = false;
     status.textContent = "";
@@ -251,10 +248,10 @@ async function main(): Promise<void> {
 
   const examples = await loadExamples();
   if (!examples.ok) {
-    showFailure(`The playground could not start. ${examples.message}`);
+    showFailure(`The playground could not start. ${examples.error}`);
     return;
   }
-  const files = examples.files;
+  const files = examples.value;
   // A replay page writes no new session.
   const replayName = new URLSearchParams(location.search).get("replay");
   const log: PageLog = replayName !== null
@@ -288,14 +285,14 @@ async function main(): Promise<void> {
 
   function showError(tag: string, message: string): void {
     emit(sink, "pg.error", errorData(tag, message));
-    errorMessage.textContent = message;
+    failureMessage.textContent = message;
     reload.hidden = true;
     errorRegion.hidden = false;
   }
 
   function clearError(): void {
     errorRegion.hidden = true;
-    errorMessage.textContent = "";
+    failureMessage.textContent = "";
   }
 
   // The source editor and its states. A state exists for each file so that
@@ -694,7 +691,7 @@ async function main(): Promise<void> {
         if (step.tag === "edit") sourceView.dispatch({ changes: step.changes });
       });
     } catch (error) {
-      failReplay(error instanceof Error ? error.message : String(error));
+      failReplay(errorMessage(error));
     }
   }
 }
