@@ -1,8 +1,8 @@
 # Fresh-eyes review 2, 2026-11-16
 
-Status: findings recorded. The user reviews the findings and decides FZD1-FZD6. No plan or code change exists yet.
+Status: the user decided FZD1-FZD6 and approved the plan FZU1-FZU16 on 2026-11-16. Execution has started.
 
-This document owns the findings, the decisions, and later the plan of the second fresh-eyes review. FZ means a finding. FZD means a decision.
+This document owns the findings, the decisions, and the plan of the second fresh-eyes review. FZ means a finding, FZD a decision, and FZU a unit of the plan.
 
 The scope is the whole repository at `54e9e42b`. Commit `ff0dc9fa` (a pre-commit lint hook) changed no source file, so the line numbers also hold at `ff0dc9fa`. The first review ([2026-11-15](../archive/plans/2026-11-15-fresh-eyes-review.md)) ran before commit `76d63bfe`. That commit adopted the Light FP lint 0.8.0 and rewrote 305 files. Most findings below are residue of that rewrite. Each proposed change must stay lint-clean.
 
@@ -19,9 +19,9 @@ Opus measured these values at `54e9e42b` on 2026-11-16.
 
 ## Decisions
 
-The user has not decided these items yet.
+On 2026-11-16 the user answered "as recommended". That answer selects option (a) for each of FZD1-FZD6.
 
-| ID | Decision | Options | Recommendation |
+| ID | Decision | Options | Decided |
 | --- | --- | --- | --- |
 | FZD1 | Scope of the cleanup | (a) All cleanup findings except the rejected rows and the rows marked "low". (b) Only the repository-wide residue FZ1-FZ10 and the dead code. (c) All rows, including the low rows. | (a) |
 | FZD2 | FZ90, the resolver lookup loop without an exit | (a) Fix it first, as its own unit. Outputs do not change. (b) Leave it. | (a) |
@@ -29,6 +29,67 @@ The user has not decided these items yet.
 | FZD4 | FZ92, `generatedSourceOf` accepts more header lines than the old regex | (a) Restore the language of the old regex with a failing test first. (b) Keep the new language and document it. | (a) |
 | FZD5 | FZ93, the pipe form of an error constructor infers a different input type than the call form | (a) Write a failing test, then give the pipe form the error-constructor branch, as FY130 did for a callback. (b) Leave it. | (a) |
 | FZD6 | FZ100-FZ114, the behavior-changing candidates | (a) Keep them out of this pass, in this ledger. (b) Decide each one now. | (a) |
+
+## Plan
+
+This document is the plan authority. The plan applies FZD1 (a): every cleanup finding apart from the rejected proposals and the rows marked "low". The excluded low rows are FZ10, FZ94, FZ96, FZ131, the `export` removals of FZ58, and the `interface.ts` part of FZ115. FZ97-FZ99 need a measurement first, so they stay open. FZ100-FZ109 stay out (FZD6).
+
+### Order
+
+1. FZU1-FZU4 fix the four probable defects on `main`, one commit each. Opus does them directly, because each is a test and a small change.
+2. Opus creates one detached worktree for each Sonnet unit from the commit of FZU4. FZU5-FZU15 then run at the same time.
+3. FZU16 integrates the units one at a time, refreshes the mutation register, and runs the final checks.
+
+Inside each Sonnet unit the order is: the test-gap rows first, then dead code, then the residue patterns FZ1-FZ9, then the other logic rows.
+
+### Rules for all Sonnet units
+
+The change preserves behavior. The diagnostics and their order, the IR, the emitted TypeScript, the CLI output, the LSP responses, the lexer snapshot, the golden files, and the surface records stay the same. A unit that finds that an item changes behavior skips the item and names it in its handback.
+
+A test-gap row comes first in its unit. The new test must pass on the unchanged code. If it fails, the executor keeps it out of the commit, stops work on that row, and reports the failure as a probable defect.
+
+Each item, or each group of items that change the same lines, gets one commit. The subject is short and imperative. The body gives the reason and names the FZ IDs. The last line is `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Before each commit, the executor runs the fast gate, and the fast gate must exit 0. The fast gate is `deno fmt --check && deno lint && deno check 'src/**/*.ts' 'playground/**/*.ts' 'tests/**/*.ts' 'scripts/**/*.ts' 'bench/**/*.ts' && deno task test`. The executor tests the exit status of the gate command itself, not of a pipe.
+
+The lint stays strict. No unit adds a lint exclusion, a rule disable, an ignore comment, or a layer header. A proposed form that the lint refuses is dropped and named in the handback.
+
+A test changes only when it covers deleted dead code, or when it reads an internal shape that an item changes. The handback names each changed test. A unit does not change an expected value to make a test pass.
+
+An executor may change a declaration that has a row in `fixtures/mutation/survivors.json`, but it does not edit that file. The handback names each such declaration. The mutation census test in `tests/mutate_slow_test.ts` is not part of the fast gate. Opus refreshes the register in FZU16.
+
+Each Sonnet unit works only in its own worktree under `~/.claude/scratch/fz/`, which Opus creates. The executor commits only there. It does not run `git checkout`, `git restore`, `git stash`, `git reset`, or `git push`. It does not run `deno task check`, `deno task coverage`, or `deno task mutate`. It runs a slow test file only when its acceptance check names that file.
+
+Each unit owns the files that its row lists. A unit that needs a change in a file of another unit stops that item and names it in the handback, unless its row grants the exact lines.
+
+When a unit reaches its turn budget, it stops and hands back. The handback lists the commits, the FZ items done and skipped with a reason for each, the fast gate result, the changed tests, the touched register declarations, and the open issues. It contains no file contents and no full logs.
+
+### Units
+
+| Unit | Model | Items | Files | Acceptance check | Turn budget |
+| --- | --- | --- | --- | --- | --- |
+| FZU1 (resolver lookup exit) | Opus | FZ90 | `src/core/resolve.ts` | No test can fail on outputs, because the outputs do not change. The evidence is a paired timing of `tests/proof_budget_slow_test.ts` before and after the change, at a recorded load. `deno task check` exits 0. | direct |
+| FZU2 (shorthand field escape) | Opus | FZ91 | A test in the shape of `tests/borrowed_use_walkers_test.ts`, `src/core/check_builtins/scope.ts`, `check_builtins/context.ts`, `src/core/check_expr.ts` (`localUses`) | The new rows for a scoped record and for a borrowed handle fail for the reason of the defect, then pass. `deno task check` exits 0. A `CHANGELOG.md` entry. Opus checks the website specification of scoped records. | direct |
+| FZU3 (generated header grammar) | Opus | FZ92 | A test, `src/core/paths.ts` | The new rows for an empty stem and for the three line terminators fail, then pass. `deno task check` exits 0. | direct |
+| FZU4 (pipe into an error constructor) | Opus | FZ93 | `tests/inferred_inputs_test.ts`, `src/core/infer_inputs.ts` | The new pipe test fails for the reason of the defect, then passes. The call-form test passes before and after. `deno task check` exits 0. A `CHANGELOG.md` entry. Opus checks the website specification as for FY130. | direct |
+| FZU5 (checker) | Sonnet | FZ120, FZ121; FZ11-FZ18; FZ59, FZ61-FZ69; FZ58 (`check_project.ts` aliases); the FZ1, FZ3-FZ5, and FZ7 sites in its files | `check_expr.ts` (not lines 1364-1365 and 1437-1447), `check_declarations.ts`, `check_project.ts`, `check_refinements.ts`, `signatures.ts`, `check_patterns.ts`, `types.ts` line 54 (the `export` of FZ62 only), their tests | Fast gate exits 0 at each commit. | 110 |
+| FZU6 (builtin rows) | Sonnet | FZ122; FZ19-FZ20; FZ21 (`check_binary.ts`); FZ70 only with a lint-clean form; FZ71-FZ74; FZ110-FZ112; FZ58 (`check_binary.ts` alias); the FZ1, FZ3, FZ4, and FZ7 sites in its files | `src/core/check_builtins/`, `check_binary.ts`, `check_expr.ts` lines 1364-1365 and 1437-1447, `docs/builtin-changes.md`, the FZ112 lines of `tables.ts` and `lower.ts`, their tests | Fast gate exits 0 at each commit. | 90 |
+| FZU7 (validator) | Sonnet | FZ123, FZ124; FZ2; FZ21 (`validate/expr.ts`); FZ22-FZ29; FZ30 (`recursion_checks.ts`); FZ58 (`ValidationCount`); FZ75-FZ78; FZ113; FZ8 (`flagAt`); the FZ1, FZ3, FZ4, FZ6, and FZ7 sites in its files | `src/core/validate/`, `src/core/validate_project.ts`, validator tests | Fast gate exits 0 at each commit. The validator imports nothing from the checker. | 120 |
+| FZU8 (expression emission and lowering) | Sonnet | FZ9; FZ35-FZ40; FZ81; FZ114 (`emit/families/`, `emit/expr.ts`); the FZ1, FZ3, and FZ7 sites in its files | `emit/expr.ts`, `emit/families/`, `fields.ts`, `shape.ts`, `calls.ts`, `walk.ts`, `type_query.ts`, `identity.ts`, `failure.ts`, `lower.ts` (not the FZ112 lines), one new export in `emit/emitted.ts`, emitter tests | Fast gate exits 0 at each commit. `tests/emit*_slow_test.ts` and `tests/strict_target_slow_test.ts` pass at the last commit. | 100 |
+| FZU9 (declaration emission) | Sonnet | FZ8 (`trueFlag`); FZ30 (`recursion_guard.ts`); FZ31-FZ34; FZ58 (`emit/tsc.ts` alias); FZ79; FZ80; FZ114 (`decls.ts`, `emit.ts`); the FZ1, FZ3, FZ4, FZ6, and FZ7 sites in its files | The other `src/core/emit/` files (not `emitted.ts`), `type_ir.ts`, `recursion_guard.ts`, a new `trueFlag` at the end of `util.ts`, `type_lower.ts` lines 584-603, emitter tests | Fast gate exits 0 at each commit. `tests/emit*_slow_test.ts` and `tests/strict_target_slow_test.ts` pass at the last commit. | 90 |
+| FZU10 (front end) | Sonnet | FZ125; FZ43-FZ45; FZ82-FZ84; the FZ1, FZ3, FZ5, and FZ7 sites in its files | `lex.ts`, `parse.ts`, `resolve.ts`, `syntax.ts`, `syntax_queries.ts`, `patterns.ts`, `type_lower.ts` line 556, their tests | Fast gate exits 0 at each commit. The lexer snapshot and the parse fixtures do not change. | 100 |
+| FZU11 (type model and inference) | Sonnet | FZ126; FZ41, FZ42; FZ60; FZ85; FZ118; FZ115 (`service_bounds.ts`); the FZ1, FZ3, FZ4, and FZ7 sites in its files | `types.ts` (not line 54), `predicates.ts`, `predicate_source.ts`, `type_lower.ts` (not lines 556 and 584-603), `type_show.ts`, `infer_inputs.ts`, `infer_contracts.ts`, `contract_origins.ts`, `requirement_provenance.ts`, `effect_set.ts`, `modes.ts`, `linear.ts`, `initialization.ts`, `body_env.ts`, `tables.ts` (not the FZ112 lines), `service_bounds.ts`, `referenced_ids.ts`, their tests | Fast gate exits 0 at each commit. | 100 |
+| FZU12 (project services and editor) | Sonnet | FZ127 (before the FZ1 and FZ86 changes in those files); FZ46-FZ49; FZ58 (editor and `paths.ts` aliases); FZ86, FZ87; FZ115 (`editor_completion.ts`); the FZ1, FZ4, FZ6, and FZ7 sites in its files | The S10 files of `src/core/` (not `util.ts`), their tests | Fast gate exits 0 at each commit. | 90 |
+| FZU13 (hosts and playground) | Sonnet | FZ128; FZ50-FZ54; FZ88; FZ115 (`outputs.ts`); the FZ4 and FZ7 sites in `log_schema.ts` | `src/cli/`, `src/host/`, `src/lsp/`, `playground/`, their tests, but not `tests/cli_helpers.ts` | Fast gate exits 0 at each commit. The CLI, LSP, and watch slow tests pass at the last commit. | 60 |
+| FZU14 (scripts and test support) | Sonnet | FZ129; FZ55, FZ56; FZ89; FZ116 (`package_vscode_smoke.ts`); FZ6 (`tests/chain_helpers.ts`) | `scripts/`, the test support files of S12, `bench/generate.ts` lines 62-73 (the move of `makeRandom` into `scripts/lib.ts`) and the tests that import `makeRandom` | Fast gate exits 0 at each commit. The slow tests of the changed scripts pass at the last commit. | 70 |
+| FZU15 (bench) | Sonnet | FZ130; FZ95 (first a test that records the side order with `pairs: 2`; the fix only if the test shows a, b, a, b); FZ57; FZ117; FZ116 (bench part); FZ6 (`bench/m2.ts`, `bench/m5_target.ts`) | `bench/` (not `generate.ts` lines 62-73), bench tests | Fast gate exits 0 at each commit. `tests/bench_*slow_test.ts` pass at the last commit. | 70 |
+| FZU16 (integration) | Opus | all | all | Opus reviews each unit line by line and lands it with `git cherry-pick`. `deno task check` exits 0 on `main` after each unit, apart from the register census until the refresh. `deno task behavior:compare <FZU4 commit> HEAD` exits 0. `deno task behavior:compare 54e9e42b <FZU4 commit>` shows only the record changes that FZU2-FZU4 explain. `deno task mutate` with all sites exits 0 on each module with a touched register declaration, after the refresh. | direct |
+
+FZU5, FZU6, FZU9, FZU10, and FZU11 share some files in disjoint line ranges, as the Files column states. Opus resolves a cherry-pick conflict in a shared file.
+
+If FZU2 or FZU4 needs a new language rule, Opus stops and asks the user first.
+
+After FZU16, Opus does Step 4 of the fresh-eyes method: it lists abstraction candidates that occur 3 or more times. It does not implement them without approval.
+
+When the plan is complete, the completing commit moves this file to `docs/archive/plans/` and updates the registry path.
 
 ## Method and evidence limits
 
@@ -145,6 +206,7 @@ Each row is one mechanical pattern across many files. Each row can be one unit.
 | FZ56 | `tests/helpers.ts:683-685` | An empty section header. | Delete. | None | Checked |
 | FZ57 | `bench/main.ts:209`; `bench/generate.ts:79-85,112` | The `m2` condition repeats line 124. `ALIAS_LINES` only builds `ALIASES`, used once. | `m2,`. Inline the 3 lines. | JSON and text | Checked |
 | FZ58 | Exported names with no outside user: aliases in `validate/` (5), `emit/` (27), test types (7), `bench/lsp_script.ts` `Workspace` and `SessionOptions`; duplicate primitive aliases (`EditorPath` 3 times and 6 more in the editor modules; `ModuleName` and `ProjectRoot` in `check_project.ts:68-69`, `paths.ts:10`, `check_binary.ts:11`, `emit/tsc.ts:137`); `ValidationCount` (`report.ts:29`) has no user at all. | ZTS061 requires a name, not an export. | Delete `ValidationCount`. Import the shared aliases. Removing `export` is low. | Type checks | Checked |
+| FZ118 | `predicates.ts:40-49,208-213` | `comparison` accepts `==` and `!=`, but only tests pass them (`predicates_test.ts:336,338`, `predicates_property_test.ts:19,23`). The production caller passes `ComparisonOperator`. No entry point exports `comparison`, and the website IR copy has no `Comparison` type. | Type the parameter as `ComparisonOperator`. Delete `Comparison` and `canonicalOperator`. Delete the 2 loose test rows, and make the property test use `===` and `!==`. | Output for each strict operator | Checked |
 
 ## 1B Tangled and duplicated logic
 
@@ -158,7 +220,7 @@ Each row is one mechanical pattern across many files. Each row can be one unit.
 | FZ64 | `check_expr.ts:364-371` | `uniqueLocalName` is correct only because both seeds start with `$`. | Append `$` on each pass. | Minimal name | Checked by reasoning |
 | FZ65 | `check_expr.ts:503,537,3194,3197` | The internal `checkFit` is exposed as `fits`, and `requireFit` as `checkFit`. | Rename (3 and 17 uses). | Rename only | Checked |
 | FZ66 | `check_expr.ts:426-450`; `2135-2161,2277-2303` | `recordInfo` repeats `finish`. Record construction and update repeat their field-loop start. | One `NodeInfo` builder. One field-start helper. | Fields, diagnostic order | Checked; second Inferred |
-| FZ67 | `check_declarations.ts:500-513,689,1025,1075` | Four fields are copied one by one. `explicit` always equals `annotation !== "none"`. A `typeof ... === "boolean" &&` test replaced `=== true`. | One spread. Test `annotation`. Use the exact-true helper. | Fields, diagnostics | Checked; spread Inferred |
+| FZ67 | `check_declarations.ts:500-513,689,1025,1075` | Four fields are copied one by one. `explicit` always equals `annotation !== "none"`. A `typeof ... === "boolean" &&` test replaced `=== true`. | One spread. Test `annotation`. Keep the `typeof` test: ZTS620 bans `=== true`, and the current form already keeps the exact-true meaning. | Fields, diagnostics | Checked; spread Inferred |
 | FZ68 | `check_project.ts:760-769` | Two named helpers only fill `CHECK_EVERY_MODULE`. | Arrow properties, as in `db.ts:432-497`. | Policy | Checked |
 | FZ69 | `check_patterns.ts:304,327` | `pattern` looks up `target` twice. | Look up once. | Diagnostic order | Checked |
 | FZ70 | `check_builtins/registry.ts:50-122` | The rewrite replaced 8 object spreads with 60 hand keys. ZTS614 allows one leading spread, so the old form fails the lint. | Only if a lint-clean form exists, for example `Object.fromEntries` over the tables. Otherwise reject. | Rows, key-set test | Inferred |
