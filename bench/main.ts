@@ -206,7 +206,7 @@ export async function run(args: readonly string[]): Promise<number> {
       deno: Deno.version.deno,
       target: Deno.build.target,
       m1,
-      m2: wants("m2") || wants("m6") ? m2 : undefined,
+      m2,
       m3,
       m4,
       m4Disk,

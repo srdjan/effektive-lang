@@ -61,19 +61,9 @@ export function allFiles(project: GeneratedProject): Map<string, string> {
   return new Map([...project.sources, ...project.hostModules]);
 }
 
-/**
- * The alias declarations that rule R1 requires. A primitive type can occur
- * only inside a type declaration. Each name has identity, so `base.eff`
- * declares each name once and every other module imports it.
- */
-const ALIAS_LINES: readonly string[] = [
-  `export type Int = int`,
-  `export type Num = number`,
-  `export type Text = string`,
-];
-
-const ALIASES = ALIAS_LINES.join("\n");
-
+// The alias declarations that rule R1 requires. A primitive type can occur
+// only inside a type declaration. Each name has identity, so `base.eff`
+// declares each name once and every other module imports it.
 const BASE = `export type Id = string
 export type Status = "open" | "done"
 export type Item = {
@@ -99,7 +89,9 @@ export service Gate {
   charge(amount: Int): Text fails Declined
 }
 
-${ALIASES}
+export type Int = int
+export type Num = number
+export type Text = string
 `;
 
 const CONFIG = `{
