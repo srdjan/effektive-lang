@@ -1,30 +1,21 @@
 import { assert, assertEquals } from "@std/assert";
 import type { Expr, ModuleIR, Type, TypeDecl } from "../src/core/ir.ts";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
 import { exprChildren } from "../src/core/validate/expr_walk.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { checkModule } from "./helpers.ts";
 
 function diagnostics(source: string): readonly string[] {
-  const result = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(result.ok, JSON.stringify(result));
-  return result.value.diagnostics.map((diagnostic) => diagnostic.code);
+  const result = checkModule(source);
+  return result.diagnostics.map((diagnostic) => diagnostic.code);
 }
 
 function lower(
   source: string,
 ): { readonly ir: ModuleIR; readonly sources: ReadonlyMap<string, string> } {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics, []);
-  const lowered = lowerProject(checked.value).get("m");
+  const checked = checkModule(source);
+  assertEquals(checked.diagnostics, []);
+  const lowered = lowerProject(checked).get("m");
   assert(lowered?.ok, JSON.stringify(lowered));
   return { ir: lowered.value, sources: new Map([["m.eff", source]]) };
 }

@@ -6,13 +6,10 @@
 // the public entries `checkProject`, `lowerProject`, and `validateModule`.
 
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  lowerProject,
-  memoryHost,
-} from "../src/core/frontend.ts";
+import { lowerProject } from "../src/core/frontend.ts";
 import type { Effects, Expr } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { checkModule } from "./helpers.ts";
 
 const CFG_LIMIT: Effects = { failures: [], requirements: ["cap:m#Cfg.limit"] };
 
@@ -21,14 +18,9 @@ const CFG_LIMIT: Effects = { failures: [], requirements: ["cap:m#Cfg.limit"] };
  * It returns the validator diagnostics, which the caller checks.
  */
 function lowerProbeWithValidation(text: string) {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics.map((d) => d.message), []);
-  const lowered = lowerProject(checked.value).get("m");
+  const checked = checkModule(text);
+  assertEquals(checked.diagnostics.map((d) => d.message), []);
+  const lowered = lowerProject(checked).get("m");
   assert(lowered?.ok === true, JSON.stringify(lowered));
   const ir = lowered.value;
   const validation = validateModule(ir, new Map([["m.eff", text]]));
@@ -135,18 +127,13 @@ const probe = () => makeLayer() |> provide(() => First.one())
 Deno.test("schema builtins reject a pipeline stage, so the lowering arm for them is dead", () => {
   const text =
     `type Int = int\nconst item: Schema<Int> = schema()\nconst probe = () => item |> schemaArray\n`;
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
+  const checked = checkModule(text);
   assertEquals(
-    checked.value.diagnostics.map((d) => `${d.code} ${d.message}`),
+    checked.diagnostics.map((d) => `${d.code} ${d.message}`),
     ["type-mismatch/010 `schemaArray` requires direct call syntax"],
   );
   // The lowering refuses a module with a diagnostic, so the arm never runs.
-  const lowered = lowerProject(checked.value).get("m");
+  const lowered = lowerProject(checked).get("m");
   assert(lowered?.ok === false);
   assertEquals(lowered.error.tag, "diagnostics");
 });

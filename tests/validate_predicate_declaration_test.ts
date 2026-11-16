@@ -4,8 +4,9 @@
 
 import { assert, assertEquals } from "@std/assert";
 import type { ModuleIR, TypeDecl } from "../src/core/ir.ts";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { checkModule } from "./helpers.ts";
 
 const SOURCE = `
 type Positive = int where n => n > 0
@@ -14,13 +15,8 @@ const value = (): Positive => Positive(1)
 `;
 
 function lowered(): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": SOURCE }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  const module = lowerProject(checked.value).get("m");
+  const checked = checkModule(SOURCE);
+  const module = lowerProject(checked).get("m");
   assert(module?.ok);
   return module.value;
 }

@@ -17,8 +17,8 @@
 import { assert, assertEquals } from "@std/assert";
 import type { Diagnostic } from "../src/core/frontend.ts";
 import type { ModuleIR } from "../src/core/ir.ts";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
-import { isRecord } from "./helpers.ts";
+import { lowerProject } from "../src/core/mod.ts";
+import { checkModule, isRecord } from "./helpers.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 
 // ------------------------------------------------------------------ helpers
@@ -68,14 +68,9 @@ interface Lowered {
 }
 
 function lowerText(text: string): Lowered {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics.map((d) => d.code), []);
-  const result = lowerProject(checked.value).get("m");
+  const checked = checkModule(text);
+  assertEquals(checked.diagnostics.map((d) => d.code), []);
+  const result = lowerProject(checked).get("m");
   assert(result?.ok === true, JSON.stringify(result));
   return { ir: result.value, sources: new Map([["m.eff", text]]) };
 }

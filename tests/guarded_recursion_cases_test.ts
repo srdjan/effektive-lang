@@ -5,13 +5,10 @@
 // validator lowers an accepted seed source and forges the rejected shape.
 
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  lowerProject,
-  memoryHost,
-} from "../src/core/frontend.ts";
+import { lowerProject } from "../src/core/frontend.ts";
 import type { Field, ModuleIR, Type } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { checkModule } from "./helpers.ts";
 
 /** Replaces one value inside a type declaration of the seed module. */
 interface Forge {
@@ -161,14 +158,9 @@ const CASES: readonly GuardedCase[] = [
 ];
 
 function lowerSource(text: string): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, text);
-  assertEquals(checked.value.diagnostics.map((d) => d.code), [], text);
-  const lowered = lowerProject(checked.value).get("m");
+  const checked = checkModule(text);
+  assertEquals(checked.diagnostics.map((d) => d.code), [], text);
+  const lowered = lowerProject(checked).get("m");
   assert(lowered?.ok === true, text);
   return structuredClone(lowered.value);
 }
@@ -198,13 +190,8 @@ function applyForge(ir: ModuleIR, forge: Forge): void {
 
 Deno.test("the checker accepts guarded recursion only for distinct literal tags and a terminal branch", () => {
   for (const c of CASES) {
-    const checked = checkProject(
-      memoryHost({ "effektive.json": "{}", "m.eff": c.source }),
-      "",
-      ["m.eff"],
-    );
-    assert(checked.ok, c.name);
-    const codes = new Set(checked.value.diagnostics.map((d) => d.code));
+    const checked = checkModule(c.source);
+    const codes = new Set(checked.diagnostics.map((d) => d.code));
     assertEquals(
       codes,
       c.accepted ? new Set() : new Set(["declaration/007"]),

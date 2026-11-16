@@ -2,17 +2,12 @@
 // The emitter prints `Math`, `Error`, `String`, and `globalThis` as bare globals,
 // so no source declaration or binding may take them.
 
-import { assert, assertEquals } from "@std/assert";
-import { checkProject, memoryHost } from "../src/core/frontend.ts";
+import { assertEquals } from "@std/assert";
+import { checkModule } from "./helpers.ts";
 
 function messages(source: string): string[] {
-  const result = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": source }),
-    "",
-    ["main.eff"],
-  );
-  assert(result.ok, JSON.stringify(result));
-  return result.value.diagnostics.map((d) => `${d.code}: ${d.message}`);
+  const result = checkModule(source, "main.eff");
+  return result.diagnostics.map((d) => `${d.code}: ${d.message}`);
 }
 
 const CASES: readonly (readonly [string, string, string])[] = [

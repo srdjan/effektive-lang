@@ -10,7 +10,7 @@
 // the root type has depth 0.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
 import type { ModuleIR, Type } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import { createReport, type Report } from "../src/core/validate/report.ts";
@@ -20,6 +20,7 @@ import {
   checkTypeIds,
 } from "../src/core/validate/type_checks.ts";
 import { buildWorld } from "../src/core/validate/world_table.ts";
+import { checkModule } from "./helpers.ts";
 
 const LIMIT = 1536;
 const BOUND = "type nesting exceeds 1536 levels";
@@ -38,14 +39,9 @@ const BASE =
   "export type Base = int\nexport type A = Base\nexport type B = Base\n";
 
 function lowerBase(): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": BASE }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics, []);
-  const lowered = [...lowerProject(checked.value).values()][0];
+  const checked = checkModule(BASE);
+  assertEquals(checked.diagnostics, []);
+  const lowered = [...lowerProject(checked).values()][0];
   assert(lowered?.ok, JSON.stringify(lowered));
   return structuredClone(lowered.value);
 }

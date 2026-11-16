@@ -1,15 +1,8 @@
-import { assert, assertEquals } from "@std/assert";
-import { checkProject, memoryHost } from "../src/core/mod.ts";
-import { assertValidProject } from "./helpers.ts";
+import { assertEquals } from "@std/assert";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 function check(text: string) {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  return checked.value;
+  return checkModule(text);
 }
 
 Deno.test("literal lengths establish string and array refinements", () => {

@@ -4,23 +4,19 @@
 // the Schema slow test files before, although they start no subprocess.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
 import type { ModuleIR } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import { assertValidation, declarationPath } from "./schema_diagnostics.ts";
+import { checkModule } from "./helpers.ts";
 
 function lowerFixture(name: string) {
   const text = Deno.readTextFileSync(
     new URL(`../fixtures/emit/${name}.eff`, import.meta.url),
   );
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": text }),
-    "",
-    ["main.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics, []);
-  const lowered = [...lowerProject(checked.value).values()][0];
+  const checked = checkModule(text, "main.eff");
+  assertEquals(checked.diagnostics, []);
+  const lowered = [...lowerProject(checked).values()][0];
   assert(lowered?.ok, JSON.stringify(lowered));
   const sources = new Map([["main.eff", text]]);
   return {

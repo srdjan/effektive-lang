@@ -1,5 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
 import { validateProject } from "../src/core/validate_project.ts";
 import type {
   CheckedProject,
@@ -8,19 +8,15 @@ import type {
   ModuleIR,
   Result,
 } from "../src/core/mod.ts";
+import { checkModule } from "./helpers.ts";
 
 function lowered(text: string) {
-  const project = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": text }),
-    "",
-    ["main.eff"],
-  );
-  assert(project.ok, JSON.stringify(project));
-  assertEquals(project.value.diagnostics, []);
-  const modules = lowerProject(project.value);
+  const project = checkModule(text, "main.eff");
+  assertEquals(project.diagnostics, []);
+  const modules = lowerProject(project);
   const main = modules.get("main");
   assert(main?.ok, JSON.stringify(main));
-  return { project: project.value, main: main.value };
+  return { project: project, main: main.value };
 }
 
 function assertMutable(

@@ -320,13 +320,8 @@ Deno.test("the on option must be a literal of the three operations", () => {
   for (const options of cases) {
     const source = prefix +
       `const bad = schemaDefaultKey(text, (): Text => "Ada", ${options})`;
-    const result = checkProject(
-      memoryHost({ "effektive.json": "{}", "main.eff": source }),
-      "",
-      ["main.eff"],
-    );
-    assert(result.ok);
-    const messages = result.value.diagnostics.map((d) => d.message);
+    const result = checkModule(source, "main.eff");
+    const messages = result.diagnostics.map((d) => d.message);
     assert(
       messages.some((m) =>
         m.includes("`on` must be a literal") || m.includes("options must be")

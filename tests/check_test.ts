@@ -14,7 +14,6 @@ import {
 } from "../src/core/signatures.ts";
 import { checkModuleDeclarations } from "../src/core/check_declarations.ts";
 import {
-  checkProject,
   type Diagnostic,
   memoryHost,
   normalizeDiagnostics,
@@ -34,6 +33,7 @@ import { stripSpans } from "../src/core/interface.ts";
 import { TypeTable } from "../src/core/types.ts";
 import { functionTypeToIr } from "../src/core/type_ir.ts";
 import {
+  checkModule,
   diskHost,
   EXAMPLE_ENTRIES,
   EXAMPLE_MODES,
@@ -1061,13 +1061,8 @@ Deno.test("a comment between a Schema type word and `<` does not change its flag
 const integer: Schema<Int> = schema()
 const bad: ${word}${gap}<Int> = integer
 `;
-    const result = checkProject(
-      memoryHost({ "effektive.json": "{}", "m.eff": source }),
-      "",
-      ["m.eff"],
-    );
-    assert(result.ok, JSON.stringify(result));
-    return result.value.diagnostics.map((d) => `${d.code} ${d.message}`);
+    const result = checkModule(source);
+    return result.diagnostics.map((d) => `${d.code} ${d.message}`);
   };
   for (const word of words) {
     const plain = messagesOf(word, "");

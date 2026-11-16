@@ -9,10 +9,11 @@
 // its child, so the tests require the expected diagnostic and ignore extra ones.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
 import type { ModuleIR } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import { assertValidation } from "./schema_diagnostics.ts";
+import { checkModule } from "./helpers.ts";
 
 type Obj = Record<string, unknown>;
 
@@ -109,14 +110,9 @@ interface Program {
 }
 
 function lowerProgram(text: string): Program {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": text }),
-    "",
-    ["main.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics, []);
-  const lowered = [...lowerProject(checked.value).values()][0];
+  const checked = checkModule(text, "main.eff");
+  assertEquals(checked.diagnostics, []);
+  const lowered = [...lowerProject(checked).values()][0];
   assert(lowered?.ok, JSON.stringify(lowered));
   const valid = lowered.value;
   return {

@@ -9,18 +9,14 @@ import {
 } from "../src/core/predicates.ts";
 import { exprChildren } from "../src/core/validate/expr_walk.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { checkModule } from "./helpers.ts";
 function lower(text: string): {
   readonly ir: ModuleIR;
   readonly sources: ReadonlyMap<string, string>;
 } {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics, []);
-  const result = lowerProject(checked.value).get("m");
+  const checked = checkModule(text);
+  assertEquals(checked.diagnostics, []);
+  const result = lowerProject(checked).get("m");
   assert(result?.ok, JSON.stringify(result));
   return { ir: result.value, sources: new Map([["m.eff", text]]) };
 }
@@ -406,13 +402,8 @@ type Box = { e: Either | Stop }
     "export const branch = (a: Int, p: Bool): Either | Stop => if (p) { { a: a, b: a } } else { Stop({}) }",
   ];
   for (const line of unproved) {
-    const checked = checkProject(
-      memoryHost({ "effektive.json": "{}", "m.eff": prelude + line + "\n" }),
-      "",
-      ["m.eff"],
-    );
-    assert(checked.ok);
-    assertEquals(checked.value.diagnostics.map((d) => d.code), [
+    const checked = checkModule(prelude + line + "\n");
+    assertEquals(checked.diagnostics.map((d) => d.code), [
       "type-mismatch/013",
     ], line);
   }

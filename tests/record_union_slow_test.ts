@@ -1,12 +1,8 @@
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  emitProject,
-  lowerProject,
-  memoryHost,
-} from "../src/core/mod.ts";
+import { emitProject, lowerProject } from "../src/core/mod.ts";
 import { validateProject } from "../src/core/validate_project.ts";
 import { runStrictTarget } from "./target_helpers.ts";
+import { checkModule } from "./helpers.ts";
 
 Deno.test("record union construction and wildcard matches pass strict checking and execute", async () => {
   const source = `type Int = int
@@ -37,24 +33,19 @@ export const one: Int = 1
 export const make = (next: () => Text): Choice => ({ kind: "b", value: next() })
 export const formatted = (x: LongTags): Int => match x { { longDiscriminatorField: "aVeryLongDiscriminatorLiteralStringToForceMultilineFormatting", ...a } => a.value, { longDiscriminatorField: "anotherVeryLongDiscriminatorLiteralStringToForceMultilineFormatting", ...b } => b.value, _ => 0 }
 `;
-  const project = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": source }),
-    "",
-    ["main.eff"],
-  );
-  assert(project.ok, JSON.stringify(project));
-  assertEquals(project.value.diagnostics, []);
-  const lowered = lowerProject(project.value);
+  const project = checkModule(source, "main.eff");
+  assertEquals(project.diagnostics, []);
+  const lowered = lowerProject(project);
   for (const result of lowered.values()) assert(result.ok);
   for (
     const diagnostics of validateProject(
-      project.value.analysis.project,
+      project.analysis.project,
       lowered,
     )
       .values()
   ) assertEquals(diagnostics, []);
   const emitted = emitProject(lowered, {
-    config: project.value.analysis.project.config,
+    config: project.analysis.project.config,
   });
   const main = emitted.get("main");
   assert(main?.ok);

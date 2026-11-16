@@ -1,11 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  lowerProject,
-  memoryHost,
-  serializeModule,
-} from "../src/core/mod.ts";
+import { lowerProject, serializeModule } from "../src/core/mod.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { checkModule } from "./helpers.ts";
 
 const source = `type Text = string
 service Need { a(): Text
@@ -19,14 +15,9 @@ const adapted = schemaTransform(
 `;
 
 Deno.test("Schema requirement sets must be sorted and unique in both service directions", () => {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": source }),
-    "",
-    ["main.eff"],
-  );
-  assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const lowered = lowerProject(checked.value).get("main");
+  const checked = checkModule(source, "main.eff");
+  assertEquals(checked.diagnostics, []);
+  const lowered = lowerProject(checked).get("main");
   assert(lowered?.ok);
   const sources = new Map([["main.eff", source]]);
   assertEquals(validateModule(lowered.value, sources), []);

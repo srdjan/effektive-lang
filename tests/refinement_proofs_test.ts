@@ -10,15 +10,10 @@ import {
 import type { ValueId } from "../src/core/ir.ts";
 import { nodeSpan } from "../src/core/syntax.ts";
 import { TypeTable } from "../src/core/types.ts";
+import { checkModule } from "./helpers.ts";
 
 function check(text: string): CheckedProject {
-  const result = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(result.ok, JSON.stringify(result));
-  return result.value;
+  return checkModule(text);
 }
 
 function messages(project: CheckedProject): string[] {

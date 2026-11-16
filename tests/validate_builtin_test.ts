@@ -2,9 +2,10 @@
 // intentionally read different fields, including when those fields disagree.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
 import type { FunctionType, ModuleIR, Type } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { checkModule } from "./helpers.ts";
 
 const SOURCE = `type Int = int
 const probe = () => map([1], (n) => n + 1)
@@ -12,14 +13,9 @@ const probe = () => map([1], (n) => n + 1)
 const SOURCES = new Map([["m.eff", SOURCE]]);
 
 function lower(source: string): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const lowered = lowerProject(checked.value).get("m");
+  const checked = checkModule(source);
+  assertEquals(checked.diagnostics, []);
+  const lowered = lowerProject(checked).get("m");
   assert(lowered?.ok);
   assertEquals(validateModule(lowered.value, new Map([["m.eff", source]])), []);
   return lowered.value;

@@ -3,10 +3,10 @@
 
 import { assert, assertEquals } from "@std/assert";
 import { Program, sourceHoverAt } from "../src/core/frontend.ts";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
 import type { Expr, ModuleIR } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { diagnosticsOf } from "./helpers.ts";
+import { checkModule, diagnosticsOf } from "./helpers.ts";
 
 const HEAD = `type Int = int
 type Text = string
@@ -138,13 +138,8 @@ const SOURCE = `${HEAD}export const a = (): Int with Log.boom =>
 `;
 
 function forged(change: (ir: ModuleIR) => void): string[] {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": SOURCE }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok);
-  const module = lowerProject(checked.value).get("m");
+  const checked = checkModule(SOURCE);
+  const module = lowerProject(checked).get("m");
   assert(module?.ok);
   const sources = new Map([["m.eff", SOURCE]]);
   assertEquals(validateModule(module.value, sources), []);

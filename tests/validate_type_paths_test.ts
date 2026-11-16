@@ -7,7 +7,7 @@
 // something besides their children.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
 import type { Effects, ModuleIR, Span, Type } from "../src/core/ir.ts";
 import { createReport, type Report } from "../src/core/validate/report.ts";
 import { typeChildren } from "../src/core/validate/type_children.ts";
@@ -17,6 +17,7 @@ import {
   checkTypeIds,
 } from "../src/core/validate/type_checks.ts";
 import { buildWorld } from "../src/core/validate/world_table.ts";
+import { checkModule } from "./helpers.ts";
 
 const SPAN: Span = { source: "m.eff", start: 0, end: 0 };
 const NONE: Effects = { failures: [], requirements: [] };
@@ -130,13 +131,8 @@ const SLOTS: readonly Slot[] = [
 function lowerBase(): ModuleIR {
   // A bare name is a transparent alias, so `A` keeps an `alias` definition.
   const source = "export type Base = int\nexport type A = Base\n";
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": source }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  const lowered = [...lowerProject(checked.value).values()][0];
+  const checked = checkModule(source);
+  const lowered = [...lowerProject(checked).values()][0];
   assert(lowered?.ok, JSON.stringify(lowered));
   return structuredClone(lowered.value);
 }

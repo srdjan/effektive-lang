@@ -12,7 +12,7 @@
 // validator (forged IR).
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
+import { lowerProject } from "../src/core/mod.ts";
 import type { ModuleIR, Type } from "../src/core/ir.ts";
 import {
   SCHEMA_ERROR_ID,
@@ -90,14 +90,9 @@ export const ok: Schema<Int> = schema()
 `;
 
 function lowerBase(): ModuleIR {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": BASE }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics, []);
-  const lowered = [...lowerProject(checked.value).values()][0];
+  const checked = checkModule(BASE);
+  assertEquals(checked.diagnostics, []);
+  const lowered = [...lowerProject(checked).values()][0];
   assert(lowered?.ok, JSON.stringify(lowered));
   return structuredClone(lowered.value);
 }

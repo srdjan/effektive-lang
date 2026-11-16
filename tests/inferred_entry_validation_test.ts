@@ -3,18 +3,14 @@ import type { Expr, FunctionDecl, ModuleIR } from "../src/core/ir.ts";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import { exprChildren } from "../src/core/validate/expr_walk.ts";
 import { validateModule } from "../src/core/validate/index.ts";
+import { checkModule } from "./helpers.ts";
 
 function lower(
   text: string,
 ): { readonly ir: ModuleIR; readonly sources: ReadonlyMap<string, string> } {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics, []);
-  const result = lowerProject(checked.value).get("m");
+  const checked = checkModule(text);
+  assertEquals(checked.diagnostics, []);
+  const result = lowerProject(checked).get("m");
   assert(result?.ok, JSON.stringify(result));
   return { ir: result.value, sources: new Map([["m.eff", text]]) };
 }

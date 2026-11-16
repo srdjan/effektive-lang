@@ -1,21 +1,11 @@
 import { assert, assertEquals } from "@std/assert";
-import {
-  type CheckedProject,
-  checkProject,
-  memoryHost,
-} from "../src/core/mod.ts";
+import type { CheckedProject } from "../src/core/mod.ts";
 import type { ValueId } from "../src/core/ir.ts";
 import { showType } from "../src/core/type_show.ts";
-import { assertValidProject } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 function check(text: string): CheckedProject {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  return checked.value;
+  return checkModule(text);
 }
 
 function parameterType(project: CheckedProject, name: string): string {

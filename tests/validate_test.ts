@@ -17,7 +17,7 @@ import { SCHEMA_ERROR_ID } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import { fits, same, show, type TypeEnv } from "../src/core/validate/typing.ts";
 import { buildFixtures } from "../scripts/validate_fixtures.ts";
-import { diskHost, EXAMPLE_ENTRIES, FIXTURES } from "./helpers.ts";
+import { checkModule, diskHost, EXAMPLE_ENTRIES, FIXTURES } from "./helpers.ts";
 
 // ------------------------------------------------------------------ helpers
 
@@ -87,14 +87,9 @@ const FORMS = lowerDisk("emit/forms", ["forms.eff", "names.eff"]);
 function lowerText(
   text: string,
 ): { ir: ModuleIR; sources: Map<string, string> } {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics.map((d) => d.code), []);
-  const result = lowerProject(checked.value).get("m");
+  const checked = checkModule(text);
+  assertEquals(checked.diagnostics.map((d) => d.code), []);
+  const result = lowerProject(checked).get("m");
   assert(result?.ok === true);
   return { ir: result.value, sources: new Map([["m.eff", text]]) };
 }

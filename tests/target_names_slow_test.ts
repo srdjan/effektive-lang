@@ -10,8 +10,8 @@
 // acceptance property.
 
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, memoryHost } from "../src/core/frontend.ts";
 import { buildProject, check, withTemporary } from "./emit_slow_helpers.ts";
+import { checkModule } from "./helpers.ts";
 
 /** The JavaScript and TypeScript globals. */
 const GLOBALS: readonly string[] = [
@@ -281,13 +281,8 @@ interface Variant {
 
 /** The checker outcome of one program: the diagnostic codes of its module. */
 function codesOf(text: string): string[] {
-  const result = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": text }),
-    "",
-    ["main.eff"],
-  );
-  assert(result.ok, JSON.stringify(result));
-  return result.value.diagnostics.map((d) => d.code);
+  const result = checkModule(text, "main.eff");
+  return result.diagnostics.map((d) => d.code);
 }
 
 Deno.test("no accepted binding name captures a name that the generated TypeScript needs", async () => {

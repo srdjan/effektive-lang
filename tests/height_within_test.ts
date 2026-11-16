@@ -4,21 +4,16 @@
 // entry `checkProject` and pins the limit for one position of one type form: a
 // type of exactly 128 levels passes, and a type of 129 levels fails.
 
-import { assert, assertEquals } from "@std/assert";
-import { checkProject, memoryHost } from "../src/core/frontend.ts";
+import { assertEquals } from "@std/assert";
+import { checkModule } from "./helpers.ts";
 
 /** The limit of `declaration/012`, in levels. */
 const LIMIT = 128;
 
 /** The codes of the diagnostics for one module. */
 function codesOf(text: string): string[] {
-  const result = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(result.ok, JSON.stringify(result));
-  return result.value.diagnostics.map((d) => d.code);
+  const result = checkModule(text);
+  return result.diagnostics.map((d) => d.code);
 }
 
 /** `Option<Option<...int...>>` with `levels` Option levels: `levels + 1` levels deep. */

@@ -4,21 +4,16 @@
 // declared error. Each case pins the code, the text of the node that carries
 // the span, and the message.
 
-import { assert, assertEquals } from "@std/assert";
-import { checkProject, memoryHost } from "../src/core/frontend.ts";
+import { assertEquals } from "@std/assert";
+import { checkModule } from "./helpers.ts";
 
 const PRELUDE = "type Int = int\nerror E = {}\nerror F = {}\n";
 
 /** The diagnostics for one type alias `T`, as [code, node text, message]. */
 function reportsFor(body: string): string[][] {
   const text = `${PRELUDE}type T = ${body}\n`;
-  const result = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(result.ok, JSON.stringify(result));
-  return result.value.diagnostics.map((d) => [
+  const result = checkModule(text);
+  return result.diagnostics.map((d) => [
     d.code,
     text.slice(d.span.start, d.span.end),
     d.message,

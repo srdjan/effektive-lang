@@ -1,18 +1,12 @@
 // A type that already has a reported error must not produce a second report
 // at a Schema derivation site. Other data-only checks keep rejecting it.
 
-import { assert } from "@std/assert";
-import { checkProject, memoryHost } from "../src/core/mod.ts";
 import { assertDiagnostics, type Expected } from "./schema_diagnostics.ts";
+import { checkModule } from "./helpers.ts";
 
 function diagnosticsOf(source: string) {
-  const result = checkProject(
-    memoryHost({ "effektive.json": "{}", "main.eff": source }),
-    "",
-    ["main.eff"],
-  );
-  assert(result.ok, JSON.stringify(result));
-  return result.value.diagnostics;
+  const result = checkModule(source, "main.eff");
+  return result.diagnostics;
 }
 
 function assertChecks(

@@ -2,13 +2,9 @@
 // in the recursion guard. Each test reaches the code through an exported name.
 
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  lowerProject,
-  memoryHost,
-  type ProjectConfig,
-} from "../src/core/frontend.ts";
+import { lowerProject, type ProjectConfig } from "../src/core/frontend.ts";
 import { importAllowed, parseConfig } from "../src/core/project_config.ts";
+import { checkModule } from "./helpers.ts";
 
 function configOf(text: string): ProjectConfig {
   const result = parseConfig(text);
@@ -57,14 +53,9 @@ Deno.test("a double-star pattern does not match a module that its tail cannot re
 });
 
 function diagnosticsOf(text: string): string[] {
-  const checked = checkProject(
-    memoryHost({ "effektive.json": "{}", "m.eff": text }),
-    "",
-    ["m.eff"],
-  );
-  assert(checked.ok, text);
-  assert(lowerProject(checked.value).get("m") !== undefined, text);
-  return checked.value.diagnostics.map((d) => `${d.code} ${d.message}`);
+  const checked = checkModule(text);
+  assert(lowerProject(checked).get("m") !== undefined, text);
+  return checked.diagnostics.map((d) => `${d.code} ${d.message}`);
 }
 
 Deno.test("a record with an optional self field is a guarded recursion", () => {
