@@ -336,11 +336,6 @@ type OptionsSpec = {
   readonly inputs: readonly { readonly label: string; readonly type: Type }[];
 };
 
-type OptionExtrasResult = {
-  readonly core: ValidatorCore;
-  readonly extras: readonly Active[];
-};
-
 /**
  * Checks the options record of `retry` or `repeat` and returns the effects that
  * its schedule and predicates add.
@@ -351,7 +346,7 @@ function optionExtras(
   expr: Expr,
   path: string,
   spec: OptionsSpec,
-): OptionExtrasResult {
+): readonly Active[] {
   const call = spec.name;
   const extras: Active[] = [];
   function bad(
@@ -389,7 +384,7 @@ function optionExtras(
   }
   if (expr.kind !== "record") {
     c = bad(c, `${path}.options`, `${call} needs an options record`);
-    return { core: c, extras: extras };
+    return extras;
   }
   const shape = unfold(c.env, options.type);
   function typeOf(name: string): Type | undefined {
@@ -451,7 +446,7 @@ function optionExtras(
       extras[extras.length] = invocationOf(cb);
     }
   }
-  return { core: c, extras: extras };
+  return extras;
 }
 
 export function retryWithSchedule(
@@ -462,15 +457,13 @@ export function retryWithSchedule(
   const job = c.check(e.job, `${path}.job`);
   const options = c.check(e.options, `${path}.options`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "retry");
-  const checkedOptions = optionExtras(c, options, e.options, path, {
+  const extras = optionExtras(c, options, e.options, path, {
     name: "retry",
     inputs: (fn?.effects.failures ?? []).map((id) => ({
       label: id,
       type: { kind: "named", id: id },
     })),
   });
-  c = checkedOptions.core;
-  const extras = checkedOptions.extras;
   if (fn === undefined) return c.poison();
   return derivedResult(
     fn.result,
@@ -490,12 +483,10 @@ export function repeat(
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "repeat");
   let extras: readonly Active[] = [];
   if (options !== undefined && e.options !== null && fn !== undefined) {
-    const checkedOptions = optionExtras(c, options, e.options, path, {
+    extras = optionExtras(c, options, e.options, path, {
       name: "repeat",
       inputs: [{ label: show(fn.result), type: fn.result }],
     });
-    c = checkedOptions.core;
-    extras = checkedOptions.extras;
   }
   if (fn === undefined) return c.poison();
   return derivedResult(
