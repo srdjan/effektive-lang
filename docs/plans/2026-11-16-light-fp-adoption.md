@@ -741,3 +741,35 @@ The slow suite takes 8 minutes 21 seconds, including both proof-budget cases.
 The complete log is `demos/light-fp-lint/full-check-post-mutation.log`.
 The source and tests remain identical to the independently reviewed candidate.
 Only documentation changed while the gate ran. Documentation is outside the configured format and lint targets.
+
+### Archived candidate dependency correction
+
+Commit `03e24539` contains the reviewed source cleanups and seven regression tests.
+The first mutation smoke stops before any mutant runs because its archived clean suite fails.
+Main reproduced the failure with full output in a separate archive.
+The plan links to the latest handoff, which exists in the working tree but was omitted from the candidate commit.
+The failed public documentation test names that single missing target.
+The working-tree gate passed because the same handoff was present during its run.
+
+Main will include the handoff and remaining migration API notes in a corrective documentation commit.
+No source or test change is required.
+The full gate will run again before that commit, as repository guidance requires.
+The original smoke failure is `demos/light-fp-lint/mutation-sweep-03e24539-smoke.log`.
+The complete archived reproduction is `demos/light-fp-lint/mutation-sweep-03e24539-clean-repro.log`.
+
+The staged tree includes that handoff and passes the complete archived fast suite: 3,312 passed, zero failed, six ignored.
+The prospective archive hash is `398e3049392a70d40223ab314f0c5579afd192f2`.
+Its log is `demos/light-fp-lint/staged-documentation-clean.log`.
+This check covers the committed dependency set, including documentation links.
+
+The standard behavior comparison also passes against original `cbd367ab` and source candidate `03e24539`.
+All 497 records match exactly, with zero changed, missing, or added records.
+Both compilers use the same generated forged IR corpus.
+The result is `demos/light-fp-lint/behavior-final-03e24539.log`.
+This comparison does not establish performance parity.
+
+The corrective full gate passes format, lint, types, 3,312 fast tests, and 325 slow tests, with zero failures.
+The same six fast tests remain ignored. The slow suite takes 8 minutes 19 seconds.
+The complete log is `demos/light-fp-lint/full-check-documentation-dependency.log`.
+No source or test changed between the two successful full gates.
+The corrective commit includes all five reviewed documentation files, including the missing handoff.

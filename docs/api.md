@@ -223,7 +223,8 @@ and Deno APIs in the core.
 
 `parse(source, text, mode)` returns the syntax tree and the diagnostics. The
 `source` value is the path that diagnostic spans carry. The `mode` value is
-`"eff"` or `"effi"`. `fileModeOf(path)` picks the mode from the extension.
+`"eff"` or `"effi"`. An explicit `undefined` selects the mode from the extension.
+`fileModeOf(path)` also returns that mode.
 
 `printTree(tree)` prints the tree back to text. The result equals the input for
 every input, including input with errors. Positions count UTF-16 code units, and

@@ -28,6 +28,8 @@ A traversal can return a count, a set, or the first matching expression.
 `walkExpr` in `src/core/emit/walk.ts` now carries that result explicitly.
 Tests consume a numeric count or the collected expression kinds.
 An unused binding does not make an ignored result meaningful.
+A query can read captured owner state without a synthetic argument.
+An extra condition that only consumes an unused argument obscures that query.
 
 Some compiler operations must retain diagnostics while discarding an invalid type's value.
 TypeLowerer uses a specific result containing the owning lowerer and the lowered value.

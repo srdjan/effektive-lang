@@ -93,3 +93,22 @@ The constants `TIMEOUT_ERROR_ID` and `DURATION_ID` name the builtin error `Timeo
 and the builtin type `Duration`. A duration is a `nominal` node over a millisecond number.
 IR field names such as `durationMs` and `delayMillis` keep their names. Only source names changed.
 The [effect surface plan](plans/2026-10-27-effect-surface.md) gives the reasons.
+
+## Light FP function APIs, 2026-11-16
+
+The Light FP migration replaces compiler classes with owning function factories.
+`Program(root)` replaces `new Program(root)`. `Program(undefined)` selects the default root.
+`program.update(undefined)` creates an unchanged revision. `program.counts()` replaces the `counts` getter.
+`revision.types.size()` replaces the type-table `size` getter.
+
+`parse(source, text, undefined)` selects the file mode from the source extension.
+The third argument remains required. Other migrated optional arguments require an explicit value or `undefined`.
+
+`makeDiagnostic(code, message, span)` accepts three arguments.
+`makeDiagnosticWithRelated(code, message, span, related)` adds related locations.
+`TokenKind`, `TriviaKind`, and `SyntaxKind` are typed constant records. Their numeric values remain unchanged.
+
+`createTypeScriptOutputs()` creates the backend cache for strict callers.
+The existing `new TypeScriptOutputs()` API remains available in adapters.
+The closed-unit predicate `isClosedUnitId(id)` replaces the `CLOSED_UNIT_IDS.has(id)` lookup.
+Serialized IR, source forms, diagnostics, and generated output remain unchanged.
