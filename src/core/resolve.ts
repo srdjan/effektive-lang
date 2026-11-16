@@ -1103,15 +1103,13 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
           resolverSpan(qn),
           undefined,
         );
-        if (service !== undefined) {
-          const resolved = resolverMethodRef(service, names[1]);
-          resolverSelf = resolved.owner;
-        }
-        whole = service?.target;
-      } else if (service !== undefined) {
+      }
+      if (service !== undefined) {
         const resolved = resolverMethodRef(service, names[1]);
         resolverSelf = resolved.owner;
-        whole = resolved.target;
+        if (context !== "provides") {
+          whole = resolved.target;
+        }
       }
     }
     for (const extra of names.slice(2)) {

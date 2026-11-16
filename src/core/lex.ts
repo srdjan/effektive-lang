@@ -322,9 +322,6 @@ export const OPERATOR_KINDS: OperatorKinds = { has: hasOperatorKind };
  * - `clause`: starts a clause of a header (`fails`, `provides`).
  * - `positional`: a keyword only in one syntactic position (`where`, `using`).
  * - `import`: belongs to an import header (`from`, `imports`).
- *
- * `startsDeclaration` marks the words that the parser accepts as the first
- * word of a declaration when a name follows.
  */
 type ContextualRole =
   | "declaration"
@@ -335,7 +332,6 @@ type ContextualRole =
 
 type ContextualWordInfo = {
   readonly role: ContextualRole;
-  readonly startsDeclaration: boolean;
 };
 
 type ContextualWords = {
@@ -356,20 +352,20 @@ type ContextualWords = {
 };
 
 const CONTEXTUAL_WORDS: ContextualWords = {
-  type: { role: "declaration", startsDeclaration: true },
-  error: { role: "declaration", startsDeclaration: true },
-  service: { role: "declaration", startsDeclaration: true },
-  provider: { role: "declaration", startsDeclaration: true },
-  sealed: { role: "modifier", startsDeclaration: true },
-  opaque: { role: "modifier", startsDeclaration: true },
-  borrow: { role: "modifier", startsDeclaration: false },
-  pure: { role: "modifier", startsDeclaration: false },
-  fails: { role: "clause", startsDeclaration: false },
-  provides: { role: "clause", startsDeclaration: false },
-  where: { role: "positional", startsDeclaration: false },
-  using: { role: "positional", startsDeclaration: false },
-  from: { role: "import", startsDeclaration: false },
-  imports: { role: "import", startsDeclaration: false },
+  type: { role: "declaration" },
+  error: { role: "declaration" },
+  service: { role: "declaration" },
+  provider: { role: "declaration" },
+  sealed: { role: "modifier" },
+  opaque: { role: "modifier" },
+  borrow: { role: "modifier" },
+  pure: { role: "modifier" },
+  fails: { role: "clause" },
+  provides: { role: "clause" },
+  where: { role: "positional" },
+  using: { role: "positional" },
+  from: { role: "import" },
+  imports: { role: "import" },
 };
 
 export type ContextualWord = keyof typeof CONTEXTUAL_WORDS;

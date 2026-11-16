@@ -15,7 +15,7 @@ import {
   nodeSpan,
   nodeText,
   SyntaxKind,
-  TYPE_WORDS,
+  typeWord,
 } from "./syntax.ts";
 import { dataOnly, type TypeRef } from "./types.ts";
 import { arityMessage, sortedUnique } from "./util.ts";
@@ -523,7 +523,7 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
     if (kindOf(tree, node) === SyntaxKind.SchemaType) {
       // The first child is the token of the type word.
       const wordToken = childrenOf(tree, node)[0];
-      const flags = TYPE_WORDS.get(nodeText(tree, wordToken))?.schema;
+      const flags = typeWord(nodeText(tree, wordToken))?.schema;
       const presence = flags?.presence ?? "required";
       const constructorDefault =
         typeof flags?.constructorDefault === "boolean" &&

@@ -437,13 +437,6 @@ export function typeWord(word: SyntaxText): TypeWord | undefined {
   return undefined;
 }
 
-type TypeWords = {
-  readonly get: (word: SyntaxText) => TypeWord | undefined;
-};
-
-/** The fixed type-word lookup. */
-export const TYPE_WORDS: TypeWords = { get: typeWord };
-
 const TYPE_WORD_NAMES: readonly SyntaxText[] = [
   "Effect",
   "Stream",

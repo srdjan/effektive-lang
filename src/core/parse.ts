@@ -48,8 +48,8 @@ import {
   type NodeId,
   SyntaxKind,
   type SyntaxTree,
-  TYPE_WORDS,
   type TypeSlotKind,
+  typeWord,
 } from "./syntax.ts";
 
 export type ParseResult = {
@@ -1202,7 +1202,7 @@ function createParser(
           return owner;
         }
       }
-      const word = TYPE_WORDS.get(name);
+      const word = typeWord(name);
       if (word !== undefined && parserKinds[parserPos + 1] === TokenKind.Lt) {
         owner = parserBegin();
         owner = parserTok();
