@@ -42,3 +42,8 @@ export function arityMessage(
     expected === 1 ? "" : "s"
   }, but ${given} ${given === 1 ? "is" : "are"} given`;
 }
+
+/** True only for the boolean `true`; any other value, including a forged flag, is false. */
+export function trueFlag(value: UnknownValue): value is true {
+  return typeof value === "boolean" && value;
+}

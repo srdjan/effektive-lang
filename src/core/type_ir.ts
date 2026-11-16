@@ -7,11 +7,7 @@ import { guardedRecord, literalTagOf } from "./recursion_guard.ts";
 import { mapFrom } from "./runtime.ts";
 import { panic } from "./source.ts";
 import type { SchemaPresence, TypeNode, TypeRef, TypeTable } from "./types.ts";
-import { compareText } from "./util.ts";
-
-function trueFlag(value: unknown): value is true {
-  return typeof value === "boolean" && value;
-}
+import { compareText, trueFlag } from "./util.ts";
 
 function schemaPresence(
   type: Type & { readonly kind: "schema" },
@@ -77,8 +73,7 @@ export function typeFromIr(table: TypeTable, type: Type): TypeRef {
       {
         presence: schemaPresence(type),
         makeInput: typeFromIr(table, type.makeInput ?? type.decoded),
-        constructorDefault: typeof type.constructorDefault === "boolean" &&
-          type.constructorDefault,
+        constructorDefault: trueFlag(type.constructorDefault),
       },
     );
   }

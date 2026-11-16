@@ -4,6 +4,7 @@ import { fieldHelperDeclarations } from "./fields.ts";
 // the project configuration. It is synchronous and pure: the caller writes files.
 import type { Declaration, ModuleIR, TypeDecl } from "../ir.ts";
 import { indices } from "../runtime.ts";
+import { trueFlag } from "../util.ts";
 import { caught, isInvariantFailure, type Result, rethrow } from "../source.ts";
 import {
   fileNameOf,
@@ -47,9 +48,6 @@ export type EmitError = {
   readonly module: string;
   readonly message: string;
 };
-function trueFlag(value: unknown): value is true {
-  return typeof value === "boolean" && value;
-}
 function importLine(group: ImportGroup): Doc {
   const names = group.names.map((n) => {
     const base = n.exported === n.local

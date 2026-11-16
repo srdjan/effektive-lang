@@ -27,6 +27,7 @@ import {
 } from "./doc.ts";
 import { internal } from "./failure.ts";
 import { servicesOf } from "./identity.ts";
+import { trueFlag } from "../util.ts";
 import type { EmitNames } from "./module_state.ts";
 import { isDeferredType } from "./type_query.ts";
 function literalText(value: string | number | boolean | null): string {
@@ -162,9 +163,6 @@ function functionTypeDoc(scope: EmitNames, type: FunctionType): Doc {
     " => ",
     returns,
   ];
-}
-function trueFlag(value: unknown): value is true {
-  return typeof value === "boolean" && value;
 }
 /**
  * True when a Schema carries make-input or optionality metadata. The printed type

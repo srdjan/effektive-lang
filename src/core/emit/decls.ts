@@ -19,6 +19,7 @@ import type {
   TypeDecl,
   ValueId,
 } from "../ir.ts";
+import { trueFlag } from "../util.ts";
 import { isCycle, stronglyConnectedComponents } from "../graph.ts";
 import { containsNamed } from "../recursion_guard.ts";
 import { declarationReferencedIds } from "../referenced_ids.ts";
@@ -57,9 +58,6 @@ import {
 import { valueReferences } from "./walk.ts";
 import type { Predicate, Term } from "../predicates.ts";
 const LINE_WIDTH = 80;
-function trueFlag(value: unknown): value is true {
-  return typeof value === "boolean" && value;
-}
 // ------------------------------------------------------------------ references
 /** The walk adds only type, error, and service identities, so each one is a `DeclarationId`. */
 function referencedDeclarations(declaration: Declaration): Set<DeclarationId> {

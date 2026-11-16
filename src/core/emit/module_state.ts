@@ -29,7 +29,7 @@ import {
   relativeSpecifier,
 } from "../paths.ts";
 import type { ProjectConfig } from "../project_config.ts";
-import { compareText } from "../util.ts";
+import { compareText, trueFlag } from "../util.ts";
 import { isValueId } from "../ids.ts";
 import { internal } from "./failure.ts";
 import { moduleOfId, nameOfId } from "./identity.ts";
@@ -39,9 +39,6 @@ const INT_TYPE: Type = { kind: "primitive", name: "int" };
 /** The order of `deno fmt` for named imports: case-insensitive, then by code unit. */
 function compareImportNames(a: string, b: string): number {
   return compareText(a.toLowerCase(), b.toLowerCase()) || compareText(a, b);
-}
-function trueFlag(value: unknown): value is true {
-  return typeof value === "boolean" && value;
 }
 // ------------------------------------------------------------------ the scope
 type HostBinding = {
