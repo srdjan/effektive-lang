@@ -7,7 +7,7 @@ import {
 } from "./runtime.ts";
 // Rule 11: a recursive data alias needs a guard that ends the recursion.
 import { isCycle, stronglyConnectedComponents } from "./graph.ts";
-import type { Type, TypeId } from "./ir.ts";
+import { isDeferredKind, type Type, type TypeId } from "./ir.ts";
 import { referencedIds } from "./referenced_ids.ts";
 type TagText = string;
 type Guarded = boolean;
@@ -51,11 +51,7 @@ export function containsNamed(part: Type, id: TypeId): Guarded {
   }
   if (
     part.kind === "primitive" || part.kind === "literal" ||
-    part.kind === "tuple" || part.kind === "ref" ||
-    part.kind === "retry-schedule" || part.kind === "schema" ||
-    part.kind === "effect" || part.kind === "stream" ||
-    part.kind === "sink" || part.kind === "function" ||
-    part.kind === "provider"
+    part.kind === "tuple" || isDeferredKind(part)
   ) {
     return false;
   }
@@ -105,11 +101,8 @@ export function guardedRecord(
     }
     if (part.kind === "primitive" || part.kind === "literal") return true;
     if (
-      part.kind === "tuple" || part.kind === "option" || part.kind === "ref" ||
-      part.kind === "retry-schedule" || part.kind === "schema" ||
-      part.kind === "effect" || part.kind === "stream" ||
-      part.kind === "sink" || part.kind === "function" ||
-      part.kind === "provider"
+      part.kind === "tuple" || part.kind === "option" ||
+      isDeferredKind(part)
     ) {
       return false;
     }

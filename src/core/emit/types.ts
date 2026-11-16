@@ -11,7 +11,7 @@ import type {
   FunctionType,
   Type,
 } from "../ir.ts";
-import { isClosedUnitId, SCOPE_CAPABILITY } from "../ir.ts";
+import { isClosedUnitId, isDeferredKind, SCOPE_CAPABILITY } from "../ir.ts";
 import {
   bracketed,
   callWith,
@@ -30,7 +30,6 @@ import { internal } from "./failure.ts";
 import { servicesOf } from "./identity.ts";
 import { trueFlag } from "../util.ts";
 import type { EmitNames } from "./module_state.ts";
-import { isDeferredType } from "./type_query.ts";
 function literalText(value: string | number | boolean | null): string {
   return typeof value === "string" ? JSON.stringify(value) : String(value);
 }
@@ -394,7 +393,7 @@ export function encodedTypeDoc(
   type: Type,
   recursive: MaybeRecursiveTypes,
 ): Doc {
-  if (isDeferredType(type)) {
+  if (isDeferredKind(type)) {
     return internal("a deferred or function type has no schema");
   }
   if (type.kind === "primitive" || type.kind === "literal") {
@@ -461,7 +460,7 @@ export function schemaDoc(
   recursive: MaybeRecursiveTypes,
 ): Doc {
   const schema = scope.effect("Schema");
-  if (isDeferredType(type)) {
+  if (isDeferredKind(type)) {
     return internal("a deferred or function type has no schema");
   }
   if (type.kind === "primitive") {

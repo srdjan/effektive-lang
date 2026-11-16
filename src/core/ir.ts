@@ -99,6 +99,41 @@ export type Type =
       };
     };
 
+/**
+ * The type kinds that have no schema and no runtime value: functions and the
+ * effectful or handle types. The type printers throw for them, and an alias
+ * that contains one is type-only.
+ */
+export type DeferredKind =
+  | "function"
+  | "effect"
+  | "stream"
+  | "sink"
+  | "provider"
+  | "ref"
+  | "retry-schedule"
+  | "schema";
+const DEFERRED_KINDS: Record<DeferredKind, true> = {
+  "function": true,
+  "effect": true,
+  "stream": true,
+  "sink": true,
+  "provider": true,
+  "ref": true,
+  "retry-schedule": true,
+  "schema": true,
+};
+/**
+ * True for a node of a deferred kind. The node is an IR `Type` or a checker
+ * `TypeNode`. After this guard fails, a chain of `kind ===` tests over the
+ * rest of the kinds is exhaustive, so a new kind is a compile error there.
+ */
+export function isDeferredKind<T extends { readonly kind: string }>(
+  node: T,
+): node is Extract<T, { readonly kind: DeferredKind }> {
+  return Object.hasOwn(DEFERRED_KINDS, node.kind);
+}
+
 export type Parameter = {
   readonly id: LocalId;
   readonly name: string;

@@ -12,6 +12,7 @@ import {
   DURATION_ID,
   INSTANT_ID,
   isClosedUnitId,
+  isDeferredKind,
   SCHEMA_ERROR_ID,
   SCHEMA_ISSUE_ID,
   TIMEOUT_ERROR_ID,
@@ -1456,12 +1457,7 @@ export function dataOnly(
       return record !== undefined && visit(record);
     }
     if (type.kind === "error") return acceptPoisoned;
-    if (
-      type.kind === "retry-schedule" || type.kind === "ref" ||
-      type.kind === "schema" || type.kind === "effect" ||
-      type.kind === "stream" || type.kind === "sink" ||
-      type.kind === "function" || type.kind === "provider"
-    ) return false;
+    if (isDeferredKind(type)) return false;
     const unreachable: never = type;
     return unreachable;
   }
@@ -1520,12 +1516,7 @@ export function containsDeferredType(
     if (seen.has(current)) return false;
     seen = seen.add(current);
     const type = table.node(current);
-    if (
-      type.kind === "function" || type.kind === "effect" ||
-      type.kind === "stream" || type.kind === "sink" ||
-      type.kind === "retry-schedule" || type.kind === "ref" ||
-      type.kind === "schema" || type.kind === "provider"
-    ) return true;
+    if (isDeferredKind(type)) return true;
     if (type.kind === "named") {
       // A tagged record stops the walk: its own declaration is checked on its own.
       const alias = !isTypeId(type.id) || table.isErrorOrTagged(type.id)
@@ -1583,11 +1574,7 @@ export function containsOpaqueType(
     if (type.kind === "union") return type.members.some(visit);
     if (
       type.kind === "primitive" || type.kind === "literal" ||
-      type.kind === "error" || type.kind === "retry-schedule" ||
-      type.kind === "ref" || type.kind === "schema" ||
-      type.kind === "effect" || type.kind === "stream" ||
-      type.kind === "sink" || type.kind === "function" ||
-      type.kind === "provider"
+      type.kind === "error" || isDeferredKind(type)
     ) return false;
     const unreachable: never = type;
     return unreachable;

@@ -14,6 +14,7 @@ import type {
   TypeDecl,
   ValueId,
 } from "../ir.ts";
+import { isDeferredKind } from "../ir.ts";
 import { trueFlag } from "../util.ts";
 import { isCycle, stronglyConnectedComponents } from "../graph.ts";
 import { containsNamed } from "../recursion_guard.ts";
@@ -38,7 +39,6 @@ import { at } from "./emitted.ts";
 import { ExprEmitter } from "./expr.ts";
 import { internal } from "./failure.ts";
 import type { ModuleState } from "./module_state.ts";
-import { isDeferredType } from "./type_query.ts";
 import { tokenOfId } from "../ids.ts";
 import { nameOfId, servicesOf } from "./identity.ts";
 import {
@@ -646,7 +646,7 @@ export function DeclarationEmitter(scope: ModuleState): DeclarationEmitter {
     type: Type,
     seen: Set<DeclarationId>,
   ): "tagged" | "plain" | "none" {
-    if (isDeferredType(type)) {
+    if (isDeferredKind(type)) {
       return "none";
     }
     function all(types: readonly Type[]): "tagged" | "plain" | "none" {

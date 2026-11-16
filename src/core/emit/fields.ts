@@ -1,7 +1,7 @@
 import { emptySet, setFrom } from "../runtime.ts";
 // Property semantics at the JavaScript boundary. Adapters follow declared data
 // shapes only: they do not traverse arbitrary host objects or deferred values.
-import type { Field, Type, TypeDecl } from "../ir.ts";
+import { type Field, isDeferredKind, type Type, type TypeDecl } from "../ir.ts";
 import { type Doc, hard } from "./doc.ts";
 import type { ExprScope, TypeLookup } from "./module_state.ts";
 type FieldName = Field["name"];
@@ -64,10 +64,7 @@ function needsFieldAdapterIn(
   }
   if (
     type.kind === "primitive" || type.kind === "literal" ||
-    type.kind === "ref" || type.kind === "retry-schedule" ||
-    type.kind === "schema" || type.kind === "effect" ||
-    type.kind === "stream" || type.kind === "sink" ||
-    type.kind === "function" || type.kind === "provider"
+    isDeferredKind(type)
   ) {
     return false;
   }

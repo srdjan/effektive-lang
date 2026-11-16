@@ -1,10 +1,10 @@
-// The deferred Type kinds have no schema and no runtime value. `isDeferredType`
-// of emit/module_state.ts is the one list of them. The table below has one sample for
+// The deferred Type kinds have no schema and no runtime value. `isDeferredKind`
+// of ir.ts is the one list of them. The table below has one sample for
 // every Type kind, so a new kind is a compile error here until it is classified.
 
 import { assertEquals } from "@std/assert";
 import type { Effects, Type } from "../src/core/ir.ts";
-import { isDeferredType } from "../src/core/emit/type_query.ts";
+import { isDeferredKind } from "../src/core/ir.ts";
 
 const NONE: Effects = { failures: [], requirements: [] };
 const STRING: Type = { kind: "primitive", name: "string" };
@@ -44,8 +44,8 @@ const SAMPLES: { readonly [K in Type["kind"]]: Extract<Type, { kind: K }> } = {
   },
 };
 
-Deno.test("isDeferredType holds for exactly the eight deferred kinds", () => {
-  const deferred = Object.values(SAMPLES).filter(isDeferredType).map((t) =>
+Deno.test("isDeferredKind holds for exactly the eight deferred kinds", () => {
+  const deferred = Object.values(SAMPLES).filter(isDeferredKind).map((t) =>
     t.kind
   ).sort();
   assertEquals(deferred, [

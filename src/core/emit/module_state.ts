@@ -14,6 +14,7 @@ import type {
 } from "../ir.ts";
 import {
   isClosedUnitId,
+  isDeferredKind,
   SCHEMA_ERROR_ID,
   SCHEMA_ISSUE_ID,
   TIMEOUT_ERROR_ID,
@@ -33,7 +34,7 @@ import { compareText, trueFlag } from "../util.ts";
 import { isValueId } from "../ids.ts";
 import { internal } from "./failure.ts";
 import { moduleOfId, nameOfId } from "./identity.ts";
-import { type EffectModule, isDeferredType } from "./type_query.ts";
+import type { EffectModule } from "./type_query.ts";
 import { binderNames } from "./walk.ts";
 const INT_TYPE: Type = { kind: "primitive", name: "int" };
 /** The order of `deno fmt` for named imports: case-insensitive, then by code unit. */
@@ -504,7 +505,7 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     return internal("a named type chain exceeded the native index range");
   }
   function moduleStateContainsFunction(type: Type): boolean {
-    if (isDeferredType(type)) {
+    if (isDeferredKind(type)) {
       return true;
     }
     if (type.kind === "primitive" || type.kind === "literal") return false;
