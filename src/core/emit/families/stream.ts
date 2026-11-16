@@ -5,7 +5,6 @@ import {
   callArguments,
   concurrencyArguments,
   type Emitted,
-  emitted,
   type Kid,
   plainEmitted,
   PREC,
@@ -34,26 +33,18 @@ export function streamStructural(
     const next = plainEmitted([
       `${effect}.map`,
       callArguments([
-        emitted(
-          [
-            at(callback, PREC.member),
-            callArguments([emitted(state, undefined, undefined)]),
-          ],
-          undefined,
-          undefined,
-        ),
-        emitted(`${option}.getOrUndefined`, undefined, undefined),
+        plainEmitted([
+          at(callback, PREC.member),
+          callArguments([plainEmitted(state)]),
+        ]),
+        plainEmitted(`${option}.getOrUndefined`),
       ]),
     ]);
     return plainEmitted([
       `${stream}.unfold`,
       callArguments([
         kid(e.seed, undefined),
-        emitted(
-          c.arrow(`(${state})`, next, undefined),
-          undefined,
-          undefined,
-        ),
+        plainEmitted(c.arrow(`(${state})`, next, undefined)),
       ]),
     ]);
   }
@@ -79,7 +70,7 @@ export function streamStructural(
       `${c.scope.effect("Sink")}.take`,
       typeArguments([typeDoc(c.scope, type.input, undefined)]),
       callArguments([
-        emitted(String(e.count), undefined, undefined),
+        plainEmitted(String(e.count)),
       ]),
     ]);
   }
@@ -104,11 +95,7 @@ export function streamStructural(
       `${stream}.buffer`,
       callArguments([
         kid(e.stream, undefined),
-        emitted(
-          `{ capacity: ${e.capacity}, strategy: "suspend" }`,
-          undefined,
-          undefined,
-        ),
+        plainEmitted(`{ capacity: ${e.capacity}, strategy: "suspend" }`),
       ]),
     ]);
   }

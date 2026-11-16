@@ -18,12 +18,8 @@ function releaseWithOutcome(c: ExprCore, release: ClosureExpr): Emitted {
   const call = plainEmitted([
     at(c.closure(release, true, true), PREC.member),
     callArguments([
-      emitted(resource, undefined, undefined),
-      emitted(
-        `${c.scope.outcome().make}(${exit})`,
-        undefined,
-        undefined,
-      ),
+      plainEmitted(resource),
+      plainEmitted(`${c.scope.outcome().make}(${exit})`),
     ]),
   ]);
   return emitted(
@@ -43,12 +39,8 @@ export function scopeLeaf(
     return plainEmitted([
       `${effect}.as`,
       callArguments([
-        emitted(
-          [`${effect}.forkScoped`, callArguments([children[0]])],
-          undefined,
-          undefined,
-        ),
-        emitted("undefined", undefined, undefined),
+        plainEmitted([`${effect}.forkScoped`, callArguments([children[0]])]),
+        plainEmitted("undefined"),
       ]),
     ]);
   }
@@ -67,11 +59,7 @@ export function scopeLeaf(
     return plainEmitted([
       `${effect}.acquireUseRelease`,
       callArguments([
-        emitted(
-          [`${effect}.suspend`, callArguments([acquire])],
-          undefined,
-          undefined,
-        ),
+        plainEmitted([`${effect}.suspend`, callArguments([acquire])]),
         use,
         release,
       ]),

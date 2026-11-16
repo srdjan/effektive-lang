@@ -296,7 +296,7 @@ function optionRecord(
 /**
  * Checks a general options record of `retry` or `repeat`: each key is `times`,
  * `while`, or `until`, at most once. A `retry` record also takes `schedule`. The result carries the effects
- * that the callbacks and the schedule add to the call.
+ * that the callbacks add to the call.
  */
 function callOptions(
   c: EffectContext,

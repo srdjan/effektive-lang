@@ -123,7 +123,7 @@ function guardedDuration(
     `${effect}.suspend(() => { const ${ms}: number = `,
     free(duration),
     `; if (${ms} < 0) throw new RangeError("negative duration"); return `,
-    free(build(emitted(ms, undefined, undefined))),
+    free(build(plainEmitted(ms))),
     `; })`,
   ]);
 }

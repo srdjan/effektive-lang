@@ -1,3 +1,6 @@
+// The expression scheme: `pure`, `inGen`, and `asEffect`, the leaf and hoist
+// rules, the control forms, and the parentheses around `yield*`.
+
 import {
   fieldKey,
   needsFieldAdapter,
@@ -5,8 +8,6 @@ import {
   sensitiveField,
   taggedFields,
 } from "./fields.ts";
-// The expression scheme: `pure`, `asEffect`, the leaf and hoist rules, the control forms, and the parentheses
-// around `yield*`.
 import type {
   Arm,
   DefectHandler,
@@ -1164,7 +1165,7 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       if (!sensitiveField(e.field)) {
         return plainEmitted([
           `${option}.fromUndefinedOr`,
-          callArguments([emitted(access, undefined, undefined)]),
+          callArguments([plainEmitted(access)]),
         ]);
       }
       const resultType = resolvedAs(
@@ -2176,11 +2177,7 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     const call = plainEmitted([
       at(exprEmitterClosure(e.finalizer, true, true), PREC.member),
       callArguments([
-        emitted(
-          `${exprEmitterScope.outcome().make}(${exit})`,
-          undefined,
-          undefined,
-        ),
+        plainEmitted(`${exprEmitterScope.outcome().make}(${exit})`),
       ]),
     ]);
     return plainEmitted([
@@ -2233,14 +2230,12 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     const recovery = issueHandler === undefined ? catchTags : plainEmitted([
       `${effect}.catchIf`,
       callArguments([
-        emitted(
+        plainEmitted(
           `(${predicate}): ${predicate} is typeof ${predicate} & ${
             exprEmitterScope.effect("SchemaIssue")
           }.Issue => ${
             exprEmitterScope.effect("SchemaIssue")
           }.isIssue(${predicate})`,
-          undefined,
-          undefined,
         ),
         exprEmitterArrowEmitted(`(${issueHandler.binding.name})`, {
           kind: "expr",
@@ -2249,14 +2244,10 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         ...(tagged.length === 0 ? [] : [
           exprEmitterArrowEmitted(`(${rest})`, {
             kind: "expr",
-            body: emitted(
-              [
-                `${effect}.fail(${rest}).pipe`,
-                callArguments([catchTags]),
-              ],
-              undefined,
-              undefined,
-            ),
+            body: plainEmitted([
+              `${effect}.fail(${rest}).pipe`,
+              callArguments([catchTags]),
+            ]),
           }),
         ]),
       ]),

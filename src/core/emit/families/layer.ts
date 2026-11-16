@@ -1,11 +1,6 @@
 // Emission of the layer builtins: a source layer and provide.
 import { bracketed, type Doc } from "../doc.ts";
-import {
-  callArguments,
-  type Emitted,
-  emitted,
-  plainEmitted,
-} from "../emitted.ts";
+import { callArguments, type Emitted, plainEmitted } from "../emitted.ts";
 import { fieldKey } from "../fields.ts";
 import { internal } from "../failure.ts";
 import { type ExprOf, hoistedOperands, type LeafOf } from "../shape.ts";
@@ -55,7 +50,7 @@ export function layerStructural(
       ".",
       method.name,
       callArguments(
-        names.map((name) => emitted(name, undefined, undefined)),
+        names.map((name) => plainEmitted(name)),
       ),
     ]);
     const body = source.execution === "pure"
@@ -68,17 +63,13 @@ export function layerStructural(
     `${effect}.map`,
     callArguments([
       c.suspended(e.acquire, undefined),
-      emitted(
-        c.arrow(`(${instance})`, assembled, undefined),
-        undefined,
-        undefined,
-      ),
+      plainEmitted(c.arrow(`(${instance})`, assembled, undefined)),
     ]),
   ]);
   return plainEmitted([
     `${layer}.effect`,
     callArguments([
-      emitted(c.scope.nameOf(e.service), undefined, undefined),
+      plainEmitted(c.scope.nameOf(e.service)),
       mapped,
     ]),
   ]);
