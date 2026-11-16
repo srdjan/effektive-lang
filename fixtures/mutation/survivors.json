@@ -1116,6 +1116,15 @@
     "reason": "The parser starts each UnaryExpr with its operator token, and a missing operand becomes a Missing node, so neither side of the guard is ever true and || equals &&. The test 'a unary chain deeper than the nesting limit is reported, not checked' in tests/check_unary_test.ts runs 600 nested minus signs and still reaches no undefined operand."
   },
   {
+    "file": "src/core/check_expr.ts",
+    "declaration": "createBodyChecker.checkFit",
+    "offset": 137,
+    "text": "fits(node, found, expected, what)",
+    "operator": "negate-if",
+    "class": "equivalent",
+    "reason": "Both exits of checkFit return checker, and each reads it after the call of fits, which records the diagnostic. Negating the test changes no returned value. A differential through the diagnostics of the 86 error fixtures and the examples gave the same output for the source and the mutant. A logging copy counted 2815 calls with fits true and 14 with fits false, so both outcomes of the negated test occurred."
+  },
+  {
     "file": "src/core/check_refinements.ts",
     "declaration": "RefinementChecker.linear",
     "offset": 762,
