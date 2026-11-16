@@ -26,7 +26,6 @@ export type ValidationMessage = string;
 export type ValidationText = string;
 export type ValidationTexts = readonly ValidationText[];
 export type ValidationFlag = boolean;
-export type ValidationCount = number;
 export type DepthLimit = number;
 
 /** The span of a finding that has no source position: the start of the first source. */
