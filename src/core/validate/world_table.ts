@@ -41,11 +41,14 @@ export type World = {
   readonly builtinInfo: ReadonlyMap<string, BuiltinInfo>;
 };
 
-function addFirst<V>(
-  map: Map<string, V>,
-  key: string,
+type EntryKey = string;
+
+/** Sets `key` only when the map has no entry for it, so the first entry wins. */
+export function addFirst<V>(
+  map: Map<EntryKey, V>,
+  key: EntryKey,
   value: V,
-): Map<string, V> {
+): Map<EntryKey, V> {
   return map.has(key) ? map : map.set(key, value);
 }
 

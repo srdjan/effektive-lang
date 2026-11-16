@@ -26,7 +26,7 @@ import { validateModule } from "./validate/index.ts";
 import { AREA } from "./validate/report.ts";
 import { fallbackSpan } from "./validate/prelude.ts";
 import { isRecord } from "./validate/guards.ts";
-import { PRELUDE_MODULE } from "./validate/world_table.ts";
+import { addFirst, PRELUDE_MODULE } from "./validate/world_table.ts";
 
 /** The part of a project that the validator reads: its modules. */
 type ProjectModules = Pick<Project, "modules">;
@@ -92,18 +92,9 @@ function describe(path: string, imported: Json, produced: Json): string {
 /** The declarations that a module holds or carries in its import payloads, by identity. */
 function knownDeclarations(producer: ModuleIR): ReadonlyMap<string, Json> {
   let known = emptyMap<string, Json>();
-  function add(
-    declarations: Map<string, Json>,
-    id: string,
-    declaration: Json,
-  ): Map<string, Json> {
-    return declarations.has(id)
-      ? declarations
-      : declarations.set(id, declaration);
-  }
   for (const d of producer.declarations) {
     // A value keeps its identity, name, and type in an import payload.
-    known = add(
+    known = addFirst(
       known,
       d.id,
       d.kind === "function" || d.kind === "constant"
@@ -115,7 +106,7 @@ function knownDeclarations(producer: ModuleIR): ReadonlyMap<string, Json> {
     for (const payload of payloadEntries(imp)) {
       const id = payload[0];
       const entry = payload[1];
-      known = add(known, id, entry);
+      known = addFirst(known, id, entry);
     }
   }
   return known;

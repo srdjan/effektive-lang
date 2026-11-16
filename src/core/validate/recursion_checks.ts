@@ -18,20 +18,14 @@ import { type Ctx, flag, type World } from "./world_table.ts";
 
 function collectOwnTargets(
   own: ReadonlySet<string>,
-  targets: string[],
   type: Type,
   depth: number,
 ): string[] {
-  if (depth > MAX_DEPTH) return targets;
-  if (type.kind === "named") {
-    if (own.has(type.id)) targets[targets.length] = type.id;
-    return targets;
-  }
-  let found = targets;
-  for (const child of typeChildren(type)) {
-    found = collectOwnTargets(own, found, child.type, depth + 1);
-  }
-  return found;
+  if (depth > MAX_DEPTH) return [];
+  if (type.kind === "named") return own.has(type.id) ? [type.id] : [];
+  return typeChildren(type).flatMap((child) =>
+    collectOwnTargets(own, child.type, depth + 1)
+  );
 }
 
 /** Rechecks finite self recursion without trusting the checker. */
@@ -157,17 +151,14 @@ function guardedDataGroups(
     }
     const tagged = env.taggedRecords.get(id);
     const alias = env.aliases.get(id);
-    let roots: readonly Type[] = [];
-    if (tagged !== undefined) roots = [tagged];
-    else if (alias !== undefined) roots = [alias];
-    let found = emptyMap<string, boolean>();
-    for (const root of roots) found = visit(found, root, false, 0);
-    return found;
+    const root = tagged ?? alias;
+    return root === undefined
+      ? emptyMap<string, boolean>()
+      : visit(emptyMap<string, boolean>(), root, false, 0);
   }
   // Tarjan's components of the reference graph of the module.
   let graph = emptyMap<string, string[]>();
   for (const id of ids) {
-    const targets: string[] = [];
     const roots: Type[] = [];
     const alias = env.aliases.get(id);
     const opaqueBase = env.opaqueBases.get(id);
@@ -178,11 +169,10 @@ function guardedDataGroups(
     ) {
       roots[roots.length] = f.type;
     }
-    let foundTargets = targets;
-    for (const root of roots) {
-      foundTargets = collectOwnTargets(own, foundTargets, root, 0);
-    }
-    graph = graph.set(id, foundTargets);
+    graph = graph.set(
+      id,
+      roots.flatMap((root) => collectOwnTargets(own, root, 0)),
+    );
   }
   let number = emptyMap<string, number>();
   let low = emptyMap<string, number>();
