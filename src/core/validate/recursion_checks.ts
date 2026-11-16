@@ -49,9 +49,7 @@ function guardedRecord(
     type.members.some((member) => !containsSelf(member));
   const firstMember = type.kind === "union" ? type.members[0] : undefined;
   const tagNames = tagged && firstMember?.kind === "record"
-    ? firstMember.fields
-      .filter((field) => !field.optional && tagOf(field.type) !== undefined)
-      .map((field) => field.name)
+    ? firstMember.fields.map((field) => field.name)
     : [];
   const hasDistinctTag = type.kind === "union" && tagNames.some((name) => {
     const fields = type.members.map((member) =>
@@ -66,7 +64,7 @@ function guardedRecord(
           field === undefined ? undefined : tagOf(field.type)
         )).size === fields.length;
   });
-  if (type.kind !== "record" && !(tagged && hasDistinctTag)) return false;
+  if (type.kind !== "record" && !hasDistinctTag) return false;
   let sawSelf = false;
   function walk(part: Type, guarded: boolean): boolean {
     if (part.kind === "named") {
@@ -81,7 +79,7 @@ function guardedRecord(
       );
     }
     if (part.kind === "union") {
-      return (guarded || (part === type && tagged && hasDistinctTag)) &&
+      return (guarded || (part === type && hasDistinctTag)) &&
         part.members.every((member) => walk(member, true));
     }
     return part.kind === "primitive" || part.kind === "literal";
@@ -211,9 +209,7 @@ function guardedDataGroups(
       if (m === id) break;
     }
     const cycle = members.length > 1 || (graph.get(id) ?? []).includes(id);
-    if (!cycle || !members.some((m) => env.taggedRecords.has(m))) {
-      return counter;
-    }
+    if (!cycle) return counter;
     if (!members.every((m) => env.taggedRecords.has(m) || env.aliases.has(m))) {
       return counter;
     }
