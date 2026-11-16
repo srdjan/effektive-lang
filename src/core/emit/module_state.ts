@@ -79,6 +79,18 @@ export type HelperKey =
   | "unmatched"
   | "hostCheck"
   | "outcome";
+type NamedHelperKey = Exclude<HelperKey, "outcome">;
+const HELPER_NAMES: Readonly<Record<NamedHelperKey, string>> = {
+  intSchema: "$Int",
+  intFunction: "$int",
+  remainder: "$rem",
+  divide: "$div",
+  round: "$round",
+  at: "$at",
+  sort: "$sort",
+  unmatched: "$unmatched",
+  hostCheck: "$hostCheck",
+};
 /** The key of a module-level field helper. The key names the helper in the emitted text. */
 export type FieldHelperKey =
   | "record"
@@ -132,45 +144,24 @@ export type ExprScope =
     ModuleState,
     "locals" | "hostBinding" | "fieldAdapters" | "fieldHelpers"
   >;
-export type ModuleState = {
-  readonly source: string;
-  readonly path: string;
-  readonly locals: ReadonlyMap<`local:${string}`, string>;
-  readonly hosts: ReadonlyMap<DeclarationId, HostBinding>;
-  readonly fieldHelpers: ReadonlyMap<FieldHelperKey, string>;
-  readonly fieldAdapters: () => Iterable<FieldAdapter>;
-  readonly fieldAdapter: (
-    type: Type,
-    direction: "decoded" | "encoded" | "make",
-  ) => string;
-  readonly fieldHelper: (key: FieldHelperKey) => string;
-  readonly ir: ModuleIR;
-  readonly fresh: (base: string) => string;
-  readonly temp: () => string;
-  readonly resetTemporaries: () => ModuleState;
-  readonly effect: (module: EffectModule) => string;
-  readonly encodedMirrorName: (id: DeclarationId) => string;
-  readonly usesHelper: (key: HelperKey) => boolean;
-  readonly intFunction: () => string;
-  readonly remainder: () => string;
-  readonly divide: () => string;
-  readonly at: () => string;
-  readonly sort: () => string;
-  readonly round: () => string;
-  readonly unmatched: () => string;
-  readonly outcome: () => OutcomeNames;
-  readonly hostCheck: () => string;
-  readonly intSchemaName: () => string;
-  readonly serviceParameter: () => string;
-  readonly typeLevelDeclaration: (
-    id: DeclarationId,
-  ) => TypeDecl | ErrorDecl | ServiceDecl | undefined;
-  readonly isTypeOnly: (id: DeclarationId) => boolean;
-  readonly resolve: (type: Type) => Type;
-  readonly nameOf: (id: DeclarationId) => string;
-  readonly hostBinding: (id: DeclarationId) => HostBinding | undefined;
-  readonly finish: () => ImportGroup[];
-};
+export type ModuleState =
+  & EmitNames
+  & Temporaries
+  & TypeLookup
+  & {
+    readonly source: string;
+    readonly path: string;
+    readonly locals: ReadonlyMap<`local:${string}`, string>;
+    readonly hosts: ReadonlyMap<DeclarationId, HostBinding>;
+    readonly fieldHelpers: ReadonlyMap<FieldHelperKey, string>;
+    readonly fieldAdapters: () => Iterable<FieldAdapter>;
+    readonly ir: ModuleIR;
+    readonly resetTemporaries: () => ModuleState;
+    readonly usesHelper: (key: HelperKey) => boolean;
+    readonly isTypeOnly: (id: DeclarationId) => boolean;
+    readonly hostBinding: (id: DeclarationId) => HostBinding | undefined;
+    readonly finish: () => ImportGroup[];
+  };
 export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
   const moduleStateConfig = config;
   const moduleStateIr = ir;
@@ -199,15 +190,7 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
   let moduleStateEffectAliases = emptyMap<EffectModule, string>();
   let moduleStateFieldHelpers = emptyMap<FieldHelperKey, string>();
   let moduleStateFieldAdaptersByKey = emptyMap<string, FieldAdapter>();
-  let moduleStateIntSchema: string | undefined;
-  let moduleStateIntHelper: string | undefined;
-  let moduleStateRemainderHelper: string | undefined;
-  let moduleStateDivideHelper: string | undefined;
-  let moduleStateRoundHelper: string | undefined;
-  let moduleStateAtHelper: string | undefined;
-  let moduleStateSortHelper: string | undefined;
-  let moduleStateUnmatchedHelper: string | undefined;
-  let moduleStateHostCheckHelper: string | undefined;
+  let moduleStateHelperNames = emptyMap<HelperKey, string>();
   let moduleStateOutcomeHelper: OutcomeNames | undefined;
   let moduleStateServiceName: string | undefined;
   let moduleStateFinished = false;
@@ -442,58 +425,17 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     return name;
   }
   function moduleStateUsesHelper(key: HelperKey): boolean {
-    if (key === "intSchema") return moduleStateIntSchema !== undefined;
-    if (key === "intFunction") return moduleStateIntHelper !== undefined;
-    if (key === "remainder") return moduleStateRemainderHelper !== undefined;
-    if (key === "divide") return moduleStateDivideHelper !== undefined;
-    if (key === "round") return moduleStateRoundHelper !== undefined;
-    if (key === "at") return moduleStateAtHelper !== undefined;
-    if (key === "sort") return moduleStateSortHelper !== undefined;
-    if (key === "unmatched") return moduleStateUnmatchedHelper !== undefined;
-    if (key === "hostCheck") return moduleStateHostCheckHelper !== undefined;
-    return moduleStateOutcomeHelper !== undefined;
+    return key === "outcome"
+      ? moduleStateOutcomeHelper !== undefined
+      : moduleStateHelperNames.has(key);
   }
-  function moduleStateIntFunction(): string {
-    if (moduleStateIntHelper === undefined) {
-      moduleStateIntHelper = moduleStateFresh("$int");
+  function moduleStateHelper(key: NamedHelperKey): string {
+    let name = moduleStateHelperNames.get(key);
+    if (name === undefined) {
+      name = moduleStateFresh(HELPER_NAMES[key]);
+      moduleStateHelperNames = moduleStateHelperNames.set(key, name);
     }
-    return moduleStateIntHelper;
-  }
-  function moduleStateRemainder(): string {
-    if (moduleStateRemainderHelper === undefined) {
-      moduleStateRemainderHelper = moduleStateFresh("$rem");
-    }
-    return moduleStateRemainderHelper;
-  }
-  function moduleStateDivide(): string {
-    if (moduleStateDivideHelper === undefined) {
-      moduleStateDivideHelper = moduleStateFresh("$div");
-    }
-    return moduleStateDivideHelper;
-  }
-  function moduleStateAt(): string {
-    if (moduleStateAtHelper === undefined) {
-      moduleStateAtHelper = moduleStateFresh("$at");
-    }
-    return moduleStateAtHelper;
-  }
-  function moduleStateSort(): string {
-    if (moduleStateSortHelper === undefined) {
-      moduleStateSortHelper = moduleStateFresh("$sort");
-    }
-    return moduleStateSortHelper;
-  }
-  function moduleStateRound(): string {
-    if (moduleStateRoundHelper === undefined) {
-      moduleStateRoundHelper = moduleStateFresh("$round");
-    }
-    return moduleStateRoundHelper;
-  }
-  function moduleStateUnmatched(): string {
-    if (moduleStateUnmatchedHelper === undefined) {
-      moduleStateUnmatchedHelper = moduleStateFresh("$unmatched");
-    }
-    return moduleStateUnmatchedHelper;
+    return name;
   }
   function moduleStateOutcome(): OutcomeNames {
     if (moduleStateOutcomeHelper === undefined) {
@@ -503,18 +445,6 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
       };
     }
     return moduleStateOutcomeHelper;
-  }
-  function moduleStateHostCheck(): string {
-    if (moduleStateHostCheckHelper === undefined) {
-      moduleStateHostCheckHelper = moduleStateFresh("$hostCheck");
-    }
-    return moduleStateHostCheckHelper;
-  }
-  function moduleStateIntSchemaName(): string {
-    if (moduleStateIntSchema === undefined) {
-      moduleStateIntSchema = moduleStateFresh("$Int");
-    }
-    return moduleStateIntSchema;
   }
   function moduleStateServiceParameter(): string {
     if (moduleStateServiceName === undefined) {
@@ -763,16 +693,16 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     effect: moduleStateEffect,
     encodedMirrorName: moduleStateEncodedMirrorName,
     usesHelper: moduleStateUsesHelper,
-    intFunction: moduleStateIntFunction,
-    remainder: moduleStateRemainder,
-    divide: moduleStateDivide,
-    at: moduleStateAt,
-    sort: moduleStateSort,
-    round: moduleStateRound,
-    unmatched: moduleStateUnmatched,
+    intFunction: () => moduleStateHelper("intFunction"),
+    remainder: () => moduleStateHelper("remainder"),
+    divide: () => moduleStateHelper("divide"),
+    at: () => moduleStateHelper("at"),
+    sort: () => moduleStateHelper("sort"),
+    round: () => moduleStateHelper("round"),
+    unmatched: () => moduleStateHelper("unmatched"),
     outcome: moduleStateOutcome,
-    hostCheck: moduleStateHostCheck,
-    intSchemaName: moduleStateIntSchemaName,
+    hostCheck: () => moduleStateHelper("hostCheck"),
+    intSchemaName: () => moduleStateHelper("intSchema"),
     serviceParameter: moduleStateServiceParameter,
     typeLevelDeclaration: moduleStateTypeLevelDeclaration,
     isTypeOnly: moduleStateIsTypeOnly,
