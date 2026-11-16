@@ -58,7 +58,7 @@ function rootOf(declaration: Declaration): Expr | undefined {
   if (declaration.kind === "constant") return declaration.value;
   return undefined;
 }
-/** Calls `visit` for each local binder of a declaration: parameters and inner binders. */
+/** The `[id, name]` pair of each local binder of a declaration: parameters first, then inner binders. */
 export function binderNames(declaration: Declaration): readonly (readonly [
   LocalId,
   string,
