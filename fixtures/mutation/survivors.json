@@ -1276,5 +1276,14 @@
     "operator": "comparison",
     "class": "equivalent",
     "reason": "In the second find the end of the span equals the offset, and an end is never below its start. So start <= offset always holds, and the <= form differs from the < form only for a span with start equal to end. The symbol index keeps only the occurrences whose text passes isIdentifier, and that function rejects the empty text. So no occurrence has an empty span. The probe found 0 empty spans in 704897 occurrences. A copy that logs the case saw 0 evaluations where the two forms disagree, in 1688773650 evaluations. The output of the mutant copy matched the source copy for every input. The case cannot be forced, because an empty span never enters the index."
+  },
+  {
+    "file": "src/core/syntax.ts",
+    "declaration": "printTree",
+    "offset": 719,
+    "text": "return false;",
+    "operator": "boolean-return",
+    "class": "equivalent",
+    "reason": "The mutant returns true from the walk visitor for a Token node. The walk then reads the children of that node. A Token node has no children, because the parser makes each token a leaf, so the walk visits nothing more and the printed text does not change. A scan of 190 fixture files found 45450 Token nodes with 0 children. A differential through printTree over 3990 texts, which are each fixture file cut at three lengths with seven tails, gave the same output for the source and the mutant."
   }
 ]
