@@ -588,6 +588,32 @@ const staged = (callback, value, extra): Int => {
   assertLoweredValid(project);
 });
 
+Deno.test("infers an input from the record argument of an error constructor", () => {
+  const project = checkText(`
+type Int = int
+error Issue = { value: Int }
+const build = (input): Issue => Issue({ value: input })
+`);
+  assertEquals(project.diagnostics, []);
+  assertEquals(parameterTypes(project, "m", "build"), ["Int"]);
+  assertLoweredValid(project);
+});
+
+Deno.test("reports the record-literal rule for an input piped into an error constructor", () => {
+  const project = checkText(`
+type Int = int
+error Issue = { value: Int }
+const build = (input): Issue => ({ value: input }) |> Issue
+`);
+  assertEquals(
+    project.diagnostics.map((d) => `${d.code} ${d.message}`),
+    [
+      "type-mismatch/010 the error `Issue` needs a record literal such as Issue({ field: value })",
+    ],
+  );
+  assertEquals(parameterTypes(project, "m", "build"), ["Int"]);
+});
+
 Deno.test("requires an annotation for an unresolved inferred callback in a pipe stage", () => {
   const project = checkText(`
 type Int = int

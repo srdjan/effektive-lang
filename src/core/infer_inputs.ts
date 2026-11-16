@@ -454,6 +454,16 @@ function InputEngine(
       }
       return inputEngineTable.named(target.id);
     }
+    if (target?.kind === "error") {
+      inputEngineSelf = inputEngineVisit(
+        left,
+        inputEngineTable.errorRecordOf(target.id),
+      );
+      for (const argument of args) {
+        inputEngineSelf = inputEngineVisit(argument, undefined);
+      }
+      return inputEngineTable.named(target.id);
+    }
     if (optionConstructorOf(target) === "some") {
       const element = inputEngineTable.optionElementOf(expected);
       const inferred = inputEngineInfer(left, element).type;

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- An inferred input piped into an error constructor gives the record-literal rule, as a literal argument does. `(input): Issue => ({ value: input }) |> Issue` gives `type-mismatch/010` "the error `Issue` needs a record literal such as Issue({ field: value })", and `input` infers `Int`, as in the call `Issue({ value: input })`.
+  Before, that pipe gave `type-mismatch/003` "the argument of Issue has type { value: unknown }, but { value: Int } is expected".
 - A scoped operation record or a borrowed handle in a shorthand record field gives `type-mismatch/010`, as the explicit field does. In `using (file = Files.open()) { const saved = { file }; saved } finally { file.close() }`, the field `{ file }` is an aggregate, and the record must not escape through it. The same holds for `{ handle }` with a borrowed handle or a `borrow` parameter.
   Before, `{ file }` gave no diagnostic, while `{ file: file }` gave `type-mismatch/010`.
 
