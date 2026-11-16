@@ -12,87 +12,8 @@ export type NodeId = number;
 
 export type FileMode = "eff" | "effi";
 
-type SyntaxKinds = {
-  readonly Token: 0;
-  readonly Missing: 1;
-  readonly Error: 2;
-  readonly Module: 3;
-  readonly ImportDecl: 4;
-  readonly TypeDecl: 5;
-  readonly RefinementClause: 6;
-  readonly ErrorDecl: 7;
-  readonly ServiceDecl: 8;
-  readonly ServiceMethod: 9;
-  readonly ProviderDecl: 10;
-  readonly ConstDecl: 11;
-  readonly ParamList: 12;
-  readonly Param: 13;
-  readonly FailsClause: 14;
-  readonly WithClause: 15;
-  readonly ProvidesClause: 16;
-  readonly QualifiedName: 17;
-  readonly Name: 18;
-  readonly NamedType: 19;
-  readonly EffectType: 20;
-  readonly StreamType: 21;
-  readonly SinkType: 22;
-  readonly SchemaType: 23;
-  readonly LayerType: 24;
-  readonly TypeArgs: 25;
-  readonly LiteralType: 26;
-  readonly RecordType: 27;
-  readonly FieldType: 28;
-  readonly TupleType: 29;
-  readonly ArrayType: 30;
-  readonly UnionType: 31;
-  readonly FunctionType: 32;
-  readonly ParenType: 33;
-  readonly LiteralExpr: 34;
-  readonly NameExpr: 35;
-  readonly ParenExpr: 36;
-  readonly ArrowExpr: 37;
-  readonly CallExpr: 38;
-  readonly ArgList: 39;
-  readonly FieldExpr: 40;
-  readonly BinaryExpr: 41;
-  readonly UnaryExpr: 42;
-  readonly PipeExpr: 43;
-  readonly PipeStage: 44;
-  readonly RecordExpr: 45;
-  readonly ListExpr: 46;
-  readonly RecordField: 47;
-  readonly ShorthandField: 48;
-  readonly SpreadField: 49;
-  readonly SpreadElement: 50;
-  readonly Block: 51;
-  readonly IfExpr: 52;
-  readonly MatchExpr: 53;
-  readonly MatchArm: 54;
-  readonly TryExpr: 55;
-  readonly CatchClause: 56;
-  readonly Handler: 57;
-  readonly WildcardPattern: 58;
-  readonly LiteralPattern: 59;
-  readonly NamePattern: 60;
-  readonly CtorPattern: 61;
-  readonly RecordPattern: 62;
-  readonly PatternField: 63;
-  readonly SpreadPattern: 64;
-  readonly OptionFallbackExpr: 65;
-  readonly RecordBinding: 66;
-  readonly BindingField: 67;
-  readonly ShorthandBinding: 68;
-  readonly UsingExpr: 69;
-  readonly ResourceAcquire: 70;
-  readonly ResourceUse: 71;
-  readonly ResourceRelease: 72;
-  readonly FinallyClause: 73;
-};
-
-export type SyntaxKind = SyntaxKinds[keyof SyntaxKinds];
-
 /** Stable numeric syntax kinds stored in compact syntax-tree arrays. */
-export const SyntaxKind: SyntaxKinds = {
+export const SyntaxKind = {
   Token: 0,
   Missing: 1,
   Error: 2,
@@ -167,161 +88,9 @@ export const SyntaxKind: SyntaxKinds = {
   ResourceUse: 71,
   ResourceRelease: 72,
   FinallyClause: 73,
-};
+} as const;
 
-const SYNTAX_KINDS: readonly SyntaxKind[] = [
-  SyntaxKind.Token,
-  SyntaxKind.Missing,
-  SyntaxKind.Error,
-  SyntaxKind.Module,
-  SyntaxKind.ImportDecl,
-  SyntaxKind.TypeDecl,
-  SyntaxKind.RefinementClause,
-  SyntaxKind.ErrorDecl,
-  SyntaxKind.ServiceDecl,
-  SyntaxKind.ServiceMethod,
-  SyntaxKind.ProviderDecl,
-  SyntaxKind.ConstDecl,
-  SyntaxKind.ParamList,
-  SyntaxKind.Param,
-  SyntaxKind.FailsClause,
-  SyntaxKind.WithClause,
-  SyntaxKind.ProvidesClause,
-  SyntaxKind.QualifiedName,
-  SyntaxKind.Name,
-  SyntaxKind.NamedType,
-  SyntaxKind.EffectType,
-  SyntaxKind.StreamType,
-  SyntaxKind.SinkType,
-  SyntaxKind.SchemaType,
-  SyntaxKind.LayerType,
-  SyntaxKind.TypeArgs,
-  SyntaxKind.LiteralType,
-  SyntaxKind.RecordType,
-  SyntaxKind.FieldType,
-  SyntaxKind.TupleType,
-  SyntaxKind.ArrayType,
-  SyntaxKind.UnionType,
-  SyntaxKind.FunctionType,
-  SyntaxKind.ParenType,
-  SyntaxKind.LiteralExpr,
-  SyntaxKind.NameExpr,
-  SyntaxKind.ParenExpr,
-  SyntaxKind.ArrowExpr,
-  SyntaxKind.CallExpr,
-  SyntaxKind.ArgList,
-  SyntaxKind.FieldExpr,
-  SyntaxKind.BinaryExpr,
-  SyntaxKind.UnaryExpr,
-  SyntaxKind.PipeExpr,
-  SyntaxKind.PipeStage,
-  SyntaxKind.RecordExpr,
-  SyntaxKind.ListExpr,
-  SyntaxKind.RecordField,
-  SyntaxKind.ShorthandField,
-  SyntaxKind.SpreadField,
-  SyntaxKind.SpreadElement,
-  SyntaxKind.Block,
-  SyntaxKind.IfExpr,
-  SyntaxKind.MatchExpr,
-  SyntaxKind.MatchArm,
-  SyntaxKind.TryExpr,
-  SyntaxKind.CatchClause,
-  SyntaxKind.Handler,
-  SyntaxKind.WildcardPattern,
-  SyntaxKind.LiteralPattern,
-  SyntaxKind.NamePattern,
-  SyntaxKind.CtorPattern,
-  SyntaxKind.RecordPattern,
-  SyntaxKind.PatternField,
-  SyntaxKind.SpreadPattern,
-  SyntaxKind.OptionFallbackExpr,
-  SyntaxKind.RecordBinding,
-  SyntaxKind.BindingField,
-  SyntaxKind.ShorthandBinding,
-  SyntaxKind.UsingExpr,
-  SyntaxKind.ResourceAcquire,
-  SyntaxKind.ResourceUse,
-  SyntaxKind.ResourceRelease,
-  SyntaxKind.FinallyClause,
-];
-
-const SYNTAX_KIND_NAMES: readonly string[] = [
-  "Token",
-  "Missing",
-  "Error",
-  "Module",
-  "ImportDecl",
-  "TypeDecl",
-  "RefinementClause",
-  "ErrorDecl",
-  "ServiceDecl",
-  "ServiceMethod",
-  "ProviderDecl",
-  "ConstDecl",
-  "ParamList",
-  "Param",
-  "FailsClause",
-  "WithClause",
-  "ProvidesClause",
-  "QualifiedName",
-  "Name",
-  "NamedType",
-  "EffectType",
-  "StreamType",
-  "SinkType",
-  "SchemaType",
-  "LayerType",
-  "TypeArgs",
-  "LiteralType",
-  "RecordType",
-  "FieldType",
-  "TupleType",
-  "ArrayType",
-  "UnionType",
-  "FunctionType",
-  "ParenType",
-  "LiteralExpr",
-  "NameExpr",
-  "ParenExpr",
-  "ArrowExpr",
-  "CallExpr",
-  "ArgList",
-  "FieldExpr",
-  "BinaryExpr",
-  "UnaryExpr",
-  "PipeExpr",
-  "PipeStage",
-  "RecordExpr",
-  "ListExpr",
-  "RecordField",
-  "ShorthandField",
-  "SpreadField",
-  "SpreadElement",
-  "Block",
-  "IfExpr",
-  "MatchExpr",
-  "MatchArm",
-  "TryExpr",
-  "CatchClause",
-  "Handler",
-  "WildcardPattern",
-  "LiteralPattern",
-  "NamePattern",
-  "CtorPattern",
-  "RecordPattern",
-  "PatternField",
-  "SpreadPattern",
-  "OptionFallbackExpr",
-  "RecordBinding",
-  "BindingField",
-  "ShorthandBinding",
-  "UsingExpr",
-  "ResourceAcquire",
-  "ResourceUse",
-  "ResourceRelease",
-  "FinallyClause",
-];
+export type SyntaxKind = (typeof SyntaxKind)[keyof typeof SyntaxKind];
 
 /** The key and constructor options that one Schema type word selects. */
 type SchemaFlags = {
@@ -492,11 +261,11 @@ export function decodeString(text: SyntaxText): SyntaxText | undefined {
 }
 
 export function kindOf(tree: SyntaxTree, node: NodeId): SyntaxKind {
-  return SYNTAX_KINDS[tree.kinds[node]];
+  return tree.kinds[node] as SyntaxKind;
 }
 
 export function kindName(kind: SyntaxKind): SyntaxKindName {
-  return SYNTAX_KIND_NAMES[kind] ?? `Kind${kind}`;
+  return Object.keys(SyntaxKind)[kind] ?? `Kind${kind}`;
 }
 
 export function childrenOf(tree: SyntaxTree, node: NodeId): Uint32Array {

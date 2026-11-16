@@ -548,47 +548,52 @@ function scanNumber(
     malformed = malformed ?? "a number cannot be followed by letters";
     end = scanIdentEnd(text, end);
   }
-  const value = numberValue(text.slice(start, end));
+  const problem = numberProblem(
+    malformed,
+    numberValue(text.slice(start, end)),
+    duration,
+  );
+  if (problem === undefined) return { diagnostics: diagnosticsInput, end: end };
+  return {
+    diagnostics: addDiagnostic(
+      diagnosticsInput,
+      source,
+      problem.code,
+      problem.message,
+      start,
+      end,
+    ),
+    end: end,
+  };
+}
+
+type NumberProblem = {
+  readonly code: "syntax/005" | "syntax/006";
+  readonly message: TokenDescription;
+};
+
+function numberProblem(
+  malformed: TokenDescription | undefined,
+  value: LexerNumber,
+  duration: LexerStatus,
+): NumberProblem | undefined {
   if (malformed !== undefined) {
-    return {
-      diagnostics: addDiagnostic(
-        diagnosticsInput,
-        source,
-        "syntax/006",
-        `malformed number: ${malformed}`,
-        start,
-        end,
-      ),
-      end: end,
-    };
+    return { code: "syntax/006", message: `malformed number: ${malformed}` };
   }
   if (!Number.isFinite(value)) {
     return {
-      diagnostics: addDiagnostic(
-        diagnosticsInput,
-        source,
-        "syntax/005",
-        "number literal is not a finite value",
-        start,
-        end,
-      ),
-      end: end,
+      code: "syntax/005",
+      message: "number literal is not a finite value",
     };
   }
   if (duration && value > Number.MAX_SAFE_INTEGER) {
     return {
-      diagnostics: addDiagnostic(
-        diagnosticsInput,
-        source,
-        "syntax/005",
+      code: "syntax/005",
+      message:
         "duration literal exceeds the largest safe integer in milliseconds",
-        start,
-        end,
-      ),
-      end: end,
     };
   }
-  return { diagnostics: diagnosticsInput, end: end };
+  return undefined;
 }
 
 function scanDigitEnd(text: LexerText, start: LexerNumber): LexerNumber {
