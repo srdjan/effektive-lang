@@ -126,11 +126,10 @@ import type { CollectionContext } from "./check_builtins/collections.ts";
 import type { EffectContext } from "./check_builtins/effect.ts";
 import type { LayerContext } from "./check_builtins/layer.ts";
 import { createFamilyRows } from "./check_builtins/registry.ts";
-import {
-  type BuiltinRow,
-  keyFact,
-  type PreludeCallName,
-  type Prologue,
+import type {
+  BuiltinRow,
+  PreludeCallName,
+  Prologue,
 } from "./check_builtins/rows.ts";
 import type { SchemaContext } from "./check_builtins/schema.ts";
 import {
@@ -1336,15 +1335,10 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     const fact = prologue.fact;
     const bailFact = prologue.bailFact;
     if (fact !== undefined) {
-      let nodeFact: NodeFact;
-      if (typeof fact === "function") {
-        nodeFact = fact(checker, name, args);
-      } else if (fact === "key") {
-        nodeFact = keyFact(name);
-      } else {
-        nodeFact = fact;
-      }
-      checker = recordFact(node, nodeFact);
+      checker = recordFact(
+        node,
+        typeof fact === "function" ? fact(checker, name, args) : fact,
+      );
     }
     const count = typeof prologue.arity === "number"
       ? prologue.arity

@@ -236,7 +236,7 @@ export function layerRows(): Pick<
       handle: (c, node, _name, args) => layerCall(c, node, args),
     },
     mergeLayers: {
-      prologue: direct(2, "pure", { fact: "key" }),
+      prologue: direct(2, "pure", { fact: { kind: "merge-layers" } }),
       handle: (c, node, _name, args) => mergeLayersCall(c, node, args),
     },
   };

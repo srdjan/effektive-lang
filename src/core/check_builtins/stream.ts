@@ -487,7 +487,7 @@ export function streamRows(): Pick<
 > {
   return {
     unfold: {
-      prologue: direct(2, "pure", { fact: "key" }),
+      prologue: direct(2, "pure", { fact: { kind: "unfold" } }),
       handle: (c, node, _name, args) => unfoldCall(c, node, args),
     },
     mapEffect: {
@@ -498,7 +498,7 @@ export function streamRows(): Pick<
       handle: (c, node, _name, args) => mapEffectCall(c, node, args),
     },
     sinkForEach: {
-      prologue: direct(1, "pure", { fact: "key" }),
+      prologue: direct(1, "pure", { fact: { kind: "sink-for-each" } }),
       handle: (c, node, _name, args, expected) =>
         sinkForEachCall(c, node, args, expected),
     },
@@ -510,12 +510,12 @@ export function streamRows(): Pick<
         takeSinkCall(c, node, args, expected),
     },
     transduceStream: {
-      prologue: direct(2, "pure", { fact: "key" }),
+      prologue: direct(2, "pure", { fact: { kind: "transduce-stream" } }),
       handle: (c, node, name, args) =>
         sinkTransformStreamCall(c, node, args, name),
     },
     runStream: {
-      prologue: direct(2, "effect", { fact: "key" }),
+      prologue: direct(2, "effect", { fact: { kind: "run-stream" } }),
       handle: (c, node, _name, args) => runStreamCall(c, node, args),
     },
     bufferStream: {

@@ -117,19 +117,19 @@ export function refRows(): Pick<
 > {
   return {
     makeRef: {
-      prologue: direct(1, "effect", { fact: "key" }),
+      prologue: direct(1, "effect", { fact: { kind: "make-ref" } }),
       handle: (c, node, _name, args) => makeRefCall(c, node, args),
     },
     getRef: {
-      prologue: direct(1, "effect", { fact: "key" }),
+      prologue: direct(1, "effect", { fact: { kind: "get-ref" } }),
       handle: (c, node, _name, args) => getRefCall(c, node, args),
     },
     setRef: {
-      prologue: direct(2, "effect", { fact: "key" }),
+      prologue: direct(2, "effect", { fact: { kind: "set-ref" } }),
       handle: (c, node, _name, args) => setRefCall(c, node, args),
     },
     updateRef: {
-      prologue: direct(2, "effect", { fact: "key" }),
+      prologue: direct(2, "effect", { fact: { kind: "update-ref" } }),
       handle: (c, node, _name, args) => updateRefCall(c, node, args),
     },
   };

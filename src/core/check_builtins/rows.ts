@@ -8,7 +8,6 @@ import type { OptionConstructorName, PreludeName } from "../resolve.ts";
 import type { NodeId } from "../syntax.ts";
 import type { NodeFact, NodeInfo } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
-import { panic } from "../source.ts";
 import type { Arg } from "./context.ts";
 
 /** The prelude names that have a family row. An option constructor has its own checking rule. */
@@ -22,50 +21,12 @@ type Kebab<S extends string> = S extends `${infer Head}${infer Tail}`
   : S;
 
 /**
- * `"key"` when the row key alone gives the fact: a fact with no field besides
- * its kind, where the kind is the key in kebab case.
- */
-type KeyFact<K extends PreludeCallName> = NodeFact extends infer F
-  ? F extends { readonly kind: infer Kind }
-    ? [Kebab<K>] extends [Kind]
-      ? Exclude<keyof F, "kind"> extends never ? "key" : never
-    : never
-  : never
-  : never;
-
-/** The fact that the key of a row gives: its name in kebab case is the kind. */
-export function keyFact(name: PreludeCallName): NodeFact {
-  if (name === "unfold") return { kind: "unfold" };
-  if (name === "sinkForEach") return { kind: "sink-for-each" };
-  if (name === "transduceStream") return { kind: "transduce-stream" };
-  if (name === "runStream") return { kind: "run-stream" };
-  if (name === "makeRef") return { kind: "make-ref" };
-  if (name === "getRef") return { kind: "get-ref" };
-  if (name === "setRef") return { kind: "set-ref" };
-  if (name === "updateRef") return { kind: "update-ref" };
-  if (name === "mergeLayers") return { kind: "merge-layers" };
-  if (name === "scoped") return { kind: "scoped" };
-  if (name === "forkScoped") return { kind: "fork-scoped" };
-  if (name === "retrySchedule") return { kind: "retry-schedule" };
-  if (name === "timeout") return { kind: "timeout" };
-  if (name === "uninterruptible") return { kind: "uninterruptible" };
-  if (name === "now") return { kind: "now" };
-  if (name === "random") return { kind: "random" };
-  if (name === "randomInt") return { kind: "random-int" };
-  if (name === "sleep") return { kind: "sleep" };
-  if (name === "defer") return { kind: "defer" };
-  if (name === "run") return { kind: "run" };
-  return panic(`builtin ${name} has no key fact`);
-}
-
-/**
  * The facts of a prologue. `fact` is recorded before the argument count is
  * tested, so a call with a wrong count keeps it. `bailFact` is recorded only
  * after a wrong count, for a handler that records another fact after its checks.
  */
 type PrologueFacts<K extends PreludeCallName, C> = {
   readonly fact?:
-    | KeyFact<K>
     | NodeFact & { readonly kind: Kebab<K> }
     | ((checker: C, name: K, args: readonly Arg[]) => NodeFact);
   readonly bailFact?: NodeFact & { readonly kind: Kebab<K> };

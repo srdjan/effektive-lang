@@ -371,11 +371,11 @@ export function scopeRows(): Pick<
 > {
   return {
     scoped: {
-      prologue: piped(1, "effect", { fact: "key" }),
+      prologue: piped(1, "effect", { fact: { kind: "scoped" } }),
       handle: (c, node, _name, args) => scopedCall(c, node, args),
     },
     forkScoped: {
-      prologue: piped(1, "effect", { fact: "key" }),
+      prologue: piped(1, "effect", { fact: { kind: "fork-scoped" } }),
       handle: (c, node, _name, args) => forkScopedCall(c, node, args),
     },
   };

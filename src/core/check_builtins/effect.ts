@@ -288,7 +288,7 @@ function callOptions(
       }
     } else if (name === "schedule" && call === "retry") {
       info = c.argInfo(valueArg, undefined);
-      own[own.length] = schedulePolicy(c, value, info, spec);
+      c = schedulePolicy(c, value, info, spec);
     } else {
       info = c.argInfo(valueArg, undefined);
       if (name === "times") c = timesValue(c, value, call);
@@ -339,13 +339,13 @@ function timesValue(
   return c;
 }
 
-/** The effects that a `retry` `schedule` option adds, after checking that its RetrySchedule accepts every failure of the call. */
+/** Checks that the RetrySchedule of a `retry` `schedule` option accepts every failure of the call. */
 function schedulePolicy(
   c: EffectContext,
   value: NodeId,
   info: NodeInfo,
   spec: OptionsSpec,
-): EffectSet {
+): EffectContext {
   const policy = c.table.node(c.table.unfold(info.type));
   if (policy.kind === "retry-schedule") {
     for (const input of spec.inputs) {
@@ -359,7 +359,7 @@ function schedulePolicy(
         );
       }
     }
-    return PURE_EFFECTS;
+    return c;
   }
   if (!c.isError(info.type)) {
     c = c.report(
@@ -368,7 +368,7 @@ function schedulePolicy(
       value,
     );
   }
-  return PURE_EFFECTS;
+  return c;
 }
 
 /** `repeat(job)` runs without end; `repeat(job, options)` returns the last success. */
@@ -856,20 +856,20 @@ export function effectRows(): Pick<
       handle: (c, node, _name, args) => repeatCall(c, node, args),
     },
     retrySchedule: {
-      prologue: piped(1, "pure", { fact: "key" }),
+      prologue: piped(1, "pure", { fact: { kind: "retry-schedule" } }),
       handle: (c, node, _name, args, expected) =>
         retryScheduleCall(c, node, args, expected),
     },
     timeout: {
-      prologue: piped(2, "effect", { fact: "key" }),
+      prologue: piped(2, "effect", { fact: { kind: "timeout" } }),
       handle: (c, node, _name, args) => timeoutCall(c, node, args),
     },
     uninterruptible: {
-      prologue: piped(1, "effect", { fact: "key" }),
+      prologue: piped(1, "effect", { fact: { kind: "uninterruptible" } }),
       handle: (c, node, _name, args) => uninterruptibleCall(c, node, args),
     },
     now: {
-      prologue: direct(0, "effect", { fact: "key" }),
+      prologue: direct(0, "effect", { fact: { kind: "now" } }),
       handle: (c, node) =>
         c.finish(node, c.table.named(INSTANT_ID), EFFECT_ONLY),
     },
@@ -884,23 +884,23 @@ export function effectRows(): Pick<
       handle: (c, node, _name, args) => logCall(c, node, args),
     },
     random: {
-      prologue: direct(0, "effect", { fact: "key" }),
+      prologue: direct(0, "effect", { fact: { kind: "random" } }),
       handle: (c, node) => c.finish(node, c.table.number, EFFECT_ONLY),
     },
     randomInt: {
-      prologue: direct(2, "effect", { fact: "key" }),
+      prologue: direct(2, "effect", { fact: { kind: "random-int" } }),
       handle: (c, node, _name, args) => randomIntCall(c, node, args),
     },
     sleep: {
-      prologue: direct(1, "effect", { fact: "key" }),
+      prologue: direct(1, "effect", { fact: { kind: "sleep" } }),
       handle: (c, node, _name, args) => sleepCall(c, node, args),
     },
     defer: {
-      prologue: piped(1, "pure", { fact: "key" }),
+      prologue: piped(1, "pure", { fact: { kind: "defer" } }),
       handle: (c, node, _name, args) => deferCall(c, node, args),
     },
     run: {
-      prologue: piped(1, "effect", { fact: "key" }),
+      prologue: piped(1, "effect", { fact: { kind: "run" } }),
       handle: (c, node, _name, args) => runCall(c, node, args),
     },
     race: {
