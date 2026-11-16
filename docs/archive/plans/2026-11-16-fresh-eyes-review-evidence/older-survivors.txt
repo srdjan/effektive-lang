@@ -1,0 +1,150 @@
+bench/lsp_script.ts:477 negate-if diskPath !== undefined
+bench/lsp_script.ts:477 comparison diskPath !== undefined
+bench/lsp_script.ts:768 negate-if !a.ok
+bench/lsp_script.ts:770 negate-if !b.ok
+bench/m1.ts:94 negate-if !pair.ok
+bench/m4.ts:155 negate-if !pair.ok
+bench/m4.ts:190 negate-if writeOnSave && !(a.hasOutput() && b.hasOutput())
+bench/m4.ts:190 logical writeOnSave && !(a.hasOutput() && b.hasOutput())
+bench/m4.ts:190 logical a.hasOutput() && b.hasOutput()
+bench/m5_target.ts:173 comparison path === target.marked
+bench/m5_variants.ts:340 negate-if !a.ok || !b.ok
+bench/m5_variants.ts:340 logical !a.ok || !b.ok
+bench/m5_variants.ts:361 logical measured.ok && first.ok
+bench/m5_variants.ts:433 negate-if measured.ok
+bench/m7.ts:236 negate-if !pair.ok
+bench/m7.ts:261 negate-if !pair.ok
+bench/m7.ts:296 negate-if !pair.ok
+scripts/coverage.ts:599 negate-if !fastRun.success
+scripts/coverage.ts:614 negate-if !slowRun.success
+scripts/package_vscode_smoke.ts:78 negate-if !installed.success
+scripts/rules_unfired.ts:97 negate-if !suite.success
+scripts/rules_unfired.ts:111 negate-if !report.success
+src/core/check_builtins/stream.ts:412 logical kids[0] !== undefined && resultsInSink(c, kids[0], name)
+src/core/check_expr.ts:536 negate-if fits(node, found, expected, what)
+src/core/check_refinements.ts:625 comparison operand === undefined
+src/core/check_refinements.ts:697 negate-if join === "or"
+src/core/check_refinements.ts:697 comparison join === "or"
+src/core/check_refinements.ts:758 boolean-return return true;
+src/core/editor_tokens.ts:151 comparison i + 1 < lexed.count
+src/core/emit/doc.ts:475 comparison i === 0
+src/core/emit/doc.ts:568 negate-if mode === "break" && d.id !== undefined
+src/core/emit/doc.ts:568 logical mode === "break" && d.id !== undefined
+src/core/emit/doc.ts:568 comparison mode === "break"
+src/core/emit/doc.ts:568 comparison d.id !== undefined
+src/core/emit/expr.ts:956 comparison declaration?.kind === "error"
+src/core/emit/expr.ts:957 comparison g.name === f.name
+src/core/emit/expr.ts:1892 negate-if service?.kind !== "service"
+src/core/emit/expr.ts:1892 comparison service?.kind !== "service"
+src/core/emit/expr.ts:1895 comparison m.id === e.capability
+src/core/emit/expr.ts:1896 comparison method === undefined
+src/core/emit/expr.ts:2007 logical fn === undefined || items?.kind !== "array"
+src/core/emit/expr.ts:2244 comparison tagged.length === 0
+src/core/emit/families/effect.ts:45 logical from !== undefined && from.execution === "pure"
+src/core/emit/families/effect.ts:197 comparison e.options === null
+src/core/emit/families/schema.ts:151 logical callback.kind === "function" &&
+src/core/emit/families/schema.ts:151 comparison callback.kind === "function"
+src/core/emit/families/schema.ts:161 comparison options.fields[0].value.kind === "literal"
+src/core/emit/families/schema.ts:162 comparison options.fields[0].value.value === "omit"
+src/core/emit/families/schema.ts:186 comparison e.op === "default-encoded-key"
+src/core/emit/families/schema.ts:191 comparison args[2] === undefined
+src/core/emit/families/schema.ts:340 negate-if schemaType.kind === "schema"
+src/core/emit/families/schema.ts:340 comparison schemaType.kind === "schema"
+src/core/emit/families/schema.ts:341 comparison e.kind === "schema-decode"
+src/core/emit/families/schema.ts:348 comparison e.kind === "schema-decode"
+src/core/emit/fields.ts:40 negate-if seen.has(type.id)
+src/core/emit/fields.ts:45 negate-if declaration?.kind === "error"
+src/core/emit/fields.ts:45 comparison declaration?.kind === "error"
+src/core/emit/fields.ts:46 boolean-return return false;
+src/core/emit/fields.ts:48 comparison declaration?.kind === "type"
+src/core/emit/fields.ts:53 logical prototypeField(f.name) || needsFieldAdapterIn(scope, f.ty...
+src/core/emit/fields.ts:66 logical type.kind === "primitive" || type.kind === "literal" ||
+src/core/emit/fields.ts:66 comparison type.kind === "literal"
+src/core/emit/fields.ts:67 logical type.kind === "primitive" || type.kind === "literal" ||
+src/core/emit/fields.ts:67 comparison type.kind === "ref"
+src/core/emit/fields.ts:67 comparison type.kind === "retry-schedule"
+src/core/emit/fields.ts:68 logical type.kind === "primitive" || type.kind === "literal" ||
+src/core/emit/fields.ts:68 comparison type.kind === "effect"
+src/core/emit/fields.ts:69 logical type.kind === "primitive" || type.kind === "literal" ||
+src/core/emit/fields.ts:69 logical type.kind === "primitive" || type.kind === "literal" ||
+src/core/emit/fields.ts:69 comparison type.kind === "stream"
+src/core/emit/fields.ts:69 comparison type.kind === "sink"
+src/core/emit/fields.ts:70 logical type.kind === "primitive" || type.kind === "literal" ||
+src/core/emit/fields.ts:70 comparison type.kind === "function"
+src/core/emit/fields.ts:70 comparison type.kind === "provider"
+src/core/emit/fields.ts:97 negate-if type.kind === "option"
+src/core/emit/fields.ts:97 comparison type.kind === "option"
+src/core/emit/fields.ts:103 negate-if type.kind === "array"
+src/core/emit/fields.ts:103 comparison type.kind === "array"
+src/core/emit/fields.ts:108 negate-if type.kind === "tuple"
+src/core/emit/fields.ts:108 comparison type.kind === "tuple"
+src/core/emit/fields.ts:114 negate-if type.kind === "union"
+src/core/emit/fields.ts:114 comparison type.kind === "union"
+src/core/emit/fields.ts:135 negate-if type.kind !== "record"
+src/core/emit/fields.ts:135 comparison type.kind !== "record"
+src/core/emit/types.ts:291 logical trueFlag(type.optionalKey) || trueFlag(type.decodedOption...
+src/core/emit/types.ts:295 logical trueFlag(type.optionalKey) || trueFlag(type.encodedOption...
+src/core/infer_inputs.ts:236 negate-if kind === SyntaxKind.ListExpr
+src/core/infer_inputs.ts:236 comparison kind === SyntaxKind.ListExpr
+src/core/infer_inputs.ts:238 negate-if kind === SyntaxKind.LiteralExpr
+src/core/infer_inputs.ts:238 comparison kind === SyntaxKind.LiteralExpr
+src/core/lower.ts:807 logical fact.kind === "none" || fact.kind === "list" || fact.kind...
+src/core/lower.ts:807 logical fact.kind === "none" || fact.kind === "list" || fact.kind...
+src/core/lower.ts:807 logical fact.kind === "none" || fact.kind === "list"
+src/core/lower.ts:808 logical fact.kind === "none" || fact.kind === "list" || fact.kind...
+src/core/lower.ts:808 logical fact.kind === "none" || fact.kind === "list" || fact.kind...
+src/core/lower.ts:809 logical fact.kind === "none" || fact.kind === "list" || fact.kind...
+src/core/lower.ts:809 logical fact.kind === "none" || fact.kind === "list" || fact.kind...
+src/core/lower.ts:810 logical fact.kind === "none" || fact.kind === "list" || fact.kind...
+src/core/lower.ts:810 logical fact.kind === "none" || fact.kind === "list" || fact.kind...
+src/core/lower.ts:916 logical options === undefined || !fact.fields
+src/core/lower.ts:1161 logical !fact.options || options === undefined || options.kind !=...
+src/core/lower.ts:1161 logical !fact.options || options === undefined
+src/core/lower.ts:1517 negate-if pattern.kind === "invalid"
+src/core/lower.ts:1517 comparison pattern.kind === "invalid"
+src/core/predicates.ts:616 negate-if term.kind === "field"
+src/core/predicates.ts:616 comparison term.kind === "field"
+src/core/recursion_guard.ts:43 logical "part.kind === \"array\" || part.kind === \"option\""
+src/core/recursion_guard.ts:54 comparison "part.kind === \"tuple\""
+src/core/recursion_guard.ts:55 logical "part.kind === \"primitive\" || part.kind === \"literal\" || part.kind === \"tuple\" || part.kind ==
+src/core/recursion_guard.ts:55 logical "part.kind === \"primitive\" || part.kind === \"literal\" || part.kind === \"tuple\" || part.kind ==
+src/core/recursion_guard.ts:55 comparison "part.kind === \"retry-schedule\""
+src/core/recursion_guard.ts:55 comparison "part.kind === \"schema\""
+src/core/recursion_guard.ts:56 logical "part.kind === \"primitive\" || part.kind === \"literal\" || part.kind === \"tuple\" || part.kind ==
+src/core/recursion_guard.ts:56 logical "part.kind === \"primitive\" || part.kind === \"literal\" || part.kind === \"tuple\" || part.kind ==
+src/core/recursion_guard.ts:56 comparison "part.kind === \"effect\""
+src/core/recursion_guard.ts:56 comparison "part.kind === \"stream\""
+src/core/recursion_guard.ts:57 comparison "part.kind === \"sink\""
+src/core/recursion_guard.ts:58 comparison "part.kind === \"provider\""
+src/core/recursion_guard.ts:106 logical "part.kind === \"primitive\" || part.kind === \"literal\""
+src/core/recursion_guard.ts:108 logical "part.kind === \"tuple\" || part.kind === \"option\" || part.kind === \"ref\" || part.kind === \"ret
+src/core/recursion_guard.ts:108 comparison "part.kind === \"ref\""
+src/core/recursion_guard.ts:109 logical "part.kind === \"tuple\" || part.kind === \"option\" || part.kind === \"ref\" || part.kind === \"ret
+src/core/recursion_guard.ts:109 logical "part.kind === \"tuple\" || part.kind === \"option\" || part.kind === \"ref\" || part.kind === \"ret
+src/core/recursion_guard.ts:109 comparison "part.kind === \"retry-schedule\""
+src/core/recursion_guard.ts:109 comparison "part.kind === \"schema\""
+src/core/recursion_guard.ts:110 logical "part.kind === \"tuple\" || part.kind === \"option\" || part.kind === \"ref\" || part.kind === \"ret
+src/core/recursion_guard.ts:110 logical "part.kind === \"tuple\" || part.kind === \"option\" || part.kind === \"ref\" || part.kind === \"ret
+src/core/recursion_guard.ts:110 comparison "part.kind === \"effect\""
+src/core/recursion_guard.ts:110 comparison "part.kind === \"stream\""
+src/core/recursion_guard.ts:111 logical "part.kind === \"tuple\" || part.kind === \"option\" || part.kind === \"ref\" || part.kind === \"ret
+src/core/recursion_guard.ts:111 logical "part.kind === \"tuple\" || part.kind === \"option\" || part.kind === \"ref\" || part.kind === \"ret
+src/core/recursion_guard.ts:111 comparison "part.kind === \"sink\""
+src/core/recursion_guard.ts:111 comparison "part.kind === \"function\""
+src/core/recursion_guard.ts:112 comparison "part.kind === \"provider\""
+src/core/requirement_provenance.ts:102 comparison node.kind === "literal"
+src/core/resolve.ts:833 logical "target.kind === \"service\" || target.kind === \"cap\" || target.kind === \"local\""
+src/core/resolve.ts:833 comparison "target.kind === \"cap\""
+src/core/resolve.ts:834 logical "target.kind === \"service\" || target.kind === \"cap\" || target.kind === \"local\" || target.kind 
+src/core/resolve.ts:834 logical "target.kind === \"service\" || target.kind === \"cap\" || target.kind === \"local\" || target.kind 
+src/core/resolve.ts:834 comparison "target.kind === \"local\""
+src/core/resolve.ts:834 comparison "target.kind === \"builtin\""
+src/core/resolve.ts:835 logical "target.kind === \"service\" || target.kind === \"cap\" || target.kind === \"local\" || target.kind 
+src/core/resolve.ts:835 comparison "target.kind === \"builtin-type\""
+src/core/resolve.ts:835 comparison "target.kind === \"field\""
+src/core/syntax.ts:337 negate-if kindOf(tree, node) !== SyntaxKind.Token
+src/core/syntax.ts:337 comparison kindOf(tree, node) !== SyntaxKind.Token
+src/core/type_lower.ts:464 comparison kind === SyntaxKind.ParenType
+src/core/type_lower.ts:468 logical inner.length === 1 && kindOf(tree, inner[0]) === SyntaxKi...
+src/core/type_lower.ts:468 comparison inner.length === 1
+src/core/type_lower.ts:468 comparison kindOf(tree, inner[0]) === SyntaxKind.UnionType
