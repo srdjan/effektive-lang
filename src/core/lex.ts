@@ -7,62 +7,7 @@ import { byteArrayFrom, indices, setFrom, uint32ArrayFrom } from "./runtime.ts";
 
 const FOUR_STEPS: readonly number[] = [0, 1, 2, 3];
 
-type TokenKinds = {
-  readonly Eof: 0;
-  readonly Newline: 1;
-  readonly Ident: 2;
-  readonly KwImport: 3;
-  readonly KwExport: 4;
-  readonly KwConst: 5;
-  readonly KwMatch: 6;
-  readonly KwTry: 7;
-  readonly KwCatch: 8;
-  readonly KwIf: 9;
-  readonly KwElse: 10;
-  readonly KwTrue: 11;
-  readonly KwFalse: 12;
-  readonly KwNull: 13;
-  readonly String: 14;
-  readonly Number: 15;
-  readonly LParen: 16;
-  readonly RParen: 17;
-  readonly LBrace: 18;
-  readonly RBrace: 19;
-  readonly LBracket: 20;
-  readonly RBracket: 21;
-  readonly Comma: 22;
-  readonly Colon: 23;
-  readonly Semicolon: 24;
-  readonly Dot: 25;
-  readonly DotDotDot: 26;
-  readonly Question: 27;
-  readonly Eq: 28;
-  readonly Arrow: 29;
-  readonly EqEqEq: 30;
-  readonly BangEqEq: 31;
-  readonly Lt: 32;
-  readonly LtEq: 33;
-  readonly Gt: 34;
-  readonly GtEq: 35;
-  readonly AmpAmp: 36;
-  readonly PipePipe: 37;
-  readonly Pipe: 38;
-  readonly PipeGt: 39;
-  readonly Plus: 40;
-  readonly Minus: 41;
-  readonly Star: 42;
-  readonly Slash: 43;
-  readonly Bang: 44;
-  readonly Unknown: 45;
-  readonly QuestionQuestion: 46;
-  readonly KwFinally: 47;
-  readonly KwWith: 48;
-  readonly Percent: 49;
-};
-
-export type TokenKind = TokenKinds[keyof TokenKinds];
-
-export const TokenKind: TokenKinds = {
+export const TokenKind = {
   Eof: 0,
   Newline: 1,
   Ident: 2,
@@ -113,74 +58,17 @@ export const TokenKind: TokenKinds = {
   KwFinally: 47,
   KwWith: 48,
   Percent: 49,
-};
+} as const;
 
-const TOKEN_KINDS: readonly TokenKind[] = [
-  TokenKind.Eof,
-  TokenKind.Newline,
-  TokenKind.Ident,
-  TokenKind.KwImport,
-  TokenKind.KwExport,
-  TokenKind.KwConst,
-  TokenKind.KwMatch,
-  TokenKind.KwTry,
-  TokenKind.KwCatch,
-  TokenKind.KwIf,
-  TokenKind.KwElse,
-  TokenKind.KwTrue,
-  TokenKind.KwFalse,
-  TokenKind.KwNull,
-  TokenKind.String,
-  TokenKind.Number,
-  TokenKind.LParen,
-  TokenKind.RParen,
-  TokenKind.LBrace,
-  TokenKind.RBrace,
-  TokenKind.LBracket,
-  TokenKind.RBracket,
-  TokenKind.Comma,
-  TokenKind.Colon,
-  TokenKind.Semicolon,
-  TokenKind.Dot,
-  TokenKind.DotDotDot,
-  TokenKind.Question,
-  TokenKind.Eq,
-  TokenKind.Arrow,
-  TokenKind.EqEqEq,
-  TokenKind.BangEqEq,
-  TokenKind.Lt,
-  TokenKind.LtEq,
-  TokenKind.Gt,
-  TokenKind.GtEq,
-  TokenKind.AmpAmp,
-  TokenKind.PipePipe,
-  TokenKind.Pipe,
-  TokenKind.PipeGt,
-  TokenKind.Plus,
-  TokenKind.Minus,
-  TokenKind.Star,
-  TokenKind.Slash,
-  TokenKind.Bang,
-  TokenKind.Unknown,
-  TokenKind.QuestionQuestion,
-  TokenKind.KwFinally,
-  TokenKind.KwWith,
-  TokenKind.Percent,
-];
+export type TokenKind = (typeof TokenKind)[keyof typeof TokenKind];
 
-type TriviaKinds = {
-  readonly Whitespace: 0;
-  readonly LineComment: 1;
-  readonly BlockComment: 2;
-};
-
-export type TriviaKind = TriviaKinds[keyof TriviaKinds];
-
-export const TriviaKind: TriviaKinds = {
+export const TriviaKind = {
   Whitespace: 0,
   LineComment: 1,
   BlockComment: 2,
-};
+} as const;
+
+export type TriviaKind = (typeof TriviaKind)[keyof typeof TriviaKind];
 
 type TriviaTable = {
   readonly kinds: Uint8Array;
@@ -211,45 +99,40 @@ export type TokenDescription = string;
 export type LexerNumber = number;
 
 /** Narrows one compact token-array value to its stable token kind. */
+/** The kind that has the number `value`. The numbers run from Eof to Percent without gaps. */
 export function tokenKind(value: LexerNumber): TokenKind | undefined {
-  return TOKEN_KINDS[value];
+  return Number.isInteger(value) && value >= TokenKind.Eof &&
+      value <= TokenKind.Percent
+    ? value as TokenKind
+    : undefined;
 }
 
-const KEYWORD_WORDS: readonly LexerText[] = [
-  "import",
-  "export",
-  "const",
-  "match",
-  "try",
-  "catch",
-  "if",
-  "else",
-  "true",
-  "false",
-  "null",
-  "finally",
-  "with",
-];
+const KEYWORD_KINDS = {
+  import: TokenKind.KwImport,
+  export: TokenKind.KwExport,
+  const: TokenKind.KwConst,
+  match: TokenKind.KwMatch,
+  try: TokenKind.KwTry,
+  catch: TokenKind.KwCatch,
+  if: TokenKind.KwIf,
+  else: TokenKind.KwElse,
+  true: TokenKind.KwTrue,
+  false: TokenKind.KwFalse,
+  null: TokenKind.KwNull,
+  finally: TokenKind.KwFinally,
+  with: TokenKind.KwWith,
+} as const;
+
+type KeywordWord = keyof typeof KEYWORD_KINDS;
 
 function keywordKind(word: LexerText): TokenKind | undefined {
-  if (word === "import") return TokenKind.KwImport;
-  if (word === "export") return TokenKind.KwExport;
-  if (word === "const") return TokenKind.KwConst;
-  if (word === "match") return TokenKind.KwMatch;
-  if (word === "try") return TokenKind.KwTry;
-  if (word === "catch") return TokenKind.KwCatch;
-  if (word === "if") return TokenKind.KwIf;
-  if (word === "else") return TokenKind.KwElse;
-  if (word === "true") return TokenKind.KwTrue;
-  if (word === "false") return TokenKind.KwFalse;
-  if (word === "null") return TokenKind.KwNull;
-  if (word === "finally") return TokenKind.KwFinally;
-  if (word === "with") return TokenKind.KwWith;
-  return undefined;
+  return Object.hasOwn(KEYWORD_KINDS, word)
+    ? KEYWORD_KINDS[word as KeywordWord]
+    : undefined;
 }
 
 function keywordWords(): IterableIterator<LexerText> {
-  return KEYWORD_WORDS.values();
+  return Object.keys(KEYWORD_KINDS).values();
 }
 
 type KeywordTable = {
@@ -323,81 +206,36 @@ export const OPERATOR_KINDS: OperatorKinds = { has: hasOperatorKind };
  * - `positional`: a keyword only in one syntactic position (`where`, `using`).
  * - `import`: belongs to an import header (`from`, `imports`).
  */
-type ContextualRole =
-  | "declaration"
-  | "modifier"
-  | "clause"
-  | "positional"
-  | "import";
+const CONTEXTUAL_ROLES = {
+  type: "declaration",
+  error: "declaration",
+  service: "declaration",
+  provider: "declaration",
+  sealed: "modifier",
+  opaque: "modifier",
+  borrow: "modifier",
+  pure: "modifier",
+  fails: "clause",
+  provides: "clause",
+  where: "positional",
+  using: "positional",
+  from: "import",
+  imports: "import",
+} as const;
 
-type ContextualWordInfo = {
-  readonly role: ContextualRole;
-};
+export type ContextualWord = keyof typeof CONTEXTUAL_ROLES;
 
-type ContextualWords = {
-  readonly type: ContextualWordInfo;
-  readonly error: ContextualWordInfo;
-  readonly service: ContextualWordInfo;
-  readonly provider: ContextualWordInfo;
-  readonly sealed: ContextualWordInfo;
-  readonly opaque: ContextualWordInfo;
-  readonly borrow: ContextualWordInfo;
-  readonly pure: ContextualWordInfo;
-  readonly fails: ContextualWordInfo;
-  readonly provides: ContextualWordInfo;
-  readonly where: ContextualWordInfo;
-  readonly using: ContextualWordInfo;
-  readonly from: ContextualWordInfo;
-  readonly imports: ContextualWordInfo;
-};
-
-const CONTEXTUAL_WORDS: ContextualWords = {
-  type: { role: "declaration" },
-  error: { role: "declaration" },
-  service: { role: "declaration" },
-  provider: { role: "declaration" },
-  sealed: { role: "modifier" },
-  opaque: { role: "modifier" },
-  borrow: { role: "modifier" },
-  pure: { role: "modifier" },
-  fails: { role: "clause" },
-  provides: { role: "clause" },
-  where: { role: "positional" },
-  using: { role: "positional" },
-  from: { role: "import" },
-  imports: { role: "import" },
-};
-
-export type ContextualWord = keyof typeof CONTEXTUAL_WORDS;
-
-const CONTEXTUAL_ENTRIES: readonly (
-  readonly [ContextualWord, ContextualWordInfo]
-)[] = [
-  ["type", CONTEXTUAL_WORDS.type],
-  ["error", CONTEXTUAL_WORDS.error],
-  ["service", CONTEXTUAL_WORDS.service],
-  ["provider", CONTEXTUAL_WORDS.provider],
-  ["sealed", CONTEXTUAL_WORDS.sealed],
-  ["opaque", CONTEXTUAL_WORDS.opaque],
-  ["borrow", CONTEXTUAL_WORDS.borrow],
-  ["pure", CONTEXTUAL_WORDS.pure],
-  ["fails", CONTEXTUAL_WORDS.fails],
-  ["provides", CONTEXTUAL_WORDS.provides],
-  ["where", CONTEXTUAL_WORDS.where],
-  ["using", CONTEXTUAL_WORDS.using],
-  ["from", CONTEXTUAL_WORDS.from],
-  ["imports", CONTEXTUAL_WORDS.imports],
-];
+type ContextualRole = (typeof CONTEXTUAL_ROLES)[ContextualWord];
 
 /** The contextual words that have one of `roles`, in table order. */
 export function contextualWordsOf(
   roles: readonly ContextualRole[],
 ): ReadonlySet<LexerText> {
   const words: LexerText[] = [];
-  for (const entry of CONTEXTUAL_ENTRIES) {
-    const word = entry[0];
-    const info = entry[1];
-    if (roles.includes(info.role)) words[words.length] = word;
+  for (const word of Object.keys(CONTEXTUAL_ROLES)) {
+    if (roles.includes(CONTEXTUAL_ROLES[word as ContextualWord])) {
+      words[words.length] = word;
+    }
   }
   return setFrom(words);
 }
@@ -593,20 +431,6 @@ function describeChar(
   return `'${String.fromCodePoint(cp)}'`;
 }
 
-function lexerDiagnostic(
-  source: LexerText,
-  code: Parameters<typeof makeDiagnostic>[0],
-  message: TokenDescription,
-  start: LexerNumber,
-  end: LexerNumber,
-): Diagnostic {
-  return makeDiagnostic(code, message, {
-    source: source,
-    start: start,
-    end: end,
-  });
-}
-
 function addDiagnostic(
   diagnostics: Diagnostic[],
   source: LexerText,
@@ -615,13 +439,11 @@ function addDiagnostic(
   start: LexerNumber,
   end: LexerNumber,
 ): Diagnostic[] {
-  diagnostics[diagnostics.length] = lexerDiagnostic(
-    source,
-    code,
-    message,
-    start,
-    end,
-  );
+  diagnostics[diagnostics.length] = makeDiagnostic(code, message, {
+    source: source,
+    start: start,
+    end: end,
+  });
   return diagnostics;
 }
 
