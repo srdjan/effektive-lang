@@ -2,8 +2,6 @@
 // write files, which the fast task has no permission for.
 
 import { assert, assertEquals } from "@std/assert";
-import { describeLspBenchError } from "../bench/lsp_script.ts";
-import { runM7 } from "../bench/m7.ts";
 import { runVariants } from "../bench/m5_variants.ts";
 import { writeTarget } from "../bench/m5_target.ts";
 import { withTemporaryDirectory } from "./process_helpers.ts";
@@ -28,24 +26,6 @@ Deno.test("writeTarget adds the mark comment to the marked file only", async () 
     );
     return Promise.resolve();
   });
-});
-
-Deno.test("M7 times one cold save for each side of each cold pair", async () => {
-  const result = await runM7({
-    seed: 1,
-    timeoutMs: 30_000,
-    presets: [{
-      size: "small",
-      coldPairs: 2,
-      warmups: 0,
-      steps: 1,
-      saveAllSteps: 1,
-    }],
-  });
-  assert(result.ok, result.ok ? "" : describeLspBenchError(result.error));
-  const cold = result.value.rows.find((row) => row.scenario === "cold");
-  assertEquals(cold?.pairs.length, 2);
-  assertEquals(cold?.samples.length, 4);
 });
 
 Deno.test("the M5 variants time the cold processes and the warm service on a small target", async () => {

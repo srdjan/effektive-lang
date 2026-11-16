@@ -243,3 +243,21 @@ Deno.test("the bench options accept m1, m3, and m4", () => {
   assert(m7.ok);
   assertEquals(m7.value.measurements, ["m7"]);
 });
+
+Deno.test("M7 times one cold save for each side of each cold pair", async () => {
+  const result = await runM7({
+    seed: 1,
+    timeoutMs: 30_000,
+    presets: [{
+      size: "small",
+      coldPairs: 2,
+      warmups: 0,
+      steps: 1,
+      saveAllSteps: 1,
+    }],
+  });
+  assert(result.ok, result.ok ? "" : describeLspBenchError(result.error));
+  const cold = result.value.rows.find((row) => row.scenario === "cold");
+  assertEquals(cold?.pairs.length, 2);
+  assertEquals(cold?.samples.length, 4);
+});

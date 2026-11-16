@@ -132,7 +132,7 @@
     "text": "!pair.ok",
     "operator": "negate-if",
     "class": "slow-only",
-    "reason": "The mutant returns the pair Result from the body of the cold loop in runM7 when openPair succeeds, so the loop records no cold pair. Only a real server gives a pair. The cold pair test of tests/bench_mutation_slow_test.ts fails on the mutant."
+    "reason": "The mutant returns the pair Result from the body of the cold loop in runM7 when openPair succeeds, so the loop records no cold pair. Only a real server gives a pair. The cold pair test of tests/bench_lsp_slow_test.ts fails on the mutant."
   },
   {
     "file": "bench/m7.ts",
