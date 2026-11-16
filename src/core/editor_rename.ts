@@ -1,5 +1,6 @@
 // Rename proves that declaration anchors remain the same after re-resolution,
 // including uses of symbols that the requested rename does not edit.
+import type { EditorOffset, EditorPath, EditorText } from "./editor.ts";
 import { isModulePath, isSourcePath } from "./paths.ts";
 import {
   BUILTIN_TYPE_NAMES,
@@ -23,15 +24,12 @@ type RenameTarget = {
   readonly name: string;
 };
 
-export type RenamePath = string;
-export type RenameOffset = number;
-export type RenameText = string;
 export type RenameName = string;
 
 export function prepareRenameAt(
   revision: Revision,
-  path: RenamePath,
-  offset: RenameOffset,
+  path: EditorPath,
+  offset: EditorOffset,
 ): RenameTarget | undefined {
   const hit = occurrenceAt(revision, path, offset);
   if (
@@ -54,9 +52,9 @@ export function prepareRenameAt(
 }
 
 export function applySourceEdits(
-  text: RenameText,
+  text: EditorText,
   edits: readonly SourceEdit[],
-): RenameText {
+): EditorText {
   return [...edits].sort((a, b) => b.span.start - a.span.start).reduce(
     (value, edit) =>
       value.slice(0, edit.span.start) + edit.text + value.slice(edit.span.end),
@@ -115,8 +113,8 @@ function movedSpan(
 
 export function renameAt(
   revision: Revision,
-  path: RenamePath,
-  offset: RenameOffset,
+  path: EditorPath,
+  offset: EditorOffset,
   name: RenameName,
 ): Result<readonly SourceEdit[], string> {
   const lexed = lex("<rename>", name);

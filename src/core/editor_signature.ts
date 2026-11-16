@@ -1,5 +1,6 @@
 // Signature help for ordinary calls. The query reads checked callee types from
 // body tables and keeps LSP wire types outside the core.
+import type { EditorOffset } from "./editor.ts";
 import { emptyMap, emptySet, indices, stackValues } from "./runtime.ts";
 import { isSourcePath, type PathText } from "./paths.ts";
 import type { Revision } from "./db.ts";
@@ -18,7 +19,6 @@ import {
 import { initOf, kidsOf, tokenKindOf, unparen } from "./syntax_queries.ts";
 import { effectText, showType } from "./type_show.ts";
 import type { TypeNode, TypeRef } from "./types.ts";
-type SourceOffset = number;
 type FunctionNode = Extract<TypeNode, {
   readonly kind: "function";
 }>;
@@ -171,7 +171,7 @@ function activeParameter(
 export function signatureHelpAt(
   revision: Revision,
   path: PathText,
-  offset: SourceOffset,
+  offset: EditorOffset,
 ): SignatureHelp | undefined {
   const module = revision.checkedModuleAt(path);
   if (module === undefined || !isSourcePath(path)) {

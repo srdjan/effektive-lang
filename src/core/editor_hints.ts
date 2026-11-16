@@ -1,5 +1,6 @@
 // Inlay hints for inferred parameter and effect contracts. Inline arrows get
 // no hint: shortcut, callback hints would add noise at every call site.
+import type { EditorOffset, EditorPath } from "./editor.ts";
 import { isSourcePath } from "./paths.ts";
 import type { Revision } from "./db.ts";
 import {
@@ -20,8 +21,6 @@ type InlayHint = {
   readonly label: string;
 };
 
-export type HintPosition = number;
-export type EditorPath = string;
 export type IgnoredCodes = readonly string[];
 export type DiagnosticFound = boolean;
 
@@ -33,7 +32,7 @@ export type DiagnosticFound = boolean;
 export function resultEndOf(
   tree: SyntaxTree,
   functionNode: NodeId,
-): HintPosition {
+): EditorOffset {
   const arrow = arrowHeaderOf(tree, functionNode)?.arrow;
   let position = -1;
   for (const part of arrow === undefined ? [] : childrenOf(tree, arrow)) {

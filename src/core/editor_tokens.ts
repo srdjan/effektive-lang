@@ -1,3 +1,4 @@
+import type { EditorPath, EditorText } from "./editor.ts";
 import type { Revision } from "./db.ts";
 import type { FileIndex } from "./declaration_index.ts";
 import type { Diagnostic } from "./diagnostics.ts";
@@ -41,9 +42,6 @@ type SemanticClassification = {
   readonly type: (typeof SEMANTIC_TOKEN_TYPES)[number];
   readonly modifiers: readonly (typeof SEMANTIC_TOKEN_MODIFIERS)[number][];
 };
-
-export type EditorPath = string;
-export type EditorText = string;
 
 /** Starts of service headers before the first ordinary import or declaration. */
 function serviceImportKeywordStarts(
@@ -136,6 +134,31 @@ export function semanticClassifications(
     "clause",
     "positional",
   ]);
+  /** The classification of a token from its kind and text, or undefined for none. */
+  function lexicalType(
+    i: number,
+    kind: TokenKind | undefined,
+    span: Span,
+  ): SemanticClassification["type"] | undefined {
+    const word = text.slice(span.start, span.end);
+    if (kind === TokenKind.String) return "string";
+    if (kind === TokenKind.Number) return "number";
+    if (
+      kind === TokenKind.Ident &&
+      (serviceImports.has(span.start) && word === "imports" ||
+        isFromKeyword(
+          word,
+          i + 1 < lexed.count ? tokenKind(lexed.kinds[i + 1]) : undefined,
+        ))
+    ) return "keyword";
+    if (
+      isKeywordKind(kind) ||
+      kind === TokenKind.Ident && contextualKeywords.has(word)
+    ) return "keyword";
+    if (kind === TokenKind.Ident) return "variable";
+    if (kind !== undefined && OPERATOR_KINDS.has(kind)) return "operator";
+    return undefined;
+  }
   const output: SemanticClassification[] = [];
   for (const i of indices(lexed.count)) {
     const kind = tokenKind(lexed.kinds[i]);
@@ -157,32 +180,11 @@ export function semanticClassifications(
             : []),
         ],
       };
-    } else if (kind === TokenKind.String) {
-      output[output.length] = { span: span, type: "string", modifiers: [] };
-    } else if (kind === TokenKind.Number) {
-      output[output.length] = { span: span, type: "number", modifiers: [] };
-    } else if (
-      kind === TokenKind.Ident && serviceImports.has(span.start) &&
-      text.slice(span.start, span.end) === "imports"
-    ) {
-      output[output.length] = { span: span, type: "keyword", modifiers: [] };
-    } else if (
-      kind === TokenKind.Ident &&
-      isFromKeyword(
-        text.slice(span.start, span.end),
-        i + 1 < lexed.count ? tokenKind(lexed.kinds[i + 1]) : undefined,
-      )
-    ) {
-      output[output.length] = { span: span, type: "keyword", modifiers: [] };
-    } else if (
-      isKeywordKind(kind) ||
-      kind === TokenKind.Ident &&
-        contextualKeywords.has(text.slice(span.start, span.end))
-    ) output[output.length] = { span: span, type: "keyword", modifiers: [] };
-    else if (kind === TokenKind.Ident) {
-      output[output.length] = { span: span, type: "variable", modifiers: [] };
-    } else if (kind !== undefined && OPERATOR_KINDS.has(kind)) {
-      output[output.length] = { span: span, type: "operator", modifiers: [] };
+    } else {
+      const type = lexicalType(i, kind, span);
+      if (type !== undefined) {
+        output[output.length] = { span: span, type: type, modifiers: [] };
+      }
     }
   }
   for (const i of indices(lexed.trivia.kinds.length)) {

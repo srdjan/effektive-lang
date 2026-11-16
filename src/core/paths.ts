@@ -1,13 +1,13 @@
 // Paths and generated-file identity: root-relative paths, module names, the
 // generated file of a source file, and the header line that marks a file as
-// generated. This file imports only the `FileMode` type.
+// generated. This file imports only types.
 
+import type { ModuleName } from "./ids.ts";
 import type { FileMode } from "./syntax.ts";
 
 export type PathText = string;
 export type OptionalPath = PathText | undefined;
 export type PathMatch = boolean;
-export type ModuleName = string;
 export type HostLabel = string;
 export type HostKey = string;
 export type SourceText = string;
@@ -130,13 +130,14 @@ export function relativeSpecifier(
   return ups === 0 ? `./${rest}` : `${"../".repeat(ups)}${rest}`;
 }
 
-/** The first line of a generated file. Only the emitter and `generatedSourceOf` may write or read it. */
-export function generatedHeader(source: PathText): SourceText {
-  return `// Generated from ${source} by the Effektive compiler. Do not edit.`;
-}
-
 const HEADER_PREFIX = "// Generated from ";
 const HEADER_SUFFIX = " by the Effektive compiler. Do not edit.";
+
+/** The first line of a generated file. Only the emitter and `generatedSourceOf` may write or read it. */
+export function generatedHeader(source: PathText): SourceText {
+  return `${HEADER_PREFIX}${source}${HEADER_SUFFIX}`;
+}
+
 /** The line terminators that a header source cannot hold, apart from `\n`. */
 const LINE_TERMINATORS: readonly string[] = ["\r", "\u2028", "\u2029"];
 

@@ -1,6 +1,12 @@
 import type { EditorOffset, EditorPath } from "./editor.ts";
-import { emptyMap, emptySet, indices, setFrom } from "./runtime.ts";
-import { isIdentPart, TokenKind } from "./lex.ts";
+import {
+  emptyMap,
+  emptySet,
+  indices,
+  reverseIndices,
+  setFrom,
+} from "./runtime.ts";
+import { isIdentPart, TokenKind, TriviaKind } from "./lex.ts";
 import type { Revision } from "./db.ts";
 import type { ModuleInfo } from "./project.ts";
 import {
@@ -97,7 +103,7 @@ function insideCommentOrString(tree: SyntaxTree, offset: number): boolean {
   const lexed = tree.lexed;
   return [...lexed.trivia.starts].some((start, i) =>
     start <= offset && offset < lexed.trivia.ends[i] &&
-    lexed.trivia.kinds[i] !== 0
+    lexed.trivia.kinds[i] !== TriviaKind.Whitespace
   ) ||
     [...lexed.starts].some((start, i) =>
       start < offset && offset <= lexed.ends[i] &&
@@ -114,9 +120,9 @@ function siteAt(
 ): Site {
   const text = tree.text;
   let start = offset;
-  for (const _step of indices(start)) {
-    if (!(start > 0 && isIdentPart(text.charCodeAt(start - 1)))) break;
-    start = start - 1;
+  for (const index of reverseIndices(offset)) {
+    if (!isIdentPart(text.charCodeAt(index))) break;
+    start = index;
   }
   const prefix = text.slice(start, offset);
   let end = offset;
@@ -198,11 +204,9 @@ function memberCompletions(
   const lexed = tree.lexed;
   const text = tree.text;
   let baseToken = previousToken - 1;
-  for (const _step of indices(baseToken + 1)) {
-    if (!(baseToken >= 0 && lexed.kinds[baseToken] === TokenKind.Newline)) {
-      break;
-    }
-    baseToken = baseToken - 1;
+  for (const index of reverseIndices(previousToken)) {
+    if (lexed.kinds[index] !== TokenKind.Newline) break;
+    baseToken = index - 1;
   }
   const baseEnd = baseToken >= 0
     ? lexed.ends[baseToken]
@@ -288,17 +292,17 @@ function serviceHeaderKeywordAllowed(site: Site): boolean {
     tree.lexed.kinds[previous] === TokenKind.Semicolon;
 }
 type NameContext = "value" | "type" | "fails" | "with";
-/** The syntax context of the word, and whether a declaration word can start here. */
+/** The syntax context of the word, and whether a declaration encloses it. */
 function nameContextAt(
   tree: SyntaxTree,
   start: number,
-  declarationStart: boolean,
 ): {
   readonly context: NameContext;
-  readonly declarationStart: boolean;
+  readonly insideDeclaration: boolean;
 } {
   let node = containingNode(tree, start);
   let context: NameContext = "value";
+  let insideDeclaration = false;
   for (const _step of indices(tree.count)) {
     if (node < 0) break;
     const kind = kindOf(tree, node);
@@ -307,7 +311,7 @@ function nameContextAt(
       kind === SyntaxKind.TypeDecl || kind === SyntaxKind.ErrorDecl ||
       kind === SyntaxKind.ServiceDecl || kind === SyntaxKind.ProviderDecl
     ) {
-      declarationStart = false;
+      insideDeclaration = true;
     }
     if (kind === SyntaxKind.FailsClause) {
       context = "fails";
@@ -323,7 +327,7 @@ function nameContextAt(
     }
     node = tree.parents[node];
   }
-  return { context: context, declarationStart: declarationStart };
+  return { context: context, insideDeclaration: insideDeclaration };
 }
 function namespaceCompletions(
   site: Site,
@@ -470,8 +474,7 @@ export function completionsAt(
   let bindingNode = containingNode(tree, offset);
   for (const _step of indices(tree.count)) {
     if (
-      !(bindingNode >= 0 &&
-        kindOf(tree, bindingNode) !== SyntaxKind.RecordBinding)
+      bindingNode < 0 || kindOf(tree, bindingNode) === SyntaxKind.RecordBinding
     ) break;
     bindingNode = tree.parents[bindingNode];
   }
@@ -482,13 +485,10 @@ export function completionsAt(
   if (previousToken >= 0 && tree.lexed.kinds[previousToken] === TokenKind.Dot) {
     return memberCompletions(site, previousToken);
   }
-  const nameContext = nameContextAt(
-    tree,
-    site.start,
-    startsDeclaration(tree, site.start),
-  );
+  const nameContext = nameContextAt(tree, site.start);
   const context = nameContext.context;
-  const declarationStart = nameContext.declarationStart;
+  const declarationStart = startsDeclaration(tree, site.start) &&
+    !nameContext.insideDeclaration;
   const values = addContextNames(
     site,
     namespaceCompletions(site, context),

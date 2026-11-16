@@ -1,5 +1,6 @@
 // Resolver identities and declaration anchors shared by editor queries. The
 // cache belongs to a Revision; retaining a Program does not retain old indices.
+import type { EditorOffset, EditorPath } from "./editor.ts";
 import { emptyMap, emptySet, indices as integerIndices } from "./runtime.ts";
 import type { CheckedModule } from "./check_project.ts";
 import type { Revision } from "./db.ts";
@@ -39,8 +40,6 @@ export function declarationKind(
 }
 type DeclarationName = string;
 type Matched = boolean;
-type SourcePath = string;
-type SourceOffset = number;
 /** True when the name span `declaration` names a const whose value is an arrow. */
 export function isArrowDeclaration(
   revision: Revision,
@@ -115,16 +114,16 @@ function localScope(
   const parameter = parent >= 0 && kindOf(tree, parent) === SyntaxKind.Param;
   for (const _step of integerIndices(tree.count)) {
     if (
-      !(parent >= 0 &&
-        !Array.of<SyntaxKind>(
-          SyntaxKind.UsingExpr,
-          SyntaxKind.ArrowExpr,
-          SyntaxKind.Block,
-          SyntaxKind.MatchArm,
-          SyntaxKind.Handler,
-          SyntaxKind.FinallyClause,
-          SyntaxKind.ResourceRelease,
-        ).includes(kindOf(tree, parent)))
+      parent < 0 ||
+      Array.of<SyntaxKind>(
+        SyntaxKind.UsingExpr,
+        SyntaxKind.ArrowExpr,
+        SyntaxKind.Block,
+        SyntaxKind.MatchArm,
+        SyntaxKind.Handler,
+        SyntaxKind.FinallyClause,
+        SyntaxKind.ResourceRelease,
+      ).includes(kindOf(tree, parent))
     ) break;
     parent = tree.parents[parent];
   }
@@ -234,8 +233,8 @@ export function buildSymbolIndex(revision: Revision): SymbolIndex {
 }
 export function occurrenceAt(
   revision: Revision,
-  path: SourcePath,
-  offset: SourceOffset,
+  path: EditorPath,
+  offset: EditorOffset,
 ): SymbolOccurrence | undefined {
   const file = revision.symbolIndex().byPath.get(path) ?? [];
   return file.find((o) => o.span.start <= offset && offset < o.span.end) ??
@@ -243,8 +242,8 @@ export function occurrenceAt(
 }
 export function referencesAt(
   revision: Revision,
-  path: SourcePath,
-  offset: SourceOffset,
+  path: EditorPath,
+  offset: EditorOffset,
   includeDeclaration: Matched | undefined,
 ): readonly Span[] {
   const hit = occurrenceAt(revision, path, offset);

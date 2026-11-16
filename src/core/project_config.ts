@@ -1,5 +1,6 @@
 // The project configuration: the `effektive.json` reader, its validation, and the glob
 // patterns of the import rules. The module loader in `project.ts` uses it.
+import type { ModuleName } from "./ids.ts";
 import { emptyMap } from "./runtime.ts";
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import {
@@ -8,7 +9,6 @@ import {
   isInterfacePath,
   isModulePath,
   joinPath,
-  type ModuleName,
   normalizeRelative,
   type PathText,
 } from "./paths.ts";
