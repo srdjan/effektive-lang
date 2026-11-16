@@ -787,62 +787,71 @@ function schemaConstructorDefaultCall(
   );
 }
 
+/**
+ * Reports a Schema whose decoded or encoded type admits null, at the first
+ * argument of the call. The null-to-missing and null-default operations need
+ * nonnullable field types.
+ */
+function rejectNullableSchema(
+  c: SchemaContext,
+  call: SchemaCall,
+  schema: SchemaNode | undefined,
+): SchemaContext {
+  const nil = c.table.literal(null);
+  if (
+    schema !== undefined &&
+    (c.assignable(nil, schema.decoded) || c.assignable(nil, schema.encoded))
+  ) {
+    c = c.report(
+      "type-mismatch/010",
+      `${call.name} needs nonnullable decoded and encoded field types`,
+      call.args[0].node,
+    );
+  }
+  return c;
+}
+
+/** The Schema of an optional key over `schema`. The encoded side admits null when `nullEncoded` is set. */
+function optionalKeySchema(
+  c: SchemaContext,
+  schema: SchemaNode | undefined,
+  nullEncoded: boolean,
+): TypeRef {
+  if (schema === undefined) return c.table.error;
+  return c.table.schema(
+    schema.decoded,
+    nullEncoded
+      ? c.table.union([schema.encoded, c.table.literal(null)])
+      : schema.encoded,
+    schema.decodeRequirements,
+    schema.encodeRequirements,
+    {
+      presence: "optional",
+      makeInput: schema.makeInput ?? schema.decoded,
+      constructorDefault: schema.constructorDefault ?? false,
+    },
+  );
+}
+
 function schemaNullToMissingKeyCall(
   c: SchemaContext,
   call: SchemaCall,
 ): NodeInfo {
-  const node = call.node;
-  const args = call.args;
   const initial = firstSchema(c, call);
-  const first = initial.first;
-  const schema = initial.schema;
-  const nil = c.table.literal(null);
-  if (
-    schema !== undefined &&
-    (c.assignable(nil, schema.decoded) ||
-      c.assignable(nil, schema.encoded))
-  ) {
-    c = c.report(
-      "type-mismatch/010",
-      "schemaNullToMissingKey needs nonnullable decoded and encoded field types",
-      args[0].node,
-    );
-  }
+  c = rejectNullableSchema(c, call, initial.schema);
   return c.finish(
-    node,
-    schema === undefined ? c.table.error : c.table.schema(
-      schema.decoded,
-      c.table.union([schema.encoded, nil]),
-      schema.decodeRequirements,
-      schema.encodeRequirements,
-      {
-        presence: "optional",
-        makeInput: schema.makeInput ?? schema.decoded,
-        constructorDefault: schema.constructorDefault ?? false,
-      },
-    ),
-    combine([first]),
+    call.node,
+    optionalKeySchema(c, initial.schema, true),
+    combine([initial.first]),
   );
 }
 
 function schemaOptionalKeyCall(c: SchemaContext, call: SchemaCall): NodeInfo {
   const initial = firstSchema(c, call);
-  const first = initial.first;
-  const schema = initial.schema;
   return c.finish(
     call.node,
-    schema === undefined ? c.table.error : c.table.schema(
-      schema.decoded,
-      schema.encoded,
-      schema.decodeRequirements,
-      schema.encodeRequirements,
-      {
-        presence: "optional",
-        makeInput: schema.makeInput ?? schema.decoded,
-        constructorDefault: schema.constructorDefault ?? false,
-      },
-    ),
-    combine([first]),
+    optionalKeySchema(c, initial.schema, false),
+    combine([initial.first]),
   );
 }
 
@@ -901,18 +910,8 @@ function schemaDefaultKeyCall(c: SchemaContext, call: SchemaCall, variant: {
   const initial = firstSchema(c, call);
   const first = initial.first;
   const schema = initial.schema;
+  if (nullable) c = rejectNullableSchema(c, call, schema);
   const nil = c.table.literal(null);
-  if (
-    nullable && schema !== undefined &&
-    (c.assignable(nil, schema.decoded) ||
-      c.assignable(nil, schema.encoded))
-  ) {
-    c = c.report(
-      "type-mismatch/010",
-      `${name} needs nonnullable decoded and encoded field types`,
-      args[0].node,
-    );
-  }
   const defaultType = direction === "encoded"
     ? schema?.encoded
     : schema?.decoded;
