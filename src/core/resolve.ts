@@ -292,28 +292,25 @@ export type Target =
 /** The identity string of a target, or the builtin name. */
 export type TargetText = string;
 export function targetText(target: Target): TargetText {
-  {
-    const subject_1 = target.kind;
-    if (subject_1 === "builtin") {
-      return `prelude:${target.name}`;
-    } else if (
-      subject_1 === "builtin-type" || subject_1 === "field" ||
-      subject_1 === "unresolved"
-    ) {
-      return `${target.kind}:${target.name}`;
-    } else if (
-      subject_1 === "type" || subject_1 === "error" ||
-      subject_1 === "service" || subject_1 === "provider" ||
-      subject_1 === "value" || subject_1 === "cap" || subject_1 === "local"
-    ) {
-      return target.id;
-    } else {
-      {
-        const unreachable: never = target;
-        return unreachable;
-      }
-    }
+  if (target.kind === "builtin") {
+    return `prelude:${target.name}`;
   }
+  if (
+    target.kind === "builtin-type" || target.kind === "field" ||
+    target.kind === "unresolved"
+  ) {
+    return `${target.kind}:${target.name}`;
+  }
+  if (
+    target.kind === "type" || target.kind === "error" ||
+    target.kind === "service" || target.kind === "provider" ||
+    target.kind === "value" || target.kind === "cap" ||
+    target.kind === "local"
+  ) {
+    return target.id;
+  }
+  const unreachable: never = target;
+  return unreachable;
 }
 type Binding = {
   readonly target: Target;
@@ -384,37 +381,26 @@ type Found = {
   readonly name: PreludeName;
 };
 type Position = "value" | "callee";
+const KIND_DESCRIPTIONS: Record<Target["kind"], string> = {
+  type: "a type",
+  error: "an error",
+  service: "a service",
+  provider: "a provider",
+  value: "a value",
+  cap: "a service method",
+  local: "a local binding",
+  builtin: "a builtin function",
+  "builtin-type": "a builtin type",
+  field: "a field",
+  unresolved: "an unresolved name",
+};
 function describeKind(target: Target): string {
-  {
-    const subject_2 = target.kind;
-    if (subject_2 === "type") {
-      return "a type";
-    } else if (subject_2 === "error") {
-      return "an error";
-    } else if (subject_2 === "service") {
-      return "a service";
-    } else if (subject_2 === "provider") {
-      return "a provider";
-    } else if (subject_2 === "value") {
-      return "a value";
-    } else if (subject_2 === "cap") {
-      return "a service method";
-    } else if (subject_2 === "local") {
-      return "a local binding";
-    } else if (subject_2 === "builtin") {
-      return "a builtin function";
-    } else if (subject_2 === "builtin-type") {
-      return "a builtin type";
-    } else if (subject_2 === "field") {
-      return "a field";
-    } else if (subject_2 === "unresolved") {
-      return "an unresolved name";
-    } else {
-      const unreachable: never = target;
-      return unreachable;
-    }
-  }
+  return KIND_DESCRIPTIONS[target.kind];
 }
+const RESOURCE_REGIONS: readonly SyntaxKind[] = [
+  SyntaxKind.ResourceUse,
+  SyntaxKind.ResourceRelease,
+];
 type Resolver = {
   readonly run: () => ModuleResolution;
 };
@@ -455,16 +441,12 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
       }[]
       | undefined,
   ): Resolver {
-    {
-      const _appendTarget1 = resolverDiagnostics;
-      const _appendValue2 = makeDiagnosticWithRelated(
-        code,
-        message,
-        span,
-        related,
-      );
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
-    }
+    resolverDiagnostics[resolverDiagnostics.length] = makeDiagnosticWithRelated(
+      code,
+      message,
+      span,
+      related,
+    );
     return resolverSelf;
   }
   function resolverSet(node: NodeId, target: Target): Resolver {
@@ -472,8 +454,7 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
     return resolverSelf;
   }
   function resolverUnresolved(node: NodeId, name: string): Resolver {
-    resolverSelf = resolverSet(node, { kind: "unresolved", name: name });
-    return resolverSelf;
+    return resolverSet(node, { kind: "unresolved", name: name });
   }
   function resolverDeclareModuleName(
     name: string,
@@ -506,12 +487,10 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
         binding.span,
         [{ span: existing.span, message: "first declared here" }],
       );
-      resolverSelf = resolverSet(nameNode, existing.target);
-      return resolverSelf;
+      return resolverSet(nameNode, existing.target);
     }
     resolverNamespace = resolverNamespace.set(name, binding);
-    resolverSelf = resolverSet(nameNode, binding.target);
-    return resolverSelf;
+    return resolverSet(nameNode, binding.target);
   }
   function resolverBindImports(): Resolver {
     const index = resolverInfo.index;
@@ -522,24 +501,16 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
     for (const indexedEntry of index.imports.entries()) {
       const i = indexedEntry[0];
       const entry = indexedEntry[1];
-      {
-        const _appendTarget3 = events;
-        const _appendValue4 = {
-          start: entry.span.start,
-          run: () => resolverBindImport(i),
-        };
-        _appendTarget3[_appendTarget3.length] = _appendValue4;
-      }
+      events[events.length] = {
+        start: entry.span.start,
+        run: () => resolverBindImport(i),
+      };
     }
     for (const decl of index.decls) {
-      {
-        const _appendTarget5 = events;
-        const _appendValue6 = {
-          start: decl.span.start,
-          run: () => resolverBindDecl(decl),
-        };
-        _appendTarget5[_appendTarget5.length] = _appendValue6;
-      }
+      events[events.length] = {
+        start: decl.span.start,
+        run: () => resolverBindDecl(decl),
+      };
     }
     events = events.sort((a, b) => a.start - b.start);
     for (const event of events) {
@@ -655,27 +626,27 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
     function id<P extends DeclarationPrefix>(prefix: P): `${P}:${string}` {
       return declarationId(prefix, module, decl.name);
     }
-    {
-      const subject_3 = decl.kind;
-      if (subject_3 === "type") {
-        return { target: { kind: "type", id: id("type") }, span: span };
-      } else if (subject_3 === "error") {
-        return { target: { kind: "error", id: id("error") }, span: span };
-      } else if (subject_3 === "service") {
-        return {
-          target: { kind: "service", id: id("service") },
-          service: { module: module, entry: decl },
-          span: span,
-        };
-      } else if (subject_3 === "provider") {
-        return { target: { kind: "provider", id: id("value") }, span: span };
-      } else if (subject_3 === "const") {
-        return { target: { kind: "value", id: id("value") }, span: span };
-      } else {
-        const unreachable: never = subject_3;
-        return unreachable;
-      }
+    if (decl.kind === "type") {
+      return { target: { kind: "type", id: id("type") }, span: span };
     }
+    if (decl.kind === "error") {
+      return { target: { kind: "error", id: id("error") }, span: span };
+    }
+    if (decl.kind === "service") {
+      return {
+        target: { kind: "service", id: id("service") },
+        service: { module: module, entry: decl },
+        span: span,
+      };
+    }
+    if (decl.kind === "provider") {
+      return { target: { kind: "provider", id: id("value") }, span: span };
+    }
+    if (decl.kind === "const") {
+      return { target: { kind: "value", id: id("value") }, span: span };
+    }
+    const unreachable: never = decl.kind;
+    return unreachable;
   }
   function resolverDeclareLocal(
     nameNode: NodeId,
@@ -793,8 +764,7 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
       resolverSpan(node),
       undefined,
     );
-    resolverSelf = resolverUnresolved(node, name);
-    return resolverSelf;
+    return resolverUnresolved(node, name);
   }
   function resolverWrongKind(
     node: NodeId,
@@ -807,8 +777,7 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
       resolverSpan(node),
       undefined,
     );
-    resolverSelf = resolverUnresolved(node, name);
-    return resolverSelf;
+    return resolverUnresolved(node, name);
   }
   function resolverValueRef(
     node: NodeId,
@@ -817,8 +786,7 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
   ): Resolver {
     const found = resolverLookupValue(name, resolverSpan(node));
     if (found === undefined) {
-      resolverSelf = resolverUnknown(node, name, "name");
-      return resolverSelf;
+      return resolverUnknown(node, name, "name");
     }
     if (found.tag === "local") {
       if (resolverPending.get(found.binding.id) ?? false) {
@@ -828,64 +796,52 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
           resolverSpan(node),
           undefined,
         );
-        resolverSelf = resolverUnresolved(node, name);
-        return resolverSelf;
+        return resolverUnresolved(node, name);
       }
-      resolverSelf = resolverSet(node, { kind: "local", id: found.binding.id });
-      return resolverSelf;
+      return resolverSet(node, { kind: "local", id: found.binding.id });
     }
     if (found.tag === "builtin") {
       if (position === "callee" || optionRole(found.name) === "none") {
-        resolverSelf = resolverSet(node, { kind: "builtin", name: found.name });
-      } else {
-        resolverSelf = resolverWrongKind(
-          node,
-          name,
-          `the builtin \`${name}\` can only be called or used as a pipeline stage`,
-        );
+        return resolverSet(node, { kind: "builtin", name: found.name });
       }
-      return resolverSelf;
+      return resolverWrongKind(
+        node,
+        name,
+        `the builtin \`${name}\` can only be called or used as a pipeline stage`,
+      );
     }
     const target = found.binding.target;
-    {
-      const subject_4 = target.kind;
-      if (
-        subject_4 === "value" || subject_4 === "provider" ||
-        subject_4 === "unresolved"
-      ) {
-        resolverSelf = resolverSet(node, target);
-        return resolverSelf;
-      } else if (subject_4 === "type" || subject_4 === "error") {
-        if (position === "callee") {
-          resolverSelf = resolverSet(node, target);
-        } else {
-          resolverSelf = resolverWrongKind(
-            node,
-            name,
-            `\`${name}\` is ${
-              describeKind(target)
-            }, not a value; call it to construct a value`,
-          );
-        }
-        return resolverSelf;
-      } else if (
-        subject_4 === "service" || subject_4 === "cap" ||
-        subject_4 === "local" || subject_4 === "builtin" ||
-        subject_4 === "builtin-type" || subject_4 === "field"
-      ) {
-        resolverSelf = resolverWrongKind(
-          node,
-          name,
-          `\`${name}\` is ${describeKind(target)}, not a value`,
-        );
-        return resolverSelf;
-      } else {
-        {
-          const unreachable: never = target;
-          return unreachable;
-        }
-      }
+    if (
+      target.kind === "value" || target.kind === "provider" ||
+      target.kind === "unresolved"
+    ) {
+      return resolverSet(node, target);
     }
+    if (target.kind === "type" || target.kind === "error") {
+      if (position === "callee") {
+        return resolverSet(node, target);
+      }
+      return resolverWrongKind(
+        node,
+        name,
+        `\`${name}\` is ${
+          describeKind(target)
+        }, not a value; call it to construct a value`,
+      );
+    }
+    if (
+      target.kind === "service" || target.kind === "cap" ||
+      target.kind === "local" || target.kind === "builtin" ||
+      target.kind === "builtin-type" || target.kind === "field"
+    ) {
+      return resolverWrongKind(
+        node,
+        name,
+        `\`${name}\` is ${describeKind(target)}, not a value`,
+      );
+    }
+    const unreachable: never = target;
+    return unreachable;
   }
   function resolverTypeRef(nameNode: NodeId): Resolver {
     const name = nameTextOf(resolverTree, nameNode);
@@ -896,37 +852,31 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
     if (binding !== undefined) {
       const t = binding.target;
       if (t.kind === "type" || t.kind === "error" || t.kind === "unresolved") {
-        resolverSelf = resolverSet(nameNode, t);
-      } else {
-        resolverSelf = resolverWrongKind(
-          nameNode,
-          name,
-          `\`${name}\` is ${describeKind(t)}, not a type`,
-        );
+        return resolverSet(nameNode, t);
       }
-      return resolverSelf;
+      return resolverWrongKind(
+        nameNode,
+        name,
+        `\`${name}\` is ${describeKind(t)}, not a type`,
+      );
     }
     const effectError = EFFECT_ERROR_IDS.get(name);
     if (effectError !== undefined) {
-      resolverSelf = resolverSet(nameNode, { kind: "error", id: effectError });
-      return resolverSelf;
+      return resolverSet(nameNode, { kind: "error", id: effectError });
     }
     const builtin = BUILTIN_TYPES.find((candidate) => candidate === name);
     if (builtin !== undefined) {
-      resolverSelf = resolverSet(nameNode, {
+      return resolverSet(nameNode, {
         kind: "builtin-type",
         name: builtin,
       });
-      return resolverSelf;
     }
-    resolverSelf = resolverUnknown(nameNode, name, "type");
-    return resolverSelf;
+    return resolverUnknown(nameNode, name, "type");
   }
   function resolverErrorRef(
     nameNode: NodeId,
-    allowAlias: boolean | undefined,
+    allowAlias: boolean,
   ): Resolver {
-    const aliasesAllowed = allowAlias ?? false;
     const name = nameTextOf(resolverTree, nameNode);
     if (name === undefined) {
       return resolverSelf;
@@ -935,29 +885,25 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
     if (binding === undefined) {
       const effectError = EFFECT_ERROR_IDS.get(name);
       if (effectError !== undefined) {
-        resolverSelf = resolverSet(nameNode, {
+        return resolverSet(nameNode, {
           kind: "error",
           id: effectError,
         });
-        return resolverSelf;
       }
-      resolverSelf = resolverUnknown(nameNode, name, "error");
-      return resolverSelf;
+      return resolverUnknown(nameNode, name, "error");
     }
     const t = binding.target;
     if (
       t.kind === "error" || t.kind === "unresolved" ||
-      (aliasesAllowed && t.kind === "type")
+      (allowAlias && t.kind === "type")
     ) {
-      resolverSelf = resolverSet(nameNode, t);
-    } else {
-      resolverSelf = resolverWrongKind(
-        nameNode,
-        name,
-        `\`${name}\` is ${describeKind(t)}, not an error`,
-      );
+      return resolverSet(nameNode, t);
     }
-    return resolverSelf;
+    return resolverWrongKind(
+      nameNode,
+      name,
+      `\`${name}\` is ${describeKind(t)}, not an error`,
+    );
   }
   function resolverIsConstructorName(nameNode: NodeId): boolean {
     const name = nameTextOf(resolverTree, nameNode);
@@ -981,16 +927,13 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
     }
     const prelude = asPrelude(name);
     if (prelude !== undefined && optionRole(prelude) !== undefined) {
-      resolverSelf = resolverSet(nameNode, { kind: "builtin", name: prelude });
-      return resolverSelf;
+      return resolverSet(nameNode, { kind: "builtin", name: prelude });
     }
     const target = resolverNamespace.get(name)?.target;
     if (target?.kind === "type") {
-      resolverSelf = resolverSet(nameNode, target);
-      return resolverSelf;
+      return resolverSet(nameNode, target);
     }
-    resolverSelf = resolverErrorRef(nameNode, undefined);
-    return resolverSelf;
+    return resolverErrorRef(nameNode, false);
   }
   function resolverServiceRef(
     nameNode: NodeId,
@@ -1126,67 +1069,68 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
   }
   function resolverResolveType(node: NodeId): Resolver {
     const kind = kindOf(resolverTree, node);
-    {
-      if (kind === SyntaxKind.NamedType) {
-        for (const kid of kidsOf(resolverTree, node)) {
-          if (kindOf(resolverTree, kid) === SyntaxKind.Name) {
-            resolverSelf = resolverTypeRef(kid);
-          } else {
-            resolverSelf = resolverResolveType(kid);
-          }
-        }
-        return resolverSelf;
-      } else if (kind === SyntaxKind.RecordType) {
-        for (
-          const field of kidsOfKind(resolverTree, node, SyntaxKind.FieldType)
-        ) {
-          resolverSelf = resolverLabelsAndTypes(field);
-        }
-        return resolverSelf;
-      } else if (kind === SyntaxKind.FunctionType) {
-        for (const kid of kidsOf(resolverTree, node)) {
-          const k = kindOf(resolverTree, kid);
-          if (k === SyntaxKind.ParamList) {
-            resolverSelf = resolverLabelParams(kid);
-          } else if (
-            k === SyntaxKind.FailsClause || k === SyntaxKind.WithClause
-          ) {
-            resolverSelf = resolverClause(kid);
-          } else {
-            resolverSelf = resolverResolveType(kid);
-          }
-        }
-        return resolverSelf;
-      } else if (
-        kind === SyntaxKind.EffectType || kind === SyntaxKind.StreamType ||
-        kind === SyntaxKind.SinkType || kind === SyntaxKind.SchemaType ||
-        kind === SyntaxKind.LayerType
-      ) {
-        for (const kid of kidsOf(resolverTree, node)) {
-          const k = kindOf(resolverTree, kid);
-          if (
-            k === SyntaxKind.FailsClause || k === SyntaxKind.WithClause ||
-            k === SyntaxKind.ProvidesClause
-          ) {
-            resolverSelf = resolverClause(kid);
-          } else {
-            resolverSelf = resolverResolveType(kid);
-          }
-        }
-        return resolverSelf;
-      } else if (
-        kind === SyntaxKind.TypeArgs || kind === SyntaxKind.TupleType ||
-        kind === SyntaxKind.ArrayType || kind === SyntaxKind.UnionType ||
-        kind === SyntaxKind.ParenType
-      ) {
-        for (const kid of kidsOf(resolverTree, node)) {
+    if (kind === SyntaxKind.NamedType) {
+      for (const kid of kidsOf(resolverTree, node)) {
+        if (kindOf(resolverTree, kid) === SyntaxKind.Name) {
+          resolverSelf = resolverTypeRef(kid);
+        } else {
           resolverSelf = resolverResolveType(kid);
         }
-        return resolverSelf;
-      } else {
-        return resolverSelf;
       }
+      return resolverSelf;
     }
+    if (kind === SyntaxKind.RecordType) {
+      for (
+        const field of kidsOfKind(resolverTree, node, SyntaxKind.FieldType)
+      ) {
+        resolverSelf = resolverLabelsAndTypes(field);
+      }
+      return resolverSelf;
+    }
+    if (kind === SyntaxKind.FunctionType) {
+      for (const kid of kidsOf(resolverTree, node)) {
+        const k = kindOf(resolverTree, kid);
+        if (k === SyntaxKind.ParamList) {
+          resolverSelf = resolverLabelParams(kid);
+        } else if (
+          k === SyntaxKind.FailsClause || k === SyntaxKind.WithClause
+        ) {
+          resolverSelf = resolverClause(kid);
+        } else {
+          resolverSelf = resolverResolveType(kid);
+        }
+      }
+      return resolverSelf;
+    }
+    if (
+      kind === SyntaxKind.EffectType || kind === SyntaxKind.StreamType ||
+      kind === SyntaxKind.SinkType || kind === SyntaxKind.SchemaType ||
+      kind === SyntaxKind.LayerType
+    ) {
+      for (const kid of kidsOf(resolverTree, node)) {
+        const k = kindOf(resolverTree, kid);
+        if (
+          k === SyntaxKind.FailsClause || k === SyntaxKind.WithClause ||
+          k === SyntaxKind.ProvidesClause
+        ) {
+          resolverSelf = resolverClause(kid);
+        } else {
+          resolverSelf = resolverResolveType(kid);
+        }
+      }
+      return resolverSelf;
+    }
+    if (
+      kind === SyntaxKind.TypeArgs || kind === SyntaxKind.TupleType ||
+      kind === SyntaxKind.ArrayType || kind === SyntaxKind.UnionType ||
+      kind === SyntaxKind.ParenType
+    ) {
+      for (const kid of kidsOf(resolverTree, node)) {
+        resolverSelf = resolverResolveType(kid);
+      }
+      return resolverSelf;
+    }
+    return resolverSelf;
   }
   function resolverFieldLabel(nameNode: NodeId): Resolver {
     const name = nameTextOf(resolverTree, nameNode);
@@ -1294,124 +1238,120 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
   }
   function resolverExpr(node: NodeId, position: Position): Resolver {
     const kind = kindOf(resolverTree, node);
-    {
-      if (kind === SyntaxKind.NameExpr) {
-        resolverSelf = resolverValueRef(
-          node,
-          nodeText(resolverTree, node),
-          position,
-        );
-        return resolverSelf;
-      } else if (kind === SyntaxKind.UsingExpr) {
-        resolverSelf = resolverUsing(node);
-        return resolverSelf;
-      } else if (kind === SyntaxKind.ArrowExpr) {
-        resolverSelf = resolverArrow(node);
-        return resolverSelf;
-      } else if (kind === SyntaxKind.CallExpr) {
-        {
-          const kids = kidsOf(resolverTree, node);
-          if (kids.length > 0) {
-            resolverSelf = resolverExpr(kids[0], "callee");
-          }
-          if (
-            kids[0] !== undefined &&
-            kindOf(resolverTree, kids[0]) === SyntaxKind.NameExpr &&
-            takesServiceArgument(nodeText(resolverTree, kids[0])) &&
-            kids[1] !== undefined &&
-            kindOf(resolverTree, kids[1]) === SyntaxKind.ArgList
-          ) {
-            const args = kidsOf(resolverTree, kids[1]);
-            const first = args[0];
-            if (
-              first !== undefined &&
-              kindOf(resolverTree, first) === SyntaxKind.NameExpr
-            ) {
-              const service = resolverServiceBinding(first);
-              if (service !== undefined) {
-                resolverSelf = resolverSet(first, service.target);
-              } else {
-                resolverSelf = resolverExpr(first, "value");
-              }
-            } else if (first !== undefined) {
-              resolverSelf = resolverExpr(first, "value");
-            }
-            for (const arg of args.slice(1)) {
-              resolverSelf = resolverExpr(arg, "value");
-            }
-            return resolverSelf;
-          }
-          for (const arg of kids.slice(1)) {
-            resolverSelf = resolverExpr(arg, "value");
-          }
-          return resolverSelf;
-        }
-      } else if (kind === SyntaxKind.FieldExpr) {
-        resolverSelf = resolverFieldExpr(node);
-        return resolverSelf;
-      } else if (kind === SyntaxKind.PipeExpr) {
-        {
-          const kids = kidsOf(resolverTree, node);
-          if (kids.length > 0) {
-            resolverSelf = resolverExpr(kids[0], "value");
-          }
-          for (const stage of kids.slice(1)) {
-            resolverSelf = resolverPipeStage(stage);
-          }
-          return resolverSelf;
-        }
-      } else if (kind === SyntaxKind.RecordExpr) {
-        for (const field of kidsOf(resolverTree, node)) {
-          resolverSelf = resolverRecordField(field);
-        }
-        return resolverSelf;
-      } else if (kind === SyntaxKind.Block) {
-        resolverSelf = resolverBlock(node, undefined);
-        return resolverSelf;
-      } else if (kind === SyntaxKind.MatchExpr) {
-        {
-          const kids = kidsOf(resolverTree, node);
-          if (kids.length > 0) {
-            resolverSelf = resolverExpr(kids[0], "value");
-          }
-          for (const arm of kids.slice(1)) {
-            if (kindOf(resolverTree, arm) === SyntaxKind.MatchArm) {
-              resolverSelf = resolverArm(arm);
-            }
-          }
-          return resolverSelf;
-        }
-      } else if (kind === SyntaxKind.TryExpr) {
-        for (const kid of kidsOf(resolverTree, node)) {
-          if (kindOf(resolverTree, kid) === SyntaxKind.CatchClause) {
-            for (const h of kidsOfKind(resolverTree, kid, SyntaxKind.Handler)) {
-              resolverSelf = resolverHandler(h);
-            }
-          } else if (kindOf(resolverTree, kid) === SyntaxKind.FinallyClause) {
-            const outer = resolverScope;
-            resolverScope = Scope(outer);
-            resolverSelf = resolverBodyWithOutcome(kid);
-            resolverScope = outer;
-          } else {
-            resolverSelf = resolverExpr(kid, "value");
-          }
-        }
-        return resolverSelf;
-      } else if (
-        kind === SyntaxKind.ParenExpr || kind === SyntaxKind.BinaryExpr ||
-        kind === SyntaxKind.UnaryExpr ||
-        kind === SyntaxKind.OptionFallbackExpr || kind === SyntaxKind.ArgList ||
-        kind === SyntaxKind.ListExpr || kind === SyntaxKind.SpreadElement ||
-        kind === SyntaxKind.IfExpr
+    if (kind === SyntaxKind.NameExpr) {
+      return resolverValueRef(
+        node,
+        nodeText(resolverTree, node),
+        position,
+      );
+    }
+    if (kind === SyntaxKind.UsingExpr) {
+      return resolverUsing(node);
+    }
+    if (kind === SyntaxKind.ArrowExpr) {
+      return resolverArrow(node);
+    }
+    if (kind === SyntaxKind.CallExpr) {
+      const kids = kidsOf(resolverTree, node);
+      if (kids.length > 0) {
+        resolverSelf = resolverExpr(kids[0], "callee");
+      }
+      if (
+        kids[0] !== undefined &&
+        kindOf(resolverTree, kids[0]) === SyntaxKind.NameExpr &&
+        takesServiceArgument(nodeText(resolverTree, kids[0])) &&
+        kids[1] !== undefined &&
+        kindOf(resolverTree, kids[1]) === SyntaxKind.ArgList
       ) {
-        for (const kid of kidsOf(resolverTree, node)) {
-          resolverSelf = resolverExpr(kid, "value");
+        const args = kidsOf(resolverTree, kids[1]);
+        const first = args[0];
+        if (
+          first !== undefined &&
+          kindOf(resolverTree, first) === SyntaxKind.NameExpr
+        ) {
+          const service = resolverServiceBinding(first);
+          if (service !== undefined) {
+            resolverSelf = resolverSet(first, service.target);
+          } else {
+            resolverSelf = resolverExpr(first, "value");
+          }
+        } else if (first !== undefined) {
+          resolverSelf = resolverExpr(first, "value");
         }
-        return resolverSelf;
-      } else {
+        for (const arg of args.slice(1)) {
+          resolverSelf = resolverExpr(arg, "value");
+        }
         return resolverSelf;
       }
+      for (const arg of kids.slice(1)) {
+        resolverSelf = resolverExpr(arg, "value");
+      }
+      return resolverSelf;
     }
+    if (kind === SyntaxKind.FieldExpr) {
+      return resolverFieldExpr(node);
+    }
+    if (kind === SyntaxKind.PipeExpr) {
+      const kids = kidsOf(resolverTree, node);
+      if (kids.length > 0) {
+        resolverSelf = resolverExpr(kids[0], "value");
+      }
+      for (const stage of kids.slice(1)) {
+        resolverSelf = resolverPipeStage(stage);
+      }
+      return resolverSelf;
+    }
+    if (kind === SyntaxKind.RecordExpr) {
+      for (const field of kidsOf(resolverTree, node)) {
+        resolverSelf = resolverRecordField(field);
+      }
+      return resolverSelf;
+    }
+    if (kind === SyntaxKind.Block) {
+      return resolverBlock(node, undefined);
+    }
+    if (kind === SyntaxKind.MatchExpr) {
+      const kids = kidsOf(resolverTree, node);
+      if (kids.length > 0) {
+        resolverSelf = resolverExpr(kids[0], "value");
+      }
+      for (const arm of kids.slice(1)) {
+        if (kindOf(resolverTree, arm) === SyntaxKind.MatchArm) {
+          resolverSelf = resolverArm(arm);
+        }
+      }
+      return resolverSelf;
+    }
+    if (kind === SyntaxKind.TryExpr) {
+      for (const kid of kidsOf(resolverTree, node)) {
+        if (kindOf(resolverTree, kid) === SyntaxKind.CatchClause) {
+          for (const h of kidsOfKind(resolverTree, kid, SyntaxKind.Handler)) {
+            resolverSelf = resolverHandler(h);
+          }
+        } else if (kindOf(resolverTree, kid) === SyntaxKind.FinallyClause) {
+          const outer = resolverScope;
+          resolverScope = Scope(outer);
+          resolverSelf = resolverBodyWithOutcome(kid);
+          resolverScope = outer;
+        } else {
+          resolverSelf = resolverExpr(kid, "value");
+        }
+      }
+      return resolverSelf;
+    }
+    if (
+      kind === SyntaxKind.ParenExpr || kind === SyntaxKind.BinaryExpr ||
+      kind === SyntaxKind.UnaryExpr ||
+      kind === SyntaxKind.OptionFallbackExpr || kind === SyntaxKind.ArgList ||
+      kind === SyntaxKind.ListExpr || kind === SyntaxKind.SpreadElement ||
+      kind === SyntaxKind.IfExpr
+    ) {
+      for (const kid of kidsOf(resolverTree, node)) {
+        resolverSelf = resolverExpr(kid, "value");
+      }
+      return resolverSelf;
+    }
+    return resolverSelf;
   }
   function resolverFieldExpr(node: NodeId): Resolver {
     const parts = memberAccessParts(resolverTree, node);
@@ -1517,8 +1457,7 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
     }
     for (
       const region of parts.filter((k) =>
-        Array.of<SyntaxKind>(SyntaxKind.ResourceUse, SyntaxKind.ResourceRelease)
-          .includes(kindOf(resolverTree, k))
+        RESOURCE_REGIONS.includes(kindOf(resolverTree, k))
       )
     ) {
       resolverScope = Scope(scope);
@@ -1592,9 +1531,7 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
           resolverSelf = declared.owner;
           const binding = declared.binding;
           if (binding !== undefined) {
-            const _appendTarget9 = bindings;
-            const _appendValue10 = binding;
-            _appendTarget9[_appendTarget9.length] = _appendValue10;
+            bindings[bindings.length] = binding;
           }
         }
       }
@@ -1665,7 +1602,7 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
           if (nameTextOf(resolverTree, kid) === DEFECT_ARM) {
             resolverDefectArms = resolverDefectArms.add(kid);
           } else {
-            resolverSelf = resolverErrorRef(kid, undefined);
+            resolverSelf = resolverErrorRef(kid, false);
           }
         } else {
           resolverSelf = resolverDeclareLocal(kid, false).owner;
@@ -1682,49 +1619,46 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
   }
   function resolverPattern(node: NodeId): Resolver {
     const kind = kindOf(resolverTree, node);
-    {
-      if (kind === SyntaxKind.NamePattern) {
-        for (const name of kidsOfKind(resolverTree, node, SyntaxKind.Name)) {
-          if (resolverIsConstructorName(name)) {
-            resolverSelf = resolverCtorRef(name);
-          } else {
+    if (kind === SyntaxKind.NamePattern) {
+      for (const name of kidsOfKind(resolverTree, node, SyntaxKind.Name)) {
+        if (resolverIsConstructorName(name)) {
+          resolverSelf = resolverCtorRef(name);
+        } else {
+          resolverSelf = resolverDeclareLocal(name, false).owner;
+        }
+      }
+      return resolverSelf;
+    }
+    if (kind === SyntaxKind.CtorPattern) {
+      const names = kidsOfKind(resolverTree, node, SyntaxKind.Name);
+      if (names.length > 0) {
+        resolverSelf = resolverCtorRef(names[0]);
+      }
+      if (names.length > 1) {
+        resolverSelf = resolverDeclareLocal(names[1], false).owner;
+      }
+      return resolverSelf;
+    }
+    if (kind === SyntaxKind.RecordPattern) {
+      for (const field of kidsOf(resolverTree, node)) {
+        const fieldKind = kindOf(resolverTree, field);
+        if (fieldKind === SyntaxKind.PatternField) {
+          for (
+            const name of kidsOfKind(resolverTree, field, SyntaxKind.Name)
+          ) {
+            resolverSelf = resolverFieldLabel(name);
+          }
+        } else if (fieldKind === SyntaxKind.SpreadPattern) {
+          for (
+            const name of kidsOfKind(resolverTree, field, SyntaxKind.Name)
+          ) {
             resolverSelf = resolverDeclareLocal(name, false).owner;
           }
         }
-        return resolverSelf;
-      } else if (kind === SyntaxKind.CtorPattern) {
-        {
-          const names = kidsOfKind(resolverTree, node, SyntaxKind.Name);
-          if (names.length > 0) {
-            resolverSelf = resolverCtorRef(names[0]);
-          }
-          if (names.length > 1) {
-            resolverSelf = resolverDeclareLocal(names[1], false).owner;
-          }
-          return resolverSelf;
-        }
-      } else if (kind === SyntaxKind.RecordPattern) {
-        for (const field of kidsOf(resolverTree, node)) {
-          const fieldKind = kindOf(resolverTree, field);
-          if (fieldKind === SyntaxKind.PatternField) {
-            for (
-              const name of kidsOfKind(resolverTree, field, SyntaxKind.Name)
-            ) {
-              resolverSelf = resolverFieldLabel(name);
-            }
-          } else if (fieldKind === SyntaxKind.SpreadPattern) {
-            for (
-              const name of kidsOfKind(resolverTree, field, SyntaxKind.Name)
-            ) {
-              resolverSelf = resolverDeclareLocal(name, false).owner;
-            }
-          }
-        }
-        return resolverSelf;
-      } else {
-        return resolverSelf;
       }
+      return resolverSelf;
     }
+    return resolverSelf;
   }
   function resolverRun(): ModuleResolution {
     resolverSelf = resolverBindImports();
@@ -1739,10 +1673,9 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
       diagnostics: normalizeDiagnostics(resolverDiagnostics),
     };
   }
-  resolverSelf = {
+  return {
     run: resolverRun,
   };
-  return resolverSelf;
 }
 /** Resolves every module of the project. The map follows the topological order. */
 export function resolveProject(
