@@ -9,15 +9,15 @@ import {
 import { isCycle, stronglyConnectedComponents } from "./graph.ts";
 import type { Type, TypeId } from "./ir.ts";
 import { referencedIds } from "./referenced_ids.ts";
+type TagText = string;
+type Guarded = boolean;
+
 /**
  * The string tag that a field type reaches: an inline string literal, or a
  * name that reaches one through literal aliases. `aliasOf` gives the IR type
  * that an id stands for, or undefined when the id is not an alias. A repeated
  * name stops an alias cycle.
  */
-type TagText = string;
-type Guarded = boolean;
-
 export function literalTagOf(
   type: Type,
   aliasOf: (id: string) => Type | undefined,
@@ -39,30 +39,28 @@ export function literalTagOf(
 }
 /** Whether a type names the id at any depth, not through a tuple or a function. */
 export function containsNamed(part: Type, id: TypeId): Guarded {
-  {
-    const kind_1 = part.kind;
-    if (kind_1 === "named") {
-      return part.id === id;
-    } else if (kind_1 === "array" || kind_1 === "option") {
-      return containsNamed(part.element, id);
-    } else if (kind_1 === "record") {
-      return part.fields.some((field) => containsNamed(field.type, id));
-    } else if (kind_1 === "union") {
-      return part.members.some((member) => containsNamed(member, id));
-    } else if (
-      kind_1 === "primitive" || kind_1 === "literal" || kind_1 === "tuple" ||
-      kind_1 === "ref" || kind_1 === "retry-schedule" || kind_1 === "schema" ||
-      kind_1 === "effect" || kind_1 === "stream" || kind_1 === "sink" ||
-      kind_1 === "function" || kind_1 === "provider"
-    ) {
-      return false;
-    } else {
-      {
-        const unreachable: never = part;
-        return unreachable;
-      }
-    }
+  if (part.kind === "named") return part.id === id;
+  if (part.kind === "array" || part.kind === "option") {
+    return containsNamed(part.element, id);
   }
+  if (part.kind === "record") {
+    return part.fields.some((field) => containsNamed(field.type, id));
+  }
+  if (part.kind === "union") {
+    return part.members.some((member) => containsNamed(member, id));
+  }
+  if (
+    part.kind === "primitive" || part.kind === "literal" ||
+    part.kind === "tuple" || part.kind === "ref" ||
+    part.kind === "retry-schedule" || part.kind === "schema" ||
+    part.kind === "effect" || part.kind === "stream" ||
+    part.kind === "sink" || part.kind === "function" ||
+    part.kind === "provider"
+  ) {
+    return false;
+  }
+  const unreachable: never = part;
+  return unreachable;
 }
 /** A single recursive data alias needs an array, optional key, or tagged terminal choice. */
 export function guardedRecord(
@@ -74,14 +72,9 @@ export function guardedRecord(
   const records = members.filter((member) => member.kind === "record");
   const tagged = records.length >= 2 && records.length === members.length &&
     records.some((member) => !containsNamed(member, id));
-  const tagNames = tagged
-    ? records[0].fields
-      .filter((field) => !field.optional && tagOf(field.type) !== undefined)
-      .map((field) => field.name)
-    : [];
-  const hasDistinctTag = tagNames.some((name) => {
+  const hasDistinctTag = tagged && records[0].fields.some((first) => {
     const fields = records.map((member) =>
-      member.fields.find((field) => field.name === name)
+      member.fields.find((field) => field.name === first.name)
     );
     return fields.every((field) =>
       field !== undefined && !field.optional &&
@@ -90,44 +83,38 @@ export function guardedRecord(
           field === undefined ? undefined : tagOf(field.type)
         )).size === fields.length;
   });
-  if (type.kind !== "record" && !(tagged && hasDistinctTag)) {
+  if (type.kind !== "record" && !hasDistinctTag) {
     return false;
   }
   let found = false;
   function visit(part: Type, guarded: boolean): boolean {
-    {
-      const kind_2 = part.kind;
-      if (kind_2 === "named") {
-        if (part.id !== id) {
-          return true;
-        }
-        found = true;
-        return guarded;
-      } else if (kind_2 === "array") {
-        return visit(part.element, true);
-      } else if (kind_2 === "record") {
-        return part.fields.every((field) =>
-          visit(field.type, guarded || field.optional)
-        );
-      } else if (kind_2 === "union") {
-        return (guarded || (part === type && tagged && hasDistinctTag)) &&
-          part.members.every((member) => visit(member, true));
-      } else if (kind_2 === "primitive" || kind_2 === "literal") {
-        return true;
-      } else if (
-        kind_2 === "tuple" || kind_2 === "option" || kind_2 === "ref" ||
-        kind_2 === "retry-schedule" || kind_2 === "schema" ||
-        kind_2 === "effect" || kind_2 === "stream" || kind_2 === "sink" ||
-        kind_2 === "function" || kind_2 === "provider"
-      ) {
-        return false;
-      } else {
-        {
-          const unreachable: never = part;
-          return unreachable;
-        }
-      }
+    if (part.kind === "named") {
+      if (part.id !== id) return true;
+      found = true;
+      return guarded;
     }
+    if (part.kind === "array") return visit(part.element, true);
+    if (part.kind === "record") {
+      return part.fields.every((field) =>
+        visit(field.type, guarded || field.optional)
+      );
+    }
+    if (part.kind === "union") {
+      return (guarded || (part === type && hasDistinctTag)) &&
+        part.members.every((member) => visit(member, true));
+    }
+    if (part.kind === "primitive" || part.kind === "literal") return true;
+    if (
+      part.kind === "tuple" || part.kind === "option" || part.kind === "ref" ||
+      part.kind === "retry-schedule" || part.kind === "schema" ||
+      part.kind === "effect" || part.kind === "stream" ||
+      part.kind === "sink" || part.kind === "function" ||
+      part.kind === "provider"
+    ) {
+      return false;
+    }
+    const unreachable: never = part;
+    return unreachable;
   }
   return visit(type, false) && found;
 }
@@ -189,16 +176,9 @@ export function recursionIsGuarded(
     keep: (from: number, to: number, bare: boolean) => boolean,
   ): boolean {
     const graph = edges.map((targets, from) =>
-      [...targets].filter((binding1) => {
-        const binding2 = binding1;
-        const to = binding2[0];
-        const bare = binding2[1];
-        return keep(from, to, bare);
-      }).map((binding3) => {
-        const binding4 = binding3;
-        const to = binding4[0];
-        return to;
-      })
+      [...targets].filter((edge) => keep(from, edge[0], edge[1])).map((edge) =>
+        edge[0]
+      )
     );
     return stronglyConnectedComponents(members.length, graph).some((c) =>
       isCycle(c, graph)
