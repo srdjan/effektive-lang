@@ -884,7 +884,8 @@ function schemaOptionFromOptionalKeyCall(
 }
 
 /**
- * `schemaDefaultKey`, `schemaDefaultNullKey`, and `schemaDefaultEncodedKey`.
+ * The Schema operations `default-key`, `default-null-key`, and
+ * `default-encoded-key`, which the `on` option of `schemaDefaultKey` selects.
  * `direction` names the field type that the default callback returns.
  * `nullable` adds null to the encoded type and rejects a nullable field.
  */
