@@ -24,22 +24,24 @@ export type QueryText = string;
 export type OptionalQueryText = QueryText | undefined;
 export type LiteralValue = string | number | boolean | null | undefined;
 
+const TYPE_KINDS: readonly SyntaxKind[] = [
+  SyntaxKind.NamedType,
+  SyntaxKind.EffectType,
+  SyntaxKind.StreamType,
+  SyntaxKind.SinkType,
+  SyntaxKind.SchemaType,
+  SyntaxKind.LayerType,
+  SyntaxKind.LiteralType,
+  SyntaxKind.RecordType,
+  SyntaxKind.TupleType,
+  SyntaxKind.ArrayType,
+  SyntaxKind.UnionType,
+  SyntaxKind.FunctionType,
+  SyntaxKind.ParenType,
+];
+
 export function isTypeKind(kind: SyntaxKind): QueryMatch {
-  return Array.of<SyntaxKind>(
-    SyntaxKind.NamedType,
-    SyntaxKind.EffectType,
-    SyntaxKind.StreamType,
-    SyntaxKind.SinkType,
-    SyntaxKind.SchemaType,
-    SyntaxKind.LayerType,
-    SyntaxKind.LiteralType,
-    SyntaxKind.RecordType,
-    SyntaxKind.TupleType,
-    SyntaxKind.ArrayType,
-    SyntaxKind.UnionType,
-    SyntaxKind.FunctionType,
-    SyntaxKind.ParenType,
-  ).includes(kind);
+  return TYPE_KINDS.includes(kind);
 }
 
 /** The lexer kind of a Token node, or undefined for any other node. */
@@ -421,12 +423,14 @@ export function initOf(
   ).pop();
 }
 
+const PATTERN_KINDS: readonly SyntaxKind[] = [
+  SyntaxKind.WildcardPattern,
+  SyntaxKind.LiteralPattern,
+  SyntaxKind.NamePattern,
+  SyntaxKind.CtorPattern,
+  SyntaxKind.RecordPattern,
+];
+
 export function isPatternKind(kind: SyntaxKind): QueryMatch {
-  return Array.of<SyntaxKind>(
-    SyntaxKind.WildcardPattern,
-    SyntaxKind.LiteralPattern,
-    SyntaxKind.NamePattern,
-    SyntaxKind.CtorPattern,
-    SyntaxKind.RecordPattern,
-  ).includes(kind);
+  return PATTERN_KINDS.includes(kind);
 }

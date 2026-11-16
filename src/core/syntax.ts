@@ -564,35 +564,23 @@ export function hasProblem(tree: SyntaxTree, node: NodeId): ProblemStatus {
 export function printTree(tree: SyntaxTree): SyntaxText {
   const lexed = tree.lexed;
   const out: string[] = [];
-  const pending: NodeId[] = [tree.root];
-  let pendingCount = 1;
-  for (const _visited of indices(tree.count)) {
-    if (pendingCount === 0) break;
-    pendingCount = pendingCount - 1;
-    const node = pending[pendingCount];
-    if (kindOf(tree, node) === SyntaxKind.Token) {
-      const token = tree.tokens[node];
-      const firstTrivia = token === 0 ? 0 : lexed.triviaEnd[token - 1];
-      const triviaCount = lexed.triviaEnd[token] - firstTrivia;
-      for (const offset of indices(triviaCount)) {
-        const trivia = firstTrivia + offset;
-        out[out.length] = tree.text.slice(
-          lexed.trivia.starts[trivia],
-          lexed.trivia.ends[trivia],
-        );
-      }
+  const _walked = walk(tree, tree.root, (node) => {
+    if (kindOf(tree, node) !== SyntaxKind.Token) return true;
+    const token = tree.tokens[node];
+    const firstTrivia = token === 0 ? 0 : lexed.triviaEnd[token - 1];
+    const triviaCount = lexed.triviaEnd[token] - firstTrivia;
+    for (const offset of indices(triviaCount)) {
+      const trivia = firstTrivia + offset;
       out[out.length] = tree.text.slice(
-        lexed.starts[token],
-        lexed.ends[token],
+        lexed.trivia.starts[trivia],
+        lexed.trivia.ends[trivia],
       );
-      continue;
     }
-    const children = childrenOf(tree, node);
-    for (const offset of indices(children.length)) {
-      const remaining = children.length - offset - 1;
-      pending[pendingCount] = children[remaining];
-      pendingCount = pendingCount + 1;
-    }
-  }
+    out[out.length] = tree.text.slice(
+      lexed.starts[token],
+      lexed.ends[token],
+    );
+    return false;
+  });
   return out.join("");
 }
