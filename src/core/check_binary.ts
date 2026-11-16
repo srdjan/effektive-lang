@@ -5,7 +5,11 @@
 import { isErrorId, isTypeId, type ModuleName } from "./ids.ts";
 import { DURATION_ID, INSTANT_ID, isClosedUnitId, type TypeId } from "./ir.ts";
 import { flattenIdentityMembers } from "./patterns.ts";
-import type { ArithmeticOperator, BinaryOperator } from "./syntax_queries.ts";
+import {
+  type ArithmeticOperator,
+  type BinaryOperator,
+  isArithmeticOperator,
+} from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
 import { indices } from "./runtime.ts";
 type TypeMatch = boolean;
@@ -157,21 +161,17 @@ export function isOrderable(table: TypeTable, ref: TypeRef): TypeMatch {
   return cls !== undefined &&
     (isNumericClass(table, cls) || isStringClass(table, cls));
 }
-/** The closed unit class of a comparison class, or undefined for another class. */
-function closedUnitClass(cls: string | undefined): string | undefined {
+/** Whether a comparison class is the class of a closed unit type. */
+function isClosedUnitClass(cls: string | undefined): boolean {
   return cls !== undefined && cls.startsWith(IDENTITY_CLASS) &&
-      isClosedUnitId(cls.slice(IDENTITY_CLASS.length))
-    ? cls
-    : undefined;
+    isClosedUnitId(cls.slice(IDENTITY_CLASS.length));
 }
 /** A closed unit type compares only with a value of the same closed unit type. */
 function closedUnitsDiffer(
   l: string | undefined,
   r: string | undefined,
 ): boolean {
-  return (closedUnitClass(l) !== undefined ||
-    closedUnitClass(r) !== undefined) &&
-    l !== r;
+  return (isClosedUnitClass(l) || isClosedUnitClass(r)) && l !== r;
 }
 /**
  * An operand of a unit rule: the id of a closed unit type, or `integral` for a
@@ -336,12 +336,12 @@ function fitsUnitOperand(
 ): boolean {
   if (operand === "integral") {
     return table.isAssignableIn(module, ref, table.int);
-  } else if (operand === "numeric") {
+  }
+  if (operand === "numeric") {
     return table.isAssignableIn(module, ref, table.int) ||
       table.isAssignableIn(module, ref, table.number);
-  } else {
-    return isUnit(table, ref, operand);
   }
+  return isUnit(table, ref, operand);
 }
 /**
  * The arithmetic of the closed units, or undefined when the general rules
@@ -366,13 +366,14 @@ function unitArithmetic(
     const outcome = rule?.result ?? row.otherwise;
     if (outcome === "general") {
       return undefined;
-    } else if (outcome === "mismatch") {
-      return { type: table.error, mismatch: true };
-    } else if (outcome === "number") {
-      return { type: table.number, mismatch: false };
-    } else {
-      return { type: table.named(outcome), mismatch: false };
     }
+    if (outcome === "mismatch") {
+      return { type: table.error, mismatch: true };
+    }
+    if (outcome === "number") {
+      return { type: table.number, mismatch: false };
+    }
+    return { type: table.named(outcome), mismatch: false };
   }
   return undefined;
 }
@@ -389,97 +390,122 @@ export function operatorResult(
   left: TypeRef,
   right: TypeRef,
 ): OperatorResult {
-  const either = isError(table, left) || isError(table, right);
   if (operator === "&&" || operator === "||") {
-    const mismatch = !either &&
+    const mismatch = !hasErrorOperand(table, left, right) &&
       !(isBoolean(table, module, left) && isBoolean(table, module, right));
     return { type: table.boolean, mismatch: mismatch };
-  } else if (
+  }
+  if (
     operator === "<" || operator === "<=" || operator === ">" ||
     operator === ">="
   ) {
-    // `isNumeric` widens an identity to its base, so the classes decide.
-    const l = comparisonClass(table, left);
-    const r = comparisonClass(table, right);
-    const mismatch = !either &&
-      (closedUnitsDiffer(l, r) ||
-        !(l !== undefined && r !== undefined &&
-          compatibleClasses(table, l, r) &&
-          isNumericClass(table, l) && isNumericClass(table, r)));
-    return { type: table.boolean, mismatch: mismatch };
-  } else if (operator === "===" || operator === "!==") {
-    let mismatch = false;
-    if (!either) {
-      const l = comparisonClass(table, left);
-      const r = comparisonClass(table, right);
-      const nullable =
-        (isNull(table, left) && table.isAssignable(left, right)) ||
-        (isNull(table, right) && table.isAssignable(right, left));
-      if (
-        !nullable &&
-        (l === undefined || r === undefined ||
-          !compatibleClasses(table, l, r) || closedUnitsDiffer(l, r))
-      ) {
-        mismatch = true;
-      }
-    }
-    return { type: table.boolean, mismatch: mismatch };
-  } else if (
-    operator === "+" || operator === "-" || operator === "*" ||
-    operator === "/" || operator === "%"
-  ) {
-    // An error operand hides whether the result is int or number.
-    if (either) {
-      return { type: table.error, mismatch: false };
-    }
-    const sealed = table.foreignSealedOf(module, left) ??
-      table.foreignSealedOf(module, right);
-    if (sealed !== undefined) {
-      return { type: table.error, mismatch: false, sealed: sealed };
-    }
-    // A bare number has no unit, and a widened operand needs no shared class.
-    const unit = unitArithmetic(table, module, operator, left, right);
-    if (unit !== undefined) {
-      return unit;
-    }
-    const l = comparisonClass(table, left);
-    const r = comparisonClass(table, right);
-    if (l === undefined || r === undefined || !compatibleClasses(table, l, r)) {
-      return { type: table.error, mismatch: true };
-    }
-    if (operator === "+" || operator === "-") {
-      const shared = sharedNumericIdentity(table, left, right);
-      if (shared !== undefined) {
-        return { type: table.named(shared), mismatch: false };
-      }
-    }
-    // One named operand and one unnamed operand that fits its body: the
-    // result keeps the name, in either operand order.
-    if (operator !== "/") {
-      const named = adoptedNumericIdentity(table, module, left, right);
-      if (named !== undefined) {
-        return { type: table.named(named), mismatch: false };
-      }
-    }
-    if (isNumericClass(table, l) && isNumericClass(table, r)) {
-      const integral = operator !== "/" &&
-        table.isAssignableIn(module, left, table.int) &&
-        table.isAssignableIn(module, right, table.int);
-      return {
-        type: integral ? table.int : table.number,
-        mismatch: false,
-      };
-    }
-    if (
-      operator === "+" && isStringClass(table, l) && isStringClass(table, r)
-    ) {
-      return { type: table.string, mismatch: false };
-    }
+    return orderingResult(table, left, right);
+  }
+  if (operator === "===" || operator === "!==") {
+    return equalityResult(table, left, right);
+  }
+  if (isArithmeticOperator(operator)) {
+    return arithmeticResult(table, module, operator, left, right);
+  }
+  const unreachable: never = operator;
+  return unreachable;
+}
+
+function hasErrorOperand(
+  table: TypeTable,
+  left: TypeRef,
+  right: TypeRef,
+): boolean {
+  return isError(table, left) || isError(table, right);
+}
+
+/** The result of `<`, `<=`, `>`, and `>=`: the comparison classes decide, because an identity widens to its base. */
+function orderingResult(
+  table: TypeTable,
+  left: TypeRef,
+  right: TypeRef,
+): OperatorResult {
+  const l = comparisonClass(table, left);
+  const r = comparisonClass(table, right);
+  const mismatch = !hasErrorOperand(table, left, right) &&
+    (closedUnitsDiffer(l, r) ||
+      !(l !== undefined && r !== undefined &&
+        compatibleClasses(table, l, r) &&
+        isNumericClass(table, l) && isNumericClass(table, r)));
+  return { type: table.boolean, mismatch: mismatch };
+}
+
+/** The result of `===` and `!==`. */
+function equalityResult(
+  table: TypeTable,
+  left: TypeRef,
+  right: TypeRef,
+): OperatorResult {
+  if (hasErrorOperand(table, left, right)) {
+    return { type: table.boolean, mismatch: false };
+  }
+  const l = comparisonClass(table, left);
+  const r = comparisonClass(table, right);
+  const nullable = (isNull(table, left) && table.isAssignable(left, right)) ||
+    (isNull(table, right) && table.isAssignable(right, left));
+  const mismatch = !nullable &&
+    (l === undefined || r === undefined ||
+      !compatibleClasses(table, l, r) || closedUnitsDiffer(l, r));
+  return { type: table.boolean, mismatch: mismatch };
+}
+
+/** The result of `+`, `-`, `*`, `/`, and `%`. */
+function arithmeticResult(
+  table: TypeTable,
+  module: ModuleName,
+  operator: ArithmeticOperator,
+  left: TypeRef,
+  right: TypeRef,
+): OperatorResult {
+  // An error operand hides whether the result is int or number.
+  if (hasErrorOperand(table, left, right)) {
+    return { type: table.error, mismatch: false };
+  }
+  const sealed = table.foreignSealedOf(module, left) ??
+    table.foreignSealedOf(module, right);
+  if (sealed !== undefined) {
+    return { type: table.error, mismatch: false, sealed: sealed };
+  }
+  // A bare number has no unit, and a widened operand needs no shared class.
+  const unit = unitArithmetic(table, module, operator, left, right);
+  if (unit !== undefined) {
+    return unit;
+  }
+  const l = comparisonClass(table, left);
+  const r = comparisonClass(table, right);
+  if (l === undefined || r === undefined || !compatibleClasses(table, l, r)) {
     return { type: table.error, mismatch: true };
-  } else {
-    {
-      const unreachable: never = operator;
-      return unreachable;
+  }
+  if (operator === "+" || operator === "-") {
+    const shared = sharedNumericIdentity(table, left, right);
+    if (shared !== undefined) {
+      return { type: table.named(shared), mismatch: false };
     }
   }
+  // One named operand and one unnamed operand that fits its body: the
+  // result keeps the name, in either operand order.
+  if (operator !== "/") {
+    const named = adoptedNumericIdentity(table, module, left, right);
+    if (named !== undefined) {
+      return { type: table.named(named), mismatch: false };
+    }
+  }
+  if (isNumericClass(table, l) && isNumericClass(table, r)) {
+    const integral = operator !== "/" &&
+      table.isAssignableIn(module, left, table.int) &&
+      table.isAssignableIn(module, right, table.int);
+    return {
+      type: integral ? table.int : table.number,
+      mismatch: false,
+    };
+  }
+  if (operator === "+" && isStringClass(table, l) && isStringClass(table, r)) {
+    return { type: table.string, mismatch: false };
+  }
+  return { type: table.error, mismatch: true };
 }
