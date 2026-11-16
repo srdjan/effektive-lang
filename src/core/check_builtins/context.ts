@@ -69,7 +69,8 @@ export type EffectfulDecision = boolean;
 
 /**
  * The bound of a `{ concurrency: N }` option record, or undefined after a
- * diagnostic. `N` is a positive safe integer literal or `"unbounded"`.
+ * diagnostic or when the call has no option. `N` is a positive safe integer
+ * literal or `"unbounded"`.
  */
 export type ConcurrencyBound<State> = {
   readonly state: State;
@@ -82,9 +83,10 @@ export function concurrencyBound<
   },
 >(
   c: State,
-  arg: Arg,
+  arg: Arg | undefined,
   operation: ConcurrencyOperation,
 ): ConcurrencyBound<State> {
+  if (arg === undefined) return { state: c, bound: undefined };
   const record = c.literalRecord(arg);
   const literal = record.ok
     ? record.value.get("concurrency")?.value
@@ -151,6 +153,18 @@ export function literalIntegerOption<
     PURE_EFFECTS,
   );
   return { context: c, value: value, info: info };
+}
+
+/** The type of the `{ concurrency: N }` option record that a specialized call takes. */
+export function concurrencyParameter(
+  table: TypeTable,
+  bound: ConcurrencyLimit,
+): TypeRef {
+  return table.record([{
+    name: "concurrency",
+    type: bound === "unbounded" ? table.string : table.int,
+    optional: false,
+  }]);
 }
 
 /** True when a function runs as an effect or has a failure or requirement. */

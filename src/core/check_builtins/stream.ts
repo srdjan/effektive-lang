@@ -85,9 +85,7 @@ function mapEffectCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const concurrencyResult = args[2] === undefined
-    ? { state: c, bound: undefined }
-    : concurrencyBound(c, args[2], "mapEffect");
+  const concurrencyResult = concurrencyBound(c, args[2], "mapEffect");
   c = concurrencyResult.state;
   const concurrency = concurrencyResult.bound;
   c = c.noPipeline("mapEffect", args);

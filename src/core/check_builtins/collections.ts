@@ -11,6 +11,7 @@ import {
   type Arg,
   type BuiltinContext,
   concurrencyBound,
+  concurrencyParameter,
   isEffectfulFunction,
   type LiteralRecordView,
 } from "./context.ts";
@@ -71,9 +72,7 @@ function allCall(
   const option = args[1] === undefined
     ? undefined
     : c.argInfo(args[1], undefined);
-  const concurrencyResult = args[1] === undefined
-    ? { state: c, bound: undefined }
-    : concurrencyBound(c, args[1], "all");
+  const concurrencyResult = concurrencyBound(c, args[1], "all");
   c = concurrencyResult.state;
   const concurrency = concurrencyResult.bound;
   if (effectTypes === undefined) {
@@ -127,11 +126,7 @@ function allCall(
     parameters: args.length === 2
       ? [
         input.type,
-        table.record([{
-          name: "concurrency",
-          type: concurrency === "unbounded" ? table.string : table.int,
-          optional: false,
-        }]),
+        concurrencyParameter(table, concurrency),
       ]
       : [input.type],
     result: result,
@@ -200,9 +195,7 @@ function traverseCall(
   const infos: NodeInfo[] = [xs];
   const cb = c.callback("traverse", args[1], [element], undefined, true);
   infos[infos.length] = cb.info;
-  const concurrencyResult = args[2] === undefined
-    ? { state: c, bound: undefined }
-    : concurrencyBound(c, args[2], "traverse");
+  const concurrencyResult = concurrencyBound(c, args[2], "traverse");
   c = concurrencyResult.state;
   const concurrency = concurrencyResult.bound;
   if (args[2] !== undefined) {
@@ -225,11 +218,7 @@ function traverseCall(
       ? [
         table.array(element),
         callbackType,
-        table.record([{
-          name: "concurrency",
-          type: concurrency === "unbounded" ? table.string : table.int,
-          optional: false,
-        }]),
+        concurrencyParameter(table, concurrency),
       ]
       : [table.array(element), callbackType],
     result: result,
