@@ -70,6 +70,12 @@ export function createReport(): Report {
     return report;
   }
 
+  /**
+   * Reports a type nested deeper than `limit` levels at `path`. A report names
+   * the declaration of the path, the text before its first `.`, and each
+   * declaration gets at most one, however many walkers or branches go past
+   * the bound.
+   */
   function addDepth(
     path: ValidationPath,
     limit: DepthLimit,

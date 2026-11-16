@@ -20,7 +20,7 @@
 //   - unknown is not a top type.
 
 import type { ValidationFlag, ValidationText } from "./report.ts";
-import { isTrue } from "./guards.ts";
+import { flagAt, isTrue } from "./guards.ts";
 import { emptySet, indices } from "../runtime.ts";
 import {
   DURATION_ID,
@@ -403,21 +403,11 @@ function assignable(
     if (s.parameters.length !== t.parameters.length) return false;
     const sourceBorrows = s.borrows;
     if (
-      t.borrows?.some((borrow, i) => {
-        const sourceBorrow = sourceBorrows === undefined
-          ? undefined
-          : sourceBorrows[i];
-        return borrow && !isTrue(sourceBorrow);
-      })
+      t.borrows?.some((borrow, i) => borrow && !flagAt(sourceBorrows, i))
     ) return false;
     const sourceChecked = s.checked;
     if (
-      t.checked?.some((checked, i) => {
-        const checkedSource = sourceChecked === undefined
-          ? undefined
-          : sourceChecked[i];
-        return checked && !isTrue(checkedSource);
-      })
+      t.checked?.some((checked, i) => checked && !flagAt(sourceChecked, i))
     ) return false;
     if (
       s.execution !== t.execution &&
@@ -753,7 +743,7 @@ export function asFunction(env: TypeEnv, type: Type): FunctionType | undefined {
   return unfolded.kind === "function" ? unfolded : undefined;
 }
 
-/** True when a structural input contains an unknown component. */
+/** True when the type, or a type that it contains, is a refined type. */
 export function containsRefinement(
   env: TypeEnv,
   type: Type,
@@ -784,6 +774,7 @@ function containsRefinementSeen(
   );
 }
 
+/** True when a structural input contains an unknown component. */
 export function containsUnknown(
   env: TypeEnv,
   type: Type,
@@ -886,7 +877,7 @@ export function comparisonClassAtDepth(
         base !== undefined &&
         comparisonClassAtDepth(env, base, depth + 1) !== undefined
       ) {
-        current = `identity:${member.id}`;
+        current = `${IDENTITY_CLASS}${member.id}`;
       }
     }
     if (current === undefined) return undefined;

@@ -10,7 +10,7 @@
 //
 // The equations come from the spec, "Equations and validation".
 
-import { isTrue } from "./guards.ts";
+import { flagAt, isTrue } from "./guards.ts";
 import { emptyMap, emptySet, setFrom } from "../runtime.ts";
 import { panic } from "../source.ts";
 import {
@@ -434,7 +434,7 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
   function checkFunction(d: FunctionDecl, path: string): Report {
     const checkedFlags = d.type.checked;
     const checkedIds = d.parameters.filter((_, index) =>
-      isTrue(checkedFlags === undefined ? undefined : checkedFlags[index])
+      flagAt(checkedFlags, index)
     ).map((parameter) => parameter.id);
     const recordedChecks = d.entryValidation ?? [];
     if (
@@ -463,7 +463,7 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       const parameter = entry[1];
       const index = entry[0];
       if (
-        isTrue(checkedFlags === undefined ? undefined : checkedFlags[index]) &&
+        flagAt(checkedFlags, index) &&
         (!entrySchemaDerivable(env, parameter.type) ||
           foreignSealedOf(env, parameter.type) !== undefined)
       ) {
@@ -1389,7 +1389,7 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         o.type,
         parameters[i],
         `${path}.arguments[${i}]`,
-        isTrue(checked === undefined ? undefined : checked[i]),
+        flagAt(checked, i),
       );
       if (!compatible) {
         ctx = flag(
@@ -1811,11 +1811,14 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       return added;
     }
     if (p.kind === "bind") {
+      // A binding arm matches every value except null, so the subject needs a
+      // null member and the binding takes the other members.
       const all = identityMembers(env, subject);
       const rest = all.filter((m) => !isNullType(env, m));
       const hidden = rest.some((m) =>
         members(env, m).some((member) => isNullType(env, member))
       );
+      // A literal-only union, such as `boolean | null`, keeps its literal arms.
       const literalOnly = members(env, subject).every((m) =>
         m.kind === "literal" ||
         (m.kind === "primitive" && m.name === "boolean")
@@ -1853,6 +1856,7 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       return added;
     }
     if (p.kind === "error" || p.kind === "nominal") {
+      // A name pattern needs a subject of data and error types only, and the name must be one of them.
       const id = p.kind === "error" ? p.error : p.nominal;
       const ms = identityMembers(env, subject);
       const ok = ms.every((m) =>
@@ -2098,6 +2102,8 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       e.operator === "<" || e.operator === "<=" || e.operator === ">" ||
       e.operator === ">="
     ) {
+      // `isNumeric` widens an identity to its base, so the classes decide. A
+      // closed unit type compares only with its own type.
       const comparable = !closedUnitsDiffer(l, r) && l !== undefined &&
         r !== undefined && compatibleClasses(env, l, r) &&
         isNumericClass(env, l) && isNumericClass(env, r);
@@ -2124,6 +2130,7 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       refinements = refinements.retain(e, shared, path);
       return derivedResult(shared, active);
     }
+    // One named operand and one unnamed operand that fits its body keep the name.
     const adopted = e.operator !== "/"
       ? adoptedNumericIdentity(env, left.type, right.type)
       : undefined;
