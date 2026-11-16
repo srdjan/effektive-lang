@@ -11,16 +11,16 @@
   {
     "file": "src/core/check_binary.ts",
     "declaration": "adoptedNumericIdentity",
-    "offset": 381,
-    "text": "named !== undefined",
-    "operator": "comparison",
+    "offset": 376,
+    "text": "named === undefined || isClosedUnitId(named)",
+    "operator": "logical",
     "class": "equivalent",
-    "reason": "The caller guarantees exactly one operand is a numeric identity, so named is never undefined here. A Duration or Instant operand never reaches this guard: instantArithmetic always returns for an Instant, and durationArithmetic already decides every Duration case whose other operand fits int."
+    "reason": "The mutant, named === undefined && isClosedUnitId(named), skips the Duration and Instant guard for every defined named. When named is undefined, neither operand has a numeric identity. The mutant then continues, and identityBaseOf(undefined) is undefined, so it returns undefined as the source does. An Instant operand never reaches this guard, because unitArithmetic returns for every Instant operand. A Duration operand reaches it only through the general rules, for example Duration times 1.5. The body of Duration is int and 1.5 does not fit it, so the mutant returns undefined there too. A differential through diagnosticsOf over 525 programs, which are every pair of nine operand types with the five arithmetic operators and three literals against four types in both orders, gave the same diagnostics for the source and the mutant."
   },
   {
     "file": "src/core/check_binary.ts",
-    "declaration": "operatorResult",
-    "offset": 3069,
+    "declaration": "arithmeticResult",
+    "offset": 1471,
     "text": "isNumericClass(table, l) && isNumericClass(table, r)",
     "operator": "logical",
     "class": "equivalent",
@@ -45,13 +45,13 @@
     "reason": "The mutant is A || (B && C) || D, where A is that self is not local, B is that the body is undefined, C is that the body is not a call, and D is that the role of the builtin of the body is not container. The builtin helper returns undefined for a body that is undefined or not a call, so recursionRoleOf gives reject and D is true. B and C each imply D, so the swap never changes the result."
   },
   {
-    "file": "src/core/check_builtins/stream.ts",
-    "declaration": "streamBufferCapacity",
-    "offset": 248,
-    "text": "capacity === undefined || typeof value !== \"number\"",
+    "file": "src/core/check_builtins/context.ts",
+    "declaration": "literalIntegerOption",
+    "offset": 451,
+    "text": "field === undefined || typeof value !== \"number\"",
     "operator": "logical",
     "class": "equivalent",
-    "reason": "The wider guard already rejects every case that the mutant drops. When capacity is undefined, value is undefined, so the second operand is true and the next operand, !Number.isSafeInteger(value), is true too. When value is not a number, Number.isSafeInteger(value) is false, so the third operand rejects it. Only a safe positive integer reaches the accept path, in both forms."
+    "reason": "The wider guard already rejects every case that the mutant drops. When field is undefined, value is undefined, so the second operand is true and the next operand, !Number.isSafeInteger(value), is true too. When value is not a number, Number.isSafeInteger(value) is false, so the third operand rejects it. Only a safe integer of at least spec.minimum reaches the accept path, in both forms."
   },
   {
     "file": "src/core/check_project.ts",
@@ -74,7 +74,7 @@
   {
     "file": "src/core/check_project.ts",
     "declaration": "scheduleRuns",
-    "offset": 3299,
+    "offset": 2874,
     "text": "run.kind === \"function\" && pending.includes(run.entry.signature.id)",
     "operator": "logical",
     "class": "equivalent",
@@ -119,7 +119,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 598,
+    "offset": 561,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result ||\n      body === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -128,7 +128,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 598,
+    "offset": 561,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result",
     "operator": "logical",
     "class": "equivalent",
@@ -137,7 +137,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 893,
+    "offset": 856,
     "text": "entry === undefined || entry.broken",
     "operator": "logical",
     "class": "equivalent",
@@ -207,54 +207,18 @@
     "reason": "When height equals tallest, the assignment tallest = height does not change tallest. > and >= give the same maximum."
   },
   {
-    "file": "src/core/types.ts",
-    "declaration": "createTypeTable.keyOf",
-    "offset": 1032,
-    "text": "node.presence === \"optional\"",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "keyOf is private and used only as the intern byKey lookup. Flipping one boolean slot in every schema key is a bijection, so nodes intern exactly as before."
-  },
-  {
-    "file": "src/core/types.ts",
-    "declaration": "createTypeTable.keyOf",
-    "offset": 1072,
-    "text": "node.presence === \"encoded-optional\"",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "keyOf is private and used only as the intern byKey lookup. Flipping one boolean slot in every schema key is a bijection, so nodes intern exactly as before."
-  },
-  {
-    "file": "src/core/types.ts",
-    "declaration": "createTypeTable.keyOf",
-    "offset": 1120,
-    "text": "node.presence === \"decoded-optional\"",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "keyOf is private and used only as the intern byKey lookup. Flipping one boolean slot in every schema key is a bijection, so nodes intern exactly as before."
-  },
-  {
     "file": "src/core/validate/expr.ts",
     "declaration": "adoptedNumericIdentity",
     "offset": 341,
-    "text": "named?.kind === \"named\"",
-    "operator": "comparison",
+    "text": "named?.kind !== \"named\" || isClosedUnitId(named.id)",
+    "operator": "logical",
     "class": "equivalent",
     "reason": "The guard skips a Duration or Instant operand, but no such operand reaches it. numericIdentityOf returns only a named type, so named is never undefined. instantArithmetic returns before this call for every Instant operand. For a Duration operand, durationArithmetic returns before this call whenever the other operand fits int, and the world table fixes the body of Duration at int, so the test fits(unnamed, body) here is the same as the integral test there. Without the guard the function still returns undefined for every input that reaches it."
   },
   {
     "file": "src/core/validate/expr.ts",
     "declaration": "createBodyValidator.pattern",
-    "offset": 3830,
-    "text": "ms.length > 0",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "The condition is the first term of a conjunction that ends in ms.some(...). Array.prototype.some on an empty array is false, so for ms.length == 0 the whole conjunction is false in both forms. For a non-empty array both comparisons are true."
-  },
-  {
-    "file": "src/core/validate/expr.ts",
-    "declaration": "createBodyValidator.pattern",
-    "offset": 4514,
+    "offset": 4655,
     "text": "return false;",
     "operator": "boolean-return",
     "class": "equivalent",
@@ -263,29 +227,11 @@
   {
     "file": "src/core/validate/expr.ts",
     "declaration": "createBodyValidator.binary",
-    "offset": 3838,
+    "offset": 3853,
     "text": "isNumericClass(env, l) && isNumericClass(env, r)",
     "operator": "logical",
     "class": "equivalent",
     "reason": "The compatibleClasses check earlier in this method returns mismatch unless the class chain of one class contains the other class. The chain of l then ends with the chain of r, or the reverse. A chain contains number only as its last entry, because number has no base. So l and r are both numeric or both not numeric, and && and || give the same value."
-  },
-  {
-    "file": "src/core/validate/families/schema.ts",
-    "declaration": "schemaTransform.callbackResult",
-    "offset": 93,
-    "text": "return false;",
-    "operator": "boolean-return",
-    "class": "equivalent",
-    "reason": "The only two calls of callbackResult follow the test decode === undefined || encode === undefined in the same || chain, which short-circuits and returns before either call. So fn is never undefined in callbackResult, and the line fn === undefined: return false cannot run."
-  },
-  {
-    "file": "src/core/validate/families/schema.ts",
-    "declaration": "guardedSchemaBody.visit",
-    "offset": 171,
-    "text": "return true;",
-    "operator": "boolean-return",
-    "class": "equivalent",
-    "reason": "The first line of visit returns when containsSelf(value) is false. For a reference, exprChildren is empty, so containsSelf is true only when value.target === self. So value.target !== self is never true on the next line, and its return true is unreachable."
   },
   {
     "file": "src/core/validate/typing.ts",
@@ -298,8 +244,8 @@
   },
   {
     "file": "src/core/validate/typing.ts",
-    "declaration": "unknownPredicateInput",
-    "offset": 1344,
+    "declaration": "termReachesUnknown",
+    "offset": 509,
     "text": "index < path.length",
     "operator": "comparison",
     "class": "equivalent",
@@ -353,7 +299,7 @@
   {
     "file": "scripts/behavior_compare.ts",
     "declaration": "<module>",
-    "offset": 12691,
+    "offset": 12584,
     "text": "done.ok",
     "operator": "negate-if",
     "class": "slow-only",
@@ -516,7 +462,7 @@
     "file": "scripts/mutate.ts",
     "declaration": "main",
     "offset": 956,
-    "text": "clean.timedOut || classify(clean) !== \"survived\"",
+    "text": "classify(clean) !== \"survived\"",
     "operator": "negate-if",
     "class": "slow-only",
     "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
@@ -525,15 +471,6 @@
     "file": "scripts/mutate.ts",
     "declaration": "main",
     "offset": 956,
-    "text": "clean.timedOut || classify(clean) !== \"survived\"",
-    "operator": "logical",
-    "class": "slow-only",
-    "reason": "tests/mutate_tool_slow_test.ts checks the exit code and the exact output of the tool for this branch."
-  },
-  {
-    "file": "scripts/mutate.ts",
-    "declaration": "main",
-    "offset": 974,
     "text": "classify(clean) !== \"survived\"",
     "operator": "comparison",
     "class": "slow-only",
@@ -542,7 +479,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 1665,
+    "offset": 1647,
     "text": "options.only.length === 0",
     "operator": "comparison",
     "class": "slow-only",
@@ -551,7 +488,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 1775,
+    "offset": 1757,
     "text": "site.file === o.file && site.line === o.line",
     "operator": "logical",
     "class": "slow-only",
@@ -560,7 +497,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 1775,
+    "offset": 1757,
     "text": "site.file === o.file",
     "operator": "comparison",
     "class": "slow-only",
@@ -569,7 +506,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 1799,
+    "offset": 1781,
     "text": "site.line === o.line",
     "operator": "comparison",
     "class": "slow-only",
@@ -578,7 +515,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2086,
+    "offset": 2068,
     "text": "outcome.class === \"infrastructure\"",
     "operator": "comparison",
     "class": "slow-only",
@@ -587,7 +524,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2136,
+    "offset": 2118,
     "text": "broken !== undefined",
     "operator": "negate-if",
     "class": "slow-only",
@@ -596,7 +533,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2136,
+    "offset": 2118,
     "text": "broken !== undefined",
     "operator": "comparison",
     "class": "slow-only",
@@ -605,7 +542,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2338,
+    "offset": 2320,
     "text": "o.class === \"survived\"",
     "operator": "comparison",
     "class": "slow-only",
@@ -614,7 +551,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2439,
+    "offset": 2421,
     "text": "o.class === \"timeout\"",
     "operator": "comparison",
     "class": "slow-only",
@@ -623,7 +560,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 2646,
+    "offset": 2628,
     "text": "o.mutant.file === module",
     "operator": "comparison",
     "class": "slow-only",
@@ -641,7 +578,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 3806,
+    "offset": 3788,
     "text": "match.unregistered.length === 0 && match.stale.length === 0",
     "operator": "logical",
     "class": "slow-only",
@@ -650,7 +587,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 3806,
+    "offset": 3788,
     "text": "match.unregistered.length === 0",
     "operator": "comparison",
     "class": "slow-only",
@@ -659,7 +596,7 @@
   {
     "file": "scripts/mutate.ts",
     "declaration": "main",
-    "offset": 3841,
+    "offset": 3823,
     "text": "match.stale.length === 0",
     "operator": "comparison",
     "class": "slow-only",
@@ -857,7 +794,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 2262,
+    "offset": 2117,
     "text": "uses !== undefined",
     "operator": "comparison",
     "class": "equivalent",
@@ -866,7 +803,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 2957,
+    "offset": 2606,
     "text": "i < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -875,7 +812,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 1767,
+    "offset": 1694,
     "text": "header === undefined || header.token === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -884,7 +821,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 3602,
+    "offset": 3151,
     "text": "remaining.failures.length > 0 || remaining.uses.length > 0",
     "operator": "logical",
     "class": "equivalent",
@@ -893,7 +830,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 3424,
+    "offset": 2973,
     "text": "changedFunction === undefined || changedFunction.body === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -902,7 +839,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 819,
+    "offset": 755,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result",
     "operator": "logical",
     "class": "equivalent",
@@ -911,7 +848,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1313,
+    "offset": 1249,
     "text": "at < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -920,7 +857,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1761,
+    "offset": 1697,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements) ||\n      diagnosticDelta(revision.diagnostics, checked.value.diagnostics, edits)\n          .added.length > 0",
     "operator": "logical",
     "class": "equivalent",
@@ -929,7 +866,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1761,
+    "offset": 1697,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements)",
     "operator": "logical",
     "class": "equivalent",
@@ -938,7 +875,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1761,
+    "offset": 1697,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures)",
     "operator": "logical",
     "class": "equivalent",
@@ -947,7 +884,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1761,
+    "offset": 1697,
     "text": "changed === undefined || changed.mode !== fn.mode",
     "operator": "logical",
     "class": "equivalent",
@@ -965,7 +902,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 819,
+    "offset": 755,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result ||\n      signature.written.fails || fn.body === undefined ||\n      entry === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -1001,8 +938,8 @@
   {
     "file": "src/core/resolve.ts",
     "declaration": "Resolver.resolverExpr",
-    "offset": 1207,
-    "text": "first !== undefined &&\n              kindOf(resolverTree, first) === SyntaxKind.NameExpr",
+    "offset": 995,
+    "text": "first !== undefined &&\n          kindOf(resolverTree, first) === SyntaxKind.NameExpr",
     "operator": "logical",
     "class": "equivalent",
     "reason": "Name arguments and missing arguments take the same branch under both guards. A non-name expression cannot match an identifier binding. The extra lookup finds no binding or prelude name, then resolves the same expression without changing outerUses."
@@ -1054,39 +991,12 @@
   },
   {
     "file": "src/core/recursion_guard.ts",
-    "declaration": "guardedRecord",
-    "offset": 460,
-    "text": "!field.optional && tagOf(field.type) !== undefined",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "A name that the || form adds is later checked by the every test, which needs a non-optional field with a tag in every member, so the added name never passes. The some result is unchanged."
-  },
-  {
-    "file": "src/core/recursion_guard.ts",
-    "declaration": "guardedRecord",
-    "offset": 1011,
-    "text": "tagged && hasDistinctTag",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "hasDistinctTag needs a non-empty tagNames, and tagNames is empty unless tagged, so hasDistinctTag implies tagged. When tagged holds without hasDistinctTag, the walk starts a union with guarded false and the same two terms, so it returns false."
-  },
-  {
-    "file": "src/core/recursion_guard.ts",
     "declaration": "guardedRecord.visit",
-    "offset": 533,
-    "text": "part === type && tagged && hasDistinctTag",
+    "offset": 444,
+    "text": "part === type && hasDistinctTag",
     "operator": "logical",
     "class": "equivalent",
-    "reason": "For a union top, the earlier return leaves tagged && hasDistinctTag true, and each nested part is visited with guarded true. For a record top, part is never type, and tagged and hasDistinctTag are both false, so every form of the term is false. A differential over 159,393 probe lines (every one- to three-part pattern over 16 atoms through parseConfig and importAllowed, key spans, and about 137,000 forged types through guardedRecord) matched the source on every row; a control mutant differed."
-  },
-  {
-    "file": "src/core/recursion_guard.ts",
-    "declaration": "guardedRecord.visit",
-    "offset": 533,
-    "text": "part === type && tagged",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "For a union top, the earlier return leaves tagged && hasDistinctTag true, and each nested part is visited with guarded true. For a record top, part is never type, and tagged and hasDistinctTag are both false, so every form of the term is false. A differential over 159,393 probe lines (every one- to three-part pattern over 16 atoms through parseConfig and importAllowed, key spans, and about 137,000 forged types through guardedRecord) matched the source on every row; a control mutant differed."
+    "reason": "hasDistinctTag is true only for a union root whose members are tagged records with distinct tags, and the early return leaves only a record root or that union root. For a record root hasDistinctTag is false and part is never type inside the union branch, so the term is false in both forms. For the union root, part === type and hasDistinctTag are both true. The root union visits its members with guarded true, so a union below the root has guarded true and the term never changes a result. A differential through guardedRecord over 300,000 forged types matched the source on every row, and 8,297 of the rows were true. A control mutant that drops the term differed."
   },
   {
     "file": "src/core/validate/import_checks.ts",
@@ -1099,57 +1009,21 @@
   },
   {
     "file": "src/core/validate/recursion_checks.ts",
-    "declaration": "guardedRecord",
-    "offset": 922,
-    "text": "!field.optional && tagOf(field.type) !== undefined",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "The filter only chooses candidate tag names from the first member. The later test requires the first field of that name in every member, the first member included, to be required and tagged. A name that the mutant adds fails that test in the first member. A differential through checkRecursion tested 300000 random forged declarations, with optional and untagged fields in tagged unions, and every report matched."
-  },
-  {
-    "file": "src/core/validate/recursion_checks.ts",
-    "declaration": "guardedRecord",
-    "offset": 1558,
-    "text": "tagged && hasDistinctTag",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "hasDistinctTag is true only when tagged is true. The mutant only lets a union with tagged and no distinct tag past the early return. The walk then reaches the root union with guarded false and the root-union guard false, so it returns false, as the early return does. A differential through checkRecursion tested 300000 random forged declarations, and every report matched. In a count over 100000 of them, 11150 held a tagged union with no distinct tag."
-  },
-  {
-    "file": "src/core/validate/recursion_checks.ts",
     "declaration": "guardedRecord.walk",
     "offset": 443,
-    "text": "part === type && tagged && hasDistinctTag",
+    "text": "part === type && hasDistinctTag",
     "operator": "logical",
     "class": "equivalent",
-    "reason": "The early return leaves only a record root or a root union that is tagged with distinct tags. A union below the root has guarded true, because the root union walks its members with guarded true. A record root has tagged and hasDistinctTag false, because both need a union root. So the extra term never changes a result. A differential through checkRecursion tested 300000 random forged declarations and every report matched."
-  },
-  {
-    "file": "src/core/validate/recursion_checks.ts",
-    "declaration": "guardedRecord.walk",
-    "offset": 443,
-    "text": "part === type && tagged",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "The early return leaves only a record root or a root union that is tagged with distinct tags. A union below the root has guarded true, because the root union walks its members with guarded true. A record root has tagged false, because tagged needs a union root. So the mutant term never changes a result. A differential through checkRecursion tested 300000 random forged declarations and every report matched."
+    "reason": "The early return leaves only a record root or a root union with distinct tags. A union below the root has guarded true, because the root union walks its members with guarded true. A record root has hasDistinctTag false, because hasDistinctTag needs a union root, and part is never type in the union branch for a record root. So the extra term never changes a result. A differential through checkRecursion tested 60,000 random forged modules of three declarations, and every report matched. In 42,863 of them the check reported a cycle. A control mutant that drops the term differed."
   },
   {
     "file": "src/core/validate/recursion_checks.ts",
     "declaration": "guardedDataGroups.strong",
-    "offset": 839,
+    "offset": 853,
     "text": "members.length > 1",
     "operator": "comparison",
     "class": "equivalent",
-    "reason": "The mutant registers a group for a tagged component of one member that has no self edge. The reaches walk consults a group only when the source and the target are the same group. For a one-member group that means a self reference, which is a self edge of the graph, so the component is a cycle in the source too. A differential through checkRecursion tested 300000 random forged declarations, and every report matched. In a count over 100000 of them, 81276 held such a tagged singleton."
-  },
-  {
-    "file": "src/core/validate/recursion_checks.ts",
-    "declaration": "guardedDataGroups.strong",
-    "offset": 905,
-    "text": "!cycle || !members.some((m) => env.taggedRecords.has(m))",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "The mutant adds two cases. An acyclic tagged singleton gets a group that nothing consults, as the row for the length test explains. A cycle without a tagged member is made of aliases only, and the alias-only test keeps every edge of such a component, so the cycle test returns before a group is set. A differential through checkRecursion tested 300000 random forged declarations, and every report matched. In a count over 100000 of them, 1909 held an alias-only cycle of several members."
+    "reason": "The mutant registers a group for a component of one member that has no self edge. That member is a tagged record or an alias, because the test that every member is a tagged record or an alias follows. The reaches walk consults a group only when the source and the target are the same group. For a one-member group that means a self reference, which is a self edge of the graph, so the component is a cycle in the source too. A differential through checkRecursion tested 60,000 random forged modules of three declarations, and every report matched. In those modules the mutant registered a group for an acyclic singleton 264,559 times, and 25,400 of them were tagged records."
   },
   {
     "file": "src/core/ids.ts",
@@ -1271,7 +1145,7 @@
   {
     "file": "src/core/resolve.ts",
     "declaration": "Resolver.resolverExpr",
-    "offset": 688,
+    "offset": 528,
     "text": "kids.length > 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1280,7 +1154,7 @@
   {
     "file": "src/core/resolve.ts",
     "declaration": "Resolver.resolverExpr",
-    "offset": 2269,
+    "offset": 1904,
     "text": "kids.length > 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1289,7 +1163,7 @@
   {
     "file": "src/core/resolve.ts",
     "declaration": "Resolver.resolverExpr",
-    "offset": 2968,
+    "offset": 2495,
     "text": "kids.length > 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1307,7 +1181,7 @@
   {
     "file": "src/core/resolve.ts",
     "declaration": "Resolver.resolverPattern",
-    "offset": 611,
+    "offset": 566,
     "text": "names.length > 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1334,16 +1208,16 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "localScope",
-    "offset": 480,
-    "text": "parent >= 0",
+    "offset": 478,
+    "text": "parent < 0",
     "operator": "comparison",
     "class": "equivalent",
-    "reason": "Parser.end builds a node after its children, so a parent node id is above the id of each child, and the id of a child is not below 0. So no parent id is 0. The only negative parent id is -1, the id of the root. The > form differs from the >= form only for the id 0. The probe analyzed 7844 inputs (each fixtures project whole, each file whole, at 20 prefixes, and with up to 40 lines deleted, and 10 generated inputs) and 4137548 nodes in 7893 trees. It found no parent id of 0 and no parent id at or below its child id. A copy that logs the case evaluated this site 167877 times and saw the id 0 in none. The output of the mutant copy matched the source copy for every input: occurrences, local scopes, classifications, occurrenceAt and referencesAt at the edges of each name. As a check of the probe, a copy that raised the bound of the walk to 1000000 changed 4992 output lines. The case cannot be forced, because no tree has a parent id of 0."
+    "reason": "Parser.end builds a node after its children, so a parent node id is above the id of each child, and the id of a child is not below 0. So no parent id is 0. The only negative parent id is -1, the id of the root. The mutant, parent <= 0, differs from parent < 0 only for the id 0. A probe through semanticClassifications and referencesAt analyzed the 179 .eff files of fixtures and tests that load. It evaluated this site 3447 times and saw the id 0 in none. The output of the mutant copy matched the source copy for the classifications and for referencesAt at every third offset of each file. The case cannot be forced, because no tree has a parent id of 0."
   },
   {
     "file": "src/core/editor_index.ts",
     "declaration": "localScope",
-    "offset": 964,
+    "offset": 941,
     "text": "parent >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1352,7 +1226,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "localScope",
-    "offset": 1036,
+    "offset": 1013,
     "text": "binding >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1361,7 +1235,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "buildSymbolIndex",
-    "offset": 1640,
+    "offset": 1598,
     "text": "parent >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1370,7 +1244,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "buildSymbolIndex",
-    "offset": 2528,
+    "offset": 2134,
     "text": "parent >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1379,7 +1253,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "buildSymbolIndex",
-    "offset": 3423,
+    "offset": 2765,
     "text": "a.span.start - b.span.start || a.span.end - b.span.end",
     "operator": "logical",
     "class": "equivalent",
@@ -1388,7 +1262,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "occurrenceAt",
-    "offset": 243,
+    "offset": 244,
     "text": "offset < o.span.end",
     "operator": "comparison",
     "class": "equivalent",
@@ -1397,7 +1271,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "occurrenceAt",
-    "offset": 313,
+    "offset": 314,
     "text": "o.span.start < offset",
     "operator": "comparison",
     "class": "equivalent",
