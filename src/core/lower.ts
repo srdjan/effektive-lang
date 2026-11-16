@@ -892,14 +892,14 @@ function BodyLowerer(
     arg: ArgumentAt,
     annotation: Annotation,
   ): Expr {
-    // The checker proved a literal options record and recorded the label of `fields`.
+    // The checker proved a literal options record and recorded whether it writes `fields`.
     const options = args[1];
     if (options !== undefined && options.kind !== "record") {
       return internal("log needs a literal options record");
     }
-    const fields = options === undefined || fact.fields === undefined
+    const fields = options === undefined || !fact.fields
       ? undefined
-      : options.fields.find((field) => field.name === fact.fields)?.value;
+      : options.fields.find((field) => field.name === "fields")?.value;
     return {
       ...annotation,
       kind: "log",
@@ -1148,13 +1148,10 @@ function BodyLowerer(
     args: readonly Expr[],
   ): readonly Expr[] {
     const options = args[2];
-    if (
-      fact.options === undefined || options === undefined ||
-      options.kind !== "record"
-    ) {
+    if (!fact.options || options === undefined || options.kind !== "record") {
       return args;
     }
-    const dropped = fact.options.on;
+    const dropped = "on";
     const fields = options.fields.filter((field) => field.name !== dropped);
     if (fields.length === 0) {
       return args.slice(0, 2);

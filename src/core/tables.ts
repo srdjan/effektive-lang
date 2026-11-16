@@ -107,8 +107,8 @@ export type NodeFact =
   | {
     readonly kind: "log";
     readonly level: LogLevel | undefined;
-    /** The label of the `fields` option in the options record, when it is written. */
-    readonly fields: string | undefined;
+    /** Whether the options record writes the `fields` option. */
+    readonly fields: boolean;
   }
   | { readonly kind: "random" }
   | { readonly kind: "random-int" }
@@ -140,11 +140,10 @@ export type NodeFact =
       | "encode"
       | "make";
     /**
-     * The options argument of a default-key builtin. The IR drops the option
-     * `on`, because the operation already records its value. `on` is the
-     * label of that option.
+     * Whether a default-key builtin has an options argument. The IR drops its
+     * option `on`, because the operation already records its value.
      */
-    readonly options: { readonly on: string } | undefined;
+    readonly options: boolean;
   }
   /**
    * A bracket literal, classified by its checked contextual type. A literal

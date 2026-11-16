@@ -592,7 +592,7 @@ function logCall(
   c = c.checkFit(args[0].node, message.type, c.table.string, "the log message");
   const infos: NodeInfo[] = [message];
   let level: LogLevel = "info";
-  let fields: string | undefined;
+  let fields = false;
   if (args[1] !== undefined) {
     const options = logOptions(c, args[1]);
     infos[infos.length] = options.info;
@@ -610,10 +610,10 @@ function logOptions(
 ): {
   readonly info: NodeInfo;
   readonly level: LogLevel;
-  readonly fields: string | undefined;
+  readonly fields: boolean;
 } {
   let level: LogLevel = "info";
-  let fieldsLabel: string | undefined;
+  let hasFields = false;
   const info = optionRecord(c, arg, {
     call: "log",
     keys: LOG_KEYS,
@@ -623,12 +623,12 @@ function logOptions(
       if (name === "level") level = logLevel(c, value) ?? level;
       else if (name === "fields") {
         c = logFields(c, value, checked);
-        fieldsLabel = name;
+        hasFields = true;
       }
       return checked;
     },
   });
-  return { info: info, level: level, fields: fieldsLabel };
+  return { info: info, level: level, fields: hasFields };
 }
 
 /** The level of a literal `level` option, or undefined after a diagnostic. */
@@ -819,7 +819,7 @@ export function effectRows(): Pick<
         bail: "effect",
         pipeline: "direct",
         usage: "`log` takes a message and optional options",
-        bailFact: { kind: "log", level: undefined, fields: undefined },
+        bailFact: { kind: "log", level: undefined, fields: false },
       },
       handle: (c, node, _name, args) => logCall(c, node, args),
     },

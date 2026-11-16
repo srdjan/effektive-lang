@@ -1378,10 +1378,10 @@ function schemaRow<Name extends SchemaBuiltinName>(): BuiltinRow<
         return {
           kind: "schema",
           op: op,
-          options: { on: DEFAULT_KEY_OPTION },
+          options: true,
         };
       }
-      return { kind: "schema", op: builtin.op, options: undefined };
+      return { kind: "schema", op: builtin.op, options: false };
     },
   };
   function handle(
