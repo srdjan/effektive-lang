@@ -216,11 +216,13 @@ The history shows this path for each version. It has no release tag.
 4. Commit with the subject `vX.Y.Z`. The task never commits. Never push: the
    maintainer pushes.
 
-The hooks in `.githooks/` complete a bare version commit. When a commit
-changes `version` in `deno.json` and `CHANGELOG.md` has no heading for it, the
-pre-commit hook moves the entries of "Unreleased" under the new heading and
-stages `CHANGELOG.md`. Each clone
-activates the hooks once with `git config core.hooksPath .githooks`.
+The pre-commit hook in `.githooks/` runs `deno lint` before each commit and stops when lint fails.
+The lint configuration loads `jsr:@srdjan/light-fp-lint@0.8.0` from JSR.
+Each clone activates the hooks once with `git config core.hooksPath .githooks`.
+
+The hooks also complete a bare version commit.
+If `version` changes and `CHANGELOG.md` has no matching heading, the pre-commit hook moves the entries of "Unreleased" under that heading.
+The hook then stages `CHANGELOG.md`.
 
 ## Root lock
 

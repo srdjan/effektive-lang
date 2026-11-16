@@ -1,9 +1,12 @@
 #!/bin/sh
+# Runs lint before each commit and stops when lint fails.
 # Completes a bare version commit. When a commit changes `version` in deno.json
 # and the CHANGELOG.md has no heading for it, the hook moves the entries of
 # "Unreleased" under that heading and stages CHANGELOG.md.
 
 root=$(cd "$(dirname "$0")/.." && pwd)
+
+deno lint --quiet || exit $?
 
 version_of() {
   sed -n 's/^  "version": "\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)".*$/\1/p' | head -n 1

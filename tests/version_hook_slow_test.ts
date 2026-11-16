@@ -55,6 +55,7 @@ async function git(dir: string, args: readonly string[]): Promise<Git> {
 async function repository(dir: string, changelog: string): Promise<void> {
   Deno.writeTextFileSync(`${dir}/deno.json`, CONFIG);
   Deno.writeTextFileSync(`${dir}/CHANGELOG.md`, changelog);
+  Deno.writeTextFileSync(`${dir}/main.ts`, "export const value = 1;\n");
   await git(dir, ["init", "-q"]);
   await git(dir, ["add", "."]);
   await git(dir, ["commit", "-q", "-m", "first"]);
@@ -127,5 +128,25 @@ Deno.test("a commit without a version change keeps the changelog", () =>
     await git(dir, ["add", "notes.txt"]);
     const commit = await git(dir, ["commit", "-q", "-m", "notes"]);
     assertEquals(commit.code, 0, commit.stderr);
+    assertEquals(await committed(dir, "CHANGELOG.md"), CHANGELOG);
+  }));
+
+Deno.test("a commit without a version change fails when Light FP lint fails", () =>
+  withTemporaryDirectory("version-hook-", async (dir) => {
+    await repository(dir, CHANGELOG);
+    const before = (await git(dir, ["rev-parse", "HEAD"])).stdout;
+    Deno.writeTextFileSync(
+      `${dir}/deno.json`,
+      '{\n  "version": "0.1.0",\n  "lint": { "plugins": ["jsr:@srdjan/light-fp-lint@0.8.0"] }\n}\n',
+    );
+    Deno.writeTextFileSync(
+      `${dir}/domain.ts`,
+      "export const now = Date.now;\n",
+    );
+    await git(dir, ["add", "."]);
+    const commit = await git(dir, ["commit", "-q", "-m", "domain clock"]);
+    assertEquals(commit.code, 1);
+    assertStringIncludes(commit.stderr, "light-fp/no-ambient-effects");
+    assertEquals((await git(dir, ["rev-parse", "HEAD"])).stdout, before);
     assertEquals(await committed(dir, "CHANGELOG.md"), CHANGELOG);
   }));
