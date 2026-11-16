@@ -85,13 +85,6 @@ type CallbackShape = {
 };
 
 export type CallbackBuiltin = "map" | "filter" | "sort" | "fold" | "traverse";
-const CALLBACK_BUILTINS: readonly CallbackBuiltin[] = [
-  "map",
-  "filter",
-  "sort",
-  "fold",
-  "traverse",
-];
 
 export const CALLBACK_SHAPES: Readonly<Record<CallbackBuiltin, CallbackShape>> =
   {
@@ -105,8 +98,7 @@ export const CALLBACK_SHAPES: Readonly<Record<CallbackBuiltin, CallbackShape>> =
 export function isCallbackBuiltin(
   name: BuiltinCallName | undefined,
 ): name is CallbackBuiltin {
-  return name !== undefined &&
-    CALLBACK_BUILTINS.some((known) => known === name);
+  return name !== undefined && Object.hasOwn(CALLBACK_SHAPES, name);
 }
 
 export function builtinInfo(
