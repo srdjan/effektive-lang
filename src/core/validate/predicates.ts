@@ -95,10 +95,9 @@ function checkBranch(
   const pending = [...task.pending];
   const constraints = [...task.constraints];
   for (const _index of indices(iterationLimit)) {
-    if (pending.length === 0) break;
-    if (!spend(1)) return { ok: false, error: { tag: "limit" } };
     const signed = pending.pop();
     if (signed === undefined) break;
+    if (!spend(1)) return { ok: false, error: { tag: "limit" } };
     const node = signed.predicate;
     if (!isRecord(node) || typeof node.kind !== "string") {
       return failure("invalid-predicate", "a predicate is not an object");
