@@ -182,24 +182,73 @@ type LoadedFile = {
   readonly index: FileIndex;
 };
 
-type Loader = {
+type LoadedModules = {
   readonly modules: ReadonlyMap<string, ModuleInfo>;
   readonly diagnostics: readonly Diagnostic[];
-  readonly addEntry: (raw: string) => Loader;
-  readonly run: () => Loader;
 };
 
-function Loader(
+/** The diagnostic for a file that cannot be loaded. */
+function failureDiagnostic(
+  path: string,
+  failure: LoadFailure,
+  span: Span,
+): Diagnostic {
+  if (failure.tag === "conflict") {
+    return makeDiagnostic(
+      "module/001",
+      `${path} and ${failure.other} have the same module name`,
+      span,
+    );
+  }
+  if (failure.tag === "bad-name") {
+    return makeDiagnostic(
+      "module/001",
+      `the module path ${path} may contain only letters, digits, and _ . - /`,
+      span,
+    );
+  }
+  const reason = failure.error.tag === "not-found"
+    ? "the file does not exist"
+    : `the file cannot be read: ${failure.error.message}`;
+  return makeDiagnostic(
+    "module/002",
+    `cannot load ${path}: ${reason}`,
+    span,
+  );
+}
+
+/** The diagnostic for an import that the project import rules forbid, or undefined. */
+function forbiddenDiagnostic(
+  config: ProjectConfig,
+  importer: string,
+  target: string,
+  span: Span,
+): Diagnostic | undefined {
+  const source = moduleNameOf(importer);
+  return importAllowed(config, source, target) ? undefined : makeDiagnostic(
+    "module/005",
+    `module \`${source}\` cannot import \`${target}\` under the project import rules`,
+    span,
+  );
+}
+
+/**
+ * Loads the entry files and every module that they reach, and builds module records in
+ * load order. The loop over `queue` reads the live array, so a module that the loop
+ * discovers is loaded in the same pass.
+ */
+function loadModules(
   host: SourceHost,
   root: string,
   config: ProjectConfig,
   parseFile: FileParser,
-): Loader {
+  entries: ProjectEntries,
+): LoadedModules {
   let modules = emptyMap<string, ModuleInfo>();
-  let diagnostics: Diagnostic[] = [];
+  const diagnostics: Diagnostic[] = [];
   let pathOfName = emptyMap<string, string>();
   let failures = emptyMap<string, LoadFailure>();
-  /** The loaded files in load order. The loop in `run` appends to it. */
+  /** The loaded files in load order. The loop below appends to it. */
   const queue: LoadedFile[] = [];
   let loaded = emptySet<string>();
 
@@ -238,76 +287,27 @@ function Loader(
     return undefined;
   }
 
-  function reportFailure(
-    path: string,
-    failure: LoadFailure,
-    span: Span,
-  ): Diagnostic[] {
-    let diagnostic: Diagnostic;
-    if (failure.tag === "conflict") {
-      diagnostic = makeDiagnostic(
-        "module/001",
-        `${path} and ${failure.other} have the same module name`,
-        span,
-      );
-    } else if (failure.tag === "bad-name") {
-      diagnostic = makeDiagnostic(
-        "module/001",
-        `the module path ${path} may contain only letters, digits, and _ . - /`,
-        span,
-      );
-    } else {
-      const reason = failure.error.tag === "not-found"
-        ? "the file does not exist"
-        : `the file cannot be read: ${failure.error.message}`;
-      diagnostic = makeDiagnostic(
-        "module/002",
-        `cannot load ${path}: ${reason}`,
-        span,
-      );
-    }
-    diagnostics[diagnostics.length] = diagnostic;
-    return diagnostics;
-  }
-
-  function reportForbidden(
-    importer: string,
-    target: string,
-    span: Span,
-  ): Diagnostic[] {
-    const source = moduleNameOf(importer);
-    if (importAllowed(config, source, target)) return diagnostics;
-    diagnostics[diagnostics.length] = makeDiagnostic(
-      "module/005",
-      `module \`${source}\` cannot import \`${target}\` under the project import rules`,
-      span,
-    );
-    return diagnostics;
-  }
-
-  function addEntry(raw: string): Loader {
+  /** Loads an entry file. Returns the diagnostic when the entry cannot be used. */
+  function loadEntry(raw: string): Diagnostic | undefined {
     const path = normalizeRelative(raw);
     if (path === undefined) {
-      diagnostics[diagnostics.length] = makeDiagnostic(
+      return makeDiagnostic(
         "module/001",
         `the entry path \`${raw}\` is not a path inside the project root`,
         emptySpan(raw),
       );
-      return self;
     }
     if (!isModulePath(path)) {
-      diagnostics[diagnostics.length] = makeDiagnostic(
+      return makeDiagnostic(
         "module/001",
         `the entry path \`${path}\` does not end in .eff or .effi`,
         emptySpan(path),
       );
-      return self;
     }
     const failure = ensure(path);
-    if (failure !== undefined) {
-      diagnostics = reportFailure(path, failure, emptySpan(path));
-    }
-    return self;
+    return failure === undefined
+      ? undefined
+      : failureDiagnostic(path, failure, emptySpan(path));
   }
 
   function linkImport(importer: string, entry: ImportEntry): ImportLink {
@@ -342,10 +342,15 @@ function Loader(
       }
       const failure = ensure(registered.interfacePath);
       if (failure !== undefined) {
-        diagnostics = reportFailure(registered.interfacePath, failure, span);
+        diagnostics[diagnostics.length] = failureDiagnostic(
+          registered.interfacePath,
+          failure,
+          span,
+        );
         return { ...unlinked, isHost: true };
       }
-      diagnostics = reportForbidden(importer, specifier, span);
+      const forbidden = forbiddenDiagnostic(config, importer, specifier, span);
+      if (forbidden !== undefined) diagnostics[diagnostics.length] = forbidden;
       return {
         entry: entry,
         target: moduleNameOf(registered.interfacePath),
@@ -371,38 +376,36 @@ function Loader(
     }
     const failure = ensure(resolved);
     if (failure !== undefined) {
-      diagnostics = reportFailure(resolved, failure, span);
+      diagnostics[diagnostics.length] = failureDiagnostic(
+        resolved,
+        failure,
+        span,
+      );
       return unlinked;
     }
     const name = moduleNameOf(resolved);
-    diagnostics = reportForbidden(importer, name, span);
+    const forbidden = forbiddenDiagnostic(config, importer, name, span);
+    if (forbidden !== undefined) diagnostics[diagnostics.length] = forbidden;
     return { entry: entry, target: name, label: name, isHost: false };
   }
 
-  /** Loads every module that the entries reach and builds module records in load order. */
-  function run(): Loader {
-    for (const loadedFile of queue.values()) {
-      modules = modules.set(loadedFile.name, {
-        name: loadedFile.name,
-        path: loadedFile.path,
-        tree: loadedFile.parsed.tree,
-        parseDiagnostics: loadedFile.parsed.diagnostics,
-        index: loadedFile.index,
-        links: loadedFile.index.imports.map((entry) =>
-          linkImport(loadedFile.path, entry)
-        ),
-      });
-    }
-    return self;
+  for (const raw of entries) {
+    const problem = loadEntry(raw);
+    if (problem !== undefined) diagnostics[diagnostics.length] = problem;
   }
-
-  const self: Loader = {
-    modules: modules,
-    diagnostics: diagnostics,
-    addEntry: addEntry,
-    run: run,
-  };
-  return self;
+  for (const loadedFile of queue.values()) {
+    modules = modules.set(loadedFile.name, {
+      name: loadedFile.name,
+      path: loadedFile.path,
+      tree: loadedFile.parsed.tree,
+      parseDiagnostics: loadedFile.parsed.diagnostics,
+      index: loadedFile.index,
+      links: loadedFile.index.imports.map((entry) =>
+        linkImport(loadedFile.path, entry)
+      ),
+    });
+  }
+  return { modules: modules, diagnostics: diagnostics };
 }
 
 type GraphResult = {
@@ -485,9 +488,13 @@ export function loadProject(
   const configResult = readConfig(host, root);
   if (!configResult.ok) return configResult;
   const config = configResult.value.config;
-  let loader = Loader(host, root, config, parseFile ?? parseFileFresh);
-  for (const entry of entries) loader = loader.addEntry(entry);
-  loader = loader.run();
+  const loader = loadModules(
+    host,
+    root,
+    config,
+    parseFile ?? parseFileFresh,
+    entries,
+  );
   const linked = linkModules(loader.modules);
   return {
     ok: true,
