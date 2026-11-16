@@ -266,8 +266,7 @@ function createParser(
   function parserWrap(cp: number, kind: SyntaxKind): Parser {
     const items = parserTop().splice(cp);
     parserStack[parserStack.length] = items;
-    owner = parserEnd(kind);
-    return owner;
+    return parserEnd(kind);
   }
 
   function parserLeaf(): Parser {
@@ -288,8 +287,7 @@ function createParser(
     if (parserKinds[parserPos] === TokenKind.Eof) {
       return panic("internal: consumed Eof token");
     }
-    owner = parserLeaf();
-    return owner;
+    return parserLeaf();
   }
 
   function parserSkipNl(): Parser {
@@ -480,14 +478,12 @@ function createParser(
   }
 
   function parserReportAtToken(code: DiagnosticCode, message: string): Parser {
-    owner = parserReport(
+    return parserReport(
       code,
       message,
       parserStarts[parserPos],
       parserEnds[parserPos],
     );
-
-    return owner;
   }
 
   function parserProblem(
@@ -506,29 +502,23 @@ function createParser(
     parserLastErrorPos = parserPos;
     parserLastErrorStart = span.start;
     parserLastErrorEnd = span.end;
-    owner = parserReport(code, message, span.start, span.end);
-
-    return owner;
+    return parserReport(code, message, span.start, span.end);
   }
 
   function parserExpectedAt(label: string): Parser {
-    owner = parserProblem(
+    return parserProblem(
       "syntax/008",
       `expected ${label}, found ${parserFoundDescription()}`,
       true,
     );
-
-    return owner;
   }
 
   function parserUnexpectedAt(context: string): Parser {
-    owner = parserProblem(
+    return parserProblem(
       "syntax/009",
       `unexpected ${parserFoundDescription()}${context}`,
       false,
     );
-
-    return owner;
   }
 
   function parserMissing(label: string): Parser {
@@ -547,11 +537,9 @@ function createParser(
 
   function parserExpect(kind: TokenKind, label: string): Parser {
     if (parserKind() === kind) {
-      owner = parserTok();
-      return owner;
+      return parserTok();
     }
-    owner = parserMissing(label);
-    return owner;
+    return parserMissing(label);
   }
 
   function parserSkipJunk(
@@ -666,9 +654,7 @@ function createParser(
   function parserParseDelimited(closer: TokenKind, item: () => Parser): Parser {
     const group = parserOpen("free");
     owner = parserParseCommaList(closer, item);
-    owner = parserClose(group, closer, describeTokenKind(closer));
-
-    return owner;
+    return parserClose(group, closer, describeTokenKind(closer));
   }
 
   function parserParseSeparated(item: () => Parser): Parser {
@@ -726,12 +712,9 @@ function createParser(
     ) {
       owner = parserParseDeclaration();
     } else {
-      owner = parserRecoverTop();
-      return owner;
+      return parserRecoverTop();
     }
-    owner = parserFinishTopItem();
-
-    return owner;
+    return parserFinishTopItem();
   }
 
   function parserFinishTopItem(): Parser {
@@ -742,9 +725,7 @@ function createParser(
     ) return owner;
     if (parserAtDeclarationStart(true)) return owner;
     owner = parserExpectedAt("end of line or `;`");
-    owner = parserRecoverTop();
-
-    return owner;
+    return parserRecoverTop();
   }
 
   function parserParseImport(): Parser {
@@ -765,9 +746,7 @@ function createParser(
     }
     if (parserKind() === TokenKind.String) owner = parserTok();
     else owner = parserMissing("a string");
-    owner = parserEnd(SyntaxKind.ImportDecl);
-
-    return owner;
+    return parserEnd(SyntaxKind.ImportDecl);
   }
 
   function parserParseServiceImport(misplaced: boolean): Parser {
@@ -799,9 +778,7 @@ function createParser(
     }
     if (parserKind() === TokenKind.String) owner = parserTok();
     else owner = parserMissing("a string");
-    owner = parserEnd(SyntaxKind.ImportDecl);
-
-    return owner;
+    return parserEnd(SyntaxKind.ImportDecl);
   }
 
   function parserParseDeclaration(): Parser {
@@ -839,9 +816,7 @@ function createParser(
     } else {
       owner = parserMissing("a declaration");
     }
-    owner = parserEnd(kind);
-
-    return owner;
+    return parserEnd(kind);
   }
 
   function parserParseConstBody(topLevel: boolean): Parser {
@@ -866,9 +841,7 @@ function createParser(
     } else {
       owner = parserMissing("`=`");
     }
-    owner = parserParseExpr();
-
-    return owner;
+    return parserParseExpr();
   }
 
   function parserParseRecordBinding(): Parser {
@@ -890,9 +863,7 @@ function createParser(
     if (fields === 0) {
       owner = parserExpectedAt("at least one record binding field");
     }
-    owner = parserEnd(SyntaxKind.RecordBinding);
-
-    return owner;
+    return parserEnd(SyntaxKind.RecordBinding);
   }
 
   function parserParseTypeBody(): Parser {
@@ -949,9 +920,7 @@ function createParser(
     if (parserKind() === TokenKind.Ident && parserIsWordAt(parserPos, "type")) {
       owner = parserTok();
     } else owner = parserMissing("`type`");
-    owner = parserParseName("binding");
-
-    return owner;
+    return parserParseName("binding");
   }
 
   function parserParseErrorBody(): Parser {
@@ -995,9 +964,7 @@ function createParser(
     }
     owner = parserParseType();
     if (parserClauseAhead("fails")) owner = parserParseFailsClause();
-    owner = parserEnd(SyntaxKind.ServiceMethod);
-
-    return owner;
+    return parserEnd(SyntaxKind.ServiceMethod);
   }
 
   function parserParseProviderBody(): Parser {
@@ -1019,9 +986,7 @@ function createParser(
     } else {
       owner = parserMissing("`provides`");
     }
-    owner = parserParseEffects();
-
-    return owner;
+    return parserParseEffects();
   }
 
   function parserParseEffects(): Parser {
@@ -1041,9 +1006,7 @@ function createParser(
     owner = parserBegin();
     owner = parserTok();
     owner = parserParseNameSet(false);
-    owner = parserEnd(SyntaxKind.FailsClause);
-
-    return owner;
+    return parserEnd(SyntaxKind.FailsClause);
   }
 
   function parserParseWithClause(): Parser {
@@ -1051,9 +1014,7 @@ function createParser(
     owner = parserBegin();
     owner = parserTok();
     owner = parserParseNameSet(true);
-    owner = parserEnd(SyntaxKind.WithClause);
-
-    return owner;
+    return parserEnd(SyntaxKind.WithClause);
   }
 
   function parserParseNameSet(qualified: boolean): Parser {
@@ -1076,9 +1037,7 @@ function createParser(
       owner = parserTok();
       owner = parserParseName("member");
     }
-    owner = parserEnd(SyntaxKind.QualifiedName);
-
-    return owner;
+    return parserEnd(SyntaxKind.QualifiedName);
   }
 
   function parserParseName(role: "binding" | "member" | "type"): Parser {
@@ -1099,9 +1058,7 @@ function createParser(
     } else {
       owner = parserMissing("a name");
     }
-    owner = parserEnd(SyntaxKind.Name);
-
-    return owner;
+    return parserEnd(SyntaxKind.Name);
   }
 
   function parserParseParamList(): Parser {
@@ -1111,9 +1068,7 @@ function createParser(
     } else {
       owner = parserMissing("`(`");
     }
-    owner = parserEnd(SyntaxKind.ParamList);
-
-    return owner;
+    return parserEnd(SyntaxKind.ParamList);
   }
 
   function parserParseParam(): Parser {
@@ -1130,9 +1085,7 @@ function createParser(
       owner = parserSkipNl();
       owner = parserParseType();
     }
-    owner = parserEnd(SyntaxKind.Param);
-
-    return owner;
+    return parserEnd(SyntaxKind.Param);
   }
 
   function parserParseType(): Parser {
@@ -1145,9 +1098,7 @@ function createParser(
       owner = parserSkipNl();
       owner = parserParsePostfixType();
     }
-    owner = parserWrap(cp, SyntaxKind.UnionType);
-
-    return owner;
+    return parserWrap(cp, SyntaxKind.UnionType);
   }
 
   function parserParsePostfixType(): Parser {
@@ -1165,17 +1116,13 @@ function createParser(
       owner = parserTok();
       owner = parserWrap(cp, SyntaxKind.ArrayType);
     }
-    owner = parserLeaveLinks(links);
-
-    return owner;
+    return parserLeaveLinks(links);
   }
 
   function parserParsePrimaryType(): Parser {
     if (!parserEnter()) return owner;
     owner = parserParsePrimaryTypeInner();
-    owner = parserLeave();
-
-    return owner;
+    return parserLeave();
   }
 
   function parserParsePrimaryTypeInner(): Parser {
@@ -1198,8 +1145,7 @@ function createParser(
           owner = parserBegin();
           owner = parserTok();
           owner = parserSkipNl();
-          owner = parserParseFunctionType();
-          return owner;
+          return parserParseFunctionType();
         }
       }
       const word = typeWord(name);
@@ -1217,8 +1163,7 @@ function createParser(
           owner = parserParseSlot(slot.kind);
         }
         owner = parserClose(group, TokenKind.Gt, "`>`");
-        owner = parserEnd(word.kind);
-        return owner;
+        return parserEnd(word.kind);
       }
       owner = parserBegin();
       owner = parserParseName("type");
@@ -1227,8 +1172,7 @@ function createParser(
         owner = parserParseDelimited(TokenKind.Gt, () => parserParseType());
         owner = parserEnd(SyntaxKind.TypeArgs);
       }
-      owner = parserEnd(SyntaxKind.NamedType);
-      return owner;
+      return parserEnd(SyntaxKind.NamedType);
     } else if (
       k === TokenKind.String || k === TokenKind.Number ||
       k === TokenKind.KwTrue || k === TokenKind.KwFalse ||
@@ -1236,19 +1180,16 @@ function createParser(
     ) {
       owner = parserBegin();
       owner = parserTok();
-      owner = parserEnd(SyntaxKind.LiteralType);
-      return owner;
+      return parserEnd(SyntaxKind.LiteralType);
     } else if (k === TokenKind.LBrace) {
-      owner = parserParseRecordType();
-      return owner;
+      return parserParseRecordType();
     } else if (k === TokenKind.LBracket) {
       owner = parserBegin();
       owner = parserParseDelimited(
         TokenKind.RBracket,
         () => parserParseType(),
       );
-      owner = parserEnd(SyntaxKind.TupleType);
-      return owner;
+      return parserEnd(SyntaxKind.TupleType);
     } else if (k === TokenKind.LParen) {
       if (parserParenFollowedBy(parserPos, false)) {
         owner = parserBegin();
@@ -1279,27 +1220,21 @@ function createParser(
     owner = parserSkipNl();
     owner = parserParseType();
     owner = parserParseEffects();
-    owner = parserEnd(SyntaxKind.FunctionType);
-
-    return owner;
+    return parserEnd(SyntaxKind.FunctionType);
   }
 
   function parserParseSlot(kind: TypeSlotKind): Parser {
     if (kind === "type") {
-      owner = parserParseType();
-      return owner;
+      return parserParseType();
     }
     if (kind === "provides") {
-      owner = parserParseNameSetClause(SyntaxKind.ProvidesClause, true);
-      return owner;
+      return parserParseNameSetClause(SyntaxKind.ProvidesClause, true);
     }
     if (kind === "fails") {
-      owner = parserParseNameSetClause(SyntaxKind.FailsClause, false);
-      return owner;
+      return parserParseNameSetClause(SyntaxKind.FailsClause, false);
     }
     if (kind === "with") {
-      owner = parserParseNameSetClause(SyntaxKind.WithClause, true);
-      return owner;
+      return parserParseNameSetClause(SyntaxKind.WithClause, true);
     }
     const unreachable: never = kind;
     return unreachable;
@@ -1311,9 +1246,7 @@ function createParser(
   ): Parser {
     owner = parserBegin();
     owner = parserParseNameSet(qualified);
-    owner = parserEnd(clause);
-
-    return owner;
+    return parserEnd(clause);
   }
 
   function parserParseRecordType(): Parser {
@@ -1329,13 +1262,9 @@ function createParser(
         owner = parserMissing("`:`");
       }
       owner = parserParseType();
-      owner = parserEnd(SyntaxKind.FieldType);
-
-      return owner;
+      return parserEnd(SyntaxKind.FieldType);
     });
-    owner = parserEnd(SyntaxKind.RecordType);
-
-    return owner;
+    return parserEnd(SyntaxKind.RecordType);
   }
 
   function parserParenFollowedBy(p: number, allowColon: boolean): boolean {
@@ -1353,9 +1282,7 @@ function createParser(
   function parserParseExpr(): Parser {
     if (!parserEnter()) return owner;
     owner = parserParseExprInner();
-    owner = parserLeave();
-
-    return owner;
+    return parserLeave();
   }
 
   function parserParseExprInner(): Parser {
@@ -1379,9 +1306,7 @@ function createParser(
       owner = parserEnd(SyntaxKind.PipeStage);
       owner = parserWrap(cp, SyntaxKind.PipeExpr);
     }
-    owner = parserLeaveLinks(links);
-
-    return owner;
+    return parserLeaveLinks(links);
   }
 
   function parserParseFallback(): Parser {
@@ -1438,16 +1363,13 @@ function createParser(
       owner = parserParseBinary(p + 1);
       owner = parserWrap(cp, SyntaxKind.BinaryExpr);
     }
-    owner = parserLeaveLinks(links);
-
-    return owner;
+    return parserLeaveLinks(links);
   }
 
   function parserParseUnary(): Parser {
     const k = parserKind();
     if (k !== TokenKind.Minus && k !== TokenKind.Bang) {
-      owner = parserParsePostfix();
-      return owner;
+      return parserParsePostfix();
     }
     if (!parserEnter()) return owner;
     owner = parserBegin();
@@ -1455,9 +1377,7 @@ function createParser(
     owner = parserSkipNl();
     owner = parserParseUnary();
     owner = parserEnd(SyntaxKind.UnaryExpr);
-    owner = parserLeave();
-
-    return owner;
+    return parserLeave();
   }
 
   function parserParsePostfix(): Parser {
@@ -1478,25 +1398,19 @@ function createParser(
         owner = parserWrap(cp, SyntaxKind.FieldExpr);
       }
     }
-    owner = parserLeaveLinks(links);
-
-    return owner;
+    return parserLeaveLinks(links);
   }
 
   function parserParseArgList(): Parser {
     owner = parserBegin();
     owner = parserParseDelimited(TokenKind.RParen, () => parserParseExpr());
-    owner = parserEnd(SyntaxKind.ArgList);
-
-    return owner;
+    return parserEnd(SyntaxKind.ArgList);
   }
 
   function parserParsePrimary(): Parser {
     if (!parserEnter()) return owner;
     owner = parserParsePrimaryInner();
-    owner = parserLeave();
-
-    return owner;
+    return parserLeave();
   }
 
   function parserParsePrimaryInner(): Parser {
@@ -1508,8 +1422,7 @@ function createParser(
     ) {
       owner = parserBegin();
       owner = parserTok();
-      owner = parserEnd(SyntaxKind.LiteralExpr);
-      return owner;
+      return parserEnd(SyntaxKind.LiteralExpr);
     }
     if (k === TokenKind.Ident) {
       if (
@@ -1518,8 +1431,7 @@ function createParser(
         parserKinds[parserPos + 2] === TokenKind.Ident &&
         parserKinds[parserPos + 3] === TokenKind.Eq
       ) {
-        owner = parserParseUsing();
-        return owner;
+        return parserParseUsing();
       }
       let next = parserPos + 1;
       for (const _kind of parserKinds) {
@@ -1527,8 +1439,7 @@ function createParser(
         next = next + 1;
       }
       if (parserKinds[next] === TokenKind.Arrow) {
-        owner = parserParseArrow();
-        return owner;
+        return parserParseArrow();
       }
       owner = parserBegin();
       const word = parserParserCheckedWordAt(parserPos);
@@ -1539,8 +1450,7 @@ function createParser(
         );
       }
       owner = parserTok();
-      owner = parserEnd(SyntaxKind.NameExpr);
-      return owner;
+      return parserEnd(SyntaxKind.NameExpr);
     }
     if (k === TokenKind.LParen) {
       if (parserParenFollowedBy(parserPos, true)) {
@@ -1555,8 +1465,7 @@ function createParser(
       return owner;
     }
     if (k === TokenKind.LBrace) {
-      owner = parserParseRecordExpr();
-      return owner;
+      return parserParseRecordExpr();
     }
     if (k === TokenKind.LBracket) {
       owner = parserBegin();
@@ -1565,31 +1474,23 @@ function createParser(
         owner = parserBegin();
         owner = parserTok();
         owner = parserParseExpr();
-        owner = parserEnd(SyntaxKind.SpreadElement);
-        return owner;
+        return parserEnd(SyntaxKind.SpreadElement);
       });
-      owner = parserEnd(SyntaxKind.ListExpr);
-      return owner;
+      return parserEnd(SyntaxKind.ListExpr);
     }
     if (k === TokenKind.KwMatch) {
-      owner = parserParseMatch();
-      return owner;
+      return parserParseMatch();
     }
     if (k === TokenKind.KwIf) {
-      owner = parserParseIf();
-      return owner;
+      return parserParseIf();
     }
     if (k === TokenKind.KwTry) {
-      owner = parserParseTry();
-      return owner;
+      return parserParseTry();
     }
     if (k === TokenKind.Plus) {
-      owner = parserParseRefusedUnary("unary operator `+` is not supported");
-      return owner;
+      return parserParseRefusedUnary("unary operator `+` is not supported");
     }
-    owner = parserMissing("an expression");
-
-    return owner;
+    return parserMissing("an expression");
   }
 
   function parserParseRefusedUnary(message: string): Parser {
@@ -1597,9 +1498,7 @@ function createParser(
     owner = parserReportAtToken("syntax/010", message);
     owner = parserTok();
     owner = parserParsePostfix();
-    owner = parserEnd(SyntaxKind.Error);
-
-    return owner;
+    return parserEnd(SyntaxKind.Error);
   }
 
   function parserParseUsing(): Parser {
@@ -1626,9 +1525,7 @@ function createParser(
     owner = parserParseOutcomeBinding();
     owner = parserParseBlockExpected();
     owner = parserEnd(SyntaxKind.ResourceRelease);
-    owner = parserEnd(SyntaxKind.UsingExpr);
-
-    return owner;
+    return parserEnd(SyntaxKind.UsingExpr);
   }
 
   function parserParseArrow(): Parser {
@@ -1657,9 +1554,7 @@ function createParser(
     }
     owner = parserSkipNl();
     owner = parserParseBody();
-    owner = parserEnd(SyntaxKind.ArrowExpr);
-
-    return owner;
+    return parserEnd(SyntaxKind.ArrowExpr);
   }
 
   function parserParseBody(): Parser {
@@ -1711,9 +1606,7 @@ function createParser(
       return owner;
     });
     owner = parserClose(group, TokenKind.RBrace, "`}`");
-    owner = parserEnd(SyntaxKind.Block);
-
-    return owner;
+    return parserEnd(SyntaxKind.Block);
   }
 
   function parserParseBlockExpected(): Parser {
@@ -1758,17 +1651,13 @@ function createParser(
 
       return owner;
     });
-    owner = parserEnd(SyntaxKind.RecordExpr);
-
-    return owner;
+    return parserEnd(SyntaxKind.RecordExpr);
   }
 
   function parserParseIf(): Parser {
     if (!parserEnter()) return owner;
     owner = parserParseIfInner();
-    owner = parserLeave();
-
-    return owner;
+    return parserLeave();
   }
 
   function parserParseIfInner(): Parser {
@@ -1790,9 +1679,7 @@ function createParser(
     } else {
       owner = parserMissing("`else`");
     }
-    owner = parserEnd(SyntaxKind.IfExpr);
-
-    return owner;
+    return parserEnd(SyntaxKind.IfExpr);
   }
 
   function parserParseMatch(): Parser {
@@ -1804,9 +1691,7 @@ function createParser(
     } else {
       owner = parserMissing("`{`");
     }
-    owner = parserEnd(SyntaxKind.MatchExpr);
-
-    return owner;
+    return parserEnd(SyntaxKind.MatchExpr);
   }
 
   function parserParseArm(): Parser {
@@ -1819,9 +1704,7 @@ function createParser(
       owner = parserMissing("`=>`");
     }
     owner = parserParseBody();
-    owner = parserEnd(SyntaxKind.MatchArm);
-
-    return owner;
+    return parserEnd(SyntaxKind.MatchArm);
   }
 
   function parserParseTry(): Parser {
@@ -1854,9 +1737,7 @@ function createParser(
     } else if (!caught) {
       owner = parserMissing("`catch` or `finally`");
     }
-    owner = parserEnd(SyntaxKind.TryExpr);
-
-    return owner;
+    return parserEnd(SyntaxKind.TryExpr);
   }
 
   function parserParseOutcomeBinding(): Parser {
@@ -1864,9 +1745,7 @@ function createParser(
     const group = parserOpen("free");
     owner = parserParseName("binding");
     owner = parserClose(group, TokenKind.RParen, "`)`");
-    owner = parserSkipNl();
-
-    return owner;
+    return parserSkipNl();
   }
 
   function parserParseHandler(): Parser {
@@ -1886,9 +1765,7 @@ function createParser(
       owner = parserMissing("`=>`");
     }
     owner = parserParseBody();
-    owner = parserEnd(SyntaxKind.Handler);
-
-    return owner;
+    return parserEnd(SyntaxKind.Handler);
   }
 
   function parserIsLiteralKind(k: TokenKind | undefined): boolean {
@@ -1898,9 +1775,7 @@ function createParser(
   }
 
   function parserInvalidPattern(message: string): Parser {
-    owner = parserProblem("syntax/011", message, false);
-
-    return owner;
+    return parserProblem("syntax/011", message, false);
   }
 
   function parserParseLiteralPattern(): Parser {
@@ -1926,9 +1801,7 @@ function createParser(
     } else {
       owner = parserTok();
     }
-    owner = parserEnd(SyntaxKind.LiteralPattern);
-
-    return owner;
+    return parserEnd(SyntaxKind.LiteralPattern);
   }
 
   function parserParsePattern(): Parser {
