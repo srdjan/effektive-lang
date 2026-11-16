@@ -7,7 +7,7 @@
 
 import { assertEquals } from "@std/assert";
 import { makeRandom } from "../scripts/lib.ts";
-import { build, withTemporary } from "./emit_slow_helpers.ts";
+import { buildMain, withTemporary } from "./emit_slow_helpers.ts";
 import { runScript } from "./process_helpers.ts";
 
 const SEEDS = [11, 29, 47, 83] as const;
@@ -100,9 +100,7 @@ Deno.test("div and % keep div(a, b) * b + a % b === a on seeded pairs", async ()
     ...EDGES.map((pair, step) => ({ label: `edge ${step}`, pair })),
   ];
   const outcomes = await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(`${dir}/main.eff`, PROGRAM);
-    build(dir, ["main.eff"]);
+    buildMain(dir, PROGRAM);
     return await runScript(
       dir,
       `

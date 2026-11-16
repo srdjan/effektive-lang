@@ -44,6 +44,13 @@ export function build(root: string, entries: readonly string[]): string[] {
   return buildProject(root, entries).paths;
 }
 
+/** Writes `source` as `main.eff` under an empty configuration in `dir`, and builds it. */
+export function buildMain(dir: string, source: string): string[] {
+  Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
+  Deno.writeTextFileSync(`${dir}/main.eff`, source);
+  return build(dir, ["main.eff"]);
+}
+
 /** Like `build`, and also returns the project and the emitted modules. */
 export function buildProject(root: string, entries: readonly string[]): Built {
   const checked = checkProject(fileHost, root, entries);

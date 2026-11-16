@@ -5,13 +5,12 @@
 
 import { assertEquals } from "@std/assert";
 import { runScript } from "./process_helpers.ts";
-import { build, withTemporary } from "./emit_slow_helpers.ts";
+import { buildMain, withTemporary } from "./emit_slow_helpers.ts";
 
 Deno.test("using releases after success, typed failure, and interruption", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "export error Stop = {}",
         "export service Files {",
@@ -25,7 +24,6 @@ Deno.test("using releases after success, typed failure, and interruption", async
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -86,9 +84,8 @@ console.log(JSON.stringify({ success, typedFailure, events }));
 
 Deno.test("bounded traverse limits jobs and waits for scoped finalizers", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "export error Stop = {}",
         "export service Jobs {",
@@ -100,7 +97,6 @@ Deno.test("bounded traverse limits jobs and waits for scoped finalizers", async 
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -186,9 +182,8 @@ console.log(JSON.stringify({ success, failure, interruption }));
 
 Deno.test("unbounded traverse starts every job and waits for scoped finalizers", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "export error Stop = {}",
         "export service Jobs {",
@@ -202,7 +197,6 @@ Deno.test("unbounded traverse starts every job and waits for scoped finalizers",
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -304,9 +298,8 @@ console.log(JSON.stringify({ success, failure, interruption, empty, allResults }
 
 Deno.test("all preserves tuple and record results and cleans up siblings", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "export error Stop = {}",
         "export service Jobs { number(): Int fails Stop; text(): Text }",
@@ -321,7 +314,6 @@ Deno.test("all preserves tuple and record results and cleans up siblings", async
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -401,9 +393,8 @@ console.log(JSON.stringify({ tupleResult, recordResult, failure, interruption })
 
 Deno.test("a source race interrupts its losing fiber and waits for cleanup", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "export service Source {",
         "  slow(): Int",
@@ -415,7 +406,6 @@ Deno.test("a source race interrupts its losing fiber and waits for cleanup", asy
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -440,9 +430,8 @@ console.log(JSON.stringify({ value, started, released }));
 
 Deno.test("forkScoped outlives its spawning fiber and closes with its scope", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "type Int = int",
         "type Bool = boolean",
@@ -456,7 +445,6 @@ Deno.test("forkScoped outlives its spawning fiber and closes with its scope", as
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -485,9 +473,8 @@ console.log(JSON.stringify({ observed, active, released }));
 
 Deno.test("reference updates are atomic under bounded traversal", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "type Int = int",
         "export const main = (): Int => {",
@@ -498,7 +485,6 @@ Deno.test("reference updates are atomic under bounded traversal", async () => {
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -513,9 +499,8 @@ console.log(JSON.stringify({ value: await Effect.runPromise(main()) }));
 
 Deno.test("effectful reference updates are atomic under bounded traversal", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "type Int = int",
         "export service Clock { pause(n: Int): Int }",
@@ -527,7 +512,6 @@ Deno.test("effectful reference updates are atomic under bounded traversal", asyn
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -543,9 +527,8 @@ console.log(JSON.stringify({ value: await Effect.runPromise(main().pipe(Effect.p
 
 Deno.test("a failing effectful reference update leaves the value unchanged", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "type Int = int",
         "export error Stop = { at: int }",
@@ -556,7 +539,6 @@ Deno.test("a failing effectful reference update leaves the value unchanged", asy
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -574,9 +556,8 @@ console.log(JSON.stringify({ failed: Exit.isFailure(exit), value: await Effect.r
 
 Deno.test("custom retry schedule sees one-based attempts and stops on None", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "export error Stop = {}",
         "export service Jobs { next(): Int fails Stop }",
@@ -587,7 +568,6 @@ Deno.test("custom retry schedule sees one-based attempts and stops on None", asy
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -605,9 +585,8 @@ console.log(JSON.stringify({ attempts, tag: error._tag }));
 
 Deno.test("source Layers merge and provide their declared services", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "service First { one(): Int }",
         "service Second { two(): Int }",
@@ -619,7 +598,6 @@ Deno.test("source Layers merge and provide their declared services", async () =>
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -634,9 +612,8 @@ console.log(JSON.stringify({ value: await Effect.runPromise(main()) }));
 
 Deno.test("source Layer acquisition carries its failure and service requirement", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "export error Stop = {}",
         "export service Source { next(): Int fails Stop }",
@@ -650,7 +627,6 @@ Deno.test("source Layer acquisition carries its failure and service requirement"
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `

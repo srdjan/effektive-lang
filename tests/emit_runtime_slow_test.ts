@@ -10,6 +10,7 @@ import {
   build,
   buildExamples,
   buildForms,
+  buildMain,
   withTemporary,
 } from "./emit_slow_helpers.ts";
 
@@ -73,9 +74,7 @@ const WIDENED_RECORDS = [
 
 Deno.test("a widened record value constructs another nominal type, in a copy, an update, and a nested field, and encodes without its tag", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(`${dir}/main.eff`, WIDENED_RECORDS);
-    build(dir, ["main.eff"]);
+    buildMain(dir, WIDENED_RECORDS);
     const result = await runScript(
       dir,
       `
@@ -440,9 +439,8 @@ console.log(JSON.stringify({
 
 Deno.test("a data value with a missing optional prototype-named field nests in another data value", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "type Text = string",
         "export type Tok = { label: Text, toString?: Text }",
@@ -454,7 +452,6 @@ Deno.test("a data value with a missing optional prototype-named field nests in a
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -477,9 +474,8 @@ console.log(JSON.stringify(box()));
 
 Deno.test("a widened record value with a nested optional prototype-named field loses its tag and keeps the field adapter", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "type Text = string",
         "export type Tok = { label: Text, toString?: Text }",
@@ -493,7 +489,6 @@ Deno.test("a widened record value with a nested optional prototype-named field l
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -610,9 +605,8 @@ console.log(JSON.stringify({
 
 Deno.test("stored Effect values run twice after deferred construction", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "error Stop = {}",
         "export service Counter { next(): Int fails Stop }",
@@ -628,7 +622,6 @@ Deno.test("stored Effect values run twice after deferred construction", async ()
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -651,9 +644,8 @@ console.log(JSON.stringify({ before, sum, calls }));
 
 Deno.test("traverse runs sequentially and stops after a typed callback failure", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "error Stop = { at: int }",
         "service Probe { step(n: Int): Int fails Stop }",
@@ -663,7 +655,6 @@ Deno.test("traverse runs sequentially and stops after a typed callback failure",
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -699,9 +690,8 @@ console.log(JSON.stringify({ empty, success, stoppedAt, calls, pure: Effect.runS
 
 Deno.test("effectful map, filter and fold run in order, stop at the first failure, and accumulate", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "error Stop = { at: int }",
         "service Probe {",
@@ -718,7 +708,6 @@ Deno.test("effectful map, filter and fold run in order, stop at the first failur
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -1241,9 +1230,8 @@ console.log(JSON.stringify({
 
 Deno.test("a fallback on a nullable union runs only for null", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "service Counter { next(): Int }",
         "export const orNext = (x: MaybeInt): Int with Counter.next => x ?? Counter.next()",
@@ -1252,7 +1240,6 @@ Deno.test("a fallback on a nullable union runs only for null", async () => {
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `

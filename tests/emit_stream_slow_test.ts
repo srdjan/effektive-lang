@@ -4,13 +4,12 @@
 
 import { assertEquals } from "@std/assert";
 import { runScript } from "./process_helpers.ts";
-import { build, withTemporary } from "./emit_slow_helpers.ts";
+import { buildMain, withTemporary } from "./emit_slow_helpers.ts";
 
 Deno.test("concurrent stream mapping bounds work and closes failed siblings", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "type Int = int",
         "export error Stop = {}",
@@ -22,7 +21,6 @@ Deno.test("concurrent stream mapping bounds work and closes failed siblings", as
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -110,9 +108,8 @@ console.log(JSON.stringify({ before, mapSuccess, mapFailed }));
 
 Deno.test("source-authored streams pull incrementally through an effectful sink", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "export error Stop = {}",
         "export service Source { next(state: Int): Option<[Int, Int]> fails Stop }",
@@ -126,7 +123,6 @@ Deno.test("source-authored streams pull incrementally through an effectful sink"
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -170,9 +166,8 @@ console.log(JSON.stringify({ before, produced, consumed, maximumAhead, output })
 
 Deno.test("mapEffect with a pure callback changes element type and propagates source failures", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "type Int = int",
         "type Bool = boolean",
@@ -186,7 +181,6 @@ Deno.test("mapEffect with a pure callback changes element type and propagates so
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -258,9 +252,8 @@ console.log(JSON.stringify({ before, all, selected, none, failure: { tag: failur
 
 Deno.test("stream pull releases a scoped operation on failure and interruption", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "export error Stop = {}",
         "export service Source { open(state: Int): { next: () => Option<[Int, Int]> fails Stop, close: () => void } }",
@@ -271,7 +264,6 @@ Deno.test("stream pull releases a scoped operation on failure and interruption",
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `
@@ -315,9 +307,8 @@ console.log(JSON.stringify({ failure, interruption: events }));
 
 Deno.test("a buffered stream defers production and keeps the source order", async () => {
   await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(
-      `${dir}/main.eff`,
+    buildMain(
+      dir,
       [
         "export service Source { next(state: Int): Option<[Int, Int]> }",
         "export service Consumer { accept(value: Int): void }",
@@ -329,7 +320,6 @@ Deno.test("a buffered stream defers production and keeps the source order", asyn
         "",
       ].join("\n"),
     );
-    build(dir, ["main.eff"]);
     const result = await runScript(
       dir,
       `

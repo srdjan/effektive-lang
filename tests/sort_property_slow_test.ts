@@ -7,7 +7,7 @@
 
 import { assertEquals } from "@std/assert";
 import { makeRandom } from "../scripts/lib.ts";
-import { build, withTemporary } from "./emit_slow_helpers.ts";
+import { buildMain, withTemporary } from "./emit_slow_helpers.ts";
 import { runScript } from "./process_helpers.ts";
 
 const SEEDS = [5, 19, 41, 73] as const;
@@ -79,9 +79,7 @@ Deno.test("sort gives a stable ordered permutation on seeded arrays", async () =
     }))
   );
   const outcomes = await withTemporary(async (dir) => {
-    Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
-    Deno.writeTextFileSync(`${dir}/main.eff`, PROGRAM);
-    build(dir, ["main.eff"]);
+    buildMain(dir, PROGRAM);
     return await runScript(
       dir,
       `
