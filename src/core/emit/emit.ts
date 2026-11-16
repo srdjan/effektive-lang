@@ -3,7 +3,6 @@ import { fieldHelperDeclarations } from "./fields.ts";
 // `ModuleIR` into the text of one TypeScript module. It reads only the IR and
 // the project configuration. It is synchronous and pure: the caller writes files.
 import type { Declaration, ModuleIR, TypeDecl } from "../ir.ts";
-import { indices } from "../runtime.ts";
 import { trueFlag } from "../util.ts";
 import { caught, isInvariantFailure, type Result, rethrow } from "../source.ts";
 import {
@@ -13,7 +12,7 @@ import {
   sourceMapPathOf,
 } from "../paths.ts";
 import type { ProjectConfig } from "../project_config.ts";
-import { bracketed, type Doc, hard, render, spanned } from "./doc.ts";
+import { bracketed, type Doc, hard, join, render, spanned } from "./doc.ts";
 import {
   constantTypeDoc,
   DeclarationEmitter,
@@ -62,32 +61,10 @@ function importLine(group: ImportGroup): Doc {
   ];
 }
 function blankSeparated(sections: readonly (readonly Doc[])[]): Doc {
-  const nonEmpty = sections.filter((s) => s.length > 0);
-  const out: Doc[] = [];
-  for (const i of indices(nonEmpty.length)) {
-    const section = nonEmpty[i];
-    if (i > 0) {
-      const _appendTarget1 = out;
-      const _appendValues2 = [hard, hard];
-      for (const _appendItem3 of _appendValues2) {
-        _appendTarget1[_appendTarget1.length] = _appendItem3;
-      }
-    }
-    for (const j of indices(section.length)) {
-      const item = section[j];
-      if (j > 0) {
-        const _appendTarget4 = out;
-        const _appendValue5 = hard;
-        _appendTarget4[_appendTarget4.length] = _appendValue5;
-      }
-      {
-        const _appendTarget6 = out;
-        const _appendValue7 = item;
-        _appendTarget6[_appendTarget6.length] = _appendValue7;
-      }
-    }
-  }
-  return out;
+  return join(
+    [hard, hard],
+    sections.filter((s) => s.length > 0).map((s) => join(hard, s)),
+  );
 }
 /**
  * A `nominal` type with an untagged, non-opaque body has its identity in the
@@ -144,16 +121,10 @@ function build(source: ModuleIR, context: EmitContext): EmittedModule {
     const key = entry[0];
     const declaration = entry[1];
     if (scope.usesHelper(key)) {
-      const _appendTarget8 = helpers;
-      const _appendValue9 = [declaration()];
-      _appendTarget8[_appendTarget8.length] = _appendValue9;
+      helpers[helpers.length] = [declaration()];
     }
   }
-  {
-    const _appendTarget10 = helpers;
-    const _appendValue11 = fieldHelperDeclarations(scope);
-    _appendTarget10[_appendTarget10.length] = _appendValue11;
-  }
+  helpers[helpers.length] = fieldHelperDeclarations(scope);
   // Every name and import is allocated by now: the import lists are final.
   const imports: Doc[] = scope.finish().map(importLine);
   const header: Doc = generatedHeader(scope.source);
@@ -222,9 +193,7 @@ type NoDeclarationType = {
   readonly tag: "unavailable";
 };
 /** One line, as the emitter prints the declaration header, without the width limit. */
-function flatWidth(): number {
-  return 1000000;
-}
+const FLAT_WIDTH = 1000000;
 /**
  * The backend type text of one declaration of the IR on one line: the header
  * of a function or the type of a constant. Unlike `emitModule`, it does not
@@ -243,12 +212,12 @@ export function declarationTypeText(
     const scope = ModuleState(ir, context.config);
     if (declaration.kind === "function") {
       const doc = functionHeaderDoc(scope, declaration, "always");
-      return { ok: true, value: render(doc, flatWidth()).text };
+      return { ok: true, value: render(doc, FLAT_WIDTH).text };
     }
     if (declaration.kind === "constant") {
       return {
         ok: true,
-        value: render(constantTypeDoc(scope, declaration), flatWidth()).text,
+        value: render(constantTypeDoc(scope, declaration), FLAT_WIDTH).text,
       };
     }
     return { ok: false, error: { tag: "unavailable" } };
