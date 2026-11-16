@@ -34,7 +34,7 @@ import {
 import { isReservedError } from "./prelude.ts";
 import { effectsFit, isSubset, sameSet, sortedUnique } from "./sets.ts";
 import { MAX_DEPTH, typeChildren } from "./type_children.ts";
-import type { Predicate } from "../predicates.ts";
+import type { Predicate, Term } from "../predicates.ts";
 
 export type TypeEnv = {
   readonly module: string;
@@ -557,6 +557,30 @@ export function fitsCheckedInputAtDepth(
   return false;
 }
 
+/** True when a member on the path of `term` through `source` has the type unknown. */
+function termReachesUnknown(env: TypeEnv, source: Type, term: Term): boolean {
+  if (term.kind === "zero") return false;
+  const path = term.kind === "input" ? [] : term.path;
+  let candidates = [source];
+  for (const index of indices(path.length + 1)) {
+    const next: Type[] = [];
+    for (
+      const candidate of candidates.flatMap((type) => members(env, type))
+    ) {
+      const value = unfold(env, candidate);
+      if (value.kind === "primitive" && value.name === "unknown") return true;
+      if (index < path.length) {
+        const field = fieldsOf(env, candidate)?.find((field) =>
+          field.name === path[index]
+        );
+        if (field !== undefined) next[next.length] = field.type;
+      }
+    }
+    candidates = next;
+  }
+  return false;
+}
+
 function unknownPredicateInput(
   env: TypeEnv,
   source: Type,
@@ -575,33 +599,12 @@ function unknownPredicateInput(
         for (const operand of current.operands) {
           nextPredicates[nextPredicates.length] = operand;
         }
-      } else if (current.kind === "difference") {
-        for (const term of [current.left, current.right]) {
-          if (term.kind === "zero") continue;
-          const path = term.kind === "input" ? [] : term.path;
-          let candidates = [source];
-          for (const index of indices(path.length + 1)) {
-            const next: Type[] = [];
-            for (
-              const candidate of candidates.flatMap((type) =>
-                members(env, type)
-              )
-            ) {
-              const value = unfold(env, candidate);
-              if (value.kind === "primitive" && value.name === "unknown") {
-                return true;
-              }
-              if (index < path.length) {
-                const field = fieldsOf(env, candidate)?.find((field) =>
-                  field.name === path[index]
-                );
-                if (field !== undefined) next[next.length] = field.type;
-              }
-            }
-            candidates = next;
-          }
-        }
-      }
+      } else if (
+        current.kind === "difference" &&
+        [current.left, current.right].some((term) =>
+          termReachesUnknown(env, source, term)
+        )
+      ) return true;
     }
     if (nextPredicates.length === 0) break;
     pending = nextPredicates;
