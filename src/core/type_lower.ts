@@ -107,7 +107,6 @@ function unitRow(id: TypeId): BuiltinTypeRow {
 /** Lowers type syntax nodes to interned types and IR trees. Diagnostics go to `sink`. */
 export type TypeLowerer = {
   readonly env: TypeEnv;
-  readonly sink: readonly Diagnostic[];
   readonly report: (
     code: Diagnostic["code"],
     message: string,
@@ -824,7 +823,6 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
   }
   self = {
     env: env,
-    sink: sink,
     report: report,
     span: spanOf,
     errorLowered: errorLowered,
