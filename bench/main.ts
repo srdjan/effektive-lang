@@ -104,6 +104,12 @@ function header(options: Options): string {
   ].join("\n");
 }
 
+/** Prints a failure on stderr and returns its exit code. */
+function reported(message: string): number {
+  console.error(`bench: ${message}`);
+  return 1;
+}
+
 export async function run(args: readonly string[]): Promise<number> {
   const parsed = parseOptions(args);
   if (!parsed.ok) {
@@ -118,8 +124,7 @@ export async function run(args: readonly string[]): Promise<number> {
   if (wants("m1")) {
     const result = await runM1(m1Config(options.profile));
     if (!result.ok) {
-      console.error(`bench: M1 failed: ${describeLspBenchError(result.error)}`);
-      return 1;
+      return reported(`M1 failed: ${describeLspBenchError(result.error)}`);
     }
     m1 = result.value;
     console.log(`\n${formatM1(m1)}`);
@@ -129,8 +134,7 @@ export async function run(args: readonly string[]): Promise<number> {
   if (wants("m2") || wants("m6")) {
     const result = runM2(m2Config(options.profile));
     if (!result.ok) {
-      console.error(`bench: M2 failed: ${describeM2Error(result.error)}`);
-      return 1;
+      return reported(`M2 failed: ${describeM2Error(result.error)}`);
     }
     m2 = result.value;
     if (wants("m2")) console.log(`\n${formatM2(m2)}`);
@@ -140,8 +144,7 @@ export async function run(args: readonly string[]): Promise<number> {
   if (wants("m3")) {
     const result = await runM3(m3Config(options.profile));
     if (!result.ok) {
-      console.error(`bench: M3 failed: ${describeLspBenchError(result.error)}`);
-      return 1;
+      return reported(`M3 failed: ${describeLspBenchError(result.error)}`);
     }
     m3 = result.value;
     console.log(`\n${formatM3(m3)}`);
@@ -151,8 +154,7 @@ export async function run(args: readonly string[]): Promise<number> {
   if (wants("m4")) {
     const result = await runM4(m4Config(options.profile));
     if (!result.ok) {
-      console.error(`bench: M4 failed: ${describeLspBenchError(result.error)}`);
-      return 1;
+      return reported(`M4 failed: ${describeLspBenchError(result.error)}`);
     }
     m4 = result.value;
     console.log(`\n${formatM4(m4)}`);
@@ -162,12 +164,9 @@ export async function run(args: readonly string[]): Promise<number> {
   if (wants("m4")) {
     const result = await runM4(m4DiskConfig(options.profile));
     if (!result.ok) {
-      console.error(
-        `bench: M4 with writeOnSave failed: ${
-          describeLspBenchError(result.error)
-        }`,
+      return reported(
+        `M4 with writeOnSave failed: ${describeLspBenchError(result.error)}`,
       );
-      return 1;
     }
     m4Disk = result.value;
     console.log(`\n${formatM4(m4Disk)}`);
@@ -177,8 +176,7 @@ export async function run(args: readonly string[]): Promise<number> {
   if (wants("m7")) {
     const result = await runM7(m7Config(options.profile));
     if (!result.ok) {
-      console.error(`bench: M7 failed: ${describeLspBenchError(result.error)}`);
-      return 1;
+      return reported(`M7 failed: ${describeLspBenchError(result.error)}`);
     }
     m7 = result.value;
     console.log(`\n${formatM7(m7)}`);
@@ -189,8 +187,7 @@ export async function run(args: readonly string[]): Promise<number> {
     const config = m5Config(options.profile, options.variants);
     const result = await runM5(config);
     if (!result.ok) {
-      console.error(`bench: M5 failed: ${describeM5Error(result.error)}`);
-      return 1;
+      return reported(`M5 failed: ${describeM5Error(result.error)}`);
     }
     m5 = result.value;
     console.log(`\n${formatM5(m5, config)}`);
@@ -216,10 +213,7 @@ export async function run(args: readonly string[]): Promise<number> {
     try {
       Deno.writeTextFileSync(options.json, JSON.stringify(document, null, 1));
     } catch (e) {
-      console.error(
-        `bench: cannot write ${options.json}: ${errorMessage(e)}`,
-      );
-      return 1;
+      return reported(`cannot write ${options.json}: ${errorMessage(e)}`);
     }
   }
   return 0;
