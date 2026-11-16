@@ -73,3 +73,4 @@ Each ledger or plan uses its own ID prefix. A new document must not reuse a pref
 | IX (items), IXU (units) | [`docs/archive/plans/2026-11-15-index-survivors.md`](../archive/plans/2026-11-15-index-survivors.md) | Old mutation survivors of the declaration and editor indexes |
 | LFA (adoption units) | [`docs/archive/plans/2026-11-16-light-fp-adoption.md`](../archive/plans/2026-11-16-light-fp-adoption.md) | Adopt Light FP lint 0.8.0 without behavior changes |
 | FZ (findings), FZD (decisions), FZU (units), FZO (open items), FZA (abstraction suggestions) | [`docs/archive/plans/2026-11-16-fresh-eyes-review.md`](../archive/plans/2026-11-16-fresh-eyes-review.md) | Second fresh-eyes review of the whole repository, after the Light FP lint rewrite |
+| FWU (units) | [`docs/plans/2026-11-16-fresh-eyes-follow-up.md`](2026-11-16-fresh-eyes-follow-up.md) | Follow-up of the second fresh-eyes review: older survivors, four abstraction suggestions, and file URL paths |
