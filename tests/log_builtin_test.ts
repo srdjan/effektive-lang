@@ -62,6 +62,7 @@ Deno.test("each rejected option is type-mismatch/010", () => {
     [`msg, { level: 3 }`, "one of the string literals"],
     [`msg, {}`, "at least one of `level` or `fields`"],
     [`msg, msg`, "needs an options record"],
+    [`msg, { ...id }`, "options need the form `name: value`"],
     [`msg, { fields: id }`, "a record literal"],
     [`msg, { fields: { f: (x: Id): Id => x } }`, "must be data"],
   ];

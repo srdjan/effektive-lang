@@ -253,6 +253,16 @@ const ROWS: readonly SiteRow[] = [
   },
   {
     builtin: "layer",
+    change:
+      "return a record variable with a method that the service does not declare",
+    valid: `${LAYER_SERVICE}const a = layer(First, () => ({ one: () => 1 }))\n`,
+    invalid:
+      `${LAYER_SERVICE}const r = { one: () => 1, two: () => 2 }\nconst a = layer(First, () => r)\n`,
+    code: "type-mismatch/010",
+    fragment: "`layer` must implement exactly the service methods",
+  },
+  {
+    builtin: "layer",
     change: "call the service method that the layer provides",
     valid: `${LAYER_SERVICE}const a = layer(First, () => ({ one: () => 1 }))\n`,
     invalid:
@@ -301,6 +311,16 @@ const ROWS: readonly SiteRow[] = [
     code: "type-mismatch/010",
     fragment:
       "`sinkForEach` needs a one-argument callback with an annotated input",
+  },
+  {
+    builtin: "transduceStream",
+    change: "replace the stream and the sink with ints",
+    valid:
+      `${INT}const probe = (s: Stream<Int>, k: Sink<Int, Int[], never, never, Int>) => transduceStream(s, k)\n`,
+    invalid:
+      `${INT}const probe = (s: Stream<Int>, k: Sink<Int, Int[], never, never, Int>) => transduceStream(1, 2)\n`,
+    code: "type-mismatch/010",
+    fragment: "`transduceStream` needs Stream and Sink values",
   },
   {
     builtin: "runStream",
