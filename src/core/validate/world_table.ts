@@ -9,11 +9,17 @@ import type {
   MethodDecl,
   ModuleIR,
   ServiceDecl,
+  Span,
   Type,
   TypeDecl,
 } from "../ir.ts";
 import type { Predicate } from "../predicates.ts";
-import type { Report } from "./report.ts";
+import type {
+  AreaCode,
+  Report,
+  ValidationMessage,
+  ValidationPath,
+} from "./report.ts";
 import type { TypeEnv } from "./typing.ts";
 import { type BuiltinInfo, builtinInfo } from "./builtins.ts";
 import { preludeErrors, preludeTypes } from "./prelude.ts";
@@ -137,3 +143,14 @@ export type Ctx = {
   readonly world: World;
   readonly report: Report;
 };
+
+/** `state` with one more finding in its report. The report is one owner, so its order is the order of the calls. */
+export function flag<T extends { readonly report: Report }>(
+  state: T,
+  area: AreaCode,
+  path: ValidationPath,
+  what: ValidationMessage,
+  span: Span,
+): T {
+  return { ...state, report: state.report.add(area, path, what, span) };
+}

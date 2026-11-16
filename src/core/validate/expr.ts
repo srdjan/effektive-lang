@@ -105,7 +105,7 @@ import {
   UNIT,
 } from "./typing.ts";
 import { checkTypeIds } from "./type_checks.ts";
-import type { Ctx } from "./world_table.ts";
+import { type Ctx, flag } from "./world_table.ts";
 import { exprChildren } from "./expr_walk.ts";
 import type { ValidatorCore } from "./families/context.ts";
 import { type Comp, derivedResult, fittedResult, type Out } from "./results.ts";
@@ -253,26 +253,22 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     generated: boolean,
   ): Ctx {
     if (!p.id.startsWith("local:")) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.identity,
-          `${path}.id`,
-          `${p.id} is not a local identity`,
-          p.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.id`,
+        `${p.id} is not a local identity`,
+        p.span,
+      );
     }
     if (declared.has(p.id)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.identity,
-          `${path}.id`,
-          `the local ${p.id} is declared twice in this function`,
-          p.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.id`,
+        `the local ${p.id} is declared twice in this function`,
+        p.span,
+      );
     }
     declared = declared.add(p.id);
     scope = scope.set(p.id, p.type);
@@ -322,30 +318,26 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     span: Span,
   ): Ctx {
     if (recorded.length !== parameters.length) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.type.parameters`,
-          countMessage,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.type.parameters`,
+        countMessage,
+        span,
+      );
       return ctx;
     }
     for (const entry of parameters.entries()) {
       const p = entry[1];
       const j = entry[0];
       if (!same(env, p.type, recorded[j])) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${path}.type.parameters[${j}]`,
-            `expected ${show(p.type)}, recorded ${show(recorded[j])}`,
-            p.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.type.parameters[${j}]`,
+          `expected ${show(p.type)}, recorded ${show(recorded[j])}`,
+          p.span,
+        );
       }
     }
     return ctx;
@@ -430,15 +422,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       ? "effect"
       : "pure";
     if (recorded.execution !== expected) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.execution,
-          `${path}.type.execution`,
-          `expected ${expected}, recorded ${recorded.execution}`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.execution,
+        `${path}.type.execution`,
+        `expected ${expected}, recorded ${recorded.execution}`,
+        span,
+      );
     }
     return ctx;
   }
@@ -454,26 +444,22 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       recordedChecks.some((id, index) => id !== checkedIds[index]) ||
       (checkedIds.length === 0 && d.entryValidation !== undefined)
     ) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.contracts,
-          `${path}.entryValidation`,
-          "entry validation must list exactly the checked parameters in declaration order",
-          d.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.contracts,
+        `${path}.entryValidation`,
+        "entry validation must list exactly the checked parameters in declaration order",
+        d.span,
+      );
     }
     if (checkedIds.length > 0 && !ctx.world.exports.has(d.id)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.contracts,
-          `${path}.entryValidation`,
-          "only an exported function can have checked entry parameters",
-          d.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.contracts,
+        `${path}.entryValidation`,
+        "only an exported function can have checked entry parameters",
+        d.span,
+      );
     }
     for (const entry of d.parameters.entries()) {
       const parameter = entry[1];
@@ -483,15 +469,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         (!entrySchemaDerivable(env, parameter.type) ||
           foreignSealedOf(env, parameter.type) !== undefined)
       ) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${path}.parameters[${index}].type`,
-            "a checked entry parameter needs a schema-derivable closed data type",
-            parameter.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.parameters[${index}].type`,
+          "a checked entry parameter needs a schema-derivable closed data type",
+          parameter.span,
+        );
       }
     }
     const body = withLocals((declare) => {
@@ -512,15 +496,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         d.type.borrows !== undefined &&
         d.type.borrows.length !== d.parameters.length
       ) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${path}.type.borrows`,
-            "borrow flags must match function parameters",
-            d.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.type.borrows`,
+          "borrow flags must match function parameters",
+          d.span,
+        );
       }
       const borrowFlags = d.type.borrows;
       for (const entry of d.parameters.entries()) {
@@ -530,15 +512,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
           ? undefined
           : borrowFlags[index];
         if (isTrue(borrowFlag) && !isTrue(parameter.borrow)) {
-          ctx = {
-            ...ctx,
-            report: add(
-              AREA.types,
-              `${path}.parameters[${index}]`,
-              "borrow parameter flag disagrees with function type",
-              parameter.span,
-            ),
-          };
+          ctx = flag(
+            ctx,
+            AREA.types,
+            `${path}.parameters[${index}]`,
+            "borrow parameter flag disagrees with function type",
+            parameter.span,
+          );
         }
         if (!isTrue(parameter.borrow)) continue;
         const type = unfold(env, parameter.type);
@@ -546,37 +526,31 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
           type.kind !== "named" ||
           !isTrue(ctx.world.types.get(type.id)?.opaque)
         ) {
-          ctx = {
-            ...ctx,
-            report: add(
-              AREA.types,
-              `${path}.parameters[${index}]`,
-              "a borrow parameter needs an opaque type",
-              parameter.span,
-            ),
-          };
+          ctx = flag(
+            ctx,
+            AREA.types,
+            `${path}.parameters[${index}]`,
+            "a borrow parameter needs an opaque type",
+            parameter.span,
+          );
         }
         if (!isTrue(borrowFlag)) {
-          ctx = {
-            ...ctx,
-            report: add(
-              AREA.types,
-              `${path}.type.borrows[${index}]`,
-              "borrow flag missing from function type",
-              parameter.span,
-            ),
-          };
+          ctx = flag(
+            ctx,
+            AREA.types,
+            `${path}.type.borrows[${index}]`,
+            "borrow flag missing from function type",
+            parameter.span,
+          );
         }
         if (!dataOnly(env, d.type.result, "value")) {
-          ctx = {
-            ...ctx,
-            report: add(
-              AREA.types,
-              `${path}.type.result`,
-              "a borrow function must return data only",
-              d.span,
-            ),
-          };
+          ctx = flag(
+            ctx,
+            AREA.types,
+            `${path}.type.result`,
+            "a borrow function must return data only",
+            d.span,
+          );
         }
         ctx = {
           ...ctx,
@@ -597,17 +571,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       type: body.type,
     };
     if (!accepts(d.body, body.type, d.type.result, `${path}.body`)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.body`,
-          `the body type ${show(body.type)} does not fit the declared result ${
-            show(d.type.result)
-          }`,
-          d.body.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.body`,
+        `the body type ${show(body.type)} does not fit the declared result ${
+          show(d.type.result)
+        }`,
+        d.body.span,
+      );
     }
     // A written set bounds the body from above. An inferred set equals the body.
     ctx = checkContractSet(d, activeBody, path, "failures", "can fail with");
@@ -629,30 +601,26 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     if (d.written[key === "failures" ? "fails" : "uses"]) {
       const extra = minus(body[key], declared);
       if (extra.length > 0) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.contracts,
-            `${path}.body`,
-            `the body ${verb} ${list(extra)}, which the declared ${key} ${
-              list(declared)
-            } do not list`,
-            d.body.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.contracts,
+          `${path}.body`,
+          `the body ${verb} ${list(extra)}, which the declared ${key} ${
+            list(declared)
+          } do not list`,
+          d.body.span,
+        );
       }
     } else if (!sameSet(declared, body[key])) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.contracts,
-          `${path}.type.effects.${key}`,
-          `an inferred contract equals the body: expected ${
-            list(body[key])
-          }, recorded ${list(declared)}`,
-          d.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.contracts,
+        `${path}.type.effects.${key}`,
+        `an inferred contract equals the body: expected ${
+          list(body[key])
+        }, recorded ${list(declared)}`,
+        d.span,
+      );
     }
     return ctx;
   }
@@ -660,31 +628,27 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
   function checkConstant(d: ConstantDecl, path: string): Report {
     const out = check(d.value, `${path}.value`);
     if (!accepts(d.value, out.type, d.type, `${path}.value`)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.value`,
-          `the initializer type ${
-            show(out.type)
-          } does not fit the constant type ${show(d.type)}`,
-          d.value.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.value`,
+        `the initializer type ${
+          show(out.type)
+        } does not fit the constant type ${show(d.type)}`,
+        d.value.span,
+      );
     }
     const v = d.value;
     if (!isQuiet(invocationOf(v))) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.initialization,
-          `${path}.value`,
-          `a module constant needs a pure initializer with empty sets; recorded ${v.execution}, failures ${
-            list(v.effects.failures)
-          }, requirements ${list(v.effects.requirements)}`,
-          v.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.initialization,
+        `${path}.value`,
+        `a module constant needs a pure initializer with empty sets; recorded ${v.execution}, failures ${
+          list(v.effects.failures)
+        }, requirements ${list(v.effects.requirements)}`,
+        v.span,
+      );
     }
     refinements = refinements.audit(d.value, `${path}.value`, exprChildren);
     return ctx.report;
@@ -708,19 +672,17 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         ? same(env, comp.type, e.type)
         : accepts(e, comp.type, e.type, path);
       if (!good) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${path}.type`,
-            comp.match === "exact"
-              ? `expected ${show(comp.type)}, recorded ${show(e.type)}`
-              : `the recomputed type ${
-                show(comp.type)
-              } does not fit the recorded type ${show(e.type)}`,
-            e.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.type`,
+          comp.match === "exact"
+            ? `expected ${show(comp.type)}, recorded ${show(e.type)}`
+            : `the recomputed type ${
+              show(comp.type)
+            } does not fit the recorded type ${show(e.type)}`,
+          e.span,
+        );
         type = comp.type;
       }
     }
@@ -733,27 +695,23 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     const active = comp.active;
     for (const key of ["failures", "requirements"] as const) {
       if (!sameSet(recorded[key], active[key])) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.contracts,
-            `${path}.effects.${key}`,
-            `expected ${list(active[key])}, recorded ${list(recorded[key])}`,
-            e.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.contracts,
+          `${path}.effects.${key}`,
+          `expected ${list(active[key])}, recorded ${list(recorded[key])}`,
+          e.span,
+        );
       }
     }
     if (recorded.execution !== active.execution) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.execution,
-          `${path}.execution`,
-          `expected ${active.execution}, recorded ${recorded.execution}`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.execution,
+        `${path}.execution`,
+        `expected ${active.execution}, recorded ${recorded.execution}`,
+        e.span,
+      );
     }
     return { ...active, type: type };
   }
@@ -811,17 +769,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         target !== undefined &&
         !accepts(e.value, v.type, target.element, `${path}.value`)
       ) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${path}.value`,
-            `the Some value has type ${show(v.type)}, which does not fit ${
-              show(target.element)
-            }`,
-            e.value.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.value`,
+          `the Some value has type ${show(v.type)}, which does not fit ${
+            show(target.element)
+          }`,
+          e.value.span,
+        );
       }
       return fittedResult({
         kind: "option",
@@ -902,27 +858,23 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     if (target.startsWith("local:")) type = scope.get(target);
     else if (target.startsWith("value:")) type = world.values.get(target);
     if (type === undefined) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.identity,
-          `${path}.target`,
-          `the target ${target} is not a parameter, a binding, or a declaration in scope`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.target`,
+        `the target ${target} is not a parameter, a binding, or a declaration in scope`,
+        span,
+      );
       return poison();
     }
     if (world.builtins.has(target) && !callee) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.identity,
-          `${path}.target`,
-          `the builtin ${target} may appear only as the callee of a call`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.target`,
+        `the builtin ${target} may appear only as the callee of a call`,
+        span,
+      );
     }
     return derivedResult(type, QUIET);
   }
@@ -952,29 +904,25 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       const i = entry[0];
       const at = `${path}.fields[${i}]`;
       if (seen.has(f.name)) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            at,
-            `the field ${f.name} appears twice`,
-            e.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          at,
+          `the field ${f.name} appears twice`,
+          e.span,
+        );
         continue;
       }
       seen = seen.add(f.name);
       const field = declared.find((d) => d.name === f.name);
       if (field === undefined) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            at,
-            `${what} has no field ${f.name}`,
-            e.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          at,
+          `${what} has no field ${f.name}`,
+          e.span,
+        );
         continue;
       }
       if (
@@ -985,32 +933,28 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
           `${at}.value`,
         )
       ) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${at}.value`,
-            `the value of ${f.name} has type ${
-              show(outs[i].type)
-            }, which does not fit ${show(field.type)}`,
-            f.value.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${at}.value`,
+          `the value of ${f.name} has type ${
+            show(outs[i].type)
+          }, which does not fit ${show(field.type)}`,
+          f.value.span,
+        );
       }
     }
     if (requireAll) {
       const missing = declared.filter((d) => !d.optional && !seen.has(d.name))
         .map((d) => d.name);
       if (missing.length > 0) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            path,
-            `the construction is missing the required fields ${list(missing)}`,
-            e.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          path,
+          `the construction is missing the required fields ${list(missing)}`,
+          e.span,
+        );
       }
     }
     return ctx;
@@ -1023,15 +967,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
   ): Ctx {
     const sealed = sealedRootOf(env, e.type);
     if (sealed !== undefined && !ownsSealed(env, sealed)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.type`,
-          `the module cannot construct the foreign sealed type ${sealed}`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.type`,
+        `the module cannot construct the foreign sealed type ${sealed}`,
+        e.span,
+      );
     }
     return ctx;
   }
@@ -1046,15 +988,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     );
     const target = unfold(env, e.type);
     if (target.kind !== "record") {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.type`,
-          `a record construction has a record type, recorded ${show(e.type)}`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.type`,
+        `a record construction has a record type, recorded ${show(e.type)}`,
+        e.span,
+      );
     } else {
       ctx = checkFieldValues(
         e,
@@ -1087,17 +1027,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
           `${path}.elements[${i}]`,
         )
       ) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${path}.elements[${i}]`,
-            `the element has type ${show(o.type)}, which does not fit ${
-              show(target(i))
-            }`,
-            e.elements[i].span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.elements[${i}]`,
+          `the element has type ${show(o.type)}, which does not fit ${
+            show(target(i))
+          }`,
+          e.elements[i].span,
+        );
       }
     }
     return ctx;
@@ -1111,15 +1049,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     const outs = e.elements.map((x, i) => check(x, `${path}.elements[${i}]`));
     const target = unfold(env, e.type);
     if (target.kind !== "array") {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.type`,
-          `an array construction has an array type, recorded ${show(e.type)}`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.type`,
+        `an array construction has an array type, recorded ${show(e.type)}`,
+        e.span,
+      );
     } else {
       ctx = checkElements(e, outs, () => target.element, path);
     }
@@ -1135,17 +1071,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     const outs = e.elements.map((x, i) => check(x, `${path}.elements[${i}]`));
     const target = unfold(env, e.type);
     if (target.kind !== "tuple" || target.elements.length !== outs.length) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.type`,
-          `a tuple construction of ${outs.length} elements has a tuple type of equal length, recorded ${
-            show(e.type)
-          }`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.type`,
+        `a tuple construction of ${outs.length} elements has a tuple type of equal length, recorded ${
+          show(e.type)
+        }`,
+        e.span,
+      );
     } else {
       ctx = checkElements(e, outs, (i) => target.elements[i], path);
     }
@@ -1161,17 +1095,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       const fields = fieldsOf(env, member);
       const field = fields?.find((f) => f.name === e.field);
       if (field === undefined) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${path}.field`,
-            fields === undefined
-              ? `a value of type ${show(base.type)} has no fields`
-              : `the type ${show(member)} has no field ${e.field}`,
-            e.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.field`,
+          fields === undefined
+            ? `a value of type ${show(base.type)} has no fields`
+            : `the type ${show(member)} has no field ${e.field}`,
+          e.span,
+        );
         return checkedResult(combine([base]));
       }
       if (field.optional) optional = true;
@@ -1192,32 +1124,28 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     const active = combine([base, ...outs]);
     const sealed = sealedRootOf(env, base.type);
     if (sealed !== undefined && !ownsSealed(env, sealed)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          path,
-          `a foreign module cannot retain the sealed type ${sealed} after an update`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        path,
+        `a foreign module cannot retain the sealed type ${sealed} after an update`,
+        e.span,
+      );
     }
     const unfolded = unfold(env, base.type);
     const fields = unfolded.kind === "union"
       ? undefined
       : fieldsOf(env, unfolded);
     if (fields === undefined) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.record`,
-          `a record update needs a record, but the base has type ${
-            show(base.type)
-          }`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.record`,
+        `a record update needs a record, but the base has type ${
+          show(base.type)
+        }`,
+        e.span,
+      );
       return checkedResult(active);
     }
     ctx = checkFieldValues(
@@ -1236,50 +1164,42 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     const v = check(e.value, `${path}.value`);
     const decl = ctx.world.types.get(e.nominal);
     if (decl === undefined) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.identity,
-          `${path}.nominal`,
-          `the type ${e.nominal} is not a declared type`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.nominal`,
+        `the type ${e.nominal} is not a declared type`,
+        e.span,
+      );
       return checkedResult(combine([v]));
     }
     if (decl.definition.kind !== "nominal") {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.nominal`,
-          `${e.nominal} is not a type with identity`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.nominal`,
+        `${e.nominal} is not a type with identity`,
+        e.span,
+      );
     } else if (isTrue(decl.opaque)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.nominal`,
-          "an opaque type cannot be constructed in source",
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.nominal`,
+        "an opaque type cannot be constructed in source",
+        e.span,
+      );
     } else if (
       isTrue(decl.definition.sealed) &&
       !ownsSealed(env, e.nominal)
     ) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.nominal`,
-          `the module cannot construct the foreign sealed type ${e.nominal}`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.nominal`,
+        `the module cannot construct the foreign sealed type ${e.nominal}`,
+        e.span,
+      );
     } else if (
       !accepts(
         e.value,
@@ -1288,17 +1208,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         `${path}.value`,
       )
     ) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.value`,
-          `the value has type ${show(v.type)}, which does not fit the base ${
-            show(decl.definition.base)
-          }`,
-          e.value.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.value`,
+        `the value has type ${show(v.type)}, which does not fit the base ${
+          show(decl.definition.base)
+        }`,
+        e.value.span,
+      );
     }
     if (
       decl.predicate !== undefined &&
@@ -1322,28 +1240,24 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     );
     const active = combine(outs);
     if (isReservedError(e.error)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          path,
-          "reserved target errors cannot be constructed as source errors",
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        path,
+        "reserved target errors cannot be constructed as source errors",
+        e.span,
+      );
       return checkedResult(active);
     }
     const decl = ctx.world.errors.get(e.error);
     if (decl === undefined) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.identity,
-          `${path}.error`,
-          `the error ${e.error} is not declared`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.error`,
+        `the error ${e.error} is not declared`,
+        e.span,
+      );
       return checkedResult(active);
     }
     ctx = checkFieldValues(
@@ -1370,27 +1284,23 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     refinements = refinements.restore(refinementScope);
     const fn = asFunction(env, e.type);
     if (fn === undefined) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.type`,
-          `a closure has a function type, recorded ${show(e.type)}`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.type`,
+        `a closure has a function type, recorded ${show(e.type)}`,
+        e.span,
+      );
       return checkedResult(QUIET);
     }
     if (fn.checked?.some(Boolean)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.contracts,
-          `${path}.type.checked`,
-          "a closure cannot claim checked entry validation",
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.contracts,
+        `${path}.type.checked`,
+        "a closure cannot claim checked entry validation",
+        e.span,
+      );
     }
     ctx = checkParameterTypes(
       e.parameters,
@@ -1400,43 +1310,37 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       e.span,
     );
     if (!accepts(e.body, body.type, fn.result, `${path}.body`)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.body`,
-          `the body type ${show(body.type)} does not fit the closure result ${
-            show(fn.result)
-          }`,
-          e.body.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.body`,
+        `the body type ${show(body.type)} does not fit the closure result ${
+          show(fn.result)
+        }`,
+        e.body.span,
+      );
     }
     if (!isSubset(body.failures, fn.effects.failures)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.contracts,
-          `${path}.type.effects.failures`,
-          `the body can fail with ${
-            list(body.failures)
-          }, the closure type lists ${list(fn.effects.failures)}`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.contracts,
+        `${path}.type.effects.failures`,
+        `the body can fail with ${
+          list(body.failures)
+        }, the closure type lists ${list(fn.effects.failures)}`,
+        e.span,
+      );
     }
     if (!isSubset(body.requirements, fn.effects.requirements)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.contracts,
-          `${path}.type.effects.requirements`,
-          `the body requires ${
-            list(body.requirements)
-          }, the closure type lists ${list(fn.effects.requirements)}`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.contracts,
+        `${path}.type.effects.requirements`,
+        `the body requires ${list(body.requirements)}, the closure type lists ${
+          list(fn.effects.requirements)
+        }`,
+        e.span,
+      );
     }
     ctx = checkExecution(fn, body, path, e.span);
     // Construction evaluates no part of the body: closure construction is pure.
@@ -1454,15 +1358,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     const parameters = fn.parameters;
     const checked = fn.checked;
     if (outs.length !== parameters.length) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.arguments`,
-          `the function takes ${parameters.length} arguments, the call has ${outs.length}`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.arguments`,
+        `the function takes ${parameters.length} arguments, the call has ${outs.length}`,
+        span,
+      );
       return ctx;
     }
     for (const entry of outs.entries()) {
@@ -1474,15 +1376,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
           fn !== undefined &&
           !isQuiet(invocationOf(fn))
         ) {
-          ctx = {
-            ...ctx,
-            report: add(
-              AREA.execution,
-              `${path}.arguments[${i}]`,
-              "a builtin callback is pure with empty failure and requirement sets",
-              args[i].span,
-            ),
-          };
+          ctx = flag(
+            ctx,
+            AREA.execution,
+            `${path}.arguments[${i}]`,
+            "a builtin callback is pure with empty failure and requirement sets",
+            args[i].span,
+          );
           continue;
         }
       }
@@ -1494,17 +1394,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         isTrue(checked === undefined ? undefined : checked[i]),
       );
       if (!compatible) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${path}.arguments[${i}]`,
-            `the argument has type ${
-              show(o.type)
-            }, which does not fit the parameter ${show(parameters[i])}`,
-            args[i].span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.arguments[${i}]`,
+          `the argument has type ${
+            show(o.type)
+          }, which does not fit the parameter ${show(parameters[i])}`,
+          args[i].span,
+        );
       }
     }
     return ctx;
@@ -1528,15 +1426,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       return out;
     });
     if (fn === undefined) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.callee`,
-          `the callee has type ${show(callee.type)}, which is not a function`,
-          e.callee.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.callee`,
+        `the callee has type ${show(callee.type)}, which is not a function`,
+        e.callee.span,
+      );
       return checkedResult(combine([callee, ...outs]));
     }
     const metadata = e.callee.kind === "reference"
@@ -1580,15 +1476,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         !sameSet(fn.effects.failures, callback.effects.failures) ||
         !sameSet(fn.effects.requirements, callback.effects.requirements)
       ) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.contracts,
-            path,
-            `${builtin} must invoke the callback with its declared failures and requirements`,
-            e.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.contracts,
+          path,
+          `${builtin} must invoke the callback with its declared failures and requirements`,
+          e.span,
+        );
       }
       if (builtin === "traverse" && outs.length === 3) {
         ctx = checkConcurrencyLiteral(builtin, 2, e, path);
@@ -1602,17 +1496,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
           isDurationType(env, out.type) ||
           isInstantType(env, out.type)
         ) {
-          ctx = {
-            ...ctx,
-            report: add(
-              AREA.types,
-              `${path}.arguments[${i}]`,
-              `${builtin} does not take a closed unit argument of type ${
-                show(out.type)
-              }`,
-              e.arguments[i].span,
-            ),
-          };
+          ctx = flag(
+            ctx,
+            AREA.types,
+            `${path}.arguments[${i}]`,
+            `${builtin} does not take a closed unit argument of type ${
+              show(out.type)
+            }`,
+            e.arguments[i].span,
+          );
         }
       }
     }
@@ -1634,15 +1526,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
   ): Ctx {
     const options = e.arguments[index];
     if (isConcurrencyOption(options)) return ctx;
-    ctx = {
-      ...ctx,
-      report: add(
-        AREA.control,
-        `${path}.arguments[${index}]`,
-        `${name} needs a positive safe integer or unbounded concurrency literal`,
-        options?.span ?? e.span,
-      ),
-    };
+    ctx = flag(
+      ctx,
+      AREA.control,
+      `${path}.arguments[${index}]`,
+      `${name} needs a positive safe integer or unbounded concurrency literal`,
+      options?.span ?? e.span,
+    );
     return ctx;
   }
 
@@ -1650,15 +1540,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     const outs = e.arguments.map((a, i) => check(a, `${path}.arguments[${i}]`));
     const method = ctx.world.methods.get(e.capability);
     if (method === undefined) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.identity,
-          `${path}.capability`,
-          `the capability ${e.capability} is not a method of a service of this module or of an import`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.identity,
+        `${path}.capability`,
+        `the capability ${e.capability} is not a method of a service of this module or of an import`,
+        e.span,
+      );
       return poison();
     }
     const fn = method.type;
@@ -1699,30 +1587,26 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
               `${at}.binding.type`,
             )
           ) {
-            ctx = {
-              ...ctx,
-              report: add(
-                AREA.types,
-                `${at}.binding.type`,
-                `the value has type ${
-                  show(value.type)
-                }, which does not fit the binding type ${
-                  show(step.binding.type)
-                }`,
-                step.binding.span,
-              ),
-            };
+            ctx = flag(
+              ctx,
+              AREA.types,
+              `${at}.binding.type`,
+              `the value has type ${
+                show(value.type)
+              }, which does not fit the binding type ${
+                show(step.binding.type)
+              }`,
+              step.binding.span,
+            );
           }
           if (step.generated !== undefined && !isTrue(step.generated)) {
-            ctx = {
-              ...ctx,
-              report: add(
-                AREA.types,
-                `${at}.generated`,
-                "a generated capture marker must be true",
-                step.binding.span,
-              ),
-            };
+            ctx = flag(
+              ctx,
+              AREA.types,
+              `${at}.generated`,
+              "a generated capture marker must be true",
+              step.binding.span,
+            );
           }
           ctx = declare(
             step.binding,
@@ -1761,17 +1645,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     area: typeof AREA.types | typeof AREA.recovery,
   ): Ctx {
     if (!accepts(expression, branch.type, recorded, path)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          area,
-          path,
-          `the branch has type ${
-            show(branch.type)
-          }, which does not fit the recorded type ${show(recorded)}`,
-          expression.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        area,
+        path,
+        `the branch has type ${
+          show(branch.type)
+        }, which does not fit the recorded type ${show(recorded)}`,
+        expression.span,
+      );
     }
     return ctx;
   }
@@ -1779,15 +1661,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
   function ifExpr(e: Extract<Expr, { kind: "if" }>, path: string): Comp {
     const cond = check(e.condition, `${path}.condition`);
     if (!isBooleanLike(env, cond.type)) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.condition`,
-          `a condition must be boolean, but it has type ${show(cond.type)}`,
-          e.condition.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.condition`,
+        `a condition must be boolean, but it has type ${show(cond.type)}`,
+        e.condition.span,
+      );
     }
     if (cond.execution === "effect") {
       refinements = refinements.clearDerivedFacts();
@@ -1876,28 +1756,24 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       ctx = declareLocal(binding, `${path}.binding`, undefined, false);
       added[added.length] = binding.id;
       if (expected !== undefined && !same(env, binding.type, expected)) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${path}.binding.type`,
-            `expected ${show(expected)}, recorded ${show(binding.type)}`,
-            binding.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.binding.type`,
+          `expected ${show(expected)}, recorded ${show(binding.type)}`,
+          binding.span,
+        );
       }
       return ctx;
     }
     function foreign(what: string): Ctx {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          path,
-          `${what} does not belong to the subject of type ${show(subject)}`,
-          p.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        path,
+        `${what} does not belong to the subject of type ${show(subject)}`,
+        p.span,
+      );
       return ctx;
     }
     const unfolded = unfold(env, subject);
@@ -1919,15 +1795,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     }
     if (p.kind === "duration") {
       if (!Number.isSafeInteger(p.millis)) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            `${path}.millis`,
-            `a duration pattern needs a safe integer of milliseconds, found ${p.millis}`,
-            p.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.millis`,
+          `a duration pattern needs a safe integer of milliseconds, found ${p.millis}`,
+          p.span,
+        );
       }
       if (!identityMembers(env, subject).some((m) => isDurationType(env, m))) {
         ctx = foreign(`the duration ${p.millis}ms`);
@@ -1959,15 +1833,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         fault = "needs an earlier arm with the pattern null";
       }
       if (fault !== undefined) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.types,
-            path,
-            `a binding arm ${fault}; the subject has type ${show(subject)}`,
-            p.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          path,
+          `a binding arm ${fault}; the subject has type ${show(subject)}`,
+          p.span,
+        );
       }
       ctx = bind(
         p.binding,
@@ -2029,17 +1901,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     if (declaration !== undefined) {
       failures = [declaration.id];
     } else {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          `${path}.error`,
-          `fail needs a value of a named error type, but the value has type ${
-            show(err.type)
-          }`,
-          e.error.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        `${path}.error`,
+        `fail needs a value of a named error type, but the value has type ${
+          show(err.type)
+        }`,
+        e.error.span,
+      );
     }
     return derivedResult(
       NEVER,
@@ -2061,38 +1931,32 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       const i = entry[0];
       const at = `${path}.handlers[${i}]`;
       if (!ctx.world.errors.has(h.error)) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.identity,
-            `${at}.error`,
-            `the handled error ${h.error} is not declared`,
-            h.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.identity,
+          `${at}.error`,
+          `the handled error ${h.error} is not declared`,
+          h.span,
+        );
       }
       if (seen.has(h.error)) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.recovery,
-            `${at}.error`,
-            `the error ${h.error} has two handlers`,
-            h.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.recovery,
+          `${at}.error`,
+          `the error ${h.error} has two handlers`,
+          h.span,
+        );
       } else if (!body.failures.includes(h.error)) {
-        ctx = {
-          ...ctx,
-          report: add(
-            AREA.recovery,
-            `${at}.error`,
-            `the protected block cannot fail with ${h.error}; its failures are ${
-              list(body.failures)
-            }`,
-            h.span,
-          ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.recovery,
+          `${at}.error`,
+          `the protected block cannot fail with ${h.error}; its failures are ${
+            list(body.failures)
+          }`,
+          h.span,
+        );
       } else {
         handled = handled.add(h.error);
       }
@@ -2103,15 +1967,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
           ctx.world.errors.has(h.error) &&
           !same(env, h.binding.type, { kind: "named", id: h.error })
         ) {
-          ctx = {
-            ...ctx,
-            report: add(
-              AREA.types,
-              `${at}.binding.type`,
-              `expected ${h.error}, recorded ${show(h.binding.type)}`,
-              h.binding.span,
-            ),
-          };
+          ctx = flag(
+            ctx,
+            AREA.types,
+            `${at}.binding.type`,
+            `expected ${h.error}, recorded ${show(h.binding.type)}`,
+            h.binding.span,
+          );
         }
         return check(h.body, `${at}.body`);
       });
@@ -2124,15 +1986,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       const out = withLocals((declare) => {
         ctx = declare(d.binding, `${at}.binding`, undefined, false);
         if (!same(env, d.binding.type, DEFECT_RECORD)) {
-          ctx = {
-            ...ctx,
-            report: add(
-              AREA.types,
-              `${at}.binding.type`,
-              `expected { message: string }, recorded ${show(d.binding.type)}`,
-              d.binding.span,
-            ),
-          };
+          ctx = flag(
+            ctx,
+            AREA.types,
+            `${at}.binding.type`,
+            `expected { message: string }, recorded ${show(d.binding.type)}`,
+            d.binding.span,
+          );
         }
         return check(d.body, `${at}.body`);
       });
@@ -2160,27 +2020,23 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
   ): ReturnType<typeof asFunction> {
     const fn = asFunction(env, job.type);
     if (fn === undefined) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.control,
-          path,
-          `${what} needs a function that takes no arguments, but the job has type ${
-            show(job.type)
-          }`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.control,
+        path,
+        `${what} needs a function that takes no arguments, but the job has type ${
+          show(job.type)
+        }`,
+        span,
+      );
     } else if (fn.parameters.length > 0) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.control,
-          path,
-          `${what} needs a function that takes no arguments, but the job takes ${fn.parameters.length}`,
-          span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.control,
+        path,
+        `${what} needs a function that takes no arguments, but the job takes ${fn.parameters.length}`,
+        span,
+      );
     }
     return fn;
   }
@@ -2198,17 +2054,15 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     refinements = refinements.restore(branch);
     const active = combine([left, right]);
     function mismatch(): Comp {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          path,
-          `the operator ${e.operator} does not accept operands of type ${
-            show(left.type)
-          } and ${show(right.type)}`,
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        path,
+        `the operator ${e.operator} does not accept operands of type ${
+          show(left.type)
+        } and ${show(right.type)}`,
+        e.span,
+      );
       return checkedResult(active);
     }
     function isNull(type: Type): boolean {
@@ -2223,15 +2077,13 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       (foreignSealedOf(env, left.type) !== undefined ||
         foreignSealedOf(env, right.type) !== undefined)
     ) {
-      ctx = {
-        ...ctx,
-        report: add(
-          AREA.types,
-          path,
-          "arithmetic cannot use a foreign sealed type",
-          e.span,
-        ),
-      };
+      ctx = flag(
+        ctx,
+        AREA.types,
+        path,
+        "arithmetic cannot use a foreign sealed type",
+        e.span,
+      );
     }
     // Two values of one numeric identity add and subtract (D32).
     const leftIdentity = numericIdentityOf(env, left.type);

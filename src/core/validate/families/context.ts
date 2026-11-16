@@ -2,7 +2,12 @@
 // context and never import `expr.ts`.
 
 import type { Expr, Span, Type } from "../../ir.ts";
-import type { AreaCode, Report } from "../report.ts";
+import type {
+  AreaCode,
+  Report,
+  ValidationMessage,
+  ValidationPath,
+} from "../report.ts";
 import type { Comp, Out } from "../results.ts";
 import {
   type asFunction,
@@ -40,6 +45,17 @@ export type ValidatorCore = {
     what: string,
   ): ReturnType<typeof asFunction>;
 };
+
+/** `c` with one more finding in its report. */
+export function flagCore(
+  c: ValidatorCore,
+  area: AreaCode,
+  path: ValidationPath,
+  what: ValidationMessage,
+  span: Span,
+): ValidatorCore {
+  return { ...c, ctx: { ...c.ctx, report: c.add(area, path, what, span) } };
+}
 
 /** The type that a mutable state keeps for a stored value: a literal widens to its primitive. */
 export function streamState(env: TypeEnv, type: Type): Type {
