@@ -20,6 +20,7 @@ import {
 import { dataOnly, type TypeRef } from "./types.ts";
 import { arityMessage, sortedUnique } from "./util.ts";
 import { showType } from "./type_show.ts";
+import { SCHEMA_PRESENCE_FLAGS } from "./type_ir.ts";
 import { isErrorId } from "./ids.ts";
 import {
   functionParts,
@@ -557,14 +558,7 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
         readonly decodedOptionalKey?: true;
         readonly makeInput?: Lowered["ir"];
         readonly constructorDefault?: true;
-      } = {};
-      if (presence === "optional") options = { optionalKey: true };
-      if (presence === "encoded-optional") {
-        options = { encodedOptionalKey: true };
-      }
-      if (presence === "decoded-optional") {
-        options = { decodedOptionalKey: true };
-      }
+      } = SCHEMA_PRESENCE_FLAGS[presence];
       if (makeInput.ref !== first.ref) {
         options = { ...options, makeInput: makeInput.ir };
       }

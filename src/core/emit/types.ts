@@ -7,6 +7,7 @@ import type {
   CapabilityId,
   Effects,
   ErrorId,
+  Field,
   FunctionType,
   Type,
 } from "../ir.ts";
@@ -438,6 +439,21 @@ export function encodedTypeDoc(
   }
   return internal("unreachable encoded type");
 }
+/** The `name: schema` entries of a struct. An optional field uses `optionalKey`. */
+export function schemaFieldDocs(
+  scope: EmitNames,
+  fields: readonly Field[],
+  recursive: MaybeRecursiveTypes,
+): Doc[] {
+  const schema = scope.effect("Schema");
+  return fields.map((f) => {
+    const inner = schemaDoc(scope, f.type, recursive);
+    return property(
+      fieldKey(f.name),
+      f.optional ? member(schema, "optionalKey", callWith("", inner)) : inner,
+    );
+  });
+}
 /** The Effect Schema value of a type. The type has no function or provider in it. */
 export function schemaDoc(
   scope: EmitNames,
@@ -516,14 +532,11 @@ export function schemaDoc(
     );
   }
   if (type.kind === "record") {
-    const fields = type.fields.map((f) => {
-      const inner = schemaDoc(scope, f.type, recursive);
-      return property(
-        fieldKey(f.name),
-        f.optional ? member(schema, "optionalKey", callWith("", inner)) : inner,
-      );
-    });
-    return [`${schema}.Struct(`, bracketed("{", "}", fields, true), ")"];
+    return [
+      `${schema}.Struct(`,
+      bracketed("{", "}", schemaFieldDocs(scope, type.fields, recursive), true),
+      ")",
+    ];
   }
   if (type.kind === "union") {
     const literals = type.members.flatMap((m) =>

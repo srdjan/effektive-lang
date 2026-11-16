@@ -1,10 +1,5 @@
 import { emptyMap, emptySet, mapFrom, setFrom } from "../runtime.ts";
-import {
-  fieldKey,
-  needsFieldAdapter,
-  sensitiveField,
-  taggedFields,
-} from "./fields.ts";
+import { needsFieldAdapter, sensitiveField, taggedFields } from "./fields.ts";
 // Declarations and their order, and the export rule.
 import type {
   ConstantDecl,
@@ -36,7 +31,6 @@ import {
   join,
   line,
   marked,
-  member,
   property,
   soft,
 } from "./doc.ts";
@@ -52,6 +46,7 @@ import {
   encodedTypeDoc,
   parameterName,
   schemaDoc,
+  schemaFieldDocs,
   typeArguments,
   typeDoc,
 } from "./types.ts";
@@ -440,14 +435,11 @@ export function DeclarationEmitter(scope: ModuleState): DeclarationEmitter {
     declared: readonly Field[],
     recursive: ReadonlySet<DeclarationId> | undefined,
   ): Doc {
-    const schema = declarationEmitterScope.effect("Schema");
-    const fields = declared.map((f) => {
-      const inner = schemaDoc(declarationEmitterScope, f.type, recursive);
-      return property(
-        fieldKey(f.name),
-        f.optional ? member(schema, "optionalKey", callWith("", inner)) : inner,
-      );
-    });
+    const fields = schemaFieldDocs(
+      declarationEmitterScope,
+      declared,
+      recursive,
+    );
     const object: Doc = bracketed("{", "}", fields, true);
     return group(
       [

@@ -24,7 +24,7 @@ function schemaPresence(
   return "required";
 }
 
-function functionOptions(type: FunctionType): {
+function functionOptions(type: Pick<FunctionType, "borrows" | "checked">): {
   readonly borrows?: readonly boolean[];
   readonly checked?: readonly boolean[];
 } {
@@ -131,6 +131,23 @@ export function functionTypeFromIr(
   });
 }
 
+/** The IR flag that each presence of a schema field sets. */
+export const SCHEMA_PRESENCE_FLAGS: Readonly<
+  Record<
+    SchemaPresence,
+    {
+      readonly optionalKey?: true;
+      readonly encodedOptionalKey?: true;
+      readonly decodedOptionalKey?: true;
+    }
+  >
+> = {
+  required: {},
+  optional: { optionalKey: true },
+  "encoded-optional": { encodedOptionalKey: true },
+  "decoded-optional": { decodedOptionalKey: true },
+};
+
 type SchemaIrOptions = {
   readonly optionalKey?: true;
   readonly encodedOptionalKey?: true;
@@ -143,14 +160,7 @@ function schemaIrOptions(
   table: TypeTable,
   node: TypeNode & { readonly kind: "schema" },
 ): SchemaIrOptions {
-  let presence: SchemaIrOptions = {};
-  if (node.presence === "optional") presence = { optionalKey: true };
-  if (node.presence === "encoded-optional") {
-    presence = { encodedOptionalKey: true };
-  }
-  if (node.presence === "decoded-optional") {
-    presence = { decodedOptionalKey: true };
-  }
+  const presence = SCHEMA_PRESENCE_FLAGS[node.presence];
   const input = node.makeInput === undefined
     ? presence
     : { ...presence, makeInput: typeToIr(table, node.makeInput) };
@@ -264,12 +274,8 @@ export function functionTypeToIr(table: TypeTable, ref: TypeRef): FunctionType {
   if (node.kind !== "function") {
     return panic(`type ref ${ref} is not a function type`);
   }
-  const borrows = node.borrows === undefined ? {} : { borrows: node.borrows };
-  const options = node.checked === undefined
-    ? borrows
-    : { ...borrows, checked: node.checked };
   return {
-    ...options,
+    ...functionOptions(node),
     kind: "function",
     execution: node.execution,
     parameters: node.parameters.map((parameter) => typeToIr(table, parameter)),
