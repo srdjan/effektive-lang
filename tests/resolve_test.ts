@@ -112,6 +112,16 @@ Deno.test("Users.find in users.eff resolves to the capability", () => {
   );
 });
 
+Deno.test("a qualified name in a with clause has at most two parts", () => {
+  const analysis = single(`export type Id = string
+export service Users { find(id: Id): Id }
+export const get = (id: Id): Id with Users.find.extra => Users.find(id)
+`);
+  assertEquals(messages(analysis), [
+    "unknown-name/004 a qualified name has at most two parts: a service and a method",
+  ]);
+});
+
 Deno.test("Users.find in a with clause resolves to the capability", () => {
   const analysis = single(`export type Id = string
 export service Users { find(id: Id): Id }

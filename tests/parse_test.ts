@@ -287,6 +287,22 @@ Deno.test("nested patterns are syntax errors", () => {
   assertEquals(countKind(result.tree, SyntaxKind.MatchArm), 2);
 });
 
+Deno.test("an empty record binding is a syntax error", () => {
+  assertEquals(
+    parseChecked("const f = (r: R): int => {\n  const {} = r\n  1\n}")
+      .diagnostics.map(show),
+    ["38-39 syntax/008 expected at least one record binding field, found `=`"],
+  );
+});
+
+Deno.test("a record pattern field must start with a name or a spread", () => {
+  assertEquals(
+    parseChecked("const m = (x: R): int => match x { { 1: 2 } => 1, _ => 2 }")
+      .diagnostics.map(show),
+    ["37-38 syntax/011 expected a field name or a spread, found `1`"],
+  );
+});
+
 Deno.test("type forms", () => {
   const types = [
     "string",
