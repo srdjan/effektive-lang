@@ -5,8 +5,10 @@ import {
   EDIT_KINDS,
   loadInput,
   parseStats,
+  Session,
 } from "../bench/lsp_script.ts";
-import { sessionDocuments } from "../bench/m4.ts";
+import { runM4, sessionDocuments } from "../bench/m4.ts";
+import { run } from "../bench/main.ts";
 import { m4Config } from "../bench/profile.ts";
 
 Deno.test("long-session profile opens multiple documents and reaches 10000 edits", () => {
@@ -150,4 +152,81 @@ Deno.test("stats parser rejects each malformed supplied measurement with its own
       error: { tag: "protocol", message },
     });
   }
+});
+
+Deno.test("an edit that the input lacks or that leaves the text unchanged returns an edit error", () => {
+  assertEquals(applyEdit(loadInput("examples", 1), "header", "", 2), {
+    ok: false,
+    error: {
+      tag: "edit",
+      kind: "header",
+      message: "the input examples has no header edit",
+    },
+  });
+  assertEquals(applyEdit(loadInput("small", 1), "alias", "", 2), {
+    ok: false,
+    error: {
+      tag: "edit",
+      kind: "alias",
+      message: "the edit did not change the text",
+    },
+  });
+});
+
+Deno.test("a session refuses a bad option or document before it starts a server", async () => {
+  const input = loadInput("small", 1);
+  assertEquals(
+    await Session.start("/unused", input, 1000, [input.editPath], {
+      saveOnStep: true,
+    }),
+    {
+      ok: false,
+      error: { tag: "setup", message: "saveOnStep needs writeOnSave true" },
+    },
+  );
+  assertEquals(
+    await Session.start("/unused", input, 1000, ["notes.txt"]),
+    {
+      ok: false,
+      error: { tag: "setup", message: "no source document notes.txt" },
+    },
+  );
+  assertEquals(
+    await Session.start("/unused", input, 1000, ["missing.eff"]),
+    {
+      ok: false,
+      error: { tag: "setup", message: "no source document missing.eff" },
+    },
+  );
+});
+
+Deno.test("M4 refuses a count that is not a positive integer or more documents than the input has", async () => {
+  const counts = {
+    ok: false,
+    error: {
+      tag: "setup",
+      message: "M4 document and step counts must be positive integers",
+    },
+  } as const;
+  const base = { seed: 1, size: "small", timeoutMs: 1000 } as const;
+  assertEquals(
+    await runM4({ ...base, stepCounts: [1], openDocuments: 0 }),
+    counts,
+  );
+  assertEquals(await runM4({ ...base, stepCounts: [0] }), counts);
+  assertEquals(await runM4({ ...base, stepCounts: [1.5] }), counts);
+  assertEquals(
+    await runM4({ ...base, stepCounts: [1], openDocuments: 1000 }),
+    {
+      ok: false,
+      error: {
+        tag: "setup",
+        message: "M4 input has fewer than 1000 source documents",
+      },
+    },
+  );
+});
+
+Deno.test("the bench run returns exit code 2 for an unknown argument", async () => {
+  assertEquals(await run(["--bogus"]), 2);
 });
