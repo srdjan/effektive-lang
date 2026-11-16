@@ -207,16 +207,10 @@ function adoptedNumericIdentity(
   if ((l === undefined) === (r === undefined)) return undefined;
   const named = l ?? r;
   // `Duration` and `Instant` have their own operator rules.
-  if (named?.kind === "named" && isClosedUnitId(named.id)) {
-    return undefined;
-  }
+  if (named?.kind !== "named" || isClosedUnitId(named.id)) return undefined;
   const unnamed = l === undefined ? left : right;
-  const body = named?.kind === "named"
-    ? identityBody(env, named.id)
-    : undefined;
-  return named !== undefined && body !== undefined && fits(env, unnamed, body)
-    ? named
-    : undefined;
+  const body = identityBody(env, named.id);
+  return body !== undefined && fits(env, unnamed, body) ? named : undefined;
 }
 
 /** The type of the binding of a `Defect` arm. */
@@ -1991,7 +1985,7 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     if (p.kind === "error" || p.kind === "nominal") {
       const id = p.kind === "error" ? p.error : p.nominal;
       const ms = identityMembers(env, subject);
-      const ok = ms.length > 0 && ms.every((m) =>
+      const ok = ms.every((m) =>
         m.kind === "named" &&
         (env.errors.has(m.id) || env.taggedRecords.has(m.id))
       ) && ms.some((m) => m.kind === "named" && m.id === id) &&
