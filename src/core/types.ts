@@ -326,7 +326,7 @@ function createTypeStorage(): TypeStorage {
 /**
  * The children of each node kind except `named`, in visit order. The first
  * match of `foreignSealedOf` selects a diagnostic, so this order is observable.
- * A switch over every kind makes a new kind a compile error here.
+ * The `never` check after the last `if` makes a new kind a compile error here.
  */
 function structuralChildren(
   node: Exclude<TypeNode, { readonly kind: "named" }>,
@@ -473,7 +473,6 @@ type TypeTableState = {
   readonly storage: TypeStorage;
   readonly defs: Lookup<TypeId, AliasDef>;
   readonly errorRecords: Lookup<ErrorId, TypeRef>;
-  readonly initializeBuiltins: boolean;
 };
 
 function createTypeTable(state: TypeTableState): TypeTable {
@@ -496,7 +495,6 @@ function createTypeTable(state: TypeTableState): TypeTable {
       storage: storage,
       defs: defs.copy(),
       errorRecords: errorRecords.copy(),
-      initializeBuiltins: false,
     });
   }
 
@@ -536,9 +534,7 @@ function createTypeTable(state: TypeTableState): TypeTable {
           node.encoded,
           node.decodeRequirements,
           node.encodeRequirements,
-          node.presence === "optional",
-          node.presence === "encoded-optional",
-          node.presence === "decoded-optional",
+          node.presence,
           node.makeInput ?? node.decoded,
           node.constructorDefault ?? false,
         ])
@@ -1365,37 +1361,37 @@ function createTypeTable(state: TypeTableState): TypeTable {
     isAssignable: isAssignable,
     isAssignableIn: isAssignableIn,
   };
-  if (!state.initializeBuiltins) return table;
-  return defineError(
-    SCHEMA_ERROR_ID,
-    record([{ name: "message", type: string, optional: false }]),
-  )
-    .defineError(SCHEMA_ISSUE_ID, record([]))
-    .defineIdentity(DURATION_ID, int, false, false, undefined)
-    .defineIdentity(INSTANT_ID, int, false, false, undefined)
-    .defineError(
-      TIMEOUT_ERROR_ID,
-      record([{ name: "message", type: string, optional: false }]),
-    );
+  return table;
 }
 
 /** Constructs an independent table with shared storage only after `fork`. */
 export function TypeTable(): TypeTable {
-  return createTypeTable({
+  const table = createTypeTable({
     storage: createTypeStorage(),
     defs: createLookup<TypeId, AliasDef>([]),
     errorRecords: createLookup<ErrorId, TypeRef>([]),
-    initializeBuiltins: true,
   });
+  const message = table.record([
+    { name: "message", type: table.string, optional: false },
+  ]);
+  return table
+    .defineError(SCHEMA_ERROR_ID, message)
+    .defineError(SCHEMA_ISSUE_ID, table.record([]))
+    .defineIdentity(DURATION_ID, table.int, false, false, undefined)
+    .defineIdentity(INSTANT_ID, table.int, false, false, undefined)
+    .defineError(TIMEOUT_ERROR_ID, message);
 }
 
 /**
- * The data-only rules. They differ in two decisions.
+ * The data-only rules. They differ in three decisions: whether the rule
+ * rejects `unit`, the reserved Schema errors, and `unknown`.
  *
  * - "value": a value or an operation type. Accepts `unit` and the reserved
- *   Schema errors.
- * - "schema": a `Schema<...>` type. Rejects `unit` and the reserved Schema
- *   errors.
+ *   Schema errors. Rejects `unknown`.
+ * - "schema": a `Schema<...>` type. Rejects `unit`, the reserved Schema
+ *   errors, and `unknown`.
+ * - "entry": the type of a checked entry parameter. Accepts `unit` and
+ *   `unknown`. Rejects the reserved Schema errors.
  */
 type DataRule = "value" | "schema" | "entry";
 export type TypeDecision = boolean;
@@ -1403,7 +1399,7 @@ export type LiteralValue = string | number | boolean | null;
 
 /**
  * What each rule rejects. A `Record` over the closed union makes a new rule a
- * compile error until this table names its two decisions.
+ * compile error until this table names its three decisions.
  */
 const DATA_RULES: Readonly<
   Record<
