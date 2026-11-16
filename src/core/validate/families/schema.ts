@@ -488,23 +488,13 @@ function schemaOptionFromOptionalKey(c: ValidatorCore, call: SchemaCall): Comp {
       "schemaOptionFromOptionalKey needs one ordinary Schema",
     );
   }
-  let plain: SchemaType = {
+  const plain: SchemaType = {
     kind: "schema",
     decoded: input.decoded,
     encoded: input.encoded,
     decodeRequirements: input.decodeRequirements,
     encodeRequirements: input.encodeRequirements,
   };
-  if (isTrue(input.optionalKey)) plain = { ...plain, optionalKey: true };
-  if (isTrue(input.encodedOptionalKey)) {
-    plain = { ...plain, encodedOptionalKey: true };
-  }
-  if (isTrue(input.decodedOptionalKey)) {
-    plain = { ...plain, decodedOptionalKey: true };
-  }
-  if (input.makeInput !== undefined) {
-    plain = { ...plain, makeInput: input.makeInput };
-  }
   return schemaResult(call, {
     ...plain,
     decoded: { kind: "option", element: input.decoded },
@@ -589,11 +579,11 @@ function schemaStruct(c: ValidatorCore, call: SchemaCall): Comp {
     call.args.length !== 1 || record?.kind !== "record" ||
     record.fields.some((field) => field.optional)
   ) return schemaBad(c, call, "schemaStruct needs required Schema fields");
-  const fields = record.fields.map((field) => ({
-    field: field,
-    schema: unfold(c.env, field.type),
-  }));
-  if (fields.some((field) => field.schema.kind !== "schema")) {
+  const fields = record.fields.flatMap((field) => {
+    const schema = unfold(c.env, field.type);
+    return schema.kind === "schema" ? [{ field: field, schema: schema }] : [];
+  });
+  if (fields.length !== record.fields.length) {
     return schemaBad(
       c,
       call,
@@ -604,58 +594,37 @@ function schemaStruct(c: ValidatorCore, call: SchemaCall): Comp {
     kind: "schema",
     decoded: {
       kind: "record",
-      fields: fields.map((item) => {
-        const field = item.field;
-        const schema = item.schema;
-        return {
-          name: field.name,
-          optional: schema.kind === "schema" &&
-            (isTrue(schema.optionalKey) ||
-              isTrue(schema.decodedOptionalKey)),
-          type: schema.kind === "schema" ? schema.decoded : field.type,
-        };
-      }),
+      fields: fields.map((item) => ({
+        name: item.field.name,
+        optional: isTrue(item.schema.optionalKey) ||
+          isTrue(item.schema.decodedOptionalKey),
+        type: item.schema.decoded,
+      })),
     },
     encoded: {
       kind: "record",
-      fields: fields.map((item) => {
-        const field = item.field;
-        const schema = item.schema;
-        return {
-          name: field.name,
-          optional: schema.kind === "schema" &&
-            (isTrue(schema.optionalKey) ||
-              isTrue(schema.encodedOptionalKey)),
-          type: schema.kind === "schema" ? schema.encoded : field.type,
-        };
-      }),
+      fields: fields.map((item) => ({
+        name: item.field.name,
+        optional: isTrue(item.schema.optionalKey) ||
+          isTrue(item.schema.encodedOptionalKey),
+        type: item.schema.encoded,
+      })),
     },
     makeInput: {
       kind: "record",
-      fields: fields.map((item) => {
-        const field = item.field;
-        const schema = item.schema;
-        return {
-          name: field.name,
-          type: schema.kind === "schema"
-            ? schema.makeInput ?? schema.decoded
-            : field.type,
-          optional: schema.kind === "schema" &&
-            (isTrue(schema.optionalKey) ||
-              isTrue(schema.decodedOptionalKey) ||
-              isTrue(schema.constructorDefault)),
-        };
-      }),
+      fields: fields.map((item) => ({
+        name: item.field.name,
+        type: item.schema.makeInput ?? item.schema.decoded,
+        optional: isTrue(item.schema.optionalKey) ||
+          isTrue(item.schema.decodedOptionalKey) ||
+          isTrue(item.schema.constructorDefault),
+      })),
     },
     decodeRequirements: sortedUnique(
-      fields.flatMap((item) =>
-        item.schema.kind === "schema" ? item.schema.decodeRequirements : []
-      ),
+      fields.flatMap((item) => item.schema.decodeRequirements),
     ),
     encodeRequirements: sortedUnique(
-      fields.flatMap((item) =>
-        item.schema.kind === "schema" ? item.schema.encodeRequirements : []
-      ),
+      fields.flatMap((item) => item.schema.encodeRequirements),
     ),
   });
 }
@@ -810,8 +779,10 @@ function schemaTransform(c: ValidatorCore, call: SchemaCall): Comp {
   const target = schemaArg(c, call, 1);
   const decode = functionArg(c, call, 2);
   const encode = functionArg(c, call, 3);
-  function callbackResult(fn: typeof decode, value: Type): boolean {
-    if (fn === undefined) return false;
+  function callbackResult(
+    fn: NonNullable<typeof decode>,
+    value: Type,
+  ): boolean {
     if (fn.effects.failures.length === 0) {
       return fits(c.env, fn.result, {
         kind: "option",
@@ -903,7 +874,6 @@ function guardedSchemaBody(
   function visit(value: Expr, guarded: boolean): boolean {
     if (!containsSelf(value)) return true;
     if (value.kind === "reference") {
-      if (value.target !== self) return true;
       found = true;
       return guarded;
     }
