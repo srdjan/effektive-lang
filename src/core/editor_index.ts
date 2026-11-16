@@ -141,9 +141,6 @@ function localScope(
     parameter: parameter,
   };
 }
-export function symbolIndex(revision: Revision): SymbolIndex {
-  return revision.symbolIndex();
-}
 export function buildSymbolIndex(revision: Revision): SymbolIndex {
   let occurrences: SymbolOccurrence[] = [];
   let byIdentity = emptyMap<string, SymbolOccurrence[]>();
@@ -259,7 +256,7 @@ export function occurrenceAt(
   path: SourcePath,
   offset: SourceOffset,
 ): SymbolOccurrence | undefined {
-  const file = symbolIndex(revision).byPath.get(path) ?? [];
+  const file = revision.symbolIndex().byPath.get(path) ?? [];
   return file.find((o) => o.span.start <= offset && offset < o.span.end) ??
     file.find((o) => o.span.end === offset && o.span.start < offset);
 }
@@ -273,7 +270,7 @@ export function referencesAt(
   if (hit?.declaration === undefined || hit.target.kind === "field") {
     return [];
   }
-  return (symbolIndex(revision).byIdentity.get(hit.identity) ?? []).filter((
+  return (revision.symbolIndex().byIdentity.get(hit.identity) ?? []).filter((
     o,
   ) => (includeDeclaration ?? true) || !o.isDeclaration).map((o) => o.span);
 }

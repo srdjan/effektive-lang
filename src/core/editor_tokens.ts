@@ -4,7 +4,6 @@ import type { Diagnostic } from "./diagnostics.ts";
 import {
   declarationKind,
   isArrowDeclaration,
-  symbolIndex,
   type SymbolOccurrence,
 } from "./editor_index.ts";
 import {
@@ -88,7 +87,7 @@ function resolvedKind(
   if (target.kind === "field") return "property";
   if (target.kind === "builtin") return "function";
   if (target.kind === "local") {
-    return symbolIndex(revision).locals.get(
+    return revision.symbolIndex().locals.get(
         occurrence.declaration?.source ?? "",
       )?.find((local) => local.identity === occurrence.identity)?.parameter
       ? "parameter"
@@ -124,7 +123,7 @@ export function semanticClassifications(
     );
   const occurrences = matching === undefined
     ? []
-    : symbolIndex(matching).byPath.get(path) ?? [];
+    : matching.symbolIndex().byPath.get(path) ?? [];
   const byStart = mapFrom(
     occurrences.map((occurrence) =>
       [occurrence.span.start, occurrence] as const

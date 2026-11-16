@@ -9,7 +9,6 @@ import {
   declarationOf,
   isArrowDeclaration,
   occurrenceAt,
-  symbolIndex,
 } from "./editor_index.ts";
 import { isTypeKind, kidsOf, nameTextOf } from "./syntax_queries.ts";
 import {
@@ -387,7 +386,7 @@ function addContextNames(
   const start = binding13.start;
   const make = binding13.make;
   if (context === "value") {
-    const locals = (symbolIndex(revision).locals.get(path) ?? []).filter((l) =>
+    const locals = (revision.symbolIndex().locals.get(path) ?? []).filter((l) =>
       l.scope.start <= offset && offset <= l.scope.end &&
       (l.parameter || l.declaration.end <= start)
     ).sort((a, b) =>

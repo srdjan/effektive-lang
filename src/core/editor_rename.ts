@@ -15,7 +15,6 @@ import type { Result, SourceEdit, Span } from "./source.ts";
 import {
   occurrenceAt,
   sameSpan,
-  symbolIndex,
   type SymbolOccurrence,
 } from "./editor_index.ts";
 
@@ -41,7 +40,7 @@ export function prepareRenameAt(
   if (
     ["field", "builtin", "builtin-type", "unresolved"].includes(hit.target.kind)
   ) return undefined;
-  const occurrences = symbolIndex(revision).byIdentity.get(hit.identity) ?? [];
+  const occurrences = revision.symbolIndex().byIdentity.get(hit.identity) ?? [];
   if (
     occurrences.some((o) => !isModulePath(o.span.source))
   ) {
@@ -139,7 +138,7 @@ export function renameAt(
     };
   }
   if (prepared.name === name) return { ok: true, value: [] };
-  const index = symbolIndex(revision);
+  const index = revision.symbolIndex();
   const occurrences = index.byIdentity.get(hit.identity) ?? [];
   const edits = occurrences.map((o) => ({
     span: o.span,
@@ -164,7 +163,7 @@ export function renameAt(
       error: "The new name is reserved or conflicts with an existing binding.",
     };
   }
-  const nextIndex = symbolIndex(next);
+  const nextIndex = next.symbolIndex();
   function matching(old: SymbolOccurrence): SymbolOccurrence | undefined {
     const at = movedSpan(old.span, edits);
     return nextIndex.byPath.get(at.source)?.find((o) => sameSpan(at, o.span));

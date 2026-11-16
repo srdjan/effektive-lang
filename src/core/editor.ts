@@ -9,7 +9,7 @@ import type { CheckedModule, FunctionBody } from "./check_project.ts";
 import type { Revision } from "./db.ts";
 import { shortName } from "./ids.ts";
 import type { DeclEntry, FileIndex } from "./declaration_index.ts";
-import { bodyTablesOf, declarationOf, symbolIndex } from "./editor_index.ts";
+import { bodyTablesOf, declarationOf } from "./editor_index.ts";
 import { parseFileFresh } from "./project.ts";
 import type { Span } from "./source.ts";
 import { type NodeId, nodeSpan, type SyntaxTree } from "./syntax.ts";
@@ -122,7 +122,7 @@ function hoverPass(
       declaration: constant.signature.id,
     };
   }
-  const occurrences = symbolIndex(revision).byPath.get(module.path) ?? [];
+  const occurrences = revision.symbolIndex().byPath.get(module.path) ?? [];
   for (const occurrence of occurrences) {
     if (
       occurrence.target.kind !== "service" ||
