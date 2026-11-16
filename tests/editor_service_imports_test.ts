@@ -36,6 +36,19 @@ function load(main = source) {
   return loaded.value;
 }
 
+Deno.test("service completion keeps the keyword before a missing name", () => {
+  const revision = load('imports from "./services.eff"\n');
+  assertEquals(
+    completionsAt(revision, "m.eff", 6).map((item) => item.label),
+    ["imports"],
+  );
+  assertEquals(
+    completionsAt(revision, "m.eff", 8).map((item) => item.label),
+    ["Audit", "Clock", "Users"],
+  );
+  assertEquals(completionsAt(revision, "m.eff", 12), []);
+});
+
 Deno.test("a service header reuses its service binding for editor queries", () => {
   const revision = load();
   assertEquals(revision.diagnostics, []);

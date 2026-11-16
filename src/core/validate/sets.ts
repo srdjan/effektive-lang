@@ -6,12 +6,7 @@ import { setFrom } from "../runtime.ts";
 import type { CapabilityId, Effects, ErrorId, Execution } from "../ir.ts";
 
 export function sortedUnique<T extends string>(items: readonly T[]): T[] {
-  function compare(left: T, right: T): number {
-    if (left < right) return -1;
-    if (left > right) return 1;
-    return 0;
-  }
-  return [...setFrom(items)].sort(compare);
+  return [...setFrom(items)].sort();
 }
 
 export function isSubset(

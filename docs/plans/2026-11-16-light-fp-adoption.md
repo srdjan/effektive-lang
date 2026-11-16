@@ -643,3 +643,101 @@ Raw paired samples are in `demos/light-fp-lint/parser-final-main-samples.log`.
 The planned mutation sweep covers 117 changed modules with mutation sites.
 Four browser adapters have no changed supported mutation expression. Twelve source modules contain no mutation site.
 The inventory and exact selected module list remain in ignored mutation artifacts.
+
+### Sampled mutation findings
+
+The 117-module sweep at `76d63bf` kills 107 samples. Ten survive; no sample times out and no row is stale.
+The first lexer sample also passes separately.
+Main removes the unused internal `isFalse` helper instead of adding a test for dead code.
+Two surviving comparisons have equivalent outcomes: distinct header markers cannot share an index, and unique strings cannot compare equal.
+The other seven survivors need public behavior checks before disposition.
+
+LFA32 (emitter mutation tests) owns only `tests/light_fp_emitter_mutation_test.ts` and ignored witnesses.
+A fresh Sol executor uses high effort and a 30-turn limit.
+Acceptance requires four exact sampled mutants to fail public tests while the original candidate passes.
+The cases cover safe error fields, null defaults, closure guards, and function or provider field adapters.
+Main owns all product code, the survivor register, and independent checks.
+
+LFA33 (validator mutation tests) owns only `tests/light_fp_validator_mutation_test.ts` and ignored witnesses.
+A fresh Sol executor uses high effort and a 25-turn limit.
+Acceptance requires literal boolean state and refinement-path cases to distinguish the exact sampled mutants through public validation.
+If a path is unreachable, the executor must supply a source proof instead of inventing a test hook.
+
+LFA34 (service completion mutation) belongs to main and changes only a focused public completion test.
+Acceptance requires the original completion result and rejection of the exact sampled mutation.
+
+### Paused checkpoint, 2026-11-16 16:49:40 UTC
+
+The user paused work. All executors finished. No owned command or server remains active.
+The current handover is [docs/handoffs/2026-11-16-164940-light-fp-adoption.md](../handoffs/2026-11-16-164940-light-fp-adoption.md).
+
+Compiler commit `76d63bf` passes the full gate: 3,305 fast tests and 325 slow tests.
+Website commit `ca14f82` passes its tests and strict panels. Both original main checkouts remain clean.
+The subsequent source cleanup and seven new mutation tests remain uncommitted. Nothing is staged.
+
+Main independently passes all 13 tests in the three mutation test files.
+The service-completion test also fails against its exact sampled mutant in an archived candidate.
+The two executors supply exact red/green witnesses for their six tests. Main reviewed both test files and their witnesses.
+Main has not yet run the combined independent seven-mutant review script.
+The script exists at `demos/light-fp-lint/mutation_overlay_review.ts`.
+
+Correction: the sampled field-adapter mutation changes the `retry-schedule`/`schema` condition.
+A function-field case does not kill this token. The new test uses a forged imported host schema field.
+The two equivalent comparison sites were removed through simpler implementations.
+Header matching now checks the first space. String sorting uses the native string order.
+Main compares 2,835 header cases and 2,801 string-list cases with the original compiler. No result differs.
+The dead `isFalse` helper is removed. The owner query no longer takes an unused string argument.
+
+No survivor row was added after the sweep. The register still contains 156 accepted rows.
+The latest full gate predates these source and test edits. Final lint, types, full gate, and committed-HEAD mutation checks remain.
+The plan remains active and has not moved into the archive. No skill, push, or merge exists.
+
+### Resumed independent review, 2026-11-16 17:10:07 UTC
+
+The user resumed with the independent seven-mutant review.
+Main compared the handoff with the live compiler, companion website, and both original main checkouts.
+The recorded branches, commits, and changed paths match. No newer change needs reconciliation.
+All preexisting changed-file hashes match before and after the review.
+
+The first review run stopped at the emitter comparison mutant because TypeScript narrowing rejected its changed source.
+Main corrected only the ignored runner: mutant trials use `--no-check`; original trials retain type checking.
+This matches the production mutation command and the existing mutation review note.
+The failed attempt remains in `demos/light-fp-lint/mutation-overlay-review-typecheck-failure.log`.
+
+The corrected review passes all seven original trials. Each exact mutant fails its matching public test.
+Each trial runs exactly one test. Main checked the failure output and matched all seven identities to the original sweep.
+The field-adapter case targets the `retry-schedule`/`schema` token, as corrected above.
+The scope mutant throws during the test instead of returning its required internal error.
+The other six mutants fail exact output assertions.
+
+The three complete test files pass on the live tree: 13 passed, zero failed.
+The temporary archive is removed. The review starts no browser or server.
+The report is `demos/light-fp-lint/mutation-overlay-review-main.md`.
+The complete trial log is `demos/light-fp-lint/mutation-overlay-review-main.log`.
+All review artifacts and the runner remain ignored.
+
+The adoption remains incomplete. The full gate and committed-HEAD mutation checks remain pending.
+Main owns these checks before the migration can receive its final commit and completion status.
+
+### Final candidate checks
+
+The user authorized the next step after the independent review.
+Main reviewed all four source cleanups and the three test files line by line.
+No further source change was required.
+The full gate passes format, lint, repository-wide type checks, and 3,312 fast tests, with six ignored tests.
+The slow suite remains active. Its two proof-budget tests remain after 323 other tests pass.
+
+Main will commit the source cleanups, regression tests, and this worklog after the full gate passes.
+The committed candidate will receive the same seeded 117-module mutation sweep.
+The four cleaned source modules select different sites with seed 11. Earlier results cannot establish their outcome.
+Main will resolve every new survivor before completing the adoption.
+The completion unit will update the API notes and notebook, archive this plan, and repair its incoming links.
+The companion website and both original main checkouts remain outside this unit's writes.
+
+The full gate now passes with `EFFEKTIVE_SITE_ROOT=/Users/srdjans/Code/effektive-light-fp-lint`.
+It passes format, lint, repository-wide type checks, 3,312 fast tests, and 325 slow tests.
+The same six fast tests remain ignored. No test fails.
+The slow suite takes 8 minutes 21 seconds, including both proof-budget cases.
+The complete log is `demos/light-fp-lint/full-check-post-mutation.log`.
+The source and tests remain identical to the independently reviewed candidate.
+Only documentation changed while the gate ran. Documentation is outside the configured format and lint targets.

@@ -369,7 +369,7 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     exported: string,
     local: string,
   ): Map<string, Map<string, ImportedName>> {
-    if (!moduleStateIsOpen(`the opaque type ${exported} is imported`)) {
+    if (!moduleStateIsOpen()) {
       return internal(
         `the opaque type ${exported} is imported after the imports are final`,
       );
@@ -395,11 +395,11 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     }
     return internal(`the interface ${module} has no host module`);
   }
-  function moduleStateIsOpen(what: string): boolean {
-    return !moduleStateFinished && what.length > 0;
+  function moduleStateIsOpen(): boolean {
+    return !moduleStateFinished;
   }
   function moduleStateFresh(base: string): string {
-    if (!moduleStateIsOpen(`the name ${base} is allocated`)) {
+    if (!moduleStateIsOpen()) {
       return internal(
         `the name ${base} is allocated after the imports are final`,
       );
@@ -414,7 +414,7 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
     return internal(`no generated name is available for ${base}`);
   }
   function moduleStateTemp(): string {
-    if (!moduleStateIsOpen("a temporary is allocated")) {
+    if (!moduleStateIsOpen()) {
       return internal("a temporary is allocated after the imports are final");
     }
     for (const _attempt of indices(Number.MAX_SAFE_INTEGER)) {
@@ -669,7 +669,7 @@ export function ModuleState(ir: ModuleIR, config: ProjectConfig): ModuleState {
   ): Map<string, Map<string, ImportedName>> {
     const module = moduleOfId(id);
     const exported = nameOfId(id);
-    if (!moduleStateIsOpen(`${exported} is imported`)) {
+    if (!moduleStateIsOpen()) {
       return internal(`${exported} is imported after the imports are final`);
     }
     let names = moduleStateForeignImports.get(module);

@@ -69,13 +69,11 @@ function firstHeaderMarker(
 ): readonly [number, string] | undefined {
   const errorMarker = " [ERROR]: ";
   const warningMarker = " [WARN]: ";
-  const errorAt = raw.indexOf(errorMarker, 2);
-  const warningAt = raw.indexOf(warningMarker, 2);
-  if (errorAt < 0) {
-    return warningAt < 0 ? undefined : [warningAt, warningMarker];
-  }
-  if (warningAt < 0 || errorAt < warningAt) return [errorAt, errorMarker];
-  return [warningAt, warningMarker];
+  const markerAt = raw.indexOf(" ", 2);
+  if (markerAt === -1) return undefined;
+  if (raw.startsWith(errorMarker, markerAt)) return [markerAt, errorMarker];
+  if (raw.startsWith(warningMarker, markerAt)) return [markerAt, warningMarker];
+  return undefined;
 }
 function headerParts(raw: string): readonly [number, string] | undefined {
   if (!raw.startsWith("TS")) return undefined;
