@@ -38,6 +38,7 @@ import {
   paramNodes,
   paramParts,
   pipeParts,
+  type RecordFieldParts,
   recordFieldParts,
   stageParts,
   unaryOperatorOf,
@@ -75,7 +76,6 @@ import {
   type ConstantSignature,
   type FunctionSignature,
   signatureFunctionRef,
-  type TypeEnv,
 } from "./signatures.ts";
 import { TypeLowerer } from "./type_lower.ts";
 import {
@@ -332,18 +332,6 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
   let errorCount = 0;
   let checkedSlots = emptySet<NodeId>();
 
-  function services(): Pick<TypeEnv["services"], "get"> {
-    return benv.env.services;
-  }
-
-  function infos(): ReadonlyMap<NodeId, NodeInfo> {
-    return bodyTable.info;
-  }
-
-  function facts(): ReadonlyMap<NodeId, NodeFact> {
-    return bodyTable.facts;
-  }
-
   function valueType(id: ValueId): TypeRef {
     return benv.values(id);
   }
@@ -362,9 +350,9 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
 
   function uniqueLocalName(seed: string): string {
     let name = seed;
-    for (const character of tree.text) {
+    for (const _character of tree.text) {
       if (!tree.text.includes(name)) return name;
-      if (character === "$") name = name + character;
+      name = name + "$";
     }
     return name;
   }
@@ -422,13 +410,17 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     return table.node(ref).kind === "error";
   }
 
-  function finish(node: NodeId, type: TypeRef, eff: EffectSet): NodeInfo {
-    const info: NodeInfo = {
+  function nodeInfo(type: TypeRef, eff: EffectSet): NodeInfo {
+    return {
       type: type,
       failures: eff.failures,
       requirements: eff.requirements,
       mode: eff.mode,
     };
+  }
+
+  function finish(node: NodeId, type: TypeRef, eff: EffectSet): NodeInfo {
+    const info = nodeInfo(type, eff);
     bodyBuilder = bodyBuilder.recordInfo(node, info);
     return info;
   }
@@ -438,13 +430,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     type: TypeRef,
     eff: EffectSet,
   ): BodyChecker {
-    const info: NodeInfo = {
-      type: type,
-      failures: eff.failures,
-      requirements: eff.requirements,
-      mode: eff.mode,
-    };
-    bodyBuilder = bodyBuilder.recordInfo(node, info);
+    bodyBuilder = bodyBuilder.recordInfo(node, nodeInfo(type, eff));
     return checker;
   }
 
@@ -499,7 +485,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
   }
 
   /** Reports a mismatch when `found` does not fit `expected`. Returns true when it fits. */
-  function checkFit(
+  function fits(
     node: NodeId,
     found: TypeRef,
     expected: TypeRef | undefined,
@@ -533,13 +519,13 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     return false;
   }
 
-  function requireFit(
+  function checkFit(
     node: NodeId,
     found: TypeRef,
     expected: TypeRef | undefined,
     what: string,
   ): BodyChecker {
-    if (checkFit(node, found, expected, what)) return checker;
+    if (fits(node, found, expected, what)) return checker;
     return checker;
   }
 
@@ -692,7 +678,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     }
     const body = expr(bodyNode, contract.result ?? hint);
     if (contract.result !== undefined) {
-      checker = requireFit(
+      checker = checkFit(
         bodyNode,
         body.type,
         contract.result,
@@ -753,7 +739,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
       return { type: annotation ?? table.error };
     }
     const init = expr(initNode, annotation);
-    checker = requireFit(initNode, init.type, annotation, "the constant");
+    checker = checkFit(initNode, init.type, annotation, "the constant");
     if (
       init.mode === "effect" || init.failures.length > 0 ||
       init.requirements.length > 0
@@ -1130,7 +1116,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
         expected !== undefined &&
         !(isChecked && checkedTypeFits(info.type, expected))
       ) {
-        checker = requireFit(
+        checker = checkFit(
           arg.node,
           info.type,
           expected,
@@ -1199,7 +1185,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     const infos = args.map((arg, i) => {
       const info = argInfo(arg, i === 0 ? record : undefined);
       if (i === 0) {
-        const fits = checkFit(
+        const fitted = fits(
           arg.node,
           info.type,
           record,
@@ -1211,7 +1197,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
         // does not fit has its type report already, as in the direct form.
         const piped = arg.pre !== undefined && args.length === 1;
         if (
-          fits && !isError(info.type) &&
+          fitted && !isError(info.type) &&
           (piped || !isPlainRecordLiteral(arg.node))
         ) {
           checker = report(
@@ -1292,7 +1278,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     const infos = args.map((arg, i) => {
       const info = argInfo(arg, i === 0 ? base : undefined);
       if (i === 0) {
-        checker = requireFit(
+        checker = checkFit(
           arg.node,
           info.type,
           base,
@@ -1422,7 +1408,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
           checkedTypeFits(info.type, hint)
         ) element = info.type;
         else {
-          checker = requireFit(a.node, info.type, hint, "the value of Some");
+          checker = checkFit(a.node, info.type, hint, "the value of Some");
         }
       }
       return info;
@@ -1830,7 +1816,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
       const infos = elements.map((element, i) => {
         const hint = target.elements[i];
         const info = expr(element, hint);
-        checker = requireFit(
+        checker = checkFit(
           element,
           info.type,
           hint,
@@ -1851,7 +1837,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
       if (!spread(element)) {
         const info = expr(element, hint);
         if (hint !== undefined) {
-          checker = requireFit(
+          checker = checkFit(
             element,
             info.type,
             hint,
@@ -1878,7 +1864,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
         return { info: info, element: table.error, spread: true };
       }
       if (hint !== undefined) {
-        checker = requireFit(
+        checker = checkFit(
           value,
           info.type,
           table.array(hint),
@@ -2095,6 +2081,39 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     return { labels: labels, literals: literals, known: known };
   }
 
+  /**
+   * The start of a field of a record literal or a record update. A field
+   * without parts gets the diagnostic of a misplaced spread and no result.
+   * A repeated label gets its diagnostic.
+   */
+  function fieldStart(
+    fieldNode: NodeId,
+    parts: RecordFieldParts | undefined,
+    seen: ReadonlySet<string>,
+  ):
+    | { readonly parts: RecordFieldParts; readonly duplicate: boolean }
+    | undefined {
+    if (parts === undefined) {
+      if (kindOf(tree, fieldNode) === SyntaxKind.SpreadField) {
+        checker = report(
+          "type-mismatch/005",
+          "a record spread must come first",
+          fieldNode,
+        );
+      }
+      return undefined;
+    }
+    const duplicate = seen.has(parts.label);
+    if (duplicate) {
+      checker = report(
+        "type-mismatch/005",
+        `the field \`${parts.label}\` appears twice`,
+        parts.labelNode,
+      );
+    }
+    return { parts: parts, duplicate: duplicate };
+  }
+
   function recordConstruction(
     node: NodeId,
     fields: readonly NodeId[],
@@ -2126,26 +2145,11 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     let raw = false;
     for (const parsedField of parsed) {
       const fieldNode = parsedField.node;
-      const parts = parsedField.parts;
-      if (parts === undefined) {
-        if (kindOf(tree, fieldNode) === SyntaxKind.SpreadField) {
-          checker = report(
-            "type-mismatch/005",
-            "a record spread must come first",
-            fieldNode,
-          );
-        }
-        continue;
-      }
+      const start = fieldStart(fieldNode, parsedField.parts, seen);
+      if (start === undefined) continue;
+      const parts = start.parts;
+      const duplicate = start.duplicate;
       const declared = target?.fields.find((f) => f.name === parts.label);
-      const duplicate = seen.has(parts.label);
-      if (duplicate) {
-        checker = report(
-          "type-mismatch/005",
-          `the field \`${parts.label}\` appears twice`,
-          parts.labelNode,
-        );
-      }
       seen = seen.add(parts.label);
       if (target !== undefined && declared === undefined && !duplicate) {
         checker = report(
@@ -2162,7 +2166,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
           !assignable(info.type, declared.type) &&
           checkedTypeFits(info.type, declared.type)
         ) raw = true;
-        checker = requireFit(
+        checker = checkFit(
           parts.value ?? fieldNode,
           info.type,
           declared.type,
@@ -2268,25 +2272,14 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     let seen = emptySet<string>();
     const infos: NodeInfo[] = [base];
     for (const fieldNode of rest) {
-      const parts = recordFieldParts(tree, fieldNode);
-      if (parts === undefined) {
-        if (kindOf(tree, fieldNode) === SyntaxKind.SpreadField) {
-          checker = report(
-            "type-mismatch/005",
-            "a record spread must come first",
-            fieldNode,
-          );
-        }
-        continue;
-      }
-      const duplicate = seen.has(parts.label);
-      if (duplicate) {
-        checker = report(
-          "type-mismatch/005",
-          `the field \`${parts.label}\` appears twice`,
-          parts.labelNode,
-        );
-      }
+      const start = fieldStart(
+        fieldNode,
+        recordFieldParts(tree, fieldNode),
+        seen,
+      );
+      if (start === undefined) continue;
+      const parts = start.parts;
+      const duplicate = start.duplicate;
       seen = seen.add(parts.label);
       const declared = baseFields?.find((f) => f.name === parts.label);
       if (baseFields !== undefined && declared === undefined && !duplicate) {
@@ -2299,7 +2292,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
       const info = fieldValue(fieldNode, parts, declared?.type);
       infos[infos.length] = info;
       if (declared !== undefined && !duplicate) {
-        checker = requireFit(
+        checker = checkFit(
           parts.value ?? fieldNode,
           info.type,
           declared.type,
@@ -2616,7 +2609,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
         infos[infos.length] = info;
         type = info.type;
         if (last && expected !== undefined && refinementBase(expected)) {
-          checker = requireFit(item, info.type, expected, "the block result");
+          checker = checkFit(item, info.type, expected, "the block result");
           adoptedResult = true;
         }
       }
@@ -2669,7 +2662,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     let type: TypeRef;
     if (annotation !== undefined) {
       if (info !== undefined && init !== undefined) {
-        checker = requireFit(init, info.type, annotation, "the value");
+        checker = checkFit(init, info.type, annotation, "the value");
       }
       type = annotation;
     } else {
@@ -2698,7 +2691,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
       ? undefined
       : lowerer.lower(typeNode).ref;
     const subject = expr(init, annotation);
-    checker = requireFit(init, subject.type, annotation, "the value");
+    checker = checkFit(init, subject.type, annotation, "the value");
     const type = annotation ?? widen(subject.type);
     const name = uniqueLocalName(`$record${node}`);
     const captured = {
@@ -2771,7 +2764,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
   ): TypeRef {
     if (expected !== undefined) {
       for (const branch of branches) {
-        checker = requireFit(branch.node, branch.type, expected, "the branch");
+        checker = checkFit(branch.node, branch.type, expected, "the branch");
       }
       return expected;
     }
@@ -2858,7 +2851,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
       kindOf(tree, bodyNode) !== SyntaxKind.Block &&
       expected !== undefined && refinementBase(expected) !== undefined
     ) {
-      checker = requireFit(bodyNode, info.type, expected, "the branch");
+      checker = checkFit(bodyNode, info.type, expected, "the branch");
     }
     const branch = {
       node: bodyNode,
@@ -3033,7 +3026,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     });
     if (block === undefined) return errorInfo(node);
     const info = expr(block, undefined);
-    checker = requireFit(block, info.type, table.unit, "the finally result");
+    checker = checkFit(block, info.type, table.unit, "the finally result");
     return finish(node, table.unit, info);
   }
 
@@ -3173,19 +3166,19 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     table: table,
     module: module,
     targets: targets,
-    services: services(),
-    infos: infos(),
-    facts: facts(),
+    services: benv.env.services,
+    infos: bodyTable.info,
+    facts: bodyTable.facts,
     valueType: valueType,
     kids: children,
     kidsOfKind: childrenOfKind,
     report: report,
     isError: isError,
     finish: finish,
-    checkFit: requireFit,
+    checkFit: checkFit,
     fact: recordFact,
     assignable: assignable,
-    fits: checkFit,
+    fits: fits,
     widen: widen,
     functionOf: functionOf,
     checkBody: checkBody,

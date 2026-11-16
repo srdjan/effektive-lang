@@ -172,14 +172,13 @@ export function checkCoverage(
   const missing = missingOf(c.table, domain, state);
   if (missing === undefined) return c;
   if (missing.length === 0 && armCount > 0) return c;
-  c = c.report(
+  return c.report(
     "pattern/001",
     missing.length === 0
       ? "the match has no arms"
       : `the match is not exhaustive; it needs ${missing.join(", ")}`,
     node,
   );
-  return c;
 }
 
 type ReachResult = {
@@ -237,14 +236,13 @@ function foreign(
   domain: Domain,
 ): PatternContext {
   if (isSilent(domain)) return c;
-  c = c.report(
+  return c.report(
     "pattern/003",
     `${what} does not belong to the subject (${
       describeDomain(c.table, domain)
     })`,
     node,
   );
-  return c;
 }
 
 type BoundLocal = {
@@ -282,6 +280,7 @@ export function pattern(
 ): PatternContext {
   const kind = kindOf(c.tree, node);
   const names = c.kidsOfKind(node, SyntaxKind.Name);
+  const target = names[0] === undefined ? undefined : c.targets.get(names[0]);
   if (kind === SyntaxKind.WildcardPattern) {
     const reached = reach(c, node, state, undefined);
     c = reached.context;
@@ -296,11 +295,9 @@ export function pattern(
       }
     }
     state = state.markWildcard();
-    c = patternFact(c, node, { kind: "wildcard" });
-    return c;
+    return patternFact(c, node, { kind: "wildcard" });
   }
   if (kind === SyntaxKind.NamePattern) {
-    const target = names[0] === undefined ? undefined : c.targets.get(names[0]);
     if (optionConstructorOf(target) === "none") {
       if (domain.kind === "option") {
         c = reach(c, node, state, "none").context;
@@ -323,7 +320,6 @@ export function pattern(
     return c;
   }
   if (kind === SyntaxKind.CtorPattern) {
-    const target = names[0] === undefined ? undefined : c.targets.get(names[0]);
     const bindingNode = names[1];
     if (optionConstructorOf(target) === "some") {
       let element = c.table.error;
@@ -383,8 +379,7 @@ export function pattern(
   if (kind === SyntaxKind.LiteralPattern) {
     const value = literalOf(c.tree, node);
     if (value === undefined) {
-      c = patternFact(c, node, { kind: "invalid" });
-      return c;
+      return patternFact(c, node, { kind: "invalid" });
     }
     const text = numberTextOf(c.tree, node);
     if (
@@ -397,12 +392,11 @@ export function pattern(
       } else {
         c = foreign(c, node, text, domain);
       }
-      c = patternFact(c, node, {
+      return patternFact(c, node, {
         kind: "duration",
         millis: value,
         text: text,
       });
-      return c;
     }
     let fits = false;
     if (domain.kind === "nullable") {
@@ -417,8 +411,7 @@ export function pattern(
     } else {
       c = foreign(c, node, describeLiteral(value), domain);
     }
-    c = patternFact(c, node, { kind: "literal", value: value });
-    return c;
+    return patternFact(c, node, { kind: "literal", value: value });
   }
   if (kind === SyntaxKind.RecordPattern) {
     return recordPattern(c, node, domain, state);
