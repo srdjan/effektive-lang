@@ -324,6 +324,46 @@ function processSampler(
 }
 
 /**
+ * Times the warm language service on one target with two services that run as
+ * a pair. The first call of each service builds the program and loads every
+ * library file. It is not a sample.
+ */
+async function measureService(
+  ts: TsApi,
+  directory: string,
+  target: Target,
+  config: VariantConfig,
+  stamp: string,
+): Promise<Result<VariantResult, string>> {
+  const a = createService(ts, directory, target);
+  const b = createService(ts, directory, target);
+  if (!a.ok || !b.ok) {
+    return {
+      ok: false,
+      error: [a, b].map((s) => (s.ok ? "" : s.error)).join(""),
+    };
+  }
+  const first = a.value.check(`${stamp}-first`);
+  const firstB = b.value.check(`${stamp}-first`);
+  const measured: Result<VariantResult, string> = !first.ok
+    ? first
+    : !firstB.ok
+    ? firstB
+    : await sampleVariant(
+      alternatingSampler(a.value, b.value),
+      { ...config, warmups: 0 },
+      VARIANT_NAMES.service,
+      target.name,
+      stamp,
+    );
+  a.value.dispose();
+  b.value.dispose();
+  return measured.ok && first.ok
+    ? { ok: true, value: { ...measured.value, firstCall: first.value } }
+    : measured;
+}
+
+/**
  * Runs every variant that works here over the targets. Creates one temporary
  * workspace and removes it at the end.
  */
@@ -385,6 +425,18 @@ async function runVariantsIn(
     skipped.push({ variant: VARIANT_NAMES.service, reason: ts.error });
   }
   const failed = new Set<string>();
+  const record = (
+    measured: Result<VariantResult, string>,
+    name: string,
+    target: string,
+  ): void => {
+    if (measured.ok) {
+      results.push(measured.value);
+      return;
+    }
+    failed.add(name);
+    skipped.push({ variant: name, reason: `${target}: ${measured.error}` });
+  };
 
   for (const [index, target] of targets.entries()) {
     const directory = `${workspace}/target-${index}`;
@@ -392,90 +444,35 @@ async function runVariantsIn(
     Deno.writeTextFileSync(`${directory}/tsconfig.json`, TSCONFIG);
     writeTarget(directory, target, "initial");
 
-    const runs: [string, string, Sampler | undefined][] = [
+    const runs: [string, Sampler | undefined][] = [
       [
-        "tsc",
         VARIANT_NAMES.tsc,
         exists(scripts.tsc)
           ? processSampler(directory, target, scripts.tsc)
           : undefined,
       ],
       [
-        "tsgo",
         VARIANT_NAMES.tsgo,
         exists(scripts.tsgo)
           ? processSampler(directory, target, scripts.tsgo)
           : undefined,
       ],
     ];
-    for (const [, name, sampler] of runs) {
+    for (const [name, sampler] of runs) {
       if (sampler === undefined || failed.has(name)) continue;
-      const measured = await sampleVariant(
-        sampler,
-        config,
+      record(
+        await sampleVariant(sampler, config, name, target.name, stamp),
         name,
         target.name,
-        stamp,
       );
-      if (measured.ok) results.push(measured.value);
-      else {
-        failed.add(name);
-        skipped.push({
-          variant: name,
-          reason: `${target.name}: ${measured.error}`,
-        });
-      }
     }
 
     if (ts.ok && !failed.has(VARIANT_NAMES.service)) {
-      const services = [
-        createService(ts.value, directory, target),
-        createService(ts.value, directory, target),
-      ];
-      const [a, b] = services;
-      if (a === undefined || b === undefined || !a.ok || !b.ok) {
-        failed.add(VARIANT_NAMES.service);
-        skipped.push({
-          variant: VARIANT_NAMES.service,
-          reason: `${target.name}: ${
-            [a, b].map((s) => (s !== undefined && !s.ok ? s.error : ""))
-              .join("")
-          }`,
-        });
-      } else {
-        // The first call builds the program and loads every library file.
-        const first = a.value.check(`${stamp}-first`);
-        const firstB = b.value.check(`${stamp}-first`);
-        if (!first.ok || !firstB.ok) {
-          failed.add(VARIANT_NAMES.service);
-          skipped.push({
-            variant: VARIANT_NAMES.service,
-            reason: `${target.name}: ${
-              !first.ok ? first.error : !firstB.ok ? firstB.error : ""
-            }`,
-          });
-        } else {
-          const sampler = alternatingSampler(a.value, b.value);
-          const measured = await sampleVariant(
-            sampler,
-            { ...config, warmups: 0 },
-            VARIANT_NAMES.service,
-            target.name,
-            stamp,
-          );
-          if (measured.ok) {
-            results.push({ ...measured.value, firstCall: first.value });
-          } else {
-            failed.add(VARIANT_NAMES.service);
-            skipped.push({
-              variant: VARIANT_NAMES.service,
-              reason: `${target.name}: ${measured.error}`,
-            });
-          }
-        }
-        a.value.dispose();
-        b.value.dispose();
-      }
+      record(
+        await measureService(ts.value, directory, target, config, stamp),
+        VARIANT_NAMES.service,
+        target.name,
+      );
     }
   }
   return { ok: true, value: { results, skipped } };
