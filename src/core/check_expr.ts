@@ -106,6 +106,7 @@ import {
   dataOnly,
   literalFitsPrimitive,
   MAX_DEPTH,
+  type RecordField,
   type TypeRef,
 } from "./types.ts";
 import { arityMessage, sortedUnique } from "./util.ts";
@@ -158,7 +159,7 @@ type Contract = {
   readonly requirements: readonly CapabilityId[] | undefined;
 };
 
-/** The branch results of an `if` or `match` that `joinArms` combines. */
+/** A saved refinement state. */
 type RefinementSnapshot = ReturnType<RefinementChecker["snapshot"]>;
 
 type BranchResult = {
@@ -166,6 +167,7 @@ type BranchResult = {
   readonly type: TypeRef;
 };
 
+/** The branch results of an `if` or `match` that `joinArms` combines. */
 type BranchArms = {
   readonly infos: () => readonly NodeInfo[];
   readonly branches: () => readonly BranchResult[];
@@ -241,6 +243,13 @@ export type ConstantRun = {
   readonly diagnostics: readonly Diagnostic[];
 };
 
+/** The three parts of a `using` expression. */
+const RESOURCE_PARTS: readonly SyntaxKind[] = [
+  SyntaxKind.ResourceAcquire,
+  SyntaxKind.ResourceUse,
+  SyntaxKind.ResourceRelease,
+];
+
 type ArrowContext = {
   readonly parameters: readonly TypeRef[];
   readonly result: TypeRef | undefined;
@@ -248,11 +257,7 @@ type ArrowContext = {
 
 type TargetFields = {
   readonly ref: TypeRef;
-  readonly fields: readonly {
-    readonly name: string;
-    readonly type: TypeRef;
-    readonly optional: boolean;
-  }[];
+  readonly fields: readonly RecordField[];
 };
 
 type RecordTarget =
@@ -292,8 +297,8 @@ type BodyChecker =
     ) => BodyChecker;
     readonly inlineStreamCallback: (name: string, arg: Arg) => BodyChecker;
     readonly noPipeline: (name: string, args: readonly Arg[]) => BodyChecker;
-    readonly recordRefinementLocal: (
-      local: LocalId,
+    readonly bindLocal: (
+      local: LocalId | undefined,
       type: TypeRef,
       init: NodeId | undefined,
     ) => BodyChecker;
@@ -444,12 +449,16 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     return checker;
   }
 
-  function recordRefinementLocal(
-    local: LocalId,
+  /** Records a local in the body table and in the refinement state. A missing local records nothing. */
+  function bindLocal(
+    local: LocalId | undefined,
     type: TypeRef,
     init: NodeId | undefined,
   ): BodyChecker {
-    refinements = refinements.addLocal(local, type, init);
+    if (local !== undefined) {
+      bodyBuilder = bodyBuilder.recordLocal(local, type);
+      refinements = refinements.addLocal(local, type, init);
+    }
     return checker;
   }
 
@@ -553,15 +562,6 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     );
   }
 
-  function preserveRefinement(node: NodeId, id: TypeId, what: string): boolean {
-    return recordRefinement(
-      node,
-      refinements.proveIdentity(node, id),
-      what,
-      id,
-    );
-  }
-
   function recordRefinement(
     node: NodeId,
     decision: RefinementDecision,
@@ -609,8 +609,12 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     id: TypeId,
     what: string,
   ): BodyChecker {
-    if (preserveRefinement(node, id, what)) return checker;
-    return checker;
+    return recordRefinementState(
+      node,
+      refinements.proveIdentity(node, id),
+      what,
+      id,
+    );
   }
 
   function recordRefinementState(
@@ -770,11 +774,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     }
     if (kind === SyntaxKind.UsingExpr) {
       const args = children(node).filter((child) =>
-        Array.of<SyntaxKind>(
-          SyntaxKind.ResourceAcquire,
-          SyntaxKind.ResourceUse,
-          SyntaxKind.ResourceRelease,
-        ).includes(kindOf(tree, child))
+        RESOURCE_PARTS.includes(kindOf(tree, child))
       ).map((child) => ({ node: child }));
       if (args.length !== 3) return errorInfo(node);
       return withResourceCall(checker, node, args, expected);
@@ -862,11 +862,8 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     if (target.kind === "value" || target.kind === "provider") {
       return finish(node, benv.values(target.id), PURE_EFFECTS);
     }
-    if (target.kind === "builtin") {
-      if (optionConstructorOf(target) === "none") {
-        return none(node, expected);
-      }
-      return errorInfo(node);
+    if (optionConstructorOf(target) === "none") {
+      return none(node, expected);
     }
     return errorInfo(node);
   }
@@ -955,9 +952,8 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
 
   /** The callee could not be resolved. The arguments still get checked. */
   function unresolvedCall(node: NodeId, args: readonly Arg[]): NodeInfo {
-    const infos = args.map((arg) => argInfo(arg, undefined));
     errorCount = errorCount + 1;
-    return finish(node, table.error, combine(infos));
+    return rejectCall(node, args, undefined);
   }
 
   function apply(
@@ -1150,12 +1146,9 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
 
   /** True for `{ a: x, b }` without a spread. */
   function isPlainRecordLiteral(node: NodeId): boolean {
-    if (kindOf(tree, node) === SyntaxKind.ParenExpr) {
-      const inner = children(node)[0];
-      return inner !== undefined && isPlainRecordLiteral(inner);
-    }
-    if (kindOf(tree, node) !== SyntaxKind.RecordExpr) return false;
-    return children(node).every((field) =>
+    const inner = unparen(tree, node);
+    if (kindOf(tree, inner) !== SyntaxKind.RecordExpr) return false;
+    return children(inner).every((field) =>
       kindOf(tree, field) !== SyntaxKind.SpreadField
     );
   }
@@ -1567,11 +1560,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
   ): { readonly info: NodeInfo; readonly result: TypeRef } {
     const kind = kindOf(tree, arg.node);
     let info: NodeInfo;
-    const implicit = Array.of<SyntaxKind>(
-      SyntaxKind.ResourceAcquire,
-      SyntaxKind.ResourceUse,
-      SyntaxKind.ResourceRelease,
-    ).includes(kind);
+    const implicit = RESOURCE_PARTS.includes(kind);
     if (arg.pre === undefined && implicit) {
       info = implicitArrow(arg.node, parameters, resultHint);
     } else if (arg.pre === undefined && kind === SyntaxKind.ArrowExpr) {
@@ -1705,13 +1694,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
   }
 
   /** The record fields of a type that is a record, a named error, or a tagged record. */
-  function recordFields(ref: TypeRef):
-    | readonly {
-      readonly name: string;
-      readonly type: TypeRef;
-      readonly optional: boolean;
-    }[]
-    | undefined {
+  function recordFields(ref: TypeRef): readonly RecordField[] | undefined {
     const unfolded = table.unfold(ref);
     const node = table.node(unfolded);
     if (node.kind === "record") return node.fields;
@@ -2141,7 +2124,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     }
     let seen = emptySet<string>();
     const infos: NodeInfo[] = [];
-    const inferred: { name: string; type: TypeRef; optional: boolean }[] = [];
+    const inferred: RecordField[] = [];
     let raw = false;
     for (const parsedField of parsed) {
       const fieldNode = parsedField.node;
@@ -2492,21 +2475,10 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     const parameterFacts: ArrowParameterFact[] = inferredParameters.map(
       (parameter, index) => {
         const type = inference.types[index] ?? parameter.type;
-        if (parameter.id !== undefined) {
-          bodyBuilder = bodyBuilder.recordLocal(parameter.id, type);
-        }
+        checker = bindLocal(parameter.id, type, undefined);
         return { id: parameter.id, name: parameter.name, type: type };
       },
     );
-    for (const parameter of parameterFacts) {
-      if (parameter.id !== undefined) {
-        refinements = refinements.addLocal(
-          parameter.id,
-          parameter.type,
-          undefined,
-        );
-      }
-    }
     const result = callbackBody(
       node,
       parameterFacts,
@@ -2555,10 +2527,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
   ): ArrowParameterFact {
     const target = targets.get(nameNode);
     const id = target?.kind === "local" ? target.id : undefined;
-    if (id !== undefined) bodyBuilder = bodyBuilder.recordLocal(id, type);
-    if (id !== undefined) {
-      refinements = refinements.addLocal(id, type, undefined);
-    }
+    checker = bindLocal(id, type, undefined);
     checker = recordInfo(nameNode, type, PURE_EFFECTS);
     return { id: id, name: nameTextOf(tree, nameNode) ?? "", type: type };
   }
@@ -2668,14 +2637,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     } else {
       type = info === undefined ? table.error : widen(info.type);
     }
-    if (id !== undefined) bodyBuilder = bodyBuilder.recordLocal(id, type);
-    if (id !== undefined) {
-      refinements = refinements.addLocal(
-        id,
-        type,
-        info?.mode === "pure" ? init : undefined,
-      );
-    }
+    checker = bindLocal(id, type, info?.mode === "pure" ? init : undefined);
     checker = recordFact(node, { kind: "binding", id: id, type: type });
     return finish(node, type, info ?? PURE_EFFECTS);
   }
@@ -3161,7 +3123,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
     addDiagnostic: addDiagnostic,
     body: bodyTable,
     recordLocal: recordLocal,
-    recordRefinementLocal: recordRefinementLocal,
+    bindLocal: bindLocal,
     tree: tree,
     table: table,
     module: module,
@@ -3203,14 +3165,7 @@ export function checkFunctionBody(
 ): FunctionRun {
   let checker = createBodyChecker(benv, signature.id);
   for (const parameter of signature.parameters) {
-    if (parameter.id !== undefined) {
-      checker = checker.recordLocal(parameter.id, parameter.type.ref);
-      checker = checker.recordRefinementLocal(
-        parameter.id,
-        parameter.type.ref,
-        undefined,
-      );
-    }
+    checker = checker.bindLocal(parameter.id, parameter.type.ref, undefined);
   }
   const written = signature.written;
   const contract: Contract = {

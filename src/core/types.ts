@@ -51,7 +51,7 @@ type PrimitiveName =
   | "never"
   | "unknown";
 
-type RecordField = {
+export type RecordField = {
   readonly name: string;
   readonly type: TypeRef;
   readonly optional: boolean;

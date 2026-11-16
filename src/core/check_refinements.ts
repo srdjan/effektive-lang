@@ -690,9 +690,11 @@ function compare(
   }
   if (join === "single") {
     return defined[0];
-  } else if (join === "and") {
+  }
+  if (join === "and") {
     return canonicalAnd(defined);
-  } else if (join === "or") {
+  }
+  if (join === "or") {
     return canonicalPredicate({ kind: "or", operands: defined });
   }
 }
