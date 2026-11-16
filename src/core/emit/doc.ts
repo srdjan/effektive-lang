@@ -449,15 +449,13 @@ export function render(
           continue;
         }
         if (d.k === "group") {
-          {
-            const mode: Mode = d.brk || hasHard(d.d) ? "break" : cmd.mode;
-            cmds[cmds.length] = {
-              indent: cmd.indent,
-              mode: mode,
-              doc: d.d,
-            };
-            continue;
-          }
+          const mode: Mode = d.brk || hasHard(d.d) ? "break" : cmd.mode;
+          cmds[cmds.length] = {
+            indent: cmd.indent,
+            mode: mode,
+            doc: d.d,
+          };
+          continue;
         }
         if (d.k === "indent") {
           cmds[cmds.length] = {
@@ -580,36 +578,34 @@ export function render(
       continue;
     }
     if (d.k === "group") {
-      {
-        if (cmd.mode === "flat" && !remeasure) {
-          const mode: Mode = d.brk || hasHard(d.d) ? "break" : "flat";
-          if (mode === "break" && d.id !== undefined) {
-            broke = broke.add(d.id);
-          }
-          stack[stack.length] = {
-            indent: cmd.indent,
-            mode: mode,
-            doc: d.d,
-          };
-          continue;
+      if (cmd.mode === "flat" && !remeasure) {
+        const mode: Mode = d.brk || hasHard(d.d) ? "break" : "flat";
+        if (mode === "break" && d.id !== undefined) {
+          broke = broke.add(d.id);
         }
-        remeasure = false;
-        const flat: Cmd = { indent: cmd.indent, mode: "flat", doc: d.d };
-        const forced = d.brk || hasHard(d.d);
-        if (!forced && fits(flat, stack, width - column)) {
-          stack[stack.length] = flat;
-        } else {
-          if (d.id !== undefined) {
-            broke = broke.add(d.id);
-          }
-          stack[stack.length] = {
-            indent: cmd.indent,
-            mode: "break",
-            doc: d.d,
-          };
-        }
+        stack[stack.length] = {
+          indent: cmd.indent,
+          mode: mode,
+          doc: d.d,
+        };
         continue;
       }
+      remeasure = false;
+      const flat: Cmd = { indent: cmd.indent, mode: "flat", doc: d.d };
+      const forced = d.brk || hasHard(d.d);
+      if (!forced && fits(flat, stack, width - column)) {
+        stack[stack.length] = flat;
+      } else {
+        if (d.id !== undefined) {
+          broke = broke.add(d.id);
+        }
+        stack[stack.length] = {
+          indent: cmd.indent,
+          mode: "break",
+          doc: d.d,
+        };
+      }
+      continue;
     }
     if (d.k === "ifbroke") {
       stack[stack.length] = {
@@ -628,65 +624,61 @@ export function render(
       continue;
     }
     if (d.k === "fill") {
-      {
-        if (cmd.mode === "flat" && !remeasure) {
-          stack[stack.length] = {
-            indent: cmd.indent,
-            mode: "flat",
-            doc: d.parts,
-          };
-          continue;
-        }
-        remeasure = false;
-        if (d.parts.length === 0) {
-          continue;
-        }
+      if (cmd.mode === "flat" && !remeasure) {
         stack[stack.length] = {
           indent: cmd.indent,
-          mode: cmd.mode,
-          doc: { k: "fillstep", fill: d, i: 1 },
-        };
-        stack[stack.length] = {
-          indent: cmd.indent,
-          mode: cmd.mode,
-          doc: group(d.parts[0], undefined, undefined),
+          mode: "flat",
+          doc: d.parts,
         };
         continue;
       }
+      remeasure = false;
+      if (d.parts.length === 0) {
+        continue;
+      }
+      stack[stack.length] = {
+        indent: cmd.indent,
+        mode: cmd.mode,
+        doc: { k: "fillstep", fill: d, i: 1 },
+      };
+      stack[stack.length] = {
+        indent: cmd.indent,
+        mode: cmd.mode,
+        doc: group(d.parts[0], undefined, undefined),
+      };
+      continue;
     }
     if (d.k === "fillstep") {
-      {
-        const parts = d.fill.parts;
-        if (d.i >= parts.length) {
-          continue;
-        }
-        const separator = parts[d.i];
-        const content = parts[d.i + 1];
-        const lastContent = d.i + 1 === parts.length - 1;
-        const deeper = cmd.indent + INDENT_WIDTH * d.fill.tail;
-        const flatPair: Cmd = {
-          indent: deeper,
-          mode: "flat",
-          doc: [separator, content],
-        };
-        const onLine = fits(flatPair, lastContent ? stack : [], width - column);
-        stack[stack.length] = {
-          indent: cmd.indent,
-          mode: cmd.mode,
-          doc: { k: "fillstep", fill: d.fill, i: d.i + 2 },
-        };
-        stack[stack.length] = {
-          indent: deeper,
-          mode: "break",
-          doc: group(content, undefined, undefined),
-        };
-        stack[stack.length] = {
-          indent: deeper,
-          mode: onLine ? "flat" : "break",
-          doc: separator,
-        };
+      const parts = d.fill.parts;
+      if (d.i >= parts.length) {
         continue;
       }
+      const separator = parts[d.i];
+      const content = parts[d.i + 1];
+      const lastContent = d.i + 1 === parts.length - 1;
+      const deeper = cmd.indent + INDENT_WIDTH * d.fill.tail;
+      const flatPair: Cmd = {
+        indent: deeper,
+        mode: "flat",
+        doc: [separator, content],
+      };
+      const onLine = fits(flatPair, lastContent ? stack : [], width - column);
+      stack[stack.length] = {
+        indent: cmd.indent,
+        mode: cmd.mode,
+        doc: { k: "fillstep", fill: d.fill, i: d.i + 2 },
+      };
+      stack[stack.length] = {
+        indent: deeper,
+        mode: "break",
+        doc: group(content, undefined, undefined),
+      };
+      stack[stack.length] = {
+        indent: deeper,
+        mode: onLine ? "flat" : "break",
+        doc: separator,
+      };
+      continue;
     }
     if (d.k === "spanopen") {
       openSpans = openSpans.set(d.id, offset);
@@ -723,44 +715,42 @@ export function render(
       continue;
     }
     if (d.k === "alt") {
-      {
-        const options = d.options;
-        const last = options[options.length - 1];
-        if (cmd.mode === "flat" && !remeasure) {
-          stack[stack.length] = {
-            indent: cmd.indent,
-            mode: "flat",
-            doc: options[0],
-          };
-          continue;
-        }
-        remeasure = false;
-        const first: Cmd = {
+      const options = d.options;
+      const last = options[options.length - 1];
+      if (cmd.mode === "flat" && !remeasure) {
+        stack[stack.length] = {
           indent: cmd.indent,
           mode: "flat",
           doc: options[0],
         };
-        if (fits(first, stack, width - column)) {
-          stack[stack.length] = first;
-          continue;
-        }
-        let chosen: Cmd | undefined;
-        for (const candidateIndex of indices(options.length - 2)) {
-          const i = candidateIndex + 1;
-          const candidate: Cmd = {
-            indent: cmd.indent,
-            mode: "flat",
-            doc: options[i],
-          };
-          if (fits(candidate, stack, width - column)) {
-            chosen = candidate;
-            break;
-          }
-        }
-        stack[stack.length] = chosen ??
-          { indent: cmd.indent, mode: "break", doc: last };
         continue;
       }
+      remeasure = false;
+      const first: Cmd = {
+        indent: cmd.indent,
+        mode: "flat",
+        doc: options[0],
+      };
+      if (fits(first, stack, width - column)) {
+        stack[stack.length] = first;
+        continue;
+      }
+      let chosen: Cmd | undefined;
+      for (const candidateIndex of indices(options.length - 2)) {
+        const i = candidateIndex + 1;
+        const candidate: Cmd = {
+          indent: cmd.indent,
+          mode: "flat",
+          doc: options[i],
+        };
+        if (fits(candidate, stack, width - column)) {
+          chosen = candidate;
+          break;
+        }
+      }
+      stack[stack.length] = chosen ??
+        { indent: cmd.indent, mode: "break", doc: last };
+      continue;
     }
     if (d.k === "span") {
       stack[stack.length] = {

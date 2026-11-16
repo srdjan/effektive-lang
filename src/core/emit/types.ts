@@ -241,17 +241,15 @@ export function typeDoc(
     return tupleTypeDoc(type, (t) => typeDoc(scope, t, undefined));
   }
   if (type.kind === "option") {
-    {
-      const option = scope.effect("Option");
-      return [
-        `${option}.Option`,
-        singleArgument(
-          type.element,
-          typeDoc(scope, type.element, breakable),
-          breakable,
-        ),
-      ];
-    }
+    const option = scope.effect("Option");
+    return [
+      `${option}.Option`,
+      singleArgument(
+        type.element,
+        typeDoc(scope, type.element, breakable),
+        breakable,
+      ),
+    ];
   }
   if (type.kind === "ref") {
     return [
@@ -271,37 +269,35 @@ export function typeDoc(
     ];
   }
   if (type.kind === "schema") {
-    {
-      const codec: Doc = [
-        `${scope.effect("Schema")}.Codec`,
-        typeArguments([
-          typeDoc(scope, type.decoded, undefined),
-          typeDoc(scope, type.encoded, undefined),
-          requirementUnion(scope, type.decodeRequirements) ?? "never",
-          requirementUnion(scope, type.encodeRequirements) ?? "never",
-        ]),
-      ];
-      if (!hasSchemaMetadata(type)) {
-        return codec;
-      }
-      return [
-        "(",
-        codec,
-        ' & { readonly "~type.make.in": ',
-        typeDoc(scope, type.makeInput ?? type.decoded, undefined),
-        '; readonly "~type.optionality": "',
-        trueFlag(type.optionalKey) || trueFlag(type.decodedOptionalKey)
-          ? "optional"
-          : "required",
-        '"; readonly "~encoded.optionality": "',
-        trueFlag(type.optionalKey) || trueFlag(type.encodedOptionalKey)
-          ? "optional"
-          : "required",
-        '"; readonly "~type.constructor.default": "',
-        trueFlag(type.constructorDefault) ? "with-default" : "no-default",
-        '" })',
-      ];
+    const codec: Doc = [
+      `${scope.effect("Schema")}.Codec`,
+      typeArguments([
+        typeDoc(scope, type.decoded, undefined),
+        typeDoc(scope, type.encoded, undefined),
+        requirementUnion(scope, type.decodeRequirements) ?? "never",
+        requirementUnion(scope, type.encodeRequirements) ?? "never",
+      ]),
+    ];
+    if (!hasSchemaMetadata(type)) {
+      return codec;
     }
+    return [
+      "(",
+      codec,
+      ' & { readonly "~type.make.in": ',
+      typeDoc(scope, type.makeInput ?? type.decoded, undefined),
+      '; readonly "~type.optionality": "',
+      trueFlag(type.optionalKey) || trueFlag(type.decodedOptionalKey)
+        ? "optional"
+        : "required",
+      '"; readonly "~encoded.optionality": "',
+      trueFlag(type.optionalKey) || trueFlag(type.encodedOptionalKey)
+        ? "optional"
+        : "required",
+      '"; readonly "~type.constructor.default": "',
+      trueFlag(type.constructorDefault) ? "with-default" : "no-default",
+      '" })',
+    ];
   }
   if (type.kind === "record") {
     return recordTypeDoc(type, (t) => typeDoc(scope, t, undefined));
@@ -349,18 +345,16 @@ export function typeDoc(
     ];
   }
   if (type.kind === "provider") {
-    {
-      // `Layer.Layer<S1 | S2, E, Rq>`.
-      const services = servicesOf(type.provides).map((id) => scope.nameOf(id));
-      return [
-        `${scope.effect("Layer")}.Layer`,
-        deferredArguments(
-          scope,
-          [unionDoc(services)],
-          type.acquisition.effects,
-        ),
-      ];
-    }
+    // `Layer.Layer<S1 | S2, E, Rq>`.
+    const services = servicesOf(type.provides).map((id) => scope.nameOf(id));
+    return [
+      `${scope.effect("Layer")}.Layer`,
+      deferredArguments(
+        scope,
+        [unionDoc(services)],
+        type.acquisition.effects,
+      ),
+    ];
   }
   return internal("unreachable type");
 }
@@ -522,38 +516,32 @@ export function schemaDoc(
     );
   }
   if (type.kind === "record") {
-    {
-      const fields = type.fields.map((f) => {
-        const inner = schemaDoc(scope, f.type, recursive);
-        return property(
-          fieldKey(f.name),
-          f.optional
-            ? member(schema, "optionalKey", callWith("", inner))
-            : inner,
-        );
-      });
-      return [`${schema}.Struct(`, bracketed("{", "}", fields, true), ")"];
-    }
+    const fields = type.fields.map((f) => {
+      const inner = schemaDoc(scope, f.type, recursive);
+      return property(
+        fieldKey(f.name),
+        f.optional ? member(schema, "optionalKey", callWith("", inner)) : inner,
+      );
+    });
+    return [`${schema}.Struct(`, bracketed("{", "}", fields, true), ")"];
   }
   if (type.kind === "union") {
-    {
-      const literals = type.members.flatMap((m) =>
-        m.kind === "literal" ? [m.value] : []
-      );
-      if (literals.length === type.members.length) {
-        return schemaOfLiterals(scope, literals);
-      }
-      return [
-        `${schema}.Union(`,
-        bracketed(
-          "[",
-          "]",
-          type.members.map((m) => schemaDoc(scope, m, recursive)),
-          false,
-        ),
-        ")",
-      ];
+    const literals = type.members.flatMap((m) =>
+      m.kind === "literal" ? [m.value] : []
+    );
+    if (literals.length === type.members.length) {
+      return schemaOfLiterals(scope, literals);
     }
+    return [
+      `${schema}.Union(`,
+      bracketed(
+        "[",
+        "]",
+        type.members.map((m) => schemaDoc(scope, m, recursive)),
+        false,
+      ),
+      ")",
+    ];
   }
   return internal("unreachable schema type");
 }
