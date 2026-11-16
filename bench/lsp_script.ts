@@ -9,6 +9,7 @@
 // list. Any other list stops the run with an error value. This is the
 // checksum-like gate of the protocol.
 
+import { fromFileUrl } from "@std/path";
 import { errorMessage, isRecord } from "../src/core/mod.ts";
 import type { Result } from "../src/core/mod.ts";
 import { STATS_METHOD } from "../src/lsp/protocol.ts";
@@ -106,7 +107,7 @@ export function loadInput(name: LspInputName, seed: number): LspInput {
     return {
       name,
       files: readTree(
-        new URL("../fixtures/examples", import.meta.url).pathname,
+        fromFileUrl(new URL("../fixtures/examples", import.meta.url)),
       ),
       editPath: "users.eff",
       hoverName: "displayName",
