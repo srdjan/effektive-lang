@@ -54,14 +54,13 @@ export type LiteralField = {
 
 export type LiteralRecordView = {
   /**
-   * Reads an option record of exactly `count` fields, each `name: literal`, and
-   * gives the fields by name. It fails with "shape" for a pipeline left side, a
-   * value that is not a record, another field count, a field of another form,
-   * or a repeated name. It reports nothing and records nothing.
+   * Reads an option record of exactly one field, `name: literal`, and gives the
+   * field by name. It fails with "shape" for a pipeline left side, a value that
+   * is not a record, another field count, a field of another form, or a
+   * repeated name. It reports nothing and records nothing.
    */
   literalRecord(
     arg: Arg,
-    count: number,
   ): Result<ReadonlyMap<string, LiteralField>, "shape">;
 };
 
@@ -86,7 +85,7 @@ export function concurrencyBound<
   arg: Arg,
   operation: ConcurrencyOperation,
 ): ConcurrencyBound<State> {
-  const record = c.literalRecord(arg, 1);
+  const record = c.literalRecord(arg);
   const literal = record.ok
     ? record.value.get("concurrency")?.value
     : undefined;
@@ -101,6 +100,57 @@ export function concurrencyBound<
     arg.node,
   );
   return { state: state, bound: undefined };
+}
+
+/** What `literalIntegerOption` reads: the field name, the least value, and the report text. */
+export type LiteralIntegerSpec = {
+  readonly key: string;
+  readonly minimum: 0 | 1;
+  readonly message: string;
+};
+
+/**
+ * The value of a one-field options record whose field is a safe integer literal
+ * of at least `minimum`, with the info of the record. The value is undefined
+ * after a diagnostic.
+ */
+export type LiteralIntegerOption<State> = {
+  readonly context: State;
+  readonly value: number | undefined;
+  readonly info: NodeInfo;
+};
+
+export function literalIntegerOption<
+  State extends
+    & LiteralRecordView
+    & Pick<BuiltinContext, "table" | "argInfo" | "finish">
+    & { report(code: DiagnosticCode, message: string, node: NodeId): State },
+>(
+  c: State,
+  arg: Arg,
+  spec: LiteralIntegerSpec,
+): LiteralIntegerOption<State> {
+  const record = c.literalRecord(arg);
+  const field = record.ok ? record.value.get(spec.key) : undefined;
+  const value = field?.value;
+  if (
+    field === undefined || typeof value !== "number" ||
+    !Number.isSafeInteger(value) || value < spec.minimum
+  ) {
+    const state = c.report("type-mismatch/010", spec.message, arg.node);
+    return {
+      context: state,
+      value: undefined,
+      info: c.argInfo(arg, undefined),
+    };
+  }
+  const fieldInfo = c.finish(field.node, c.table.int, PURE_EFFECTS);
+  const info = c.finish(
+    arg.node,
+    c.table.record([{ name: spec.key, type: fieldInfo.type, optional: false }]),
+    PURE_EFFECTS,
+  );
+  return { context: c, value: value, info: info };
 }
 
 /** True when a function runs as an effect or has a failure or requirement. */

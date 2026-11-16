@@ -1408,7 +1408,6 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
 
   function literalRecord(
     arg: Arg,
-    count: number,
   ): Result<ReadonlyMap<string, LiteralField>, "shape"> {
     const shape = { ok: false, error: "shape" } as const;
     if (
@@ -1416,7 +1415,7 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
       kindOf(tree, arg.node) !== SyntaxKind.RecordExpr
     ) return shape;
     const fields = children(arg.node);
-    if (fields.length !== count) return shape;
+    if (fields.length !== 1) return shape;
     let values = emptyMap<string, LiteralField>();
     for (const field of fields) {
       if (kindOf(tree, field) !== SyntaxKind.RecordField) return shape;

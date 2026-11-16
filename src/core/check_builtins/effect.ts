@@ -9,15 +9,9 @@ import {
   type LogLevel,
   TIMEOUT_ERROR_ID,
 } from "../ir.ts";
-import type { Result } from "../source.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
 import { literalOf, recordFieldParts } from "../syntax_queries.ts";
-import {
-  combine,
-  EFFECT_ONLY,
-  type EffectSet,
-  PURE_EFFECTS,
-} from "../effect_set.ts";
+import { combine, EFFECT_ONLY, type EffectSet } from "../effect_set.ts";
 import type { NodeFact, NodeInfo } from "../tables.ts";
 import { dataOnly, type TypeNode, type TypeRef } from "../types.ts";
 import { showType } from "../type_show.ts";
@@ -28,7 +22,8 @@ import {
   type FunctionNode,
   invocationOf,
   isEffectfulFunction,
-  type LiteralField,
+  literalIntegerOption,
+  type LiteralRecordView,
   type SyntaxView,
 } from "./context.ts";
 import { direct, piped, type PreludeCallName, type Rows } from "./rows.ts";
@@ -45,6 +40,7 @@ export type EffectContext =
     | "isError"
   >
   & SyntaxView
+  & LiteralRecordView
   & {
     checkFit(
       node: NodeId,
@@ -61,10 +57,6 @@ export type EffectContext =
       args: readonly Arg[],
       usage: string | undefined,
     ): boolean;
-    literalRecord(
-      arg: Arg,
-      count: number,
-    ): Result<ReadonlyMap<string, LiteralField>, "shape">;
     jobFunction(
       name: string,
       arg: Arg,
@@ -155,9 +147,14 @@ function retryCall(
       ]),
     );
   }
-  const retry = retryTimes(c, args[1]);
+  const retry = literalIntegerOption(c, args[1], {
+    key: "times",
+    minimum: 0,
+    message:
+      "`retry` needs `{ times: N }`, where N is a finite nonnegative safe integer literal",
+  });
   c = retry.context;
-  c = c.fact(node, { kind: "retry", times: retry.times });
+  c = c.fact(node, { kind: "retry", times: retry.value });
   const invocation: EffectSet = invocationOf(fn);
   return c.finish(
     node,
@@ -778,44 +775,6 @@ function raceCall(
     ...b.failures,
   ], [...a.requirements, ...b.requirements]);
   return c.finish(node, type, combine([left, right]));
-}
-
-type RetryTimes = {
-  readonly context: EffectContext;
-  readonly times: number | undefined;
-  readonly info: NodeInfo;
-};
-
-function retryTimes(c: EffectContext, arg: Arg): RetryTimes {
-  const record = c.literalRecord(arg, 1);
-  const times = record.ok ? record.value.get("times") : undefined;
-  const value = times?.value;
-  if (
-    times === undefined || typeof value !== "number" ||
-    !Number.isSafeInteger(value) || value < 0
-  ) {
-    c = c.report(
-      "type-mismatch/010",
-      "`retry` needs `{ times: N }`, where N is a finite nonnegative safe integer literal",
-      arg.node,
-    );
-    return {
-      context: c,
-      times: undefined,
-      info: c.argInfo(arg, undefined),
-    };
-  }
-  const timesInfo = c.finish(times.node, c.table.int, PURE_EFFECTS);
-  const info = c.finish(
-    arg.node,
-    c.table.record([{
-      name: "times",
-      type: timesInfo.type,
-      optional: false,
-    }]),
-    PURE_EFFECTS,
-  );
-  return { context: c, times: value, info: info };
 }
 
 export function effectRows(): Pick<

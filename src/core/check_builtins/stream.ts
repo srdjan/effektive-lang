@@ -10,6 +10,7 @@ import {
   type BuiltinContext,
   concurrencyBound,
   type FactView,
+  literalIntegerOption,
   type LiteralRecordView,
   type ResolveView,
   type SyntaxView,
@@ -313,9 +314,14 @@ function bufferStreamCall(
   args: readonly Arg[],
 ): NodeInfo {
   const stream = streamArg(c, "bufferStream", args[0]).info;
-  const option = streamBufferCapacity(c, args[1]);
+  const option = literalIntegerOption(c, args[1], {
+    key: "capacity",
+    minimum: 1,
+    message:
+      "`bufferStream` needs `{ capacity: N }` with a positive safe integer literal",
+  });
   c = option.context;
-  c = c.fact(node, { kind: "buffer-stream", capacity: option.capacity });
+  c = c.fact(node, { kind: "buffer-stream", capacity: option.value });
   return c.finish(node, stream.type, combine([stream, option.info]));
 }
 
@@ -432,47 +438,6 @@ function resultsInSink(
     });
   }
   return false;
-}
-
-type StreamBufferCapacity = {
-  readonly context: StreamContext;
-  readonly capacity: number | undefined;
-  readonly info: NodeInfo;
-};
-
-function streamBufferCapacity(
-  c: StreamContext,
-  arg: Arg,
-): StreamBufferCapacity {
-  const record = c.literalRecord(arg, 1);
-  const capacity = record.ok ? record.value.get("capacity") : undefined;
-  const value = capacity?.value;
-  if (
-    capacity === undefined || typeof value !== "number" ||
-    !Number.isSafeInteger(value) || value <= 0
-  ) {
-    c = c.report(
-      "type-mismatch/010",
-      "`bufferStream` needs `{ capacity: N }` with a positive safe integer literal",
-      arg.node,
-    );
-    return {
-      context: c,
-      capacity: undefined,
-      info: c.argInfo(arg, undefined),
-    };
-  }
-  const capacityInfo = c.finish(capacity.node, c.table.int, PURE_EFFECTS);
-  const info = c.finish(
-    arg.node,
-    c.table.record([{
-      name: "capacity",
-      type: capacityInfo.type,
-      optional: false,
-    }]),
-    PURE_EFFECTS,
-  );
-  return { context: c, capacity: value, info: info };
 }
 
 export function streamRows(): Pick<
