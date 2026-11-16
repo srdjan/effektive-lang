@@ -675,13 +675,9 @@ function InputEngine(
       const type = typeNode === undefined
         ? fn?.parameters[index] ?? inputEngineTable.unknown
         : inputEngineLowerer.lower(typeNode).ref;
-      {
-        const _appendTarget1 = parameterEvidence;
-        const _appendValue2 = typeNode === undefined
-          ? fn?.parameters[index]
-          : type;
-        _appendTarget1[_appendTarget1.length] = _appendValue2;
-      }
+      parameterEvidence[parameterEvidence.length] = typeNode === undefined
+        ? fn?.parameters[index]
+        : type;
       if (id !== undefined) {
         inputEngineLocalTypes = inputEngineLocalTypes.set(id, type);
       }

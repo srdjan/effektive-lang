@@ -174,11 +174,7 @@ export function InputContractResolver(
     ) {
       return inputContractResolverSelf;
     }
-    {
-      const _appendTarget1 = list;
-      const _appendValue2 = demand;
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
-    }
+    list[list.length] = demand;
     inputContractResolverDemands = inputContractResolverDemands.set(
       origin.root.id,
       list,
@@ -206,11 +202,7 @@ export function InputContractResolver(
       applyContract: applyContract,
     };
     const calls = inputContractResolverDeferredCalls.get(origin.root.id) ?? [];
-    {
-      const _appendTarget3 = calls;
-      const _appendValue4 = call;
-      _appendTarget3[_appendTarget3.length] = _appendValue4;
-    }
+    calls[calls.length] = call;
     inputContractResolverDeferredCalls = inputContractResolverDeferredCalls.set(
       origin.root.id,
       calls,
@@ -247,15 +239,11 @@ export function InputContractResolver(
           of (inputContractResolverDeferredCalls.get(parameter.id) ?? [])
             .filter((candidate) => !resolved.has(candidate))
       ) {
-        {
-          const _appendTarget5 = issues;
-          const _appendValue6: ContractIssue = {
-            kind: "unresolved-call",
-            rootName: root?.name ?? "input",
-            node: call.callee,
-          };
-          _appendTarget5[_appendTarget5.length] = _appendValue6;
-        }
+        issues[issues.length] = {
+          kind: "unresolved-call",
+          rootName: root?.name ?? "input",
+          node: call.callee,
+        };
       }
       if (root === undefined || demands.length === 0) {
         return parameter.type;
@@ -268,11 +256,9 @@ export function InputContractResolver(
     if (inputContractResolverQueuedCalls.has(call)) {
       return inputContractResolverQueuedCalls;
     }
-    {
-      const _appendTarget7 = inputContractResolverPendingCalls;
-      const _appendValue8 = call;
-      _appendTarget7[_appendTarget7.length] = _appendValue8;
-    }
+    inputContractResolverPendingCalls[
+      inputContractResolverPendingCalls.length
+    ] = call;
     return inputContractResolverQueuedCalls.add(call);
   }
   function inputContractResolverPropagateDeferredCalls(): Set<DeferredCall> {
@@ -381,11 +367,7 @@ export function InputContractResolver(
       (candidates.length === 0 ||
         !inputContractResolverSatisfiesFields(candidates[0], fieldsAtPath))
     ) {
-      {
-        const _appendTarget11 = candidates;
-        const _appendValue12 = fields;
-        _appendTarget11[_appendTarget11.length] = _appendValue12;
-      }
+      candidates[candidates.length] = fields;
     }
     const chosen = candidates[0] ?? inputContractResolverTable.unknown;
     const canonical = inputContractResolverTable.unfoldTransparent(chosen);
@@ -395,17 +377,13 @@ export function InputContractResolver(
       )
     ) {
       for (const use of demands) {
-        {
-          const _appendTarget13 = issues;
-          const _appendValue14: ContractIssue = {
-            kind: "conflicting-requirements",
-            rootName: root.name,
-            path: path,
-            candidates: candidates,
-            node: use.node,
-          };
-          _appendTarget13[_appendTarget13.length] = _appendValue14;
-        }
+        issues[issues.length] = {
+          kind: "conflicting-requirements",
+          rootName: root.name,
+          path: path,
+          candidates: candidates,
+          node: use.node,
+        };
       }
     }
     return chosen;

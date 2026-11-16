@@ -200,16 +200,12 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
     span: Span,
     related: Diagnostic["related"],
   ): TypeLowerer {
-    {
-      const _appendTarget1 = sink;
-      const _appendValue2 = makeDiagnosticWithRelated(
-        code,
-        message,
-        span,
-        related,
-      );
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
-    }
+    sink[sink.length] = makeDiagnosticWithRelated(
+      code,
+      message,
+      span,
+      related,
+    );
 
     return self;
   }
@@ -418,17 +414,13 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
         kindOf(tree, c) === SyntaxKind.Token &&
         tree.lexed.kinds[tree.tokens[c]] === TokenKind.Question
       );
-      {
-        const _appendTarget3 = result;
-        const _appendValue4 = {
-          name: name,
-          optional: optional,
-          type: type,
-          span: spanOf(fieldNode),
-          typeSpan: spanOf(typeNode ?? fieldNode),
-        };
-        _appendTarget3[_appendTarget3.length] = _appendValue4;
-      }
+      result[result.length] = {
+        name: name,
+        optional: optional,
+        type: type,
+        span: spanOf(fieldNode),
+        typeSpan: spanOf(typeNode ?? fieldNode),
+      };
     }
     return result;
   }
@@ -452,11 +444,7 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
         continue;
       }
       refs = refs.add(member.ref);
-      {
-        const _appendTarget5 = unique;
-        const _appendValue6 = member;
-        _appendTarget5[_appendTarget5.length] = _appendValue6;
-      }
+      unique[unique.length] = member;
     }
     if (unique.length === 0) {
       return errorLowered();
@@ -486,18 +474,10 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
         ) {
           out = collectUnion(inner[0], out);
         } else {
-          {
-            const _appendTarget7 = out;
-            const _appendValue8 = lowerType(kid);
-            _appendTarget7[_appendTarget7.length] = _appendValue8;
-          }
+          out[out.length] = lowerType(kid);
         }
       } else {
-        {
-          const _appendTarget9 = out;
-          const _appendValue10 = lowerType(kid);
-          _appendTarget9[_appendTarget9.length] = _appendValue10;
-        }
+        out[out.length] = lowerType(kid);
       }
     }
 
@@ -635,11 +615,7 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
       if (clause !== undefined) {
         for (const qn of kidsOfKind(tree, clause, SyntaxKind.QualifiedName)) {
           for (const capability of capabilitiesOf(qn)) {
-            {
-              const _appendTarget11 = provides;
-              const _appendValue12 = capability;
-              _appendTarget11[_appendTarget11.length] = _appendValue12;
-            }
+            provides[provides.length] = capability;
           }
         }
       }
@@ -726,19 +702,15 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
           ir: { kind: "primitive" as const, name: "unknown" as const },
         }
         : lowerType(typeNode);
-      {
-        const _appendTarget13 = result;
-        const _appendValue14 = {
-          name: name,
-          borrow: hasModifier(tree, param, "borrow"),
-          id: target?.kind === "local" ? target.id : undefined,
-          type: type,
-          annotated: typeNode !== undefined,
-          inferred: typeNode === undefined || type.ref === env.table.unknown,
-          span: spanOf(param),
-        };
-        _appendTarget13[_appendTarget13.length] = _appendValue14;
-      }
+      result[result.length] = {
+        name: name,
+        borrow: hasModifier(tree, param, "borrow"),
+        id: target?.kind === "local" ? target.id : undefined,
+        type: type,
+        annotated: typeNode !== undefined,
+        inferred: typeNode === undefined || type.ref === env.table.unknown,
+        span: spanOf(param),
+      };
     }
     return result;
   }
@@ -751,9 +723,7 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
     for (const name of kidsOfKind(tree, clause, SyntaxKind.Name)) {
       const target = env.targets.get(name);
       if (target?.kind === "error") {
-        const _appendTarget15 = ids;
-        const _appendValue16 = target.id;
-        _appendTarget15[_appendTarget15.length] = _appendValue16;
+        ids[ids.length] = target.id;
       } else if (target?.kind === "type") {
         ids = expandFailureAlias(name, table.named(target.id), ids, emptySet());
       }
@@ -774,9 +744,7 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
     seen = seen.add(unfolded);
     const node = table.node(unfolded);
     if (node.kind === "named" && isErrorId(node.id)) {
-      const _appendTarget17 = ids;
-      const _appendValue18 = node.id;
-      _appendTarget17[_appendTarget17.length] = _appendValue18;
+      ids[ids.length] = node.id;
     } else if (node.kind === "union") {
       for (const member of node.members) {
         ids = expandFailureAlias(nameNode, member, ids, seen);
@@ -801,11 +769,7 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
     const ids: CapabilityId[] = [];
     for (const qn of kidsOfKind(tree, clause, SyntaxKind.QualifiedName)) {
       for (const capability of capabilitiesOf(qn)) {
-        {
-          const _appendTarget19 = ids;
-          const _appendValue20 = capability;
-          _appendTarget19[_appendTarget19.length] = _appendValue20;
-        }
+        ids[ids.length] = capability;
       }
     }
     return sortedUnique(ids);
