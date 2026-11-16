@@ -42,8 +42,12 @@ type Linear = {
   readonly offset: bigint;
 };
 
+function constantLinear(offset: bigint): Linear {
+  return { terms: emptyMap(), offset: offset };
+}
+
 function zeroLinear(): Linear {
-  return { terms: emptyMap(), offset: 0n };
+  return constantLinear(0n);
 }
 
 type RefinementSnapshot = {
@@ -208,10 +212,7 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
       return undefined;
     }
     const left = linear(subject);
-    const right: Linear = {
-      terms: emptyMap(),
-      offset: bigInteger(value.toString()),
-    };
+    const right = constantLinear(bigInteger(value.toString()));
     return left === undefined ? undefined : compare(left, "===", right);
   }
 
@@ -304,16 +305,14 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
     consumedProofs = consumedProofs.set(expression, consumed);
     for (const proof of proofs) consumed = consumed.add(proof);
     if (proofs.length !== 1) {
-      ctx = flag(
+      return invalid(
         ctx,
-        AREA.types,
-        `${path}.proofs`,
+        path,
+        expression,
         proofs.length === 0
           ? `a value adopted as ${target} needs one proof`
           : `a value adopted as ${target} has duplicate proofs`,
-        expression.span,
       );
-      return ctx;
     }
     const proof = proofs[0];
     const declaration = ctx.world.types.get(target);
@@ -438,16 +437,12 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
       if (
         expression.kind === "literal" && typeof expression.value === "string"
       ) {
-        return {
-          terms: emptyMap(),
-          offset: bigInteger(expression.value.length.toString()),
-        };
+        return constantLinear(bigInteger(expression.value.length.toString()));
       }
       if (expression.kind === "array" || expression.kind === "tuple") {
-        return {
-          terms: emptyMap(),
-          offset: bigInteger(expression.elements.length.toString()),
-        };
+        return constantLinear(
+          bigInteger(expression.elements.length.toString()),
+        );
       }
       const base = pathOf(expression);
       return base === undefined ? undefined : linearForPath(base, true);
@@ -460,10 +455,7 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
       expression.kind === "literal" && typeof expression.value === "number" &&
       Number.isSafeInteger(expression.value) && expression.value >= 0
     ) {
-      return {
-        terms: emptyMap(),
-        offset: bigInteger(expression.value.toString()),
-      };
+      return constantLinear(bigInteger(expression.value.toString()));
     }
     const path = pathOf(expression);
     if (path !== undefined && integerPath(path)) {
@@ -721,7 +713,7 @@ function typeAssumptionsAt(
     (current.kind === "literal" && typeof current.value === "string")
   ) {
     const length = linearForPath(path, true);
-    const zero: Linear = { terms: emptyMap(), offset: 0n };
+    const zero = zeroLinear();
     const lower = difference(addLinear(zero, length, -1n), 0n);
     const upper = difference(
       addLinear(length, zero, -1n),

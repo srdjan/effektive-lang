@@ -2,7 +2,14 @@
 // groups, rechecked without the checker.
 
 import { isTrue } from "./guards.ts";
-import { emptyMap, emptySet, indices, mapFrom, setFrom } from "../runtime.ts";
+import {
+  deleteMapEntry,
+  emptyMap,
+  emptySet,
+  indices,
+  mapFrom,
+  setFrom,
+} from "../runtime.ts";
 import type { ModuleIR, Type } from "../ir.ts";
 import { AREA, type Report } from "./report.ts";
 import { dataOnly } from "./typing.ts";
@@ -180,7 +187,7 @@ function guardedDataGroups(
   let number = emptyMap<string, number>();
   let low = emptyMap<string, number>();
   const stack: string[] = [];
-  let onStack = emptySet<string>();
+  let onStack = emptyMap<string, boolean>();
   let groups = emptyMap<string, number>();
   let counter = 0;
   let groupCount = 0;
@@ -189,7 +196,7 @@ function guardedDataGroups(
     low = low.set(id, counter);
     counter = counter + 1;
     stack[stack.length] = id;
-    onStack = onStack.add(id);
+    onStack = onStack.set(id, true);
     for (const next of graph.get(id) ?? []) {
       if (!number.has(next)) {
         counter = strong(next);
@@ -203,7 +210,7 @@ function guardedDataGroups(
     for (const _index of indices(stack.length)) {
       const m = stack.pop();
       if (m === undefined) break;
-      if (!onStack.delete(m)) continue;
+      onStack = deleteMapEntry(onStack, m).map;
       members[members.length] = m;
       if (m === id) break;
     }

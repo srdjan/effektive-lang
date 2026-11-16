@@ -11,7 +11,7 @@
 // The equations come from the spec, "Equations and validation".
 
 import { flagAt, isTrue } from "./guards.ts";
-import { emptyMap, emptySet, setFrom } from "../runtime.ts";
+import { deleteMapEntry, emptyMap, emptySet, setFrom } from "../runtime.ts";
 import { panic } from "../source.ts";
 import {
   type BuiltinCallName,
@@ -156,6 +156,12 @@ function checkedResult(active: Active): Comp {
   return { kind: "checked", active: active };
 }
 
+/** How the message of a closure names the failures and the requirements of its body. */
+const BODY_EFFECT_VERBS = {
+  failures: "can fail with",
+  requirements: "requires",
+} as const;
+
 function isNullType(env: TypeEnv, type: Type): boolean {
   const unfolded = unfold(env, type);
   return unfolded.kind === "literal" && unfolded.value === null;
@@ -276,9 +282,7 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
   }
 
   function release(ids: readonly string[]): Ctx {
-    for (const id of ids) {
-      if (!scope.delete(id)) continue;
-    }
+    for (const id of ids) scope = deleteMapEntry(scope, id).map;
     refinements = refinements.release(ids);
     return ctx;
   }
@@ -1318,27 +1322,18 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         e.body.span,
       );
     }
-    if (!isSubset(body.failures, fn.effects.failures)) {
-      ctx = flag(
-        ctx,
-        AREA.contracts,
-        `${path}.type.effects.failures`,
-        `the body can fail with ${
-          list(body.failures)
-        }, the closure type lists ${list(fn.effects.failures)}`,
-        e.span,
-      );
-    }
-    if (!isSubset(body.requirements, fn.effects.requirements)) {
-      ctx = flag(
-        ctx,
-        AREA.contracts,
-        `${path}.type.effects.requirements`,
-        `the body requires ${list(body.requirements)}, the closure type lists ${
-          list(fn.effects.requirements)
-        }`,
-        e.span,
-      );
+    for (const key of ["failures", "requirements"] as const) {
+      if (!isSubset(body[key], fn.effects[key])) {
+        ctx = flag(
+          ctx,
+          AREA.contracts,
+          `${path}.type.effects.${key}`,
+          `the body ${BODY_EFFECT_VERBS[key]} ${
+            list(body[key])
+          }, the closure type lists ${list(fn.effects[key])}`,
+          e.span,
+        );
+      }
     }
     ctx = checkExecution(fn, body, path, e.span);
     // Construction evaluates no part of the body: closure construction is pure.
@@ -1369,10 +1364,10 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       const o = entry[1];
       const i = entry[0];
       if (builtin === "other") {
-        const fn = asFunction(env, o.type);
+        const callback = asFunction(env, o.type);
         if (
-          fn !== undefined &&
-          !isQuiet(invocationOf(fn))
+          callback !== undefined &&
+          !isQuiet(invocationOf(callback))
         ) {
           ctx = flag(
             ctx,
@@ -1411,11 +1406,7 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     const fn = asFunction(env, callee.type);
     const outs = e.arguments.map((argument, index) => {
       const previous = checkedRaw;
-      const checkedFlags = fn?.checked;
-      const checked = checkedFlags === undefined
-        ? undefined
-        : checkedFlags[index];
-      if (isTrue(checked)) {
+      if (flagAt(fn?.checked, index)) {
         checkedRaw = setFrom(previous);
         checkedRaw = markCheckedRaw(argument, checkedRaw);
       }
@@ -2067,10 +2058,6 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       );
       return checkedResult(active);
     }
-    function isNull(type: Type): boolean {
-      const value = unfold(env, type);
-      return value.kind === "literal" && value.value === null;
-    }
     const l = comparisonClass(env, left.type);
     const r = comparisonClass(env, right.type);
     if (
@@ -2110,9 +2097,10 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
       return comparable ? derivedResult(BOOLEAN, active) : mismatch();
     }
     if (e.operator === "===" || e.operator === "!==") {
-      const nullable = (isNull(left.type) &&
+      const nullable = (isNullType(env, left.type) &&
         fitsNullComparison(env, left.type, right.type)) ||
-        (isNull(right.type) && fitsNullComparison(env, right.type, left.type));
+        (isNullType(env, right.type) &&
+          fitsNullComparison(env, right.type, left.type));
       const comparable = nullable || l !== undefined && r !== undefined &&
           compatibleClasses(env, l, r) && !closedUnitsDiffer(l, r);
       return comparable ? derivedResult(BOOLEAN, active) : mismatch();
