@@ -29,7 +29,7 @@ import {
   UNIT,
 } from "../typing.ts";
 import { walkExprs } from "../expr_walk.ts";
-import type { ValidatorCore } from "./context.ts";
+import { flagCore, type ValidatorCore } from "./context.ts";
 import { type Comp, derivedResult, fittedResult } from "../results.ts";
 
 export function scoped(
@@ -40,18 +40,7 @@ export function scoped(
   const value = c.check(e.value, `${path}.value`);
   const effect = unfold(c.env, value.type);
   if (effect.kind !== "effect") {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          path,
-          "scoped needs an Effect value",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(c, AREA.control, path, "scoped needs an Effect value", e.span);
     return c.poison();
   }
   return derivedResult(
@@ -74,33 +63,23 @@ export function forkScoped(
   const job = c.check(e.job, `${path}.job`);
   const effect = unfold(c.env, job.type);
   if (effect.kind !== "effect") {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          path,
-          "forkScoped needs an Effect value",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      path,
+      "forkScoped needs an Effect value",
+      e.span,
+    );
     return c.poison();
   }
   if (effect.effects.failures.length > 0) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          path,
-          "forkScoped needs an Effect value without typed failures",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      path,
+      "forkScoped needs an Effect value without typed failures",
+      e.span,
+    );
   }
   return derivedResult(
     UNIT,
@@ -122,18 +101,13 @@ function checkOperationRecord(
     value.kind !== "record" || value.fields.length === 0 ||
     value.fields.some((f) => f.optional)
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          path,
-          "acquisition must return a nonempty record of required operations",
-          span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      path,
+      "acquisition must return a nonempty record of required operations",
+      span,
+    );
     return c;
   }
   for (const field of value.fields) {
@@ -144,18 +118,13 @@ function checkOperationRecord(
       ) ||
       !dataOnly(c.env, fn.result, "value")
     ) {
-      c = {
-        ...c,
-        ctx: {
-          ...c.ctx,
-          report: c.add(
-            AREA.types,
-            `${path}.${field.name}`,
-            "an operation must take and return data-only values",
-            span,
-          ),
-        },
-      };
+      c = flagCore(
+        c,
+        AREA.types,
+        `${path}.${field.name}`,
+        "an operation must take and return data-only values",
+        span,
+      );
     }
   }
   return c;
@@ -173,18 +142,13 @@ function scopedReferences(
         nested || parent?.kind !== "get" || parent.record !== e ||
         grandparent?.kind !== "call" || grandparent.callee !== parent
       ) {
-        current = {
-          ...current,
-          ctx: {
-            ...current.ctx,
-            report: current.add(
-              AREA.control,
-              path,
-              "a scoped operation record may only be the direct receiver of an operation call",
-              e.span,
-            ),
-          },
-        };
+        current = flagCore(
+          current,
+          AREA.control,
+          path,
+          "a scoped operation record may only be the direct receiver of an operation call",
+          e.span,
+        );
       }
     }
     return current;
@@ -248,66 +212,46 @@ export function ensure(
     f.parameters.length > 1 ||
     e.finalizer.parameters.length !== f.parameters.length
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          `${path}.finalizer`,
-          "an ensure finalizer is a closure with zero or one parameter",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      `${path}.finalizer`,
+      "an ensure finalizer is a closure with zero or one parameter",
+      e.span,
+    );
     return c.poison();
   }
   if (f.parameters.length === 1) {
     const expected = outcomeOf(e.type, body.failures);
     if (!same(c.env, f.parameters[0], expected)) {
-      c = {
-        ...c,
-        ctx: {
-          ...c.ctx,
-          report: c.add(
-            AREA.types,
-            `${path}.finalizer.parameters[0]`,
-            `the outcome has type ${show(expected)}, recorded ${
-              show(f.parameters[0])
-            }`,
-            e.finalizer.span,
-          ),
-        },
-      };
+      c = flagCore(
+        c,
+        AREA.types,
+        `${path}.finalizer.parameters[0]`,
+        `the outcome has type ${show(expected)}, recorded ${
+          show(f.parameters[0])
+        }`,
+        e.finalizer.span,
+      );
     }
     if (!dataOnly(c.env, e.type, "value")) {
-      c = {
-        ...c,
-        ctx: {
-          ...c.ctx,
-          report: c.add(
-            AREA.types,
-            `${path}.type`,
-            "an outcome binding needs a data-only protected result",
-            e.span,
-          ),
-        },
-      };
+      c = flagCore(
+        c,
+        AREA.types,
+        `${path}.type`,
+        "an outcome binding needs a data-only protected result",
+        e.span,
+      );
     }
   }
   if (!fits(c.env, f.result, UNIT)) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          `${path}.finalizer.type.result`,
-          "a finalizer must return void",
-          e.finalizer.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      `${path}.finalizer.type.result`,
+      "a finalizer must return void",
+      e.finalizer.span,
+    );
   }
   return fittedResult(
     body.type,
@@ -331,18 +275,13 @@ export function withResource(
     e.release.kind !== "closure" || a === undefined || u === undefined ||
     r === undefined
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          path,
-          "with-resource requires three inline closures",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      path,
+      "with-resource requires three inline closures",
+      e.span,
+    );
     return c.poison();
   }
   if (
@@ -351,18 +290,13 @@ export function withResource(
     e.acquire.parameters.length !== 0 || e.use.parameters.length !== 1 ||
     e.release.parameters.length !== r.parameters.length
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          path,
-          "with-resource callback arity or scoped identity is invalid",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      path,
+      "with-resource callback arity or scoped identity is invalid",
+      e.span,
+    );
     return c.poison();
   }
   const acquired = unfold(c.env, a.result);
@@ -380,65 +314,45 @@ export function withResource(
     !same(c.env, a.result, u.parameters[0]) ||
     !same(c.env, a.result, r.parameters[0])
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          path,
-          "use and release must accept the acquired operation record",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      path,
+      "use and release must accept the acquired operation record",
+      e.span,
+    );
   }
   if (r.parameters.length === 2) {
     const expected = outcomeOf(u.result, u.effects.failures);
     if (!same(c.env, r.parameters[1], expected)) {
-      c = {
-        ...c,
-        ctx: {
-          ...c.ctx,
-          report: c.add(
-            AREA.types,
-            `${path}.release.parameters[1]`,
-            `the outcome has type ${show(expected)}, recorded ${
-              show(r.parameters[1])
-            }`,
-            e.release.span,
-          ),
-        },
-      };
+      c = flagCore(
+        c,
+        AREA.types,
+        `${path}.release.parameters[1]`,
+        `the outcome has type ${show(expected)}, recorded ${
+          show(r.parameters[1])
+        }`,
+        e.release.span,
+      );
     }
   }
   if (!fits(c.env, r.result, UNIT)) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          `${path}.release.type.result`,
-          "release must return void",
-          e.release.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      `${path}.release.type.result`,
+      "release must return void",
+      e.release.span,
+    );
   }
   if (!dataOnly(c.env, u.result, "value")) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          `${path}.use.type.result`,
-          "use must return data only",
-          e.use.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      `${path}.use.type.result`,
+      "use must return data only",
+      e.use.span,
+    );
   }
   const references = opaque ? borrowedReferences : scopedReferences;
   c = references(c, e.use.body, e.use.parameters[0].id, `${path}.use.body`);
@@ -495,18 +409,13 @@ export function borrowedReferences(
           : functionBorrows[index];
         const borrowed = isTrue(methodBorrow) || isTrue(functionBorrow);
         if (nested || index < 0 || !borrowed) {
-          current = {
-            ...current,
-            ctx: {
-              ...current.ctx,
-              report: current.add(
-                AREA.control,
-                path,
-                "borrowed handle may only pass to a borrow-qualified method",
-                expr.span,
-              ),
-            },
-          };
+          current = flagCore(
+            current,
+            AREA.control,
+            path,
+            "borrowed handle may only pass to a borrow-qualified method",
+            expr.span,
+          );
         }
       }
       return current;

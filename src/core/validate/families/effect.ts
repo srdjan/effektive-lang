@@ -33,7 +33,7 @@ import {
   unfold,
   UNIT,
 } from "../typing.ts";
-import type { ValidatorCore } from "./context.ts";
+import { flagCore, type ValidatorCore } from "./context.ts";
 import { type Comp, derivedResult, type Out } from "../results.ts";
 
 export function retry(
@@ -44,18 +44,13 @@ export function retry(
   const job = c.check(e.job, `${path}.job`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "retry");
   if (!Number.isSafeInteger(e.times) || e.times < 0) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          `${path}.times`,
-          `retry needs a finite nonnegative safe integer count, recorded ${e.times}`,
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      `${path}.times`,
+      `retry needs a finite nonnegative safe integer count, recorded ${e.times}`,
+      e.span,
+    );
   }
   if (fn === undefined) return c.poison();
   return derivedResult(
@@ -73,18 +68,13 @@ export function timeout(
   const duration = c.check(e.durationMs, `${path}.durationMs`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "timeout");
   if (!fits(c.env, duration.type, DURATION)) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          `${path}.durationMs`,
-          `timeout needs a Duration, found ${show(duration.type)}`,
-          e.durationMs.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      `${path}.durationMs`,
+      `timeout needs a Duration, found ${show(duration.type)}`,
+      e.durationMs.span,
+    );
   }
   if (fn === undefined) return c.poison();
   return derivedResult(
@@ -119,18 +109,13 @@ export function sleep(
 ): Comp {
   const duration = c.check(e.durationMs, `${path}.durationMs`);
   if (!fits(c.env, duration.type, DURATION)) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          `${path}.durationMs`,
-          `sleep needs a Duration, found ${show(duration.type)}`,
-          e.durationMs.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      `${path}.durationMs`,
+      `sleep needs a Duration, found ${show(duration.type)}`,
+      e.durationMs.span,
+    );
   }
   return derivedResult(UNIT, combine([duration, EFFECT_ONLY]));
 }
@@ -142,32 +127,22 @@ export function log(
 ): Comp {
   const message = c.check(e.message, `${path}.message`);
   if (!fits(c.env, message.type, STRING)) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          `${path}.message`,
-          `log needs a string message, found ${show(message.type)}`,
-          e.message.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      `${path}.message`,
+      `log needs a string message, found ${show(message.type)}`,
+      e.message.span,
+    );
   }
   if (!LOG_LEVELS.some((level) => level === e.level)) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          `${path}.level`,
-          `log needs a level of ${LOG_LEVELS.join(", ")}, recorded ${e.level}`,
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      `${path}.level`,
+      `log needs a level of ${LOG_LEVELS.join(", ")}, recorded ${e.level}`,
+      e.span,
+    );
   }
   const fields = e.fields === null
     ? undefined
@@ -175,35 +150,23 @@ export function log(
   if (fields !== undefined && e.fields !== null) {
     const record = unfold(c.env, fields.type);
     if (record.kind !== "record") {
-      c = {
-        ...c,
-        ctx: {
-          ...c.ctx,
-          report: c.add(
-            AREA.types,
-            `${path}.fields`,
-            `log needs a record of fields, found ${show(fields.type)}`,
-            e.fields.span,
-          ),
-        },
-      };
+      c = flagCore(
+        c,
+        AREA.types,
+        `${path}.fields`,
+        `log needs a record of fields, found ${show(fields.type)}`,
+        e.fields.span,
+      );
     } else {
       for (const field of record.fields) {
         if (!dataOnly(c.env, field.type, "value")) {
-          c = {
-            ...c,
-            ctx: {
-              ...c.ctx,
-              report: c.add(
-                AREA.types,
-                `${path}.fields`,
-                `log field ${field.name} must be data, found ${
-                  show(field.type)
-                }`,
-                e.fields.span,
-              ),
-            },
-          };
+          c = flagCore(
+            c,
+            AREA.types,
+            `${path}.fields`,
+            `log field ${field.name} must be data, found ${show(field.type)}`,
+            e.fields.span,
+          );
         }
       }
     }
@@ -232,18 +195,13 @@ export function randomInt(
     const operand = item[1];
     const child = item[2];
     if (!fits(c.env, operand.type, INT)) {
-      c = {
-        ...c,
-        ctx: {
-          ...c.ctx,
-          report: c.add(
-            AREA.types,
-            `${path}.${name}`,
-            `randomInt needs an int ${name}, found ${show(operand.type)}`,
-            child.span,
-          ),
-        },
-      };
+      c = flagCore(
+        c,
+        AREA.types,
+        `${path}.${name}`,
+        `randomInt needs an int ${name}, found ${show(operand.type)}`,
+        child.span,
+      );
     }
   }
   return derivedResult(INT, combine([min, max, EFFECT_ONLY]));
@@ -257,65 +215,45 @@ export function retrySchedule(
   const step = c.check(e.step, `${path}.step`);
   const fn = asFunction(c.env, step.type);
   if (fn === undefined || fn.parameters.length !== 2) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          `${path}.step`,
-          "retry schedule needs a two-parameter callback",
-          e.step.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      `${path}.step`,
+      "retry schedule needs a two-parameter callback",
+      e.step.span,
+    );
     return c.poison();
   }
   const error = unfold(c.env, fn.parameters[0]);
   if (error.kind !== "named" || !c.env.errors.has(error.id)) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          `${path}.step`,
-          "retry schedule needs a declared error parameter",
-          e.step.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      `${path}.step`,
+      "retry schedule needs a declared error parameter",
+      e.step.span,
+    );
   }
   if (
     !fits(c.env, INT, fn.parameters[1]) ||
     !fits(c.env, fn.result, { kind: "option", element: DURATION })
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          `${path}.step`,
-          "retry schedule needs an Int attempt and Option<Duration> result",
-          e.step.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      `${path}.step`,
+      "retry schedule needs an Int attempt and Option<Duration> result",
+      e.step.span,
+    );
   }
   if (!isQuiet(invocationOf(fn))) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          `${path}.step`,
-          "retry schedule callback must be pure",
-          e.step.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      `${path}.step`,
+      "retry schedule callback must be pure",
+      e.step.span,
+    );
   }
   return derivedResult(
     { kind: "retry-schedule", error: fn.parameters[0] },
@@ -349,24 +287,6 @@ function optionExtras(
 ): readonly Active[] {
   const call = spec.name;
   const extras: Active[] = [];
-  function bad(
-    current: ValidatorCore,
-    field: string,
-    what: string,
-  ): ValidatorCore {
-    return {
-      ...current,
-      ctx: {
-        ...current.ctx,
-        report: current.add(
-          AREA.control,
-          field,
-          what,
-          expr.span,
-        ),
-      },
-    };
-  }
   function accepts(
     current: ValidatorCore,
     input: Type,
@@ -377,13 +297,25 @@ function optionExtras(
       const label = item.label;
       const type = item.type;
       if (!fits(current.env, type, input)) {
-        current = bad(current, at, `${what} does not accept ${label}`);
+        current = flagCore(
+          current,
+          AREA.control,
+          at,
+          `${what} does not accept ${label}`,
+          expr.span,
+        );
       }
     }
     return current;
   }
   if (expr.kind !== "record") {
-    c = bad(c, `${path}.options`, `${call} needs an options record`);
+    c = flagCore(
+      c,
+      AREA.control,
+      `${path}.options`,
+      `${call} needs an options record`,
+      expr.span,
+    );
     return extras;
   }
   const shape = unfold(c.env, options.type);
@@ -393,7 +325,13 @@ function optionExtras(
       : undefined;
   }
   if (expr.fields.length === 0) {
-    c = bad(c, `${path}.options`, `${call} needs at least one option`);
+    c = flagCore(
+      c,
+      AREA.control,
+      `${path}.options`,
+      `${call} needs at least one option`,
+      expr.span,
+    );
   }
   let seen = emptySet<string>();
   for (const entry of expr.fields.entries()) {
@@ -401,11 +339,23 @@ function optionExtras(
     const i = entry[0];
     const at = `${path}.options.fields[${i}]`;
     if (!OPTION_KEYS[call].includes(field.name)) {
-      c = bad(c, at, `${call} has no option ${field.name}`);
+      c = flagCore(
+        c,
+        AREA.control,
+        at,
+        `${call} has no option ${field.name}`,
+        expr.span,
+      );
       continue;
     }
     if (seen.has(field.name)) {
-      c = bad(c, at, `${call} option ${field.name} appears twice`);
+      c = flagCore(
+        c,
+        AREA.control,
+        at,
+        `${call} option ${field.name} appears twice`,
+        expr.span,
+      );
       continue;
     }
     seen = seen.add(field.name);
@@ -416,10 +366,12 @@ function optionExtras(
         v.kind !== "literal" || typeof v.value !== "number" ||
         !Number.isSafeInteger(v.value) || v.value < 0
       ) {
-        c = bad(
+        c = flagCore(
           c,
+          AREA.control,
           `${at}.value`,
           `${call} needs a finite nonnegative safe integer literal for times`,
+          expr.span,
         );
       }
     } else if (field.name === "schedule") {
@@ -427,21 +379,35 @@ function optionExtras(
       if (policy?.kind === "retry-schedule") {
         c = accepts(c, policy.error, at, `${call} schedule`);
       } else {
-        c = bad(c, at, `${call} needs a retry schedule in schedule`);
+        c = flagCore(
+          c,
+          AREA.control,
+          at,
+          `${call} needs a retry schedule in schedule`,
+          expr.span,
+        );
       }
     } else {
       const cb = type === undefined ? undefined : asFunction(c.env, type);
       if (cb === undefined || cb.parameters.length !== 1) {
-        c = bad(
+        c = flagCore(
           c,
+          AREA.control,
           at,
           `${call} ${field.name} needs a one-parameter function`,
+          expr.span,
         );
         continue;
       }
       c = accepts(c, cb.parameters[0], at, `${call} ${field.name}`);
       if (!fits(c.env, cb.result, BOOLEAN)) {
-        c = bad(c, at, `${call} ${field.name} needs a boolean result`);
+        c = flagCore(
+          c,
+          AREA.control,
+          at,
+          `${call} ${field.name} needs a boolean result`,
+          expr.span,
+        );
       }
       extras[extras.length] = invocationOf(cb);
     }
@@ -524,20 +490,15 @@ export function run(
   const value = c.check(e.value, `${path}.value`);
   const type = unfold(c.env, value.type);
   if (type.kind !== "effect") {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          `${path}.value`,
-          `run needs an Effect value, but the expression has type ${
-            show(value.type)
-          }`,
-          e.value.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      `${path}.value`,
+      `run needs an Effect value, but the expression has type ${
+        show(value.type)
+      }`,
+      e.value.span,
+    );
     return c.poison();
   }
   return derivedResult(
@@ -559,35 +520,19 @@ export function race(
   const a = unfold(c.env, left.type);
   const b = unfold(c.env, right.type);
   if (a.kind !== "effect" || b.kind !== "effect") {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          path,
-          "race needs two Effect values",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(c, AREA.types, path, "race needs two Effect values", e.span);
     return c.poison();
   }
   const aFitsB = fits(c.env, a.result, b.result);
   const bFitsA = fits(c.env, b.result, a.result);
   if (!aFitsB && !bFitsA) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          path,
-          "race needs compatible success types",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      path,
+      "race needs compatible success types",
+      e.span,
+    );
   }
   return derivedResult({
     kind: "effect",
@@ -605,18 +550,13 @@ export function raceAll(
   const array = unfold(c.env, jobs.type);
   const job = array.kind === "array" ? unfold(c.env, array.element) : undefined;
   if (job?.kind !== "effect") {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          path,
-          "race needs an array of Effect values",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      path,
+      "race needs an array of Effect values",
+      e.span,
+    );
     return c.poison();
   }
   return derivedResult(

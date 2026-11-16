@@ -14,7 +14,7 @@ import {
   unionEffects,
 } from "../sets.ts";
 import { asFunction, fits, show, unfold } from "../typing.ts";
-import type { ValidatorCore } from "./context.ts";
+import { flagCore, type ValidatorCore } from "./context.ts";
 import { type Comp, derivedResult } from "../results.ts";
 
 export function layer(
@@ -29,18 +29,13 @@ export function layer(
     service === undefined || fn === undefined || fn.parameters.length !== 0 ||
     e.acquire.kind !== "closure"
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          path,
-          "layer needs a declared service and inline zero-argument callback",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      path,
+      "layer needs a declared service and inline zero-argument callback",
+      e.span,
+    );
     return c.poison();
   }
   const implementation = unfold(c.env, fn.result);
@@ -48,18 +43,13 @@ export function layer(
     implementation.kind !== "record" ||
     implementation.fields.length !== service.methods.length
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          `${path}.acquire`,
-          "layer must return exactly the service methods",
-          e.acquire.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      `${path}.acquire`,
+      "layer must return exactly the service methods",
+      e.acquire.span,
+    );
     return c.poison();
   }
   for (const method of service.methods) {
@@ -68,34 +58,24 @@ export function layer(
       field === undefined || field.optional ||
       !fits(c.env, field.type, method.type)
     ) {
-      c = {
-        ...c,
-        ctx: {
-          ...c.ctx,
-          report: c.add(
-            AREA.types,
-            `${path}.acquire`,
-            `layer method ${method.name} does not fit its service contract`,
-            e.acquire.span,
-          ),
-        },
-      };
+      c = flagCore(
+        c,
+        AREA.types,
+        `${path}.acquire`,
+        `layer method ${method.name} does not fit its service contract`,
+        e.acquire.span,
+      );
     }
   }
   const provides = sortedUnique(service.methods.map((m) => m.id));
   if (fn.effects.requirements.some((r) => provides.includes(r))) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          path,
-          "layer acquisition requires a method it provides",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      path,
+      "layer acquisition requires a method it provides",
+      e.span,
+    );
   }
   return derivedResult({
     kind: "provider",
@@ -114,18 +94,13 @@ export function mergeLayers(
   const a = unfold(c.env, left.type);
   const b = unfold(c.env, right.type);
   if (a.kind !== "provider" || b.kind !== "provider") {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          path,
-          "mergeLayers needs two Layer values",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      path,
+      "mergeLayers needs two Layer values",
+      e.span,
+    );
     return c.poison();
   }
   const services = setFrom(
@@ -134,18 +109,13 @@ export function mergeLayers(
   if (
     b.provides.some((id) => services.has(id.slice(0, id.lastIndexOf("."))))
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          path,
-          "mergeLayers cannot provide one service twice",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      path,
+      "mergeLayers cannot provide one service twice",
+      e.span,
+    );
   }
   return derivedResult({
     kind: "provider",
@@ -166,20 +136,15 @@ export function provide(
   const job = c.check(e.job, `${path}.job`);
   const providerType = unfold(c.env, provider.type);
   if (providerType.kind !== "provider") {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.control,
-          `${path}.provider`,
-          `provide needs a provider, but the expression has type ${
-            show(provider.type)
-          }`,
-          e.provider.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.control,
+      `${path}.provider`,
+      `provide needs a provider, but the expression has type ${
+        show(provider.type)
+      }`,
+      e.provider.span,
+    );
   }
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "provide");
   if (fn === undefined || providerType.kind !== "provider") {

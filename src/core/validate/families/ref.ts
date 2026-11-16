@@ -5,7 +5,7 @@ import type { Expr } from "../../ir.ts";
 import { AREA } from "../report.ts";
 import { combine, EFFECT_ONLY, invocationOf } from "../sets.ts";
 import { asFunction, fits, unfold, UNIT } from "../typing.ts";
-import { streamState, type ValidatorCore } from "./context.ts";
+import { flagCore, streamState, type ValidatorCore } from "./context.ts";
 import { type Comp, derivedResult } from "../results.ts";
 
 export function refOperation(
@@ -26,18 +26,7 @@ export function refOperation(
   const ref = c.check(e.ref, `${path}.ref`);
   const type = unfold(c.env, ref.type);
   if (type.kind !== "ref") {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          path,
-          `${e.kind} needs a Ref value`,
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(c, AREA.types, path, `${e.kind} needs a Ref value`, e.span);
     return c.poison();
   }
   if (e.kind === "get-ref") {
@@ -46,18 +35,13 @@ export function refOperation(
   if (e.kind === "set-ref") {
     const value = c.check(e.value, `${path}.value`);
     if (!fits(c.env, value.type, type.element)) {
-      c = {
-        ...c,
-        ctx: {
-          ...c.ctx,
-          report: c.add(
-            AREA.types,
-            `${path}.value`,
-            "the new value must fit the Ref element",
-            e.value.span,
-          ),
-        },
-      };
+      c = flagCore(
+        c,
+        AREA.types,
+        `${path}.value`,
+        "the new value must fit the Ref element",
+        e.value.span,
+      );
     }
     return derivedResult(UNIT, combine([ref, value, EFFECT_ONLY]));
   }
@@ -68,18 +52,13 @@ export function refOperation(
     !fits(c.env, type.element, fn.parameters[0]) ||
     !fits(c.env, fn.result, type.element)
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.execution,
-          `${path}.transform`,
-          "updateRef needs an element-to-element callback",
-          e.transform.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.execution,
+      `${path}.transform`,
+      "updateRef needs an element-to-element callback",
+      e.transform.span,
+    );
   }
   // An effectful callback runs inside the update, so the call takes its
   // failures and requirements.

@@ -29,7 +29,7 @@ import {
   same,
   unfold,
 } from "../typing.ts";
-import type { ValidatorCore } from "./context.ts";
+import { flagCore, type ValidatorCore } from "./context.ts";
 import { type Comp, derivedResult, type Out } from "../results.ts";
 
 type SchemaExpr = Extract<Expr, { readonly kind: "schema" }>;
@@ -157,18 +157,13 @@ function checkCallbackInputAuthority(
     foreignSealedOf(c.env, source.decoded) !== undefined &&
     foreignSealedOf(c.env, target.decoded) === undefined
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          call.path,
-          "a foreign module cannot pass a sealed type to a schema transformation callback",
-          call.e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      call.path,
+      "a foreign module cannot pass a sealed type to a schema transformation callback",
+      call.e.span,
+    );
   }
   return c;
 }
@@ -284,18 +279,13 @@ export function schema(
     recorded.kind === "schema" &&
     foreignSealedOf(c.env, recorded.decoded) !== undefined
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          path,
-          "a foreign module cannot derive a Schema that decodes to a sealed type",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      path,
+      "a foreign module cannot derive a Schema that decodes to a sealed type",
+      e.span,
+    );
   }
   return result;
 }
@@ -375,18 +365,7 @@ function closureArg(
 }
 
 function schemaBad(c: ValidatorCore, call: SchemaCall, message: string): Comp {
-  c = {
-    ...c,
-    ctx: {
-      ...c.ctx,
-      report: c.add(
-        AREA.types,
-        call.path,
-        message,
-        call.e.span,
-      ),
-    },
-  };
+  c = flagCore(c, AREA.types, call.path, message, call.e.span);
   return c.poison();
 }
 
@@ -933,36 +912,26 @@ export function schemaOperation(
       (isTrue(type.optionalKey) || isTrue(type.encodedOptionalKey) ||
         isTrue(type.decodedOptionalKey)))
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          path,
-          "schema runner needs an ordinary Schema value",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      path,
+      "schema runner needs an ordinary Schema value",
+      e.span,
+    );
     return c.poison();
   }
   if (
     e.kind !== "schema-encode" &&
     foreignSealedOf(c.env, type.decoded) !== undefined
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          path,
-          "a foreign module cannot decode or make a sealed type",
-          e.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      path,
+      "a foreign module cannot decode or make a sealed type",
+      e.span,
+    );
   }
   if (
     e.kind !== "schema-decode" &&
@@ -972,20 +941,15 @@ export function schemaOperation(
       e.kind === "schema-make" ? type.makeInput ?? type.decoded : type.decoded,
     )
   ) {
-    c = {
-      ...c,
-      ctx: {
-        ...c.ctx,
-        report: c.add(
-          AREA.types,
-          `${path}.input`,
-          `${
-            e.kind === "schema-make" ? "schemaMake" : "schemaEncode"
-          } input does not fit decoded type`,
-          e.input.span,
-        ),
-      },
-    };
+    c = flagCore(
+      c,
+      AREA.types,
+      `${path}.input`,
+      `${
+        e.kind === "schema-make" ? "schemaMake" : "schemaEncode"
+      } input does not fit decoded type`,
+      e.input.span,
+    );
   }
   let requirements = type.encodeRequirements;
   if (e.kind === "schema-make") requirements = [];

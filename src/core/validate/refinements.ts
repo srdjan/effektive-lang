@@ -261,16 +261,13 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
       const proof = entry[1];
       const index = entry[0];
       if (!consumedProofs.get(expression)?.has(proof)) {
-        ctx = {
-          ...ctx,
-          report: ctx.report
-            .add(
-              AREA.types,
-              `${path}.proofs[${index}]`,
-              "the proof has no supported obligation on this expression",
-              expression.span,
-            ),
-        };
+        ctx = flag(
+          ctx,
+          AREA.types,
+          `${path}.proofs[${index}]`,
+          "the proof has no supported obligation on this expression",
+          expression.span,
+        );
       }
     }
     for (const entry of children(expression).entries()) {
