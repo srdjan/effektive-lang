@@ -1673,9 +1673,10 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
       diagnostics: normalizeDiagnostics(resolverDiagnostics),
     };
   }
-  return {
+  resolverSelf = {
     run: resolverRun,
   };
+  return resolverSelf;
 }
 /** Resolves every module of the project. The map follows the topological order. */
 export function resolveProject(

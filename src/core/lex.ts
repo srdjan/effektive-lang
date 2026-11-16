@@ -98,7 +98,6 @@ export type LexerStatus = boolean;
 export type TokenDescription = string;
 export type LexerNumber = number;
 
-/** Narrows one compact token-array value to its stable token kind. */
 /** The kind that has the number `value`. The numbers run from Eof to Percent without gaps. */
 export function tokenKind(value: LexerNumber): TokenKind | undefined {
   return Number.isInteger(value) && value >= TokenKind.Eof &&
