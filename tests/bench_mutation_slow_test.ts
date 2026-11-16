@@ -4,6 +4,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { describeLspBenchError } from "../bench/lsp_script.ts";
 import { runM7 } from "../bench/m7.ts";
+import { runVariants } from "../bench/m5_variants.ts";
 import { writeTarget } from "../bench/m5_target.ts";
 
 Deno.test("writeTarget adds the mark comment to the marked file only", () => {
@@ -46,4 +47,26 @@ Deno.test("M7 times one cold save for each side of each cold pair", async () => 
   const cold = result.value.rows.find((row) => row.scenario === "cold");
   assertEquals(cold?.pairs.length, 2);
   assertEquals(cold?.samples.length, 4);
+});
+
+Deno.test("the M5 variants time the cold processes and the warm service on a small target", async () => {
+  const outcome = await runVariants([{
+    name: "tiny",
+    files: new Map([["app.ts", "export const a: number = 1;\n"]]),
+    marked: "app.ts",
+  }], { pairs: 1, warmups: 0 });
+  assert(outcome.ok);
+  assertEquals(outcome.value.skipped, []);
+  assertEquals(
+    outcome.value.results.map((result) => result.variant),
+    [
+      "tsc 5.9.3 cold process",
+      "tsgo 7.0.0-dev.20260707.2 cold process",
+      "ts.LanguageService 5.9.3 warm",
+    ],
+  );
+  const service = outcome.value.results[2];
+  assertEquals(service?.pairs.length, 1);
+  assertEquals(service?.samples.length, 2);
+  assertEquals(typeof service?.firstCall, "number");
 });
