@@ -91,6 +91,12 @@ After FZU16, Opus does Step 4 of the fresh-eyes method: it lists abstraction can
 
 When the plan is complete, the completing commit moves this file to `docs/archive/plans/` and updates the registry path.
 
+### Results
+
+| Unit | Commits | Result |
+| --- | --- | --- |
+| FZU1 | 1 | FZ90 is fixed. `tests/proof_budget_slow_test.ts` took 7 minutes 16 seconds before the fix, at a load average of 6 to 12. It took 3.4 seconds after the fix on `main`, at a load average of 17.8. `deno task check` exits 0 in 46.5 seconds: 3312 fast tests passed and 6 ignored, 326 slow tests passed, and the slow suite took 31 seconds. Before the fix the slow suite took about 8 minutes. |
+
 ## Method and evidence limits
 
 Thirteen read-only Opus examiners each examined one slice:

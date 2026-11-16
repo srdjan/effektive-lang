@@ -752,16 +752,17 @@ function Resolver(info: ModuleInfo, project: Project): Resolver {
     const passed: Scope[] = [];
     let found: Found | undefined;
     let scope = resolverScope;
+    // The scope chain is never longer than the node count, so the node list
+    // bounds the walk. The walk stops at the outermost scope or at a binding.
     for (const _kind of resolverTree.kinds) {
-      if (scope !== undefined && found === undefined) {
-        const binding = scope.binding(name);
-        if (binding !== undefined) {
-          found = { tag: "local", binding: binding };
-        } else {
-          passed[passed.length] = scope;
-        }
-        scope = scope.parent;
+      if (scope === undefined || found !== undefined) break;
+      const binding = scope.binding(name);
+      if (binding !== undefined) {
+        found = { tag: "local", binding: binding };
+      } else {
+        passed[passed.length] = scope;
       }
+      scope = scope.parent;
     }
     if (found === undefined) {
       const moduleBinding = resolverNamespace.get(name);
