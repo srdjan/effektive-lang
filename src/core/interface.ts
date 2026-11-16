@@ -74,20 +74,16 @@ function byId<
 }
 /** Removes every `span` key. A span depends on the position of the text, not on its meaning. */
 export function stripSpans(value: UnknownValue): UnknownValue {
-  if (value === null || typeof value !== "object") {
-    return value;
-  }
   if (Array.isArray(value)) {
     return value.map((item) => stripSpans(item));
   }
-  const result: Record<string, unknown> = {};
   if (!isRecord(value)) return value;
-  const record = value;
-  for (const key of Object.keys(record)) {
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(value)) {
     if (key === "span") {
       continue;
     }
-    result[key] = stripSpans(record[key]);
+    result[key] = stripSpans(value[key]);
   }
   return result;
 }

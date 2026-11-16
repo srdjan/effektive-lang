@@ -49,7 +49,6 @@ function findProblem(value: unknown, path: string): SerializeError | undefined {
       ? undefined
       : { tag: "non-finite-number", path: path };
   }
-  if (value === null || typeof value !== "object") return undefined;
   if (Array.isArray(value)) {
     for (const i of value.keys()) {
       const problem = findProblem(value[i], `${path}[${i}]`);
@@ -58,9 +57,8 @@ function findProblem(value: unknown, path: string): SerializeError | undefined {
     return undefined;
   }
   if (!isRecord(value)) return undefined;
-  const record = value;
-  for (const key of Object.keys(record)) {
-    const item = record[key];
+  for (const key of Object.keys(value)) {
+    const item = value[key];
     if (
       SET_KEYS.includes(key) && Array.isArray(item) && !isSortedUnique(item)
     ) {

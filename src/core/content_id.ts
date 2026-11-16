@@ -18,9 +18,7 @@ function print(
   indent: string,
 ): string {
   if (value === undefined) return "null";
-  if (value === null || typeof value !== "object") {
-    return JSON.stringify(value);
-  }
+  if (!isRecord(value) && !Array.isArray(value)) return JSON.stringify(value);
   const inner = `${indent}${step ?? ""}`;
   const join = step === undefined ? "," : ",\n";
   function wrap(
@@ -36,12 +34,10 @@ function print(
     const items = value.map((item) => `${inner}${print(item, step, inner)}`);
     return wrap("[", items, "]");
   }
-  if (!isRecord(value)) return "null";
-  const record = value;
   const colon = step === undefined ? ":" : ": ";
-  const members = Object.keys(record).filter((k) => record[k] !== undefined)
+  const members = Object.keys(value).filter((k) => value[k] !== undefined)
     .sort(compareText).map((key) =>
-      `${inner}${JSON.stringify(key)}${colon}${print(record[key], step, inner)}`
+      `${inner}${JSON.stringify(key)}${colon}${print(value[key], step, inner)}`
     );
   return wrap("{", members, "}");
 }
