@@ -93,7 +93,6 @@ export function InputContractResolver(
     DeferredCall,
     Set<TypeRef>
   >();
-  let inputContractResolverResolved = emptySet<DeferredCall>();
   for (const root of roots) {
     inputContractResolverOrigins = inputContractResolverOrigins.set(root.id, {
       root: root,
@@ -228,8 +227,7 @@ export function InputContractResolver(
       readonly inferred: boolean;
     }[],
   ): Resolution {
-    inputContractResolverResolved =
-      inputContractResolverPropagateDeferredCalls();
+    const resolved = inputContractResolverPropagateDeferredCalls();
     const issues: ContractIssue[] = [];
     const types = parameters.map((parameter) => {
       if (!parameter.inferred || parameter.id === undefined) {
@@ -247,9 +245,7 @@ export function InputContractResolver(
       for (
         const call
           of (inputContractResolverDeferredCalls.get(parameter.id) ?? [])
-            .filter((candidate) =>
-              !inputContractResolverResolved.has(candidate)
-            )
+            .filter((candidate) => !resolved.has(candidate))
       ) {
         {
           const _appendTarget5 = issues;
@@ -280,6 +276,7 @@ export function InputContractResolver(
     return inputContractResolverQueuedCalls.add(call);
   }
   function inputContractResolverPropagateDeferredCalls(): Set<DeferredCall> {
+    let resolved = emptySet<DeferredCall>();
     for (const call of inputContractResolverPendingCalls) {
       if (!inputContractResolverQueuedCalls.delete(call)) {
         continue;
@@ -299,14 +296,11 @@ export function InputContractResolver(
           continue;
         }
         if (call.applyContract(evidence)) {
-          inputContractResolverResolved = inputContractResolverResolved.add(
-            call,
-          );
+          resolved = resolved.add(call);
         }
       }
     }
-    inputContractResolverPendingCalls.length = 0;
-    return inputContractResolverResolved;
+    return resolved;
   }
   function inputContractResolverContractsFor(origin: Origin): TypeRef[] {
     let contracts = emptySet<TypeRef>();
