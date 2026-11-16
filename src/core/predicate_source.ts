@@ -10,6 +10,7 @@ import {
   or,
   type Predicate,
   type Term,
+  termKey,
 } from "./predicates.ts";
 import {
   kindOf,
@@ -392,15 +393,6 @@ function hasLength(table: TypeTable, ref: TypeRef): boolean {
   }
   return node.kind === "union" &&
     node.members.every((member) => hasLength(table, member));
-}
-function termKey(term: Term): string {
-  if (term.kind === "zero" || term.kind === "input") {
-    return term.kind;
-  }
-  if (term.kind === "field") {
-    return `field:${term.path.join(".")}`;
-  }
-  return `length:${term.path.join(".")}:${term.unit}`;
 }
 function fail<T>(
   tree: SyntaxTree,

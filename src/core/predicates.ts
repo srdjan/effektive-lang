@@ -83,56 +83,37 @@ export function constant(value: PredicateTruth): Predicate {
   return { kind: "constant", value: value };
 }
 export function and(operands: readonly Predicate[]): Predicate {
-  const flat: Predicate[] = [];
-  for (const operand of operands) {
-    if (operand.kind === "constant") {
-      if (!operand.value) {
-        return operand;
-      }
-      continue;
-    }
-    if (operand.kind === "and") {
-      const _appendTarget1 = flat;
-      const _appendValues2 = [...operand.operands];
-      for (const _appendItem3 of _appendValues2) {
-        _appendTarget1[_appendTarget1.length] = _appendItem3;
-      }
-    } else {
-      const _appendTarget4 = flat;
-      const _appendValue5 = operand;
-      _appendTarget4[_appendTarget4.length] = _appendValue5;
-    }
-  }
-  if (flat.length === 0) {
-    return constant(true);
-  }
-  return flat.length === 1 ? flat[0] : { kind: "and", operands: flat };
+  return junction("and", false, operands);
 }
 export function or(operands: readonly Predicate[]): Predicate {
+  return junction("or", true, operands);
+}
+/** Flattens nested nodes of one kind. A constant equal to `absorbing` decides the result. */
+function junction(
+  kind: "and" | "or",
+  absorbing: PredicateTruth,
+  operands: readonly Predicate[],
+): Predicate {
   const flat: Predicate[] = [];
   for (const operand of operands) {
     if (operand.kind === "constant") {
-      if (operand.value) {
+      if (operand.value === absorbing) {
         return operand;
       }
       continue;
     }
-    if (operand.kind === "or") {
-      const _appendTarget6 = flat;
-      const _appendValues7 = [...operand.operands];
-      for (const _appendItem8 of _appendValues7) {
-        _appendTarget6[_appendTarget6.length] = _appendItem8;
+    if (operand.kind === kind) {
+      for (const item of operand.operands) {
+        flat[flat.length] = item;
       }
     } else {
-      const _appendTarget9 = flat;
-      const _appendValue10 = operand;
-      _appendTarget9[_appendTarget9.length] = _appendValue10;
+      flat[flat.length] = operand;
     }
   }
   if (flat.length === 0) {
-    return constant(false);
+    return constant(!absorbing);
   }
-  return flat.length === 1 ? flat[0] : { kind: "or", operands: flat };
+  return flat.length === 1 ? flat[0] : { kind: kind, operands: flat };
 }
 export function not(operand: Predicate): Predicate {
   if (operand.kind === "constant") {
@@ -516,11 +497,7 @@ function negativeCycle(constraints: readonly Constraint[], budget: Budget): {
     if (index === undefined) {
       return { kind: "none" };
     }
-    {
-      const _appendTarget19 = cycle;
-      const _appendValue20 = index;
-      _appendTarget19[_appendTarget19.length] = _appendValue20;
-    }
+    cycle[cycle.length] = index;
     node = constraints[index].rightKey;
     if (node === start) {
       break;
@@ -627,19 +604,19 @@ function isPredicateRecord(value: unknown): value is Predicate {
   return typeof value === "object" && value !== null &&
     hasProperty(value, "kind");
 }
-function termKey(term: Term): string {
-  {
-    const kind_1 = term.kind;
-    if (kind_1 === "zero") {
-      return "z";
-    } else if (kind_1 === "input") {
-      return "i";
-    } else if (kind_1 === "field") {
-      return `f${JSON.stringify(term.path)}`;
-    } else {
-      return `l${JSON.stringify(term.path)}`;
-    }
+type TermKey = string;
+/** Returns a key that is equal for equal terms. */
+export function termKey(term: Term): TermKey {
+  if (term.kind === "zero") {
+    return "z";
   }
+  if (term.kind === "input") {
+    return "i";
+  }
+  if (term.kind === "field") {
+    return `f${JSON.stringify(term.path)}`;
+  }
+  return `l${JSON.stringify(term.path)}`;
 }
 function checkLimits(limits: SolverLimits): Result<true, PredicateError> {
   if (!Number.isSafeInteger(limits.maxSteps) || limits.maxSteps < 0) {
