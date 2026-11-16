@@ -5,6 +5,7 @@ import { assert, assertEquals } from "@std/assert";
 import { fromFileUrl, toFileUrl } from "@std/path";
 import { build } from "../playground/build.ts";
 import { Program } from "../src/core/frontend.ts";
+import { withTemporaryDirectory } from "./process_helpers.ts";
 
 const OUTPUTS: readonly string[] = [
   "index.html",
@@ -27,8 +28,7 @@ const EXAMPLE_PATHS: readonly string[] = [
 ];
 
 Deno.test("build writes the page files and the examples", async () => {
-  const dir = Deno.makeTempDirSync({ prefix: "effektive-playground-" });
-  try {
+  await withTemporaryDirectory("effektive-playground-", async (dir) => {
     const out = `${dir}/dist`;
     const result = await build(out);
     assert(result.ok, result.ok ? "" : JSON.stringify(result.error));
@@ -52,14 +52,11 @@ Deno.test("build writes the page files and the examples", async () => {
     assert(app.byteLength > 0);
     assertEquals(result.value.appBytes, app.byteLength);
     assert(result.value.appGzipBytes > 0);
-  } finally {
-    Deno.removeSync(dir, { recursive: true });
-  }
+  });
 });
 
 Deno.test("build refuses repository targets reached through symbolic links", async () => {
-  const dir = Deno.makeTempDirSync({ prefix: "effektive-playground-links-" });
-  try {
+  await withTemporaryDirectory("effektive-playground-links-", async (dir) => {
     const root = `${dir}/repository`;
     Deno.mkdirSync(`${root}/playground`, { recursive: true });
     Deno.mkdirSync(`${root}/src/core`, { recursive: true });
@@ -91,7 +88,5 @@ Deno.test("build refuses repository targets reached through symbolic links", asy
       });
       assertEquals(Deno.readTextFileSync(sentinel), "keep");
     }
-  } finally {
-    Deno.removeSync(dir, { recursive: true });
-  }
+  });
 });

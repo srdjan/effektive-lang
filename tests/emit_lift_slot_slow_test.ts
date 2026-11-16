@@ -7,7 +7,7 @@ import { assert, assertEquals } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
 import { LIFT_PROGRAMS } from "./lift_slot_programs.ts";
-import { deno, runScript } from "./process_helpers.ts";
+import { deno, runScript, withTemporaryDirectory } from "./process_helpers.ts";
 import { validationProblems } from "./validate_helpers.ts";
 
 const CLI = fromFileUrl(new URL("../src/cli/main.ts", import.meta.url));
@@ -16,14 +16,11 @@ async function withProgram<T>(
   text: string,
   body: (dir: string) => Promise<T>,
 ): Promise<T> {
-  const dir = Deno.makeTempDirSync({ prefix: "effektive-lift-" });
-  try {
+  return await withTemporaryDirectory("effektive-lift-", async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(`${dir}/m.eff`, text);
     return await body(dir);
-  } finally {
-    Deno.removeSync(dir, { recursive: true });
-  }
+  });
 }
 
 /** Builds the directory with `--tsc`. The run must report no diagnostic. */

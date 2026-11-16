@@ -6,7 +6,7 @@
 import { assertEquals } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
-import { deno, runScript } from "./process_helpers.ts";
+import { deno, runScript, withTemporaryDirectory } from "./process_helpers.ts";
 
 const CLI = fromFileUrl(new URL("../src/cli/main.ts", import.meta.url));
 
@@ -53,8 +53,7 @@ console.log(JSON.stringify({
 `;
 
 Deno.test("a computed pure callback runs at the expression that the source writes", async () => {
-  const dir = Deno.makeTempDirSync({ prefix: "effektive-lift-once-" });
-  try {
+  await withTemporaryDirectory("effektive-lift-once-", async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(`${dir}/m.eff`, PROGRAM);
     const build = await deno(dir, [
@@ -88,7 +87,5 @@ Deno.test("a computed pure callback runs at the expression that the source write
       viaMatch: "viaMatch: RangeError: int overflow",
       traversed: "traversed: RangeError: int overflow",
     });
-  } finally {
-    Deno.removeSync(dir, { recursive: true });
-  }
+  });
 });

@@ -5,6 +5,7 @@
 // that kills some mutants and not others, so the expected survivors are known.
 
 import { assertEquals, assertStringIncludes } from "@std/assert";
+import { withTemporaryDirectory } from "./process_helpers.ts";
 
 interface Run {
   readonly code: number;
@@ -118,8 +119,7 @@ async function inRepo(
   files: Readonly<Record<string, string>>,
   body: (dir: string) => Promise<void>,
 ): Promise<void> {
-  const dir = await Deno.makeTempDir({ prefix: "effektive-mutate-tool-" });
-  try {
+  await withTemporaryDirectory("effektive-mutate-tool-", async (dir) => {
     await lay(dir, files);
     await runCommand("git", ["init", "-q"], dir);
     await runCommand("git", ["add", "-A"], dir);
@@ -139,9 +139,7 @@ async function inRepo(
     ], dir);
     assertEquals(committed.code, 0, committed.stderr);
     await body(dir);
-  } finally {
-    await Deno.remove(dir, { recursive: true });
-  }
+  });
 }
 
 /** Runs the copy of the tool in `dir`. The tool has no type-checked imports. */
@@ -360,14 +358,11 @@ Deno.test("a missing register gives exit 2", async () => {
 });
 
 Deno.test("a directory that is not a git repository gives exit 2", async () => {
-  const dir = await Deno.makeTempDir({ prefix: "effektive-mutate-tool-" });
-  try {
+  await withTemporaryDirectory("effektive-mutate-tool-", async (dir) => {
     await lay(dir, FIXTURE);
     const run = await mutate(dir, [...TESTS, SAMPLE_PATH]);
     assertEquals(run.stdout, "");
     assertStringIncludes(run.stderr, "mutate: git archive failed: ");
     assertEquals(run.code, 2);
-  } finally {
-    await Deno.remove(dir, { recursive: true });
-  }
+  });
 });

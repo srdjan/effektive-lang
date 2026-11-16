@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { runChecked, runProcess, withTempDir } from "../scripts/lib.ts";
+import { withTemporaryDirectory } from "./process_helpers.ts";
 
 Deno.test("runProcess returns the streams and the exit code", async () => {
   const result = await runProcess("deno", [
@@ -37,16 +38,13 @@ Deno.test("runChecked words a failure in the stderr style", async () => {
 });
 
 Deno.test("runProcess runs in the directory and with the environment of the caller", async () => {
-  const dir = Deno.makeTempDirSync({ prefix: "lib-test-" });
-  try {
+  await withTemporaryDirectory("lib-test-", async (dir) => {
     const result = await runProcess("deno", [
       "eval",
       "console.log(Deno.cwd() + ' ' + Deno.env.get('LIB_TEST_VALUE'))",
     ], { cwd: dir, env: { LIB_TEST_VALUE: "seen" } });
     assertEquals(result.stdout, `${Deno.realPathSync(dir)} seen\n`);
-  } finally {
-    Deno.removeSync(dir, { recursive: true });
-  }
+  });
 });
 
 Deno.test("runProcess leaves the text of a stream empty when the stream is not piped", async () => {
