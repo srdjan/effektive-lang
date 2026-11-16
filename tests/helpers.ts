@@ -680,8 +680,6 @@ export function projectFiles(dir: string): Record<string, string> {
   return files;
 }
 
-// ------------------------------------------------------------------ validator
-
 // ------------------------------------------------------------------ host boundary
 
 /** One entry of `fixtures/host-boundary/manifest.json`. */

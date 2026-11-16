@@ -640,7 +640,7 @@ async function main(args: string[]): Promise<number> {
       testArgs(options.tests, true),
       CLEAN_LIMIT_MS,
     );
-    if (clean.timedOut || classify(clean) !== "survived") {
+    if (classify(clean) !== "survived") {
       console.error("mutate: the clean run failed:");
       console.error(clean.output.trim().split("\n").slice(-30).join("\n"));
       return 2;

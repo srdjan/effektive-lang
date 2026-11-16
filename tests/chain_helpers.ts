@@ -1,10 +1,11 @@
 // @light-fp adapter
-import { TypeScriptOutputs } from "../src/core/typescript.ts";
-const outputs = new TypeScriptOutputs();
 // Builds long left-deep chains and runs them through every compiler pass.
 
 import { Program } from "../src/core/mod.ts";
+import { TypeScriptOutputs } from "../src/core/typescript.ts";
 import { validateRevision } from "./validate_helpers.ts";
+
+const outputs = new TypeScriptOutputs();
 
 export type ChainForm = "binary" | "pipeline" | "call" | "field" | "array";
 
