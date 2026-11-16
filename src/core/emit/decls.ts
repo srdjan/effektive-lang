@@ -897,14 +897,14 @@ function predicateDoc(predicate: Predicate, input: string): Doc {
       return String(predicate.kind === "and");
     }
     const separator = predicate.kind === "and" ? " && " : " || ";
-    const out: Doc[] = ["("];
-    for (const operandEntry of predicate.operands.entries()) {
-      const index = operandEntry[0];
-      const operand = operandEntry[1];
-      if (index > 0) out[out.length] = separator;
-      out[out.length] = predicateDoc(operand, input);
-    }
-    return [...out, ")"];
+    return [
+      "(",
+      join(
+        separator,
+        predicate.operands.map((operand) => predicateDoc(operand, input)),
+      ),
+      ")",
+    ];
   }
   return `(${term(predicate.left)} - ${
     term(predicate.right)

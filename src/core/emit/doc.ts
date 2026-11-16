@@ -349,6 +349,14 @@ type Cmd = {
   readonly mode: Mode;
   readonly doc: Doc;
 };
+/** A command for `doc` at the indentation and in the mode of `cmd`. */
+function child(cmd: Cmd, doc: Doc): Cmd {
+  return { indent: cmd.indent, mode: cmd.mode, doc: doc };
+}
+/** A command for `doc` at the indentation of `cmd`, in `mode`. */
+function childIn(cmd: Cmd, mode: Mode, doc: Doc): Cmd {
+  return { indent: cmd.indent, mode: mode, doc: doc };
+}
 function isText(doc: Doc): doc is string {
   return typeof doc === "string";
 }
@@ -428,11 +436,7 @@ export function render(
         left = left - d.length;
       } else if (isList(d)) {
         for (const i of reverseIndices(d.length)) {
-          cmds[cmds.length] = {
-            indent: cmd.indent,
-            mode: cmd.mode,
-            doc: d[i],
-          };
+          cmds[cmds.length] = child(cmd, d[i]);
         }
       } else {
         if (d.k === "line") {
@@ -450,11 +454,7 @@ export function render(
         }
         if (d.k === "group") {
           const mode: Mode = d.brk || hasHard(d.d) ? "break" : cmd.mode;
-          cmds[cmds.length] = {
-            indent: cmd.indent,
-            mode: mode,
-            doc: d.d,
-          };
+          cmds[cmds.length] = childIn(cmd, mode, d.d);
           continue;
         }
         if (d.k === "indent") {
@@ -466,11 +466,7 @@ export function render(
           continue;
         }
         if (d.k === "span" || d.k === "mark") {
-          cmds[cmds.length] = {
-            indent: cmd.indent,
-            mode: cmd.mode,
-            doc: d.d,
-          };
+          cmds[cmds.length] = child(cmd, d.d);
           continue;
         }
         if (d.k === "fill") {
@@ -493,43 +489,36 @@ export function render(
           continue;
         }
         if (d.k === "ifbroke") {
-          cmds[cmds.length] = {
-            indent: cmd.indent,
-            mode: cmd.mode,
-            doc: broke.has(d.id) ? d.broken : d.flat,
-          };
+          cmds[cmds.length] = child(cmd, broke.has(d.id) ? d.broken : d.flat);
           continue;
         }
         if (d.k === "ifbreak") {
-          cmds[cmds.length] = {
-            indent: cmd.indent,
-            mode: cmd.mode,
-            doc: cmd.mode === "break" ? d.broken : d.flat,
-          };
+          cmds[cmds.length] = child(
+            cmd,
+            cmd.mode === "break" ? d.broken : d.flat,
+          );
           continue;
         }
         if (d.k === "alt") {
-          cmds[cmds.length] = {
-            indent: cmd.indent,
-            mode: cmd.mode,
-            doc: cmd.mode === "break"
+          cmds[cmds.length] = child(
+            cmd,
+            cmd.mode === "break"
               ? d.options[d.options.length - 1]
               : d.options[0],
-          };
+          );
           continue;
         }
         if (d.k === "iffits") {
-          cmds[cmds.length] = {
-            indent: cmd.indent,
-            mode: cmd.mode,
-            doc: fits(
-                { indent: cmd.indent, mode: "flat", doc: d.probe },
+          cmds[cmds.length] = child(
+            cmd,
+            fits(
+                childIn(cmd, "flat", d.probe),
                 [],
                 left,
               )
               ? d.whenFits
               : d.otherwise,
-          };
+          );
           continue;
         }
         if (d.k === "endspan" || d.k === "endmark") {
@@ -557,11 +546,7 @@ export function render(
     }
     if (isList(d)) {
       for (const i of reverseIndices(d.length)) {
-        stack[stack.length] = {
-          indent: cmd.indent,
-          mode: cmd.mode,
-          doc: d[i],
-        };
+        stack[stack.length] = child(cmd, d[i]);
       }
       continue;
     }
@@ -583,15 +568,11 @@ export function render(
         if (mode === "break" && d.id !== undefined) {
           broke = broke.add(d.id);
         }
-        stack[stack.length] = {
-          indent: cmd.indent,
-          mode: mode,
-          doc: d.d,
-        };
+        stack[stack.length] = childIn(cmd, mode, d.d);
         continue;
       }
       remeasure = false;
-      const flat: Cmd = { indent: cmd.indent, mode: "flat", doc: d.d };
+      const flat: Cmd = childIn(cmd, "flat", d.d);
       const forced = d.brk || hasHard(d.d);
       if (!forced && fits(flat, stack, width - column)) {
         stack[stack.length] = flat;
@@ -599,20 +580,12 @@ export function render(
         if (d.id !== undefined) {
           broke = broke.add(d.id);
         }
-        stack[stack.length] = {
-          indent: cmd.indent,
-          mode: "break",
-          doc: d.d,
-        };
+        stack[stack.length] = childIn(cmd, "break", d.d);
       }
       continue;
     }
     if (d.k === "ifbroke") {
-      stack[stack.length] = {
-        indent: cmd.indent,
-        mode: cmd.mode,
-        doc: broke.has(d.id) ? d.broken : d.flat,
-      };
+      stack[stack.length] = child(cmd, broke.has(d.id) ? d.broken : d.flat);
       continue;
     }
     if (d.k === "indent") {
@@ -625,27 +598,15 @@ export function render(
     }
     if (d.k === "fill") {
       if (cmd.mode === "flat" && !remeasure) {
-        stack[stack.length] = {
-          indent: cmd.indent,
-          mode: "flat",
-          doc: d.parts,
-        };
+        stack[stack.length] = childIn(cmd, "flat", d.parts);
         continue;
       }
       remeasure = false;
       if (d.parts.length === 0) {
         continue;
       }
-      stack[stack.length] = {
-        indent: cmd.indent,
-        mode: cmd.mode,
-        doc: { k: "fillstep", fill: d, i: 1 },
-      };
-      stack[stack.length] = {
-        indent: cmd.indent,
-        mode: cmd.mode,
-        doc: group(d.parts[0], undefined, undefined),
-      };
+      stack[stack.length] = child(cmd, { k: "fillstep", fill: d, i: 1 });
+      stack[stack.length] = child(cmd, group(d.parts[0], undefined, undefined));
       continue;
     }
     if (d.k === "fillstep") {
@@ -663,11 +624,11 @@ export function render(
         doc: [separator, content],
       };
       const onLine = fits(flatPair, lastContent ? stack : [], width - column);
-      stack[stack.length] = {
-        indent: cmd.indent,
-        mode: cmd.mode,
-        doc: { k: "fillstep", fill: d.fill, i: d.i + 2 },
-      };
+      stack[stack.length] = child(cmd, {
+        k: "fillstep",
+        fill: d.fill,
+        i: d.i + 2,
+      });
       stack[stack.length] = {
         indent: deeper,
         mode: "break",
@@ -693,44 +654,34 @@ export function render(
       continue;
     }
     if (d.k === "ifbreak") {
-      stack[stack.length] = {
-        indent: cmd.indent,
-        mode: cmd.mode,
-        doc: cmd.mode === "break" ? d.broken : d.flat,
-      };
+      stack[stack.length] = child(
+        cmd,
+        cmd.mode === "break" ? d.broken : d.flat,
+      );
       continue;
     }
     if (d.k === "iffits") {
-      stack[stack.length] = {
-        indent: cmd.indent,
-        mode: cmd.mode,
-        doc: fits(
-            { indent: cmd.indent, mode: "flat", doc: d.probe },
+      stack[stack.length] = child(
+        cmd,
+        fits(
+            childIn(cmd, "flat", d.probe),
             [],
             width - column,
           )
           ? d.whenFits
           : d.otherwise,
-      };
+      );
       continue;
     }
     if (d.k === "alt") {
       const options = d.options;
       const last = options[options.length - 1];
       if (cmd.mode === "flat" && !remeasure) {
-        stack[stack.length] = {
-          indent: cmd.indent,
-          mode: "flat",
-          doc: options[0],
-        };
+        stack[stack.length] = childIn(cmd, "flat", options[0]);
         continue;
       }
       remeasure = false;
-      const first: Cmd = {
-        indent: cmd.indent,
-        mode: "flat",
-        doc: options[0],
-      };
+      const first: Cmd = childIn(cmd, "flat", options[0]);
       if (fits(first, stack, width - column)) {
         stack[stack.length] = first;
         continue;
@@ -738,31 +689,22 @@ export function render(
       let chosen: Cmd | undefined;
       for (const candidateIndex of indices(options.length - 2)) {
         const i = candidateIndex + 1;
-        const candidate: Cmd = {
-          indent: cmd.indent,
-          mode: "flat",
-          doc: options[i],
-        };
+        const candidate: Cmd = childIn(cmd, "flat", options[i]);
         if (fits(candidate, stack, width - column)) {
           chosen = candidate;
           break;
         }
       }
-      stack[stack.length] = chosen ??
-        { indent: cmd.indent, mode: "break", doc: last };
+      stack[stack.length] = chosen ?? childIn(cmd, "break", last);
       continue;
     }
     if (d.k === "span") {
-      stack[stack.length] = {
-        indent: cmd.indent,
-        mode: cmd.mode,
-        doc: { k: "endspan", span: d.span, start: offset },
-      };
-      stack[stack.length] = {
-        indent: cmd.indent,
-        mode: cmd.mode,
-        doc: d.d,
-      };
+      stack[stack.length] = child(cmd, {
+        k: "endspan",
+        span: d.span,
+        start: offset,
+      });
+      stack[stack.length] = child(cmd, d.d);
       continue;
     }
     if (d.k === "endspan") {
@@ -770,16 +712,12 @@ export function render(
       continue;
     }
     if (d.k === "mark") {
-      stack[stack.length] = {
-        indent: cmd.indent,
-        mode: cmd.mode,
-        doc: { k: "endmark", data: d.data, start: offset },
-      };
-      stack[stack.length] = {
-        indent: cmd.indent,
-        mode: cmd.mode,
-        doc: d.d,
-      };
+      stack[stack.length] = child(cmd, {
+        k: "endmark",
+        data: d.data,
+        start: offset,
+      });
+      stack[stack.length] = child(cmd, d.d);
       continue;
     }
     if (d.k === "endmark") {
