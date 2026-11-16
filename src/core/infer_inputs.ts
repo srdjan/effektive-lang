@@ -339,36 +339,43 @@ function InputEngine(
       ? inputEngineTable.named(id)
       : record ?? inputEngineTable.identityBaseOf(id);
   }
-  function inputEngineCall(
-    node: NodeId,
+  function inputEngineVisitArguments(
+    args: readonly NodeId[],
+    expectedAt: (index: number, argument: NodeId) => TypeRef | undefined,
+  ): InputEngine {
+    for (const index of args.keys()) {
+      const argument = args[index];
+      if (argument === undefined) {
+        continue;
+      }
+      inputEngineSelf = inputEngineVisit(argument, expectedAt(index, argument));
+    }
+    return inputEngineSelf;
+  }
+  /** Applies the callee to its arguments. A pipe puts its left side first. */
+  function inputEngineApply(
+    callee: NodeId | undefined,
+    target: Target | undefined,
+    calleeType: TypeRef | undefined,
+    args: readonly NodeId[],
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const callee = kidsOf(inputEngineTree, node)[0];
-    const args = argNodes(inputEngineTree, node);
-    if (callee === undefined) {
-      return undefined;
-    }
-    const target = inputEngineTargets.get(callee);
     if (target?.kind === "type") {
-      if (args[0] !== undefined) {
-        inputEngineSelf = inputEngineVisit(
-          args[0],
-          inputEngineConstructorInput(target.id, args[0]),
-        );
-      }
-      for (const argument of args.slice(1)) {
-        inputEngineSelf = inputEngineVisit(argument, undefined);
-      }
+      inputEngineSelf = inputEngineVisitArguments(
+        args,
+        (index, argument) =>
+          index === 0
+            ? inputEngineConstructorInput(target.id, argument)
+            : undefined,
+      );
       return inputEngineTable.named(target.id);
     }
     if (target?.kind === "error") {
       const type = inputEngineTable.errorRecordOf(target.id);
-      if (args[0] !== undefined) {
-        inputEngineSelf = inputEngineVisit(args[0], type);
-      }
-      for (const argument of args.slice(1)) {
-        inputEngineSelf = inputEngineVisit(argument, undefined);
-      }
+      inputEngineSelf = inputEngineVisitArguments(
+        args,
+        (index) => index === 0 ? type : undefined,
+      );
       return inputEngineTable.named(target.id);
     }
     if (optionConstructorOf(target) === "some") {
@@ -376,54 +383,62 @@ function InputEngine(
       const inferred = args[0] === undefined
         ? undefined
         : inputEngineInfer(args[0], element).type;
-      for (const argument of args.slice(1)) {
-        inputEngineSelf = inputEngineVisit(argument, undefined);
-      }
+      inputEngineSelf = inputEngineVisitArguments(
+        args.slice(1),
+        () => undefined,
+      );
       return inputEngineTable.option(
         element ?? inferred ?? inputEngineTable.unknown,
       );
     }
+    const fn = callee === undefined
+      ? undefined
+      : inputEngineCallableEvidence(callee, calleeType);
+    if (fn !== undefined) {
+      inputEngineSelf = inputEngineVisitArguments(
+        args,
+        (index) => inputEngineExpectedArgument(fn, index),
+      );
+      return fn.result;
+    }
+    const origin = callee === undefined
+      ? undefined
+      : inputEngineOriginOf(callee);
+    if (callee !== undefined && origin !== undefined) {
+      inputEngineResolver = inputEngineResolver.defer(
+        origin,
+        callee,
+        (evidence) => {
+          inputEngineSelf = inputEngineVisitArguments(
+            args,
+            (index) => inputEngineExpectedArgument(evidence, index),
+          );
+          return true;
+        },
+      );
+    }
+    inputEngineSelf = inputEngineVisitArguments(args, () => undefined);
+    return undefined;
+  }
+  function inputEngineCall(
+    node: NodeId,
+    expected: TypeRef | undefined,
+  ): TypeRef | undefined {
+    const callee = kidsOf(inputEngineTree, node)[0];
+    if (callee === undefined) {
+      return undefined;
+    }
+    const target = inputEngineTargets.get(callee);
     const calleeType = target === undefined
       ? inputEngineInfer(callee, undefined).type
       : inputEngineNameType(target);
-    const fn = inputEngineCallableEvidence(callee, calleeType);
-    if (fn === undefined) {
-      const origin = inputEngineOriginOf(callee);
-      if (origin !== undefined) {
-        inputEngineResolver = inputEngineResolver.defer(
-          origin,
-          callee,
-          (evidence) => {
-            for (const index of args.keys()) {
-              const argument = args[index];
-              if (argument === undefined) {
-                continue;
-              }
-              inputEngineSelf = inputEngineVisit(
-                argument,
-                inputEngineExpectedArgument(evidence, index),
-              );
-            }
-            return true;
-          },
-        );
-      }
-      for (const argument of args) {
-        inputEngineSelf = inputEngineVisit(argument, undefined);
-      }
-      return undefined;
-    }
-    for (const index of args.keys()) {
-      const argument = args[index];
-      if (argument === undefined) {
-        continue;
-      }
-      inputEngineSelf = inputEngineVisit(
-        argument,
-        inputEngineExpectedArgument(fn, index),
-      );
-    }
-    return fn.result;
+    return inputEngineApply(
+      callee,
+      target,
+      calleeType,
+      argNodes(inputEngineTree, node),
+      expected,
+    );
   }
   function inputEnginePipe(
     node: NodeId,
@@ -437,89 +452,16 @@ function InputEngine(
     }
     const stageNode = stageParts(inputEngineTree, stage);
     const callee = stageNode.callee;
-    const args = stageNode.args;
     const target = callee === undefined
       ? undefined
       : inputEngineTargets.get(callee);
-    if (target?.kind === "type") {
-      inputEngineSelf = inputEngineVisit(
-        left,
-        inputEngineConstructorInput(target.id, left),
-      );
-      for (const argument of args) {
-        inputEngineSelf = inputEngineVisit(argument, undefined);
-      }
-      return inputEngineTable.named(target.id);
-    }
-    if (target?.kind === "error") {
-      inputEngineSelf = inputEngineVisit(
-        left,
-        inputEngineTable.errorRecordOf(target.id),
-      );
-      for (const argument of args) {
-        inputEngineSelf = inputEngineVisit(argument, undefined);
-      }
-      return inputEngineTable.named(target.id);
-    }
-    if (optionConstructorOf(target) === "some") {
-      const element = inputEngineTable.optionElementOf(expected);
-      const inferred = inputEngineInfer(left, element).type;
-      for (const argument of args) {
-        inputEngineSelf = inputEngineVisit(argument, undefined);
-      }
-      return inputEngineTable.option(
-        element ?? inferred ?? inputEngineTable.unknown,
-      );
-    }
-    const calleeType = inputEngineNameType(target);
-    const fn = callee === undefined
-      ? undefined
-      : inputEngineCallableEvidence(callee, calleeType);
-    if (fn === undefined) {
-      const origin = callee === undefined
-        ? undefined
-        : inputEngineOriginOf(callee);
-      if (callee !== undefined && origin !== undefined) {
-        inputEngineResolver = inputEngineResolver.defer(
-          origin,
-          callee,
-          (evidence) => {
-            const argumentsWithLeft = [left, ...args];
-            for (const index of argumentsWithLeft.keys()) {
-              const argument = argumentsWithLeft[index];
-              if (argument === undefined) {
-                continue;
-              }
-              inputEngineSelf = inputEngineVisit(
-                argument,
-                inputEngineExpectedArgument(evidence, index),
-              );
-            }
-            return true;
-          },
-        );
-      }
-      inputEngineSelf = inputEngineVisit(left, undefined);
-      for (const argument of args) {
-        inputEngineSelf = inputEngineVisit(argument, undefined);
-      }
-      return undefined;
-    }
-    inputEngineSelf = inputEngineVisit(
-      left,
-      inputEngineExpectedArgument(fn, 0),
+    return inputEngineApply(
+      callee,
+      target,
+      inputEngineNameType(target),
+      [left, ...stageNode.args],
+      expected,
     );
-    for (const index of args.keys()) {
-      const argument = args[index];
-      if (argument === undefined) {
-        continue;
-      }
-      inputEngineSelf = inputEngineVisit(
-        argument,
-        inputEngineExpectedArgument(fn, index + 1),
-      );
-    }
-    return fn.result;
   }
   function inputEngineBinary(
     node: NodeId,
