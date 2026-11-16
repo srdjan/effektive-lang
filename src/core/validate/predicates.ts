@@ -5,7 +5,7 @@ import type {
   SolverLimits,
   UnsatProof,
 } from "../predicates.ts";
-import { bigInteger, indices } from "../runtime.ts";
+import { bigInteger, indices, reverseIndices } from "../runtime.ts";
 import { isRecord } from "./guards.ts";
 
 type CertificateError =
@@ -138,8 +138,7 @@ function checkBranch(
         if (!spend(node.operands.length)) {
           return { ok: false, error: { tag: "limit" } };
         }
-        for (const offset of indices(node.operands.length)) {
-          const index = node.operands.length - offset - 1;
+        for (const index of reverseIndices(node.operands.length)) {
           pending[pending.length] = {
             predicate: node.operands[index],
             negated: signed.negated,
@@ -161,8 +160,7 @@ function checkBranch(
       if (!spend(node.operands.length)) {
         return { ok: false, error: { tag: "limit" } };
       }
-      for (const offset of indices(node.operands.length)) {
-        const index = node.operands.length - offset - 1;
+      for (const index of reverseIndices(node.operands.length)) {
         const proof = task.proof.cases[index];
         if (!isUnsatProof(proof)) {
           return failure(
@@ -278,7 +276,11 @@ function decodeConstraint(
     };
 }
 
-function isNormalizedInteger(text: string): boolean {
+type IntegerText = string;
+type NormalForm = boolean;
+
+/** True when `text` is a decimal integer with an optional minus sign and no leading zero. The text `-0` passes. */
+export function isNormalizedInteger(text: IntegerText): NormalForm {
   const digits = text.startsWith("-") ? text.slice(1) : text;
   if (digits === "0") return true;
   if (digits.length === 0 || digits.startsWith("0")) return false;

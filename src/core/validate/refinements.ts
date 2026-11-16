@@ -18,7 +18,7 @@ import type {
   TypeId,
 } from "../ir.ts";
 import type { Predicate, Term } from "../predicates.ts";
-import { verifyCertificate } from "./predicates.ts";
+import { isNormalizedInteger, verifyCertificate } from "./predicates.ts";
 import { invocationOf, isQuiet } from "./sets.ts";
 import { MAX_DEPTH } from "./type_children.ts";
 import {
@@ -617,16 +617,6 @@ function predicateProblem(
   }
   return termProblem(ctx, predicate.left, base) ??
     termProblem(ctx, predicate.right, base);
-}
-
-function isNormalizedInteger(text: string): boolean {
-  const digits = text.startsWith("-") ? text.slice(1) : text;
-  if (digits === "0") return true;
-  if (digits.length === 0 || digits.startsWith("0")) return false;
-  for (const digit of digits) {
-    if (digit < "0" || digit > "9") return false;
-  }
-  return true;
 }
 
 function termProblem(ctx: Ctx, term: Term, base: Type): string | undefined {
