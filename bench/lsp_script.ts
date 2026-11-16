@@ -20,7 +20,9 @@ import {
   applyInterfaceEdit,
   applyModeFlipEdit,
   generateSize,
+  readTree,
   type SizeName,
+  writeFiles,
 } from "./generate.ts";
 import {
   describeLspClientError,
@@ -98,26 +100,14 @@ export interface LspInput {
   readonly kinds: readonly EditKind[];
 }
 
-function readTree(
-  root: URL,
-  prefix: string,
-  into: Map<string, string>,
-): void {
-  for (const entry of Deno.readDirSync(root)) {
-    const child = new URL(entry.name + (entry.isDirectory ? "/" : ""), root);
-    if (entry.isDirectory) readTree(child, `${prefix}${entry.name}/`, into);
-    else into.set(`${prefix}${entry.name}`, Deno.readTextFileSync(child));
-  }
-}
-
 /** Loads an input. The examples come from `fixtures/examples`. */
 export function loadInput(name: LspInputName, seed: number): LspInput {
   if (name === "examples") {
-    const files = new Map<string, string>();
-    readTree(new URL("../fixtures/examples/", import.meta.url), "", files);
     return {
       name,
-      files,
+      files: readTree(
+        new URL("../fixtures/examples", import.meta.url).pathname,
+      ),
       editPath: "users.eff",
       hoverName: "displayName",
       kinds: ["body"],
@@ -198,11 +188,7 @@ function writeProject(
 ): Result<string, LspBenchError> {
   const dir = Deno.makeTempDirSync({ prefix: TEMP_PREFIX });
   try {
-    for (const [path, text] of files) {
-      const full = `${dir}/${path}`;
-      Deno.mkdirSync(full.slice(0, full.lastIndexOf("/")), { recursive: true });
-      Deno.writeTextFileSync(full, text);
-    }
+    writeFiles(dir, files);
   } catch (e) {
     Deno.removeSync(dir, { recursive: true });
     return fail({
@@ -453,21 +439,13 @@ export class Session {
     if (!next.ok) return next;
     const version = (companion?.version ?? this.#version) + 1;
     const uri = companion?.uri ?? this.#uri;
-    const waiting = this.#client.waitForDiagnostics(
-      uri,
-      version,
-      this.#timeoutMs,
-    );
-    waiting.catch(() => {});
     try {
-      if (this.#saveOnStep) this.#writeDisk(path, next.value);
-      const start = performance.now();
-      await this.#client.notify("textDocument/didChange", {
-        textDocument: { uri, version },
-        contentChanges: [{ text: next.value }],
-      });
-      const params = await waiting;
-      const elapsed = performance.now() - start;
+      const { params, elapsed } = await this.#change(
+        uri,
+        version,
+        next.value,
+        this.#saveOnStep ? path : undefined,
+      );
       if (this.#saveOnStep) {
         await this.#client.notify("textDocument/didSave", {
           textDocument: { uri },
@@ -488,6 +466,33 @@ export class Session {
     }
   }
 
+  /**
+   * Sends one full-text `didChange` and waits for its diagnostics. When
+   * `diskPath` is set, it writes the text to that file first. The elapsed time
+   * runs from just before the `didChange` to the receipt of the diagnostics.
+   */
+  async #change(
+    uri: string,
+    version: number,
+    text: string,
+    diskPath: string | undefined,
+  ): Promise<{ readonly params: unknown; readonly elapsed: number }> {
+    const waiting = this.#client.waitForDiagnostics(
+      uri,
+      version,
+      this.#timeoutMs,
+    );
+    waiting.catch(() => {});
+    if (diskPath !== undefined) this.#writeDisk(diskPath, text);
+    const start = performance.now();
+    await this.#client.notify("textDocument/didChange", {
+      textDocument: { uri, version },
+      contentChanges: [{ text }],
+    });
+    const params = await waiting;
+    return { params, elapsed: performance.now() - start };
+  }
+
   #writeDisk(path: string, text: string): void {
     Deno.writeTextFileSync(`${this.#dir}/${path}`, text);
   }
@@ -505,19 +510,13 @@ export class Session {
     const next = applyEdit(this.#input, kind, this.#text, revision);
     if (!next.ok) return next;
     const version = this.#version + 1;
-    const waiting = this.#client.waitForDiagnostics(
-      this.#uri,
-      version,
-      this.#timeoutMs,
-    );
-    waiting.catch(() => {});
     try {
-      this.#writeDisk(this.#input.editPath, next.value);
-      await this.#client.notify("textDocument/didChange", {
-        textDocument: { uri: this.#uri, version },
-        contentChanges: [{ text: next.value }],
-      });
-      const params = await waiting;
+      const { params } = await this.#change(
+        this.#uri,
+        version,
+        next.value,
+        this.#input.editPath,
+      );
       this.#text = next.value;
       this.#version = version;
       const gate = this.#gate(
@@ -766,6 +765,20 @@ export class Workspace {
     this.#clients.push(started.value.client);
     this.#sessions.push(started.value.session);
     return succeed(started.value.session);
+  }
+
+  /** Opens two sessions on the same input. Side A opens first. */
+  async openPair(
+    input: LspInput,
+    timeoutMs: number,
+    openPaths?: readonly string[],
+    options?: SessionOptions,
+  ): Promise<Result<readonly [Session, Session], LspBenchError>> {
+    const a = await this.open(input, timeoutMs, openPaths, options);
+    if (!a.ok) return a;
+    const b = await this.open(input, timeoutMs, openPaths, options);
+    if (!b.ok) return b;
+    return succeed([a.value, b.value] as const);
   }
 
   async finish(): Promise<Result<null, LspBenchError>> {

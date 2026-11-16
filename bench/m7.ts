@@ -227,21 +227,14 @@ export async function runM7(
     const cold: Pair[] = [];
     for (let turn = 0; turn < preset.coldPairs; turn++) {
       const ran = await withWorkspace(async (workspace) => {
-        const a = await workspace.open(
+        const pair = await workspace.openPair(
           input,
           config.timeoutMs,
           undefined,
           on,
         );
-        if (!a.ok) return a;
-        const b = await workspace.open(
-          input,
-          config.timeoutMs,
-          undefined,
-          on,
-        );
-        if (!b.ok) return b;
-        const [first, second] = byTurn(turn, a.value, b.value);
+        if (!pair.ok) return pair;
+        const [first, second] = byTurn(turn, pair.value[0], pair.value[1]);
         const one = await first.save();
         if (!one.ok) return one;
         const gateOne = checkOutput(first, undefined, "cold save");
@@ -259,12 +252,16 @@ export async function runM7(
 
     // Warm scenarios on one pair of servers, with the edit target open.
     const warm = await withWorkspace(async (workspace) => {
-      const a = await workspace.open(input, config.timeoutMs, undefined, on);
-      if (!a.ok) return a;
-      const b = await workspace.open(input, config.timeoutMs, undefined, on);
-      if (!b.ok) return b;
+      const pair = await workspace.openPair(
+        input,
+        config.timeoutMs,
+        undefined,
+        on,
+      );
+      if (!pair.ok) return pair;
+      const [a, b] = pair.value;
       // The first round creates the disk program. It is the cold scenario.
-      for (const session of [a.value, b.value]) {
+      for (const session of [a, b]) {
         const first = await session.save();
         if (!first.ok) return first;
       }
@@ -272,8 +269,8 @@ export async function runM7(
         const scenario of ["stats only", "repeat", "body", "interface"] as const
       ) {
         const pairs = await runPairs(
-          a.value,
-          b.value,
+          a,
+          b,
           STEPS[scenario],
           preset.warmups,
           preset.steps,
@@ -295,23 +292,22 @@ export async function runM7(
     // Save All on its own pair, with every module open.
     const saveAll = await withWorkspace(async (all) => {
       const paths = allModules(input);
-      const a = await all.open(input, config.timeoutMs, paths, on);
-      if (!a.ok) return a;
-      const b = await all.open(input, config.timeoutMs, paths, on);
-      if (!b.ok) return b;
-      for (const session of [a.value, b.value]) {
+      const pair = await all.openPair(input, config.timeoutMs, paths, on);
+      if (!pair.ok) return pair;
+      const [a, b] = pair.value;
+      for (const session of [a, b]) {
         const first = await session.save();
         if (!first.ok) return first;
       }
       const pairs = await runPairs(
-        a.value,
-        b.value,
+        a,
+        b,
         STEPS["save all"],
         1,
         preset.saveAllSteps,
       );
       if (!pairs.ok) return pairs;
-      rows.push(row(preset.size, "save all", a.value.openCount, pairs.value));
+      rows.push(row(preset.size, "save all", a.openCount, pairs.value));
       return succeed(null);
     });
     if (!saveAll.ok) return saveAll;

@@ -5,7 +5,7 @@
 
 import { errorMessage, Program, type Result } from "../src/core/mod.ts";
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
-import { generateProject } from "./generate.ts";
+import { generateProject, readTree, writeFiles } from "./generate.ts";
 
 const outputs = new TypeScriptOutputs();
 
@@ -50,18 +50,6 @@ export interface Target {
   readonly marked: string;
 }
 
-function readTree(
-  root: string,
-  relative: string,
-  into: Map<string, string>,
-): void {
-  for (const entry of Deno.readDirSync(`${root}/${relative}`)) {
-    const child = relative === "" ? entry.name : `${relative}/${entry.name}`;
-    if (entry.isDirectory) readTree(root, child, into);
-    else into.set(child, Deno.readTextFileSync(`${root}/${child}`));
-  }
-}
-
 /** Emits every module of a project in memory. Returns the generated files by path. */
 function emitSources(
   sources: ReadonlyMap<string, string>,
@@ -103,9 +91,9 @@ function emitSources(
 /** The six examples and the companion module, emitted, with `users-live.ts`. The gate compares them with the golden files. */
 export function exampleTarget(): Result<Target, M5Error> {
   const fixtures = new URL("../fixtures/", import.meta.url).pathname;
-  const tree = new Map<string, string>();
+  let tree: Map<string, string>;
   try {
-    readTree(`${fixtures}examples`, "", tree);
+    tree = readTree(`${fixtures}examples`);
   } catch (e) {
     return {
       ok: false,
@@ -178,12 +166,10 @@ export function writeTarget(
   target: Target,
   mark: string,
 ): void {
-  for (const [path, text] of target.files) {
-    const full = `${directory}/${path}`;
-    Deno.mkdirSync(full.slice(0, full.lastIndexOf("/")), { recursive: true });
-    Deno.writeTextFileSync(
-      full,
-      path === target.marked ? `${text}// bench ${mark}\n` : text,
-    );
-  }
+  writeFiles(
+    directory,
+    [...target.files].map((
+      [path, text],
+    ) => [path, path === target.marked ? `${text}// bench ${mark}\n` : text]),
+  );
 }

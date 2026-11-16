@@ -146,23 +146,17 @@ export async function runM4(
           },
         };
       }
-      const a = await workspace.open(
+      const pair = await workspace.openPair(
         input,
         config.timeoutMs,
         paths,
         sessionOptions,
       );
-      if (!a.ok) return a;
-      const b = await workspace.open(
-        input,
-        config.timeoutMs,
-        paths,
-        sessionOptions,
-      );
-      if (!b.ok) return b;
-      const firstA = await a.value.stats();
+      if (!pair.ok) return pair;
+      const [a, b] = pair.value;
+      const firstA = await a.stats();
       if (!firstA.ok) return firstA;
-      const firstB = await b.value.stats();
+      const firstB = await b.stats();
       if (!firstB.ok) return firstB;
       const baselineA = memory(firstA.value);
       if (!baselineA.ok) return baselineA;
@@ -180,8 +174,8 @@ export async function runM4(
         }
         const order = byTurn(
           i,
-          [a.value, memorySamplesA] as const,
-          [b.value, memorySamplesB] as const,
+          [a, memorySamplesA] as const,
+          [b, memorySamplesB] as const,
         );
         for (const [session, samples] of order) {
           const changed = await session.step(kind, path);
@@ -193,7 +187,7 @@ export async function runM4(
           samples.push(sample.value);
         }
       }
-      if (writeOnSave && !(a.value.hasOutput() && b.value.hasOutput())) {
+      if (writeOnSave && !(a.hasOutput() && b.hasOutput())) {
         return {
           ok: false,
           error: {
@@ -208,19 +202,19 @@ export async function runM4(
         steps,
         documents: paths.map((path) => ({
           path,
-          editsA: a.value.editCounts.get(path) ?? 0,
-          editsB: b.value.editCounts.get(path) ?? 0,
+          editsA: a.editCounts.get(path) ?? 0,
+          editsB: b.editCounts.get(path) ?? 0,
           edit: path === input.editPath
             ? "body/header/alias/flip"
             : /^m\d+\.eff$/.test(path)
             ? "body"
             : "comment",
         })),
-        distinctEditsA: [...a.value.editCounts.values()].reduce(
+        distinctEditsA: [...a.editCounts.values()].reduce(
           (sum, n) => sum + n,
           0,
         ),
-        distinctEditsB: [...b.value.editCounts.values()].reduce(
+        distinctEditsB: [...b.editCounts.values()].reduce(
           (sum, n) => sum + n,
           0,
         ),

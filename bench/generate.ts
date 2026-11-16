@@ -528,6 +528,32 @@ export function applyExamplesBodyEdit(text: string, revision: number): string {
   );
 }
 
+/** Writes each file under `directory` and creates its folders. */
+export function writeFiles(
+  directory: string,
+  files: Iterable<readonly [string, string]>,
+): void {
+  for (const [path, text] of files) {
+    const full = `${directory}/${path}`;
+    Deno.mkdirSync(full.slice(0, full.lastIndexOf("/")), { recursive: true });
+    Deno.writeTextFileSync(full, text);
+  }
+}
+
+/** Reads every file under `root` by root-relative path, in directory order. */
+export function readTree(root: string): Map<string, string> {
+  const files = new Map<string, string>();
+  const walk = (relative: string): void => {
+    for (const entry of Deno.readDirSync(`${root}/${relative}`)) {
+      const child = relative === "" ? entry.name : `${relative}/${entry.name}`;
+      if (entry.isDirectory) walk(child);
+      else files.set(child, Deno.readTextFileSync(`${root}/${child}`));
+    }
+  };
+  walk("");
+  return files;
+}
+
 /** Writes a generated project to a directory: `deno run bench/generate.ts <size> <dir>`. */
 if (import.meta.main) {
   const [sizeArg, directory] = Deno.args;
@@ -541,11 +567,7 @@ if (import.meta.main) {
     Deno.exit(2);
   }
   const project = generateSize(size);
-  for (const [path, text] of allFiles(project)) {
-    const full = `${directory}/${path}`;
-    Deno.mkdirSync(full.slice(0, full.lastIndexOf("/")), { recursive: true });
-    Deno.writeTextFileSync(full, text);
-  }
+  writeFiles(directory, allFiles(project));
   console.log(
     `wrote ${
       project.sources.size + project.hostModules.size

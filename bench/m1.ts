@@ -90,16 +90,15 @@ export async function runM1(
   for (const entry of config.inputs) {
     const ran = await withWorkspace(async (workspace) => {
       const input = loadInput(entry.input, config.seed);
-      const a = await workspace.open(input, config.timeoutMs);
-      if (!a.ok) return a;
-      const b = await workspace.open(input, config.timeoutMs);
-      if (!b.ok) return b;
+      const pair = await workspace.openPair(input, config.timeoutMs);
+      if (!pair.ok) return pair;
+      const [a, b] = pair.value;
       let turn = 0;
       for (const kind of input.kinds) {
         const change: Pair[] = [];
         const hover: Pair[] = [];
         for (let i = 0; i < entry.warmups + entry.steps; i++, turn++) {
-          const [first, second] = byTurn(turn, a.value, b.value);
+          const [first, second] = byTurn(turn, a, b);
           const one = await stepOn(first, kind);
           if (!one.ok) return one;
           const two = await stepOn(second, kind);
