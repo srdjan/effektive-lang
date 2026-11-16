@@ -333,9 +333,7 @@ Deno.test("comparison yields the exact predicate for every operator", () => {
   ][] = [
     ["<", forward("-1")],
     ["<=", forward("0")],
-    ["==", { kind: "and", operands: [forward("0"), reverse("0")] }],
     ["===", { kind: "and", operands: [forward("0"), reverse("0")] }],
-    ["!=", { kind: "or", operands: [forward("-1"), reverse("-1")] }],
     ["!==", { kind: "or", operands: [forward("-1"), reverse("-1")] }],
     [">=", reverse("0")],
     [">", reverse("-1")],

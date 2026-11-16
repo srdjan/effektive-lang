@@ -37,16 +37,6 @@ export type Predicate =
     readonly maximum: DecimalInteger;
   };
 
-type Comparison =
-  | "<"
-  | "<="
-  | "=="
-  | "==="
-  | "!="
-  | "!=="
-  | ">="
-  | ">";
-
 type PredicateError =
   | { readonly tag: "invalid-integer"; readonly value: string }
   | { readonly tag: "invalid-term"; readonly message: string }
@@ -168,7 +158,7 @@ export function normalizeInteger(
 export function comparison(
   left: Term,
   leftOffset: DecimalInteger,
-  operator: Comparison,
+  operator: ComparisonOperator,
   right: Term,
   rightOffset: DecimalInteger,
 ): Result<Predicate, PredicateError> {
@@ -189,10 +179,8 @@ export function comparison(
     return rightInteger;
   }
   const maximum = rightInteger.value - leftInteger.value;
-  const binding1 = COMPARISON_BOUNDS[canonicalOperator(operator)];
-  const join = binding1.join;
-  const parts = binding1.parts;
-  const bounds = parts.map((part) =>
+  const join = COMPARISON_BOUNDS[operator].join;
+  const bounds = COMPARISON_BOUNDS[operator].parts.map((part) =>
     part.reversed
       ? difference(right, left, -maximum + part.slack)
       : difference(left, right, maximum + part.slack)
@@ -204,12 +192,6 @@ export function comparison(
   } else {
     return { ok: true, value: or(bounds) };
   }
-}
-function canonicalOperator(operator: Comparison): ComparisonOperator {
-  if (operator === "==") {
-    return "===";
-  }
-  return operator === "!=" ? "!==" : operator;
 }
 type Constraint = {
   readonly left: Term;

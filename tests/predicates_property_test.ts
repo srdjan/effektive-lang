@@ -16,11 +16,11 @@ import { verifyCertificate } from "../src/core/validate/predicates.ts";
 // domain. The integers x, y, and z each range over -3 .. 3.
 type Name = "x" | "y" | "z";
 type Assignment = Readonly<Record<Name, number>>;
-type Operator = "<" | "<=" | "==" | "!=" | ">=" | ">";
+type Operator = "<" | "<=" | "===" | "!==" | ">=" | ">";
 const LIMITS = { maxSteps: 4000 };
 const LOW = -3;
 const HIGH = 3;
-const OPERATORS: readonly Operator[] = ["<", "<=", "==", "!=", ">=", ">"];
+const OPERATORS: readonly Operator[] = ["<", "<=", "===", "!==", ">=", ">"];
 const X: Term = { kind: "field", path: ["x"] };
 const Y: Term = { kind: "field", path: ["y"] };
 const Z: Term = { kind: "field", path: ["z"] };
