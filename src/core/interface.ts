@@ -1,12 +1,3 @@
-import {
-  bigInteger,
-  emptyMap,
-  emptySet,
-  indices,
-  mapFrom,
-  stackValues,
-  type UnknownValue,
-} from "./runtime.ts";
 // Module interfaces. An interface is the `Import` payload of the IR without
 // `module` and `bindings`: the exports, the types of the exported values, and
 // the declarations that those exports reach (design I8). The spec requires the
@@ -20,6 +11,15 @@ import {
 //
 // `reachableModules` also lives here. The project driver in `check_project.ts`
 // uses it to give each module the type graphs of the modules that it reaches.
+import {
+  bigInteger,
+  emptyMap,
+  emptySet,
+  indices,
+  mapFrom,
+  stackValues,
+  type UnknownValue,
+} from "./runtime.ts";
 import type { Analysis } from "./analyze.ts";
 import {
   contractSets,

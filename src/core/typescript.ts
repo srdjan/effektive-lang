@@ -55,12 +55,12 @@ type OutputEntry = {
   map?: Result<SourceMapV3, EmitProjectError | SourceMapError>;
 };
 
-/** One output cache per program/session. Reused lowerings reuse outputs without retaining revisions. */
 /** Create the owner of TypeScript output queries for one compiler session. */
 export function createTypeScriptOutputs(): TypeScriptOutputs {
   return new TypeScriptOutputs();
 }
 
+/** One output cache per program/session. Reused lowerings reuse outputs without retaining revisions. */
 export class TypeScriptOutputs {
   private readonly entries = new WeakMap<
     Result<ModuleIR, LowerError>,

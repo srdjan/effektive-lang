@@ -1,11 +1,11 @@
+// Rename proves that declaration anchors remain the same after re-resolution,
+// including uses of symbols that the requested rename does not edit.
 import { isModulePath, isSourcePath } from "./paths.ts";
 import {
   BUILTIN_TYPE_NAMES,
   PRELUDE_NAMES,
   SHADOWABLE_PRELUDE_NAMES,
 } from "./resolve.ts";
-// Rename proves that declaration anchors remain the same after re-resolution,
-// including uses of symbols that the requested rename does not edit.
 import { Program, type Revision } from "./db.ts";
 import { diagnosticDelta } from "./diagnostic_delta.ts";
 import { mapFrom } from "./runtime.ts";

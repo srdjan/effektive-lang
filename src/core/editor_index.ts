@@ -1,6 +1,6 @@
-import { emptyMap, emptySet, indices as integerIndices } from "./runtime.ts";
 // Resolver identities and declaration anchors shared by editor queries. The
 // cache belongs to a Revision; retaining a Program does not retain old indices.
+import { emptyMap, emptySet, indices as integerIndices } from "./runtime.ts";
 import type { CheckedModule } from "./check_project.ts";
 import type { Revision } from "./db.ts";
 import { isIdentifier } from "./lex.ts";
@@ -27,8 +27,8 @@ export function bodyTablesOf(
     ...(module?.constants.values() ?? []),
   ].map((body) => body.table);
 }
-/** The editor kind of a type, error, or service declaration. Other kinds need the declaration. */
 type DeclarationKind = "type" | "class" | "interface";
+/** The editor kind of a type, error, or service declaration. Other kinds need the declaration. */
 export function declarationKind(
   kind: DeclarationName,
 ): DeclarationKind | undefined {
@@ -156,10 +156,9 @@ export function buildSymbolIndex(revision: Revision): SymbolIndex {
     let file: SymbolOccurrence[] = [];
     const scopes: LocalScope[] = [];
     let seen = emptySet<string>();
-    for (const binding1 of resolution.targets) {
-      const binding2 = binding1;
-      const node = binding2[0];
-      const target = binding2[1];
+    for (const entry of resolution.targets) {
+      const node = entry[0];
+      const target = entry[1];
       const span = nodeSpan(tree, node);
       const text = tree.text.slice(span.start, span.end);
       // FieldExpr/QualifiedName also carry capability identities. Their Name

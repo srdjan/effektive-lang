@@ -94,8 +94,7 @@ type Site = {
   readonly filter: (values: readonly Completion[]) => Completion[];
 };
 function insideCommentOrString(tree: SyntaxTree, offset: number): boolean {
-  const binding1 = tree;
-  const lexed = binding1.lexed;
+  const lexed = tree.lexed;
   return [...lexed.trivia.starts].some((start, i) =>
     start <= offset && offset < lexed.trivia.ends[i] &&
     lexed.trivia.kinds[i] !== 0
@@ -145,12 +144,11 @@ function recordBindingCompletions(
   site: Site,
   bindingNode: NodeId,
 ): readonly Completion[] {
-  const binding2 = site;
-  const revision = binding2.revision;
-  const tree = binding2.tree;
-  const start = binding2.start;
-  const make = binding2.make;
-  const filter = binding2.filter;
+  const revision = site.revision;
+  const tree = site.tree;
+  const start = site.start;
+  const make = site.make;
+  const filter = site.filter;
   const declaration = tree.parents[bindingNode];
   const selected = setFrom(
     kidsOf(tree, bindingNode).flatMap((field) => {
@@ -175,8 +173,7 @@ function recordBindingCompletions(
 }
 /** The last token that ends at or before the word, skipping newlines. */
 function previousTokenOf(tree: SyntaxTree, start: number): number {
-  const binding3 = tree;
-  const lexed = binding3.lexed;
+  const lexed = tree.lexed;
   let previousToken = -1;
   for (const i of indices(lexed.count)) {
     if (
@@ -193,15 +190,13 @@ function memberCompletions(
   site: Site,
   previousToken: number,
 ): readonly Completion[] {
-  const binding4 = site;
-  const revision = binding4.revision;
-  const path = binding4.path;
-  const tree = binding4.tree;
-  const make = binding4.make;
-  const filter = binding4.filter;
-  const binding5 = tree;
-  const lexed = binding5.lexed;
-  const text = binding5.text;
+  const revision = site.revision;
+  const path = site.path;
+  const tree = site.tree;
+  const make = site.make;
+  const filter = site.filter;
+  const lexed = tree.lexed;
+  const text = tree.text;
   let baseToken = previousToken - 1;
   for (const _step of indices(baseToken + 1)) {
     if (!(baseToken >= 0 && lexed.kinds[baseToken] === TokenKind.Newline)) {
@@ -223,10 +218,9 @@ function memberCompletions(
   }
   let fields = emptySet<string>();
   for (const table of bodyTablesOf(revision.checkedModule(site.module))) {
-    for (const binding6 of table.info) {
-      const binding7 = binding6;
-      const node = binding7[0];
-      const nodeInfo = binding7[1];
+    for (const entry of table.info) {
+      const node = entry[0];
+      const nodeInfo = entry[1];
       if (
         tree.ends[node] !== baseEnd || kindOf(tree, node) === SyntaxKind.Token
       ) {
@@ -241,9 +235,8 @@ function memberCompletions(
 }
 /** True when the word is the first on its line, or follows only `export`. */
 function startsDeclaration(tree: SyntaxTree, start: number): boolean {
-  const binding8 = tree;
-  const lexed = binding8.lexed;
-  const text = binding8.text;
+  const lexed = tree.lexed;
+  const text = tree.text;
   const lineStart = text.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
   const beforeOnLine: number[] = [];
   for (const i of indices(lexed.count)) {
@@ -260,11 +253,10 @@ function startsDeclaration(tree: SyntaxTree, start: number): boolean {
       lexed.kinds[beforeOnLine[0]] === TokenKind.KwExport);
 }
 function serviceHeaderKeywordAllowed(site: Site): boolean {
-  const binding9 = site;
-  const revision = binding9.revision;
-  const module = binding9.module;
-  const tree = binding9.tree;
-  const start = binding9.start;
+  const revision = site.revision;
+  const module = site.module;
+  const tree = site.tree;
+  const start = site.start;
   const headers =
     revision.moduleInfo(module)?.index.imports.filter((entry) =>
       entry.role === "service" && entry.span.end <= start
@@ -337,15 +329,13 @@ function namespaceCompletions(
   site: Site,
   context: NameContext,
 ): Map<string, Completion> {
-  const binding10 = site;
-  const revision = binding10.revision;
-  const make = binding10.make;
+  const revision = site.revision;
+  const make = site.make;
   let values = emptyMap<string, Completion>();
   const namespace = revision.resolution(site.module)?.namespace;
-  for (const binding11 of namespace ?? []) {
-    const binding12 = binding11;
-    const name = binding12[0];
-    const binding = binding12[1];
+  for (const entry of namespace ?? []) {
+    const name = entry[0];
+    const binding = entry[1];
     const kind = binding.target.kind;
     if (context === "type" && kind !== "type" && kind !== "error") {
       continue;
@@ -377,12 +367,11 @@ function addContextNames(
   context: NameContext,
   declarationStart: boolean,
 ): Map<string, Completion> {
-  const binding13 = site;
-  const revision = binding13.revision;
-  const path = binding13.path;
-  const offset = binding13.offset;
-  const start = binding13.start;
-  const make = binding13.make;
+  const revision = site.revision;
+  const path = site.path;
+  const offset = site.offset;
+  const start = site.start;
+  const make = site.make;
   if (context === "value") {
     const locals = (revision.symbolIndex().locals.get(path) ?? []).filter((l) =>
       l.scope.start <= offset && offset <= l.scope.end &&
@@ -469,8 +458,7 @@ export function completionsAt(
   if (info === undefined || offset < 0 || offset > info.tree.text.length) {
     return [];
   }
-  const binding14 = info;
-  const tree = binding14.tree;
+  const tree = info.tree;
   if (insideCommentOrString(tree, offset)) {
     return [];
   }
@@ -494,13 +482,13 @@ export function completionsAt(
   if (previousToken >= 0 && tree.lexed.kinds[previousToken] === TokenKind.Dot) {
     return memberCompletions(site, previousToken);
   }
-  const binding15 = nameContextAt(
+  const nameContext = nameContextAt(
     tree,
     site.start,
     startsDeclaration(tree, site.start),
   );
-  const context = binding15.context;
-  const declarationStart = binding15.declarationStart;
+  const context = nameContext.context;
+  const declarationStart = nameContext.declarationStart;
   const values = addContextNames(
     site,
     namespaceCompletions(site, context),

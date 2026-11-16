@@ -1,6 +1,6 @@
-import { emptyMap } from "./runtime.ts";
 // The declaration index of one file. It lists each top-level declaration by name
 // with its kind, export flag, spans, and methods.
+import { emptyMap } from "./runtime.ts";
 import { TokenKind } from "./lex.ts";
 import type { Span } from "./source.ts";
 import {

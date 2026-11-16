@@ -1,6 +1,6 @@
-import { emptyMap, emptySet, indices, stackValues } from "./runtime.ts";
 // Signature help for ordinary calls. The query reads checked callee types from
 // body tables and keeps LSP wire types outside the core.
+import { emptyMap, emptySet, indices, stackValues } from "./runtime.ts";
 import { isSourcePath, type PathText } from "./paths.ts";
 import type { Revision } from "./db.ts";
 import { bodyTablesOf } from "./editor_index.ts";
@@ -75,10 +75,9 @@ function parameterNames(
       let declarations = localDeclarations.get(currentModule);
       if (declarations === undefined) {
         declarations = emptyMap();
-        for (const binding1 of resolution.targets) {
-          const binding2 = binding1;
-          const node = binding2[0];
-          const candidate = binding2[1];
+        for (const entry of resolution.targets) {
+          const node = entry[0];
+          const candidate = entry[1];
           if (candidate.kind !== "local") {
             continue;
           }
@@ -178,8 +177,7 @@ export function signatureHelpAt(
   if (module === undefined || !isSourcePath(path)) {
     return undefined;
   }
-  const binding3 = module;
-  const tree = binding3.tree;
+  const tree = module.tree;
   const tables = bodyTablesOf(module);
   let best: {
     readonly callee: NodeId;

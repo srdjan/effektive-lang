@@ -1,6 +1,6 @@
-import { emptyMap } from "./runtime.ts";
 // The project configuration: the `effektive.json` reader, its validation, and the glob
 // patterns of the import rules. The module loader in `project.ts` uses it.
+import { emptyMap } from "./runtime.ts";
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import {
   hostKeyOf,
@@ -39,10 +39,10 @@ export type ProjectConfig = {
   /** The first matching rule controls a module. No rules leave imports unrestricted. */
   readonly imports?: readonly ImportRuleConfig[];
 };
-/** The cache key of a configuration. It lists every field, so a new field must be added here. */
 type ConfigKey = string;
 type ImportPermission = boolean;
 type ImportTarget = string;
+/** The cache key of a configuration. It lists every field, so a new field must be added here. */
 export function configKey(config: ProjectConfig): ConfigKey {
   return JSON.stringify([
     [...config.host].map((

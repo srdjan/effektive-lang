@@ -1,7 +1,7 @@
+// Contract edits come from checked body effect sets, never diagnostic prose.
 import type { EditorOffset, EditorPath } from "./editor.ts";
 import type { NodeId, SyntaxTree } from "./syntax.ts";
 import { emptyMap, emptySet, setFrom } from "./runtime.ts";
-// Contract edits come from checked body effect sets, never diagnostic prose.
 import { isSourcePath } from "./paths.ts";
 import type { FunctionBody } from "./check_project.ts";
 import type { Revision } from "./db.ts";
@@ -30,8 +30,7 @@ function missingEntries(
   readonly failures: readonly string[];
   readonly uses: readonly string[];
 } {
-  const binding1 = fn;
-  const signature = binding1.signature;
+  const signature = fn.signature;
   return {
     // An open set has no clause to extend, so it never misses an entry.
     failures: signature.written.fails
@@ -49,19 +48,17 @@ function effectName(
   module: string,
   id: string,
 ): string | undefined {
-  for (const binding2 of EFFECT_ERROR_IDS) {
-    const binding3 = binding2;
-    const name = binding3[0];
-    const effectId = binding3[1];
+  for (const entry of EFFECT_ERROR_IDS) {
+    const name = entry[0];
+    const effectId = entry[1];
     if (id === effectId) {
       return name;
     }
   }
   const namespace = revision.resolution(module)?.namespace;
-  for (const binding4 of namespace ?? []) {
-    const binding5 = binding4;
-    const name = binding5[0];
-    const binding = binding5[1];
+  for (const entry of namespace ?? []) {
+    const name = entry[0];
+    const binding = entry[1];
     const target = binding.target;
     if (
       target.kind !== "builtin" && target.kind !== "builtin-type" &&
@@ -92,10 +89,9 @@ function requirementNames(
   const missing = setFrom(ids);
   let whole = emptyMap<string, string>();
   let covered = emptySet<string>();
-  for (const binding6 of revision.resolution(module)?.namespace ?? []) {
-    const binding7 = binding6;
-    const name = binding7[0];
-    const binding = binding7[1];
+  for (const entry of revision.resolution(module)?.namespace ?? []) {
+    const name = entry[0];
+    const binding = entry[1];
     if (binding.target.kind !== "service") {
       continue;
     }
@@ -145,9 +141,8 @@ export function contractActionsAt(
   }
   const output: ContractAction[] = [];
   for (const fn of module.functions.values()) {
-    const binding8 = fn;
-    const signature = binding8.signature;
-    const body = binding8.body;
+    const signature = fn.signature;
+    const body = fn.body;
     if (
       signature.annotation !== "arrow" || !signature.written.result ||
       body === undefined || signature.span.end < start ||
@@ -167,9 +162,9 @@ export function contractActionsAt(
     ) {
       continue;
     }
-    const binding9 = missingEntries(fn, body);
-    const missingFailures = binding9.failures;
-    const missingUses = binding9.uses;
+    const missing = missingEntries(fn, body);
+    const missingFailures = missing.failures;
+    const missingUses = missing.uses;
     if (missingFailures.length === 0 && missingUses.length === 0) {
       continue;
     }
@@ -180,16 +175,15 @@ export function contractActionsAt(
     if ([...failureNames, ...useNames].some((n) => n === undefined)) {
       continue;
     }
-    const binding10 = module;
-    const tree = binding10.tree;
+    const tree = module.tree;
     const header = arrowHeaderOf(tree, signature.node);
     if (header === undefined || header.token === undefined) {
       continue;
     }
     const token = header.token;
-    const binding12 = functionParts(tree, header.arrow);
-    const fails = binding12.fails;
-    const uses = binding12.uses;
+    const parts = functionParts(tree, header.arrow);
+    const fails = parts.fails;
+    const uses = parts.uses;
     const edits: SourceEdit[] = [];
 
     if (failureNames.length > 0) {
@@ -272,11 +266,9 @@ export function failsClauseActionsAt(
   if (module === undefined || !isSourcePath(path)) {
     return [];
   }
-  const binding13 = module;
-  const tree = binding13.tree;
+  const tree = module.tree;
   for (const fn of module.functions.values()) {
-    const binding14 = fn;
-    const signature = binding14.signature;
+    const signature = fn.signature;
     const token = arrowHeaderOf(tree, signature.node)?.token;
     if (
       token === undefined || start < signature.span.start ||
