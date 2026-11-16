@@ -999,6 +999,15 @@
     "reason": "hasDistinctTag is true only for a union root whose members are tagged records with distinct tags, and the early return leaves only a record root or that union root. For a record root hasDistinctTag is false and part is never type inside the union branch, so the term is false in both forms. For the union root, part === type and hasDistinctTag are both true. The root union visits its members with guarded true, so a union below the root has guarded true and the term never changes a result. A differential through guardedRecord over 300,000 forged types matched the source on every row, and 8,297 of the rows were true. A control mutant that drops the term differed."
   },
   {
+    "file": "src/core/recursion_guard.ts",
+    "declaration": "guardedRecord.visit",
+    "offset": 556,
+    "text": "part.kind === \"primitive\" || part.kind === \"literal\"",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "With && no kind passes the test, so a primitive or a literal reaches the exhaustive check at the end of visit and returns the node itself, a truthy object, in place of true. Each caller of visit reads only the truthiness. The every calls and the union branch coerce the value to a boolean, and the root of guardedRecord is a record or a union, so no root visit returns a primitive or a literal. A differential through guardedRecord over 200,000 forged types matched the source on every row, and 4,296 of the rows were true. A logging copy reached the changed test 30,691 times. A control mutant that passes false for an array element differed."
+  },
+  {
     "file": "src/core/validate/import_checks.ts",
     "declaration": "checkImport.add",
     "offset": 251,
