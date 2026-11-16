@@ -120,17 +120,13 @@ function indexMethods(tree: SyntaxTree, service: NodeId): MethodEntry[] {
     if (name === undefined) {
       continue;
     }
-    {
-      const _appendTarget1 = methods;
-      const _appendValue2 = {
-        name: name,
-        node: child,
-        nameNode: nameNode,
-        nameSpan: nodeSpan(tree, nameNode),
-        span: nodeSpan(tree, child),
-      };
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
-    }
+    methods[methods.length] = {
+      name: name,
+      node: child,
+      nameNode: nameNode,
+      nameSpan: nodeSpan(tree, nameNode),
+      span: nodeSpan(tree, child),
+    };
   }
   return methods;
 }
@@ -183,15 +179,11 @@ function indexImport(tree: SyntaxTree, node: NodeId): ImportEntry {
     if (kind === SyntaxKind.Name) {
       const name = nameTextOf(tree, child);
       if (name !== undefined) {
-        {
-          const _appendTarget3 = names;
-          const _appendValue4 = {
-            name: name,
-            node: child,
-            span: nodeSpan(tree, child),
-          };
-          _appendTarget3[_appendTarget3.length] = _appendValue4;
-        }
+        names[names.length] = {
+          name: name,
+          node: child,
+          span: nodeSpan(tree, child),
+        };
       }
     } else if (tokenKindOf(tree, child) === TokenKind.String) {
       specifierSpan = nodeSpan(tree, child);
@@ -214,11 +206,7 @@ export function buildIndex(tree: SyntaxTree): FileIndex {
   for (const child of kidsOf(tree, tree.root)) {
     const kind = kindOf(tree, child);
     if (kind === SyntaxKind.ImportDecl) {
-      {
-        const _appendTarget5 = imports;
-        const _appendValue6 = indexImport(tree, child);
-        _appendTarget5[_appendTarget5.length] = _appendValue6;
-      }
+      imports[imports.length] = indexImport(tree, child);
       continue;
     }
     const declKind = declarationKind(kind);
@@ -229,11 +217,7 @@ export function buildIndex(tree: SyntaxTree): FileIndex {
     if (entry === undefined) {
       continue;
     }
-    {
-      const _appendTarget7 = decls;
-      const _appendValue8 = entry;
-      _appendTarget7[_appendTarget7.length] = _appendValue8;
-    }
+    decls[decls.length] = entry;
     if (!byName.has(entry.name)) {
       byName = byName.set(entry.name, entry);
     }

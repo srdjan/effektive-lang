@@ -193,41 +193,31 @@ export function contractActionsAt(
     const edits: SourceEdit[] = [];
 
     if (failureNames.length > 0) {
-      {
-        const _appendTarget1 = edits;
-        const _appendValue2 = clauseEdit(
-          tree,
-          path,
-          fails,
-          "fails",
-          failureNames,
-          uses !== undefined ? tree.starts[uses] : tree.starts[token],
-        );
-        _appendTarget1[_appendTarget1.length] = _appendValue2;
-      }
+      edits[edits.length] = clauseEdit(
+        tree,
+        path,
+        fails,
+        "fails",
+        failureNames,
+        uses !== undefined ? tree.starts[uses] : tree.starts[token],
+      );
     }
     if (useNames.length > 0) {
-      {
-        const _appendTarget3 = edits;
-        const _appendValue4 = clauseEdit(
-          tree,
-          path,
-          uses,
-          "with",
-          useNames,
-          tree.starts[token],
-        );
-        _appendTarget3[_appendTarget3.length] = _appendValue4;
-      }
+      edits[edits.length] = clauseEdit(
+        tree,
+        path,
+        uses,
+        "with",
+        useNames,
+        tree.starts[token],
+      );
     }
     // Merge insertions at a shared offset in language clause order.
     const merged: SourceEdit[] = [];
     for (const edit of edits) {
       const i = merged.findIndex((e) => e.span.start === edit.span.start);
       if (i < 0) {
-        const _appendTarget5 = merged;
-        const _appendValue6 = edit;
-        _appendTarget5[_appendTarget5.length] = _appendValue6;
+        merged[merged.length] = edit;
       } else {
         merged[i] = { span: edit.span, text: merged[i].text + edit.text };
       }
@@ -256,17 +246,13 @@ export function contractActionsAt(
     if (harmful || delta.removed.length === 0) {
       continue;
     }
-    {
-      const _appendTarget7 = output;
-      const _appendValue8 = {
-        title: `Add missing ${
-          missingClauseName(missingFailures, missingUses)
-        } entries`,
-        function: signature.id,
-        edits: merged,
-      };
-      _appendTarget7[_appendTarget7.length] = _appendValue8;
-    }
+    output[output.length] = {
+      title: `Add missing ${
+        missingClauseName(missingFailures, missingUses)
+      } entries`,
+      function: signature.id,
+      edits: merged,
+    };
   }
   return output;
 }

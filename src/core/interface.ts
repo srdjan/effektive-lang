@@ -236,9 +236,7 @@ export function buildInterface(
   const functions: FunctionSignature[] = [];
   for (const signature of declarations.values.values()) {
     if (signature.kind === "function") {
-      const _appendTarget9 = functions;
-      const _appendValue10 = signature;
-      _appendTarget9[_appendTarget9.length] = _appendValue10;
+      functions[functions.length] = signature;
     }
   }
   const missing = functions
@@ -308,11 +306,7 @@ export function reachableModules(
     }
     seen = seen.add(next);
     for (const dependency of analysis.project.graph.get(next) ?? []) {
-      {
-        const _appendTarget17 = stack;
-        const _appendValue18 = dependency;
-        _appendTarget17[_appendTarget17.length] = _appendValue18;
-      }
+      stack[stack.length] = dependency;
     }
   }
   return [...seen].filter((name) => name !== module).sort(compareText);

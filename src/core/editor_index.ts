@@ -189,22 +189,10 @@ export function buildSymbolIndex(revision: Revision): SymbolIndex {
             SyntaxKind.ShorthandBinding,
           ).includes(kindOf(tree, parent)),
       };
-      {
-        const _appendTarget1 = occurrences;
-        const _appendValue2 = occurrence;
-        _appendTarget1[_appendTarget1.length] = _appendValue2;
-      }
-      {
-        const _appendTarget3 = file;
-        const _appendValue4 = occurrence;
-        _appendTarget3[_appendTarget3.length] = _appendValue4;
-      }
+      occurrences[occurrences.length] = occurrence;
+      file[file.length] = occurrence;
       const group = byIdentity.get(identity) ?? [];
-      {
-        const _appendTarget5 = group;
-        const _appendValue6 = occurrence;
-        _appendTarget5[_appendTarget5.length] = _appendValue6;
-      }
+      group[group.length] = occurrence;
       byIdentity = byIdentity.set(identity, group);
       if (isDeclaration && target.kind === "local") {
         const local = localScope(tree, node, identity);
@@ -216,21 +204,15 @@ export function buildSymbolIndex(revision: Revision): SymbolIndex {
                 SyntaxKind.ResourceRelease,
               ).includes(kindOf(tree, region))
             ) {
-              {
-                const _appendTarget7 = scopes;
-                const _appendValue8 = {
-                  ...local,
-                  scope: nodeSpan(tree, region),
-                  parameter: true,
-                };
-                _appendTarget7[_appendTarget7.length] = _appendValue8;
-              }
+              scopes[scopes.length] = {
+                ...local,
+                scope: nodeSpan(tree, region),
+                parameter: true,
+              };
             }
           }
         } else {
-          const _appendTarget9 = scopes;
-          const _appendValue10 = local;
-          _appendTarget9[_appendTarget9.length] = _appendValue10;
+          scopes[scopes.length] = local;
         }
       }
     }

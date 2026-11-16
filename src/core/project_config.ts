@@ -202,15 +202,11 @@ export function parseConfig(
   const diagnostics: Diagnostic[] = [];
   for (const key of Object.keys(data)) {
     if (!TOP_KEYS.includes(key)) {
-      {
-        const _appendTarget1 = diagnostics;
-        const _appendValue2 = makeDiagnostic(
-          "module/001",
-          `unknown key \`${key}\` in ${CONFIG_FILE}`,
-          keySpan(text, key, 0),
-        );
-        _appendTarget1[_appendTarget1.length] = _appendValue2;
-      }
+      diagnostics[diagnostics.length] = makeDiagnostic(
+        "module/001",
+        `unknown key \`${key}\` in ${CONFIG_FILE}`,
+        keySpan(text, key, 0),
+      );
     }
   }
   const importsData = data["imports"];
@@ -255,23 +251,15 @@ export function parseConfig(
       const entryStart = keySpan(text, "from", ruleStart).start;
       for (const field of Object.keys(entry)) {
         if (!IMPORT_RULE_KEYS.includes(field)) {
-          {
-            const _appendTarget3 = diagnostics;
-            const _appendValue4 = makeDiagnostic(
-              "module/001",
-              `unknown key \`${field}\` in imports entry ${i + 1}`,
-              keySpan(text, field, entryStart),
-            );
-            _appendTarget3[_appendTarget3.length] = _appendValue4;
-          }
+          diagnostics[diagnostics.length] = makeDiagnostic(
+            "module/001",
+            `unknown key \`${field}\` in imports entry ${i + 1}`,
+            keySpan(text, field, entryStart),
+          );
         }
       }
       ruleStart = entryStart + 1;
-      {
-        const _appendTarget5 = rules;
-        const _appendValue6 = { from: from, allow: allow };
-        _appendTarget5[_appendTarget5.length] = _appendValue6;
-      }
+      rules[rules.length] = { from: from, allow: allow };
     }
     imports = rules;
   }
@@ -290,15 +278,11 @@ export function parseConfig(
       const entryStart = keySpan(text, key, hostStart).start;
       for (const field of Object.keys(entry)) {
         if (!HOST_KEYS.includes(field)) {
-          {
-            const _appendTarget7 = diagnostics;
-            const _appendValue8 = makeDiagnostic(
-              "module/001",
-              `unknown key \`${field}\` in host entry \`${key}\``,
-              keySpan(text, field, entryStart),
-            );
-            _appendTarget7[_appendTarget7.length] = _appendValue8;
-          }
+          diagnostics[diagnostics.length] = makeDiagnostic(
+            "module/001",
+            `unknown key \`${field}\` in host entry \`${key}\``,
+            keySpan(text, field, entryStart),
+          );
         }
       }
       const interfaceValue = entry["interface"];
@@ -313,27 +297,19 @@ export function parseConfig(
       const modulePath = normalizeRelative(moduleValue);
       const interfaceSpan = keySpan(text, "interface", entryStart);
       if (interfacePath === undefined || !isInterfacePath(interfacePath)) {
-        {
-          const _appendTarget9 = diagnostics;
-          const _appendValue10 = makeDiagnostic(
-            "module/001",
-            `the interface of host entry \`${key}\` must be a path inside the project root that ends in .effi`,
-            interfaceSpan,
-          );
-          _appendTarget9[_appendTarget9.length] = _appendValue10;
-        }
+        diagnostics[diagnostics.length] = makeDiagnostic(
+          "module/001",
+          `the interface of host entry \`${key}\` must be a path inside the project root that ends in .effi`,
+          interfaceSpan,
+        );
         continue;
       }
       if (modulePath === undefined) {
-        {
-          const _appendTarget11 = diagnostics;
-          const _appendValue12 = makeDiagnostic(
-            "module/001",
-            `the module of host entry \`${key}\` must be a path inside the project root`,
-            keySpan(text, "module", entryStart),
-          );
-          _appendTarget11[_appendTarget11.length] = _appendValue12;
-        }
+        diagnostics[diagnostics.length] = makeDiagnostic(
+          "module/001",
+          `the module of host entry \`${key}\` must be a path inside the project root`,
+          keySpan(text, "module", entryStart),
+        );
         continue;
       }
       host = host.set(key, {

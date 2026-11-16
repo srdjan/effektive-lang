@@ -252,9 +252,7 @@ function startsDeclaration(tree: SyntaxTree, start: number): boolean {
       lexed.kinds[i] !== TokenKind.Newline &&
       lexed.kinds[i] !== TokenKind.Eof
     ) {
-      const _appendTarget1 = beforeOnLine;
-      const _appendValue2 = i;
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
+      beforeOnLine[beforeOnLine.length] = i;
     }
   }
   return beforeOnLine.length === 0 ||
