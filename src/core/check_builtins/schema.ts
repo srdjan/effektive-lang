@@ -283,15 +283,14 @@ const SCHEMA_HANDLERS: SchemaHandlers = {
     schemaDefaultKeyCall(c, call, { direction: "decoded", nullable: true }),
   "default-encoded-key": (c, call) =>
     schemaDefaultKeyCall(c, call, { direction: "encoded", nullable: false }),
-  "optional-transform": (c, call) => schemaOptionalBridgeCall(c, call, false),
-  "optional-from-required": (c, call) =>
-    schemaOptionalBridgeCall(c, call, true),
+  "optional-transform": (c, call) => schemaOptionalBridgeCall(c, call),
+  "optional-from-required": (c, call) => schemaOptionalBridgeCall(c, call),
   union: (c, call) => schemaUnionCall(c, call),
   transform: (c, call) => schemaTransformCall(c, call),
   recursive: (c, call) => schemaRecursiveCall(c, call),
-  decode: (c, call) => schemaOperationCall(c, call, "decode"),
-  encode: (c, call) => schemaOperationCall(c, call, "encode"),
-  make: (c, call) => schemaOperationCall(c, call, "make"),
+  decode: (c, call) => schemaOperationCall(c, call),
+  encode: (c, call) => schemaOperationCall(c, call),
+  make: (c, call) => schemaOperationCall(c, call),
 };
 
 /** The literal value of a field in an inline options record, by label. */
@@ -705,11 +704,10 @@ function schemaUnionCall(c: SchemaContext, call: SchemaCall): NodeInfo {
 function schemaOptionalBridgeCall(
   c: SchemaContext,
   call: SchemaCall,
-  fromRequired: boolean,
 ): NodeInfo {
   const node = call.node;
-  const name = call.name;
   const args = call.args;
+  const fromRequired = call.name === "schemaOptionalFromRequired";
   const sourceInfo = c.argInfo(args[0], undefined);
   const targetInfo = c.argInfo(args[1], undefined);
   const source = fromRequired
@@ -727,12 +725,12 @@ function schemaOptionalBridgeCall(
       ]),
     );
   }
-  return optionalBridge(c, node, name, args, {
+  return optionalBridge(c, call, {
     sourceInfo: sourceInfo,
     targetInfo: targetInfo,
     source: source,
     target: target,
-  }, fromRequired);
+  });
 }
 
 function schemaConstructorDefaultCall(
@@ -991,9 +989,9 @@ function schemaDefaultKeyCall(c: SchemaContext, call: SchemaCall, variant: {
 function schemaOperationCall(
   c: SchemaContext,
   call: SchemaCall,
-  op: "decode" | "encode" | "make",
 ): NodeInfo {
   const node = call.node;
+  const op = call.op;
   const args = call.args;
   const initial = firstSchema(c, call);
   const first = initial.first;
@@ -1145,17 +1143,18 @@ function schemaTransformCall(c: SchemaContext, call: SchemaCall): NodeInfo {
  */
 function optionalBridge(
   c: SchemaContext,
-  node: NodeId,
-  name: string,
-  args: readonly Arg[],
+  call: SchemaCall,
   parts: {
     readonly sourceInfo: NodeInfo;
     readonly targetInfo: NodeInfo;
     readonly source: SchemaNode;
     readonly target: SchemaNode;
   },
-  fromRequired: boolean,
 ): NodeInfo {
+  const node = call.node;
+  const name = call.name;
+  const args = call.args;
+  const fromRequired = name === "schemaOptionalFromRequired";
   const sourceInfo = parts.sourceInfo;
   const targetInfo = parts.targetInfo;
   const source = parts.source;

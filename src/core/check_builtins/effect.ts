@@ -66,11 +66,10 @@ export type EffectContext =
 
 /**
  * The Effect element type of an array of Effect values, or undefined after a
- * diagnostic (`name` needs an array of Effect values). Used by `race`.
+ * diagnostic (`race` needs an array of Effect values).
  */
 function effectArrayMember(
   c: Pick<EffectContext, "table" | "isError" | "report">,
-  name: string,
   jobs: NodeInfo,
   at: NodeId,
 ): Extract<TypeNode, { readonly kind: "effect" }> | undefined {
@@ -82,7 +81,7 @@ function effectArrayMember(
   if (!c.isError(jobs.type)) {
     c = c.report(
       "type-mismatch/010",
-      `\`${name}\` needs an array of Effect values`,
+      "`race` needs an array of Effect values",
       at,
     );
   }
@@ -727,7 +726,7 @@ function raceCall(
 ): NodeInfo {
   const left = c.argInfo(args[0], undefined);
   if (args.length === 1) {
-    const member = effectArrayMember(c, "race", left, args[0].node);
+    const member = effectArrayMember(c, left, args[0].node);
     return c.finish(
       node,
       member === undefined

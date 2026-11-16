@@ -227,7 +227,6 @@ function sinkTransformStreamCall(
   c: StreamContext,
   node: NodeId,
   args: readonly Arg[],
-  name: "transduceStream",
 ): NodeInfo {
   const stream = c.argInfo(args[0], undefined);
   const producer = c.table.node(c.table.unfold(stream.type));
@@ -236,7 +235,7 @@ function sinkTransformStreamCall(
   if (producer.kind !== "stream" || consumer.kind !== "sink") {
     c = c.report(
       "type-mismatch/010",
-      `\`${name}\` needs Stream and Sink values`,
+      "`transduceStream` needs Stream and Sink values",
       node,
     );
     return c.finish(node, c.table.error, combine([stream, sink]));
@@ -378,7 +377,7 @@ function sinkHint(
   if (producer.kind !== "stream" || sink.pre !== undefined) {
     return undefined;
   }
-  if (resultsInSink(c, sink.node, "takeSink", true)) {
+  if (resultsInSink(c, sink.node, "takeSink")) {
     return c.table.sink(
       producer.element,
       c.table.array(producer.element),
@@ -387,7 +386,7 @@ function sinkHint(
       producer.element,
     );
   }
-  return resultsInSink(c, sink.node, "sinkForEach", false)
+  return resultsInSink(c, sink.node, "sinkForEach")
     ? c.table.sink(producer.element, c.table.unit, [], [], c.table.never)
     : undefined;
 }
@@ -395,14 +394,14 @@ function sinkHint(
 /**
  * Whether a direct call of the named sink builtin is a result of the
  * expression: the expression itself, or the result of a block inside it.
- * With `branches`, also a branch of an `if` or an arm of a `match`.
+ * For `takeSink`, also a branch of an `if` or an arm of a `match`.
  */
 function resultsInSink(
   c: StreamContext,
   node: NodeId,
   name: "takeSink" | "sinkForEach",
-  branches: boolean,
 ): boolean {
+  const branches = name === "takeSink";
   const kids = c.kids(node);
   const kind = kindOf(c.tree, node);
   if (kind === SyntaxKind.CallExpr) {
@@ -410,19 +409,17 @@ function resultsInSink(
     return target?.kind === "builtin" && target.name === name;
   }
   if (kind === SyntaxKind.ParenExpr) {
-    return kids[0] !== undefined && resultsInSink(c, kids[0], name, branches);
+    return kids[0] !== undefined && resultsInSink(c, kids[0], name);
   }
   if (kind === SyntaxKind.Block) {
     const last = kids.at(-1);
     return last !== undefined &&
       kindOf(c.tree, last) !== SyntaxKind.ConstDecl &&
-      resultsInSink(c, last, name, branches);
+      resultsInSink(c, last, name);
   }
   if (kind === SyntaxKind.IfExpr) {
     return branches &&
-      kids.slice(1, 3).some((branch) =>
-        resultsInSink(c, branch, name, branches)
-      );
+      kids.slice(1, 3).some((branch) => resultsInSink(c, branch, name));
   }
   if (kind === SyntaxKind.MatchExpr) {
     return branches && kids.slice(1).some((arm) => {
@@ -432,7 +429,7 @@ function resultsInSink(
         isPatternKind(kindOf(c.tree, child))
       );
       const body = parts.filter((child) => child !== pattern).pop();
-      return body !== undefined && resultsInSink(c, body, name, branches);
+      return body !== undefined && resultsInSink(c, body, name);
     });
   }
   return false;
@@ -474,8 +471,7 @@ export function streamRows(): Pick<
     },
     transduceStream: {
       prologue: direct(2, "pure", { fact: { kind: "transduce-stream" } }),
-      handle: (c, node, name, args) =>
-        sinkTransformStreamCall(c, node, args, name),
+      handle: (c, node, _name, args) => sinkTransformStreamCall(c, node, args),
     },
     runStream: {
       prologue: direct(2, "effect", { fact: { kind: "run-stream" } }),
