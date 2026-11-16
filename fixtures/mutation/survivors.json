@@ -9,6 +9,24 @@
     "reason": "The earlier equal-name branch returns zero. This branch compares distinct strings, so < and <= have identical truth values. A public summarizeLcov differential tested 1024 permutations of 256 records with equal aliases and both distinct-name orders; every summary matched."
   },
   {
+    "file": "scripts/coverage.ts",
+    "declaration": "main",
+    "offset": 1105,
+    "text": "!fastRun.success",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "main starts the fast suite and the slow suite as subprocesses, so no fast test reaches the branch. tests/coverage_slow_test.ts kills it with the pass, test, and run scenarios, which replace deno with an executable double. Run with --only and --tests on that file."
+  },
+  {
+    "file": "scripts/coverage.ts",
+    "declaration": "main",
+    "offset": 1539,
+    "text": "!slowRun.success",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "main starts the fast suite and the slow suite as subprocesses, so no fast test reaches the branch. tests/coverage_slow_test.ts kills it with the pass, test, and run scenarios, which replace deno with an executable double. Run with --only and --tests on that file."
+  },
+  {
     "file": "src/core/check_binary.ts",
     "declaration": "adoptedNumericIdentity",
     "offset": 376,
@@ -1206,6 +1224,87 @@
     "reason": "A CtorPattern always has a first Name. The parser builds it at one site, and it calls parseName for the constructor before it builds the node. So names is never empty and the >= form never runs on an empty list. The log copy saw no empty list in 19169 inputs. No forced probe applies: ctorRef on an undefined node reads an unrelated node, so the empty case is unreachable, not harmless."
   },
   {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.resolverValueRef",
+    "offset": 1584,
+    "text": "target.kind === \"service\" || target.kind === \"cap\" ||\n      target.kind === \"local\" || target.kind === \"builtin\" ||\n      target.kind === \"builtin-type\" || target.kind === \"field\"",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The branch handles a module binding target after the branches for value, provider, unresolved, type, and error. Only resolverBindingFor and the poison binding of an import make a module binding, so the target kind here is always service. Each other kind in the chain (cap, local, builtin, builtin-type, field) is the target of a use site and never of a binding. The swap of || to && regroups the chain around one term, and the term for service stays a top-level disjunct, so the branch still reports the service. A copy that logs the nine mutant conditions beside the source condition saw 4 arrivals in 1907 programs and 86 error cases, all of kind service, and 0 differences. A copy with all nine swaps gave output identical to the source on the same inputs."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.resolverValueRef",
+    "offset": 1584,
+    "text": "target.kind === \"service\" || target.kind === \"cap\" ||\n      target.kind === \"local\" || target.kind === \"builtin\" ||\n      target.kind === \"builtin-type\"",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The branch handles a module binding target after the branches for value, provider, unresolved, type, and error. Only resolverBindingFor and the poison binding of an import make a module binding, so the target kind here is always service. Each other kind in the chain (cap, local, builtin, builtin-type, field) is the target of a use site and never of a binding. The swap of || to && regroups the chain around one term, and the term for service stays a top-level disjunct, so the branch still reports the service. A copy that logs the nine mutant conditions beside the source condition saw 4 arrivals in 1907 programs and 86 error cases, all of kind service, and 0 differences. A copy with all nine swaps gave output identical to the source on the same inputs."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.resolverValueRef",
+    "offset": 1584,
+    "text": "target.kind === \"service\" || target.kind === \"cap\" ||\n      target.kind === \"local\" || target.kind === \"builtin\"",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The branch handles a module binding target after the branches for value, provider, unresolved, type, and error. Only resolverBindingFor and the poison binding of an import make a module binding, so the target kind here is always service. Each other kind in the chain (cap, local, builtin, builtin-type, field) is the target of a use site and never of a binding. The swap of || to && regroups the chain around one term, and the term for service stays a top-level disjunct, so the branch still reports the service. A copy that logs the nine mutant conditions beside the source condition saw 4 arrivals in 1907 programs and 86 error cases, all of kind service, and 0 differences. A copy with all nine swaps gave output identical to the source on the same inputs."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.resolverValueRef",
+    "offset": 1584,
+    "text": "target.kind === \"service\" || target.kind === \"cap\" ||\n      target.kind === \"local\"",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The branch handles a module binding target after the branches for value, provider, unresolved, type, and error. Only resolverBindingFor and the poison binding of an import make a module binding, so the target kind here is always service. Each other kind in the chain (cap, local, builtin, builtin-type, field) is the target of a use site and never of a binding. The swap of || to && regroups the chain around one term, and the term for service stays a top-level disjunct, so the branch still reports the service. A copy that logs the nine mutant conditions beside the source condition saw 4 arrivals in 1907 programs and 86 error cases, all of kind service, and 0 differences. A copy with all nine swaps gave output identical to the source on the same inputs."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.resolverValueRef",
+    "offset": 1613,
+    "text": "target.kind === \"cap\"",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The branch handles a module binding target after the branches for value, provider, unresolved, type, and error. Only resolverBindingFor and the poison binding of an import make a module binding, so the target kind here is always service. The swap of === to !== makes one other term true for every kind but its own, and the term for service already makes the condition true. A copy that logs the nine mutant conditions beside the source condition saw 4 arrivals in 1907 programs and 86 error cases, all of kind service, and 0 differences. A copy with all nine swaps gave output identical to the source on the same inputs."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.resolverValueRef",
+    "offset": 1644,
+    "text": "target.kind === \"local\"",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The branch handles a module binding target after the branches for value, provider, unresolved, type, and error. Only resolverBindingFor and the poison binding of an import make a module binding, so the target kind here is always service. The swap of === to !== makes one other term true for every kind but its own, and the term for service already makes the condition true. A copy that logs the nine mutant conditions beside the source condition saw 4 arrivals in 1907 programs and 86 error cases, all of kind service, and 0 differences. A copy with all nine swaps gave output identical to the source on the same inputs."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.resolverValueRef",
+    "offset": 1671,
+    "text": "target.kind === \"builtin\"",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The branch handles a module binding target after the branches for value, provider, unresolved, type, and error. Only resolverBindingFor and the poison binding of an import make a module binding, so the target kind here is always service. The swap of === to !== makes one other term true for every kind but its own, and the term for service already makes the condition true. A copy that logs the nine mutant conditions beside the source condition saw 4 arrivals in 1907 programs and 86 error cases, all of kind service, and 0 differences. A copy with all nine swaps gave output identical to the source on the same inputs."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.resolverValueRef",
+    "offset": 1706,
+    "text": "target.kind === \"builtin-type\"",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The branch handles a module binding target after the branches for value, provider, unresolved, type, and error. Only resolverBindingFor and the poison binding of an import make a module binding, so the target kind here is always service. The swap of === to !== makes one other term true for every kind but its own, and the term for service already makes the condition true. A copy that logs the nine mutant conditions beside the source condition saw 4 arrivals in 1907 programs and 86 error cases, all of kind service, and 0 differences. A copy with all nine swaps gave output identical to the source on the same inputs."
+  },
+  {
+    "file": "src/core/resolve.ts",
+    "declaration": "Resolver.resolverValueRef",
+    "offset": 1740,
+    "text": "target.kind === \"field\"",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The branch handles a module binding target after the branches for value, provider, unresolved, type, and error. Only resolverBindingFor and the poison binding of an import make a module binding, so the target kind here is always service. The swap of === to !== makes one other term true for every kind but its own, and the term for service already makes the condition true. A copy that logs the nine mutant conditions beside the source condition saw 4 arrivals in 1907 programs and 86 error cases, all of kind service, and 0 differences. A copy with all nine swaps gave output identical to the source on the same inputs."
+  },
+  {
     "file": "src/core/editor_index.ts",
     "declaration": "localScope",
     "offset": 146,
@@ -1303,5 +1402,41 @@
     "operator": "boolean-return",
     "class": "equivalent",
     "reason": "The mutant returns true from the walk visitor for a Token node. The walk then reads the children of that node. A Token node has no children, because the parser makes each token a leaf, so the walk visits nothing more and the printed text does not change. A scan of 190 fixture files found 45450 Token nodes with 0 children. A differential through printTree over 3990 texts, which are each fixture file cut at three lengths with seven tails, gave the same output for the source and the mutant."
+  },
+  {
+    "file": "src/core/editor_tokens.ts",
+    "declaration": "semanticClassifications.lexicalType",
+    "offset": 446,
+    "text": "i + 1 < lexed.count",
+    "operator": "comparison",
+    "class": "equivalent",
+    "reason": "The comparison guards the read of the next token kind for the keyword check of an identifier. The lexer always ends the token list with an Eof token, so the last token never has kind Ident, and the guard is never evaluated at the last token. With <=, the guard would differ only there. A copy that logs the case counted 2,077,973 evaluations in 12214 inputs (each fixture whole, with each third line deleted, and at every 17th prefix) and 0 evaluations at the last token. The mutant copy gave output identical to the source on all 12214 inputs."
+  },
+  {
+    "file": "scripts/rules_unfired.ts",
+    "declaration": "main",
+    "offset": 375,
+    "text": "!suite.success",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "main starts the fast suite and the coverage report as subprocesses, so no fast test reaches the branch. tests/rules_unfired_slow_test.ts kills it with the pass, test, and coverage scenarios, which replace deno with an executable double. Run with --only and --tests on that file."
+  },
+  {
+    "file": "scripts/rules_unfired.ts",
+    "declaration": "main",
+    "offset": 786,
+    "text": "!report.success",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "main starts the fast suite and the coverage report as subprocesses, so no fast test reaches the branch. tests/rules_unfired_slow_test.ts kills it with the pass, test, and coverage scenarios, which replace deno with an executable double. Run with --only and --tests on that file."
+  },
+  {
+    "file": "scripts/package_vscode_smoke.ts",
+    "declaration": "installedEditorSmoke",
+    "offset": 2487,
+    "text": "!installed.success",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "installedEditorSmoke is not exported and starts VS Code as a subprocess, so no fast test reaches the branch. tests/package_vscode_smoke_slow_test.ts kills it with the pass and install scenarios, which replace the packaging step and VS Code with doubles. Run with --only and --tests on that file."
   }
 ]
