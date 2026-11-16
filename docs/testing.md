@@ -86,7 +86,7 @@ aliases, internal directory links, and dangling links.
 
 ## Property tests
 
-A property test generates its inputs from a literal table of seeds, with `makeRandom` from `bench/generate.ts`. It asserts literal counts of each outcome, so it cannot pass with no effective input. A failure message prints the seed and the step.
+A property test generates its inputs from a literal table of seeds, with `makeRandom` from `scripts/lib.ts`. It asserts literal counts of each outcome, so it cannot pass with no effective input. A failure message prints the seed and the step.
 
 | File | What it proves | What it can miss |
 | --- | --- | --- |

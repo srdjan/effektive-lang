@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { fastSuiteArgs, prettyJson } from "../scripts/lib.ts";
+import { fastSuiteArgs, makeRandom, prettyJson } from "../scripts/lib.ts";
 
 const config: { tasks: Record<string, string> } = JSON.parse(
   Deno.readTextFileSync(new URL("../deno.json", import.meta.url)),
@@ -28,4 +28,12 @@ Deno.test("fastSuiteArgs puts the flags of a caller before the selection", () =>
 
 Deno.test("prettyJson writes a two-space indent and a final newline", () => {
   assertEquals(prettyJson({ a: [1] }), '{\n  "a": [\n    1\n  ]\n}\n');
+});
+
+Deno.test("makeRandom gives the same numbers in [0, 1) for the same seed", () => {
+  const random = makeRandom(0x1ec5);
+  assertEquals(
+    [random(), random(), random()],
+    [0.12442471110261977, 0.48457478848285973, 0.3912345527205616],
+  );
 });

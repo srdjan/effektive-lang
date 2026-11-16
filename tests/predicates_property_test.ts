@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { makeRandom } from "../bench/generate.ts";
+import { makeRandom } from "../scripts/lib.ts";
 import {
   and,
   comparison,

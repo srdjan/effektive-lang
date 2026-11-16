@@ -1,6 +1,6 @@
 // Shared mechanics of the task scripts: the repository root, one process
 // runner, a temporary directory helper, the fixture JSON writer, the revision
-// export, and the base arguments of the fast test suite.
+// export, the base arguments of the fast test suite, and the seeded generator.
 //
 // `scripts/behavior_corpus.ts` must not import this module. The comparison
 // copies that file into old source trees, where this module does not exist.
@@ -216,4 +216,16 @@ export async function exportRevision(
     if (!result.ok) return result;
   }
   return { ok: true, value: undefined };
+}
+
+/** A small seeded generator (mulberry32). It returns numbers in [0, 1). */
+export function makeRandom(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }

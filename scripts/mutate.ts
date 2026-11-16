@@ -41,6 +41,7 @@ import type { Result } from "../src/core/mod.ts";
 import {
   exportRevision,
   fastSuiteArgs,
+  makeRandom,
   ROOT,
   runProcess,
   withTempDir,
@@ -210,16 +211,6 @@ export function applyMutant(source: string, mutant: Mutant): string {
     source.slice(mutant.end);
 }
 
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 /**
  * The items to test, in source order. `"all"` keeps every item. A number keeps
  * that many items, chosen by a shuffle that the seed fixes.
@@ -231,7 +222,7 @@ export function selectSample<T>(
 ): T[] {
   if (sample === "all" || sample >= items.length) return [...items];
   const order = items.map((_, index) => index);
-  const next = mulberry32(seed);
+  const next = makeRandom(seed);
   for (let i = order.length - 1; i > 0; i--) {
     const j = Math.floor(next() * (i + 1));
     [order[i], order[j]] = [order[j]!, order[i]!];

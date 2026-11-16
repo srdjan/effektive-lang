@@ -4,7 +4,8 @@
 // rejects only counts toward the totals. Nothing may throw in any case.
 
 import { assertEquals } from "@std/assert";
-import { allFiles, generateProject, makeRandom } from "../bench/generate.ts";
+import { allFiles, generateProject } from "../bench/generate.ts";
+import { makeRandom } from "../scripts/lib.ts";
 import { lex, Program, TokenKind } from "../src/core/frontend.ts";
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 import { exampleFiles } from "./helpers.ts";

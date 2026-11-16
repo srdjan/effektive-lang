@@ -10,7 +10,7 @@
 
 import { lex } from "../src/core/mod.ts";
 import type { Lexed } from "../src/core/lex.ts";
-import { prettyJson } from "./lib.ts";
+import { makeRandom, prettyJson } from "./lib.ts";
 
 /** The number of random strings. */
 export const RANDOM_COUNT = 20_000;
@@ -33,21 +33,9 @@ const ALPHABET: readonly string[] = [
   "\ud83d",
 ];
 
-/** A small seeded generator (mulberry32). It returns numbers in [0, 1). */
-function generator(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 /** The random strings. The same seed always gives the same strings. */
 export function randomInputs(count: number = RANDOM_COUNT): string[] {
-  const next = generator(SEED);
+  const next = makeRandom(SEED);
   const inputs: string[] = [];
   for (let k = 0; k < count; k++) {
     const length = Math.floor(next() * 40);

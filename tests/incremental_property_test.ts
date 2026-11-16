@@ -14,8 +14,8 @@ import {
   applyModeFlipEdit,
   type GeneratedProject,
   generateProject,
-  makeRandom,
 } from "../bench/generate.ts";
+import { makeRandom } from "../scripts/lib.ts";
 import {
   checkProject,
   compareText,

@@ -9,7 +9,7 @@
 // over the sealed types of `owner` and none over the sealed types of `other`.
 
 import { assertEquals } from "@std/assert";
-import { makeRandom } from "../bench/generate.ts";
+import { makeRandom } from "../scripts/lib.ts";
 import type {
   CapabilityId,
   Effects,

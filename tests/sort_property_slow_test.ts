@@ -6,7 +6,7 @@
 // literal counts.
 
 import { assertEquals } from "@std/assert";
-import { makeRandom } from "../bench/generate.ts";
+import { makeRandom } from "../scripts/lib.ts";
 import { build, withTemporary } from "./emit_slow_helpers.ts";
 import { runScript } from "./process_helpers.ts";
 
