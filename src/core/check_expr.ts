@@ -1508,13 +1508,8 @@ function createBodyChecker(benv: BodyEnv, declaration: ValueId): BodyChecker {
           child,
           node,
           parent,
-          nested ||
-            Array.of<SyntaxKind>(
-              SyntaxKind.ArrowExpr,
-              SyntaxKind.ResourceAcquire,
-              SyntaxKind.ResourceUse,
-              SyntaxKind.ResourceRelease,
-            ).includes(kind),
+          nested || kind === SyntaxKind.ArrowExpr ||
+            RESOURCE_PARTS.includes(kind),
         );
       }
       return uses;

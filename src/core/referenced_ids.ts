@@ -104,16 +104,13 @@ export function declarationReferencedIds<Id extends string>(
     return ids;
   }
   if (declaration.kind === "type") {
-    {
-      const kind_3 = declaration.definition.kind;
-      if (kind_3 === "alias") {
-        ids = referencedIds(declaration.definition.type, ids);
-        return ids;
-      }
-      if (kind_3 === "nominal") {
-        ids = referencedIds(declaration.definition.base, ids);
-        return ids;
-      }
+    if (declaration.definition.kind === "alias") {
+      ids = referencedIds(declaration.definition.type, ids);
+      return ids;
+    }
+    if (declaration.definition.kind === "nominal") {
+      ids = referencedIds(declaration.definition.base, ids);
+      return ids;
     }
     return ids;
   }
