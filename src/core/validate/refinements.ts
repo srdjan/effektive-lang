@@ -18,6 +18,7 @@ import type {
   TypeId,
 } from "../ir.ts";
 import type { Predicate, Term } from "../predicates.ts";
+import { exprChildren } from "./expr_walk.ts";
 import { isNormalizedInteger, verifyCertificate } from "./predicates.ts";
 import { invocationOf, isQuiet } from "./sets.ts";
 import { MAX_DEPTH } from "./type_children.ts";
@@ -91,7 +92,6 @@ export type RefinementValidator = {
   readonly audit: (
     expression: Expr,
     path: string,
-    children: (expr: Expr) => readonly Expr[],
   ) => RefinementValidator;
 };
 
@@ -255,7 +255,6 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
   function audit(
     expression: Expr,
     path: string,
-    children: (expr: Expr) => readonly Expr[],
   ): RefinementValidator {
     for (const entry of (expression.proofs ?? []).entries()) {
       const proof = entry[1];
@@ -270,10 +269,10 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
         );
       }
     }
-    for (const entry of children(expression).entries()) {
+    for (const entry of exprChildren(expression).entries()) {
       const child = entry[1];
       const index = entry[0];
-      validator = audit(child, `${path}.$children[${index}]`, children);
+      validator = audit(child, `${path}.$children[${index}]`);
     }
     return validator;
   }
@@ -306,7 +305,6 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
     for (const proof of proofs) consumed = consumed.add(proof);
     if (proofs.length !== 1) {
       return invalid(
-        ctx,
         path,
         expression,
         proofs.length === 0
@@ -323,7 +321,6 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
       !ownsSealed(ctx.world.env, target)
     ) {
       return invalid(
-        ctx,
         path,
         expression,
         "the proof target is not a constructible refined identity",
@@ -335,7 +332,6 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
     );
     if (goal === undefined) {
       return invalid(
-        ctx,
         path,
         expression,
         "the proof claim uses an unsupported expression",
@@ -343,7 +339,6 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
     }
     if (proof.certificate.claim !== "proved") {
       return invalid(
-        ctx,
         path,
         expression,
         "the proof certificate does not prove its claim",
@@ -351,7 +346,6 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
     }
     if (remainingSteps === 0) {
       return invalid(
-        ctx,
         path,
         expression,
         "the aggregate proof validation limit is exhausted",
@@ -362,7 +356,7 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
       ...[...locals].flatMap((entry) => {
         const id = entry[0];
         const type = entry[1];
-        return typeAssumptionsAt(ctx, type, [id], undefined);
+        return typeAssumptionsAt(ctx, type, [id], emptySet<Type>());
       }),
       ...aliases,
       ...branches,
@@ -376,7 +370,6 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
     if (!checked.ok) {
       remainingSteps = remainingSteps - maxSteps;
       return invalid(
-        ctx,
         path,
         expression,
         `the proof certificate is invalid: ${checked.error.tag}`,
@@ -387,13 +380,12 @@ export function createRefinementValidator(ctx: Ctx): RefinementValidator {
   }
 
   function invalid(
-    current: Ctx,
     path: string,
     expression: Expr,
     message: string,
   ): Ctx {
     return flag(
-      current,
+      ctx,
       AREA.types,
       `${path}.proofs`,
       message,
@@ -660,11 +652,10 @@ function typeAssumptionsAt(
   ctx: Ctx,
   type: Type,
   path: readonly string[],
-  seen: ReadonlySet<Type> | undefined,
+  seen: ReadonlySet<Type>,
 ): Predicate[] {
-  const visited = seen === undefined ? emptySet<Type>() : seen;
-  if (visited.has(type)) return [];
-  const nextSeen = setFrom(visited).add(type);
+  if (seen.has(type)) return [];
+  const nextSeen = setFrom(seen).add(type);
   const current = unfoldTransparentType(ctx, type);
   if (current.kind === "named" && current.id.startsWith("type:")) {
     const id: TypeId = `type:${current.id.slice("type:".length)}`;

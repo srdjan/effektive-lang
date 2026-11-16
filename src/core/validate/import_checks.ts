@@ -73,7 +73,7 @@ function checkBuiltinShape(
     report = checkConcatShape(report, env, type, wrong);
   } else if (name === "sort") report = checkSortShape(report, env, type, wrong);
   else {
-    report = checkCallbackShape(report, ctx, name, type, path, span, wrong);
+    report = checkCallbackShape(report, env, name, type, path, span, wrong);
   }
   return { ...ctx, report: report };
 }
@@ -281,14 +281,13 @@ function checkAllShape(
 
 function checkCallbackShape(
   report: Report,
-  ctx: Ctx,
+  env: World["env"],
   name: "map" | "filter" | "fold" | "traverse",
   type: FunctionType,
   path: string,
   span: Span,
   wrong: Wrong,
 ): Report {
-  const env = ctx.world.env;
   const count = type.parameters.length;
   if (!CALLBACK_SHAPES[name].counts.includes(count)) {
     return wrong(report, `has an invalid parameter count ${count}`);

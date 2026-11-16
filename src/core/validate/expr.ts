@@ -104,7 +104,6 @@ import {
 } from "./typing.ts";
 import { checkTypeIds } from "./type_checks.ts";
 import { type Ctx, flag } from "./world_table.ts";
-import { exprChildren } from "./expr_walk.ts";
 import type { ValidatorCore } from "./families/context.ts";
 import { type Comp, derivedResult, fittedResult, type Out } from "./results.ts";
 import {
@@ -587,7 +586,7 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
     ctx = checkContractSet(d, activeBody, path, "failures", "can fail with");
     ctx = checkContractSet(d, activeBody, path, "requirements", "requires");
     ctx = checkExecution(d.type, activeBody, path, d.span);
-    refinements = refinements.audit(d.body, `${path}.body`, exprChildren);
+    refinements = refinements.audit(d.body, `${path}.body`);
     return ctx.report;
   }
 
@@ -652,7 +651,7 @@ export function createBodyValidator(ctx: Ctx): BodyValidator {
         v.span,
       );
     }
-    refinements = refinements.audit(d.value, `${path}.value`, exprChildren);
+    refinements = refinements.audit(d.value, `${path}.value`);
     return ctx.report;
   }
 

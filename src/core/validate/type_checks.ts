@@ -290,25 +290,18 @@ const DEFERRED_KINDS: readonly Type["kind"][] = [
 function containsDeferred(
   env: TypeEnv,
   type: Type,
-  seen: ReadonlySet<string> | undefined,
-  depth: number | undefined,
+  seen: ReadonlySet<string>,
+  depth: number,
 ): boolean {
-  const visited = seen === undefined ? emptySet<string>() : seen;
-  const currentDepth = depth === undefined ? 0 : depth;
   if (DEFERRED_KINDS.includes(type.kind)) return true;
-  if (currentDepth > MAX_DEPTH) return false;
+  if (depth > MAX_DEPTH) return false;
   if (type.kind === "named") {
     const alias = env.aliases.get(type.id);
-    if (alias === undefined || visited.has(type.id)) return false;
-    return containsDeferred(
-      env,
-      alias,
-      setFrom([...visited, type.id]),
-      currentDepth + 1,
-    );
+    if (alias === undefined || seen.has(type.id)) return false;
+    return containsDeferred(env, alias, setFrom([...seen, type.id]), depth + 1);
   }
   return typeChildren(type).some((c) =>
-    containsDeferred(env, c.type, visited, currentDepth + 1)
+    containsDeferred(env, c.type, seen, depth + 1)
   );
 }
 
@@ -322,7 +315,7 @@ export function checkDeferredFields(
   for (const entry of fields.entries()) {
     const f = entry[1];
     const i = entry[0];
-    if (containsDeferred(ctx.world.env, f.type, undefined, undefined)) {
+    if (containsDeferred(ctx.world.env, f.type, emptySet<string>(), 0)) {
       ctx = flag(
         ctx,
         AREA.types,

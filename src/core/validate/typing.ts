@@ -255,6 +255,10 @@ function assignable(
   adopt: boolean,
 ): boolean {
   if (depth > MAX_DEPTH) return false;
+  /** Compares two parts below this type: no lift, one level deeper, adoption allowed. */
+  function part(source: Type, target: Type): boolean {
+    return assignable(env, source, target, false, depth + 1, true);
+  }
   if (s.kind === "named" && t.kind === "named" && s.id === t.id) return true;
   // Preserve a recursive alias's identity before unfolding it into a union arm.
   if (
@@ -325,18 +329,18 @@ function assignable(
       const sf = s.fields.find((f) => f.name === tf.name);
       if (
         sf === undefined || sf.optional !== tf.optional ||
-        !assignable(env, sf.type, tf.type, false, depth + 1, true)
+        !part(sf.type, tf.type)
       ) return false;
     }
     return true;
   }
   if (t.kind === "array") {
     return s.kind === "array" &&
-      assignable(env, s.element, t.element, false, depth + 1, true);
+      part(s.element, t.element);
   }
   if (t.kind === "option") {
     return s.kind === "option" &&
-      assignable(env, s.element, t.element, false, depth + 1, true);
+      part(s.element, t.element);
   }
   if (t.kind === "ref") {
     return s.kind === "ref" && invariant(env, s.element, t.element, depth);
@@ -363,26 +367,19 @@ function assignable(
   }
   if (t.kind === "effect") {
     return s.kind === "effect" &&
-      assignable(env, s.result, t.result, false, depth + 1, true) &&
+      part(s.result, t.result) &&
       effectsFit(s.effects, t.effects);
   }
   if (t.kind === "stream") {
     return s.kind === "stream" &&
-      assignable(env, s.element, t.element, false, depth + 1, true) &&
+      part(s.element, t.element) &&
       effectsFit(s.effects, t.effects);
   }
   if (t.kind === "sink") {
     return s.kind === "sink" &&
-      assignable(env, t.input, s.input, false, depth + 1, true) &&
-      assignable(env, s.result, t.result, false, depth + 1, true) &&
-      assignable(
-        env,
-        s.leftover ?? NEVER,
-        t.leftover ?? NEVER,
-        false,
-        depth + 1,
-        true,
-      ) &&
+      part(t.input, s.input) &&
+      part(s.result, t.result) &&
+      part(s.leftover ?? NEVER, t.leftover ?? NEVER) &&
       effectsFit(s.effects, t.effects);
   }
   if (t.kind === "tuple") {
@@ -391,7 +388,7 @@ function assignable(
     }
     for (const i of indices(s.elements.length)) {
       if (
-        !assignable(env, s.elements[i], t.elements[i], false, depth + 1, true)
+        !part(s.elements[i], t.elements[i])
       ) {
         return false;
       }
@@ -414,19 +411,12 @@ function assignable(
       !(lift && executionFits(s.execution, t.execution))
     ) return false;
     if (!effectsFit(s.effects, t.effects)) return false;
-    if (!assignable(env, s.result, t.result, false, depth + 1, true)) {
+    if (!part(s.result, t.result)) {
       return false;
     }
     for (const i of indices(t.parameters.length)) {
       if (
-        !assignable(
-          env,
-          t.parameters[i],
-          s.parameters[i],
-          false,
-          depth + 1,
-          true,
-        )
+        !part(t.parameters[i], s.parameters[i])
       ) {
         return false;
       }
