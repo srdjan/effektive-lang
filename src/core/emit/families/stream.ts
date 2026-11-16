@@ -26,104 +26,92 @@ export function streamStructural(
   kid: Kid,
 ): Emitted {
   if (e.kind === "unfold") {
-    {
-      const stream = c.scope.effect("Stream");
-      const effect = c.scope.effect("Effect");
-      const option = c.scope.effect("Option");
-      const state = c.scope.temp();
-      const callback = c.effectCallback(e.next);
-      const next = plainEmitted([
-        `${effect}.map`,
-        callArguments([
-          emitted(
-            [
-              at(callback, PREC.member),
-              callArguments([emitted(state, undefined, undefined)]),
-            ],
-            undefined,
-            undefined,
-          ),
-          emitted(`${option}.getOrUndefined`, undefined, undefined),
-        ]),
-      ]);
-      return plainEmitted([
-        `${stream}.unfold`,
-        callArguments([
-          kid(e.seed, undefined),
-          emitted(
-            c.arrow(`(${state})`, next, undefined),
-            undefined,
-            undefined,
-          ),
-        ]),
-      ]);
-    }
+    const stream = c.scope.effect("Stream");
+    const effect = c.scope.effect("Effect");
+    const option = c.scope.effect("Option");
+    const state = c.scope.temp();
+    const callback = c.effectCallback(e.next);
+    const next = plainEmitted([
+      `${effect}.map`,
+      callArguments([
+        emitted(
+          [
+            at(callback, PREC.member),
+            callArguments([emitted(state, undefined, undefined)]),
+          ],
+          undefined,
+          undefined,
+        ),
+        emitted(`${option}.getOrUndefined`, undefined, undefined),
+      ]),
+    ]);
+    return plainEmitted([
+      `${stream}.unfold`,
+      callArguments([
+        kid(e.seed, undefined),
+        emitted(
+          c.arrow(`(${state})`, next, undefined),
+          undefined,
+          undefined,
+        ),
+      ]),
+    ]);
   }
   if (e.kind === "map-effect") {
-    {
-      const stream = c.scope.effect("Stream");
-      return plainEmitted([
-        `${stream}.mapEffect`,
-        callArguments([
-          kid(e.stream, undefined),
-          c.effectCallback(e.transform),
-          ...concurrencyArguments(e.concurrency),
-        ]),
-      ]);
-    }
+    const stream = c.scope.effect("Stream");
+    return plainEmitted([
+      `${stream}.mapEffect`,
+      callArguments([
+        kid(e.stream, undefined),
+        c.effectCallback(e.transform),
+        ...concurrencyArguments(e.concurrency),
+      ]),
+    ]);
   }
   if (e.kind === "take-sink") {
-    {
-      const type = resolvedAs(
-        c.scope,
-        e.type,
-        "sink",
-        "takeSink has no Sink type",
-      );
-      return plainEmitted([
-        `${c.scope.effect("Sink")}.take`,
-        typeArguments([typeDoc(c.scope, type.input, undefined)]),
-        callArguments([
-          emitted(String(e.count), undefined, undefined),
-        ]),
-      ]);
-    }
+    const type = resolvedAs(
+      c.scope,
+      e.type,
+      "sink",
+      "takeSink has no Sink type",
+    );
+    return plainEmitted([
+      `${c.scope.effect("Sink")}.take`,
+      typeArguments([typeDoc(c.scope, type.input, undefined)]),
+      callArguments([
+        emitted(String(e.count), undefined, undefined),
+      ]),
+    ]);
   }
   if (e.kind === "transduce-stream") {
-    {
-      const message = "transduction has invalid operands";
-      const source = resolvedAs(c.scope, e.stream.type, "stream", message);
-      const sink = resolvedAs(c.scope, e.sink.type, "sink", message);
-      return plainEmitted([
-        `${c.scope.effect("Stream")}.transduce`,
-        typeArguments([
-          typeDoc(c.scope, sink.input, undefined),
-          ...channelTypeArguments(c.scope, source.effects),
-          typeDoc(c.scope, sink.result, undefined),
-          ...channelTypeArguments(c.scope, sink.effects),
-        ]),
-        callArguments([kid(e.stream, undefined), kid(e.sink, undefined)]),
-      ]);
-    }
+    const message = "transduction has invalid operands";
+    const source = resolvedAs(c.scope, e.stream.type, "stream", message);
+    const sink = resolvedAs(c.scope, e.sink.type, "sink", message);
+    return plainEmitted([
+      `${c.scope.effect("Stream")}.transduce`,
+      typeArguments([
+        typeDoc(c.scope, sink.input, undefined),
+        ...channelTypeArguments(c.scope, source.effects),
+        typeDoc(c.scope, sink.result, undefined),
+        ...channelTypeArguments(c.scope, sink.effects),
+      ]),
+      callArguments([kid(e.stream, undefined), kid(e.sink, undefined)]),
+    ]);
   }
   if (e.kind === "buffer-stream") {
-    {
-      const stream = c.scope.effect("Stream");
-      return plainEmitted([
-        `${stream}.buffer`,
-        callArguments([
-          kid(e.stream, undefined),
-          emitted(
-            `{ capacity: ${e.capacity}, strategy: "suspend" }`,
-            undefined,
-            undefined,
-          ),
-        ]),
-      ]);
-    }
+    const stream = c.scope.effect("Stream");
+    return plainEmitted([
+      `${stream}.buffer`,
+      callArguments([
+        kid(e.stream, undefined),
+        emitted(
+          `{ capacity: ${e.capacity}, strategy: "suspend" }`,
+          undefined,
+          undefined,
+        ),
+      ]),
+    ]);
   }
-  {
-    const unreachable: never = e;
-    return unreachable;
-  }
+  const unreachable: never = e;
+  return unreachable;
 }

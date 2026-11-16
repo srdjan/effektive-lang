@@ -196,50 +196,32 @@ function conditionalChain(
     const test = tests[k - 1];
     const split = test.split;
     if (split === undefined || blocked) {
-      {
-        const _appendTarget1 = options;
-        const _appendValue2 = broken;
-        _appendTarget1[_appendTarget1.length] = _appendValue2;
-      }
+      options[options.length] = broken;
     } else {
       const rest: Doc[] = ["? ", arms[k]];
       for (const j of tests.keys()) {
         if (j < k) continue;
-        {
-          const _appendTarget3 = rest;
-          const _appendValues4 = [
+        for (
+          const part of [
             hard,
             ": ",
             tests[j].doc,
             hard,
             "? ",
             arms[j + 1],
-          ];
-          for (const _appendItem5 of _appendValues4) {
-            _appendTarget3[_appendTarget3.length] = _appendItem5;
-          }
-        }
+          ]
+        ) rest[rest.length] = part;
       }
-      {
-        const _appendTarget6 = rest;
-        const _appendValues7 = [hard, ": ", last];
-        for (const _appendItem8 of _appendValues7) {
-          _appendTarget6[_appendTarget6.length] = _appendItem8;
-        }
-      }
-      {
-        const _appendTarget9 = options;
-        const _appendValue10 = alt([
-          [
-            prefix,
-            split.head,
-            indent(indent([hard, split.right])),
-            group(indent([hard, ...rest]), undefined, undefined),
-          ],
-          broken,
-        ]);
-        _appendTarget9[_appendTarget9.length] = _appendValue10;
-      }
+      for (const part of [hard, ": ", last]) rest[rest.length] = part;
+      options[options.length] = alt([
+        [
+          prefix,
+          split.head,
+          indent(indent([hard, split.right])),
+          group(indent([hard, ...rest]), undefined, undefined),
+        ],
+        broken,
+      ]);
     }
     blocked = blocked || hasHardLine(test.doc) || hasHardLine(arms[k]);
     prefix = [prefix, test.doc, " ? ", arms[k], " : "];
@@ -300,38 +282,22 @@ function runDoc(run: Run, tail: number): Doc {
     const k = operandEntry[0];
     const operand = operandEntry[1];
     if (k > 0) {
-      const _appendTarget11 = parts;
-      const _appendValue12 = line;
-      _appendTarget11[_appendTarget11.length] = _appendValue12;
+      parts[parts.length] = line;
     }
     const chunk: Doc[] = [];
     if (k === 0) {
       for (const end of [...ends].reverse()) {
-        const _appendTarget13 = chunk;
-        const _appendValue14 = end.open;
-        _appendTarget13[_appendTarget13.length] = _appendValue14;
+        chunk[chunk.length] = end.open;
       }
     }
-    {
-      const _appendTarget15 = chunk;
-      const _appendValue16 = operand;
-      _appendTarget15[_appendTarget15.length] = _appendValue16;
-    }
+    chunk[chunk.length] = operand;
     if (k >= 1 && k - 1 < ends.length) {
-      const _appendTarget17 = chunk;
-      const _appendValue18 = ends[k - 1].close;
-      _appendTarget17[_appendTarget17.length] = _appendValue18;
+      chunk[chunk.length] = ends[k - 1].close;
     }
     if (k < last) {
-      const _appendTarget19 = chunk;
-      const _appendValue20 = ` ${run.operators[k]}`;
-      _appendTarget19[_appendTarget19.length] = _appendValue20;
+      chunk[chunk.length] = ` ${run.operators[k]}`;
     }
-    {
-      const _appendTarget21 = parts;
-      const _appendValue22 = chunk;
-      _appendTarget21[_appendTarget21.length] = _appendValue22;
-    }
+    parts[parts.length] = chunk;
   }
   const filled = fill(parts, tail);
   return run.top === undefined ? filled : spanned(run.top, filled);
@@ -476,31 +442,15 @@ function chainLayouts(
     const broken = options.broken;
     const layouts: Doc[] = [[" ", options.oneLine]];
     if (broken !== undefined) {
-      const _appendTarget23 = layouts;
-      const _appendValue24 = [" ", broken(" ")];
-      _appendTarget23[_appendTarget23.length] = _appendValue24;
+      layouts[layouts.length] = [" ", broken(" ")];
     }
-    {
-      const _appendTarget25 = layouts;
-      const _appendValue26 = indent([through, options.oneLine]);
-      _appendTarget25[_appendTarget25.length] = _appendValue26;
-    }
+    layouts[layouts.length] = indent([through, options.oneLine]);
     if (broken !== undefined) {
-      const _appendTarget27 = layouts;
-      const _appendValue28 = indent([through, broken(" ")]);
-      _appendTarget27[_appendTarget27.length] = _appendValue28;
+      layouts[layouts.length] = indent([through, broken(" ")]);
     }
-    {
-      const _appendTarget29 = layouts;
-      const _appendValue30 = indent([through, options.split(through)]);
-      _appendTarget29[_appendTarget29.length] = _appendValue30;
-    }
+    layouts[layouts.length] = indent([through, options.split(through)]);
     if (broken !== undefined) {
-      {
-        const _appendTarget31 = layouts;
-        const _appendValue32 = indent([through, broken(through)]);
-        _appendTarget31[_appendTarget31.length] = _appendValue32;
-      }
+      layouts[layouts.length] = indent([through, broken(through)]);
     }
     return layouts.reduceRight<Doc>(
       (otherwise, layout) =>
@@ -514,17 +464,9 @@ function chainLayouts(
     indent([through, options.oneLine]),
     indent([through, options.bodyDown]),
     indent([through, options.split(through)]),
+    indent([through, options.splitDown(through)]),
+    [" ", options.splitAdaptive(hard)],
   ];
-  {
-    const _appendTarget33 = choices;
-    const _appendValues34 = [indent([through, options.splitDown(through)]), [
-      " ",
-      options.splitAdaptive(hard),
-    ]];
-    for (const _appendItem35 of _appendValues34) {
-      _appendTarget33[_appendTarget33.length] = _appendItem35;
-    }
-  }
   return alt(choices.map(declare));
 }
 /** True when the doc that `at(e, min)` prints starts with `{`. */
@@ -650,21 +592,13 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
     const mode: Mode = gen ? "gen" : "pure";
     const statements: Doc[] = [];
     for (const step of block.steps) {
-      {
-        const _appendTarget36 = statements;
-        const _appendValue37 = exprEmitterStep(step, mode);
-        _appendTarget36[_appendTarget36.length] = _appendValue37;
-      }
+      statements[statements.length] = exprEmitterStep(step, mode);
     }
-    {
-      const _appendTarget38 = statements;
-      const _appendValue39 = exprEmitterReturnStatement(
-        block.result,
-        exprEmitterSlotOf(expected, block.type),
-        mode,
-      );
-      _appendTarget38[_appendTarget38.length] = _appendValue39;
-    }
+    statements[statements.length] = exprEmitterReturnStatement(
+      block.result,
+      exprEmitterSlotOf(expected, block.type),
+      mode,
+    );
     return statements;
   }
   function exprEmitterReturnStatement(
@@ -908,21 +842,19 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       return plainEmitted(exprEmitterReference(e.target));
     }
     if (e.kind === "record") {
-      {
-        const shape = expected ?? e.type;
-        const object = exprEmitterObjectLiteral(
-          e.fields.map((f) =>
-            exprEmitterField(
-              f.name,
-              f.value,
-              kid,
-              exprEmitterFieldType(expected ?? e.type, f.name),
-            )
-          ),
-          [],
-        );
-        return exprEmitterSafeRecord(object, shape);
-      }
+      const shape = expected ?? e.type;
+      const object = exprEmitterObjectLiteral(
+        e.fields.map((f) =>
+          exprEmitterField(
+            f.name,
+            f.value,
+            kid,
+            exprEmitterFieldType(expected ?? e.type, f.name),
+          )
+        ),
+        [],
+      );
+      return exprEmitterSafeRecord(object, shape);
     }
     if (e.kind === "array" || e.kind === "tuple") {
       return emitted(
@@ -942,125 +874,115 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       return exprEmitterGetField(e, kid);
     }
     if (e.kind === "update") {
-      {
-        const base = kid(e.record, undefined);
-        const spread: Doc = ["...", at(base, PREC.member)];
-        return exprEmitterSafeRecord(
-          exprEmitterObjectLiteral(
-            e.fields.map((f) =>
-              exprEmitterField(
-                f.name,
-                f.value,
-                kid,
-                exprEmitterFieldType(e.type, f.name),
-              )
-            ),
-            [spread],
-          ),
-          expected ?? e.type,
-        );
-      }
-    }
-    if (e.kind === "nominal") {
-      {
-        // A `Duration` or an `Instant` erases to its millisecond value.
-        if (isClosedUnitId(e.nominal)) {
-          return kid(e.value, undefined);
-        }
-        const declaration = exprEmitterScope.typeLevelDeclaration(e.nominal);
-        // An untagged non-record nominal type is erased: its value is the base value.
-        if (
-          declaration?.kind === "type" &&
-          declaration.definition.kind === "alias"
-        ) {
-          return kid(e.value, undefined);
-        }
-        const fields = declaration?.kind === "type"
-          ? taggedFields(declaration)
-          : undefined;
-        const record: Type | undefined = fields === undefined
-          ? undefined
-          : { kind: "record", fields: fields };
-        // A widened record value keeps its `_tag`, which `make` rejects. A
-        // record literal has none. Every other argument gets the copy.
-        const argument = record !== undefined && e.value.kind !== "record"
-          ? plainEmitted([
-            exprEmitterScope.fieldHelper("untagged"),
-            "<",
-            typeDoc(exprEmitterScope, record, undefined),
-            ">",
-            callArguments([kid(e.value, undefined)]),
-          ])
-          : kid(e.value, undefined);
-        // `make` reads a missing optional field through the prototype chain,
-        // so a nested data value with such a field needs a copy without one.
-        const value = fields?.some((f) =>
-            needsFieldAdapter(exprEmitterScope, f.type)
-          )
-          ? exprEmitterAdaptedInput(argument, {
-            kind: "record",
-            fields: fields,
-          }, "make")
-          : argument;
-        return plainEmitted(member(
-          exprEmitterScope.nameOf(e.nominal),
-          "make",
-          callArguments([value]),
-        ));
-      }
-    }
-    if (e.kind === "some") {
-      {
-        const option = exprEmitterScope.effect("Option");
-        const resolved = resolvedAs(
-          exprEmitterScope,
-          e.type,
-          "option",
-          "a Some expression has a non-option type",
-        );
-        // Keep the checked context through generic wrappers and lifted callbacks.
-        // Inferring `some` can widen tuple payloads and record discriminants.
-        return plainEmitted([
-          `${option}.some<`,
-          typeDoc(exprEmitterScope, resolved.element, undefined),
-          ">",
-          callArguments([kid(e.value, resolved.element)]),
-        ]);
-      }
-    }
-    if (e.kind === "none") {
-      {
-        const option = exprEmitterScope.effect("Option");
-        return plainEmitted(`${option}.none()`);
-      }
-    }
-    if (e.kind === "error") {
-      {
-        const declaration = exprEmitterScope.typeLevelDeclaration(e.error);
-        const shape: Type | undefined = declaration?.kind === "error"
-          ? { kind: "record", fields: declaration.fields }
-          : undefined;
-        const object = exprEmitterObjectLiteral(
+      const base = kid(e.record, undefined);
+      const spread: Doc = ["...", at(base, PREC.member)];
+      return exprEmitterSafeRecord(
+        exprEmitterObjectLiteral(
           e.fields.map((f) =>
             exprEmitterField(
               f.name,
               f.value,
               kid,
-              declaration?.kind === "error"
-                ? declaration.fields.find((g) => g.name === f.name)?.type
-                : undefined,
+              exprEmitterFieldType(e.type, f.name),
             )
           ),
-          [],
-        );
-        return plainEmitted([
-          "new ",
-          exprEmitterScope.nameOf(e.error),
-          callArguments([
-            shape === undefined ? object : exprEmitterSafeRecord(object, shape),
-          ]),
-        ]);
+          [spread],
+        ),
+        expected ?? e.type,
+      );
+    }
+    if (e.kind === "nominal") {
+      // A `Duration` or an `Instant` erases to its millisecond value.
+      if (isClosedUnitId(e.nominal)) {
+        return kid(e.value, undefined);
       }
+      const declaration = exprEmitterScope.typeLevelDeclaration(e.nominal);
+      // An untagged non-record nominal type is erased: its value is the base value.
+      if (
+        declaration?.kind === "type" &&
+        declaration.definition.kind === "alias"
+      ) {
+        return kid(e.value, undefined);
+      }
+      const fields = declaration?.kind === "type"
+        ? taggedFields(declaration)
+        : undefined;
+      const record: Type | undefined = fields === undefined
+        ? undefined
+        : { kind: "record", fields: fields };
+      // A widened record value keeps its `_tag`, which `make` rejects. A
+      // record literal has none. Every other argument gets the copy.
+      const argument = record !== undefined && e.value.kind !== "record"
+        ? plainEmitted([
+          exprEmitterScope.fieldHelper("untagged"),
+          "<",
+          typeDoc(exprEmitterScope, record, undefined),
+          ">",
+          callArguments([kid(e.value, undefined)]),
+        ])
+        : kid(e.value, undefined);
+      // `make` reads a missing optional field through the prototype chain,
+      // so a nested data value with such a field needs a copy without one.
+      const value = fields?.some((f) =>
+          needsFieldAdapter(exprEmitterScope, f.type)
+        )
+        ? exprEmitterAdaptedInput(argument, {
+          kind: "record",
+          fields: fields,
+        }, "make")
+        : argument;
+      return plainEmitted(member(
+        exprEmitterScope.nameOf(e.nominal),
+        "make",
+        callArguments([value]),
+      ));
+    }
+    if (e.kind === "some") {
+      const option = exprEmitterScope.effect("Option");
+      const resolved = resolvedAs(
+        exprEmitterScope,
+        e.type,
+        "option",
+        "a Some expression has a non-option type",
+      );
+      // Keep the checked context through generic wrappers and lifted callbacks.
+      // Inferring `some` can widen tuple payloads and record discriminants.
+      return plainEmitted([
+        `${option}.some<`,
+        typeDoc(exprEmitterScope, resolved.element, undefined),
+        ">",
+        callArguments([kid(e.value, resolved.element)]),
+      ]);
+    }
+    if (e.kind === "none") {
+      const option = exprEmitterScope.effect("Option");
+      return plainEmitted(`${option}.none()`);
+    }
+    if (e.kind === "error") {
+      const declaration = exprEmitterScope.typeLevelDeclaration(e.error);
+      const shape: Type | undefined = declaration?.kind === "error"
+        ? { kind: "record", fields: declaration.fields }
+        : undefined;
+      const object = exprEmitterObjectLiteral(
+        e.fields.map((f) =>
+          exprEmitterField(
+            f.name,
+            f.value,
+            kid,
+            declaration?.kind === "error"
+              ? declaration.fields.find((g) => g.name === f.name)?.type
+              : undefined,
+          )
+        ),
+        [],
+      );
+      return plainEmitted([
+        "new ",
+        exprEmitterScope.nameOf(e.error),
+        callArguments([
+          shape === undefined ? object : exprEmitterSafeRecord(object, shape),
+        ]),
+      ]);
     }
     if (e.kind === "closure") {
       return exprEmitterClosure(e, true, undefined);
@@ -1511,140 +1433,120 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       return internal(`the builtin ${builtinName} has no emission form`);
     }
     if (name === "map" || name === "filter") {
-      {
-        if (args.length !== 2) {
-          return internal(`${name} needs two arguments`);
-        }
-        return plainEmitted([
-          at(kid(args[0], undefined), PREC.member),
-          `.${name}`,
-          callArguments([exprEmitterCallback(args[1], kid)]),
-        ]);
+      if (args.length !== 2) {
+        return internal(`${name} needs two arguments`);
       }
+      return plainEmitted([
+        at(kid(args[0], undefined), PREC.member),
+        `.${name}`,
+        callArguments([exprEmitterCallback(args[1], kid)]),
+      ]);
     }
     if (name === "fold") {
-      {
-        if (args.length !== 3) {
-          return internal("fold needs three arguments");
-        }
-        const generic = e.type.kind === "primitive"
-          ? ""
-          : typeArguments([typeDoc(exprEmitterScope, e.type, undefined)]);
-        return plainEmitted([
-          at(kid(args[0], undefined), PREC.member),
-          ".reduce",
-          generic,
-          callArguments([
-            exprEmitterCallback(args[2], kid),
-            kid(args[1], undefined),
-          ]),
-        ]);
+      if (args.length !== 3) {
+        return internal("fold needs three arguments");
       }
+      const generic = e.type.kind === "primitive"
+        ? ""
+        : typeArguments([typeDoc(exprEmitterScope, e.type, undefined)]);
+      return plainEmitted([
+        at(kid(args[0], undefined), PREC.member),
+        ".reduce",
+        generic,
+        callArguments([
+          exprEmitterCallback(args[2], kid),
+          kid(args[1], undefined),
+        ]),
+      ]);
     }
     if (name === "div") {
-      {
-        if (args.length !== 2) {
-          return internal("div needs two arguments");
-        }
-        return plainEmitted([
-          exprEmitterScope.divide(),
-          callArguments([kid(args[0], undefined), kid(args[1], undefined)]),
-        ]);
+      if (args.length !== 2) {
+        return internal("div needs two arguments");
       }
+      return plainEmitted([
+        exprEmitterScope.divide(),
+        callArguments([kid(args[0], undefined), kid(args[1], undefined)]),
+      ]);
     }
     if (name === "round") {
-      {
-        if (args.length !== 1) {
-          return internal("round needs one argument");
-        }
-        return exprEmitterIntCall(plainEmitted([
-          exprEmitterScope.round(),
-          callArguments([kid(args[0], undefined)]),
-        ]));
+      if (args.length !== 1) {
+        return internal("round needs one argument");
       }
+      return exprEmitterIntCall(plainEmitted([
+        exprEmitterScope.round(),
+        callArguments([kid(args[0], undefined)]),
+      ]));
     }
     if (name === "trunc" || name === "floor" || name === "ceil") {
-      {
-        if (args.length !== 1) {
-          return internal(`${name} needs one argument`);
-        }
-        // `+ 0` turns the `-0` of `Math.ceil(-0.5)` into `0`.
-        return exprEmitterIntCall(emitted(
-          [
-            `Math.${name}`,
-            callArguments([kid(args[0], undefined)]),
-            " + 0",
-          ],
-          PREC.additive,
-          undefined,
-        ));
+      if (args.length !== 1) {
+        return internal(`${name} needs one argument`);
       }
+      // `+ 0` turns the `-0` of `Math.ceil(-0.5)` into `0`.
+      return exprEmitterIntCall(emitted(
+        [
+          `Math.${name}`,
+          callArguments([kid(args[0], undefined)]),
+          " + 0",
+        ],
+        PREC.additive,
+        undefined,
+      ));
     }
     if (name === "text") {
-      {
-        if (args.length !== 1) {
-          return internal("text needs one argument");
-        }
-        return plainEmitted([
-          "String",
-          callArguments([kid(args[0], undefined)]),
-        ]);
+      if (args.length !== 1) {
+        return internal("text needs one argument");
       }
+      return plainEmitted([
+        "String",
+        callArguments([kid(args[0], undefined)]),
+      ]);
     }
     if (name === "at") {
-      {
-        if (args.length !== 2) {
-          return internal("at needs two arguments");
-        }
-        return plainEmitted([
-          exprEmitterScope.at(),
-          callArguments([kid(args[0], undefined), kid(args[1], undefined)]),
-        ]);
+      if (args.length !== 2) {
+        return internal("at needs two arguments");
       }
+      return plainEmitted([
+        exprEmitterScope.at(),
+        callArguments([kid(args[0], undefined), kid(args[1], undefined)]),
+      ]);
     }
     if (name === "concat") {
-      {
-        // A list literal with a spread prints as one array literal.
-        if (args.length === 0) {
-          return internal("concat needs an argument");
-        }
-        const parts = args.flatMap((arg): Doc[] =>
-          arg.kind === "array"
-            ? arg.elements.map((x) =>
-              flush(kid(x, exprEmitterElementType(arg.type, 0)))
-            )
-            : [["...", at(kid(arg, undefined), PREC.member)]]
-        );
-        return emitted(bracketed("[", "]", parts, false), PREC.member, {
-          huggable: true,
-          bracket: true,
-        });
+      // A list literal with a spread prints as one array literal.
+      if (args.length === 0) {
+        return internal("concat needs an argument");
       }
+      const parts = args.flatMap((arg): Doc[] =>
+        arg.kind === "array"
+          ? arg.elements.map((x) =>
+            flush(kid(x, exprEmitterElementType(arg.type, 0)))
+          )
+          : [["...", at(kid(arg, undefined), PREC.member)]]
+      );
+      return emitted(bracketed("[", "]", parts, false), PREC.member, {
+        huggable: true,
+        bracket: true,
+      });
     }
     if (name === "len") {
-      {
-        if (args.length !== 1) {
-          return internal("len needs one argument");
-        }
-        return plainEmitted([
-          at(kid(args[0], undefined), PREC.member),
-          ".length",
-        ]);
+      if (args.length !== 1) {
+        return internal("len needs one argument");
       }
+      return plainEmitted([
+        at(kid(args[0], undefined), PREC.member),
+        ".length",
+      ]);
     }
     if (name === "sort") {
-      {
-        if (args.length !== 1 && args.length !== 2) {
-          return internal("sort needs one or two arguments");
-        }
-        return plainEmitted([
-          exprEmitterScope.sort(),
-          callArguments([
-            kid(args[0], undefined),
-            ...(args.length === 2 ? [exprEmitterCallback(args[1], kid)] : []),
-          ]),
-        ]);
+      if (args.length !== 1 && args.length !== 2) {
+        return internal("sort needs one or two arguments");
       }
+      return plainEmitted([
+        exprEmitterScope.sort(),
+        callArguments([
+          kid(args[0], undefined),
+          ...(args.length === 2 ? [exprEmitterCallback(args[1], kid)] : []),
+        ]),
+      ]);
     }
     return internal(`the builtin ${name} has no emission form`);
   }
@@ -1929,19 +1831,17 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       );
     }
     if (pattern.kind === "tag") {
-      {
-        const left = `${selector}.${pattern.field}`;
-        const right = JSON.stringify(pattern.value);
-        if (exprEmitterRecordMemberLacksField(subject, pattern.field)) {
-          const guard = `${JSON.stringify(pattern.field)} in ${selector} &&`;
-          return {
-            doc: guardedArmEquality(guard, left, right, 2),
-            first: guardedArmEquality(guard, left, right, 1),
-            split: undefined,
-          };
-        }
-        return armEquality(left, right);
+      const left = `${selector}.${pattern.field}`;
+      const right = JSON.stringify(pattern.value);
+      if (exprEmitterRecordMemberLacksField(subject, pattern.field)) {
+        const guard = `${JSON.stringify(pattern.field)} in ${selector} &&`;
+        return {
+          doc: guardedArmEquality(guard, left, right, 2),
+          first: guardedArmEquality(guard, left, right, 1),
+          split: undefined,
+        };
       }
+      return armEquality(left, right);
     }
     if (pattern.kind === "none" || pattern.kind === "some") {
       return internal(
@@ -2003,16 +1903,14 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
         ];
     }
     if (e.kind === "perform") {
-      {
-        const service = exprEmitterScope.typeLevelDeclaration(
-          serviceOfCapability(e.capability),
-        );
-        if (service?.kind !== "service") {
-          return [];
-        }
-        const method = service.methods.find((m) => m.id === e.capability);
-        return method === undefined ? [] : [...method.type.parameters];
+      const service = exprEmitterScope.typeLevelDeclaration(
+        serviceOfCapability(e.capability),
+      );
+      if (service?.kind !== "service") {
+        return [];
       }
+      const method = service.methods.find((m) => m.id === e.capability);
+      return method === undefined ? [] : [...method.type.parameters];
     }
     return [];
   }
@@ -2068,30 +1966,22 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       }
       const name = exprEmitterScope.temp();
       const want = expected[i];
-      {
-        const _appendTarget40 = statements;
-        const _appendValue41 = [
-          "const ",
-          name,
-          ": ",
-          typeDoc(exprEmitterScope, want ?? child.type, undefined),
-          " = ",
-          free(exprEmitterFit(child, want, "gen")),
-          ";",
-        ];
-        _appendTarget40[_appendTarget40.length] = _appendValue41;
-      }
-      return plainEmitted(name);
-    });
-    {
-      const _appendTarget42 = statements;
-      const _appendValue43 = [
-        "return ",
-        free(exprEmitterYieldOf(exprEmitterLeaf(e, emittedChildren))),
+      statements[statements.length] = [
+        "const ",
+        name,
+        ": ",
+        typeDoc(exprEmitterScope, want ?? child.type, undefined),
+        " = ",
+        free(exprEmitterFit(child, want, "gen")),
         ";",
       ];
-      _appendTarget42[_appendTarget42.length] = _appendValue43;
-    }
+      return plainEmitted(name);
+    });
+    statements[statements.length] = [
+      "return ",
+      free(exprEmitterYieldOf(exprEmitterLeaf(e, emittedChildren))),
+      ";",
+    ];
     const gen = exprEmitterGenCall(statements);
     return yielded ? exprEmitterYieldOf(gen) : gen;
   }
@@ -2127,27 +2017,25 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
           const second = children[1];
           const third = children[2];
           if (builtin === "filter") {
-            {
-              // Effect 4 has only the curried form for an effectful
-              // predicate. Its element type is not inferable, so name it.
-              const fn = exprEmitterFunctionTypeOf(e.callee.type);
-              const items = fn && exprEmitterScope.resolve(fn.parameters[0]);
-              if (fn === undefined || items?.kind !== "array") {
-                return internal("filter has no array parameter");
-              }
-              return plainEmitted([
-                `${effect}.filter`,
-                typeArguments([
-                  typeDoc(exprEmitterScope, items.element, undefined),
-                  ...channelTypeArguments(exprEmitterScope, fn.effects),
-                ]),
-                "(",
-                free(second),
-                ")(",
-                free(first),
-                ")",
-              ]);
+            // Effect 4 has only the curried form for an effectful
+            // predicate. Its element type is not inferable, so name it.
+            const fn = exprEmitterFunctionTypeOf(e.callee.type);
+            const items = fn && exprEmitterScope.resolve(fn.parameters[0]);
+            if (fn === undefined || items?.kind !== "array") {
+              return internal("filter has no array parameter");
             }
+            return plainEmitted([
+              `${effect}.filter`,
+              typeArguments([
+                typeDoc(exprEmitterScope, items.element, undefined),
+                ...channelTypeArguments(exprEmitterScope, fn.effects),
+              ]),
+              "(",
+              free(second),
+              ")(",
+              free(first),
+              ")",
+            ]);
           }
           if (builtin === "fold") {
             // The source evaluates the initial value at the call, which
@@ -2189,25 +2077,23 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       ]);
     }
     if (e.kind === "perform") {
-      {
-        const service = exprEmitterScope.nameOf(
-          serviceOfCapability(e.capability),
-        );
-        const parameter = exprEmitterScope.serviceParameter();
-        const call = plainEmitted([
-          parameter,
-          ".",
-          methodOfCapability(e.capability),
-          callArguments(children),
-        ]);
-        const bodyGroup: GroupId = {};
-        const arrow = emitted(
-          exprEmitterArrow(`(${parameter})`, call, bodyGroup),
-          PREC.yield,
-          { huggable: true, bodyGroup: bodyGroup },
-        );
-        return plainEmitted(member(service, "use", callArguments([arrow])));
-      }
+      const service = exprEmitterScope.nameOf(
+        serviceOfCapability(e.capability),
+      );
+      const parameter = exprEmitterScope.serviceParameter();
+      const call = plainEmitted([
+        parameter,
+        ".",
+        methodOfCapability(e.capability),
+        callArguments(children),
+      ]);
+      const bodyGroup: GroupId = {};
+      const arrow = emitted(
+        exprEmitterArrow(`(${parameter})`, call, bodyGroup),
+        PREC.yield,
+        { huggable: true, bodyGroup: bodyGroup },
+      );
+      return plainEmitted(member(service, "use", callArguments([arrow])));
     }
     if (
       e.kind === "schema-make" || e.kind === "schema-decode" ||
@@ -2237,16 +2123,14 @@ export function ExprEmitter(scope: ExprScope): ExprEmitter {
       return exprEmitterEnsureEffect(e);
     }
     if (e.kind === "update-ref") {
-      {
-        return plainEmitted([
-          exprEmitterCalleeText(
-            exprEmitterIsEffectfulFunction(e.transform.type)
-              ? UPDATE_REF_EFFECT
-              : LEAF_CALLS["update-ref"],
-          ),
-          callArguments(children),
-        ]);
-      }
+      return plainEmitted([
+        exprEmitterCalleeText(
+          exprEmitterIsEffectfulFunction(e.transform.type)
+            ? UPDATE_REF_EFFECT
+            : LEAF_CALLS["update-ref"],
+        ),
+        callArguments(children),
+      ]);
     }
     // The remaining leaf kinds call a function on their children. A kind
     // that has neither a case above nor a row in LEAF_CALLS fails to

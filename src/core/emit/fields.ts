@@ -36,42 +36,38 @@ function needsFieldAdapterIn(
   type: Type,
   seen: ReadonlySet<string>,
 ): boolean {
-  {
-    const kind_1 = type.kind;
-    if (kind_1 === "named") {
-      if (seen.has(type.id)) {
-        return false;
-      }
-      const next = setFrom([...seen, type.id]);
-      const declaration = scope.typeLevelDeclaration(type.id);
-      if (declaration?.kind === "error") {
-        return false;
-      }
-      return declaration?.kind === "type" &&
-        needsFieldAdapterIn(scope, definitionType(declaration), next);
-    } else if (kind_1 === "record") {
-      return type.fields.some((f) =>
-        prototypeField(f.name) || needsFieldAdapterIn(scope, f.type, seen)
-      );
-    } else if (kind_1 === "option" || kind_1 === "array") {
-      return needsFieldAdapterIn(scope, type.element, seen);
-    } else if (kind_1 === "tuple") {
-      return type.elements.some((t) => needsFieldAdapterIn(scope, t, seen));
-    } else if (kind_1 === "union") {
-      return type.members.some((t) => needsFieldAdapterIn(scope, t, seen));
-    } else if (
-      kind_1 === "primitive" || kind_1 === "literal" || kind_1 === "ref" ||
-      kind_1 === "retry-schedule" || kind_1 === "schema" ||
-      kind_1 === "effect" || kind_1 === "stream" || kind_1 === "sink" ||
-      kind_1 === "function" || kind_1 === "provider"
-    ) {
+  const kind_1 = type.kind;
+  if (kind_1 === "named") {
+    if (seen.has(type.id)) {
       return false;
-    } else {
-      {
-        const unreachable: never = type;
-        return unreachable;
-      }
     }
+    const next = setFrom([...seen, type.id]);
+    const declaration = scope.typeLevelDeclaration(type.id);
+    if (declaration?.kind === "error") {
+      return false;
+    }
+    return declaration?.kind === "type" &&
+      needsFieldAdapterIn(scope, definitionType(declaration), next);
+  } else if (kind_1 === "record") {
+    return type.fields.some((f) =>
+      prototypeField(f.name) || needsFieldAdapterIn(scope, f.type, seen)
+    );
+  } else if (kind_1 === "option" || kind_1 === "array") {
+    return needsFieldAdapterIn(scope, type.element, seen);
+  } else if (kind_1 === "tuple") {
+    return type.elements.some((t) => needsFieldAdapterIn(scope, t, seen));
+  } else if (kind_1 === "union") {
+    return type.members.some((t) => needsFieldAdapterIn(scope, t, seen));
+  } else if (
+    kind_1 === "primitive" || kind_1 === "literal" || kind_1 === "ref" ||
+    kind_1 === "retry-schedule" || kind_1 === "schema" ||
+    kind_1 === "effect" || kind_1 === "stream" || kind_1 === "sink" ||
+    kind_1 === "function" || kind_1 === "provider"
+  ) {
+    return false;
+  } else {
+    const unreachable: never = type;
+    return unreachable;
   }
 }
 function adapterBody(
@@ -153,13 +149,9 @@ export function fieldHelperDeclarations(scope: ExprScope): Doc[] {
     const name = adapter.name;
     const type = adapter.type;
     const direction = adapter.direction;
-    {
-      const _appendTarget1 = adapters;
-      const _appendValue2 = `function ${name}(value: unknown): unknown {\n${
-        adapterBody(scope, type, direction)
-      }\n}`;
-      _appendTarget1[_appendTarget1.length] = _appendValue2;
-    }
+    adapters[adapters.length] = `function ${name}(value: unknown): unknown {\n${
+      adapterBody(scope, type, direction)
+    }\n}`;
   }
   const optional = scope.fieldHelpers.get("optionalField");
   const presence = optional === undefined
@@ -167,19 +159,13 @@ export function fieldHelperDeclarations(scope: ExprScope): Doc[] {
     : scope.fieldHelper("suppliedFields");
   const helpers: string[] = [];
   if (presence !== undefined) {
-    {
-      const _appendTarget3 = helpers;
-      const _appendValue4 =
-        `const ${presence} = globalThis.Symbol.for("effektive/source-fields");`;
-      _appendTarget3[_appendTarget3.length] = _appendValue4;
-    }
+    helpers[helpers.length] =
+      `const ${presence} = globalThis.Symbol.for("effektive/source-fields");`;
   }
   const untagged = scope.fieldHelpers.get("untagged");
   if (untagged !== undefined) {
-    {
-      const _appendTarget5 = helpers;
-      const _appendValue6 =
-        `// A data value carries \`_tag\`. The copy leaves it out and has no prototype.
+    helpers[helpers.length] =
+      `// A data value carries \`_tag\`. The copy leaves it out and has no prototype.
 const ${untagged} = <T>(value: object): T =>
   globalThis.Object.assign(
     globalThis.Object.create(null),
@@ -187,15 +173,11 @@ const ${untagged} = <T>(value: object): T =>
       globalThis.Object.entries(value).filter(([key]) => key !== "_tag"),
     ),
   );`;
-      _appendTarget5[_appendTarget5.length] = _appendValue6;
-    }
   }
   const record = scope.fieldHelpers.get("record");
   if (record !== undefined) {
-    {
-      const _appendTarget7 = helpers;
-      const _appendValue8 =
-        `// Source checking establishes T; this boundary supplies JavaScript own-field semantics.
+    helpers[helpers.length] =
+      `// Source checking establishes T; this boundary supplies JavaScript own-field semantics.
 const ${record} = <T>(value: unknown, adapt?: (value: unknown) => unknown): T => {
 let output: unknown;
 if (adapt !== undefined) output = adapt(value);
@@ -206,20 +188,14 @@ else {
 }
 return output as T;
 };`;
-      _appendTarget7[_appendTarget7.length] = _appendValue8;
-    }
   }
   if (optional !== undefined) {
     const option = scope.effect("Option");
-    {
-      const _appendTarget9 = helpers;
-      const _appendValue10 =
-        `const ${optional} = <T>(value: object, key: string): ${option}.Option<T> => {
+    helpers[helpers.length] =
+      `const ${optional} = <T>(value: object, key: string): ${option}.Option<T> => {
 const supplied: unknown = globalThis.Reflect.get(value, ${presence});
 return globalThis.Object.hasOwn(value, key) && (!(supplied instanceof globalThis.Set) || supplied.has(key)) ? ${option}.some<T>(globalThis.Reflect.get(value, key)) : ${option}.none();
 };`;
-      _appendTarget9[_appendTarget9.length] = _appendValue10;
-    }
   }
   // Fixed helper bodies stay inside the Doc renderer, which owns source spans;
   // the emitter has no runtime formatter dependency.

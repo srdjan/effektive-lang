@@ -53,34 +53,30 @@ export function scopeLeaf(
     ]);
   }
   if (e.kind === "with-resource") {
-    {
-      if (
-        e.acquire.kind !== "closure" || e.use.kind !== "closure" ||
-        e.release.kind !== "closure"
-      ) {
-        return internal("with-resource requires three closures");
-      }
-      const acquire = c.closure(e.acquire, false, true);
-      const use = c.closure(e.use, false, true);
-      const release = e.release.parameters.length === 2
-        ? releaseWithOutcome(c, e.release)
-        : c.closure(e.release, false, true);
-      return plainEmitted([
-        `${effect}.acquireUseRelease`,
-        callArguments([
-          emitted(
-            [`${effect}.suspend`, callArguments([acquire])],
-            undefined,
-            undefined,
-          ),
-          use,
-          release,
-        ]),
-      ]);
+    if (
+      e.acquire.kind !== "closure" || e.use.kind !== "closure" ||
+      e.release.kind !== "closure"
+    ) {
+      return internal("with-resource requires three closures");
     }
+    const acquire = c.closure(e.acquire, false, true);
+    const use = c.closure(e.use, false, true);
+    const release = e.release.parameters.length === 2
+      ? releaseWithOutcome(c, e.release)
+      : c.closure(e.release, false, true);
+    return plainEmitted([
+      `${effect}.acquireUseRelease`,
+      callArguments([
+        emitted(
+          [`${effect}.suspend`, callArguments([acquire])],
+          undefined,
+          undefined,
+        ),
+        use,
+        release,
+      ]),
+    ]);
   }
-  {
-    const unreachable: never = e;
-    return unreachable;
-  }
+  const unreachable: never = e;
+  return unreachable;
 }
