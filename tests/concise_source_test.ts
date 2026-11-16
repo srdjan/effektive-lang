@@ -14,7 +14,7 @@ import { TypeScriptOutputs } from "../src/core/typescript.ts";
 import { validateRevision } from "./validate_helpers.ts";
 
 export function checked(text: string, clean = true) {
-  const updated = new Program().update({
+  const updated = Program(undefined).update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(updated.ok);
@@ -102,7 +102,7 @@ Deno.test("bare lambda locals support references, rename, hover, completion, tok
     const revision = checked(text);
     const declaration = text.indexOf("value");
     const use = text.lastIndexOf("value");
-    assertEquals(referencesAt(revision, "m.eff", use).length, 2);
+    assertEquals(referencesAt(revision, "m.eff", use, undefined).length, 2);
     assertEquals(definitionAt(revision, "m.eff", use)?.start, declaration);
     assertEquals(sourceHoverAt(revision, "m.eff", use)?.contract, "Int");
     assert(
@@ -207,7 +207,7 @@ export const run = (): Int with Store.find | Store.fallback => Store.find() ?? S
     [],
   );
   const offset = text.lastIndexOf("fallback");
-  assert(referencesAt(revision, "m.eff", offset).length === 3);
+  assert(referencesAt(revision, "m.eff", offset, undefined).length === 3);
   assert(
     !completionsAt(revision, "m.eff", offset).some((c) =>
       c.label.startsWith("$option")
@@ -300,7 +300,7 @@ Deno.test("destructured names support shorthand rename expansion, field completi
   const changed = applySourceEdits(text, renamed.value);
   assert(changed.includes("{ id: articleId, revision: expectedRevision }"));
   checked(changed);
-  assertEquals(referencesAt(revision, "m.eff", id).length, 2);
+  assertEquals(referencesAt(revision, "m.eff", id, undefined).length, 2);
   assertEquals(sourceHoverAt(revision, "m.eff", id)?.contract, "Int");
   assertEquals(
     definitionAt(revision, "m.eff", text.lastIndexOf("expectedRevision"))
@@ -426,7 +426,7 @@ Deno.test("resource expressions share one source identity across two scopes and 
     "type Int = int\nservice Jobs { open(): { read: () => Int, close: () => void } }\nexport const run = (): Int with Jobs.open => using (job = Jobs.open()) { job.read() } finally { job.close() }";
   const revision = checked(text);
   const binding = text.indexOf("job =");
-  assertEquals(referencesAt(revision, "m.eff", binding).length, 3);
+  assertEquals(referencesAt(revision, "m.eff", binding, undefined).length, 3);
   const renamed = renameAt(revision, "m.eff", binding, "resource");
   assert(renamed.ok, JSON.stringify(renamed));
   checked(applySourceEdits(text, renamed.value));

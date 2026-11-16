@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The surface oracle: records the command-line output and the language server
 // output of the current build, so that a refactor shows each change of a message,
 // an exit code, or the order of replies. `scripts/surface_update.ts` writes the

@@ -10,6 +10,7 @@ and the repository layout.
 ```
 src/core/      The core library. It is synchronous and does no I/O. Program memoizes its queries.
   ir.ts          Typed IR model. This file is the authored contract. The sibling repository effektive publishes a copy.
+  runtime.ts     Native collection constructors, deterministic native operations, and bounded index iterators. No compiler algorithms.
   source.ts      The Result type of an expected failure, caught (the one catch of a synchronous throw), SourceHost, line tables, positions, and span helpers.
   diagnostics.ts Diagnostic type, the registry of codes, sort and dedupe.
   lex.ts         Lexer: typed arrays of tokens plus trivia.
@@ -38,7 +39,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   check_builtins/ Source-checker builtin families; shared dispatch and body-table writes stay in check_expr.ts.
     context.ts     Shared argument, function, literal-field and local-use shapes, invocation effects, the shared views, and the checker operations.
     rows.ts        The row shape of a builtin: its prologue and its handler, and the prologue helpers.
-    registry.ts    FAMILY_ROWS: the rows of all families, composed once.
+    registry.ts    createFamilyRows and familyRowTables: fresh family row registries.
     collections.ts Collection callbacks, `sort` and its key function, traversal and grouped effects through a family-specific context.
     data.ts        The pure data builtins `div`, `trunc`, `floor`, `round`, `ceil`, `text`, `len`, and `at`: argument types, the closed unit rule, and the builtin instance fact.
     effect.ts      Effect construction, execution, failures and retry options through EffectContext.
@@ -82,7 +83,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
   sha256.ts      Synchronous SHA-256 over the UTF-8 bytes of a string.
   lower.ts       Checked modules to typed IR: pipelines, builtin specialization, imports.
   serialize.ts   Canonical JSON of a module IR, with the set and number checks.
-  validate/      The independent IR validator. It imports only ir.ts, source.ts, and diagnostics.ts.
+  validate/      The independent IR validator. It imports contract types and native runtime primitives.
     index.ts       validateModule: the public entry.
     world_table.ts The lookup tables of a module (World, buildWorld) and the check context (Ctx).
     prelude.ts     The prelude declarations (reserved errors, Duration, Instant) and the reserved-error test.
@@ -115,7 +116,7 @@ src/core/      The core library. It is synchronous and does no I/O. Program memo
     doc.ts         The printer: documents, layout at 80 columns, span tags.
     module_state.ts ModuleState: names, fresh names, imports, host bindings, specifiers.
     identity.ts    Identity helpers that throw an internal failure for a malformed identity.
-    failure.ts     EmitFailure and internal: the failure that the emitter throws inside one module.
+    failure.ts     internal: the branded invariant fault that the emitter maps into its public Result.
     calls.ts       The simple calls: tables of the structural and leaf kinds that print as callee(operands).
     fields.ts      Own-field construction, optional reads and declared schema input adapters.
     shape.ts       The shape table of every IR expression kind: children, deferred children, and leaf effects.
@@ -413,8 +414,8 @@ modes from the children of each node, with the equations of the spec. It
 compares the result with the recorded annotation. After a disagreement it
 continues with the recomputed value, so one fault gives one diagnostic. It
 reimplements type compatibility and does not call the checker. A test checks
-that `src/core/validate/` imports only `ir.ts`, `source.ts`,
-and `diagnostics.ts`.
+that `src/core/validate/` imports only contract types, `source.ts`,
+`diagnostics.ts`, `runtime.ts`, and its own files.
 
 Each code names a validation area. `validation/001` is Identity, `002` is Types,
 `003` is Contracts, `004` is Execution, `005` is Recovery, `006` is Control,
@@ -549,10 +550,13 @@ directory also holds two captured outputs of `deno check` for the parser tests.
 
 ## Using the program
 
-`new Program(root)` holds the state of one project across revisions.
+`Program(root)` holds the state of one project across revisions.
 `program.update({ set, remove })` applies file changes and starts a revision.
 The `set` value maps root-relative paths to texts. The `remove` value lists
 deleted paths.
+
+`Program(undefined)` selects the default root. `program.update(undefined)` starts an unchanged revision.
+`program.counts()` returns the current parse, check, and lowering counts.
 
 The program reads its files only from these calls, so it needs no `SourceHost`.
 Every `.eff` file in the set is an entry. The call returns a `Result`. A missing
@@ -566,7 +570,7 @@ this revision checked again, in topological order. It includes the host
 interface modules.
 
 A `Revision` also answers read-only queries for the editor and the adapters, so
-a caller needs no access to the project or the checker state. The getters
+a caller needs no access to the project or the checker state. The readonly properties
 `root`, `config`, `types`, and `analysisDiagnostics` give the project root, the
 project configuration, the read-only type table (`TypeReader`), and the
 diagnostics of the analysis. `moduleInfos()` lists the module infos in discovery
@@ -604,7 +608,7 @@ An earlier revision therefore keeps its original definitions even when its first
 
 A reused checked module keeps its original object and `declarations.env.table` from its last check.
 `Revision.types` gives the definition view for the current revision.
-`TypeReader.size` counts all nodes in shared storage, including nodes that later revisions or delayed lowering add.
+`TypeReader.size()` counts all nodes in shared storage, including nodes that later revisions or delayed lowering add.
 Tables have no parent link or revision-history collection.
 Cached modules and caller-retained objects can keep earlier definition maps alive.
 Measurement M4 records memory over edits; it does not establish a byte bound.

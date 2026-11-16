@@ -1,8 +1,8 @@
+import { emptyMap, emptySet } from "./runtime.ts";
 // The type lowering of the declaration checker: the builtin type rows,
 // `TypeLowerer` for the type syntax of a module, and the recursion check of
 // type groups. The body checker uses `TypeLowerer` for annotations inside bodies.
-
-import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
+import { type Diagnostic, makeDiagnosticWithRelated } from "./diagnostics.ts";
 import type { CapabilityId, ErrorId, Field, TypeId } from "./ir.ts";
 import { DURATION_ID, INSTANT_ID } from "./ir.ts";
 import { TokenKind } from "./lex.ts";
@@ -15,7 +15,6 @@ import {
   nodeSpan,
   nodeText,
   SyntaxKind,
-  type SyntaxTree,
   TYPE_WORDS,
 } from "./syntax.ts";
 import { dataOnly, type TypeRef } from "./types.ts";
@@ -37,14 +36,10 @@ import {
   type ParameterSignature,
   type TypeEnv,
 } from "./signatures.ts";
-
 // ------------------------------------------------------------------ type lowering
-
-type BuiltinTypeName = Extract<
-  Target,
-  { readonly kind: "builtin-type" }
->["name"];
-
+type BuiltinTypeName = Extract<Target, {
+  readonly kind: "builtin-type";
+}>["name"];
 /** How a built-in type name lowers. */
 type BuiltinTypeRow =
   /** The name takes no type arguments. */
@@ -65,7 +60,6 @@ type BuiltinTypeRow =
       nodes: readonly NodeId[],
     ) => Lowered;
   };
-
 /**
  * The primitive type names that take no type arguments. A value primitive
  * (`true`) carries data and can occur only inside a type or error declaration.
@@ -78,179 +72,67 @@ const PRIMITIVE_TYPES = {
   never: false,
   unknown: false,
 } as const;
-
 type PrimitiveTypeName = keyof typeof PRIMITIVE_TYPES;
-
 /** True for a built-in type name that is a primitive that carries data. */
-export function isValuePrimitiveName(name: string): boolean {
-  return Object.entries(PRIMITIVE_TYPES).some(([primitive, value]) =>
-    value && primitive === name
-  );
+type PrimitiveNameText = string;
+type TypeMatch = boolean;
+export function isValuePrimitiveName(name: PrimitiveNameText): TypeMatch {
+  return Object.entries(PRIMITIVE_TYPES).some((binding1) => {
+    const binding2 = binding1;
+    const primitive = binding2[0];
+    const value = binding2[1];
+    return value && primitive === name;
+  });
 }
-
 /** The row of a primitive type name that takes no type arguments. */
 function primitiveRow(name: PrimitiveTypeName): BuiltinTypeRow {
   return {
     kind: "plain",
     build: (lowerer) => ({
       ref: lowerer.env.table.primitive(name),
-      ir: { kind: "primitive", name },
+      ir: { kind: "primitive", name: name },
     }),
   };
 }
-
 /** The row of a closed unit type name that takes no type arguments. */
 function unitRow(id: TypeId): BuiltinTypeRow {
   return {
     kind: "plain",
     build: (lowerer) => ({
       ref: lowerer.env.table.named(id),
-      ir: { kind: "named", id },
+      ir: { kind: "named", id: id },
     }),
   };
 }
-
 /** Lowers type syntax nodes to interned types and IR trees. Diagnostics go to `sink`. */
-export class TypeLowerer {
-  constructor(
-    readonly env: TypeEnv,
-    readonly sink: Diagnostic[],
-  ) {}
-
-  private get tree(): SyntaxTree {
-    return this.env.tree;
-  }
-
-  report(
+export type TypeLowerer = {
+  readonly env: TypeEnv;
+  readonly sink: readonly Diagnostic[];
+  readonly report: (
     code: Diagnostic["code"],
     message: string,
     span: Span,
-    related?: readonly { span: Span; message: string }[],
-  ): void {
-    this.sink.push(makeDiagnostic(code, message, span, related));
-  }
-
-  /** Child nodes that are not tokens or Missing nodes. */
-  private kids(node: NodeId): NodeId[] {
-    return kidsOf(this.tree, node);
-  }
-
-  span(node: NodeId): Span {
-    return nodeSpan(this.tree, node);
-  }
-
-  errorLowered(): Lowered {
-    return {
-      ref: this.env.table.error,
-      ir: { kind: "primitive", name: "unknown" },
-    };
-  }
-
-  lower(node: NodeId): Lowered {
-    const table = this.env.table;
-    switch (kindOf(this.tree, node)) {
-      case SyntaxKind.NamedType:
-        return this.named(node);
-      case SyntaxKind.EffectType:
-      case SyntaxKind.StreamType:
-      case SyntaxKind.SinkType:
-      case SyntaxKind.SchemaType:
-      case SyntaxKind.LayerType:
-        return this.deferredType(node);
-      case SyntaxKind.LiteralType:
-        return this.literal(node);
-      case SyntaxKind.RecordType:
-        return this.recordOf(this.fields(node, false));
-      case SyntaxKind.TupleType: {
-        const elements = this.kids(node).map((k) => this.element(k));
-        return {
-          ref: table.tuple(elements.map((e) => e.ref)),
-          ir: { kind: "tuple", elements: elements.map((e) => e.ir) },
-        };
-      }
-      case SyntaxKind.ArrayType: {
-        const inner = this.kids(node)[0];
-        if (inner === undefined) return this.errorLowered();
-        const element = this.element(inner);
-        return {
-          ref: table.array(element.ref),
-          ir: { kind: "array", element: element.ir },
-        };
-      }
-      case SyntaxKind.UnionType:
-        return this.union(node);
-      case SyntaxKind.FunctionType:
-        return this.functionType(node);
-      case SyntaxKind.ParenType: {
-        const inner = this.kids(node)[0];
-        return inner === undefined ? this.errorLowered() : this.lower(inner);
-      }
-      default:
-        return this.errorLowered();
-    }
-  }
-
-  /** A record field, array element, or tuple element. `void` is not allowed here. */
-  private element(node: NodeId): Lowered {
-    const lowered = this.lower(node);
-    if (lowered.ref === this.env.table.unit) {
-      this.report(
-        "type-mismatch/002",
-        "`void` cannot be a record field, an array element, or a tuple element",
-        this.span(node),
-      );
-      return this.errorLowered();
-    }
-    return lowered;
-  }
-
-  private literal(node: NodeId): Lowered {
-    const value = literalOf(this.tree, node);
-    return value === undefined
-      ? this.errorLowered()
-      : { ref: this.env.table.literal(value), ir: { kind: "literal", value } };
-  }
-
-  private named(node: NodeId): Lowered {
-    const table = this.env.table;
-    const nameNode = kidsOfKind(this.tree, node, SyntaxKind.Name)[0];
-    const argsNode = kidsOfKind(this.tree, node, SyntaxKind.TypeArgs)[0];
-    const args = argsNode === undefined ? [] : this.kids(argsNode);
-    if (nameNode === undefined) return this.errorLowered();
-    const name = nameTextOf(this.tree, nameNode) ?? "";
-    const target = this.env.targets.get(nameNode);
-    if (target === undefined || target.kind === "unresolved") {
-      for (const arg of args) this.lower(arg);
-      return this.errorLowered();
-    }
-    if (target.kind === "type" || target.kind === "error") {
-      this.noArguments(name, args, argsNode);
-      return {
-        ref: table.named(target.id),
-        ir: { kind: "named", id: target.id },
-      };
-    }
-    if (target.kind !== "builtin-type") return this.errorLowered();
-    const row = TypeLowerer.BUILTIN_TYPES[target.name];
-    switch (row.kind) {
-      case "plain":
-        this.noArguments(name, args, argsNode);
-        return row.build(this);
-      case "generic": {
-        if (args.length !== row.arity) {
-          this.arity(name, row.arity, args, node);
-          return this.errorLowered();
-        }
-        return row.build(this, args.map((arg) => this.lower(arg)), args);
-      }
-      default: {
-        const unreachable: never = row;
-        return unreachable;
-      }
-    }
-  }
-
-  private static readonly BUILTIN_TYPES: {
+    related: Diagnostic["related"],
+  ) => TypeLowerer;
+  readonly span: (node: NodeId) => Span;
+  readonly errorLowered: () => Lowered;
+  readonly lower: (node: NodeId) => Lowered;
+  readonly fields: (node: NodeId, errorDeclaration: boolean) => LoweredField[];
+  readonly recordOf: (fields: readonly LoweredField[]) => Lowered;
+  readonly providerOf: (
+    provides: readonly CapabilityId[],
+    failures: readonly ErrorId[],
+    requirements: readonly CapabilityId[],
+  ) => Lowered;
+  readonly parameters: (paramList: NodeId) => ParameterSignature[];
+  readonly failures: (clause: NodeId | undefined) => ErrorId[];
+  readonly requirements: (clause: NodeId | undefined) => CapabilityId[];
+  readonly capabilitiesOf: (qn: NodeId) => CapabilityId[];
+};
+export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
+  let self: TypeLowerer;
+  const tree = env.tree;
+  const builtinTypes: {
     readonly [N in BuiltinTypeName]: BuiltinTypeRow;
   } = {
     string: primitiveRow("string"),
@@ -271,28 +153,39 @@ export class TypeLowerer {
     Option: {
       kind: "generic",
       arity: 1,
-      build: (lowerer, [element]) => ({
-        ref: lowerer.env.table.option(element.ref),
-        ir: { kind: "option", element: element.ir },
-      }),
+      build: (lowerer, binding3) => {
+        const binding4 = binding3;
+        const element = binding4[0];
+        return ({
+          ref: lowerer.env.table.option(element.ref),
+          ir: { kind: "option", element: element.ir },
+        });
+      },
     },
     Ref: {
       kind: "generic",
       arity: 1,
-      build: (lowerer, [element]) => ({
-        ref: lowerer.env.table.ref(element.ref),
-        ir: { kind: "ref", element: element.ir },
-      }),
+      build: (lowerer, binding5) => {
+        const binding6 = binding5;
+        const element = binding6[0];
+        return ({
+          ref: lowerer.env.table.ref(element.ref),
+          ir: { kind: "ref", element: element.ir },
+        });
+      },
     },
     RetrySchedule: {
       kind: "generic",
       arity: 1,
-      build: (lowerer, [error], nodes) => {
+      build: (lowerer, binding7, nodes) => {
+        const binding8 = binding7;
+        const error = binding8[0];
         if (error.ir.kind !== "named" || !isErrorId(error.ir.id)) {
-          lowerer.report(
+          lowerer = lowerer.report(
             "type-mismatch/001",
             "RetrySchedule needs a declared error type",
             lowerer.span(nodes[0]),
+            undefined,
           );
         }
         return {
@@ -302,68 +195,218 @@ export class TypeLowerer {
       },
     },
   };
+  function report(
+    code: Diagnostic["code"],
+    message: string,
+    span: Span,
+    related: Diagnostic["related"],
+  ): TypeLowerer {
+    {
+      const _appendTarget1 = sink;
+      const _appendValue2 = makeDiagnosticWithRelated(
+        code,
+        message,
+        span,
+        related,
+      );
+      _appendTarget1[_appendTarget1.length] = _appendValue2;
+    }
 
-  private noArguments(
+    return self;
+  }
+  function lowerWithState(
+    node: NodeId,
+  ): { readonly lowerer: TypeLowerer; readonly value: Lowered } {
+    const value = lowerType(node);
+    return { lowerer: self, value: value };
+  }
+  function typeChildren(node: NodeId): NodeId[] {
+    return kidsOf(tree, node);
+  }
+  function spanOf(node: NodeId): Span {
+    return nodeSpan(tree, node);
+  }
+  function errorLowered(): Lowered {
+    return {
+      ref: env.table.error,
+      ir: { kind: "primitive", name: "unknown" },
+    };
+  }
+  function lowerType(node: NodeId): Lowered {
+    const table = env.table;
+    {
+      const kind_1 = kindOf(tree, node);
+      if (kind_1 === SyntaxKind.NamedType) {
+        return named(node);
+      } else if (
+        kind_1 === SyntaxKind.EffectType || kind_1 === SyntaxKind.StreamType ||
+        kind_1 === SyntaxKind.SinkType || kind_1 === SyntaxKind.SchemaType ||
+        kind_1 === SyntaxKind.LayerType
+      ) {
+        return deferredType(node);
+      } else if (kind_1 === SyntaxKind.LiteralType) {
+        return literal(node);
+      } else if (kind_1 === SyntaxKind.RecordType) {
+        return recordOf(lowerFields(node, false));
+      } else if (kind_1 === SyntaxKind.TupleType) {
+        const elements = typeChildren(node).map((k) => lowerElement(k));
+        return {
+          ref: table.tuple(elements.map((e) => e.ref)),
+          ir: { kind: "tuple", elements: elements.map((e) => e.ir) },
+        };
+      } else if (kind_1 === SyntaxKind.ArrayType) {
+        const inner = typeChildren(node)[0];
+        if (inner === undefined) {
+          return errorLowered();
+        }
+        const element = lowerElement(inner);
+        return {
+          ref: table.array(element.ref),
+          ir: { kind: "array", element: element.ir },
+        };
+      } else if (kind_1 === SyntaxKind.UnionType) {
+        return union(node);
+      } else if (kind_1 === SyntaxKind.FunctionType) {
+        return functionType(node);
+      } else if (kind_1 === SyntaxKind.ParenType) {
+        const inner = typeChildren(node)[0];
+        return inner === undefined ? errorLowered() : lowerType(inner);
+      } else {
+        return errorLowered();
+      }
+    }
+  }
+  function lowerElement(node: NodeId): Lowered {
+    const lowered = lowerType(node);
+    if (lowered.ref === env.table.unit) {
+      self = report(
+        "type-mismatch/002",
+        "`void` cannot be a record field, an array element, or a tuple element",
+        spanOf(node),
+        undefined,
+      );
+      return errorLowered();
+    }
+    return lowered;
+  }
+  function literal(node: NodeId): Lowered {
+    const value = literalOf(tree, node);
+    return value === undefined ? errorLowered() : {
+      ref: env.table.literal(value),
+      ir: { kind: "literal", value: value },
+    };
+  }
+  function named(node: NodeId): Lowered {
+    const table = env.table;
+    const nameNode = kidsOfKind(tree, node, SyntaxKind.Name)[0];
+    const argsNode = kidsOfKind(tree, node, SyntaxKind.TypeArgs)[0];
+    const args = argsNode === undefined ? [] : typeChildren(argsNode);
+    if (nameNode === undefined) {
+      return errorLowered();
+    }
+    const name = nameTextOf(tree, nameNode) ?? "";
+    const target = env.targets.get(nameNode);
+    if (target === undefined || target.kind === "unresolved") {
+      for (const arg of args) self = lowerWithState(arg).lowerer;
+      return errorLowered();
+    }
+    if (target.kind === "type" || target.kind === "error") {
+      self = noArguments(name, args, argsNode);
+      return {
+        ref: table.named(target.id),
+        ir: { kind: "named", id: target.id },
+      };
+    }
+    if (target.kind !== "builtin-type") {
+      return errorLowered();
+    }
+    const row = builtinTypes[target.name];
+    {
+      const kind_2 = row.kind;
+      if (kind_2 === "plain") {
+        self = noArguments(name, args, argsNode);
+        return row.build(self);
+      } else if (kind_2 === "generic") {
+        if (args.length !== row.arity) {
+          self = arity(name, row.arity, args, node);
+          return errorLowered();
+        }
+        return row.build(self, args.map((arg) => lowerType(arg)), args);
+      } else {
+        {
+          const unreachable: never = row;
+          return unreachable;
+        }
+      }
+    }
+  }
+  function noArguments(
     name: string,
     args: readonly NodeId[],
     argsNode: NodeId | undefined,
-  ): void {
-    if (argsNode === undefined) return;
-    for (const arg of args) this.lower(arg);
-    this.report(
+  ): TypeLowerer {
+    if (argsNode === undefined) {
+      return self;
+    }
+    for (const arg of args) self = lowerWithState(arg).lowerer;
+    self = report(
       "type-mismatch/001",
       `\`${name}\` takes no type arguments`,
-      this.span(argsNode),
+      spanOf(argsNode),
+      undefined,
     );
-  }
 
-  private arity(
+    return self;
+  }
+  function arity(
     name: string,
     expected: number,
     args: readonly NodeId[],
     node: NodeId,
-  ): void {
-    for (const arg of args) this.lower(arg);
-    this.report(
+  ): TypeLowerer {
+    for (const arg of args) self = lowerWithState(arg).lowerer;
+    self = report(
       "type-mismatch/001",
       arityMessage(`\`${name}\``, "type argument", expected, args.length),
-      this.span(node),
+      spanOf(node),
+      undefined,
     );
-  }
 
-  /**
-   * The fields of a record type in source order. Reports duplicate names, void
-   * fields, and, for an error declaration, a field named `_tag`.
-   */
-  fields(node: NodeId, errorDeclaration: boolean): LoweredField[] {
+    return self;
+  }
+  function lowerFields(
+    node: NodeId,
+    errorDeclaration: boolean,
+  ): LoweredField[] {
     const result: LoweredField[] = [];
-    const seen = new Map<string, Span>();
-    for (const fieldNode of kidsOfKind(this.tree, node, SyntaxKind.FieldType)) {
-      const parts = this.kids(fieldNode);
-      const nameNode = parts.find((k) =>
-        kindOf(this.tree, k) === SyntaxKind.Name
-      );
+    let seen = emptyMap<string, Span>();
+    for (const fieldNode of kidsOfKind(tree, node, SyntaxKind.FieldType)) {
+      const parts = typeChildren(fieldNode);
+      const nameNode = parts.find((k) => kindOf(tree, k) === SyntaxKind.Name);
       const typeNode = parts.find((k) => k !== nameNode);
       const name = nameNode === undefined
         ? undefined
-        : nameTextOf(this.tree, nameNode);
+        : nameTextOf(tree, nameNode);
       // Lower the type first so that its diagnostics appear even for a bad name.
       const type = typeNode === undefined
-        ? this.errorLowered()
-        : this.element(typeNode);
-      if (nameNode === undefined || name === undefined) continue;
-      const nameSpan = this.span(nameNode);
+        ? errorLowered()
+        : lowerElement(typeNode);
+      if (nameNode === undefined || name === undefined) {
+        continue;
+      }
+      const nameSpan = spanOf(nameNode);
       if (errorDeclaration && name === "_tag") {
-        this.report(
+        self = report(
           "declaration/009",
           "the field name `_tag` is reserved for generated tags",
           nameSpan,
+          undefined,
         );
         continue;
       }
       const first = seen.get(name);
       if (first !== undefined) {
-        this.report(
+        self = report(
           "declaration/010",
           `the record type already has a field named \`${name}\``,
           nameSpan,
@@ -371,25 +414,28 @@ export class TypeLowerer {
         );
         continue;
       }
-      seen.set(name, nameSpan);
-      const optional = childrenOf(this.tree, fieldNode).some((c) =>
-        kindOf(this.tree, c) === SyntaxKind.Token &&
-        this.tree.lexed.kinds[this.tree.tokens[c]] === TokenKind.Question
+      seen = seen.set(name, nameSpan);
+      const optional = childrenOf(tree, fieldNode).some((c) =>
+        kindOf(tree, c) === SyntaxKind.Token &&
+        tree.lexed.kinds[tree.tokens[c]] === TokenKind.Question
       );
-      result.push({
-        name,
-        optional,
-        type,
-        span: this.span(fieldNode),
-        typeSpan: this.span(typeNode ?? fieldNode),
-      });
+      {
+        const _appendTarget3 = result;
+        const _appendValue4 = {
+          name: name,
+          optional: optional,
+          type: type,
+          span: spanOf(fieldNode),
+          typeSpan: spanOf(typeNode ?? fieldNode),
+        };
+        _appendTarget3[_appendTarget3.length] = _appendValue4;
+      }
     }
     return result;
   }
-
-  recordOf(fields: readonly LoweredField[]): Lowered {
+  function recordOf(fields: readonly LoweredField[]): Lowered {
     return {
-      ref: this.env.table.record(fields.map((f) => ({
+      ref: env.table.record(fields.map((f) => ({
         name: f.name,
         type: f.type.ref,
         optional: f.optional,
@@ -397,185 +443,227 @@ export class TypeLowerer {
       ir: { kind: "record", fields: fields.map(toIrField) },
     };
   }
-
-  private union(node: NodeId): Lowered {
-    const members: Lowered[] = [];
-    this.collectUnion(node, members);
-    const refs = new Set<TypeRef>();
+  function union(node: NodeId): Lowered {
+    let members: Lowered[] = [];
+    members = collectUnion(node, members);
+    let refs = emptySet<TypeRef>();
     const unique: Lowered[] = [];
     for (const member of members) {
-      if (refs.has(member.ref)) continue;
-      refs.add(member.ref);
-      unique.push(member);
-    }
-    if (unique.length === 0) return this.errorLowered();
-    if (unique.length === 1) return unique[0];
-    const ref = this.env.table.union(unique.map((m) => m.ref));
-    if (ref === this.env.table.error) return this.errorLowered();
-    return { ref, ir: { kind: "union", members: unique.map((m) => m.ir) } };
-  }
-
-  private collectUnion(node: NodeId, out: Lowered[]): void {
-    for (const kid of this.kids(node)) {
-      const kind = kindOf(this.tree, kid);
-      if (kind === SyntaxKind.UnionType) {
-        this.collectUnion(kid, out);
-      } else if (kind === SyntaxKind.ParenType) {
-        const inner = this.kids(kid);
-        if (
-          inner.length === 1 &&
-          kindOf(this.tree, inner[0]) === SyntaxKind.UnionType
-        ) {
-          this.collectUnion(inner[0], out);
-        } else {
-          out.push(this.lower(kid));
-        }
-      } else {
-        out.push(this.lower(kid));
+      if (refs.has(member.ref)) {
+        continue;
+      }
+      refs = refs.add(member.ref);
+      {
+        const _appendTarget5 = unique;
+        const _appendValue6 = member;
+        _appendTarget5[_appendTarget5.length] = _appendValue6;
       }
     }
+    if (unique.length === 0) {
+      return errorLowered();
+    }
+    if (unique.length === 1) {
+      return unique[0];
+    }
+    const ref = env.table.union(unique.map((m) => m.ref));
+    if (ref === env.table.error) {
+      return errorLowered();
+    }
+    return {
+      ref: ref,
+      ir: { kind: "union", members: unique.map((m) => m.ir) },
+    };
   }
+  function collectUnion(node: NodeId, out: Lowered[]): Lowered[] {
+    for (const kid of typeChildren(node)) {
+      const kind = kindOf(tree, kid);
+      if (kind === SyntaxKind.UnionType) {
+        out = collectUnion(kid, out);
+      } else if (kind === SyntaxKind.ParenType) {
+        const inner = typeChildren(kid);
+        if (
+          inner.length === 1 &&
+          kindOf(tree, inner[0]) === SyntaxKind.UnionType
+        ) {
+          out = collectUnion(inner[0], out);
+        } else {
+          {
+            const _appendTarget7 = out;
+            const _appendValue8 = lowerType(kid);
+            _appendTarget7[_appendTarget7.length] = _appendValue8;
+          }
+        }
+      } else {
+        {
+          const _appendTarget9 = out;
+          const _appendValue10 = lowerType(kid);
+          _appendTarget9[_appendTarget9.length] = _appendValue10;
+        }
+      }
+    }
 
-  /** A function type in type syntax. An unmarked type defaults to `effect`. */
-  private functionType(node: NodeId): Lowered {
-    const execution = hasModifier(this.tree, node, "pure") ? "pure" : "effect";
-    const kids = this.kids(node);
-    const { paramList, fails, uses } = functionParts(this.tree, node);
+    return out;
+  }
+  function functionType(node: NodeId): Lowered {
+    const execution = hasModifier(tree, node, "pure") ? "pure" : "effect";
+    const kids = typeChildren(node);
+    const binding9 = functionParts(tree, node);
+    const paramList = binding9.paramList;
+    const fails = binding9.fails;
+    const uses = binding9.uses;
     const parameters = paramList === undefined
       ? []
-      : this.parameters(paramList);
+      : lowerParameters(paramList);
     const resultNode = kids.find((k) => {
-      const kind = kindOf(this.tree, k);
+      const kind = kindOf(tree, k);
       return k !== paramList && kind !== SyntaxKind.FailsClause &&
         kind !== SyntaxKind.WithClause;
     });
     const result = resultNode === undefined
-      ? this.errorLowered()
-      : this.lower(resultNode);
-    const failures = this.failures(fails);
-    const requirements = this.requirements(uses);
+      ? errorLowered()
+      : lowerType(resultNode);
+    const failures = lowerFailures(fails);
+    const requirements = lowerRequirements(uses);
     if (
       execution === "pure" &&
       (failures.length > 0 || requirements.length > 0)
     ) {
-      this.report(
+      self = report(
         "execution-mode/005",
         "a pure function type cannot declare failures or requirements",
-        this.span(node),
+        spanOf(node),
+        undefined,
       );
     }
     return loweredFunction(
-      this.env.table,
-      { mode: execution, failures, requirements },
+      env.table,
+      { mode: execution, failures: failures, requirements: requirements },
       parameters.map((p) => p.type),
       result,
       parameters.map((p) => p.borrow),
+      undefined,
     );
   }
-
-  private deferredType(node: NodeId): Lowered {
-    const kids = this.kids(node);
-    const typeNodes = kids.filter((k) => isTypeKind(kindOf(this.tree, k)));
+  function deferredType(node: NodeId): Lowered {
+    const kids = typeChildren(node);
+    const typeNodes = kids.filter((k) => isTypeKind(kindOf(tree, k)));
     const first = typeNodes[0] === undefined
-      ? this.errorLowered()
-      : this.lower(typeNodes[0]);
-    if (kindOf(this.tree, node) === SyntaxKind.SchemaType) {
+      ? errorLowered()
+      : lowerType(typeNodes[0]);
+    if (kindOf(tree, node) === SyntaxKind.SchemaType) {
       // The first child is the token of the type word.
-      const wordToken = childrenOf(this.tree, node)[0];
-      const flags = TYPE_WORDS.get(nodeText(this.tree, wordToken))?.schema;
+      const wordToken = childrenOf(tree, node)[0];
+      const flags = TYPE_WORDS.get(nodeText(tree, wordToken))?.schema;
       const presence = flags?.presence ?? "required";
-      const constructorDefault = flags?.constructorDefault === true;
+      const constructorDefault =
+        typeof flags?.constructorDefault === "boolean" &&
+        flags.constructorDefault;
       const encoded = typeNodes[1] === undefined
         ? first
-        : this.lower(typeNodes[1]);
+        : lowerType(typeNodes[1]);
       const makeInput = typeNodes[2] === undefined
         ? first
-        : this.lower(typeNodes[2]);
+        : lowerType(typeNodes[2]);
       if (
-        !dataOnly(this.env.table, first.ref, "schema", true) ||
-        !dataOnly(this.env.table, encoded.ref, "schema", true) ||
-        !dataOnly(this.env.table, makeInput.ref, "schema", true)
+        !dataOnly(env.table, first.ref, "schema", true) ||
+        !dataOnly(env.table, encoded.ref, "schema", true) ||
+        !dataOnly(env.table, makeInput.ref, "schema", true)
       ) {
-        this.report(
+        self = report(
           "type-mismatch/010",
           "Schema decoded and encoded types must be data only",
-          this.span(node),
+          spanOf(node),
+          undefined,
         );
       }
       const uses = kids.filter((k) =>
-        kindOf(this.tree, k) === SyntaxKind.WithClause
+        kindOf(tree, k) === SyntaxKind.WithClause
       );
-      const decodeRequirements = this.requirements(uses[0]);
-      const encodeRequirements = this.requirements(uses[1]);
+      const decodeRequirements = lowerRequirements(uses[0]);
+      const encodeRequirements = lowerRequirements(uses[1]);
+      let options: {
+        readonly optionalKey?: true;
+        readonly encodedOptionalKey?: true;
+        readonly decodedOptionalKey?: true;
+        readonly makeInput?: Lowered["ir"];
+        readonly constructorDefault?: true;
+      } = {};
+      if (presence === "optional") options = { optionalKey: true };
+      if (presence === "encoded-optional") {
+        options = { encodedOptionalKey: true };
+      }
+      if (presence === "decoded-optional") {
+        options = { decodedOptionalKey: true };
+      }
+      if (makeInput.ref !== first.ref) {
+        options = { ...options, makeInput: makeInput.ir };
+      }
+      if (constructorDefault) {
+        options = { ...options, constructorDefault: true };
+      }
       return {
-        ref: this.env.table.schema(
+        ref: env.table.schema(
           first.ref,
           encoded.ref,
           decodeRequirements,
           encodeRequirements,
           {
-            presence,
+            presence: presence,
             makeInput: makeInput.ref,
-            constructorDefault,
+            constructorDefault: constructorDefault,
           },
         ),
         ir: {
+          ...options,
           kind: "schema",
           decoded: first.ir,
           encoded: encoded.ir,
-          decodeRequirements,
-          encodeRequirements,
-          ...(presence === "optional" ? { optionalKey: true as const } : {}),
-          ...(presence === "encoded-optional"
-            ? { encodedOptionalKey: true as const }
-            : {}),
-          ...(presence === "decoded-optional"
-            ? { decodedOptionalKey: true as const }
-            : {}),
-          ...(makeInput.ref === first.ref ? {} : { makeInput: makeInput.ir }),
-          ...(constructorDefault ? { constructorDefault: true as const } : {}),
+          decodeRequirements: decodeRequirements,
+          encodeRequirements: encodeRequirements,
         },
       };
     }
-    const clauses = functionParts(this.tree, node);
-    const failures = this.failures(clauses.fails);
-    const requirements = this.requirements(clauses.uses);
-    const effects = { failures, requirements };
-    const kind = kindOf(this.tree, node);
+    const clauses = functionParts(tree, node);
+    const failures = lowerFailures(clauses.fails);
+    const requirements = lowerRequirements(clauses.uses);
+    const effects = { failures: failures, requirements: requirements };
+    const kind = kindOf(tree, node);
     if (kind === SyntaxKind.LayerType) {
       const provides: CapabilityId[] = [];
       const clause = kids.find((k) =>
-        kindOf(this.tree, k) === SyntaxKind.ProvidesClause
+        kindOf(tree, k) === SyntaxKind.ProvidesClause
       );
       if (clause !== undefined) {
-        for (
-          const qn of kidsOfKind(this.tree, clause, SyntaxKind.QualifiedName)
-        ) {
-          for (const capability of this.capabilitiesOf(qn)) {
-            provides.push(capability);
+        for (const qn of kidsOfKind(tree, clause, SyntaxKind.QualifiedName)) {
+          for (const capability of capabilitiesOf(qn)) {
+            {
+              const _appendTarget11 = provides;
+              const _appendValue12 = capability;
+              _appendTarget11[_appendTarget11.length] = _appendValue12;
+            }
           }
         }
       }
-      return this.providerOf(provides, failures, requirements);
+      return providerOf(provides, failures, requirements);
     }
     if (kind === SyntaxKind.StreamType) {
       return {
-        ref: this.env.table.stream(first.ref, failures, requirements),
-        ir: { kind: "stream", element: first.ir, effects },
+        ref: env.table.stream(first.ref, failures, requirements),
+        ir: { kind: "stream", element: first.ir, effects: effects },
       };
     }
     if (kind === SyntaxKind.SinkType) {
       const second = typeNodes[1] === undefined
-        ? this.errorLowered()
-        : this.lower(typeNodes[1]);
+        ? errorLowered()
+        : lowerType(typeNodes[1]);
       const leftover = typeNodes[2] === undefined
         ? {
-          ref: this.env.table.never,
+          ref: env.table.never,
           ir: { kind: "primitive" as const, name: "never" as const },
         }
-        : this.lower(typeNodes[2]);
+        : lowerType(typeNodes[2]);
       return {
-        ref: this.env.table.sink(
+        ref: env.table.sink(
           first.ref,
           second.ref,
           failures,
@@ -583,160 +671,182 @@ export class TypeLowerer {
           leftover.ref,
         ),
         ir: {
+          ...(leftover.ref === env.table.never
+            ? {}
+            : { leftover: leftover.ir }),
           kind: "sink",
           input: first.ir,
           result: second.ir,
-          ...(leftover.ref === this.env.table.never
-            ? {}
-            : { leftover: leftover.ir }),
-          effects,
+          effects: effects,
         },
       };
     }
     return {
-      ref: this.env.table.effect(first.ref, failures, requirements),
-      ir: { kind: "effect", result: first.ir, effects },
+      ref: env.table.effect(first.ref, failures, requirements),
+      ir: { kind: "effect", result: first.ir, effects: effects },
     };
   }
-
-  /** A provider type. Its acquisition execution is always `effect`. */
-  providerOf(
+  function providerOf(
     provides: readonly CapabilityId[],
     failures: readonly ErrorId[],
     requirements: readonly CapabilityId[],
   ): Lowered {
     const provided = sortedUnique(provides);
     return {
-      ref: this.env.table.provider({
+      ref: env.table.provider({
         provides: provided,
         execution: "effect",
-        failures,
-        requirements,
+        failures: failures,
+        requirements: requirements,
       }),
       ir: {
         kind: "provider",
         provides: provided,
         acquisition: {
           execution: "effect",
-          effects: { failures, requirements },
+          effects: { failures: failures, requirements: requirements },
         },
       },
     };
   }
-
-  /** The parameters of a parameter list. An omitted annotation starts as unknown. */
-  parameters(paramList: NodeId): ParameterSignature[] {
+  function lowerParameters(paramList: NodeId): ParameterSignature[] {
     const result: ParameterSignature[] = [];
-    for (const param of kidsOfKind(this.tree, paramList, SyntaxKind.Param)) {
-      const parts = this.kids(param);
-      const nameNode = parts.find((k) =>
-        kindOf(this.tree, k) === SyntaxKind.Name
-      );
+    for (const param of kidsOfKind(tree, paramList, SyntaxKind.Param)) {
+      const parts = typeChildren(param);
+      const nameNode = parts.find((k) => kindOf(tree, k) === SyntaxKind.Name);
       const typeNode = parts.find((k) => k !== nameNode);
       const name = nameNode === undefined
         ? ""
-        : nameTextOf(this.tree, nameNode) ?? "";
+        : nameTextOf(tree, nameNode) ?? "";
       const target = nameNode === undefined
         ? undefined
-        : this.env.targets.get(nameNode);
+        : env.targets.get(nameNode);
       const type = typeNode === undefined
         ? {
-          ref: this.env.table.unknown,
+          ref: env.table.unknown,
           ir: { kind: "primitive" as const, name: "unknown" as const },
         }
-        : this.lower(typeNode);
-      result.push({
-        name,
-        borrow: hasModifier(this.tree, param, "borrow"),
-        id: target?.kind === "local" ? target.id : undefined,
-        type,
-        annotated: typeNode !== undefined,
-        inferred: typeNode === undefined || type.ref === this.env.table.unknown,
-        span: this.span(param),
-      });
+        : lowerType(typeNode);
+      {
+        const _appendTarget13 = result;
+        const _appendValue14 = {
+          name: name,
+          borrow: hasModifier(tree, param, "borrow"),
+          id: target?.kind === "local" ? target.id : undefined,
+          type: type,
+          annotated: typeNode !== undefined,
+          inferred: typeNode === undefined || type.ref === env.table.unknown,
+          span: spanOf(param),
+        };
+        _appendTarget13[_appendTarget13.length] = _appendValue14;
+      }
     }
     return result;
   }
-
-  /** The error identities of a `fails` clause, sorted and unique. */
-  failures(clause: NodeId | undefined): ErrorId[] {
-    if (clause === undefined) return [];
-    const table = this.env.table;
-    const ids: ErrorId[] = [];
-    for (const name of kidsOfKind(this.tree, clause, SyntaxKind.Name)) {
-      const target = this.env.targets.get(name);
-      if (target?.kind === "error") ids.push(target.id);
-      else if (target?.kind === "type") {
-        this.expandFailureAlias(name, table.named(target.id), ids, new Set());
+  function lowerFailures(clause: NodeId | undefined): ErrorId[] {
+    if (clause === undefined) {
+      return [];
+    }
+    const table = env.table;
+    let ids: ErrorId[] = [];
+    for (const name of kidsOfKind(tree, clause, SyntaxKind.Name)) {
+      const target = env.targets.get(name);
+      if (target?.kind === "error") {
+        const _appendTarget15 = ids;
+        const _appendValue16 = target.id;
+        _appendTarget15[_appendTarget15.length] = _appendValue16;
+      } else if (target?.kind === "type") {
+        ids = expandFailureAlias(name, table.named(target.id), ids, emptySet());
       }
     }
     return sortedUnique(ids);
   }
-
-  /** Adds the errors of an alias body to `ids`. A member that is not an error gets a diagnostic. */
-  private expandFailureAlias(
+  function expandFailureAlias(
     nameNode: NodeId,
     ref: TypeRef,
     ids: ErrorId[],
     seen: Set<TypeRef>,
-  ): void {
-    const table = this.env.table;
+  ): ErrorId[] {
+    const table = env.table;
     const unfolded = table.unfold(ref);
-    if (seen.has(unfolded)) return;
-    seen.add(unfolded);
+    if (seen.has(unfolded)) {
+      return ids;
+    }
+    seen = seen.add(unfolded);
     const node = table.node(unfolded);
-    if (node.kind === "named" && isErrorId(node.id)) ids.push(node.id);
-    else if (node.kind === "union") {
+    if (node.kind === "named" && isErrorId(node.id)) {
+      const _appendTarget17 = ids;
+      const _appendValue18 = node.id;
+      _appendTarget17[_appendTarget17.length] = _appendValue18;
+    } else if (node.kind === "union") {
       for (const member of node.members) {
-        this.expandFailureAlias(nameNode, member, ids, seen);
+        ids = expandFailureAlias(nameNode, member, ids, seen);
       }
     } else if (node.kind !== "error") {
-      this.report(
+      self = report(
         "failure-contract/004",
-        `\`${
-          nodeText(this.tree, nameNode)
-        }\` has a member that is not an error: \`${showType(table, ref)}\``,
-        this.span(nameNode),
+        `\`${nodeText(tree, nameNode)}\` has a member that is not an error: \`${
+          showType(table, ref)
+        }\``,
+        spanOf(nameNode),
+        undefined,
       );
     }
-  }
 
-  /**
-   * The capabilities of a `with` clause, sorted and unique. A whole service
-   * expands to all its methods.
-   */
-  requirements(clause: NodeId | undefined): CapabilityId[] {
-    if (clause === undefined) return [];
+    return ids;
+  }
+  function lowerRequirements(clause: NodeId | undefined): CapabilityId[] {
+    if (clause === undefined) {
+      return [];
+    }
     const ids: CapabilityId[] = [];
-    for (const qn of kidsOfKind(this.tree, clause, SyntaxKind.QualifiedName)) {
-      for (const capability of this.capabilitiesOf(qn)) {
-        ids.push(capability);
+    for (const qn of kidsOfKind(tree, clause, SyntaxKind.QualifiedName)) {
+      for (const capability of capabilitiesOf(qn)) {
+        {
+          const _appendTarget19 = ids;
+          const _appendValue20 = capability;
+          _appendTarget19[_appendTarget19.length] = _appendValue20;
+        }
       }
     }
     return sortedUnique(ids);
   }
-
-  /** The capabilities that a qualified name stands for: one method, or all methods of a service. */
-  capabilitiesOf(qn: NodeId): CapabilityId[] {
-    const target = this.env.targets.get(qn);
-    if (target?.kind === "cap") return [target.id];
+  function capabilitiesOf(qn: NodeId): CapabilityId[] {
+    const target = env.targets.get(qn);
+    if (target?.kind === "cap") {
+      return [target.id];
+    }
     if (target?.kind === "service") {
-      const service = this.env.services.get(target.id);
+      const service = env.services.get(target.id);
       return service === undefined ? [] : service.methods.map((m) => m.id);
     }
     return [];
   }
+  self = {
+    env: env,
+    sink: sink,
+    report: report,
+    span: spanOf,
+    errorLowered: errorLowered,
+    lower: lowerType,
+    fields: lowerFields,
+    recordOf: recordOf,
+    providerOf: providerOf,
+    parameters: lowerParameters,
+    failures: lowerFailures,
+    requirements: lowerRequirements,
+    capabilitiesOf: capabilitiesOf,
+  };
+  return self;
 }
-
-export interface LoweredField {
+export type LoweredField = {
   readonly name: string;
   readonly optional: boolean;
   readonly type: Lowered;
   readonly span: Span;
   /** The span of the field type, or of the whole field when the type is missing. */
   readonly typeSpan: Span;
-}
-
+};
 export function toIrField(field: LoweredField): Field {
   return { name: field.name, type: field.type.ir, optional: field.optional };
 }

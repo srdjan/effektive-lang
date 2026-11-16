@@ -1,3 +1,4 @@
+// @light-fp adapter -- Concrete backend orchestration and its output cache.
 // Concrete TypeScript orchestration. Frontend queries do not import this module.
 import type { Revision } from "./db.ts";
 import type { ModuleIR } from "./ir.ts";
@@ -48,13 +49,18 @@ export function emitProject(
   return results;
 }
 
-interface OutputEntry {
+type OutputEntry = {
   emitted?: Result<EmittedModule, EmitProjectError>;
   table?: Result<SpanTable, EmitProjectError>;
   map?: Result<SourceMapV3, EmitProjectError | SourceMapError>;
-}
+};
 
 /** One output cache per program/session. Reused lowerings reuse outputs without retaining revisions. */
+/** Create the owner of TypeScript output queries for one compiler session. */
+export function createTypeScriptOutputs(): TypeScriptOutputs {
+  return new TypeScriptOutputs();
+}
+
 export class TypeScriptOutputs {
   private readonly entries = new WeakMap<
     Result<ModuleIR, LowerError>,
@@ -135,18 +141,18 @@ export class TypeScriptOutputs {
 }
 
 /** The generated text that a client shows for one module. */
-interface GeneratedOutput {
+type GeneratedOutput = {
   readonly text: string;
   /** True when the text comes from an earlier emit, because the newest emit failed. */
   readonly stale: boolean;
-}
+};
 
 /** The new last good text of a module and the output to show after one emit. */
-interface OutputStep {
+type OutputStep = {
   readonly lastGood: string | undefined;
   /** `null`: no emit of the module has ever succeeded. */
   readonly output: GeneratedOutput | null;
-}
+};
 
 /**
  * The stale-output rule. A successful emit gives its text, and that text becomes
@@ -174,11 +180,11 @@ export const BACKEND_UNAVAILABLE_TEXT =
 export type HoverBackend = { readonly tag: "type"; readonly text: string } | {
   readonly tag: "unavailable";
 };
-interface Hover {
+type Hover = {
   readonly span: Span;
   readonly contract: string;
   readonly backend: HoverBackend | undefined;
-}
+};
 
 function backendOf(
   revision: Revision,

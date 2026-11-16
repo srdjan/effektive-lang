@@ -4,33 +4,40 @@
 // that holds a constant cannot be initialized. The emitter orders the emitted
 // constants itself, from the IR.
 
-import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
+import { type Diagnostic, makeDiagnosticWithRelated } from "./diagnostics.ts";
 import { isCycle, stronglyConnectedComponents } from "./graph.ts";
 import { shortName } from "./ids.ts";
 import type { ValueId } from "./ir.ts";
+import { emptyMap, setFrom } from "./runtime.ts";
 import type { Span } from "./source.ts";
 
-interface InitializationNode {
+type InitializationNode = {
   readonly id: ValueId;
   readonly kind: "function" | "constant";
   /** Module-level declarations that the body or initializer references. */
   readonly references: readonly ValueId[];
-}
+};
 
 /**
  * For each node, the sorted positions of the nodes that its references name.
  * A reference to an id outside `nodes` is dropped.
  */
+export type ReferenceEdges = readonly (readonly number[])[];
+
 export function referenceEdges(
   nodes: readonly {
     readonly id: ValueId;
     readonly references: readonly ValueId[];
   }[],
-): number[][] {
-  const position = new Map<ValueId, number>();
-  nodes.forEach((node, i) => position.set(node.id, i));
+): ReferenceEdges {
+  let position = emptyMap<ValueId, number>();
+  for (const entry of nodes.entries()) {
+    const index = entry[0];
+    const node = entry[1];
+    position = position.set(node.id, index);
+  }
   return nodes.map((node) =>
-    [...new Set(node.references)]
+    [...setFrom(node.references)]
       .map((id) => position.get(id))
       .filter((p): p is number => p !== undefined)
       .sort((a, b) => a - b)
@@ -38,9 +45,9 @@ export function referenceEdges(
 }
 
 /** A node with the span of its name, for the cycle diagnostics. */
-interface NamedNode extends InitializationNode {
+type NamedNode = InitializationNode & {
   readonly nameSpan: Span;
-}
+};
 
 /** One `module/004` diagnostic for each initialization cycle of the nodes. */
 export function checkInitialization(
@@ -51,16 +58,20 @@ export function checkInitialization(
   for (const component of stronglyConnectedComponents(nodes.length, edges)) {
     if (!isCycle(component, edges)) continue;
     if (!component.some((p) => nodes[p].kind === "constant")) continue;
-    cycles.push({ at: component[0], members: component.map((p) => nodes[p]) });
+    cycles[cycles.length] = {
+      at: component[0],
+      members: component.map((p) => nodes[p]),
+    };
   }
-  cycles.sort((a, b) => a.at - b.at);
+  const sortedCycles = cycles.toSorted((a, b) => a.at - b.at);
 
   const diagnostics: Diagnostic[] = [];
-  for (const { members } of cycles) {
+  for (const cycle of sortedCycles) {
+    const members = cycle.members;
     const first = members.find((m) => m.kind === "constant") ?? members[0];
     const ids = members.map((m) => m.id);
     const loop = [...ids.map(shortName), shortName(ids[0])].join(" -> ");
-    diagnostics.push(makeDiagnostic(
+    diagnostics[diagnostics.length] = makeDiagnosticWithRelated(
       "module/004",
       `module initialization cycle: ${loop}`,
       first.nameSpan,
@@ -68,7 +79,7 @@ export function checkInitialization(
         span: m.nameSpan,
         message: "also part of the cycle",
       })),
-    ));
+    );
   }
   return diagnostics;
 }

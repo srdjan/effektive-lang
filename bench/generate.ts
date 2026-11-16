@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The synthetic module generator for the measurements M2, M5, and M6.
 //
 // `generateProject` is a pure function. It returns the text of a valid

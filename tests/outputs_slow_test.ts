@@ -32,7 +32,7 @@ function generated(path: string): GeneratedSource {
     generated: () => ({
       kind: "ready",
       emitted,
-      table: buildSpanTable(emitted),
+      table: buildSpanTable(emitted, undefined),
       map,
     }),
   };

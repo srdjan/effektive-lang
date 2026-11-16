@@ -16,7 +16,7 @@ const use = (raw: unknown): Text fails SchemaError => { const nestedAlias = entr
 `;
 
 function revision() {
-  const loaded = new Program().update({
+  const loaded = Program(undefined).update({
     set: {
       "effektive.json": "{}",
       "dep.eff": dependency,
@@ -85,7 +85,7 @@ Deno.test("signature help selects nested calls and the active parameter", () => 
 
 Deno.test("signature help tolerates an incomplete argument list", () => {
   const text = consumer.replace("nestedAlias(raw) }", "nestedAlias(");
-  const loaded = new Program().update({
+  const loaded = Program(undefined).update({
     set: {
       "effektive.json": "{}",
       "dep.eff": dependency,
@@ -104,7 +104,7 @@ const topLevel = make(1)
 const use = (): Int => { const local = make(2); local(3) + topLevel(4) }
 const nested = (): Int => make(0)(1)
 `;
-  const loaded = new Program().update({
+  const loaded = Program(undefined).update({
     set: { "effektive.json": "{}", "main.eff": text },
   });
   assert(loaded.ok);

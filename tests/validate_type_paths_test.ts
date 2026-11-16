@@ -9,7 +9,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { Effects, ModuleIR, Span, Type } from "../src/core/ir.ts";
-import { Report } from "../src/core/validate/report.ts";
+import { createReport, type Report } from "../src/core/validate/report.ts";
 import { typeChildren } from "../src/core/validate/type_children.ts";
 import { checkRecursion } from "../src/core/validate/recursion_checks.ts";
 import {
@@ -146,9 +146,9 @@ function alone(
   module: ModuleIR,
   run: (ctx: { world: ReturnType<typeof buildWorld>; report: Report }) => void,
 ): string[] {
-  const report = new Report();
+  const report = createReport();
   run({ world: buildWorld(module), report });
-  return report.items.map((d) => `${d.code} ${d.message}`);
+  return report.items().map((d) => `${d.code} ${d.message}`);
 }
 
 const ROOT = "p";

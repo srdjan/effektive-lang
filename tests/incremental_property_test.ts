@@ -370,9 +370,9 @@ function runSequence(seed: number): Tally {
   const project = generateProject({ declarations: DECLARATIONS, seed });
   const rng = makeRandom(seed);
   const sequence = new EditSequence(project, rng);
-  const program = new Program("");
+  const program = Program("");
   const outputs = new TypeScriptOutputs();
-  const unqueried = new Program("");
+  const unqueried = Program("");
   const retained: Retained[] = [];
   const kinds: StepKind[] = [
     "body",
@@ -395,7 +395,7 @@ function runSequence(seed: number): Tally {
   ): void => {
     try {
       const incremental = observeProgram(program, outputs, step);
-      const fresh = observeProgram(new Program(""), new TypeScriptOutputs(), {
+      const fresh = observeProgram(Program(""), new TypeScriptOutputs(), {
         set: sequence.files,
       });
       assertEquals(

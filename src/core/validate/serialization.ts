@@ -7,6 +7,7 @@
 // not one of `ir.sources`. The walk checks such a span against the text only
 // when the caller supplies that text.
 
+import { setFrom } from "../runtime.ts";
 import type { ModuleIR, Span } from "../ir.ts";
 import { isRecord } from "./guards.ts";
 import { AREA, moduleSpan, type Report } from "./report.ts";
@@ -35,11 +36,11 @@ export function checkSerialization(
   ir: ModuleIR,
   sources: ReadonlyMap<string, string>,
   report: Report,
-): void {
+): Report {
   const fallback: Span = moduleSpan(ir);
-  const own = new Set<string>(ir.sources);
+  const own = setFrom<string>(ir.sources);
   if (ir.format !== "light-functional-ir" || ir.version !== 10) {
-    report.add(
+    report = report.add(
       AREA.serialization,
       "format",
       `expected the format light-functional-ir version 10, recorded ${
@@ -48,78 +49,95 @@ export function checkSerialization(
       fallback,
     );
   }
-  ir.sources.forEach((source, i) => {
+  for (const entry of ir.sources.entries()) {
+    const source = entry[1];
+    const i = entry[0];
     if (!sources.has(source)) {
-      report.add(
+      report = report.add(
         AREA.serialization,
         `sources[${i}]`,
         `the source ${source} is not among the supplied source texts`,
         fallback,
       );
     }
-  });
+  }
 
-  const checkSpan = (
+  function checkSpan(
+    current: Report,
     span: Span,
     path: string,
     payload: boolean,
-  ): void => {
-    const fail = (what: string): void =>
-      report.add(AREA.serialization, path, what, span);
+  ): Report {
+    function fail(what: string): Report {
+      return current.add(
+        AREA.serialization,
+        path,
+        what,
+        span,
+      );
+    }
     if (!Number.isInteger(span.start) || !Number.isInteger(span.end)) {
-      fail("a span has integer offsets");
-      return;
+      return fail("a span has integer offsets");
     }
     if (span.start < 0 || span.end < span.start) {
-      fail(
+      return fail(
         `a span needs 0 <= start <= end, recorded ${span.start}..${span.end}`,
       );
-      return;
     }
     const text = sources.get(span.source);
     if (!payload) {
       if (!own.has(span.source)) {
-        fail(
+        return fail(
           `the source ${span.source} is not listed in the sources of the module`,
         );
-        return;
       }
       if (text === undefined) {
-        fail(
+        return fail(
           `the source ${span.source} is not among the supplied source texts`,
         );
-        return;
       }
     }
     if (text !== undefined && span.end > text.length) {
-      fail(
+      return fail(
         `the span ${span.start}..${span.end} ends after the end of ${span.source}, which has ${text.length} code units`,
       );
     }
-  };
+    return current;
+  }
 
-  const walk = (
+  function walk(
+    currentReport: Report,
     value: unknown,
     path: string,
     payload: boolean,
     current: Span,
-  ): void => {
+  ): Report {
     if (typeof value === "number") {
       if (!Number.isFinite(value)) {
-        report.add(
+        return currentReport.add(
           AREA.serialization,
           path,
           `a number must be finite, recorded ${value}`,
           current,
         );
       }
-      return;
+      return currentReport;
     }
     if (Array.isArray(value)) {
-      value.forEach((item, i) => walk(item, `${path}[${i}]`, payload, current));
-      return;
+      for (const entry of value.entries()) {
+        const item = entry[1];
+        const i = entry[0];
+        currentReport = walk(
+          currentReport,
+          item,
+          `${path}[${i}]`,
+          payload,
+          current,
+        );
+      }
+      return currentReport;
     }
-    if (!isRecord(value)) return;
+    if (!isRecord(value)) return currentReport;
     const nodeSpan = asSpan(value.span);
     const here = nodeSpan ?? current;
     for (const key of Object.keys(value)) {
@@ -132,7 +150,7 @@ export function checkSerialization(
         Array.isArray(child) &&
         !isSortedUnique(child)
       ) {
-        report.add(
+        currentReport = currentReport.add(
           AREA.serialization,
           at,
           `an effect set is sorted and unique, recorded [${child.join(", ")}]`,
@@ -141,19 +159,26 @@ export function checkSerialization(
       }
       if (key === "span") {
         if (nodeSpan === undefined) {
-          report.add(
+          currentReport = currentReport.add(
             AREA.serialization,
             at,
             "a span has a source and two offsets",
             here,
           );
         } else {
-          checkSpan(nodeSpan, at, payload);
+          currentReport = checkSpan(currentReport, nodeSpan, at, payload);
         }
         continue;
       }
-      walk(child, at, payload || (path === "" && key === "imports"), here);
+      currentReport = walk(
+        currentReport,
+        child,
+        at,
+        payload || (path === "" && key === "imports"),
+        here,
+      );
     }
-  };
-  walk(ir, "", false, fallback);
+    return currentReport;
+  }
+  return walk(report, ir, "", false, fallback);
 }

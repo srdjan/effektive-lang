@@ -9,9 +9,9 @@
 
 import type { CapabilityId, ErrorId, Execution, TypeId } from "./ir.ts";
 import {
-  CLOSED_UNIT_IDS,
   DURATION_ID,
   INSTANT_ID,
+  isClosedUnitId,
   SCHEMA_ERROR_ID,
   SCHEMA_ISSUE_ID,
   TIMEOUT_ERROR_ID,
@@ -20,6 +20,8 @@ import { isErrorId, isReservedErrorId, isTypeId, moduleOfId } from "./ids.ts";
 import type { Predicate } from "./predicates.ts";
 import { typeToIr } from "./type_ir.ts";
 import { canonicalJson } from "./content_id.ts";
+import { emptyMap, emptySet, indices, mapFrom, setFrom } from "./runtime.ts";
+import { panic } from "./source.ts";
 import { compareText, sortedUnique } from "./util.ts";
 
 declare const typeRefBrand: unique symbol;
@@ -33,12 +35,12 @@ export type SchemaPresence =
   | "encoded-optional"
   | "decoded-optional";
 
-interface SchemaOptions {
+type SchemaOptions = {
   readonly presence?: SchemaPresence;
   readonly makeInput?: TypeRef;
   /** Constructor defaults are independent of field presence. */
   readonly constructorDefault?: boolean;
-}
+};
 
 type PrimitiveName =
   | "string"
@@ -49,11 +51,11 @@ type PrimitiveName =
   | "never"
   | "unknown";
 
-interface RecordField {
+type RecordField = {
   readonly name: string;
   readonly type: TypeRef;
   readonly optional: boolean;
-}
+};
 
 /** The interned form. Records are sorted by field name, unions by the canonical text of their IR. */
 export type TypeNode =
@@ -124,7 +126,7 @@ export type TypeNode =
   /** The recovery type. It is compatible with every type in both directions. */
   | { readonly kind: "error" };
 
-interface FunctionSpec {
+type FunctionSpec = {
   readonly execution: Execution;
   readonly parameters: readonly TypeRef[];
   readonly borrows?: readonly boolean[];
@@ -132,20 +134,20 @@ interface FunctionSpec {
   readonly result: TypeRef;
   readonly failures: readonly ErrorId[];
   readonly requirements: readonly CapabilityId[];
-}
+};
 
-interface ProviderSpec {
+type ProviderSpec = {
   readonly provides: readonly CapabilityId[];
   readonly execution: Execution;
   readonly failures: readonly ErrorId[];
   readonly requirements: readonly CapabilityId[];
-}
+};
 
 function isSubset(
   small: readonly string[],
   large: readonly string[],
 ): boolean {
-  const set = new Set(large);
+  const set = setFrom(large);
   return small.every((item) => set.has(item));
 }
 
@@ -165,18 +167,15 @@ export function flattenUnion(
   ref: TypeRef,
   unfold: (ref: TypeRef) => TypeRef,
 ): TypeRef[] {
-  const out: TypeRef[] = [];
-  const visit = (current: TypeRef, depth: number): void => {
+  function visit(current: TypeRef, depth: number): TypeRef[] {
     const unfolded = unfold(current);
     const node = table.node(unfolded);
     if (node.kind === "union" && depth < MAX_DEPTH) {
-      for (const member of node.members) visit(member, depth + 1);
-    } else {
-      out.push(unfolded);
+      return node.members.flatMap((member) => visit(member, depth + 1));
     }
-  };
-  visit(ref, 0);
-  return out;
+    return [unfolded];
+  }
+  return visit(ref, 0);
 }
 
 // No module has this name, so it owns no sealed type.
@@ -236,17 +235,92 @@ export type TypeReader = Pick<
   | "size"
 >;
 
-interface TypeStorage {
-  readonly nodes: TypeNode[];
-  readonly byKey: Map<string, TypeRef>;
-  /** Canonical IR text depends on immutable nodes, not definitions. */
-  readonly irKeys: Map<TypeRef, string>;
+type Lookup<Key, Value> = {
+  readonly size: () => number;
+  readonly get: (key: Key) => Value | undefined;
+  readonly has: (key: Key) => boolean;
+  readonly set: (key: Key, value: Value) => Lookup<Key, Value>;
+  readonly copy: () => Lookup<Key, Value>;
+};
+
+function createLookup<Key, Value>(
+  entries: Iterable<readonly [Key, Value]>,
+): Lookup<Key, Value> {
+  let values = mapFrom(entries);
+  function size(): number {
+    return values.size;
+  }
+  function get(key: Key): Value | undefined {
+    return values.get(key);
+  }
+  function has(key: Key): boolean {
+    return values.has(key);
+  }
+  function set(key: Key, value: Value): Lookup<Key, Value> {
+    values = values.set(key, value);
+    return lookup;
+  }
+  function copy(): Lookup<Key, Value> {
+    return createLookup(values);
+  }
+  const lookup: Lookup<Key, Value> = {
+    size: size,
+    get: get,
+    has: has,
+    set: set,
+    copy: copy,
+  };
+  return lookup;
 }
 
-interface TypeTableState {
-  readonly storage: TypeStorage;
-  readonly defs: Map<TypeId, AliasDef>;
-  readonly errorRecords: Map<ErrorId, TypeRef>;
+type TypeStorage = {
+  readonly size: () => number;
+  readonly node: (ref: TypeRef) => TypeNode | undefined;
+  readonly find: (key: string) => TypeRef | undefined;
+  readonly append: (key: string, node: TypeNode) => TypeRef;
+  readonly irKey: (ref: TypeRef) => string | undefined;
+  readonly cacheIrKey: (ref: TypeRef, key: string) => string;
+};
+
+function createTypeRef(index: number): TypeRef {
+  // This private constructor brands one newly allocated internal index.
+  return index as TypeRef;
+}
+
+function createTypeStorage(): TypeStorage {
+  const nodes: TypeNode[] = [];
+  let byKey = emptyMap<string, TypeRef>();
+  let irKeys = emptyMap<TypeRef, string>();
+  function size(): number {
+    return nodes.length;
+  }
+  function node(ref: TypeRef): TypeNode | undefined {
+    return nodes[ref];
+  }
+  function find(key: string): TypeRef | undefined {
+    return byKey.get(key);
+  }
+  function append(key: string, node: TypeNode): TypeRef {
+    const ref = createTypeRef(nodes.length);
+    nodes[nodes.length] = node;
+    byKey = byKey.set(key, ref);
+    return ref;
+  }
+  function irKey(ref: TypeRef): string | undefined {
+    return irKeys.get(ref);
+  }
+  function cacheIrKey(ref: TypeRef, key: string): string {
+    irKeys = irKeys.set(ref, key);
+    return key;
+  }
+  return {
+    size: size,
+    node: node,
+    find: find,
+    append: append,
+    irKey: irKey,
+    cacheIrKey: cacheIrKey,
+  };
 }
 
 /**
@@ -257,47 +331,40 @@ interface TypeTableState {
 function structuralChildren(
   node: Exclude<TypeNode, { readonly kind: "named" }>,
 ): readonly TypeRef[] {
-  switch (node.kind) {
-    case "record":
-      return node.fields.map((field) => field.type);
-    case "array":
-    case "option":
-    case "ref":
-    case "stream":
-      return [node.element];
-    case "tuple":
-      return node.elements;
-    case "union":
-      return node.members;
-    case "retry-schedule":
-      return [node.error];
-    case "schema":
-      return node.makeInput === undefined
-        ? [node.decoded, node.encoded]
-        : [node.decoded, node.encoded, node.makeInput];
-    case "effect":
-      return [node.result];
-    case "sink":
-      return [node.input, node.result, node.leftover];
-    case "function":
-      return [...node.parameters, node.result];
-    case "primitive":
-    case "literal":
-    case "provider":
-    case "error":
-      return [];
-    default: {
-      const unreachable: never = node;
-      return unreachable;
-    }
+  if (node.kind === "record") return node.fields.map((field) => field.type);
+  if (
+    node.kind === "array" || node.kind === "option" || node.kind === "ref" ||
+    node.kind === "stream"
+  ) return [node.element];
+  if (node.kind === "tuple") return node.elements;
+  if (node.kind === "union") return node.members;
+  if (node.kind === "retry-schedule") return [node.error];
+  if (node.kind === "schema") {
+    return node.makeInput === undefined
+      ? [node.decoded, node.encoded]
+      : [node.decoded, node.encoded, node.makeInput];
   }
+  if (node.kind === "effect") return [node.result];
+  if (node.kind === "sink") return [node.input, node.result, node.leftover];
+  if (node.kind === "function") return [...node.parameters, node.result];
+  if (
+    node.kind === "primitive" || node.kind === "literal" ||
+    node.kind === "provider" || node.kind === "error"
+  ) return [];
+  const unreachable: never = node;
+  return unreachable;
 }
 
-export class TypeTable {
-  private readonly storage: TypeStorage;
-  private readonly defs: Map<TypeId, AliasDef>;
-  private readonly errorRecords: Map<ErrorId, TypeRef>;
+export type TypeDepthMemo = {
+  readonly get: (ref: TypeRef) => number | undefined;
+  readonly set: (ref: TypeRef, height: number) => TypeDepthMemo;
+};
 
+export function TypeDepthMemo(): TypeDepthMemo {
+  return createLookup<TypeRef, number>([]);
+}
+
+export type TypeTable = {
   readonly error: TypeRef;
   readonly string: TypeRef;
   readonly boolean: TypeRef;
@@ -306,263 +373,350 @@ export class TypeTable {
   readonly unit: TypeRef;
   readonly never: TypeRef;
   readonly unknown: TypeRef;
-
-  constructor(state?: TypeTableState) {
-    this.storage = state?.storage ?? {
-      nodes: [],
-      byKey: new Map(),
-      irKeys: new Map(),
-    };
-    this.defs = state?.defs ?? new Map();
-    this.errorRecords = state?.errorRecords ?? new Map();
-    this.error = this.intern({ kind: "error" });
-    this.string = this.primitive("string");
-    this.boolean = this.primitive("boolean");
-    this.int = this.primitive("int");
-    this.number = this.primitive("number");
-    this.unit = this.primitive("unit");
-    this.never = this.primitive("never");
-    this.unknown = this.primitive("unknown");
-    if (state !== undefined) return;
-    this.defineError(
-      SCHEMA_ERROR_ID,
-      this.record([{ name: "message", type: this.string, optional: false }]),
-    );
-    this.defineError(SCHEMA_ISSUE_ID, this.record([]));
-    this.defineIdentity(DURATION_ID, this.int, false);
-    this.defineIdentity(INSTANT_ID, this.int, false);
-    this.defineError(
-      TIMEOUT_ERROR_ID,
-      this.record([{ name: "message", type: this.string, optional: false }]),
-    );
-  }
-
-  /** Shares interned nodes and copies the definitions for independent writes. */
-  fork(): TypeTable {
-    return new TypeTable({
-      storage: this.storage,
-      defs: new Map(this.defs),
-      errorRecords: new Map(this.errorRecords),
-    });
-  }
-
-  /** Number of interned types across tables that share storage. */
-  get size(): number {
-    return this.storage.nodes.length;
-  }
-
-  node(ref: TypeRef): TypeNode {
-    const node = this.storage.nodes[ref];
-    if (node === undefined) throw new Error(`unknown type ref ${ref}`);
-    return node;
-  }
-
-  /** The intern key of a node. Each kind has its own prefix, so keys of different kinds never collide. */
-  private keyOf(node: TypeNode): string {
-    switch (node.kind) {
-      case "primitive":
-        return `p:${node.name}`;
-      case "literal":
-        return `l:${JSON.stringify(node.value)}`;
-      case "named":
-        return `n:${node.id}`;
-      case "record":
-        return `r:${
-          JSON.stringify(node.fields.map((f) => [f.name, f.optional, f.type]))
-        }`;
-      case "array":
-        return `a:${node.element}`;
-      case "tuple":
-        return `t:${JSON.stringify(node.elements)}`;
-      case "union":
-        return `u:${JSON.stringify(node.members)}`;
-      case "option":
-        return `o:${node.element}`;
-      case "ref":
-        return `q:${node.element}`;
-      case "retry-schedule":
-        return `z:${node.error}`;
-      case "schema":
-        return `h:${
-          JSON.stringify([
-            node.decoded,
-            node.encoded,
-            node.decodeRequirements,
-            node.encodeRequirements,
-            node.presence === "optional",
-            node.presence === "encoded-optional",
-            node.presence === "decoded-optional",
-            node.makeInput ?? node.decoded,
-            node.constructorDefault === true,
-          ])
-        }`;
-      case "effect":
-        return `x:${
-          JSON.stringify([node.result, node.failures, node.requirements])
-        }`;
-      case "stream":
-        return `s:${
-          JSON.stringify([node.element, node.failures, node.requirements])
-        }`;
-      case "sink":
-        return `k:${
-          JSON.stringify([
-            node.input,
-            node.result,
-            node.leftover,
-            node.failures,
-            node.requirements,
-          ])
-        }`;
-      case "function":
-        return `f:${
-          JSON.stringify([
-            node.execution,
-            node.parameters,
-            node.borrows ?? [],
-            node.checked ?? [],
-            node.result,
-            node.failures,
-            node.requirements,
-          ])
-        }`;
-      case "provider":
-        return `v:${
-          JSON.stringify([
-            node.provides,
-            node.execution,
-            node.failures,
-            node.requirements,
-          ])
-        }`;
-      case "error":
-        return "e";
-    }
-  }
-
-  /** Interns a node that is already in normal form. */
-  private intern(node: TypeNode): TypeRef {
-    const key = this.keyOf(node);
-    const existing = this.storage.byKey.get(key);
-    if (existing !== undefined) return existing;
-    const ref = this.storage.nodes.length as TypeRef;
-    this.storage.nodes.push(node);
-    this.storage.byKey.set(key, ref);
-    return ref;
-  }
-
-  primitive(name: PrimitiveName): TypeRef {
-    return this.intern({ kind: "primitive", name });
-  }
-
-  literal(value: string | number | boolean | null): TypeRef {
-    return this.intern({ kind: "literal", value });
-  }
-
-  named(id: TypeId | ErrorId): TypeRef {
-    return this.intern({ kind: "named", id });
-  }
-
-  /** Sorts the fields by name. Duplicate names keep the first field. */
-  record(fields: readonly RecordField[]): TypeRef {
-    const seen = new Set<string>();
-    const unique: RecordField[] = [];
-    for (const field of fields) {
-      if (seen.has(field.name)) continue;
-      seen.add(field.name);
-      unique.push(field);
-    }
-    unique.sort((a, b) => compareText(a.name, b.name));
-    return this.intern({ kind: "record", fields: unique });
-  }
-
-  array(element: TypeRef): TypeRef {
-    return this.intern({ kind: "array", element });
-  }
-
-  tuple(elements: readonly TypeRef[]): TypeRef {
-    return this.intern({ kind: "tuple", elements: [...elements] });
-  }
-
-  option(element: TypeRef): TypeRef {
-    return this.intern({ kind: "option", element });
-  }
-
-  ref(element: TypeRef): TypeRef {
-    return this.intern({ kind: "ref", element });
-  }
-
-  retrySchedule(error: TypeRef): TypeRef {
-    return this.intern({ kind: "retry-schedule", error });
-  }
-
-  schema(
+  readonly fork: () => TypeTable;
+  readonly size: () => number;
+  readonly node: (ref: TypeRef) => TypeNode;
+  readonly primitive: (name: PrimitiveName) => TypeRef;
+  readonly literal: (value: string | number | boolean | null) => TypeRef;
+  readonly named: (id: TypeId | ErrorId) => TypeRef;
+  readonly record: (fields: readonly RecordField[]) => TypeRef;
+  readonly array: (element: TypeRef) => TypeRef;
+  readonly tuple: (elements: readonly TypeRef[]) => TypeRef;
+  readonly option: (element: TypeRef) => TypeRef;
+  readonly ref: (element: TypeRef) => TypeRef;
+  readonly retrySchedule: (error: TypeRef) => TypeRef;
+  readonly schema: (
     decoded: TypeRef,
     encoded: TypeRef,
     decodeRequirements: readonly CapabilityId[],
     encodeRequirements: readonly CapabilityId[],
-    options: SchemaOptions = {},
-  ): TypeRef {
-    const {
-      presence = "required",
-      makeInput = decoded,
-      constructorDefault = false,
-    } = options;
-    return this.intern({
-      kind: "schema",
-      decoded,
-      encoded,
-      decodeRequirements: sortedUnique(decodeRequirements),
-      encodeRequirements: sortedUnique(encodeRequirements),
-      presence,
-      ...(makeInput === decoded ||
-          // The interned type serves every module, so the test needs no authority.
-          (this.isAssignableIn(NO_MODULE, makeInput, decoded) &&
-            this.isAssignableIn(NO_MODULE, decoded, makeInput))
-        ? {}
-        : { makeInput }),
-      ...(constructorDefault ? { constructorDefault: true as const } : {}),
-    });
-  }
-
-  effect(
+    options: SchemaOptions,
+  ) => TypeRef;
+  readonly effect: (
     result: TypeRef,
     failures: readonly ErrorId[],
     requirements: readonly CapabilityId[],
-  ): TypeRef {
-    return this.intern({
-      kind: "effect",
-      result,
-      failures: sortedUnique(failures),
-      requirements: sortedUnique(requirements),
-    });
-  }
-
-  stream(
+  ) => TypeRef;
+  readonly stream: (
     element: TypeRef,
     failures: readonly ErrorId[],
     requirements: readonly CapabilityId[],
-  ): TypeRef {
-    return this.intern({
-      kind: "stream",
-      element,
-      failures: sortedUnique(failures),
-      requirements: sortedUnique(requirements),
-    });
-  }
-
-  sink(
+  ) => TypeRef;
+  readonly sink: (
     input: TypeRef,
     result: TypeRef,
     failures: readonly ErrorId[],
     requirements: readonly CapabilityId[],
-    leftover: TypeRef = this.never,
+    leftover: TypeRef,
+  ) => TypeRef;
+  readonly union: (members: readonly TypeRef[]) => TypeRef;
+  readonly function: (spec: FunctionSpec) => TypeRef;
+  readonly provider: (spec: ProviderSpec) => TypeRef;
+  readonly defineAlias: (
+    id: TypeId,
+    target: TypeRef,
+    guarded: boolean,
+  ) => TypeTable;
+  readonly defineIdentity: (
+    id: TypeId,
+    body: TypeRef,
+    sealed: boolean,
+    guarded: boolean,
+    predicate: Predicate | undefined,
+  ) => TypeTable;
+  readonly defineTagged: (
+    id: TypeId,
+    body: TypeRef,
+    sealed: boolean,
+    predicate: Predicate | undefined,
+  ) => TypeTable;
+  readonly defineOpaque: (id: TypeId) => TypeTable;
+  readonly isIdentity: (id: TypeId) => boolean;
+  readonly isOpaque: (id: TypeId) => boolean;
+  readonly isSealed: (id: TypeId) => boolean;
+  readonly ownsSealed: (module: string, id: TypeId) => boolean;
+  readonly sealedRootOf: (ref: TypeRef) => TypeId | undefined;
+  readonly foreignSealedOf: (
+    module: string,
+    ref: TypeRef,
+  ) => TypeId | undefined;
+  readonly containsForeignSealed: (module: string, ref: TypeRef) => boolean;
+  readonly defineError: (id: ErrorId, record: TypeRef) => TypeTable;
+  readonly aliasOf: (id: TypeId) => TypeRef | undefined;
+  readonly identityBaseOf: (id: TypeId) => TypeRef | undefined;
+  readonly taggedRecordOf: (id: TypeId) => TypeRef | undefined;
+  readonly predicateOf: (id: TypeId) => Predicate | undefined;
+  readonly taggedIdOf: (ref: TypeRef) => TypeId | undefined;
+  readonly errorRecordOf: (id: ErrorId) => TypeRef | undefined;
+  readonly isErrorOrTagged: (id: TypeId | ErrorId) => boolean;
+  readonly recordBodyOf: (id: TypeId | ErrorId) => TypeRef | undefined;
+  readonly nominalBodyOf: (id: TypeId | ErrorId) => TypeRef | undefined;
+  readonly declaredBodyOf: (id: string) => TypeRef | undefined;
+  readonly optionElementOf: (ref: TypeRef | undefined) => TypeRef | undefined;
+  readonly isDefined: (id: TypeId | ErrorId) => boolean;
+  readonly unfold: (ref: TypeRef) => TypeRef;
+  readonly unfoldTransparent: (ref: TypeRef) => TypeRef;
+  readonly exceedsDepth: (
+    ref: TypeRef,
+    limit: number,
+    memo: TypeDepthMemo,
+  ) => boolean;
+  readonly isAssignable: (source: TypeRef, target: TypeRef) => boolean;
+  readonly isAssignableIn: (
+    module: string,
+    source: TypeRef,
+    target: TypeRef,
+  ) => boolean;
+};
+
+type TypeTableState = {
+  readonly storage: TypeStorage;
+  readonly defs: Lookup<TypeId, AliasDef>;
+  readonly errorRecords: Lookup<ErrorId, TypeRef>;
+  readonly initializeBuiltins: boolean;
+};
+
+function createTypeTable(state: TypeTableState): TypeTable {
+  const storage = state.storage;
+  const defs = state.defs;
+  const errorRecords = state.errorRecords;
+
+  const error = intern({ kind: "error" });
+  const string = primitive("string");
+  const boolean = primitive("boolean");
+  const int = primitive("int");
+  const number = primitive("number");
+  const unit = primitive("unit");
+  const never = primitive("never");
+  const unknown = primitive("unknown");
+
+  /** Shares interned nodes and copies the definitions for independent writes. */
+  function fork(): TypeTable {
+    return createTypeTable({
+      storage: storage,
+      defs: defs.copy(),
+      errorRecords: errorRecords.copy(),
+      initializeBuiltins: false,
+    });
+  }
+
+  /** Number of interned types across tables that share storage. */
+  function size(): number {
+    return storage.size();
+  }
+
+  function node(ref: TypeRef): TypeNode {
+    return storage.node(ref) ?? panic(`unknown type ref ${ref}`);
+  }
+
+  /** The intern key of a node. Each kind has its own prefix, so keys of different kinds never collide. */
+  function keyOf(node: TypeNode): string {
+    if (node.kind === "primitive") return `p:${node.name}`;
+    if (node.kind === "literal") return `l:${JSON.stringify(node.value)}`;
+    if (node.kind === "named") return `n:${node.id}`;
+    if (node.kind === "record") {
+      return `r:${
+        JSON.stringify(node.fields.map((field) => [
+          field.name,
+          field.optional,
+          field.type,
+        ]))
+      }`;
+    }
+    if (node.kind === "array") return `a:${node.element}`;
+    if (node.kind === "tuple") return `t:${JSON.stringify(node.elements)}`;
+    if (node.kind === "union") return `u:${JSON.stringify(node.members)}`;
+    if (node.kind === "option") return `o:${node.element}`;
+    if (node.kind === "ref") return `q:${node.element}`;
+    if (node.kind === "retry-schedule") return `z:${node.error}`;
+    if (node.kind === "schema") {
+      return `h:${
+        JSON.stringify([
+          node.decoded,
+          node.encoded,
+          node.decodeRequirements,
+          node.encodeRequirements,
+          node.presence === "optional",
+          node.presence === "encoded-optional",
+          node.presence === "decoded-optional",
+          node.makeInput ?? node.decoded,
+          node.constructorDefault ?? false,
+        ])
+      }`;
+    }
+    if (node.kind === "effect") {
+      return `x:${
+        JSON.stringify([node.result, node.failures, node.requirements])
+      }`;
+    }
+    if (node.kind === "stream") {
+      return `s:${
+        JSON.stringify([node.element, node.failures, node.requirements])
+      }`;
+    }
+    if (node.kind === "sink") {
+      return `k:${
+        JSON.stringify([
+          node.input,
+          node.result,
+          node.leftover,
+          node.failures,
+          node.requirements,
+        ])
+      }`;
+    }
+    if (node.kind === "function") {
+      return `f:${
+        JSON.stringify([
+          node.execution,
+          node.parameters,
+          node.borrows ?? [],
+          node.checked ?? [],
+          node.result,
+          node.failures,
+          node.requirements,
+        ])
+      }`;
+    }
+    if (node.kind === "provider") {
+      return `v:${
+        JSON.stringify([
+          node.provides,
+          node.execution,
+          node.failures,
+          node.requirements,
+        ])
+      }`;
+    }
+    if (node.kind === "error") return "e";
+    const unreachable: never = node;
+    return unreachable;
+  }
+
+  /** Interns a node that is already in normal form. */
+  function intern(node: TypeNode): TypeRef {
+    const key = keyOf(node);
+    const existing = storage.find(key);
+    if (existing !== undefined) return existing;
+    return storage.append(key, node);
+  }
+
+  function primitive(name: PrimitiveName): TypeRef {
+    return intern({ kind: "primitive", name: name });
+  }
+
+  function literal(value: string | number | boolean | null): TypeRef {
+    return intern({ kind: "literal", value: value });
+  }
+
+  function named(id: TypeId | ErrorId): TypeRef {
+    return intern({ kind: "named", id: id });
+  }
+
+  /** Sorts the fields by name. Duplicate names keep the first field. */
+  function record(fields: readonly RecordField[]): TypeRef {
+    let byName = emptyMap<string, RecordField>();
+    for (const field of fields) {
+      if (!byName.has(field.name)) byName = byName.set(field.name, field);
+    }
+    const unique = [...byName.values()].toSorted((left, right) =>
+      compareText(left.name, right.name)
+    );
+    return intern({ kind: "record", fields: unique });
+  }
+
+  function array(element: TypeRef): TypeRef {
+    return intern({ kind: "array", element: element });
+  }
+
+  function tuple(elements: readonly TypeRef[]): TypeRef {
+    return intern({ kind: "tuple", elements: [...elements] });
+  }
+
+  function option(element: TypeRef): TypeRef {
+    return intern({ kind: "option", element: element });
+  }
+
+  function ref(element: TypeRef): TypeRef {
+    return intern({ kind: "ref", element: element });
+  }
+
+  function retrySchedule(error: TypeRef): TypeRef {
+    return intern({ kind: "retry-schedule", error: error });
+  }
+
+  function schema(
+    decoded: TypeRef,
+    encoded: TypeRef,
+    decodeRequirements: readonly CapabilityId[],
+    encodeRequirements: readonly CapabilityId[],
+    options: SchemaOptions,
   ): TypeRef {
-    return this.intern({
+    const presence = options.presence ?? "required";
+    const makeInput = options.makeInput ?? decoded;
+    const constructorDefault = options.constructorDefault ?? false;
+    const inputOption: {
+      readonly makeInput?: TypeRef;
+    } = makeInput === decoded ||
+        (isAssignableIn(NO_MODULE, makeInput, decoded) &&
+          isAssignableIn(NO_MODULE, decoded, makeInput))
+      ? {}
+      : { makeInput: makeInput };
+    const nodeOptions: {
+      readonly makeInput?: TypeRef;
+      readonly constructorDefault?: true;
+    } = constructorDefault
+      ? { ...inputOption, constructorDefault: true }
+      : inputOption;
+    return intern({
+      ...nodeOptions,
+      kind: "schema",
+      decoded: decoded,
+      encoded: encoded,
+      decodeRequirements: sortedUnique(decodeRequirements),
+      encodeRequirements: sortedUnique(encodeRequirements),
+      presence: presence,
+    });
+  }
+
+  function effect(
+    result: TypeRef,
+    failures: readonly ErrorId[],
+    requirements: readonly CapabilityId[],
+  ): TypeRef {
+    return intern({
+      kind: "effect",
+      result: result,
+      failures: sortedUnique(failures),
+      requirements: sortedUnique(requirements),
+    });
+  }
+
+  function stream(
+    element: TypeRef,
+    failures: readonly ErrorId[],
+    requirements: readonly CapabilityId[],
+  ): TypeRef {
+    return intern({
+      kind: "stream",
+      element: element,
+      failures: sortedUnique(failures),
+      requirements: sortedUnique(requirements),
+    });
+  }
+
+  function sink(
+    input: TypeRef,
+    result: TypeRef,
+    failures: readonly ErrorId[],
+    requirements: readonly CapabilityId[],
+    leftover: TypeRef,
+  ): TypeRef {
+    return intern({
       kind: "sink",
-      input,
-      result,
-      leftover,
+      input: input,
+      result: result,
+      leftover: leftover,
       failures: sortedUnique(failures),
       requirements: sortedUnique(requirements),
     });
@@ -575,50 +729,55 @@ export class TypeTable {
    * member is that member. An empty union is `never`. A union with the error type
    * is the error type.
    */
-  union(members: readonly TypeRef[]): TypeRef {
-    const flat = new Set<TypeRef>();
+  function union(members: readonly TypeRef[]): TypeRef {
+    let flat = emptySet<TypeRef>();
     for (const member of members) {
-      const node = this.node(member);
-      if (node.kind === "error") return this.error;
-      if (node.kind === "union") {
-        for (const inner of node.members) flat.add(inner);
+      const memberNode = node(member);
+      if (memberNode.kind === "error") return error;
+      if (memberNode.kind === "union") {
+        for (const inner of memberNode.members) flat = flat.add(inner);
       } else {
-        flat.add(member);
+        flat = flat.add(member);
       }
     }
-    if (flat.size === 0) return this.never;
-    const sorted = [...flat].sort((a, b) =>
-      compareText(this.irKey(a), this.irKey(b)) || a - b
+    if (flat.size === 0) return never;
+    const sorted = [...flat].toSorted((a, b) =>
+      compareText(irKey(a), irKey(b)) || a - b
     );
     if (sorted.length === 1) return sorted[0];
-    return this.intern({ kind: "union", members: sorted });
+    return intern({ kind: "union", members: sorted });
   }
 
-  private irKey(ref: TypeRef): string {
-    let key = this.storage.irKeys.get(ref);
-    if (key === undefined) {
-      key = canonicalJson(typeToIr(this, ref));
-      this.storage.irKeys.set(ref, key);
-    }
-    return key;
+  function irKey(ref: TypeRef): string {
+    const key = storage.irKey(ref);
+    if (key !== undefined) return key;
+    return storage.cacheIrKey(ref, canonicalJson(typeToIr(table, ref)));
   }
 
   /** Sorts and deduplicates the failure and requirement sets. */
-  function(spec: FunctionSpec): TypeRef {
-    return this.intern({
+  function functionType(spec: FunctionSpec): TypeRef {
+    const borrowOption: {
+      readonly borrows?: readonly boolean[];
+    } = spec.borrows?.some(Boolean) ? { borrows: [...spec.borrows] } : {};
+    const options: {
+      readonly borrows?: readonly boolean[];
+      readonly checked?: readonly boolean[];
+    } = spec.checked?.some(Boolean)
+      ? { ...borrowOption, checked: [...spec.checked] }
+      : borrowOption;
+    return intern({
+      ...options,
       kind: "function",
       execution: spec.execution,
       parameters: [...spec.parameters],
-      ...(spec.borrows?.some(Boolean) ? { borrows: [...spec.borrows] } : {}),
-      ...(spec.checked?.some(Boolean) ? { checked: [...spec.checked] } : {}),
       result: spec.result,
       failures: sortedUnique(spec.failures),
       requirements: sortedUnique(spec.requirements),
     });
   }
 
-  provider(spec: ProviderSpec): TypeRef {
-    return this.intern({
+  function provider(spec: ProviderSpec): TypeRef {
+    return intern({
       kind: "provider",
       provides: sortedUnique(spec.provides),
       execution: spec.execution,
@@ -632,83 +791,107 @@ export class TypeTable {
    * alias is a recursive record that needs an array, an optional key, or a
    * tagged terminal choice.
    */
-  defineAlias(id: TypeId, target: TypeRef, guarded = false): void {
-    this.defs.set(id, { kind: "transparent", body: target, guarded });
+  function writeDefinition(id: TypeId, definition: AliasDef): TypeTable {
+    const stored = defs.set(id, definition).get(id);
+    return stored === definition
+      ? table
+      : panic(`type definition ${id} was not stored`);
+  }
+
+  function defineAlias(
+    id: TypeId,
+    target: TypeRef,
+    isGuarded: boolean,
+  ): TypeTable {
+    return writeDefinition(id, {
+      kind: "transparent",
+      body: target,
+      guarded: isGuarded,
+    });
   }
 
   /** Defines an alias with identity by name. A sealed identity needs the authority of its module. */
-  defineIdentity(
+  function defineIdentity(
     id: TypeId,
     body: TypeRef,
     sealed: boolean,
-    guarded = false,
-    predicate?: Predicate,
-  ): void {
-    this.defs.set(id, {
+    isGuarded: boolean,
+    predicate: Predicate | undefined,
+  ): TypeTable {
+    const options: { readonly predicate?: Predicate } = predicate === undefined
+      ? {}
+      : { predicate: predicate };
+    return writeDefinition(id, {
+      ...options,
       kind: "identity",
-      body,
-      sealed,
-      guarded,
-      ...(predicate === undefined ? {} : { predicate }),
+      body: body,
+      sealed: sealed,
+      guarded: isGuarded,
     });
   }
 
   /** Defines an identity record that carries a tag. */
-  defineTagged(
+  function defineTagged(
     id: TypeId,
     body: TypeRef,
     sealed: boolean,
-    predicate?: Predicate,
-  ): void {
-    this.defs.set(id, {
+    predicate: Predicate | undefined,
+  ): TypeTable {
+    const options: { readonly predicate?: Predicate } = predicate === undefined
+      ? {}
+      : { predicate: predicate };
+    return writeDefinition(id, {
+      ...options,
       kind: "tagged",
-      body,
-      sealed,
-      ...(predicate === undefined ? {} : { predicate }),
+      body: body,
+      sealed: sealed,
     });
   }
 
   /** Defines an opaque type. It has no body and is never sealed. */
-  defineOpaque(id: TypeId): void {
-    this.defs.set(id, { kind: "opaque" });
+  function defineOpaque(id: TypeId): TypeTable {
+    return writeDefinition(id, { kind: "opaque" });
   }
 
   /** The definition behind a named type, or undefined for an error or another node. */
-  private defOf(node: TypeNode): AliasDef | undefined {
+  function defOf(node: TypeNode): AliasDef | undefined {
     return node.kind === "named" && !isErrorId(node.id)
-      ? this.defs.get(node.id)
+      ? defs.get(node.id)
       : undefined;
   }
 
   /** True for an opaque type, an alias with identity, or a tagged record. */
-  isIdentity(id: TypeId): boolean {
-    const kind = this.defs.get(id)?.kind;
+  function isIdentity(id: TypeId): boolean {
+    const kind = defs.get(id)?.kind;
     return kind === "identity" || kind === "tagged" || kind === "opaque";
   }
 
-  isOpaque(id: TypeId): boolean {
-    return this.defs.get(id)?.kind === "opaque";
+  function isOpaque(id: TypeId): boolean {
+    return defs.get(id)?.kind === "opaque";
   }
 
-  isSealed(id: TypeId): boolean {
-    const def = this.defs.get(id);
+  function isSealed(id: TypeId): boolean {
+    const def = defs.get(id);
     return (def?.kind === "identity" || def?.kind === "tagged") && def.sealed;
   }
 
-  ownsSealed(module: string, id: TypeId): boolean {
-    return !this.isSealed(id) || moduleOfId(id) === module;
+  function ownsSealed(module: string, id: TypeId): boolean {
+    return !isSealed(id) || moduleOfId(id) === module;
   }
 
   /** The sealed nominal identity below aliases, if this type is one. */
-  sealedRootOf(ref: TypeRef): TypeId | undefined {
+  function sealedRootOf(ref: TypeRef): TypeId | undefined {
     let current = ref;
-    const seen = new Set<TypeRef>();
-    while (!seen.has(current)) {
-      seen.add(current);
-      const node = this.node(current);
-      if (node.kind !== "named" || isErrorId(node.id)) return undefined;
-      if (this.isSealed(node.id)) return node.id;
-      const alias = this.aliasOf(node.id);
+    let seen = emptySet<TypeRef>();
+    for (const _step of indices(defs.size() + 1)) {
+      if (seen.has(current)) return undefined;
+      seen = seen.add(current);
+      const currentNode = node(current);
+      if (currentNode.kind !== "named" || isErrorId(currentNode.id)) {
+        return undefined;
+      }
+      if (isSealed(currentNode.id)) return currentNode.id;
+      const alias = aliasOf(currentNode.id);
       if (alias === undefined) return undefined;
       current = alias;
     }
@@ -716,139 +899,141 @@ export class TypeTable {
   }
 
   /** A foreign sealed nominal identity contained in this type, if one exists. */
-  foreignSealedOf(module: string, ref: TypeRef): TypeId | undefined {
-    const seen = new Set<TypeRef>();
-    const visit = (current: TypeRef): TypeId | undefined => {
+  function foreignSealedOf(module: string, ref: TypeRef): TypeId | undefined {
+    let seen = emptySet<TypeRef>();
+    function visit(current: TypeRef): TypeId | undefined {
       if (seen.has(current)) return undefined;
-      seen.add(current);
-      const node = this.node(current);
-      if (node.kind === "named") {
-        if (!isErrorId(node.id) && !this.ownsSealed(module, node.id)) {
-          return node.id;
+      seen = seen.add(current);
+      const currentNode = node(current);
+      if (currentNode.kind === "named") {
+        if (!isErrorId(currentNode.id) && !ownsSealed(module, currentNode.id)) {
+          return currentNode.id;
         }
-        const target = isErrorId(node.id)
-          ? this.errorRecords.get(node.id)
-          : this.aliasOf(node.id);
+        const target = isErrorId(currentNode.id)
+          ? errorRecords.get(currentNode.id)
+          : aliasOf(currentNode.id);
         return target === undefined ? undefined : visit(target);
       }
-      for (const child of structuralChildren(node)) {
+      for (const child of structuralChildren(currentNode)) {
         const found = visit(child);
         if (found !== undefined) return found;
       }
       return undefined;
-    };
+    }
     return visit(ref);
   }
 
   /** True when a type contains a sealed nominal type from another module. */
-  containsForeignSealed(module: string, ref: TypeRef): boolean {
-    return this.foreignSealedOf(module, ref) !== undefined;
+  function containsForeignSealed(module: string, ref: TypeRef): boolean {
+    return foreignSealedOf(module, ref) !== undefined;
   }
 
-  defineError(id: ErrorId, record: TypeRef): void {
-    this.errorRecords.set(id, record);
+  function defineError(id: ErrorId, record: TypeRef): TypeTable {
+    const stored = errorRecords.set(id, record).get(id);
+    return stored === record
+      ? table
+      : panic(`error definition ${id} was not stored`);
   }
 
-  aliasOf(id: TypeId): TypeRef | undefined {
-    const def = this.defs.get(id);
+  function aliasOf(id: TypeId): TypeRef | undefined {
+    const def = defs.get(id);
     return def === undefined || def.kind === "opaque" ? undefined : def.body;
   }
 
   /** The base of an opaque type, or the body of an untagged identity. */
-  identityBaseOf(id: TypeId): TypeRef | undefined {
-    const def = this.defs.get(id);
-    if (def?.kind === "opaque") return this.unknown;
+  function identityBaseOf(id: TypeId): TypeRef | undefined {
+    const def = defs.get(id);
+    if (def?.kind === "opaque") return unknown;
     return def?.kind === "identity" ? def.body : undefined;
   }
 
   /** The body of a tagged record. */
-  taggedRecordOf(id: TypeId): TypeRef | undefined {
-    const def = this.defs.get(id);
+  function taggedRecordOf(id: TypeId): TypeRef | undefined {
+    const def = defs.get(id);
     return def?.kind === "tagged" ? def.body : undefined;
   }
 
   /** The predicate of an identity or tagged record. */
-  predicateOf(id: TypeId): Predicate | undefined {
-    const def = this.defs.get(id);
+  function predicateOf(id: TypeId): Predicate | undefined {
+    const def = defs.get(id);
     return def?.kind === "identity" || def?.kind === "tagged"
       ? def.predicate
       : undefined;
   }
 
   /** The id of the type when it is a named tagged record, otherwise undefined. */
-  taggedIdOf(ref: TypeRef): TypeId | undefined {
-    const node = this.node(ref);
-    return node.kind === "named" && isTypeId(node.id) &&
-        this.taggedRecordOf(node.id) !== undefined
-      ? node.id
+  function taggedIdOf(ref: TypeRef): TypeId | undefined {
+    const typeNode = node(ref);
+    return typeNode.kind === "named" && isTypeId(typeNode.id) &&
+        taggedRecordOf(typeNode.id) !== undefined
+      ? typeNode.id
       : undefined;
   }
 
-  errorRecordOf(id: ErrorId): TypeRef | undefined {
-    return this.errorRecords.get(id);
+  function errorRecordOf(id: ErrorId): TypeRef | undefined {
+    return errorRecords.get(id);
   }
 
   /** True for a named error or a tagged record. An untagged identity, an opaque type, and an alias are not. */
-  isErrorOrTagged(id: TypeId | ErrorId): boolean {
-    return isErrorId(id) || this.taggedRecordOf(id) !== undefined;
+  function isErrorOrTagged(id: TypeId | ErrorId): boolean {
+    return isErrorId(id) || taggedRecordOf(id) !== undefined;
   }
 
   /** The record body of a named error or a tagged record. Any other id has none. */
-  recordBodyOf(id: TypeId | ErrorId): TypeRef | undefined {
-    return isErrorId(id) ? this.errorRecordOf(id) : this.taggedRecordOf(id);
+  function recordBodyOf(id: TypeId | ErrorId): TypeRef | undefined {
+    return isErrorId(id) ? errorRecordOf(id) : taggedRecordOf(id);
   }
 
   /** The record body, or the base of an untagged identity or an opaque type. An error has no base. */
-  nominalBodyOf(id: TypeId | ErrorId): TypeRef | undefined {
+  function nominalBodyOf(id: TypeId | ErrorId): TypeRef | undefined {
     return isErrorId(id)
-      ? this.errorRecordOf(id)
-      : this.taggedRecordOf(id) ?? this.identityBaseOf(id);
+      ? errorRecordOf(id)
+      : taggedRecordOf(id) ?? identityBaseOf(id);
   }
 
   /** The alias or record body of a type id, or the record body of an error id. Any other id has none. */
-  declaredBodyOf(id: string): TypeRef | undefined {
-    return isTypeId(id)
-      ? this.aliasOf(id) ?? this.taggedRecordOf(id)
-      : isErrorId(id)
-      ? this.errorRecordOf(id)
-      : undefined;
+  function declaredBodyOf(id: string): TypeRef | undefined {
+    if (isTypeId(id)) return aliasOf(id) ?? taggedRecordOf(id);
+    return isErrorId(id) ? errorRecordOf(id) : undefined;
   }
 
   /** The element type of an option type, or undefined when the type is no option or has several options. */
-  optionElementOf(ref: TypeRef | undefined): TypeRef | undefined {
+  function optionElementOf(ref: TypeRef | undefined): TypeRef | undefined {
     if (ref === undefined) return undefined;
-    const options = flattenUnion(this, ref, (r) => this.unfold(r)).map((m) =>
-      this.node(m)
+    const options = flattenUnion(table, ref, (r) => unfold(r)).map((m) =>
+      node(m)
     ).filter((m) => m.kind === "option");
     const only = options.length === 1 ? options[0] : undefined;
     return only?.kind === "option" ? only.element : undefined;
   }
 
-  isDefined(id: TypeId | ErrorId): boolean {
-    return isErrorId(id) ? this.errorRecords.has(id) : this.defs.has(id);
+  function isDefined(id: TypeId | ErrorId): boolean {
+    return isErrorId(id) ? errorRecords.has(id) : defs.has(id);
   }
 
   /** Follows alias definitions until the type is not a defined alias. */
-  unfold(ref: TypeRef): TypeRef {
-    return this.follow(ref, false);
+  function unfold(ref: TypeRef): TypeRef {
+    return follow(ref, false);
   }
 
   /** Follows transparent aliases and stops at an alias that has identity. */
-  unfoldTransparent(ref: TypeRef): TypeRef {
-    return this.follow(ref, true);
+  function unfoldTransparent(ref: TypeRef): TypeRef {
+    return follow(ref, true);
   }
 
-  private follow(ref: TypeRef, stopAtIdentity: boolean): TypeRef {
+  function follow(ref: TypeRef, stopAtIdentity: boolean): TypeRef {
     let current = ref;
-    for (let steps = 0; steps <= this.defs.size; steps++) {
-      const node = this.node(current);
-      if (node.kind !== "named" || isErrorId(node.id)) return current;
-      const def = this.defs.get(node.id);
+    for (const _step of indices(defs.size() + 1)) {
+      const currentNode = node(current);
+      if (currentNode.kind !== "named" || isErrorId(currentNode.id)) {
+        return current;
+      }
+      const def = defs.get(currentNode.id);
       if (def === undefined || def.kind === "opaque") return current;
       if (stopAtIdentity && def.kind !== "transparent") return current;
       current = def.body;
     }
-    return this.error;
+    return error;
   }
 
   /**
@@ -859,42 +1044,41 @@ export class TypeTable {
    * past the limit stops and memoizes nothing for the nodes it aborted. The
    * recursion has at most `limit + 1` frames.
    */
-  exceedsDepth(
+  function exceedsDepth(
     ref: TypeRef,
     limit: number,
-    memo: Map<TypeRef, number>,
+    memo: TypeDepthMemo,
   ): boolean {
-    return this.heightWithin(ref, limit, memo) === Infinity;
+    return heightWithin(ref, limit, memo) === Infinity;
   }
 
   /** The exact height of the type when it is at most `budget`, else `Infinity`. */
-  private heightWithin(
+  function heightWithin(
     ref: TypeRef,
     budget: number,
-    memo: Map<TypeRef, number>,
+    memo: TypeDepthMemo,
   ): number {
     const known = memo.get(ref);
     if (known !== undefined) return known <= budget ? known : Infinity;
     if (budget < 1) return Infinity;
     let tallest = 0;
-    for (const child of this.childRefs(this.node(ref))) {
-      const height = this.heightWithin(child, budget - 1, memo);
+    for (const child of childRefs(node(ref))) {
+      const height = heightWithin(child, budget - 1, memo);
       if (height === Infinity) return Infinity;
       if (height > tallest) tallest = height;
     }
     const height = 1 + tallest;
-    memo.set(ref, height);
-    return height;
+    return memo.set(ref, height).get(ref) ?? height;
   }
 
   /**
    * The types that one level below `node` counts toward its height. An alias
    * name has its target as its child, unless the alias is guarded or undefined.
    */
-  private childRefs(node: TypeNode): readonly TypeRef[] {
+  function childRefs(node: TypeNode): readonly TypeRef[] {
     if (node.kind !== "named") return structuralChildren(node);
     if (isErrorId(node.id)) return [];
-    const def = this.defs.get(node.id);
+    const def = defs.get(node.id);
     if (
       def === undefined || def.kind === "opaque" || def.kind === "tagged" ||
       def.guarded
@@ -907,13 +1091,17 @@ export class TypeTable {
    * Every module owns every sealed type here. Use this form only for a test
    * that builds no value, such as a `null` equality or a literal pattern.
    */
-  isAssignable(source: TypeRef, target: TypeRef): boolean {
-    return this.assignable(source, target, 0, true);
+  function isAssignable(source: TypeRef, target: TypeRef): boolean {
+    return assignable(source, target, 0, true, undefined, true);
   }
 
   /** Compatibility in one source module. Sealed nominal widening needs this authority. */
-  isAssignableIn(module: string, source: TypeRef, target: TypeRef): boolean {
-    return this.assignable(source, target, 0, true, module);
+  function isAssignableIn(
+    module: string,
+    source: TypeRef,
+    target: TypeRef,
+  ): boolean {
+    return assignable(source, target, 0, true, module, true);
   }
 
   /**
@@ -922,27 +1110,27 @@ export class TypeTable {
    * function nested in a record, array, option, tuple, union, result, or
    * parameter cannot be wrapped, so its execution must match.
    */
-  private assignable(
+  function assignable(
     s: TypeRef,
     t: TypeRef,
     depth: number,
-    lift = false,
-    module?: string,
-    adopt = true,
+    lift: boolean,
+    module: string | undefined,
+    adopt: boolean,
   ): boolean {
     if (s === t) return true;
     if (depth > MAX_DEPTH) return false;
-    const sn = this.node(s);
-    const tn = this.node(t);
+    const sn = node(s);
+    const tn = node(t);
     // `adopt` is false for a value that has widened to the body of an identity:
     // it takes no other name at that level.
-    const nested = (
+    function nested(
       source: TypeRef,
       target: TypeRef,
-      nestedLift = false,
-      nestedAdopt = true,
-    ) =>
-      this.assignable(
+      nestedLift: boolean,
+      nestedAdopt: boolean,
+    ): boolean {
+      return assignable(
         source,
         target,
         depth + 1,
@@ -950,14 +1138,16 @@ export class TypeTable {
         module,
         nestedAdopt,
       );
-    const sd = this.defOf(sn);
-    const td = this.defOf(tn);
+    }
+    const sd = defOf(sn);
+    const td = defOf(tn);
     // Two different guarded records never fit each other. Equal ids have equal refs.
     if (guarded(sd) && guarded(td)) return false;
     if (sn.kind === "error" || tn.kind === "error") return true;
     if (sn.kind === "primitive" && sn.name === "never") return true;
-    const owns = (id: TypeId | ErrorId) =>
-      module === undefined || isErrorId(id) || this.ownsSealed(module, id);
+    function owns(id: TypeId | ErrorId): boolean {
+      return module === undefined || isErrorId(id) || ownsSealed(module, id);
+    }
     // A transparent alias unfolds. An alias with identity stays a name.
     if (sd?.kind === "transparent") return nested(sd.body, t, lift, adopt);
     if (td?.kind === "transparent") return nested(s, td.body, lift, adopt);
@@ -978,10 +1168,10 @@ export class TypeTable {
     if (tn.kind === "named") {
       // `Duration` and `Instant` are closed: only a literal or an operation of
       // the type makes one.
-      return adopt && sn.kind !== "named" && !CLOSED_UNIT_IDS.has(tn.id) &&
+      return adopt && sn.kind !== "named" && !isClosedUnitId(tn.id) &&
         td?.kind === "identity" &&
         td.predicate === undefined && owns(tn.id) &&
-        nested(s, td.body, lift);
+        nested(s, td.body, lift, true);
     }
     if (tn.kind === "union") {
       for (const member of tn.members) {
@@ -989,121 +1179,214 @@ export class TypeTable {
       }
       return false;
     }
-    switch (tn.kind) {
-      case "primitive":
-        if (sn.kind === "primitive") {
-          return sn.name === tn.name ||
-            (sn.name === "int" && tn.name === "number");
-        }
-        if (sn.kind === "literal") {
-          return literalFitsPrimitive(sn.value, tn.name);
-        }
-        return false;
-      case "literal":
-        return sn.kind === "literal" && sn.value === tn.value;
-      case "record":
-        if (sn.kind !== "record") return false;
-        if (sn.fields.length !== tn.fields.length) return false;
-        for (let i = 0; i < sn.fields.length; i++) {
-          const field = sn.fields[i];
-          const other = tn.fields[i];
-          if (
-            field.name !== other.name || field.optional !== other.optional ||
-            !nested(field.type, other.type)
-          ) return false;
-        }
-        return true;
-      case "array":
-        return sn.kind === "array" &&
-          nested(sn.element, tn.element);
-      case "option":
-        return sn.kind === "option" &&
-          nested(sn.element, tn.element);
-      case "ref":
-        return sn.kind === "ref" &&
-          nested(sn.element, tn.element) &&
-          nested(tn.element, sn.element);
-      case "retry-schedule":
-        return sn.kind === "retry-schedule" &&
-          nested(sn.error, tn.error) &&
-          nested(tn.error, sn.error);
-      case "schema":
-        return sn.kind === "schema" &&
-          sn.presence === tn.presence &&
-          sn.constructorDefault === tn.constructorDefault &&
-          nested(
-            sn.makeInput ?? sn.decoded,
-            tn.makeInput ?? tn.decoded,
-          ) &&
-          nested(
-            tn.makeInput ?? tn.decoded,
-            sn.makeInput ?? sn.decoded,
-          ) &&
-          nested(sn.decoded, tn.decoded) &&
-          nested(tn.decoded, sn.decoded) &&
-          nested(sn.encoded, tn.encoded) &&
-          nested(tn.encoded, sn.encoded) &&
-          isSubset(sn.decodeRequirements, tn.decodeRequirements) &&
-          isSubset(sn.encodeRequirements, tn.encodeRequirements);
-      case "effect":
-        return sn.kind === "effect" &&
-          nested(sn.result, tn.result) &&
-          isSubset(sn.failures, tn.failures) &&
-          isSubset(sn.requirements, tn.requirements);
-      case "stream":
-        return sn.kind === "stream" &&
-          nested(sn.element, tn.element) &&
-          isSubset(sn.failures, tn.failures) &&
-          isSubset(sn.requirements, tn.requirements);
-      case "sink":
-        return sn.kind === "sink" &&
-          nested(tn.input, sn.input) &&
-          nested(sn.result, tn.result) &&
-          nested(sn.leftover, tn.leftover) &&
-          isSubset(sn.failures, tn.failures) &&
-          isSubset(sn.requirements, tn.requirements);
-      case "tuple":
-        if (sn.kind !== "tuple" || sn.elements.length !== tn.elements.length) {
-          return false;
-        }
-        for (let i = 0; i < sn.elements.length; i++) {
-          if (!nested(sn.elements[i], tn.elements[i])) {
-            return false;
-          }
-        }
-        return true;
-      case "function":
-        if (sn.kind !== "function") return false;
-        if (sn.parameters.length !== tn.parameters.length) return false;
-        if (
-          tn.borrows?.some((borrow, i) => borrow && sn.borrows?.[i] !== true)
-        ) return false;
-        if (
-          tn.checked?.some((checked, i) => checked && sn.checked?.[i] !== true)
-        ) return false;
-        if (
-          sn.execution !== tn.execution &&
-          !(lift && executionFits(sn.execution, tn.execution))
-        ) {
-          return false;
-        }
-        if (!isSubset(sn.failures, tn.failures)) return false;
-        if (!isSubset(sn.requirements, tn.requirements)) return false;
-        if (!nested(sn.result, tn.result)) return false;
-        for (let i = 0; i < tn.parameters.length; i++) {
-          if (!nested(tn.parameters[i], sn.parameters[i])) {
-            return false;
-          }
-        }
-        return true;
-      case "provider":
-        return sn.kind === "provider" &&
-          sameList(sn.provides, tn.provides) &&
-          executionFits(sn.execution, tn.execution) &&
-          isSubset(sn.failures, tn.failures) &&
-          isSubset(sn.requirements, tn.requirements);
+    if (tn.kind === "primitive") {
+      if (sn.kind === "primitive") {
+        return sn.name === tn.name ||
+          (sn.name === "int" && tn.name === "number");
+      }
+      return sn.kind === "literal" && literalFitsPrimitive(sn.value, tn.name);
     }
+    if (tn.kind === "literal") {
+      return sn.kind === "literal" && sn.value === tn.value;
+    }
+    if (tn.kind === "record") {
+      return sn.kind === "record" && sn.fields.length === tn.fields.length &&
+        sn.fields.every((field, index) => {
+          const other = tn.fields[index];
+          return field.name === other.name &&
+            field.optional === other.optional &&
+            nested(field.type, other.type, false, true);
+        });
+    }
+    if (tn.kind === "array") {
+      return sn.kind === "array" &&
+        nested(sn.element, tn.element, false, true);
+    }
+    if (tn.kind === "option") {
+      return sn.kind === "option" &&
+        nested(sn.element, tn.element, false, true);
+    }
+    if (tn.kind === "ref") {
+      return sn.kind === "ref" &&
+        nested(sn.element, tn.element, false, true) &&
+        nested(tn.element, sn.element, false, true);
+    }
+    if (tn.kind === "retry-schedule") {
+      return sn.kind === "retry-schedule" &&
+        nested(sn.error, tn.error, false, true) &&
+        nested(tn.error, sn.error, false, true);
+    }
+    if (tn.kind === "schema") {
+      return sn.kind === "schema" &&
+        sn.presence === tn.presence &&
+        sn.constructorDefault === tn.constructorDefault &&
+        nested(
+          sn.makeInput ?? sn.decoded,
+          tn.makeInput ?? tn.decoded,
+          false,
+          true,
+        ) &&
+        nested(
+          tn.makeInput ?? tn.decoded,
+          sn.makeInput ?? sn.decoded,
+          false,
+          true,
+        ) &&
+        nested(sn.decoded, tn.decoded, false, true) &&
+        nested(tn.decoded, sn.decoded, false, true) &&
+        nested(sn.encoded, tn.encoded, false, true) &&
+        nested(tn.encoded, sn.encoded, false, true) &&
+        isSubset(sn.decodeRequirements, tn.decodeRequirements) &&
+        isSubset(sn.encodeRequirements, tn.encodeRequirements);
+    }
+    if (tn.kind === "effect") {
+      return sn.kind === "effect" &&
+        nested(sn.result, tn.result, false, true) &&
+        isSubset(sn.failures, tn.failures) &&
+        isSubset(sn.requirements, tn.requirements);
+    }
+    if (tn.kind === "stream") {
+      return sn.kind === "stream" &&
+        nested(sn.element, tn.element, false, true) &&
+        isSubset(sn.failures, tn.failures) &&
+        isSubset(sn.requirements, tn.requirements);
+    }
+    if (tn.kind === "sink") {
+      return sn.kind === "sink" &&
+        nested(tn.input, sn.input, false, true) &&
+        nested(sn.result, tn.result, false, true) &&
+        nested(sn.leftover, tn.leftover, false, true) &&
+        isSubset(sn.failures, tn.failures) &&
+        isSubset(sn.requirements, tn.requirements);
+    }
+    if (tn.kind === "tuple") {
+      return sn.kind === "tuple" &&
+        sn.elements.length === tn.elements.length &&
+        sn.elements.every((element, index) =>
+          nested(element, tn.elements[index], false, true)
+        );
+    }
+    if (tn.kind === "function") {
+      if (sn.kind !== "function") return false;
+      if (sn.parameters.length !== tn.parameters.length) return false;
+      const sourceBorrows = sn.borrows ?? [];
+      if (
+        (tn.borrows ?? []).some((borrow, index) =>
+          borrow && !sourceBorrows[index]
+        )
+      ) {
+        return false;
+      }
+      const sourceChecked = sn.checked ?? [];
+      if (
+        (tn.checked ?? []).some((checked, index) =>
+          checked && !sourceChecked[index]
+        )
+      ) {
+        return false;
+      }
+      if (
+        sn.execution !== tn.execution &&
+        !(lift && executionFits(sn.execution, tn.execution))
+      ) return false;
+      if (!isSubset(sn.failures, tn.failures)) return false;
+      if (!isSubset(sn.requirements, tn.requirements)) return false;
+      if (!nested(sn.result, tn.result, false, true)) return false;
+      return tn.parameters.every((parameter, index) =>
+        nested(parameter, sn.parameters[index], false, true)
+      );
+    }
+    if (tn.kind === "provider") {
+      return sn.kind === "provider" &&
+        sameList(sn.provides, tn.provides) &&
+        executionFits(sn.execution, tn.execution) &&
+        isSubset(sn.failures, tn.failures) &&
+        isSubset(sn.requirements, tn.requirements);
+    }
+    const unreachable: never = tn;
+    return unreachable;
   }
+
+  const table: TypeTable = {
+    error: error,
+    string: string,
+    boolean: boolean,
+    int: int,
+    number: number,
+    unit: unit,
+    never: never,
+    unknown: unknown,
+    fork: fork,
+    size: size,
+    node: node,
+    primitive: primitive,
+    literal: literal,
+    named: named,
+    record: record,
+    array: array,
+    tuple: tuple,
+    option: option,
+    ref: ref,
+    retrySchedule: retrySchedule,
+    schema: schema,
+    effect: effect,
+    stream: stream,
+    sink: sink,
+    union: union,
+    function: functionType,
+    provider: provider,
+    defineAlias: defineAlias,
+    defineIdentity: defineIdentity,
+    defineTagged: defineTagged,
+    defineOpaque: defineOpaque,
+    isIdentity: isIdentity,
+    isOpaque: isOpaque,
+    isSealed: isSealed,
+    ownsSealed: ownsSealed,
+    sealedRootOf: sealedRootOf,
+    foreignSealedOf: foreignSealedOf,
+    containsForeignSealed: containsForeignSealed,
+    defineError: defineError,
+    aliasOf: aliasOf,
+    identityBaseOf: identityBaseOf,
+    taggedRecordOf: taggedRecordOf,
+    predicateOf: predicateOf,
+    taggedIdOf: taggedIdOf,
+    errorRecordOf: errorRecordOf,
+    isErrorOrTagged: isErrorOrTagged,
+    recordBodyOf: recordBodyOf,
+    nominalBodyOf: nominalBodyOf,
+    declaredBodyOf: declaredBodyOf,
+    optionElementOf: optionElementOf,
+    isDefined: isDefined,
+    unfold: unfold,
+    unfoldTransparent: unfoldTransparent,
+    exceedsDepth: exceedsDepth,
+    isAssignable: isAssignable,
+    isAssignableIn: isAssignableIn,
+  };
+  if (!state.initializeBuiltins) return table;
+  return defineError(
+    SCHEMA_ERROR_ID,
+    record([{ name: "message", type: string, optional: false }]),
+  )
+    .defineError(SCHEMA_ISSUE_ID, record([]))
+    .defineIdentity(DURATION_ID, int, false, false, undefined)
+    .defineIdentity(INSTANT_ID, int, false, false, undefined)
+    .defineError(
+      TIMEOUT_ERROR_ID,
+      record([{ name: "message", type: string, optional: false }]),
+    );
+}
+
+/** Constructs an independent table with shared storage only after `fork`. */
+export function TypeTable(): TypeTable {
+  return createTypeTable({
+    storage: createTypeStorage(),
+    defs: createLookup<TypeId, AliasDef>([]),
+    errorRecords: createLookup<ErrorId, TypeRef>([]),
+    initializeBuiltins: true,
+  });
 }
 
 /**
@@ -1115,6 +1398,8 @@ export class TypeTable {
  *   errors.
  */
 type DataRule = "value" | "schema" | "entry";
+export type TypeDecision = boolean;
+export type LiteralValue = string | number | boolean | null;
 
 /**
  * What each rule rejects. A `Record` over the closed union makes a new rule a
@@ -1144,55 +1429,47 @@ export function dataOnly(
   table: TypeTable,
   ref: TypeRef,
   rule: DataRule,
-  acceptPoisoned = false,
-  seen = new Set<TypeRef>(),
-): boolean {
-  const unfolded = table.unfold(ref);
-  if (seen.has(unfolded)) return true;
-  seen.add(unfolded);
-  const type = table.node(unfolded);
+  acceptPoisoned: TypeDecision,
+): TypeDecision {
   const rejects = DATA_RULES[rule];
-  const nested = (child: TypeRef): boolean =>
-    dataOnly(table, child, rule, acceptPoisoned, seen);
-  switch (type.kind) {
-    case "primitive":
+  let seen = emptySet<TypeRef>();
+  function visit(current: TypeRef): TypeDecision {
+    const unfolded = table.unfold(current);
+    if (seen.has(unfolded)) return true;
+    seen = seen.add(unfolded);
+    const type = table.node(unfolded);
+    if (type.kind === "primitive") {
       return !(rejects.unknown && type.name === "unknown") &&
         !(rejects.unit && type.name === "unit");
-    case "literal":
-      return true;
-    case "record":
-      return type.fields.every((field) => nested(field.type));
-    case "array":
-    case "option":
-      return nested(type.element);
-    case "tuple":
-      return type.elements.every(nested);
-    case "union":
-      return type.members.every(nested);
-    case "named": {
+    }
+    if (type.kind === "literal") return true;
+    if (type.kind === "record") {
+      return type.fields.every((field) => visit(field.type));
+    }
+    if (type.kind === "array" || type.kind === "option") {
+      return visit(type.element);
+    }
+    if (type.kind === "tuple") return type.elements.every(visit);
+    if (type.kind === "union") return type.members.every(visit);
+    if (type.kind === "named") {
       if (
         rejects.reserved &&
         isReservedErrorId(type.id)
       ) return false;
       const record = table.nominalBodyOf(type.id);
-      return record !== undefined && nested(record);
+      return record !== undefined && visit(record);
     }
-    case "error":
-      return acceptPoisoned;
-    case "retry-schedule":
-    case "ref":
-    case "schema":
-    case "effect":
-    case "stream":
-    case "sink":
-    case "function":
-    case "provider":
-      return false;
-    default: {
-      const unreachable: never = type;
-      return unreachable;
-    }
+    if (type.kind === "error") return acceptPoisoned;
+    if (
+      type.kind === "retry-schedule" || type.kind === "ref" ||
+      type.kind === "schema" || type.kind === "effect" ||
+      type.kind === "stream" || type.kind === "sink" ||
+      type.kind === "function" || type.kind === "provider"
+    ) return false;
+    const unreachable: never = type;
+    return unreachable;
   }
+  return visit(ref);
 }
 
 /** Unknown predicate inputs need entry validation instead of a static proof. */
@@ -1200,12 +1477,12 @@ export function containsUnknownPredicateInput(
   table: TypeTable,
   source: TypeRef,
   predicate: Predicate,
-): boolean {
-  const unknownAt = (
+): TypeDecision {
+  function unknownAt(
     ref: TypeRef,
     path: readonly string[],
-    depth = 0,
-  ): boolean => {
+    depth: number,
+  ): TypeDecision {
     if (depth > MAX_DEPTH) return false;
     const node = table.node(table.unfold(ref));
     if (node.kind === "primitive" && node.name === "unknown") return true;
@@ -1216,23 +1493,20 @@ export function containsUnknownPredicateInput(
     const field = node.fields.find((field) => field.name === path[0]);
     return field !== undefined &&
       unknownAt(field.type, path.slice(1), depth + 1);
-  };
-  switch (predicate.kind) {
-    case "constant":
-      return false;
-    case "not":
-      return containsUnknownPredicateInput(table, source, predicate.operand);
-    case "and":
-    case "or":
-      return predicate.operands.some((operand) =>
-        containsUnknownPredicateInput(table, source, operand)
-      );
-    case "difference":
-      return [predicate.left, predicate.right].some((term) =>
-        term.kind !== "zero" &&
-        unknownAt(source, term.kind === "input" ? [] : term.path)
-      );
   }
+  if (predicate.kind === "constant") return false;
+  if (predicate.kind === "not") {
+    return containsUnknownPredicateInput(table, source, predicate.operand);
+  }
+  if (predicate.kind === "and" || predicate.kind === "or") {
+    return predicate.operands.some((operand) =>
+      containsUnknownPredicateInput(table, source, operand)
+    );
+  }
+  return [predicate.left, predicate.right].some((term) =>
+    term.kind !== "zero" &&
+    unknownAt(source, term.kind === "input" ? [] : term.path, 0)
+  );
 }
 
 /**
@@ -1244,48 +1518,41 @@ export function containsUnknownPredicateInput(
 export function containsDeferredType(
   table: TypeTable,
   ref: TypeRef,
-  seen = new Set<TypeRef>(),
-): boolean {
-  if (seen.has(ref)) return false;
-  seen.add(ref);
-  const type = table.node(ref);
-  const any = (children: readonly TypeRef[]): boolean =>
-    children.some((child) => containsDeferredType(table, child, seen));
-  switch (type.kind) {
-    case "function":
-    case "effect":
-    case "stream":
-    case "sink":
-    case "retry-schedule":
-    case "ref":
-    case "schema":
-    case "provider":
-      return true;
-    case "named": {
+): TypeDecision {
+  let seen = emptySet<TypeRef>();
+  function visit(current: TypeRef): TypeDecision {
+    if (seen.has(current)) return false;
+    seen = seen.add(current);
+    const type = table.node(current);
+    if (
+      type.kind === "function" || type.kind === "effect" ||
+      type.kind === "stream" || type.kind === "sink" ||
+      type.kind === "retry-schedule" || type.kind === "ref" ||
+      type.kind === "schema" || type.kind === "provider"
+    ) return true;
+    if (type.kind === "named") {
       // A tagged record stops the walk: its own declaration is checked on its own.
       const alias = !isTypeId(type.id) || table.isErrorOrTagged(type.id)
         ? undefined
         : table.aliasOf(type.id);
-      return alias !== undefined && any([alias]);
+      return alias !== undefined && visit(alias);
     }
-    case "record":
-      return any(type.fields.map((f) => f.type));
-    case "array":
-    case "option":
-      return any([type.element]);
-    case "tuple":
-      return any(type.elements);
-    case "union":
-      return any(type.members);
-    case "primitive":
-    case "literal":
-    case "error":
-      return false;
-    default: {
-      const unreachable: never = type;
-      return unreachable;
+    if (type.kind === "record") {
+      return type.fields.some((field) => visit(field.type));
     }
+    if (type.kind === "array" || type.kind === "option") {
+      return visit(type.element);
+    }
+    if (type.kind === "tuple") return type.elements.some(visit);
+    if (type.kind === "union") return type.members.some(visit);
+    if (
+      type.kind === "primitive" || type.kind === "literal" ||
+      type.kind === "error"
+    ) return false;
+    const unreachable: never = type;
+    return unreachable;
   }
+  return visit(ref);
 }
 
 /**
@@ -1297,50 +1564,51 @@ export function containsDeferredType(
 export function containsOpaqueType(
   table: TypeTable,
   ref: TypeRef,
-  seen = new Set<TypeRef>(),
-): boolean {
-  if (seen.has(ref)) return false;
-  seen.add(ref);
-  const type = table.node(ref);
-  const any = (children: readonly TypeRef[]): boolean =>
-    children.some((child) => containsOpaqueType(table, child, seen));
-  switch (type.kind) {
-    case "named": {
+): TypeDecision {
+  let seen = emptySet<TypeRef>();
+  function visit(current: TypeRef): TypeDecision {
+    if (seen.has(current)) return false;
+    seen = seen.add(current);
+    const type = table.node(current);
+    if (type.kind === "named") {
       if (isErrorId(type.id)) return false;
       if (table.isOpaque(type.id)) return true;
       if (table.taggedRecordOf(type.id) !== undefined) return false;
       const alias = table.aliasOf(type.id);
-      return alias !== undefined && any([alias]);
+      return alias !== undefined && visit(alias);
     }
-    case "record":
-      return any(type.fields.map((f) => f.type));
-    case "array":
-    case "option":
-      return any([type.element]);
-    case "tuple":
-      return any(type.elements);
-    case "union":
-      return any(type.members);
-    default:
-      return false;
+    if (type.kind === "record") {
+      return type.fields.some((field) => visit(field.type));
+    }
+    if (type.kind === "array" || type.kind === "option") {
+      return visit(type.element);
+    }
+    if (type.kind === "tuple") return type.elements.some(visit);
+    if (type.kind === "union") return type.members.some(visit);
+    if (
+      type.kind === "primitive" || type.kind === "literal" ||
+      type.kind === "error" || type.kind === "retry-schedule" ||
+      type.kind === "ref" || type.kind === "schema" ||
+      type.kind === "effect" || type.kind === "stream" ||
+      type.kind === "sink" || type.kind === "function" ||
+      type.kind === "provider"
+    ) return false;
+    const unreachable: never = type;
+    return unreachable;
   }
+  return visit(ref);
 }
 
 /** True when a literal value is a member of a primitive: an `int` is a safe integer. */
 export function literalFitsPrimitive(
-  value: string | number | boolean | null,
+  value: LiteralValue,
   name: PrimitiveName,
-): boolean {
+): TypeDecision {
   if (value === null) return false;
-  switch (typeof value) {
-    case "string":
-      return name === "string";
-    case "boolean":
-      return name === "boolean";
-    case "number":
-      return name === "number" ||
-        (name === "int" && Number.isSafeInteger(value));
-  }
+  if (typeof value === "string") return name === "string";
+  if (typeof value === "boolean") return name === "boolean";
+  return name === "number" ||
+    (name === "int" && Number.isSafeInteger(value));
 }
 
 /** A pure function fits an effect target. An effect function does not fit a pure target. */

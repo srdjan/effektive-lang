@@ -1,3 +1,4 @@
+// @light-fp adapter
 // One build of a revision: print the diagnostics, and for `build` and `watch`
 // also write the generated files and run `deno check`.
 

@@ -1,3 +1,4 @@
+// @light-fp adapter
 // JSON-RPC 2.0 over Content-Length framing. The decoder takes byte chunks and
 // returns the complete messages. A bad frame is an error value, never an
 // exception. The module has no I/O.

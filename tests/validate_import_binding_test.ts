@@ -107,7 +107,7 @@ Deno.test("a consumer IR is rejected when the producer changed the failures of a
 });
 
 Deno.test("an import of a host module is not compared with a producer", () => {
-  const loaded = new Program().update({ set: exampleFiles() });
+  const loaded = Program(undefined).update({ set: exampleFiles() });
   assert(loaded.ok);
   const revision = loaded.value;
   const modules = new Map(
@@ -313,7 +313,7 @@ Deno.test("a type that a producer carries from a third module is compared with t
 });
 
 Deno.test("a module under the key of a host or prelude import does not become its producer", () => {
-  const loaded = new Program().update({ set: exampleFiles() });
+  const loaded = Program(undefined).update({ set: exampleFiles() });
   assert(loaded.ok);
   const revision = loaded.value;
   const modules = new Map(

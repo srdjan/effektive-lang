@@ -30,7 +30,7 @@ Deno.test("duration literals lex as one Number token", () => {
 
 Deno.test("duration literals read as milliseconds", () => {
   for (const [text, ms] of UNITS) {
-    const { tree } = parse("t.eff", `const d = ${text}\n`);
+    const { tree } = parse("t.eff", `const d = ${text}\n`, undefined);
     const found: unknown[] = [];
     for (let node = 0; node < tree.count; node++) {
       const value = literalOf(tree, node);

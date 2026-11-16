@@ -14,7 +14,7 @@ import { type Target, targetText } from "../src/core/resolve.ts";
 import { diskHost, listEffFiles } from "./helpers.ts";
 
 function analyzeDisk(root: string, entries: readonly string[]): Analysis {
-  const result = analyzeProject(diskHost(), root, entries);
+  const result = analyzeProject(diskHost(), root, entries, undefined);
   assert(result.ok, JSON.stringify(result));
   return result.value;
 }
@@ -29,6 +29,7 @@ function analyzeText(
     memoryHost({ "effektive.json": "{}", ...files }),
     "",
     [entry],
+    undefined,
   );
   assert(result.ok, JSON.stringify(result));
   return result.value;

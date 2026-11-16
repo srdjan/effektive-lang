@@ -16,8 +16,10 @@ import {
   OPERATOR_KINDS,
   PRELUDE_NAMES,
   TokenKind,
+  tokenKind,
   TriviaKind,
 } from "../../src/core/frontend.ts";
+import { emptySet, indices, reverseIndices } from "../../src/core/frontend.ts";
 
 export type HighlightKind =
   | "keyword"
@@ -29,21 +31,27 @@ export type HighlightKind =
   | "operator";
 
 /** A range of the text. `to` is exclusive. Ranges do not overlap. */
-interface HighlightRange {
+type HighlightRange = {
   readonly from: number;
   readonly to: number;
   readonly kind: HighlightKind;
-}
+};
+
+type HighlightText = string;
 
 /** Words that are keywords at the start of a line or after `export`. */
-const DECLARATION_WORDS: ReadonlySet<string> = contextualWordsOf("declaration");
+function declarationWords(): ReadonlySet<string> {
+  return contextualWordsOf(["declaration"]);
+}
 
 /**
  * Words that are keywords wherever they appear as a name: the clause words. The
  * positional words `where` and `using`, the modifiers, `imports`, and `from`
  * have their own rules below.
  */
-const CLAUSE_WORDS: ReadonlySet<string> = contextualWordsOf("clause");
+function clauseWords(): ReadonlySet<string> {
+  return contextualWordsOf(["clause"]);
+}
 
 function isCapitalized(word: string): boolean {
   const first = word.charCodeAt(0);
@@ -54,13 +62,18 @@ function functionTypeOpeners(
   kinds: ArrayLike<number>,
   count: number,
 ): ReadonlySet<number> {
-  const openers = new Set<number>();
+  let openers = emptySet<number>();
   const closes: boolean[] = [];
-  let next = TokenKind.Eof;
-  for (let i = count - 1; i >= 0; i--) {
-    const kind = kinds[i];
-    if (kind === TokenKind.RParen) closes.push(next === TokenKind.Arrow);
-    else if (kind === TokenKind.LParen && closes.pop() === true) openers.add(i);
+  let next: TokenKind | undefined = TokenKind.Eof;
+  for (const i of reverseIndices(count)) {
+    const kind = tokenKind(kinds[i]);
+    if (kind === TokenKind.RParen) {
+      closes[closes.length] = next === TokenKind.Arrow;
+    } else if (kind === TokenKind.LParen) {
+      const close = closes[closes.length - 1];
+      if (close !== undefined) closes.length = closes.length - 1;
+      if (close) openers = openers.add(i);
+    }
     if (kind !== TokenKind.Newline) next = kind;
   }
   return openers;
@@ -74,11 +87,13 @@ function serviceImportOpeners(
   ends: ArrayLike<number>,
   count: number,
 ): ReadonlySet<number> {
-  const openers = new Set<number>();
+  let openers = emptySet<number>();
   let headersAllowed = true;
   let lineStart = true;
-  for (let i = 0; i < count; i++) {
-    const kind = kinds[i];
+  let skipThrough = -1;
+  for (const i of indices(count)) {
+    if (i <= skipThrough) continue;
+    const kind = tokenKind(kinds[i]);
     if (kind === TokenKind.Newline || kind === TokenKind.Semicolon) {
       lineStart = true;
       continue;
@@ -91,8 +106,8 @@ function serviceImportOpeners(
       text.slice(starts[i + 2], ends[i + 2]) === "from" &&
       kinds[i + 3] === TokenKind.String
     ) {
-      openers.add(i);
-      i += 3;
+      openers = openers.add(i);
+      skipThrough = i + 3;
       lineStart = false;
       continue;
     }
@@ -102,9 +117,55 @@ function serviceImportOpeners(
   return openers;
 }
 
+function skipWhitespace(text: string, start: number): number {
+  for (const offset of indices(text.length - start)) {
+    const index = start + offset;
+    if (text[index].trim().length > 0) return index;
+  }
+  return text.length;
+}
+
+function isIdentifierStart(code: number): boolean {
+  return (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a) || code === 0x24 || code === 0x5f;
+}
+
+function isIdentifierPart(code: number): boolean {
+  return isIdentifierStart(code) || (code >= 0x30 && code <= 0x39);
+}
+
+function identifierEnd(text: string, start: number): number | undefined {
+  if (!isIdentifierStart(text.charCodeAt(start))) return undefined;
+  for (const offset of indices(text.length - start - 1)) {
+    const index = start + offset + 1;
+    if (!isIdentifierPart(text.charCodeAt(index))) return index;
+  }
+  return text.length;
+}
+
+function isWhereFunctionSuffix(text: string): boolean {
+  let index = skipWhitespace(text, 0);
+  if (index === 0) return false;
+  if (text[index] === "(") {
+    index = skipWhitespace(text, index + 1);
+    const end = identifierEnd(text, index);
+    if (end === undefined) return false;
+    index = skipWhitespace(text, end);
+    if (text[index] !== ")") return false;
+    index = skipWhitespace(text, index + 1);
+  } else {
+    const end = identifierEnd(text, index);
+    if (end === undefined) return false;
+    index = skipWhitespace(text, end);
+  }
+  return text.slice(index, index + 2) === "=>";
+}
+
 /** The ranges of `text`, sorted by `from`. */
-export function highlightTokens(text: string): HighlightRange[] {
+export function highlightTokens(text: HighlightText): HighlightRange[] {
   const lexed = lex("", text);
+  const declaration = declarationWords();
+  const clause = clauseWords();
   const pureTypeOpeners = functionTypeOpeners(lexed.kinds, lexed.count);
   const serviceImports = serviceImportOpeners(
     text,
@@ -115,19 +176,19 @@ export function highlightTokens(text: string): HighlightRange[] {
   );
   const ranges: HighlightRange[] = [];
 
-  for (let i = 0; i < lexed.trivia.kinds.length; i++) {
+  for (const i of indices(lexed.trivia.kinds.length)) {
     const kind = lexed.trivia.kinds[i];
     if (kind === TriviaKind.LineComment || kind === TriviaKind.BlockComment) {
-      ranges.push({
+      ranges[ranges.length] = {
         from: lexed.trivia.starts[i],
         to: lexed.trivia.ends[i],
         kind: "comment",
-      });
+      };
     }
   }
 
-  for (let i = 0; i < lexed.count; i++) {
-    const kind = lexed.kinds[i] as TokenKind;
+  for (const i of indices(lexed.count)) {
+    const kind = tokenKind(lexed.kinds[i]);
     const from = lexed.starts[i];
     const to = lexed.ends[i];
     let result: HighlightKind | undefined;
@@ -137,11 +198,11 @@ export function highlightTokens(text: string): HighlightRange[] {
       result = "string";
     } else if (kind === TokenKind.Number) {
       result = "number";
-    } else if (OPERATOR_KINDS.has(kind)) {
+    } else if (kind !== undefined && OPERATOR_KINDS.has(kind)) {
       result = "operator";
     } else if (kind === TokenKind.Ident) {
       const word = text.slice(from, to);
-      const previous = i === 0 ? undefined : lexed.kinds[i - 1] as TokenKind;
+      const previous = i === 0 ? undefined : tokenKind(lexed.kinds[i - 1]);
       const startsDeclaration = previous === undefined ||
         previous === TokenKind.Newline || previous === TokenKind.KwExport;
       const previousWord = i === 0
@@ -158,25 +219,29 @@ export function highlightTokens(text: string): HighlightRange[] {
         lexed.kinds[i + 3] === TokenKind.Eq
       ) result = "keyword";
       else if (
-        isFromKeyword(word, lexed.kinds[i + 1] as TokenKind | undefined)
+        isFromKeyword(word, tokenKind(lexed.kinds[i + 1]))
       ) result = "keyword";
-      else if (CLAUSE_WORDS.has(word)) result = "keyword";
+      else if (clause.has(word)) result = "keyword";
       else if (
         word === "sealed" && startsDeclaration &&
         text.slice(lexed.starts[i + 1], lexed.ends[i + 1]) === "type"
       ) result = "keyword";
       else if (
         word === "where" &&
-        text.slice(lexed.ends[i]).match(
-          /^\s+(?:[A-Za-z_$][A-Za-z0-9_$]*|\(\s*[A-Za-z_$][A-Za-z0-9_$]*\s*\))\s*=>/,
-        )
+        isWhereFunctionSuffix(text.slice(lexed.ends[i]))
       ) result = "keyword";
       else if (word === "pure") {
-        let open = i + 1;
-        while (lexed.kinds[open] === TokenKind.Newline) open++;
+        let open = lexed.count;
+        for (const offset of indices(lexed.count - i - 1)) {
+          const candidate = i + offset + 1;
+          if (tokenKind(lexed.kinds[candidate]) !== TokenKind.Newline) {
+            open = candidate;
+            break;
+          }
+        }
         if (pureTypeOpeners.has(open)) result = "keyword";
       } else if (
-        DECLARATION_WORDS.has(word) &&
+        declaration.has(word) &&
         (startsDeclaration || (word === "type" && afterSealed))
       ) {
         result = "keyword";
@@ -185,7 +250,9 @@ export function highlightTokens(text: string): HighlightRange[] {
         result = "type";
       }
     }
-    if (result !== undefined) ranges.push({ from, to, kind: result });
+    if (result !== undefined) {
+      ranges[ranges.length] = { from: from, to: to, kind: result };
+    }
   }
 
   return ranges.sort((a, b) => a.from - b.from);

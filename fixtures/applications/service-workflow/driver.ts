@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Cause, Effect, Layer, Schema, Stream } from "effect";
 import type * as SqlConnection from "effect/sql/SqlConnection";
 import {

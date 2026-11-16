@@ -214,7 +214,7 @@ export async function loadCore(root: string): Promise<Res<CoreApi>> {
   const e = entries as {
     [K in keyof typeof entries]: (...args: unknown[]) => unknown;
   };
-  const Program = program as new () => ProgramLike;
+  const Program = program as new (root: undefined) => ProgramLike;
   const api: CoreApi = {
     check: (files, entryPaths) =>
       e.checkProject(e.memoryHost(files), "", entryPaths) as Res<CheckedLike>,
@@ -245,7 +245,7 @@ export async function loadCore(root: string): Promise<Res<CoreApi>> {
     },
     validateProject: (project, lowered) => e.validateProject(project, lowered),
     validateModule: (ir, sources) => e.validateModule(ir, sources),
-    program: () => new Program(),
+    program: () => new Program(undefined),
     emptyConfig: () => ({ host: new Map() }),
   };
   return { ok: true, value: api };

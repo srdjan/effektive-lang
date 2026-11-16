@@ -1,3 +1,4 @@
+// @light-fp adapter
 // `--tsc`: run `deno check` over the generated files and the host modules with a
 // generated configuration, then map each error back to the Effektive source.
 

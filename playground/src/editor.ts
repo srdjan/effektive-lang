@@ -1,3 +1,4 @@
+// @light-fp adapter
 /// <reference lib="dom" />
 // The CodeMirror parts of the playground page: the extension
 // arrays of the source editor and of the read-only TypeScript pane, the

@@ -1,10 +1,11 @@
+// @light-fp adapter
 // The pure parts of the playground replay: the steps of a logged
 // session, the application of an edit to a text, and the timed player. The
 // page and `scripts/logs_replay.ts` share this file. It has no DOM code.
 
 import { isRecord } from "../../src/core/mod.ts";
 import { isKind } from "../../src/host/log_schema.ts";
-import type { EditChange } from "./events.ts";
+import type { EditChange } from "../../src/host/log_schema.ts";
 
 /** The longest single wait of the player, in milliseconds. */
 export const MAX_WAIT_MS = 2000;

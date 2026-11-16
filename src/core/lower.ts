@@ -8,7 +8,6 @@
 // `.effi` file lowers to its declarations, without its providers. Expected
 // failures are error values. A violated internal invariant throws inside the
 // lowering and the entry point turns it into an `internal` error value.
-
 import {
   argNodes,
   arrowBody,
@@ -59,7 +58,13 @@ import type {
   ValueId,
 } from "./ir.ts";
 import { DURATION_ID } from "./ir.ts";
-import { caught, type Result } from "./source.ts";
+import {
+  caught,
+  invariantFailure,
+  isInvariantFailure,
+  type Result,
+  rethrow,
+} from "./source.ts";
 import { TokenKind } from "./lex.ts";
 import { exportRuleOf, type ModuleInfo, planImports } from "./project.ts";
 import type { ModuleResolution, Target } from "./resolve.ts";
@@ -87,13 +92,17 @@ import {
   builtinInstanceId,
   type BuiltinInstanceName,
   localId,
+  type ModuleName,
   shortName,
 } from "./ids.ts";
 import { PRELUDE_MODULE } from "./paths.ts";
-
+import { emptyMap, emptySet, indices, reverseIndices } from "./runtime.ts";
 export type LowerError =
   /** The module name is not part of the checked project. */
-  | { readonly tag: "unknown-module"; readonly module: string }
+  | {
+    readonly tag: "unknown-module";
+    readonly module: string;
+  }
   /** The module has diagnostics, so it has no IR. */
   | {
     readonly tag: "diagnostics";
@@ -113,31 +122,50 @@ export type LowerError =
     readonly message: string;
   };
 
-/** Thrown inside the lowering only. `lowerModule` turns it into a `LowerError`. */
-class LowerFailure extends Error {}
-
-function internal(message: string): LowerFailure {
-  return new LowerFailure(message);
+type LowerResult = Result<ModuleIR, LowerError>;
+/** `lowerModule` returns an invariant failure as a `LowerError`. */
+function internal(message: string): never {
+  return invariantFailure("lower", message);
 }
-
-interface BuiltinInstance {
+type BuiltinInstance = {
   readonly type: FunctionType;
+};
+type BuiltinInstances = {
+  readonly get: (id: ValueId) => BuiltinInstance | undefined;
+  readonly set: (id: ValueId, instance: BuiltinInstance) => BuiltinInstances;
+  readonly values: () => ReadonlyMap<ValueId, BuiltinInstance>;
+};
+function BuiltinInstances(): BuiltinInstances {
+  let values = emptyMap<ValueId, BuiltinInstance>();
+  function get(id: ValueId): BuiltinInstance | undefined {
+    return values.get(id);
+  }
+  function set(id: ValueId, instance: BuiltinInstance): BuiltinInstances {
+    values = values.set(id, instance);
+    return owner;
+  }
+  function readonlyValues(): ReadonlyMap<ValueId, BuiltinInstance> {
+    return values;
+  }
+  const owner: BuiltinInstances = {
+    get: get,
+    set: set,
+    values: readonlyValues,
+  };
+  return owner;
 }
-
 /** What the lowering of every body of one module shares. */
-interface ModuleContext {
+type ModuleContext = {
   readonly module: string;
   readonly tree: SyntaxTree;
   readonly types: TypeTable;
   readonly targets: ReadonlyMap<NodeId, Target>;
   /** Specialized builtins in the order of first use. */
-  readonly builtins: Map<ValueId, BuiltinInstance>;
+  readonly builtins: BuiltinInstances;
   /** The identifier texts of the module, which a generated `$p<n>` name skips. */
   readonly identifiers: ReadonlySet<string>;
-}
-
+};
 const EMPTY_EFFECTS: Effects = { failures: [], requirements: [] };
-
 function setOf(expr: Expr): EffectSet {
   return {
     failures: expr.effects.failures,
@@ -145,12 +173,9 @@ function setOf(expr: Expr): EffectSet {
     mode: expr.execution,
   };
 }
-
 type FactKind = NodeFact["kind"];
-
 /** The argument reader of `invoke`: argument `i`, or an internal error. */
 type ArgumentAt = (i: number) => Expr;
-
 /**
  * The fact kinds that `invoke` lowers in its own cases: a fact field with
  * logic, a callee, a closure check, or no call at all.
@@ -177,21 +202,21 @@ type SpecialKind =
   | "finalizer"
   | "option-fallback"
   | "record-binding";
-
 /** The fact kinds whose node moves positional arguments into named fields. */
 type PositionalKind = Exclude<FactKind, SpecialKind>;
-
-type FactOf<K extends FactKind> = NodeFact extends infer F
-  ? F extends { readonly kind: infer FK }
-    ? [Extract<K, FK>] extends [never] ? never
+type FactOf<K extends FactKind> = NodeFact extends infer F ? F extends {
+    readonly kind: infer FK;
+  } ? [
+      Extract<K, FK>,
+    ] extends [
+      never,
+    ] ? never
     : F
   : never
   : never;
-
-type BodyOf<K extends PositionalKind> = Extract<Expr, { kind: K }> extends
-  infer E ? E extends Expr ? Omit<E, keyof Annotation> : never
-  : never;
-
+type BodyOf<K extends PositionalKind> = Extract<Expr, {
+  readonly kind: K;
+}> extends infer E ? E extends Expr ? Omit<E, keyof Annotation> : never : never;
 /**
  * One builder for each positional kind. A kind without a row, and a row for a
  * kind that `invoke` handles itself, fail to compile. A row that builds the
@@ -203,7 +228,6 @@ type PositionalBuilders = {
     fact: FactOf<K>,
   ) => BodyOf<K>;
 };
-
 const POSITIONAL_BUILDERS: PositionalBuilders = {
   "some": (arg) => ({ kind: "some", value: arg(0) }),
   "fail": (arg) => ({ kind: "fail", error: arg(0) }),
@@ -264,7 +288,6 @@ const POSITIONAL_BUILDERS: PositionalBuilders = {
     right: arg(1),
   }),
 };
-
 /** The node of a positional fact, without its annotation. */
 function positionalBody<K extends PositionalKind>(
   kind: K,
@@ -273,370 +296,442 @@ function positionalBody<K extends PositionalKind>(
 ): BodyOf<K> {
   return POSITIONAL_BUILDERS[kind](arg, fact);
 }
-
 /**
  * Lowers the expressions of one top-level declaration. The counter of generated
  * pipeline bindings belongs to the declaration and starts at 1.
  */
-class BodyLowerer {
-  private pipelines = 0;
+type BodyLowerer = {
+  readonly expr: (node: NodeId) => Expr;
+};
 
-  constructor(
-    private readonly ctx: ModuleContext,
-    private readonly body: BodyTable,
-    /** The name of the top-level declaration, which forms generated local identities. */
-    private readonly owner: string,
-  ) {}
+type PipelineLink = {
+  readonly pipe: NodeId;
+  readonly stage: NodeId;
+};
 
-  private kids(node: NodeId): NodeId[] {
-    return kidsOf(this.ctx.tree, node);
+type PipelineParts = {
+  readonly base: NodeId;
+  readonly links: readonly PipelineLink[];
+};
+
+function BodyLowerer(
+  ctx: ModuleContext,
+  body: BodyTable,
+  owner: string,
+): BodyLowerer {
+  const bodyLowererOwner = owner;
+  const bodyLowererBody = body;
+  const bodyLowererCtx = ctx;
+  let bodyLowererPipelines = 0;
+  let bodyLowererResourceBindings = emptyMap<LocalId, LocalId>();
+  function bodyLowererKids(node: NodeId): NodeId[] {
+    return kidsOf(bodyLowererCtx.tree, node);
   }
-
-  private span(node: NodeId): Span {
-    return nodeSpan(this.ctx.tree, node);
+  function bodyLowererSpan(node: NodeId): Span {
+    return nodeSpan(bodyLowererCtx.tree, node);
   }
-
-  private info(node: NodeId): NodeInfo {
-    const info = this.body.info.get(node);
+  function bodyLowererInfo(node: NodeId): NodeInfo {
+    const info = bodyLowererBody.info.get(node);
     if (info === undefined) {
-      throw internal(`no checker info for the node at ${this.describe(node)}`);
+      return internal(
+        `no checker info for the node at ${bodyLowererDescribe(node)}`,
+      );
     }
     return info;
   }
-
-  private fact(node: NodeId): NodeFact | undefined {
-    return this.body.facts.get(node);
+  function bodyLowererFact(node: NodeId): NodeFact | undefined {
+    return bodyLowererBody.facts.get(node);
   }
-
-  private factOf<K extends FactKind>(node: NodeId, kind: K): FactOf<K> {
-    const fact = this.fact(node);
-    if (fact?.kind !== kind) {
-      throw internal(`no ${kind} fact at ${this.describe(node)}`);
+  function bodyLowererFactOf<K extends FactKind>(
+    node: NodeId,
+    kind: K,
+  ): FactOf<K> {
+    const fact = bodyLowererFact(node);
+    if (fact === undefined || !factHasKind(fact, kind)) {
+      return internal(`no ${kind} fact at ${bodyLowererDescribe(node)}`);
     }
-    return fact as FactOf<K>;
+    return fact;
   }
 
-  private describe(node: NodeId): string {
-    const span = this.span(node);
+  function factHasKind<K extends FactKind>(
+    fact: NodeFact,
+    kind: K,
+  ): fact is FactOf<K> {
+    return fact.kind === kind;
+  }
+  function bodyLowererDescribe(node: NodeId): string {
+    const span = bodyLowererSpan(node);
     return `${span.source}:${span.start}-${span.end}`;
   }
-
-  private ir(ref: TypeRef): Type {
-    return typeToIr(this.ctx.types, ref);
+  function bodyLowererIr(ref: TypeRef): Type {
+    return typeToIr(bodyLowererCtx.types, ref);
   }
-
-  private annotationWith(
+  function bodyLowererAnnotationWith(
     type: TypeRef,
     set: EffectSet,
     span: Span,
   ): Annotation {
     return {
-      type: this.ir(type),
+      type: bodyLowererIr(type),
       execution: set.mode,
       effects: {
         failures: [...set.failures],
         requirements: [...set.requirements],
       },
-      span,
+      span: span,
     };
   }
-
-  private annotation(node: NodeId, spanNode: NodeId = node): Annotation {
-    const info = this.info(node);
-    const proofs = this.body.proofs.get(node);
-    return {
-      ...this.annotationWith(info.type, info, this.span(spanNode)),
-      ...(proofs === undefined ? {} : { proofs }),
-    };
+  function bodyLowererAnnotation(node: NodeId): Annotation {
+    const info = bodyLowererInfo(node);
+    const proofs = bodyLowererBody.proofs.get(node);
+    const annotation = bodyLowererAnnotationWith(
+      info.type,
+      info,
+      bodyLowererSpan(node),
+    );
+    return proofs === undefined
+      ? annotation
+      : { ...annotation, proofs: proofs };
   }
-
-  private nameText(nameNode: NodeId | undefined): string {
+  function bodyLowererNameText(nameNode: NodeId | undefined): string {
     const text = nameNode === undefined
       ? undefined
-      : nameTextOf(this.ctx.tree, nameNode);
-    if (text === undefined) throw internal("a name node has no identifier");
+      : nameTextOf(bodyLowererCtx.tree, nameNode);
+    if (text === undefined) {
+      return internal("a name node has no identifier");
+    }
     return text;
   }
-
-  private required<T>(value: T | undefined, what: string, node: NodeId): T {
+  function bodyLowererRequired<T>(
+    value: T | undefined,
+    what: string,
+    node: NodeId,
+  ): T {
     if (value === undefined) {
-      throw internal(`${what} is missing at ${this.describe(node)}`);
+      return internal(`${what} is missing at ${bodyLowererDescribe(node)}`);
     }
     return value;
   }
-
-  private parameter(
+  function bodyLowererParameter(
     id: LocalId | undefined,
     name: string,
     type: TypeRef | undefined,
     span: Span,
   ): Parameter {
     if (id === undefined || type === undefined) {
-      throw internal(`the binding \`${name}\` has no local identity`);
+      return internal(`the binding \`${name}\` has no local identity`);
     }
-    return { id, name, type: this.ir(type), span };
+    return { id: id, name: name, type: bodyLowererIr(type), span: span };
   }
-
-  /** A binding that a pattern or handler names: the local identity and the name node. */
-  private bindingOf(
+  function bodyLowererBindingOf(
     id: LocalId | undefined,
     nameNode: NodeId | undefined,
   ): Parameter {
     if (id === undefined || nameNode === undefined) {
-      throw internal("a pattern binding has no local identity");
+      return internal("a pattern binding has no local identity");
     }
-    return this.parameter(
+    return bodyLowererParameter(
       id,
-      this.nameText(nameNode),
-      this.body.locals.get(id),
-      this.span(nameNode),
+      bodyLowererNameText(nameNode),
+      bodyLowererBody.locals.get(id),
+      bodyLowererSpan(nameNode),
     );
   }
-
-  private nextPipelineBinding(): {
+  function bodyLowererNextPipelineBinding(): {
     readonly id: LocalId;
     readonly name: string;
   } {
-    this.pipelines += 1;
-    while (this.ctx.identifiers.has(`$p${this.pipelines}`)) {
-      this.pipelines += 1;
+    for (const _index of indices(bodyLowererCtx.identifiers.size + 1)) {
+      bodyLowererPipelines = bodyLowererPipelines + 1;
+      if (!bodyLowererCtx.identifiers.has(`$p${bodyLowererPipelines}`)) {
+        const name = `$p${bodyLowererPipelines}`;
+        return {
+          id: localId(bodyLowererCtx.module, bodyLowererOwner, name),
+          name: name,
+        };
+      }
     }
-    const name = `$p${this.pipelines}`;
-    return { id: localId(this.ctx.module, this.owner, name), name };
+    return internal("cannot allocate a pipeline binding");
   }
-
-  expr(node: NodeId): Expr {
-    const tree = this.ctx.tree;
-    switch (kindOf(tree, node)) {
-      case SyntaxKind.LiteralExpr: {
+  function bodyLowererExpr(node: NodeId): Expr {
+    const tree = bodyLowererCtx.tree;
+    {
+      const kind = kindOf(tree, node);
+      if (kind === SyntaxKind.LiteralExpr) {
         const value = literalOf(tree, node);
         if (value === undefined) {
-          throw internal(`a literal has no value at ${this.describe(node)}`);
+          return internal(
+            `a literal has no value at ${bodyLowererDescribe(node)}`,
+          );
         }
-        if (value === null) return { kind: "null", ...this.annotation(node) };
+        if (value === null) {
+          return { ...bodyLowererAnnotation(node), kind: "null" };
+        }
         const literal: Expr = {
+          ...bodyLowererAnnotation(node),
           kind: "literal",
-          value,
-          ...this.annotation(node),
+          value: value,
         };
-        if (!isDurationLiteral(tree, node)) return literal;
+        if (!isDurationLiteral(tree, node)) {
+          return literal;
+        }
         // A duration literal is the `Duration` of its millisecond value.
+        const valueAnnotation = bodyLowererAnnotationWith(
+          bodyLowererCtx.types.int,
+          bodyLowererInfo(node),
+          bodyLowererSpan(node),
+        );
         return {
+          ...bodyLowererAnnotation(node),
           kind: "nominal",
           nominal: DURATION_ID,
           value: {
             ...literal,
-            ...this.annotationWith(
-              this.ctx.types.int,
-              this.info(node),
-              this.span(node),
-            ),
+            type: valueAnnotation.type,
+            execution: valueAnnotation.execution,
+            effects: valueAnnotation.effects,
+            span: valueAnnotation.span,
           },
-          ...this.annotation(node),
         };
-      }
-      case SyntaxKind.NameExpr:
-        return this.name(node);
-      case SyntaxKind.ParenExpr: {
-        const inner = this.kids(node)[0];
-        return this.expr(this.required(inner, "a parenthesized value", node));
-      }
-      case SyntaxKind.ArrowExpr:
-        return this.closure(node);
-      case SyntaxKind.UsingExpr:
-        return this.using(node);
-      case SyntaxKind.CallExpr:
-        return this.call(node);
-      case SyntaxKind.FieldExpr:
-        return this.field(node);
-      case SyntaxKind.BinaryExpr:
-        return this.binary(node);
-      case SyntaxKind.UnaryExpr:
-        return this.unary(node);
-      case SyntaxKind.OptionFallbackExpr:
-        return this.optionFallback(node);
-      case SyntaxKind.PipeExpr:
-        return this.pipeline(node);
-      case SyntaxKind.RecordExpr:
-        return this.record(node);
-      case SyntaxKind.ListExpr: {
-        const fact = this.factOf(node, "list");
-        if (fact.concat !== undefined) return this.concat(node, fact.concat);
+      } else if (kind === SyntaxKind.NameExpr) {
+        return bodyLowererName(node);
+      } else if (kind === SyntaxKind.ParenExpr) {
+        const inner = bodyLowererKids(node)[0];
+        return bodyLowererExpr(
+          bodyLowererRequired(inner, "a parenthesized value", node),
+        );
+      } else if (kind === SyntaxKind.ArrowExpr) {
+        return bodyLowererClosure(node);
+      } else if (kind === SyntaxKind.UsingExpr) {
+        return bodyLowererUsing(node);
+      } else if (kind === SyntaxKind.CallExpr) {
+        return bodyLowererCall(node);
+      } else if (kind === SyntaxKind.FieldExpr) {
+        return bodyLowererField(node);
+      } else if (kind === SyntaxKind.BinaryExpr) {
+        return bodyLowererBinary(node);
+      } else if (kind === SyntaxKind.UnaryExpr) {
+        return bodyLowererUnary(node);
+      } else if (kind === SyntaxKind.OptionFallbackExpr) {
+        return bodyLowererOptionFallback(node);
+      } else if (kind === SyntaxKind.PipeExpr) {
+        return bodyLowererPipeline(node);
+      } else if (kind === SyntaxKind.RecordExpr) {
+        return bodyLowererRecord(node);
+      } else if (kind === SyntaxKind.ListExpr) {
+        const fact = bodyLowererFactOf(node, "list");
+        if (fact.concat !== undefined) {
+          return bodyLowererConcat(node, fact.concat);
+        }
         return {
+          ...bodyLowererAnnotation(node),
           kind: fact.shape,
-          elements: this.kids(node).map((child) => this.expr(child)),
-          ...this.annotation(node),
+          elements: bodyLowererKids(node).map((child) =>
+            bodyLowererExpr(child)
+          ),
         };
+      } else if (kind === SyntaxKind.Block) {
+        return bodyLowererBlock(node);
+      } else if (kind === SyntaxKind.IfExpr) {
+        return bodyLowererIfExpr(node);
+      } else if (kind === SyntaxKind.MatchExpr) {
+        return bodyLowererMatch(node);
+      } else if (kind === SyntaxKind.TryExpr) {
+        return bodyLowererTryExpr(node);
+      } else {
+        return internal(
+          `cannot lower the node at ${bodyLowererDescribe(node)}`,
+        );
       }
-      case SyntaxKind.Block:
-        return this.block(node);
-      case SyntaxKind.IfExpr:
-        return this.ifExpr(node);
-      case SyntaxKind.MatchExpr:
-        return this.match(node);
-      case SyntaxKind.TryExpr:
-        return this.tryExpr(node);
-      default:
-        throw internal(`cannot lower the node at ${this.describe(node)}`);
     }
   }
-
-  private readonly resourceBindings = new Map<LocalId, LocalId>();
-
-  private valueTarget(nameNode: NodeId): LocalId | ValueId {
-    const target = this.ctx.targets.get(nameNode);
+  function bodyLowererValueTarget(nameNode: NodeId): LocalId | ValueId {
+    const target = bodyLowererCtx.targets.get(nameNode);
     if (
       target?.kind === "local" || target?.kind === "value" ||
       target?.kind === "provider"
     ) {
       return target.kind === "local"
-        ? this.resourceBindings.get(target.id) ?? target.id
+        ? bodyLowererResourceBindings.get(target.id) ?? target.id
         : target.id;
     }
-    throw internal(
-      `the name at ${this.describe(nameNode)} does not refer to a value`,
+    return internal(
+      `the name at ${bodyLowererDescribe(nameNode)} does not refer to a value`,
     );
   }
-
-  private name(node: NodeId): Expr {
-    if (this.fact(node)?.kind === "none") {
-      return { kind: "none", ...this.annotation(node) };
+  function bodyLowererName(node: NodeId): Expr {
+    if (bodyLowererFact(node)?.kind === "none") {
+      return { ...bodyLowererAnnotation(node), kind: "none" };
     }
     return {
+      ...bodyLowererAnnotation(node),
       kind: "reference",
-      target: this.valueTarget(node),
-      ...this.annotation(node),
+      target: bodyLowererValueTarget(node),
     };
   }
-
-  private using(node: NodeId): Expr {
-    const parts = this.kids(node);
-    const region = (kind: SyntaxKind): ClosureExpr => {
-      const region = this.required(
-        parts.find((k) => kindOf(this.ctx.tree, k) === kind),
+  function bodyLowererUsing(node: NodeId): Expr {
+    const parts = bodyLowererKids(node);
+    function region(kind: SyntaxKind): ClosureExpr {
+      const region = bodyLowererRequired(
+        parts.find((k) => kindOf(bodyLowererCtx.tree, k) === kind),
         "resource region",
         node,
       );
-      const fact = this.factOf(region, "arrow");
+      const fact = bodyLowererFactOf(region, "arrow");
       const source = fact.parameters[0];
       const outcome = fact.parameters[1];
-      const outcomeName = kidsOfKind(this.ctx.tree, region, SyntaxKind.Name)[0];
-      const id: LocalId = bodyLocalId(this.body.declaration, `$using${region}`);
-      const parameters = source === undefined
-        ? []
-        : [this.parameter(id, source.name, source.type, this.span(parts[0]))];
+      const outcomeName =
+        kidsOfKind(bodyLowererCtx.tree, region, SyntaxKind.Name)[0];
+      const id: LocalId = bodyLocalId(
+        bodyLowererBody.declaration,
+        `$using${region}`,
+      );
+      const parameters = source === undefined ? [] : [
+        bodyLowererParameter(
+          id,
+          source.name,
+          source.type,
+          bodyLowererSpan(parts[0]),
+        ),
+      ];
       if (outcome !== undefined) {
-        parameters.push(this.parameter(
+        parameters[parameters.length] = bodyLowererParameter(
           outcome.id,
           outcome.name,
           outcome.type,
-          this.span(this.required(outcomeName, "the outcome name", node)),
-        ));
+          bodyLowererSpan(
+            bodyLowererRequired(outcomeName, "the outcome name", node),
+          ),
+        );
       }
       const previous = source?.id === undefined
         ? undefined
-        : this.resourceBindings.get(source.id);
-      if (source?.id !== undefined) this.resourceBindings.set(source.id, id);
+        : bodyLowererResourceBindings.get(source.id);
+      if (source?.id !== undefined) {
+        bodyLowererResourceBindings = bodyLowererResourceBindings.set(
+          source.id,
+          id,
+        );
+      }
       // A failure ends the lowering of the module, so no restore on a throw.
       const closure: Expr = {
+        ...bodyLowererAnnotation(region),
         kind: "closure",
-        parameters,
-        body: this.expr(
-          this.required(this.kids(region).at(-1), "the region body", node),
+        parameters: parameters,
+        body: bodyLowererExpr(
+          bodyLowererRequired(
+            bodyLowererKids(region).at(-1),
+            "the region body",
+            node,
+          ),
         ),
-        ...this.annotation(region),
       };
       if (source?.id !== undefined) {
-        if (previous === undefined) this.resourceBindings.delete(source.id);
-        else this.resourceBindings.set(source.id, previous);
+        if (previous === undefined) {
+          if (!bodyLowererResourceBindings.delete(source.id)) {
+            return internal("the active resource binding is missing");
+          }
+        } else {
+          bodyLowererResourceBindings = bodyLowererResourceBindings.set(
+            source.id,
+            previous,
+          );
+        }
       }
       return closure;
-    };
+    }
     return {
+      ...bodyLowererAnnotation(node),
       kind: "with-resource",
       acquire: region(SyntaxKind.ResourceAcquire),
       use: region(SyntaxKind.ResourceUse),
       release: region(SyntaxKind.ResourceRelease),
-      ...this.annotation(node),
     };
   }
-
-  private closure(node: NodeId): Expr {
-    const fact = this.factOf(node, "arrow");
+  function bodyLowererClosure(node: NodeId): Expr {
+    const fact = bodyLowererFactOf(node, "arrow");
     const params = paramNodes(
-      this.ctx.tree,
-      functionParts(this.ctx.tree, node).paramList,
+      bodyLowererCtx.tree,
+      functionParts(bodyLowererCtx.tree, node).paramList,
     );
     const parameters = fact.parameters.map((p, i) =>
-      this.parameter(
+      bodyLowererParameter(
         p.id,
         p.name,
         p.type,
-        this.span(this.required(params[i], "a parameter", node)),
+        bodyLowererSpan(bodyLowererRequired(params[i], "a parameter", node)),
       )
     );
-    const bodyNode = arrowBody(this.ctx.tree, node);
+    const bodyNode = arrowBody(bodyLowererCtx.tree, node);
     return {
+      ...bodyLowererAnnotation(node),
       kind: "closure",
-      parameters,
-      body: this.expr(this.required(bodyNode, "the arrow body", node)),
-      ...this.annotation(node),
+      parameters: parameters,
+      body: bodyLowererExpr(
+        bodyLowererRequired(bodyNode, "the arrow body", node),
+      ),
     };
   }
-
-  private call(node: NodeId): Expr {
-    const kids = this.kids(node);
-    const callee = this.required(kids[0], "the callee", node);
-    const args = argNodes(this.ctx.tree, node);
-    return this.invoke(node, callee, args, undefined);
+  function bodyLowererCall(node: NodeId): Expr {
+    const kids = bodyLowererKids(node);
+    const callee = bodyLowererRequired(kids[0], "the callee", node);
+    const args = argNodes(bodyLowererCtx.tree, node);
+    return bodyLowererInvoke(node, callee, args, undefined);
   }
-
-  /**
-   * Lowers a call node or a pipeline stage by the checker fact of `node`.
-   * `pre` is the lowered left value of a stage, which is the first argument.
-   * A stage whose left value moved into a binding takes its set from `stageSets`.
-   */
-  private invoke(
+  function bodyLowererInvoke(
     node: NodeId,
     calleeNode: NodeId,
     argNodes: readonly NodeId[],
     pre: Expr | undefined,
   ): Expr {
-    const fact = this.required(this.fact(node), "the call fact", node);
+    const fact = bodyLowererRequired(
+      bodyLowererFact(node),
+      "the call fact",
+      node,
+    );
     if (fact.kind === "layer") {
-      return this.invokeLayer(fact, node, argNodes, pre);
+      return bodyLowererInvokeLayer(fact, node, argNodes, pre);
     }
     const callee: Expr | undefined = fact.kind === "call"
-      ? this.calleeExpr(calleeNode)
+      ? bodyLowererCalleeExpr(calleeNode)
       : undefined;
     const args: Expr[] = pre === undefined ? [] : [pre];
     if (fact.kind !== "error-construction") {
-      for (const argNode of argNodes) args.push(this.expr(argNode));
+      for (const argNode of argNodes) {
+        args[args.length] = bodyLowererExpr(argNode);
+      }
     }
-    const stageSet = this.body.stageSets.get(node);
+    const stageSet = bodyLowererBody.stageSets.get(node);
     const annotation = stageSet === undefined
-      ? this.annotation(node)
-      : this.annotationWith(this.info(node).type, stageSet, this.span(node));
-    const arg: ArgumentAt = (i) =>
-      this.required(args[i], `argument ${i + 1}`, node);
-    switch (fact.kind) {
-      case "call":
+      ? bodyLowererAnnotation(node)
+      : bodyLowererAnnotationWith(
+        bodyLowererInfo(node).type,
+        stageSet,
+        bodyLowererSpan(node),
+      );
+    function arg(i: number): Expr {
+      return bodyLowererRequired(args[i], `argument ${i + 1}`, node);
+    }
+    {
+      const factKind = fact.kind;
+      if (factKind === "call") {
         return {
-          kind: "call",
-          callee: this.required(callee, "the callee", node),
-          arguments: args,
           ...annotation,
+          kind: "call",
+          callee: bodyLowererRequired(callee, "the callee", node),
+          arguments: args,
         };
-      case "perform":
+      } else if (factKind === "perform") {
         return {
+          ...annotation,
           kind: "perform",
           capability: fact.capability,
           arguments: args,
-          ...annotation,
         };
-      case "builtin": {
-        const id = this.specialize(fact.name, fact.ir);
+      } else if (factKind === "builtin") {
+        const id = bodyLowererSpecialize(fact.name, fact.ir);
         return {
+          ...annotation,
           kind: "call",
           callee: {
             kind: "reference",
@@ -644,92 +739,94 @@ class BodyLowerer {
             type: fact.ir,
             execution: "pure",
             effects: EMPTY_EFFECTS,
-            span: this.span(calleeNode),
+            span: bodyLowererSpan(calleeNode),
           },
           arguments: args,
-          ...annotation,
         };
-      }
-      case "error-construction":
-        return this.invokeErrorConstruction(fact, argNodes, pre, annotation);
-      case "identity-construction":
+      } else if (factKind === "error-construction") {
+        return bodyLowererInvokeErrorConstruction(
+          fact,
+          argNodes,
+          pre,
+          annotation,
+        );
+      } else if (factKind === "identity-construction") {
         return {
+          ...annotation,
           kind: "nominal",
           nominal: fact.identity,
           value: arg(0),
-          ...annotation,
         };
-      case "retry":
+      } else if (factKind === "retry") {
         return {
+          ...annotation,
           kind: "retry",
           job: arg(0),
-          times: this.required(fact.times, "the retry count", node),
-          ...annotation,
+          times: bodyLowererRequired(fact.times, "the retry count", node),
         };
-      case "schema":
-        return this.invokeSchema(fact, args, arg, annotation);
-      case "log":
-        return this.invokeLog(fact, node, args, arg, annotation);
-      case "take-sink":
+      } else if (factKind === "schema") {
+        return bodyLowererInvokeSchema(fact, args, arg, annotation);
+      } else if (factKind === "log") {
+        return bodyLowererInvokeLog(fact, node, args, arg, annotation);
+      } else if (factKind === "take-sink") {
         return {
+          ...annotation,
           kind: "take-sink",
-          count: this.required(fact.count, "the sink count", node),
-          ...annotation,
+          count: bodyLowererRequired(fact.count, "the sink count", node),
         };
-      case "buffer-stream":
+      } else if (factKind === "buffer-stream") {
         return {
+          ...annotation,
           kind: "buffer-stream",
           stream: arg(0),
-          capacity: this.required(
+          capacity: bodyLowererRequired(
             fact.capacity,
             "the stream buffer capacity",
             node,
           ),
-          ...annotation,
         };
-      case "none":
-      case "list":
-      case "field":
-      case "arrow":
-      case "binding":
-      case "pattern":
-      case "handler":
-      case "finalizer":
-      case "option-fallback":
-      case "record-binding":
-        throw internal(
-          `the fact ${fact.kind} is no call at ${this.describe(node)}`,
+      } else if (
+        factKind === "none" || factKind === "list" || factKind === "field" ||
+        factKind === "arrow" || factKind === "binding" ||
+        factKind === "pattern" || factKind === "handler" ||
+        factKind === "finalizer" || factKind === "option-fallback" ||
+        factKind === "record-binding"
+      ) {
+        return internal(
+          `the fact ${fact.kind} is no call at ${bodyLowererDescribe(node)}`,
         );
-      default:
+      } else {
         // Every other fact kind has a row in POSITIONAL_BUILDERS. A kind
         // without a row, or without a case above, fails to compile here.
         return {
           ...positionalBody(fact.kind, fact, arg),
-          ...annotation,
+          type: annotation.type,
+          execution: annotation.execution,
+          effects: annotation.effects,
+          span: annotation.span,
         };
+      }
     }
   }
-
-  private invokeLayer(
+  function bodyLowererInvokeLayer(
     fact: FactOf<"layer">,
     node: NodeId,
     argNodes: readonly NodeId[],
     pre: Expr | undefined,
   ): Expr {
     if (pre !== undefined) {
-      throw internal("layer does not accept a pipeline input");
+      return internal("layer does not accept a pipeline input");
     }
     return {
+      ...bodyLowererAnnotation(node),
       kind: "layer",
-      service: this.required(fact.service, "the supplied service", node),
-      acquire: this.expr(
-        this.required(argNodes[1], "the layer acquisition", node),
+      service: bodyLowererRequired(fact.service, "the supplied service", node),
+      acquire: bodyLowererExpr(
+        bodyLowererRequired(argNodes[1], "the layer acquisition", node),
       ),
-      ...this.annotation(node),
     };
   }
-
-  private invokeErrorConstruction(
+  function bodyLowererInvokeErrorConstruction(
     fact: FactOf<"error-construction">,
     argNodes: readonly NodeId[],
     pre: Expr | undefined,
@@ -738,47 +835,57 @@ class BodyLowerer {
     const record = argNodes[0];
     if (
       pre !== undefined || argNodes.length !== 1 || record === undefined ||
-      kindOf(this.ctx.tree, record) !== SyntaxKind.RecordExpr
+      kindOf(bodyLowererCtx.tree, record) !== SyntaxKind.RecordExpr
     ) {
-      throw internal(
+      return internal(
         "an error is constructed from a record literal; this argument is not one",
       );
     }
     return {
+      ...annotation,
       kind: "error",
       error: fact.error,
-      fields: this.recordFields(this.kids(record)),
-      ...annotation,
+      fields: bodyLowererRecordFields(bodyLowererKids(record)),
     };
   }
-
-  private invokeSchema(
+  function bodyLowererInvokeSchema(
     fact: FactOf<"schema">,
     args: readonly Expr[],
     arg: ArgumentAt,
     annotation: Annotation,
   ): Expr {
-    return fact.op === "decode" || fact.op === "encode" ||
-        fact.op === "make"
-      ? {
-        kind: fact.op === "decode"
-          ? "schema-decode"
-          : fact.op === "encode"
-          ? "schema-encode"
-          : "schema-make",
+    if (fact.op === "decode") {
+      return {
+        ...annotation,
+        kind: "schema-decode",
         schema: arg(0),
         input: arg(1),
-        ...annotation,
-      }
-      : {
-        kind: "schema",
-        op: fact.op,
-        arguments: this.schemaArguments(fact, args),
-        ...annotation,
       };
+    }
+    if (fact.op === "encode") {
+      return {
+        ...annotation,
+        kind: "schema-encode",
+        schema: arg(0),
+        input: arg(1),
+      };
+    }
+    if (fact.op === "make") {
+      return {
+        ...annotation,
+        kind: "schema-make",
+        schema: arg(0),
+        input: arg(1),
+      };
+    }
+    return {
+      ...annotation,
+      kind: "schema",
+      op: fact.op,
+      arguments: bodyLowererSchemaArguments(fact, args),
+    };
   }
-
-  private invokeLog(
+  function bodyLowererInvokeLog(
     fact: FactOf<"log">,
     node: NodeId,
     args: readonly Expr[],
@@ -788,43 +895,36 @@ class BodyLowerer {
     // The checker proved a literal options record and recorded the label of `fields`.
     const options = args[1];
     if (options !== undefined && options.kind !== "record") {
-      throw internal("log needs a literal options record");
+      return internal("log needs a literal options record");
     }
     const fields = options === undefined || fact.fields === undefined
       ? undefined
       : options.fields.find((field) => field.name === fact.fields)?.value;
     return {
+      ...annotation,
       kind: "log",
       message: arg(0),
-      level: this.required(fact.level, "the log level", node),
+      level: bodyLowererRequired(fact.level, "the log level", node),
       fields: fields ?? null,
-      ...annotation,
     };
   }
-
-  /** A callee expression, or the qualified name of a pipeline stage. */
-  private calleeExpr(calleeNode: NodeId): Expr {
-    if (kindOf(this.ctx.tree, calleeNode) !== SyntaxKind.QualifiedName) {
-      return this.expr(calleeNode);
+  function bodyLowererCalleeExpr(calleeNode: NodeId): Expr {
+    if (kindOf(bodyLowererCtx.tree, calleeNode) !== SyntaxKind.QualifiedName) {
+      return bodyLowererExpr(calleeNode);
     }
     return {
+      ...bodyLowererAnnotation(calleeNode),
       kind: "reference",
-      target: this.valueTarget(calleeNode),
-      ...this.annotation(calleeNode),
+      target: bodyLowererValueTarget(calleeNode),
     };
   }
-
-  /**
-   * A list literal with a spread is a call of the instance `concat`. A spread
-   * child is its value, and each other child is a one-element array.
-   */
-  private concat(node: NodeId, type: FunctionType): Expr {
-    const span = this.span(node);
-    const args = this.kids(node).map((child, i): Expr => {
-      if (kindOf(this.ctx.tree, child) === SyntaxKind.SpreadElement) {
-        return this.expr(this.kids(child)[0]);
+  function bodyLowererConcat(node: NodeId, type: FunctionType): Expr {
+    const span = bodyLowererSpan(node);
+    const args = bodyLowererKids(node).map((child, i): Expr => {
+      if (kindOf(bodyLowererCtx.tree, child) === SyntaxKind.SpreadElement) {
+        return bodyLowererExpr(bodyLowererKids(child)[0]);
       }
-      const element = this.expr(child);
+      const element = bodyLowererExpr(child);
       return {
         kind: "array",
         elements: [element],
@@ -835,202 +935,215 @@ class BodyLowerer {
       };
     });
     return {
+      ...bodyLowererAnnotation(node),
       kind: "call",
       callee: {
         kind: "reference",
-        target: this.specialize("concat", type),
-        type,
+        target: bodyLowererSpecialize("concat", type),
+        type: type,
         execution: "pure",
         effects: EMPTY_EFFECTS,
-        span,
+        span: span,
       },
       arguments: args,
-      ...this.annotation(node),
     };
   }
-
-  /** The identity of a closed builtin instance. Equal types share one identity. */
-  private specialize(name: BuiltinInstanceName, type: FunctionType): ValueId {
+  function bodyLowererSpecialize(
+    name: BuiltinInstanceName,
+    type: FunctionType,
+  ): ValueId {
     const json = canonicalJson(type);
     const hash = sha256Hex(json).slice(0, 12);
-    const id: ValueId = builtinInstanceId(this.ctx.module, name, hash);
-    const known = this.ctx.builtins.get(id);
+    const id: ValueId = builtinInstanceId(bodyLowererCtx.module, name, hash);
+    const known = bodyLowererCtx.builtins.get(id);
     if (known === undefined) {
-      this.ctx.builtins.set(id, { type });
+      if (
+        bodyLowererCtx.builtins.set(id, { type: type }) !==
+          bodyLowererCtx.builtins
+      ) {
+        return internal("the builtin owner changed while registering an entry");
+      }
     } else if (canonicalJson(known.type) !== json) {
       // The 12-digit hash is a truncation, so two types could share an id.
-      throw internal(`two builtin instance types share the id ${id}`);
+      return internal(`two builtin instance types share the id ${id}`);
     }
     return id;
   }
-
-  private field(node: NodeId): Expr {
-    const fact = this.factOf(node, "field");
-    const base = this.required(this.kids(node)[0], "the record", node);
+  function bodyLowererField(node: NodeId): Expr {
+    const fact = bodyLowererFactOf(node, "field");
+    const base = bodyLowererRequired(
+      bodyLowererKids(node)[0],
+      "the record",
+      node,
+    );
     return {
+      ...bodyLowererAnnotation(node),
       kind: "get",
-      record: this.expr(base),
+      record: bodyLowererExpr(base),
       field: fact.name,
-      ...this.annotation(node),
     };
   }
-
-  private binary(node: NodeId): Expr {
-    const kids = this.kids(node);
-    const operator: BinaryOperator = this.required(
-      operatorOf(this.ctx.tree, node),
+  function bodyLowererBinary(node: NodeId): Expr {
+    const kids = bodyLowererKids(node);
+    const operator: BinaryOperator = bodyLowererRequired(
+      operatorOf(bodyLowererCtx.tree, node),
       "the operator",
       node,
     );
     return {
+      ...bodyLowererAnnotation(node),
       kind: "binary",
-      operator,
-      left: this.expr(this.required(kids[0], "the left operand", node)),
-      right: this.expr(this.required(kids[1], "the right operand", node)),
-      ...this.annotation(node),
+      operator: operator,
+      left: bodyLowererExpr(
+        bodyLowererRequired(kids[0], "the left operand", node),
+      ),
+      right: bodyLowererExpr(
+        bodyLowererRequired(kids[1], "the right operand", node),
+      ),
     };
   }
-
-  /**
-   * `-e` lowers as `0 - e`, and `!e` as `e === false`. The literal takes the
-   * span of the operator.
-   */
-  private unary(node: NodeId): Expr {
-    const { operator, token } = this.required(
-      unaryOperatorOf(this.ctx.tree, node),
+  function bodyLowererUnary(node: NodeId): Expr {
+    const unary = bodyLowererRequired(
+      unaryOperatorOf(bodyLowererCtx.tree, node),
       "the operator",
       node,
     );
-    const operand = this.expr(
-      this.required(this.kids(node)[0], "the operand", node),
+    const operator = unary.operator;
+    const token = unary.token;
+    const operand = bodyLowererExpr(
+      bodyLowererRequired(bodyLowererKids(node)[0], "the operand", node),
     );
     const minus = operator === "-";
     const literal: Expr = {
+      ...bodyLowererAnnotationWith(
+        minus ? bodyLowererCtx.types.int : bodyLowererCtx.types.boolean,
+        PURE_EFFECTS,
+        bodyLowererSpan(token),
+      ),
       kind: "literal",
       value: minus ? 0 : false,
-      ...this.annotationWith(
-        minus ? this.ctx.types.int : this.ctx.types.boolean,
-        PURE_EFFECTS,
-        this.span(token),
-      ),
     };
     return {
+      ...bodyLowererAnnotation(node),
       kind: "binary",
       operator: minus ? "-" : "===",
       left: minus ? literal : operand,
       right: minus ? operand : literal,
-      ...this.annotation(node),
     };
   }
-
-  /**
-   * `x |> s1 |> s2(a)` becomes a block that binds `$p1 = x` and `$p2 = s1($p1)`
-   * and returns `s2($p2, a)`. A generated binding and each reference to it use
-   * the span of the left expression that it stands for. Each call keeps the
-   * span of its stage.
-   */
-  private pipeline(node: NodeId): Expr {
-    const chain: { readonly pipe: NodeId; readonly stage: NodeId }[] = [];
-    let base = node;
-    while (kindOf(this.ctx.tree, base) === SyntaxKind.PipeExpr) {
-      const { left, stage } = pipeParts(this.ctx.tree, base);
-      chain.unshift({
-        pipe: base,
-        stage: this.required(stage, "the pipeline stage", base),
-      });
-      base = this.required(left, "the pipeline value", base);
-    }
+  function bodyLowererPipeline(node: NodeId): Expr {
+    const parts = bodyLowererPipelineParts(node);
+    const chain = parts.links;
+    const base = parts.base;
     // One binding for the base value and one for each stage but the last.
-    const bindings = chain.map(() => this.nextPipelineBinding());
+    const bindings = chain.map(() => bodyLowererNextPipelineBinding());
     const steps: Step[] = [];
     let left: NodeId = base;
-    let value = this.expr(base);
+    let value = bodyLowererExpr(base);
     let result: Expr | undefined;
-    for (let i = 0; i < chain.length; i++) {
+    let bindingIndex = 0;
+    for (const i of reverseIndices(chain.length)) {
       const link = chain[i];
-      const leftInfo = this.info(left);
-      const leftSpan = this.span(left);
-      const proofs = this.body.proofs.get(left);
-      if (proofs !== undefined) value = { ...value, proofs };
+      const leftInfo = bodyLowererInfo(left);
+      const leftSpan = bodyLowererSpan(left);
+      const proofs = bodyLowererBody.proofs.get(left);
+      if (proofs !== undefined) {
+        value = { ...value, proofs: proofs };
+      }
       const adoption = value.proofs?.find((proof) =>
-        this.ctx.types.identityBaseOf(proof.target) !== undefined
+        bodyLowererCtx.types.identityBaseOf(proof.target) !== undefined
       );
       const type: Type = adoption === undefined
-        ? this.ir(leftInfo.type)
+        ? bodyLowererIr(leftInfo.type)
         : { kind: "named", id: adoption.target };
-      steps.push({
+      const bindingStep: Step = {
         kind: "bind",
         generated: true,
         binding: {
-          id: bindings[i].id,
-          name: bindings[i].name,
-          type,
+          id: bindings[bindingIndex].id,
+          name: bindings[bindingIndex].name,
+          type: type,
           span: leftSpan,
         },
-        value,
-      });
+        value: value,
+      };
+      steps[steps.length] = bindingStep;
       const reference: Expr = {
         kind: "reference",
-        target: bindings[i].id,
-        type,
+        target: bindings[bindingIndex].id,
+        type: type,
         execution: "pure",
         effects: EMPTY_EFFECTS,
         span: leftSpan,
       };
-      const call = this.stage(link.stage, reference, leftInfo);
-      if (i === chain.length - 1) {
+      const call = bodyLowererStage(link.stage, reference, leftInfo);
+      if (i === 0) {
         result = call;
       } else {
         value = call;
         left = link.pipe;
       }
+      bindingIndex = bindingIndex + 1;
     }
-    const last = this.required(result, "the pipeline result", node);
-    const outer = this.info(node);
+    const last = bodyLowererRequired(result, "the pipeline result", node);
+    const outer = bodyLowererInfo(node);
     const set = combine([...steps.map((s) => setOf(s.value)), setOf(last)]);
-    const proofs = this.body.proofs.get(node);
-    return {
+    const proofs = bodyLowererBody.proofs.get(node);
+    const block: Expr = {
+      ...bodyLowererAnnotationWith(outer.type, set, bodyLowererSpan(node)),
       kind: "block",
-      steps,
+      steps: steps,
       result: last,
-      ...this.annotationWith(outer.type, set, this.span(node)),
-      ...(proofs === undefined ? {} : { proofs }),
     };
+    return proofs === undefined ? block : { ...block, proofs: proofs };
   }
 
-  /** Lowers one stage as a call whose first argument is the generated reference. */
-  private stage(stage: NodeId, pre: Expr, leftInfo: NodeInfo): Expr {
-    const { callee, args: stageArgs } = stageParts(this.ctx.tree, stage);
-    const qualified = this.required(callee, "the stage name", stage);
+  function bodyLowererPipelineParts(node: NodeId): PipelineParts {
+    let base = node;
+    const links: PipelineLink[] = [];
+    for (const _index of indices(bodyLowererCtx.tree.count)) {
+      if (kindOf(bodyLowererCtx.tree, base) !== SyntaxKind.PipeExpr) {
+        return { base: base, links: links };
+      }
+      const parts = pipeParts(bodyLowererCtx.tree, base);
+      links[links.length] = {
+        pipe: base,
+        stage: bodyLowererRequired(parts.stage, "the pipeline stage", base),
+      };
+      base = bodyLowererRequired(parts.left, "the pipeline value", base);
+    }
+    return internal("a pipeline is deeper than its syntax tree");
+  }
+  function bodyLowererStage(
+    stage: NodeId,
+    pre: Expr,
+    leftInfo: NodeInfo,
+  ): Expr {
+    const parts = stageParts(bodyLowererCtx.tree, stage);
+    const callee = parts.callee;
+    const stageArgs = parts.args;
+    const qualified = bodyLowererRequired(callee, "the stage name", stage);
     if (!isQuiet(leftInfo)) {
-      this.required(
-        this.body.stageSets.get(stage),
-        "the stage effect set",
-        stage,
-      );
+      if (bodyLowererBody.stageSets.get(stage) === undefined) {
+        return internal(
+          `the stage effect set is missing at ${bodyLowererDescribe(stage)}`,
+        );
+      }
     }
-    return this.invoke(stage, qualified, stageArgs, pre);
+    return bodyLowererInvoke(stage, qualified, stageArgs, pre);
   }
-
-  /** The label, label node, and value node of a field. The value is absent in a shorthand field. */
-  private fieldParts(field: NodeId): RecordFieldParts {
-    const kind = kindOf(this.ctx.tree, field);
+  function bodyLowererFieldParts(field: NodeId): RecordFieldParts {
+    const kind = kindOf(bodyLowererCtx.tree, field);
     if (kind !== SyntaxKind.RecordField && kind !== SyntaxKind.ShorthandField) {
-      throw internal("a record spread must come first in a record");
+      return internal("a record spread must come first in a record");
     }
-    return this.required(
-      recordFieldParts(this.ctx.tree, field),
+    return bodyLowererRequired(
+      recordFieldParts(bodyLowererCtx.tree, field),
       "the field label",
       field,
     );
   }
-
-  /**
-   * The `on` option of `schemaDefaultKey` selects the operation and is not
-   * part of the IR. Rebuild the options record without it, or drop the record.
-   * The record type is the single required field that the IR always had.
-   */
-  private schemaArguments(
+  function bodyLowererSchemaArguments(
     fact: FactOf<"schema">,
     args: readonly Expr[],
   ): readonly Expr[] {
@@ -1038,17 +1151,21 @@ class BodyLowerer {
     if (
       fact.options === undefined || options === undefined ||
       options.kind !== "record"
-    ) return args;
+    ) {
+      return args;
+    }
     const dropped = fact.options.on;
     const fields = options.fields.filter((field) => field.name !== dropped);
-    if (fields.length === 0) return args.slice(0, 2);
+    if (fields.length === 0) {
+      return args.slice(0, 2);
+    }
     const type = options.type;
     return [
       args[0],
       args[1],
       {
         ...options,
-        fields,
+        fields: fields,
         type: type.kind === "record"
           ? {
             kind: "record",
@@ -1060,84 +1177,95 @@ class BodyLowerer {
       },
     ];
   }
-
-  private recordFields(
-    fields: readonly NodeId[],
-  ): { readonly name: string; readonly value: Expr }[] {
+  function bodyLowererRecordFields(fields: readonly NodeId[]): {
+    readonly name: string;
+    readonly value: Expr;
+  }[] {
     return fields.map((field) => {
-      const parts = this.fieldParts(field);
+      const parts = bodyLowererFieldParts(field);
       // A shorthand field `{ id }` reads the variable `id`. The checker keeps its sets on the field node.
-      const value: Expr = parts.value !== undefined ? this.expr(parts.value) : {
-        kind: "reference",
-        target: this.valueTarget(parts.labelNode),
-        ...this.annotation(field),
-      };
-      return { name: parts.label, value };
+      const value: Expr = parts.value !== undefined
+        ? bodyLowererExpr(parts.value)
+        : {
+          ...bodyLowererAnnotation(field),
+          kind: "reference",
+          target: bodyLowererValueTarget(parts.labelNode),
+        };
+      return { name: parts.label, value: value };
     });
   }
-
-  private record(node: NodeId): Expr {
-    const fields = this.kids(node);
+  function bodyLowererRecord(node: NodeId): Expr {
+    const fields = bodyLowererKids(node);
     const first = fields[0];
     if (
       first !== undefined &&
-      kindOf(this.ctx.tree, first) === SyntaxKind.SpreadField
+      kindOf(bodyLowererCtx.tree, first) === SyntaxKind.SpreadField
     ) {
-      const baseNode = this.required(
-        this.kids(first)[0],
+      const baseNode = bodyLowererRequired(
+        bodyLowererKids(first)[0],
         "the spread base",
         first,
       );
       return {
+        ...bodyLowererAnnotation(node),
         kind: "update",
-        record: this.expr(baseNode),
-        fields: this.recordFields(fields.slice(1)),
-        ...this.annotation(node),
+        record: bodyLowererExpr(baseNode),
+        fields: bodyLowererRecordFields(fields.slice(1)),
       };
     }
     const record: Expr = {
+      ...bodyLowererAnnotation(node),
       kind: "record",
-      fields: this.recordFields(fields),
-      ...this.annotation(node),
+      fields: bodyLowererRecordFields(fields),
     };
-    const fact = this.fact(node);
-    if (fact?.kind !== "identity-construction") return record;
+    const fact = bodyLowererFact(node);
+    if (fact?.kind !== "identity-construction") {
+      return record;
+    }
     // A record literal at a tagged record is an implicit `Name({ ... })`: the
     // literal itself has the unnamed record type.
-    const body = this.ctx.types.taggedRecordOf(fact.identity);
+    const body = bodyLowererCtx.types.taggedRecordOf(fact.identity);
     return {
+      ...bodyLowererAnnotationWith(
+        bodyLowererInfo(node).type,
+        bodyLowererInfo(node),
+        bodyLowererSpan(node),
+      ),
       kind: "nominal",
       nominal: fact.identity,
-      value: body === undefined ? record : { ...record, type: this.ir(body) },
-      ...this.annotationWith(
-        this.info(node).type,
-        this.info(node),
-        this.span(node),
-      ),
+      value: body === undefined
+        ? record
+        : { ...record, type: bodyLowererIr(body) },
     };
   }
-
-  private block(node: NodeId): Expr {
-    const items = this.kids(node);
+  function bodyLowererBlock(node: NodeId): Expr {
+    const items = bodyLowererKids(node);
     const steps: Step[] = [];
     let result: Expr | undefined;
-    for (let i = 0; i < items.length; i++) {
+    for (const i of indices(items.length)) {
       const item = items[i];
-      if (kindOf(this.ctx.tree, item) === SyntaxKind.ConstDecl) {
-        if (this.fact(item)?.kind === "record-binding") {
-          for (const recordStep of this.recordBinding(item)) {
-            steps.push(recordStep);
+      if (kindOf(bodyLowererCtx.tree, item) === SyntaxKind.ConstDecl) {
+        if (bodyLowererFact(item)?.kind === "record-binding") {
+          for (const recordStep of bodyLowererRecordBinding(item)) {
+            steps[steps.length] = recordStep;
           }
-        } else steps.push(this.binding(item));
+        } else {
+          steps[steps.length] = bodyLowererBinding(item);
+        }
       } else if (i === items.length - 1) {
-        result = this.expr(item);
+        result = bodyLowererExpr(item);
       } else {
-        steps.push({ kind: "evaluate", value: this.expr(item) });
+        const evaluateStep: Step = {
+          kind: "evaluate",
+          value: bodyLowererExpr(item),
+        };
+        steps[steps.length] = evaluateStep;
       }
     }
     return {
+      ...bodyLowererAnnotation(node),
       kind: "block",
-      steps,
+      steps: steps,
       // A block that ends with a binding, or has no items, yields unit.
       result: result ?? {
         kind: "literal",
@@ -1145,285 +1273,327 @@ class BodyLowerer {
         type: { kind: "primitive", name: "unit" },
         execution: "pure",
         effects: EMPTY_EFFECTS,
-        span: this.span(node),
+        span: bodyLowererSpan(node),
       },
-      ...this.annotation(node),
     };
   }
-
-  private recordBinding(node: NodeId): Step[] {
-    const fact = this.factOf(node, "record-binding");
-    const init = this.kids(node).at(-1)!;
-    const captured = this.parameter(
+  function bodyLowererRecordBinding(node: NodeId): Step[] {
+    const fact = bodyLowererFactOf(node, "record-binding");
+    const init = bodyLowererRequired(
+      bodyLowererKids(node).at(-1),
+      "the record binding initializer",
+      node,
+    );
+    const captured = bodyLowererParameter(
       fact.captured.id,
       fact.captured.name,
       fact.captured.type,
-      this.span(init),
+      bodyLowererSpan(init),
     );
     const reference: Expr = {
+      ...bodyLowererAnnotationWith(
+        fact.captured.type,
+        PURE_EFFECTS,
+        bodyLowererSpan(init),
+      ),
       kind: "reference",
       target: captured.id,
-      ...this.annotationWith(fact.captured.type, PURE_EFFECTS, this.span(init)),
     };
     return [
-      { kind: "bind", binding: captured, value: this.expr(init) },
-      ...fact.fields.map(({ name, binding, label, local }): Step => ({
-        kind: "bind",
-        binding: this.parameter(
-          binding.id,
-          binding.name,
-          binding.type,
-          this.span(local),
-        ),
-        value: {
-          kind: "get",
-          record: reference,
-          field: name,
-          ...this.annotationWith(binding.type, PURE_EFFECTS, this.span(label)),
-        },
-      })),
+      { kind: "bind", binding: captured, value: bodyLowererExpr(init) },
+      ...fact.fields.map((field): Step => {
+        const name = field.name;
+        const binding = field.binding;
+        const label = field.label;
+        const local = field.local;
+        return ({
+          kind: "bind",
+          binding: bodyLowererParameter(
+            binding.id,
+            binding.name,
+            binding.type,
+            bodyLowererSpan(local),
+          ),
+          value: {
+            ...bodyLowererAnnotationWith(
+              binding.type,
+              PURE_EFFECTS,
+              bodyLowererSpan(label),
+            ),
+            kind: "get",
+            record: reference,
+            field: name,
+          },
+        });
+      }),
     ];
   }
-
-  /** A `const` in a block. The binding span covers the name and its annotation. */
-  private binding(node: NodeId): Step {
-    const fact = this.factOf(node, "binding");
-    const parts = this.kids(node);
-    const nameNode = this.required(
-      parts.find((k) => kindOf(this.ctx.tree, k) === SyntaxKind.Name),
+  function bodyLowererBinding(node: NodeId): Step {
+    const fact = bodyLowererFactOf(node, "binding");
+    const parts = bodyLowererKids(node);
+    const nameNode = bodyLowererRequired(
+      parts.find((k) => kindOf(bodyLowererCtx.tree, k) === SyntaxKind.Name),
       "the binding name",
       node,
     );
-    const typeNode = parts.find((k) => isTypeKind(kindOf(this.ctx.tree, k)));
-    const init = initOf(this.ctx.tree, node, nameNode);
-    const name = this.span(nameNode);
-    const end = typeNode === undefined ? name.end : this.span(typeNode).end;
+    const typeNode = parts.find((k) =>
+      isTypeKind(kindOf(bodyLowererCtx.tree, k))
+    );
+    const init = initOf(bodyLowererCtx.tree, node, nameNode);
+    const name = bodyLowererSpan(nameNode);
+    const end = typeNode === undefined
+      ? name.end
+      : bodyLowererSpan(typeNode).end;
     return {
       kind: "bind",
-      binding: this.parameter(fact.id, this.nameText(nameNode), fact.type, {
-        source: name.source,
-        start: name.start,
-        end,
-      }),
-      value: this.expr(this.required(init, "the binding value", node)),
+      binding: bodyLowererParameter(
+        fact.id,
+        bodyLowererNameText(nameNode),
+        fact.type,
+        {
+          source: name.source,
+          start: name.start,
+          end: end,
+        },
+      ),
+      value: bodyLowererExpr(
+        bodyLowererRequired(init, "the binding value", node),
+      ),
     };
   }
-
-  private ifExpr(node: NodeId): Expr {
-    const kids = this.kids(node);
-    const part = (i: number, what: string): Expr =>
-      this.expr(this.required(kids[i], what, node));
+  function bodyLowererIfExpr(node: NodeId): Expr {
+    const kids = bodyLowererKids(node);
+    function part(i: number, what: string): Expr {
+      return bodyLowererExpr(bodyLowererRequired(kids[i], what, node));
+    }
     return {
+      ...bodyLowererAnnotation(node),
       kind: "if",
       condition: part(0, "the condition"),
       then: part(1, "the then branch"),
       else: part(2, "the else branch"),
-      ...this.annotation(node),
     };
   }
-
-  private optionFallback(node: NodeId): Expr {
-    const [left, right] = this.kids(node);
-    const fact = this.factOf(node, "option-fallback");
-    const span = this.span(node);
+  function bodyLowererOptionFallback(node: NodeId): Expr {
+    const children = bodyLowererKids(node);
+    const left = children[0];
+    const right = children[1];
+    const fact = bodyLowererFactOf(node, "option-fallback");
+    const span = bodyLowererSpan(node);
     // The subject lowers first, so its pipeline bindings number before those of the fallback.
-    const subject = this.expr(left);
-    const binding = this.parameter(
+    const subject = bodyLowererExpr(left);
+    const binding = bodyLowererParameter(
       fact.binding.id,
       fact.binding.name,
       fact.binding.type,
-      this.span(left),
+      bodyLowererSpan(left),
     );
     const taken: Arm = {
       pattern: fact.subject === "option"
-        ? { kind: "some", binding, span }
-        : { kind: "bind", binding, span },
+        ? { kind: "some", binding: binding, span: span }
+        : { kind: "bind", binding: binding, span: span },
       body: {
-        kind: "reference",
-        target: binding.id,
-        ...this.annotationWith(
+        ...bodyLowererAnnotationWith(
           fact.binding.type,
           PURE_EFFECTS,
-          this.span(left),
+          bodyLowererSpan(left),
         ),
+        kind: "reference",
+        target: binding.id,
       },
     };
     const absent: Arm = {
       pattern: fact.subject === "option"
-        ? { kind: "none", span }
-        : { kind: "literal", value: null, span },
-      body: this.expr(right),
+        ? { kind: "none", span: span }
+        : { kind: "literal", value: null, span: span },
+      body: bodyLowererExpr(right),
     };
     return {
+      ...bodyLowererAnnotation(node),
       kind: "match",
-      subject,
+      subject: subject,
       arms: fact.subject === "option" ? [taken, absent] : [absent, taken],
-      ...this.annotation(node),
     };
   }
-
-  private match(node: NodeId): Expr {
-    const kids = this.kids(node);
-    const subject = this.expr(this.required(kids[0], "the subject", node));
+  function bodyLowererMatch(node: NodeId): Expr {
+    const kids = bodyLowererKids(node);
+    const subject = bodyLowererExpr(
+      bodyLowererRequired(kids[0], "the subject", node),
+    );
     const arms: Arm[] = kids.slice(1)
-      .filter((k) => kindOf(this.ctx.tree, k) === SyntaxKind.MatchArm)
+      .filter((k) => kindOf(bodyLowererCtx.tree, k) === SyntaxKind.MatchArm)
       .map((arm) => {
-        const parts = this.kids(arm);
-        const patternNode = this.required(
-          parts.find((k) => isPatternKind(kindOf(this.ctx.tree, k))),
+        const parts = bodyLowererKids(arm);
+        const patternNode = bodyLowererRequired(
+          parts.find((k) => isPatternKind(kindOf(bodyLowererCtx.tree, k))),
           "the pattern",
           arm,
         );
         const bodyNode = parts.filter((k) => k !== patternNode).pop();
         return {
-          pattern: this.pattern(patternNode),
-          body: this.expr(this.required(bodyNode, "the arm body", arm)),
+          pattern: bodyLowererPattern(patternNode),
+          body: bodyLowererExpr(
+            bodyLowererRequired(bodyNode, "the arm body", arm),
+          ),
         };
       });
-    return { kind: "match", subject, arms, ...this.annotation(node) };
+    return {
+      ...bodyLowererAnnotation(node),
+      kind: "match",
+      subject: subject,
+      arms: arms,
+    };
   }
-
-  private pattern(node: NodeId): Pattern {
-    const fact = this.factOf(node, "pattern");
+  function bodyLowererPattern(node: NodeId): Pattern {
+    const fact = bodyLowererFactOf(node, "pattern");
     const pattern = fact.pattern;
-    const span = this.span(node);
-    const names = kidsOfKind(this.ctx.tree, node, SyntaxKind.Name);
-    switch (pattern.kind) {
-      case "wildcard":
-        return { kind: "wildcard", span };
-      case "literal":
-        return { kind: "literal", value: pattern.value, span };
-      case "duration":
-        return { kind: "duration", millis: pattern.millis, span };
-      case "none":
-        return { kind: "none", span };
-      case "bind":
+    const span = bodyLowererSpan(node);
+    const names = kidsOfKind(bodyLowererCtx.tree, node, SyntaxKind.Name);
+    {
+      const kind = pattern.kind;
+      if (kind === "wildcard") {
+        return { kind: "wildcard", span: span };
+      } else if (kind === "literal") {
+        return { kind: "literal", value: pattern.value, span: span };
+      } else if (kind === "duration") {
+        return { kind: "duration", millis: pattern.millis, span: span };
+      } else if (kind === "none") {
+        return { kind: "none", span: span };
+      } else if (kind === "bind") {
         return {
           kind: "bind",
-          binding: this.bindingOf(pattern.binding, names[0]),
-          span,
+          binding: bodyLowererBindingOf(pattern.binding, names[0]),
+          span: span,
         };
-      case "some":
+      } else if (kind === "some") {
         return {
           kind: "some",
-          binding: this.bindingOf(pattern.binding, names[1]),
-          span,
+          binding: bodyLowererBindingOf(pattern.binding, names[1]),
+          span: span,
         };
-      case "error":
+      } else if (kind === "error") {
         return {
           kind: "error",
           error: pattern.error,
-          binding: this.bindingOf(pattern.binding, names[1]),
-          span,
+          binding: bodyLowererBindingOf(pattern.binding, names[1]),
+          span: span,
         };
-      case "tagged":
+      } else if (kind === "tagged") {
         return {
           kind: "nominal",
           nominal: pattern.tagged,
-          binding: this.bindingOf(pattern.binding, names[1]),
-          span,
+          binding: bodyLowererBindingOf(pattern.binding, names[1]),
+          span: span,
         };
-      case "tag": {
+      } else if (kind === "tag") {
         const spread =
-          kidsOfKind(this.ctx.tree, node, SyntaxKind.SpreadPattern)[0];
+          kidsOfKind(bodyLowererCtx.tree, node, SyntaxKind.SpreadPattern)[0];
         const spreadName = spread === undefined
           ? undefined
-          : kidsOfKind(this.ctx.tree, spread, SyntaxKind.Name)[0];
+          : kidsOfKind(bodyLowererCtx.tree, spread, SyntaxKind.Name)[0];
         return {
           kind: "tag",
           field: pattern.field,
           value: pattern.value,
           binding: pattern.binding === null
             ? null
-            : this.bindingOf(pattern.binding, spreadName),
-          span,
+            : bodyLowererBindingOf(pattern.binding, spreadName),
+          span: span,
         };
+      } else if (kind === "invalid") {
+        return internal(`an invalid pattern at ${bodyLowererDescribe(node)}`);
       }
-      case "invalid":
-        throw internal(`an invalid pattern at ${this.describe(node)}`);
     }
+    return internal(`an unknown pattern at ${bodyLowererDescribe(node)}`);
   }
-
-  private tryExpr(node: NodeId): Expr {
-    const kids = this.kids(node);
-    const bodyNode = this.required(
-      kids.find((k) => kindOf(this.ctx.tree, k) === SyntaxKind.Block),
+  function bodyLowererTryExpr(node: NodeId): Expr {
+    const kids = bodyLowererKids(node);
+    const bodyNode = bodyLowererRequired(
+      kids.find((k) => kindOf(bodyLowererCtx.tree, k) === SyntaxKind.Block),
       "the protected block",
       node,
     );
     const catchNode = kids.find((k) =>
-      kindOf(this.ctx.tree, k) === SyntaxKind.CatchClause
+      kindOf(bodyLowererCtx.tree, k) === SyntaxKind.CatchClause
     );
     const finallyNode = kids.find((k) =>
-      kindOf(this.ctx.tree, k) === SyntaxKind.FinallyClause
+      kindOf(bodyLowererCtx.tree, k) === SyntaxKind.FinallyClause
     );
-    const body = this.expr(bodyNode);
+    const body = bodyLowererExpr(bodyNode);
     const arms = catchNode === undefined
       ? []
-      : kidsOfKind(this.ctx.tree, catchNode, SyntaxKind.Handler);
-    const isDefect = (h: NodeId) => {
-      const fact = this.fact(h);
-      return fact?.kind === "handler" && fact.defect === true;
-    };
+      : kidsOfKind(bodyLowererCtx.tree, catchNode, SyntaxKind.Handler);
+    function isDefect(h: NodeId): boolean {
+      const fact = bodyLowererFact(h);
+      return fact?.kind === "handler" &&
+        typeof fact.defect === "boolean" && fact.defect;
+    }
     const handlers: Handler[] = arms.filter((h) => !isDefect(h)).map((h) =>
-      this.handler(h)
+      bodyLowererHandler(h)
     );
     const defectArm = arms.find(isDefect);
-    const defect = defectArm === undefined
-      ? {}
-      : { defect: this.defectHandler(defectArm) };
-    const whole = this.annotation(node);
-    const fact = finallyNode === undefined ? undefined : this.fact(finallyNode);
+    const whole = bodyLowererAnnotation(node);
+    const fact = finallyNode === undefined
+      ? undefined
+      : bodyLowererFact(finallyNode);
     if (finallyNode === undefined || fact?.kind !== "finalizer") {
-      return { kind: "catch", body, handlers, ...defect, ...whole };
+      const caughtExpr: Expr = {
+        ...whole,
+        kind: "catch",
+        body: body,
+        handlers: handlers,
+      };
+      return defectArm === undefined
+        ? caughtExpr
+        : { ...caughtExpr, defect: bodyLowererDefectHandler(defectArm) };
     }
     // The catch node carries the effects of the protected part only.
-    const protectedPart: Expr = catchNode === undefined ? body : {
+    const protectedAnnotation = bodyLowererAnnotationWith(
+      bodyLowererInfo(node).type,
+      fact.protectedSet,
+      whole.span,
+    );
+    const caughtProtected: Expr = {
+      ...protectedAnnotation,
       kind: "catch",
-      body,
-      handlers,
-      ...defect,
-      ...this.annotationWith(
-        this.info(node).type,
-        fact.protectedSet,
-        whole.span,
-      ),
+      body: body,
+      handlers: handlers,
     };
+    let protectedPart: Expr = body;
+    if (catchNode !== undefined) {
+      protectedPart = defectArm === undefined ? caughtProtected : {
+        ...caughtProtected,
+        defect: bodyLowererDefectHandler(defectArm),
+      };
+    }
     return {
+      ...whole,
       kind: "ensure",
       body: protectedPart,
-      finalizer: this.finalizer(finallyNode, fact.binding),
-      ...whole,
+      finalizer: bodyLowererFinalizer(finallyNode, fact.binding),
     };
   }
-
-  private finalizer(
+  function bodyLowererFinalizer(
     node: NodeId,
-    binding:
-      | { id: LocalId | undefined; name: string; type: TypeRef }
-      | undefined,
+    binding: {
+      id: LocalId | undefined;
+      name: string;
+      type: TypeRef;
+    } | undefined,
   ): ClosureExpr {
-    const block = this.required(
-      this.kids(node).find((k) =>
-        kindOf(this.ctx.tree, k) === SyntaxKind.Block
+    const block = bodyLowererRequired(
+      bodyLowererKids(node).find((k) =>
+        kindOf(bodyLowererCtx.tree, k) === SyntaxKind.Block
       ),
       "the finally block",
       node,
     );
-    const name = kidsOfKind(this.ctx.tree, node, SyntaxKind.Name)[0];
-    const info = this.info(node);
-    const body = this.expr(block);
+    const name = kidsOfKind(bodyLowererCtx.tree, node, SyntaxKind.Name)[0];
+    const info = bodyLowererInfo(node);
+    const body = bodyLowererExpr(block);
     return {
-      kind: "closure",
-      parameters: binding === undefined ? [] : [this.parameter(
-        binding.id,
-        binding.name,
-        binding.type,
-        this.span(this.required(name, "the outcome name", node)),
-      )],
-      body,
-      ...this.annotationWith(
-        this.ctx.types.function({
+      ...bodyLowererAnnotationWith(
+        bodyLowererCtx.types.function({
           execution: info.mode,
           parameters: binding === undefined ? [] : [binding.type],
           result: info.type,
@@ -1431,58 +1601,70 @@ class BodyLowerer {
           requirements: info.requirements,
         }),
         PURE_EFFECTS,
-        this.span(node),
+        bodyLowererSpan(node),
       ),
+      kind: "closure",
+      parameters: binding === undefined ? [] : [
+        bodyLowererParameter(
+          binding.id,
+          binding.name,
+          binding.type,
+          bodyLowererSpan(bodyLowererRequired(name, "the outcome name", node)),
+        ),
+      ],
+      body: body,
     };
   }
-
-  private defectHandler(node: NodeId): DefectHandler {
-    const fact = this.factOf(node, "handler");
-    const parts = this.kids(node);
+  function bodyLowererDefectHandler(node: NodeId): DefectHandler {
+    const fact = bodyLowererFactOf(node, "handler");
+    const parts = bodyLowererKids(node);
     const bodyNode = parts.filter((k) =>
-      kindOf(this.ctx.tree, k) !== SyntaxKind.Name
+      kindOf(bodyLowererCtx.tree, k) !== SyntaxKind.Name
     ).pop();
     return {
-      binding: this.bindingOf(
+      binding: bodyLowererBindingOf(
         fact.binding,
-        parts.filter((k) => kindOf(this.ctx.tree, k) === SyntaxKind.Name)[1],
+        parts.filter((k) =>
+          kindOf(bodyLowererCtx.tree, k) === SyntaxKind.Name
+        )[1],
       ),
-      body: this.expr(this.required(bodyNode, "the handler body", node)),
-      span: this.span(node),
+      body: bodyLowererExpr(
+        bodyLowererRequired(bodyNode, "the handler body", node),
+      ),
+      span: bodyLowererSpan(node),
     };
   }
-
-  private handler(node: NodeId): Handler {
-    const fact = this.factOf(node, "handler");
-    const parts = this.kids(node);
+  function bodyLowererHandler(node: NodeId): Handler {
+    const fact = bodyLowererFactOf(node, "handler");
+    const parts = bodyLowererKids(node);
     const nameNodes = parts.filter((k) =>
-      kindOf(this.ctx.tree, k) === SyntaxKind.Name
+      kindOf(bodyLowererCtx.tree, k) === SyntaxKind.Name
     );
     const bodyNode = parts.filter((k) =>
-      kindOf(this.ctx.tree, k) !== SyntaxKind.Name
+      kindOf(bodyLowererCtx.tree, k) !== SyntaxKind.Name
     ).pop();
     return {
-      error: this.required(fact.error, "the handled error", node),
-      binding: this.bindingOf(fact.binding, nameNodes[1]),
-      body: this.expr(this.required(bodyNode, "the handler body", node)),
-      span: this.span(node),
+      error: bodyLowererRequired(fact.error, "the handled error", node),
+      binding: bodyLowererBindingOf(fact.binding, nameNodes[1]),
+      body: bodyLowererExpr(
+        bodyLowererRequired(bodyNode, "the handler body", node),
+      ),
+      span: bodyLowererSpan(node),
     };
   }
+  return { expr: bodyLowererExpr };
 }
-
 function targetId(target: Target | undefined): DeclarationId | undefined {
-  switch (target?.kind) {
-    case "type":
-    case "error":
-    case "service":
-    case "provider":
-    case "value":
-      return target.id;
-    default:
-      return undefined;
+  if (target === undefined) return undefined;
+  if (
+    target.kind === "type" || target.kind === "error" ||
+    target.kind === "service" || target.kind === "provider" ||
+    target.kind === "value"
+  ) {
+    return target.id;
   }
+  return undefined;
 }
-
 function lowerImports(
   checked: CheckedProject,
   info: ModuleInfo,
@@ -1501,10 +1683,17 @@ function lowerImports(
     ) {
       return {
         ok: false,
-        error: { tag: "no-interface", module, imported: planned.imported },
+        error: {
+          tag: "no-interface",
+          module: module,
+          imported: planned.imported,
+        },
       };
     }
-    const bindings: { name: string; target: DeclarationId }[] = [];
+    const bindings: {
+      name: string;
+      target: DeclarationId;
+    }[] = [];
     for (const name of planned.names) {
       const target = targetId(resolution.namespace.get(name)?.target);
       if (target === undefined) {
@@ -1512,90 +1701,108 @@ function lowerImports(
           ok: false,
           error: {
             tag: "internal",
-            module,
+            module: module,
             message: `the imported name ${name} has no target`,
           },
         };
       }
-      bindings.push({ name, target });
+      bindings[bindings.length] = { name: name, target: target };
     }
     const payload = iface.value.payload;
-    imports.push({
+    imports[imports.length] = {
       module: planned.label,
-      bindings,
+      bindings: bindings,
       exports: payload.exports,
       values: payload.values,
       types: payload.types,
       errors: payload.errors,
       services: payload.services,
-    });
+    };
   }
   return { ok: true, value: imports };
 }
-
 /** The synthetic import of the closed prelude interface, or nothing when no builtin is used. */
 function preludeImport(
   builtins: ReadonlyMap<ValueId, BuiltinInstance>,
 ): Import | undefined {
-  if (builtins.size === 0) return undefined;
-  const entries = [...builtins].sort(([a], [b]) => compareText(a, b));
+  if (builtins.size === 0) {
+    return undefined;
+  }
+  const entries = [...builtins].sort((left, right) => {
+    return compareText(left[0], right[0]);
+  });
   return {
     module: PRELUDE_MODULE,
     bindings: [],
-    exports: entries.map(([id]) => id),
-    values: entries.map(([id, builtin]) => ({
-      id,
-      name: shortName(id),
-      type: builtin.type,
-    })),
+    exports: entries.map((entry) => {
+      return entry[0];
+    }),
+    values: entries.map((entry) => {
+      const id = entry[0];
+      const builtin = entry[1];
+      return ({
+        id: id,
+        name: shortName(id),
+        type: builtin.type,
+      });
+    }),
     types: [],
     errors: [],
     services: [],
   };
 }
-
 function lowerDeclarations(
   checked: CheckedProject,
   module: CheckedModule,
   ctx: ModuleContext,
 ): Declaration[] {
-  const found: { readonly start: number; readonly declaration: Declaration }[] =
-    [];
+  const found: {
+    readonly start: number;
+    readonly declaration: Declaration;
+  }[] = [];
   const decls = module.declarations;
   for (const declaration of decls.types) {
-    found.push({ start: declaration.span.start, declaration });
+    found[found.length] = {
+      start: declaration.span.start,
+      declaration: declaration,
+    };
   }
   for (const declaration of decls.errors) {
-    found.push({ start: declaration.span.start, declaration });
+    found[found.length] = {
+      start: declaration.span.start,
+      declaration: declaration,
+    };
   }
   for (const declaration of decls.services) {
-    found.push({ start: declaration.span.start, declaration });
+    found[found.length] = {
+      start: declaration.span.start,
+      declaration: declaration,
+    };
   }
   for (const fn of module.functions.values()) {
-    found.push({
+    found[found.length] = {
       start: fn.signature.span.start,
       declaration: lowerFunction(checked, ctx, fn),
-    });
+    };
   }
   for (const constant of module.constants.values()) {
-    found.push({
+    found[found.length] = {
       start: constant.signature.span.start,
       declaration: lowerConstant(ctx, constant),
-    });
+    };
   }
-  found.sort((a, b) => a.start - b.start);
-  return found.map((f) => f.declaration);
+  const ordered = found.sort((a, b) => a.start - b.start);
+  return ordered.map((entry) => entry.declaration);
 }
-
 function lowerFunction(
   checked: CheckedProject,
   ctx: ModuleContext,
   fn: FunctionBody,
 ): Declaration {
   const signature = fn.signature;
-  const lowerer = new BodyLowerer(ctx, fn.table, signature.name);
+  const lowerer = BodyLowerer(ctx, fn.table, signature.name);
   if (fn.bodyNode === undefined) {
-    throw internal(`the function ${signature.name} has no body`);
+    return internal(`the function ${signature.name} has no body`);
   }
   let type: FunctionType;
   if (signature.written.result) {
@@ -1606,7 +1813,7 @@ function lowerFunction(
       requirements: fn.requirements,
     });
     if (!computed.ok) {
-      throw internal(`the function ${signature.name} has no computed mode`);
+      return internal(`the function ${signature.name} has no computed mode`);
     }
     type = computed.value.ir;
   } else {
@@ -1614,44 +1821,46 @@ function lowerFunction(
   }
   const parameters: Parameter[] = signature.parameters.map((p) => {
     if (p.id === undefined) {
-      throw internal(`the parameter ${p.name} has no local identity`);
+      return internal(`the parameter ${p.name} has no local identity`);
     }
-    return {
+    const parameter: Parameter = {
       id: p.id,
       name: p.name,
       type: p.type.ir,
-      ...(p.borrow ? { borrow: true } : {}),
       span: p.span,
     };
+    return p.borrow ? { ...parameter, borrow: true } : parameter;
   });
+  const checkedParameters = type.checked;
+  const entryValidation = checkedParameters?.some(Boolean)
+    ? parameters.filter((_parameter, index) => {
+      const checked = checkedParameters[index];
+      return typeof checked === "boolean" && checked;
+    }).map((parameter) => parameter.id)
+    : undefined;
   return {
+    ...(entryValidation === undefined
+      ? {}
+      : { entryValidation: entryValidation }),
     kind: "function",
     id: signature.id,
     name: signature.name,
-    parameters,
-    type,
+    parameters: parameters,
+    type: type,
     written: signature.written,
-    ...(type.checked?.some(Boolean)
-      ? {
-        entryValidation: parameters.filter((_, i) => type.checked?.[i]).map((
-          p,
-        ) => p.id),
-      }
-      : {}),
     body: lowerer.expr(fn.bodyNode),
     span: signature.span,
   };
 }
-
 function lowerConstant(
   ctx: ModuleContext,
   constant: ConstantBody,
 ): Declaration {
   const signature = constant.signature;
   if (constant.initNode === undefined) {
-    throw internal(`the constant ${signature.name} has no initializer`);
+    return internal(`the constant ${signature.name} has no initializer`);
   }
-  const lowerer = new BodyLowerer(ctx, constant.table, signature.name);
+  const lowerer = BodyLowerer(ctx, constant.table, signature.name);
   return {
     kind: "constant",
     id: signature.id,
@@ -1661,7 +1870,6 @@ function lowerConstant(
     span: signature.span,
   };
 }
-
 /**
  * Lowers one checked module to typed IR. A module that `checked.blocked` lists
  * has an error value. A `.effi` module lowers to its type, error, and service
@@ -1669,8 +1877,8 @@ function lowerConstant(
  */
 export function lowerModule(
   checked: CheckedProject,
-  module: string,
-): Result<ModuleIR, LowerError> {
+  module: ModuleName,
+): LowerResult {
   const checkedModule = checked.modules.get(module);
   const info = checked.analysis.project.modules.get(module);
   const resolution = checked.analysis.resolutions.get(module);
@@ -1678,50 +1886,63 @@ export function lowerModule(
     checkedModule === undefined || info === undefined ||
     resolution === undefined
   ) {
-    return { ok: false, error: { tag: "unknown-module", module } };
+    return { ok: false, error: { tag: "unknown-module", module: module } };
   }
   const count = checked.blocked.get(module);
   if (count !== undefined) {
-    return { ok: false, error: { tag: "diagnostics", module, count } };
+    return {
+      ok: false,
+      error: { tag: "diagnostics", module: module, count: count },
+    };
   }
   const imports = lowerImports(checked, info, resolution, module);
-  if (!imports.ok) return imports;
+  if (!imports.ok) {
+    return imports;
+  }
   const lexed = checkedModule.tree.lexed;
-  const identifiers = new Set<string>();
-  for (let t = 0; t < lexed.count; t++) {
+  let identifiers = emptySet<string>();
+  for (const t of indices(lexed.count)) {
     if (lexed.kinds[t] === TokenKind.Ident) {
-      identifiers.add(lexed.text.slice(lexed.starts[t], lexed.ends[t]));
+      identifiers = identifiers.add(
+        lexed.text.slice(lexed.starts[t], lexed.ends[t]),
+      );
     }
   }
   const ctx: ModuleContext = {
-    module,
+    module: module,
     tree: checkedModule.tree,
     types: checked.table,
     targets: resolution.targets,
-    builtins: new Map(),
-    identifiers,
+    builtins: BuiltinInstances(),
+    identifiers: identifiers,
   };
   const lowered = caught(() => lowerDeclarations(checked, checkedModule, ctx));
   if (!lowered.ok) {
-    if (!(lowered.error instanceof LowerFailure)) throw lowered.error;
+    if (!isInvariantFailure(lowered.error, "lower")) {
+      return rethrow(lowered.error);
+    }
     return {
       ok: false,
-      error: { tag: "internal", module, message: lowered.error.message },
+      error: {
+        tag: "internal",
+        module: module,
+        message: lowered.error.message,
+      },
     };
   }
   const declarations = lowered.value;
-  const prelude = preludeImport(ctx.builtins);
+  const prelude = preludeImport(ctx.builtins.values());
   return {
     ok: true,
     value: {
       format: "light-functional-ir",
       version: 10,
-      module,
+      module: module,
       sources: [checkedModule.path],
       imports: prelude === undefined
         ? imports.value
         : [...imports.value, prelude],
-      declarations,
+      declarations: declarations,
       // The companion module of a `.effi` file exports every declaration,
       // because the host module needs each one. Providers are not lowered.
       exports: exportRuleOf(info) === "every-declaration"
@@ -1730,17 +1951,18 @@ export function lowerModule(
     },
   };
 }
-
 /**
  * Lowers every `.eff` and `.effi` module of the project, in topological order.
  * A module with an error value has no IR.
  */
 export function lowerProject(
   checked: CheckedProject,
-): ReadonlyMap<string, Result<ModuleIR, LowerError>> {
-  const results = new Map<string, Result<ModuleIR, LowerError>>();
+): LoweredProject {
+  let results = emptyMap<string, LowerResult>();
   for (const name of checked.modules.keys()) {
-    results.set(name, lowerModule(checked, name));
+    results = results.set(name, lowerModule(checked, name));
   }
   return results;
 }
+
+type LoweredProject = ReadonlyMap<string, LowerResult>;

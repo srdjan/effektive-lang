@@ -4,12 +4,9 @@
 // `evaluatedChildren`, and `isLeafExpr` derive from the table. A new Expr kind
 // is a compile error until it has a row. The validator keeps its own child
 // list (`validate/expr_walk.ts` exprChildren) and must not import this module.
-
 import type { Expr } from "../ir.ts";
 import type { Emitted } from "./emitted.ts";
-
 type ExprKind = Expr["kind"];
-
 /**
  * The members of Expr that have the kind `K`. A member that has several kinds
  * belongs to each of its kinds.
@@ -17,7 +14,6 @@ type ExprKind = Expr["kind"];
 export type ExprOf<K extends ExprKind> = Expr extends infer E
   ? E extends Expr ? K extends E["kind"] ? E : never : never
   : never;
-
 /**
  * How the emitter treats a kind.
  * - `leaf`: an Effect operation. The emitter prints it with `leaf`, after it
@@ -28,8 +24,7 @@ export type ExprOf<K extends ExprKind> = Expr extends infer E
  *   parts.
  */
 type LeafRule = "leaf" | "call" | "structural";
-
-interface Shape<E extends Expr> {
+type Shape<E extends Expr> = {
   /**
    * The sub-expressions that the node evaluates when it runs, in order. A leaf
    * evaluates them before it runs.
@@ -42,21 +37,52 @@ interface Shape<E extends Expr> {
    */
   readonly deferred?: (e: E) => readonly Expr[];
   readonly leaf: LeafRule;
-}
-
-type ShapeTable = { readonly [K in ExprKind]: Shape<ExprOf<K>> };
-
+};
+export type LeafKind =
+  | "run"
+  | "scoped"
+  | "fork-scoped"
+  | "with-resource"
+  | "run-stream"
+  | "make-ref"
+  | "get-ref"
+  | "set-ref"
+  | "update-ref"
+  | "retry-with-schedule"
+  | "schema-decode"
+  | "schema-encode"
+  | "schema-make"
+  | "perform"
+  | "fail"
+  | "catch"
+  | "ensure"
+  | "retry"
+  | "timeout"
+  | "repeat"
+  | "sleep"
+  | "now"
+  | "log"
+  | "random"
+  | "random-int"
+  | "uninterruptible"
+  | "provide";
+type ShapeTable = {
+  readonly [K in ExprKind]: Shape<ExprOf<K>> & {
+    readonly leaf: K extends LeafKind ? "leaf" : Exclude<LeafRule, "leaf">;
+  };
+};
 /**
  * An operand that a builtin runs later, such as a job, still runs its own
  * expression first when that expression has effects. `retry(make(), ...)` calls
  * `make` once, before `retry` starts. The effectful operands are evaluated
  * children, and the pure operands stay deferred.
  */
-const effectful = (operands: readonly Expr[]): Expr[] =>
-  operands.filter((x) => x.execution === "effect");
-const pure = (operands: readonly Expr[]): Expr[] =>
-  operands.filter((x) => x.execution !== "effect");
-
+function effectful(operands: readonly Expr[]): Expr[] {
+  return operands.filter((x) => x.execution === "effect");
+}
+function pure(operands: readonly Expr[]): Expr[] {
+  return operands.filter((x) => x.execution !== "effect");
+}
 /**
  * The emitted value of each operand that the table hoists, in operand order,
  * and undefined for an operand that stays deferred. `children` holds the
@@ -67,23 +93,29 @@ export function hoistedOperands(
   children: readonly Emitted[],
 ): (Emitted | undefined)[] {
   let next = 0;
-  return operands.map((x) =>
-    x.execution === "effect" ? children[next++] : undefined
-  );
+  const hoisted: (Emitted | undefined)[] = [];
+  for (const operand of operands) {
+    if (operand.execution === "effect") {
+      hoisted[hoisted.length] = children[next];
+      next = next + 1;
+    } else {
+      hoisted[hoisted.length] = undefined;
+    }
+  }
+  return hoisted;
 }
-
 /** Whether `e` reads a function that exists already: a name, a field of a stable value, or a block with only that value. Evaluating it more than once does no work. */
-export function isStableValue(e: Expr): boolean {
+export type Stability = boolean;
+export function isStableValue(e: Expr): Stability {
   return e.kind === "reference" || e.kind === "closure" ||
     (e.kind === "get" && isStableValue(e.record)) ||
     (e.kind === "block" && e.steps.length === 0 && isStableValue(e.result));
 }
-
 /** The operands of `repeat` in source order: the job, then the options when present. */
-export const repeatOperands = (e: ExprOf<"repeat">): Expr[] =>
-  e.options === null ? [e.job] : [e.job, e.options];
-
-const ROWS = {
+export function repeatOperands(e: ExprOf<"repeat">): Expr[] {
+  return e.options === null ? [e.job] : [e.job, e.options];
+}
+const SHAPE_ROWS: ShapeTable = {
   literal: { children: () => [], leaf: "structural" },
   null: { children: () => [], leaf: "structural" },
   reference: { children: () => [], leaf: "structural" },
@@ -213,40 +245,32 @@ const ROWS = {
     leaf: "leaf",
   },
   binary: { children: (e) => [e.left, e.right], leaf: "structural" },
-} as const satisfies ShapeTable;
-
-export type LeafKind = {
-  readonly [K in ExprKind]: (typeof ROWS)[K]["leaf"] extends "leaf" ? K
-    : never;
-}[ExprKind];
-
+};
 /**
  * `K` itself, when the table marks every member of `K` as `leaf`. A family
  * names its leaf kinds with it, so a name that the table does not mark as a
  * leaf is a type error.
  */
 export type LeafOf<K extends LeafKind> = K;
-
 /** The expressions that the emitter always prints as leaf effects. */
 type LeafExpr = ExprOf<LeafKind>;
-
-const TABLE: ShapeTable = ROWS;
-
+const TABLE: ShapeTable = SHAPE_ROWS;
 function rowChildren<K extends ExprKind>(kind: K, expr: ExprOf<K>): Expr[] {
   const row = TABLE[kind];
-  return [...row.children(expr), ...(row.deferred?.(expr) ?? [])];
+  const deferred = row.deferred;
+  return [
+    ...row.children(expr),
+    ...(deferred === undefined ? [] : deferred(expr)),
+  ];
 }
-
 function rowEvaluated<K extends ExprKind>(kind: K, expr: ExprOf<K>): Expr[] {
   const row = TABLE[kind];
   return row.leaf === "structural" ? [] : [...row.children(expr)];
 }
-
 /** The direct sub-expressions of `expr`, in evaluation order. */
 export function childrenOf(expr: Expr): Expr[] {
   return rowChildren(expr.kind, expr);
 }
-
 /**
  * The children that a leaf, or a call, evaluates before it runs, in source
  * order. A structural node has none: the emitter prints its parts itself.
@@ -254,7 +278,6 @@ export function childrenOf(expr: Expr): Expr[] {
 export function evaluatedChildren(expr: Expr): Expr[] {
   return rowEvaluated(expr.kind, expr);
 }
-
 /** True when the table marks the kind as a leaf. A call is not one: see `LeafRule`. */
 export function isLeafExpr(expr: Expr): expr is LeafExpr {
   return TABLE[expr.kind].leaf === "leaf";

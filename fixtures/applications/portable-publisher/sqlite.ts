@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { DatabaseSync } from "node:sqlite";
 import { Effect, type Layer, Option } from "effect";
 import { type PlatformBackend, platformLayer } from "./backend.ts";

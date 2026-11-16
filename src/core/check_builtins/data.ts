@@ -6,29 +6,43 @@
 // `int` elsewhere.
 
 import { combine } from "../effect_set.ts";
+import type { DiagnosticCode } from "../diagnostics.ts";
 import type { BuiltinInstanceName } from "../ids.ts";
-import { CLOSED_UNIT_IDS } from "../ir.ts";
+import { isClosedUnitId } from "../ir.ts";
 import type { NodeId } from "../syntax.ts";
-import type { NodeInfo } from "../tables.ts";
+import type { NodeFact, NodeInfo } from "../tables.ts";
 import { functionTypeToIr } from "../type_ir.ts";
 import { showType, showTypes } from "../type_show.ts";
 import type { TypeRef, TypeTable } from "../types.ts";
-import type { Arg, BuiltinContext, FactWriter } from "./context.ts";
+import type { Arg, BuiltinContext } from "./context.ts";
 import { piped, type PreludeCallName, type Rows } from "./rows.ts";
 
-export interface DataContext extends
-  Pick<
+export type DataContext =
+  & Pick<
     BuiltinContext,
-    "table" | "argInfo" | "assignable" | "finish" | "fits" | "report"
-  >,
-  FactWriter {}
+    | "table"
+    | "argInfo"
+    | "assignable"
+    | "finish"
+    | "fits"
+  >
+  & {
+    checkFit(
+      node: NodeId,
+      found: TypeRef,
+      expected: TypeRef | undefined,
+      what: string,
+    ): DataContext;
+    report(code: DiagnosticCode, message: string, node: NodeId): DataContext;
+    fact(node: NodeId, fact: NodeFact): DataContext;
+  };
 
 /** The builtins that take plain numbers and give an `int`. */
 type DataName = "div" | "trunc" | "floor" | "round" | "ceil";
 
 function isClosedUnit(table: TypeTable, ref: TypeRef): boolean {
   const node = table.node(table.unfoldTransparent(ref));
-  return node.kind === "named" && CLOSED_UNIT_IDS.has(node.id);
+  return node.kind === "named" && isClosedUnitId(node.id);
 }
 
 /** Records the closed function type of a builtin instance and gives the call its result. */
@@ -43,14 +57,14 @@ function instanceCall(
   const table = c.table;
   const specialized = table.function({
     execution: "pure",
-    parameters,
-    result,
+    parameters: parameters,
+    result: result,
     failures: [],
     requirements: [],
   });
-  c.fact(node, {
+  c = c.fact(node, {
     kind: "builtin",
-    name,
+    name: name,
     ir: functionTypeToIr(table, specialized),
   });
   return c.finish(node, result, combine(infos));
@@ -67,13 +81,17 @@ function dataCall(
   const infos = args.map((arg, i) => {
     const info = c.argInfo(arg, parameters[i]);
     if (isClosedUnit(table, info.type)) {
-      const [found, expected] = showTypes(table, info.type, parameters[i]);
-      c.report(
+      const shown = showTypes(table, [info.type, parameters[i]]);
+      const found = shown[0];
+      const expected = shown[1];
+      c = c.report(
         "type-mismatch/003",
         `the argument has type ${found}, but ${expected} is expected`,
         arg.node,
       );
-    } else c.fits(arg.node, info.type, parameters[i], "the argument");
+    } else {
+      c = c.checkFit(arg.node, info.type, parameters[i], "the argument");
+    }
     return info;
   });
   return instanceCall(c, node, name, parameters, table.int, infos);
@@ -86,15 +104,17 @@ function dataCall(
  */
 function textCall(c: DataContext, node: NodeId, arg: Arg): NodeInfo {
   const table = c.table;
-  const info = c.argInfo(arg);
-  const parameter = !isClosedUnit(table, info.type) &&
-      c.assignable(info.type, table.number)
-    ? table.number
-    : c.assignable(info.type, table.boolean)
-    ? table.boolean
-    : undefined;
+  const info = c.argInfo(arg, undefined);
+  let parameter: TypeRef | undefined;
+  if (
+    !isClosedUnit(table, info.type) && c.assignable(info.type, table.number)
+  ) {
+    parameter = table.number;
+  } else if (c.assignable(info.type, table.boolean)) {
+    parameter = table.boolean;
+  }
   if (parameter === undefined) {
-    c.report(
+    c = c.report(
       "type-mismatch/003",
       `the argument has type ${
         showType(table, info.type)
@@ -120,16 +140,18 @@ function textCall(c: DataContext, node: NodeId, arg: Arg): NodeInfo {
  */
 function lenCall(c: DataContext, node: NodeId, arg: Arg): NodeInfo {
   const table = c.table;
-  const info = c.argInfo(arg);
+  const info = c.argInfo(arg, undefined);
   const unfolded = table.unfold(info.type);
-  const parameter = table.node(unfolded).kind === "array" &&
-      c.assignable(info.type, unfolded)
-    ? unfolded
-    : c.assignable(info.type, table.string)
-    ? table.string
-    : undefined;
+  let parameter: TypeRef | undefined;
+  if (
+    table.node(unfolded).kind === "array" && c.assignable(info.type, unfolded)
+  ) {
+    parameter = unfolded;
+  } else if (c.assignable(info.type, table.string)) {
+    parameter = table.string;
+  }
   if (parameter === undefined) {
-    c.report(
+    c = c.report(
       "type-mismatch/003",
       `the argument has type ${
         showType(table, info.type)
@@ -154,7 +176,7 @@ function atCall(
   index: Arg,
 ): NodeInfo {
   const table = c.table;
-  const arrayInfo = c.argInfo(array);
+  const arrayInfo = c.argInfo(array, undefined);
   const unfolded = table.unfold(arrayInfo.type);
   const unfoldedNode = table.node(unfolded);
   const parameter = unfoldedNode.kind === "array" &&
@@ -162,7 +184,7 @@ function atCall(
     ? unfolded
     : undefined;
   if (parameter === undefined) {
-    c.report(
+    c = c.report(
       "type-mismatch/003",
       `the argument has type ${
         showType(table, arrayInfo.type)
@@ -172,13 +194,17 @@ function atCall(
   }
   const indexInfo = c.argInfo(index, table.int);
   if (isClosedUnit(table, indexInfo.type)) {
-    const [found, expected] = showTypes(table, indexInfo.type, table.int);
-    c.report(
+    const shown = showTypes(table, [indexInfo.type, table.int]);
+    const found = shown[0];
+    const expected = shown[1];
+    c = c.report(
       "type-mismatch/003",
       `the argument has type ${found}, but ${expected} is expected`,
       index.node,
     );
-  } else c.fits(index.node, indexInfo.type, table.int, "the argument");
+  } else {
+    c = c.checkFit(index.node, indexInfo.type, table.int, "the argument");
+  }
   const element = unfoldedNode.kind === "array"
     ? unfoldedNode.element
     : table.int;
@@ -192,37 +218,42 @@ function atCall(
   );
 }
 
-export const DATA_ROWS = {
-  div: {
-    prologue: piped(2, "pure"),
-    handle: (c, node, name, args) => dataCall(c, node, name, args),
-  },
-  trunc: {
-    prologue: piped(1, "pure"),
-    handle: (c, node, name, args) => dataCall(c, node, name, args),
-  },
-  floor: {
-    prologue: piped(1, "pure"),
-    handle: (c, node, name, args) => dataCall(c, node, name, args),
-  },
-  round: {
-    prologue: piped(1, "pure"),
-    handle: (c, node, name, args) => dataCall(c, node, name, args),
-  },
-  ceil: {
-    prologue: piped(1, "pure"),
-    handle: (c, node, name, args) => dataCall(c, node, name, args),
-  },
-  text: {
-    prologue: piped(1, "pure"),
-    handle: (c, node, _name, args) => textCall(c, node, args[0]),
-  },
-  len: {
-    prologue: piped(1, "pure"),
-    handle: (c, node, _name, args) => lenCall(c, node, args[0]),
-  },
-  at: {
-    prologue: piped(2, "pure"),
-    handle: (c, node, _name, args) => atCall(c, node, args[0], args[1]),
-  },
-} satisfies Partial<Rows<PreludeCallName, DataContext>>;
+export function dataRows(): Pick<
+  Rows<PreludeCallName, DataContext>,
+  "div" | "trunc" | "floor" | "round" | "ceil" | "text" | "len" | "at"
+> {
+  return {
+    div: {
+      prologue: piped(2, "pure", {}),
+      handle: (c, node, name, args) => dataCall(c, node, name, args),
+    },
+    trunc: {
+      prologue: piped(1, "pure", {}),
+      handle: (c, node, name, args) => dataCall(c, node, name, args),
+    },
+    floor: {
+      prologue: piped(1, "pure", {}),
+      handle: (c, node, name, args) => dataCall(c, node, name, args),
+    },
+    round: {
+      prologue: piped(1, "pure", {}),
+      handle: (c, node, name, args) => dataCall(c, node, name, args),
+    },
+    ceil: {
+      prologue: piped(1, "pure", {}),
+      handle: (c, node, name, args) => dataCall(c, node, name, args),
+    },
+    text: {
+      prologue: piped(1, "pure", {}),
+      handle: (c, node, _name, args) => textCall(c, node, args[0]),
+    },
+    len: {
+      prologue: piped(1, "pure", {}),
+      handle: (c, node, _name, args) => lenCall(c, node, args[0]),
+    },
+    at: {
+      prologue: piped(2, "pure", {}),
+      handle: (c, node, _name, args) => atCall(c, node, args[0], args[1]),
+    },
+  };
+}

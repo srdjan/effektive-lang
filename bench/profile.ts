@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The scale profiles of the harness. `--full` differs from `--quick` only in
 // these numbers: the iteration, step, warm-up, and edit counts and the pairs.
 // The sizes and their declaration counts come from `SIZES` in generate.ts and

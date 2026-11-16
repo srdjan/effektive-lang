@@ -22,6 +22,7 @@ function analysisOf(files: Record<string, string>): Analysis {
     memoryHost({ "effektive.json": "{}", ...files }),
     "",
     Object.keys(files),
+    undefined,
   );
   if (!analyzed.ok) throw new Error(JSON.stringify(analyzed.error));
   return analyzed.value;

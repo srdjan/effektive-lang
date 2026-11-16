@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The disk program of one project: a `Program` that sees the files of the
 // project directory and nothing else. A caller reads the directory, may inspect
 // the difference, and then gives the difference to the program. The CLI session
@@ -27,7 +28,7 @@ export class DiskProgram {
   #known: ReadonlyMap<string, string> = new Map();
 
   constructor(readonly root: string) {
-    this.program = new Program(root);
+    this.program = Program(root);
   }
 
   get known(): ReadonlyMap<string, string> {

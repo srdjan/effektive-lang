@@ -119,7 +119,7 @@ function runPath(
   outputs: TypeScriptOutputs,
 ): void {
   try {
-    const updated = new Program().update({ set: files });
+    const updated = Program(undefined).update({ set: files });
     if (!updated.ok) {
       tally.rejected++;
       return;

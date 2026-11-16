@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The browser side of the playground log. It wraps events in the
 // shared envelope, batches them, and posts them to `POST /log` on `serve.ts`.
 // Logging never changes the page: an error inside the client is swallowed, and

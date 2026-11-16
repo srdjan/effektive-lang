@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Cause, Duration, Effect, Option, Schedule } from "effect";
 import {
   type JobFailure,

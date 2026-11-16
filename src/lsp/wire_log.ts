@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The wire log of the language server: every frame in, every message out, every
 // disk call, and every flush, as events of an `EventLog`. `WireLog` wraps the
 // ports and the frame intake from outside, so the server logic does not change.

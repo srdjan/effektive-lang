@@ -2,7 +2,21 @@
 // specialization uses it, because the core cannot call the
 // asynchronous Web Crypto API. The function returns 64 lowercase hex digits.
 
-const K: Uint32Array = Uint32Array.from([
+import {
+  byteArray,
+  copyBytes,
+  dataView,
+  indices,
+  setUint32,
+  uint32Array,
+  uint32ArrayFrom,
+  utf8Bytes,
+} from "./runtime.ts";
+
+export type HashInput = string;
+export type HashHex = string;
+
+const K: readonly number[] = [
   0x428a2f98,
   0x71374491,
   0xb5c0fbcf,
@@ -67,7 +81,7 @@ const K: Uint32Array = Uint32Array.from([
   0xa4506ceb,
   0xbef9a3f7,
   0xc67178f2,
-]);
+];
 
 function rotateRight(value: number, bits: number): number {
   return (value >>> bits) | (value << (32 - bits));
@@ -77,21 +91,20 @@ function rotateRight(value: number, bits: number): number {
 function pad(bytes: Uint8Array): Uint8Array {
   const length = bytes.length;
   const total = Math.ceil((length + 9) / 64) * 64;
-  const padded = new Uint8Array(total);
-  padded.set(bytes);
+  const padded = copyBytes(byteArray(total), bytes);
   padded[length] = 0x80;
-  const view = new DataView(padded.buffer);
+  let view = dataView(padded.buffer);
   const bitLength = length * 8;
-  view.setUint32(total - 8, Math.floor(bitLength / 0x100000000));
-  view.setUint32(total - 4, bitLength >>> 0);
+  view = setUint32(view, total - 8, Math.floor(bitLength / 0x100000000));
+  view = setUint32(view, total - 4, bitLength >>> 0);
   return padded;
 }
 
 /** SHA-256 of the UTF-8 encoding of `text`, as 64 lowercase hex digits. */
-export function sha256Hex(text: string): string {
-  const padded = pad(new TextEncoder().encode(text));
-  const view = new DataView(padded.buffer);
-  const state = Uint32Array.from([
+export function sha256Hex(text: HashInput): HashHex {
+  const padded = pad(utf8Bytes(text));
+  const view = dataView(padded.buffer);
+  const state = uint32ArrayFrom([
     0x6a09e667,
     0xbb67ae85,
     0x3c6ef372,
@@ -101,18 +114,29 @@ export function sha256Hex(text: string): string {
     0x1f83d9ab,
     0x5be0cd19,
   ]);
-  const w = new Uint32Array(64);
-  for (let offset = 0; offset < padded.length; offset += 64) {
-    for (let i = 0; i < 16; i++) w[i] = view.getUint32(offset + i * 4);
-    for (let i = 16; i < 64; i++) {
+  const w = uint32Array(64);
+  for (const block of indices(padded.length / 64)) {
+    const offset = block * 64;
+    for (const i of indices(16)) {
+      w[i] = view.getUint32(offset + i * 4);
+    }
+    for (const shifted of indices(48)) {
+      const i = shifted + 16;
       const s0 = rotateRight(w[i - 15], 7) ^ rotateRight(w[i - 15], 18) ^
         (w[i - 15] >>> 3);
       const s1 = rotateRight(w[i - 2], 17) ^ rotateRight(w[i - 2], 19) ^
         (w[i - 2] >>> 10);
       w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
     }
-    let [a, b, c, d, e, f, g, h] = state;
-    for (let i = 0; i < 64; i++) {
+    let a = state[0];
+    let b = state[1];
+    let c = state[2];
+    let d = state[3];
+    let e = state[4];
+    let f = state[5];
+    let g = state[6];
+    let h = state[7];
+    for (const i of indices(64)) {
       const s1 = rotateRight(e, 6) ^ rotateRight(e, 11) ^ rotateRight(e, 25);
       const choice = (e & f) ^ (~e & g);
       const t1 = (h + s1 + choice + K[i] + w[i]) >>> 0;

@@ -1,37 +1,40 @@
 import type { Term } from "./predicates.ts";
+import { mapFrom } from "./runtime.ts";
 
 /** One term of a linear integer expression with its non-zero or zero coefficient. */
-interface LinearTerm {
+type LinearTerm = {
   readonly term: Term;
   readonly coefficient: bigint;
-}
+};
 
 /** A sum of terms plus an integer offset. The caller chooses the key of each term. */
-export interface Linear {
+export type Linear = {
   readonly terms: ReadonlyMap<string, LinearTerm>;
   readonly offset: bigint;
-}
+};
 
 /** Returns `left + scale * right`. Terms with equal keys merge. */
 export function addLinear(left: Linear, right: Linear, scale: bigint): Linear {
-  const terms = new Map(left.terms);
-  for (const [key, item] of right.terms) {
-    terms.set(key, {
+  let terms = mapFrom(left.terms);
+  for (const entry of right.terms) {
+    const key = entry[0];
+    const item = entry[1];
+    terms = terms.set(key, {
       term: item.term,
       coefficient: (terms.get(key)?.coefficient ?? 0n) +
         item.coefficient * scale,
     });
   }
-  return { terms, offset: left.offset + right.offset * scale };
+  return { terms: terms, offset: left.offset + right.offset * scale };
 }
 
 /** The two terms of a difference constraint `positive - negative`. */
-interface DifferenceShape {
+type DifferenceShape = {
   readonly positive: Term;
   readonly negative: Term;
   /** True when the expression has no term with a non-zero coefficient. */
   readonly constant: boolean;
-}
+};
 
 /**
  * Reads a linear expression as a difference constraint. An expression has this shape when at

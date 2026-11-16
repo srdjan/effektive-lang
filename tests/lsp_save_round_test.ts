@@ -72,7 +72,7 @@ function oracle(h: Harness, skip = ""): Map<string, string> {
     const path = full.slice(ROOT.length + 1);
     if (isWorkspaceInput(path)) set.set(path, text);
   }
-  const updated = new Program(ROOT).update({ set });
+  const updated = Program(ROOT).update({ set });
   assert(updated.ok);
   const revision = updated.value;
   const outputs = new Map<string, string>();

@@ -3,74 +3,192 @@
 // Newline tokens are significant. The parser decides where they separate items.
 
 import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
+import { byteArrayFrom, indices, setFrom, uint32ArrayFrom } from "./runtime.ts";
 
-export enum TokenKind {
-  Eof,
-  Newline,
-  Ident,
-  KwImport,
-  KwExport,
-  KwConst,
-  KwMatch,
-  KwTry,
-  KwCatch,
-  KwIf,
-  KwElse,
-  KwTrue,
-  KwFalse,
-  KwNull,
-  String,
-  Number,
-  LParen,
-  RParen,
-  LBrace,
-  RBrace,
-  LBracket,
-  RBracket,
-  Comma,
-  Colon,
-  Semicolon,
-  Dot,
-  DotDotDot,
-  Question,
-  Eq,
-  Arrow,
-  EqEqEq,
-  BangEqEq,
-  Lt,
-  LtEq,
-  Gt,
-  GtEq,
-  AmpAmp,
-  PipePipe,
-  Pipe,
-  PipeGt,
-  Plus,
-  Minus,
-  Star,
-  Slash,
-  Bang,
-  /** A character or sequence that the language does not use. The lexer reported it. */
-  Unknown,
-  QuestionQuestion,
-  KwFinally,
-  KwWith,
-  Percent,
-}
+const FOUR_STEPS: readonly number[] = [0, 1, 2, 3];
 
-export enum TriviaKind {
-  Whitespace,
-  LineComment,
-  BlockComment,
-}
+type TokenKinds = {
+  readonly Eof: 0;
+  readonly Newline: 1;
+  readonly Ident: 2;
+  readonly KwImport: 3;
+  readonly KwExport: 4;
+  readonly KwConst: 5;
+  readonly KwMatch: 6;
+  readonly KwTry: 7;
+  readonly KwCatch: 8;
+  readonly KwIf: 9;
+  readonly KwElse: 10;
+  readonly KwTrue: 11;
+  readonly KwFalse: 12;
+  readonly KwNull: 13;
+  readonly String: 14;
+  readonly Number: 15;
+  readonly LParen: 16;
+  readonly RParen: 17;
+  readonly LBrace: 18;
+  readonly RBrace: 19;
+  readonly LBracket: 20;
+  readonly RBracket: 21;
+  readonly Comma: 22;
+  readonly Colon: 23;
+  readonly Semicolon: 24;
+  readonly Dot: 25;
+  readonly DotDotDot: 26;
+  readonly Question: 27;
+  readonly Eq: 28;
+  readonly Arrow: 29;
+  readonly EqEqEq: 30;
+  readonly BangEqEq: 31;
+  readonly Lt: 32;
+  readonly LtEq: 33;
+  readonly Gt: 34;
+  readonly GtEq: 35;
+  readonly AmpAmp: 36;
+  readonly PipePipe: 37;
+  readonly Pipe: 38;
+  readonly PipeGt: 39;
+  readonly Plus: 40;
+  readonly Minus: 41;
+  readonly Star: 42;
+  readonly Slash: 43;
+  readonly Bang: 44;
+  readonly Unknown: 45;
+  readonly QuestionQuestion: 46;
+  readonly KwFinally: 47;
+  readonly KwWith: 48;
+  readonly Percent: 49;
+};
 
-interface TriviaTable {
+export type TokenKind = TokenKinds[keyof TokenKinds];
+
+export const TokenKind: TokenKinds = {
+  Eof: 0,
+  Newline: 1,
+  Ident: 2,
+  KwImport: 3,
+  KwExport: 4,
+  KwConst: 5,
+  KwMatch: 6,
+  KwTry: 7,
+  KwCatch: 8,
+  KwIf: 9,
+  KwElse: 10,
+  KwTrue: 11,
+  KwFalse: 12,
+  KwNull: 13,
+  String: 14,
+  Number: 15,
+  LParen: 16,
+  RParen: 17,
+  LBrace: 18,
+  RBrace: 19,
+  LBracket: 20,
+  RBracket: 21,
+  Comma: 22,
+  Colon: 23,
+  Semicolon: 24,
+  Dot: 25,
+  DotDotDot: 26,
+  Question: 27,
+  Eq: 28,
+  Arrow: 29,
+  EqEqEq: 30,
+  BangEqEq: 31,
+  Lt: 32,
+  LtEq: 33,
+  Gt: 34,
+  GtEq: 35,
+  AmpAmp: 36,
+  PipePipe: 37,
+  Pipe: 38,
+  PipeGt: 39,
+  Plus: 40,
+  Minus: 41,
+  Star: 42,
+  Slash: 43,
+  Bang: 44,
+  Unknown: 45,
+  QuestionQuestion: 46,
+  KwFinally: 47,
+  KwWith: 48,
+  Percent: 49,
+};
+
+const TOKEN_KINDS: readonly TokenKind[] = [
+  TokenKind.Eof,
+  TokenKind.Newline,
+  TokenKind.Ident,
+  TokenKind.KwImport,
+  TokenKind.KwExport,
+  TokenKind.KwConst,
+  TokenKind.KwMatch,
+  TokenKind.KwTry,
+  TokenKind.KwCatch,
+  TokenKind.KwIf,
+  TokenKind.KwElse,
+  TokenKind.KwTrue,
+  TokenKind.KwFalse,
+  TokenKind.KwNull,
+  TokenKind.String,
+  TokenKind.Number,
+  TokenKind.LParen,
+  TokenKind.RParen,
+  TokenKind.LBrace,
+  TokenKind.RBrace,
+  TokenKind.LBracket,
+  TokenKind.RBracket,
+  TokenKind.Comma,
+  TokenKind.Colon,
+  TokenKind.Semicolon,
+  TokenKind.Dot,
+  TokenKind.DotDotDot,
+  TokenKind.Question,
+  TokenKind.Eq,
+  TokenKind.Arrow,
+  TokenKind.EqEqEq,
+  TokenKind.BangEqEq,
+  TokenKind.Lt,
+  TokenKind.LtEq,
+  TokenKind.Gt,
+  TokenKind.GtEq,
+  TokenKind.AmpAmp,
+  TokenKind.PipePipe,
+  TokenKind.Pipe,
+  TokenKind.PipeGt,
+  TokenKind.Plus,
+  TokenKind.Minus,
+  TokenKind.Star,
+  TokenKind.Slash,
+  TokenKind.Bang,
+  TokenKind.Unknown,
+  TokenKind.QuestionQuestion,
+  TokenKind.KwFinally,
+  TokenKind.KwWith,
+  TokenKind.Percent,
+];
+
+type TriviaKinds = {
+  readonly Whitespace: 0;
+  readonly LineComment: 1;
+  readonly BlockComment: 2;
+};
+
+export type TriviaKind = TriviaKinds[keyof TriviaKinds];
+
+export const TriviaKind: TriviaKinds = {
+  Whitespace: 0,
+  LineComment: 1,
+  BlockComment: 2,
+};
+
+type TriviaTable = {
   readonly kinds: Uint8Array;
   readonly starts: Uint32Array;
   readonly ends: Uint32Array;
-}
+};
 
-export interface Lexed {
+export type Lexed = {
   readonly text: string;
   /** Number of tokens, including the final Eof token. */
   readonly count: number;
@@ -85,41 +203,82 @@ export interface Lexed {
    */
   readonly triviaEnd: Uint32Array;
   readonly diagnostics: readonly Diagnostic[];
+};
+
+export type LexerText = string;
+export type LexerStatus = boolean;
+export type TokenDescription = string;
+export type LexerNumber = number;
+
+/** Narrows one compact token-array value to its stable token kind. */
+export function tokenKind(value: LexerNumber): TokenKind | undefined {
+  return TOKEN_KINDS[value];
 }
 
-export const KEYWORDS: ReadonlyMap<string, TokenKind> = new Map([
-  ["import", TokenKind.KwImport],
-  ["export", TokenKind.KwExport],
-  ["const", TokenKind.KwConst],
-  ["match", TokenKind.KwMatch],
-  ["try", TokenKind.KwTry],
-  ["catch", TokenKind.KwCatch],
-  ["if", TokenKind.KwIf],
-  ["else", TokenKind.KwElse],
-  ["true", TokenKind.KwTrue],
-  ["false", TokenKind.KwFalse],
-  ["null", TokenKind.KwNull],
-  ["finally", TokenKind.KwFinally],
-  ["with", TokenKind.KwWith],
-]);
+const KEYWORD_WORDS: readonly LexerText[] = [
+  "import",
+  "export",
+  "const",
+  "match",
+  "try",
+  "catch",
+  "if",
+  "else",
+  "true",
+  "false",
+  "null",
+  "finally",
+  "with",
+];
 
-/** The token kinds of the keyword table. The order of the enum does not matter. */
-const KEYWORD_KINDS: ReadonlySet<TokenKind> = new Set(KEYWORDS.values());
+function keywordKind(word: LexerText): TokenKind | undefined {
+  if (word === "import") return TokenKind.KwImport;
+  if (word === "export") return TokenKind.KwExport;
+  if (word === "const") return TokenKind.KwConst;
+  if (word === "match") return TokenKind.KwMatch;
+  if (word === "try") return TokenKind.KwTry;
+  if (word === "catch") return TokenKind.KwCatch;
+  if (word === "if") return TokenKind.KwIf;
+  if (word === "else") return TokenKind.KwElse;
+  if (word === "true") return TokenKind.KwTrue;
+  if (word === "false") return TokenKind.KwFalse;
+  if (word === "null") return TokenKind.KwNull;
+  if (word === "finally") return TokenKind.KwFinally;
+  if (word === "with") return TokenKind.KwWith;
+  return undefined;
+}
 
-export function isKeywordKind(kind: TokenKind): boolean {
-  return KEYWORD_KINDS.has(kind);
+function keywordWords(): IterableIterator<LexerText> {
+  return KEYWORD_WORDS.values();
+}
+
+type KeywordTable = {
+  readonly get: (word: LexerText) => TokenKind | undefined;
+  readonly keys: () => IterableIterator<LexerText>;
+};
+
+/** The fixed keyword lookup. */
+export const KEYWORDS: KeywordTable = {
+  get: keywordKind,
+  keys: keywordWords,
+};
+
+export function isKeywordKind(kind: LexerNumber | undefined): LexerStatus {
+  return kind !== undefined &&
+    ((kind >= TokenKind.KwImport && kind <= TokenKind.KwNull) ||
+      kind === TokenKind.KwFinally || kind === TokenKind.KwWith);
 }
 
 /** Whether the name `word` is the keyword `from`: only a string literal, the module path, follows it. */
 export function isFromKeyword(
-  word: string,
+  word: LexerText,
   next: TokenKind | undefined,
-): boolean {
+): LexerStatus {
   return word === "from" && next === TokenKind.String;
 }
 
 /** The token kinds that the editors color as operators. The order of the enum does not matter. */
-export const OPERATOR_KINDS: ReadonlySet<TokenKind> = new Set([
+const OPERATOR_KIND_VALUES: readonly TokenKind[] = [
   TokenKind.Eq,
   TokenKind.QuestionQuestion,
   TokenKind.Arrow,
@@ -139,7 +298,18 @@ export const OPERATOR_KINDS: ReadonlySet<TokenKind> = new Set([
   TokenKind.Slash,
   TokenKind.Percent,
   TokenKind.Bang,
-]);
+];
+
+function hasOperatorKind(kind: TokenKind): LexerStatus {
+  return OPERATOR_KIND_VALUES.includes(kind);
+}
+
+type OperatorKinds = {
+  readonly has: (kind: TokenKind) => LexerStatus;
+};
+
+/** Fixed token kinds that editors color as operators. */
+export const OPERATOR_KINDS: OperatorKinds = { has: hasOperatorKind };
 
 /**
  * How a contextual word is used. The lexer reads each of these words as a name.
@@ -163,12 +333,29 @@ type ContextualRole =
   | "positional"
   | "import";
 
-interface ContextualWordInfo {
+type ContextualWordInfo = {
   readonly role: ContextualRole;
   readonly startsDeclaration: boolean;
-}
+};
 
-const CONTEXTUAL_WORDS = {
+type ContextualWords = {
+  readonly type: ContextualWordInfo;
+  readonly error: ContextualWordInfo;
+  readonly service: ContextualWordInfo;
+  readonly provider: ContextualWordInfo;
+  readonly sealed: ContextualWordInfo;
+  readonly opaque: ContextualWordInfo;
+  readonly borrow: ContextualWordInfo;
+  readonly pure: ContextualWordInfo;
+  readonly fails: ContextualWordInfo;
+  readonly provides: ContextualWordInfo;
+  readonly where: ContextualWordInfo;
+  readonly using: ContextualWordInfo;
+  readonly from: ContextualWordInfo;
+  readonly imports: ContextualWordInfo;
+};
+
+const CONTEXTUAL_WORDS: ContextualWords = {
   type: { role: "declaration", startsDeclaration: true },
   error: { role: "declaration", startsDeclaration: true },
   service: { role: "declaration", startsDeclaration: true },
@@ -183,44 +370,63 @@ const CONTEXTUAL_WORDS = {
   using: { role: "positional", startsDeclaration: false },
   from: { role: "import", startsDeclaration: false },
   imports: { role: "import", startsDeclaration: false },
-} as const satisfies Readonly<Record<string, ContextualWordInfo>>;
+};
 
 export type ContextualWord = keyof typeof CONTEXTUAL_WORDS;
 
-const CONTEXTUAL_ENTRIES = Object.entries(CONTEXTUAL_WORDS) as readonly (
+const CONTEXTUAL_ENTRIES: readonly (
   readonly [ContextualWord, ContextualWordInfo]
-)[];
+)[] = [
+  ["type", CONTEXTUAL_WORDS.type],
+  ["error", CONTEXTUAL_WORDS.error],
+  ["service", CONTEXTUAL_WORDS.service],
+  ["provider", CONTEXTUAL_WORDS.provider],
+  ["sealed", CONTEXTUAL_WORDS.sealed],
+  ["opaque", CONTEXTUAL_WORDS.opaque],
+  ["borrow", CONTEXTUAL_WORDS.borrow],
+  ["pure", CONTEXTUAL_WORDS.pure],
+  ["fails", CONTEXTUAL_WORDS.fails],
+  ["provides", CONTEXTUAL_WORDS.provides],
+  ["where", CONTEXTUAL_WORDS.where],
+  ["using", CONTEXTUAL_WORDS.using],
+  ["from", CONTEXTUAL_WORDS.from],
+  ["imports", CONTEXTUAL_WORDS.imports],
+];
 
 /** The contextual words that have one of `roles`, in table order. */
 export function contextualWordsOf(
-  ...roles: readonly ContextualRole[]
-): ReadonlySet<string> {
-  return new Set(
-    CONTEXTUAL_ENTRIES.filter(([, info]) => roles.includes(info.role))
-      .map(([word]) => word),
-  );
+  roles: readonly ContextualRole[],
+): ReadonlySet<LexerText> {
+  const words: LexerText[] = [];
+  for (const entry of CONTEXTUAL_ENTRIES) {
+    const word = entry[0];
+    const info = entry[1];
+    if (roles.includes(info.role)) words[words.length] = word;
+  }
+  return setFrom(words);
 }
 
 /** The words that can start a declaration when a name follows. */
-const DECLARATION_START_WORDS: ReadonlySet<string> = new Set(
-  CONTEXTUAL_ENTRIES.filter(([, info]) => info.startsDeclaration)
-    .map(([word]) => word),
-);
-
-const DECLARATION_START_LENGTHS = [...DECLARATION_START_WORDS].map((word) =>
-  word.length
-);
-const DECLARATION_START_MIN = Math.min(...DECLARATION_START_LENGTHS);
-const DECLARATION_START_MAX = Math.max(...DECLARATION_START_LENGTHS);
+const DECLARATION_START_WORDS: readonly LexerText[] = [
+  "type",
+  "error",
+  "service",
+  "provider",
+  "sealed",
+  "opaque",
+];
 
 /** True when token `index` is an identifier that spells a declaration start word. */
-export function isDeclarationStartWord(lexed: Lexed, index: number): boolean {
+export function isDeclarationStartWord(
+  lexed: Lexed,
+  index: LexerNumber,
+): LexerStatus {
   if (lexed.kinds[index] !== TokenKind.Ident) return false;
   const length = lexed.ends[index] - lexed.starts[index];
-  if (length < DECLARATION_START_MIN || length > DECLARATION_START_MAX) {
+  if (length < 4 || length > 8) {
     return false;
   }
-  return DECLARATION_START_WORDS.has(
+  return DECLARATION_START_WORDS.includes(
     lexed.text.slice(lexed.starts[index], lexed.ends[index]),
   );
 }
@@ -232,13 +438,14 @@ export function isDeclarationStartWord(lexed: Lexed, index: number): boolean {
  * `while` stays valid as a record label (the `retry` option): the lexer skips
  * both and the parser checks them in the other positions.
  */
-export const PARSER_CHECKED_WORDS = ["void", "while"] as const;
+export type ParserCheckedWord = "void" | "while";
 
-export type ParserCheckedWord = typeof PARSER_CHECKED_WORDS[number];
+export const PARSER_CHECKED_WORDS: readonly ParserCheckedWord[] = [
+  "void",
+  "while",
+];
 
-const PARSER_CHECKED_SET: ReadonlySet<string> = new Set(PARSER_CHECKED_WORDS);
-
-const RESERVED_WORDS: ReadonlySet<string> = new Set([
+const RESERVED_WORDS: readonly LexerText[] = [
   "break",
   "case",
   "class",
@@ -276,99 +483,113 @@ const RESERVED_WORDS: ReadonlySet<string> = new Set([
   "await",
   "arguments",
   "eval",
-]);
+];
 
-const TOKEN_NAMES: Readonly<Record<TokenKind, string>> = {
-  [TokenKind.Eof]: "end of file",
-  [TokenKind.Newline]: "end of line",
-  [TokenKind.Ident]: "name",
-  [TokenKind.String]: "string",
-  [TokenKind.Number]: "number",
-  [TokenKind.LParen]: "`(`",
-  [TokenKind.RParen]: "`)`",
-  [TokenKind.LBrace]: "`{`",
-  [TokenKind.RBrace]: "`}`",
-  [TokenKind.LBracket]: "`[`",
-  [TokenKind.RBracket]: "`]`",
-  [TokenKind.Comma]: "`,`",
-  [TokenKind.Colon]: "`:`",
-  [TokenKind.Semicolon]: "`;`",
-  [TokenKind.Dot]: "`.`",
-  [TokenKind.DotDotDot]: "`...`",
-  [TokenKind.Question]: "`?`",
-  [TokenKind.QuestionQuestion]: "`??`",
-  [TokenKind.KwFinally]: "`finally`",
-  [TokenKind.KwWith]: "`with`",
-  [TokenKind.Eq]: "`=`",
-  [TokenKind.Arrow]: "`=>`",
-  [TokenKind.EqEqEq]: "`===`",
-  [TokenKind.BangEqEq]: "`!==`",
-  [TokenKind.Lt]: "`<`",
-  [TokenKind.LtEq]: "`<=`",
-  [TokenKind.Gt]: "`>`",
-  [TokenKind.GtEq]: "`>=`",
-  [TokenKind.AmpAmp]: "`&&`",
-  [TokenKind.PipePipe]: "`||`",
-  [TokenKind.Pipe]: "`|`",
-  [TokenKind.PipeGt]: "`|>`",
-  [TokenKind.Plus]: "`+`",
-  [TokenKind.Minus]: "`-`",
-  [TokenKind.Star]: "`*`",
-  [TokenKind.Slash]: "`/`",
-  [TokenKind.Percent]: "`%`",
-  [TokenKind.Bang]: "`!`",
-  [TokenKind.Unknown]: "unknown character",
-  [TokenKind.KwImport]: "`import`",
-  [TokenKind.KwExport]: "`export`",
-  [TokenKind.KwConst]: "`const`",
-  [TokenKind.KwMatch]: "`match`",
-  [TokenKind.KwTry]: "`try`",
-  [TokenKind.KwCatch]: "`catch`",
-  [TokenKind.KwIf]: "`if`",
-  [TokenKind.KwElse]: "`else`",
-  [TokenKind.KwTrue]: "`true`",
-  [TokenKind.KwFalse]: "`false`",
-  [TokenKind.KwNull]: "`null`",
-};
+const TOKEN_NAMES: readonly TokenDescription[] = [
+  "end of file",
+  "end of line",
+  "name",
+  "`import`",
+  "`export`",
+  "`const`",
+  "`match`",
+  "`try`",
+  "`catch`",
+  "`if`",
+  "`else`",
+  "`true`",
+  "`false`",
+  "`null`",
+  "string",
+  "number",
+  "`(`",
+  "`)`",
+  "`{`",
+  "`}`",
+  "`[`",
+  "`]`",
+  "`,`",
+  "`:`",
+  "`;`",
+  "`.`",
+  "`...`",
+  "`?`",
+  "`=`",
+  "`=>`",
+  "`===`",
+  "`!==`",
+  "`<`",
+  "`<=`",
+  "`>`",
+  "`>=`",
+  "`&&`",
+  "`||`",
+  "`|`",
+  "`|>`",
+  "`+`",
+  "`-`",
+  "`*`",
+  "`/`",
+  "`!`",
+  "unknown character",
+  "`??`",
+  "`finally`",
+  "`with`",
+  "`%`",
+];
 
 /** A short name for messages. */
-export function describeTokenKind(kind: TokenKind): string {
+export function describeTokenKind(kind: TokenKind): TokenDescription {
   return TOKEN_NAMES[kind];
 }
 
-export function isWord(lexed: Lexed, index: number, word: string): boolean {
+export function isWord(
+  lexed: Lexed,
+  index: LexerNumber,
+  word: LexerText,
+): LexerStatus {
   return lexed.kinds[index] === TokenKind.Ident &&
     lexed.ends[index] - lexed.starts[index] === word.length &&
     lexed.text.startsWith(word, lexed.starts[index]);
 }
 
-function isIdentStart(c: number): boolean {
+function isIdentStart(c: LexerNumber): LexerStatus {
   return (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) || c === 0x5f ||
     c === 0x24;
 }
 
-function isDigit(c: number): boolean {
+function isDigit(c: LexerNumber): LexerStatus {
   return c >= 0x30 && c <= 0x39;
 }
 
-export function isIdentPart(c: number): boolean {
+export function isIdentPart(c: LexerNumber): LexerStatus {
   return isIdentStart(c) || isDigit(c);
 }
 
 /** True when `text` has the shape of one identifier. */
-export function isIdentifier(text: string): boolean {
+export function isIdentifier(text: LexerText): LexerStatus {
   if (text.length === 0 || !isIdentStart(text.charCodeAt(0))) return false;
-  for (let i = 1; i < text.length; i++) {
-    if (!isIdentPart(text.charCodeAt(i))) return false;
+  let first = true;
+  for (const character of text) {
+    if (first) {
+      first = false;
+      continue;
+    }
+    if (character.length !== 1 || !isIdentPart(character.charCodeAt(0))) {
+      return false;
+    }
   }
   return true;
 }
 
-function isHexDigit(c: number): boolean {
+function isHexDigit(c: LexerNumber): LexerStatus {
   return isDigit(c) || (c >= 0x41 && c <= 0x46) || (c >= 0x61 && c <= 0x66);
 }
 
-function describeChar(text: string, index: number): string {
+function describeChar(
+  text: LexerText,
+  index: LexerNumber,
+): TokenDescription {
   const cp = text.codePointAt(index) ?? 0;
   if (cp < 0x20 || cp === 0x7f || (cp >= 0xd800 && cp <= 0xdfff)) {
     return `U+${cp.toString(16).toUpperCase().padStart(4, "0")}`;
@@ -376,194 +597,345 @@ function describeChar(text: string, index: number): string {
   return `'${String.fromCodePoint(cp)}'`;
 }
 
-type Report = (
+function lexerDiagnostic(
+  source: LexerText,
   code: Parameters<typeof makeDiagnostic>[0],
-  message: string,
-  s: number,
-  e: number,
-) => void;
+  message: TokenDescription,
+  start: LexerNumber,
+  end: LexerNumber,
+): Diagnostic {
+  return makeDiagnostic(code, message, {
+    source: source,
+    start: start,
+    end: end,
+  });
+}
 
-/** Token kind + 1 of each one-character token, by char code. 0 means none. */
-const SINGLE = new Uint8Array(128);
-for (
-  const [ch, kind] of [
-    ["(", TokenKind.LParen],
-    [")", TokenKind.RParen],
-    ["{", TokenKind.LBrace],
-    ["}", TokenKind.RBrace],
-    ["[", TokenKind.LBracket],
-    ["]", TokenKind.RBracket],
-    [",", TokenKind.Comma],
-    [":", TokenKind.Colon],
-    [";", TokenKind.Semicolon],
-    ["+", TokenKind.Plus],
-    ["-", TokenKind.Minus],
-    ["*", TokenKind.Star],
-    ["%", TokenKind.Percent],
-  ] as const
-) SINGLE[ch.charCodeAt(0)] = kind + 1;
+function addDiagnostic(
+  diagnostics: Diagnostic[],
+  source: LexerText,
+  code: Parameters<typeof makeDiagnostic>[0],
+  message: TokenDescription,
+  start: LexerNumber,
+  end: LexerNumber,
+): Diagnostic[] {
+  diagnostics[diagnostics.length] = lexerDiagnostic(
+    source,
+    code,
+    message,
+    start,
+    end,
+  );
+  return diagnostics;
+}
 
-const DURATION_UNIT_MS: Record<string, number> = {
-  ms: 1,
-  s: 1000,
-  m: 60000,
-  h: 3600000,
-};
-const DURATION = /^([0-9]+)(ms|s|m|h)$/;
-const DURATION_UNIT = /(?:ms|s|m|h)(?![A-Za-z0-9_$])/y;
+function singleToken(code: LexerNumber): TokenKind | undefined {
+  if (code === 0x28) return TokenKind.LParen;
+  if (code === 0x29) return TokenKind.RParen;
+  if (code === 0x7b) return TokenKind.LBrace;
+  if (code === 0x7d) return TokenKind.RBrace;
+  if (code === 0x5b) return TokenKind.LBracket;
+  if (code === 0x5d) return TokenKind.RBracket;
+  if (code === 0x2c) return TokenKind.Comma;
+  if (code === 0x3a) return TokenKind.Colon;
+  if (code === 0x3b) return TokenKind.Semicolon;
+  if (code === 0x2b) return TokenKind.Plus;
+  if (code === 0x2d) return TokenKind.Minus;
+  if (code === 0x2a) return TokenKind.Star;
+  if (code === 0x25) return TokenKind.Percent;
+  return undefined;
+}
+
+function durationUnitLength(text: LexerText, index: LexerNumber): LexerNumber {
+  const first = text.charCodeAt(index);
+  const second = text.charCodeAt(index + 1);
+  let length = 0;
+  if (first === 0x6d && second === 0x73) {
+    length = 2;
+  } else if (first === 0x73 || first === 0x6d || first === 0x68) {
+    length = 1;
+  }
+  const after = index + length;
+  return length > 0 &&
+      (after >= text.length || !isIdentPart(text.charCodeAt(after)))
+    ? length
+    : 0;
+}
 
 /** True when the text of a Number token has a duration suffix, such as `5s`. */
-export function isDurationText(text: string): boolean {
-  return DURATION.test(text);
+export function isDurationText(text: LexerText): LexerStatus {
+  if (text.length < 2 || !isDigit(text.charCodeAt(0))) return false;
+  let end = 0;
+  for (const character of text) {
+    if (character.length !== 1 || !isDigit(character.charCodeAt(0))) break;
+    end = end + 1;
+  }
+  const unitLength = durationUnitLength(text, end);
+  return end > 0 && unitLength > 0 && end + unitLength === text.length;
 }
 
 /** The value of a Number token's text. A duration literal such as `5s` becomes milliseconds. */
-export function numberValue(text: string): number {
-  const duration = DURATION.exec(text);
-  return duration === null
-    ? Number(text)
-    : Number(duration[1]) * DURATION_UNIT_MS[duration[2]];
+export function numberValue(text: LexerText): LexerNumber {
+  if (!isDurationText(text)) return Number(text);
+  if (text.endsWith("ms")) return Number(text.slice(0, -2));
+  if (text.endsWith("s")) return Number(text.slice(0, -1)) * 1000;
+  if (text.endsWith("m")) return Number(text.slice(0, -1)) * 60000;
+  return Number(text.slice(0, -1)) * 3600000;
 }
 
-/** Scans a number that starts at `i`. Returns its end. */
-function scanNumber(text: string, i: number, report: Report): number {
-  const n = text.length;
-  let j = i + 1;
-  while (j < n && isDigit(text.charCodeAt(j))) j++;
-  const intEnd = j;
-  let malformed: string | undefined;
-  if (text.charCodeAt(i) === 0x30 && intEnd - i > 1) {
+/** Scans a number that starts at `start`. */
+function scanNumber(
+  source: LexerText,
+  text: LexerText,
+  diagnosticsInput: Diagnostic[],
+  start: LexerNumber,
+): { readonly diagnostics: Diagnostic[]; readonly end: LexerNumber } {
+  const count = text.length;
+  let end = scanDigitEnd(text, start + 1);
+  const integerEnd = end;
+  let malformed: LexerText | undefined;
+  if (text.charCodeAt(start) === 0x30 && integerEnd - start > 1) {
     malformed = "a number cannot have a leading zero";
   }
   if (
-    j + 1 < n && text.charCodeAt(j) === 0x2e &&
-    isDigit(text.charCodeAt(j + 1))
+    end + 1 < count && text.charCodeAt(end) === 0x2e &&
+    isDigit(text.charCodeAt(end + 1))
   ) {
-    j++;
-    while (j < n && isDigit(text.charCodeAt(j))) j++;
+    end = scanDigitEnd(text, end + 1);
   }
-  const ec = j < n ? text.charCodeAt(j) : 0;
-  if (ec === 0x65 || ec === 0x45) {
-    let k = j + 1;
-    if (
-      k < n && (text.charCodeAt(k) === 0x2b || text.charCodeAt(k) === 0x2d)
-    ) k++;
-    if (k < n && isDigit(text.charCodeAt(k))) {
-      while (k < n && isDigit(text.charCodeAt(k))) k++;
-      j = k;
+  const exponent = end < count ? text.charCodeAt(end) : 0;
+  if (exponent === 0x65 || exponent === 0x45) {
+    let exponentEnd = end + 1;
+    const sign = text.charCodeAt(exponentEnd);
+    if (exponentEnd < count && (sign === 0x2b || sign === 0x2d)) {
+      exponentEnd = exponentEnd + 1;
+    }
+    if (exponentEnd < count && isDigit(text.charCodeAt(exponentEnd))) {
+      exponentEnd = scanDigitEnd(text, exponentEnd);
+      end = exponentEnd;
     } else {
       malformed = malformed ?? "the exponent has no digits";
-      j = k;
+      end = exponentEnd;
     }
   }
   let duration = false;
-  if (j === intEnd) {
-    DURATION_UNIT.lastIndex = j;
-    const unit = DURATION_UNIT.exec(text);
-    if (unit !== null) {
-      j += unit[0].length;
+  if (end === integerEnd) {
+    const unitLength = durationUnitLength(text, end);
+    if (unitLength > 0) {
+      end = end + unitLength;
       duration = true;
     }
   }
-  if (j < n && isIdentPart(text.charCodeAt(j))) {
+  if (end < count && isIdentPart(text.charCodeAt(end))) {
     malformed = malformed ?? "a number cannot be followed by letters";
-    while (j < n && isIdentPart(text.charCodeAt(j))) j++;
+    end = scanIdentEnd(text, end);
   }
+  const value = numberValue(text.slice(start, end));
   if (malformed !== undefined) {
-    report("syntax/006", `malformed number: ${malformed}`, i, j);
-  } else if (!Number.isFinite(numberValue(text.slice(i, j)))) {
-    report("syntax/005", "number literal is not a finite value", i, j);
-  } else if (
-    duration && numberValue(text.slice(i, j)) > Number.MAX_SAFE_INTEGER
-  ) {
-    report(
-      "syntax/005",
-      "duration literal exceeds the largest safe integer in milliseconds",
-      i,
-      j,
-    );
+    return {
+      diagnostics: addDiagnostic(
+        diagnosticsInput,
+        source,
+        "syntax/006",
+        `malformed number: ${malformed}`,
+        start,
+        end,
+      ),
+      end: end,
+    };
   }
-  return j;
+  if (!Number.isFinite(value)) {
+    return {
+      diagnostics: addDiagnostic(
+        diagnosticsInput,
+        source,
+        "syntax/005",
+        "number literal is not a finite value",
+        start,
+        end,
+      ),
+      end: end,
+    };
+  }
+  if (duration && value > Number.MAX_SAFE_INTEGER) {
+    return {
+      diagnostics: addDiagnostic(
+        diagnosticsInput,
+        source,
+        "syntax/005",
+        "duration literal exceeds the largest safe integer in milliseconds",
+        start,
+        end,
+      ),
+      end: end,
+    };
+  }
+  return { diagnostics: diagnosticsInput, end: end };
 }
 
-/** Scans the escape at `j` (a backslash) inside a string. Returns the next index. */
-function scanEscape(text: string, j: number, report: Report): number {
-  const n = text.length;
-  const e = j + 1 < n ? text.charCodeAt(j + 1) : -1;
-  if (
-    e === 0x22 || e === 0x5c || e === 0x2f || e === 0x62 ||
-    e === 0x66 || e === 0x6e ||
-    e === 0x72 || e === 0x74
-  ) {
-    return j + 2;
+function scanDigitEnd(text: LexerText, start: LexerNumber): LexerNumber {
+  let end = start;
+  for (const offset of indices(text.length - start)) {
+    const index = start + offset;
+    if (!isDigit(text.charCodeAt(index))) break;
+    end = index + 1;
   }
-  if (e === 0x75) {
-    let k = j + 2;
+  return end;
+}
+
+function scanIdentEnd(text: LexerText, start: LexerNumber): LexerNumber {
+  let end = start;
+  for (const offset of indices(text.length - start)) {
+    const index = start + offset;
+    if (!isIdentPart(text.charCodeAt(index))) break;
+    end = index + 1;
+  }
+  return end;
+}
+
+function lineCommentEnd(text: LexerText, start: LexerNumber): LexerNumber {
+  const lineFeed = text.indexOf("\n", start);
+  const carriageReturn = text.indexOf("\r", start);
+  if (lineFeed < 0) return carriageReturn < 0 ? text.length : carriageReturn;
+  if (carriageReturn < 0) return lineFeed;
+  return Math.min(lineFeed, carriageReturn);
+}
+
+/** Scans the escape at `start` inside a string. */
+function scanEscape(
+  source: LexerText,
+  text: LexerText,
+  diagnosticsInput: Diagnostic[],
+  start: LexerNumber,
+): { readonly diagnostics: Diagnostic[]; readonly end: LexerNumber } {
+  const count = text.length;
+  const escape = start + 1 < count ? text.charCodeAt(start + 1) : -1;
+  if (
+    escape === 0x22 || escape === 0x5c || escape === 0x2f ||
+    escape === 0x62 || escape === 0x66 || escape === 0x6e ||
+    escape === 0x72 || escape === 0x74
+  ) {
+    return { diagnostics: diagnosticsInput, end: start + 2 };
+  }
+  if (escape === 0x75) {
+    let end = start + 2;
     let digits = 0;
-    while (digits < 4 && k < n && isHexDigit(text.charCodeAt(k))) {
-      k++;
-      digits++;
+    for (const offset of FOUR_STEPS) {
+      const index = start + 2 + offset;
+      if (index >= count || !isHexDigit(text.charCodeAt(index))) break;
+      end = index + 1;
+      digits = digits + 1;
     }
     if (digits < 4) {
-      report(
-        "syntax/003",
-        "invalid escape sequence: \\u needs four hex digits",
-        j,
-        k,
-      );
+      return {
+        diagnostics: addDiagnostic(
+          diagnosticsInput,
+          source,
+          "syntax/003",
+          "invalid escape sequence: \\u needs four hex digits",
+          start,
+          end,
+        ),
+        end: end,
+      };
     }
-    return k;
+    return { diagnostics: diagnosticsInput, end: end };
   }
-  if (e === -1 || e === 0x0a || e === 0x0d) {
-    report(
+  if (escape === -1 || escape === 0x0a || escape === 0x0d) {
+    return {
+      diagnostics: addDiagnostic(
+        diagnosticsInput,
+        source,
+        "syntax/003",
+        "invalid escape sequence: backslash at end of line",
+        start,
+        start + 1,
+      ),
+      end: start + 1,
+    };
+  }
+  const width = (text.codePointAt(start + 1) ?? 0) > 0xffff ? 2 : 1;
+  return {
+    diagnostics: addDiagnostic(
+      diagnosticsInput,
+      source,
       "syntax/003",
-      "invalid escape sequence: backslash at end of line",
-      j,
-      j + 1,
-    );
-    return j + 1;
-  }
-  const width = (text.codePointAt(j + 1) ?? 0) > 0xffff ? 2 : 1;
-  report(
-    "syntax/003",
-    `invalid escape sequence: \\${text.slice(j + 1, j + 1 + width)}`,
-    j,
-    j + 1 + width,
-  );
-  return j + 1 + width;
+      `invalid escape sequence: \\${text.slice(start + 1, start + 1 + width)}`,
+      start,
+      start + 1 + width,
+    ),
+    end: start + 1 + width,
+  };
 }
 
-/** Scans a string that starts at `i`. Returns its end. */
-function scanString(text: string, i: number, report: Report): number {
-  const n = text.length;
-  let j = i + 1;
-  while (j < n) {
-    const d = text.charCodeAt(j);
-    if (d === 0x22) return j + 1;
-    if (d === 0x0a || d === 0x0d) break;
-    if (d < 0x20 || d === 0x7f) {
-      report(
+/** Scans a string that starts at `start`. */
+function scanString(
+  source: LexerText,
+  text: LexerText,
+  diagnosticsInput: Diagnostic[],
+  start: LexerNumber,
+): { readonly diagnostics: Diagnostic[]; readonly end: LexerNumber } {
+  let diagnostics = diagnosticsInput;
+  let end = start + 1;
+  for (const offset of indices(text.length - end)) {
+    const index = start + 1 + offset;
+    if (index < end) continue;
+    if (end >= text.length) break;
+    const code = text.charCodeAt(index);
+    if (code === 0x22) {
+      return { diagnostics: diagnostics, end: index + 1 };
+    }
+    if (code === 0x0a || code === 0x0d) break;
+    if (code < 0x20 || code === 0x7f) {
+      diagnostics = addDiagnostic(
+        diagnostics,
+        source,
         "syntax/003",
         `string literal contains the control character ${
-          describeChar(text, j)
+          describeChar(text, index)
         }; use an escape sequence`,
-        j,
-        j + 1,
+        index,
+        index + 1,
       );
-      j++;
-    } else if (d === 0x5c) {
-      j = scanEscape(text, j, report);
+      end = index + 1;
+    } else if (code === 0x5c) {
+      const escaped = scanEscape(source, text, diagnostics, index);
+      diagnostics = escaped.diagnostics;
+      end = escaped.end;
     } else {
-      j++;
+      end = index + 1;
     }
   }
-  report("syntax/002", "string literal has no closing quote", i, j);
-  return j;
+  diagnostics = addDiagnostic(
+    diagnostics,
+    source,
+    "syntax/002",
+    "string literal has no closing quote",
+    start,
+    end,
+  );
+  return { diagnostics: diagnostics, end: end };
+}
+
+function pairToken(
+  text: LexerText,
+  index: LexerNumber,
+  second: LexerNumber,
+  two: TokenKind,
+  one: TokenKind,
+): { readonly kind: TokenKind; readonly end: LexerNumber } {
+  const hasPair = text.charCodeAt(index + 1) === second;
+  const end = index + (hasPair ? 2 : 1);
+  return { kind: hasPair ? two : one, end: end };
+}
+
+function isParserCheckedWord(word: LexerText): LexerStatus {
+  return word === "void" || word === "while";
 }
 
 /** Scans the whole text. Never throws. */
-export function lex(source: string, text: string): Lexed {
-  const n = text.length;
+export function lex(source: LexerText, text: LexerText): Lexed {
+  const count = text.length;
   const kinds: number[] = [];
   const starts: number[] = [];
   const ends: number[] = [];
@@ -571,250 +943,283 @@ export function lex(source: string, text: string): Lexed {
   const triviaStarts: number[] = [];
   const triviaEnds: number[] = [];
   const triviaEnd: number[] = [];
-  const diagnostics: Diagnostic[] = [];
+  let diagnostics: Diagnostic[] = [];
+  let tokenCount = 0;
 
-  const report: Report = (code, message, s, e) => {
-    diagnostics.push(
-      makeDiagnostic(code, message, { source, start: s, end: e }),
-    );
-  };
-  const push = (kind: TokenKind, s: number, e: number) => {
-    kinds.push(kind);
-    starts.push(s);
-    ends.push(e);
-    triviaEnd.push(triviaKinds.length);
-  };
-  const pushTrivia = (kind: TriviaKind, s: number, e: number) => {
-    triviaKinds.push(kind);
-    triviaStarts.push(s);
-    triviaEnds.push(e);
-  };
-  /** Pushes `two` when the next char is `second`, else `one`. Returns the next index. */
-  const pair = (
-    i: number,
-    second: number,
-    two: TokenKind,
-    one: TokenKind,
-  ): number => {
-    if (text.charCodeAt(i + 1) === second) {
-      push(two, i, i + 2);
-      return i + 2;
-    }
-    push(one, i, i + 1);
-    return i + 1;
-  };
-
-  let i = 0;
-  if (n > 0 && text.charCodeAt(0) === 0xfeff) {
-    pushTrivia(TriviaKind.Whitespace, 0, 1);
-    i = 1;
+  function appendToken(
+    kind: TokenKind,
+    start: LexerNumber,
+    end: LexerNumber,
+  ): LexerNumber {
+    const outputIndex = kinds.length;
+    kinds[outputIndex] = kind;
+    starts[outputIndex] = start;
+    ends[outputIndex] = end;
+    triviaEnd[outputIndex] = triviaKinds.length;
+    return outputIndex + 1;
   }
 
-  while (i < n) {
-    const c = text.charCodeAt(i);
-    const single = c < 128 ? SINGLE[c] : 0;
-    if (single !== 0) {
-      push(single - 1, i, i + 1);
-      i++;
+  function appendTrivia(
+    kind: TriviaKind,
+    start: LexerNumber,
+    end: LexerNumber,
+  ): LexerNumber {
+    const outputIndex = triviaKinds.length;
+    triviaKinds[outputIndex] = kind;
+    triviaStarts[outputIndex] = start;
+    triviaEnds[outputIndex] = end;
+    return end;
+  }
+
+  let index = 0;
+  if (count > 0 && text.charCodeAt(0) === 0xfeff) {
+    index = appendTrivia(TriviaKind.Whitespace, 0, 1);
+  }
+
+  for (const scanCount of indices(count)) {
+    if (scanCount > index || index >= count) break;
+    const code = text.charCodeAt(index);
+    const single = singleToken(code);
+    if (single !== undefined) {
+      tokenCount = appendToken(single, index, index + 1);
+      index = index + 1;
       continue;
     }
 
-    // Whitespace
-    if (c === 0x20 || c === 0x09) {
-      let j = i + 1;
-      while (j < n) {
-        const d = text.charCodeAt(j);
-        if (d !== 0x20 && d !== 0x09) break;
-        j++;
+    if (code === 0x20 || code === 0x09) {
+      let end = index + 1;
+      const contentStart = end;
+      for (const offset of indices(count - contentStart)) {
+        const nextIndex = contentStart + offset;
+        const next = text.charCodeAt(nextIndex);
+        if (next !== 0x20 && next !== 0x09) break;
+        end = nextIndex + 1;
       }
-      pushTrivia(TriviaKind.Whitespace, i, j);
-      i = j;
+      index = appendTrivia(TriviaKind.Whitespace, index, end);
       continue;
     }
 
-    // Newline
-    if (c === 0x0a) {
-      push(TokenKind.Newline, i, i + 1);
-      i++;
+    if (code === 0x0a) {
+      tokenCount = appendToken(TokenKind.Newline, index, index + 1);
+      index = index + 1;
       continue;
     }
-    if (c === 0x0d) {
-      const e = i + 1 < n && text.charCodeAt(i + 1) === 0x0a ? i + 2 : i + 1;
-      push(TokenKind.Newline, i, e);
-      i = e;
+    if (code === 0x0d) {
+      const end = index + 1 < count && text.charCodeAt(index + 1) === 0x0a
+        ? index + 2
+        : index + 1;
+      tokenCount = appendToken(TokenKind.Newline, index, end);
+      index = end;
       continue;
     }
 
-    // Identifier or keyword
-    if (isIdentStart(c)) {
-      let j = i + 1;
-      while (j < n && isIdentPart(text.charCodeAt(j))) j++;
-      const word = text.slice(i, j);
-      const keyword = KEYWORDS.get(word);
+    if (isIdentStart(code)) {
+      const end = scanIdentEnd(text, index + 1);
+      const word = text.slice(index, end);
+      const keyword = keywordKind(word);
       if (keyword !== undefined) {
-        push(keyword, i, j);
+        tokenCount = appendToken(keyword, index, end);
       } else {
-        if (!PARSER_CHECKED_SET.has(word) && RESERVED_WORDS.has(word)) {
-          report(
+        if (!isParserCheckedWord(word) && RESERVED_WORDS.includes(word)) {
+          diagnostics = addDiagnostic(
+            diagnostics,
+            source,
             "syntax/007",
             `\`${word}\` is a reserved word and cannot be a name`,
-            i,
-            j,
+            index,
+            end,
           );
         }
-        push(TokenKind.Ident, i, j);
+        tokenCount = appendToken(TokenKind.Ident, index, end);
       }
-      i = j;
+      index = end;
       continue;
     }
 
-    if (isDigit(c)) {
-      const j = scanNumber(text, i, report);
-      push(TokenKind.Number, i, j);
-      i = j;
+    if (isDigit(code)) {
+      const scanned = scanNumber(source, text, diagnostics, index);
+      diagnostics = scanned.diagnostics;
+      tokenCount = appendToken(TokenKind.Number, index, scanned.end);
+      index = scanned.end;
       continue;
     }
 
-    if (c === 0x22) {
-      const j = scanString(text, i, report);
-      push(TokenKind.String, i, j);
-      i = j;
+    if (code === 0x22) {
+      const scanned = scanString(source, text, diagnostics, index);
+      diagnostics = scanned.diagnostics;
+      tokenCount = appendToken(TokenKind.String, index, scanned.end);
+      index = scanned.end;
       continue;
     }
 
-    const next = i + 1 < n ? text.charCodeAt(i + 1) : -1;
-    const next2 = i + 2 < n ? text.charCodeAt(i + 2) : -1;
+    const next = index + 1 < count ? text.charCodeAt(index + 1) : -1;
+    const afterNext = index + 2 < count ? text.charCodeAt(index + 2) : -1;
 
-    switch (c) {
-      case 0x3f: // ?
-        i = pair(i, 0x3f, TokenKind.QuestionQuestion, TokenKind.Question);
-        continue;
-      case 0x2f: // /
-        if (next === 0x2f) {
-          let j = i + 2;
-          while (j < n) {
-            const d = text.charCodeAt(j);
-            if (d === 0x0a || d === 0x0d) break;
-            j++;
-          }
-          pushTrivia(TriviaKind.LineComment, i, j);
-          i = j;
-        } else if (next === 0x2a) {
-          // A block comment ends at its `*/`, or at the end of the text.
-          const close = text.indexOf("*/", i + 2);
-          if (close < 0) {
-            report(
-              "syntax/004",
-              "block comment has no closing `*/`",
-              i,
-              text.length,
-            );
-          }
-          const j = close < 0 ? text.length : close + 2;
-          pushTrivia(TriviaKind.BlockComment, i, j);
-          i = j;
-        } else {
-          push(TokenKind.Slash, i, i + 1);
-          i++;
-        }
-        continue;
-      case 0x7c: // |
-        if (next === 0x7c) {
-          push(TokenKind.PipePipe, i, i + 2);
-          i += 2;
-        } else i = pair(i, 0x3e, TokenKind.PipeGt, TokenKind.Pipe);
-        continue;
-      case 0x26: // &
-        if (next === 0x26) {
-          push(TokenKind.AmpAmp, i, i + 2);
-          i += 2;
-        } else {
-          report(
-            "syntax/001",
-            "unexpected character '&'; the AND operator is `&&`",
-            i,
-            i + 1,
+    if (code === 0x3f) {
+      const scanned = pairToken(
+        text,
+        index,
+        0x3f,
+        TokenKind.QuestionQuestion,
+        TokenKind.Question,
+      );
+      tokenCount = appendToken(scanned.kind, index, scanned.end);
+      index = scanned.end;
+      continue;
+    }
+    if (code === 0x2f) {
+      if (next === 0x2f) {
+        const end = lineCommentEnd(text, index + 2);
+        index = appendTrivia(TriviaKind.LineComment, index, end);
+      } else if (next === 0x2a) {
+        const close = text.indexOf("*/", index + 2);
+        if (close < 0) {
+          diagnostics = addDiagnostic(
+            diagnostics,
+            source,
+            "syntax/004",
+            "block comment has no closing `*/`",
+            index,
+            text.length,
           );
-          push(TokenKind.Unknown, i, i + 1);
-          i++;
         }
-        continue;
-      case 0x3d: // =
-        if (next === 0x3d && next2 === 0x3d) {
-          push(TokenKind.EqEqEq, i, i + 3);
-          i += 3;
-        } else if (next === 0x3d) {
-          report(
-            "syntax/001",
-            "unexpected `==`; the equality operator is `===`",
-            i,
-            i + 2,
-          );
-          push(TokenKind.Unknown, i, i + 2);
-          i += 2;
-        } else i = pair(i, 0x3e, TokenKind.Arrow, TokenKind.Eq);
-        continue;
-      case 0x21: // !
-        if (next === 0x3d && next2 === 0x3d) {
-          push(TokenKind.BangEqEq, i, i + 3);
-          i += 3;
-        } else if (next === 0x3d) {
-          report(
-            "syntax/001",
-            "unexpected `!=`; the inequality operator is `!==`",
-            i,
-            i + 2,
-          );
-          push(TokenKind.Unknown, i, i + 2);
-          i += 2;
-        } else {
-          push(TokenKind.Bang, i, i + 1);
-          i++;
-        }
-        continue;
-      case 0x3c: // <
-        i = pair(i, 0x3d, TokenKind.LtEq, TokenKind.Lt);
-        continue;
-      case 0x3e: // >
-        i = pair(i, 0x3d, TokenKind.GtEq, TokenKind.Gt);
-        continue;
-      case 0x2e: // .
-        if (next === 0x2e && next2 === 0x2e) {
-          push(TokenKind.DotDotDot, i, i + 3);
-          i += 3;
-        } else {
-          push(TokenKind.Dot, i, i + 1);
-          i++;
-        }
-        continue;
-      default: {
-        const width = (text.codePointAt(i) ?? 0) > 0xffff ? 2 : 1;
-        report(
-          "syntax/001",
-          `unexpected character ${describeChar(text, i)}`,
-          i,
-          i + width,
+        const end = close < 0 ? text.length : close + 2;
+        index = appendTrivia(TriviaKind.BlockComment, index, end);
+      } else {
+        tokenCount = appendToken(TokenKind.Slash, index, index + 1);
+        index = index + 1;
+      }
+      continue;
+    }
+    if (code === 0x7c) {
+      if (next === 0x7c) {
+        tokenCount = appendToken(TokenKind.PipePipe, index, index + 2);
+        index = index + 2;
+      } else {
+        const scanned = pairToken(
+          text,
+          index,
+          0x3e,
+          TokenKind.PipeGt,
+          TokenKind.Pipe,
         );
-        push(TokenKind.Unknown, i, i + width);
-        i += width;
+        tokenCount = appendToken(scanned.kind, index, scanned.end);
+        index = scanned.end;
       }
+      continue;
     }
+    if (code === 0x26) {
+      if (next === 0x26) {
+        tokenCount = appendToken(TokenKind.AmpAmp, index, index + 2);
+        index = index + 2;
+      } else {
+        diagnostics = addDiagnostic(
+          diagnostics,
+          source,
+          "syntax/001",
+          "unexpected character '&'; the AND operator is `&&`",
+          index,
+          index + 1,
+        );
+        tokenCount = appendToken(TokenKind.Unknown, index, index + 1);
+        index = index + 1;
+      }
+      continue;
+    }
+    if (code === 0x3d) {
+      if (next === 0x3d && afterNext === 0x3d) {
+        tokenCount = appendToken(TokenKind.EqEqEq, index, index + 3);
+        index = index + 3;
+      } else if (next === 0x3d) {
+        diagnostics = addDiagnostic(
+          diagnostics,
+          source,
+          "syntax/001",
+          "unexpected `==`; the equality operator is `===`",
+          index,
+          index + 2,
+        );
+        tokenCount = appendToken(TokenKind.Unknown, index, index + 2);
+        index = index + 2;
+      } else {
+        const scanned = pairToken(
+          text,
+          index,
+          0x3e,
+          TokenKind.Arrow,
+          TokenKind.Eq,
+        );
+        tokenCount = appendToken(scanned.kind, index, scanned.end);
+        index = scanned.end;
+      }
+      continue;
+    }
+    if (code === 0x21) {
+      if (next === 0x3d && afterNext === 0x3d) {
+        tokenCount = appendToken(TokenKind.BangEqEq, index, index + 3);
+        index = index + 3;
+      } else if (next === 0x3d) {
+        diagnostics = addDiagnostic(
+          diagnostics,
+          source,
+          "syntax/001",
+          "unexpected `!=`; the inequality operator is `!==`",
+          index,
+          index + 2,
+        );
+        tokenCount = appendToken(TokenKind.Unknown, index, index + 2);
+        index = index + 2;
+      } else {
+        tokenCount = appendToken(TokenKind.Bang, index, index + 1);
+        index = index + 1;
+      }
+      continue;
+    }
+    if (code === 0x3c || code === 0x3e) {
+      const scanned = code === 0x3c
+        ? pairToken(text, index, 0x3d, TokenKind.LtEq, TokenKind.Lt)
+        : pairToken(text, index, 0x3d, TokenKind.GtEq, TokenKind.Gt);
+      tokenCount = appendToken(scanned.kind, index, scanned.end);
+      index = scanned.end;
+      continue;
+    }
+    if (code === 0x2e) {
+      if (next === 0x2e && afterNext === 0x2e) {
+        tokenCount = appendToken(TokenKind.DotDotDot, index, index + 3);
+        index = index + 3;
+      } else {
+        tokenCount = appendToken(TokenKind.Dot, index, index + 1);
+        index = index + 1;
+      }
+      continue;
+    }
+
+    const width = (text.codePointAt(index) ?? 0) > 0xffff ? 2 : 1;
+    diagnostics = addDiagnostic(
+      diagnostics,
+      source,
+      "syntax/001",
+      `unexpected character ${describeChar(text, index)}`,
+      index,
+      index + width,
+    );
+    tokenCount = appendToken(TokenKind.Unknown, index, index + width);
+    index = index + width;
   }
 
-  push(TokenKind.Eof, n, n);
-
+  tokenCount = appendToken(TokenKind.Eof, count, count);
   return {
-    text,
-    count: kinds.length,
-    kinds: Uint8Array.from(kinds),
-    starts: Uint32Array.from(starts),
-    ends: Uint32Array.from(ends),
+    text: text,
+    count: tokenCount,
+    kinds: byteArrayFrom(kinds),
+    starts: uint32ArrayFrom(starts),
+    ends: uint32ArrayFrom(ends),
     trivia: {
-      kinds: Uint8Array.from(triviaKinds),
-      starts: Uint32Array.from(triviaStarts),
-      ends: Uint32Array.from(triviaEnds),
+      kinds: byteArrayFrom(triviaKinds),
+      starts: uint32ArrayFrom(triviaStarts),
+      ends: uint32ArrayFrom(triviaEnds),
     },
-    triviaEnd: Uint32Array.from(triviaEnd),
-    diagnostics,
+    triviaEnd: uint32ArrayFrom(triviaEnd),
+    diagnostics: diagnostics,
   };
 }

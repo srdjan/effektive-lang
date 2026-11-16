@@ -160,7 +160,7 @@ Deno.test("extreme identifiers preserve formatting, execution and source mapping
           : `${alias}.read()`;
         runs.push(call);
         // Verify actual mapped tokens after the new breaks, not only span bounds.
-        const table = buildSpanTable(generated);
+        const table = buildSpanTable(generated, undefined);
         if (c.kind === "member") {
           const field = identifier("field", c.width);
           const offset = generated.text.lastIndexOf(`.${field}`) + 1;

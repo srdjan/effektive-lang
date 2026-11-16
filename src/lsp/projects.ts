@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Projects and the open-document overlay. A project is a directory with
 // `effektive.json`. The set keeps one `Program` per project. A project lives
 // until it loses its `effektive.json` and its last open document. The text that
@@ -108,7 +109,7 @@ export class ProjectState {
   diskSession: DiskSession | undefined;
 
   constructor(readonly root: string) {
-    this.program = new Program(root);
+    this.program = Program(root);
   }
 
   private get last(): CompletedProject | undefined {

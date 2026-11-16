@@ -20,52 +20,60 @@ const CAPABILITY_PREFIX = "cap:";
 
 /** The prefixes of declaration identities. A provider has a value identity. */
 export type DeclarationPrefix = "type" | "error" | "service" | "value";
+export type IdentityText = string;
+export type ModuleName = string;
+export type DeclarationName = string;
+export type ServiceName = string;
+export type MethodName = string;
+export type OwnerName = string;
+export type ContentHash = string;
+export type OptionalIdentityText = IdentityText | undefined;
 
 /** The identity of a declaration, such as `type:users#User`. */
 export function declarationId<P extends DeclarationPrefix>(
   prefix: P,
-  module: string,
-  name: string,
+  module: ModuleName,
+  name: DeclarationName,
 ): `${P}:${string}` {
   return `${prefix}:${module}#${name}`;
 }
 
 /** True for an identity such as `type:users#User`. */
-export function isTypeId(id: string): id is TypeId {
+export function isTypeId(id: IdentityText): id is TypeId {
   return id.startsWith("type:");
 }
 
 /** True for an identity such as `error:users#NotFound`. */
-export function isErrorId(id: string): id is ErrorId {
+export function isErrorId(id: IdentityText): id is ErrorId {
   return id.startsWith("error:");
 }
 
 /** True for an identity such as `service:users#Users`. */
-export function isServiceId(id: string): id is ServiceId {
+export function isServiceId(id: IdentityText): id is ServiceId {
   return id.startsWith(SERVICE_PREFIX);
 }
 
 /** True for one of the reserved Effect errors, which have no `#` and no source declaration. */
-export function isReservedErrorId(id: string): id is ErrorId {
+export function isReservedErrorId(id: IdentityText): id is ErrorId {
   return id === SCHEMA_ERROR_ID || id === SCHEMA_ISSUE_ID ||
     id === TIMEOUT_ERROR_ID;
 }
 
 /** True for an identity such as `value:users#find`. */
-export function isValueId(id: string): id is ValueId {
+export function isValueId(id: IdentityText): id is ValueId {
   return id.startsWith("value:");
 }
 
 /** True for an identity such as `local:users#find/x`. */
-export function isLocalId(id: string): id is LocalId {
+export function isLocalId(id: IdentityText): id is LocalId {
   return id.startsWith("local:");
 }
 
 /** The identity of a service method: `cap:users#Users.find`. */
 export function capabilityId(
-  module: string,
-  service: string,
-  method: string,
+  module: ModuleName,
+  service: ServiceName,
+  method: MethodName,
 ): CapabilityId {
   return `cap:${module}#${service}.${method}`;
 }
@@ -73,22 +81,25 @@ export function capabilityId(
 /** The capability of a method of the service with identity `service:m#S`. */
 export function capabilityOfService(
   service: ServiceId,
-  method: string,
+  method: MethodName,
 ): CapabilityId {
   return `cap:${service.slice(SERVICE_PREFIX.length)}.${method}`;
 }
 
 /** The identity of a local binding of a declaration: `local:users#find/x`. */
 export function localId(
-  module: string,
-  owner: string,
-  name: string,
+  module: ModuleName,
+  owner: OwnerName,
+  name: DeclarationName,
 ): LocalId {
   return `local:${module}#${owner}/${name}`;
 }
 
 /** The identity of a local binding that the checker adds to a body: `local:value:users#find/$record3`. */
-export function bodyLocalId(declaration: ValueId, name: string): LocalId {
+export function bodyLocalId(
+  declaration: ValueId,
+  name: DeclarationName,
+): LocalId {
   return `local:${declaration}/${name}`;
 }
 
@@ -115,15 +126,15 @@ export type BuiltinInstanceName = typeof BUILTIN_INSTANCE_NAMES[number];
 
 /** The identity of a closed builtin instance: `value:<module>#$builtin/<name>/<hash>`. */
 export function builtinInstanceId(
-  module: string,
+  module: ModuleName,
   name: BuiltinInstanceName,
-  hash: string,
+  hash: ContentHash,
 ): ValueId {
   return `value:${module}#$builtin/${name}/${hash}`;
 }
 
 /** The builtin name of an instance identity, or undefined for any other identity. */
-export function builtinInstanceName(id: string): string | undefined {
+export function builtinInstanceName(id: IdentityText): OptionalIdentityText {
   if (!isValueId(id)) return undefined;
   const rest = id.slice(id.indexOf("#") + 1);
   if (!rest.startsWith("$builtin/")) return undefined;
@@ -132,20 +143,20 @@ export function builtinInstanceName(id: string): string | undefined {
 
 /** The typed name, or undefined when `name` is not a builtin instance name. */
 export function asBuiltinInstanceName(
-  name: string | undefined,
+  name: OptionalIdentityText,
 ): BuiltinInstanceName | undefined {
   return BUILTIN_INSTANCE_NAMES.find((candidate) => candidate === name);
 }
 
 /** The typed builtin name of an instance identity, or undefined for any other identity. */
 export function knownBuiltinInstanceName(
-  id: string,
+  id: IdentityText,
 ): BuiltinInstanceName | undefined {
   return asBuiltinInstanceName(builtinInstanceName(id));
 }
 
 /** The module part of an identity such as `type:users#User`. */
-export function moduleOfId(id: string): string | undefined {
+export function moduleOfId(id: IdentityText): OptionalIdentityText {
   const colon = id.indexOf(":");
   const hash = id.indexOf("#");
   if (colon < 0 || hash < colon) return undefined;
@@ -153,12 +164,12 @@ export function moduleOfId(id: string): string | undefined {
 }
 
 /** The text after the colon: the tag, service key, or identity token of the emitted code. */
-export function tokenOfId(id: string): string {
+export function tokenOfId(id: IdentityText): IdentityText {
   return id.slice(id.indexOf(":") + 1);
 }
 
 /** The declared name in an identity such as `type:users#User`. */
-export function nameOfId(id: string): string | undefined {
+export function nameOfId(id: IdentityText): OptionalIdentityText {
   const hash = id.indexOf("#");
   if (hash < 0) return undefined;
   const rest = id.slice(hash + 1);
@@ -169,7 +180,7 @@ export function nameOfId(id: string): string | undefined {
 /** The method name in a capability such as `cap:users#Users.find`. */
 export function methodOfCapability(
   capability: CapabilityId,
-): string | undefined {
+): OptionalIdentityText {
   const dot = capability.indexOf(".", capability.indexOf("#"));
   if (dot < 0) return undefined;
   return capability.slice(dot + 1);
@@ -193,7 +204,7 @@ const RESERVED_SPACE = ":effect/";
  * The name of an identity, for messages: the part after the `#`. A reserved
  * Effect identity has no `#`, and its name is the part after `effect/`.
  */
-export function shortName(id: string): string {
+export function shortName(id: IdentityText): IdentityText {
   const hash = id.indexOf("#");
   if (hash >= 0) return id.slice(hash + 1);
   const reserved = id.indexOf(RESERVED_SPACE);

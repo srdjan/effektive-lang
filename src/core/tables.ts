@@ -21,11 +21,12 @@ import type { EffectSet } from "./effect_set.ts";
 import type { BuiltinInstanceName } from "./ids.ts";
 import type { NodeId } from "./syntax.ts";
 import type { TypeRef } from "./types.ts";
+import { emptyMap } from "./runtime.ts";
 
 /** What the checker records for one syntax node. */
-export interface NodeInfo extends EffectSet {
+export type NodeInfo = EffectSet & {
   readonly type: TypeRef;
-}
+};
 
 /** What a pattern node means, for lowering. */
 export type PatternFact =
@@ -62,11 +63,11 @@ export type PatternFact =
   /** A pattern that a diagnostic already rejected. */
   | { readonly kind: "invalid" };
 
-export interface ArrowParameterFact {
+export type ArrowParameterFact = {
   readonly id: LocalId | undefined;
   readonly name: string;
   readonly type: TypeRef;
-}
+};
 
 /** What a node means, for lowering. The key is the syntax node id. */
 export type NodeFact =
@@ -134,7 +135,7 @@ export type NodeFact =
     readonly kind: "schema";
     /** The IR operations, and the three that lower to their own kinds. */
     readonly op:
-      | Extract<Expr, { kind: "schema" }>["op"]
+      | Extract<Expr, { readonly kind: "schema" }>["op"]
       | "decode"
       | "encode"
       | "make";
@@ -194,30 +195,86 @@ export type NodeFact =
     readonly binding: LocalId | undefined;
   };
 
-export interface BodyTable {
+export type BodyTable = {
   readonly declaration: ValueId;
   /** Syntax node id to type, sets, and mode. */
-  readonly info: Map<NodeId, NodeInfo>;
-  readonly proofs: Map<NodeId, readonly RefinementProof[]>;
+  readonly info: ReadonlyMap<NodeId, NodeInfo>;
+  readonly proofs: ReadonlyMap<NodeId, readonly RefinementProof[]>;
   /** Syntax node id to what lowering needs. */
-  readonly facts: Map<NodeId, NodeFact>;
+  readonly facts: ReadonlyMap<NodeId, NodeFact>;
   /** The type of each parameter, block binding, and pattern binding. */
-  readonly locals: Map<LocalId, TypeRef>;
+  readonly locals: ReadonlyMap<LocalId, TypeRef>;
   /**
    * The sets of a pipeline stage without its left value. A stage has an entry
    * only when its left value is not quiet. The stage's own `info` includes the
    * left value, but the lowering evaluates the left value in its own binding.
    */
-  readonly stageSets: Map<NodeId, EffectSet>;
-}
+  readonly stageSets: ReadonlyMap<NodeId, EffectSet>;
+};
 
-export function newBodyTable(declaration: ValueId): BodyTable {
-  return {
-    declaration,
-    info: new Map(),
-    proofs: new Map(),
-    facts: new Map(),
-    locals: new Map(),
-    stageSets: new Map(),
+/** The owner that records one checked body behind readonly table views. */
+export type BodyBuilder = {
+  readonly table: BodyTable;
+  readonly recordInfo: (node: NodeId, value: NodeInfo) => BodyBuilder;
+  readonly recordProofs: (
+    node: NodeId,
+    value: readonly RefinementProof[],
+  ) => BodyBuilder;
+  readonly recordFact: (node: NodeId, value: NodeFact) => BodyBuilder;
+  readonly recordLocal: (local: LocalId, value: TypeRef) => BodyBuilder;
+  readonly recordStageSet: (node: NodeId, value: EffectSet) => BodyBuilder;
+};
+
+export function createBodyBuilder(declaration: ValueId): BodyBuilder {
+  let info = emptyMap<NodeId, NodeInfo>();
+  let proofs = emptyMap<NodeId, readonly RefinementProof[]>();
+  let facts = emptyMap<NodeId, NodeFact>();
+  let locals = emptyMap<LocalId, TypeRef>();
+  let stageSets = emptyMap<NodeId, EffectSet>();
+  const table: BodyTable = {
+    declaration: declaration,
+    info: info,
+    proofs: proofs,
+    facts: facts,
+    locals: locals,
+    stageSets: stageSets,
   };
+
+  function recordInfo(node: NodeId, value: NodeInfo): BodyBuilder {
+    info = info.set(node, value);
+    return builder;
+  }
+
+  function recordProofs(
+    node: NodeId,
+    value: readonly RefinementProof[],
+  ): BodyBuilder {
+    proofs = proofs.set(node, value);
+    return builder;
+  }
+
+  function recordFact(node: NodeId, value: NodeFact): BodyBuilder {
+    facts = facts.set(node, value);
+    return builder;
+  }
+
+  function recordLocal(local: LocalId, value: TypeRef): BodyBuilder {
+    locals = locals.set(local, value);
+    return builder;
+  }
+
+  function recordStageSet(node: NodeId, value: EffectSet): BodyBuilder {
+    stageSets = stageSets.set(node, value);
+    return builder;
+  }
+
+  const builder: BodyBuilder = {
+    table: table,
+    recordInfo: recordInfo,
+    recordProofs: recordProofs,
+    recordFact: recordFact,
+    recordLocal: recordLocal,
+    recordStageSet: recordStageSet,
+  };
+  return builder;
 }

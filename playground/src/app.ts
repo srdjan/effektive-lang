@@ -1,3 +1,5 @@
+// @light-fp adapter
+import type { EditChange, Layout } from "../../src/host/log_schema.ts";
 /// <reference lib="dom" />
 // The playground page. It fetches `examples.json`,
 // starts the compile facade, and wires the file tabs, the three regions, the
@@ -27,13 +29,11 @@ import {
 } from "./editor.ts";
 import {
   compileData,
-  type EditChange,
   editData,
   endData,
   errorData,
   EXPLORER_FROM,
   hoverData,
-  type Layout,
   layoutData,
   layoutOf,
   problemData,
@@ -260,7 +260,9 @@ async function main(): Promise<void> {
   const log: PageLog = replayName !== null
     ? { event: () => {}, flush: () => {} }
     : createPageLog({ fetch: (url, init) => fetch(url, init) });
-  const sink = { append: log.event };
+  const sink = {
+    append: (kind: string, data: unknown) => log.event(kind, data) ?? undefined,
+  };
   const paths = Object.keys(files).filter((path) => path !== CONFIG_FILE);
   const session = createPlayground(files, { now: () => performance.now() });
   const first = session.start();

@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Effect, Layer, Option } from "effect";
 import {
   Input,

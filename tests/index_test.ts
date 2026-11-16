@@ -7,7 +7,7 @@ import { parse } from "../src/core/parse.ts";
 import { FIXTURES } from "./helpers.ts";
 
 function indexOf(text: string, path = "m.eff") {
-  return buildIndex(parse(path, text).tree);
+  return buildIndex(parse(path, text, undefined).tree);
 }
 
 function decl(text: string, name: string): DeclEntry {

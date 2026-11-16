@@ -13,12 +13,10 @@ import {
   type Term,
 } from "../src/core/predicates.ts";
 import { verifyCertificate } from "../src/core/validate/predicates.ts";
-
 const ZERO: Term = { kind: "zero" };
 const INPUT: Term = { kind: "input" };
 const FIELD: Term = { kind: "field", path: ["count"] };
-const LIMITS = { maxSteps: 10_000 };
-
+const LIMITS = { maxSteps: 10000 };
 function compare(
   left: Term,
   leftOffset: string,
@@ -26,17 +24,10 @@ function compare(
   right: Term,
   rightOffset: string,
 ): Predicate {
-  const result = comparison(
-    left,
-    leftOffset,
-    operator,
-    right,
-    rightOffset,
-  );
+  const result = comparison(left, leftOffset, operator, right, rightOffset);
   assert(result.ok, JSON.stringify(result));
   return result.value;
 }
-
 function certificateOf(
   assumptions: Predicate,
   predicate: Predicate,
@@ -56,7 +47,6 @@ function certificateOf(
   assert(checked.ok, JSON.stringify(checked));
   return result.value.certificate;
 }
-
 Deno.test("comparison normalizes integers beyond the safe number range", () => {
   assertEquals(normalizeInteger("+00090071992547409931234567890"), {
     ok: true,
@@ -75,41 +65,35 @@ Deno.test("comparison normalizes integers beyond the safe number range", () => {
     right: FIELD,
     maximum: "9",
   });
-  assertEquals(
-    comparison(INPUT, "1.5", "<=", ZERO, "0"),
-    { ok: false, error: { tag: "invalid-integer", value: "1.5" } },
-  );
+  assertEquals(comparison(INPUT, "1.5", "<=", ZERO, "0"), {
+    ok: false,
+    error: { tag: "invalid-integer", value: "1.5" },
+  });
 });
-
 Deno.test("conjunction entailment produces an independently valid cycle", () => {
-  const assumptions = and(
+  const assumptions = and([
     compare(INPUT, "0", ">=", ZERO, "1"),
     compare(INPUT, "0", "<=", ZERO, "2"),
-  );
-  const predicate = and(
+  ]);
+  const predicate = and([
     compare(INPUT, "0", ">", ZERO, "0"),
     compare(INPUT, "0", "<", ZERO, "3"),
-  );
+  ]);
   const result = entails(assumptions, predicate, LIMITS);
   assert(result.ok, JSON.stringify(result));
   assertEquals(result.value.status, "proved");
   assert(result.value.status === "proved");
   assertEquals(result.value.certificate.claim, "proved");
   assert(
-    verifyCertificate(
-      assumptions,
-      predicate,
-      result.value.certificate,
-      LIMITS,
-    ).ok,
+    verifyCertificate(assumptions, predicate, result.value.certificate, LIMITS)
+      .ok,
   );
 });
-
 Deno.test("disjunction entailment records every Boolean split", () => {
-  const assumptions = or(
+  const assumptions = or([
     compare(INPUT, "0", "<=", ZERO, "-1"),
     compare(INPUT, "0", ">=", ZERO, "1"),
-  );
+  ]);
   const predicate = compare(INPUT, "0", "!==", ZERO, "0");
   const certificate = certificateOf(assumptions, predicate);
   assertEquals(certificate.claim, "proved");
@@ -118,7 +102,6 @@ Deno.test("disjunction entailment records every Boolean split", () => {
     assertEquals(certificate.proof.cases.length, 2);
   }
 });
-
 Deno.test("the solver disproves a contradictory predicate", () => {
   const assumptions = compare(INPUT, "0", "===", ZERO, "0");
   const predicate = compare(INPUT, "0", ">", ZERO, "0");
@@ -128,15 +111,10 @@ Deno.test("the solver disproves a contradictory predicate", () => {
   assert(result.value.status === "disproved");
   assertEquals(result.value.certificate.claim, "disproved");
   assert(
-    verifyCertificate(
-      assumptions,
-      predicate,
-      result.value.certificate,
-      LIMITS,
-    ).ok,
+    verifyCertificate(assumptions, predicate, result.value.certificate, LIMITS)
+      .ok,
   );
 });
-
 Deno.test("the independent checker rejects a mutated cycle", () => {
   const assumptions = compare(INPUT, "0", ">=", ZERO, "1");
   const predicate = compare(INPUT, "0", "<=", ZERO, "0");
@@ -144,19 +122,16 @@ Deno.test("the independent checker rejects a mutated cycle", () => {
   assertEquals(certificate.proof.kind, "negative-cycle");
   const mutated = structuredClone(certificate) as {
     claim: "proved" | "disproved";
-    proof: { kind: "negative-cycle"; constraints: number[] };
+    proof: {
+      kind: "negative-cycle";
+      constraints: number[];
+    };
   };
   mutated.proof.constraints[0] = 999;
-  const checked = verifyCertificate(
-    assumptions,
-    predicate,
-    mutated,
-    LIMITS,
-  );
+  const checked = verifyCertificate(assumptions, predicate, mutated, LIMITS);
   assert(!checked.ok);
   assertEquals(checked.error.tag, "invalid-certificate");
 });
-
 Deno.test("work exhaustion returns unknown and bounds certificate checking", () => {
   const predicate = compare(INPUT, "0", ">", ZERO, "0");
   assertEquals(entails(constant(true), predicate, { maxSteps: 0 }), {
@@ -172,7 +147,6 @@ Deno.test("work exhaustion returns unknown and bounds certificate checking", () 
     { ok: false, error: { tag: "limit" } },
   );
 });
-
 Deno.test("an open comparison stays unknown", () => {
   const result = entails(
     constant(true),
@@ -185,17 +159,14 @@ Deno.test("an open comparison stays unknown", () => {
   assertEquals(result.value.reason, "open");
   assert(result.value.stepsUsed > 0);
 });
-
 /** Builds a value that the type system forbids, to test boundary rejection. */
 function forged<T>(value: unknown): T {
   return value as T;
 }
-
 /** Compares a result with a literal that may differ in static type. */
 function same(actual: unknown, expected: unknown, message?: string): void {
   assertEquals(actual, expected, message);
 }
-
 function verify(
   assumptions: unknown,
   predicate: unknown,
@@ -209,7 +180,6 @@ function verify(
     forged<SolverLimits>(limits),
   );
 }
-
 const TRUE = { kind: "constant", value: true };
 const FALSE_PROOF = { kind: "false" };
 const NEGATIVE_CYCLE = { kind: "negative-cycle", constraints: [0, 1] };
@@ -225,7 +195,6 @@ const ZERO_BELOW_INPUT_BY_ONE = {
   right: { kind: "input" },
   maximum: "-1",
 };
-
 function differenceOf(
   left: unknown,
   right: unknown,
@@ -233,20 +202,17 @@ function differenceOf(
 ): unknown {
   return { kind: "difference", left, right, maximum };
 }
-
 interface BadTerm {
   readonly name: string;
   readonly term: unknown;
   readonly solver: string;
   readonly checker: string;
 }
-
 const NOT_OBJECT = "a term is not an object";
 const UNKNOWN_KIND = "a term has an unknown kind";
 const PATH_MESSAGE = "a term path is not a string list";
 const EMPTY_PATH = "a field term has an empty path";
 const UNIT_MESSAGE = "a length term does not use UTF-16 units";
-
 const BAD_TERMS: readonly BadTerm[] = [
   { name: "a number", term: 7, solver: NOT_OBJECT, checker: NOT_OBJECT },
   { name: "null", term: null, solver: NOT_OBJECT, checker: NOT_OBJECT },
@@ -311,7 +277,6 @@ const BAD_TERMS: readonly BadTerm[] = [
     checker: UNIT_MESSAGE,
   },
 ];
-
 Deno.test("comparison rejects a forged term or offset with its exact error", () => {
   for (const row of BAD_TERMS) {
     const expected = {
@@ -329,16 +294,15 @@ Deno.test("comparison rejects a forged term or offset with its exact error", () 
       `${row.name} as the right term`,
     );
   }
-  same(
-    comparison(ZERO, "0", "<", INPUT, "x"),
-    { ok: false, error: { tag: "invalid-integer", value: "x" } },
-  );
-  same(
-    comparison(ZERO, "", "<", INPUT, "0"),
-    { ok: false, error: { tag: "invalid-integer", value: "" } },
-  );
+  same(comparison(ZERO, "0", "<", INPUT, "x"), {
+    ok: false,
+    error: { tag: "invalid-integer", value: "x" },
+  });
+  same(comparison(ZERO, "", "<", INPUT, "0"), {
+    ok: false,
+    error: { tag: "invalid-integer", value: "" },
+  });
 });
-
 Deno.test("normalizeInteger rejects text that is not a decimal integer", () => {
   same(normalizeInteger("-0"), { ok: true, value: "0" });
   same(normalizeInteger("12a"), {
@@ -350,7 +314,6 @@ Deno.test("normalizeInteger rejects text that is not a decimal integer", () => {
     error: { tag: "invalid-integer", value: "+" },
   });
 });
-
 Deno.test("comparison yields the exact predicate for every operator", () => {
   const forward = (maximum: string) => ({
     kind: "difference",
@@ -364,7 +327,10 @@ Deno.test("comparison yields the exact predicate for every operator", () => {
     right: INPUT,
     maximum,
   });
-  const rows: readonly [Parameters<typeof comparison>[2], unknown][] = [
+  const rows: readonly [
+    Parameters<typeof comparison>[2],
+    unknown,
+  ][] = [
     ["<", forward("-1")],
     ["<=", forward("0")],
     ["==", { kind: "and", operands: [forward("0"), reverse("0")] }],
@@ -375,28 +341,26 @@ Deno.test("comparison yields the exact predicate for every operator", () => {
     [">", reverse("-1")],
   ];
   for (const [operator, expected] of rows) {
-    same(
-      comparison(INPUT, "0", operator, FIELD, "0"),
-      { ok: true, value: expected as Predicate },
-      operator,
-    );
+    same(comparison(INPUT, "0", operator, FIELD, "0"), {
+      ok: true,
+      value: expected as Predicate,
+    }, operator);
   }
 });
-
 Deno.test("Boolean constructors fold constants and flatten nesting", () => {
   const open = compare(INPUT, "0", ">", ZERO, "0");
   const other = compare(FIELD, "0", ">", ZERO, "0");
-  same(and(), constant(true));
-  same(or(), constant(false));
-  same(and(constant(true), open), open);
-  same(and(open, constant(false), other), constant(false));
-  same(or(open, constant(true), other), constant(true));
-  same(or(constant(false), open), open);
-  same(and(and(open, other), open), {
+  same(and([]), constant(true));
+  same(or([]), constant(false));
+  same(and([constant(true), open]), open);
+  same(and([open, constant(false), other]), constant(false));
+  same(or([open, constant(true), other]), constant(true));
+  same(or([constant(false), open]), open);
+  same(and([and([open, other]), open]), {
     kind: "and",
     operands: [open, other, open],
   });
-  same(or(or(open, other), open), {
+  same(or([or([open, other]), open]), {
     kind: "or",
     operands: [open, other, open],
   });
@@ -404,7 +368,6 @@ Deno.test("Boolean constructors fold constants and flatten nesting", () => {
   same(not(open), { kind: "not", operand: open });
   same(not(not(open)), open);
 });
-
 Deno.test("entails rejects a bad step limit with its exact error", () => {
   const error = {
     ok: false,
@@ -415,18 +378,13 @@ Deno.test("entails rejects a bad step limit with its exact error", () => {
   };
   const predicate = constant(true);
   for (const maxSteps of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
-    same(
-      entails(predicate, predicate, { maxSteps }),
-      error,
-      String(maxSteps),
-    );
+    same(entails(predicate, predicate, { maxSteps }), error, String(maxSteps));
   }
   same(entails(constant(true), constant(true), { maxSteps: 0 }), {
     ok: true,
     value: { status: "unknown", stepsUsed: 0, reason: "exhausted" },
   });
 });
-
 Deno.test("verifyCertificate rejects a bad step limit with its exact error", () => {
   const error = {
     ok: false,
@@ -435,7 +393,10 @@ Deno.test("verifyCertificate rejects a bad step limit with its exact error", () 
       message: "maxSteps must be a nonnegative safe integer",
     },
   };
-  const rows: readonly [string, unknown][] = [
+  const rows: readonly [
+    string,
+    unknown,
+  ][] = [
     ["a negative safe integer", -1],
     ["a non-integer", 1.5],
     ["NaN", Number.NaN],
@@ -459,14 +420,18 @@ Deno.test("verifyCertificate rejects a bad step limit with its exact error", () 
     { ok: true, value: { stepsUsed: 1 } },
   );
 });
-
 Deno.test("entails rejects a forged predicate with its exact error", () => {
   const open = compare(INPUT, "0", ">", ZERO, "0");
   const invalid = (message: string) => ({
     ok: false,
     error: { tag: "invalid-predicate", message },
   });
-  const rows: readonly [string, unknown, unknown, unknown][] = [
+  const rows: readonly [
+    string,
+    unknown,
+    unknown,
+    unknown,
+  ][] = [
     ["a number", TRUE, 5, invalid("a predicate is not an object")],
     ["null", TRUE, null, invalid("a predicate is not an object")],
     [
@@ -560,7 +525,6 @@ Deno.test("entails rejects a forged predicate with its exact error", () => {
     );
   }
 });
-
 Deno.test("entails rejects a forged difference term with its exact error", () => {
   for (const row of BAD_TERMS) {
     const expected = {
@@ -587,7 +551,6 @@ Deno.test("entails rejects a forged difference term with its exact error", () =>
     );
   }
 });
-
 Deno.test("entails accepts a length term and a zero-operand node", () => {
   const length: Term = { kind: "length", path: ["name"], unit: "utf16" };
   const atMostFive = compare(length, "0", "<=", ZERO, "5");
@@ -603,28 +566,22 @@ Deno.test("entails accepts a length term and a zero-operand node", () => {
       },
     },
   });
-  same(
-    entails(constant(true), { kind: "and", operands: [] }, LIMITS),
-    {
-      ok: true,
-      value: {
-        status: "proved",
-        stepsUsed: 1,
-        certificate: { claim: "proved", proof: { kind: "false" } },
-      },
+  same(entails(constant(true), { kind: "and", operands: [] }, LIMITS), {
+    ok: true,
+    value: {
+      status: "proved",
+      stepsUsed: 1,
+      certificate: { claim: "proved", proof: { kind: "false" } },
     },
-  );
-  same(
-    entails(constant(true), { kind: "or", operands: [] }, LIMITS),
-    {
-      ok: true,
-      value: {
-        status: "disproved",
-        stepsUsed: 3,
-        certificate: { claim: "disproved", proof: { kind: "false" } },
-      },
+  });
+  same(entails(constant(true), { kind: "or", operands: [] }, LIMITS), {
+    ok: true,
+    value: {
+      status: "disproved",
+      stepsUsed: 3,
+      certificate: { claim: "disproved", proof: { kind: "false" } },
     },
-  );
+  });
   same(entails(constant(true), constant(false), LIMITS), {
     ok: true,
     value: {
@@ -634,20 +591,19 @@ Deno.test("entails accepts a length term and a zero-operand node", () => {
     },
   });
 });
-
 Deno.test("entails reports exhausted at every spend site", () => {
   const open = compare(INPUT, "0", ">", ZERO, "0");
   const exhausted = (stepsUsed: number) => ({
     ok: true,
     value: { status: "unknown", stepsUsed, reason: "exhausted" },
   });
-  const many = and(
+  const many = and([
     compare(INPUT, "0", ">=", ZERO, "1"),
     compare(INPUT, "0", "<=", ZERO, "2"),
     compare(FIELD, "0", ">=", ZERO, "0"),
-  );
+  ]);
   same(entails(many, open, { maxSteps: 3 }), exhausted(3));
-  const split = and(open, compare(FIELD, "0", ">", ZERO, "0"));
+  const split = and([open, compare(FIELD, "0", ">", ZERO, "0")]);
   same(entails(constant(true), split, { maxSteps: 2 }), exhausted(2));
   const assumptions = compare(INPUT, "0", ">=", ZERO, "1");
   const predicate = compare(INPUT, "0", "<=", ZERO, "0");
@@ -670,7 +626,6 @@ Deno.test("entails reports exhausted at every spend site", () => {
     },
   });
 });
-
 Deno.test("verifyCertificate rejects a forged certificate shape", () => {
   const shape = {
     ok: false,
@@ -679,7 +634,10 @@ Deno.test("verifyCertificate rejects a forged certificate shape", () => {
       message: "the certificate shape is invalid",
     },
   };
-  const rows: readonly [string, unknown][] = [
+  const rows: readonly [
+    string,
+    unknown,
+  ][] = [
     ["null", null],
     ["an array", []],
     ["a number", 3],
@@ -693,7 +651,6 @@ Deno.test("verifyCertificate rejects a forged certificate shape", () => {
     same(verify(TRUE, TRUE, certificate), shape, name);
   }
 });
-
 Deno.test("verifyCertificate rejects a forged predicate with its exact error", () => {
   const invalid = (message: string) => ({
     ok: false,
@@ -705,7 +662,12 @@ Deno.test("verifyCertificate rejects a forged predicate with its exact error", (
   });
   const proved = { claim: "proved", proof: FALSE_PROOF };
   const disproved = { claim: "disproved", proof: FALSE_PROOF };
-  const rows: readonly [string, unknown, unknown, unknown][] = [
+  const rows: readonly [
+    string,
+    unknown,
+    unknown,
+    unknown,
+  ][] = [
     ["a number", 5, proved, invalid("a predicate is not an object")],
     ["null", null, proved, invalid("a predicate is not an object")],
     ["an array", [], proved, invalid("a predicate is not an object")],
@@ -797,7 +759,6 @@ Deno.test("verifyCertificate rejects a forged predicate with its exact error", (
     "a forged assumption",
   );
 });
-
 Deno.test("verifyCertificate rejects a forged difference term", () => {
   const disproved = { claim: "disproved", proof: FALSE_PROOF };
   for (const row of BAD_TERMS) {
@@ -806,26 +767,17 @@ Deno.test("verifyCertificate rejects a forged difference term", () => {
       error: { tag: "invalid-predicate", message: row.checker },
     };
     same(
-      verify(
-        TRUE,
-        differenceOf(row.term, { kind: "zero" }, "0"),
-        disproved,
-      ),
+      verify(TRUE, differenceOf(row.term, { kind: "zero" }, "0"), disproved),
       expected,
       `${row.name} as the left term`,
     );
     same(
-      verify(
-        TRUE,
-        differenceOf({ kind: "zero" }, row.term, "0"),
-        disproved,
-      ),
+      verify(TRUE, differenceOf({ kind: "zero" }, row.term, "0"), disproved),
       expected,
       `${row.name} as the right term`,
     );
   }
 });
-
 Deno.test("verifyCertificate rejects a Boolean split that does not match", () => {
   const certificateError = (message: string) => ({
     ok: false,
@@ -835,7 +787,12 @@ Deno.test("verifyCertificate rejects a Boolean split that does not match", () =>
   const mismatch = certificateError(
     "a Boolean split does not match the predicate",
   );
-  const rows: readonly [string, unknown, unknown, unknown][] = [
+  const rows: readonly [
+    string,
+    unknown,
+    unknown,
+    unknown,
+  ][] = [
     ["a false proof", either, FALSE_PROOF, mismatch],
     [
       "a split without a case list",
@@ -889,7 +846,6 @@ Deno.test("verifyCertificate rejects a Boolean split that does not match", () =>
     { ok: true, value: { stepsUsed: 1 } },
   );
 });
-
 Deno.test("verifyCertificate enforces the step limit at each counted site", () => {
   const limit = { ok: false, error: { tag: "limit" } };
   const wide = { kind: "and", operands: [TRUE, TRUE, TRUE] };
@@ -901,15 +857,10 @@ Deno.test("verifyCertificate enforces the step limit at each counted site", () =
     "a conjunction of three operands",
   );
   same(
-    verify(
-      TRUE,
-      { kind: "or", operands: [TRUE, TRUE] },
-      {
-        claim: "disproved",
-        proof: { kind: "split", cases: [FALSE_PROOF, FALSE_PROOF] },
-      },
-      { maxSteps: 2 },
-    ),
+    verify(TRUE, { kind: "or", operands: [TRUE, TRUE] }, {
+      claim: "disproved",
+      proof: { kind: "split", cases: [FALSE_PROOF, FALSE_PROOF] },
+    }, { maxSteps: 2 }),
     limit,
     "a split of two cases",
   );
@@ -924,7 +875,6 @@ Deno.test("verifyCertificate enforces the step limit at each counted site", () =
     { ok: true, value: { stepsUsed: 4 } },
   );
 });
-
 Deno.test("verifyCertificate rejects a forged negative cycle", () => {
   const certificateError = (message: string) => ({
     ok: false,
@@ -938,7 +888,11 @@ Deno.test("verifyCertificate rejects a forged negative cycle", () => {
     claim: "disproved",
     proof: { kind: "negative-cycle", constraints },
   });
-  const rows: readonly [string, unknown, unknown][] = [
+  const rows: readonly [
+    string,
+    unknown,
+    unknown,
+  ][] = [
     ["a false proof", { claim: "disproved", proof: FALSE_PROOF }, noCycle],
     [
       "a split proof",
@@ -1002,7 +956,6 @@ Deno.test("verifyCertificate rejects a forged negative cycle", () => {
     "a cycle that sums to a positive number",
   );
 });
-
 Deno.test("verifyCertificate counts one step for each predicate it pops", () => {
   const falseConstant = { kind: "constant", value: false };
   const disproved = { claim: "disproved", proof: FALSE_PROOF };
@@ -1013,5 +966,23 @@ Deno.test("verifyCertificate counts one step for each predicate it pops", () => 
   same(verify(TRUE, falseConstant, disproved, { maxSteps: 1 }), {
     ok: true,
     value: { stepsUsed: 1 },
+  });
+});
+
+Deno.test("generated deep prototype chains report an invalid predicate", () => {
+  const layers = Array.from({ length: 20_000 }).reduce<object>(
+    (parent) => Object.create(parent),
+    {},
+  );
+  const malformed = Object.assign({
+    kind: "not" as const,
+    operand: constant(true),
+  }, { operand: layers });
+  assertEquals(entails(malformed, constant(false), { maxSteps: 30_000 }), {
+    ok: false,
+    error: {
+      tag: "invalid-predicate",
+      message: "a not node has no predicate operand",
+    },
   });
 });

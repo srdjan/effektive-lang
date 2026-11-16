@@ -720,7 +720,7 @@ export const forward = (input: { job: Effect<Int, never, Users.read> }): void =>
 `;
   const inherited = source("input.job");
   const local = source("defer(() => Users.read())");
-  const program = new Program("");
+  const program = Program("");
   const initial = program.update({
     set: { ...CONFIG, "services.eff": services, "main.eff": inherited },
   });
@@ -733,7 +733,7 @@ export const forward = (input: { job: Effect<Int, never, Users.read> }): void =>
     ],
   );
 
-  const warm = program.update();
+  const warm = program.update(undefined);
   assert(warm.ok, JSON.stringify(warm));
   assertEquals(warm.value.diagnostics, []);
   assertEquals(warm.value.rechecked, []);
@@ -765,7 +765,7 @@ export const forward = (input: { job: Effect<Int, never, Users.read> }): void =>
     "requirement-contract/002",
   ]);
 
-  const fresh = new Program("").update({
+  const fresh = Program("").update({
     set: { ...CONFIG, "services.eff": services, "main.eff": local },
   });
   assert(fresh.ok, JSON.stringify(fresh));
@@ -1046,7 +1046,7 @@ export const lookup = (query: Query): User => User({ name: query.text })
     "User({ name: query.text })",
     "Users.find(query)",
   );
-  const program = new Program("");
+  const program = Program("");
   const firstResult = program.update({
     set: {
       ...CONFIG,

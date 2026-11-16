@@ -12,7 +12,6 @@ import {
   soft,
 } from "./doc.ts";
 import type { ModuleState } from "./module_state.ts";
-
 /** `const $int = ...` */
 export function intFunctionDeclaration(scope: ModuleState): Doc {
   const name = scope.intFunction();
@@ -25,7 +24,6 @@ export function intFunctionDeclaration(scope: ModuleState): Doc {
     ";",
   ];
 }
-
 /** `const $rem = ...`: the remainder of an `int`, which gives no `-0` and no `NaN`. */
 export function remainderDeclaration(scope: ModuleState): Doc {
   const name = scope.remainder();
@@ -38,7 +36,6 @@ export function remainderDeclaration(scope: ModuleState): Doc {
     ";",
   ];
 }
-
 /** `const $div = ...`: the quotient of two `int` values, truncated toward zero and exact. */
 export function divideDeclaration(scope: ModuleState): Doc {
   const name = scope.divide();
@@ -51,7 +48,6 @@ export function divideDeclaration(scope: ModuleState): Doc {
     ";",
   ];
 }
-
 /** `const $round = ...`: `Math.round` with the half rounded away from zero and no `-0`. */
 export function roundDeclaration(scope: ModuleState): Doc {
   const name = scope.round();
@@ -64,7 +60,6 @@ export function roundDeclaration(scope: ModuleState): Doc {
     ";",
   ];
 }
-
 /** `const $at = ...`: `Some` of the element at an index in range, else `None`. An element can be `null`. */
 export function atDeclaration(scope: ModuleState): Doc {
   const name = scope.at();
@@ -77,7 +72,6 @@ export function atDeclaration(scope: ModuleState): Doc {
     ";",
   ];
 }
-
 /**
  * `function $sort`: a stable copy of an array in ascending order of the element or of
  * its key, which is a number or a string. NaN sorts after every number, and two NaN are equal.
@@ -113,7 +107,6 @@ export function sortDeclaration(scope: ModuleState): Doc {
     ]),
   ];
 }
-
 /** `const $unmatched = ...` */
 export function unmatchedDeclaration(scope: ModuleState): Doc {
   const name = scope.unmatched();
@@ -125,32 +118,38 @@ export function unmatchedDeclaration(scope: ModuleState): Doc {
     ";",
   ];
 }
-
 /** `const $Int = Schema.Finite.check(...)`, the `Int` schema of the book. */
 export function intSchemaDeclaration(scope: ModuleState): Doc {
   const name = scope.intSchemaName();
   const schema = scope.effect("Schema");
-  const filter: Doc = group([
-    `${schema}.makeFilter(`,
-    indent([
+  const filter: Doc = group(
+    [
+      `${schema}.makeFilter(`,
+      indent([
+        soft,
+        '(value) => Number.isSafeInteger(value) || "expected a safe integer"',
+      ]),
+      ifBreak(",", undefined),
       soft,
-      '(value) => Number.isSafeInteger(value) || "expected a safe integer"',
-    ]),
-    ifBreak(","),
-    soft,
-    ")",
-  ]);
+      ")",
+    ],
+    undefined,
+    undefined,
+  );
   return [
     `const ${name} = ${schema}.Finite.check(`,
-    group([
-      indent([soft, filter]),
-      ifBreak(","),
-      soft,
-    ]),
+    group(
+      [
+        indent([soft, filter]),
+        ifBreak(",", undefined),
+        soft,
+      ],
+      undefined,
+      undefined,
+    ),
     ");",
   ];
 }
-
 /** `const $hostCheck = ...`: the synchronous check of a wrapped host provider. */
 export function hostCheckDeclaration(scope: ModuleState): Doc {
   const name = scope.hostCheck();
@@ -204,12 +203,11 @@ export function hostCheckDeclaration(scope: ModuleState): Doc {
     ";",
   ];
 }
-
 /** The message of a defect value. The Defect arm of `catch` uses the same rule. */
-export function defectMessage(value: string): string {
+export type EmittedText = string;
+export function defectMessage(value: EmittedText): EmittedText {
   return `${value} instanceof Error ? ${value}.message : String(${value})`;
 }
-
 export function outcomeDeclaration(scope: ModuleState): Doc {
   const names = scope.outcome();
   const exit = scope.effect("Exit");

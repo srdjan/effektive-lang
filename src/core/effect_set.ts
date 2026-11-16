@@ -4,13 +4,14 @@
 // set is nonempty (spec, "Execution order and mode").
 
 import type { CapabilityId, ErrorId, Execution } from "./ir.ts";
+import { setFrom } from "./runtime.ts";
 import { sortedUnique } from "./util.ts";
 
-export interface EffectSet {
+export type EffectSet = {
   readonly failures: readonly ErrorId[];
   readonly requirements: readonly CapabilityId[];
   readonly mode: Execution;
-}
+};
 
 export const PURE_EFFECTS: EffectSet = {
   failures: [],
@@ -24,9 +25,12 @@ export const EFFECT_ONLY: EffectSet = {
   mode: "effect",
 };
 
+export type Quiet = boolean;
+export type RemovedItems = readonly string[];
+
 /** The sorted, unique union of several lists. */
 export function sortedUnion<T extends string>(
-  ...lists: readonly (readonly T[])[]
+  lists: readonly (readonly T[])[],
 ): T[] {
   return sortedUnique(lists.flat());
 }
@@ -36,12 +40,12 @@ export function sortedUnion<T extends string>(
  * effect or when a set is nonempty.
  */
 export function combine(parts: readonly EffectSet[]): EffectSet {
-  const failures = sortedUnion(...parts.map((part) => part.failures));
-  const requirements = sortedUnion(...parts.map((part) => part.requirements));
+  const failures = sortedUnion(parts.map((part) => part.failures));
+  const requirements = sortedUnion(parts.map((part) => part.requirements));
   const effect = parts.some((part) => part.mode === "effect");
   return {
-    failures,
-    requirements,
+    failures: failures,
+    requirements: requirements,
     mode: effect || failures.length > 0 || requirements.length > 0
       ? "effect"
       : "pure",
@@ -49,7 +53,7 @@ export function combine(parts: readonly EffectSet[]): EffectSet {
 }
 
 /** True when an evaluation is pure and has no failure and no requirement. */
-export function isQuiet(set: EffectSet): boolean {
+export function isQuiet(set: EffectSet): Quiet {
   return set.mode === "pure" && set.failures.length === 0 &&
     set.requirements.length === 0;
 }
@@ -57,8 +61,8 @@ export function isQuiet(set: EffectSet): boolean {
 /** Items of `items` that are not in `removed`, in their order. */
 export function without<T extends string>(
   items: readonly T[],
-  removed: readonly string[],
+  removed: RemovedItems,
 ): T[] {
-  const set = new Set<string>(removed);
+  const set = setFrom(removed);
   return items.filter((item) => !set.has(item));
 }

@@ -10,13 +10,16 @@ import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
 import type { CapabilityId, ErrorId, Execution, ValueId } from "./ir.ts";
 import type { Span } from "./source.ts";
 import { sortedUnion } from "./effect_set.ts";
+import { mapFrom } from "./runtime.ts";
 
 /** The most rounds that one group may take (design 4.6, resource caps). */
 const ROUND_CAP = 32;
+export type RecursiveName = string;
+export type RoundCap = number;
 
 /** `execution-mode/003`: a member of a recursive group lacks a written parameter or result type. */
 export function recursiveAnnotationDiagnostic(
-  name: string,
+  name: RecursiveName,
   nameSpan: Span,
 ): Diagnostic {
   return makeDiagnostic(
@@ -28,7 +31,7 @@ export function recursiveAnnotationDiagnostic(
 
 /** `execution-mode/004`: the group of `name` did not settle within the round cap. */
 export function unsettledGroupDiagnostic(
-  name: string,
+  name: RecursiveName,
   nameSpan: Span,
 ): Diagnostic {
   return makeDiagnostic(
@@ -39,29 +42,29 @@ export function unsettledGroupDiagnostic(
 }
 
 /** The invocation state of a function that its body decides: the mode and the sets. */
-export interface Solved {
+export type Solved = {
   readonly mode: Execution;
   /** Sorted and unique. */
   readonly failures: readonly ErrorId[];
   /** Sorted and unique. */
   readonly requirements: readonly CapabilityId[];
-}
+};
 
-interface Round<R> {
+type Round<R> = {
   /** The checks of this round. The last round's results are the final ones. */
   readonly results: R;
   /** The state that each pending member computed against the assumed state. */
   readonly computed: ReadonlyMap<ValueId, Solved>;
-}
+};
 
-interface GroupSolution<R> {
+type GroupSolution<R> = {
   readonly solved: ReadonlyMap<ValueId, Solved>;
   /** The results of the last round. When `settled`, they used the final modes. */
   readonly results: R;
   readonly rounds: number;
   /** False when the round cap ended the loop. */
   readonly settled: boolean;
-}
+};
 
 const PURE: Solved = { mode: "pure", failures: [], requirements: [] };
 
@@ -69,8 +72,8 @@ const PURE: Solved = { mode: "pure", failures: [], requirements: [] };
 function join(a: Solved, b: Solved): Solved {
   return {
     mode: a.mode === "effect" || b.mode === "effect" ? "effect" : "pure",
-    failures: sortedUnion(a.failures, b.failures),
-    requirements: sortedUnion(a.requirements, b.requirements),
+    failures: sortedUnion([a.failures, b.failures]),
+    requirements: sortedUnion([a.requirements, b.requirements]),
   };
 }
 
@@ -88,24 +91,46 @@ function same(a: Solved, b: Solved): boolean {
 export function solveModeGroup<R>(
   pending: readonly ValueId[],
   round: (assumed: ReadonlyMap<ValueId, Solved>) => Round<R>,
-  cap: number = ROUND_CAP,
+  cap: RoundCap | undefined,
 ): GroupSolution<R> {
-  let solved = new Map<ValueId, Solved>(pending.map((id) => [id, PURE]));
-  for (let rounds = 1;; rounds++) {
+  const resolvedCap = cap ?? ROUND_CAP;
+  function solveRound(
+    solved: ReadonlyMap<ValueId, Solved>,
+    rounds: RoundCap,
+  ): GroupSolution<R> {
     const result = round(solved);
-    const next = new Map(solved);
-    let changed = false;
-    for (const [id, before] of solved) {
+    const nextEntries = [...solved].map((entry) => {
+      const id = entry[0];
+      const before = entry[1];
       const after = join(before, result.computed.get(id) ?? PURE);
-      if (!same(after, before)) changed = true;
-      next.set(id, after);
-    }
+      return [id, after] as const;
+    });
+    const next = mapFrom(nextEntries);
+    const changed = nextEntries.some((entry) => {
+      const id = entry[0];
+      const after = entry[1];
+      return !same(after, solved.get(id) ?? PURE);
+    });
     if (!changed) {
-      return { solved, results: result.results, rounds, settled: true };
+      return {
+        solved: solved,
+        results: result.results,
+        rounds: rounds,
+        settled: true,
+      };
     }
-    solved = next;
-    if (rounds >= cap) {
-      return { solved, results: result.results, rounds, settled: false };
+    if (rounds >= resolvedCap) {
+      return {
+        solved: next,
+        results: result.results,
+        rounds: rounds,
+        settled: false,
+      };
     }
+    return solveRound(next, rounds + 1);
   }
+  return solveRound(
+    mapFrom(pending.map((id) => [id, PURE] as const)),
+    1,
+  );
 }

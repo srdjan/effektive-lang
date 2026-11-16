@@ -1,6 +1,6 @@
-/** Thrown inside the emitter only. `emitModule` turns it into an `EmitError`. */
-export class EmitFailure extends Error {}
+import { invariantFailure, type InvariantMessage } from "../source.ts";
 
-export function internal(message: string): EmitFailure {
-  return new EmitFailure(message);
+/** `emitModule` returns an invariant failure as an `EmitError`. */
+export function internal(message: InvariantMessage): never {
+  return invariantFailure("emit", message);
 }

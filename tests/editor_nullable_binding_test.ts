@@ -9,7 +9,7 @@ import { offsetOf } from "./helpers.ts";
 const outputs = new TypeScriptOutputs();
 
 function hoverText(text: string, needle: string, delta: number): string {
-  const result = new Program("").update({
+  const result = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(result.ok, JSON.stringify(result));

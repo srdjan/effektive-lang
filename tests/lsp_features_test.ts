@@ -524,7 +524,7 @@ function freshOutput(h: Harness, name: string): string {
       set.set(path, text);
     }
   }
-  const updated = new Program(ROOT).update({ set });
+  const updated = Program(ROOT).update({ set });
   assert(updated.ok);
   const emitted = outputs.emitted(updated.value, name);
   assert(emitted?.ok);

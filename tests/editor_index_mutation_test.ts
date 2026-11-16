@@ -9,7 +9,7 @@ import {
 import { assert, assertEquals } from "@std/assert";
 
 function load(text: string) {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -63,10 +63,16 @@ const g = (): Int => r.a
 `;
   const revision = load(text);
   assertEquals(revision.diagnostics, []);
-  assertEquals(referencesAt(revision, "m.eff", text.indexOf("= int") + 2), []);
-  assertEquals(referencesAt(revision, "m.eff", text.indexOf("a: Int")), []);
   assertEquals(
-    referencesAt(revision, "m.eff", text.indexOf("const r") + 5),
+    referencesAt(revision, "m.eff", text.indexOf("= int") + 2, undefined),
+    [],
+  );
+  assertEquals(
+    referencesAt(revision, "m.eff", text.indexOf("a: Int"), undefined),
+    [],
+  );
+  assertEquals(
+    referencesAt(revision, "m.eff", text.indexOf("const r") + 5, undefined),
     [],
   );
 });

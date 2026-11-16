@@ -2,6 +2,7 @@
 // A part registers only the codes that it emits.
 
 import { compareSpans, type Span } from "./source.ts";
+import { emptySet } from "./runtime.ts";
 import { compareText } from "./util.ts";
 
 type Category =
@@ -19,10 +20,6 @@ type Category =
   | "validation";
 
 export type Severity = "error";
-
-interface CodeInfo {
-  readonly description: string;
-}
 
 /**
  * The registry. A code is `<category>/<three digits>`. The category is the
@@ -350,26 +347,28 @@ export const DIAGNOSTIC_CODES = {
     description:
       "Import binding: an import payload differs from the export of its producer module in the same validation call, in an identity, a type definition, an effect set, a predicate, an execution mode, a flag, or a service contract.",
   },
-} as const satisfies Readonly<Record<`${Category}/${string}`, CodeInfo>>;
+} as const;
 
 export type DiagnosticCode = keyof typeof DIAGNOSTIC_CODES;
+export type DiagnosticText = string;
 
-export interface RelatedSpan {
+export type RelatedSpan = {
   readonly span: Span;
   readonly message: string;
-}
+};
 
-export interface Diagnostic {
+export type Diagnostic = {
   readonly code: DiagnosticCode;
   readonly category: Category;
   readonly severity: Severity;
   readonly message: string;
   readonly span: Span;
   readonly related?: readonly RelatedSpan[];
-}
+};
 
 export function registeredCodes(): readonly DiagnosticCode[] {
-  return Object.keys(DIAGNOSTIC_CODES) as DiagnosticCode[];
+  const keys = Object.keys(DIAGNOSTIC_CODES);
+  return keys.filter((key): key is DiagnosticCode => keys.includes(key));
 }
 
 export function categoryOf(code: DiagnosticCode): Category {
@@ -378,26 +377,43 @@ export function categoryOf(code: DiagnosticCode): Category {
   return code.slice(0, code.indexOf("/")) as Category;
 }
 
-export function describeCode(code: DiagnosticCode): string {
+export function describeCode(code: DiagnosticCode): DiagnosticText {
   return DIAGNOSTIC_CODES[code].description;
 }
 
 export function makeDiagnostic(
   code: DiagnosticCode,
-  message: string,
+  message: DiagnosticText,
   span: Span,
-  related?: readonly RelatedSpan[],
+): Diagnostic {
+  return diagnostic(code, message, span, undefined);
+}
+
+export function makeDiagnosticWithRelated(
+  code: DiagnosticCode,
+  message: DiagnosticText,
+  span: Span,
+  related: readonly RelatedSpan[] | undefined,
+): Diagnostic {
+  return diagnostic(code, message, span, related);
+}
+
+function diagnostic(
+  code: DiagnosticCode,
+  message: DiagnosticText,
+  span: Span,
+  related: readonly RelatedSpan[] | undefined,
 ): Diagnostic {
   const base = {
-    code,
+    code: code,
     category: categoryOf(code),
     severity: "error" as const,
-    message,
-    span,
+    message: message,
+    span: span,
   };
   return related === undefined || related.length === 0
     ? base
-    : { ...base, related };
+    : { ...base, related: related };
 }
 
 /** Sorts by span, then code, then message. The input is not changed. */
@@ -414,14 +430,14 @@ export function sortDiagnostics(
 export function dedupeDiagnostics(
   diagnostics: readonly Diagnostic[],
 ): Diagnostic[] {
-  const seen = new Set<string>();
+  let seen = emptySet<string>();
   const result: Diagnostic[] = [];
   for (const d of diagnostics) {
     const key =
       `${d.code}\u0000${d.span.source}\u0000${d.span.start}\u0000${d.span.end}\u0000${d.message}`;
     if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(d);
+    seen = seen.add(key);
+    result[result.length] = d;
   }
   return result;
 }

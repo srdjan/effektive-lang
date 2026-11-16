@@ -28,29 +28,30 @@ export function contractOrigins(
   root: NodeId,
   entry: ContractEntry,
 ): Span[] {
-  const ownSet = (node: NodeId): EffectSet | undefined =>
-    body.stageSets.get(node) ?? body.info.get(node);
-  const carries = (node: NodeId): boolean => {
+  function ownSet(node: NodeId): EffectSet | undefined {
+    return body.stageSets.get(node) ?? body.info.get(node);
+  }
+  function carries(node: NodeId): boolean {
     const set = ownSet(node);
     if (set === undefined) return false;
     return entry.kind === "failure"
       ? set.failures.includes(entry.error)
       : set.requirements.includes(entry.capability);
-  };
-  const handlesEntry = (handler: NodeId): boolean => {
+  }
+  function handlesEntry(handler: NodeId): boolean {
     const fact = body.facts.get(handler);
     return entry.kind === "failure" && fact?.kind === "handler" &&
       fact.error === entry.error;
-  };
-  const arrowReplacement = (node: NodeId): NodeId | undefined => {
+  }
+  function arrowReplacement(node: NodeId): NodeId | undefined {
     if (body.facts.get(node)?.kind !== "arrow") return undefined;
     if (kindOf(tree, node) === SyntaxKind.ArrowExpr) {
       return arrowBody(tree, node);
     }
     return kidsOf(tree, node).pop();
-  };
+  }
   // The syntax children that stand in for the children of `node`.
-  const stand = (node: NodeId, skipProtected: boolean): NodeId[] => {
+  function stand(node: NodeId, skipProtected: boolean): NodeId[] {
     const result: NodeId[] = [];
     const protectedBlock = skipProtected
       ? kidsOf(tree, node).find((k) => kindOf(tree, k) === SyntaxKind.Block)
@@ -59,33 +60,37 @@ export function contractOrigins(
       if (child === protectedBlock) continue;
       const replacement = arrowReplacement(child);
       if (replacement !== undefined) {
-        result.push(replacement);
+        result[result.length] = replacement;
       } else if (ownSet(child) === undefined) {
-        result.push(...stand(child, false));
+        for (const descendant of stand(child, false)) {
+          result[result.length] = descendant;
+        }
       } else {
-        result.push(child);
+        result[result.length] = child;
       }
     }
     return result;
-  };
-  const namesHandler = (node: NodeId): boolean =>
-    kindOf(tree, node) === SyntaxKind.TryExpr &&
-    kidsOf(tree, node).some((k) =>
-      kindOf(tree, k) === SyntaxKind.CatchClause &&
-      kidsOf(tree, k).some((h) =>
-        kindOf(tree, h) === SyntaxKind.Handler && handlesEntry(h)
-      )
-    );
-  const found = new Map<string, Span>();
-  const visit = (node: NodeId): void => {
+  }
+  function namesHandler(node: NodeId): boolean {
+    return kindOf(tree, node) === SyntaxKind.TryExpr &&
+      kidsOf(tree, node).some((k) =>
+        kindOf(tree, k) === SyntaxKind.CatchClause &&
+        kidsOf(tree, k).some((h) =>
+          kindOf(tree, h) === SyntaxKind.Handler && handlesEntry(h)
+        )
+      );
+  }
+  function visit(node: NodeId): readonly Span[] {
     const selected = stand(node, namesHandler(node)).filter(carries);
     if (selected.length === 0) {
-      const span = nodeSpan(tree, node);
-      found.set(`${span.start}:${span.end}`, span);
-      return;
+      return [nodeSpan(tree, node)];
     }
-    for (const child of selected) visit(child);
-  };
-  if (carries(root)) visit(root);
-  return [...found.values()].sort((a, b) => a.start - b.start || a.end - b.end);
+    return selected.flatMap(visit);
+  }
+  if (!carries(root)) return [];
+  return visit(root).filter((span, index, spans) =>
+    spans.findIndex((candidate) =>
+      candidate.start === span.start && candidate.end === span.end
+    ) === index
+  ).toSorted((a, b) => a.start - b.start || a.end - b.end);
 }

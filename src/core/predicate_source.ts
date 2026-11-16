@@ -1,6 +1,7 @@
 import type { Span } from "./ir.ts";
 import { addLinear, differenceShape, type Linear } from "./linear.ts";
 import type { Result } from "./source.ts";
+import { bigInteger, emptyMap, mapFrom } from "./runtime.ts";
 import {
   and,
   comparison,
@@ -31,19 +32,16 @@ import {
   unparen,
 } from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
-
-interface PredicateSourceError {
+type PredicateSourceError = {
   readonly message: string;
   readonly span: Span;
-}
-
-interface Context {
+};
+type Context = {
   readonly tree: SyntaxTree;
   readonly table: TypeTable;
   readonly inputName: string;
   readonly inputType: TypeRef;
-}
-
+};
 /** Compiles one contextual `where` clause into its normalized predicate. */
 export function predicateFromSource(
   tree: SyntaxTree,
@@ -77,9 +75,13 @@ export function predicateFromSource(
   if (body === undefined) {
     return fail(tree, arrow, "a refinement predicate needs a body");
   }
-  return compilePredicate({ tree, table, inputName, inputType }, body);
+  return compilePredicate({
+    tree: tree,
+    table: table,
+    inputName: inputName,
+    inputType: inputType,
+  }, body);
 }
-
 function compilePredicate(
   context: Context,
   node: NodeId,
@@ -88,8 +90,12 @@ function compilePredicate(
   const kind = kindOf(context.tree, inner);
   if (kind === SyntaxKind.LiteralExpr) {
     const text = nodeText(context.tree, inner);
-    if (text === "true") return { ok: true, value: constant(true) };
-    if (text === "false") return { ok: true, value: constant(false) };
+    if (text === "true") {
+      return { ok: true, value: constant(true) };
+    }
+    if (text === "false") {
+      return { ok: true, value: constant(false) };
+    }
   }
   if (
     kind === SyntaxKind.UnaryExpr &&
@@ -111,14 +117,18 @@ function compilePredicate(
   }
   if (operator === "&&" || operator === "||") {
     const left = compilePredicate(context, operands[0]);
-    if (!left.ok) return left;
+    if (!left.ok) {
+      return left;
+    }
     const right = compilePredicate(context, operands[1]);
-    if (!right.ok) return right;
+    if (!right.ok) {
+      return right;
+    }
     return {
       ok: true,
       value: operator === "&&"
-        ? and(left.value, right.value)
-        : or(left.value, right.value),
+        ? and([left.value, right.value])
+        : or([left.value, right.value]),
     };
   }
   if (
@@ -132,12 +142,15 @@ function compilePredicate(
     );
   }
   const left = compileLinear(context, operands[0]);
-  if (!left.ok) return left;
+  if (!left.ok) {
+    return left;
+  }
   const right = compileLinear(context, operands[1]);
-  if (!right.ok) return right;
+  if (!right.ok) {
+    return right;
+  }
   return compareLinear(context.tree, inner, left.value, operator, right.value);
 }
-
 function compareLinear(
   tree: SyntaxTree,
   node: NodeId,
@@ -150,7 +163,8 @@ function compareLinear(
   if (shape === undefined) {
     return fail(tree, node, "the comparison is not a difference constraint");
   }
-  const { positive, negative } = shape;
+  const positive = shape.positive;
+  const negative = shape.negative;
   const result = comparison(
     positive,
     difference.offset.toString(),
@@ -162,7 +176,6 @@ function compareLinear(
     ? result
     : fail(tree, node, "the integer comparison is not supported");
 }
-
 function compileLinear(
   context: Context,
   node: NodeId,
@@ -170,17 +183,22 @@ function compileLinear(
   const inner = unparen(context.tree, node);
   if (kindOf(context.tree, inner) === SyntaxKind.LiteralExpr) {
     const text = nodeText(context.tree, inner);
-    if (!/^[0-9]+$/.test(text)) {
+    const decimal = text.length > 0 &&
+      [...text].every((character) => character >= "0" && character <= "9");
+    if (!decimal) {
       return fail(context.tree, inner, "a refinement needs integer literals");
     }
-    return { ok: true, value: { terms: new Map(), offset: BigInt(text) } };
+    return {
+      ok: true,
+      value: { terms: emptyMap(), offset: bigInteger(text) },
+    };
   }
   if (kindOf(context.tree, inner) === SyntaxKind.UnaryExpr) {
     // `-e` reads as `0 - e`.
     if (unaryOperatorOf(context.tree, inner)?.operator === "!") {
       return fail(context.tree, inner, "a refinement does not support `!`");
     }
-    const [operandNode] = kidsOf(context.tree, inner);
+    const operandNode = kidsOf(context.tree, inner)[0];
     if (operandNode === undefined) {
       return fail(
         context.tree,
@@ -192,16 +210,14 @@ function compileLinear(
     return operand.ok
       ? {
         ok: true,
-        value: addLinear({ terms: new Map(), offset: 0n }, operand.value, -1n),
+        value: addLinear({ terms: emptyMap(), offset: 0n }, operand.value, -1n),
       }
       : operand;
   }
   if (kindOf(context.tree, inner) === SyntaxKind.BinaryExpr) {
     const operator = operatorOf(context.tree, inner);
     const operands = kidsOf(context.tree, inner);
-    if (
-      operands.length !== 2 || (operator !== "+" && operator !== "-")
-    ) {
+    if (operands.length !== 2 || (operator !== "+" && operator !== "-")) {
       return fail(
         context.tree,
         inner,
@@ -209,9 +225,13 @@ function compileLinear(
       );
     }
     const left = compileLinear(context, operands[0]);
-    if (!left.ok) return left;
+    if (!left.ok) {
+      return left;
+    }
     const right = compileLinear(context, operands[1]);
-    if (!right.ok) return right;
+    if (!right.ok) {
+      return right;
+    }
     return {
       ok: true,
       value: addLinear(left.value, right.value, operator === "+" ? 1n : -1n),
@@ -222,16 +242,17 @@ function compileLinear(
     ? {
       ok: true,
       value: {
-        terms: new Map([[termKey(term.value), {
-          term: term.value,
-          coefficient: 1n,
-        }]]),
+        terms: mapFrom([
+          [termKey(term.value), {
+            term: term.value,
+            coefficient: 1n,
+          }] as const,
+        ]),
         offset: 0n,
       },
     }
     : term;
 }
-
 function compileTerm(
   context: Context,
   node: NodeId,
@@ -240,9 +261,13 @@ function compileTerm(
     return compileLength(context, node);
   }
   const path = pathOf(context.tree, node, context.inputName);
-  if (!path.ok) return path;
+  if (!path.ok) {
+    return path;
+  }
   const type = typeAtPath(context, path.value, node);
-  if (!type.ok) return type;
+  if (!type.ok) {
+    return type;
+  }
   if (!isInteger(context.table, type.value)) {
     return fail(context.tree, node, "a compared value must have type `int`");
   }
@@ -253,7 +278,6 @@ function compileTerm(
       : { kind: "field", path: path.value },
   };
 }
-
 function compileLength(
   context: Context,
   node: NodeId,
@@ -277,9 +301,13 @@ function compileLength(
     return fail(context.tree, node, "`len` needs one input or field path");
   }
   const path = pathOf(context.tree, arguments_[0], context.inputName);
-  if (!path.ok) return path;
+  if (!path.ok) {
+    return path;
+  }
   const type = typeAtPath(context, path.value, arguments_[0]);
-  if (!type.ok) return type;
+  if (!type.ok) {
+    return type;
+  }
   if (!hasLength(context.table, type.value)) {
     return fail(context.tree, arguments_[0], "`len` needs a string or array");
   }
@@ -288,7 +316,6 @@ function compileLength(
     value: { kind: "length", path: path.value, unit: "utf16" },
   };
 }
-
 function pathOf(
   tree: SyntaxTree,
   node: NodeId,
@@ -303,7 +330,9 @@ function pathOf(
   if (kindOf(tree, inner) !== SyntaxKind.FieldExpr) {
     return fail(tree, inner, "a refinement term must be an input field path");
   }
-  const { base, member: fieldNode } = memberAccessParts(tree, inner);
+  const access = memberAccessParts(tree, inner);
+  const base = access.base;
+  const fieldNode = access.member;
   const field = fieldNode === undefined
     ? undefined
     : nameTextOf(tree, fieldNode);
@@ -313,7 +342,6 @@ function pathOf(
   const prefix = pathOf(tree, base, inputName);
   return prefix.ok ? { ok: true, value: [...prefix.value, field] } : prefix;
 }
-
 function typeAtPath(
   context: Context,
   path: readonly string[],
@@ -340,42 +368,47 @@ function typeAtPath(
   }
   return { ok: true, value: current };
 }
-
 function isInteger(table: TypeTable, ref: TypeRef): boolean {
   const node = table.node(table.unfold(ref));
-  if (node.kind === "primitive") return node.name === "int";
+  if (node.kind === "primitive") {
+    return node.name === "int";
+  }
   if (node.kind === "literal") {
     return typeof node.value === "number" && Number.isSafeInteger(node.value);
   }
   return node.kind === "union" &&
     node.members.every((member) => isInteger(table, member));
 }
-
 function hasLength(table: TypeTable, ref: TypeRef): boolean {
   const node = table.node(table.unfold(ref));
-  if (node.kind === "array") return true;
-  if (node.kind === "primitive") return node.name === "string";
-  if (node.kind === "literal") return typeof node.value === "string";
+  if (node.kind === "array") {
+    return true;
+  }
+  if (node.kind === "primitive") {
+    return node.name === "string";
+  }
+  if (node.kind === "literal") {
+    return typeof node.value === "string";
+  }
   return node.kind === "union" &&
     node.members.every((member) => hasLength(table, member));
 }
-
 function termKey(term: Term): string {
-  switch (term.kind) {
-    case "zero":
-    case "input":
-      return term.kind;
-    case "field":
-      return `field:${term.path.join(".")}`;
-    case "length":
-      return `length:${term.path.join(".")}:${term.unit}`;
+  if (term.kind === "zero" || term.kind === "input") {
+    return term.kind;
   }
+  if (term.kind === "field") {
+    return `field:${term.path.join(".")}`;
+  }
+  return `length:${term.path.join(".")}:${term.unit}`;
 }
-
 function fail<T>(
   tree: SyntaxTree,
   node: NodeId,
   message: string,
 ): Result<T, PredicateSourceError> {
-  return { ok: false, error: { message, span: nodeSpan(tree, node) } };
+  return {
+    ok: false,
+    error: { message: message, span: nodeSpan(tree, node) },
+  };
 }

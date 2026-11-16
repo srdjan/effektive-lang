@@ -8,17 +8,26 @@
 // `git archive` export has no sibling, so all three tests are ignored.
 
 import { assert, assertEquals } from "@std/assert";
+import { join, toFileUrl } from "@std/path";
 import { generateSiteIr } from "../scripts/site_ir.ts";
 import { deno, withTemporaryDirectory } from "./process_helpers.ts";
 
 const CORE_IR = new URL("../src/core/ir.ts", import.meta.url);
 const CORE_PREDICATES = new URL("../src/core/predicates.ts", import.meta.url);
-const SITE_IR = new URL("../../effektive/public/typed-ir.ts", import.meta.url);
 const LOG_FIXTURE = new URL(
   "../fixtures/ir/example/log.ir.json",
   import.meta.url,
 );
-const SITE_LOG = new URL("../../effektive/public/log.ir.json", import.meta.url);
+
+function siteFile(name: string): URL {
+  const override = Deno.env.get("EFFEKTIVE_SITE_ROOT");
+  return override === undefined
+    ? new URL(`../../effektive/public/${name}`, import.meta.url)
+    : toFileUrl(join(override, "public", name));
+}
+
+const SITE_IR = siteFile("typed-ir.ts");
+const SITE_LOG = siteFile("log.ir.json");
 
 function siteIrExists(): boolean {
   try {
@@ -28,7 +37,9 @@ function siteIrExists(): boolean {
   }
 }
 
-const SITE_ABSENT = !siteIrExists();
+// An explicit companion root must fail when its files are absent.
+const SITE_ABSENT = Deno.env.get("EFFEKTIVE_SITE_ROOT") === undefined &&
+  !siteIrExists();
 
 Deno.test({
   name: "the published typed IR equals the text that site:ir generates",

@@ -9,7 +9,7 @@
 import { canonicalJsonIndented } from "./content_id.ts";
 import type { ModuleIR } from "./ir.ts";
 import type { Result } from "./source.ts";
-import { compareText } from "./util.ts";
+import { compareText, isRecord } from "./util.ts";
 
 type SerializeError =
   /** A failure, requirement, or provides set that is not sorted, or that repeats an entry. */
@@ -21,13 +21,13 @@ type SerializeError =
   /** A number literal that is `NaN` or infinite. */
   | { readonly tag: "non-finite-number"; readonly path: string };
 
-const SET_KEYS: ReadonlySet<string> = new Set([
+const SET_KEYS: readonly string[] = [
   "failures",
   "requirements",
   "decodeRequirements",
   "encodeRequirements",
   "provides",
-]);
+];
 
 /** True when the list holds strings in strictly increasing order. */
 function isSortedUnique(list: readonly unknown[]): boolean {
@@ -47,20 +47,23 @@ function findProblem(value: unknown, path: string): SerializeError | undefined {
   if (typeof value === "number") {
     return Number.isFinite(value)
       ? undefined
-      : { tag: "non-finite-number", path };
+      : { tag: "non-finite-number", path: path };
   }
   if (value === null || typeof value !== "object") return undefined;
   if (Array.isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
+    for (const i of value.keys()) {
       const problem = findProblem(value[i], `${path}[${i}]`);
       if (problem !== undefined) return problem;
     }
     return undefined;
   }
-  const record = value as Readonly<Record<string, unknown>>;
+  if (!isRecord(value)) return undefined;
+  const record = value;
   for (const key of Object.keys(record)) {
     const item = record[key];
-    if (SET_KEYS.has(key) && Array.isArray(item) && !isSortedUnique(item)) {
+    if (
+      SET_KEYS.includes(key) && Array.isArray(item) && !isSortedUnique(item)
+    ) {
       return { tag: "unsorted-set", path: `${path}.${key}` };
     }
     const problem = findProblem(item, `${path}.${key}`);

@@ -20,21 +20,28 @@ import type {
 import type { PlaygroundHover, PlaygroundResult } from "./compile.ts";
 import { outputState, type ProblemItem, tabCounts } from "./model.ts";
 
-export type { EditChange, Layout };
+type ViewportWidth = number;
+type SourcePath = string;
+type SourceLength = number;
+type SavingLabel = string;
+type SourceOffset = number;
+type ViewName = string;
+type ErrorTag = string;
+type ErrorMessage = string;
 
 /** The widths where the wide layout and the explorer start. `app.css` agrees. */
 export const WIDE_FROM = 720;
 export const EXPLORER_FROM = 1024;
 
-export function layoutOf(width: number): Layout {
-  return width < WIDE_FROM
-    ? "narrow"
-    : width < EXPLORER_FROM
-    ? "wide"
-    : "explorer";
+export function layoutOf(width: ViewportWidth): Layout {
+  if (width < WIDE_FROM) return "narrow";
+  if (width < EXPLORER_FROM) return "wide";
+  return "explorer";
 }
 
-const round1 = (value: number): number => Math.round(value * 10) / 10;
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
 
 export function startData(input: {
   readonly build: string;
@@ -53,50 +60,52 @@ export function startData(input: {
 }
 
 export function selectData(
-  path: string,
+  path: SourcePath,
   by: "click" | "key" | "hash" | "start",
 ): PgSelectData {
-  return { path, by };
+  return { path: path, by: by };
 }
 
 export function editData(
-  path: string,
+  path: SourcePath,
   changes: readonly EditChange[],
-  length: number,
+  length: SourceLength,
 ): PgEditData {
-  return { path, changes, length };
+  return { path: path, changes: changes, length: length };
 }
 
 /** The diagnostics are those of `path`. The counts list files with errors. */
 export function compileData(
-  path: string,
+  path: SourcePath,
   result: PlaygroundResult,
-  saving: string,
+  saving: SavingLabel,
 ): PgCompileData {
   const counts: Record<string, number> = {};
-  for (const [file, count] of Object.entries(tabCounts(result))) {
+  for (const entry of Object.entries(tabCounts(result))) {
+    const file = entry[0];
+    const count = entry[1];
     if (count > 0) counts[file] = count;
   }
   return {
-    path,
+    path: path,
     ms: round1(result.elapsedMs),
     diagnostics: (result.diagnostics[path] ?? []).map((d) => ({
       code: d.code,
       from: d.from,
       to: d.to,
     })),
-    counts,
+    counts: counts,
     stale: outputState(result, path).tag === "stale",
-    saving,
+    saving: saving,
   };
 }
 
 export function hoverData(
-  offset: number,
+  offset: SourceOffset,
   hit: PlaygroundHover | undefined,
   by: "pointer" | "cursor",
 ): PgHoverData {
-  return { offset, hit: hit !== undefined, by };
+  return { offset: offset, hit: hit !== undefined, by: by };
 }
 
 export function problemData(
@@ -105,16 +114,16 @@ export function problemData(
   return { code: item.code, path: item.path };
 }
 
-export function viewData(name: string): PgViewData {
-  return { name };
+export function viewData(name: ViewName): PgViewData {
+  return { name: name };
 }
 
 export function layoutData(mode: Layout): PgLayoutData {
-  return { mode };
+  return { mode: mode };
 }
 
-export function errorData(tag: string, message: string): PgErrorData {
-  return { tag, message };
+export function errorData(tag: ErrorTag, message: ErrorMessage): PgErrorData {
+  return { tag: tag, message: message };
 }
 
 export function endData(): EmptyData {

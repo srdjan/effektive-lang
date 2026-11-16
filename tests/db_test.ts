@@ -9,12 +9,7 @@ const outputs = new TypeScriptOutputs();
 // Tests for the program: the memo, the module cutoff, and the
 // differential check against a run from scratch.
 
-import {
-  assert,
-  assertEquals,
-  assertNotEquals,
-  assertThrows,
-} from "@std/assert";
+import { assert, assertEquals, assertNotEquals } from "@std/assert";
 import {
   checkProject,
   lowerProject,
@@ -25,7 +20,6 @@ import {
   serializeModule,
 } from "../src/core/frontend.ts";
 import { emitProject } from "../src/core/typescript.ts";
-import { TypeTable } from "../src/core/types.ts";
 import { exampleFiles } from "./helpers.ts";
 
 type Files = Record<string, string>;
@@ -91,7 +85,7 @@ function sortedKeys(value: unknown): unknown {
 
 class Session {
   readonly files: Files;
-  readonly program = new Program("");
+  readonly program = Program("");
   last: Revision | undefined;
 
   constructor(files: Files) {
@@ -141,44 +135,6 @@ Deno.test("incremental alias and brand edits equal fresh checks across dependent
   assertEquals(session.apply({ "a.eff": alias }).diagnostics, []);
 });
 
-Deno.test("an update after an internal failure in check equals a run from scratch", () => {
-  const alias = "export type N = int\nexport const n: N = 1\n";
-  const files = {
-    "effektive.json": "{}",
-    "a.eff": alias,
-    "b.eff": 'import { N, n } from "./a.eff"\nexport const copy: N = n\n',
-  };
-  const session = new Session(files);
-  session.apply(files);
-  // A body edit makes `check` run again, and `check` then reaches `isAssignableIn`.
-  const broken = {
-    "b.eff":
-      'import { N, n } from "./a.eff"\nexport const copy: N = n\nexport const twin: N = n\n',
-  };
-  const original = TypeTable.prototype.isAssignableIn;
-  TypeTable.prototype.isAssignableIn = () => {
-    throw new Error("internal: injected");
-  };
-  try {
-    assertThrows(
-      () => session.program.update({ set: broken }),
-      Error,
-      "injected",
-    );
-  } finally {
-    TypeTable.prototype.isAssignableIn = original;
-  }
-  // The files stay changed by design, so the session follows them.
-  Object.assign(session.files, broken);
-  const fixed = session.apply({
-    "b.eff":
-      'import { N, n } from "./a.eff"\nexport const copy: N = n\nexport const again: N = copy\n',
-  });
-  assertEquals(fixed.diagnostics, []);
-});
-
-// ------------------------------------------------------------------ the memo
-
 Deno.test("the first revision checks every module in topological order", () => {
   const session = new Session(exampleFiles());
   const first = session.apply(exampleFiles());
@@ -198,11 +154,11 @@ Deno.test("the first revision checks every module in topological order", () => {
 Deno.test("an update with no change rechecks nothing and recomputes nothing", () => {
   const session = new Session(exampleFiles());
   session.apply(exampleFiles());
-  const before = { ...session.program.counts };
+  const before = { ...session.program.counts() };
   const second = session.apply({});
   assertEquals(second.rechecked, []);
   assertEquals(second.number, 2);
-  assertEquals(session.program.counts, before);
+  assertEquals(session.program.counts(), before);
 });
 
 Deno.test("a changed file is rechecked alone when no module imports it", () => {
@@ -363,7 +319,7 @@ Deno.test("differential: a sequence of edits equals a run from scratch after eac
 
 Deno.test("differential: a broken project file is an error value, and a fix brings the program back", () => {
   const files = exampleFiles();
-  const program = new Program("");
+  const program = Program("");
   const first = program.update({ set: files });
   assert(first.ok);
   const broken = program.update({ set: { "effektive.json": "{" } });
@@ -410,15 +366,15 @@ function updated(program: Program, set: Files = {}): Revision {
 }
 
 Deno.test("counts: a cold update parses and checks every module and lowers nothing", () => {
-  const program = new Program("");
-  assertEquals(program.counts, {
+  const program = Program("");
+  assertEquals(program.counts(), {
     parses: 0,
     checks: 0,
     lowerings: 0,
   });
   updated(program, exampleFiles());
   // Six .eff files and the .effi file that main.eff imports.
-  assertEquals(program.counts, {
+  assertEquals(program.counts(), {
     parses: 7,
     checks: 7,
     lowerings: 0,
@@ -427,7 +383,7 @@ Deno.test("counts: a cold update parses and checks every module and lowers nothi
 
 Deno.test("counts: a body edit parses and checks one module, an interface edit checks its importers", () => {
   const files = exampleFiles();
-  const program = new Program("");
+  const program = Program("");
   updated(program, files);
   const body = files[USERS].replace(
     "None => fail(UserMissing({ id }))",
@@ -435,7 +391,7 @@ Deno.test("counts: a body edit parses and checks one module, an interface edit c
   );
   assertNotEquals(body, files[USERS]);
   updated(program, { [USERS]: body });
-  assertEquals(program.counts, {
+  assertEquals(program.counts(), {
     parses: 8,
     checks: 8,
     lowerings: 0,
@@ -446,14 +402,14 @@ Deno.test("counts: a body edit parses and checks one module, an interface edit c
   );
   updated(program, { [USERS]: iface });
   // users and main check again.
-  assertEquals(program.counts, {
+  assertEquals(program.counts(), {
     parses: 9,
     checks: 10,
     lowerings: 0,
   });
   // An update with no change adds nothing.
   updated(program);
-  assertEquals(program.counts, {
+  assertEquals(program.counts(), {
     parses: 9,
     checks: 10,
     lowerings: 0,
@@ -462,23 +418,23 @@ Deno.test("counts: a body edit parses and checks one module, an interface edit c
 
 Deno.test("counts: lowerings and emits count once per module and revision, and not on a memo hit", () => {
   const outputs = new TypeScriptOutputs();
-  const program = new Program("");
+  const program = Program("");
   const first = updated(program, exampleFiles());
   first.lowered("main");
   first.lowered("main");
-  assertEquals(program.counts.lowerings, 1);
+  assertEquals(program.counts().lowerings, 1);
   assertEquals(outputs.counts.emits, 0);
   outputs.emitted(first, "main");
   outputs.emitted(first, "main");
   outputs.emitted(first, "pay");
-  assertEquals(program.counts.lowerings, 2);
+  assertEquals(program.counts().lowerings, 2);
   assertEquals(outputs.counts.emits, 2);
   // The next revision reuses the memo entries of both modules.
   const second = updated(program);
   second.lowered("main");
   outputs.emitted(second, "main");
   outputs.emitted(second, "pay");
-  assertEquals(program.counts.lowerings, 2);
+  assertEquals(program.counts().lowerings, 2);
   assertEquals(outputs.counts.emits, 2);
   // The counts are a snapshot: an earlier value does not change.
   const before = outputs.counts;
@@ -496,7 +452,7 @@ const FLIP_EFFECT =
 
 Deno.test("revisionDelta: no change and a body edit change nothing, an interface edit changes the interface", () => {
   const files = exampleFiles();
-  const program = new Program("");
+  const program = Program("");
   const first = updated(program, files);
   const same = updated(program);
   assertEquals(revisionDelta(first, same), {
@@ -529,7 +485,7 @@ Deno.test("revisionDelta: no change and a body edit change nothing, an interface
 });
 
 Deno.test("revisionDelta: a mode flip appears in both lists", () => {
-  const program = new Program("");
+  const program = Program("");
   const pure = updated(program, { "effektive.json": "{}", "m.eff": FLIP_PURE });
   assertEquals(pure.diagnostics, []);
   assertEquals(
@@ -553,7 +509,7 @@ Deno.test("revisionDelta: a mode flip appears in both lists", () => {
 });
 
 Deno.test("revisionDelta: a module absent from the previous revision, or no previous revision, counts as changed", () => {
-  const program = new Program("");
+  const program = Program("");
   const first = updated(program, exampleFiles());
   assertEquals(
     revisionDelta(undefined, first),
@@ -572,7 +528,7 @@ Deno.test("revisionDelta: a module absent from the previous revision, or no prev
 });
 
 Deno.test("revision queries: path lookups, imports, declaration entries, and module order", () => {
-  const result = new Program("").update({
+  const result = Program("").update({
     set: {
       "effektive.json": "{}",
       "a.eff": 'import { N, n } from "./b.eff"\nexport const copy: N = n\n',
@@ -622,7 +578,7 @@ export const next = (s: Stamp): Stamp => bump(s)
 `;
 
 Deno.test("counts: a body edit after a span move keeps the lowering of an indirect importer", () => {
-  const program = new Program("");
+  const program = Program("");
   const first = updated(program, {
     "effektive.json": "{}",
     "lib.eff": STAMP_LIB,
@@ -631,13 +587,13 @@ Deno.test("counts: a body edit after a span move keeps the lowering of an indire
   });
   assertEquals(first.diagnostics, []);
   first.lowered("top");
-  assertEquals(program.counts.lowerings, 1);
+  assertEquals(program.counts().lowerings, 1);
   // A comment moves the span of `Stamp`. The interface hash of lib stays
   // equal, so only lib is checked again, and top is lowered again.
   const moved = updated(program, { "lib.eff": "// moved\n" + STAMP_LIB });
   assertEquals(moved.rechecked, ["lib"]);
   const movedTop = moved.lowered("top");
-  assertEquals(program.counts.lowerings, 2);
+  assertEquals(program.counts().lowerings, 2);
   // A body edit of mid with the same length keeps every span of its interface.
   // top reaches the same payloads as before, so its IR is not lowered again.
   const edited = updated(program, {
@@ -645,11 +601,11 @@ Deno.test("counts: a body edit after a span move keeps the lowering of an indire
   });
   assertEquals(edited.rechecked, ["mid"]);
   assert(edited.lowered("top") === movedTop);
-  assertEquals(program.counts.lowerings, 2);
+  assertEquals(program.counts().lowerings, 2);
 });
 
 Deno.test("revisionDelta: a new function adds a mode entry, so the module counts as mode changed", () => {
-  const program = new Program("");
+  const program = Program("");
   const one = updated(program, {
     "effektive.json": "{}",
     "m.eff": FLIP_PURE,

@@ -41,7 +41,7 @@ Deno.test("emitter alias resolution reaches deep targets and stops at cycles, br
     declarations,
     exports: [],
   };
-  const scope = new ModuleState(ir, { host: new Map() });
+  const scope = ModuleState(ir, { host: new Map() });
   for (const depth of [63, 64, 70, 125]) {
     assertEquals(scope.resolve(named(depth)), leaf);
   }

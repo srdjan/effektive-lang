@@ -6,7 +6,11 @@
 // current revision, so the requirements that values carry are read from the
 // same table as the checked bodies.
 
-import { type Diagnostic, makeDiagnostic } from "./diagnostics.ts";
+import {
+  type Diagnostic,
+  makeDiagnostic,
+  makeDiagnosticWithRelated,
+} from "./diagnostics.ts";
 import { contractOrigins } from "./contract_origins.ts";
 import { serviceOfCapability, shortName } from "./ids.ts";
 import type { CapabilityId, LocalId, ServiceId } from "./ir.ts";
@@ -20,9 +24,10 @@ import type { ConstantSignature, FunctionSignature } from "./signatures.ts";
 import type { NodeId } from "./syntax.ts";
 import type { BodyTable } from "./tables.ts";
 import type { TypeReader, TypeRef } from "./types.ts";
+import { emptySet, setFrom } from "./runtime.ts";
 
 /** A checked function, as far as the bound reads it. */
-interface BoundedFunction {
+type BoundedFunction = {
   readonly signature: Pick<
     FunctionSignature,
     "name" | "nameSpan" | "parameters"
@@ -32,16 +37,16 @@ interface BoundedFunction {
   readonly table: BodyTable;
   /** The body expression of the arrow, or undefined when the source is broken. */
   readonly bodyNode: NodeId | undefined;
-}
+};
 
 /** A checked constant, as far as the bound reads it. */
-interface BoundedConstant {
+type BoundedConstant = {
   readonly signature: Pick<ConstantSignature, "name" | "nameSpan">;
   readonly type: TypeRef;
   readonly table: BodyTable;
-}
+};
 
-interface ServiceBoundInput {
+type ServiceBoundInput = {
   readonly info: Pick<ModuleInfo, "tree" | "index">;
   readonly resolution: ModuleResolution;
   /** The services that the module declares. */
@@ -50,7 +55,7 @@ interface ServiceBoundInput {
   readonly table: TypeReader;
   readonly functions: Iterable<BoundedFunction>;
   readonly constants: Iterable<BoundedConstant>;
-}
+};
 
 /** The services that the module may require, or undefined when it has no service header. */
 function allowedServiceIds(
@@ -60,13 +65,13 @@ function allowedServiceIds(
     entry.role === "service"
   );
   if (headers.length === 0) return undefined;
-  const allowed = new Set<ServiceId>(
+  let allowed = setFrom<ServiceId>(
     input.declaredServices.map((service) => service.id),
   );
   for (const header of headers) {
     for (const name of header.names) {
       const target = input.resolution.namespace.get(name.name)?.target;
-      if (target?.kind === "service") allowed.add(target.id);
+      if (target?.kind === "service") allowed = allowed.add(target.id);
     }
   }
   return allowed;
@@ -76,35 +81,52 @@ function allowedServiceIds(
 export function serviceBoundDiagnostics(
   input: ServiceBoundInput,
 ): Diagnostic[] {
-  const { info, resolution, table } = input;
+  const info = input.info;
+  const resolution = input.resolution;
+  const table = input.table;
   const allowed = allowedServiceIds(input);
   if (allowed === undefined) return [];
   const diagnostics: Diagnostic[] = [];
-  const undeclared = (
+  function undeclared(
     initial: Iterable<CapabilityId>,
     produced: TypeRef,
     body: BodyTable,
     parameters: readonly (LocalId | undefined)[],
-  ): CapabilityId[] => {
-    const requirements = new Set<CapabilityId>(initial);
-    producedRequirements(table, produced, requirements);
-    transferredRequirements(
-      { table, tree: info.tree, resolution, body, parameters },
+    allowedServices: ReadonlySet<ServiceId>,
+  ): CapabilityId[] {
+    let requirements = setFrom<CapabilityId>(initial);
+    requirements = producedRequirements(
+      table,
+      produced,
+      requirements,
+      undefined,
+    );
+    requirements = transferredRequirements(
+      {
+        table: table,
+        tree: info.tree,
+        resolution: resolution,
+        body: body,
+        parameters: parameters,
+      },
       requirements,
     );
-    const found = new Set<CapabilityId>();
+    let found = emptySet<CapabilityId>();
     for (const capability of requirements) {
       const service = serviceOfCapability(capability);
-      if (service !== undefined && !allowed.has(service)) found.add(capability);
+      if (service !== undefined && !allowedServices.has(service)) {
+        found = found.add(capability);
+      }
     }
     return [...found].sort();
-  };
+  }
   for (const fn of input.functions) {
     const extra = undeclared(
       fn.requirements,
       fn.result,
       fn.table,
       fn.signature.parameters.map((parameter) => parameter.id),
+      allowed,
     );
     if (extra.length === 0) continue;
     const related = extra.flatMap((capability) =>
@@ -112,31 +134,31 @@ export function serviceBoundDiagnostics(
         info.tree,
         fn.table,
         fn.bodyNode,
-        { kind: "requirement", capability },
+        { kind: "requirement", capability: capability },
       ).map((span) => ({
-        span,
+        span: span,
         message: `requires \`${shortName(capability)}\` here`,
       }))
     );
-    diagnostics.push(makeDiagnostic(
+    diagnostics[diagnostics.length] = makeDiagnosticWithRelated(
       "requirement-contract/002",
       `\`${fn.signature.name}\` requires undeclared service methods ${
         extra.map(shortName).join(", ")
       }`,
       fn.signature.nameSpan,
       related,
-    ));
+    );
   }
   for (const constant of input.constants) {
-    const extra = undeclared([], constant.type, constant.table, []);
+    const extra = undeclared([], constant.type, constant.table, [], allowed);
     if (extra.length === 0) continue;
-    diagnostics.push(makeDiagnostic(
+    diagnostics[diagnostics.length] = makeDiagnostic(
       "requirement-contract/002",
       `\`${constant.signature.name}\` produces a value with undeclared service methods ${
         extra.map(shortName).join(", ")
       }`,
       constant.signature.nameSpan,
-    ));
+    );
   }
   return diagnostics;
 }

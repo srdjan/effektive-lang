@@ -279,11 +279,14 @@ function replayLsp(
     return isRecord(data) && data.op === op ? data : {};
   };
   let pending: (() => void) | undefined;
-  const failure = (): Result<void, FileFailure> => ({
+  const failure = (): Result<undefined, FileFailure> => ({
     ok: false,
     error: { message: "replayed failure" },
   });
-  const ok = (): Result<void, FileFailure> => ({ ok: true, value: undefined });
+  const ok = (): Result<undefined, FileFailure> => ({
+    ok: true,
+    value: undefined,
+  });
   const ports: ServerPorts = {
     send: (message) => {
       actual.push({ kind: "lsp.out", data: { message } });

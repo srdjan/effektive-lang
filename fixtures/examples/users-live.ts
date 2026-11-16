@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Host module for the provider UsersLive in host/providers.effi.
 // It keeps the users in memory. The store starts with one active and one inactive user.
 

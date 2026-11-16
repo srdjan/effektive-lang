@@ -1,32 +1,32 @@
 // The emitter-owned context of the builtin families. The families use this
 // context and never import `expr.ts`.
-
 import type { Expr, FunctionType, Type } from "../../ir.ts";
 import type { Doc, GroupId } from "../doc.ts";
 import type { Emitted, Mode } from "../emitted.ts";
 import type { ExprScope } from "../module_state.ts";
-
 /**
  * The operations that the builtin families use from the expression emitter.
  * The emitter owns the printing of child nodes and the naming state.
  */
-export interface ExprCore {
+export type ExprCore = {
   readonly scope: ExprScope;
-  pure(e: Expr, expected?: Type): Emitted;
+  pure(e: Expr, expected: Type | undefined): Emitted;
   fit(e: Expr, expected: Type | undefined, mode: Mode): Emitted;
   effectCallback(arg: Expr): Emitted;
-  arrow(parameters: Doc, body: Emitted, bodyGroup?: GroupId): Doc;
+  arrow(parameters: Doc, body: Emitted, bodyGroup: GroupId | undefined): Doc;
   adaptedInput(
     input: Emitted,
     type: Type,
     direction: "decoded" | "encoded" | "make",
   ): Emitted;
-  suspended(job: Expr, hoisted?: Emitted): Emitted;
+  suspended(job: Expr, hoisted: Emitted | undefined): Emitted;
   closure(
-    e: Extract<Expr, { kind: "closure" }>,
+    e: Extract<Expr, {
+      kind: "closure";
+    }>,
     annotate: boolean,
-    forceEffect?: boolean,
+    forceEffect: boolean | undefined,
   ): Emitted;
   objectLiteral(fields: readonly Doc[], spreads: readonly Doc[]): Emitted;
   functionTypeOf(type: Type): FunctionType | undefined;
-}
+};

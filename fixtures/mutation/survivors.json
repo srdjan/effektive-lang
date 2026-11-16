@@ -11,7 +11,7 @@
   {
     "file": "src/core/check_binary.ts",
     "declaration": "adoptedNumericIdentity",
-    "offset": 371,
+    "offset": 381,
     "text": "named !== undefined",
     "operator": "comparison",
     "class": "equivalent",
@@ -20,7 +20,7 @@
   {
     "file": "src/core/check_binary.ts",
     "declaration": "operatorResult",
-    "offset": 3181,
+    "offset": 3069,
     "text": "isNumericClass(table, l) && isNumericClass(table, r)",
     "operator": "logical",
     "class": "equivalent",
@@ -38,7 +38,7 @@
   {
     "file": "src/core/check_builtins/schema.ts",
     "declaration": "guardedSchemaCallback",
-    "offset": 873,
+    "offset": 869,
     "text": "self?.kind !== \"local\" || body === undefined ||\n    kindOf(c.tree, body) !== SyntaxKind.CallExpr",
     "operator": "logical",
     "class": "equivalent",
@@ -47,7 +47,7 @@
   {
     "file": "src/core/check_builtins/stream.ts",
     "declaration": "streamBufferCapacity",
-    "offset": 246,
+    "offset": 248,
     "text": "capacity === undefined || typeof value !== \"number\"",
     "operator": "logical",
     "class": "equivalent",
@@ -56,7 +56,7 @@
   {
     "file": "src/core/check_project.ts",
     "declaration": "collectEntries",
-    "offset": 564,
+    "offset": 654,
     "text": "signature.kind === \"function\" && initNode !== undefined &&\n        kindOf(tree, initNode) === SyntaxKind.ArrowExpr",
     "operator": "logical",
     "class": "equivalent",
@@ -65,7 +65,7 @@
   {
     "file": "src/core/check_project.ts",
     "declaration": "collectEntries",
-    "offset": 564,
+    "offset": 654,
     "text": "signature.kind === \"function\" && initNode !== undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -74,7 +74,7 @@
   {
     "file": "src/core/check_project.ts",
     "declaration": "scheduleRuns",
-    "offset": 2752,
+    "offset": 3299,
     "text": "run.kind === \"function\" && pending.includes(run.entry.signature.id)",
     "operator": "logical",
     "class": "equivalent",
@@ -92,7 +92,7 @@
   {
     "file": "src/core/db.ts",
     "declaration": "Revision.declEntry",
-    "offset": 120,
+    "offset": 129,
     "text": "owner === undefined || name === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -110,7 +110,7 @@
   {
     "file": "src/core/db.ts",
     "declaration": "Program.check",
-    "offset": 2631,
+    "offset": 2924,
     "text": "info !== undefined && analysis.resolutions.has(name)",
     "operator": "logical",
     "class": "equivalent",
@@ -119,7 +119,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 412,
+    "offset": 598,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result ||\n      body === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -128,7 +128,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 412,
+    "offset": 598,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result",
     "operator": "logical",
     "class": "equivalent",
@@ -137,7 +137,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 693,
+    "offset": 893,
     "text": "entry === undefined || entry.broken",
     "operator": "logical",
     "class": "equivalent",
@@ -145,35 +145,26 @@
   },
   {
     "file": "src/core/predicates.ts",
-    "declaration": "spendMany",
-    "offset": 67,
-    "text": "count > budget.remaining",
+    "declaration": "createBudget.spend",
+    "offset": 49,
+    "text": "count > remaining",
     "operator": "comparison",
     "class": "equivalent",
     "reason": "When count equals remaining, both versions leave remaining at 0. The split cases always have a non-empty pending list, so the next reduce call spends first and returns exhausted. The result and stepsUsed are the same."
   },
   {
     "file": "src/core/predicates.ts",
-    "declaration": "spendMany",
-    "offset": 125,
+    "declaration": "createBudget.spend",
+    "offset": 97,
     "text": "return false;",
     "operator": "boolean-return",
     "class": "equivalent",
     "reason": "After the budget is set to 0, a true return lets reduce return the split. The next reduce call then fails its first spend and returns exhausted. This is the same result as returning false."
   },
   {
-    "file": "src/core/predicates.ts",
-    "declaration": "contradiction",
-    "offset": 228,
-    "text": "tasks.length > 0",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "With an empty list, tasks.pop() returns undefined and the next line breaks out of the loop. The loop ends the same way as with >."
-  },
-  {
     "file": "src/core/requirement_provenance.ts",
     "declaration": "transferredRequirements.inputOnly",
-    "offset": 180,
+    "offset": 268,
     "text": "node === undefined || seen.has(node)",
     "operator": "logical",
     "class": "equivalent",
@@ -182,7 +173,7 @@
   {
     "file": "src/core/requirement_provenance.ts",
     "declaration": "transferredRequirements.inputOnly",
-    "offset": 626,
+    "offset": 757,
     "text": "return false;",
     "operator": "boolean-return",
     "class": "equivalent",
@@ -208,8 +199,8 @@
   },
   {
     "file": "src/core/types.ts",
-    "declaration": "TypeTable.heightWithin",
-    "offset": 450,
+    "declaration": "createTypeTable.heightWithin",
+    "offset": 429,
     "text": "height > tallest",
     "operator": "comparison",
     "class": "equivalent",
@@ -217,8 +208,8 @@
   },
   {
     "file": "src/core/types.ts",
-    "declaration": "TypeTable.keyOf",
-    "offset": 960,
+    "declaration": "createTypeTable.keyOf",
+    "offset": 1032,
     "text": "node.presence === \"optional\"",
     "operator": "comparison",
     "class": "equivalent",
@@ -226,8 +217,8 @@
   },
   {
     "file": "src/core/types.ts",
-    "declaration": "TypeTable.keyOf",
-    "offset": 1002,
+    "declaration": "createTypeTable.keyOf",
+    "offset": 1072,
     "text": "node.presence === \"encoded-optional\"",
     "operator": "comparison",
     "class": "equivalent",
@@ -235,39 +226,12 @@
   },
   {
     "file": "src/core/types.ts",
-    "declaration": "TypeTable.keyOf",
-    "offset": 1052,
+    "declaration": "createTypeTable.keyOf",
+    "offset": 1120,
     "text": "node.presence === \"decoded-optional\"",
     "operator": "comparison",
     "class": "equivalent",
     "reason": "keyOf is private and used only as the intern byKey lookup. Flipping one boolean slot in every schema key is a bijection, so nodes intern exactly as before."
-  },
-  {
-    "file": "src/core/types.ts",
-    "declaration": "TypeTable.keyOf",
-    "offset": 1146,
-    "text": "node.constructorDefault === true",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "keyOf is private and used only as the intern byKey lookup. Flipping one boolean slot in every schema key is a bijection, so nodes intern exactly as before."
-  },
-  {
-    "file": "src/core/types.ts",
-    "declaration": "TypeTable.assignable",
-    "offset": 5446,
-    "text": "i < sn.elements.length",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "The code checks that both tuples have the same length first. The extra iteration at index length compares undefined with undefined, and assignable returns true at once when s === t."
-  },
-  {
-    "file": "src/core/types.ts",
-    "declaration": "TypeTable.assignable",
-    "offset": 6361,
-    "text": "i < tn.parameters.length",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "The code checks that both functions have the same parameter count first. The extra iteration at index length compares undefined with undefined, and assignable returns true at once when s === t."
   },
   {
     "file": "src/core/validate/expr.ts",
@@ -280,8 +244,8 @@
   },
   {
     "file": "src/core/validate/expr.ts",
-    "declaration": "BodyValidator.pattern",
-    "offset": 3927,
+    "declaration": "createBodyValidator.pattern",
+    "offset": 3830,
     "text": "ms.length > 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -289,8 +253,8 @@
   },
   {
     "file": "src/core/validate/expr.ts",
-    "declaration": "BodyValidator.pattern",
-    "offset": 4685,
+    "declaration": "createBodyValidator.pattern",
+    "offset": 4514,
     "text": "return false;",
     "operator": "boolean-return",
     "class": "equivalent",
@@ -298,8 +262,8 @@
   },
   {
     "file": "src/core/validate/expr.ts",
-    "declaration": "BodyValidator.binary",
-    "offset": 4200,
+    "declaration": "createBodyValidator.binary",
+    "offset": 3838,
     "text": "isNumericClass(env, l) && isNumericClass(env, r)",
     "operator": "logical",
     "class": "equivalent",
@@ -308,7 +272,7 @@
   {
     "file": "src/core/validate/families/schema.ts",
     "declaration": "schemaTransform.callbackResult",
-    "offset": 64,
+    "offset": 93,
     "text": "return false;",
     "operator": "boolean-return",
     "class": "equivalent",
@@ -317,20 +281,11 @@
   {
     "file": "src/core/validate/families/schema.ts",
     "declaration": "guardedSchemaBody.visit",
-    "offset": 160,
+    "offset": 171,
     "text": "return true;",
     "operator": "boolean-return",
     "class": "equivalent",
     "reason": "The first line of visit returns when containsSelf(value) is false. For a reference, exprChildren is empty, so containsSelf is true only when value.target === self. So value.target !== self is never true on the next line, and its return true is unreachable."
-  },
-  {
-    "file": "src/core/validate/predicates.ts",
-    "declaration": "verifyCertificate",
-    "offset": 906,
-    "text": "tasks.length > 0",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "With an empty list, tasks.pop() returns undefined and the next line breaks out of the loop. The result is the same as with >."
   },
   {
     "file": "src/core/validate/typing.ts",
@@ -344,7 +299,7 @@
   {
     "file": "src/core/validate/typing.ts",
     "declaration": "unknownPredicateInput",
-    "offset": 1143,
+    "offset": 1344,
     "text": "index < path.length",
     "operator": "comparison",
     "class": "equivalent",
@@ -866,7 +821,7 @@
   {
     "file": "src/core/contract_origins.ts",
     "declaration": "contractOrigins.carries",
-    "offset": 86,
+    "offset": 99,
     "text": "return false;",
     "operator": "boolean-return",
     "class": "equivalent",
@@ -875,7 +830,7 @@
   {
     "file": "src/core/contract_origins.ts",
     "declaration": "contractOrigins.arrowReplacement",
-    "offset": 114,
+    "offset": 136,
     "text": "kindOf(tree, node) === SyntaxKind.ArrowExpr",
     "operator": "negate-if",
     "class": "equivalent",
@@ -884,7 +839,7 @@
   {
     "file": "src/core/contract_origins.ts",
     "declaration": "contractOrigins.arrowReplacement",
-    "offset": 114,
+    "offset": 136,
     "text": "kindOf(tree, node) === SyntaxKind.ArrowExpr",
     "operator": "comparison",
     "class": "equivalent",
@@ -893,7 +848,7 @@
   {
     "file": "src/core/contract_origins.ts",
     "declaration": "contractOrigins",
-    "offset": 2393,
+    "offset": 2530,
     "text": "a.start - b.start || a.end - b.end",
     "operator": "logical",
     "class": "equivalent",
@@ -902,7 +857,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 2581,
+    "offset": 2262,
     "text": "uses !== undefined",
     "operator": "comparison",
     "class": "equivalent",
@@ -911,7 +866,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 2992,
+    "offset": 2957,
     "text": "i < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -920,7 +875,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 1450,
+    "offset": 1767,
     "text": "header === undefined || header.token === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -929,7 +884,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 3482,
+    "offset": 3602,
     "text": "remaining.failures.length > 0 || remaining.uses.length > 0",
     "operator": "logical",
     "class": "equivalent",
@@ -938,7 +893,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "contractActionsAt",
-    "offset": 3304,
+    "offset": 3424,
     "text": "changedFunction === undefined || changedFunction.body === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -947,7 +902,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 714,
+    "offset": 819,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result",
     "operator": "logical",
     "class": "equivalent",
@@ -956,7 +911,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1169,
+    "offset": 1313,
     "text": "at < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -965,7 +920,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1589,
+    "offset": 1761,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements) ||\n      diagnosticDelta(revision.diagnostics, checked.value.diagnostics, edits)\n          .added.length > 0",
     "operator": "logical",
     "class": "equivalent",
@@ -974,7 +929,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1589,
+    "offset": 1761,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures) ||\n      !sameIds(changed.requirements, fn.requirements)",
     "operator": "logical",
     "class": "equivalent",
@@ -983,7 +938,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1589,
+    "offset": 1761,
     "text": "changed === undefined || changed.mode !== fn.mode ||\n      !sameIds(changed.failures, fn.failures)",
     "operator": "logical",
     "class": "equivalent",
@@ -992,7 +947,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 1589,
+    "offset": 1761,
     "text": "changed === undefined || changed.mode !== fn.mode",
     "operator": "logical",
     "class": "equivalent",
@@ -1010,7 +965,7 @@
   {
     "file": "src/core/editor_actions.ts",
     "declaration": "failsClauseActionsAt",
-    "offset": 714,
+    "offset": 819,
     "text": "signature.annotation !== \"arrow\" || !signature.written.result ||\n      signature.written.fails || fn.body === undefined ||\n      entry === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -1019,7 +974,7 @@
   {
     "file": "src/core/ids.ts",
     "declaration": "shortName",
-    "offset": 86,
+    "offset": 98,
     "text": "hash >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1028,7 +983,7 @@
   {
     "file": "src/core/ids.ts",
     "declaration": "shortName",
-    "offset": 180,
+    "offset": 192,
     "text": "reserved < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1045,9 +1000,9 @@
   },
   {
     "file": "src/core/resolve.ts",
-    "declaration": "Resolver.expr",
-    "offset": 914,
-    "text": "first !== undefined &&\n            kindOf(this.tree, first) === SyntaxKind.NameExpr",
+    "declaration": "Resolver.resolverExpr",
+    "offset": 1207,
+    "text": "first !== undefined &&\n              kindOf(resolverTree, first) === SyntaxKind.NameExpr",
     "operator": "logical",
     "class": "equivalent",
     "reason": "Name arguments and missing arguments take the same branch under both guards. A non-name expression cannot match an identifier binding. The extra lookup finds no binding or prelude name, then resolves the same expression without changing outerUses."
@@ -1082,7 +1037,7 @@
   {
     "file": "src/core/project_config.ts",
     "declaration": "modulePatternMatches.matches",
-    "offset": 406,
+    "offset": 433,
     "text": "partIndex < parts.length",
     "operator": "comparison",
     "class": "equivalent",
@@ -1091,7 +1046,7 @@
   {
     "file": "src/core/project_config.ts",
     "declaration": "modulePatternMatches.matches",
-    "offset": 501,
+    "offset": 528,
     "text": "partIndex < parts.length",
     "operator": "comparison",
     "class": "equivalent",
@@ -1118,7 +1073,7 @@
   {
     "file": "src/core/recursion_guard.ts",
     "declaration": "guardedRecord.visit",
-    "offset": 418,
+    "offset": 533,
     "text": "part === type && tagged && hasDistinctTag",
     "operator": "logical",
     "class": "equivalent",
@@ -1127,7 +1082,7 @@
   {
     "file": "src/core/recursion_guard.ts",
     "declaration": "guardedRecord.visit",
-    "offset": 418,
+    "offset": 533,
     "text": "part === type && tagged",
     "operator": "logical",
     "class": "equivalent",
@@ -1136,7 +1091,7 @@
   {
     "file": "src/core/validate/import_checks.ts",
     "declaration": "checkImport.add",
-    "offset": 229,
+    "offset": 251,
     "text": "hash > colon",
     "operator": "comparison",
     "class": "equivalent",
@@ -1145,7 +1100,7 @@
   {
     "file": "src/core/validate/recursion_checks.ts",
     "declaration": "guardedRecord",
-    "offset": 1183,
+    "offset": 922,
     "text": "!field.optional && tagOf(field.type) !== undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -1154,7 +1109,7 @@
   {
     "file": "src/core/validate/recursion_checks.ts",
     "declaration": "guardedRecord",
-    "offset": 1819,
+    "offset": 1558,
     "text": "tagged && hasDistinctTag",
     "operator": "logical",
     "class": "equivalent",
@@ -1163,7 +1118,7 @@
   {
     "file": "src/core/validate/recursion_checks.ts",
     "declaration": "guardedRecord.walk",
-    "offset": 418,
+    "offset": 443,
     "text": "part === type && tagged && hasDistinctTag",
     "operator": "logical",
     "class": "equivalent",
@@ -1172,7 +1127,7 @@
   {
     "file": "src/core/validate/recursion_checks.ts",
     "declaration": "guardedRecord.walk",
-    "offset": 418,
+    "offset": 443,
     "text": "part === type && tagged",
     "operator": "logical",
     "class": "equivalent",
@@ -1181,7 +1136,7 @@
   {
     "file": "src/core/validate/recursion_checks.ts",
     "declaration": "guardedDataGroups.strong",
-    "offset": 661,
+    "offset": 839,
     "text": "members.length > 1",
     "operator": "comparison",
     "class": "equivalent",
@@ -1190,25 +1145,16 @@
   {
     "file": "src/core/validate/recursion_checks.ts",
     "declaration": "guardedDataGroups.strong",
-    "offset": 727,
+    "offset": 905,
     "text": "!cycle || !members.some((m) => env.taggedRecords.has(m))",
     "operator": "logical",
     "class": "equivalent",
     "reason": "The mutant adds two cases. An acyclic tagged singleton gets a group that nothing consults, as the row for the length test explains. A cycle without a tagged member is made of aliases only, and the alias-only test keeps every edge of such a component, so the cycle test returns before a group is set. A differential through checkRecursion tested 300000 random forged declarations, and every report matched. In a count over 100000 of them, 1909 held an alias-only cycle of several members."
   },
   {
-    "file": "src/core/paths.ts",
-    "declaration": "relativeSpecifier",
-    "offset": 180,
-    "text": "common < from.length",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "The mutant differs only when common equals the directory length of the source file. The second loop guard then holds, so to[common] is a string, while from[common] is undefined. The two never compare equal, so the loop stops under both guards. A differential over 339,000 path pairs of up to four segments matched."
-  },
-  {
     "file": "src/core/ids.ts",
     "declaration": "moduleOfId",
-    "offset": 145,
+    "offset": 153,
     "text": "hash < colon",
     "operator": "comparison",
     "class": "equivalent",
@@ -1217,7 +1163,7 @@
   {
     "file": "src/core/ids.ts",
     "declaration": "methodOfCapability",
-    "offset": 158,
+    "offset": 160,
     "text": "dot < 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1253,7 +1199,7 @@
   {
     "file": "src/core/graph.ts",
     "declaration": "stronglyConnectedComponents.visit",
-    "offset": 331,
+    "offset": 462,
     "text": "frame.next < targets.length",
     "operator": "comparison",
     "class": "equivalent",
@@ -1262,34 +1208,25 @@
   {
     "file": "src/core/graph.ts",
     "declaration": "stronglyConnectedComponents",
-    "offset": 1788,
-    "text": "n < count",
-    "operator": "comparison",
-    "class": "equivalent",
-    "reason": "With <=, the loop also reads index[count], which is undefined. undefined < 0 is false, so no node outside 0 .. count - 1 is visited and the result is the same."
-  },
-  {
-    "file": "src/core/graph.ts",
-    "declaration": "stronglyConnectedComponents",
-    "offset": 1814,
-    "text": "index[n] < 0",
+    "offset": 2271,
+    "text": "index[node] < 0",
     "operator": "comparison",
     "class": "equivalent",
     "reason": "With <=, the test also accepts index 0. Only node 0 gets index 0, because the loop visits it first at n = 0 while every index is -1. At every later n, index[n] is -1 or at least 1, so the visits are the same."
   },
   {
     "file": "src/core/emit/expr.ts",
-    "declaration": "ExprEmitter.isOptionalField",
-    "offset": 81,
-    "text": "depth >= 64",
+    "declaration": "ExprEmitter.exprEmitterIsOptionalField",
+    "offset": 164,
+    "text": "resolvedDepth >= 64",
     "operator": "comparison",
     "class": "equivalent",
     "reason": "The walk never reaches depth 64. Only a member that is a named union alias deepens it: a union nested 70 levels inline emits Option.fromUndefinedOr(u.x). declaration/012 rejects a chain of 64 such aliases (U64 is nested deeper than 128 levels), and a chain of 63 emits the option read. So >= and > give the same result."
   },
   {
     "file": "src/core/emit/expr.ts",
-    "declaration": "ExprEmitter.optionMatch",
-    "offset": 411,
+    "declaration": "ExprEmitter.exprEmitterOptionMatch",
+    "offset": 429,
     "text": "none === undefined || some === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -1297,8 +1234,8 @@
   },
   {
     "file": "src/core/check_expr.ts",
-    "declaration": "BodyChecker.unary",
-    "offset": 143,
+    "declaration": "createBodyChecker.unary",
+    "offset": 139,
     "text": "parts === undefined || operandNode === undefined",
     "operator": "logical",
     "class": "equivalent",
@@ -1307,25 +1244,16 @@
   {
     "file": "src/core/check_refinements.ts",
     "declaration": "RefinementChecker.linear",
-    "offset": 776,
-    "text": "operand === undefined ||\n        unaryOperatorOf(this.tree, inner)?.operator !== \"-\"",
+    "offset": 762,
+    "text": "operand === undefined ||\n        unaryOperatorOf(tree, inner)?.operator !== \"-\"",
     "operator": "logical",
     "class": "equivalent",
     "reason": "The operand is never undefined (see BodyChecker.unary). With && the guard also lets a ! node through, but the operand of ! is boolean, and linear gives undefined for a boolean literal, path, comparison, or connective, so the result is undefined either way."
   },
   {
-    "file": "src/core/check_patterns.ts",
-    "declaration": "reach",
-    "offset": 485,
-    "text": "return false;",
-    "operator": "boolean-return",
-    "class": "equivalent",
-    "reason": "After a binding arm, reach returns before it adds a key. Its result only guards two writes: the wildcard path reports an extra pattern/002 only when missingOf is empty, which never holds for a nullable domain because it always lists _, and bindingArm sets state.binding to \"bound\", which an earlier binding arm already set. So true and false give the same diagnostics."
-  },
-  {
     "file": "src/core/resolve.ts",
-    "declaration": "Resolver.isConstructorName",
-    "offset": 133,
+    "declaration": "Resolver.resolverIsConstructorName",
+    "offset": 153,
     "text": "return true;",
     "operator": "boolean-return",
     "class": "equivalent",
@@ -1333,17 +1261,17 @@
   },
   {
     "file": "src/core/resolve.ts",
-    "declaration": "Resolver.resolveDecl",
-    "offset": 1401,
-    "text": "init !== undefined && !isTypeKind(kindOf(this.tree, init))",
+    "declaration": "Resolver.resolverResolveDecl",
+    "offset": 1644,
+    "text": "init !== undefined && !isTypeKind(kindOf(resolverTree, init))",
     "operator": "logical",
     "class": "equivalent",
     "reason": "The guard only decides whether to call expr on the last child of a top-level const. For an undefined node or a type kind, expr takes its default branch and does nothing, because kindOf gives undefined for an undefined node and no type kind is an expression kind. With || the extra calls reach only those nodes. The probe analyzed 19169 inputs: each fixtures file whole, at every 11th prefix, and with each line deleted. A copy that logs each time the two forms differ saw 2046 such cases. The output of the mutant copy matched the source copy in all of them."
   },
   {
     "file": "src/core/resolve.ts",
-    "declaration": "Resolver.expr",
-    "offset": 473,
+    "declaration": "Resolver.resolverExpr",
+    "offset": 688,
     "text": "kids.length > 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1351,8 +1279,8 @@
   },
   {
     "file": "src/core/resolve.ts",
-    "declaration": "Resolver.expr",
-    "offset": 1610,
+    "declaration": "Resolver.resolverExpr",
+    "offset": 2269,
     "text": "kids.length > 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1360,8 +1288,8 @@
   },
   {
     "file": "src/core/resolve.ts",
-    "declaration": "Resolver.expr",
-    "offset": 2049,
+    "declaration": "Resolver.resolverExpr",
+    "offset": 2968,
     "text": "kids.length > 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1369,17 +1297,17 @@
   },
   {
     "file": "src/core/resolve.ts",
-    "declaration": "Resolver.blockConst",
-    "offset": 404,
-    "text": "kindOf(this.tree, field) === SyntaxKind.BindingField &&\n          names[0] !== undefined",
+    "declaration": "Resolver.resolverBlockConst",
+    "offset": 429,
+    "text": "kindOf(resolverTree, field) === SyntaxKind.BindingField &&\n          names[0] !== undefined",
     "operator": "logical",
     "class": "equivalent",
     "reason": "With ||, a shorthand field {a} gets fieldLabel on its name. The next statement, declareLocal on the same name node, sets a local target for it and replaces the field target. Every path of declareLocal that has a name sets that target, and a block always has a scope. A BindingField always has a first name, because the parser calls parseName before it. The probe analyzed 19169 inputs: each fixtures file whole, at every 11th prefix, and with each line deleted. A copy that logs each time the two forms differ saw 2319 shorthand fields. The output of the mutant copy matched the source copy in all of them."
   },
   {
     "file": "src/core/resolve.ts",
-    "declaration": "Resolver.pattern",
-    "offset": 464,
+    "declaration": "Resolver.resolverPattern",
+    "offset": 611,
     "text": "names.length > 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1397,7 +1325,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "localScope",
-    "offset": 341,
+    "offset": 353,
     "text": "parent >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1406,7 +1334,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "localScope",
-    "offset": 413,
+    "offset": 480,
     "text": "parent >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1415,7 +1343,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "localScope",
-    "offset": 813,
+    "offset": 964,
     "text": "parent >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1424,7 +1352,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "localScope",
-    "offset": 885,
+    "offset": 1036,
     "text": "binding >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1432,8 +1360,8 @@
   },
   {
     "file": "src/core/editor_index.ts",
-    "declaration": "symbolIndex",
-    "offset": 1518,
+    "declaration": "buildSymbolIndex",
+    "offset": 1640,
     "text": "parent >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1441,8 +1369,8 @@
   },
   {
     "file": "src/core/editor_index.ts",
-    "declaration": "symbolIndex",
-    "offset": 1974,
+    "declaration": "buildSymbolIndex",
+    "offset": 2528,
     "text": "parent >= 0",
     "operator": "comparison",
     "class": "equivalent",
@@ -1450,8 +1378,8 @@
   },
   {
     "file": "src/core/editor_index.ts",
-    "declaration": "symbolIndex",
-    "offset": 2512,
+    "declaration": "buildSymbolIndex",
+    "offset": 3423,
     "text": "a.span.start - b.span.start || a.span.end - b.span.end",
     "operator": "logical",
     "class": "equivalent",
@@ -1460,7 +1388,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "occurrenceAt",
-    "offset": 233,
+    "offset": 243,
     "text": "offset < o.span.end",
     "operator": "comparison",
     "class": "equivalent",
@@ -1469,7 +1397,7 @@
   {
     "file": "src/core/editor_index.ts",
     "declaration": "occurrenceAt",
-    "offset": 303,
+    "offset": 313,
     "text": "o.span.start < offset",
     "operator": "comparison",
     "class": "equivalent",

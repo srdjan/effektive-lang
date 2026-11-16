@@ -1,3 +1,4 @@
+// @light-fp adapter
 // LSP positions and file URIs. A position is a zero-based line and a zero-based
 // UTF-16 character, the same unit as a JavaScript string index, so no encoding
 // conversion is needed. Line ends follow `lineStarts`: `\n`, `\r\n`, or a lone

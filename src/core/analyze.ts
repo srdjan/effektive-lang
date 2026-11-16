@@ -7,13 +7,17 @@ import type { ConfigError } from "./project_config.ts";
 import { type ModuleResolution, resolveProject } from "./resolve.ts";
 import type { Result, SourceHost } from "./source.ts";
 
-export interface Analysis {
+export type Analysis = {
   readonly project: Project;
   /** Per-module resolution tables, keyed by module name, in topological order. */
   readonly resolutions: ReadonlyMap<string, ModuleResolution>;
   /** Parse, project, and resolution diagnostics, sorted and without duplicates. */
   readonly diagnostics: readonly Diagnostic[];
-}
+};
+
+export type AnalysisRoot = string;
+export type AnalysisEntries = readonly string[];
+export type AnalysisParser = FileParser | undefined;
 
 /**
  * Loads the project at `root` from the entry files (root-relative paths) and
@@ -23,9 +27,9 @@ export interface Analysis {
  */
 export function analyzeProject(
   host: SourceHost,
-  root: string,
-  entries: readonly string[],
-  parseFile?: FileParser,
+  root: AnalysisRoot,
+  entries: AnalysisEntries,
+  parseFile: AnalysisParser,
 ): Result<Analysis, ConfigError> {
   const loaded = loadProject(host, root, entries, parseFile);
   if (!loaded.ok) return loaded;
@@ -34,19 +38,19 @@ export function analyzeProject(
   const diagnostics: Diagnostic[] = [...project.diagnostics];
   for (const module of project.modules.values()) {
     for (const diagnostic of module.parseDiagnostics) {
-      diagnostics.push(diagnostic);
+      diagnostics[diagnostics.length] = diagnostic;
     }
   }
   for (const resolution of resolutions.values()) {
     for (const diagnostic of resolution.diagnostics) {
-      diagnostics.push(diagnostic);
+      diagnostics[diagnostics.length] = diagnostic;
     }
   }
   return {
     ok: true,
     value: {
-      project,
-      resolutions,
+      project: project,
+      resolutions: resolutions,
       diagnostics: normalizeDiagnostics(diagnostics),
     },
   };

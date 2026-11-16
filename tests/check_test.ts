@@ -1,3 +1,4 @@
+import { TypeDepthMemo } from "../src/core/types.ts";
 // Tests for the declaration level of the checker and for module interfaces.
 
 import { assert, assertEquals, assertNotEquals } from "@std/assert";
@@ -45,7 +46,7 @@ function analyzeFiles(
   files: Record<string, string>,
   entries: readonly string[],
 ): Analysis {
-  const result = analyzeProject(memoryHost(files), "", entries);
+  const result = analyzeProject(memoryHost(files), "", entries, undefined);
   assert(result.ok, JSON.stringify(result));
   return result.value;
 }
@@ -87,7 +88,7 @@ function checkDeclarations(
   modes: ModeMap = new Map(),
   solved: SolvedLookup = modesAsSolved(modes),
 ): ProjectCheck {
-  const table = new TypeTable();
+  const table = TypeTable();
   const graphs = new Map<string, TypeGraph>();
   const modules = new Map<string, ModuleCheck>();
   const diagnostics: Diagnostic[] = [...analysis.diagnostics];
@@ -102,7 +103,7 @@ function checkDeclarations(
     modules.set(name, {
       module: name,
       declarations,
-      interface: buildInterface(declarations, solved, imported),
+      interface: buildInterface(declarations, solved, imported, undefined),
       diagnostics: declarations.diagnostics,
     });
     diagnostics.push(...declarations.diagnostics);
@@ -208,7 +209,12 @@ Deno.test("the modules are checked in topological order", () => {
 });
 
 Deno.test("the type of log equals the type in log.ir.json", () => {
-  const result = analyzeProject(diskHost(), "ir", ["example/log.eff"]);
+  const result = analyzeProject(
+    diskHost(),
+    "ir",
+    ["example/log.eff"],
+    undefined,
+  );
   assert(result.ok);
   const modes = new Map<ValueId, Execution>([[
     "value:example/log#log",
@@ -240,7 +246,12 @@ Deno.test("the type of log equals the type in log.ir.json", () => {
 });
 
 Deno.test("Console.print has the method type of log.ir.json", () => {
-  const result = analyzeProject(diskHost(), "ir", ["example/log.eff"]);
+  const result = analyzeProject(
+    diskHost(),
+    "ir",
+    ["example/log.eff"],
+    undefined,
+  );
   assert(result.ok);
   const project = checkDeclarations(result.value);
   const declarations = project.modules.get("example/log")!.declarations;
@@ -254,7 +265,12 @@ Deno.test("Console.print has the method type of log.ir.json", () => {
 });
 
 Deno.test("declaration spans equal the spans in log.ir.json apart from the source id", () => {
-  const result = analyzeProject(diskHost(), "ir", ["example/log.eff"]);
+  const result = analyzeProject(
+    diskHost(),
+    "ir",
+    ["example/log.eff"],
+    undefined,
+  );
   assert(result.ok);
   const declarations = checkDeclarations(result.value).modules.get(
     "example/log",
@@ -412,7 +428,7 @@ Deno.test("a function without a result annotation has an open contract", () => {
     requirements: [],
   });
   const type = signatureType(
-    new TypeTable(),
+    TypeTable(),
     twice,
     modesAsSolved(new Map()),
   );
@@ -574,11 +590,20 @@ Deno.test("a missing mode entry is a Result error that names every function", ()
 Deno.test("buildInterface can be called again after the modes arrive", () => {
   const project = checkExamples(() => {}, new Map());
   const declarations = project.modules.get("collections")!.declarations;
-  assert(!buildInterface(declarations, modesAsSolved(new Map())).ok);
+  assert(
+    !buildInterface(
+      declarations,
+      modesAsSolved(new Map()),
+      undefined,
+      undefined,
+    ).ok,
+  );
   const analysis = analyzeFiles(exampleFiles(), EXAMPLE_ENTRIES);
   const built = buildInterface(
     declarations,
     modesAsSolved(computedModes(analysis)),
+    undefined,
+    undefined,
   );
   assert(built.ok);
 });
@@ -599,14 +624,14 @@ Deno.test("nonempty sets force effect mode whatever the map says", () => {
     requirements: ["cap:log#Console.print"],
   });
   const forcedType = signatureType(
-    new TypeTable(),
+    TypeTable(),
     log,
     modesAsSolved(new Map([["value:log#log", "pure"]])),
   );
   assert(forcedType.ok);
   assertEquals(forcedType.value.ir.execution, "effect");
   const typeWithoutEntry = signatureType(
-    new TypeTable(),
+    TypeTable(),
     log,
     modesAsSolved(new Map()),
   );
@@ -622,7 +647,7 @@ Deno.test("an empty-set function without an entry is a Result error", () => {
     requirements: [],
   });
   const type = signatureType(
-    new TypeTable(),
+    TypeTable(),
     total,
     modesAsSolved(new Map()),
   );
@@ -846,7 +871,7 @@ export const show = (name: Name, wrapper: Wrapper): Name => name
   });
 
   // A fresh table that has never seen module a learns a's definitions from the graph.
-  const fresh = new TypeTable();
+  const fresh = TypeTable();
   const graph = {
     types: aGraph.types,
     errors: aGraph.errors,
@@ -892,7 +917,12 @@ Deno.test("declaration checking never throws on a prefix of every example", () =
     const step = Math.max(1, Math.floor(text.length / 60));
     for (let n = 0; n <= text.length; n += step) {
       const edited = { ...files, [path]: text.slice(0, n) };
-      const result = analyzeProject(memoryHost(edited), "", EXAMPLE_ENTRIES);
+      const result = analyzeProject(
+        memoryHost(edited),
+        "",
+        EXAMPLE_ENTRIES,
+        undefined,
+      );
       assert(result.ok);
       const project = checkDeclarations(result.value);
       assert(project.modules.size > 0);
@@ -910,7 +940,12 @@ Deno.test("declaration checking never throws when one character is deleted", () 
         ...files,
         [path]: text.slice(0, i) + text.slice(i + 1),
       };
-      const result = analyzeProject(memoryHost(edited), "", EXAMPLE_ENTRIES);
+      const result = analyzeProject(
+        memoryHost(edited),
+        "",
+        EXAMPLE_ENTRIES,
+        undefined,
+      );
       assert(result.ok);
       checkDeclarations(result.value);
     }
@@ -998,7 +1033,7 @@ export const first = (t: T): T => t
   assertEquals(diagnosticCodes(project), []);
   const aGraph = interfaceOf(project, "a").payload;
   // A fresh table loads the recursive alias before the tag aliases that it uses.
-  const fresh = new TypeTable();
+  const fresh = TypeTable();
   const reordered = {
     types: [...aGraph.types].sort((x, y) => (x.name < y.name ? 1 : -1)),
     errors: aGraph.errors,
@@ -1007,7 +1042,7 @@ export const first = (t: T): T => t
   assertEquals(reordered.types.map((t) => t.name), ["T", "B", "A"]);
   declarationsOf(analysis, "b", fresh, new Map([["a", reordered]]));
   // The table walks a guarded alias once, and it walks an unguarded cycle forever.
-  assert(!fresh.exceedsDepth(fresh.named("type:a#T"), 128, new Map()));
+  assert(!fresh.exceedsDepth(fresh.named("type:a#T"), 128, TypeDepthMemo()));
 });
 
 Deno.test("a comment between a Schema type word and `<` does not change its flags", () => {

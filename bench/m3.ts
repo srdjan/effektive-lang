@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Measurement M3: the work that one edit makes the server do.
 //
 // One server process per input runs the edit script with no hover. After each

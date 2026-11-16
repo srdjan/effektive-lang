@@ -63,7 +63,7 @@ Deno.test("an update before start sends every file", () => {
 
 Deno.test("the first call sends every file and later calls send one file", () => {
   const sets: string[][] = [];
-  const real = new Program("");
+  const real = Program("");
   const program: ProgramPort = {
     update(changes) {
       const set = changes.set instanceof Map
@@ -212,7 +212,7 @@ Deno.test("a broken effektive.json gives a config error and no hover", () => {
 
 Deno.test("a program that throws gives an internal error and no hover", () => {
   let calls = 0;
-  const real = new Program("");
+  const real = Program("");
   const program: ProgramPort = {
     update(changes) {
       calls++;
@@ -254,7 +254,7 @@ for (
   Deno.test(`an internal error ${phase} resends failed edits when another file changes`, () => {
     let calls = 0;
     const sets: ReadonlyMap<string, string>[] = [];
-    const real = new Program("");
+    const real = Program("");
     const outputs = new TypeScriptOutputs();
     const emit = outputs.emitted.bind(outputs);
     const program: ProgramPort = {
@@ -293,7 +293,7 @@ for (
 }
 
 Deno.test("an internal error on start resends all files on the next edit", () => {
-  const real = new Program("");
+  const real = Program("");
   let calls = 0;
   const program: ProgramPort = {
     update(changes) {

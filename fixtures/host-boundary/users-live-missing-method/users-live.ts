@@ -1,3 +1,4 @@
+// @light-fp adapter
 // A wrong host module for the provider UsersLive in host/providers.effi.
 // The registry says that UsersLive provides Users. This module provides a
 // service with another shape: the method find takes a number, and the method

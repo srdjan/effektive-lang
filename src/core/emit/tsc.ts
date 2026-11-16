@@ -1,3 +1,4 @@
+import { decodeUriComponent, emptyMap } from "../runtime.ts";
 // The `tsc` oracle on the Effektive side. Two pure functions:
 //
 // - `parseDenoCheck` reads the text that `deno check` prints on failure and
@@ -11,7 +12,6 @@
 // import. A diagnostic inside a registered host module means the same thing,
 // for example a layer of the declared service that lacks a method. It keeps
 // its position in the host module.
-
 import { type Diagnostic, makeDiagnostic } from "../diagnostics.ts";
 import type { Span } from "../ir.ts";
 import { caught } from "../source.ts";
@@ -22,11 +22,9 @@ import {
   offsetOfGenerated,
   type SpanTable,
 } from "./spans.ts";
-
 // ------------------------------------------------------------------ parsing
-
 /** One TypeScript diagnostic from `deno check`. */
-export interface TscDiagnostic {
+export type TscDiagnostic = {
   /** Root-relative with `/` separators when the file lies under the root, else the absolute path. */
   readonly file: string;
   /** One-based. */
@@ -39,9 +37,8 @@ export interface TscDiagnostic {
   readonly message: string;
   /** The other lines of the message, the source line, and its underline. */
   readonly detail: string;
-}
-
-interface DenoCheckOutput {
+};
+type DenoCheckOutput = {
   readonly diagnostics: readonly TscDiagnostic[];
   /**
    * Lines that belong to no diagnostic and that are not progress lines: an
@@ -49,9 +46,7 @@ interface DenoCheckOutput {
    * holds only diagnostics.
    */
   readonly other: readonly string[];
-}
-
-const HEADER = /^TS(\d+) \[(?:ERROR|WARN)\]: (.*)$/;
+};
 /**
  * TypeScript appends this advice when `exactOptionalPropertyTypes` rejects an
  * assignment. The generated code is not the user's to edit, so the advice is
@@ -59,93 +54,185 @@ const HEADER = /^TS(\d+) \[(?:ERROR|WARN)\]: (.*)$/;
  */
 const UNDEFINED_ADVICE =
   " Consider adding 'undefined' to the types of the target's properties.";
-
-const LOCATION = /^\s+at (file:\/\/\S+):(\d+):(\d+)$/;
-const PROGRESS = /^(Check|Download|Resolving|Initialize) /;
-const SUMMARY = /^error: Type checking failed\.$|^Found \d+ errors?\.$/;
-
+function hasOnlyDigits(text: string): boolean {
+  return text.length > 0 &&
+    [...text].every((character) => character >= "0" && character <= "9");
+}
+function hasLineTerminator(text: string): boolean {
+  return [...text].some((character) =>
+    character === "\n" || character === "\r" || character === "\u2028" ||
+    character === "\u2029"
+  );
+}
+function firstHeaderMarker(
+  raw: string,
+): readonly [number, string] | undefined {
+  const errorMarker = " [ERROR]: ";
+  const warningMarker = " [WARN]: ";
+  const errorAt = raw.indexOf(errorMarker, 2);
+  const warningAt = raw.indexOf(warningMarker, 2);
+  if (errorAt < 0) {
+    return warningAt < 0 ? undefined : [warningAt, warningMarker];
+  }
+  if (warningAt < 0 || errorAt < warningAt) return [errorAt, errorMarker];
+  return [warningAt, warningMarker];
+}
+function headerParts(raw: string): readonly [number, string] | undefined {
+  if (!raw.startsWith("TS")) return undefined;
+  const marker = firstHeaderMarker(raw);
+  if (marker === undefined) return undefined;
+  const markerAt = marker[0];
+  const code = raw.slice(2, markerAt);
+  if (!hasOnlyDigits(code)) return undefined;
+  const message = raw.slice(markerAt + marker[1].length);
+  return hasLineTerminator(message) ? undefined : [Number(code), message];
+}
+function locationParts(
+  raw: string,
+): readonly [string, number, number] | undefined {
+  const trimmed = raw.trimStart();
+  if (trimmed.length === raw.length || !trimmed.startsWith("at file://")) {
+    return undefined;
+  }
+  const columnSeparator = trimmed.lastIndexOf(":");
+  const lineSeparator = trimmed.lastIndexOf(":", columnSeparator - 1);
+  if (lineSeparator < 0 || columnSeparator < 0) return undefined;
+  const url = trimmed.slice("at ".length, lineSeparator);
+  const line = trimmed.slice(lineSeparator + 1, columnSeparator);
+  const column = trimmed.slice(columnSeparator + 1);
+  if (
+    [...url].some((character) => character.trim() === "") ||
+    !hasOnlyDigits(line) || !hasOnlyDigits(column)
+  ) {
+    return undefined;
+  }
+  return [url, Number(line), Number(column)];
+}
+function isProgress(raw: string): boolean {
+  return raw.startsWith("Check ") || raw.startsWith("Download ") ||
+    raw.startsWith("Resolving ") || raw.startsWith("Initialize ");
+}
+function isSummary(raw: string): boolean {
+  if (raw === "error: Type checking failed.") return true;
+  if (!raw.startsWith("Found ")) return false;
+  let suffix: string | undefined;
+  if (raw.endsWith(" errors.")) {
+    suffix = " errors.";
+  } else if (raw.endsWith(" error.")) {
+    suffix = " error.";
+  }
+  return suffix !== undefined &&
+    hasOnlyDigits(raw.slice("Found ".length, -suffix.length));
+}
 function pathOfFileUrl(url: string): string {
   const path = url.slice("file://".length);
-  const decoded = caught(() => decodeURIComponent(path));
+  const decoded = caught(() => decodeUriComponent(path));
   return decoded.ok ? decoded.value : path;
 }
-
 /**
  * Parses the output of `deno check` (stderr, without color codes). `root` is
  * the absolute project directory, as `deno check` prints it. A file under the
  * root gets a root-relative path. Text after the first location of a
  * diagnostic, such as a note about a related declaration, is dropped.
  */
-export function parseDenoCheck(text: string, root: string): DenoCheckOutput {
+export type DenoCheckText = string;
+export type ProjectRoot = string;
+export function parseDenoCheck(
+  text: DenoCheckText,
+  root: ProjectRoot,
+): DenoCheckOutput {
   const prefix = root.endsWith("/") ? root : root + "/";
   const diagnostics: TscDiagnostic[] = [];
   const other: string[] = [];
   type Open = {
     readonly code: number;
     readonly message: string;
-    readonly detail: string[];
-    location: { file: string; line: number; column: number } | undefined;
+    readonly detail: readonly string[];
+    readonly location: {
+      readonly file: string;
+      readonly line: number;
+      readonly column: number;
+    } | undefined;
   };
   let open: Open | undefined;
-  const close = (): void => {
-    if (open === undefined) return;
-    if (open.location === undefined) {
-      other.push(`TS${open.code}: ${open.message}`);
-    } else {
-      diagnostics.push({
-        file: open.location.file.startsWith(prefix)
-          ? open.location.file.slice(prefix.length)
-          : open.location.file,
-        line: open.location.line,
-        column: open.location.column,
-        code: open.code,
-        message: open.message,
-        detail: open.detail.join("\n"),
-      });
+  function close(current: Open | undefined): Open | undefined {
+    if (current === undefined) {
+      return undefined;
     }
-    open = undefined;
-  };
-  for (const raw of text.split(/\r?\n/)) {
-    const header = HEADER.exec(raw);
-    if (header !== null) {
-      close();
+    if (current.location === undefined) {
+      {
+        const _appendTarget1 = other;
+        const _appendValue2 = `TS${current.code}: ${current.message}`;
+        _appendTarget1[_appendTarget1.length] = _appendValue2;
+      }
+    } else {
+      {
+        const _appendTarget3 = diagnostics;
+        const _appendValue4 = {
+          file: current.location.file.startsWith(prefix)
+            ? current.location.file.slice(prefix.length)
+            : current.location.file,
+          line: current.location.line,
+          column: current.location.column,
+          code: current.code,
+          message: current.message,
+          detail: current.detail.join("\n"),
+        };
+        _appendTarget3[_appendTarget3.length] = _appendValue4;
+      }
+    }
+    return undefined;
+  }
+  for (const raw of text.replaceAll("\r\n", "\n").split("\n")) {
+    const header = headerParts(raw);
+    if (header !== undefined) {
+      open = close(open);
       open = {
-        code: Number(header[1]),
-        message: header[2].endsWith(UNDEFINED_ADVICE)
-          ? header[2].slice(0, -UNDEFINED_ADVICE.length)
-          : header[2],
+        code: header[0],
+        message: header[1].endsWith(UNDEFINED_ADVICE)
+          ? header[1].slice(0, -UNDEFINED_ADVICE.length)
+          : header[1],
         detail: [],
         location: undefined,
       };
       continue;
     }
     if (open !== undefined) {
-      if (SUMMARY.test(raw) || /^error: /.test(raw)) {
-        close();
+      if (isSummary(raw) || raw.startsWith("error: ")) {
+        open = close(open);
       } else {
-        if (open.location !== undefined) continue;
-        const location = LOCATION.exec(raw);
-        if (location !== null) {
-          open.location = {
-            file: pathOfFileUrl(location[1]),
-            line: Number(location[2]),
-            column: Number(location[3]),
+        if (open.location !== undefined) {
+          continue;
+        }
+        const location = locationParts(raw);
+        if (location !== undefined) {
+          open = {
+            ...open,
+            location: {
+              file: pathOfFileUrl(location[0]),
+              line: location[1],
+              column: location[2],
+            },
           };
         } else {
-          open.detail.push(raw);
+          open = { ...open, detail: [...open.detail, raw] };
         }
         continue;
       }
     }
-    if (raw.trim() === "" || PROGRESS.test(raw) || SUMMARY.test(raw)) continue;
-    other.push(raw);
+    if (raw.trim() === "" || isProgress(raw) || isSummary(raw)) {
+      continue;
+    }
+    {
+      const _appendTarget7 = other;
+      const _appendValue8 = raw;
+      _appendTarget7[_appendTarget7.length] = _appendValue8;
+    }
   }
-  close();
-  return { diagnostics, other };
+  open = close(open);
+  return { diagnostics: diagnostics, other: other };
 }
-
 // ------------------------------------------------------------------ mapping
-
 /** A TypeScript diagnostic mapped to the Effektive side. */
 export type TscMapping =
   /** The diagnostic lies on a host assertion constant. */
@@ -193,16 +280,18 @@ export type TscMapping =
     readonly tsCode: number;
     readonly message: string;
   };
-
 /** The root-relative path of each host module to its registry key. */
 export function hostModulePaths(
   config: ProjectConfig,
 ): ReadonlyMap<string, string> {
-  const paths = new Map<string, string>();
-  for (const [key, host] of config.host) paths.set(host.modulePath, key);
+  let paths = emptyMap<string, string>();
+  for (const entry of config.host) {
+    const key = entry[0];
+    const host = entry[1];
+    paths = paths.set(host.modulePath, key);
+  }
   return paths;
 }
-
 /**
  * Maps one TypeScript diagnostic. `tables` maps the root-relative path of a
  * generated file, such as `users.ts`, to its span table. `hosts` maps the
@@ -212,13 +301,14 @@ export function hostModulePaths(
 export function mapTscDiagnostic(
   diagnostic: TscDiagnostic,
   tables: ReadonlyMap<string, SpanTable>,
-  hosts: ReadonlyMap<string, string> = new Map(),
+  requestedHosts: ReadonlyMap<string, string> | undefined,
 ): TscMapping {
+  const hosts = requestedHosts ?? emptyMap<string, string>();
   const key = hosts.get(diagnostic.file);
   if (key !== undefined) {
     return {
       tag: "host-module",
-      key,
+      key: key,
       file: diagnostic.file,
       line: diagnostic.line,
       column: diagnostic.column,
@@ -235,9 +325,13 @@ export function mapTscDiagnostic(
     message: diagnostic.message,
   };
   const table = tables.get(diagnostic.file);
-  if (table === undefined) return unmapped;
+  if (table === undefined) {
+    return unmapped;
+  }
   const offset = offsetOfGenerated(table, diagnostic.line, diagnostic.column);
-  if (offset === undefined) return unmapped;
+  if (offset === undefined) {
+    return unmapped;
+  }
   const assertion = hostAssertionAtOffset(table, offset);
   if (assertion !== undefined && assertion.importSpan !== undefined) {
     return {
@@ -251,10 +345,12 @@ export function mapTscDiagnostic(
     };
   }
   const span = mapOffset(table, offset);
-  if (span === undefined) return unmapped;
+  if (span === undefined) {
+    return unmapped;
+  }
   return {
     tag: "source",
-    span,
+    span: span,
     tsCode: diagnostic.code,
     message: diagnostic.message,
   };

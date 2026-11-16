@@ -149,7 +149,7 @@ Deno.test("the grammar names the scope and every lexer keyword", () => {
     ...BUILTIN_TYPE_NAMES,
     // Contextual words that the grammar matches as a bare word. The modifiers
     // and the positional words need a lookahead, so a bare token does not match.
-    ...contextualWordsOf("declaration", "clause"),
+    ...contextualWordsOf(["declaration", "clause"]),
     "from",
   ];
   const matchers = collectMatches(grammar).map((match) => new RegExp(match));

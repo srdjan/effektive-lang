@@ -1,3 +1,4 @@
+import { emptyMap, setFrom } from "./runtime.ts";
 import type {
   FunctionSignature,
   ParameterSignature,
@@ -35,19 +36,15 @@ import { kindOf, type NodeId, nodeSpan, SyntaxKind } from "./syntax.ts";
 import { showType } from "./type_show.ts";
 import { typeToIr } from "./type_ir.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
-
-interface InputInference {
+type InputInference = {
   readonly types: readonly TypeRef[];
   readonly diagnostics: readonly Diagnostic[];
-}
-
-interface RecordEvidence {
+};
+type RecordEvidence = {
   readonly kind: "record";
   readonly fields: ReadonlyMap<string, ExpressionEvidence>;
-}
-
+};
 type ExpressionEvidence = CallableEvidence | RecordEvidence;
-
 /** Infers the body-driven types of one function's inferred parameters. */
 export function inferFunctionInputs(
   benv: BodyEnv,
@@ -65,76 +62,94 @@ export function inferFunctionInputs(
     roots,
     bodyNode,
     signature.result?.ref,
+    undefined,
   );
 }
-
-interface InputParameter {
+type InputParameter = {
   readonly id: LocalId | undefined;
   readonly name: string;
   readonly inferred: boolean;
   readonly type: TypeRef;
-}
-
+};
 /** Infers omitted arrow parameters before the ordinary body checker checks the arrow. */
 export function inferArrowInputs(
   benv: BodyEnv,
   parameters: readonly InputParameter[],
   bodyNode: NodeId | undefined,
   result: TypeRef | undefined,
-  outerLocals: ReadonlyMap<LocalId, TypeRef> = new Map(),
+  outerLocals: ReadonlyMap<LocalId, TypeRef> | undefined,
 ): InputInference {
-  const engine = new InputEngine(benv, parameters, outerLocals);
-  if (bodyNode !== undefined) engine.visit(bodyNode, result);
+  let engine = InputEngine(benv, parameters, outerLocals);
+  if (bodyNode !== undefined) {
+    engine = engine.visit(bodyNode, result);
+  }
   return engine.finish();
 }
-
-class InputEngine {
-  private readonly tree: TypeEnv["tree"];
-  private readonly table: TypeTable;
-  private readonly targets: TypeEnv["targets"];
-  private readonly resolver: InputContractResolver;
-  private readonly localTypes = new Map<LocalId, TypeRef>();
-  private readonly expressionEvidence = new Map<NodeId, ExpressionEvidence>();
-  private readonly localEvidence = new Map<LocalId, ExpressionEvidence>();
-  private readonly lowerer: TypeLowerer;
-
-  constructor(
-    private readonly benv: BodyEnv,
-    private readonly parameters: readonly InputParameter[],
-    outerLocals: ReadonlyMap<LocalId, TypeRef>,
-  ) {
-    this.tree = benv.env.tree;
-    this.table = benv.env.table;
-    this.targets = benv.env.targets;
-    this.lowerer = new TypeLowerer(benv.env, []);
-    this.resolver = new InputContractResolver(
-      this.table,
-      parameters.flatMap((parameter) =>
-        parameter.inferred && parameter.id !== undefined
-          ? [{ id: parameter.id, name: parameter.name }]
-          : []
-      ),
-    );
-    for (const [id, type] of outerLocals) this.localTypes.set(id, type);
-    for (const parameter of parameters) {
-      if (parameter.id === undefined) continue;
-      this.localTypes.set(parameter.id, parameter.type);
-    }
+type InputEngine = {
+  readonly finish: () => InputInference;
+  readonly visit: (
+    node: NodeId,
+    expected: TypeRef | undefined,
+  ) => InputEngine;
+};
+type InputEngineResult = {
+  readonly engine: InputEngine;
+  readonly type: TypeRef | undefined;
+};
+function InputEngine(
+  benv: BodyEnv,
+  parameters: readonly InputParameter[],
+  outerLocals: ReadonlyMap<LocalId, TypeRef> | undefined,
+): InputEngine {
+  let inputEngineSelf: InputEngine;
+  const inputEngineParameters = parameters;
+  const inputEngineBenv = benv;
+  const inputEngineTree: TypeEnv["tree"] = benv.env.tree;
+  const inputEngineTable: TypeTable = benv.env.table;
+  const inputEngineTargets: TypeEnv["targets"] = benv.env.targets;
+  let inputEngineResolver: InputContractResolver;
+  let inputEngineLocalTypes = emptyMap<LocalId, TypeRef>();
+  let inputEngineExpressionEvidence = emptyMap<NodeId, ExpressionEvidence>();
+  let inputEngineLocalEvidence = emptyMap<LocalId, ExpressionEvidence>();
+  const inputEngineLowerer: TypeLowerer = TypeLowerer(benv.env, []);
+  inputEngineResolver = InputContractResolver(
+    inputEngineTable,
+    parameters.flatMap((parameter) =>
+      parameter.inferred && parameter.id !== undefined
+        ? [{ id: parameter.id, name: parameter.name }]
+        : []
+    ),
+  );
+  for (const binding1 of outerLocals ?? emptyMap()) {
+    const binding2 = binding1;
+    const id = binding2[0];
+    const type = binding2[1];
+    inputEngineLocalTypes = inputEngineLocalTypes.set(id, type);
   }
-
-  finish(): InputInference {
-    const resolution = this.resolver.finish(this.parameters);
+  for (const parameter of parameters) {
+    if (parameter.id === undefined) {
+      continue;
+    }
+    inputEngineLocalTypes = inputEngineLocalTypes.set(
+      parameter.id,
+      parameter.type,
+    );
+  }
+  function inputEngineFinish(): InputInference {
+    const resolution = inputEngineResolver.finish(inputEngineParameters);
     const diagnostics = resolution.issues.map((issue) => {
       if (issue.kind === "unresolved-call") {
         return makeDiagnostic(
           "type-mismatch/011",
           `the parameter \`${issue.rootName}\` needs a type annotation because its callback type cannot be inferred`,
-          nodeSpan(this.tree, issue.node),
+          nodeSpan(inputEngineTree, issue.node),
         );
       }
       const texts = [
-        ...new Set(
-          issue.candidates.map((candidate) => showType(this.table, candidate)),
+        ...setFrom(
+          issue.candidates.map((candidate) =>
+            showType(inputEngineTable, candidate)
+          ),
         ),
       ];
       return makeDiagnostic(
@@ -142,453 +157,606 @@ class InputEngine {
         `the inferred input \`${issue.rootName}\` has conflicting requirements at \`${
           [issue.rootName, ...issue.path].join(".")
         }\`: ${texts.join(" and ")}`,
-        nodeSpan(this.tree, issue.node),
+        nodeSpan(inputEngineTree, issue.node),
       );
     });
-    return { types: resolution.types, diagnostics };
+    return { types: resolution.types, diagnostics: diagnostics };
   }
-
-  private originOf(node: NodeId): Origin | undefined {
-    const kind = kindOf(this.tree, node);
+  function inputEngineOriginOf(node: NodeId): Origin | undefined {
+    const kind = kindOf(inputEngineTree, node);
     if (kind === SyntaxKind.ParenExpr) {
-      const inner = kidsOf(this.tree, node)[0];
-      return inner === undefined ? undefined : this.originOf(inner);
+      const inner = kidsOf(inputEngineTree, node)[0];
+      return inner === undefined ? undefined : inputEngineOriginOf(inner);
     }
     if (
       kind === SyntaxKind.NameExpr || kind === SyntaxKind.Name ||
       kind === SyntaxKind.QualifiedName
     ) {
-      const target = this.targets.get(node);
+      const target = inputEngineTargets.get(node);
       return target?.kind === "local"
-        ? this.resolver.origin(target.id)
+        ? inputEngineResolver.origin(target.id)
         : undefined;
     }
-    if (kind !== SyntaxKind.FieldExpr) return undefined;
-    const { base, member } = memberAccessParts(this.tree, node);
-    const origin = base === undefined ? undefined : this.originOf(base);
+    if (kind !== SyntaxKind.FieldExpr) {
+      return undefined;
+    }
+    const binding3 = memberAccessParts(inputEngineTree, node);
+    const base = binding3.base;
+    const member = binding3.member;
+    const origin = base === undefined ? undefined : inputEngineOriginOf(base);
     const name = member === undefined
       ? undefined
-      : nameTextOf(this.tree, member);
+      : nameTextOf(inputEngineTree, member);
     return origin === undefined || name === undefined
       ? undefined
       : { root: origin.root, path: [...origin.path, name] };
   }
-
-  visit(node: NodeId, expected?: TypeRef): TypeRef | undefined {
-    const origin = this.originOf(node);
-    if (origin !== undefined) this.resolver.demand(origin, expected, node);
-    switch (kindOf(this.tree, node)) {
-      case SyntaxKind.NameExpr:
-      case SyntaxKind.Name:
-        return this.nameType(this.targets.get(node));
-      case SyntaxKind.ParenExpr: {
-        const inner = kidsOf(this.tree, node)[0];
-        return inner === undefined ? undefined : this.visit(inner, expected);
-      }
-      case SyntaxKind.FieldExpr:
-        return this.field(node, expected);
-      case SyntaxKind.CallExpr:
-        return this.call(node, expected);
-      case SyntaxKind.PipeExpr:
-        return this.pipe(node, expected);
-      case SyntaxKind.BinaryExpr:
-        return this.binary(node, expected);
-      case SyntaxKind.UnaryExpr:
-        return this.unary(node, expected);
-      case SyntaxKind.Block:
-        return this.block(node, expected);
-      case SyntaxKind.IfExpr:
-        return this.ifExpr(node, expected);
-      case SyntaxKind.MatchExpr:
-        return this.matchExpr(node, expected);
-      case SyntaxKind.ArrowExpr:
-        return this.arrow(node, expected);
-      case SyntaxKind.RecordExpr:
-        return this.record(node, expected);
-      case SyntaxKind.ListExpr:
-        return this.list(node, expected);
-      case SyntaxKind.LiteralExpr:
-        return undefined;
-      default:
-        for (const child of kidsOf(this.tree, node)) this.visit(child);
-        return undefined;
-    }
+  function inputEngineVisit(
+    node: NodeId,
+    expected: TypeRef | undefined,
+  ): InputEngine {
+    return inputEngineInfer(node, expected).engine;
   }
-
-  private nameType(target: Target | undefined): TypeRef | undefined {
-    if (target?.kind === "local") return this.localTypes.get(target.id);
-    if (target?.kind === "value" || target?.kind === "provider") {
-      return this.benv.values(target.id);
+  function inputEngineInfer(
+    node: NodeId,
+    expected: TypeRef | undefined,
+  ): InputEngineResult {
+    const origin = inputEngineOriginOf(node);
+    if (origin !== undefined) {
+      inputEngineResolver = inputEngineResolver.demand(origin, expected, node);
     }
-    if (target?.kind === "cap") return this.benv.methodType(target.id);
+    let type: TypeRef | undefined;
+    {
+      const kind_1 = kindOf(inputEngineTree, node);
+      if (kind_1 === SyntaxKind.NameExpr || kind_1 === SyntaxKind.Name) {
+        type = inputEngineNameType(inputEngineTargets.get(node));
+      } else if (kind_1 === SyntaxKind.ParenExpr) {
+        const inner = kidsOf(inputEngineTree, node)[0];
+        type = inner === undefined
+          ? undefined
+          : inputEngineInfer(inner, expected).type;
+      } else if (kind_1 === SyntaxKind.FieldExpr) {
+        type = inputEngineField(node, expected);
+      } else if (kind_1 === SyntaxKind.CallExpr) {
+        type = inputEngineCall(node, expected);
+      } else if (kind_1 === SyntaxKind.PipeExpr) {
+        type = inputEnginePipe(node, expected);
+      } else if (kind_1 === SyntaxKind.BinaryExpr) {
+        type = inputEngineBinary(node, expected);
+      } else if (kind_1 === SyntaxKind.UnaryExpr) {
+        type = inputEngineUnary(node, expected);
+      } else if (kind_1 === SyntaxKind.Block) {
+        type = inputEngineBlock(node, expected);
+      } else if (kind_1 === SyntaxKind.IfExpr) {
+        type = inputEngineIfExpr(node, expected);
+      } else if (kind_1 === SyntaxKind.MatchExpr) {
+        type = inputEngineMatchExpr(node, expected);
+      } else if (kind_1 === SyntaxKind.ArrowExpr) {
+        type = inputEngineArrow(node, expected);
+      } else if (kind_1 === SyntaxKind.RecordExpr) {
+        type = inputEngineRecord(node, expected);
+      } else if (kind_1 === SyntaxKind.ListExpr) {
+        type = inputEngineList(node, expected);
+      } else if (kind_1 === SyntaxKind.LiteralExpr) {
+        type = undefined;
+      } else {
+        for (const child of kidsOf(inputEngineTree, node)) {
+          inputEngineSelf = inputEngineVisit(child, undefined);
+        }
+        type = undefined;
+      }
+    }
+    return { engine: inputEngineSelf, type: type };
+  }
+  function inputEngineNameType(
+    target: Target | undefined,
+  ): TypeRef | undefined {
+    if (target?.kind === "local") {
+      return inputEngineLocalTypes.get(target.id);
+    }
+    if (target?.kind === "value" || target?.kind === "provider") {
+      return inputEngineBenv.values(target.id);
+    }
+    if (target?.kind === "cap") {
+      return inputEngineBenv.methodType(target.id);
+    }
     return undefined;
   }
-
-  private evidenceOf(node: NodeId): ExpressionEvidence | undefined {
-    const recorded = this.expressionEvidence.get(node);
-    if (recorded !== undefined) return recorded;
-    const bare = unparen(this.tree, node);
-    if (bare !== node) return this.evidenceOf(bare);
-    const kind = kindOf(this.tree, node);
+  function inputEngineEvidenceOf(node: NodeId): ExpressionEvidence | undefined {
+    const recorded = inputEngineExpressionEvidence.get(node);
+    if (recorded !== undefined) {
+      return recorded;
+    }
+    const bare = unparen(inputEngineTree, node);
+    if (bare !== node) {
+      return inputEngineEvidenceOf(bare);
+    }
+    const kind = kindOf(inputEngineTree, node);
     if (
       kind === SyntaxKind.NameExpr || kind === SyntaxKind.Name ||
       kind === SyntaxKind.QualifiedName
     ) {
-      const target = this.targets.get(node);
+      const target = inputEngineTargets.get(node);
       return target?.kind === "local"
-        ? this.localEvidence.get(target.id)
+        ? inputEngineLocalEvidence.get(target.id)
         : undefined;
     }
-    if (kind !== SyntaxKind.FieldExpr) return undefined;
-    const { base, member } = memberAccessParts(this.tree, node);
+    if (kind !== SyntaxKind.FieldExpr) {
+      return undefined;
+    }
+    const binding4 = memberAccessParts(inputEngineTree, node);
+    const base = binding4.base;
+    const member = binding4.member;
     const name = member === undefined
       ? undefined
-      : nameTextOf(this.tree, member);
-    const evidence = base === undefined ? undefined : this.evidenceOf(base);
+      : nameTextOf(inputEngineTree, member);
+    const evidence = base === undefined
+      ? undefined
+      : inputEngineEvidenceOf(base);
     return evidence?.kind === "record" && name !== undefined
       ? evidence.fields.get(name)
       : undefined;
   }
-
-  private callableEvidence(
+  function inputEngineCallableEvidence(
     node: NodeId,
     type: TypeRef | undefined,
   ): CallableEvidence | undefined {
-    const evidence = this.resolver.callableEvidence(type) ??
-      this.evidenceOf(node);
+    const evidence = inputEngineResolver.callableEvidence(type) ??
+      inputEngineEvidenceOf(node);
     return evidence?.kind === "callable" ? evidence : undefined;
   }
-
-  private field(
+  function inputEngineField(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const { base, member } = memberAccessParts(this.tree, node);
+    const binding5 = memberAccessParts(inputEngineTree, node);
+    const base = binding5.base;
+    const member = binding5.member;
     const name = member === undefined
       ? undefined
-      : nameTextOf(this.tree, member);
-    if (base === undefined || name === undefined) return expected;
-    const baseType = this.visit(base);
-    return this.resolver.fieldType(baseType, name) ?? expected;
+      : nameTextOf(inputEngineTree, member);
+    if (base === undefined || name === undefined) {
+      return expected;
+    }
+    const baseType = inputEngineInfer(base, undefined).type;
+    return inputEngineResolver.fieldType(baseType, name) ?? expected;
   }
-
-  private expectedArgument(
+  function inputEngineExpectedArgument(
     fn: CallableEvidence,
     index: number,
   ): TypeRef | undefined {
-    return fn.checked?.[index] ? this.table.unknown : fn.parameters[index];
+    return fn.checked !== undefined && fn.checked[index]
+      ? inputEngineTable.unknown
+      : fn.parameters[index];
   }
-
-  /** The type that a type constructor expects of its first argument. */
-  private constructorInput(
-    id: Extract<Target, { kind: "type" }>["id"],
+  function inputEngineConstructorInput(
+    id: Extract<Target, {
+      kind: "type";
+    }>["id"],
     argument: NodeId,
   ): TypeRef | undefined {
-    const record = this.table.taggedRecordOf(id);
+    const record = inputEngineTable.taggedRecordOf(id);
     return record === undefined &&
-        this.table.predicateOf(id) !== undefined &&
-        this.originOf(argument) !== undefined
-      ? this.table.named(id)
-      : record ?? this.table.identityBaseOf(id);
+        inputEngineTable.predicateOf(id) !== undefined &&
+        inputEngineOriginOf(argument) !== undefined
+      ? inputEngineTable.named(id)
+      : record ?? inputEngineTable.identityBaseOf(id);
   }
-
-  private call(
+  function inputEngineCall(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const callee = kidsOf(this.tree, node)[0];
-    const args = argNodes(this.tree, node);
-    if (callee === undefined) return undefined;
-    const target = this.targets.get(callee);
+    const callee = kidsOf(inputEngineTree, node)[0];
+    const args = argNodes(inputEngineTree, node);
+    if (callee === undefined) {
+      return undefined;
+    }
+    const target = inputEngineTargets.get(callee);
     if (target?.kind === "type") {
       if (args[0] !== undefined) {
-        this.visit(args[0], this.constructorInput(target.id, args[0]));
+        inputEngineSelf = inputEngineVisit(
+          args[0],
+          inputEngineConstructorInput(target.id, args[0]),
+        );
       }
-      args.slice(1).forEach((argument) => this.visit(argument));
-      return this.table.named(target.id);
+      for (const argument of args.slice(1)) {
+        inputEngineSelf = inputEngineVisit(argument, undefined);
+      }
+      return inputEngineTable.named(target.id);
     }
     if (target?.kind === "error") {
-      const type = this.table.errorRecordOf(target.id);
-      if (args[0] !== undefined) this.visit(args[0], type);
-      args.slice(1).forEach((argument) => this.visit(argument));
-      return this.table.named(target.id);
+      const type = inputEngineTable.errorRecordOf(target.id);
+      if (args[0] !== undefined) {
+        inputEngineSelf = inputEngineVisit(args[0], type);
+      }
+      for (const argument of args.slice(1)) {
+        inputEngineSelf = inputEngineVisit(argument, undefined);
+      }
+      return inputEngineTable.named(target.id);
     }
     if (optionConstructorOf(target) === "some") {
-      const element = this.table.optionElementOf(expected);
+      const element = inputEngineTable.optionElementOf(expected);
       const inferred = args[0] === undefined
         ? undefined
-        : this.visit(args[0], element);
-      args.slice(1).forEach((argument) => this.visit(argument));
-      return this.table.option(element ?? inferred ?? this.table.unknown);
+        : inputEngineInfer(args[0], element).type;
+      for (const argument of args.slice(1)) {
+        inputEngineSelf = inputEngineVisit(argument, undefined);
+      }
+      return inputEngineTable.option(
+        element ?? inferred ?? inputEngineTable.unknown,
+      );
     }
     const calleeType = target === undefined
-      ? this.visit(callee)
-      : this.nameType(target);
-    const fn = this.callableEvidence(callee, calleeType);
+      ? inputEngineInfer(callee, undefined).type
+      : inputEngineNameType(target);
+    const fn = inputEngineCallableEvidence(callee, calleeType);
     if (fn === undefined) {
-      const origin = this.originOf(callee);
+      const origin = inputEngineOriginOf(callee);
       if (origin !== undefined) {
-        this.resolver.defer(origin, callee, (evidence) => {
-          args.forEach((argument, index) =>
-            this.visit(argument, this.expectedArgument(evidence, index))
-          );
-        });
+        inputEngineResolver = inputEngineResolver.defer(
+          origin,
+          callee,
+          (evidence) => {
+            for (const index of args.keys()) {
+              const argument = args[index];
+              if (argument === undefined) {
+                continue;
+              }
+              inputEngineSelf = inputEngineVisit(
+                argument,
+                inputEngineExpectedArgument(evidence, index),
+              );
+            }
+            return true;
+          },
+        );
       }
-      args.forEach((argument) => this.visit(argument));
+      for (const argument of args) {
+        inputEngineSelf = inputEngineVisit(argument, undefined);
+      }
       return undefined;
     }
-    args.forEach((argument, index) =>
-      this.visit(argument, this.expectedArgument(fn, index))
-    );
+    for (const index of args.keys()) {
+      const argument = args[index];
+      if (argument === undefined) {
+        continue;
+      }
+      inputEngineSelf = inputEngineVisit(
+        argument,
+        inputEngineExpectedArgument(fn, index),
+      );
+    }
     return fn.result;
   }
-
-  private pipe(
+  function inputEnginePipe(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const { left, stage } = pipeParts(this.tree, node);
-    if (left === undefined || stage === undefined) return undefined;
-    const { callee, args } = stageParts(this.tree, stage);
-    const target = callee === undefined ? undefined : this.targets.get(callee);
+    const binding6 = pipeParts(inputEngineTree, node);
+    const left = binding6.left;
+    const stage = binding6.stage;
+    if (left === undefined || stage === undefined) {
+      return undefined;
+    }
+    const binding7 = stageParts(inputEngineTree, stage);
+    const callee = binding7.callee;
+    const args = binding7.args;
+    const target = callee === undefined
+      ? undefined
+      : inputEngineTargets.get(callee);
     if (target?.kind === "type") {
-      this.visit(left, this.constructorInput(target.id, left));
-      args.forEach((argument) => this.visit(argument));
-      return this.table.named(target.id);
+      inputEngineSelf = inputEngineVisit(
+        left,
+        inputEngineConstructorInput(target.id, left),
+      );
+      for (const argument of args) {
+        inputEngineSelf = inputEngineVisit(argument, undefined);
+      }
+      return inputEngineTable.named(target.id);
     }
     if (optionConstructorOf(target) === "some") {
-      const element = this.table.optionElementOf(expected);
-      const inferred = this.visit(left, element);
-      args.forEach((argument) => this.visit(argument));
-      return this.table.option(element ?? inferred ?? this.table.unknown);
+      const element = inputEngineTable.optionElementOf(expected);
+      const inferred = inputEngineInfer(left, element).type;
+      for (const argument of args) {
+        inputEngineSelf = inputEngineVisit(argument, undefined);
+      }
+      return inputEngineTable.option(
+        element ?? inferred ?? inputEngineTable.unknown,
+      );
     }
-    const calleeType = this.nameType(target);
+    const calleeType = inputEngineNameType(target);
     const fn = callee === undefined
       ? undefined
-      : this.callableEvidence(callee, calleeType);
+      : inputEngineCallableEvidence(callee, calleeType);
     if (fn === undefined) {
-      const origin = callee === undefined ? undefined : this.originOf(callee);
+      const origin = callee === undefined
+        ? undefined
+        : inputEngineOriginOf(callee);
       if (callee !== undefined && origin !== undefined) {
-        this.resolver.defer(origin, callee, (evidence) => {
-          [left, ...args].forEach((argument, index) =>
-            this.visit(argument, this.expectedArgument(evidence, index))
-          );
-        });
+        inputEngineResolver = inputEngineResolver.defer(
+          origin,
+          callee,
+          (evidence) => {
+            const argumentsWithLeft = [left, ...args];
+            for (const index of argumentsWithLeft.keys()) {
+              const argument = argumentsWithLeft[index];
+              if (argument === undefined) {
+                continue;
+              }
+              inputEngineSelf = inputEngineVisit(
+                argument,
+                inputEngineExpectedArgument(evidence, index),
+              );
+            }
+            return true;
+          },
+        );
       }
-      this.visit(left);
-      args.forEach((argument) => this.visit(argument));
+      inputEngineSelf = inputEngineVisit(left, undefined);
+      for (const argument of args) {
+        inputEngineSelf = inputEngineVisit(argument, undefined);
+      }
       return undefined;
     }
-    this.visit(left, this.expectedArgument(fn, 0));
-    args.forEach((argument, index) =>
-      this.visit(argument, this.expectedArgument(fn, index + 1))
+    inputEngineSelf = inputEngineVisit(
+      left,
+      inputEngineExpectedArgument(fn, 0),
     );
+    for (const index of args.keys()) {
+      const argument = args[index];
+      if (argument === undefined) {
+        continue;
+      }
+      inputEngineSelf = inputEngineVisit(
+        argument,
+        inputEngineExpectedArgument(fn, index + 1),
+      );
+    }
     return fn.result;
   }
-
-  private binary(
+  function inputEngineBinary(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const operands = kidsOf(this.tree, node);
-    const operator = operatorOf(this.tree, node);
+    const operands = kidsOf(inputEngineTree, node);
+    const operator = operatorOf(inputEngineTree, node);
     const contextual =
-      isArithmeticOperator(operator) && this.resolver.isConcrete(expected)
+      isArithmeticOperator(operator) && inputEngineResolver.isConcrete(expected)
         ? expected
         : undefined;
-    operands.forEach((operand) => this.visit(operand, contextual));
+    for (const operand of operands) {
+      inputEngineSelf = inputEngineVisit(operand, contextual);
+    }
     return expected;
   }
-
-  /** `-e` reads as `0 - e`, and `!e` as `e === false`. */
-  private unary(
+  function inputEngineUnary(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const contextual = unaryOperatorOf(this.tree, node)?.operator === "-" &&
-        this.resolver.isConcrete(expected)
-      ? expected
-      : undefined;
-    kidsOf(this.tree, node).forEach((operand) =>
-      this.visit(operand, contextual)
-    );
+    const contextual =
+      unaryOperatorOf(inputEngineTree, node)?.operator === "-" &&
+        inputEngineResolver.isConcrete(expected)
+        ? expected
+        : undefined;
+    for (const operand of kidsOf(inputEngineTree, node)) {
+      inputEngineSelf = inputEngineVisit(operand, contextual);
+    }
     return expected;
   }
-
-  private block(
+  function inputEngineBlock(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const items = kidsOf(this.tree, node);
+    const items = kidsOf(inputEngineTree, node);
     let type: TypeRef | undefined;
-    items.forEach((item, index) => {
-      if (kindOf(this.tree, item) === SyntaxKind.ConstDecl) {
-        this.binding(item);
-        return;
+    for (const index of items.keys()) {
+      const item = items[index];
+      if (item === undefined) {
+        continue;
       }
-      type = this.visit(
+      if (kindOf(inputEngineTree, item) === SyntaxKind.ConstDecl) {
+        inputEngineSelf = inputEngineBinding(item);
+        continue;
+      }
+      type = inputEngineInfer(
         item,
         index === items.length - 1 ? expected : undefined,
-      );
-    });
+      ).type;
+    }
     return type;
   }
-
-  private binding(node: NodeId): void {
-    const parts = kidsOf(this.tree, node);
+  function inputEngineBinding(node: NodeId): InputEngine {
+    const parts = kidsOf(inputEngineTree, node);
     const nameNode = parts.find((part) =>
-      kindOf(this.tree, part) === SyntaxKind.Name
+      kindOf(inputEngineTree, part) === SyntaxKind.Name
     );
-    const typeNode = parts.find((part) => isTypeKind(kindOf(this.tree, part)));
-    const init = initOf(this.tree, node, nameNode);
+    const typeNode = parts.find((part) =>
+      isTypeKind(kindOf(inputEngineTree, part))
+    );
+    const init = initOf(inputEngineTree, node, nameNode);
     const target = nameNode === undefined
       ? undefined
-      : this.targets.get(nameNode);
+      : inputEngineTargets.get(nameNode);
     const id = target?.kind === "local" ? target.id : undefined;
     const annotation = typeNode === undefined
       ? undefined
-      : this.lowerer.lower(typeNode).ref;
+      : inputEngineLowerer.lower(typeNode).ref;
     const inferred = init === undefined
       ? undefined
-      : this.visit(init, annotation);
+      : inputEngineInfer(init, annotation).type;
     const type = annotation ?? inferred;
-    if (id === undefined) return;
-    if (type !== undefined) this.localTypes.set(id, type);
-    const evidence = this.resolver.callableEvidence(annotation) ??
-      (init === undefined ? undefined : this.evidenceOf(init));
-    if (evidence !== undefined) this.localEvidence.set(id, evidence);
-    if (init !== undefined) {
-      const origin = this.originOf(init);
-      if (origin !== undefined) this.resolver.setOrigin(id, origin);
+    if (id === undefined) {
+      return inputEngineSelf;
     }
+    if (type !== undefined) {
+      inputEngineLocalTypes = inputEngineLocalTypes.set(id, type);
+    }
+    const evidence = inputEngineResolver.callableEvidence(annotation) ??
+      (init === undefined ? undefined : inputEngineEvidenceOf(init));
+    if (evidence !== undefined) {
+      inputEngineLocalEvidence = inputEngineLocalEvidence.set(id, evidence);
+    }
+    if (init !== undefined) {
+      const origin = inputEngineOriginOf(init);
+      if (origin !== undefined) {
+        inputEngineResolver = inputEngineResolver.setOrigin(id, origin);
+      }
+    }
+    return inputEngineSelf;
   }
-
-  private ifExpr(
+  function inputEngineIfExpr(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const parts = kidsOf(this.tree, node);
-    if (parts[0] !== undefined) this.visit(parts[0], this.table.boolean);
+    const parts = kidsOf(inputEngineTree, node);
+    if (parts[0] !== undefined) {
+      inputEngineSelf = inputEngineVisit(parts[0], inputEngineTable.boolean);
+    }
     let type: TypeRef | undefined;
     for (const branch of parts.slice(1)) {
-      type = this.visit(branch, expected) ?? type;
+      type = inputEngineInfer(branch, expected).type ?? type;
     }
     return expected ?? type;
   }
-
-  private matchExpr(
+  function inputEngineMatchExpr(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const parts = kidsOf(this.tree, node);
+    const parts = kidsOf(inputEngineTree, node);
     const subject = parts.find((part) =>
-      kindOf(this.tree, part) !== SyntaxKind.MatchArm
+      kindOf(inputEngineTree, part) !== SyntaxKind.MatchArm
     );
-    if (subject !== undefined) this.visit(subject);
+    if (subject !== undefined) {
+      inputEngineSelf = inputEngineVisit(subject, undefined);
+    }
     let type: TypeRef | undefined;
     for (
       const arm of parts.filter((part) =>
-        kindOf(this.tree, part) === SyntaxKind.MatchArm
+        kindOf(inputEngineTree, part) === SyntaxKind.MatchArm
       )
     ) {
-      const body = kidsOf(this.tree, arm).at(-1);
-      if (body !== undefined) type = this.visit(body, expected) ?? type;
+      const body = kidsOf(inputEngineTree, arm).at(-1);
+      if (body !== undefined) {
+        type = inputEngineInfer(body, expected).type ?? type;
+      }
     }
     return expected ?? type;
   }
-
-  private arrow(
+  function inputEngineArrow(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const fn = this.resolver.callableEvidence(expected);
-    const header = functionParts(this.tree, node);
-    const params = paramNodes(this.tree, header.paramList);
+    const fn = inputEngineResolver.callableEvidence(expected);
+    const header = functionParts(inputEngineTree, node);
+    const params = paramNodes(inputEngineTree, header.paramList);
     const parameterEvidence: (TypeRef | undefined)[] = [];
-    params.forEach((param, index) => {
-      const { name: nameNode, type: typeNode } = paramParts(this.tree, param);
+    for (const index of params.keys()) {
+      const param = params[index];
+      if (param === undefined) {
+        continue;
+      }
+      const binding8 = paramParts(inputEngineTree, param);
+      const nameNode = binding8.name;
+      const typeNode = binding8.type;
       const target = nameNode === undefined
         ? undefined
-        : this.targets.get(nameNode);
+        : inputEngineTargets.get(nameNode);
       const id = target?.kind === "local" ? target.id : undefined;
       const type = typeNode === undefined
-        ? fn?.parameters[index] ?? this.table.unknown
-        : this.lowerer.lower(typeNode).ref;
-      parameterEvidence.push(
-        typeNode === undefined ? fn?.parameters[index] : type,
-      );
-      if (id !== undefined) this.localTypes.set(id, type);
-    });
+        ? fn?.parameters[index] ?? inputEngineTable.unknown
+        : inputEngineLowerer.lower(typeNode).ref;
+      {
+        const _appendTarget1 = parameterEvidence;
+        const _appendValue2 = typeNode === undefined
+          ? fn?.parameters[index]
+          : type;
+        _appendTarget1[_appendTarget1.length] = _appendValue2;
+      }
+      if (id !== undefined) {
+        inputEngineLocalTypes = inputEngineLocalTypes.set(id, type);
+      }
+    }
     const resultNode = header.result;
     const result = resultNode === undefined
       ? fn?.result
-      : this.lowerer.lower(resultNode).ref;
-    this.expressionEvidence.set(node, {
+      : inputEngineLowerer.lower(resultNode).ref;
+    inputEngineExpressionEvidence = inputEngineExpressionEvidence.set(node, {
       kind: "callable",
       parameters: parameterEvidence,
-      result,
+      result: result,
       checked: fn?.checked,
     });
-    const body = arrowBody(this.tree, node);
-    if (body !== undefined) this.visit(body, result);
+    const body = arrowBody(inputEngineTree, node);
+    if (body !== undefined) {
+      inputEngineSelf = inputEngineVisit(body, result);
+    }
     return expected;
   }
-
-  private record(
+  function inputEngineRecord(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const target = this.resolver.isConcrete(expected)
-      ? this.table.node(this.table.unfold(expected))
+    const target = inputEngineResolver.isConcrete(expected)
+      ? inputEngineTable.node(inputEngineTable.unfold(expected))
       : undefined;
-    const evidence = new Map<string, ExpressionEvidence>();
-    for (const field of kidsOf(this.tree, node)) {
-      const pieces = kidsOf(this.tree, field);
+    let evidence = emptyMap<string, ExpressionEvidence>();
+    for (const field of kidsOf(inputEngineTree, node)) {
+      const pieces = kidsOf(inputEngineTree, field);
       const labelNode = pieces.find((piece) =>
-        kindOf(this.tree, piece) === SyntaxKind.Name
+        kindOf(inputEngineTree, piece) === SyntaxKind.Name
       );
       const label = labelNode === undefined
         ? undefined
-        : nameTextOf(this.tree, labelNode);
+        : nameTextOf(inputEngineTree, labelNode);
       const value = pieces.at(-1);
-      if (value === undefined) continue;
+      if (value === undefined) {
+        continue;
+      }
       const fieldType = target?.kind === "record" && label !== undefined
         ? target.fields.find((entry) => entry.name === label)?.type
         : undefined;
-      const valueType = this.visit(value, fieldType);
-      const fieldEvidence = this.resolver.callableEvidence(
-        fieldType ?? valueType,
-      ) ??
-        this.evidenceOf(value);
+      const valueType = inputEngineInfer(value, fieldType).type;
+      const fieldEvidence =
+        inputEngineResolver.callableEvidence(fieldType ?? valueType) ??
+          inputEngineEvidenceOf(value);
       if (label !== undefined && fieldEvidence !== undefined) {
-        evidence.set(label, fieldEvidence);
+        evidence = evidence.set(label, fieldEvidence);
       }
     }
     if (evidence.size > 0) {
-      this.expressionEvidence.set(node, { kind: "record", fields: evidence });
+      inputEngineExpressionEvidence = inputEngineExpressionEvidence.set(node, {
+        kind: "record",
+        fields: evidence,
+      });
     }
     return expected;
   }
-
-  private list(
+  function inputEngineList(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const target = this.resolver.isConcrete(expected)
-      ? this.table.node(this.table.unfold(expected))
+    const target = inputEngineResolver.isConcrete(expected)
+      ? inputEngineTable.node(inputEngineTable.unfold(expected))
       : undefined;
-    kidsOf(this.tree, node).forEach((element, index) => {
-      const elementType = target?.kind === "array"
-        ? target.element
-        : target?.kind === "tuple"
-        ? target.elements[index]
-        : undefined;
-      this.visit(element, elementType);
-    });
+    const elements = kidsOf(inputEngineTree, node);
+    for (const index of elements.keys()) {
+      const element = elements[index];
+      if (element === undefined) {
+        continue;
+      }
+      let elementType: TypeRef | undefined;
+      if (target?.kind === "array") {
+        elementType = target.element;
+      } else if (target?.kind === "tuple") {
+        elementType = target.elements[index];
+      }
+      inputEngineSelf = inputEngineVisit(element, elementType);
+    }
     return expected;
   }
+  inputEngineSelf = { finish: inputEngineFinish, visit: inputEngineVisit };
+  return inputEngineSelf;
 }
-
 /** Returns a signature copy with finalized inferred parameter contracts. */
 export function withInferredInputs(
   signature: FunctionSignature,
@@ -601,7 +769,7 @@ export function withInferredInputs(
       (parameter, index): ParameterSignature => {
         const ref = inference.types[index] ?? parameter.type.ref;
         return parameter.inferred && parameter.type.ref !== ref
-          ? { ...parameter, type: { ref, ir: typeToIr(table, ref) } }
+          ? { ...parameter, type: { ref: ref, ir: typeToIr(table, ref) } }
           : parameter;
       },
     ),

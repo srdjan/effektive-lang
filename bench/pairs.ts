@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The A/B alternation of the paired measurements. Side A runs first on an even
 // turn and side B runs first on an odd turn. The same function maps the
 // results of the first and second run of a turn back to the order [A, B], so

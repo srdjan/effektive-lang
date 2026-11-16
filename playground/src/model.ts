@@ -3,24 +3,29 @@
 // the TypeScript pane, and the hover texts. Fast tests cover each function.
 
 import {
+  caught,
   isInterfacePath,
   lineStarts,
   positionOf,
   type Severity,
 } from "../../src/core/mod.ts";
+import { decodeUriComponent } from "../../src/core/frontend.ts";
 import { BACKEND_UNAVAILABLE_TEXT } from "../../src/core/typescript.ts";
 import type { PlaygroundHover, PlaygroundResult } from "./compile.ts";
 
 /** The tab that opens when the hash names no known file. */
 export const DEFAULT_TAB = "main.eff";
 
+type UrlHash = string;
+type SourcePath = string;
+type SourceText = string;
+type TabSize = number;
+type Column = number;
+
 /** `decodeURIComponent` that gives undefined for a malformed escape. */
 function decode(text: string): string | undefined {
-  try {
-    return decodeURIComponent(text);
-  } catch {
-    return undefined;
-  }
+  const decoded = caught(() => decodeUriComponent(text));
+  return decoded.ok ? decoded.value : undefined;
 }
 
 /**
@@ -28,13 +33,16 @@ function decode(text: string): string | undefined {
  * `#host%2Fproviders.effi`. The result is the decoded path when `paths`
  * contains it, else `DEFAULT_TAB`. A malformed escape gives `DEFAULT_TAB`.
  */
-export function tabFromHash(hash: string, paths: readonly string[]): string {
+export function tabFromHash(
+  hash: UrlHash,
+  paths: readonly SourcePath[],
+): SourcePath {
   const path = decode(hash.startsWith("#") ? hash.slice(1) : hash);
   return path !== undefined && paths.includes(path) ? path : DEFAULT_TAB;
 }
 
 /** One entry of the Problems list. Line and column are one-based. */
-export interface ProblemItem {
+export type ProblemItem = {
   readonly path: string;
   readonly from: number;
   readonly to: number;
@@ -43,6 +51,12 @@ export interface ProblemItem {
   readonly severity: Severity;
   readonly code: string;
   readonly message: string;
+};
+
+function compareProblemItems(left: ProblemItem, right: ProblemItem): number {
+  if (left.path !== right.path) return left.path < right.path ? -1 : 1;
+  if (left.from !== right.from) return left.from - right.from;
+  return left.to - right.to;
 }
 
 /**
@@ -55,13 +69,15 @@ export function problemItems(
   texts: Readonly<Record<string, string>>,
 ): ProblemItem[] {
   const items: ProblemItem[] = [];
-  for (const [path, diagnostics] of Object.entries(result.diagnostics)) {
+  for (const entry of Object.entries(result.diagnostics)) {
+    const path = entry[0];
+    const diagnostics = entry[1];
     const text = texts[path] ?? "";
     const starts = lineStarts(text);
     for (const d of diagnostics) {
       const position = positionOf(starts, text, d.from);
-      items.push({
-        path,
+      items[items.length] = {
+        path: path,
         from: d.from,
         to: d.to,
         line: position.line,
@@ -69,16 +85,10 @@ export function problemItems(
         severity: d.severity,
         code: d.code,
         message: d.message,
-      });
+      };
     }
   }
-  return items.sort((a, b) =>
-    a.path !== b.path
-      ? (a.path < b.path ? -1 : 1)
-      : a.from !== b.from
-      ? a.from - b.from
-      : a.to - b.to
-  );
+  return items.sort(compareProblemItems);
 }
 
 /**
@@ -87,7 +97,9 @@ export function problemItems(
  */
 export function tabCounts(result: PlaygroundResult): Record<string, number> {
   const counts: Record<string, number> = {};
-  for (const [path, diagnostics] of Object.entries(result.diagnostics)) {
+  for (const entry of Object.entries(result.diagnostics)) {
+    const path = entry[0];
+    const diagnostics = entry[1];
     counts[path] = diagnostics.length;
   }
   return counts;
@@ -105,7 +117,7 @@ type OutputState =
 
 export function outputState(
   result: PlaygroundResult,
-  path: string,
+  path: SourcePath,
 ): OutputState {
   const output = result.outputs[path];
   if (output === undefined || output === null) return { tag: "none" };
@@ -115,11 +127,19 @@ export function outputState(
 }
 
 /** The characters that are not whitespace, outside whole-line `//` comments. */
+function nonWhitespaceLength(text: string): number {
+  let length = 0;
+  for (const character of text) {
+    if (character.trim().length > 0) length = length + character.length;
+  }
+  return length;
+}
+
 function codeLength(text: string): number {
-  return text.split("\n")
+  const code = text.split("\n")
     .filter((line) => !line.trimStart().startsWith("//"))
-    .join("")
-    .replace(/\s/g, "").length;
+    .join("");
+  return nonWhitespaceLength(code);
 }
 
 /**
@@ -127,7 +147,10 @@ function codeLength(text: string): number {
  * Whitespace and whole-line comments, such as the generated header and the
  * source map line, do not count. Empty when the output has no code.
  */
-export function savingLabel(source: string, generated: string): string {
+export function savingLabel(
+  source: SourceText,
+  generated: SourceText,
+): SourceText {
   const target = codeLength(generated);
   if (target === 0) return "";
   const saved = Math.round((1 - codeLength(source) / target) * 100);
@@ -143,26 +166,34 @@ export function savingLabel(source: string, generated: string): string {
  */
 export function outputSaving(
   state: OutputState,
-  path: string,
-  source: string,
-): string {
+  path: SourcePath,
+  source: SourceText,
+): SourceText {
   return state.tag === "text" && !isInterfacePath(path)
     ? savingLabel(source, state.text)
     : "";
 }
 
 /** One labelled block of the hover tooltip. `code` is false for a plain message. */
-export interface HoverBlock {
+export type HoverBlock = {
   readonly label: string;
   readonly text: string;
   readonly code: boolean;
-}
+};
 
-interface HoverLines {
+type HoverLines = {
   /** The blocks of the tooltip: the contract, then the backend type when it exists. */
   readonly tooltip: readonly HoverBlock[];
   /** The text of the cursor line: the contract on one line. Empty without a hit. */
   readonly cursor: string;
+};
+
+function oneLine(text: string): string {
+  return text.split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .join(" ")
+    .trim();
 }
 
 /** The texts of the tooltip and of the cursor line for a hover answer. */
@@ -172,17 +203,21 @@ export function hoverLines(hit: PlaygroundHover | undefined): HoverLines {
     { label: "Contract", text: hit.contract, code: true },
   ];
   if (hit.backend?.tag === "type") {
-    tooltip.push({ label: "Backend type", text: hit.backend.text, code: true });
+    tooltip[tooltip.length] = {
+      label: "Backend type",
+      text: hit.backend.text,
+      code: true,
+    };
   } else if (hit.backend?.tag === "unavailable") {
-    tooltip.push({
+    tooltip[tooltip.length] = {
       label: "Backend type",
       text: BACKEND_UNAVAILABLE_TEXT,
       code: false,
-    });
+    };
   }
   return {
-    tooltip,
-    cursor: hit.contract.replace(/\s*\n\s*/g, " ").trim(),
+    tooltip: tooltip,
+    cursor: oneLine(hit.contract),
   };
 }
 
@@ -194,11 +229,11 @@ export const WRAP_HANG = 2;
  * whitespace of the line plus `WRAP_HANG`. A tab moves to the next multiple of
  * `tabSize`.
  */
-export function wrapIndent(line: string, tabSize: number): number {
+export function wrapIndent(line: SourceText, tabSize: TabSize): Column {
   let column = 0;
   for (const char of line) {
-    if (char === " ") column += 1;
-    else if (char === "\t") column += tabSize - (column % tabSize);
+    if (char === " ") column = column + 1;
+    else if (char === "\t") column = column + tabSize - (column % tabSize);
     else break;
   }
   return column + WRAP_HANG;

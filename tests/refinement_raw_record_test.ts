@@ -2,7 +2,7 @@ import { assert, assertEquals } from "@std/assert";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import { validateProject } from "../src/core/validate_project.ts";
 import type { Expr, ModuleIR } from "../src/core/ir.ts";
-import { exprChildren } from "../src/core/validate/expr.ts";
+import { exprChildren } from "../src/core/validate/expr_walk.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 
 const declarations = `

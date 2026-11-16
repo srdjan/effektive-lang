@@ -22,11 +22,12 @@ export const DURATION_ID: TypeId = "type:effect/Duration";
  * time it is a number of milliseconds since the Unix epoch. It is closed.
  */
 export const INSTANT_ID: TypeId = "type:effect/Instant";
+export type IdentityCandidate = string;
+export type UnitIdentityMatch = boolean;
 /** The closed builtin unit identities: no unnamed value fits one, and each erases to a number. */
-export const CLOSED_UNIT_IDS: ReadonlySet<string> = new Set([
-  DURATION_ID,
-  INSTANT_ID,
-]);
+export function isClosedUnitId(id: IdentityCandidate): UnitIdentityMatch {
+  return id === DURATION_ID || id === INSTANT_ID;
+}
 /** The levels of `log`, in the order of increasing severity. The default is "info". */
 export const LOG_LEVELS = [
   "trace",
@@ -42,26 +43,26 @@ export type LocalId = `local:${string}`;
 export type Execution = "pure" | "effect";
 
 /** Offsets count UTF-16 code units. The end offset is exclusive. */
-export interface Span {
+export type Span = {
   readonly source: string;
   readonly start: number;
   readonly end: number;
-}
+};
 
 /** These sets are closed. Serialization sorts IDs and removes duplicates. */
-export interface Effects {
+export type Effects = {
   readonly failures: readonly ErrorId[];
   readonly requirements: readonly CapabilityId[];
-}
+};
 
-export interface Field {
+export type Field = {
   readonly name: string;
   readonly type: Type;
   readonly optional: boolean;
-}
+};
 
 /** Function effects describe invocation. Constructing a closure remains pure. */
-export interface FunctionType {
+export type FunctionType = {
   readonly kind: "function";
   readonly execution: Execution;
   readonly parameters: readonly Type[];
@@ -70,7 +71,7 @@ export interface FunctionType {
   readonly checked?: readonly boolean[];
   readonly result: Type;
   readonly effects: Effects;
-}
+};
 
 export type Type =
   | { readonly kind: "primitive"; readonly name: "string" | "boolean" | "int" | "number" | "unit" | "never" | "unknown" }
@@ -98,20 +99,20 @@ export type Type =
       };
     };
 
-export interface Parameter {
+export type Parameter = {
   readonly id: LocalId;
   readonly name: string;
   readonly type: Type;
   readonly borrow?: boolean;
   readonly span: Span;
-}
+};
 
-export interface RefinementProof {
+export type RefinementProof = {
   readonly target: TypeId;
   readonly certificate: ProofCertificate;
-}
+};
 
-export interface Annotation {
+export type Annotation = {
   readonly proofs?: readonly RefinementProof[];
   readonly type: Type;
   /** Execution mode remains independent of unhandled failures and requirements. */
@@ -119,7 +120,7 @@ export interface Annotation {
   /** Active effects for this evaluation, including effects of evaluated children. */
   readonly effects: Effects;
   readonly span: Span;
-}
+};
 
 type Node<T> = Readonly<T> & Annotation;
 
@@ -134,106 +135,106 @@ export type Pattern =
   | { readonly kind: "nominal"; readonly nominal: TypeId; readonly binding: Parameter; readonly span: Span }
   | { readonly kind: "tag"; readonly field: string; readonly value: string; readonly binding: Parameter | null; readonly span: Span };
 
-export interface Arm {
+export type Arm = {
   readonly pattern: Pattern;
   readonly body: Expr;
-}
+};
 
-export interface Handler {
+export type Handler = {
   readonly error: ErrorId;
   readonly binding: Parameter;
   readonly body: Expr;
   readonly span: Span;
-}
+};
 
 /** The `Defect(name) => expression` arm of a catch. The binding is `{ message: string }`. */
-export interface DefectHandler {
+export type DefectHandler = {
   readonly binding: Parameter;
   readonly body: Expr;
   readonly span: Span;
-}
+};
 
 export type Step =
   | { readonly kind: "bind"; readonly binding: Parameter; readonly value: Expr; readonly generated?: true }
   | { readonly kind: "evaluate"; readonly value: Expr };
 
-export type ClosureExpr = Node<{ kind: "closure"; parameters: readonly Parameter[]; body: Expr }>;
+export type ClosureExpr = Node<{ readonly kind: "closure"; readonly parameters: readonly Parameter[]; readonly body: Expr }>;
 
 /** Calls and capability operations remain distinct after resolution. */
 export type Expr =
   // A null value in the original literal node represents unit, emitted as undefined.
-  | Node<{ kind: "literal"; value: string | number | boolean | null }>
+  | Node<{ readonly kind: "literal"; readonly value: string | number | boolean | null }>
   // Source null data is distinct from the existing unit marker.
-  | Node<{ kind: "null" }>
-  | Node<{ kind: "reference"; target: LocalId | ValueId }>
-  | Node<{ kind: "record"; fields: readonly { readonly name: string; readonly value: Expr }[] }>
-  | Node<{ kind: "array"; elements: readonly Expr[] }>
-  | Node<{ kind: "tuple"; elements: readonly Expr[] }>
-  | Node<{ kind: "get"; record: Expr; field: string }>
-  | Node<{ kind: "update"; record: Expr; fields: readonly { readonly name: string; readonly value: Expr }[] }>
-  | Node<{ kind: "nominal"; nominal: TypeId; value: Expr }>
-  | Node<{ kind: "some"; value: Expr }>
-  | Node<{ kind: "none" }>
-  | Node<{ kind: "error"; error: ErrorId; fields: readonly { readonly name: string; readonly value: Expr }[] }>
+  | Node<{ readonly kind: "null" }>
+  | Node<{ readonly kind: "reference"; readonly target: LocalId | ValueId }>
+  | Node<{ readonly kind: "record"; readonly fields: readonly { readonly name: string; readonly value: Expr }[] }>
+  | Node<{ readonly kind: "array"; readonly elements: readonly Expr[] }>
+  | Node<{ readonly kind: "tuple"; readonly elements: readonly Expr[] }>
+  | Node<{ readonly kind: "get"; readonly record: Expr; readonly field: string }>
+  | Node<{ readonly kind: "update"; readonly record: Expr; readonly fields: readonly { readonly name: string; readonly value: Expr }[] }>
+  | Node<{ readonly kind: "nominal"; readonly nominal: TypeId; readonly value: Expr }>
+  | Node<{ readonly kind: "some"; readonly value: Expr }>
+  | Node<{ readonly kind: "none" }>
+  | Node<{ readonly kind: "error"; readonly error: ErrorId; readonly fields: readonly { readonly name: string; readonly value: Expr }[] }>
   | ClosureExpr
-  | Node<{ kind: "call"; callee: Expr; arguments: readonly Expr[] }>
-  | Node<{ kind: "defer"; job: Expr }>
-  | Node<{ kind: "run"; value: Expr }>
-  | Node<{ kind: "scoped"; value: Expr }>
-  | Node<{ kind: "fork-scoped"; job: Expr }>
-  | Node<{ kind: "with-resource"; acquire: ClosureExpr; use: ClosureExpr; release: ClosureExpr }>
-  | Node<{ kind: "unfold"; seed: Expr; next: Expr }>
-  | Node<{ kind: "map-effect"; stream: Expr; transform: Expr; concurrency: number | "unbounded" | undefined }>
-  | Node<{ kind: "map-stream"; stream: Expr; transform: Expr }>
-  | Node<{ kind: "sink-for-each"; consume: Expr }>
-  | Node<{ kind: "take-sink"; count: number }>
-  | Node<{ kind: "transduce-stream"; stream: Expr; sink: Expr }>
-  | Node<{ kind: "run-stream"; stream: Expr; sink: Expr }>
-  | Node<{ kind: "buffer-stream"; stream: Expr; capacity: number }>
-  | Node<{ kind: "race"; left: Expr; right: Expr }>
-  | Node<{ kind: "race-all"; jobs: Expr }>
-  | Node<{ kind: "make-ref"; value: Expr }>
-  | Node<{ kind: "get-ref"; ref: Expr }>
-  | Node<{ kind: "set-ref"; ref: Expr; value: Expr }>
-  | Node<{ kind: "update-ref"; ref: Expr; transform: Expr }>
-  | Node<{ kind: "layer"; service: ServiceId; acquire: Expr }>
-  | Node<{ kind: "merge-layers"; left: Expr; right: Expr }>
-  | Node<{ kind: "retry-schedule"; step: Expr }>
-  | Node<{ kind: "retry-with-schedule"; job: Expr; options: Expr }>
-  | Node<{ kind: "schema"; op: "identity" | "array" | "struct" | "optional-key" | "null-to-missing-key" | "option-from-optional-key" | "default-key" | "constructor-default" | "default-null-key" | "default-encoded-key" | "optional-transform" | "optional-from-required" | "union" | "transform" | "recursive"; arguments: readonly Expr[] }>
-  | Node<{ kind: "schema-decode"; schema: Expr; input: Expr }>
-  | Node<{ kind: "schema-encode"; schema: Expr; input: Expr }>
-  | Node<{ kind: "schema-make"; schema: Expr; input: Expr }>
-  | Node<{ kind: "perform"; capability: CapabilityId; arguments: readonly Expr[] }>
-  | Node<{ kind: "block"; steps: readonly Step[]; result: Expr }>
-  | Node<{ kind: "if"; condition: Expr; then: Expr; else: Expr }>
-  | Node<{ kind: "match"; subject: Expr; arms: readonly Arm[] }>
-  | Node<{ kind: "fail"; error: Expr }>
+  | Node<{ readonly kind: "call"; readonly callee: Expr; readonly arguments: readonly Expr[] }>
+  | Node<{ readonly kind: "defer"; readonly job: Expr }>
+  | Node<{ readonly kind: "run"; readonly value: Expr }>
+  | Node<{ readonly kind: "scoped"; readonly value: Expr }>
+  | Node<{ readonly kind: "fork-scoped"; readonly job: Expr }>
+  | Node<{ readonly kind: "with-resource"; readonly acquire: ClosureExpr; readonly use: ClosureExpr; readonly release: ClosureExpr }>
+  | Node<{ readonly kind: "unfold"; readonly seed: Expr; readonly next: Expr }>
+  | Node<{ readonly kind: "map-effect"; readonly stream: Expr; readonly transform: Expr; readonly concurrency: number | "unbounded" | undefined }>
+  | Node<{ readonly kind: "map-stream"; readonly stream: Expr; readonly transform: Expr }>
+  | Node<{ readonly kind: "sink-for-each"; readonly consume: Expr }>
+  | Node<{ readonly kind: "take-sink"; readonly count: number }>
+  | Node<{ readonly kind: "transduce-stream"; readonly stream: Expr; readonly sink: Expr }>
+  | Node<{ readonly kind: "run-stream"; readonly stream: Expr; readonly sink: Expr }>
+  | Node<{ readonly kind: "buffer-stream"; readonly stream: Expr; readonly capacity: number }>
+  | Node<{ readonly kind: "race"; readonly left: Expr; readonly right: Expr }>
+  | Node<{ readonly kind: "race-all"; readonly jobs: Expr }>
+  | Node<{ readonly kind: "make-ref"; readonly value: Expr }>
+  | Node<{ readonly kind: "get-ref"; readonly ref: Expr }>
+  | Node<{ readonly kind: "set-ref"; readonly ref: Expr; readonly value: Expr }>
+  | Node<{ readonly kind: "update-ref"; readonly ref: Expr; readonly transform: Expr }>
+  | Node<{ readonly kind: "layer"; readonly service: ServiceId; readonly acquire: Expr }>
+  | Node<{ readonly kind: "merge-layers"; readonly left: Expr; readonly right: Expr }>
+  | Node<{ readonly kind: "retry-schedule"; readonly step: Expr }>
+  | Node<{ readonly kind: "retry-with-schedule"; readonly job: Expr; readonly options: Expr }>
+  | Node<{ readonly kind: "schema"; readonly op: "identity" | "array" | "struct" | "optional-key" | "null-to-missing-key" | "option-from-optional-key" | "default-key" | "constructor-default" | "default-null-key" | "default-encoded-key" | "optional-transform" | "optional-from-required" | "union" | "transform" | "recursive"; readonly arguments: readonly Expr[] }>
+  | Node<{ readonly kind: "schema-decode"; readonly schema: Expr; readonly input: Expr }>
+  | Node<{ readonly kind: "schema-encode"; readonly schema: Expr; readonly input: Expr }>
+  | Node<{ readonly kind: "schema-make"; readonly schema: Expr; readonly input: Expr }>
+  | Node<{ readonly kind: "perform"; readonly capability: CapabilityId; readonly arguments: readonly Expr[] }>
+  | Node<{ readonly kind: "block"; readonly steps: readonly Step[]; readonly result: Expr }>
+  | Node<{ readonly kind: "if"; readonly condition: Expr; readonly then: Expr; readonly else: Expr }>
+  | Node<{ readonly kind: "match"; readonly subject: Expr; readonly arms: readonly Arm[] }>
+  | Node<{ readonly kind: "fail"; readonly error: Expr }>
   | Node<{
-    kind: "catch";
-    body: Expr;
-    handlers: readonly Handler[];
-    defect?: DefectHandler;
+    readonly kind: "catch";
+    readonly body: Expr;
+    readonly handlers: readonly Handler[];
+    readonly defect?: DefectHandler;
   }>
-  | Node<{ kind: "ensure"; body: Expr; finalizer: ClosureExpr }>
-  | Node<{ kind: "retry"; job: Expr; times: number }>
-  | Node<{ kind: "timeout"; job: Expr; durationMs: Expr }>
-  | Node<{ kind: "repeat"; job: Expr; options: Expr | null }>
-  | Node<{ kind: "sleep"; durationMs: Expr }>
-  | Node<{ kind: "now" }>
-  | Node<{ kind: "log"; message: Expr; level: LogLevel; fields: Expr | null }>
-  | Node<{ kind: "random" }>
-  | Node<{ kind: "random-int"; min: Expr; max: Expr }>
-  | Node<{ kind: "uninterruptible"; job: Expr }>
-  | Node<{ kind: "provide"; provider: Expr; job: Expr }>
+  | Node<{ readonly kind: "ensure"; readonly body: Expr; readonly finalizer: ClosureExpr }>
+  | Node<{ readonly kind: "retry"; readonly job: Expr; readonly times: number }>
+  | Node<{ readonly kind: "timeout"; readonly job: Expr; readonly durationMs: Expr }>
+  | Node<{ readonly kind: "repeat"; readonly job: Expr; readonly options: Expr | null }>
+  | Node<{ readonly kind: "sleep"; readonly durationMs: Expr }>
+  | Node<{ readonly kind: "now" }>
+  | Node<{ readonly kind: "log"; readonly message: Expr; readonly level: LogLevel; readonly fields: Expr | null }>
+  | Node<{ readonly kind: "random" }>
+  | Node<{ readonly kind: "random-int"; readonly min: Expr; readonly max: Expr }>
+  | Node<{ readonly kind: "uninterruptible"; readonly job: Expr }>
+  | Node<{ readonly kind: "provide"; readonly provider: Expr; readonly job: Expr }>
   | Node<{
-      kind: "binary";
-      operator: "+" | "-" | "*" | "/" | "%" | "===" | "!==" | "<" | "<=" | ">" | ">=" | "&&" | "||";
-      left: Expr;
-      right: Expr;
+      readonly kind: "binary";
+      readonly operator: "+" | "-" | "*" | "/" | "%" | "===" | "!==" | "<" | "<=" | ">" | ">=" | "&&" | "||";
+      readonly left: Expr;
+      readonly right: Expr;
     }>;
 
-export interface TypeDecl {
+export type TypeDecl = {
   readonly kind: "type";
   readonly id: TypeId;
   readonly name: string;
@@ -248,40 +249,40 @@ export interface TypeDecl {
   readonly predicate?: Predicate;
   readonly opaque?: boolean;
   readonly span: Span;
-}
+};
 
-export interface ErrorDecl {
+export type ErrorDecl = {
   readonly kind: "error";
   readonly id: ErrorId;
   readonly name: string;
   readonly fields: readonly Field[];
   readonly span: Span;
-}
+};
 
-export interface MethodDecl {
+export type MethodDecl = {
   readonly id: CapabilityId;
   readonly name: string;
   readonly type: FunctionType;
   readonly borrows?: readonly boolean[];
   readonly span: Span;
-}
+};
 
-export interface ServiceDecl {
+export type ServiceDecl = {
   readonly kind: "service";
   readonly id: ServiceId;
   readonly name: string;
   readonly methods: readonly MethodDecl[];
   readonly span: Span;
-}
+};
 
 /** Which parts of a function contract are closed. A closed set bounds the body from above. An open set equals the body set. */
-export interface WrittenParts {
+export type WrittenParts = {
   readonly result: boolean;
   readonly fails: boolean;
   readonly uses: boolean;
-}
+};
 
-export interface FunctionDecl {
+export type FunctionDecl = {
   readonly kind: "function";
   readonly id: ValueId;
   readonly name: string;
@@ -293,21 +294,21 @@ export interface FunctionDecl {
   readonly entryValidation?: readonly LocalId[];
   readonly body: Expr;
   readonly span: Span;
-}
+};
 
-export interface ConstantDecl {
+export type ConstantDecl = {
   readonly kind: "constant";
   readonly id: ValueId;
   readonly name: string;
   readonly type: Type;
   readonly value: Expr;
   readonly span: Span;
-}
+};
 
 export type Declaration = TypeDecl | ErrorDecl | ServiceDecl | FunctionDecl | ConstantDecl;
 export type DeclarationId = TypeId | ErrorId | ServiceId | ValueId;
 
-export interface Import {
+export type Import = {
   readonly module: string;
   /** These bindings select public names. Other declarations supply transitive type information. */
   readonly bindings: readonly { readonly name: string; readonly target: DeclarationId }[];
@@ -317,9 +318,9 @@ export interface Import {
   readonly types: readonly TypeDecl[];
   readonly errors: readonly ErrorDecl[];
   readonly services: readonly ServiceDecl[];
-}
+};
 
-export interface ModuleIR {
+export type ModuleIR = {
   readonly format: "light-functional-ir";
   readonly version: 10;
   readonly module: string;
@@ -328,10 +329,10 @@ export interface ModuleIR {
   readonly imports: readonly Import[];
   readonly declarations: readonly Declaration[];
   readonly exports: readonly DeclarationId[];
-}
+};
 
-export interface Diagnostic {
+export type Diagnostic = {
   readonly code: string;
   readonly message: string;
   readonly span: Span;
-}
+};

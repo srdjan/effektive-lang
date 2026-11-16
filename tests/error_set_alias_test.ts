@@ -20,7 +20,7 @@ function messages(text: string): string[] {
 }
 
 function load(files: Record<string, string>) {
-  const result = new Program("").update({
+  const result = Program("").update({
     set: { "effektive.json": "{}", ...files },
   });
   assert(result.ok, JSON.stringify(result));
@@ -152,7 +152,12 @@ Deno.test("references of an alias include its use in a fails clause", () => {
   const text =
     `${HEAD}export const pay = (id: Text): Text fails PayFailure => fail(NotFound({ id }))\n`;
   const revision = load({ "m.eff": text });
-  const refs = referencesAt(revision, "m.eff", text.indexOf("PayFailure ="));
+  const refs = referencesAt(
+    revision,
+    "m.eff",
+    text.indexOf("PayFailure ="),
+    undefined,
+  );
   assertEquals(refs.length, 2);
 });
 
@@ -173,7 +178,7 @@ export service Bank {
 export const pay = (id: Text): Text fails Declined | NotFound with Bank.charge => Bank.charge(id)
 `,
   };
-  const result = new Program("").update({ set: files });
+  const result = Program("").update({ set: files });
   assert(result.ok, JSON.stringify(result));
   assertEquals(result.value.diagnostics, []);
 });

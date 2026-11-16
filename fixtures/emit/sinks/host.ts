@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Effect, Layer, Sink, Stream } from "effect";
 import { Factory } from "./contracts.ts";
 

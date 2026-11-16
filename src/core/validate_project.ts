@@ -12,6 +12,7 @@
 // This file sits outside `validate/` because it reads the project type. The
 // validator itself stays independent of the checker and the lowering.
 
+import { emptyMap, setFrom } from "./runtime.ts";
 import {
   type Diagnostic,
   makeDiagnostic,
@@ -21,7 +22,8 @@ import type { LowerError } from "./lower.ts";
 import type { Import, ModuleIR } from "./ir.ts";
 import type { Result } from "./source.ts";
 import type { Project } from "./project.ts";
-import { AREA, validateModule } from "./validate/index.ts";
+import { validateModule } from "./validate/index.ts";
+import { AREA } from "./validate/report.ts";
 import { fallbackSpan } from "./validate/prelude.ts";
 import { isRecord } from "./validate/guards.ts";
 import { PRELUDE_MODULE } from "./validate/world_table.ts";
@@ -57,14 +59,16 @@ function firstDifference(
     if (imported.length !== produced.length) {
       return describe(path, imported, produced);
     }
-    for (const [i, item] of imported.entries()) {
+    for (const entry of imported.entries()) {
+      const i = entry[0];
+      const item = entry[1];
       const found = firstDifference(item, produced[i], `${path}[${i}]`);
       if (found !== undefined) return found;
     }
     return undefined;
   }
   if (isRecord(imported) && isRecord(produced)) {
-    const keys = new Set([...Object.keys(imported), ...Object.keys(produced)]);
+    const keys = setFrom([...Object.keys(imported), ...Object.keys(produced)]);
     for (const key of [...keys].sort()) {
       if (key === "span") continue;
       const found = firstDifference(
@@ -87,13 +91,20 @@ function describe(path: string, imported: Json, produced: Json): string {
 
 /** The declarations that a module holds or carries in its import payloads, by identity. */
 function knownDeclarations(producer: ModuleIR): ReadonlyMap<string, Json> {
-  const known = new Map<string, Json>();
-  const add = (id: string, declaration: Json) => {
-    if (!known.has(id)) known.set(id, declaration);
-  };
+  let known = emptyMap<string, Json>();
+  function add(
+    declarations: Map<string, Json>,
+    id: string,
+    declaration: Json,
+  ): Map<string, Json> {
+    return declarations.has(id)
+      ? declarations
+      : declarations.set(id, declaration);
+  }
   for (const d of producer.declarations) {
     // A value keeps its identity, name, and type in an import payload.
-    add(
+    known = add(
+      known,
       d.id,
       d.kind === "function" || d.kind === "constant"
         ? { id: d.id, name: d.name, type: d.type }
@@ -101,9 +112,20 @@ function knownDeclarations(producer: ModuleIR): ReadonlyMap<string, Json> {
     );
   }
   for (const imp of producer.imports) {
-    for (const [id, entry] of payloadEntries(imp)) add(id, entry);
+    for (const payload of payloadEntries(imp)) {
+      const id = payload[0];
+      const entry = payload[1];
+      known = add(known, id, entry);
+    }
   }
   return known;
+}
+
+function identityOwner(id: string): string | undefined {
+  const colonAt = id.indexOf(":");
+  if (colonAt <= 0 || id.slice(0, colonAt).includes("#")) return undefined;
+  const hashAt = id.indexOf("#", colonAt + 1);
+  return hashAt <= colonAt + 1 ? undefined : id.slice(colonAt + 1, hashAt);
 }
 
 /** The entries of an import payload, each with its identity. */
@@ -130,7 +152,7 @@ function importDifference(
     producer === undefined || imp.module === PRELUDE_MODULE ||
     imp.module.startsWith(HOST_PREFIX)
   ) return undefined;
-  const exported = new Set<string>(producer.exports);
+  const exported = setFrom<string>(producer.exports);
   for (const id of imp.exports) {
     if (!exported.has(id)) {
       return `${id}: the import has an export, the producer has none`;
@@ -142,10 +164,12 @@ function importDifference(
     }
   }
   const known = knownDeclarations(producer);
-  for (const [id, entry] of payloadEntries(imp)) {
+  for (const payload of payloadEntries(imp)) {
+    const id = payload[0];
+    const entry = payload[1];
     const found = known.get(id);
     // The owner is the module part of an identity such as `type:lib#Count`.
-    const owner = /^[^:#]+:([^#]+)#/.exec(id)?.[1];
+    const owner = identityOwner(id);
     if (found === undefined && owner !== imp.module) continue;
     const difference = firstDifference(entry, found, id);
     if (difference !== undefined) return difference;
@@ -163,42 +187,42 @@ export function validateProject(
   lowered: ReadonlyMap<string, Result<ModuleIR, LowerError>>,
 ): ReadonlyMap<string, readonly Diagnostic[]> {
   // The source texts, keyed by the root-relative paths that spans use.
-  const sources = new Map<string, string>();
+  let sources = emptyMap<string, string>();
   for (const info of project.modules.values()) {
-    sources.set(info.path, info.tree.text);
+    sources = sources.set(info.path, info.tree.text);
   }
-  const result = new Map<string, readonly Diagnostic[]>();
-  for (const [name, module] of lowered) {
+  let result = emptyMap<string, readonly Diagnostic[]>();
+  for (const loweredEntry of lowered) {
+    const name = loweredEntry[0];
+    const module = loweredEntry[1];
     if (!module.ok) continue;
     const diagnostics = validateModule(module.value, sources);
     const at = fallbackSpan(project.modules.get(name)?.path ?? name);
     const found: Diagnostic[] = [];
     const recorded = module.value?.module;
     if (recorded !== name) {
-      found.push(
-        makeDiagnostic(
-          AREA.identity,
-          `module: expected the lowered module ${name}, recorded ${recorded}`,
-          at,
-        ),
+      found[found.length] = makeDiagnostic(
+        AREA.identity,
+        `module: expected the lowered module ${name}, recorded ${recorded}`,
+        at,
       );
     }
-    module.value.imports.forEach((imp, index) => {
+    for (const entry of module.value.imports.entries()) {
+      const imp = entry[1];
+      const index = entry[0];
       const producer = lowered.get(imp.module);
       const difference = importDifference(
         imp,
         producer?.ok ? producer.value : undefined,
       );
-      if (difference === undefined) return;
-      found.push(
-        makeDiagnostic(
-          "validation/009",
-          `imports[${index}]: the import of ${imp.module} in ${name} differs from the producer ${imp.module} at ${difference}`,
-          at,
-        ),
+      if (difference === undefined) continue;
+      found[found.length] = makeDiagnostic(
+        "validation/009",
+        `imports[${index}]: the import of ${imp.module} in ${name} differs from the producer ${imp.module} at ${difference}`,
+        at,
       );
-    });
-    result.set(
+    }
+    result = result.set(
       name,
       found.length === 0
         ? diagnostics

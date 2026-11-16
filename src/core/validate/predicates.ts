@@ -5,6 +5,7 @@ import type {
   SolverLimits,
   UnsatProof,
 } from "../predicates.ts";
+import { bigInteger, indices } from "../runtime.ts";
 import { isRecord } from "./guards.ts";
 
 type CertificateError =
@@ -13,30 +14,28 @@ type CertificateError =
   | { readonly tag: "invalid-limit"; readonly message: string }
   | { readonly tag: "limit" };
 
-interface SignedPredicate {
+type SignedPredicate = {
   readonly predicate: Predicate;
   readonly negated: boolean;
-}
+};
 
-interface CheckedConstraint {
+type CheckedConstraint = {
   readonly left: string;
   readonly right: string;
   readonly maximum: bigint;
-}
+};
 
-interface CheckTask {
-  readonly pending: SignedPredicate[];
-  readonly constraints: CheckedConstraint[];
+type CheckTask = {
+  readonly pending: readonly SignedPredicate[];
+  readonly constraints: readonly CheckedConstraint[];
   readonly proof: UnsatProof;
-}
+};
 
-interface Counter {
-  remaining: number;
-}
+type Spend = (count: number) => boolean;
 
-interface CertificateVerification {
+type CertificateVerification = {
   readonly stepsUsed: number;
-}
+};
 
 /** Checks a proof without calling or sharing implementation with the solver. */
 export function verifyCertificate(
@@ -58,36 +57,47 @@ export function verifyCertificate(
   ) {
     return failure("invalid-certificate", "the certificate shape is invalid");
   }
-  const counter: Counter = { remaining: limits.maxSteps };
+  let remaining = limits.maxSteps;
+  function spend(count: number): boolean {
+    if (count > remaining) {
+      remaining = 0;
+      return false;
+    }
+    remaining = remaining - count;
+    return true;
+  }
   const tasks: CheckTask[] = [{
     pending: [
       { predicate: assumptions, negated: false },
-      { predicate, negated: certificate.claim === "proved" },
+      { predicate: predicate, negated: certificate.claim === "proved" },
     ],
     constraints: [],
     proof: certificate.proof,
   }];
-  while (tasks.length > 0) {
+  for (const _index of indices(limits.maxSteps + 1)) {
     const task = tasks.pop();
     if (task === undefined) break;
-    const checked = checkBranch(task, tasks, counter);
+    const checked = checkBranch(task, tasks, spend, limits.maxSteps + 1);
     if (!checked.ok) return checked;
   }
   return {
     ok: true,
-    value: { stepsUsed: limits.maxSteps - counter.remaining },
+    value: { stepsUsed: limits.maxSteps - remaining },
   };
 }
 
 function checkBranch(
   task: CheckTask,
   tasks: CheckTask[],
-  counter: Counter,
+  spend: Spend,
+  iterationLimit: number,
 ): Result<true, CertificateError> {
-  while (task.pending.length > 0) {
-    if (counter.remaining === 0) return { ok: false, error: { tag: "limit" } };
-    counter.remaining--;
-    const signed = task.pending.pop();
+  const pending = [...task.pending];
+  const constraints = [...task.constraints];
+  for (const _index of indices(iterationLimit)) {
+    if (pending.length === 0) break;
+    if (!spend(1)) return { ok: false, error: { tag: "limit" } };
+    const signed = pending.pop();
     if (signed === undefined) break;
     const node = signed.predicate;
     if (!isRecord(node) || typeof node.kind !== "string") {
@@ -111,10 +121,10 @@ function checkBranch(
           "a not node has no predicate operand",
         );
       }
-      task.pending.push({
+      pending[pending.length] = {
         predicate: node.operand,
         negated: !signed.negated,
-      });
+      };
       continue;
     }
     if (node.kind === "and" || node.kind === "or") {
@@ -126,14 +136,15 @@ function checkBranch(
       }
       const isConjunction = (node.kind === "and") !== signed.negated;
       if (isConjunction) {
-        if (!takeCount(counter, node.operands.length)) {
+        if (!spend(node.operands.length)) {
           return { ok: false, error: { tag: "limit" } };
         }
-        for (let index = node.operands.length - 1; index >= 0; index--) {
-          task.pending.push({
+        for (const offset of indices(node.operands.length)) {
+          const index = node.operands.length - offset - 1;
+          pending[pending.length] = {
             predicate: node.operands[index],
             negated: signed.negated,
-          });
+          };
         }
         continue;
       }
@@ -148,10 +159,11 @@ function checkBranch(
           "a Boolean split does not match the predicate",
         );
       }
-      if (!takeCount(counter, node.operands.length)) {
+      if (!spend(node.operands.length)) {
         return { ok: false, error: { tag: "limit" } };
       }
-      for (let index = node.operands.length - 1; index >= 0; index--) {
+      for (const offset of indices(node.operands.length)) {
+        const index = node.operands.length - offset - 1;
         const proof = task.proof.cases[index];
         if (!isUnsatProof(proof)) {
           return failure(
@@ -159,26 +171,26 @@ function checkBranch(
             "a Boolean split case is invalid",
           );
         }
-        tasks.push({
+        tasks[tasks.length] = {
           pending: [
-            ...task.pending,
+            ...pending,
             { predicate: node.operands[index], negated: signed.negated },
           ],
-          constraints: [...task.constraints],
-          proof,
-        });
+          constraints: [...constraints],
+          proof: proof,
+        };
       }
       return { ok: true, value: true };
     }
     if (node.kind === "difference") {
       const constraint = decodeConstraint(node, signed.negated);
       if (!constraint.ok) return constraint;
-      task.constraints.push(constraint.value);
+      constraints[constraints.length] = constraint.value;
       continue;
     }
     return failure("invalid-predicate", "a predicate has an unknown kind");
   }
-  return checkCycle(task.proof, task.constraints, counter);
+  return checkCycle(task.proof, constraints, spend);
 }
 
 function expectFalse(proof: UnsatProof): Result<true, CertificateError> {
@@ -191,7 +203,7 @@ function expectFalse(proof: UnsatProof): Result<true, CertificateError> {
 function checkCycle(
   proof: UnsatProof,
   constraints: readonly CheckedConstraint[],
-  counter: Counter,
+  spend: Spend,
 ): Result<true, CertificateError> {
   if (proof.kind !== "negative-cycle" || !Array.isArray(proof.constraints)) {
     return failure(
@@ -202,7 +214,7 @@ function checkCycle(
   if (proof.constraints.length === 0) {
     return failure("invalid-certificate", "a negative cycle is empty");
   }
-  if (!takeCount(counter, proof.constraints.length)) {
+  if (!spend(proof.constraints.length)) {
     return { ok: false, error: { tag: "limit" } };
   }
   const cycle: CheckedConstraint[] = [];
@@ -215,10 +227,10 @@ function checkCycle(
         "a negative cycle constraint index is invalid",
       );
     }
-    cycle.push(constraints[index]);
+    cycle[cycle.length] = constraints[index];
   }
   let total = 0n;
-  for (let index = 0; index < cycle.length; index++) {
+  for (const index of indices(cycle.length)) {
     const edge = cycle[index];
     const next = cycle[(index + 1) % cycle.length];
     if (edge.right !== next.left) {
@@ -227,7 +239,7 @@ function checkCycle(
         "the listed constraints do not form a cycle",
       );
     }
-    total += edge.maximum;
+    total = total + edge.maximum;
   }
   return total < 0n
     ? { ok: true, value: true }
@@ -244,14 +256,14 @@ function decodeConstraint(
   if (!right.ok) return right;
   if (
     typeof node.maximum !== "string" ||
-    !/^-?(0|[1-9][0-9]*)$/.test(node.maximum)
+    !isNormalizedInteger(node.maximum)
   ) {
     return failure(
       "invalid-predicate",
       "a difference maximum is not a normalized integer",
     );
   }
-  const maximum = BigInt(node.maximum);
+  const maximum = bigInteger(node.maximum);
   return negated
     ? {
       ok: true,
@@ -263,8 +275,18 @@ function decodeConstraint(
     }
     : {
       ok: true,
-      value: { left: left.value, right: right.value, maximum },
+      value: { left: left.value, right: right.value, maximum: maximum },
     };
+}
+
+function isNormalizedInteger(text: string): boolean {
+  const digits = text.startsWith("-") ? text.slice(1) : text;
+  if (digits === "0") return true;
+  if (digits.length === 0 || digits.startsWith("0")) return false;
+  for (const digit of digits) {
+    if (digit < "0" || digit > "9") return false;
+  }
+  return true;
 }
 
 function decodeTerm(term: unknown): Result<string, CertificateError> {
@@ -303,18 +325,9 @@ function isUnsatProof(value: unknown): value is UnsatProof {
       value.kind === "negative-cycle");
 }
 
-function takeCount(counter: Counter, count: number): boolean {
-  if (count > counter.remaining) {
-    counter.remaining = 0;
-    return false;
-  }
-  counter.remaining -= count;
-  return true;
-}
-
 function failure(
   tag: "invalid-certificate" | "invalid-predicate" | "invalid-limit",
   message: string,
 ): Result<never, CertificateError> {
-  return { ok: false, error: { tag, message } };
+  return { ok: false, error: { tag: tag, message: message } };
 }

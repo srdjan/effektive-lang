@@ -1,3 +1,4 @@
+// @light-fp prelude
 // Source access, line tables, and span helpers. Positions are UTF-16 code units
 // with an exclusive end, as JavaScript strings index them.
 
@@ -10,6 +11,16 @@ export type { Span };
 export type Result<A, E> =
   | { readonly ok: true; readonly value: A }
   | { readonly ok: false; readonly error: E };
+
+export type SourceText = string;
+export type UnknownValue = unknown;
+export type InvariantPhase = "emit" | "lower";
+export type InvariantMessage = string;
+// deno-lint-ignore light-fp/pure-module -- private symbol brands invariant errors without an ambient registry
+const INVARIANT_FAILURE = Symbol("effektive.invariant-failure");
+export type InvariantFailure = Error & {
+  readonly [INVARIANT_FAILURE]: InvariantPhase;
+};
 
 /**
  * Runs `run` and returns its value, or the value that it throws, as a result.
@@ -24,10 +35,46 @@ export function caught<T>(run: () => T): Result<T, unknown> {
   }
 }
 
-export interface SourceEdit {
+/** Parse JSON and return the thrown value as data. */
+export function parseJson(
+  text: SourceText,
+): Result<UnknownValue, UnknownValue> {
+  return caught((): UnknownValue => JSON.parse(text));
+}
+
+/** Stop after an unexpected compiler invariant failure. */
+export function invariantFailure(
+  phase: InvariantPhase,
+  message: InvariantMessage,
+): never {
+  throw Object.defineProperty(new Error(message), INVARIANT_FAILURE, {
+    value: phase,
+  });
+}
+
+/** Test whether an unknown thrown value is an invariant failure of one phase. */
+export function isInvariantFailure(
+  value: UnknownValue,
+  phase: InvariantPhase,
+): value is InvariantFailure {
+  return value instanceof Error &&
+    Object.getOwnPropertyDescriptor(value, INVARIANT_FAILURE)?.value === phase;
+}
+
+/** Throw an unknown value again without changing its identity. */
+export function rethrow(value: UnknownValue): never {
+  throw value;
+}
+
+/** Stop after an unexpected invariant failure that has no phase-specific error result. */
+export function panic(message: InvariantMessage): never {
+  throw new Error(message);
+}
+
+export type SourceEdit = {
   readonly span: Span;
   readonly text: string;
-}
+};
 
 export type ReadError =
   | { readonly tag: "not-found"; readonly path: string }
@@ -52,7 +99,7 @@ export function memoryHost(
     readText(path: string): Result<string, ReadError> {
       const text = map.get(path);
       return text === undefined
-        ? { ok: false, error: { tag: "not-found", path } }
+        ? { ok: false, error: { tag: "not-found", path: path } }
         : { ok: true, value: text };
     },
   };
@@ -65,21 +112,21 @@ export function lineStarts(text: string): Uint32Array {
   for (let i = 0; i < n; i++) {
     const c = text.charCodeAt(i);
     if (c === 0x0a) {
-      starts.push(i + 1);
+      starts[starts.length] = i + 1;
     } else if (c === 0x0d) {
-      if (i + 1 < n && text.charCodeAt(i + 1) === 0x0a) i++;
-      starts.push(i + 1);
+      if (i + 1 < n && text.charCodeAt(i + 1) === 0x0a) i = i + 1;
+      starts[starts.length] = i + 1;
     }
   }
   return Uint32Array.from(starts);
 }
 
-interface Position {
+type Position = {
   /** One-based. */
   readonly line: number;
   /** One-based, in UTF-16 code units. */
   readonly column: number;
-}
+};
 
 /** Index (zero-based) of the line that contains `offset`. */
 export function lineIndexOf(starts: Uint32Array, offset: number): number {

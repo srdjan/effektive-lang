@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Shared helpers for the slow tests that start a `deno` subprocess. A fast test
 // must not import this file.
 

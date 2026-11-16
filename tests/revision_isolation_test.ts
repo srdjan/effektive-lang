@@ -31,7 +31,7 @@ function update(
 }
 
 function fresh(files: Files): Revision {
-  return update(new Program(), { "effektive.json": "{}", ...files });
+  return update(Program(undefined), { "effektive.json": "{}", ...files });
 }
 
 function snapshot(revision: Revision, outputs = new TypeScriptOutputs()) {
@@ -56,20 +56,20 @@ function snapshot(revision: Revision, outputs = new TypeScriptOutputs()) {
 }
 
 Deno.test("retained cold tagged-record IR validates after a definition edit", () => {
-  const program = new Program();
+  const program = Program(undefined);
   const first = update(program, {
     "effektive.json": "{}",
     "main.eff": original,
   });
   const second = update(program, { "main.eff": changed });
   assertEquals(second.diagnostics, []);
-  assertEquals(program.counts.lowerings, 0);
+  assertEquals(program.counts().lowerings, 0);
   assertEquals(snapshot(first), snapshot(fresh({ "main.eff": original })));
   assertEquals(snapshot(second), snapshot(fresh({ "main.eff": changed })));
 });
 
 Deno.test("newer output can precede cold original output and interleaved queries", () => {
-  const program = new Program();
+  const program = Program(undefined);
   const outputs = new TypeScriptOutputs();
   const first = update(program, {
     "effektive.json": "{}",
@@ -89,7 +89,7 @@ Deno.test("newer output can precede cold original output and interleaved queries
 });
 
 Deno.test("warm original output retains cache objects after definition changes", () => {
-  const program = new Program();
+  const program = Program(undefined);
   const outputs = new TypeScriptOutputs();
   const first = update(program, {
     "effektive.json": "{}",
@@ -114,7 +114,7 @@ Deno.test("retained imports keep alias and tagged definitions after edits and re
   const main =
     'import { N, A } from "./dep.eff"\nexport const f = (x: N): A => ({ n: x })\n';
   const files = { "dep.eff": dependency, "main.eff": main };
-  const program = new Program();
+  const program = Program(undefined);
   const first = update(program, { "effektive.json": "{}", ...files });
   const current = {
     "dep.eff": dependency.replace("int", "string").replace(
@@ -136,7 +136,7 @@ Deno.test("retained imports keep alias and tagged definitions after edits and re
 Deno.test("retained error fields and editor completions keep the original contract", () => {
   const text =
     "type N = int\nerror Stop = { code: N }\nconst raise = (): N fails Stop => fail(Stop({ code: 1 }))\nexport const run = (): N => try { raise() } catch { Stop(e) => e.code }\n";
-  const program = new Program();
+  const program = Program(undefined);
   const first = update(program, { "effektive.json": "{}", "main.eff": text });
   const expected = fresh({ "main.eff": text });
   const nextText = text.replaceAll("code", "detail");
@@ -175,7 +175,7 @@ function definitionState(table: TypeReader) {
 
 Deno.test("retained definition kinds, sealing and predicates survive replacement and restoration", () => {
   const text = "export sealed type Choice = int where n => n > 0\n";
-  const program = new Program();
+  const program = Program(undefined);
   const first = update(program, { "effektive.json": "{}", "main.eff": text });
   const expected = fresh({ "main.eff": text });
   const state = definitionState(expected.types);
@@ -205,7 +205,7 @@ Deno.test("retained definition kinds, sealing and predicates survive replacement
 Deno.test("retained function aliases keep original signature help", () => {
   const text =
     "type N = int\ntype Handler = (value: N) => N\nexport const run = (handler: Handler): N => handler(1)\n";
-  const program = new Program();
+  const program = Program(undefined);
   const first = update(program, { "effektive.json": "{}", "main.eff": text });
   const expected = fresh({ "main.eff": text });
   const nextText = text.replace("(value: N)", "(left: N, right: N)").replace(
@@ -233,7 +233,7 @@ Deno.test("retained function aliases keep original signature help", () => {
 Deno.test("retained semantic classifications keep original tagged membership", () => {
   const text =
     "type N = int\nexport type Choice = { value: N }\ntype Other = { other: N }\ntype U = Choice | Other\nexport const pass = (value: Choice): Choice => value\n";
-  const program = new Program();
+  const program = Program(undefined);
   const first = update(program, { "effektive.json": "{}", "main.eff": text });
   const nextText = text.replace("{ value: N }", "N");
   const second = update(program, { "main.eff": nextText });
@@ -257,7 +257,7 @@ Deno.test("retained semantic classifications keep original tagged membership", (
 });
 
 Deno.test("failed configuration updates preserve retained results and recover changed files", () => {
-  const program = new Program();
+  const program = Program(undefined);
   const first = update(program, {
     "effektive.json": "{}",
     "main.eff": original,
@@ -266,7 +266,7 @@ Deno.test("failed configuration updates preserve retained results and recover ch
     set: { "effektive.json": "{", "main.eff": changed },
   });
   assert(!failed.ok);
-  assertEquals(program.counts.checks, 1);
+  assertEquals(program.counts().checks, 1);
   assertEquals(snapshot(first), snapshot(fresh({ "main.eff": original })));
   const recovered = update(program, { "effektive.json": "{}" });
   assertEquals(recovered.number, 2);
@@ -281,17 +281,17 @@ Deno.test("span-only edits preserve interface cutoffs and unrelated edits preser
       'import { N, value } from "./dep.eff"\nexport const copy: N = value\n',
     "other.eff": "type N = int\nexport const value: N = 1\n",
   };
-  const program = new Program();
+  const program = Program(undefined);
   const outputs = new TypeScriptOutputs();
   const first = update(program, { "effektive.json": "{}", ...files });
   const expected = snapshot(first, outputs);
   const firstLowering = first.lowered("main");
-  const before = program.counts;
+  const before = program.counts();
   files["dep.eff"] = "\n" + files["dep.eff"];
   const moved = update(program, { "dep.eff": files["dep.eff"] });
   assertEquals(moved.rechecked, ["dep"]);
   assertEquals(moved.interfaceHash("dep"), first.interfaceHash("dep"));
-  assertEquals(program.counts, {
+  assertEquals(program.counts(), {
     parses: before.parses + 1,
     checks: before.checks + 1,
     lowerings: before.lowerings,
@@ -302,7 +302,7 @@ Deno.test("span-only edits preserve interface cutoffs and unrelated edits preser
   const checked = moved.checkedModule("main");
   const lowering = moved.lowered("main");
   const emitted = outputs.emitted(moved, "main");
-  const counts = program.counts;
+  const counts = program.counts();
   const emits = outputs.counts;
   files["other.eff"] = files["other.eff"].replace("= 1", "= 2");
   const unrelated = update(program, { "other.eff": files["other.eff"] });
@@ -311,7 +311,7 @@ Deno.test("span-only edits preserve interface cutoffs and unrelated edits preser
   assert(unrelated.lowered("main") === lowering);
   assert(outputs.emitted(unrelated, "main") === emitted);
   assertEquals(outputs.counts, emits);
-  assertEquals(program.counts, {
+  assertEquals(program.counts(), {
     parses: counts.parses + 1,
     checks: counts.checks + 1,
     lowerings: counts.lowerings,
@@ -322,15 +322,15 @@ Deno.test("span-only edits preserve interface cutoffs and unrelated edits preser
 Deno.test("retained finalizers can lazily intern function types after a later update", () => {
   const text =
     "type N = int\nservice Jobs { close(): void }\nexport const run = (value: N): N with Jobs.close => try { value } finally { Jobs.close() }\n";
-  const program = new Program();
+  const program = Program(undefined);
   const first = update(program, { "effektive.json": "{}", "main.eff": text });
   const nextText = text.replace("type N = int", "type N = string");
   const second = update(program, { "main.eff": nextText });
-  assertEquals(program.counts.lowerings, 0);
-  const before = first.types.size;
+  assertEquals(program.counts().lowerings, 0);
+  const before = first.types.size();
   assertEquals(snapshot(first), snapshot(fresh({ "main.eff": text })));
-  assert(first.types.size > before);
-  assertEquals(first.types.size, second.types.size);
+  assert(first.types.size() > before);
+  assertEquals(first.types.size(), second.types.size());
   assertEquals(snapshot(second), snapshot(fresh({ "main.eff": nextText })));
 });
 
@@ -340,7 +340,7 @@ Deno.test("rotating independent modules retain at most one table per cached modu
   for (const name of names) {
     files[`${name}.eff`] = "type N = int\nexport const value: N = 0\n";
   }
-  const program = new Program();
+  const program = Program(undefined);
   let current = update(program, files);
   for (let sweep = 1; sweep <= 4; sweep++) {
     for (const name of names) {

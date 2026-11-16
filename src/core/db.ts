@@ -37,6 +37,7 @@
 // its interface again from the reused declarations and lowers it again. The IR
 // then carries the new spans.
 
+import { buildSymbolIndex, type SymbolIndex } from "./editor_index.ts";
 import { type Analysis, analyzeProject } from "./analyze.ts";
 import type { Solved } from "./modes.ts";
 import {
@@ -44,6 +45,7 @@ import {
   type CheckedProject,
   driveProject,
   type ModuleDecision,
+  type ModulePolicy,
   type ModuleStep,
 } from "./check_project.ts";
 import type { Diagnostic } from "./diagnostics.ts";
@@ -53,7 +55,6 @@ import { fnv1a64, payloadHash } from "./interface.ts";
 import type { ModuleIR, ValueId } from "./ir.ts";
 import { type LowerError, lowerModule } from "./lower.ts";
 import {
-  type FileParser,
   type ModuleInfo,
   type ParsedFile,
   parseFileFresh,
@@ -69,22 +70,23 @@ import type { ModuleResolution } from "./resolve.ts";
 import { memoryHost, type Result } from "./source.ts";
 import { type TypeReader, TypeTable } from "./types.ts";
 import { compareText } from "./util.ts";
+import { deleteMapEntry, emptyMap, mapFrom } from "./runtime.ts";
 
 /** A change set. Paths are relative to the project root. */
-export interface ProgramChanges {
+export type ProgramChanges = {
   /** Files that are new or that have new text. */
   readonly set?:
     | ReadonlyMap<string, string>
     | Readonly<Record<string, string>>;
   /** Files that no longer exist. */
   readonly remove?: readonly string[];
-}
+};
 
 /** The files to set and the paths to remove, so that `known` becomes `wanted`. */
-interface FileDiff {
-  readonly set: Map<string, string>;
-  readonly remove: string[];
-}
+type FileDiff = {
+  readonly set: ReadonlyMap<string, string>;
+  readonly remove: readonly string[];
+};
 
 /**
  * The change set that turns `known` into `wanted`, in the shape that
@@ -96,29 +98,64 @@ export function diffFiles(
   known: ReadonlyMap<string, string>,
   wanted: ReadonlyMap<string, string>,
 ): FileDiff {
-  const set = new Map<string, string>();
-  for (const [path, text] of wanted) {
-    if (known.get(path) !== text) set.set(path, text);
+  let set = emptyMap<string, string>();
+  for (const file of wanted) {
+    const path = file[0];
+    const text = file[1];
+    if (known.get(path) !== text) set = set.set(path, text);
   }
   const remove = [...known.keys()].filter((path) => !wanted.has(path));
-  return { set, remove };
+  return { set: set, remove: remove };
 }
 
 /**
  * Cumulative counts of the expensive queries of a program (design measurement
  * M3). A memo hit does not count.
  */
-interface QueryCounts {
+export type QueryCounts = {
   /** Parses that missed the parse memo. */
   readonly parses: number;
   /** Modules checked again, whatever the reason. */
   readonly checks: number;
   /** Lowerings that `Revision.lowered` computed on demand. */
   readonly lowerings: number;
-}
+};
 
-/** The mutable counters that a program shares with its revisions. */
-type Counters = { -readonly [K in keyof QueryCounts]: number };
+/** The counter owner that a program shares with its revisions. */
+type QueryCounter = {
+  readonly counts: () => QueryCounts;
+  readonly parsed: () => QueryCounter;
+  readonly checked: () => QueryCounter;
+  readonly lowered: () => QueryCounter;
+};
+
+function QueryCounter(): QueryCounter {
+  let parses = 0;
+  let checks = 0;
+  let lowerings = 0;
+  function counts(): QueryCounts {
+    return { parses: parses, checks: checks, lowerings: lowerings };
+  }
+  function parsed(): QueryCounter {
+    parses = parses + 1;
+    return counter;
+  }
+  function checked(): QueryCounter {
+    checks = checks + 1;
+    return counter;
+  }
+  function lowered(): QueryCounter {
+    lowerings = lowerings + 1;
+    return counter;
+  }
+  const counter: QueryCounter = {
+    counts: counts,
+    parsed: parsed,
+    checked: checked,
+    lowered: lowered,
+  };
+  return counter;
+}
 
 /**
  * A cache decision with the keys that `decide` computed for the module.
@@ -135,7 +172,7 @@ function payloadOf(step: ModuleStep, fallback: string): string {
 }
 
 /** A memo entry. The key decides when it is valid. The lazy fields fill on demand. */
-interface Entry {
+type Entry = {
   readonly text: string;
   readonly rest: string;
   readonly step: ModuleStep;
@@ -145,315 +182,389 @@ interface Entry {
   readonly payload: string;
   /** The payload hashes of the reached modules when this entry was lowered. */
   readonly lowerKey: string;
-  lowered?: Result<ModuleIR, LowerError>;
+  readonly lowered: (
+    checked: CheckedProject,
+    name: string,
+    counter: QueryCounter,
+  ) => Result<ModuleIR, LowerError>;
+};
+
+function LoweredQuery(): Entry["lowered"] {
+  let cached: Result<ModuleIR, LowerError> | undefined;
+  return (checked, name, counter) => {
+    if (cached === undefined) {
+      counter = counter.lowered();
+      cached = lowerModule(checked, name);
+    }
+    return cached;
+  };
 }
+
+type RevisionState = {
+  readonly number: number;
+  readonly project: Project;
+  readonly checked: CheckedProject;
+  readonly rechecked: readonly string[];
+  readonly entries: ReadonlyMap<string, Entry>;
+  readonly texts: ReadonlyMap<string, string>;
+  readonly counter: QueryCounter;
+  readonly files: ReadonlyMap<string, string>;
+};
+
+export type Revision = {
+  /** The revision number: 1 for the first successful `update`. */
+  readonly number: number;
+  /** The modules that this revision checked again, in topological order. */
+  readonly rechecked: readonly string[];
+  /** All diagnostics of the project, sorted and without duplicates. */
+  readonly diagnostics: readonly Diagnostic[];
+  readonly root: string;
+  readonly config: ProjectConfig;
+  /** The type table of this revision, read-only. */
+  readonly types: TypeReader;
+  /** The loading, linking, and resolving diagnostics before module checks. */
+  readonly analysisDiagnostics: readonly Diagnostic[];
+  readonly symbolIndex: () => SymbolIndex;
+  readonly moduleNames: () => readonly string[];
+  readonly checkedModule: (name: string) => CheckedModule | undefined;
+  readonly moduleInfos: () => Iterable<ModuleInfo>;
+  readonly moduleInfo: (name: string) => ModuleInfo | undefined;
+  readonly moduleInfoAt: (path: string) => ModuleInfo | undefined;
+  readonly checkedModuleAt: (path: string) => CheckedModule | undefined;
+  readonly resolution: (name: string) => ModuleResolution | undefined;
+  readonly imports: (name: string) => readonly string[];
+  readonly declEntry: (id: string) => DeclEntry | undefined;
+  readonly interfaceHash: (name: string) => string | undefined;
+  readonly sourceTexts: () => ReadonlyMap<string, string>;
+  readonly inputs: () => ReadonlyMap<string, string>;
+  readonly lowered: (
+    name: string,
+  ) => Result<ModuleIR, LowerError> | undefined;
+};
 
 /**
  * The state of the program after one `update`. The query methods return
  * memoized values: a module with an unchanged key returns the same objects as
  * in the revision before.
  */
-export class Revision {
-  constructor(
-    /** The revision number: 1 for the first successful `update`. */
-    readonly number: number,
-    private readonly project: Project,
-    /** The checked project of this revision, in the shape that `lowerProject` reads. */
-    private readonly checked: CheckedProject,
-    /** The modules that this revision checked again, in topological order. */
-    readonly rechecked: readonly string[],
-    private readonly entries: ReadonlyMap<string, Entry>,
-    private readonly texts: ReadonlyMap<string, string>,
-    private readonly counters: Counters,
-    /** The files of the program when this revision started. */
-    private readonly files: ReadonlyMap<string, string>,
-  ) {}
+export function Revision(state: RevisionState): Revision {
+  const project = state.project;
+  const checked = state.checked;
+  const entries = state.entries;
+  let pathMap: ReadonlyMap<string, string> | undefined;
+  let editorSymbols: SymbolIndex | undefined;
 
-  private pathMap?: ReadonlyMap<string, string>;
-
-  /** All diagnostics of the project, sorted and without duplicates. */
-  get diagnostics(): readonly Diagnostic[] {
-    return this.checked.diagnostics;
+  function symbolIndex(): SymbolIndex {
+    editorSymbols = editorSymbols ?? buildSymbolIndex(revision);
+    return editorSymbols;
   }
 
   /**
    * The module names, imported modules before their importers. Each `.eff` and
-   * `.effi` module has one generated module, so this is also the list of those.
+   * `.effi` module has one generated module, so this is also their list.
    */
-  moduleNames(): readonly string[] {
-    return [...this.entries.keys()];
+  function moduleNames(): readonly string[] {
+    return [...entries.keys()];
   }
 
-  checkedModule(name: string): CheckedModule | undefined {
-    return this.entries.get(name)?.step.checked;
-  }
-
-  get root(): string {
-    return this.project.root;
-  }
-
-  get config(): ProjectConfig {
-    return this.project.config;
-  }
-
-  /** The type table of this revision, read-only. */
-  get types(): TypeReader {
-    return this.checked.table;
-  }
-
-  /** The loading, linking, and resolving diagnostics of the analysis, before the module checks. */
-  get analysisDiagnostics(): readonly Diagnostic[] {
-    return this.checked.analysis.diagnostics;
+  function checkedModule(name: string): CheckedModule | undefined {
+    return entries.get(name)?.step.checked;
   }
 
   /** The module infos in discovery order. */
-  moduleInfos(): Iterable<ModuleInfo> {
-    return this.project.modules.values();
+  function moduleInfos(): Iterable<ModuleInfo> {
+    return project.modules.values();
   }
 
-  moduleInfo(name: string): ModuleInfo | undefined {
-    return this.project.modules.get(name);
-  }
-
-  moduleInfoAt(path: string): ModuleInfo | undefined {
-    const name = this.namesByPath().get(path);
-    return name === undefined ? undefined : this.project.modules.get(name);
-  }
-
-  checkedModuleAt(path: string): CheckedModule | undefined {
-    const name = this.namesByPath().get(path);
-    return name === undefined
-      ? undefined
-      : this.entries.get(name)?.step.checked;
-  }
-
-  resolution(name: string): ModuleResolution | undefined {
-    return this.checked.analysis.resolutions.get(name);
-  }
-
-  /** The sorted module names that a module imports, or an empty list. */
-  imports(name: string): readonly string[] {
-    return this.project.graph.get(name) ?? [];
-  }
-
-  /** The index entry of a declaration identity, or undefined for a malformed or unknown id. */
-  declEntry(id: string): DeclEntry | undefined {
-    const owner = moduleOfId(id);
-    const name = nameOfId(id);
-    if (owner === undefined || name === undefined) return undefined;
-    return this.project.modules.get(owner)?.index.byName.get(name);
+  function moduleInfo(name: string): ModuleInfo | undefined {
+    return project.modules.get(name);
   }
 
   /** The module name of each root-relative path. Built on first use. */
-  private namesByPath(): ReadonlyMap<string, string> {
-    if (this.pathMap === undefined) {
-      this.pathMap = new Map(
-        [...this.project.modules].map(([name, info]) => [info.path, name]),
+  function namesByPath(): ReadonlyMap<string, string> {
+    if (pathMap === undefined) {
+      pathMap = mapFrom(
+        [...project.modules].map(
+          (moduleEntry): readonly [string, string] => [
+            moduleEntry[1].path,
+            moduleEntry[0],
+          ],
+        ),
       );
     }
-    return this.pathMap;
+    return pathMap;
+  }
+
+  function moduleInfoAt(path: string): ModuleInfo | undefined {
+    const name = namesByPath().get(path);
+    return name === undefined ? undefined : project.modules.get(name);
+  }
+
+  function checkedModuleAt(path: string): CheckedModule | undefined {
+    const name = namesByPath().get(path);
+    return name === undefined ? undefined : entries.get(name)?.step.checked;
+  }
+
+  function resolution(name: string): ModuleResolution | undefined {
+    return checked.analysis.resolutions.get(name);
+  }
+
+  /** The sorted module names that a module imports, or an empty list. */
+  function imports(name: string): readonly string[] {
+    return project.graph.get(name) ?? [];
+  }
+
+  /** The declaration entry, or undefined for a malformed or unknown identity. */
+  function declEntry(id: string): DeclEntry | undefined {
+    const owner = moduleOfId(id);
+    const name = nameOfId(id);
+    if (owner === undefined || name === undefined) return undefined;
+    return project.modules.get(owner)?.index.byName.get(name);
   }
 
   /** The interface hash, which leaves out source spans. */
-  interfaceHash(name: string): string | undefined {
-    return this.entries.get(name)?.step.checked.hash;
+  function interfaceHash(name: string): string | undefined {
+    return entries.get(name)?.step.checked.hash;
   }
 
-  /** The text of each file that the project loaded, keyed by root-relative path. */
-  sourceTexts(): ReadonlyMap<string, string> {
-    return this.texts;
+  /** The text of each loaded file, keyed by its root-relative path. */
+  function sourceTexts(): ReadonlyMap<string, string> {
+    return state.texts;
   }
 
-  /**
-   * The input files of this revision, keyed by root-relative path. They are the
-   * `.eff` and `.effi` files and the root `effektive.json`. A speculative program
-   * starts from a copy of them.
-   */
-  inputs(): ReadonlyMap<string, string> {
-    return this.files;
+  /** The input files when this revision started. */
+  function inputs(): ReadonlyMap<string, string> {
+    return state.files;
   }
 
   /** The typed IR of a module. A module with an error has an error value. */
-  lowered(name: string): Result<ModuleIR, LowerError> | undefined {
-    const entry = this.entries.get(name);
-    if (entry === undefined) return undefined;
-    if (entry.lowered === undefined) {
-      this.counters.lowerings++;
-      entry.lowered = lowerModule(this.checked, name);
-    }
-    return entry.lowered;
+  function lowered(name: string): Result<ModuleIR, LowerError> | undefined {
+    const entry = entries.get(name);
+    return entry?.lowered(checked, name, state.counter);
   }
+
+  const revision: Revision = {
+    number: state.number,
+    rechecked: state.rechecked,
+    diagnostics: checked.diagnostics,
+    root: project.root,
+    config: project.config,
+    types: checked.table,
+    analysisDiagnostics: checked.analysis.diagnostics,
+    symbolIndex: symbolIndex,
+    moduleNames: moduleNames,
+    checkedModule: checkedModule,
+    moduleInfos: moduleInfos,
+    moduleInfo: moduleInfo,
+    moduleInfoAt: moduleInfoAt,
+    checkedModuleAt: checkedModuleAt,
+    resolution: resolution,
+    imports: imports,
+    declEntry: declEntry,
+    interfaceHash: interfaceHash,
+    sourceTexts: sourceTexts,
+    inputs: inputs,
+    lowered: lowered,
+  };
+  return revision;
 }
 
-export class Program {
-  private readonly files = new Map<string, string>();
-  private readonly parses = new Map<
-    string,
-    { readonly text: string; readonly file: ParsedFile }
-  >();
-  private entries = new Map<string, Entry>();
-  private table = new TypeTable();
-  private count = 0;
-  private readonly counters: Counters = {
-    parses: 0,
-    checks: 0,
-    lowerings: 0,
-  };
+type ParseMemo = {
+  readonly text: string;
+  readonly file: ParsedFile;
+};
 
-  /** `root` is the project directory that diagnostics and error values name. */
-  constructor(private readonly root: string = "") {}
+export type ProgramRoot = string;
 
+export type Program = {
   /** A snapshot of the cumulative query counts over the life of the program. */
-  get counts(): QueryCounts {
-    return { ...this.counters };
-  }
+  readonly counts: () => QueryCounts;
+  readonly update: (
+    changes: ProgramChanges | undefined,
+  ) => Result<Revision, ConfigError>;
+};
 
-  private readonly parseFile: FileParser = (path, text) => {
-    const memo = this.parses.get(path);
+function isMapChangeSet(
+  set: ReadonlyMap<string, string> | Readonly<Record<string, string>>,
+): set is ReadonlyMap<string, string> {
+  return typeof set.get === "function" &&
+    typeof set.entries === "function";
+}
+
+function changeEntries(
+  set:
+    | ReadonlyMap<string, string>
+    | Readonly<Record<string, string>>
+    | undefined,
+): readonly (readonly [string, string])[] {
+  if (set === undefined) return [];
+  return isMapChangeSet(set) ? [...set] : Object.entries(set);
+}
+
+/** `root` is the project directory that diagnostics and errors name. */
+export function Program(root: ProgramRoot | undefined): Program {
+  const programRoot = root ?? "";
+  let files = emptyMap<string, string>();
+  let parses = emptyMap<string, ParseMemo>();
+  let entries = emptyMap<string, Entry>();
+  let table = TypeTable();
+  let count = 0;
+  let counter = QueryCounter();
+
+  function parseFile(path: string, text: string): ParsedFile {
+    const memo = parses.get(path);
     if (memo !== undefined && memo.text === text) return memo.file;
-    this.counters.parses++;
+    counter = counter.parsed();
     const file = parseFileFresh(path, text);
-    this.parses.set(path, { text, file });
+    parses = parses.set(path, { text: text, file: file });
     return file;
-  };
-
-  /**
-   * Applies the changes and starts a new revision. A missing or malformed
-   * `effektive.json` is an error value, and no revision starts. The files stay
-   * changed, so a later `update` that fixes the project file succeeds.
-   */
-  update(changes: ProgramChanges = {}): Result<Revision, ConfigError> {
-    const set = changes.set instanceof Map
-      ? [...changes.set]
-      : Object.entries(changes.set ?? {});
-    for (const [path, text] of set) this.files.set(path, text);
-    for (const path of changes.remove ?? []) this.files.delete(path);
-    for (const path of [...this.parses.keys()]) {
-      if (!this.files.has(path)) this.parses.delete(path);
-    }
-
-    const hostFiles = new Map<string, string>();
-    for (const [path, text] of this.files) {
-      hostFiles.set(joinPath(this.root, path), text);
-    }
-    const entryPaths = [...this.files.keys()].filter(isSourcePath)
-      .sort(compareText);
-    const analyzed = analyzeProject(
-      memoryHost(hostFiles),
-      this.root,
-      entryPaths,
-      this.parseFile,
-    );
-    if (!analyzed.ok) return analyzed;
-    this.count++;
-    return {
-      ok: true,
-      value: this.check(analyzed.value),
-    };
   }
 
-  /** The same project driver as `checkAnalysis`, with the memo deciding each module. */
-  private check(analysis: Analysis): Revision {
-    const table = this.table.fork();
-    const { project } = analysis;
+  /** The same project driver as `checkAnalysis`, with the memo deciding modules. */
+  function check(analysis: Analysis): Revision {
+    const nextTable = table.fork();
+    const project = analysis.project;
     const config = configKey(project.config);
-    const signatures = new Map<string, string>();
-    const payloads = new Map<string, string>();
-    const entries = new Map<string, Entry>();
+    let signatures = emptyMap<string, string>();
+    let payloads = emptyMap<string, string>();
+    let nextEntries = emptyMap<string, Entry>();
     const rechecked: string[] = [];
-    const checked = driveProject<MemoDecision>(analysis, table, {
+    const policy: ModulePolicy<MemoDecision> = {
       decide: (name, info, seen) => {
-        const { reached } = seen;
+        const reached = seen.reached;
         const keys = {
           rest: JSON.stringify([
             info.path,
             config,
-            analysis.diagnostics.filter((d) => d.span.source === info.path),
+            analysis.diagnostics.filter((diagnostic) =>
+              diagnostic.span.source === info.path
+            ),
             reached.map((other) => [other, signatures.get(other) ?? null]),
           ]),
           lowerKey: JSON.stringify(
             reached.map((other) => [other, payloads.get(other) ?? null]),
           ),
         };
-        const entry = this.entries.get(name);
+        const entry = entries.get(name);
         if (
           entry === undefined || entry.text !== info.tree.text ||
           entry.rest !== keys.rest
         ) {
-          return { kind: "check", keys };
+          return { kind: "check", keys: keys };
         }
         return {
           kind: entry.lowerKey === keys.lowerKey ? "reuse" : "refresh",
           step: entry.step,
-          keys,
+          keys: keys,
         };
       },
       settled: (name, step, decision) => {
-        const { keys } = decision;
-        const previous = this.entries.get(name);
+        const keys = decision.keys;
+        const previous = entries.get(name);
         const text = step.checked.tree.text;
         let entry: Entry;
         if (decision.kind === "check" || previous === undefined) {
           const signature = step.checked.hash ??
             `key:${fnv1a64(keys.rest)}:${fnv1a64(text)}`;
           entry = {
-            text,
+            text: text,
             rest: keys.rest,
-            step,
-            signature,
+            step: step,
+            signature: signature,
             payload: payloadOf(step, signature),
             lowerKey: keys.lowerKey,
+            lowered: LoweredQuery(),
           };
-          rechecked.push(name);
-          this.counters.checks++;
+          rechecked[rechecked.length] = name;
+          counter = counter.checked();
         } else if (decision.kind === "refresh") {
-          // Only spans of reached modules moved. The IR is lowered again on demand.
+          // Only reached-module spans moved. Lower the IR again on demand.
           entry = {
             text: previous.text,
             rest: previous.rest,
-            step,
+            step: step,
             signature: previous.signature,
             payload: payloadOf(step, previous.signature),
             lowerKey: keys.lowerKey,
+            lowered: LoweredQuery(),
           };
         } else {
           entry = previous;
         }
-        entries.set(name, entry);
-        signatures.set(name, entry.signature);
-        payloads.set(name, entry.payload);
+        nextEntries = nextEntries.set(name, entry);
+        signatures = signatures.set(name, entry.signature);
+        payloads = payloads.set(name, entry.payload);
+        return policy;
       },
-    });
+    };
+    const checked = driveProject<MemoDecision>(analysis, nextTable, policy);
 
-    const texts = new Map<string, string>();
+    let texts = emptyMap<string, string>();
     for (const name of project.order) {
       const info = project.modules.get(name);
       if (info !== undefined && analysis.resolutions.has(name)) {
-        texts.set(info.path, info.tree.text);
+        texts = texts.set(info.path, info.tree.text);
       }
     }
-    this.entries = entries;
-    this.table = table;
-    return new Revision(
-      this.count,
-      project,
-      checked,
-      rechecked,
-      entries,
-      texts,
-      this.counters,
-      new Map(this.files),
-    );
+    entries = nextEntries;
+    table = nextTable;
+    return Revision({
+      number: count,
+      project: project,
+      checked: checked,
+      rechecked: rechecked,
+      entries: nextEntries,
+      texts: texts,
+      counter: counter,
+      files: mapFrom(files),
+    });
   }
+
+  /**
+   * Applies changes and starts a revision. A project-file error is a value.
+   * Changed files remain, so a later update can repair the project file.
+   */
+  function update(
+    changes: ProgramChanges | undefined,
+  ): Result<Revision, ConfigError> {
+    const selected = changes ?? {};
+    for (const file of changeEntries(selected.set)) {
+      files = files.set(file[0], file[1]);
+    }
+    for (const path of selected.remove ?? []) {
+      files = deleteMapEntry(files, path).map;
+      parses = deleteMapEntry(parses, path).map;
+    }
+
+    let hostFiles = emptyMap<string, string>();
+    for (const file of files) {
+      hostFiles = hostFiles.set(
+        joinPath(programRoot, file[0]),
+        file[1],
+      );
+    }
+    const entryPaths = [...files.keys()].filter(isSourcePath).sort(compareText);
+    const analyzed = analyzeProject(
+      memoryHost(hostFiles),
+      programRoot,
+      entryPaths,
+      parseFile,
+    );
+    if (!analyzed.ok) return analyzed;
+    count = count + 1;
+    return { ok: true, value: check(analyzed.value) };
+  }
+
+  return { counts: counter.counts, update: update };
 }
 
 /** The modules that differ between two revisions, in the module order of the later one. */
-export interface RevisionDelta {
+export type RevisionDelta = {
   /** Modules whose interface hash differs. */
-  readonly interfaceChanged: string[];
+  readonly interfaceChanged: readonly string[];
   /** Modules whose mode map differs in size or in any entry. */
-  readonly modeChanged: string[];
-}
+  readonly modeChanged: readonly string[];
+};
 
 function sameModes(
   a: ReadonlyMap<ValueId, Solved> | undefined,
@@ -461,7 +572,9 @@ function sameModes(
 ): boolean {
   if (a === undefined || b === undefined) return a === b;
   if (a.size !== b.size) return false;
-  for (const [id, solved] of a) {
+  for (const entry of a) {
+    const id = entry[0];
+    const solved = entry[1];
     if (b.get(id)?.mode !== solved.mode) return false;
   }
   return true;
@@ -480,16 +593,19 @@ export function revisionDelta(
   for (const name of next.moduleNames()) {
     const before = previous?.checkedModule(name);
     if (previous === undefined || before === undefined) {
-      interfaceChanged.push(name);
-      modeChanged.push(name);
+      interfaceChanged[interfaceChanged.length] = name;
+      modeChanged[modeChanged.length] = name;
       continue;
     }
     if (previous.interfaceHash(name) !== next.interfaceHash(name)) {
-      interfaceChanged.push(name);
+      interfaceChanged[interfaceChanged.length] = name;
     }
     if (!sameModes(before.solved, next.checkedModule(name)?.solved)) {
-      modeChanged.push(name);
+      modeChanged[modeChanged.length] = name;
     }
   }
-  return { interfaceChanged, modeChanged };
+  return {
+    interfaceChanged: interfaceChanged,
+    modeChanged: modeChanged,
+  };
 }

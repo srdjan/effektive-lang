@@ -1,3 +1,4 @@
+// @light-fp adapter
 import type { HostFs } from "../host/io.ts";
 import type { Result } from "../core/mod.ts";
 import type { GeneratedTypeScriptResult } from "./protocol.ts";

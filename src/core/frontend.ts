@@ -1,3 +1,4 @@
+// @light-fp adapter -- Public package facade with no compiler algorithms.
 // The public API of the core. This file is a list of re-exports. The core is
 // synchronous and does no I/O: it reads files only through `SourceHost`.
 
@@ -60,10 +61,23 @@ export {
   categoryOf,
   describeCode,
   makeDiagnostic,
+  makeDiagnosticWithRelated,
   normalizeDiagnostics,
   registeredCodes,
 } from "./diagnostics.ts";
 export type { Diagnostic, DiagnosticCode, Severity } from "./diagnostics.ts";
+
+// Deterministic native operations for shared host schemas.
+export {
+  decodeUriComponent,
+  emptyMap,
+  emptySet,
+  hasProperty,
+  indices,
+  mapFrom,
+  reverseIndices,
+  timeValue as parseTimestamp,
+} from "./runtime.ts";
 
 // The lexer and the prelude names, for the highlighter of the playground.
 export {
@@ -74,12 +88,14 @@ export {
   lex,
   OPERATOR_KINDS,
   TokenKind,
+  tokenKind,
   TriviaKind,
 } from "./lex.ts";
 export { BUILTIN_TYPE_NAMES, PRELUDE_NAMES } from "./resolve.ts";
 
 // The IR types.
 export type * from "./ir.ts";
+export { isClosedUnitId } from "./ir.ts";
 
 export { inlayHintsAt } from "./editor_hints.ts";
 export { contractActionsAt, failsClauseActionsAt } from "./editor_actions.ts";

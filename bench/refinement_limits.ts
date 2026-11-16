@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Program } from "../src/core/mod.ts";
 import {
   and,
@@ -7,7 +8,6 @@ import {
   type Predicate,
   type Term,
 } from "../src/core/predicates.ts";
-
 const iterations = Number(Deno.args[0] ?? "1");
 if (!Number.isSafeInteger(iterations) || iterations < 1) {
   throw new Error("positive iteration count required");
@@ -19,17 +19,21 @@ const compare = (
   offset: string,
 ): Predicate => {
   const result = comparison(term, "0", operator, zero, offset);
-  if (!result.ok) throw new Error(JSON.stringify(result.error));
+  if (!result.ok) {
+    throw new Error(JSON.stringify(result.error));
+  }
   return result.value;
 };
 const terms: Term[] = Array.from(
   { length: 10 },
   (_, i) => ({ kind: "field", path: [`x${i}`] }),
 );
-const assumptions = and(
-  ...terms.map((term) => or(compare(term, "<", "0"), compare(term, ">", "0"))),
+const assumptions = and([
+  ...terms.map((term) =>
+    or([compare(term, "<", "0"), compare(term, ">", "0")])
+  ),
   ...terms.map((term) => compare(term, "===", "0")),
-);
+]);
 const goal = compare(terms[0], ">", "0");
 const limits = [128, 512, 2048, 8192, 32768, 100000];
 const rows = [];
@@ -40,12 +44,18 @@ for (const maxSteps of limits) {
     const start = performance.now();
     const result = entails(assumptions, goal, { maxSteps });
     samples.push(performance.now() - start);
-    if (!result.ok) throw new Error(JSON.stringify(result.error));
+    if (!result.ok) {
+      throw new Error(JSON.stringify(result.error));
+    }
     if (
       result.value.status !== "unknown" || result.value.reason !== "exhausted"
-    ) throw new Error("adversarial workload did not exhaust its work bound");
+    ) {
+      throw new Error("adversarial workload did not exhaust its work bound");
+    }
     stepsUsed = result.value.stepsUsed;
-    if (stepsUsed > maxSteps) throw new Error("solver exceeded work bound");
+    if (stepsUsed > maxSteps) {
+      throw new Error("solver exceeded work bound");
+    }
   }
   samples.sort((a, b) => a - b);
   rows.push({
@@ -55,7 +65,6 @@ for (const maxSteps of limits) {
     maxMs: samples.at(-1),
   });
 }
-
 const count = 200;
 const source = (edit: number): string =>
   [
@@ -64,7 +73,7 @@ const source = (edit: number): string =>
       `const f${index} = (n: Positive): Positive => n + 1`),
     `const edit = ${edit}`,
   ].join("\n");
-const program = new Program("");
+const program = Program("");
 const updates: number[] = [];
 for (let edit = 0; edit < iterations; edit++) {
   const start = performance.now();
@@ -77,20 +86,18 @@ for (let edit = 0; edit < iterations; edit++) {
   }
 }
 updates.sort((a, b) => a - b);
-console.log(
-  JSON.stringify(
-    {
-      iterations,
-      workload: "ten contradictory Boolean splits",
-      rows,
-      compiler: {
-        functions: count,
-        updates: iterations,
-        p90Ms: updates[Math.ceil(updates.length * 0.9) - 1],
-        maxMs: updates.at(-1),
-      },
+console.log(JSON.stringify(
+  {
+    iterations,
+    workload: "ten contradictory Boolean splits",
+    rows,
+    compiler: {
+      functions: count,
+      updates: iterations,
+      p90Ms: updates[Math.ceil(updates.length * 0.9) - 1],
+      maxMs: updates.at(-1),
     },
-    null,
-    2,
-  ),
-);
+  },
+  null,
+  2,
+));

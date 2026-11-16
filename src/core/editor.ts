@@ -15,10 +15,14 @@ import type { Span } from "./source.ts";
 import { type NodeId, nodeSpan, type SyntaxTree } from "./syntax.ts";
 import { effectText, showType } from "./type_show.ts";
 
-interface Range {
+type Range = {
   readonly start: number;
   readonly end: number;
-}
+};
+
+export type EditorPath = string;
+export type EditorOffset = number;
+export type EditorText = string;
 
 /**
  * The position rule of hover and definition. The first pass accepts a range with
@@ -33,12 +37,12 @@ function covers(range: Range, offset: number, afterEnd: boolean): boolean {
 
 const PASSES: readonly boolean[] = [false, true];
 
-interface SourceHover {
+type SourceHover = {
   readonly span: Span;
   readonly contract: string;
   /** Only on a module-level function or constant name. */
   readonly declaration: string | undefined;
-}
+};
 
 function cleanErrors(text: string): string {
   return text.replaceAll("<error>", "unknown (error)");
@@ -49,7 +53,7 @@ function functionContract(
   fn: FunctionBody,
 ): string {
   const table = revision.types;
-  const { signature } = fn;
+  const signature = fn.signature;
   const parameters = signature.parameters.map((p) =>
     `${p.name}: ${showType(table, p.type.ref)}`
   ).join(", ");
@@ -102,7 +106,7 @@ function hoverPass(
     const span = fn.signature.nameSpan;
     if (!covers(span, offset, afterEnd)) continue;
     return {
-      span,
+      span: span,
       contract: functionContract(revision, fn),
       declaration: fn.signature.id,
     };
@@ -111,7 +115,7 @@ function hoverPass(
     const span = constant.signature.nameSpan;
     if (!covers(span, offset, afterEnd)) continue;
     return {
-      span,
+      span: span,
       contract: cleanErrors(
         `${constant.signature.name}: ${showType(table, constant.type)}`,
       ),
@@ -147,14 +151,18 @@ function hoverPass(
   const found = innermostNode(
     module.tree,
     bodyTablesOf(module).flatMap((table) =>
-      [...table.info].map(([node, info]) => ({ node, info }))
+      [...table.info].map((entry) => ({
+        node: entry[0],
+        info: entry[1],
+      }))
     ),
     (candidate) => candidate.node,
     offset,
     afterEnd,
   );
   if (found === undefined) return undefined;
-  const { node, info } = found;
+  const node = found.node;
+  const info = found.info;
   return {
     span: nodeSpan(module.tree, node),
     contract: cleanErrors(
@@ -173,8 +181,8 @@ function hoverPass(
  */
 export function sourceHoverAt(
   revision: Revision,
-  path: string,
-  offset: number,
+  path: EditorPath,
+  offset: EditorOffset,
 ): SourceHover | undefined {
   const module = revision.checkedModuleAt(path);
   if (module === undefined) return undefined;
@@ -192,19 +200,19 @@ export function sourceHoverAt(
  */
 export function definitionAt(
   revision: Revision,
-  path: string,
-  offset: number,
+  path: EditorPath,
+  offset: EditorOffset,
 ): Span | undefined {
   const module = revision.checkedModuleAt(path);
   if (module === undefined) return undefined;
   const resolution = revision.resolution(module.module);
   if (resolution === undefined) return undefined;
-  const { tree } = module;
+  const tree = module.tree;
   for (const afterEnd of PASSES) {
     const best = innermostNode(
       tree,
       resolution.targets,
-      ([node]) => node,
+      (entry) => entry[0],
       offset,
       afterEnd,
     );
@@ -223,22 +231,25 @@ export type EditorSymbolKind =
   | "method"
   | "provider";
 
-export interface EditorSymbol {
+export type EditorSymbol = {
   readonly name: string;
   readonly kind: EditorSymbolKind;
   readonly span: Span;
   readonly nameSpan: Span;
   /** The methods of a service. Empty for every other kind. */
   readonly children: readonly EditorSymbol[];
-}
+};
 
 function symbolOf(entry: DeclEntry): EditorSymbol {
-  const kind: EditorSymbolKind = entry.kind === "const"
-    ? entry.isArrow ? "function" : "constant"
-    : entry.kind;
+  let kind: EditorSymbolKind;
+  if (entry.kind === "const") {
+    kind = entry.isArrow ? "function" : "constant";
+  } else {
+    kind = entry.kind;
+  }
   return {
     name: entry.name,
-    kind,
+    kind: kind,
     span: entry.span,
     nameSpan: entry.nameSpan,
     children: entry.methodList.map((method) => ({
@@ -253,8 +264,8 @@ function symbolOf(entry: DeclEntry): EditorSymbol {
 
 function indexOfFile(
   revision: Revision | undefined,
-  path: string,
-  text: string,
+  path: EditorPath,
+  text: EditorText,
 ): FileIndex {
   if (revision !== undefined) {
     const info = revision.moduleInfoAt(path);
@@ -271,8 +282,8 @@ function indexOfFile(
  */
 export function documentSymbols(
   revision: Revision | undefined,
-  path: string,
-  text: string,
+  path: EditorPath,
+  text: EditorText,
 ): EditorSymbol[] {
   return indexOfFile(revision, path, text).decls.map(symbolOf);
 }

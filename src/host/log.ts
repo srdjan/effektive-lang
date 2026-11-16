@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The event log: one JSON object per line, plus content-addressed text blobs.
 // Logging never breaks the program: after a write failure the file log turns
 // itself off. The core never imports this file.

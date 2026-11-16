@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Adapt the revision's lazy queries to one complete generation result.
 // File writing consumes this port without depending on a concrete Revision.
 

@@ -15,7 +15,7 @@ import type { ValueId } from "../src/core/ir.ts";
 import { emitFiles } from "./helpers.ts";
 import { validateRevision } from "./validate_helpers.ts";
 
-function load(files: Record<string, string>, program = new Program("")) {
+function load(files: Record<string, string>, program = Program("")) {
   const result = program.update({
     set: { "effektive.json": "{}", ...files },
   });
@@ -188,7 +188,7 @@ export const f = (): Text => "x"
 export error E = { m: string }
 export const f = (): Text => fail(E({ m: "x" }))
 `;
-  const program = new Program("");
+  const program = Program("");
   const first = load({ "a.eff": withoutFailure, "b.eff": importer }, program);
   assertEquals(codesOf(first), ["failure-contract/002"]);
   const second = load({ "a.eff": withFailure }, program);
@@ -223,7 +223,7 @@ Deno.test("the span-only rebuild of an importer keeps the inferred failures of i
   const b = `import { f, Text } from "./a.eff"
 export const g = (): Text => f()
 `;
-  const program = new Program("");
+  const program = Program("");
   const first = load({ "a.eff": a, "b.eff": b }, program);
   const second = load({ "a.eff": "// moves every span\n" + a }, program);
   assertEquals(second.rechecked, ["a"]);

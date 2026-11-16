@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Unsound host code: each data result has a wrong tag through a cast, and
 // `total` returns a number that is not an integer.
 import { Effect, Layer, Option, Stream } from "effect";

@@ -6,7 +6,7 @@ import { checkModuleDeclarations } from "../src/core/check_declarations.ts";
 import type { TypeId } from "../src/core/ir.ts";
 import { parse } from "../src/core/parse.ts";
 import { memoryHost } from "../src/core/frontend.ts";
-import { childrenOf, kindName } from "../src/core/syntax.ts";
+import { childrenOf, kindName, kindOf } from "../src/core/syntax.ts";
 import {
   functionTypeFromIr,
   functionTypeToIr,
@@ -19,9 +19,10 @@ function checkDeclarations(text: string) {
     memoryHost({ "effektive.json": "{}", "m.eff": text }),
     "",
     ["m.eff"],
+    undefined,
   );
   assert(analysis.ok, JSON.stringify(analysis));
-  const table = new TypeTable();
+  const table = TypeTable();
   const info = analysis.value.project.modules.get("m");
   const resolution = analysis.value.resolutions.get("m");
   assert(info !== undefined && resolution !== undefined);
@@ -39,16 +40,17 @@ Deno.test("a type declaration parses its refinement clause", () => {
   const parsed = parse(
     "m.eff",
     "export type Positive = int where n => n > 0\n",
+    undefined,
   );
   assertEquals(parsed.diagnostics, []);
   const declaration = childrenOf(parsed.tree, parsed.tree.root).find((node) =>
-    kindName(parsed.tree.kinds[node]) === "TypeDecl"
+    kindName(kindOf(parsed.tree, node)) === "TypeDecl"
   );
   assertEquals(
     declaration === undefined
       ? []
       : [...childrenOf(parsed.tree, declaration)].map((node) =>
-        kindName(parsed.tree.kinds[node])
+        kindName(kindOf(parsed.tree, node))
       ),
     ["Token", "Token", "Name", "Token", "NamedType", "RefinementClause"],
   );
@@ -134,7 +136,7 @@ Deno.test("type tables preserve predicates and reject unproved adoption", () => 
     true,
   );
 
-  const loaded = new TypeTable();
+  const loaded = TypeTable();
   loadGraph(loaded, {
     types: checked.declarations.types,
     errors: checked.declarations.errors,
@@ -162,7 +164,7 @@ type Domain = PositiveRow | Stop
 });
 
 Deno.test("checked function capability survives IR and only discards", () => {
-  const table = new TypeTable();
+  const table = TypeTable();
   const plain = table.function({
     execution: "pure",
     parameters: [table.int],

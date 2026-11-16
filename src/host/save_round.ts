@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The output step of a save round, shared by `build`, `watch`, and the
 // language server: remove the outputs of modules that left the project, then
 // write the outputs of every writable module that the project owns.

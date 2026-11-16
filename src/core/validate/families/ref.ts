@@ -1,5 +1,6 @@
 // Validation of the Ref operations: makeRef, getRef, setRef, and updateRef.
 
+import type { ValidationPath } from "../report.ts";
 import type { Expr } from "../../ir.ts";
 import { AREA } from "../report.ts";
 import { combine, EFFECT_ONLY, invocationOf } from "../sets.ts";
@@ -13,7 +14,7 @@ export function refOperation(
     Expr,
     { kind: "make-ref" | "get-ref" | "set-ref" | "update-ref" }
   >,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   if (e.kind === "make-ref") {
     const value = c.check(e.value, `${path}.value`);
@@ -25,7 +26,18 @@ export function refOperation(
   const ref = c.check(e.ref, `${path}.ref`);
   const type = unfold(c.env, ref.type);
   if (type.kind !== "ref") {
-    c.add(AREA.types, path, `${e.kind} needs a Ref value`, e.span);
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          path,
+          `${e.kind} needs a Ref value`,
+          e.span,
+        ),
+      },
+    };
     return c.poison();
   }
   if (e.kind === "get-ref") {
@@ -34,12 +46,18 @@ export function refOperation(
   if (e.kind === "set-ref") {
     const value = c.check(e.value, `${path}.value`);
     if (!fits(c.env, value.type, type.element)) {
-      c.add(
-        AREA.types,
-        `${path}.value`,
-        "the new value must fit the Ref element",
-        e.value.span,
-      );
+      c = {
+        ...c,
+        ctx: {
+          ...c.ctx,
+          report: c.add(
+            AREA.types,
+            `${path}.value`,
+            "the new value must fit the Ref element",
+            e.value.span,
+          ),
+        },
+      };
     }
     return derivedResult(UNIT, combine([ref, value, EFFECT_ONLY]));
   }
@@ -50,12 +68,18 @@ export function refOperation(
     !fits(c.env, type.element, fn.parameters[0]) ||
     !fits(c.env, fn.result, type.element)
   ) {
-    c.add(
-      AREA.execution,
-      `${path}.transform`,
-      "updateRef needs an element-to-element callback",
-      e.transform.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.execution,
+          `${path}.transform`,
+          "updateRef needs an element-to-element callback",
+          e.transform.span,
+        ),
+      },
+    };
   }
   // An effectful callback runs inside the update, so the call takes its
   // failures and requirements.

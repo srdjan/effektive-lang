@@ -38,17 +38,28 @@ Deno.test("a group that does not fit breaks every line and adds a trailing comma
 });
 
 Deno.test("a hard line breaks the enclosing group but not a sibling", () => {
-  const doc: Doc = [group(["a", hard, "b"]), " ", group(["c", line, "d"])];
+  const doc: Doc = [
+    group(["a", hard, "b"], undefined, undefined),
+    " ",
+    group(["c", line, "d"], undefined, undefined),
+  ];
   assertEquals(render(doc, 80).text, "a\nb c d");
 });
 
 Deno.test("braces print one statement for each line and an empty list as {}", () => {
-  assertEquals(render(braces(["x;", "y;"])).text, "{\n  x;\n  y;\n}");
-  assertEquals(render(braces([])).text, "{}");
+  assertEquals(
+    render(braces(["x;", "y;"]), undefined).text,
+    "{\n  x;\n  y;\n}",
+  );
+  assertEquals(render(braces([]), undefined).text, "{}");
 });
 
 Deno.test("ifBreak follows the mode of the enclosing group", () => {
-  const doc = group(["(", indent([soft, "a"]), ifBreak(";"), soft, ")"]);
+  const doc = group(
+    ["(", indent([soft, "a"]), ifBreak(";", undefined), soft, ")"],
+    undefined,
+    undefined,
+  );
   assertEquals(render(doc, 80).text, "(a)");
   assertEquals(render(doc, 2).text, "(\n  a;\n)");
 });
@@ -73,7 +84,7 @@ Deno.test("span tags record the generated range of their content", () => {
     spanned(span(4, 9), ["x", " = ", spanned(span(8, 9), "1")]),
     ";",
   ];
-  const result = render(doc);
+  const result = render(doc, undefined);
   assertEquals(result.text, "let x = 1;");
   assertEquals(
     result.spans.map((r) => [r.start, r.end, r.span.start, r.span.end]),
@@ -82,8 +93,8 @@ Deno.test("span tags record the generated range of their content", () => {
 });
 
 Deno.test("join puts the separator between items only", () => {
-  assertEquals(render(join(", ", ["a", "b", "c"])).text, "a, b, c");
-  assertEquals(render(join(", ", [])).text, "");
+  assertEquals(render(join(", ", ["a", "b", "c"]), undefined).text, "a, b, c");
+  assertEquals(render(join(", ", []), undefined).text, "");
 });
 
 Deno.test("ifBroke asks whether an earlier group broke", () => {
@@ -101,13 +112,13 @@ Deno.test("ifBroke asks whether an earlier group broke", () => {
 Deno.test("ifBroke counts a group that a hard line forces to break", () => {
   const id = {};
   const doc: Doc = [group(["a", hard, "b"], false, id), ifBroke(id, "!", "?")];
-  assertEquals(render(doc).text, "a\nb!");
+  assertEquals(render(doc, undefined).text, "a\nb!");
 });
 
 Deno.test("mark tags record the generated range of their content", () => {
   const data = { name: "N$host", local: "N", exported: "n", key: "k" };
   const doc: Doc = ["a ", marked(data, ["b", hard, "c"]), " d"];
-  const result = render(doc);
+  const result = render(doc, undefined);
   assertEquals(result.text, "a b\nc d");
   assertEquals(result.marks, [{ data, start: 2, end: 5 }]);
 });
@@ -189,7 +200,11 @@ Deno.test("ifFits restarts the measure at a through line, at the current indenta
 });
 
 Deno.test("a group measures the chosen branch of an ifFits", () => {
-  const doc = group([ifFits("xxxx", "a", "bbbbbbbbbb"), line, "c"]);
+  const doc = group(
+    [ifFits("xxxx", "a", "bbbbbbbbbb"), line, "c"],
+    undefined,
+    undefined,
+  );
   assertEquals(render(doc, 5).text, "a c");
   assertEquals(render(doc, 3).text, "bbbbbbbbbb\nc");
 });
@@ -198,6 +213,6 @@ Deno.test("the hard-line check looks at both branches of an ifFits and ignores t
   assertEquals(hasHardLine(ifFits(hard, "a", "b")), false);
   assertEquals(hasHardLine(ifFits("p", [hard], "b")), true);
   assertEquals(hasHardLine(ifFits("p", "a", [hard])), true);
-  assertEquals(hasHardLine(group(["a", hard])), true);
+  assertEquals(hasHardLine(group(["a", hard], undefined, undefined)), true);
   assertEquals(hasHardLine(alt([[hard], "b"])), false);
 });

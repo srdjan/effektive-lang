@@ -119,7 +119,7 @@ Deno.test("the Defect binding has the type { message: string }", () => {
   const text = `${HEAD}export const a = (): Text with Log.boom =>
   try { Log.boom(); "x" } catch { Defect(failure) => failure.message }
 `;
-  const program = new Program().update({
+  const program = Program(undefined).update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(program.ok);

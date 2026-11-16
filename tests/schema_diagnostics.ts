@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Assertion helpers for Schema negative tests. A negative case must name the
 // rule that rejects it: the diagnostic code, a fragment of the message, and
 // where the source is available the text of the offending node. A bare

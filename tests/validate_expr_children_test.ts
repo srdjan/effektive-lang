@@ -16,7 +16,7 @@ import type {
   Type,
 } from "../src/core/ir.ts";
 import { childrenOf } from "../src/core/emit/shape.ts";
-import { exprChildren } from "../src/core/validate/expr.ts";
+import { exprChildren } from "../src/core/validate/expr_walk.ts";
 import { FIXTURES } from "./helpers.ts";
 
 type Obj = Record<string, unknown>;

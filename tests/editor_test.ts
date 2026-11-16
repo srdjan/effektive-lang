@@ -19,7 +19,7 @@ import { showType } from "../src/core/type_show.ts";
 type Files = Record<string, string>;
 
 function load(files: Files): Revision {
-  const result = new Program("").update({ set: files });
+  const result = Program("").update({ set: files });
   assert(result.ok, JSON.stringify(result));
   return result.value;
 }

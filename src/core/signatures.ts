@@ -38,20 +38,20 @@ import type { TypeRef, TypeTable } from "./types.ts";
 import { sortedUnique } from "./util.ts";
 
 /** An interned type together with its IR tree in source order. */
-export interface Lowered {
+export type Lowered = {
   readonly ref: TypeRef;
   readonly ir: Type;
-}
+};
 
 /** The declarations that an imported module supplies, as an interface carries them. */
-export interface TypeGraph {
+export type TypeGraph = {
   readonly types: readonly TypeDecl[];
   readonly errors: readonly ErrorDecl[];
   readonly services: readonly ServiceDecl[];
-}
+};
 
 /** Everything that type lowering reads about one module. */
-export interface TypeEnv {
+export type TypeEnv = {
   readonly module: string;
   readonly tree: SyntaxTree;
   readonly targets: ReadonlyMap<NodeId, Target>;
@@ -59,10 +59,10 @@ export interface TypeEnv {
   readonly defectArms: ReadonlySet<NodeId>;
   readonly table: TypeTable;
   /** Local and imported services by identity. */
-  readonly services: Map<ServiceId, ServiceDecl>;
-}
+  readonly services: ReadonlyMap<ServiceId, ServiceDecl>;
+};
 
-export interface ParameterSignature {
+export type ParameterSignature = {
   readonly name: string;
   readonly borrow: boolean;
   /** The local identity from the resolver. Absent in a function type, where names are labels. */
@@ -74,9 +74,9 @@ export interface ParameterSignature {
   readonly inferred: boolean;
   /** Covers the name and its annotation. */
   readonly span: Span;
-}
+};
 
-export interface SignatureBase {
+export type SignatureBase = {
   readonly name: string;
   readonly exported: boolean;
   /** The declaration node. */
@@ -85,9 +85,9 @@ export interface SignatureBase {
   /** The span of the whole declaration. */
   readonly span: Span;
   readonly nameSpan: Span;
-}
+};
 
-export interface FunctionSignature extends SignatureBase {
+export type FunctionSignature = SignatureBase & {
   readonly kind: "function";
   readonly id: ValueId;
   /**
@@ -107,30 +107,30 @@ export interface FunctionSignature extends SignatureBase {
   readonly requirements: readonly CapabilityId[];
   /** Present when a binding type requires pure execution. */
   readonly expectedExecution?: "pure";
-}
+};
 
-export interface ConstantSignature extends SignatureBase {
+export type ConstantSignature = SignatureBase & {
   readonly kind: "constant";
   readonly id: ValueId;
   /** The binding type annotation, when present. */
   readonly type: Lowered | undefined;
-}
+};
 
-export interface ProviderSignature extends SignatureBase {
+export type ProviderSignature = SignatureBase & {
   readonly kind: "provider";
   readonly id: ValueId;
   readonly failures: readonly ErrorId[];
   readonly requirements: readonly CapabilityId[];
   /** The provider type: acquisition execution is always `effect`. */
   readonly type: Lowered;
-}
+};
 
 export type ValueSignature =
   | FunctionSignature
   | ConstantSignature
   | ProviderSignature;
 
-export interface ModuleDeclarations {
+export type ModuleDeclarations = {
   readonly module: string;
   readonly env: TypeEnv;
   /** Source order. Duplicate names after the first are left out. */
@@ -144,11 +144,13 @@ export interface ModuleDeclarations {
   readonly exports: readonly DeclarationId[];
   /** Declaration diagnostics of this module, sorted. */
   readonly diagnostics: readonly Diagnostic[];
-}
+};
 
 export type ModeMap = ReadonlyMap<ValueId, Execution>;
 /** Consumers can look up a solved state without owning or mutating the map. */
 export type SolvedLookup = Pick<ReadonlyMap<ValueId, Solved>, "get">;
+export type PendingMode = boolean;
+export type InputFlags = readonly boolean[];
 
 type SignatureError =
   | { readonly tag: "missing-mode"; readonly id: ValueId }
@@ -158,8 +160,8 @@ type SignatureError =
  * True when the body decides part of the contract of a function with a written
  * result: the mode, because the closed sets are empty, or an open set.
  */
-export function isPendingMode(signature: FunctionSignature): boolean {
-  const { written } = signature;
+export function isPendingMode(signature: FunctionSignature): PendingMode {
+  const written = signature.written;
   return written.result &&
     !(written.fails && written.uses &&
       signature.failures.length + signature.requirements.length > 0);
@@ -173,7 +175,7 @@ export function contractSets(
   signature: FunctionSignature,
   solved: SolvedLookup,
 ): Pick<Solved, "failures" | "requirements"> {
-  const { written } = signature;
+  const written = signature.written;
   const entry = written.fails && written.uses
     ? undefined
     : solved.get(signature.id);
@@ -211,26 +213,28 @@ function contractOf(
   if (entry === undefined) {
     return { ok: false, error: { tag: "missing-mode", id: signature.id } };
   }
-  const { failures, requirements } = contractSets(signature, solved);
+  const sets = contractSets(signature, solved);
+  const failures = sets.failures;
+  const requirements = sets.requirements;
   return {
     ok: true,
     value: {
       mode: failures.length + requirements.length > 0 ? "effect" : entry.mode,
-      failures,
-      requirements,
+      failures: failures,
+      requirements: requirements,
     },
   };
 }
 
-export interface SignatureType {
+export type SignatureType = {
   readonly ref: TypeRef;
   readonly ir: FunctionType;
-}
+};
 
 export function checkedInputFlags(
   signature: Pick<FunctionSignature, "exported" | "parameters">,
   table: TypeTable,
-): readonly boolean[] {
+): InputFlags {
   return signature.parameters.map((parameter) =>
     signature.exported && parameter.inferred &&
     parameter.type.ref !== table.unknown
@@ -290,7 +294,7 @@ export function signatureFunctionRef(
     parameters: signature.parameters.map((p) => p.type.ref),
     borrows: signature.parameters.map((p) => p.borrow),
     checked: checkedInputFlags(signature, table),
-    result,
+    result: result,
     failures: contract.failures,
     requirements: contract.requirements,
   });
@@ -302,32 +306,48 @@ export function loweredFunction(
   contract: Pick<Solved, "mode" | "failures" | "requirements">,
   parameters: readonly Lowered[],
   result: Lowered,
-  borrows?: readonly boolean[],
-  checked?: readonly boolean[],
+  borrows: InputFlags | undefined,
+  checked: InputFlags | undefined,
 ): SignatureType {
   const execution = contract.mode;
   const failureSet = sortedUnique(contract.failures);
   const requirementSet = sortedUnique(contract.requirements);
-  const borrowed = borrows?.some(Boolean) ? { borrows } : {};
-  const validated = checked?.some(Boolean) ? { checked } : {};
+  const borrowed = borrows?.some(Boolean) ?? false;
+  const validated = checked?.some(Boolean) ?? false;
+  let flags: {
+    readonly borrows?: InputFlags;
+    readonly checked?: InputFlags;
+  };
+  if (
+    borrows !== undefined && checked !== undefined && borrowed && validated
+  ) {
+    flags = { borrows: borrows, checked: checked };
+  } else if (borrows !== undefined && borrowed) {
+    flags = { borrows: borrows };
+  } else if (checked !== undefined && validated) {
+    flags = { checked: checked };
+  } else {
+    flags = {};
+  }
   return {
     ref: table.function({
-      execution,
+      ...flags,
+      execution: execution,
       parameters: parameters.map((p) => p.ref),
-      ...borrowed,
-      ...validated,
       result: result.ref,
       failures: failureSet,
       requirements: requirementSet,
     }),
     ir: {
+      ...flags,
       kind: "function",
-      execution,
+      execution: execution,
       parameters: parameters.map((p) => p.ir),
-      ...borrowed,
-      ...validated,
       result: result.ir,
-      effects: { failures: failureSet, requirements: requirementSet },
+      effects: {
+        failures: failureSet,
+        requirements: requirementSet,
+      },
     },
   };
 }

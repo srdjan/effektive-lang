@@ -20,7 +20,7 @@ const emitted: EmittedModule = {
   spans: [],
   hostAssertions: [],
 };
-const table = buildSpanTable(emitted);
+const table = buildSpanTable(emitted, undefined);
 const map: SourceMapV3 = {
   version: 3,
   file: "m.ts",
@@ -80,7 +80,7 @@ Deno.test("writeGenerated refuses paths outside the root-relative module contrac
 });
 
 Deno.test("generationSource adapts real revisions, unknown modules and source errors", () => {
-  const updated = new Program().update({
+  const updated = Program(undefined).update({
     set: {
       "effektive.json": "{}",
       "m.eff": "type I = int\nexport const x: I = 1\n",
@@ -112,7 +112,7 @@ Deno.test("generationSource retains query order and classifies emit, map and abs
     ] as const
   ) {
     const calls: string[] = [];
-    const lower = new Program().update({
+    const lower = Program(undefined).update({
       set: {
         "effektive.json": "{}",
         "m.eff": "type I = int\nexport const x: I = 1\n",
@@ -278,10 +278,15 @@ Deno.test("generationSource stops after a lowering failure and keeps diagnostics
     const unexpected = (): never => {
       throw new Error("queried after lowering failed");
     };
-    const revision = new Program().update({ set: { "effektive.json": "{}" } });
+    const revision = Program(undefined).update({
+      set: { "effektive.json": "{}" },
+    });
     assert(revision.ok);
-    revision.value.lowered = () => ({ ok: false, error });
-    const result = generationSource(revision.value, {
+    const failedRevision = {
+      ...revision.value,
+      lowered: () => ({ ok: false as const, error }),
+    };
+    const result = generationSource(failedRevision, {
       emitted: unexpected,
       spanTable: unexpected,
       sourceMap: unexpected,

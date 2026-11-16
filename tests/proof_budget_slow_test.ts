@@ -25,7 +25,7 @@ function edited(
   files: Record<string, string>,
   changed: Record<string, string>,
 ): string[] {
-  const program = new Program("");
+  const program = Program("");
   program.update({ set: files });
   const result = program.update({ set: changed });
   if (!result.ok) throw new Error("Program.update failed");

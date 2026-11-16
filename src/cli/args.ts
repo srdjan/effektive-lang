@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The command line: `effektive check|build|watch [root] [flags]`.
 
 import type { Result } from "../core/mod.ts";

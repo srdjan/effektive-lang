@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The real ports: the Deno file system, `deno check` as a subprocess, and
 // `Deno.watchFs`. In the CLI, only this file and the wiring at the end of
 // `main.ts` call Deno APIs.
@@ -40,14 +41,15 @@ export const denoFs: HostFs = {
         : { tag: "unreadable", path, message: errorMessage(read.error) },
     };
   },
-  writeText(path: string, text: string): Result<void, FileFailure> {
+  writeText(path: string, text: string): Result<undefined, FileFailure> {
     return attempt(() => {
       const slash = path.lastIndexOf("/");
       if (slash > 0) Deno.mkdirSync(path.slice(0, slash), { recursive: true });
       Deno.writeTextFileSync(path, text);
+      return undefined;
     });
   },
-  remove(path: string): Result<void, FileFailure> {
+  remove(path: string): Result<undefined, FileFailure> {
     const removed = caught(() => Deno.removeSync(path));
     if (removed.ok || removed.error instanceof Deno.errors.NotFound) {
       return { ok: true, value: undefined };

@@ -5,7 +5,8 @@
 // fixtures with it.
 
 import { checkProject, lowerProject } from "../src/core/mod.ts";
-import { AREA, validateModule } from "../src/core/validate/index.ts";
+import { validateModule } from "../src/core/validate/index.ts";
+import { AREA } from "../src/core/validate/report.ts";
 import { diskHost, EXAMPLE_ENTRIES, isRecord } from "../tests/helpers.ts";
 
 type Obj = Record<string, unknown>;

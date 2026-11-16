@@ -1,6 +1,7 @@
+import { emptyMap, emptySet, indices, stackValues } from "./runtime.ts";
 // Signature help for ordinary calls. The query reads checked callee types from
 // body tables and keeps LSP wire types outside the core.
-import { isSourcePath } from "./paths.ts";
+import { isSourcePath, type PathText } from "./paths.ts";
 import type { Revision } from "./db.ts";
 import { bodyTablesOf } from "./editor_index.ts";
 import { moduleOfId } from "./ids.ts";
@@ -17,20 +18,19 @@ import {
 import { initOf, kidsOf, tokenKindOf, unparen } from "./syntax_queries.ts";
 import { effectText, showType } from "./type_show.ts";
 import type { TypeNode, TypeRef } from "./types.ts";
-
-type FunctionNode = Extract<TypeNode, { readonly kind: "function" }>;
-
-interface SignatureParameter {
+type SourceOffset = number;
+type FunctionNode = Extract<TypeNode, {
+  readonly kind: "function";
+}>;
+type SignatureParameter = {
   readonly label: string;
   readonly documentation?: string;
-}
-
-interface SignatureHelp {
+};
+type SignatureHelp = {
   readonly label: string;
   readonly parameters: readonly SignatureParameter[];
   readonly activeParameter: number;
-}
-
+};
 function aliasTargetNode(
   revision: Revision,
   module: string,
@@ -38,12 +38,13 @@ function aliasTargetNode(
   node: NodeId,
 ): NodeId | undefined {
   const current = unparen(tree, node);
-  if (kindOf(tree, current) === SyntaxKind.ParenExpr) return undefined;
+  if (kindOf(tree, current) === SyntaxKind.ParenExpr) {
+    return undefined;
+  }
   return revision.resolution(module)?.targets.has(current)
     ? current
     : undefined;
 }
-
 function parameterNames(
   revision: Revision,
   module: string,
@@ -52,37 +53,44 @@ function parameterNames(
 ): readonly string[] {
   let currentModule = module;
   let currentTree = tree;
-  let currentNode = aliasTargetNode(
-    revision,
-    currentModule,
-    currentTree,
-    callee,
-  );
-  const seen = new Set<string>();
-  const localDeclarations = new Map<string, Map<LocalId, NodeId>>();
-  while (currentNode !== undefined) {
+  const first = aliasTargetNode(revision, currentModule, currentTree, callee);
+  const pending: NodeId[] = first === undefined ? [] : [first];
+  let seen = emptySet<string>();
+  let localDeclarations = emptyMap<string, Map<LocalId, NodeId>>();
+  for (const currentNode of stackValues(pending)) {
     const resolution = revision.resolution(currentModule);
-    if (resolution === undefined) break;
+    if (resolution === undefined) {
+      break;
+    }
     const target = resolution.targets.get(currentNode);
     if (
       target === undefined ||
       target.kind !== "local" && target.kind !== "value" ||
       seen.has(target.id)
-    ) break;
-    seen.add(target.id);
+    ) {
+      break;
+    }
+    seen = seen.add(target.id);
     if (target.kind === "local") {
       let declarations = localDeclarations.get(currentModule);
       if (declarations === undefined) {
-        declarations = new Map();
-        for (const [node, candidate] of resolution.targets) {
-          if (candidate.kind !== "local") continue;
+        declarations = emptyMap();
+        for (const binding1 of resolution.targets) {
+          const binding2 = binding1;
+          const node = binding2[0];
+          const candidate = binding2[1];
+          if (candidate.kind !== "local") {
+            continue;
+          }
           const span = resolution.locals.get(candidate.id);
           if (
             span !== undefined && currentTree.starts[node] === span.start &&
             currentTree.ends[node] === span.end
-          ) declarations.set(candidate.id, node);
+          ) {
+            declarations = declarations.set(candidate.id, node);
+          }
         }
-        localDeclarations.set(currentModule, declarations);
+        localDeclarations = localDeclarations.set(currentModule, declarations);
       }
       const declaration = declarations.get(target.id);
       const binding = declaration === undefined
@@ -92,9 +100,10 @@ function parameterNames(
           kindOf(currentTree, binding) !== SyntaxKind.ConstDecl
         ? undefined
         : initOf(currentTree, binding, declaration);
-      currentNode = init === undefined
+      const next = init === undefined
         ? undefined
         : aliasTargetNode(revision, currentModule, currentTree, init);
+      if (next !== undefined) pending[pending.length] = next;
       continue;
     }
     const owner = moduleOfId(target.id);
@@ -102,7 +111,9 @@ function parameterNames(
       ? undefined
       : revision.checkedModule(owner);
     const fn = checked?.functions.get(target.id);
-    if (fn !== undefined) return fn.signature.parameters.map((p) => p.name);
+    if (fn !== undefined) {
+      return fn.signature.parameters.map((p) => p.name);
+    }
     const constant = checked?.constants.get(target.id);
     if (
       owner === undefined || checked === undefined ||
@@ -112,29 +123,34 @@ function parameterNames(
     }
     currentModule = owner;
     currentTree = checked.tree;
-    currentNode = aliasTargetNode(
+    const next = aliasTargetNode(
       revision,
       currentModule,
       currentTree,
       constant.initNode,
     );
+    if (next !== undefined) pending[pending.length] = next;
   }
   return [];
 }
-
 function containsCursor(
   tree: SyntaxTree,
   args: NodeId,
   offset: number,
 ): boolean {
-  if (offset <= tree.starts[args]) return false;
-  if (offset < tree.ends[args]) return true;
-  if (offset !== tree.ends[args]) return false;
+  if (offset <= tree.starts[args]) {
+    return false;
+  }
+  if (offset < tree.ends[args]) {
+    return true;
+  }
+  if (offset !== tree.ends[args]) {
+    return false;
+  }
   return ![...childrenOf(tree, args)].some((child) =>
     tokenKindOf(tree, child) === TokenKind.RParen
   );
 }
-
 function activeParameter(
   tree: SyntaxTree,
   args: NodeId,
@@ -146,31 +162,35 @@ function activeParameter(
     if (
       tokenKindOf(tree, child) === TokenKind.Comma &&
       tree.ends[child] <= offset
-    ) active++;
+    ) {
+      active = active + 1;
+    }
   }
   return count === 0 ? 0 : Math.min(active, count - 1);
 }
-
 /** Returns signature help for the innermost ordinary call at `offset`. */
 export function signatureHelpAt(
   revision: Revision,
-  path: string,
-  offset: number,
+  path: PathText,
+  offset: SourceOffset,
 ): SignatureHelp | undefined {
   const module = revision.checkedModuleAt(path);
-  if (module === undefined || !isSourcePath(path)) return undefined;
-  const { tree } = module;
+  if (module === undefined || !isSourcePath(path)) {
+    return undefined;
+  }
+  const binding3 = module;
+  const tree = binding3.tree;
   const tables = bodyTablesOf(module);
-  let best:
-    | {
-      readonly callee: NodeId;
-      readonly args: NodeId;
-      readonly fn: FunctionNode;
-      readonly width: number;
+  let best: {
+    readonly callee: NodeId;
+    readonly args: NodeId;
+    readonly fn: FunctionNode;
+    readonly width: number;
+  } | undefined;
+  for (const node of indices(tree.count)) {
+    if (kindOf(tree, node) !== SyntaxKind.CallExpr) {
+      continue;
     }
-    | undefined;
-  for (let node = 0; node < tree.count; node++) {
-    if (kindOf(tree, node) !== SyntaxKind.CallExpr) continue;
     const children = kidsOf(tree, node);
     const callee = children[0];
     const args = children.find((child) =>
@@ -185,36 +205,41 @@ export function signatureHelpAt(
     let type: TypeRef | undefined;
     for (const table of tables) {
       type = table.info.get(callee)?.type;
-      if (type !== undefined) break;
+      if (type !== undefined) {
+        break;
+      }
     }
-    if (type === undefined) continue;
+    if (type === undefined) {
+      continue;
+    }
     const fn = revision.types.node(revision.types.unfold(type));
-    if (fn.kind !== "function") continue;
+    if (fn.kind !== "function") {
+      continue;
+    }
     const width = tree.ends[node] - tree.starts[node];
     if (best === undefined || width < best.width) {
-      best = { callee, args, fn, width };
+      best = { callee: callee, args: args, fn: fn, width: width };
     }
   }
-  if (best === undefined) return undefined;
-  const names = parameterNames(
-    revision,
-    module.module,
-    tree,
-    best.callee,
-  );
+  if (best === undefined) {
+    return undefined;
+  }
+  const names = parameterNames(revision, module.module, tree, best.callee);
   const parameters = best.fn.parameters.map((type, index) => {
     const contract = showType(revision.types, type);
-    const checked = best.fn.checked?.[index] === true;
+    const flags = best.fn.checked;
+    const flag = flags === undefined ? undefined : flags[index];
+    const checked = typeof flag === "boolean" && flag;
     return {
-      label: `${names[index] ?? `arg${index + 1}`}: ${
-        checked ? `unknown -> ${contract}` : contract
-      }`,
       ...(checked
         ? {
           documentation:
             `This entry accepts unknown input and validates it as ${contract}.`,
         }
         : {}),
+      label: `${names[index] ?? `arg${index + 1}`}: ${
+        checked ? `unknown -> ${contract}` : contract
+      }`,
     };
   });
   return {
@@ -223,7 +248,7 @@ export function signatureHelpAt(
     }): ${showType(revision.types, best.fn.result)}${
       effectText(best.fn.failures, best.fn.requirements)
     }`,
-    parameters,
+    parameters: parameters,
     activeParameter: activeParameter(
       tree,
       best.args,

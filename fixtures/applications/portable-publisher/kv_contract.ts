@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { assert, assertEquals, assertNotEquals } from "@std/assert";
 import { Cause, Effect, Exit, Option } from "effect";
 import type { PlatformBackend } from "./backend.ts";

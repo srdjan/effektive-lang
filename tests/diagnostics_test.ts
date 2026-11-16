@@ -8,6 +8,7 @@ import {
   categoryOf,
   describeCode,
   makeDiagnostic,
+  makeDiagnosticWithRelated,
   normalizeDiagnostics,
   registeredCodes,
 } from "../src/core/frontend.ts";
@@ -56,12 +57,15 @@ Deno.test("makeDiagnostic fills category and severity and keeps related spans on
   assertEquals(plain.category, "syntax");
   assertEquals(plain.severity, "error");
   assertEquals("related" in plain, false);
-  const related = makeDiagnostic("syntax/008", "m", span, [{
+  const related = makeDiagnosticWithRelated("syntax/008", "m", span, [{
     span,
     message: "see",
   }]);
   assertEquals(related.related?.length, 1);
-  assertEquals("related" in makeDiagnostic("syntax/008", "m", span, []), false);
+  assertEquals(
+    "related" in makeDiagnosticWithRelated("syntax/008", "m", span, []),
+    false,
+  );
 });
 
 Deno.test("sort orders by span, then code, then message; the input stays unchanged", () => {

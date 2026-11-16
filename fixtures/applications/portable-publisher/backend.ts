@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Effect, Layer, type Scope } from "effect";
 import {
   type KeyValue,

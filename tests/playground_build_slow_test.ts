@@ -45,7 +45,7 @@ Deno.test("build writes the page files and the examples", async () => {
       assert(typeof text === "string", path);
       files[path] = text;
     }
-    const revision = new Program("").update({ set: files });
+    const revision = Program("").update({ set: files });
     assert(revision.ok);
     assertEquals(revision.value.diagnostics, []);
     const app = Deno.readFileSync(`${out}/app.js`);

@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The edit script and the server session that M1, M3, and M4 share (plan
 // section 8). An input is a project: the five examples or a synthetic size. A
 // session is one server process on a temporary copy of the project. It opens

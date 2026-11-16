@@ -14,155 +14,194 @@ import { kindOf, type NodeId, SyntaxKind, type SyntaxTree } from "./syntax.ts";
 import type { BodyTable } from "./tables.ts";
 import type { TypeReader, TypeRef } from "./types.ts";
 import { isTypeId } from "./ids.ts";
-
+import { emptyMap, emptySet, indices, setFrom } from "./runtime.ts";
 /** Adds requirements carried by values that a type produces. */
 export function producedRequirements(
   table: TypeReader,
   ref: TypeRef,
   into: Set<CapabilityId>,
-  seen = new Set<TypeRef>(),
-): void {
-  if (seen.has(ref)) return;
-  seen.add(ref);
+  seen: Set<TypeRef> | undefined,
+): Set<CapabilityId> {
+  let visited = seen ?? emptySet<TypeRef>();
+  if (visited.has(ref)) {
+    return into;
+  }
+  visited = visited.add(ref);
   const node = table.node(ref);
-  const visit = (child: TypeRef): void =>
-    producedRequirements(table, child, into, seen);
-  const add = (requirements: readonly CapabilityId[]): void => {
-    for (const requirement of requirements) into.add(requirement);
-  };
-  switch (node.kind) {
-    case "named": {
-      const target = isTypeId(node.id) ? table.aliasOf(node.id) : undefined;
-      if (target !== undefined) visit(target);
-      return;
+  function visit(child: TypeRef): Set<CapabilityId> {
+    return producedRequirements(table, child, into, visited);
+  }
+  function add(requirements: readonly CapabilityId[]): Set<CapabilityId> {
+    for (const requirement of requirements) {
+      into = into.add(requirement);
     }
-    case "record":
-      for (const field of node.fields) visit(field.type);
-      return;
-    case "array":
-    case "option":
-    case "ref":
-      visit(node.element);
-      return;
-    case "tuple":
-      for (const element of node.elements) visit(element);
-      return;
-    case "union":
-      for (const member of node.members) visit(member);
-      return;
-    case "schema":
-      add(node.decodeRequirements);
-      add(node.encodeRequirements);
-      visit(node.decoded);
-      visit(node.encoded);
-      return;
-    case "effect":
-      add(node.requirements);
-      visit(node.result);
-      return;
-    case "stream":
-      add(node.requirements);
-      visit(node.element);
-      return;
-    case "sink":
-      add(node.requirements);
-      visit(node.result);
-      visit(node.leftover);
-      return;
-    case "function":
-      add(node.requirements);
-      visit(node.result);
-      return;
-    case "provider":
-      add(node.requirements);
-      return;
-    case "primitive":
-    case "literal":
-    case "retry-schedule":
-    case "error":
-      return;
-    default: {
-      const unreachable: never = node;
-      return unreachable;
+    return into;
+  }
+  {
+    const kind_1 = node.kind;
+    if (kind_1 === "named") {
+      const target = isTypeId(node.id) ? table.aliasOf(node.id) : undefined;
+      if (target !== undefined) {
+        into = visit(target);
+      }
+      return into;
+    } else if (kind_1 === "record") {
+      for (const field of node.fields) {
+        into = visit(field.type);
+      }
+      return into;
+    } else if (kind_1 === "array" || kind_1 === "option" || kind_1 === "ref") {
+      into = visit(node.element);
+      return into;
+    } else if (kind_1 === "tuple") {
+      for (const element of node.elements) {
+        into = visit(element);
+      }
+      return into;
+    } else if (kind_1 === "union") {
+      for (const member of node.members) {
+        into = visit(member);
+      }
+      return into;
+    } else if (kind_1 === "schema") {
+      into = add(node.decodeRequirements);
+      into = add(node.encodeRequirements);
+      into = visit(node.decoded);
+      into = visit(node.encoded);
+      return into;
+    } else if (kind_1 === "effect") {
+      into = add(node.requirements);
+      into = visit(node.result);
+      return into;
+    } else if (kind_1 === "stream") {
+      into = add(node.requirements);
+      into = visit(node.element);
+      return into;
+    } else if (kind_1 === "sink") {
+      into = add(node.requirements);
+      into = visit(node.result);
+      into = visit(node.leftover);
+      return into;
+    } else if (kind_1 === "function") {
+      into = add(node.requirements);
+      into = visit(node.result);
+      return into;
+    } else if (kind_1 === "provider") {
+      into = add(node.requirements);
+      return into;
+    } else if (
+      kind_1 === "primitive" || kind_1 === "literal" ||
+      kind_1 === "retry-schedule" || kind_1 === "error"
+    ) {
+      return into;
+    } else {
+      {
+        const unreachable: never = node;
+        return unreachable;
+      }
     }
   }
 }
-
-interface TransferInputs {
+type TransferInputs = {
   readonly table: TypeReader;
   readonly tree: SyntaxTree;
   readonly resolution: ModuleResolution;
   readonly body: BodyTable;
   readonly parameters: readonly (LocalId | undefined)[];
-}
-
-interface Initializer {
+};
+type Initializer = {
   readonly node: NodeId;
   readonly field?: string;
-}
-
+};
 /** Adds locally produced requirements passed to calls or stored through references. */
 export function transferredRequirements(
   inputs: TransferInputs,
   into: Set<CapabilityId>,
-): void {
-  const { table, tree, resolution, body } = inputs;
-  const parameters = new Set(
+): Set<CapabilityId> {
+  const table = inputs.table;
+  const tree = inputs.tree;
+  const resolution = inputs.resolution;
+  const body = inputs.body;
+  let parameters = setFrom(
     inputs.parameters.filter((id): id is LocalId => id !== undefined),
   );
-  const initializers = new Map<LocalId, Initializer>();
-  for (const [node, fact] of body.facts) {
+  let initializers = emptyMap<LocalId, Initializer>();
+  for (const entry of body.facts) {
+    const node = entry[0];
+    const fact = entry[1];
     if (fact.kind === "arrow") {
       for (const parameter of fact.parameters) {
-        if (parameter.id !== undefined) parameters.add(parameter.id);
+        if (parameter.id !== undefined) {
+          parameters = parameters.add(parameter.id);
+        }
       }
       continue;
     }
-    if (fact.kind !== "binding" && fact.kind !== "record-binding") continue;
+    if (fact.kind !== "binding" && fact.kind !== "record-binding") {
+      continue;
+    }
     const init = initOf(tree, node, undefined);
-    if (init === undefined) continue;
+    if (init === undefined) {
+      continue;
+    }
     if (fact.kind === "binding") {
-      if (fact.id !== undefined) initializers.set(fact.id, { node: init });
+      if (fact.id !== undefined) {
+        initializers = initializers.set(fact.id, { node: init });
+      }
       continue;
     }
     for (const field of fact.fields) {
       if (field.binding.id !== undefined) {
-        initializers.set(field.binding.id, { node: init, field: field.name });
+        initializers = initializers.set(field.binding.id, {
+          node: init,
+          field: field.name,
+        });
       }
     }
   }
-
-  const argsOf = (node: NodeId): NodeId[] => {
+  function argsOf(node: NodeId): NodeId[] {
     const args = argNodes(tree, node);
     if (kindOf(tree, node) === SyntaxKind.PipeStage) {
-      const { left } = pipeParts(tree, tree.parents[node]);
-      if (left !== undefined) args.unshift(left);
+      const left = pipeParts(tree, tree.parents[node]).left;
+      if (left !== undefined) {
+        return [left, ...args];
+      }
     }
     return args;
-  };
-
-  const originOf = (start: NodeId): NodeId | undefined => {
+  }
+  function originOf(start: NodeId): NodeId | undefined {
     let node: NodeId | undefined = start;
-    const seen = new Set<NodeId>();
+    let seen = emptySet<NodeId>();
     const fields: string[] = [];
-    while (node !== undefined) {
+    for (const _index of indices(tree.count + 1)) {
+      if (node === undefined) {
+        break;
+      }
       node = unparen(tree, node);
-      if (seen.has(node)) return undefined;
-      seen.add(node);
+      if (seen.has(node)) {
+        return undefined;
+      }
+      seen = seen.add(node);
       const target = resolution.targets.get(node);
       const init = target?.kind === "local"
         ? initializers.get(target.id)
         : undefined;
       if (init !== undefined) {
-        if (init.field !== undefined) fields.push(init.field);
+        if (init.field !== undefined) {
+          fields[fields.length] = init.field;
+        }
         node = init.node;
         continue;
       }
       if (kindOf(tree, node) === SyntaxKind.FieldExpr) {
-        const { base, member: label } = memberAccessParts(tree, node);
+        const parts = memberAccessParts(tree, node);
+        const base = parts.base;
+        const label = parts.member;
         const name = label === undefined ? undefined : nameTextOf(tree, label);
-        if (name === undefined) return node;
-        fields.push(name);
+        if (name === undefined) {
+          return node;
+        }
+        fields[fields.length] = name;
         node = base;
         continue;
       }
@@ -174,7 +213,7 @@ export function transferredRequirements(
           return label !== undefined && nameTextOf(tree, label) === name;
         });
         if (field !== undefined) {
-          fields.pop();
+          fields.length = fields.length - 1;
           const children = kidsOf(tree, field);
           node = kindOf(tree, field) === SyntaxKind.ShorthandField
             ? children[0]
@@ -184,24 +223,32 @@ export function transferredRequirements(
         const spread = entries.find((entry) =>
           kindOf(tree, entry) === SyntaxKind.SpreadField
         );
-        if (spread === undefined) return node;
+        if (spread === undefined) {
+          return node;
+        }
         node = kidsOf(tree, spread)[0];
         continue;
       }
       return node;
     }
     return undefined;
-  };
-
-  const inputOnly = (start: NodeId): boolean => {
+  }
+  function inputOnly(start: NodeId): boolean {
     let node: NodeId | undefined = start;
-    const seen = new Set<NodeId>();
-    while (node !== undefined) {
+    let seen = emptySet<NodeId>();
+    for (const _index of indices(tree.count + 1)) {
+      if (node === undefined) {
+        break;
+      }
       node = originOf(node);
-      if (node === undefined || seen.has(node)) return false;
-      seen.add(node);
+      if (node === undefined || seen.has(node)) {
+        return false;
+      }
+      seen = seen.add(node);
       const target = resolution.targets.get(node);
-      if (target?.kind === "local" && parameters.has(target.id)) return true;
+      if (target?.kind === "local" && parameters.has(target.id)) {
+        return true;
+      }
       if (kindOf(tree, node) === SyntaxKind.FieldExpr) {
         node = kidsOf(tree, node)[0];
       } else if (body.facts.get(node)?.kind === "get-ref") {
@@ -211,36 +258,38 @@ export function transferredRequirements(
       }
     }
     return false;
-  };
-
-  const seenTypes = new Set<TypeRef>();
-  const addType = (node: NodeId): void => {
+  }
+  const seenTypes = emptySet<TypeRef>();
+  function addType(node: NodeId): Set<CapabilityId> {
     const info = body.info.get(node);
     if (info !== undefined) {
-      producedRequirements(table, info.type, into, seenTypes);
+      into = producedRequirements(table, info.type, into, seenTypes);
     }
-  };
-  const addValue = (
+    return into;
+  }
+  function addValue(
     start: NodeId | undefined,
-    trail = new Set<NodeId>(),
-    fallback?: NodeId,
-  ): void => {
-    if (start === undefined || inputOnly(start)) return;
+    trail: ReadonlySet<NodeId>,
+    fallback: NodeId | undefined,
+  ): Set<CapabilityId> {
+    if (start === undefined || inputOnly(start)) {
+      return into;
+    }
     const root = fallback ?? start;
     const origin = originOf(start);
     if (origin === undefined) {
-      addType(root);
-      return;
+      into = addType(root);
+      return into;
     }
     const node = unparen(tree, origin);
     if (trail.has(node)) {
-      addType(root);
-      return;
+      into = addType(root);
+      return into;
     }
-    const nextTrail = new Set(trail);
-    nextTrail.add(node);
-    switch (kindOf(tree, node)) {
-      case SyntaxKind.RecordExpr: {
+    const nextTrail = setFrom([...trail, node]);
+    {
+      const kind_2 = kindOf(tree, node);
+      if (kind_2 === SyntaxKind.RecordExpr) {
         const fields = kidsOf(tree, node);
         let needsFallback = fields.length === 0;
         for (const field of fields) {
@@ -248,54 +297,69 @@ export function transferredRequirements(
           const child = kindOf(tree, field) === SyntaxKind.RecordField
             ? children[1]
             : children[0];
-          if (child === undefined) needsFallback = true;
-          else addValue(child, nextTrail, root);
+          if (child === undefined) {
+            needsFallback = true;
+          } else {
+            into = addValue(child, nextTrail, root);
+          }
         }
-        if (needsFallback) addType(root);
-        return;
-      }
-      case SyntaxKind.ListExpr: {
+        if (needsFallback) {
+          into = addType(root);
+        }
+        return into;
+      } else if (kind_2 === SyntaxKind.ListExpr) {
         const elements = kidsOf(tree, node);
-        if (elements.length === 0) addType(root);
+        if (elements.length === 0) {
+          into = addType(root);
+        }
         for (const element of elements) {
           const value = kindOf(tree, element) === SyntaxKind.SpreadElement
             ? kidsOf(tree, element)[0]
             : element;
-          addValue(value, nextTrail, root);
+          into = addValue(value, nextTrail, root);
         }
-        return;
+        return into;
+      } else if (kind_2 === SyntaxKind.Block) {
+        into = addValue(kidsOf(tree, node).at(-1), nextTrail, root);
+        return into;
+      } else {
+        into = addType(node);
       }
-      case SyntaxKind.Block:
-        addValue(kidsOf(tree, node).at(-1), nextTrail, root);
-        return;
-      default:
-        addType(node);
     }
-  };
-
-  for (const [node, fact] of body.facts) {
+    return into;
+  }
+  for (const entry of body.facts) {
+    const node = entry[0];
+    const fact = entry[1];
     if (fact.kind === "call" || fact.kind === "perform") {
-      for (const arg of argsOf(node)) addValue(arg);
+      for (const arg of argsOf(node)) {
+        into = addValue(arg, emptySet<NodeId>(), undefined);
+      }
     } else if (fact.kind === "set-ref") {
-      addValue(argsOf(node)[1]);
+      into = addValue(argsOf(node)[1], emptySet<NodeId>(), undefined);
     } else if (fact.kind === "update-ref") {
       const callback = argsOf(node)[1];
-      if (callback === undefined || inputOnly(callback)) continue;
+      if (callback === undefined || inputOnly(callback)) {
+        continue;
+      }
       const origin = originOf(callback);
       if (origin === undefined) {
-        addValue(callback);
+        into = addValue(callback, emptySet<NodeId>(), undefined);
         continue;
       }
       if (body.facts.get(origin)?.kind === "arrow") {
-        addValue(arrowBody(tree, origin));
+        into = addValue(arrowBody(tree, origin), emptySet<NodeId>(), undefined);
         continue;
       }
       const info = body.info.get(callback);
-      if (info === undefined) continue;
+      if (info === undefined) {
+        continue;
+      }
       const type = table.node(table.unfold(info.type));
       if (type.kind === "function") {
-        producedRequirements(table, type.result, into, seenTypes);
+        into = producedRequirements(table, type.result, into, seenTypes);
       }
     }
   }
+  return into;
 }

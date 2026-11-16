@@ -83,10 +83,11 @@ function rootOf(ir: ModuleIR, name: string): Expr {
 
 /** The first expression below `root` that satisfies `test`. */
 function find(root: Expr, test: (e: Expr) => boolean): Expr {
-  let found: Expr | undefined;
-  walkExpr(root, (e) => {
-    if (found === undefined && test(e)) found = e;
-  });
+  const found = walkExpr<Expr | undefined>(
+    root,
+    undefined,
+    (found, e) => found === undefined && test(e) ? e : found,
+  );
   assert(found !== undefined, "no expression matches");
   return found;
 }

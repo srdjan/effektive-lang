@@ -1,5 +1,7 @@
 // Validation of the effect builtins: retry, repeat, timeout, sleep, retrySchedule, defer, run, and race.
 
+import type { ValidationPath } from "../report.ts";
+import { emptySet } from "../../runtime.ts";
 import {
   DURATION_ID,
   type Expr,
@@ -37,17 +39,23 @@ import { type Comp, derivedResult, type Out } from "../results.ts";
 export function retry(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "retry" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const job = c.check(e.job, `${path}.job`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "retry");
   if (!Number.isSafeInteger(e.times) || e.times < 0) {
-    c.add(
-      AREA.control,
-      `${path}.times`,
-      `retry needs a finite nonnegative safe integer count, recorded ${e.times}`,
-      e.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.control,
+          `${path}.times`,
+          `retry needs a finite nonnegative safe integer count, recorded ${e.times}`,
+          e.span,
+        ),
+      },
+    };
   }
   if (fn === undefined) return c.poison();
   return derivedResult(
@@ -59,18 +67,24 @@ export function retry(
 export function timeout(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "timeout" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const job = c.check(e.job, `${path}.job`);
   const duration = c.check(e.durationMs, `${path}.durationMs`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "timeout");
   if (!fits(c.env, duration.type, DURATION)) {
-    c.add(
-      AREA.types,
-      `${path}.durationMs`,
-      `timeout needs a Duration, found ${show(duration.type)}`,
-      e.durationMs.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          `${path}.durationMs`,
+          `timeout needs a Duration, found ${show(duration.type)}`,
+          e.durationMs.span,
+        ),
+      },
+    };
   }
   if (fn === undefined) return c.poison();
   return derivedResult(
@@ -87,7 +101,7 @@ export function timeout(
 export function uninterruptible(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "uninterruptible" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const job = c.check(e.job, `${path}.job`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "uninterruptible");
@@ -101,16 +115,22 @@ export function uninterruptible(
 export function sleep(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "sleep" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const duration = c.check(e.durationMs, `${path}.durationMs`);
   if (!fits(c.env, duration.type, DURATION)) {
-    c.add(
-      AREA.types,
-      `${path}.durationMs`,
-      `sleep needs a Duration, found ${show(duration.type)}`,
-      e.durationMs.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          `${path}.durationMs`,
+          `sleep needs a Duration, found ${show(duration.type)}`,
+          e.durationMs.span,
+        ),
+      },
+    };
   }
   return derivedResult(UNIT, combine([duration, EFFECT_ONLY]));
 }
@@ -118,24 +138,36 @@ export function sleep(
 export function log(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "log" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const message = c.check(e.message, `${path}.message`);
   if (!fits(c.env, message.type, STRING)) {
-    c.add(
-      AREA.types,
-      `${path}.message`,
-      `log needs a string message, found ${show(message.type)}`,
-      e.message.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          `${path}.message`,
+          `log needs a string message, found ${show(message.type)}`,
+          e.message.span,
+        ),
+      },
+    };
   }
   if (!LOG_LEVELS.some((level) => level === e.level)) {
-    c.add(
-      AREA.control,
-      `${path}.level`,
-      `log needs a level of ${LOG_LEVELS.join(", ")}, recorded ${e.level}`,
-      e.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.control,
+          `${path}.level`,
+          `log needs a level of ${LOG_LEVELS.join(", ")}, recorded ${e.level}`,
+          e.span,
+        ),
+      },
+    };
   }
   const fields = e.fields === null
     ? undefined
@@ -143,21 +175,35 @@ export function log(
   if (fields !== undefined && e.fields !== null) {
     const record = unfold(c.env, fields.type);
     if (record.kind !== "record") {
-      c.add(
-        AREA.types,
-        `${path}.fields`,
-        `log needs a record of fields, found ${show(fields.type)}`,
-        e.fields.span,
-      );
+      c = {
+        ...c,
+        ctx: {
+          ...c.ctx,
+          report: c.add(
+            AREA.types,
+            `${path}.fields`,
+            `log needs a record of fields, found ${show(fields.type)}`,
+            e.fields.span,
+          ),
+        },
+      };
     } else {
       for (const field of record.fields) {
         if (!dataOnly(c.env, field.type, "value")) {
-          c.add(
-            AREA.types,
-            `${path}.fields`,
-            `log field ${field.name} must be data, found ${show(field.type)}`,
-            e.fields.span,
-          );
+          c = {
+            ...c,
+            ctx: {
+              ...c.ctx,
+              report: c.add(
+                AREA.types,
+                `${path}.fields`,
+                `log field ${field.name} must be data, found ${
+                  show(field.type)
+                }`,
+                e.fields.span,
+              ),
+            },
+          };
         }
       }
     }
@@ -171,24 +217,33 @@ export function log(
 export function randomInt(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "random-int" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const min = c.check(e.min, `${path}.min`);
   const max = c.check(e.max, `${path}.max`);
   for (
-    const [name, operand, child] of [["min", min, e.min], [
+    const item of [["min", min, e.min], [
       "max",
       max,
       e.max,
     ]] as const
   ) {
+    const name = item[0];
+    const operand = item[1];
+    const child = item[2];
     if (!fits(c.env, operand.type, INT)) {
-      c.add(
-        AREA.types,
-        `${path}.${name}`,
-        `randomInt needs an int ${name}, found ${show(operand.type)}`,
-        child.span,
-      );
+      c = {
+        ...c,
+        ctx: {
+          ...c.ctx,
+          report: c.add(
+            AREA.types,
+            `${path}.${name}`,
+            `randomInt needs an int ${name}, found ${show(operand.type)}`,
+            child.span,
+          ),
+        },
+      };
     }
   }
   return derivedResult(INT, combine([min, max, EFFECT_ONLY]));
@@ -197,46 +252,70 @@ export function randomInt(
 export function retrySchedule(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "retry-schedule" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const step = c.check(e.step, `${path}.step`);
   const fn = asFunction(c.env, step.type);
   if (fn === undefined || fn.parameters.length !== 2) {
-    c.add(
-      AREA.control,
-      `${path}.step`,
-      "retry schedule needs a two-parameter callback",
-      e.step.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.control,
+          `${path}.step`,
+          "retry schedule needs a two-parameter callback",
+          e.step.span,
+        ),
+      },
+    };
     return c.poison();
   }
   const error = unfold(c.env, fn.parameters[0]);
   if (error.kind !== "named" || !c.env.errors.has(error.id)) {
-    c.add(
-      AREA.types,
-      `${path}.step`,
-      "retry schedule needs a declared error parameter",
-      e.step.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          `${path}.step`,
+          "retry schedule needs a declared error parameter",
+          e.step.span,
+        ),
+      },
+    };
   }
   if (
     !fits(c.env, INT, fn.parameters[1]) ||
     !fits(c.env, fn.result, { kind: "option", element: DURATION })
   ) {
-    c.add(
-      AREA.types,
-      `${path}.step`,
-      "retry schedule needs an Int attempt and Option<Duration> result",
-      e.step.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          `${path}.step`,
+          "retry schedule needs an Int attempt and Option<Duration> result",
+          e.step.span,
+        ),
+      },
+    };
   }
   if (!isQuiet(invocationOf(fn))) {
-    c.add(
-      AREA.control,
-      `${path}.step`,
-      "retry schedule callback must be pure",
-      e.step.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.control,
+          `${path}.step`,
+          "retry schedule callback must be pure",
+          e.step.span,
+        ),
+      },
+    };
   }
   return derivedResult(
     { kind: "retry-schedule", error: fn.parameters[0] },
@@ -251,11 +330,16 @@ const OPTION_KEYS: Readonly<Record<"retry" | "repeat", readonly string[]>> = {
 };
 
 /** What `optionExtras` needs to know about a retry or a repeat call. */
-interface OptionsSpec {
+type OptionsSpec = {
   readonly name: "retry" | "repeat";
   /** The values that a schedule and a predicate must accept, with display labels. */
   readonly inputs: readonly { readonly label: string; readonly type: Type }[];
-}
+};
+
+type OptionExtrasResult = {
+  readonly core: ValidatorCore;
+  readonly extras: readonly Active[];
+};
 
 /**
  * Checks the options record of `retry` or `repeat` and returns the effects that
@@ -267,42 +351,69 @@ function optionExtras(
   expr: Expr,
   path: string,
   spec: OptionsSpec,
-): readonly Active[] {
+): OptionExtrasResult {
   const call = spec.name;
   const extras: Active[] = [];
-  const bad = (field: string, what: string): void =>
-    c.add(AREA.control, field, what, expr.span);
-  const accepts = (input: Type, at: string, what: string): void => {
-    for (const { label, type } of spec.inputs) {
-      if (!fits(c.env, type, input)) {
-        bad(at, `${what} does not accept ${label}`);
+  function bad(
+    current: ValidatorCore,
+    field: string,
+    what: string,
+  ): ValidatorCore {
+    return {
+      ...current,
+      ctx: {
+        ...current.ctx,
+        report: current.add(
+          AREA.control,
+          field,
+          what,
+          expr.span,
+        ),
+      },
+    };
+  }
+  function accepts(
+    current: ValidatorCore,
+    input: Type,
+    at: string,
+    what: string,
+  ): ValidatorCore {
+    for (const item of spec.inputs) {
+      const label = item.label;
+      const type = item.type;
+      if (!fits(current.env, type, input)) {
+        current = bad(current, at, `${what} does not accept ${label}`);
       }
     }
-  };
+    return current;
+  }
   if (expr.kind !== "record") {
-    bad(`${path}.options`, `${call} needs an options record`);
-    return extras;
+    c = bad(c, `${path}.options`, `${call} needs an options record`);
+    return { core: c, extras: extras };
   }
   const shape = unfold(c.env, options.type);
-  const typeOf = (name: string): Type | undefined =>
-    shape.kind === "record"
+  function typeOf(name: string): Type | undefined {
+    return shape.kind === "record"
       ? shape.fields.find((f) => f.name === name)?.type
       : undefined;
-  if (expr.fields.length === 0) {
-    bad(`${path}.options`, `${call} needs at least one option`);
   }
-  const seen = new Set<string>();
-  expr.fields.forEach((field, i) => {
+  if (expr.fields.length === 0) {
+    c = bad(c, `${path}.options`, `${call} needs at least one option`);
+  }
+  let seen = emptySet<string>();
+  for (const entry of expr.fields.entries()) {
+    const field = entry[1];
+    const i = entry[0];
     const at = `${path}.options.fields[${i}]`;
     if (!OPTION_KEYS[call].includes(field.name)) {
-      bad(at, `${call} has no option ${field.name}`);
-      return;
+      c = bad(c, at, `${call} has no option ${field.name}`);
+      continue;
     }
     if (seen.has(field.name)) {
-      bad(at, `${call} option ${field.name} appears twice`);
-      return;
+      c = bad(c, at, `${call} option ${field.name} appears twice`);
+      continue;
     }
-    seen.add(field.name);
+    seen = seen.add(field.name);
     const type = typeOf(field.name);
     if (field.name === "times") {
       const v = field.value;
@@ -310,7 +421,8 @@ function optionExtras(
         v.kind !== "literal" || typeof v.value !== "number" ||
         !Number.isSafeInteger(v.value) || v.value < 0
       ) {
-        bad(
+        c = bad(
+          c,
           `${at}.value`,
           `${call} needs a finite nonnegative safe integer literal for times`,
         );
@@ -318,41 +430,47 @@ function optionExtras(
     } else if (field.name === "schedule") {
       const policy = type === undefined ? undefined : unfold(c.env, type);
       if (policy?.kind === "retry-schedule") {
-        accepts(policy.error, at, `${call} schedule`);
+        c = accepts(c, policy.error, at, `${call} schedule`);
       } else {
-        bad(at, `${call} needs a retry schedule in schedule`);
+        c = bad(c, at, `${call} needs a retry schedule in schedule`);
       }
     } else {
       const cb = type === undefined ? undefined : asFunction(c.env, type);
       if (cb === undefined || cb.parameters.length !== 1) {
-        bad(at, `${call} ${field.name} needs a one-parameter function`);
-        return;
+        c = bad(
+          c,
+          at,
+          `${call} ${field.name} needs a one-parameter function`,
+        );
+        continue;
       }
-      accepts(cb.parameters[0], at, `${call} ${field.name}`);
+      c = accepts(c, cb.parameters[0], at, `${call} ${field.name}`);
       if (!fits(c.env, cb.result, BOOLEAN)) {
-        bad(at, `${call} ${field.name} needs a boolean result`);
+        c = bad(c, at, `${call} ${field.name} needs a boolean result`);
       }
-      extras.push(invocationOf(cb));
+      extras[extras.length] = invocationOf(cb);
     }
-  });
-  return extras;
+  }
+  return { core: c, extras: extras };
 }
 
 export function retryWithSchedule(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "retry-with-schedule" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const job = c.check(e.job, `${path}.job`);
   const options = c.check(e.options, `${path}.options`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "retry");
-  const extras = optionExtras(c, options, e.options, path, {
+  const checkedOptions = optionExtras(c, options, e.options, path, {
     name: "retry",
     inputs: (fn?.effects.failures ?? []).map((id) => ({
       label: id,
-      type: { kind: "named", id },
+      type: { kind: "named", id: id },
     })),
   });
+  c = checkedOptions.core;
+  const extras = checkedOptions.extras;
   if (fn === undefined) return c.poison();
   return derivedResult(
     fn.result,
@@ -363,19 +481,22 @@ export function retryWithSchedule(
 export function repeat(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "repeat" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const job = c.check(e.job, `${path}.job`);
   const options = e.options === null
     ? undefined
     : c.check(e.options, `${path}.options`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "repeat");
-  const extras = options === undefined || e.options === null || fn === undefined
-    ? []
-    : optionExtras(c, options, e.options, path, {
+  let extras: readonly Active[] = [];
+  if (options !== undefined && e.options !== null && fn !== undefined) {
+    const checkedOptions = optionExtras(c, options, e.options, path, {
       name: "repeat",
       inputs: [{ label: show(fn.result), type: fn.result }],
     });
+    c = checkedOptions.core;
+    extras = checkedOptions.extras;
+  }
   if (fn === undefined) return c.poison();
   return derivedResult(
     options === undefined ? NEVER : fn.result,
@@ -392,7 +513,7 @@ export function repeat(
 export function defer(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "defer" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const job = c.check(e.job, `${path}.job`);
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "defer");
@@ -407,19 +528,25 @@ export function defer(
 export function run(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "run" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const value = c.check(e.value, `${path}.value`);
   const type = unfold(c.env, value.type);
   if (type.kind !== "effect") {
-    c.add(
-      AREA.control,
-      `${path}.value`,
-      `run needs an Effect value, but the expression has type ${
-        show(value.type)
-      }`,
-      e.value.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.control,
+          `${path}.value`,
+          `run needs an Effect value, but the expression has type ${
+            show(value.type)
+          }`,
+          e.value.span,
+        ),
+      },
+    };
     return c.poison();
   }
   return derivedResult(
@@ -434,38 +561,71 @@ export function run(
 export function race(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "race" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const left = c.check(e.left, `${path}.left`);
   const right = c.check(e.right, `${path}.right`);
   const a = unfold(c.env, left.type);
   const b = unfold(c.env, right.type);
   if (a.kind !== "effect" || b.kind !== "effect") {
-    c.add(AREA.types, path, "race needs two Effect values", e.span);
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          path,
+          "race needs two Effect values",
+          e.span,
+        ),
+      },
+    };
     return c.poison();
   }
   const aFitsB = fits(c.env, a.result, b.result);
   const bFitsA = fits(c.env, b.result, a.result);
   if (!aFitsB && !bFitsA) {
-    c.add(AREA.types, path, "race needs compatible success types", e.span);
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          path,
+          "race needs compatible success types",
+          e.span,
+        ),
+      },
+    };
   }
   return derivedResult({
     kind: "effect",
     result: aFitsB ? b.result : a.result,
-    effects: unionEffects(a.effects, b.effects),
+    effects: unionEffects([a.effects, b.effects]),
   }, combine([left, right]));
 }
 
 export function raceAll(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "race-all" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const jobs = c.check(e.jobs, `${path}.jobs`);
   const array = unfold(c.env, jobs.type);
   const job = array.kind === "array" ? unfold(c.env, array.element) : undefined;
   if (job?.kind !== "effect") {
-    c.add(AREA.types, path, "race needs an array of Effect values", e.span);
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          path,
+          "race needs an array of Effect values",
+          e.span,
+        ),
+      },
+    };
     return c.poison();
   }
   return derivedResult(

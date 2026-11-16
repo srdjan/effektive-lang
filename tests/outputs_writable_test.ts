@@ -6,7 +6,7 @@ import { Program } from "../src/core/mod.ts";
 import { planWrites } from "../src/host/outputs.ts";
 
 function writable(files: Readonly<Record<string, string>>): string[] {
-  const revision = new Program().update({
+  const revision = Program(undefined).update({
     set: { "effektive.json": "{}", ...files },
   });
   if (!revision.ok) throw new Error(JSON.stringify(revision));
@@ -30,7 +30,7 @@ Deno.test("planWrites writes the companion of a host interface target", () => {
     Deno.readTextFileSync(
       new URL(`../fixtures/examples/${path}`, import.meta.url),
     );
-  const revision = new Program().update({
+  const revision = Program(undefined).update({
     set: {
       "effektive.json": read("effektive.json"),
       "users-service.eff": read("users-service.eff"),
@@ -67,7 +67,7 @@ Deno.test("planWrites writes no module whose imported host interface has an erro
     Deno.readTextFileSync(
       new URL(`../fixtures/examples/${path}`, import.meta.url),
     );
-  const revision = new Program().update({
+  const revision = Program(undefined).update({
     set: {
       "effektive.json": read("effektive.json"),
       "users-service.eff": read("users-service.eff"),

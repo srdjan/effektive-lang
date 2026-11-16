@@ -1,6 +1,15 @@
 import { assertEquals } from "@std/assert";
-import type { Lexed } from "../src/core/lex.ts";
-import { lex, TokenKind, TriviaKind } from "../src/core/frontend.ts";
+import { isDurationText, type Lexed, numberValue } from "../src/core/lex.ts";
+import { lex, TokenKind, tokenKind, TriviaKind } from "../src/core/frontend.ts";
+
+Deno.test("tokenKind returns defined kinds and rejects invalid indices", () => {
+  assertEquals(tokenKind(0), 0);
+  assertEquals(tokenKind(49), 49);
+  assertEquals(tokenKind(-1), undefined);
+  assertEquals(tokenKind(50), undefined);
+  assertEquals(tokenKind(1.5), undefined);
+  assertEquals(tokenKind(NaN), undefined);
+});
 
 function kindsOf(text: string): TokenKind[] {
   const lexed = lex("t.eff", text);
@@ -275,4 +284,30 @@ Deno.test("with is a keyword token and not a reserved-word diagnostic", () => {
   assertEquals(kindsOf("with"), [TokenKind.KwWith, TokenKind.Eof]);
   assertEquals(codes("with"), []);
   assertEquals(kindsOf("uses"), [TokenKind.Ident, TokenKind.Eof]);
+});
+
+Deno.test("plain multi-digit numbers do not have a duration suffix", () => {
+  assertEquals(isDurationText("42"), false);
+  assertEquals(numberValue("42"), 42);
+  assertEquals(isDurationText("42ms"), true);
+  assertEquals(numberValue("42ms"), 42);
+});
+
+Deno.test("an unterminated quote stops at the input end", () => {
+  const result = lex("t.eff", '"');
+  assertEquals([...result.starts], [0, 1]);
+  assertEquals([...result.ends], [1, 1]);
+  assertEquals(result.diagnostics[0].span, {
+    source: "t.eff",
+    start: 0,
+    end: 1,
+  });
+});
+
+Deno.test("a line comment stops at the input end", () => {
+  const result = lex("t.eff", "//");
+  assertEquals([...result.trivia.starts], [0]);
+  assertEquals([...result.trivia.ends], [2]);
+  assertEquals([...result.starts], [2]);
+  assertEquals([...result.ends], [2]);
 });

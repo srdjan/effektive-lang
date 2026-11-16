@@ -178,7 +178,7 @@ Deno.test("editor tooling completes and highlights pure", () => {
 type Int = int
 export const apply = (callback: pure (value: Int) => Int): Int => callback(1)
 `;
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "main.eff": text },
   });
   assert(loaded.ok, JSON.stringify(loaded));
@@ -196,7 +196,7 @@ export const apply = (callback: pure (value: Int) => Int): Int => callback(1)
   );
 
   const bindingText = "type pure = int\nexport const value: pu = 1\n";
-  const binding = new Program("").update({
+  const binding = Program("").update({
     set: { "effektive.json": "{}", "main.eff": bindingText },
   });
   assert(binding.ok, JSON.stringify(binding));

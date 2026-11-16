@@ -12,6 +12,7 @@ function refine(declaration: string, allowSyntaxErrors = false) {
     }),
     "",
     ["m.eff"],
+    undefined,
   );
   assert(analysis.ok, JSON.stringify(analysis));
   if (!allowSyntaxErrors) assertEquals(analysis.value.diagnostics, []);
@@ -24,7 +25,7 @@ function refine(declaration: string, allowSyntaxErrors = false) {
       info,
       resolution,
       "m",
-      new TypeTable(),
+      TypeTable(),
       new Map(),
     ),
   };

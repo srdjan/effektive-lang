@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Runs emitted TypeScript against the strict target configuration.
 
 import { assert, assertEquals } from "@std/assert";

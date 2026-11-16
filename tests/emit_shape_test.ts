@@ -91,14 +91,14 @@ Deno.test("childrenOf finds the nodes that a reflective walk finds", () => {
         ? declaration.value
         : undefined;
       if (root === undefined) continue;
-      walkExpr(root, (node) => {
+      nodes = walkExpr(root, nodes, (count, node) => {
         const typed = childrenOf(node);
         const reflected = reflectiveChildren(node);
         assertEquals(typed.length, reflected.length, node.kind);
         for (const child of reflected) {
           assert(typed.includes(child), `${node.kind} lacks ${child.kind}`);
         }
-        nodes += 1;
+        return count + 1;
       });
     }
   }
@@ -192,7 +192,7 @@ Deno.test("a structural node has no evaluated children, and a call has all", () 
 });
 
 Deno.test("the table marks the 27 leaf kinds", () => {
-  const kinds = new Set<string>();
+  let kinds = new Set<string>();
   for (const ir of irOfExamplesAndEmitFixtures()) {
     for (const declaration of ir.declarations) {
       const root = declaration.kind === "function"
@@ -201,9 +201,11 @@ Deno.test("the table marks the 27 leaf kinds", () => {
         ? declaration.value
         : undefined;
       if (root === undefined) continue;
-      walkExpr(root, (node) => {
-        if (isLeafExpr(node)) kinds.add(node.kind);
-      });
+      kinds = walkExpr(
+        root,
+        kinds,
+        (kinds, node) => isLeafExpr(node) ? kinds.add(node.kind) : kinds,
+      );
     }
   }
   // The fixtures reach part of the 27 kinds. Each reached kind is in the list.

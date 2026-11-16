@@ -16,11 +16,13 @@
 // file again.
 
 import {
+  createTypeScriptOutputs,
   type HoverBackend,
   stepOutput,
-  TypeScriptOutputs,
+  type TypeScriptOutputs,
 } from "../../src/core/typescript.ts";
 import {
+  caught,
   type ConfigError,
   describeConfigError,
   errorMessage,
@@ -31,37 +33,40 @@ import {
   type Revision,
   type Severity,
 } from "../../src/core/mod.ts";
+import { emptyMap, mapFrom } from "../../src/core/frontend.ts";
 
 /** The part of `Program` that the facade uses. A test supplies a double. */
-export interface ProgramPort {
-  update(changes: ProgramChanges): Result<Revision, ConfigError>;
-}
+export type ProgramPort = {
+  readonly update: (
+    changes: ProgramChanges,
+  ) => Result<Revision, ConfigError>;
+};
 
-interface PlaygroundPorts {
+type PlaygroundPorts = {
   /** The clock, in milliseconds. `performance.now` fits. */
   readonly now: () => number;
-  /** The program. The default is `new Program("")`. */
+  /** The program. The default is `Program("")`. */
   readonly program?: ProgramPort;
   readonly outputs?: TypeScriptOutputs;
-}
+};
 
 /** One diagnostic of one file. Offsets are UTF-16 code units, `to` exclusive. */
-export interface PlaygroundDiagnostic {
+export type PlaygroundDiagnostic = {
   readonly from: number;
   readonly to: number;
   readonly severity: Severity;
   readonly code: string;
   readonly message: string;
-}
+};
 
 /** The generated TypeScript of one `.eff` or `.effi` file. */
-interface PlaygroundOutput {
+type PlaygroundOutput = {
   readonly text: string;
   /** True when the text comes from an earlier revision, because this one has errors. */
   readonly stale: boolean;
-}
+};
 
-export interface PlaygroundResult {
+export type PlaygroundResult = {
   /** Every file of the revision, keyed by root-relative path. A clean file has an empty list. */
   readonly diagnostics: Readonly<
     Record<string, readonly PlaygroundDiagnostic[]>
@@ -70,20 +75,20 @@ export interface PlaygroundResult {
   readonly outputs: Readonly<Record<string, PlaygroundOutput | null>>;
   /** The time of the update and the emits, from `ports.now`. */
   readonly elapsedMs: number;
-}
+};
 
 export type PlaygroundError =
   | { readonly tag: "config"; readonly message: string }
   | { readonly tag: "internal"; readonly message: string };
 
 /** The answer of `hover`. The offsets are in the file that the hover names. */
-export interface PlaygroundHover {
+export type PlaygroundHover = {
   readonly from: number;
   readonly to: number;
   readonly contract: string;
   /** The backend type, `unavailable` while the module has errors, or undefined. */
   readonly backend: HoverBackend | undefined;
-}
+};
 
 export interface Playground {
   /** Sends every file and returns the first result. Later calls send every file again. */
@@ -104,13 +109,15 @@ function diagnosticsOf(
   for (const path of revision.sourceTexts().keys()) result[path] = [];
   for (const diagnostic of revision.diagnostics) {
     const path = diagnostic.span.source;
-    (result[path] ??= []).push({
+    const previous = result[path] ?? [];
+    previous[previous.length] = {
       from: diagnostic.span.start,
       to: diagnostic.span.end,
       severity: diagnostic.severity,
       code: diagnostic.code,
       message: diagnostic.message,
-    });
+    };
+    result[path] = previous;
   }
   return result;
 }
@@ -119,63 +126,77 @@ export function createPlayground(
   files: Readonly<Record<string, string>>,
   ports: PlaygroundPorts,
 ): Playground {
-  const outputCache = ports.outputs ?? new TypeScriptOutputs();
-  const program: ProgramPort = ports.program ?? new Program("");
-  const texts = new Map<string, string>(Object.entries(files));
+  const outputCache = ports.outputs ?? createTypeScriptOutputs();
+  const program: ProgramPort = ports.program ?? Program("");
+  let texts = mapFrom<string, string>(Object.entries(files));
   /** The text of the newest emit that succeeded, by source path. */
-  const lastGoodText = new Map<string, string>();
+  let lastGoodText = emptyMap<string, string>();
   let sent = false;
   let lastGood: Revision | undefined;
+
+  function compile(
+    changed: string | undefined,
+    started: number,
+  ): Result<PlaygroundResult, PlaygroundError> {
+    const changes: ProgramChanges = sent && changed !== undefined
+      ? { set: mapFrom([[changed, texts.get(changed) ?? ""]]) }
+      : { set: mapFrom(texts) };
+    const updated = program.update(changes);
+    sent = true;
+    if (!updated.ok) {
+      return {
+        ok: false,
+        error: { tag: "config", message: describeConfigError(updated.error) },
+      };
+    }
+    const revision = updated.value;
+    const outputs: Record<string, PlaygroundOutput | null> = {};
+    for (const info of revision.moduleInfos()) {
+      const path = info.path;
+      const step = stepOutput(
+        lastGoodText.get(path),
+        outputCache.emitted(revision, info.name),
+      );
+      if (step.lastGood !== undefined) {
+        lastGoodText = lastGoodText.set(path, step.lastGood);
+      }
+      outputs[path] = step.output;
+    }
+    const diagnostics = diagnosticsOf(revision);
+    lastGood = revision;
+    return {
+      ok: true,
+      value: {
+        diagnostics: diagnostics,
+        outputs: outputs,
+        elapsedMs: ports.now() - started,
+      },
+    };
+  }
 
   function run(
     changed: string | undefined,
   ): Result<PlaygroundResult, PlaygroundError> {
     lastGood = undefined;
     const started = ports.now();
-    try {
-      const changes: ProgramChanges = sent && changed !== undefined
-        ? { set: new Map([[changed, texts.get(changed) ?? ""]]) }
-        : { set: new Map(texts) };
-      const updated = program.update(changes);
-      sent = true;
-      if (!updated.ok) {
-        return {
-          ok: false,
-          error: { tag: "config", message: describeConfigError(updated.error) },
-        };
-      }
-      const revision = updated.value;
-      const outputs: Record<string, PlaygroundOutput | null> = {};
-      for (const { path, name } of revision.moduleInfos()) {
-        const step = stepOutput(
-          lastGoodText.get(path),
-          outputCache.emitted(revision, name),
-        );
-        if (step.lastGood !== undefined) lastGoodText.set(path, step.lastGood);
-        outputs[path] = step.output;
-      }
-      const diagnostics = diagnosticsOf(revision);
-      lastGood = revision;
-      return {
-        ok: true,
-        value: { diagnostics, outputs, elapsedMs: ports.now() - started },
-      };
-    } catch (thrown) {
+    const compiled = caught(() => compile(changed, started));
+    if (!compiled.ok) {
       sent = false;
       return {
         ok: false,
-        error: { tag: "internal", message: errorMessage(thrown) },
+        error: { tag: "internal", message: errorMessage(compiled.error) },
       };
     }
+    return compiled.value;
   }
 
   return {
     start: () => run(undefined),
-    update(path, text) {
-      texts.set(path, text);
+    update: (path, text) => {
+      texts = texts.set(path, text);
       return run(path);
     },
-    hover(path, offset) {
+    hover: (path, offset) => {
       if (lastGood === undefined) return undefined;
       const hit = hoverAt(lastGood, path, offset, outputCache);
       if (hit === undefined) return undefined;

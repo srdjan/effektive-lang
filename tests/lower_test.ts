@@ -463,12 +463,13 @@ Deno.test("equal closed builtin types share one identity", () => {
   for (const id of exported) {
     assert(/^value:m#\$builtin\/(map|fold|filter)\/[0-9a-f]{12}$/.test(id), id);
   }
-  const used: string[] = [];
+  let used: string[] = [];
   for (const body of bodies(ir)) {
-    walkExpr(body, (e) => {
+    used = walkExpr(body, used, (references, e) => {
       if (e.kind === "call" && e.callee.kind === "reference") {
-        used.push(e.callee.target);
+        references.push(e.callee.target);
       }
+      return references;
     });
   }
   assertEquals(used.length, 4);
@@ -596,20 +597,20 @@ Deno.test("every expression kind and pattern kind lowers", () => {
       lowered(examples(), m)
     ),
   ];
-  const kinds = new Set<string>();
-  const patterns = new Set<string>();
+  let reached = { kinds: new Set<string>(), patterns: new Set<string>() };
   for (const ir of all) {
     for (const body of bodies(ir)) {
-      walkExpr(body, (e) => {
-        kinds.add(e.kind);
+      reached = walkExpr(body, reached, (reached, e) => {
+        reached.kinds.add(e.kind);
         if (e.kind === "match") {
-          for (const arm of e.arms) patterns.add(arm.pattern.kind);
+          for (const arm of e.arms) reached.patterns.add(arm.pattern.kind);
         }
+        return reached;
       });
     }
   }
   assertEquals(
-    [...kinds].sort(),
+    [...reached.kinds].sort(),
     [
       "binary",
       "block",
@@ -634,7 +635,7 @@ Deno.test("every expression kind and pattern kind lowers", () => {
     ],
   );
   assertEquals(
-    [...patterns].sort(),
+    [...reached.patterns].sort(),
     ["duration", "error", "literal", "none", "some", "tag", "wildcard"],
   );
   const text = serializeModule(wide);

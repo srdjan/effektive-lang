@@ -33,8 +33,16 @@ import {
   PARSER_CHECKED_WORDS,
   type ParserCheckedWord,
   TokenKind,
+  tokenKind,
 } from "./lex.ts";
 import { fileModeOf } from "./paths.ts";
+import {
+  byteArrayFrom,
+  int32Array,
+  int32ArrayFrom,
+  uint32ArrayFrom,
+} from "./runtime.ts";
+import { panic } from "./source.ts";
 import {
   type FileMode,
   type NodeId,
@@ -44,25 +52,29 @@ import {
   type TypeSlotKind,
 } from "./syntax.ts";
 
-export interface ParseResult {
+export type ParseResult = {
   readonly tree: SyntaxTree;
   /** Lexer and parser diagnostics, sorted and without duplicates. */
   readonly diagnostics: readonly Diagnostic[];
-}
+};
+
+export type ParseSource = string;
+export type ParseText = string;
 
 export function parse(
-  source: string,
-  text: string,
-  mode: FileMode = fileModeOf(source),
+  source: ParseSource,
+  text: ParseText,
+  mode: FileMode | undefined,
 ): ParseResult {
+  const resolvedMode = mode ?? fileModeOf(source);
   const lexed = lex(source, text);
-  const parser = new Parser(source, text, mode, lexed);
+  const parser = createParser(source, text, resolvedMode, lexed);
   const tree = parser.run();
   const diagnostics = normalizeDiagnostics([
     ...lexed.diagnostics,
-    ...parser.diagnostics,
+    ...parser.diagnostics(),
   ]);
-  return { tree, diagnostics };
+  return { tree: tree, diagnostics: diagnostics };
 }
 
 type Group = { readonly sig: boolean; readonly unmatched: number };
@@ -70,553 +82,575 @@ type Group = { readonly sig: boolean; readonly unmatched: number };
 /** Deepest nesting of expressions and types that the parser accepts. A parenthesis counts twice. */
 const MAX_NESTING = 512;
 
-function binaryPrecedence(k: TokenKind): number {
-  switch (k) {
-    case TokenKind.PipePipe:
-      return 1;
-    case TokenKind.AmpAmp:
-      return 2;
-    case TokenKind.EqEqEq:
-    case TokenKind.BangEqEq:
-      return 3;
-    case TokenKind.Lt:
-    case TokenKind.LtEq:
-    case TokenKind.Gt:
-    case TokenKind.GtEq:
-      return 4;
-    case TokenKind.Plus:
-    case TokenKind.Minus:
-      return 5;
-    case TokenKind.Star:
-    case TokenKind.Slash:
-    case TokenKind.Percent:
-      return 6;
-    default:
-      return 0;
-  }
-}
+type Parser = {
+  readonly diagnostics: () => readonly Diagnostic[];
+  readonly run: () => SyntaxTree;
+};
 
-/** For each opening bracket, the index of its closing token, or -1. */
-function matchBrackets(kinds: Uint8Array, count: number): Int32Array {
-  const match = new Int32Array(count).fill(-1);
-  const parens: number[] = [];
-  const braces: number[] = [];
-  const brackets: number[] = [];
-  for (let i = 0; i < count; i++) {
-    switch (kinds[i]) {
-      case TokenKind.LParen:
-        parens.push(i);
-        break;
-      case TokenKind.LBrace:
-        braces.push(i);
-        break;
-      case TokenKind.LBracket:
-        brackets.push(i);
-        break;
-      case TokenKind.RParen: {
+function createParser(
+  source: ParseSource,
+  text: ParseText,
+  mode: FileMode,
+  lexed: Lexed,
+): Parser {
+  const parserDiagnostics: Diagnostic[] = [];
+  const parserKinds = lexed.kinds;
+  const parserStarts = lexed.starts;
+  const parserEnds = lexed.ends;
+  let parserPos = 0;
+  let parserSig = true;
+  let parserUnmatched = 0;
+  let parserDepth = 0;
+  let parserLastErrorPos = -1;
+  let parserLastErrorStart = -1;
+  let parserLastErrorEnd = -1;
+  const parserNodeKinds: number[] = [];
+  const parserNodeStarts: number[] = [];
+  const parserNodeEnds: number[] = [];
+  const parserNodeParents: number[] = [];
+  const parserNodeTokens: number[] = [];
+  const parserNodeChildStart: number[] = [];
+  const parserNodeChildEnd: number[] = [];
+  const parserFlat: number[] = [];
+  const parserStack: NodeId[][] = [];
+  const parserSource = source;
+  const parserText = text;
+  const parserMode = mode;
+  const parserLexed = lexed;
+  let owner: Parser;
+
+  function binaryPrecedence(k: TokenKind | undefined): number {
+    if (k === TokenKind.PipePipe) return 1;
+    if (k === TokenKind.AmpAmp) return 2;
+    if (k === TokenKind.EqEqEq || k === TokenKind.BangEqEq) return 3;
+    if (
+      k === TokenKind.Lt || k === TokenKind.LtEq || k === TokenKind.Gt ||
+      k === TokenKind.GtEq
+    ) return 4;
+    if (k === TokenKind.Plus || k === TokenKind.Minus) return 5;
+    if (
+      k === TokenKind.Star || k === TokenKind.Slash || k === TokenKind.Percent
+    ) return 6;
+    return 0;
+  }
+
+  function isLogicalToken(kind: number): boolean {
+    return kind === TokenKind.AmpAmp || kind === TokenKind.PipePipe;
+  }
+
+  /** For each opening bracket, the index of its closing token, or -1. */
+  function matchBrackets(kinds: Uint8Array, count: number): Int32Array {
+    const match = int32Array(count).fill(-1);
+    const parens: number[] = [];
+    const braces: number[] = [];
+    const brackets: number[] = [];
+    let index = 0;
+    for (const kind of kinds) {
+      if (kind === TokenKind.LParen) {
+        parens[parens.length] = index;
+      } else if (kind === TokenKind.LBrace) {
+        braces[braces.length] = index;
+      } else if (kind === TokenKind.LBracket) {
+        brackets[brackets.length] = index;
+      } else if (kind === TokenKind.RParen) {
         const open = parens.pop();
-        if (open !== undefined) match[open] = i;
-        break;
-      }
-      case TokenKind.RBrace: {
+        if (open !== undefined) match[open] = index;
+      } else if (kind === TokenKind.RBrace) {
         const open = braces.pop();
-        if (open !== undefined) match[open] = i;
-        break;
-      }
-      case TokenKind.RBracket: {
+        if (open !== undefined) match[open] = index;
+      } else if (kind === TokenKind.RBracket) {
         const open = brackets.pop();
-        if (open !== undefined) match[open] = i;
-        break;
+        if (open !== undefined) match[open] = index;
       }
+      index = index + 1;
     }
-  }
-  return match;
-}
-
-class Parser {
-  readonly diagnostics: Diagnostic[] = [];
-
-  private readonly kinds: Uint8Array;
-  private readonly starts: Uint32Array;
-  private readonly ends: Uint32Array;
-  private readonly match: Int32Array;
-
-  private pos = 0;
-  private sig = true;
-  private unmatched = 0;
-  private depth = 0;
-  private lastErrorPos = -1;
-  private lastErrorStart = -1;
-  private lastErrorEnd = -1;
-
-  private readonly nodeKinds: number[] = [];
-  private readonly nodeStarts: number[] = [];
-  private readonly nodeEnds: number[] = [];
-  private readonly nodeParents: number[] = [];
-  private readonly nodeTokens: number[] = [];
-  private readonly nodeChildStart: number[] = [];
-  private readonly nodeChildEnd: number[] = [];
-  private readonly flat: number[] = [];
-  private readonly stack: NodeId[][] = [];
-
-  constructor(
-    private readonly source: string,
-    private readonly text: string,
-    private readonly mode: FileMode,
-    private readonly lexed: Lexed,
-  ) {
-    this.kinds = lexed.kinds;
-    this.starts = lexed.starts;
-    this.ends = lexed.ends;
-    this.match = matchBrackets(lexed.kinds, lexed.count);
+    return match;
   }
 
-  run(): SyntaxTree {
-    const root = this.parseModule();
-    this.nodeStarts[root] = 0;
-    this.nodeEnds[root] = this.text.length;
+  const parserMatch = matchBrackets(lexed.kinds, lexed.count);
+
+  function parserRun(): SyntaxTree {
+    const root = parserParseModule();
+    parserNodeStarts[root] = 0;
+    parserNodeEnds[root] = parserText.length;
     return {
-      source: this.source,
-      text: this.text,
-      mode: this.mode,
-      lexed: this.lexed,
-      root,
-      count: this.nodeKinds.length,
-      kinds: Uint8Array.from(this.nodeKinds),
-      starts: Uint32Array.from(this.nodeStarts),
-      ends: Uint32Array.from(this.nodeEnds),
-      parents: Int32Array.from(this.nodeParents),
-      tokens: Int32Array.from(this.nodeTokens),
-      childStart: Uint32Array.from(this.nodeChildStart),
-      childEnd: Uint32Array.from(this.nodeChildEnd),
-      children: Uint32Array.from(this.flat),
+      source: parserSource,
+      text: parserText,
+      mode: parserMode,
+      lexed: parserLexed,
+      root: root,
+      count: parserNodeKinds.length,
+      kinds: byteArrayFrom(parserNodeKinds),
+      starts: uint32ArrayFrom(parserNodeStarts),
+      ends: uint32ArrayFrom(parserNodeEnds),
+      parents: int32ArrayFrom(parserNodeParents),
+      tokens: int32ArrayFrom(parserNodeTokens),
+      childStart: uint32ArrayFrom(parserNodeChildStart),
+      childEnd: uint32ArrayFrom(parserNodeChildEnd),
+      children: uint32ArrayFrom(parserFlat),
     };
   }
 
-  private top(): NodeId[] {
-    return this.stack[this.stack.length - 1];
+  function parserTop(): NodeId[] {
+    return parserStack[parserStack.length - 1];
   }
 
-  private newNode(
+  function parserNewNode(
     kind: SyntaxKind,
     start: number,
     end: number,
     token: number,
   ): NodeId {
-    const id = this.nodeKinds.length;
-    this.nodeKinds.push(kind);
-    this.nodeStarts.push(start);
-    this.nodeEnds.push(end);
-    this.nodeParents.push(-1);
-    this.nodeTokens.push(token);
-    this.nodeChildStart.push(0);
-    this.nodeChildEnd.push(0);
+    const id = parserNodeKinds.length;
+    parserNodeKinds[parserNodeKinds.length] = kind;
+    parserNodeStarts[parserNodeStarts.length] = start;
+    parserNodeEnds[parserNodeEnds.length] = end;
+    parserNodeParents[parserNodeParents.length] = -1;
+    parserNodeTokens[parserNodeTokens.length] = token;
+    parserNodeChildStart[parserNodeChildStart.length] = 0;
+    parserNodeChildEnd[parserNodeChildEnd.length] = 0;
     return id;
   }
 
-  private begin(): void {
-    this.stack.push([]);
+  function parserBegin(): Parser {
+    parserStack[parserStack.length] = [];
+
+    return owner;
   }
 
-  /** Finishes the open node and adds it to the node below it on the stack. */
-  private end(kind: SyntaxKind): NodeId {
-    const list = this.stack.pop();
-    if (list === undefined) throw new Error("internal: end() without begin()");
+  function parserEnd(kind: SyntaxKind): Parser {
+    const list = parserStack.pop();
+    if (list === undefined) {
+      return panic("internal: end() without begin()");
+    }
     let start = -1;
     let stop = -1;
     let missingAt = -1;
     for (const child of list) {
-      const ck = this.nodeKinds[child];
+      const ck = parserNodeKinds[child];
       if (ck === SyntaxKind.Missing) {
-        if (missingAt < 0) missingAt = this.nodeStarts[child];
+        if (missingAt < 0) missingAt = parserNodeStarts[child];
         continue;
       }
       if (
         ck === SyntaxKind.Token &&
-        this.kinds[this.nodeTokens[child]] === TokenKind.Newline
+        parserKinds[parserNodeTokens[child]] === TokenKind.Newline
       ) {
         continue;
       }
-      if (start < 0) start = this.nodeStarts[child];
-      stop = this.nodeEnds[child];
+      if (start < 0) start = parserNodeStarts[child];
+      stop = parserNodeEnds[child];
     }
     if (start < 0) {
-      start = missingAt >= 0 ? missingAt : this.prevEnd();
+      start = missingAt >= 0 ? missingAt : parserPrevEnd();
       stop = start;
     }
-    const id = this.newNode(kind, start, stop, -1);
-    this.nodeChildStart[id] = this.flat.length;
+    const id = parserNewNode(kind, start, stop, -1);
+    parserNodeChildStart[id] = parserFlat.length;
     for (const child of list) {
-      this.flat.push(child);
-      this.nodeParents[child] = id;
+      parserFlat[parserFlat.length] = child;
+      parserNodeParents[child] = id;
     }
-    this.nodeChildEnd[id] = this.flat.length;
-    if (this.stack.length > 0) this.top().push(id);
-    return id;
-  }
-
-  private checkpoint(): number {
-    return this.top().length;
-  }
-
-  /** Makes the items added since `cp` the children of a new node. */
-  private wrap(cp: number, kind: SyntaxKind): NodeId {
-    const items = this.top().splice(cp);
-    this.stack.push(items);
-    return this.end(kind);
-  }
-
-  private leaf(): NodeId {
-    const t = this.pos;
-    const id = this.newNode(SyntaxKind.Token, this.starts[t], this.ends[t], t);
-    this.top().push(id);
-    this.pos++;
-    return id;
-  }
-
-  private tok(): NodeId {
-    if (this.kinds[this.pos] === TokenKind.Eof) {
-      throw new Error("internal: consumed Eof token");
+    parserNodeChildEnd[id] = parserFlat.length;
+    if (parserStack.length > 0) {
+      const top = parserTop();
+      top[top.length] = id;
     }
-    return this.leaf();
+    return owner;
   }
 
-  /**
-   * Consumes newline tokens so that an item continues on the next line. It keeps
-   * the newlines when a declaration starts on the next line: no expression or
-   * type can start with a declaration keyword, so the item is incomplete.
-   */
-  private skipNl(): void {
-    if (this.kinds[this.pos] !== TokenKind.Newline) return;
-    const p = this.laPos();
-    const k = this.kinds[p];
+  function parserCheckpoint(): number {
+    return parserTop().length;
+  }
+
+  function parserWrap(cp: number, kind: SyntaxKind): Parser {
+    const items = parserTop().splice(cp);
+    parserStack[parserStack.length] = items;
+    owner = parserEnd(kind);
+    return owner;
+  }
+
+  function parserLeaf(): Parser {
+    const t = parserPos;
+    const id = parserNewNode(
+      SyntaxKind.Token,
+      parserStarts[t],
+      parserEnds[t],
+      t,
+    );
+    const top = parserTop();
+    top[top.length] = id;
+    parserPos = parserPos + 1;
+    return owner;
+  }
+
+  function parserTok(): Parser {
+    if (parserKinds[parserPos] === TokenKind.Eof) {
+      return panic("internal: consumed Eof token");
+    }
+    owner = parserLeaf();
+    return owner;
+  }
+
+  function parserSkipNl(): Parser {
+    if (parserKinds[parserPos] !== TokenKind.Newline) return owner;
+    const p = parserLaPos();
+    const k = parserKinds[p];
     if (
       k === TokenKind.KwConst || k === TokenKind.KwImport ||
       k === TokenKind.KwExport ||
-      (this.isDeclarationWord(p) && this.kinds[p + 1] === TokenKind.Ident)
+      (parserIsDeclarationWord(p) && parserKinds[p + 1] === TokenKind.Ident)
     ) {
-      return;
+      return owner;
     }
-    while (this.kinds[this.pos] === TokenKind.Newline) this.leaf();
+    for (const _kind of parserKinds) {
+      if (parserKinds[parserPos] !== TokenKind.Newline) break;
+      owner = parserLeaf();
+    }
+
+    return owner;
   }
 
-  private skipSeps(): void {
-    while (
-      this.kinds[this.pos] === TokenKind.Newline ||
-      this.kinds[this.pos] === TokenKind.Semicolon
-    ) {
-      this.leaf();
+  function parserSkipSeps(): Parser {
+    for (const _kind of parserKinds) {
+      if (
+        parserKinds[parserPos] !== TokenKind.Newline &&
+        parserKinds[parserPos] !== TokenKind.Semicolon
+      ) break;
+      owner = parserLeaf();
     }
+
+    return owner;
   }
 
-  /**
-   * The current token kind. Outside significant-newline contexts it consumes
-   * newline tokens first. Inside a construct whose opening bracket has no match,
-   * a declaration keyword at the start of a line reads as Eof.
-   */
-  private kind(): TokenKind {
-    if (!this.sig) {
-      while (this.kinds[this.pos] === TokenKind.Newline) this.leaf();
+  function parserKind(): TokenKind | undefined {
+    if (!parserSig) {
+      for (const _kind of parserKinds) {
+        if (parserKinds[parserPos] !== TokenKind.Newline) break;
+        owner = parserLeaf();
+      }
     }
-    if (this.unmatched > 0 && this.atDeclarationStart(false)) {
+    if (parserUnmatched > 0 && parserAtDeclarationStart(false)) {
       return TokenKind.Eof;
     }
-    return this.kinds[this.pos] as TokenKind;
+    return tokenKind(parserKinds[parserPos]);
   }
 
-  /** Position of the next token that is not a newline, without consuming. */
-  private laPos(): number {
-    let p = this.pos;
-    while (this.kinds[p] === TokenKind.Newline) p++;
+  function parserLaPos(): number {
+    let p = parserPos;
+    for (const _kind of parserKinds) {
+      if (parserKinds[p] !== TokenKind.Newline) break;
+      p = p + 1;
+    }
     return p;
   }
 
-  private la(): TokenKind {
-    return this.kinds[this.laPos()] as TokenKind;
+  function parserLa(): TokenKind | undefined {
+    return tokenKind(parserKinds[parserLaPos()]);
   }
 
-  /** True when the token at `pos` starts a declaration and sits first on its line. */
-  private atDeclarationStart(constAnyColumn: boolean): boolean {
-    const p = this.pos;
-    if (p === 0 || this.kinds[p - 1] !== TokenKind.Newline) return false;
-    switch (this.kinds[p]) {
-      case TokenKind.KwImport:
-      case TokenKind.KwExport:
-        return true;
-      case TokenKind.KwConst:
-        return constAnyColumn ||
-          this.lexed.triviaEnd[p - 1] === this.lexed.triviaEnd[p];
-      case TokenKind.Ident:
-        return (this.isDeclarationWord(p) || this.isServiceImportAt(p)) &&
-          this.kinds[p + 1] === TokenKind.Ident;
-      default:
-        return false;
+  function parserAtDeclarationStart(constAnyColumn: boolean): boolean {
+    const p = parserPos;
+    if (p === 0 || parserKinds[p - 1] !== TokenKind.Newline) return false;
+    if (
+      parserKinds[p] === TokenKind.KwImport ||
+      parserKinds[p] === TokenKind.KwExport
+    ) return true;
+    if (parserKinds[p] === TokenKind.KwConst) {
+      return constAnyColumn ||
+        parserLexed.triviaEnd[p - 1] === parserLexed.triviaEnd[p];
     }
+    if (parserKinds[p] === TokenKind.Ident) {
+      return (parserIsDeclarationWord(p) || parserIsServiceImportAt(p)) &&
+        parserKinds[p + 1] === TokenKind.Ident;
+    }
+    return false;
   }
 
-  private isDeclarationWord(p: number): boolean {
-    return isDeclarationStartWord(this.lexed, p);
+  function parserIsDeclarationWord(p: number): boolean {
+    return isDeclarationStartWord(parserLexed, p);
   }
 
-  /** True when the contextual word `imports` starts a service import. */
-  private isServiceImportAt(p: number): boolean {
-    return this.kinds[p] === TokenKind.Ident &&
-      this.isWordAt(p, "imports") &&
-      this.kinds[p + 1] === TokenKind.Ident;
+  function parserIsServiceImportAt(p: number): boolean {
+    return parserKinds[p] === TokenKind.Ident &&
+      parserIsWordAt(p, "imports") &&
+      parserKinds[p + 1] === TokenKind.Ident;
   }
 
-  private isWordAt(
+  function parserIsWordAt(
     p: number,
     word: ContextualWord | ParserCheckedWord | "_",
   ): boolean {
-    return isWord(this.lexed, p, word);
+    return isWord(parserLexed, p, word);
   }
 
-  /** `void` or `while` at `p`: the reserved words that the lexer leaves to the parser. */
-  private parserCheckedWordAt(p: number): ParserCheckedWord | undefined {
-    return PARSER_CHECKED_WORDS.find((word) => this.isWordAt(p, word));
+  function parserParserCheckedWordAt(p: number): ParserCheckedWord | undefined {
+    return PARSER_CHECKED_WORDS.find((word) => parserIsWordAt(p, word));
   }
 
-  /** True when `fails` starts a clause here, possibly after newlines. */
-  private clauseAhead(word: ContextualWord): boolean {
-    const p = this.laPos();
-    return this.isWordAt(p, word) && this.kinds[p + 1] === TokenKind.Ident;
+  function parserClauseAhead(word: ContextualWord): boolean {
+    const p = parserLaPos();
+    return parserIsWordAt(p, word) && parserKinds[p + 1] === TokenKind.Ident;
   }
 
-  private open(inner: "sig" | "free"): Group {
-    const index = this.pos;
-    this.tok();
+  function parserOpen(inner: "sig" | "free"): Group {
+    const index = parserPos;
+    owner = parserTok();
     const group: Group = {
-      sig: this.sig,
-      unmatched: this.match[index] < 0 ? 1 : 0,
+      sig: parserSig,
+      unmatched: parserMatch[index] < 0 ? 1 : 0,
     };
-    this.sig = inner === "sig";
-    this.unmatched += group.unmatched;
+    parserSig = inner === "sig";
+    parserUnmatched = parserUnmatched + group.unmatched;
     return group;
   }
 
-  private close(group: Group, closer: TokenKind, label: string): void {
-    this.expect(closer, label);
-    this.sig = group.sig;
-    this.unmatched -= group.unmatched;
+  function parserClose(group: Group, closer: TokenKind, label: string): Parser {
+    owner = parserExpect(closer, label);
+    parserSig = group.sig;
+    parserUnmatched = parserUnmatched - group.unmatched;
+
+    return owner;
   }
 
-  private prevEnd(): number {
-    let p = this.pos - 1;
-    while (p >= 0 && this.kinds[p] === TokenKind.Newline) p--;
-    return p < 0 ? 0 : this.ends[p];
+  function parserPrevEnd(): number {
+    let p = parserPos - 1;
+    for (const _kind of parserKinds) {
+      if (!(p >= 0 && parserKinds[p] === TokenKind.Newline)) break;
+      p = p - 1;
+    }
+    return p < 0 ? 0 : parserEnds[p];
   }
 
-  private foundDescription(): string {
-    const raw = this.kinds[this.pos] as TokenKind;
+  function parserFoundDescription(): string {
+    const raw = tokenKind(parserKinds[parserPos]);
+    if (raw === undefined) {
+      return `internal token kind ${parserKinds[parserPos]}`;
+    }
     if (raw === TokenKind.Eof) return "end of file";
     if (raw === TokenKind.Newline) return "end of line";
-    if (this.unmatched > 0 && this.atDeclarationStart(false)) {
+    if (parserUnmatched > 0 && parserAtDeclarationStart(false)) {
       return "the start of the next declaration";
     }
     if (
       raw === TokenKind.Ident || raw === TokenKind.Number ||
       raw === TokenKind.String || isKeywordKind(raw)
     ) {
-      const t = this.text.slice(this.starts[this.pos], this.ends[this.pos]);
+      const t = parserText.slice(
+        parserStarts[parserPos],
+        parserEnds[parserPos],
+      );
       return `\`${t.length > 24 ? t.slice(0, 24) + "..." : t}\``;
     }
     return describeTokenKind(raw);
   }
 
-  /**
-   * The span of a problem at the current token. A token is its own span, except
-   * for a missing-token problem, where `atPreviousEnd` is true: if the token is
-   * the last on its line or sits on a later line, the span is empty and ends the
-   * last real token, so the problem shows where the text is incomplete.
-   */
-  private errorSpan(atPreviousEnd: boolean): { start: number; end: number } {
-    const raw = this.kinds[this.pos];
-    const afterNewline = this.pos > 0 &&
-      this.kinds[this.pos - 1] === TokenKind.Newline;
+  function parserErrorSpan(
+    atPreviousEnd: boolean,
+  ): { start: number; end: number } {
+    const raw = parserKinds[parserPos];
+    const afterNewline = parserPos > 0 &&
+      parserKinds[parserPos - 1] === TokenKind.Newline;
     if (
       raw === TokenKind.Eof || raw === TokenKind.Newline ||
       (atPreviousEnd && afterNewline)
     ) {
-      const at = this.prevEnd();
+      const at = parserPrevEnd();
       return { start: at, end: at };
     }
-    return { start: this.starts[this.pos], end: this.ends[this.pos] };
+    return {
+      start: parserStarts[parserPos],
+      end: parserEnds[parserPos],
+    };
   }
 
-  private report(
+  function parserReport(
     code: DiagnosticCode,
     message: string,
     start: number,
     end: number,
-  ): void {
-    this.diagnostics.push(
-      makeDiagnostic(code, message, { source: this.source, start, end }),
+  ): Parser {
+    parserDiagnostics[parserDiagnostics.length] = makeDiagnostic(
+      code,
+      message,
+      { source: parserSource, start: start, end: end },
     );
+
+    return owner;
   }
 
-  private reportAtToken(code: DiagnosticCode, message: string): void {
-    this.report(code, message, this.starts[this.pos], this.ends[this.pos]);
+  function parserReportAtToken(code: DiagnosticCode, message: string): Parser {
+    owner = parserReport(
+      code,
+      message,
+      parserStarts[parserPos],
+      parserEnds[parserPos],
+    );
+
+    return owner;
   }
 
-  /**
-   * Reports a syntax problem at the current token, once. It stays silent when the
-   * lexer already reported the token, or when an earlier problem has the same
-   * token or the same span.
-   */
-  private problem(
+  function parserProblem(
     code: DiagnosticCode,
     message: string,
     atPreviousEnd: boolean,
-  ): void {
-    if (this.kinds[this.pos] === TokenKind.Unknown) return;
-    const span = this.errorSpan(atPreviousEnd);
+  ): Parser {
+    if (parserKinds[parserPos] === TokenKind.Unknown) return owner;
+    const span = parserErrorSpan(atPreviousEnd);
     if (
-      this.lastErrorPos === this.pos ||
-      (span.start === this.lastErrorStart && span.end === this.lastErrorEnd)
+      parserLastErrorPos === parserPos ||
+      (span.start === parserLastErrorStart && span.end === parserLastErrorEnd)
     ) {
-      return;
+      return owner;
     }
-    this.lastErrorPos = this.pos;
-    this.lastErrorStart = span.start;
-    this.lastErrorEnd = span.end;
-    this.report(code, message, span.start, span.end);
+    parserLastErrorPos = parserPos;
+    parserLastErrorStart = span.start;
+    parserLastErrorEnd = span.end;
+    owner = parserReport(code, message, span.start, span.end);
+
+    return owner;
   }
 
-  private expectedAt(label: string): void {
-    this.problem(
+  function parserExpectedAt(label: string): Parser {
+    owner = parserProblem(
       "syntax/008",
-      `expected ${label}, found ${this.foundDescription()}`,
+      `expected ${label}, found ${parserFoundDescription()}`,
       true,
     );
+
+    return owner;
   }
 
-  private unexpectedAt(context: string): void {
-    this.problem(
+  function parserUnexpectedAt(context: string): Parser {
+    owner = parserProblem(
       "syntax/009",
-      `unexpected ${this.foundDescription()}${context}`,
+      `unexpected ${parserFoundDescription()}${context}`,
       false,
     );
+
+    return owner;
   }
 
-  /** Reports a missing token or construct and adds a zero-width Missing node. */
-  private missing(label: string): void {
-    this.expectedAt(label);
-    const at = this.prevEnd();
-    this.top().push(this.newNode(SyntaxKind.Missing, at, at, -1));
+  function parserMissing(label: string): Parser {
+    owner = parserExpectedAt(label);
+    const at = parserPrevEnd();
+    const top = parserTop();
+    top[top.length] = parserNewNode(
+      SyntaxKind.Missing,
+      at,
+      at,
+      -1,
+    );
+
+    return owner;
   }
 
-  private expect(kind: TokenKind, label: string): boolean {
-    if (this.kind() === kind) {
-      this.tok();
-      return true;
+  function parserExpect(kind: TokenKind, label: string): Parser {
+    if (parserKind() === kind) {
+      owner = parserTok();
+      return owner;
     }
-    this.missing(label);
-    return false;
+    owner = parserMissing(label);
+    return owner;
   }
 
-  /**
-   * Skips junk into an Error node. Skips at least one token unless at Eof. Jumps
-   * over balanced bracket groups. Stops before a token for which `stop` is true,
-   * but only after the first token.
-   */
-  private skipJunk(stop: (k: TokenKind) => boolean, context: string): void {
-    this.begin();
+  function parserSkipJunk(
+    stop: (k: TokenKind | undefined) => boolean,
+    context: string,
+  ): Parser {
+    owner = parserBegin();
     let skipped = 0;
-    while (true) {
-      const k = this.kind();
+    for (const _kind of parserKinds) {
+      const k = parserKind();
       if (k === TokenKind.Eof) break;
       if (skipped > 0 && stop(k)) break;
-      if (skipped === 0) this.unexpectedAt(context);
-      const open = this.pos;
+      if (skipped === 0) owner = parserUnexpectedAt(context);
+      const open = parserPos;
       const close = k === TokenKind.LParen || k === TokenKind.LBrace ||
           k === TokenKind.LBracket
-        ? this.match[open]
+        ? parserMatch[open]
         : -1;
       if (close >= 0) {
-        while (this.pos <= close) this.leaf();
+        for (const _nestedKind of parserKinds) {
+          if (parserPos > close) break;
+          owner = parserLeaf();
+        }
       } else {
-        this.tok();
+        owner = parserTok();
       }
-      skipped++;
+      skipped = skipped + 1;
     }
     if (skipped === 0) {
-      this.stack.pop();
+      parserStack.length = parserStack.length - 1;
     } else {
-      this.end(SyntaxKind.Error);
+      owner = parserEnd(SyntaxKind.Error);
     }
+
+    return owner;
   }
 
-  /**
-   * Guards the recursive entry points. A construct nested deeper than the limit
-   * is reported and skipped, so the recursion stays bounded and never overflows.
-   * The skip covers one token or one balanced group, so the enclosing levels and
-   * the later declarations still parse.
-   */
-  private enter(): boolean {
-    if (this.depth >= MAX_NESTING) {
-      this.skipJunk(() => true, "; nesting is too deep");
+  function parserEnter(): boolean {
+    if (parserDepth >= MAX_NESTING) {
+      owner = parserSkipJunk(() => true, "; nesting is too deep");
       return false;
     }
-    this.depth++;
+    parserDepth = parserDepth + 1;
     return true;
   }
 
-  private leave(): void {
-    this.depth--;
+  function parserLeave(): Parser {
+    parserDepth = parserDepth - 1;
+
+    return owner;
   }
 
-  /**
-   * Guards one link of a left-deep chain: a binary, pipeline, call, field, or
-   * array-type wrap. A link costs two levels, as a parenthesis does, so a chain
-   * stays within the depth that later passes can recurse. The caller counts the
-   * accepted links and calls `leaveLinks` once at the end of the chain.
-   */
-  private enterLink(): boolean {
-    if (!this.enter()) return false;
-    if (this.enter()) return true;
-    this.leave();
+  function parserEnterLink(): boolean {
+    if (!parserEnter()) return false;
+    if (parserEnter()) return true;
+    owner = parserLeave();
     return false;
   }
 
-  private leaveLinks(links: number): void {
-    this.depth -= 2 * links;
+  function parserLeaveLinks(links: number): Parser {
+    parserDepth = parserDepth - 2 * links;
+
+    return owner;
   }
 
-  /** Top-level recovery: skip to the next declaration keyword at the start of a line. */
-  private recoverTop(): void {
-    this.begin();
+  function parserRecoverTop(): Parser {
+    owner = parserBegin();
     let skipped = 0;
-    while (true) {
-      if (this.kinds[this.pos] === TokenKind.Eof) break;
-      if (skipped > 0 && this.atDeclarationStart(true)) break;
-      if (skipped === 0) this.unexpectedAt("; expected a declaration");
-      this.leaf();
-      skipped++;
+    for (const _kind of parserKinds) {
+      if (parserKinds[parserPos] === TokenKind.Eof) break;
+      if (skipped > 0 && parserAtDeclarationStart(true)) break;
+      if (skipped === 0) owner = parserUnexpectedAt("; expected a declaration");
+      owner = parserLeaf();
+      skipped = skipped + 1;
     }
     if (skipped === 0) {
-      this.stack.pop();
+      parserStack.length = parserStack.length - 1;
     } else {
-      this.end(SyntaxKind.Error);
+      owner = parserEnd(SyntaxKind.Error);
     }
+
+    return owner;
   }
 
-  /** A comma-separated list. The opener is consumed. The caller consumes the closer. */
-  private parseCommaList(closer: TokenKind, item: () => void): void {
-    while (true) {
-      const k = this.kind();
+  function parserParseCommaList(closer: TokenKind, item: () => Parser): Parser {
+    for (const _kind of parserKinds) {
+      const k = parserKind();
       if (k === closer || k === TokenKind.Eof) break;
-      const startPos = this.pos;
-      item();
-      if (this.kind() === TokenKind.Comma) {
-        this.tok();
+      const startPos = parserPos;
+      owner = item();
+      if (parserKind() === TokenKind.Comma) {
+        owner = parserTok();
         continue;
       }
-      const k2 = this.kind();
+      const k2 = parserKind();
       if (k2 === closer || k2 === TokenKind.Eof) break;
-      this.missing("`,`");
-      if (this.pos === startPos) {
-        this.skipJunk(
+      owner = parserMissing("`,`");
+      if (parserPos === startPos) {
+        owner = parserSkipJunk(
           (x) =>
             x === TokenKind.Comma || x === TokenKind.RParen ||
             x === TokenKind.RBracket ||
@@ -625,26 +659,25 @@ class Parser {
         );
       }
     }
+
+    return owner;
   }
 
-  /**
-   * The opener is the current token. Consumes it, parses a comma-separated list,
-   * and expects `closer`, which the message names.
-   */
-  private parseDelimited(closer: TokenKind, item: () => void): void {
-    const group = this.open("free");
-    this.parseCommaList(closer, item);
-    this.close(group, closer, describeTokenKind(closer));
+  function parserParseDelimited(closer: TokenKind, item: () => Parser): Parser {
+    const group = parserOpen("free");
+    owner = parserParseCommaList(closer, item);
+    owner = parserClose(group, closer, describeTokenKind(closer));
+
+    return owner;
   }
 
-  /** Items separated by newlines or semicolons, up to `}`. Used for blocks and service bodies. */
-  private parseSeparated(item: () => void): void {
-    while (true) {
-      this.skipSeps();
-      const k = this.kind();
+  function parserParseSeparated(item: () => Parser): Parser {
+    for (const _kind of parserKinds) {
+      owner = parserSkipSeps();
+      const k = parserKind();
       if (k === TokenKind.RBrace || k === TokenKind.Eof) break;
-      item();
-      const k2 = this.kind();
+      owner = item();
+      const k2 = parserKind();
       if (
         k2 === TokenKind.Newline || k2 === TokenKind.Semicolon ||
         k2 === TokenKind.RBrace ||
@@ -652,1195 +685,1357 @@ class Parser {
       ) {
         continue;
       }
-      this.expectedAt("end of line or `;`");
-      this.skipJunk(
+      owner = parserExpectedAt("end of line or `;`");
+      owner = parserSkipJunk(
         (x) =>
           x === TokenKind.Newline || x === TokenKind.Semicolon ||
           x === TokenKind.RBrace,
         "",
       );
     }
+
+    return owner;
   }
 
-  private parseModule(): NodeId {
-    this.begin();
+  function parserParseModule(): NodeId {
+    owner = parserBegin();
     let serviceHeadersAllowed = true;
-    while (true) {
-      this.skipSeps();
-      const k = this.kind();
+    for (const _kind of parserKinds) {
+      owner = parserSkipSeps();
+      const k = parserKind();
       if (k === TokenKind.Eof) break;
-      if (this.isServiceImportAt(this.pos)) {
-        this.parseServiceImport(!serviceHeadersAllowed);
-        this.finishTopItem();
+      if (parserIsServiceImportAt(parserPos)) {
+        owner = parserParseServiceImport(!serviceHeadersAllowed);
+        owner = parserFinishTopItem();
       } else {
         serviceHeadersAllowed = false;
-        this.parseTopItem(k);
+        owner = parserParseTopItem(k);
       }
     }
-    this.leaf();
-    return this.end(SyntaxKind.Module);
+    owner = parserLeaf();
+    owner = parserEnd(SyntaxKind.Module);
+    return parserNodeKinds.length - 1;
   }
 
-  private parseTopItem(k: TokenKind): void {
+  function parserParseTopItem(k: TokenKind | undefined): Parser {
     if (k === TokenKind.KwImport) {
-      this.parseImport();
+      owner = parserParseImport();
     } else if (
       k === TokenKind.KwExport || k === TokenKind.KwConst ||
-      this.isDeclarationWord(this.pos)
+      parserIsDeclarationWord(parserPos)
     ) {
-      this.parseDeclaration();
+      owner = parserParseDeclaration();
     } else {
-      this.recoverTop();
-      return;
+      owner = parserRecoverTop();
+      return owner;
     }
-    this.finishTopItem();
+    owner = parserFinishTopItem();
+
+    return owner;
   }
 
-  private finishTopItem(): void {
-    const k2 = this.kind();
+  function parserFinishTopItem(): Parser {
+    const k2 = parserKind();
     if (
       k2 === TokenKind.Newline || k2 === TokenKind.Semicolon ||
       k2 === TokenKind.Eof
-    ) return;
-    if (this.atDeclarationStart(true)) return;
-    this.expectedAt("end of line or `;`");
-    this.recoverTop();
+    ) return owner;
+    if (parserAtDeclarationStart(true)) return owner;
+    owner = parserExpectedAt("end of line or `;`");
+    owner = parserRecoverTop();
+
+    return owner;
   }
 
-  private parseImport(): void {
-    this.begin();
-    this.tok();
-    if (this.kind() === TokenKind.LBrace) {
-      this.parseDelimited(TokenKind.RBrace, () => this.parseName("binding"));
+  function parserParseImport(): Parser {
+    owner = parserBegin();
+    owner = parserTok();
+    if (parserKind() === TokenKind.LBrace) {
+      owner = parserParseDelimited(
+        TokenKind.RBrace,
+        () => parserParseName("binding"),
+      );
     } else {
-      this.missing("`{`");
+      owner = parserMissing("`{`");
     }
-    if (this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "from")) {
-      this.tok();
+    if (parserKind() === TokenKind.Ident && parserIsWordAt(parserPos, "from")) {
+      owner = parserTok();
     } else {
-      this.missing("`from`");
+      owner = parserMissing("`from`");
     }
-    if (this.kind() === TokenKind.String) this.tok();
-    else this.missing("a string");
-    this.end(SyntaxKind.ImportDecl);
+    if (parserKind() === TokenKind.String) owner = parserTok();
+    else owner = parserMissing("a string");
+    owner = parserEnd(SyntaxKind.ImportDecl);
+
+    return owner;
   }
 
-  private parseServiceImport(misplaced: boolean): void {
-    this.begin();
-    const start = this.starts[this.pos];
-    const end = this.ends[this.pos];
+  function parserParseServiceImport(misplaced: boolean): Parser {
+    owner = parserBegin();
+    const start = parserStarts[parserPos];
+    const end = parserEnds[parserPos];
     if (misplaced) {
-      this.report(
+      owner = parserReport(
         "syntax/008",
         "a service import must precede ordinary imports and declarations",
         start,
         end,
       );
     }
-    if (this.mode === "effi") {
-      this.report(
+    if (parserMode === "effi") {
+      owner = parserReport(
         "syntax/008",
         "a host interface file cannot contain a service import",
         start,
         end,
       );
     }
-    this.tok();
-    this.parseName("binding");
-    if (this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "from")) {
-      this.tok();
+    owner = parserTok();
+    owner = parserParseName("binding");
+    if (parserKind() === TokenKind.Ident && parserIsWordAt(parserPos, "from")) {
+      owner = parserTok();
     } else {
-      this.missing("`from`");
+      owner = parserMissing("`from`");
     }
-    if (this.kind() === TokenKind.String) this.tok();
-    else this.missing("a string");
-    this.end(SyntaxKind.ImportDecl);
+    if (parserKind() === TokenKind.String) owner = parserTok();
+    else owner = parserMissing("a string");
+    owner = parserEnd(SyntaxKind.ImportDecl);
+
+    return owner;
   }
 
-  private parseDeclaration(): void {
-    this.begin();
-    if (this.kind() === TokenKind.KwExport) this.tok();
-    const k = this.kind();
-    let kind = SyntaxKind.Error;
+  function parserParseDeclaration(): Parser {
+    owner = parserBegin();
+    if (parserKind() === TokenKind.KwExport) owner = parserTok();
+    const k = parserKind();
+    let kind: SyntaxKind = SyntaxKind.Error;
     if (k === TokenKind.KwConst) {
       kind = SyntaxKind.ConstDecl;
-      this.parseConstBody(true);
-    } else if (k === TokenKind.Ident && this.isDeclarationWord(this.pos)) {
-      const word = this.text.slice(this.starts[this.pos], this.ends[this.pos]);
+      owner = parserParseConstBody(true);
+    } else if (k === TokenKind.Ident && parserIsDeclarationWord(parserPos)) {
+      const word = parserText.slice(
+        parserStarts[parserPos],
+        parserEnds[parserPos],
+      );
       if (word === "type") {
         kind = SyntaxKind.TypeDecl;
-        this.parseTypeBody();
+        owner = parserParseTypeBody();
       } else if (word === "opaque") {
         kind = SyntaxKind.TypeDecl;
-        this.parseOpaqueTypeBody();
+        owner = parserParseOpaqueTypeBody();
       } else if (word === "sealed") {
         kind = SyntaxKind.TypeDecl;
-        this.parseSealedTypeBody();
+        owner = parserParseSealedTypeBody();
       } else if (word === "error") {
         kind = SyntaxKind.ErrorDecl;
-        this.parseErrorBody();
+        owner = parserParseErrorBody();
       } else if (word === "service") {
         kind = SyntaxKind.ServiceDecl;
-        this.parseServiceBody();
+        owner = parserParseServiceBody();
       } else {
         kind = SyntaxKind.ProviderDecl;
-        this.parseProviderBody();
+        owner = parserParseProviderBody();
       }
     } else {
-      this.missing("a declaration");
+      owner = parserMissing("a declaration");
     }
-    this.end(kind);
+    owner = parserEnd(kind);
+
+    return owner;
   }
 
-  private parseConstBody(topLevel: boolean): void {
-    if (topLevel && this.mode === "effi") {
-      this.reportAtToken(
+  function parserParseConstBody(topLevel: boolean): Parser {
+    if (topLevel && parserMode === "effi") {
+      owner = parserReportAtToken(
         "syntax/012",
         "a host interface file cannot contain `const`",
       );
     }
-    this.tok();
-    if (!topLevel && this.kind() === TokenKind.LBrace) {
-      this.parseRecordBinding();
-    } else this.parseName("binding");
-    if (this.kind() === TokenKind.Colon) {
-      this.tok();
-      this.skipNl();
-      this.parseType();
+    owner = parserTok();
+    if (!topLevel && parserKind() === TokenKind.LBrace) {
+      owner = parserParseRecordBinding();
+    } else owner = parserParseName("binding");
+    if (parserKind() === TokenKind.Colon) {
+      owner = parserTok();
+      owner = parserSkipNl();
+      owner = parserParseType();
     }
-    if (this.kind() === TokenKind.Eq) {
-      this.tok();
-      this.skipNl();
+    if (parserKind() === TokenKind.Eq) {
+      owner = parserTok();
+      owner = parserSkipNl();
     } else {
-      this.missing("`=`");
+      owner = parserMissing("`=`");
     }
-    this.parseExpr();
+    owner = parserParseExpr();
+
+    return owner;
   }
 
-  private parseRecordBinding(): void {
-    this.begin();
+  function parserParseRecordBinding(): Parser {
+    owner = parserBegin();
     let fields = 0;
-    this.parseDelimited(TokenKind.RBrace, () => {
-      fields++;
-      this.begin();
-      this.parseName("binding");
-      if (this.kind() === TokenKind.Colon) {
-        this.tok();
-        this.skipNl();
-        this.parseName("binding");
-        this.end(SyntaxKind.BindingField);
-      } else this.end(SyntaxKind.ShorthandBinding);
+    owner = parserParseDelimited(TokenKind.RBrace, () => {
+      fields = fields + 1;
+      owner = parserBegin();
+      owner = parserParseName("binding");
+      if (parserKind() === TokenKind.Colon) {
+        owner = parserTok();
+        owner = parserSkipNl();
+        owner = parserParseName("binding");
+        owner = parserEnd(SyntaxKind.BindingField);
+      } else owner = parserEnd(SyntaxKind.ShorthandBinding);
+
+      return owner;
     });
-    if (fields === 0) this.expectedAt("at least one record binding field");
-    this.end(SyntaxKind.RecordBinding);
+    if (fields === 0) {
+      owner = parserExpectedAt("at least one record binding field");
+    }
+    owner = parserEnd(SyntaxKind.RecordBinding);
+
+    return owner;
   }
 
-  private parseTypeBody(): void {
-    this.tok();
-    this.parseName("binding");
-    if (this.kind() === TokenKind.Eq) {
-      this.tok();
-      this.skipNl();
+  function parserParseTypeBody(): Parser {
+    owner = parserTok();
+    owner = parserParseName("binding");
+    if (parserKind() === TokenKind.Eq) {
+      owner = parserTok();
+      owner = parserSkipNl();
     } else {
-      this.missing("`=`");
+      owner = parserMissing("`=`");
     }
-    this.parseType();
-    if (this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "where")) {
-      this.begin();
-      this.tok();
-      this.parseExpr();
-      this.end(SyntaxKind.RefinementClause);
+    owner = parserParseType();
+    if (
+      parserKind() === TokenKind.Ident && parserIsWordAt(parserPos, "where")
+    ) {
+      owner = parserBegin();
+      owner = parserTok();
+      owner = parserParseExpr();
+      owner = parserEnd(SyntaxKind.RefinementClause);
     }
+
+    return owner;
   }
 
-  private parseSealedTypeBody(): void {
-    const start = this.starts[this.pos];
-    const end = this.ends[this.pos];
-    this.tok();
-    if (this.mode === "effi") {
-      this.report(
+  function parserParseSealedTypeBody(): Parser {
+    const start = parserStarts[parserPos];
+    const end = parserEnds[parserPos];
+    owner = parserTok();
+    if (parserMode === "effi") {
+      owner = parserReport(
         "syntax/008",
         "a sealed type declaration is not allowed in a host interface file",
         start,
         end,
       );
     }
-    if (this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "type")) {
-      this.parseTypeBody();
+    if (parserKind() === TokenKind.Ident && parserIsWordAt(parserPos, "type")) {
+      owner = parserParseTypeBody();
     } else {
-      this.missing("`type`");
+      owner = parserMissing("`type`");
     }
+
+    return owner;
   }
 
-  private parseOpaqueTypeBody(): void {
-    if (this.mode !== "effi") {
-      this.reportAtToken(
+  function parserParseOpaqueTypeBody(): Parser {
+    if (parserMode !== "effi") {
+      owner = parserReportAtToken(
         "syntax/012",
         "an opaque type belongs in a host interface file",
       );
     }
-    this.tok();
-    if (this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "type")) {
-      this.tok();
-    } else this.missing("`type`");
-    this.parseName("binding");
+    owner = parserTok();
+    if (parserKind() === TokenKind.Ident && parserIsWordAt(parserPos, "type")) {
+      owner = parserTok();
+    } else owner = parserMissing("`type`");
+    owner = parserParseName("binding");
+
+    return owner;
   }
 
-  private parseErrorBody(): void {
-    this.tok();
-    this.parseName("binding");
-    if (this.kind() === TokenKind.Eq) {
-      this.tok();
-      this.skipNl();
+  function parserParseErrorBody(): Parser {
+    owner = parserTok();
+    owner = parserParseName("binding");
+    if (parserKind() === TokenKind.Eq) {
+      owner = parserTok();
+      owner = parserSkipNl();
     } else {
-      this.missing("`=`");
+      owner = parserMissing("`=`");
     }
-    if (this.kind() === TokenKind.LBrace) this.parseRecordType();
-    else this.missing("a record type");
+    if (parserKind() === TokenKind.LBrace) owner = parserParseRecordType();
+    else owner = parserMissing("a record type");
+
+    return owner;
   }
 
-  private parseServiceBody(): void {
-    this.tok();
-    this.parseName("binding");
-    if (this.kind() === TokenKind.LBrace) {
-      const group = this.open("sig");
-      this.parseSeparated(() => this.parseServiceMethod());
-      this.close(group, TokenKind.RBrace, "`}`");
+  function parserParseServiceBody(): Parser {
+    owner = parserTok();
+    owner = parserParseName("binding");
+    if (parserKind() === TokenKind.LBrace) {
+      const group = parserOpen("sig");
+      owner = parserParseSeparated(() => parserParseServiceMethod());
+      owner = parserClose(group, TokenKind.RBrace, "`}`");
     } else {
-      this.missing("`{`");
+      owner = parserMissing("`{`");
     }
+
+    return owner;
   }
 
-  private parseServiceMethod(): void {
-    this.begin();
-    this.parseName("member");
-    this.parseParamList();
-    if (this.kind() === TokenKind.Colon) {
-      this.tok();
-      this.skipNl();
+  function parserParseServiceMethod(): Parser {
+    owner = parserBegin();
+    owner = parserParseName("member");
+    owner = parserParseParamList();
+    if (parserKind() === TokenKind.Colon) {
+      owner = parserTok();
+      owner = parserSkipNl();
     } else {
-      this.missing("`:`");
+      owner = parserMissing("`:`");
     }
-    this.parseType();
-    if (this.clauseAhead("fails")) this.parseFailsClause();
-    this.end(SyntaxKind.ServiceMethod);
+    owner = parserParseType();
+    if (parserClauseAhead("fails")) owner = parserParseFailsClause();
+    owner = parserEnd(SyntaxKind.ServiceMethod);
+
+    return owner;
   }
 
-  private parseProviderBody(): void {
-    if (this.mode !== "effi") {
-      this.reportAtToken(
+  function parserParseProviderBody(): Parser {
+    if (parserMode !== "effi") {
+      owner = parserReportAtToken(
         "syntax/013",
         "a provider declaration is allowed only in a host interface file (.effi)",
       );
     }
-    this.tok();
-    this.parseName("binding");
+    owner = parserTok();
+    owner = parserParseName("binding");
     if (
-      this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "provides")
+      parserKind() === TokenKind.Ident && parserIsWordAt(parserPos, "provides")
     ) {
-      this.begin();
-      this.tok();
-      this.parseNameSet(true);
-      this.end(SyntaxKind.ProvidesClause);
+      owner = parserBegin();
+      owner = parserTok();
+      owner = parserParseNameSet(true);
+      owner = parserEnd(SyntaxKind.ProvidesClause);
     } else {
-      this.missing("`provides`");
+      owner = parserMissing("`provides`");
     }
-    this.parseEffects();
+    owner = parserParseEffects();
+
+    return owner;
   }
 
-  private parseEffects(): void {
-    if (this.clauseAhead("fails")) this.parseFailsClause();
+  function parserParseEffects(): Parser {
+    if (parserClauseAhead("fails")) owner = parserParseFailsClause();
     // A `with` clause starts here, possibly after newlines.
-    const p = this.laPos();
+    const p = parserLaPos();
     if (
-      this.kinds[p] === TokenKind.KwWith &&
-      this.kinds[p + 1] === TokenKind.Ident
-    ) this.parseWithClause();
+      parserKinds[p] === TokenKind.KwWith &&
+      parserKinds[p + 1] === TokenKind.Ident
+    ) owner = parserParseWithClause();
+
+    return owner;
   }
 
-  private parseFailsClause(): void {
-    this.skipNl();
-    this.begin();
-    this.tok();
-    this.parseNameSet(false);
-    this.end(SyntaxKind.FailsClause);
+  function parserParseFailsClause(): Parser {
+    owner = parserSkipNl();
+    owner = parserBegin();
+    owner = parserTok();
+    owner = parserParseNameSet(false);
+    owner = parserEnd(SyntaxKind.FailsClause);
+
+    return owner;
   }
 
-  private parseWithClause(): void {
-    this.skipNl();
-    this.begin();
-    this.tok();
-    this.parseNameSet(true);
-    this.end(SyntaxKind.WithClause);
+  function parserParseWithClause(): Parser {
+    owner = parserSkipNl();
+    owner = parserBegin();
+    owner = parserTok();
+    owner = parserParseNameSet(true);
+    owner = parserEnd(SyntaxKind.WithClause);
+
+    return owner;
   }
 
-  /** `Name ("|" Name)*`. Names are qualified (`A.b`) when `qualified` is true. */
-  private parseNameSet(qualified: boolean): void {
-    while (true) {
-      if (qualified) this.parseQualifiedName();
-      else this.parseName("member");
-      if (this.kind() !== TokenKind.Pipe) break;
-      this.tok();
-      this.skipNl();
+  function parserParseNameSet(qualified: boolean): Parser {
+    for (const _kind of parserKinds) {
+      if (qualified) owner = parserParseQualifiedName();
+      else owner = parserParseName("member");
+      if (parserKind() !== TokenKind.Pipe) break;
+      owner = parserTok();
+      owner = parserSkipNl();
     }
+
+    return owner;
   }
 
-  private parseQualifiedName(): void {
-    this.begin();
-    this.parseName("member");
-    while (this.kind() === TokenKind.Dot) {
-      this.tok();
-      this.parseName("member");
+  function parserParseQualifiedName(): Parser {
+    owner = parserBegin();
+    owner = parserParseName("member");
+    for (const _kind of parserKinds) {
+      if (parserKind() !== TokenKind.Dot) break;
+      owner = parserTok();
+      owner = parserParseName("member");
     }
-    this.end(SyntaxKind.QualifiedName);
+    owner = parserEnd(SyntaxKind.QualifiedName);
+
+    return owner;
   }
 
-  /** A Name node. A keyword in a name position is taken as the name and reported. */
-  private parseName(role: "binding" | "member" | "type"): void {
-    this.begin();
-    const k = this.kind();
+  function parserParseName(role: "binding" | "member" | "type"): Parser {
+    owner = parserBegin();
+    const k = parserKind();
     if (k === TokenKind.Ident) {
-      const word = this.parserCheckedWordAt(this.pos);
+      const word = parserParserCheckedWordAt(parserPos);
       if (role === "binding" && word !== undefined) {
-        this.reportAtToken(
+        owner = parserReportAtToken(
           "syntax/007",
           `\`${word}\` is a reserved word and cannot be a name`,
         );
       }
-      this.tok();
+      owner = parserTok();
     } else if (isKeywordKind(k)) {
-      this.expectedAt("a name");
-      this.tok();
+      owner = parserExpectedAt("a name");
+      owner = parserTok();
     } else {
-      this.missing("a name");
+      owner = parserMissing("a name");
     }
-    this.end(SyntaxKind.Name);
+    owner = parserEnd(SyntaxKind.Name);
+
+    return owner;
   }
 
-  private parseParamList(): void {
-    this.begin();
-    if (this.kind() === TokenKind.LParen) {
-      this.parseDelimited(TokenKind.RParen, () => this.parseParam());
+  function parserParseParamList(): Parser {
+    owner = parserBegin();
+    if (parserKind() === TokenKind.LParen) {
+      owner = parserParseDelimited(TokenKind.RParen, () => parserParseParam());
     } else {
-      this.missing("`(`");
+      owner = parserMissing("`(`");
     }
-    this.end(SyntaxKind.ParamList);
+    owner = parserEnd(SyntaxKind.ParamList);
+
+    return owner;
   }
 
-  private parseParam(): void {
-    this.begin();
+  function parserParseParam(): Parser {
+    owner = parserBegin();
     if (
-      this.kind() === TokenKind.Ident && this.isWordAt(this.pos, "borrow") &&
-      this.kinds[this.pos + 1] === TokenKind.Ident
+      parserKind() === TokenKind.Ident && parserIsWordAt(parserPos, "borrow") &&
+      parserKinds[parserPos + 1] === TokenKind.Ident
     ) {
-      this.tok();
+      owner = parserTok();
     }
-    this.parseName("binding");
-    if (this.kind() === TokenKind.Colon) {
-      this.tok();
-      this.skipNl();
-      this.parseType();
+    owner = parserParseName("binding");
+    if (parserKind() === TokenKind.Colon) {
+      owner = parserTok();
+      owner = parserSkipNl();
+      owner = parserParseType();
     }
-    this.end(SyntaxKind.Param);
+    owner = parserEnd(SyntaxKind.Param);
+
+    return owner;
   }
 
-  private parseType(): void {
-    const cp = this.checkpoint();
-    this.parsePostfixType();
-    if (this.kind() !== TokenKind.Pipe) return;
-    while (this.kind() === TokenKind.Pipe) {
-      this.tok();
-      this.skipNl();
-      this.parsePostfixType();
+  function parserParseType(): Parser {
+    const cp = parserCheckpoint();
+    owner = parserParsePostfixType();
+    if (parserKind() !== TokenKind.Pipe) return owner;
+    for (const _kind of parserKinds) {
+      if (parserKind() !== TokenKind.Pipe) break;
+      owner = parserTok();
+      owner = parserSkipNl();
+      owner = parserParsePostfixType();
     }
-    this.wrap(cp, SyntaxKind.UnionType);
+    owner = parserWrap(cp, SyntaxKind.UnionType);
+
+    return owner;
   }
 
-  private parsePostfixType(): void {
-    const cp = this.checkpoint();
-    this.parsePrimaryType();
+  function parserParsePostfixType(): Parser {
+    const cp = parserCheckpoint();
+    owner = parserParsePrimaryType();
     let links = 0;
-    while (
-      this.kind() === TokenKind.LBracket &&
-      this.kinds[this.pos + 1] === TokenKind.RBracket
+    for (const _kind of parserKinds) {
+      if (
+        parserKind() !== TokenKind.LBracket ||
+        parserKinds[parserPos + 1] !== TokenKind.RBracket
+      ) break;
+      if (!parserEnterLink()) break;
+      links = links + 1;
+      owner = parserTok();
+      owner = parserTok();
+      owner = parserWrap(cp, SyntaxKind.ArrayType);
+    }
+    owner = parserLeaveLinks(links);
+
+    return owner;
+  }
+
+  function parserParsePrimaryType(): Parser {
+    if (!parserEnter()) return owner;
+    owner = parserParsePrimaryTypeInner();
+    owner = parserLeave();
+
+    return owner;
+  }
+
+  function parserParsePrimaryTypeInner(): Parser {
+    const k = parserKind();
+    if (k === TokenKind.Ident) {
+      const name = parserText.slice(
+        parserStarts[parserPos],
+        parserEnds[parserPos],
+      );
+      if (name === "pure") {
+        let open = parserPos + 1;
+        for (const _kind of parserKinds) {
+          if (parserKinds[open] !== TokenKind.Newline) break;
+          open = open + 1;
+        }
+        if (
+          parserKinds[open] === TokenKind.LParen &&
+          parserParenFollowedBy(open, false)
+        ) {
+          owner = parserBegin();
+          owner = parserTok();
+          owner = parserSkipNl();
+          owner = parserParseFunctionType();
+          return owner;
+        }
+      }
+      const word = TYPE_WORDS.get(name);
+      if (word !== undefined && parserKinds[parserPos + 1] === TokenKind.Lt) {
+        owner = parserBegin();
+        owner = parserTok();
+        const group = parserOpen("free");
+        for (const index of word.slots.keys()) {
+          const slot = word.slots[index];
+          if (index > 0) {
+            if (parserKind() === TokenKind.Comma) owner = parserTok();
+            else if (slot.required) owner = parserMissing("`,`");
+            else break;
+          }
+          owner = parserParseSlot(slot.kind);
+        }
+        owner = parserClose(group, TokenKind.Gt, "`>`");
+        owner = parserEnd(word.kind);
+        return owner;
+      }
+      owner = parserBegin();
+      owner = parserParseName("type");
+      if (parserKind() === TokenKind.Lt) {
+        owner = parserBegin();
+        owner = parserParseDelimited(TokenKind.Gt, () => parserParseType());
+        owner = parserEnd(SyntaxKind.TypeArgs);
+      }
+      owner = parserEnd(SyntaxKind.NamedType);
+      return owner;
+    } else if (
+      k === TokenKind.String || k === TokenKind.Number ||
+      k === TokenKind.KwTrue || k === TokenKind.KwFalse ||
+      k === TokenKind.KwNull
     ) {
-      if (!this.enterLink()) break;
-      links++;
-      this.tok();
-      this.tok();
-      this.wrap(cp, SyntaxKind.ArrayType);
-    }
-    this.leaveLinks(links);
-  }
-
-  private parsePrimaryType(): void {
-    if (!this.enter()) return;
-    this.parsePrimaryTypeInner();
-    this.leave();
-  }
-
-  private parsePrimaryTypeInner(): void {
-    const k = this.kind();
-    switch (k) {
-      case TokenKind.Ident: {
-        const name = this.text.slice(
-          this.starts[this.pos],
-          this.ends[this.pos],
-        );
-        if (name === "pure") {
-          let open = this.pos + 1;
-          while (this.kinds[open] === TokenKind.Newline) open++;
-          if (
-            this.kinds[open] === TokenKind.LParen &&
-            this.parenFollowedBy(open, false)
-          ) {
-            this.begin();
-            this.tok();
-            this.skipNl();
-            this.parseFunctionType();
-            return;
-          }
-        }
-        const word = TYPE_WORDS.get(name);
-        if (word !== undefined && this.kinds[this.pos + 1] === TokenKind.Lt) {
-          this.begin();
-          this.tok();
-          const group = this.open("free");
-          for (let index = 0; index < word.slots.length; index++) {
-            const slot = word.slots[index];
-            if (index > 0) {
-              if (this.kind() === TokenKind.Comma) this.tok();
-              else if (slot.required) this.missing("`,`");
-              else break;
-            }
-            this.parseSlot(slot.kind);
-          }
-          this.close(group, TokenKind.Gt, "`>`");
-          this.end(word.kind);
-          return;
-        }
-        this.begin();
-        this.parseName("type");
-        if (this.kind() === TokenKind.Lt) {
-          this.begin();
-          this.parseDelimited(TokenKind.Gt, () => this.parseType());
-          this.end(SyntaxKind.TypeArgs);
-        }
-        this.end(SyntaxKind.NamedType);
-        return;
-      }
-      case TokenKind.String:
-      case TokenKind.Number:
-      case TokenKind.KwTrue:
-      case TokenKind.KwFalse:
-      case TokenKind.KwNull:
-        this.begin();
-        this.tok();
-        this.end(SyntaxKind.LiteralType);
-        return;
-      case TokenKind.LBrace:
-        this.parseRecordType();
-        return;
-      case TokenKind.LBracket: {
-        this.begin();
-        this.parseDelimited(TokenKind.RBracket, () => this.parseType());
-        this.end(SyntaxKind.TupleType);
-        return;
-      }
-      case TokenKind.LParen:
-        if (this.parenFollowedBy(this.pos, false)) {
-          this.begin();
-          this.parseFunctionType();
-        } else {
-          this.begin();
-          const group = this.open("free");
-          this.parseType();
-          this.close(group, TokenKind.RParen, "`)`");
-          this.end(SyntaxKind.ParenType);
-        }
-        return;
-      default:
-        this.missing("a type");
-    }
-  }
-
-  /** Parses a function type after an optional contextual `pure` token. */
-  private parseFunctionType(): void {
-    this.parseParamList();
-    if (this.la() === TokenKind.Arrow) {
-      this.skipNl();
-      this.tok();
-    } else {
-      this.missing("`=>`");
-    }
-    this.skipNl();
-    this.parseType();
-    this.parseEffects();
-    this.end(SyntaxKind.FunctionType);
-  }
-
-  private parseSlot(kind: TypeSlotKind): void {
-    switch (kind) {
-      case "type":
-        this.parseType();
-        return;
-      case "provides":
-        this.parseNameSetClause(SyntaxKind.ProvidesClause, true);
-        return;
-      case "fails":
-        this.parseNameSetClause(SyntaxKind.FailsClause, false);
-        return;
-      case "with":
-        this.parseNameSetClause(SyntaxKind.WithClause, true);
-        return;
-      default: {
-        const unreachable: never = kind;
-        return unreachable;
-      }
-    }
-  }
-
-  private parseNameSetClause(clause: SyntaxKind, qualified: boolean): void {
-    this.begin();
-    this.parseNameSet(qualified);
-    this.end(clause);
-  }
-
-  private parseRecordType(): void {
-    this.begin();
-    this.parseDelimited(TokenKind.RBrace, () => {
-      this.begin();
-      this.parseName("member");
-      if (this.kind() === TokenKind.Question) this.tok();
-      if (this.kind() === TokenKind.Colon) {
-        this.tok();
-        this.skipNl();
+      owner = parserBegin();
+      owner = parserTok();
+      owner = parserEnd(SyntaxKind.LiteralType);
+      return owner;
+    } else if (k === TokenKind.LBrace) {
+      owner = parserParseRecordType();
+      return owner;
+    } else if (k === TokenKind.LBracket) {
+      owner = parserBegin();
+      owner = parserParseDelimited(
+        TokenKind.RBracket,
+        () => parserParseType(),
+      );
+      owner = parserEnd(SyntaxKind.TupleType);
+      return owner;
+    } else if (k === TokenKind.LParen) {
+      if (parserParenFollowedBy(parserPos, false)) {
+        owner = parserBegin();
+        owner = parserParseFunctionType();
       } else {
-        this.missing("`:`");
+        owner = parserBegin();
+        const group = parserOpen("free");
+        owner = parserParseType();
+        owner = parserClose(group, TokenKind.RParen, "`)`");
+        owner = parserEnd(SyntaxKind.ParenType);
       }
-      this.parseType();
-      this.end(SyntaxKind.FieldType);
-    });
-    this.end(SyntaxKind.RecordType);
+      return owner;
+    } else {
+      owner = parserMissing("a type");
+    }
+
+    return owner;
   }
 
-  /**
-   * True when the `(` at `p` has a match and the next token after newlines is
-   * `=>`, or `:` when `allowColon` is true.
-   */
-  private parenFollowedBy(p: number, allowColon: boolean): boolean {
-    const m = this.match[p];
+  function parserParseFunctionType(): Parser {
+    owner = parserParseParamList();
+    if (parserLa() === TokenKind.Arrow) {
+      owner = parserSkipNl();
+      owner = parserTok();
+    } else {
+      owner = parserMissing("`=>`");
+    }
+    owner = parserSkipNl();
+    owner = parserParseType();
+    owner = parserParseEffects();
+    owner = parserEnd(SyntaxKind.FunctionType);
+
+    return owner;
+  }
+
+  function parserParseSlot(kind: TypeSlotKind): Parser {
+    if (kind === "type") {
+      owner = parserParseType();
+      return owner;
+    }
+    if (kind === "provides") {
+      owner = parserParseNameSetClause(SyntaxKind.ProvidesClause, true);
+      return owner;
+    }
+    if (kind === "fails") {
+      owner = parserParseNameSetClause(SyntaxKind.FailsClause, false);
+      return owner;
+    }
+    if (kind === "with") {
+      owner = parserParseNameSetClause(SyntaxKind.WithClause, true);
+      return owner;
+    }
+    const unreachable: never = kind;
+    return unreachable;
+  }
+
+  function parserParseNameSetClause(
+    clause: SyntaxKind,
+    qualified: boolean,
+  ): Parser {
+    owner = parserBegin();
+    owner = parserParseNameSet(qualified);
+    owner = parserEnd(clause);
+
+    return owner;
+  }
+
+  function parserParseRecordType(): Parser {
+    owner = parserBegin();
+    owner = parserParseDelimited(TokenKind.RBrace, () => {
+      owner = parserBegin();
+      owner = parserParseName("member");
+      if (parserKind() === TokenKind.Question) owner = parserTok();
+      if (parserKind() === TokenKind.Colon) {
+        owner = parserTok();
+        owner = parserSkipNl();
+      } else {
+        owner = parserMissing("`:`");
+      }
+      owner = parserParseType();
+      owner = parserEnd(SyntaxKind.FieldType);
+
+      return owner;
+    });
+    owner = parserEnd(SyntaxKind.RecordType);
+
+    return owner;
+  }
+
+  function parserParenFollowedBy(p: number, allowColon: boolean): boolean {
+    const m = parserMatch[p];
     if (m < 0) return false;
     let q = m + 1;
-    while (this.kinds[q] === TokenKind.Newline) q++;
-    const k = this.kinds[q];
+    for (const _kind of parserKinds) {
+      if (parserKinds[q] !== TokenKind.Newline) break;
+      q = q + 1;
+    }
+    const k = parserKinds[q];
     return k === TokenKind.Arrow || (allowColon && k === TokenKind.Colon);
   }
 
-  /** Full expression: a pipeline of binary expressions. */
-  private parseExpr(): void {
-    if (!this.enter()) return;
-    this.parseExprInner();
-    this.leave();
+  function parserParseExpr(): Parser {
+    if (!parserEnter()) return owner;
+    owner = parserParseExprInner();
+    owner = parserLeave();
+
+    return owner;
   }
 
-  private parseExprInner(): void {
-    const cp = this.checkpoint();
-    this.parseFallback();
+  function parserParseExprInner(): Parser {
+    const cp = parserCheckpoint();
+    owner = parserParseFallback();
     let links = 0;
-    while (this.la() === TokenKind.PipeGt) {
-      if (!this.enterLink()) break;
-      links++;
-      this.skipNl();
-      this.tok();
-      this.skipNl();
-      this.begin();
-      if (this.kind() === TokenKind.Ident) {
-        this.parseQualifiedName();
-        if (this.kind() === TokenKind.LParen) this.parseArgList();
+    for (const _kind of parserKinds) {
+      if (parserLa() !== TokenKind.PipeGt) break;
+      if (!parserEnterLink()) break;
+      links = links + 1;
+      owner = parserSkipNl();
+      owner = parserTok();
+      owner = parserSkipNl();
+      owner = parserBegin();
+      if (parserKind() === TokenKind.Ident) {
+        owner = parserParseQualifiedName();
+        if (parserKind() === TokenKind.LParen) owner = parserParseArgList();
       } else {
-        this.missing("a pipeline stage");
+        owner = parserMissing("a pipeline stage");
       }
-      this.end(SyntaxKind.PipeStage);
-      this.wrap(cp, SyntaxKind.PipeExpr);
+      owner = parserEnd(SyntaxKind.PipeStage);
+      owner = parserWrap(cp, SyntaxKind.PipeExpr);
     }
-    this.leaveLinks(links);
+    owner = parserLeaveLinks(links);
+
+    return owner;
   }
 
-  /** Between logical expressions and pipelines; the fallback associates to the right. */
-  private parseFallback(): void {
-    const cp = this.checkpoint();
-    this.parseBinary(1);
-    if (this.kind() === TokenKind.QuestionQuestion) {
-      if (!this.enterLink()) return;
-      this.tok();
-      this.skipNl();
-      this.parseFallback();
-      const node = this.wrap(cp, SyntaxKind.OptionFallbackExpr);
+  function parserParseFallback(): Parser {
+    const cp = parserCheckpoint();
+    owner = parserParseBinary(1);
+    if (parserKind() === TokenKind.QuestionQuestion) {
+      if (!parserEnterLink()) return owner;
+      owner = parserTok();
+      owner = parserSkipNl();
+      owner = parserParseFallback();
+      owner = parserWrap(cp, SyntaxKind.OptionFallbackExpr);
+      const node = parserNodeKinds.length - 1;
       for (
-        const operand of this.flat.slice(
-          this.nodeChildStart[node],
-          this.nodeChildEnd[node],
+        const operand of parserFlat.slice(
+          parserNodeChildStart[node],
+          parserNodeChildEnd[node],
         )
       ) {
-        if (this.nodeKinds[operand] !== SyntaxKind.BinaryExpr) continue;
-        const logical = this.flat.slice(
-          this.nodeChildStart[operand],
-          this.nodeChildEnd[operand],
+        if (parserNodeKinds[operand] !== SyntaxKind.BinaryExpr) continue;
+        const logical = parserFlat.slice(
+          parserNodeChildStart[operand],
+          parserNodeChildEnd[operand],
         ).some((child) =>
-          this.nodeKinds[child] === SyntaxKind.Token &&
-          [TokenKind.AmpAmp, TokenKind.PipePipe].includes(
-            this.kinds[this.nodeTokens[child]],
-          )
+          parserNodeKinds[child] === SyntaxKind.Token &&
+          isLogicalToken(parserKinds[parserNodeTokens[child]])
         );
         if (logical) {
-          this.report(
+          owner = parserReport(
             "syntax/015",
             "parenthesize logical operands when mixing `??` with `&&` or `||`",
-            this.nodeStarts[operand],
-            this.nodeEnds[operand],
+            parserNodeStarts[operand],
+            parserNodeEnds[operand],
           );
         }
       }
-      this.leaveLinks(1);
+      owner = parserLeaveLinks(1);
     }
+
+    return owner;
   }
 
-  private parseBinary(minPrecedence: number): void {
-    const cp = this.checkpoint();
-    this.parseUnary();
+  function parserParseBinary(minPrecedence: number): Parser {
+    const cp = parserCheckpoint();
+    owner = parserParseUnary();
     let links = 0;
-    while (true) {
-      const k = this.kind();
+    for (const _kind of parserKinds) {
+      const k = parserKind();
       const p = binaryPrecedence(k);
       if (p === 0 || p < minPrecedence) break;
-      if (!this.enterLink()) break;
-      links++;
-      this.tok();
-      this.skipNl();
-      this.parseBinary(p + 1);
-      this.wrap(cp, SyntaxKind.BinaryExpr);
+      if (!parserEnterLink()) break;
+      links = links + 1;
+      owner = parserTok();
+      owner = parserSkipNl();
+      owner = parserParseBinary(p + 1);
+      owner = parserWrap(cp, SyntaxKind.BinaryExpr);
     }
-    this.leaveLinks(links);
+    owner = parserLeaveLinks(links);
+
+    return owner;
   }
 
-  /** `-e` and `!e` bind tighter than `*` and looser than a call or a field. */
-  private parseUnary(): void {
-    const k = this.kind();
+  function parserParseUnary(): Parser {
+    const k = parserKind();
     if (k !== TokenKind.Minus && k !== TokenKind.Bang) {
-      this.parsePostfix();
-      return;
+      owner = parserParsePostfix();
+      return owner;
     }
-    if (!this.enter()) return;
-    this.begin();
-    this.tok();
-    this.skipNl();
-    this.parseUnary();
-    this.end(SyntaxKind.UnaryExpr);
-    this.leave();
+    if (!parserEnter()) return owner;
+    owner = parserBegin();
+    owner = parserTok();
+    owner = parserSkipNl();
+    owner = parserParseUnary();
+    owner = parserEnd(SyntaxKind.UnaryExpr);
+    owner = parserLeave();
+
+    return owner;
   }
 
-  private parsePostfix(): void {
-    const cp = this.checkpoint();
-    this.parsePrimary();
+  function parserParsePostfix(): Parser {
+    const cp = parserCheckpoint();
+    owner = parserParsePrimary();
     let links = 0;
-    while (true) {
-      const k = this.kind();
+    for (const _kind of parserKinds) {
+      const k = parserKind();
       if (k !== TokenKind.LParen && k !== TokenKind.Dot) break;
-      if (!this.enterLink()) break;
-      links++;
+      if (!parserEnterLink()) break;
+      links = links + 1;
       if (k === TokenKind.LParen) {
-        this.parseArgList();
-        this.wrap(cp, SyntaxKind.CallExpr);
+        owner = parserParseArgList();
+        owner = parserWrap(cp, SyntaxKind.CallExpr);
       } else {
-        this.tok();
-        this.parseName("member");
-        this.wrap(cp, SyntaxKind.FieldExpr);
+        owner = parserTok();
+        owner = parserParseName("member");
+        owner = parserWrap(cp, SyntaxKind.FieldExpr);
       }
     }
-    this.leaveLinks(links);
+    owner = parserLeaveLinks(links);
+
+    return owner;
   }
 
-  private parseArgList(): void {
-    this.begin();
-    this.parseDelimited(TokenKind.RParen, () => this.parseExpr());
-    this.end(SyntaxKind.ArgList);
+  function parserParseArgList(): Parser {
+    owner = parserBegin();
+    owner = parserParseDelimited(TokenKind.RParen, () => parserParseExpr());
+    owner = parserEnd(SyntaxKind.ArgList);
+
+    return owner;
   }
 
-  private parsePrimary(): void {
-    if (!this.enter()) return;
-    this.parsePrimaryInner();
-    this.leave();
+  function parserParsePrimary(): Parser {
+    if (!parserEnter()) return owner;
+    owner = parserParsePrimaryInner();
+    owner = parserLeave();
+
+    return owner;
   }
 
-  private parsePrimaryInner(): void {
-    const k = this.kind();
-    switch (k) {
-      case TokenKind.Number:
-      case TokenKind.String:
-      case TokenKind.KwTrue:
-      case TokenKind.KwFalse:
-      case TokenKind.KwNull:
-        this.begin();
-        this.tok();
-        this.end(SyntaxKind.LiteralExpr);
-        return;
-      case TokenKind.Ident: {
-        if (
-          this.isWordAt(this.pos, "using") &&
-          this.kinds[this.pos + 1] === TokenKind.LParen &&
-          this.kinds[this.pos + 2] === TokenKind.Ident &&
-          this.kinds[this.pos + 3] === TokenKind.Eq
-        ) {
-          this.parseUsing();
-          return;
-        }
-        let next = this.pos + 1;
-        while (this.kinds[next] === TokenKind.Newline) next++;
-        if (this.kinds[next] === TokenKind.Arrow) {
-          this.parseArrow();
-          return;
-        }
-        this.begin();
-        const word = this.parserCheckedWordAt(this.pos);
-        if (word !== undefined) {
-          this.reportAtToken(
-            "syntax/007",
-            `\`${word}\` is a reserved word and cannot be a name`,
-          );
-        }
-        this.tok();
-        this.end(SyntaxKind.NameExpr);
-        return;
-      }
-      case TokenKind.LParen:
-        if (this.parenFollowedBy(this.pos, true)) {
-          this.parseArrow();
-        } else {
-          this.begin();
-          const group = this.open("free");
-          this.parseExpr();
-          this.close(group, TokenKind.RParen, "`)`");
-          this.end(SyntaxKind.ParenExpr);
-        }
-        return;
-      case TokenKind.LBrace:
-        this.parseRecordExpr();
-        return;
-      case TokenKind.LBracket: {
-        this.begin();
-        this.parseDelimited(TokenKind.RBracket, () => {
-          if (this.kind() !== TokenKind.DotDotDot) return this.parseExpr();
-          this.begin();
-          this.tok();
-          this.parseExpr();
-          this.end(SyntaxKind.SpreadElement);
-        });
-        this.end(SyntaxKind.ListExpr);
-        return;
-      }
-      case TokenKind.KwMatch:
-        this.parseMatch();
-        return;
-      case TokenKind.KwIf:
-        this.parseIf();
-        return;
-      case TokenKind.KwTry:
-        this.parseTry();
-        return;
-      case TokenKind.Plus:
-        this.parseRefusedUnary("unary operator `+` is not supported");
-        return;
-      default:
-        this.missing("an expression");
+  function parserParsePrimaryInner(): Parser {
+    const k = parserKind();
+    if (
+      k === TokenKind.Number || k === TokenKind.String ||
+      k === TokenKind.KwTrue || k === TokenKind.KwFalse ||
+      k === TokenKind.KwNull
+    ) {
+      owner = parserBegin();
+      owner = parserTok();
+      owner = parserEnd(SyntaxKind.LiteralExpr);
+      return owner;
     }
+    if (k === TokenKind.Ident) {
+      if (
+        parserIsWordAt(parserPos, "using") &&
+        parserKinds[parserPos + 1] === TokenKind.LParen &&
+        parserKinds[parserPos + 2] === TokenKind.Ident &&
+        parserKinds[parserPos + 3] === TokenKind.Eq
+      ) {
+        owner = parserParseUsing();
+        return owner;
+      }
+      let next = parserPos + 1;
+      for (const _kind of parserKinds) {
+        if (parserKinds[next] !== TokenKind.Newline) break;
+        next = next + 1;
+      }
+      if (parserKinds[next] === TokenKind.Arrow) {
+        owner = parserParseArrow();
+        return owner;
+      }
+      owner = parserBegin();
+      const word = parserParserCheckedWordAt(parserPos);
+      if (word !== undefined) {
+        owner = parserReportAtToken(
+          "syntax/007",
+          `\`${word}\` is a reserved word and cannot be a name`,
+        );
+      }
+      owner = parserTok();
+      owner = parserEnd(SyntaxKind.NameExpr);
+      return owner;
+    }
+    if (k === TokenKind.LParen) {
+      if (parserParenFollowedBy(parserPos, true)) {
+        owner = parserParseArrow();
+      } else {
+        owner = parserBegin();
+        const group = parserOpen("free");
+        owner = parserParseExpr();
+        owner = parserClose(group, TokenKind.RParen, "`)`");
+        owner = parserEnd(SyntaxKind.ParenExpr);
+      }
+      return owner;
+    }
+    if (k === TokenKind.LBrace) {
+      owner = parserParseRecordExpr();
+      return owner;
+    }
+    if (k === TokenKind.LBracket) {
+      owner = parserBegin();
+      owner = parserParseDelimited(TokenKind.RBracket, () => {
+        if (parserKind() !== TokenKind.DotDotDot) return parserParseExpr();
+        owner = parserBegin();
+        owner = parserTok();
+        owner = parserParseExpr();
+        owner = parserEnd(SyntaxKind.SpreadElement);
+        return owner;
+      });
+      owner = parserEnd(SyntaxKind.ListExpr);
+      return owner;
+    }
+    if (k === TokenKind.KwMatch) {
+      owner = parserParseMatch();
+      return owner;
+    }
+    if (k === TokenKind.KwIf) {
+      owner = parserParseIf();
+      return owner;
+    }
+    if (k === TokenKind.KwTry) {
+      owner = parserParseTry();
+      return owner;
+    }
+    if (k === TokenKind.Plus) {
+      owner = parserParseRefusedUnary("unary operator `+` is not supported");
+      return owner;
+    }
+    owner = parserMissing("an expression");
+
+    return owner;
   }
 
-  /** Reports `syntax/010` for the operator at the cursor, and skips its operand. */
-  private parseRefusedUnary(message: string): void {
-    this.begin();
-    this.reportAtToken("syntax/010", message);
-    this.tok();
-    this.parsePostfix();
-    this.end(SyntaxKind.Error);
+  function parserParseRefusedUnary(message: string): Parser {
+    owner = parserBegin();
+    owner = parserReportAtToken("syntax/010", message);
+    owner = parserTok();
+    owner = parserParsePostfix();
+    owner = parserEnd(SyntaxKind.Error);
+
+    return owner;
   }
 
-  private parseUsing(): void {
-    this.begin();
-    this.tok();
-    const group = this.open("free");
-    this.parseName("binding");
-    this.expect(TokenKind.Eq, "`=`");
-    this.skipNl();
-    this.begin();
-    this.parseBody();
-    this.end(SyntaxKind.ResourceAcquire);
-    this.close(group, TokenKind.RParen, "`)`");
-    this.skipNl();
-    this.begin();
-    this.parseBlockExpected();
-    this.end(SyntaxKind.ResourceUse);
-    if (this.la() === TokenKind.KwFinally) {
-      this.skipNl();
-      this.tok();
-    } else this.missing("`finally`");
-    this.skipNl();
-    this.begin();
-    this.parseOutcomeBinding();
-    this.parseBlockExpected();
-    this.end(SyntaxKind.ResourceRelease);
-    this.end(SyntaxKind.UsingExpr);
+  function parserParseUsing(): Parser {
+    owner = parserBegin();
+    owner = parserTok();
+    const group = parserOpen("free");
+    owner = parserParseName("binding");
+    owner = parserExpect(TokenKind.Eq, "`=`");
+    owner = parserSkipNl();
+    owner = parserBegin();
+    owner = parserParseBody();
+    owner = parserEnd(SyntaxKind.ResourceAcquire);
+    owner = parserClose(group, TokenKind.RParen, "`)`");
+    owner = parserSkipNl();
+    owner = parserBegin();
+    owner = parserParseBlockExpected();
+    owner = parserEnd(SyntaxKind.ResourceUse);
+    if (parserLa() === TokenKind.KwFinally) {
+      owner = parserSkipNl();
+      owner = parserTok();
+    } else owner = parserMissing("`finally`");
+    owner = parserSkipNl();
+    owner = parserBegin();
+    owner = parserParseOutcomeBinding();
+    owner = parserParseBlockExpected();
+    owner = parserEnd(SyntaxKind.ResourceRelease);
+    owner = parserEnd(SyntaxKind.UsingExpr);
+
+    return owner;
   }
 
-  private parseArrow(): void {
-    this.begin();
-    if (this.kind() === TokenKind.Ident) {
-      this.begin(); // A bare parameter has the same structure, without invented tokens.
-      this.begin();
-      this.parseName("binding");
-      this.end(SyntaxKind.Param);
-      this.end(SyntaxKind.ParamList);
+  function parserParseArrow(): Parser {
+    owner = parserBegin();
+    if (parserKind() === TokenKind.Ident) {
+      owner = parserBegin(); // A bare parameter has the same structure, without invented tokens.
+      owner = parserBegin();
+      owner = parserParseName("binding");
+      owner = parserEnd(SyntaxKind.Param);
+      owner = parserEnd(SyntaxKind.ParamList);
     } else {
-      this.parseParamList();
+      owner = parserParseParamList();
     }
-    if (this.la() === TokenKind.Colon) {
-      this.skipNl();
-      this.tok();
-      this.skipNl();
-      this.parseType();
-      this.parseEffects();
+    if (parserLa() === TokenKind.Colon) {
+      owner = parserSkipNl();
+      owner = parserTok();
+      owner = parserSkipNl();
+      owner = parserParseType();
+      owner = parserParseEffects();
     }
-    if (this.la() === TokenKind.Arrow) {
-      this.skipNl();
-      this.tok();
+    if (parserLa() === TokenKind.Arrow) {
+      owner = parserSkipNl();
+      owner = parserTok();
     } else {
-      this.missing("`=>`");
+      owner = parserMissing("`=>`");
     }
-    this.skipNl();
-    this.parseBody();
-    this.end(SyntaxKind.ArrowExpr);
+    owner = parserSkipNl();
+    owner = parserParseBody();
+    owner = parserEnd(SyntaxKind.ArrowExpr);
+
+    return owner;
   }
 
-  /**
-   * After `=>`: a brace opens a block. Anything else is an expression. A block
-   * statement never starts with `name :` or `...`, so those tokens show a record
-   * literal without parentheses. It gets one diagnostic and parses as a record.
-   */
-  private parseBody(): void {
-    if (this.kind() !== TokenKind.LBrace) {
-      this.parseExpr();
-    } else if (this.startsRecordLiteral()) {
-      this.reportAtToken(
+  function parserParseBody(): Parser {
+    if (parserKind() !== TokenKind.LBrace) {
+      owner = parserParseExpr();
+    } else if (parserStartsRecordLiteral()) {
+      owner = parserReportAtToken(
         "syntax/016",
         "a record literal body needs parentheses: `({ ... })`",
       );
-      this.parseRecordExpr();
+      owner = parserParseRecordExpr();
     } else {
-      this.parseBlock();
+      owner = parserParseBlock();
     }
+
+    return owner;
   }
 
-  /** True when the `{` at the current token is followed by `name :` or `...`. */
-  private startsRecordLiteral(): boolean {
-    let p = this.pos + 1;
-    while (this.kinds[p] === TokenKind.Newline) p++;
-    return this.kinds[p] === TokenKind.DotDotDot ||
-      (this.kinds[p] === TokenKind.Ident &&
-        this.kinds[p + 1] === TokenKind.Colon);
+  function parserStartsRecordLiteral(): boolean {
+    let p = parserPos + 1;
+    for (const _kind of parserKinds) {
+      if (parserKinds[p] !== TokenKind.Newline) break;
+      p = p + 1;
+    }
+    return parserKinds[p] === TokenKind.DotDotDot ||
+      (parserKinds[p] === TokenKind.Ident &&
+        parserKinds[p + 1] === TokenKind.Colon);
   }
 
-  private parseBlock(): void {
-    this.begin();
-    const group = this.open("sig");
+  function parserParseBlock(): Parser {
+    owner = parserBegin();
+    const group = parserOpen("sig");
     let first = true;
-    this.parseSeparated(() => {
+    owner = parserParseSeparated(() => {
       const leading = first;
       first = false;
-      if (this.kind() === TokenKind.KwConst) {
-        this.begin();
-        this.parseConstBody(false);
-        this.end(SyntaxKind.ConstDecl);
-      } else if (!leading && this.kind() === TokenKind.Minus) {
+      if (parserKind() === TokenKind.KwConst) {
+        owner = parserBegin();
+        owner = parserParseConstBody(false);
+        owner = parserEnd(SyntaxKind.ConstDecl);
+      } else if (!leading && parserKind() === TokenKind.Minus) {
         // A newline ends the previous item, so this `-` would read as two statements.
-        this.parseRefusedUnary(
+        owner = parserParseRefusedUnary(
           "a block item cannot start with `-`; put `-` at the end of the previous line, or write `(-x)`",
         );
       } else {
-        this.parseExpr();
+        owner = parserParseExpr();
       }
+      return owner;
     });
-    this.close(group, TokenKind.RBrace, "`}`");
-    this.end(SyntaxKind.Block);
+    owner = parserClose(group, TokenKind.RBrace, "`}`");
+    owner = parserEnd(SyntaxKind.Block);
+
+    return owner;
   }
 
-  private parseBlockExpected(): void {
-    if (this.kind() === TokenKind.LBrace) this.parseBlock();
-    else this.missing("`{`");
+  function parserParseBlockExpected(): Parser {
+    if (parserKind() === TokenKind.LBrace) owner = parserParseBlock();
+    else owner = parserMissing("`{`");
+
+    return owner;
   }
 
-  private parseRecordExpr(): void {
-    this.begin();
+  function parserParseRecordExpr(): Parser {
+    owner = parserBegin();
     let index = 0;
-    this.parseDelimited(TokenKind.RBrace, () => {
-      const k = this.kind();
+    owner = parserParseDelimited(TokenKind.RBrace, () => {
+      const k = parserKind();
       if (k === TokenKind.DotDotDot) {
         if (index > 0) {
-          this.reportAtToken(
+          owner = parserReportAtToken(
             "syntax/014",
             "a spread must be the first field and appear only once",
           );
         }
-        this.begin();
-        this.tok();
-        this.parseExpr();
-        this.end(SyntaxKind.SpreadField);
+        owner = parserBegin();
+        owner = parserTok();
+        owner = parserParseExpr();
+        owner = parserEnd(SyntaxKind.SpreadField);
       } else if (k === TokenKind.Ident) {
-        this.begin();
-        if (this.kinds[this.pos + 1] === TokenKind.Colon) {
-          this.parseName("member");
-          this.tok();
-          this.skipNl();
-          this.parseExpr();
-          this.end(SyntaxKind.RecordField);
+        owner = parserBegin();
+        if (parserKinds[parserPos + 1] === TokenKind.Colon) {
+          owner = parserParseName("member");
+          owner = parserTok();
+          owner = parserSkipNl();
+          owner = parserParseExpr();
+          owner = parserEnd(SyntaxKind.RecordField);
         } else {
-          this.parseName("binding");
-          this.end(SyntaxKind.ShorthandField);
+          owner = parserParseName("binding");
+          owner = parserEnd(SyntaxKind.ShorthandField);
         }
       } else {
-        this.missing("a field name");
+        owner = parserMissing("a field name");
       }
-      index++;
+      index = index + 1;
+
+      return owner;
     });
-    this.end(SyntaxKind.RecordExpr);
+    owner = parserEnd(SyntaxKind.RecordExpr);
+
+    return owner;
   }
 
-  private parseIf(): void {
-    if (!this.enter()) return;
-    this.parseIfInner();
-    this.leave();
+  function parserParseIf(): Parser {
+    if (!parserEnter()) return owner;
+    owner = parserParseIfInner();
+    owner = parserLeave();
+
+    return owner;
   }
 
-  private parseIfInner(): void {
-    this.begin();
-    this.tok();
-    if (this.kind() === TokenKind.LParen) {
-      const group = this.open("free");
-      this.parseExpr();
-      this.close(group, TokenKind.RParen, "`)`");
+  function parserParseIfInner(): Parser {
+    owner = parserBegin();
+    owner = parserTok();
+    if (parserKind() === TokenKind.LParen) {
+      const group = parserOpen("free");
+      owner = parserParseExpr();
+      owner = parserClose(group, TokenKind.RParen, "`)`");
     } else {
-      this.missing("`(`");
+      owner = parserMissing("`(`");
     }
-    this.parseBlockExpected();
-    if (this.la() === TokenKind.KwElse) {
-      this.skipNl();
-      this.tok();
-      if (this.kind() === TokenKind.KwIf) this.parseIf();
-      else this.parseBlockExpected();
+    owner = parserParseBlockExpected();
+    if (parserLa() === TokenKind.KwElse) {
+      owner = parserSkipNl();
+      owner = parserTok();
+      if (parserKind() === TokenKind.KwIf) owner = parserParseIf();
+      else owner = parserParseBlockExpected();
     } else {
-      this.missing("`else`");
+      owner = parserMissing("`else`");
     }
-    this.end(SyntaxKind.IfExpr);
+    owner = parserEnd(SyntaxKind.IfExpr);
+
+    return owner;
   }
 
-  private parseMatch(): void {
-    this.begin();
-    this.tok();
-    this.parseExpr();
-    if (this.kind() === TokenKind.LBrace) {
-      this.parseDelimited(TokenKind.RBrace, () => this.parseArm());
+  function parserParseMatch(): Parser {
+    owner = parserBegin();
+    owner = parserTok();
+    owner = parserParseExpr();
+    if (parserKind() === TokenKind.LBrace) {
+      owner = parserParseDelimited(TokenKind.RBrace, () => parserParseArm());
     } else {
-      this.missing("`{`");
+      owner = parserMissing("`{`");
     }
-    this.end(SyntaxKind.MatchExpr);
+    owner = parserEnd(SyntaxKind.MatchExpr);
+
+    return owner;
   }
 
-  private parseArm(): void {
-    this.begin();
-    this.parsePattern();
-    if (this.kind() === TokenKind.Arrow) {
-      this.tok();
-      this.skipNl();
+  function parserParseArm(): Parser {
+    owner = parserBegin();
+    owner = parserParsePattern();
+    if (parserKind() === TokenKind.Arrow) {
+      owner = parserTok();
+      owner = parserSkipNl();
     } else {
-      this.missing("`=>`");
+      owner = parserMissing("`=>`");
     }
-    this.parseBody();
-    this.end(SyntaxKind.MatchArm);
+    owner = parserParseBody();
+    owner = parserEnd(SyntaxKind.MatchArm);
+
+    return owner;
   }
 
-  private parseTry(): void {
-    this.begin();
-    this.tok();
-    this.parseBlockExpected();
-    const caught = this.la() === TokenKind.KwCatch;
+  function parserParseTry(): Parser {
+    owner = parserBegin();
+    owner = parserTok();
+    owner = parserParseBlockExpected();
+    const caught = parserLa() === TokenKind.KwCatch;
     if (caught) {
-      this.skipNl();
-      this.begin();
-      this.tok();
-      if (this.kind() === TokenKind.LBrace) {
-        this.parseDelimited(TokenKind.RBrace, () => this.parseHandler());
+      owner = parserSkipNl();
+      owner = parserBegin();
+      owner = parserTok();
+      if (parserKind() === TokenKind.LBrace) {
+        owner = parserParseDelimited(
+          TokenKind.RBrace,
+          () => parserParseHandler(),
+        );
       } else {
-        this.missing("`{`");
+        owner = parserMissing("`{`");
       }
-      this.end(SyntaxKind.CatchClause);
+      owner = parserEnd(SyntaxKind.CatchClause);
     }
-    if (this.la() === TokenKind.KwFinally) {
-      this.skipNl();
-      this.begin();
-      this.tok();
-      this.skipNl();
-      this.parseOutcomeBinding();
-      this.parseBlockExpected();
-      this.end(SyntaxKind.FinallyClause);
+    if (parserLa() === TokenKind.KwFinally) {
+      owner = parserSkipNl();
+      owner = parserBegin();
+      owner = parserTok();
+      owner = parserSkipNl();
+      owner = parserParseOutcomeBinding();
+      owner = parserParseBlockExpected();
+      owner = parserEnd(SyntaxKind.FinallyClause);
     } else if (!caught) {
-      this.missing("`catch` or `finally`");
+      owner = parserMissing("`catch` or `finally`");
     }
-    this.end(SyntaxKind.TryExpr);
+    owner = parserEnd(SyntaxKind.TryExpr);
+
+    return owner;
   }
 
-  /** The optional `(outcome)` of a `finally` block. */
-  private parseOutcomeBinding(): void {
-    if (this.kind() !== TokenKind.LParen) return;
-    const group = this.open("free");
-    this.parseName("binding");
-    this.close(group, TokenKind.RParen, "`)`");
-    this.skipNl();
+  function parserParseOutcomeBinding(): Parser {
+    if (parserKind() !== TokenKind.LParen) return owner;
+    const group = parserOpen("free");
+    owner = parserParseName("binding");
+    owner = parserClose(group, TokenKind.RParen, "`)`");
+    owner = parserSkipNl();
+
+    return owner;
   }
 
-  private parseHandler(): void {
-    this.begin();
-    this.parseName("member");
-    if (this.kind() === TokenKind.LParen) {
-      const group = this.open("free");
-      this.parseName("binding");
-      this.close(group, TokenKind.RParen, "`)`");
+  function parserParseHandler(): Parser {
+    owner = parserBegin();
+    owner = parserParseName("member");
+    if (parserKind() === TokenKind.LParen) {
+      const group = parserOpen("free");
+      owner = parserParseName("binding");
+      owner = parserClose(group, TokenKind.RParen, "`)`");
     } else {
-      this.missing("`(`");
+      owner = parserMissing("`(`");
     }
-    if (this.kind() === TokenKind.Arrow) {
-      this.tok();
-      this.skipNl();
+    if (parserKind() === TokenKind.Arrow) {
+      owner = parserTok();
+      owner = parserSkipNl();
     } else {
-      this.missing("`=>`");
+      owner = parserMissing("`=>`");
     }
-    this.parseBody();
-    this.end(SyntaxKind.Handler);
+    owner = parserParseBody();
+    owner = parserEnd(SyntaxKind.Handler);
+
+    return owner;
   }
 
-  private isLiteralKind(k: TokenKind): boolean {
+  function parserIsLiteralKind(k: TokenKind | undefined): boolean {
     return k === TokenKind.String || k === TokenKind.Number ||
       k === TokenKind.KwTrue ||
       k === TokenKind.KwFalse || k === TokenKind.KwNull;
   }
 
-  private invalidPattern(message: string): void {
-    this.problem("syntax/011", message, false);
+  function parserInvalidPattern(message: string): Parser {
+    owner = parserProblem("syntax/011", message, false);
+
+    return owner;
   }
 
-  /**
-   * A literal token, or `-` and a number. A negative duration, a negative
-   * non-number, and a `-` alone give one syntax/011. The node keeps the `-` and
-   * the token that follows it, so one bad pattern gives one problem.
-   */
-  private parseLiteralPattern(): void {
-    this.begin();
-    if (this.kind() === TokenKind.Minus) {
-      this.tok();
-      const next = this.kind();
+  function parserParseLiteralPattern(): Parser {
+    owner = parserBegin();
+    if (parserKind() === TokenKind.Minus) {
+      owner = parserTok();
+      const next = parserKind();
       if (
         next === TokenKind.Number &&
         !isDurationText(
-          this.text.slice(this.starts[this.pos], this.ends[this.pos]),
+          parserText.slice(parserStarts[parserPos], parserEnds[parserPos]),
         )
       ) {
-        this.tok();
+        owner = parserTok();
       } else {
-        this.invalidPattern(
+        owner = parserInvalidPattern(
           "a negative pattern must be a number literal, as in `-1` or `-1.5`",
         );
-        if (next === TokenKind.Ident || this.isLiteralKind(next)) this.tok();
+        if (next === TokenKind.Ident || parserIsLiteralKind(next)) {
+          owner = parserTok();
+        }
       }
     } else {
-      this.tok();
+      owner = parserTok();
     }
-    this.end(SyntaxKind.LiteralPattern);
+    owner = parserEnd(SyntaxKind.LiteralPattern);
+
+    return owner;
   }
 
-  private parsePattern(): void {
-    const k = this.kind();
+  function parserParsePattern(): Parser {
+    const k = parserKind();
     if (k === TokenKind.Ident) {
-      this.begin();
-      if (this.isWordAt(this.pos, "_")) {
-        this.tok();
-        this.end(SyntaxKind.WildcardPattern);
-      } else if (this.kinds[this.pos + 1] === TokenKind.LParen) {
-        this.parseName("member");
-        const group = this.open("free");
+      owner = parserBegin();
+      if (parserIsWordAt(parserPos, "_")) {
+        owner = parserTok();
+        owner = parserEnd(SyntaxKind.WildcardPattern);
+      } else if (parserKinds[parserPos + 1] === TokenKind.LParen) {
+        owner = parserParseName("member");
+        const group = parserOpen("free");
         if (
-          this.kind() === TokenKind.Ident &&
-          this.kinds[this.pos + 1] === TokenKind.RParen
+          parserKind() === TokenKind.Ident &&
+          parserKinds[parserPos + 1] === TokenKind.RParen
         ) {
-          this.parseName("binding");
-        } else if (this.kind() !== TokenKind.RParen) {
-          this.invalidPattern(
+          owner = parserParseName("binding");
+        } else if (parserKind() !== TokenKind.RParen) {
+          owner = parserInvalidPattern(
             "nested patterns are not supported; bind one name",
           );
-          this.skipJunk((x) => x === TokenKind.RParen, "");
+          owner = parserSkipJunk((x) => x === TokenKind.RParen, "");
         } else {
-          this.missing("a name");
+          owner = parserMissing("a name");
         }
-        this.close(group, TokenKind.RParen, "`)`");
-        this.end(SyntaxKind.CtorPattern);
+        owner = parserClose(group, TokenKind.RParen, "`)`");
+        owner = parserEnd(SyntaxKind.CtorPattern);
       } else {
-        this.parseName("member");
-        this.end(SyntaxKind.NamePattern);
+        owner = parserParseName("member");
+        owner = parserEnd(SyntaxKind.NamePattern);
       }
-    } else if (this.isLiteralKind(k) || k === TokenKind.Minus) {
-      this.parseLiteralPattern();
+    } else if (parserIsLiteralKind(k) || k === TokenKind.Minus) {
+      owner = parserParseLiteralPattern();
     } else if (k === TokenKind.LBrace) {
-      this.begin();
-      this.parseDelimited(TokenKind.RBrace, () => this.parsePatternField());
-      this.end(SyntaxKind.RecordPattern);
-    } else {
-      this.invalidPattern(
-        `expected a pattern, found ${this.foundDescription()}`,
+      owner = parserBegin();
+      owner = parserParseDelimited(
+        TokenKind.RBrace,
+        () => parserParsePatternField(),
       );
-      const at = this.prevEnd();
-      this.top().push(this.newNode(SyntaxKind.Missing, at, at, -1));
+      owner = parserEnd(SyntaxKind.RecordPattern);
+    } else {
+      owner = parserInvalidPattern(
+        `expected a pattern, found ${parserFoundDescription()}`,
+      );
+      const at = parserPrevEnd();
+      const top = parserTop();
+      top[top.length] = parserNewNode(
+        SyntaxKind.Missing,
+        at,
+        at,
+        -1,
+      );
     }
+
+    return owner;
   }
 
-  private parsePatternField(): void {
-    const k = this.kind();
+  function parserParsePatternField(): Parser {
+    const k = parserKind();
     if (k === TokenKind.DotDotDot) {
-      this.begin();
-      this.tok();
-      this.parseName("binding");
-      this.end(SyntaxKind.SpreadPattern);
+      owner = parserBegin();
+      owner = parserTok();
+      owner = parserParseName("binding");
+      owner = parserEnd(SyntaxKind.SpreadPattern);
     } else if (k === TokenKind.Ident) {
-      this.begin();
-      this.parseName("member");
-      if (this.kind() === TokenKind.Colon) {
-        this.tok();
-        this.skipNl();
+      owner = parserBegin();
+      owner = parserParseName("member");
+      if (parserKind() === TokenKind.Colon) {
+        owner = parserTok();
+        owner = parserSkipNl();
       } else {
-        this.missing("`:`");
+        owner = parserMissing("`:`");
       }
-      if (this.isLiteralKind(this.kind()) || this.kind() === TokenKind.Minus) {
-        this.parseLiteralPattern();
+      if (
+        parserIsLiteralKind(parserKind()) || parserKind() === TokenKind.Minus
+      ) {
+        owner = parserParseLiteralPattern();
       } else {
-        this.invalidPattern("a field in a record pattern must match a literal");
-        this.skipJunk(
+        owner = parserInvalidPattern(
+          "a field in a record pattern must match a literal",
+        );
+        owner = parserSkipJunk(
           (x) => x === TokenKind.Comma || x === TokenKind.RBrace,
           "",
         );
       }
-      this.end(SyntaxKind.PatternField);
+      owner = parserEnd(SyntaxKind.PatternField);
     } else {
-      this.invalidPattern(
-        `expected a field name or a spread, found ${this.foundDescription()}`,
+      owner = parserInvalidPattern(
+        `expected a field name or a spread, found ${parserFoundDescription()}`,
       );
-      const at = this.prevEnd();
-      this.top().push(this.newNode(SyntaxKind.Missing, at, at, -1));
+      const at = parserPrevEnd();
+      const top = parserTop();
+      top[top.length] = parserNewNode(
+        SyntaxKind.Missing,
+        at,
+        at,
+        -1,
+      );
     }
+
+    return owner;
   }
+  function parserGetDiagnostics(): readonly Diagnostic[] {
+    return parserDiagnostics;
+  }
+
+  owner = { diagnostics: parserGetDiagnostics, run: parserRun };
+  return owner;
 }

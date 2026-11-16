@@ -70,7 +70,9 @@ Deno.test("a wrong host module gives one host-boundary diagnostic on the import 
           buildSpanTable(module, imports.get(name)),
         ]),
       );
-      const mapped = output.diagnostics.map((d) => mapTscDiagnostic(d, tables));
+      const mapped = output.diagnostics.map((d) =>
+        mapTscDiagnostic(d, tables, undefined)
+      );
       assertEquals(mapped.length, 1, run.stderr);
       const only = mapped[0];
       assert(only.tag === "host-boundary", JSON.stringify(only));
@@ -670,7 +672,9 @@ Deno.test("a host module with its own service class and a missing method gives o
         buildSpanTable(module, imports.get(name)),
       ]),
     );
-    const mapped = output.diagnostics.map((d) => mapTscDiagnostic(d, tables));
+    const mapped = output.diagnostics.map((d) =>
+      mapTscDiagnostic(d, tables, undefined)
+    );
     assertEquals(mapped.length, 1, run.stderr);
     const only = mapped[0];
     assert(only.tag === "host-boundary", JSON.stringify(only));

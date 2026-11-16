@@ -1,3 +1,4 @@
+// @light-fp adapter
 // In-memory doubles for the command-line tests: a file system in a map, a
 // recorded `deno check` runner, and a scripted watch source.
 
@@ -60,14 +61,14 @@ export function memoryFs(
         ? { ok: false, error: { tag: "not-found", path } }
         : { ok: true, value: text };
     },
-    writeText(path, text): Result<void, FileFailure> {
+    writeText(path, text): Result<undefined, FileFailure> {
       if (unwritable.has(path)) {
         return { ok: false, error: { message: "permission denied" } };
       }
       files.set(path, text);
       return { ok: true, value: undefined };
     },
-    remove(path): Result<void, FileFailure> {
+    remove(path): Result<undefined, FileFailure> {
       if (unwritable.has(path)) {
         return { ok: false, error: { message: "permission denied" } };
       }

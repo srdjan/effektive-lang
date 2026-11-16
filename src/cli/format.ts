@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Output lines. A diagnostic prints as `path:line:column: error code: message`.
 // Each related location of a diagnostic prints on the next line as
 // `path:line:column: note: message`. The path is root-relative. The line and

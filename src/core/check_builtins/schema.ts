@@ -1,5 +1,7 @@
 // Schema construction, directional transformations, defaults and recursion checks.
-import { SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "../ir.ts";
+import { type CapabilityId, SCHEMA_ERROR_ID, SCHEMA_ISSUE_ID } from "../ir.ts";
+import type { DiagnosticCode } from "../diagnostics.ts";
+import { panic } from "../source.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
 import {
   functionParts,
@@ -9,18 +11,18 @@ import {
 import { combine, PURE_EFFECTS } from "../effect_set.ts";
 import type { NodeFact, NodeInfo } from "../tables.ts";
 import { dataOnly, type TypeNode, type TypeRef } from "../types.ts";
+import { emptyMap, emptySet, setFrom } from "../runtime.ts";
 import type {
   Arg,
   BuiltinContext,
   FactView,
-  FactWriter,
   ResolveView,
   SyntaxView,
 } from "./context.ts";
 import type { BuiltinRow, Rows, SharedPrologue } from "./rows.ts";
 
-export interface SchemaContext extends
-  Pick<
+export type SchemaContext =
+  & Pick<
     BuiltinContext,
     | "table"
     | "module"
@@ -31,18 +33,25 @@ export interface SchemaContext extends
     | "fits"
     | "functionOf"
     | "isError"
-    | "report"
-  >,
-  SyntaxView,
-  ResolveView,
-  FactView,
-  FactWriter {
-  readonly infos: ReadonlyMap<NodeId, NodeInfo>;
-  kidsOfKind(node: NodeId, kind: SyntaxKind): NodeId[];
-  expr(node: NodeId, expected?: TypeRef): NodeInfo;
-}
+  >
+  & SyntaxView
+  & ResolveView
+  & FactView
+  & {
+    checkFit(
+      node: NodeId,
+      found: TypeRef,
+      expected: TypeRef | undefined,
+      what: string,
+    ): SchemaContext;
+    report(code: DiagnosticCode, message: string, node: NodeId): SchemaContext;
+    fact(node: NodeId, fact: NodeFact): SchemaContext;
+    readonly infos: ReadonlyMap<NodeId, NodeInfo>;
+    kidsOfKind(node: NodeId, kind: SyntaxKind): NodeId[];
+    expr(node: NodeId, expected: TypeRef | undefined): NodeInfo;
+  };
 
-type SchemaNode = Extract<TypeNode, { kind: "schema" }>;
+type SchemaNode = Extract<TypeNode, { readonly kind: "schema" }>;
 
 /**
  * True when `failures` is known and holds no failure or exactly one failure
@@ -57,7 +66,7 @@ function failsOnlyWith(
     failures.every((id) => allowed.includes(id));
 }
 
-type SchemaOp = Extract<NodeFact, { kind: "schema" }>["op"];
+type SchemaOp = Extract<NodeFact, { readonly kind: "schema" }>["op"];
 
 /**
  * Where `self` may occur below a call of a Schema builtin in a recursive body.
@@ -75,7 +84,7 @@ type RecursionRole =
   | "reject";
 
 /** How `schemaCall` treats one Schema builtin. */
-interface SchemaBuiltin {
+type SchemaBuiltin = {
   readonly op: SchemaOp;
   readonly arity: number;
   /** A third options argument is also accepted. */
@@ -86,9 +95,27 @@ interface SchemaBuiltin {
   readonly preservesMakeInput: boolean;
   /** How a recursive Schema body may hold its `self` below a call of this builtin. */
   readonly recursion: RecursionRole;
-}
+};
 
-const SCHEMA_BUILTINS = {
+type SchemaBuiltinName =
+  | "schema"
+  | "schemaArray"
+  | "schemaStruct"
+  | "schemaOptionalKey"
+  | "schemaNullToMissingKey"
+  | "schemaOptionFromOptionalKey"
+  | "schemaDefaultKey"
+  | "schemaConstructorDefault"
+  | "schemaOptionalTransform"
+  | "schemaOptionalFromRequired"
+  | "schemaUnion"
+  | "schemaTransform"
+  | "schemaRecursive"
+  | "schemaDecode"
+  | "schemaEncode"
+  | "schemaMake";
+
+const SCHEMA_BUILTINS: Readonly<Record<SchemaBuiltinName, SchemaBuiltin>> = {
   schema: {
     op: "identity",
     arity: 0,
@@ -202,7 +229,7 @@ const SCHEMA_BUILTINS = {
     preservesMakeInput: true,
     recursion: "reject",
   },
-} as const satisfies Record<string, SchemaBuiltin>;
+};
 
 const DEFAULT_KEY_ON = ["missing", "null", "encoded"] as const;
 
@@ -213,8 +240,6 @@ const DEFAULT_KEY_OPS = {
   null: "default-null-key",
   encoded: "default-encoded-key",
 } as const;
-
-type SchemaBuiltinName = keyof typeof SCHEMA_BUILTINS;
 
 /** The recursion role of a builtin name; a name that is not a Schema builtin rejects `self`. */
 function recursionRoleOf(name: string | undefined): RecursionRole {
@@ -228,7 +253,7 @@ function isSchemaBuiltinName(name: string): name is SchemaBuiltinName {
 }
 
 /** What a Schema handler reads from the call. */
-interface SchemaCall {
+type SchemaCall = {
   readonly node: NodeId;
   readonly name: SchemaBuiltinName;
   readonly builtin: SchemaBuiltin;
@@ -236,7 +261,7 @@ interface SchemaCall {
   readonly op: SchemaOp;
   readonly args: readonly Arg[];
   readonly expected: TypeRef | undefined;
-}
+};
 
 type SchemaHandler = (checker: SchemaContext, call: SchemaCall) => NodeInfo;
 
@@ -304,7 +329,7 @@ function defaultKeyChoice(
     : undefined;
   const on = DEFAULT_KEY_ON.find((candidate) => candidate === literal);
   if (on === undefined) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `${name} \`on\` must be a literal "missing", "null", or "encoded"`,
       value ?? options.node,
@@ -323,7 +348,7 @@ function defaultKeyOptionsShape(c: SchemaContext, record: NodeId): boolean {
   if (fields.length < 1 || fields.length > 2) {
     return false;
   }
-  const seen = new Set<string>();
+  let seen = emptySet<string>();
   for (const field of fields) {
     const parts = kindOf(c.tree, field) === SyntaxKind.RecordField
       ? recordFieldParts(c.tree, field)
@@ -335,7 +360,7 @@ function defaultKeyOptionsShape(c: SchemaContext, record: NodeId): boolean {
     ) {
       return false;
     }
-    seen.add(parts.label);
+    seen = seen.add(parts.label);
     if (parts.label === "encodingStrategy") {
       const strategy = literalOf(c.tree, parts.value);
       if (strategy !== "omit" && strategy !== "passthrough") {
@@ -358,17 +383,24 @@ function schemaCall(
   const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
   const fact = c.facts.get(node);
   if (fact?.kind !== "schema") {
-    throw new Error("internal: a Schema builtin call has no schema fact");
+    return panic("internal: a Schema builtin call has no schema fact");
   }
   const op = fact.op;
   const handler = SCHEMA_HANDLERS[op];
-  const result = handler(c, { node, name, builtin, op, args, expected });
+  const result = handler(c, {
+    node: node,
+    name: name,
+    builtin: builtin,
+    op: op,
+    args: args,
+    expected: expected,
+  });
   const type = c.table.node(c.table.unfold(result.type));
   if (
     type.kind === "schema" &&
     c.table.containsForeignSealed(c.module, type.decoded)
   ) {
-    c.report(
+    c = c.report(
       "sealed/004",
       "only the declaring module can derive a Schema that decodes to a sealed type",
       node,
@@ -390,20 +422,22 @@ function schemaOf(
   info: NodeInfo,
   at: NodeId,
 ): SchemaNode | undefined {
-  const { name, builtin, op } = call;
+  const name = call.name;
+  const builtin = call.builtin;
+  const op = call.op;
   const type = c.table.node(c.table.unfold(info.type));
   const accepted = type.kind === "schema" &&
     (op === "constructor-default" ||
       type.presence === "required") &&
-    (builtin.acceptsDefault || type.constructorDefault !== true);
+    (builtin.acceptsDefault || !type.constructorDefault);
   if (!accepted && !c.isError(info.type)) {
-    c.report("type-mismatch/010", `\`${name}\` needs a Schema value`, at);
+    c = c.report("type-mismatch/010", `\`${name}\` needs a Schema value`, at);
   }
   if (
     type.kind === "schema" && changedMakeInput(c, type) &&
     !builtin.preservesMakeInput
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `${name} does not yet preserve constructor make-input metadata`,
       at,
@@ -422,7 +456,7 @@ function optionalOf(
   const type = c.table.node(c.table.unfold(info.type));
   if (type.kind !== "schema" || type.presence !== "optional") {
     if (!c.isError(info.type)) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         `\`${call.name}\` needs a SchemaOptional field`,
         at,
@@ -438,8 +472,8 @@ function firstSchema(c: SchemaContext, call: SchemaCall): {
   first: NodeInfo;
   schema: SchemaNode | undefined;
 } {
-  const first = c.argInfo(call.args[0]);
-  return { first, schema: schemaOf(c, call, first, call.args[0].node) };
+  const first = c.argInfo(call.args[0], undefined);
+  return { first: first, schema: schemaOf(c, call, first, call.args[0].node) };
 }
 
 /**
@@ -450,7 +484,9 @@ function expectedSchema(c: SchemaContext, call: SchemaCall): {
   schema: SchemaNode;
   type: TypeRef;
 } | undefined {
-  const { node, name, expected } = call;
+  const node = call.node;
+  const name = call.name;
+  const expected = call.expected;
   const hintKind = expected === undefined
     ? undefined
     : c.table.node(c.table.unfold(expected)).kind;
@@ -466,7 +502,7 @@ function expectedSchema(c: SchemaContext, call: SchemaCall): {
   if (expected === undefined || hint === undefined) {
     // `schemaOf` has already reported a rejected flag or a poisoned hint.
     if (!hintable) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         `\`${name}\` needs an expected Schema type`,
         node,
@@ -479,13 +515,17 @@ function expectedSchema(c: SchemaContext, call: SchemaCall): {
     !dataOnly(c.table, hint.encoded, "value", true) ||
     !dataOnly(c.table, hint.makeInput ?? hint.decoded, "value", true)
   ) {
-    c.report("type-mismatch/010", "Schema data must be compiler-derived", node);
+    c = c.report(
+      "type-mismatch/010",
+      "Schema data must be compiler-derived",
+      node,
+    );
   }
   return { schema: hint, type: expected };
 }
 
 function schemaIdentityCall(c: SchemaContext, call: SchemaCall): NodeInfo {
-  const { node } = call;
+  const node = call.node;
   const hint = expectedSchema(c, call);
   if (hint === undefined) {
     return c.finish(node, c.table.error, PURE_EFFECTS);
@@ -495,7 +535,7 @@ function schemaIdentityCall(c: SchemaContext, call: SchemaCall): NodeInfo {
     hint.schema.decodeRequirements.length ||
     hint.schema.encodeRequirements.length
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/003",
       "`schema()` needs an identity Schema with no services",
       node,
@@ -505,25 +545,27 @@ function schemaIdentityCall(c: SchemaContext, call: SchemaCall): NodeInfo {
 }
 
 function schemaRecursiveCall(c: SchemaContext, call: SchemaCall): NodeInfo {
-  const { node, name, args } = call;
+  const node = call.node;
+  const name = call.name;
+  const args = call.args;
   const hint = expectedSchema(c, call);
   if (hint === undefined) {
     return c.finish(
       node,
       c.table.error,
-      combine(args.map((a) => c.argInfo(a))),
+      combine(args.map((arg) => c.argInfo(arg, undefined))),
     );
   }
   const callback = c.callback(name, args[0], [hint.type], hint.type, false);
   if (!guardedSchemaCallback(c, args[0].node)) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "recursive schema self must occur beneath an array, optional key, or tagged union with a terminal branch",
       args[0].node,
     );
   }
   if (!c.assignable(callback.result, hint.type)) {
-    c.report(
+    c = c.report(
       "type-mismatch/003",
       "recursive schema body does not fit its expected Schema",
       args[0].node,
@@ -533,11 +575,12 @@ function schemaRecursiveCall(c: SchemaContext, call: SchemaCall): NodeInfo {
 }
 
 function schemaStructCall(c: SchemaContext, call: SchemaCall): NodeInfo {
-  const { node, args } = call;
-  const input = c.argInfo(args[0]);
+  const node = call.node;
+  const args = call.args;
+  const input = c.argInfo(args[0], undefined);
   const record = c.table.node(c.table.unfold(input.type));
   if (record.kind !== "record" || record.fields.some((f) => f.optional)) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`schemaStruct` needs a record of required Schema fields",
       args[0].node,
@@ -546,42 +589,42 @@ function schemaStructCall(c: SchemaContext, call: SchemaCall): NodeInfo {
   }
   const fields = record.fields.flatMap((field) => {
     const schema = c.table.node(c.table.unfold(field.type));
-    return schema.kind === "schema" ? [{ field, schema }] : [];
+    return schema.kind === "schema" ? [{ field: field, schema: schema }] : [];
   });
   if (fields.length !== record.fields.length) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`schemaStruct` fields must be Schema values or schemaOptionalKey descriptors",
       args[0].node,
     );
     return c.finish(node, c.table.error, combine([input]));
   }
-  const decoded = c.table.record(fields.map(({ field, schema }) => ({
-    name: field.name,
-    type: schema.decoded,
-    optional: schema.presence === "optional" ||
-      schema.presence === "decoded-optional",
+  const decoded = c.table.record(fields.map((entry) => ({
+    name: entry.field.name,
+    type: entry.schema.decoded,
+    optional: entry.schema.presence === "optional" ||
+      entry.schema.presence === "decoded-optional",
   })));
-  const encoded = c.table.record(fields.map(({ field, schema }) => ({
-    name: field.name,
-    type: schema.encoded,
-    optional: schema.presence === "optional" ||
-      schema.presence === "encoded-optional",
+  const encoded = c.table.record(fields.map((entry) => ({
+    name: entry.field.name,
+    type: entry.schema.encoded,
+    optional: entry.schema.presence === "optional" ||
+      entry.schema.presence === "encoded-optional",
   })));
   return c.finish(
     node,
     c.table.schema(
       decoded,
       encoded,
-      fields.flatMap(({ schema }) => schema.decodeRequirements),
-      fields.flatMap(({ schema }) => schema.encodeRequirements),
+      fields.flatMap((entry) => entry.schema.decodeRequirements),
+      fields.flatMap((entry) => entry.schema.encodeRequirements),
       {
-        makeInput: c.table.record(fields.map(({ field, schema }) => ({
-          name: field.name,
-          type: schema.makeInput ?? schema.decoded,
-          optional: schema.presence === "optional" ||
-            schema.presence === "decoded-optional" ||
-            schema.constructorDefault === true,
+        makeInput: c.table.record(fields.map((entry) => ({
+          name: entry.field.name,
+          type: entry.schema.makeInput ?? entry.schema.decoded,
+          optional: entry.schema.presence === "optional" ||
+            entry.schema.presence === "decoded-optional" ||
+            (entry.schema.constructorDefault ?? false),
         }))),
       },
     ),
@@ -590,11 +633,12 @@ function schemaStructCall(c: SchemaContext, call: SchemaCall): NodeInfo {
 }
 
 function schemaUnionCall(c: SchemaContext, call: SchemaCall): NodeInfo {
-  const { node, args } = call;
+  const node = call.node;
+  const args = call.args;
   const list = args[0].node;
   if (kindOf(c.tree, list) !== SyntaxKind.ListExpr) {
-    const input = c.argInfo(args[0]);
-    c.report(
+    const input = c.argInfo(args[0], undefined);
+    c = c.report(
       "type-mismatch/010",
       "`schemaUnion` needs an inline list of Schema branches",
       list,
@@ -606,7 +650,7 @@ function schemaUnionCall(c: SchemaContext, call: SchemaCall): NodeInfo {
     kindOf(c.tree, element) === SyntaxKind.SpreadElement
   );
   if (spread !== undefined) {
-    c.report(
+    c = c.report(
       "type-mismatch/003",
       "`schemaUnion` takes a list literal of schemas without a spread",
       spread,
@@ -616,12 +660,13 @@ function schemaUnionCall(c: SchemaContext, call: SchemaCall): NodeInfo {
         kindOf(c.tree, element) === SyntaxKind.SpreadElement
           ? c.kids(element)[0]
           : element,
+        undefined,
       )
     );
     return c.finish(node, c.table.error, combine(infos));
   }
-  c.fact(list, { kind: "list", shape: "tuple" });
-  const infos = elements.map((element) => c.expr(element));
+  c = c.fact(list, { kind: "list", shape: "tuple" });
+  const infos = elements.map((element) => c.expr(element, undefined));
   const input = c.finish(
     list,
     c.table.tuple(infos.map((info) => info.type)),
@@ -631,7 +676,7 @@ function schemaUnionCall(c: SchemaContext, call: SchemaCall): NodeInfo {
     schemaOf(c, call, info, elements[index])
   );
   if (branches.length < 2 || branches.some((branch) => branch === undefined)) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`schemaUnion` needs at least two ordinary Schema branches",
       list,
@@ -662,9 +707,11 @@ function schemaOptionalBridgeCall(
   call: SchemaCall,
   fromRequired: boolean,
 ): NodeInfo {
-  const { node, name, args } = call;
-  const sourceInfo = c.argInfo(args[0]);
-  const targetInfo = c.argInfo(args[1]);
+  const node = call.node;
+  const name = call.name;
+  const args = call.args;
+  const sourceInfo = c.argInfo(args[0], undefined);
+  const targetInfo = c.argInfo(args[1], undefined);
   const source = fromRequired
     ? schemaOf(c, call, sourceInfo, args[0].node)
     : optionalOf(c, call, sourceInfo, args[0].node);
@@ -676,15 +723,15 @@ function schemaOptionalBridgeCall(
       combine([
         sourceInfo,
         targetInfo,
-        ...args.slice(2).map((arg) => c.argInfo(arg)),
+        ...args.slice(2).map((arg) => c.argInfo(arg, undefined)),
       ]),
     );
   }
   return optionalBridge(c, node, name, args, {
-    sourceInfo,
-    targetInfo,
-    source,
-    target,
+    sourceInfo: sourceInfo,
+    targetInfo: targetInfo,
+    source: source,
+    target: target,
   }, fromRequired);
 }
 
@@ -692,8 +739,12 @@ function schemaConstructorDefaultCall(
   c: SchemaContext,
   call: SchemaCall,
 ): NodeInfo {
-  const { node, name, args } = call;
-  const { first, schema } = firstSchema(c, call);
+  const node = call.node;
+  const name = call.name;
+  const args = call.args;
+  const initial = firstSchema(c, call);
+  const first = initial.first;
+  const schema = initial.schema;
   const callback = c.callback(
     name,
     args[1],
@@ -713,7 +764,7 @@ function schemaConstructorDefaultCall(
         schema.makeInput ?? schema.decoded,
       ))
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "schemaConstructorDefault needs an inline make-input callback with no services and only SchemaIssue failure",
       args[1].node,
@@ -740,15 +791,18 @@ function schemaNullToMissingKeyCall(
   c: SchemaContext,
   call: SchemaCall,
 ): NodeInfo {
-  const { node, args } = call;
-  const { first, schema } = firstSchema(c, call);
+  const node = call.node;
+  const args = call.args;
+  const initial = firstSchema(c, call);
+  const first = initial.first;
+  const schema = initial.schema;
   const nil = c.table.literal(null);
   if (
     schema !== undefined &&
     (c.assignable(nil, schema.decoded) ||
       c.assignable(nil, schema.encoded))
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "schemaNullToMissingKey needs nonnullable decoded and encoded field types",
       args[0].node,
@@ -764,7 +818,7 @@ function schemaNullToMissingKeyCall(
       {
         presence: "optional",
         makeInput: schema.makeInput ?? schema.decoded,
-        constructorDefault: schema.constructorDefault === true,
+        constructorDefault: schema.constructorDefault ?? false,
       },
     ),
     combine([first]),
@@ -772,7 +826,9 @@ function schemaNullToMissingKeyCall(
 }
 
 function schemaOptionalKeyCall(c: SchemaContext, call: SchemaCall): NodeInfo {
-  const { first, schema } = firstSchema(c, call);
+  const initial = firstSchema(c, call);
+  const first = initial.first;
+  const schema = initial.schema;
   return c.finish(
     call.node,
     schema === undefined ? c.table.error : c.table.schema(
@@ -783,7 +839,7 @@ function schemaOptionalKeyCall(c: SchemaContext, call: SchemaCall): NodeInfo {
       {
         presence: "optional",
         makeInput: schema.makeInput ?? schema.decoded,
-        constructorDefault: schema.constructorDefault === true,
+        constructorDefault: schema.constructorDefault ?? false,
       },
     ),
     combine([first]),
@@ -791,7 +847,9 @@ function schemaOptionalKeyCall(c: SchemaContext, call: SchemaCall): NodeInfo {
 }
 
 function schemaArrayCall(c: SchemaContext, call: SchemaCall): NodeInfo {
-  const { first, schema } = firstSchema(c, call);
+  const initial = firstSchema(c, call);
+  const first = initial.first;
+  const schema = initial.schema;
   return c.finish(
     call.node,
     schema === undefined ? c.table.error : c.table.schema(
@@ -809,7 +867,9 @@ function schemaOptionFromOptionalKeyCall(
   c: SchemaContext,
   call: SchemaCall,
 ): NodeInfo {
-  const { first, schema } = firstSchema(c, call);
+  const initial = firstSchema(c, call);
+  const first = initial.first;
+  const schema = initial.schema;
   return c.finish(
     call.node,
     schema === undefined ? c.table.error : c.table.schema(
@@ -829,19 +889,24 @@ function schemaOptionFromOptionalKeyCall(
  * `nullable` adds null to the encoded type and rejects a nullable field.
  */
 function schemaDefaultKeyCall(c: SchemaContext, call: SchemaCall, variant: {
-  direction: "decoded" | "encoded";
-  nullable: boolean;
+  readonly direction: "decoded" | "encoded";
+  readonly nullable: boolean;
 }): NodeInfo {
-  const { node, name, args } = call;
-  const { direction, nullable } = variant;
-  const { first, schema } = firstSchema(c, call);
+  const node = call.node;
+  const name = call.name;
+  const args = call.args;
+  const direction = variant.direction;
+  const nullable = variant.nullable;
+  const initial = firstSchema(c, call);
+  const first = initial.first;
+  const schema = initial.schema;
   const nil = c.table.literal(null);
   if (
     nullable && schema !== undefined &&
     (c.assignable(nil, schema.decoded) ||
       c.assignable(nil, schema.encoded))
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `${name} needs nonnullable decoded and encoded field types`,
       args[0].node,
@@ -856,14 +921,14 @@ function schemaDefaultKeyCall(c: SchemaContext, call: SchemaCall, variant: {
     fallbackFn !== undefined &&
     !failsOnlyWith(fallbackFn.failures, [SCHEMA_ISSUE_ID, SCHEMA_ERROR_ID])
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `${name} callback may fail only with SchemaIssue or SchemaError`,
       args[1].node,
     );
   }
   if (kindOf(c.tree, args[1].node) !== SyntaxKind.ArrowExpr) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `${name} needs an inline default callback`,
       args[1].node,
@@ -873,7 +938,7 @@ function schemaDefaultKeyCall(c: SchemaContext, call: SchemaCall, variant: {
     defaultType !== undefined &&
     !c.assignable(fallback.result, defaultType)
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/003",
       `${name} callback must return the ${direction} field type`,
       args[1].node,
@@ -895,7 +960,7 @@ function schemaDefaultKeyCall(c: SchemaContext, call: SchemaCall, variant: {
     }]),
   );
   if (options !== undefined && !defaultKeyOptionsShape(c, args[2].node)) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `${name} options must be an inline { on?: "missing" | "null" | "encoded", encodingStrategy?: "omit" | "passthrough" } record with literal values`,
       args[2].node,
@@ -911,7 +976,7 @@ function schemaDefaultKeyCall(c: SchemaContext, call: SchemaCall, variant: {
       {
         presence: "encoded-optional",
         makeInput: schema.makeInput ?? schema.decoded,
-        constructorDefault: schema.constructorDefault === true,
+        constructorDefault: schema.constructorDefault ?? false,
       },
     ),
     combine([
@@ -928,21 +993,23 @@ function schemaOperationCall(
   call: SchemaCall,
   op: "decode" | "encode" | "make",
 ): NodeInfo {
-  const { node, args } = call;
-  const { first, schema } = firstSchema(c, call);
+  const node = call.node;
+  const args = call.args;
+  const initial = firstSchema(c, call);
+  const first = initial.first;
+  const schema = initial.schema;
+  let inputHint: TypeRef | undefined;
+  if (op === "make") inputHint = schema?.makeInput ?? schema?.decoded;
+  if (op === "encode") inputHint = schema?.decoded;
   const input = c.argInfo(
     args[1],
-    op === "decode"
-      ? undefined
-      : op === "make"
-      ? schema?.makeInput ?? schema?.decoded
-      : schema?.decoded,
+    inputHint,
   );
   if (
     op !== "encode" && schema !== undefined &&
     c.table.containsForeignSealed(c.module, schema.decoded)
   ) {
-    c.report(
+    c = c.report(
       "sealed/004",
       `only the declaring module can run schema${
         op === "decode" ? "Decode" : "Make"
@@ -951,46 +1018,53 @@ function schemaOperationCall(
     );
   }
   if (op !== "decode" && schema !== undefined) {
-    c.fits(
+    c = c.checkFit(
       args[1].node,
       input.type,
       op === "make" ? schema.makeInput ?? schema.decoded : schema.decoded,
       `the schema ${op} input`,
     );
   }
+  let result = c.table.error;
+  if (schema !== undefined) {
+    result = op === "encode" ? schema.encoded : schema.decoded;
+  }
+  let requirements: readonly CapabilityId[] = [];
+  if (schema !== undefined && op === "decode") {
+    requirements = schema.decodeRequirements;
+  }
+  if (schema !== undefined && op === "encode") {
+    requirements = schema.encodeRequirements;
+  }
   return c.finish(
     node,
-    schema === undefined
-      ? c.table.error
-      : op === "encode"
-      ? schema.encoded
-      : schema.decoded,
+    result,
     combine([first, input, {
       failures: [op === "make" ? SCHEMA_ISSUE_ID : SCHEMA_ERROR_ID],
-      requirements: schema === undefined || op === "make"
-        ? []
-        : op === "decode"
-        ? schema.decodeRequirements
-        : schema.encodeRequirements,
+      requirements: requirements,
       mode: "effect",
     }]),
   );
 }
 
 function schemaTransformCall(c: SchemaContext, call: SchemaCall): NodeInfo {
-  const { node, name, args } = call;
-  const { first, schema } = firstSchema(c, call);
-  const targetInfo = c.argInfo(args[1]);
+  const node = call.node;
+  const name = call.name;
+  const args = call.args;
+  const initial = firstSchema(c, call);
+  const first = initial.first;
+  const schema = initial.schema;
+  const targetInfo = c.argInfo(args[1], undefined);
   const target = schemaOf(c, call, targetInfo, args[1].node);
   if (schema === undefined || target === undefined) {
-    const rest = args.slice(2).map((a) => c.argInfo(a));
+    const rest = args.slice(2).map((arg) => c.argInfo(arg, undefined));
     return c.finish(node, c.table.error, combine([first, targetInfo, ...rest]));
   }
   if (
     c.table.containsForeignSealed(c.module, schema.decoded) &&
     !c.table.containsForeignSealed(c.module, target.decoded)
   ) {
-    c.report(
+    c = c.report(
       "sealed/004",
       "only the declaring module can pass a sealed type to a schema transformation callback",
       node,
@@ -1016,7 +1090,7 @@ function schemaTransformCall(c: SchemaContext, call: SchemaCall): NodeInfo {
     kindOf(c.tree, args[2].node) !== SyntaxKind.ArrowExpr ||
     kindOf(c.tree, args[3].node) !== SyntaxKind.ArrowExpr
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "schemaTransform needs inline callbacks",
       node,
@@ -1026,7 +1100,7 @@ function schemaTransformCall(c: SchemaContext, call: SchemaCall): NodeInfo {
     !failsOnlyWith(decodeFn?.failures, [SCHEMA_ISSUE_ID]) ||
     !failsOnlyWith(encodeFn?.failures, [SCHEMA_ISSUE_ID])
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "schema transformations may fail only with SchemaIssue",
       node,
@@ -1042,7 +1116,7 @@ function schemaTransformCall(c: SchemaContext, call: SchemaCall): NodeInfo {
     !c.assignable(decode.result, decodeExpected) ||
     !c.assignable(encode.result, encodeExpected)
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/003",
       "schema transformation callbacks must return Option or issue-failing values in their direction",
       node,
@@ -1082,12 +1156,15 @@ function optionalBridge(
   },
   fromRequired: boolean,
 ): NodeInfo {
-  const { sourceInfo, targetInfo, source, target } = parts;
+  const sourceInfo = parts.sourceInfo;
+  const targetInfo = parts.targetInfo;
+  const source = parts.source;
+  const target = parts.target;
   if (
     c.table.containsForeignSealed(c.module, source.decoded) &&
     !c.table.containsForeignSealed(c.module, target.decoded)
   ) {
-    c.report(
+    c = c.report(
       "sealed/004",
       `only the declaring module can pass a sealed type to a ${name} callback`,
       node,
@@ -1116,7 +1193,7 @@ function optionalBridge(
     !failsOnlyWith(decodeFn?.failures, [SCHEMA_ISSUE_ID]) ||
     !failsOnlyWith(encodeFn?.failures, [SCHEMA_ISSUE_ID])
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `${name} callbacks may fail only with SchemaIssue`,
       node,
@@ -1126,13 +1203,13 @@ function optionalBridge(
     kindOf(c.tree, args[2].node) !== SyntaxKind.ArrowExpr ||
     kindOf(c.tree, args[3].node) !== SyntaxKind.ArrowExpr
   ) {
-    c.report("type-mismatch/010", `${name} needs inline callbacks`, node);
+    c = c.report("type-mismatch/010", `${name} needs inline callbacks`, node);
   }
   if (
     !c.assignable(decode.result, c.table.option(target.encoded)) ||
     !c.assignable(encode.result, sourceValue)
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/003",
       fromRequired
         ? `${name} decode must return optional target-encoded values and encode must return a required source-decoded value`
@@ -1153,7 +1230,7 @@ function optionalBridge(
     ], {
       presence: fromRequired ? "decoded-optional" : "optional",
       makeInput: target.makeInput ?? target.decoded,
-      constructorDefault: target.constructorDefault === true,
+      constructorDefault: target.constructorDefault ?? false,
     }),
     combine([sourceInfo, targetInfo, decode.info, encode.info]),
   );
@@ -1173,14 +1250,14 @@ function guardedSchemaCallback(c: SchemaContext, node: NodeId): boolean {
     : c.kidsOfKind(first, SyntaxKind.Name)[0];
   const self = name === undefined ? undefined : c.targets.get(name);
   const body = parts.at(-1);
-  const builtin = (part: NodeId): string | undefined => {
+  function builtin(part: NodeId): string | undefined {
     if (kindOf(c.tree, part) !== SyntaxKind.CallExpr) {
       return undefined;
     }
     const callee = c.kids(part)[0];
     const target = callee === undefined ? undefined : c.targets.get(callee);
     return target?.kind === "builtin" ? target.name : undefined;
-  };
+  }
   if (
     self?.kind !== "local" || body === undefined ||
     kindOf(c.tree, body) !== SyntaxKind.CallExpr ||
@@ -1188,18 +1265,20 @@ function guardedSchemaCallback(c: SchemaContext, node: NodeId): boolean {
   ) {
     return false;
   }
-  const isSelf = (part: NodeId): boolean => {
+  const selfId = self.id;
+  function isSelf(part: NodeId): boolean {
     const target = c.targets.get(part);
     return kindOf(c.tree, part) === SyntaxKind.NameExpr &&
-      target?.kind === "local" && target.id === self.id;
-  };
-  const containsSelf = (part: NodeId): boolean =>
-    isSelf(part) || c.kids(part).some(containsSelf);
+      target?.kind === "local" && target.id === selfId;
+  }
+  function containsSelf(part: NodeId): boolean {
+    return isSelf(part) || c.kids(part).some(containsSelf);
+  }
   const union = builtin(body) === "schemaUnion";
-  const findList = (part: NodeId): NodeId | undefined =>
-    kindOf(c.tree, part) === SyntaxKind.ListExpr
-      ? part
-      : c.kids(part).map(findList).find((found) => found !== undefined);
+  function findList(part: NodeId): NodeId | undefined {
+    if (kindOf(c.tree, part) === SyntaxKind.ListExpr) return part;
+    return c.kids(part).map(findList).find((found) => found !== undefined);
+  }
   const list = union ? findList(body) : undefined;
   const tags = list === undefined ? [] : c.kids(list).map((branch) => {
     const info = c.infos.get(branch);
@@ -1212,7 +1291,7 @@ function guardedSchemaCallback(c: SchemaContext, node: NodeId): boolean {
     const encoded = schema?.kind === "schema"
       ? c.table.node(c.table.unfold(schema.encoded))
       : undefined;
-    const candidates = new Map<string, string>();
+    let candidates = emptyMap<string, string>();
     if (decoded?.kind !== "record" || encoded?.kind !== "record") {
       return candidates;
     }
@@ -1230,7 +1309,7 @@ function guardedSchemaCallback(c: SchemaContext, node: NodeId): boolean {
         left.kind === "literal" && right.kind === "literal" &&
         typeof left.value === "string" && left.value === right.value
       ) {
-        candidates.set(field.name, left.value);
+        candidates = candidates.set(field.name, left.value);
       }
     }
     return candidates;
@@ -1238,13 +1317,13 @@ function guardedSchemaCallback(c: SchemaContext, node: NodeId): boolean {
   const tagged = tags.length >= 2 && [...tags[0].keys()].some((name) => {
     const values = tags.map((candidate) => candidate.get(name));
     return values.every((value) => value !== undefined) &&
-      new Set(values).size === values.length;
+      setFrom(values).size === values.length;
   });
   const finiteChoice = list !== undefined &&
     tagged &&
     c.kids(list).some((branch) => !containsSelf(branch));
   let found = false;
-  const visit = (part: NodeId, guarded: boolean): boolean => {
+  function visit(part: NodeId, guarded: boolean): boolean {
     if (!containsSelf(part)) {
       return true;
     }
@@ -1258,69 +1337,83 @@ function guardedSchemaCallback(c: SchemaContext, node: NodeId): boolean {
         kindOf(c.tree, child) === SyntaxKind.ArgList
       );
       const values = args === undefined ? [] : c.kids(args);
-      switch (role) {
-        case "pass-first":
-          return values.length >= 2 &&
-            values.slice(1).every((value) => !containsSelf(value)) &&
-            visit(values[0], guarded);
-        case "pass-two":
-          return values.length === 4 &&
-            values.slice(2).every((value) => !containsSelf(value)) &&
-            values.slice(0, 2).every((value) => visit(value, guarded));
-        case "guard":
-          return values.every((value) => visit(value, true));
-        case "container":
-          return values.every((value) => visit(value, guarded));
-        case "reject":
-          return false;
-        default: {
-          const unreachable: never = role;
-          return unreachable;
-        }
+      if (role === "pass-first") {
+        return values.length >= 2 &&
+          values.slice(1).every((value) => !containsSelf(value)) &&
+          visit(values[0], guarded);
       }
+      if (role === "pass-two") {
+        return values.length === 4 &&
+          values.slice(2).every((value) => !containsSelf(value)) &&
+          values.slice(0, 2).every((value) => visit(value, guarded));
+      }
+      if (role === "guard") {
+        return values.every((value) => visit(value, true));
+      }
+      if (role === "container") {
+        return values.every((value) => visit(value, guarded));
+      }
+      return false;
     }
     return c.kids(part).every((child) => visit(child, guarded));
-  };
+  }
   return visit(body, finiteChoice) && found;
 }
 
-/** One prologue serves every Schema builtin. A builtin that accepts options selects its operation with the `on` option. */
-const SCHEMA_PROLOGUE: SharedPrologue<SchemaBuiltinName, SchemaContext> = {
-  arity: (name, args) => {
-    const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
-    return builtin.acceptsOptions === true && args.length === 3
-      ? 3
-      : builtin.arity;
-  },
-  bail: "pure",
-  pipeline: "direct",
-  fact: (c, name, args) => {
-    const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
-    if (builtin.acceptsOptions === true && args.length === 3) {
-      const op = defaultKeyChoice(c, name, args[2]);
-      return {
-        kind: "schema",
-        op,
-        options: { on: DEFAULT_KEY_OPTION },
-      };
-    }
-    return { kind: "schema", op: builtin.op, options: undefined };
-  },
-};
+/** Creates the shared row with the exact Schema builtin name type. */
+function schemaRow<Name extends SchemaBuiltinName>(): BuiltinRow<
+  Name,
+  SchemaContext
+> {
+  const prologue: SharedPrologue<Name, SchemaContext> = {
+    arity: (name, args) => {
+      const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
+      return builtin.acceptsOptions && args.length === 3 ? 3 : builtin.arity;
+    },
+    bail: "pure",
+    pipeline: "direct",
+    fact: (c, name, args) => {
+      const builtin: SchemaBuiltin = SCHEMA_BUILTINS[name];
+      if (builtin.acceptsOptions && args.length === 3) {
+        const op = defaultKeyChoice(c, name, args[2]);
+        return {
+          kind: "schema",
+          op: op,
+          options: { on: DEFAULT_KEY_OPTION },
+        };
+      }
+      return { kind: "schema", op: builtin.op, options: undefined };
+    },
+  };
+  function handle(
+    c: SchemaContext,
+    node: NodeId,
+    name: Name,
+    args: readonly Arg[],
+    expected: TypeRef | undefined,
+  ): NodeInfo {
+    return schemaCall(c, node, name, args, expected);
+  }
+  return { prologue: prologue, handle: handle };
+}
 
-const SCHEMA_HANDLE: BuiltinRow<SchemaBuiltinName, SchemaContext>["handle"] = (
-  c,
-  node,
-  name,
-  args,
-  expected,
-) => schemaCall(c, node, name, args, expected);
-
-const SCHEMA_ROW: BuiltinRow<SchemaBuiltinName, SchemaContext> = {
-  prologue: SCHEMA_PROLOGUE,
-  handle: SCHEMA_HANDLE,
-};
-
-export const SCHEMA_ROWS = Object.fromEntries(
-  Object.keys(SCHEMA_BUILTINS).map((name) => [name, SCHEMA_ROW]),
-) as Rows<SchemaBuiltinName, SchemaContext>;
+export function schemaRows(): Rows<SchemaBuiltinName, SchemaContext> {
+  return {
+    schema: schemaRow(),
+    schemaArray: schemaRow(),
+    schemaStruct: schemaRow(),
+    schemaOptionalKey: schemaRow(),
+    schemaNullToMissingKey: schemaRow(),
+    schemaOptionFromOptionalKey: schemaRow(),
+    schemaDefaultKey: schemaRow(),
+    schemaConstructorDefault: schemaRow(),
+    schemaOptionalTransform: schemaRow(),
+    schemaOptionalFromRequired: schemaRow(),
+    schemaUnion: schemaRow(),
+    schemaTransform: schemaRow(),
+    schemaRecursive: schemaRow(),
+    schemaDecode: schemaRow(),
+    schemaEncode: schemaRow(),
+    schemaMake: schemaRow(),
+  };
+}

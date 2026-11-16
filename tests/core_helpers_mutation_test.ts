@@ -154,19 +154,19 @@ function optionAtDepth(table: TypeTable, n: number): TypeRef {
       table.named(id(k + 1)),
       k === n ? table.option(table.string) : table.int,
     ]);
-    table.defineAlias(id(k), target);
+    table.defineAlias(id(k), target, false);
   }
   return table.named(id(0));
 }
 
 Deno.test("optionElementOf finds an option in a union at the last visited depth", () => {
-  const table = new TypeTable();
+  const table = TypeTable();
   const root = optionAtDepth(table, MAX_DEPTH - 1);
   assertEquals(table.optionElementOf(root), table.string);
 });
 
 Deno.test("optionElementOf does not expand a union at the depth bound", () => {
-  const table = new TypeTable();
+  const table = TypeTable();
   const root = optionAtDepth(table, MAX_DEPTH);
   assertEquals(table.optionElementOf(root), undefined);
 });

@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Duration, Effect, Layer } from "effect";
 import { Clock, type JobFailure, Jobs } from "./contracts.ts";
 

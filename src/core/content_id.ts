@@ -2,7 +2,10 @@
 // the output of `canonicalJson` (`lower.ts`, specialize), so a change here renames
 // generated code.
 
-import { compareText } from "./util.ts";
+import { compareText, isRecord } from "./util.ts";
+
+export type CanonicalValue = unknown;
+export type CanonicalJson = string;
 
 /**
  * Prints a value with the shared rules: sorted keys, no key with an `undefined`
@@ -20,17 +23,21 @@ function print(
   }
   const inner = `${indent}${step ?? ""}`;
   const join = step === undefined ? "," : ",\n";
-  const wrap = (open: string, parts: readonly string[], close: string) =>
-    parts.length === 0
-      ? `${open}${close}`
-      : step === undefined
-      ? `${open}${parts.join(join)}${close}`
-      : `${open}\n${parts.join(join)}\n${indent}${close}`;
+  function wrap(
+    open: string,
+    parts: readonly string[],
+    close: string,
+  ): string {
+    if (parts.length === 0) return `${open}${close}`;
+    if (step === undefined) return `${open}${parts.join(join)}${close}`;
+    return `${open}\n${parts.join(join)}\n${indent}${close}`;
+  }
   if (Array.isArray(value)) {
     const items = value.map((item) => `${inner}${print(item, step, inner)}`);
     return wrap("[", items, "]");
   }
-  const record = value as Readonly<Record<string, unknown>>;
+  if (!isRecord(value)) return "null";
+  const record = value;
   const colon = step === undefined ? ":" : ": ";
   const members = Object.keys(record).filter((k) => record[k] !== undefined)
     .sort(compareText).map((key) =>
@@ -43,11 +50,11 @@ function print(
  * JSON text with object keys in sorted order. Arrays keep their order. A key
  * with an `undefined` value is left out. Use it to hash a value.
  */
-export function canonicalJson(value: unknown): string {
+export function canonicalJson(value: CanonicalValue): CanonicalJson {
   return print(value, undefined, "");
 }
 
 /** The same rules as `canonicalJson`, with two-space indentation. */
-export function canonicalJsonIndented(value: unknown): string {
+export function canonicalJsonIndented(value: CanonicalValue): CanonicalJson {
   return print(value, "  ", "");
 }

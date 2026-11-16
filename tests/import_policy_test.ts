@@ -232,7 +232,7 @@ Deno.test("a configuration edit invalidates cached import diagnostics", () => {
   const forbidden = config([
     { from: "feature/**", allow: ["feature/**"] },
   ]);
-  const program = new Program("");
+  const program = Program("");
   const first = program.update({
     set: {
       "effektive.json": allowed,

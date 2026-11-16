@@ -43,7 +43,7 @@ function checkFiles(
 
 /** The hover contract of `m.eff` at an offset, through the public editor query. */
 function hoverContract(text: string, offset: number): string | undefined {
-  const result = new Program("").update({
+  const result = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(result.ok, JSON.stringify(result));
@@ -649,6 +649,7 @@ Deno.test("the interface rebuilt from the solved sets equals the interface of th
       module.declarations,
       module.solved,
       imported,
+      undefined,
     );
     assert(rebuilt.ok && module.interface.ok);
     assertEquals(rebuilt.value.hash, module.interface.value.hash);
@@ -1188,7 +1189,7 @@ Deno.test("the mode solver starts pure, converges, and reports a cap hit", () =>
         [b, state("effect")],
       ]),
     };
-  });
+  }, undefined);
   assertEquals(solved.settled, true);
   assertEquals(solved.solved.get(a)?.mode, "effect");
   assertEquals(solved.solved.get(b)?.mode, "effect");

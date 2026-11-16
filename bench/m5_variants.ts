@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The optional variants of M5: other ways to type check the emitted code.
 //
 // - `tsc` cold: the TypeScript compiler of the npm package `typescript`, run

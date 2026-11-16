@@ -25,7 +25,7 @@ export const fetch = (id: Text): Text => Users.read(id)
 `;
 
 function load(main = source) {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: {
       "effektive.json": "{}",
       "services.eff": services,
@@ -47,7 +47,9 @@ Deno.test("a service header reuses its service binding for editor queries", () =
     end: declaration + "Users".length,
   });
   assertEquals(
-    referencesAt(revision, "m.eff", header).map((span) => span.source),
+    referencesAt(revision, "m.eff", header, undefined).map((span) =>
+      span.source
+    ),
     ["m.eff", "m.eff", "services.eff"],
   );
   assertEquals(
@@ -58,7 +60,7 @@ Deno.test("a service header reuses its service binding for editor queries", () =
   const renamed = renameAt(revision, "m.eff", header, "Accounts");
   assert(renamed.ok, JSON.stringify(renamed));
   assertEquals(renamed.value.length, 3);
-  const next = new Program("").update({
+  const next = Program("").update({
     set: {
       "effektive.json": "{}",
       "services.eff": applySourceEdits(

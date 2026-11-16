@@ -19,14 +19,17 @@
 //     only at the top of a value position.
 //   - unknown is not a top type.
 
+import type { ValidationFlag, ValidationText } from "./report.ts";
+import { isTrue } from "./guards.ts";
+import { emptySet, indices } from "../runtime.ts";
 import type { Execution, Field, FunctionType, Type } from "../ir.ts";
-import { CLOSED_UNIT_IDS, DURATION_ID, INSTANT_ID } from "../ir.ts";
+import { DURATION_ID, INSTANT_ID, isClosedUnitId } from "../ir.ts";
 import { isReservedError } from "./prelude.ts";
 import { effectsFit, isSubset, sameSet, sortedUnique } from "./sets.ts";
 import { MAX_DEPTH, typeChildren } from "./type_children.ts";
 import type { Predicate } from "../predicates.ts";
 
-export interface TypeEnv {
+export type TypeEnv = {
   readonly module: string;
   /** Alias identity to the aliased type. */
   readonly aliases: ReadonlyMap<string, Type>;
@@ -37,7 +40,7 @@ export interface TypeEnv {
   /** Tagged record identity to its base record type. */
   readonly taggedRecords: ReadonlyMap<
     string,
-    Extract<Type, { kind: "record" }>
+    Extract<Type, { readonly kind: "record" }>
   >;
   /** Error identity to its fields. */
   readonly errors: ReadonlyMap<string, readonly Field[]>;
@@ -48,7 +51,7 @@ export interface TypeEnv {
   /** Identities whose values must satisfy a declared predicate. */
   readonly refined?: ReadonlySet<string>;
   readonly predicates?: ReadonlyMap<string, Predicate>;
-}
+};
 
 export const INT: Type = { kind: "primitive", name: "int" };
 export const NUMBER: Type = { kind: "primitive", name: "number" };
@@ -57,17 +60,22 @@ export const BOOLEAN: Type = { kind: "primitive", name: "boolean" };
 export const UNIT: Type = { kind: "primitive", name: "unit" };
 export const NEVER: Type = { kind: "primitive", name: "never" };
 
-export function isNever(type: Type): boolean {
+export type TypeDepth = number;
+
+export function isNever(type: Type): ValidationFlag {
   return type.kind === "primitive" && type.name === "never";
 }
 
 /** True when a nominal type is open or belongs to the module under validation. */
-export function ownsSealed(env: TypeEnv, id: string): boolean {
+export function ownsSealed(env: TypeEnv, id: ValidationText): ValidationFlag {
   return !env.sealed.has(id) || id.startsWith(`type:${env.module}#`);
 }
 
 /** The base of an opaque type, or the body of an alias with identity. */
-export function identityBody(env: TypeEnv, id: string): Type | undefined {
+export function identityBody(
+  env: TypeEnv,
+  id: ValidationText,
+): Type | undefined {
   return env.opaqueBases.get(id) ??
     (env.identities.has(id) ? env.aliases.get(id) : undefined);
 }
@@ -77,7 +85,7 @@ function namedBody(env: TypeEnv, id: string): Type | undefined {
   const fields = env.errors.get(id);
   return env.aliases.get(id) ?? env.taggedRecords.get(id) ??
     env.opaqueBases.get(id) ??
-    (fields === undefined ? undefined : { kind: "record", fields });
+    (fields === undefined ? undefined : { kind: "record", fields: fields });
 }
 
 /** Follows transparent aliases and stops at an alias with identity. */
@@ -92,7 +100,7 @@ export function unfold(env: TypeEnv, type: Type): Type {
 
 function follow(env: TypeEnv, type: Type, stopAtIdentity: boolean): Type {
   let current = type;
-  for (let i = 0; i < MAX_DEPTH; i++) {
+  for (const _index of indices(MAX_DEPTH)) {
     if (current.kind !== "named") return current;
     if (stopAtIdentity && env.identities.has(current.id)) return current;
     const alias = env.aliases.get(current.id);
@@ -128,61 +136,69 @@ export function dataOnly(
   env: TypeEnv,
   type: Type,
   rule: DataRule,
-  seen = new Set<Type>(),
-): boolean {
+): ValidationFlag {
+  return dataOnlySeen(env, type, rule, emptySet());
+}
+
+function dataOnlySeen(
+  env: TypeEnv,
+  type: Type,
+  rule: DataRule,
+  seen: Set<Type>,
+): ValidationFlag {
   const value = unfold(env, type);
   if (seen.has(value)) return true;
-  seen.add(value);
+  seen = seen.add(value);
   const rejects = DATA_RULES[rule];
-  const nested = (child: Type): boolean => dataOnly(env, child, rule, seen);
-  switch (value.kind) {
-    case "primitive":
-      return value.name !== "unknown" &&
-        !(rejects.unit && value.name === "unit");
-    case "literal":
-      return true;
-    case "record":
-      return value.fields.every((field) => nested(field.type));
-    case "array":
-    case "option":
-      return nested(value.element);
-    case "tuple":
-      return value.elements.every(nested);
-    case "union":
-      return value.members.every(nested);
-    case "named": {
-      if (rejects.reserved && isReservedError(value.id)) return false;
-      const errorFields = env.errors.get(value.id);
-      const base = env.taggedRecords.get(value.id) ??
-        env.opaqueBases.get(value.id) ??
-        (errorFields !== undefined
-          ? { kind: "record" as const, fields: errorFields }
-          : undefined);
-      return base !== undefined && nested(base);
-    }
-    case "ref":
-    case "retry-schedule":
-    case "schema":
-    case "effect":
-    case "stream":
-    case "sink":
-    case "function":
-    case "provider":
-      return false;
-    default: {
-      const unreachable: never = value;
-      return unreachable;
-    }
+  function nested(child: Type): boolean {
+    return dataOnlySeen(env, child, rule, seen);
   }
+  if (value.kind === "primitive") {
+    return value.name !== "unknown" &&
+      !(rejects.unit && value.name === "unit");
+  }
+  if (value.kind === "literal") return true;
+  if (value.kind === "record") {
+    return value.fields.every((field) => nested(field.type));
+  }
+  if (value.kind === "array") return nested(value.element);
+  if (value.kind === "option") return nested(value.element);
+  if (value.kind === "tuple") return value.elements.every(nested);
+  if (value.kind === "union") return value.members.every(nested);
+  if (value.kind !== "named") return false;
+  if (rejects.reserved && isReservedError(value.id)) return false;
+  const errorFields = env.errors.get(value.id);
+  const base = env.taggedRecords.get(value.id) ??
+    env.opaqueBases.get(value.id) ??
+    (errorFields !== undefined
+      ? { kind: "record" as const, fields: errorFields }
+      : undefined);
+  return base !== undefined && nested(base);
 }
 
 /** The members of a type after aliases unfold and unions flatten. */
-export function members(env: TypeEnv, type: Type, depth = 0): Type[] {
+export function members(env: TypeEnv, type: Type): readonly Type[] {
+  return membersAtDepth(env, type, 0);
+}
+
+export function membersAtDepth(
+  env: TypeEnv,
+  type: Type,
+  depth: TypeDepth,
+): readonly Type[] {
   return flatten(env, type, depth, unfold);
 }
 
 /** As `members`, but an alias with identity stops the unfold. */
-export function identityMembers(env: TypeEnv, type: Type, depth = 0): Type[] {
+export function identityMembers(env: TypeEnv, type: Type): readonly Type[] {
+  return identityMembersAtDepth(env, type, 0);
+}
+
+export function identityMembersAtDepth(
+  env: TypeEnv,
+  type: Type,
+  depth: TypeDepth,
+): readonly Type[] {
   return flatten(env, type, depth, unfoldTransparent);
 }
 
@@ -191,7 +207,7 @@ function flatten(
   type: Type,
   depth: number,
   step: (env: TypeEnv, type: Type) => Type,
-): Type[] {
+): readonly Type[] {
   const unfolded = step(env, type);
   if (unfolded.kind === "union" && depth < MAX_DEPTH) {
     return unfolded.members.flatMap((member) =>
@@ -206,15 +222,10 @@ function literalFits(
   name: string,
 ): boolean {
   if (value === null) return false;
-  switch (typeof value) {
-    case "string":
-      return name === "string";
-    case "boolean":
-      return name === "boolean";
-    case "number":
-      return name === "number" ||
-        (name === "int" && Number.isSafeInteger(value));
-  }
+  if (typeof value === "string") return name === "string";
+  if (typeof value === "boolean") return name === "boolean";
+  return name === "number" ||
+    (name === "int" && Number.isSafeInteger(value));
 }
 
 /** A pure function fits an effect target. An effect function does not fit a pure target. */
@@ -224,8 +235,8 @@ function executionFits(source: Execution, target: Execution): boolean {
 
 /** Each type fits the other: the position is invariant. */
 function invariant(env: TypeEnv, a: Type, b: Type, depth: number): boolean {
-  return assignable(env, a, b, false, depth + 1) &&
-    assignable(env, b, a, false, depth + 1);
+  return assignable(env, a, b, false, depth + 1, true) &&
+    assignable(env, b, a, false, depth + 1, true);
 }
 
 function assignable(
@@ -234,7 +245,7 @@ function assignable(
   t: Type,
   lift: boolean,
   depth: number,
-  adopt = true,
+  adopt: boolean,
 ): boolean {
   if (depth > MAX_DEPTH) return false;
   if (s.kind === "named" && t.kind === "named" && s.id === t.id) return true;
@@ -282,9 +293,9 @@ function assignable(
   if (t.kind === "named") {
     const body = env.identities.has(t.id) ? env.aliases.get(t.id) : undefined;
     // `Duration` and `Instant` are closed: an unnamed value never fits them.
-    return adopt && env.refined?.has(t.id) !== true && s.kind !== "named" &&
-      !CLOSED_UNIT_IDS.has(t.id) && body !== undefined &&
-      ownsSealed(env, t.id) && assignable(env, s, body, lift, depth + 1);
+    return adopt && !isTrue(env.refined?.has(t.id)) && s.kind !== "named" &&
+      !isClosedUnitId(t.id) && body !== undefined &&
+      ownsSealed(env, t.id) && assignable(env, s, body, lift, depth + 1, true);
   }
   if (t.kind === "union") {
     for (const member of t.members) {
@@ -292,162 +303,167 @@ function assignable(
     }
     return false;
   }
-  switch (t.kind) {
-    case "primitive":
-      if (s.kind === "primitive") {
-        return s.name === t.name || (s.name === "int" && t.name === "number");
-      }
-      if (s.kind === "literal") return literalFits(s.value, t.name);
-      return false;
-    case "literal":
-      return s.kind === "literal" && s.value === t.value;
-    case "record": {
-      if (s.kind !== "record") return false;
-      if (s.fields.length !== t.fields.length) return false;
-      for (const tf of t.fields) {
-        const sf = s.fields.find((f) => f.name === tf.name);
-        if (
-          sf === undefined || sf.optional !== tf.optional ||
-          !assignable(env, sf.type, tf.type, false, depth + 1)
-        ) return false;
-      }
-      return true;
+  if (t.kind === "primitive") {
+    if (s.kind === "primitive") {
+      return s.name === t.name || (s.name === "int" && t.name === "number");
     }
-    case "array":
-      return s.kind === "array" &&
-        assignable(env, s.element, t.element, false, depth + 1);
-    case "option":
-      return s.kind === "option" &&
-        assignable(env, s.element, t.element, false, depth + 1);
-    case "ref":
-      return s.kind === "ref" &&
-        invariant(env, s.element, t.element, depth);
-    case "retry-schedule":
-      return s.kind === "retry-schedule" &&
-        invariant(env, s.error, t.error, depth);
-    case "schema":
-      return s.kind === "schema" &&
-        s.optionalKey === t.optionalKey &&
-        s.encodedOptionalKey === t.encodedOptionalKey &&
-        s.decodedOptionalKey === t.decodedOptionalKey &&
-        s.constructorDefault === t.constructorDefault &&
-        invariant(
+    if (s.kind === "literal") return literalFits(s.value, t.name);
+    return false;
+  }
+  if (t.kind === "literal") return s.kind === "literal" && s.value === t.value;
+  if (t.kind === "record") {
+    if (s.kind !== "record") return false;
+    if (s.fields.length !== t.fields.length) return false;
+    for (const tf of t.fields) {
+      const sf = s.fields.find((f) => f.name === tf.name);
+      if (
+        sf === undefined || sf.optional !== tf.optional ||
+        !assignable(env, sf.type, tf.type, false, depth + 1, true)
+      ) return false;
+    }
+    return true;
+  }
+  if (t.kind === "array") {
+    return s.kind === "array" &&
+      assignable(env, s.element, t.element, false, depth + 1, true);
+  }
+  if (t.kind === "option") {
+    return s.kind === "option" &&
+      assignable(env, s.element, t.element, false, depth + 1, true);
+  }
+  if (t.kind === "ref") {
+    return s.kind === "ref" && invariant(env, s.element, t.element, depth);
+  }
+  if (t.kind === "retry-schedule") {
+    return s.kind === "retry-schedule" &&
+      invariant(env, s.error, t.error, depth);
+  }
+  if (t.kind === "schema") {
+    return s.kind === "schema" && s.optionalKey === t.optionalKey &&
+      s.encodedOptionalKey === t.encodedOptionalKey &&
+      s.decodedOptionalKey === t.decodedOptionalKey &&
+      s.constructorDefault === t.constructorDefault &&
+      invariant(
+        env,
+        s.makeInput ?? s.decoded,
+        t.makeInput ?? t.decoded,
+        depth,
+      ) &&
+      invariant(env, s.decoded, t.decoded, depth) &&
+      invariant(env, s.encoded, t.encoded, depth) &&
+      isSubset(s.decodeRequirements, t.decodeRequirements) &&
+      isSubset(s.encodeRequirements, t.encodeRequirements);
+  }
+  if (t.kind === "effect") {
+    return s.kind === "effect" &&
+      assignable(env, s.result, t.result, false, depth + 1, true) &&
+      effectsFit(s.effects, t.effects);
+  }
+  if (t.kind === "stream") {
+    return s.kind === "stream" &&
+      assignable(env, s.element, t.element, false, depth + 1, true) &&
+      effectsFit(s.effects, t.effects);
+  }
+  if (t.kind === "sink") {
+    return s.kind === "sink" &&
+      assignable(env, t.input, s.input, false, depth + 1, true) &&
+      assignable(env, s.result, t.result, false, depth + 1, true) &&
+      assignable(
+        env,
+        s.leftover ?? NEVER,
+        t.leftover ?? NEVER,
+        false,
+        depth + 1,
+        true,
+      ) &&
+      effectsFit(s.effects, t.effects);
+  }
+  if (t.kind === "tuple") {
+    if (s.kind !== "tuple" || s.elements.length !== t.elements.length) {
+      return false;
+    }
+    for (const i of indices(s.elements.length)) {
+      if (
+        !assignable(env, s.elements[i], t.elements[i], false, depth + 1, true)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+  if (t.kind === "function") {
+    if (s.kind !== "function") return false;
+    if (s.parameters.length !== t.parameters.length) return false;
+    const sourceBorrows = s.borrows;
+    if (
+      t.borrows?.some((borrow, i) => {
+        const sourceBorrow = sourceBorrows === undefined
+          ? undefined
+          : sourceBorrows[i];
+        return borrow && !isTrue(sourceBorrow);
+      })
+    ) return false;
+    const sourceChecked = s.checked;
+    if (
+      t.checked?.some((checked, i) => {
+        const checkedSource = sourceChecked === undefined
+          ? undefined
+          : sourceChecked[i];
+        return checked && !isTrue(checkedSource);
+      })
+    ) return false;
+    if (
+      s.execution !== t.execution &&
+      !(lift && executionFits(s.execution, t.execution))
+    ) return false;
+    if (!effectsFit(s.effects, t.effects)) return false;
+    if (!assignable(env, s.result, t.result, false, depth + 1, true)) {
+      return false;
+    }
+    for (const i of indices(t.parameters.length)) {
+      if (
+        !assignable(
           env,
-          s.makeInput ?? s.decoded,
-          t.makeInput ?? t.decoded,
-          depth,
-        ) &&
-        invariant(env, s.decoded, t.decoded, depth) &&
-        invariant(env, s.encoded, t.encoded, depth) &&
-        isSubset(s.decodeRequirements, t.decodeRequirements) &&
-        isSubset(s.encodeRequirements, t.encodeRequirements);
-    case "effect":
-      return s.kind === "effect" &&
-        assignable(env, s.result, t.result, false, depth + 1) &&
-        effectsFit(s.effects, t.effects);
-    case "stream":
-      return s.kind === "stream" &&
-        assignable(env, s.element, t.element, false, depth + 1) &&
-        effectsFit(s.effects, t.effects);
-    case "sink":
-      return s.kind === "sink" &&
-        assignable(env, t.input, s.input, false, depth + 1) &&
-        assignable(env, s.result, t.result, false, depth + 1) &&
-        assignable(
-          env,
-          s.leftover ?? NEVER,
-          t.leftover ?? NEVER,
+          t.parameters[i],
+          s.parameters[i],
           false,
           depth + 1,
-        ) &&
-        effectsFit(s.effects, t.effects);
-    case "tuple":
-      if (s.kind !== "tuple" || s.elements.length !== t.elements.length) {
+          true,
+        )
+      ) {
         return false;
       }
-      for (let i = 0; i < s.elements.length; i++) {
-        if (!assignable(env, s.elements[i], t.elements[i], false, depth + 1)) {
-          return false;
-        }
-      }
-      return true;
-    case "function": {
-      if (s.kind !== "function") return false;
-      if (s.parameters.length !== t.parameters.length) return false;
-      if (t.borrows?.some((borrow, i) => borrow && s.borrows?.[i] !== true)) {
-        return false;
-      }
-      if (
-        t.checked?.some((checked, i) => checked && s.checked?.[i] !== true)
-      ) return false;
-      if (
-        s.execution !== t.execution &&
-        !(lift && executionFits(s.execution, t.execution))
-      ) return false;
-      if (!effectsFit(s.effects, t.effects)) return false;
-      if (!assignable(env, s.result, t.result, false, depth + 1)) return false;
-      for (let i = 0; i < t.parameters.length; i++) {
-        if (
-          !assignable(env, t.parameters[i], s.parameters[i], false, depth + 1)
-        ) {
-          return false;
-        }
-      }
-      return true;
     }
-    case "provider":
-      return s.kind === "provider" && sameSet(s.provides, t.provides) &&
-        executionFits(
-          s.acquisition.execution,
-          t.acquisition.execution,
-        ) &&
-        effectsFit(s.acquisition.effects, t.acquisition.effects);
+    return true;
   }
+  return s.kind === "provider" && sameSet(s.provides, t.provides) &&
+    executionFits(s.acquisition.execution, t.acquisition.execution) &&
+    effectsFit(s.acquisition.effects, t.acquisition.effects);
 }
 
 function guardedAlias(env: TypeEnv, id: string): boolean {
   const alias = env.aliases.get(id);
   if (alias?.kind !== "record" && alias?.kind !== "union") return false;
-  const visit = (type: Type, guarded: boolean): boolean => {
-    switch (type.kind) {
-      case "named":
-        return type.id === id && guarded;
-      case "array":
-        return visit(type.element, true);
-      case "record":
-        return type.fields.some((field) =>
-          visit(field.type, guarded || field.optional)
-        );
-      case "union":
-        return type.members.some((member) => visit(member, true));
-      case "primitive":
-      case "literal":
-      case "option":
-      case "ref":
-      case "tuple":
-      case "retry-schedule":
-      case "schema":
-      case "effect":
-      case "stream":
-      case "sink":
-      case "function":
-      case "provider":
-        return false;
-      default: {
-        const unreachable: never = type;
-        return unreachable;
-      }
+  function visit(type: Type, guarded: boolean): boolean {
+    if (type.kind === "named") return type.id === id && guarded;
+    if (type.kind === "array") return visit(type.element, true);
+    if (type.kind === "record") {
+      return type.fields.some((field) =>
+        visit(field.type, guarded || field.optional)
+      );
     }
-  };
+    if (type.kind === "union") {
+      return type.members.some((member) => visit(member, true));
+    }
+    return false;
+  }
   return visit(alias, false);
 }
 
 /** A value of type `source` fits a value position of type `target`. The lift applies at the top. */
-export function fits(env: TypeEnv, source: Type, target: Type): boolean {
-  return assignable(env, source, target, true, 0);
+export function fits(env: TypeEnv, source: Type, target: Type): ValidationFlag {
+  return assignable(env, source, target, true, 0, true);
 }
-
-const NO_SEALED_TYPES: ReadonlySet<string> = new Set();
 
 /**
  * A comparison reads the value, so it needs no sealed authority. The checker
@@ -457,8 +473,8 @@ export function fitsNullComparison(
   env: TypeEnv,
   source: Type,
   target: Type,
-): boolean {
-  return fits({ ...env, sealed: NO_SEALED_TYPES }, source, target);
+): ValidationFlag {
+  return fits({ ...env, sealed: emptySet() }, source, target);
 }
 
 /**
@@ -469,8 +485,16 @@ export function fitsCheckedInput(
   env: TypeEnv,
   source: Type,
   target: Type,
-  depth = 0,
-): boolean {
+): ValidationFlag {
+  return fitsCheckedInputAtDepth(env, source, target, 0);
+}
+
+export function fitsCheckedInputAtDepth(
+  env: TypeEnv,
+  source: Type,
+  target: Type,
+  depth: TypeDepth,
+): ValidationFlag {
   if (depth > MAX_DEPTH) return false;
   if (fits(env, source, target)) return true;
   const s = unfoldTransparent(env, source);
@@ -478,12 +502,12 @@ export function fitsCheckedInput(
   if (s.kind === "primitive" && s.name === "unknown") return true;
   if (s.kind === "union") {
     return s.members.every((member) =>
-      fitsCheckedInput(env, member, t, depth + 1)
+      fitsCheckedInputAtDepth(env, member, t, depth + 1)
     );
   }
   if (t.kind === "union") {
     return t.members.some((member) =>
-      fitsCheckedInput(env, s, member, depth + 1)
+      fitsCheckedInputAtDepth(env, s, member, depth + 1)
     );
   }
   if (t.kind === "named" && s.kind !== "named") {
@@ -491,19 +515,19 @@ export function fitsCheckedInput(
     const predicate = env.predicates?.get(t.id);
     if (
       !ownsSealed(env, t.id) ||
-      (env.refined?.has(t.id) === true &&
+      (isTrue(env.refined?.has(t.id)) &&
         (predicate === undefined ||
           !unknownPredicateInput(env, s, predicate))) ||
       env.taggedRecords.has(t.id)
     ) return false;
     return base !== undefined &&
-      fitsCheckedInput(env, s, base, depth + 1);
+      fitsCheckedInputAtDepth(env, s, base, depth + 1);
   }
   if (s.kind === "named" && t.kind !== "named") {
     if (!ownsSealed(env, s.id)) return false;
     const base = identityBody(env, s.id) ?? env.taggedRecords.get(s.id);
     return base !== undefined &&
-      fitsCheckedInput(env, base, t, depth + 1);
+      fitsCheckedInputAtDepth(env, base, t, depth + 1);
   }
   if (s.kind === "record" && t.kind === "record") {
     if (s.fields.length !== t.fields.length) return false;
@@ -513,7 +537,7 @@ export function fitsCheckedInput(
       );
       return sourceField !== undefined &&
         sourceField.optional === targetField.optional &&
-        fitsCheckedInput(
+        fitsCheckedInputAtDepth(
           env,
           sourceField.type,
           targetField.type,
@@ -522,15 +546,15 @@ export function fitsCheckedInput(
     });
   }
   if (s.kind === "array" && t.kind === "array") {
-    return fitsCheckedInput(env, s.element, t.element, depth + 1);
+    return fitsCheckedInputAtDepth(env, s.element, t.element, depth + 1);
   }
   if (s.kind === "option" && t.kind === "option") {
-    return fitsCheckedInput(env, s.element, t.element, depth + 1);
+    return fitsCheckedInputAtDepth(env, s.element, t.element, depth + 1);
   }
   if (s.kind === "tuple" && t.kind === "tuple") {
     return s.elements.length === t.elements.length &&
       s.elements.every((element, index) =>
-        fitsCheckedInput(env, element, t.elements[index], depth + 1)
+        fitsCheckedInputAtDepth(env, element, t.elements[index], depth + 1)
       );
   }
   return false;
@@ -541,104 +565,101 @@ function unknownPredicateInput(
   source: Type,
   predicate: Predicate,
 ): boolean {
-  const pending = [predicate];
-  const seen = new Set<Predicate>();
-  while (pending.length > 0) {
-    const current = pending.pop()!;
-    if (seen.has(current)) continue;
-    seen.add(current);
-    if (current.kind === "not") pending.push(current.operand);
-    else if (current.kind === "and" || current.kind === "or") {
-      for (const operand of current.operands) {
-        pending.push(operand);
-      }
-    } else if (current.kind === "difference") {
-      for (const term of [current.left, current.right]) {
-        if (term.kind === "zero") continue;
-        const path = term.kind === "input" ? [] : term.path;
-        let candidates = [source];
-        for (let index = 0; index <= path.length; index++) {
-          const next: Type[] = [];
-          for (
-            const candidate of candidates.flatMap((type) => members(env, type))
-          ) {
-            const value = unfold(env, candidate);
-            if (value.kind === "primitive" && value.name === "unknown") {
-              return true;
+  let pending = [predicate];
+  let seen = emptySet<Predicate>();
+  for (const _depth of indices(MAX_DEPTH + 1)) {
+    const nextPredicates: Predicate[] = [];
+    for (const current of pending) {
+      if (seen.has(current)) continue;
+      seen = seen.add(current);
+      if (current.kind === "not") {
+        nextPredicates[nextPredicates.length] = current.operand;
+      } else if (current.kind === "and" || current.kind === "or") {
+        for (const operand of current.operands) {
+          nextPredicates[nextPredicates.length] = operand;
+        }
+      } else if (current.kind === "difference") {
+        for (const term of [current.left, current.right]) {
+          if (term.kind === "zero") continue;
+          const path = term.kind === "input" ? [] : term.path;
+          let candidates = [source];
+          for (const index of indices(path.length + 1)) {
+            const next: Type[] = [];
+            for (
+              const candidate of candidates.flatMap((type) =>
+                members(env, type)
+              )
+            ) {
+              const value = unfold(env, candidate);
+              if (value.kind === "primitive" && value.name === "unknown") {
+                return true;
+              }
+              if (index < path.length) {
+                const field = fieldsOf(env, candidate)?.find((field) =>
+                  field.name === path[index]
+                );
+                if (field !== undefined) next[next.length] = field.type;
+              }
             }
-            if (index < path.length) {
-              const field = fieldsOf(env, candidate)?.find((field) =>
-                field.name === path[index]
-              );
-              if (field !== undefined) next.push(field.type);
-            }
+            candidates = next;
           }
-          candidates = next;
         }
       }
     }
+    if (nextPredicates.length === 0) break;
+    pending = nextPredicates;
   }
   return false;
 }
 
 /** True when the generated entry validator can derive a closed schema. */
-export function entrySchemaDerivable(env: TypeEnv, type: Type): boolean {
-  const seen = new Set<string>();
-  const visit = (current: Type): boolean => {
+export function entrySchemaDerivable(env: TypeEnv, type: Type): ValidationFlag {
+  let seen = emptySet<string>();
+  function visit(current: Type): boolean {
     if (current.kind === "named") {
       if (
         isReservedError(current.id) || env.opaque.has(current.id)
       ) return false;
       if (seen.has(current.id)) return true;
-      seen.add(current.id);
+      seen = seen.add(current.id);
       const body = namedBody(env, current.id);
       return body !== undefined && visit(body);
     }
-    switch (current.kind) {
-      case "primitive":
-      case "literal":
-        return true;
-      case "record":
-        return current.fields.every((field) => visit(field.type));
-      case "array":
-      case "option":
-        return visit(current.element);
-      case "tuple":
-        return current.elements.every(visit);
-      case "union":
-        return current.members.every(visit);
-      case "ref":
-      case "retry-schedule":
-      case "schema":
-      case "effect":
-      case "stream":
-      case "sink":
-      case "function":
-      case "provider":
-        return false;
+    if (current.kind === "primitive" || current.kind === "literal") return true;
+    if (current.kind === "record") {
+      return current.fields.every((field) => visit(field.type));
     }
-  };
+    if (current.kind === "array" || current.kind === "option") {
+      return visit(current.element);
+    }
+    if (current.kind === "tuple") return current.elements.every(visit);
+    if (current.kind === "union") return current.members.every(visit);
+    return false;
+  }
   return visit(type);
 }
 
 /** The sorted names that a type holds, not looking into the body of an identity. */
 function nameSignature(env: TypeEnv, type: Type): string {
-  const names = new Set<string>();
-  const seen = new Set<Type>();
-  const visit = (current: Type, depth: number): void => {
-    if (seen.has(current) || depth > MAX_DEPTH) return;
-    seen.add(current);
+  let names = emptySet<string>();
+  let seen = emptySet<Type>();
+  function visit(current: Type, depth: number): Set<string> {
+    if (seen.has(current) || depth > MAX_DEPTH) return names;
+    seen = seen.add(current);
     if (current.kind === "named") {
       const alias = env.identities.has(current.id)
         ? undefined
         : env.aliases.get(current.id);
-      if (alias === undefined) names.add(current.id);
-      else visit(alias, depth + 1);
-      return;
+      if (alias === undefined) names = names.add(current.id);
+      else names = visit(alias, depth + 1);
+      return names;
     }
-    for (const child of typeChildren(current)) visit(child.type, depth + 1);
-  };
-  visit(type, 0);
+    for (const child of typeChildren(current)) {
+      names = visit(child.type, depth + 1);
+    }
+    return names;
+  }
+  names = visit(type, 0);
   return sortedUnique([...names]).join(",");
 }
 
@@ -647,8 +668,9 @@ function nameSignature(env: TypeEnv, type: Type): string {
  * type equality up to transparent aliases and union order. `int` and an
  * identity over `int` fit each other, but they are not the same type.
  */
-export function same(env: TypeEnv, a: Type, b: Type): boolean {
-  return assignable(env, a, b, false, 0) && assignable(env, b, a, false, 0) &&
+export function same(env: TypeEnv, a: Type, b: Type): ValidationFlag {
+  return assignable(env, a, b, false, 0, true) &&
+    assignable(env, b, a, false, 0, true) &&
     nameSignature(env, a) === nameSignature(env, b);
 }
 
@@ -656,7 +678,7 @@ export function same(env: TypeEnv, a: Type, b: Type): boolean {
 export function unionOf(env: TypeEnv, types: readonly Type[]): Type {
   const kept: Type[] = [];
   for (const type of types) {
-    if (!kept.some((k) => same(env, k, type))) kept.push(type);
+    if (!kept.some((k) => same(env, k, type))) kept[kept.length] = type;
   }
   if (kept.length === 0) return NEVER;
   return kept.length === 1 ? kept[0] : { kind: "union", members: kept };
@@ -678,11 +700,15 @@ export function fieldsOf(
 }
 
 /** The sealed nominal identity below aliases, if this type is one. */
-export function sealedRootOf(env: TypeEnv, type: Type): string | undefined {
+export function sealedRootOf(
+  env: TypeEnv,
+  type: Type,
+): ValidationText | undefined {
   let current = type;
-  const seen = new Set<Type>();
-  while (!seen.has(current)) {
-    seen.add(current);
+  let seen = emptySet<Type>();
+  for (const _index of indices(MAX_DEPTH + 1)) {
+    if (seen.has(current)) break;
+    seen = seen.add(current);
     if (current.kind !== "named") return undefined;
     if (env.sealed.has(current.id)) return current.id;
     const alias = env.aliases.get(current.id);
@@ -696,11 +722,11 @@ export function sealedRootOf(env: TypeEnv, type: Type): string | undefined {
 export function foreignSealedOf(
   env: TypeEnv,
   type: Type,
-): string | undefined {
-  const seen = new Set<Type>();
-  const visit = (current: Type): string | undefined => {
+): ValidationText | undefined {
+  let seen = emptySet<Type>();
+  function visit(current: Type): string | undefined {
     if (seen.has(current)) return undefined;
-    seen.add(current);
+    seen = seen.add(current);
     if (current.kind === "named") {
       if (!ownsSealed(env, current.id)) return current.id;
       const target = namedBody(env, current.id);
@@ -711,7 +737,7 @@ export function foreignSealedOf(
       if (found !== undefined) return found;
     }
     return undefined;
-  };
+  }
   return visit(type);
 }
 
@@ -724,66 +750,82 @@ export function asFunction(env: TypeEnv, type: Type): FunctionType | undefined {
 export function containsRefinement(
   env: TypeEnv,
   type: Type,
-  seen = new Set<Type>(),
-): boolean {
+): ValidationFlag {
+  return containsRefinementSeen(env, type, emptySet());
+}
+
+function containsRefinementSeen(
+  env: TypeEnv,
+  type: Type,
+  seen: Set<Type>,
+): ValidationFlag {
   if (seen.has(type)) return false;
-  seen.add(type);
+  seen = seen.add(type);
   if (type.kind === "named") {
     if (env.refined?.has(type.id)) return true;
     const fields = env.errors.get(type.id);
     const body = env.aliases.get(type.id) ?? env.opaqueBases.get(type.id) ??
       env.taggedRecords.get(type.id);
     return body !== undefined
-      ? containsRefinement(env, body, seen)
-      : fields?.some((field) => containsRefinement(env, field.type, seen)) ===
-        true;
+      ? containsRefinementSeen(env, body, seen)
+      : isTrue(
+        fields?.some((field) => containsRefinementSeen(env, field.type, seen)),
+      );
   }
   return typeChildren(type).some((child) =>
-    containsRefinement(env, child.type, seen)
+    containsRefinementSeen(env, child.type, seen)
   );
 }
 
 export function containsUnknown(
   env: TypeEnv,
   type: Type,
-  seen = new Set<Type>(),
-): boolean {
+): ValidationFlag {
+  return containsUnknownSeen(env, type, emptySet());
+}
+
+function containsUnknownSeen(
+  env: TypeEnv,
+  type: Type,
+  seen: Set<Type>,
+): ValidationFlag {
   const current = unfoldTransparent(env, type);
   if (seen.has(current)) return false;
-  seen.add(current);
+  seen = seen.add(current);
   if (current.kind === "primitive") return current.name === "unknown";
   if (current.kind === "named" && ownsSealed(env, current.id)) {
     const body = identityBody(env, current.id) ??
       env.taggedRecords.get(current.id);
-    return body !== undefined && containsUnknown(env, body, seen);
+    return body !== undefined && containsUnknownSeen(env, body, seen);
   }
   return typeChildren(current).some((child) =>
-    containsUnknown(env, child.type, seen)
+    containsUnknownSeen(env, child.type, seen)
   );
 }
 
-export function isBooleanLike(env: TypeEnv, type: Type): boolean {
+export function isBooleanLike(env: TypeEnv, type: Type): ValidationFlag {
   return fits(env, type, BOOLEAN) && !isNever(type);
 }
 
 /** True when the type, after transparent aliases, is `Duration`. */
-export function isDurationType(env: TypeEnv, type: Type): boolean {
+export function isDurationType(env: TypeEnv, type: Type): ValidationFlag {
   const unfolded = unfoldTransparent(env, type);
   return unfolded.kind === "named" && unfolded.id === DURATION_ID;
 }
 
 /** A closed unit type compares only with a value of the same closed unit type. */
 export function closedUnitsDiffer(
-  l: string | undefined,
-  r: string | undefined,
-): boolean {
-  const closed = (cls: string | undefined) =>
-    cls !== undefined && cls.startsWith(IDENTITY_CLASS) &&
-    CLOSED_UNIT_IDS.has(cls.slice(IDENTITY_CLASS.length));
+  l: ValidationText | undefined,
+  r: ValidationText | undefined,
+): ValidationFlag {
+  function closed(cls: string | undefined): boolean {
+    return cls !== undefined && cls.startsWith(IDENTITY_CLASS) &&
+      isClosedUnitId(cls.slice(IDENTITY_CLASS.length));
+  }
   return (closed(l) || closed(r)) && l !== r;
 }
 
-export function isInstantType(env: TypeEnv, type: Type): boolean {
+export function isInstantType(env: TypeEnv, type: Type): ValidationFlag {
   const unfolded = unfoldTransparent(env, type);
   return unfolded.kind === "named" && unfolded.id === INSTANT_ID;
 }
@@ -811,8 +853,15 @@ export function numericIdentityOf(env: TypeEnv, type: Type): Type | undefined {
 export function comparisonClass(
   env: TypeEnv,
   type: Type,
-  depth = 0,
-): string | undefined {
+): ValidationText | undefined {
+  return comparisonClassAtDepth(env, type, 0);
+}
+
+export function comparisonClassAtDepth(
+  env: TypeEnv,
+  type: Type,
+  depth: TypeDepth,
+): ValidationText | undefined {
   if (depth > MAX_DEPTH) return undefined;
   let found: string | undefined;
   for (const member of identityMembers(env, type)) {
@@ -828,7 +877,7 @@ export function comparisonClass(
       const base = identityBody(env, member.id);
       if (
         base !== undefined &&
-        comparisonClass(env, base, depth + 1) !== undefined
+        comparisonClassAtDepth(env, base, depth + 1) !== undefined
       ) {
         current = `identity:${member.id}`;
       }
@@ -852,9 +901,11 @@ function baseClass(env: TypeEnv, cls: string): string | undefined {
 /** The class and the classes of its bases, as far as widening reaches. */
 function classChain(env: TypeEnv, cls: string): readonly string[] {
   const chain = [cls];
-  for (let next = baseClass(env, cls); next !== undefined;) {
+  let next = baseClass(env, cls);
+  for (const _index of indices(MAX_DEPTH + 1)) {
+    if (next === undefined) break;
     if (chain.includes(next)) break;
-    chain.push(next);
+    chain[chain.length] = next;
     next = baseClass(env, next);
   }
   return chain;
@@ -863,18 +914,24 @@ function classChain(env: TypeEnv, cls: string): readonly string[] {
 /** Two classes are compatible when one widens to the other. */
 export function compatibleClasses(
   env: TypeEnv,
-  l: string,
-  r: string,
-): boolean {
+  l: ValidationText,
+  r: ValidationText,
+): ValidationFlag {
   return classChain(env, l).includes(r) || classChain(env, r).includes(l);
 }
 
 /** True when the class widens to `number`. */
-export function isNumericClass(env: TypeEnv, cls: string): boolean {
+export function isNumericClass(
+  env: TypeEnv,
+  cls: ValidationText,
+): ValidationFlag {
   return classChain(env, cls).includes("number");
 }
 
-export function isStringClass(env: TypeEnv, cls: string): boolean {
+export function isStringClass(
+  env: TypeEnv,
+  cls: ValidationText,
+): ValidationFlag {
   return classChain(env, cls).includes("string");
 }
 
@@ -884,82 +941,79 @@ function orNever(items: readonly string[]): string {
 }
 
 /** A readable form for messages. */
-export function show(type: Type): string {
-  switch (type.kind) {
-    case "primitive":
-      return type.name === "unit" ? "void" : type.name;
-    case "literal":
-      return JSON.stringify(type.value);
-    case "named":
-      return CLOSED_UNIT_IDS.has(type.id)
-        ? type.id.slice(type.id.indexOf("/") + 1)
-        : type.id;
-    case "record":
-      return type.fields.length === 0
-        ? "{}"
-        : `{ ${
-          type.fields.map((f) =>
-            `${f.name}${f.optional ? "?" : ""}: ${show(f.type)}`
-          ).join(", ")
-        } }`;
-    case "array": {
-      const inner = show(type.element);
-      return type.element.kind === "union" || type.element.kind === "function"
-        ? `(${inner})[]`
-        : `${inner}[]`;
-    }
-    case "tuple":
-      return `[${type.elements.map(show).join(", ")}]`;
-    case "union":
-      return type.members.map(show).join(" | ");
-    case "option":
-      return `Option<${show(type.element)}>`;
-    case "ref":
-      return `Ref<${show(type.element)}>`;
-    case "retry-schedule":
-      return `RetrySchedule<${show(type.error)}>`;
-    case "schema":
-      return `${
-        type.optionalKey === true
-          ? "SchemaOptional"
-          : type.encodedOptionalKey === true
-          ? "SchemaEncodedOptional"
-          : type.decodedOptionalKey === true
-          ? "SchemaDecodedOptional"
-          : "Schema"
-      }${type.constructorDefault === true ? "ConstructorDefault" : ""}<${
-        show(type.decoded)
-      }, ${show(type.encoded)}, ${orNever(type.decodeRequirements)}, ${
-        orNever(type.encodeRequirements)
-      }${type.makeInput === undefined ? "" : `, ${show(type.makeInput)}`}>`;
-    case "effect":
-      return `Effect<${show(type.result)}, ${orNever(type.effects.failures)}, ${
-        orNever(type.effects.requirements)
-      }>`;
-    case "stream":
-      return `Stream<${show(type.element)}, ${
-        orNever(type.effects.failures)
-      }, ${orNever(type.effects.requirements)}>`;
-    case "sink":
-      return `Sink<${show(type.input)}, ${show(type.result)}, ${
-        orNever(type.effects.failures)
-      }, ${orNever(type.effects.requirements)}${
-        type.leftover === undefined ? "" : `, ${show(type.leftover)}`
-      }>`;
-    case "function": {
-      const fails = type.effects.failures.length === 0
-        ? ""
-        : ` fails ${type.effects.failures.join(" | ")}`;
-      const withText = type.effects.requirements.length === 0
-        ? ""
-        : ` with ${type.effects.requirements.join(" | ")}`;
-      return `(${type.parameters.map(show).join(", ")}) => ${
-        show(type.result)
-      }${fails}${withText} [${type.execution}]`;
-    }
-    case "provider":
-      return `provider provides ${
-        type.provides.join(" | ")
-      } [${type.acquisition.execution}]`;
+export function show(type: Type): ValidationText {
+  if (type.kind === "primitive") {
+    return type.name === "unit" ? "void" : type.name;
   }
+  if (type.kind === "literal") return JSON.stringify(type.value);
+  if (type.kind === "named") {
+    return isClosedUnitId(type.id)
+      ? type.id.slice(type.id.indexOf("/") + 1)
+      : type.id;
+  }
+  if (type.kind === "record") {
+    if (type.fields.length === 0) return "{}";
+    return `{ ${
+      type.fields.map((f) =>
+        `${f.name}${f.optional ? "?" : ""}: ${show(f.type)}`
+      ).join(", ")
+    } }`;
+  }
+  if (type.kind === "array") {
+    const inner = show(type.element);
+    return type.element.kind === "union" || type.element.kind === "function"
+      ? `(${inner})[]`
+      : `${inner}[]`;
+  }
+  if (type.kind === "tuple") return `[${type.elements.map(show).join(", ")}]`;
+  if (type.kind === "union") return type.members.map(show).join(" | ");
+  if (type.kind === "option") return `Option<${show(type.element)}>`;
+  if (type.kind === "ref") return `Ref<${show(type.element)}>`;
+  if (type.kind === "retry-schedule") {
+    return `RetrySchedule<${show(type.error)}>`;
+  }
+  if (type.kind === "schema") {
+    let name = "Schema";
+    if (isTrue(type.optionalKey)) name = "SchemaOptional";
+    else if (isTrue(type.encodedOptionalKey)) name = "SchemaEncodedOptional";
+    else if (isTrue(type.decodedOptionalKey)) name = "SchemaDecodedOptional";
+    return `${name}${
+      isTrue(type.constructorDefault) ? "ConstructorDefault" : ""
+    }<${show(type.decoded)}, ${show(type.encoded)}, ${
+      orNever(type.decodeRequirements)
+    }, ${orNever(type.encodeRequirements)}${
+      type.makeInput === undefined ? "" : `, ${show(type.makeInput)}`
+    }>`;
+  }
+  if (type.kind === "effect") {
+    return `Effect<${show(type.result)}, ${orNever(type.effects.failures)}, ${
+      orNever(type.effects.requirements)
+    }>`;
+  }
+  if (type.kind === "stream") {
+    return `Stream<${show(type.element)}, ${orNever(type.effects.failures)}, ${
+      orNever(type.effects.requirements)
+    }>`;
+  }
+  if (type.kind === "sink") {
+    return `Sink<${show(type.input)}, ${show(type.result)}, ${
+      orNever(type.effects.failures)
+    }, ${orNever(type.effects.requirements)}${
+      type.leftover === undefined ? "" : `, ${show(type.leftover)}`
+    }>`;
+  }
+  if (type.kind === "function") {
+    const fails = type.effects.failures.length === 0
+      ? ""
+      : ` fails ${type.effects.failures.join(" | ")}`;
+    const withText = type.effects.requirements.length === 0
+      ? ""
+      : ` with ${type.effects.requirements.join(" | ")}`;
+    return `(${type.parameters.map(show).join(", ")}) => ${
+      show(type.result)
+    }${fails}${withText} [${type.execution}]`;
+  }
+  return `provider provides ${
+    type.provides.join(" | ")
+  } [${type.acquisition.execution}]`;
 }

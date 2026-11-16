@@ -1,11 +1,14 @@
-// deno-lint-ignore-file no-import-prefix -- the repo pins effect only in generated project configs
+// @light-fp adapter
 
 // Cost of ES-D3 (a): 1,000 updates of a Ref, of a SynchronizedRef, and of a
 // SynchronizedRef with an effectful callback, each inside one Effect.gen.
 // Run: deno bench --no-lock --allow-read --allow-env bench/ref_update.ts
 
+// deno-lint-ignore no-import-prefix -- this benchmark retains the generated target's exact Effect version
 import * as Effect from "npm:effect@4.1.2/Effect";
+// deno-lint-ignore no-import-prefix -- this benchmark retains the generated target's exact Effect version
 import * as Ref from "npm:effect@4.1.2/Ref";
+// deno-lint-ignore no-import-prefix -- this benchmark retains the generated target's exact Effect version
 import * as SynchronizedRef from "npm:effect@4.1.2/SynchronizedRef";
 
 const UPDATES = 1000;

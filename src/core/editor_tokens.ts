@@ -2,7 +2,7 @@ import type { Revision } from "./db.ts";
 import type { FileIndex } from "./declaration_index.ts";
 import type { Diagnostic } from "./diagnostics.ts";
 import {
-  DECLARATION_KINDS,
+  declarationKind,
   isArrowDeclaration,
   symbolIndex,
   type SymbolOccurrence,
@@ -14,9 +14,11 @@ import {
   lex,
   OPERATOR_KINDS,
   TokenKind,
+  tokenKind,
   TriviaKind,
 } from "./lex.ts";
 import { parseFileFresh } from "./project.ts";
+import { emptyMap, emptySet, indices, mapFrom, setFrom } from "./runtime.ts";
 import type { Span } from "./source.ts";
 
 export const SEMANTIC_TOKEN_TYPES = [
@@ -35,25 +37,30 @@ export const SEMANTIC_TOKEN_TYPES = [
   "operator",
 ] as const;
 export const SEMANTIC_TOKEN_MODIFIERS = ["declaration", "readonly"] as const;
-interface SemanticClassification {
+type SemanticClassification = {
   readonly span: Span;
   readonly type: (typeof SEMANTIC_TOKEN_TYPES)[number];
   readonly modifiers: readonly (typeof SEMANTIC_TOKEN_MODIFIERS)[number][];
-}
+};
+
+export type EditorPath = string;
+export type EditorText = string;
 
 /** Starts of service headers before the first ordinary import or declaration. */
 function serviceImportKeywordStarts(
   index: FileIndex,
   diagnostics: readonly Diagnostic[],
 ): ReadonlySet<number> {
-  const firstOrdinary = Math.min(
-    ...index.decls.map((entry) => entry.span.start),
-    ...index.imports.filter((entry) => entry.role === "ordinary").map((entry) =>
+  const ordinaryStarts = index.decls.map((entry) => entry.span.start).concat(
+    index.imports.filter((entry) => entry.role === "ordinary").map((entry) =>
       entry.span.start
     ),
+  );
+  const firstOrdinary = ordinaryStarts.reduce(
+    (first, start) => Math.min(first, start),
     Infinity,
   );
-  return new Set(
+  return setFrom(
     index.imports.filter((entry) =>
       entry.role === "service" && entry.span.start < firstOrdinary &&
       !diagnostics.some((diagnostic) =>
@@ -64,56 +71,42 @@ function serviceImportKeywordStarts(
   );
 }
 
-/** Every contextual word except the import words: `imports` and `from` have their own rules. */
-const contextualKeywords = contextualWordsOf(
-  "declaration",
-  "modifier",
-  "clause",
-  "positional",
-);
-
 function resolvedKind(
   revision: Revision,
   occurrence: SymbolOccurrence,
 ): SemanticClassification["type"] {
-  switch (occurrence.target.kind) {
-    case "type":
-      return revision.types.taggedRecordOf(occurrence.target.id) === undefined
-        ? "type"
-        : "class";
-    case "builtin-type":
-      return "type";
-    case "error":
-      return "class";
-    case "service":
-      return "interface";
-    case "cap":
-      return "method";
-    case "field":
-      return "property";
-    case "builtin":
-      return "function";
-    case "local":
-      return symbolIndex(revision).locals.get(
-          occurrence.declaration?.source ?? "",
-        )?.find((l) => l.identity === occurrence.identity)?.parameter
-        ? "parameter"
-        : "variable";
-    case "value": {
-      return isArrowDeclaration(revision, occurrence.declaration)
-        ? "function"
-        : "variable";
-    }
-    default:
-      return "variable";
+  const target = occurrence.target;
+  if (target.kind === "type") {
+    return revision.types.taggedRecordOf(target.id) === undefined
+      ? "type"
+      : "class";
   }
+  if (target.kind === "builtin-type") return "type";
+  if (target.kind === "error") return "class";
+  if (target.kind === "service") return "interface";
+  if (target.kind === "cap") return "method";
+  if (target.kind === "field") return "property";
+  if (target.kind === "builtin") return "function";
+  if (target.kind === "local") {
+    return symbolIndex(revision).locals.get(
+        occurrence.declaration?.source ?? "",
+      )?.find((local) => local.identity === occurrence.identity)?.parameter
+      ? "parameter"
+      : "variable";
+  }
+  if (target.kind === "value") {
+    return isArrowDeclaration(revision, occurrence.declaration)
+      ? "function"
+      : "variable";
+  }
+  return "variable";
 }
 
 /** Resolver classifications where available and lexical fallback everywhere else. */
 export function semanticClassifications(
   revision: Revision | undefined,
-  path: string,
-  text: string,
+  path: EditorPath,
+  text: EditorText,
 ): readonly SemanticClassification[] {
   const matching = revision?.sourceTexts().get(path) === text
     ? revision
@@ -124,7 +117,7 @@ export function semanticClassifications(
   const moduleInfo = matching?.moduleInfoAt(path);
   const fileIndex = moduleInfo?.index ?? parsed?.index;
   const serviceImports = fileIndex === undefined
-    ? new Set<number>()
+    ? emptySet<number>()
     : serviceImportKeywordStarts(
       fileIndex,
       moduleInfo?.parseDiagnostics ?? parsed?.parsed.diagnostics ?? [],
@@ -132,11 +125,21 @@ export function semanticClassifications(
   const occurrences = matching === undefined
     ? []
     : symbolIndex(matching).byPath.get(path) ?? [];
-  const byStart = new Map(occurrences.map((o) => [o.span.start, o]));
+  const byStart = mapFrom(
+    occurrences.map((occurrence) =>
+      [occurrence.span.start, occurrence] as const
+    ),
+  );
   const lexed = lex(path, text);
+  const contextualKeywords = contextualWordsOf([
+    "declaration",
+    "modifier",
+    "clause",
+    "positional",
+  ]);
   const output: SemanticClassification[] = [];
-  for (let i = 0; i < lexed.count; i++) {
-    const kind = lexed.kinds[i];
+  for (const i of indices(lexed.count)) {
+    const kind = tokenKind(lexed.kinds[i]);
     const span = { source: path, start: lexed.starts[i], end: lexed.ends[i] };
     if (span.start === span.end || kind === TokenKind.Newline) continue;
     const occurrence = byStart.get(span.start);
@@ -144,8 +147,8 @@ export function semanticClassifications(
       occurrence !== undefined && occurrence.span.end === span.end &&
       matching !== undefined
     ) {
-      output.push({
-        span,
+      output[output.length] = {
+        span: span,
         type: resolvedKind(matching, occurrence),
         modifiers: [
           ...(occurrence.isDeclaration ? ["declaration" as const] : []),
@@ -154,41 +157,41 @@ export function semanticClassifications(
             ? ["readonly" as const]
             : []),
         ],
-      });
+      };
     } else if (kind === TokenKind.String) {
-      output.push({ span, type: "string", modifiers: [] });
+      output[output.length] = { span: span, type: "string", modifiers: [] };
     } else if (kind === TokenKind.Number) {
-      output.push({ span, type: "number", modifiers: [] });
+      output[output.length] = { span: span, type: "number", modifiers: [] };
     } else if (
       kind === TokenKind.Ident && serviceImports.has(span.start) &&
       text.slice(span.start, span.end) === "imports"
     ) {
-      output.push({ span, type: "keyword", modifiers: [] });
+      output[output.length] = { span: span, type: "keyword", modifiers: [] };
     } else if (
       kind === TokenKind.Ident &&
       isFromKeyword(
         text.slice(span.start, span.end),
-        lexed.kinds[i + 1] as TokenKind | undefined,
+        i + 1 < lexed.count ? tokenKind(lexed.kinds[i + 1]) : undefined,
       )
     ) {
-      output.push({ span, type: "keyword", modifiers: [] });
+      output[output.length] = { span: span, type: "keyword", modifiers: [] };
     } else if (
       isKeywordKind(kind) ||
       kind === TokenKind.Ident &&
         contextualKeywords.has(text.slice(span.start, span.end))
-    ) output.push({ span, type: "keyword", modifiers: [] });
+    ) output[output.length] = { span: span, type: "keyword", modifiers: [] };
     else if (kind === TokenKind.Ident) {
-      output.push({ span, type: "variable", modifiers: [] });
-    } else if (OPERATOR_KINDS.has(kind)) {
-      output.push({ span, type: "operator", modifiers: [] });
+      output[output.length] = { span: span, type: "variable", modifiers: [] };
+    } else if (kind !== undefined && OPERATOR_KINDS.has(kind)) {
+      output[output.length] = { span: span, type: "operator", modifiers: [] };
     }
   }
-  for (let i = 0; i < lexed.trivia.kinds.length; i++) {
+  for (const i of indices(lexed.trivia.kinds.length)) {
     if (
       lexed.trivia.kinds[i] === TriviaKind.LineComment ||
       lexed.trivia.kinds[i] === TriviaKind.BlockComment
     ) {
-      output.push({
+      output[output.length] = {
         span: {
           source: path,
           start: lexed.trivia.starts[i],
@@ -196,30 +199,32 @@ export function semanticClassifications(
         },
         type: "comment",
         modifiers: [],
-      });
+      };
     }
   }
   // Declarations recovered from otherwise broken regions can still be marked.
   if (matching === undefined && fileIndex !== undefined) {
-    const types = new Map<number, SemanticClassification["type"]>();
+    let types = emptyMap<number, SemanticClassification["type"]>();
     for (const d of fileIndex.decls) {
       if (!types.has(d.nameSpan.start)) {
-        types.set(
+        types = types.set(
           d.nameSpan.start,
-          DECLARATION_KINDS.get(d.kind) ??
+          declarationKind(d.kind) ??
             (d.isArrow ? "function" : "variable"),
         );
       }
       for (const m of d.methodList) {
-        if (!types.has(m.nameSpan.start)) types.set(m.nameSpan.start, "method");
+        if (!types.has(m.nameSpan.start)) {
+          types = types.set(m.nameSpan.start, "method");
+        }
       }
     }
-    for (let i = 0; i < output.length; i++) {
+    for (const i of indices(output.length)) {
       const type = types.get(output[i].span.start);
       if (type !== undefined) {
         output[i] = {
           ...output[i],
-          type,
+          type: type,
           modifiers: ["declaration", "readonly"],
         };
       }

@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Measurement M5: the wall time of the TypeScript check over the emitted
 // code, against Effect 4.1.2.
 //

@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Validation of a revision for tests. The validator is a test oracle, and a
 // revision does not carry it. This helper reads the module infos of the
 // revision and calls `validateProject` with them.
@@ -47,7 +48,7 @@ function sourceFilesOf(dir: string, prefix = ""): Record<string, string> {
  * failures. An empty list means the validator accepts the project.
  */
 export function validationProblems(dir: string): string[] {
-  const loaded = new Program().update({ set: sourceFilesOf(dir) });
+  const loaded = Program(undefined).update({ set: sourceFilesOf(dir) });
   if (!loaded.ok) return [`project: ${JSON.stringify(loaded.error)}`];
   const revision = loaded.value;
   const lowered = new Map<string, Result<ModuleIR, LowerError>>();

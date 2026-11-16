@@ -1,12 +1,11 @@
+import { emptyMap, emptySet, mapFrom, setFrom } from "../runtime.ts";
 import {
-  fieldAdapter,
   fieldKey,
   needsFieldAdapter,
   sensitiveField,
   taggedFields,
 } from "./fields.ts";
 // Declarations and their order, and the export rule.
-
 import type {
   ConstantDecl,
   Declaration,
@@ -57,37 +56,41 @@ import {
 } from "./types.ts";
 import { valueReferences } from "./walk.ts";
 import type { Predicate, Term } from "../predicates.ts";
-
 const LINE_WIDTH = 80;
-
+function trueFlag(value: unknown): value is true {
+  return typeof value === "boolean" && value;
+}
 // ------------------------------------------------------------------ references
-
 /** The walk adds only type, error, and service identities, so each one is a `DeclarationId`. */
 function referencedDeclarations(declaration: Declaration): Set<DeclarationId> {
-  const ids = new Set<string>();
-  declarationReferencedIds(declaration, ids);
-  return ids as Set<DeclarationId>;
+  return declarationReferencedIds(declaration, emptySet<DeclarationId>());
 }
-
 /** Source exports plus every declaration that the interface of an export reaches. */
 export function exportedIds(ir: ModuleIR): Set<DeclarationId> {
-  const byId = new Map<DeclarationId, Declaration>(
+  const byId = mapFrom<DeclarationId, Declaration>(
     ir.declarations.map((d) => [d.id, d]),
   );
-  const seen = new Set<DeclarationId>();
-  const visit = (id: DeclarationId): void => {
-    if (seen.has(id)) return;
+  let seen = emptySet<DeclarationId>();
+  function visit(id: DeclarationId): Set<DeclarationId> {
+    if (seen.has(id)) {
+      return seen;
+    }
     const declaration = byId.get(id);
-    if (declaration === undefined) return;
-    seen.add(id);
-    for (const next of referencedDeclarations(declaration)) visit(next);
-  };
-  for (const id of ir.exports) visit(id);
+    if (declaration === undefined) {
+      return seen;
+    }
+    seen = seen.add(id);
+    for (const next of referencedDeclarations(declaration)) {
+      seen = visit(next);
+    }
+    return seen;
+  }
+  for (const id of ir.exports) {
+    seen = visit(id);
+  }
   return seen;
 }
-
 // ------------------------------------------------------------------ recursion
-
 /**
  * The recursive groups that contain a data type, keyed by each member. A group
  * is a strongly connected component of the type-level references. Every member
@@ -98,106 +101,137 @@ export function recursiveGroups(
   ir: ModuleIR,
 ): ReadonlyMap<DeclarationId, ReadonlySet<DeclarationId>> {
   const group = ir.declarations.filter(isTypeLevel);
-  const index = new Map<DeclarationId, number>(group.map((d, n) => [d.id, n]));
+  const index = mapFrom<DeclarationId, number>(group.map((d, n) => [d.id, n]));
   const edges = group.map((d) =>
     [...referencedDeclarations(d)].flatMap((id) => {
       const target = index.get(id);
       return target === undefined ? [] : [target];
     })
   );
-  const groups = new Map<DeclarationId, ReadonlySet<DeclarationId>>();
+  let groups = emptyMap<DeclarationId, ReadonlySet<DeclarationId>>();
   for (const members of stronglyConnectedComponents(group.length, edges)) {
     const declarations = members.map((n) => group[n]);
     const cycle = isCycle(members, edges);
     const hasData = declarations.some((d) =>
       d.kind === "type" && taggedFields(d) !== undefined
     );
-    if (!cycle || !hasData) continue;
-    const ids = new Set(declarations.map((d) => d.id));
-    for (const id of ids) groups.set(id, ids);
+    if (!cycle || !hasData) {
+      continue;
+    }
+    const ids = setFrom(declarations.map((d) => d.id));
+    for (const id of ids) {
+      groups = groups.set(id, ids);
+    }
   }
   return groups;
 }
-
 // ------------------------------------------------------------------ order
-
 type TypeLevel = TypeDecl | ErrorDecl | ServiceDecl;
-
 function isTypeLevel(d: Declaration): d is TypeLevel {
   return d.kind === "type" || d.kind === "error" || d.kind === "service";
 }
-
 /** Dependencies before users. Source order decides everything else. */
 export function orderTypeLevel(ir: ModuleIR): TypeLevel[] {
   const group = ir.declarations.filter(isTypeLevel);
-  const byId = new Map<DeclarationId, TypeLevel>(group.map((d) => [d.id, d]));
+  const byId = mapFrom<DeclarationId, TypeLevel>(group.map((d) => [d.id, d]));
   const ordered: TypeLevel[] = [];
-  const state = new Map<DeclarationId, "active" | "done">();
-  const visit = (declaration: TypeLevel): void => {
-    if (state.has(declaration.id)) return;
-    state.set(declaration.id, "active");
+  let state = emptyMap<DeclarationId, "active" | "done">();
+  function visit(
+    declaration: TypeLevel,
+  ): Map<DeclarationId, "active" | "done"> {
+    if (state.has(declaration.id)) {
+      return state;
+    }
+    state = state.set(declaration.id, "active");
     const dependencies = [...referencedDeclarations(declaration)]
       .flatMap((id) => {
         const dependency = byId.get(id);
         return dependency === undefined ? [] : [dependency];
       })
       .sort((a, b) => a.span.start - b.span.start);
-    for (const dependency of dependencies) visit(dependency);
-    state.set(declaration.id, "done");
-    ordered.push(declaration);
-  };
-  for (const declaration of group) visit(declaration);
+    for (const dependency of dependencies) {
+      state = visit(dependency);
+    }
+    state = state.set(declaration.id, "done");
+    {
+      const _appendTarget1 = ordered;
+      const _appendValue2 = declaration;
+      _appendTarget1[_appendTarget1.length] = _appendValue2;
+    }
+    return state;
+  }
+  for (const declaration of group) {
+    state = visit(declaration);
+  }
   return ordered;
 }
-
 /** Constants in the order of their eager dependencies. */
 export function orderConstants(ir: ModuleIR): ConstantDecl[] {
-  const constants = ir.declarations.filter(
-    (d): d is ConstantDecl => d.kind === "constant",
+  const constants = ir.declarations.filter((d): d is ConstantDecl =>
+    d.kind === "constant"
   );
-  const values = new Map<ValueId, FunctionDecl | ConstantDecl>();
+  let values = emptyMap<ValueId, FunctionDecl | ConstantDecl>();
   for (const d of ir.declarations) {
-    if (d.kind === "function" || d.kind === "constant") values.set(d.id, d);
+    if (d.kind === "function" || d.kind === "constant") {
+      values = values.set(d.id, d);
+    }
   }
-  const eagerDependencies = (constant: ConstantDecl): ConstantDecl[] => {
-    const found = new Map<ValueId, ConstantDecl>();
-    const expanded = new Set<ValueId>();
+  function eagerDependencies(constant: ConstantDecl): ConstantDecl[] {
+    let found = emptyMap<ValueId, ConstantDecl>();
+    let expanded = emptySet<ValueId>();
     const pending = valueReferences(constant);
-    for (let id = pending.pop(); id !== undefined; id = pending.pop()) {
+    for (const id of pending) {
       const target = values.get(id);
-      if (target === undefined || expanded.has(id)) continue;
-      expanded.add(id);
+      if (target === undefined || expanded.has(id)) {
+        continue;
+      }
+      expanded = expanded.add(id);
       if (target.kind === "constant") {
-        found.set(id, target);
+        found = found.set(id, target);
       } else {
         for (const reference of valueReferences(target)) {
-          pending.push(reference);
+          {
+            const _appendTarget3 = pending;
+            const _appendValue4 = reference;
+            _appendTarget3[_appendTarget3.length] = _appendValue4;
+          }
         }
       }
     }
     return [...found.values()].sort((a, b) => a.span.start - b.span.start);
-  };
+  }
   const ordered: ConstantDecl[] = [];
-  const state = new Map<ValueId, "active" | "done">();
-  const visit = (constant: ConstantDecl): void => {
+  let state = emptyMap<ValueId, "active" | "done">();
+  function visit(
+    constant: ConstantDecl,
+  ): Map<ValueId, "active" | "done"> {
     const known = state.get(constant.id);
-    if (known === "done") return;
+    if (known === "done") {
+      return state;
+    }
     if (known === "active") {
-      throw internal(`the constant ${constant.name} depends on itself`);
+      return internal(`the constant ${constant.name} depends on itself`);
     }
-    state.set(constant.id, "active");
+    state = state.set(constant.id, "active");
     for (const dependency of eagerDependencies(constant)) {
-      if (dependency.id !== constant.id) visit(dependency);
+      if (dependency.id !== constant.id) {
+        state = visit(dependency);
+      }
     }
-    state.set(constant.id, "done");
-    ordered.push(constant);
-  };
-  for (const constant of constants) visit(constant);
+    state = state.set(constant.id, "done");
+    {
+      const _appendTarget5 = ordered;
+      const _appendValue6 = constant;
+      _appendTarget5[_appendTarget5.length] = _appendValue6;
+    }
+    return state;
+  }
+  for (const constant of constants) {
+    state = visit(constant);
+  }
   return ordered;
 }
-
 // ------------------------------------------------------------------ printing
-
 /**
  * The parameter list of a function declaration, and the result type when
  * `result` is `"always"` or when the result is written. The emitter passes
@@ -211,63 +245,69 @@ export function functionHeaderDoc(
   const parameters = bracketed(
     "(",
     ")",
-    d.parameters.map((p, i) =>
-      property(p.name, d.type.checked?.[i] ? "unknown" : typeDoc(scope, p.type))
-    ),
+    d.parameters.map((p, i) => {
+      const checked = d.type.checked;
+      const isChecked = checked === undefined ? false : checked[i];
+      return property(
+        p.name,
+        isChecked ? "unknown" : typeDoc(scope, p.type, undefined),
+      );
+    }),
     false,
   );
-  if (result === "contract" && !d.written.result) return parameters;
-  const resultDoc = typeDoc(scope, d.type.result);
+  if (result === "contract" && !d.written.result) {
+    return parameters;
+  }
+  const resultDoc = typeDoc(scope, d.type.result, undefined);
   const returns = d.type.execution === "effect"
     ? effectTypeDoc(scope, resultDoc, d.type.effects)
     : resultDoc;
   return [parameters, ": ", returns];
 }
-
 export function constantTypeDoc(scope: ModuleState, d: ConstantDecl): Doc {
-  return typeDoc(scope, d.type);
+  return typeDoc(scope, d.type, undefined);
 }
-
-export class DeclarationEmitter {
+export type DeclarationEmitter = {
   readonly expr: ExprEmitter;
-
-  constructor(
-    readonly scope: ModuleState,
-    readonly exported: ReadonlySet<DeclarationId>,
-    private readonly groups: ReadonlyMap<
-      DeclarationId,
-      ReadonlySet<DeclarationId>
-    > = new Map(),
-  ) {
-    this.expr = new ExprEmitter(scope);
+  readonly scope: ModuleState;
+  readonly exported: ReadonlySet<DeclarationId>;
+  readonly declaration: (declaration: Declaration) => Doc;
+  readonly hostAssertions: () => Doc[];
+};
+export function DeclarationEmitter(
+  scope: ModuleState,
+  exported: ReadonlySet<DeclarationId>,
+  groups: ReadonlyMap<DeclarationId, ReadonlySet<DeclarationId>>,
+): DeclarationEmitter {
+  const declarationEmitterGroups = groups;
+  const declarationEmitterExported = exported;
+  let declarationEmitterScope = scope;
+  const declarationEmitterExpr = ExprEmitter(scope);
+  function declarationEmitterExportKeyword(id: DeclarationId): string {
+    return declarationEmitterExported.has(id) ? "export " : "";
   }
-
-  private exportKeyword(id: DeclarationId): string {
-    return this.exported.has(id) ? "export " : "";
-  }
-
-  declaration(declaration: Declaration): Doc {
-    this.scope.resetTemporaries();
-    switch (declaration.kind) {
-      case "type":
-        return this.typeDeclaration(declaration);
-      case "error":
-        return this.errorDeclaration(declaration);
-      case "service":
-        return this.serviceDeclaration(declaration);
-      case "function":
-        return this.functionDeclaration(declaration);
-      case "constant":
-        return this.constantDeclaration(declaration);
+  function declarationEmitterDeclaration(declaration: Declaration): Doc {
+    declarationEmitterScope = declarationEmitterScope.resetTemporaries();
+    if (declaration.kind === "type") {
+      return declarationEmitterTypeDeclaration(declaration);
     }
+    if (declaration.kind === "error") {
+      return declarationEmitterErrorDeclaration(declaration);
+    }
+    if (declaration.kind === "service") {
+      return declarationEmitterServiceDeclaration(declaration);
+    }
+    if (declaration.kind === "function") {
+      return declarationEmitterFunctionDeclaration(declaration);
+    }
+    return declarationEmitterConstantDeclaration(declaration);
   }
-
-  private typeDeclaration(d: TypeDecl): Doc {
-    const keyword = this.exportKeyword(d.id);
-    const grouped = this.groups.get(d.id);
+  function declarationEmitterTypeDeclaration(d: TypeDecl): Doc {
+    const keyword = declarationEmitterExportKeyword(d.id);
+    const grouped = declarationEmitterGroups.get(d.id);
     const fields = taggedFields(d);
     if (fields !== undefined && grouped !== undefined) {
-      return this.recursiveData(d, fields, grouped);
+      return declarationEmitterRecursiveData(d, fields, grouped);
     }
     if (
       d.definition.kind === "alias" &&
@@ -276,70 +316,84 @@ export class DeclarationEmitter {
           d.definition.type.kind === "union") &&
           containsNamed(d.definition.type, d.id)))
     ) {
-      const recursive = grouped ?? new Set([d.id]);
-      const schema = this.scope.effect("Schema");
-      const mirror = this.scope.encodedMirrorName(d.id);
+      const recursive = grouped ?? setFrom([d.id]);
+      const schema = declarationEmitterScope.effect("Schema");
+      const mirror = declarationEmitterScope.encodedMirrorName(d.id);
       return [
         keyword,
         "type ",
         d.name,
         " = ",
-        typeDoc(this.scope, d.definition.type),
+        typeDoc(declarationEmitterScope, d.definition.type, undefined),
         ";",
         hard,
         keyword,
         "type ",
         mirror,
         " = ",
-        encodedTypeDoc(this.scope, d.definition.type, recursive),
+        encodedTypeDoc(declarationEmitterScope, d.definition.type, recursive),
         ";",
         hard,
         keyword,
         "const ",
         d.name,
         `: ${schema}.Codec<${d.name}, ${mirror}> = `,
-        schemaDoc(this.scope, d.definition.type, recursive),
+        schemaDoc(declarationEmitterScope, d.definition.type, recursive),
         ";",
       ];
     }
-    if (d.definition.kind === "alias" && this.scope.isTypeOnly(d.id)) {
+    if (
+      d.definition.kind === "alias" && declarationEmitterScope.isTypeOnly(d.id)
+    ) {
       return [
         keyword,
         "type ",
         d.name,
         " = ",
-        typeDoc(this.scope, d.definition.type),
+        typeDoc(declarationEmitterScope, d.definition.type, undefined),
         ";",
       ];
     }
-    const schema = this.scope.effect("Schema");
+    const schema = declarationEmitterScope.effect("Schema");
     let value: Doc;
     if (fields !== undefined) {
-      value = [`${schema}.TaggedStruct`, this.tagArguments(d.id, fields)];
+      value = [
+        `${schema}.TaggedStruct`,
+        declarationEmitterTagArguments(d.id, fields, undefined),
+      ];
     } else if (d.definition.kind === "alias") {
-      value = schemaDoc(this.scope, d.definition.type);
+      value = schemaDoc(declarationEmitterScope, d.definition.type, undefined);
     } else {
-      throw internal(`the nominal type ${d.name} has no emitted form`);
+      return internal(`the nominal type ${d.name} has no emitted form`);
     }
     return [
-      assignment([keyword, "const ", d.name], this.refinedSchema(d, value)),
+      assignment(
+        [keyword, "const ", d.name],
+        declarationEmitterRefinedSchema(d, value),
+        undefined,
+      ),
       ";",
       hard,
-      group([
-        keyword,
-        "type ",
-        d.name,
-        " =",
-        indent([line, `typeof ${d.name}.Type`]),
-      ]),
+      group(
+        [
+          keyword,
+          "type ",
+          d.name,
+          " =",
+          indent([line, `typeof ${d.name}.Type`]),
+        ],
+        undefined,
+        undefined,
+      ),
       ";",
     ];
   }
-
-  private refinedSchema(d: TypeDecl, value: Doc): Doc {
-    if (d.predicate === undefined) return value;
-    const schema = this.scope.effect("Schema");
-    const input = this.scope.temp();
+  function declarationEmitterRefinedSchema(d: TypeDecl, value: Doc): Doc {
+    if (d.predicate === undefined) {
+      return value;
+    }
+    const schema = declarationEmitterScope.effect("Schema");
+    const input = declarationEmitterScope.temp();
     return [
       value,
       `.check(${schema}.makeFilter((${input}) => `,
@@ -347,22 +401,16 @@ export class DeclarationEmitter {
       ` || ${JSON.stringify(`expected ${d.name}`)}))`,
     ];
   }
-
-  /**
-   * A data type in a recursive group: an interface for the type, an interface
-   * for the encoded form, and the `TaggedStruct`, whose references to the group
-   * are suspended.
-   */
-  private recursiveData(
+  function declarationEmitterRecursiveData(
     d: TypeDecl,
     fields: readonly Field[],
     recursive: ReadonlySet<DeclarationId>,
   ): Doc {
-    const keyword = this.exportKeyword(d.id);
-    const schema = this.scope.effect("Schema");
+    const keyword = declarationEmitterExportKeyword(d.id);
+    const schema = declarationEmitterScope.effect("Schema");
     const tag = ["readonly _tag: ", JSON.stringify(tokenOfId(d.id)), ";"];
-    const members = (print: (type: Type) => Doc): Doc[] =>
-      fields.map((f) => [
+    function members(print: (type: Type) => Doc): Doc[] {
+      return fields.map((f) => [
         "readonly ",
         f.name,
         f.optional ? "?" : "",
@@ -370,13 +418,17 @@ export class DeclarationEmitter {
         print(f.type),
         ";",
       ]);
-    const mirror = this.scope.encodedMirrorName(d.id);
+    }
+    const mirror = declarationEmitterScope.encodedMirrorName(d.id);
     return [
       keyword,
       "interface ",
       d.name,
       " ",
-      braces([tag, ...members((t) => typeDoc(this.scope, t))]),
+      braces([
+        tag,
+        ...members((t) => typeDoc(declarationEmitterScope, t, undefined)),
+      ]),
       hard,
       keyword,
       "interface ",
@@ -384,29 +436,30 @@ export class DeclarationEmitter {
       " ",
       braces([
         tag,
-        ...members((t) => encodedTypeDoc(this.scope, t, recursive)),
+        ...members((t) =>
+          encodedTypeDoc(declarationEmitterScope, t, recursive)
+        ),
       ]),
       hard,
       assignment(
         [keyword, "const ", d.name],
-        this.refinedSchema(d, [
+        declarationEmitterRefinedSchema(d, [
           `${schema}.TaggedStruct`,
-          this.tagArguments(d.id, fields, recursive),
+          declarationEmitterTagArguments(d.id, fields, recursive),
         ]),
+        undefined,
       ),
       ";",
     ];
   }
-
-  /** The `(tag, { fields })` arguments of `TaggedError` and `TaggedStruct`. */
-  private tagArguments(
+  function declarationEmitterTagArguments(
     id: DeclarationId,
     declared: readonly Field[],
-    recursive?: ReadonlySet<DeclarationId>,
+    recursive: ReadonlySet<DeclarationId> | undefined,
   ): Doc {
-    const schema = this.scope.effect("Schema");
+    const schema = declarationEmitterScope.effect("Schema");
     const fields = declared.map((f) => {
-      const inner = schemaDoc(this.scope, f.type, recursive);
+      const inner = schemaDoc(declarationEmitterScope, f.type, recursive);
       return property(
         fieldKey(f.name),
         f.optional ? member(schema, "optionalKey", callWith("", inner)) : inner,
@@ -415,19 +468,22 @@ export class DeclarationEmitter {
     const object: Doc = fields.length === 0
       ? "{}"
       : bracketed("{", "}", fields, true);
-    return group([
-      "(",
-      indent([soft, JSON.stringify(tokenOfId(id)), ",", line, object]),
-      ifBreak(","),
-      soft,
-      ")",
-    ]);
+    return group(
+      [
+        "(",
+        indent([soft, JSON.stringify(tokenOfId(id)), ",", line, object]),
+        ifBreak(",", undefined),
+        soft,
+        ")",
+      ],
+      undefined,
+      undefined,
+    );
   }
-
-  private errorDeclaration(d: ErrorDecl): Doc {
-    const schema = this.scope.effect("Schema");
-    const args = this.tagArguments(d.id, d.fields);
-    const keyword = this.exportKeyword(d.id);
+  function declarationEmitterErrorDeclaration(d: ErrorDecl): Doc {
+    const schema = declarationEmitterScope.effect("Schema");
+    const args = declarationEmitterTagArguments(d.id, d.fields, undefined);
+    const keyword = declarationEmitterExportKeyword(d.id);
     const heritage: Doc = [
       `${schema}.TaggedError`,
       typeArguments([d.name]),
@@ -439,19 +495,19 @@ export class DeclarationEmitter {
         (f.optional && sensitiveField(f.name)) || f.name === "__proto__"
       )
     ) {
-      const presence = this.scope.fieldHelper("suppliedFields");
+      const presence = declarationEmitterScope.fieldHelper("suppliedFields");
       const shape: Type = { kind: "record", fields: d.fields };
       body = [
         " ",
         braces([[
           "constructor(fields: ",
-          typeDoc(this.scope, shape),
+          typeDoc(declarationEmitterScope, shape, undefined),
           d.fields.every((f) => f.optional)
             ? [
               " = ",
-              this.scope.fieldHelper("record"),
+              declarationEmitterScope.fieldHelper("record"),
               "<",
-              typeDoc(this.scope, shape),
+              typeDoc(declarationEmitterScope, shape, undefined),
               ">({})",
             ]
             : "",
@@ -459,9 +515,9 @@ export class DeclarationEmitter {
           braces([
             [
               "super(",
-              this.scope.fieldHelper("record"),
+              declarationEmitterScope.fieldHelper("record"),
               "<",
-              typeDoc(this.scope, shape),
+              typeDoc(declarationEmitterScope, shape, undefined),
               ">(fields));",
             ],
             "globalThis.Object.setPrototypeOf(this, new.target.prototype);",
@@ -489,18 +545,17 @@ export class DeclarationEmitter {
     }
     return [`${keyword}class ${d.name} extends `, heritage, args, body];
   }
-
-  private serviceDeclaration(d: ServiceDecl): Doc {
-    const context = this.scope.effect("Context");
+  function declarationEmitterServiceDeclaration(d: ServiceDecl): Doc {
+    const context = declarationEmitterScope.effect("Context");
     const methods = d.methods.map((m) => [
       "readonly ",
       m.name,
       ": ",
-      typeDoc(this.scope, m.type),
+      typeDoc(declarationEmitterScope, m.type, undefined),
       ";",
     ]);
     const members: Doc = methods.length === 0 ? "{}" : braces(methods);
-    const keyword = this.exportKeyword(d.id);
+    const keyword = declarationEmitterExportKeyword(d.id);
     const argumentsDoc: Doc =
       `  extends ${context}.Service<${d.name}, {`.length > LINE_WIDTH
         ? typeArguments([d.name, members])
@@ -521,178 +576,200 @@ export class DeclarationEmitter {
     }
     return [`${keyword}class ${d.name} `, heritage];
   }
-
-  private functionDeclaration(d: FunctionDecl): Doc {
-    const header = functionHeaderDoc(this.scope, d, "contract");
-    const prefix: Doc = [this.exportKeyword(d.id), "const ", d.name];
+  function declarationEmitterFunctionDeclaration(d: FunctionDecl): Doc {
+    const header = functionHeaderDoc(declarationEmitterScope, d, "contract");
+    const prefix: Doc = [
+      declarationEmitterExportKeyword(d.id),
+      "const ",
+      d.name,
+    ];
     if (
       d.type.execution === "pure" && d.body.kind === "block" &&
       d.body.steps.length > 0
     ) {
-      const statements = this.expr.blockStatements(
+      const statements = declarationEmitterExpr.blockStatements(
         d.body,
         false,
         d.type.result,
       );
       return [
-        assignment(prefix, this.expr.arrowBlock(header, statements)),
+        assignment(
+          prefix,
+          declarationEmitterExpr.arrowBlock(header, statements),
+          undefined,
+        ),
         ";",
       ];
     }
     const body = d.type.execution === "effect"
-      ? this.expr.asEffect(d.body, d.type.result)
-      : this.expr.fit(d.body, d.type.result, "pure");
+      ? declarationEmitterExpr.asEffect(d.body, d.type.result)
+      : declarationEmitterExpr.fit(d.body, d.type.result, "pure");
     if (d.type.checked?.some(Boolean)) {
-      const effect = this.scope.effect("Effect");
-      const schema = this.scope.effect("Schema");
+      const effect = declarationEmitterScope.effect("Effect");
+      const schema = declarationEmitterScope.effect("Schema");
       const argumentsDoc: Doc[] = [];
       const statements: Doc[] = [];
-      for (const [index, parameter] of d.parameters.entries()) {
+      for (const parameterEntry of d.parameters.entries()) {
+        const index = parameterEntry[0];
+        const parameter = parameterEntry[1];
         if (d.type.checked[index]) {
-          const decoded = this.scope.temp();
-          statements.push([
-            "const ",
-            decoded,
-            " = yield* ",
-            `${schema}.decodeUnknownEffect(`,
-            `${schema}.toType(`,
-            schemaDoc(this.scope, parameter.type),
-            '), { onExcessProperty: "error" })(',
-            parameter.name,
-            ");",
-          ]);
-          argumentsDoc.push(decoded);
-        } else argumentsDoc.push(parameter.name);
+          const decoded = declarationEmitterScope.temp();
+          {
+            const _appendTarget7 = statements;
+            const _appendValue8 = [
+              "const ",
+              decoded,
+              " = yield* ",
+              `${schema}.decodeUnknownEffect(`,
+              `${schema}.toType(`,
+              schemaDoc(declarationEmitterScope, parameter.type, undefined),
+              '), { onExcessProperty: "error" })(',
+              parameter.name,
+              ");",
+            ];
+            _appendTarget7[_appendTarget7.length] = _appendValue8;
+          }
+          {
+            const _appendTarget9 = argumentsDoc;
+            const _appendValue10 = decoded;
+            _appendTarget9[_appendTarget9.length] = _appendValue10;
+          }
+        } else {
+          const _appendTarget11 = argumentsDoc;
+          const _appendValue12 = parameter.name;
+          _appendTarget11[_appendTarget11.length] = _appendValue12;
+        }
       }
-      const typedHeader = functionHeaderDoc(this.scope, {
+      const typedHeader = functionHeaderDoc(declarationEmitterScope, {
         ...d,
         type: { ...d.type, checked: d.parameters.map(() => false) },
       }, "always");
-      statements.push([
-        "return yield* ((",
-        typedHeader,
-        " => ",
-        at(body, 0),
-        ")(",
-        join(", ", argumentsDoc),
-        "));",
-      ]);
+      {
+        const _appendTarget13 = statements;
+        const _appendValue14 = [
+          "return yield* ((",
+          typedHeader,
+          " => ",
+          at(body, 0),
+          ")(",
+          join(", ", argumentsDoc),
+          "));",
+        ];
+        _appendTarget13[_appendTarget13.length] = _appendValue14;
+      }
       const checkedBody = [
         `${effect}.gen(function* () {`,
         indent([hard, join(hard, statements)]),
         hard,
         "})",
       ];
-      return [assignment(prefix, [header, " => ", checkedBody]), ";"];
+      return [
+        assignment(prefix, [header, " => ", checkedBody], undefined),
+        ";",
+      ];
     }
-    return [this.expr.arrowDeclaration(prefix, header, body), ";"];
+    return [declarationEmitterExpr.arrowDeclaration(prefix, header, body), ";"];
   }
-
-  private constantDeclaration(d: ConstantDecl): Doc {
-    const value = this.expr.fit(d.value, d.type, "pure");
+  function declarationEmitterConstantDeclaration(d: ConstantDecl): Doc {
+    const value = declarationEmitterExpr.fit(d.value, d.type, "pure");
     return [
-      this.exportKeyword(d.id),
+      declarationEmitterExportKeyword(d.id),
       "const ",
       d.name,
       ": ",
-      constantTypeDoc(this.scope, d),
+      constantTypeDoc(declarationEmitterScope, d),
       " = ",
       at(value, 0),
       ";",
     ];
   }
-
-  /**
-   * How a result type can be checked at the host boundary: `data` when it
-   * has a schema value in this module and contains a data type, `plain` when
-   * it has a schema and no data type, `none` when it has no schema value (a
-   * function, a deferred, or opaque type).
-   */
-  private checkKind(
+  function declarationEmitterCheckKind(
     type: Type,
     seen: Set<DeclarationId>,
   ): "tagged" | "plain" | "none" {
-    if (isDeferredType(type)) return "none";
-    const all = (types: readonly Type[]) => {
+    if (isDeferredType(type)) {
+      return "none";
+    }
+    function all(types: readonly Type[]): "tagged" | "plain" | "none" {
       let kind: "tagged" | "plain" | "none" = "plain";
       for (const t of types) {
-        const found = this.checkKind(t, seen);
-        if (found === "none") return "none";
-        if (found === "tagged") kind = "tagged";
-      }
-      return kind;
-    };
-    switch (type.kind) {
-      case "primitive":
-      case "literal":
-        return "plain";
-      case "named": {
-        if (seen.has(type.id)) return "plain";
-        seen.add(type.id);
-        const declaration = this.scope.typeLevelDeclaration(type.id);
-        if (declaration === undefined || declaration.kind === "service") {
+        const found = declarationEmitterCheckKind(t, seen);
+        if (found === "none") {
           return "none";
         }
-        if (declaration.kind === "error") return "plain";
-        if (declaration.opaque === true) return "none";
-        if (taggedFields(declaration) !== undefined) return "tagged";
-        return declaration.definition.kind === "alias"
-          ? this.checkKind(declaration.definition.type, seen)
-          : "plain";
+        if (found === "tagged") {
+          kind = "tagged";
+        }
       }
-      case "record":
-        return all(type.fields.map((f) => f.type));
-      case "array":
-      case "option":
-        return all([type.element]);
-      case "tuple":
-        return all(type.elements);
-      case "union":
-        return all(type.members);
+      return kind;
     }
+    if (type.kind === "primitive" || type.kind === "literal") return "plain";
+    if (type.kind === "named") {
+      if (seen.has(type.id)) return "plain";
+      seen = seen.add(type.id);
+      const declaration = declarationEmitterScope.typeLevelDeclaration(type.id);
+      if (declaration === undefined || declaration.kind === "service") {
+        return "none";
+      }
+      if (declaration.kind === "error") return "plain";
+      if (trueFlag(declaration.opaque)) return "none";
+      if (taggedFields(declaration) !== undefined) return "tagged";
+      return declaration.definition.kind === "alias"
+        ? declarationEmitterCheckKind(declaration.definition.type, seen)
+        : "plain";
+    }
+    if (type.kind === "record") return all(type.fields.map((f) => f.type));
+    if (type.kind === "array" || type.kind === "option") {
+      return all([type.element]);
+    }
+    if (type.kind === "tuple") return all(type.elements);
+    return all(type.members);
   }
-
-  /**
-   * The wrapped value of a host provider, or undefined when no method of its
-   * services needs a check: each provided service is rebuilt with every method
-   * named, and a method with a data result goes through a `$hostCheck`
-   * constant. `checks` are the constants, which come before the assertion.
-   */
-  private wrappedProvider(
-    host: { readonly local: string },
-    provider: Extract<Type, { readonly kind: "provider" }>,
-  ): { readonly checks: Doc[]; readonly value: Doc } | undefined {
+  function declarationEmitterWrappedProvider(
+    host: {
+      readonly local: string;
+    },
+    provider: Extract<Type, {
+      readonly kind: "provider";
+    }>,
+  ): {
+    readonly checks: Doc[];
+    readonly value: Doc;
+  } | undefined {
     const services = servicesOf(provider.provides).map((id) => {
-      const declaration = this.scope.typeLevelDeclaration(id);
+      const declaration = declarationEmitterScope.typeLevelDeclaration(id);
       if (declaration?.kind !== "service") {
-        throw internal(`the provided service ${id} is not a service`);
+        return internal(`the provided service ${id} is not a service`);
       }
       return declaration;
     });
     const planned = services.map((service) =>
       service.methods.map((method) => {
         // A method checks its result, or the element of a result stream.
-        const resolved = this.scope.resolve(method.type.result);
+        const resolved = declarationEmitterScope.resolve(method.type.result);
         const stream = resolved.kind === "stream";
         const type = resolved.kind === "stream"
           ? resolved.element
           : method.type.result;
-        const checked = this.checkKind(type, new Set()) === "tagged"
-          ? { type, stream }
-          : undefined;
-        return { method, checked };
+        const checked =
+          declarationEmitterCheckKind(type, emptySet()) === "tagged"
+            ? { type: type, stream: stream }
+            : undefined;
+        return { method: method, checked: checked };
       })
     );
     if (!planned.some((methods) => methods.some((m) => m.checked))) {
       return undefined;
     }
-    const layer = this.scope.effect("Layer");
-    const effect = this.scope.effect("Effect");
+    const layer = declarationEmitterScope.effect("Layer");
+    const effect = declarationEmitterScope.effect("Effect");
     const checks: Doc[] = [];
     const rebuilt = services.map((service, i) => {
-      const serviceName = this.scope.nameOf(service.id);
-      const self = this.scope.serviceParameter();
-      const entries = planned[i].map(({ method, checked }) => {
+      const serviceName = declarationEmitterScope.nameOf(service.id);
+      const self = declarationEmitterScope.serviceParameter();
+      const entries = planned[i].map((plannedMethod) => {
+        const method = plannedMethod.method;
+        const checked = plannedMethod.checked;
         const names = method.type.parameters.map((_, k) => parameterName(k));
         const call: Doc = [
           `${self}.${method.name}`,
@@ -700,44 +777,51 @@ export class DeclarationEmitter {
         ];
         let body: Doc = call;
         if (checked !== undefined) {
-          const check = this.scope.fresh(`${host.local}$${method.name}`);
+          const check = declarationEmitterScope.fresh(
+            `${host.local}$${method.name}`,
+          );
           const label = `${nameOfId(service.id)}.${method.name}`;
-          checks.push([
-            assignment(
-              `const ${check}`,
-              [
-                this.scope.hostCheck(),
-                bracketed(
-                  "(",
-                  ")",
-                  [
-                    schemaDoc(this.scope, checked.type),
-                    JSON.stringify(label),
-                    // A missing optional field named as on `Object.prototype` needs a copy without a prototype.
-                    ...(needsFieldAdapter(this.scope, checked.type)
-                      ? [fieldAdapter(this.scope, checked.type, "decoded")]
-                      : []),
-                  ],
-                  false,
-                ),
-              ],
-            ),
-            ";",
-          ]);
+          {
+            const _appendTarget15 = checks;
+            const _appendValue16 = [
+              assignment(`const ${check}`, [
+                declarationEmitterScope.hostCheck(),
+                bracketed("(", ")", [
+                  schemaDoc(declarationEmitterScope, checked.type, undefined),
+                  JSON.stringify(label),
+                  // A missing optional field named as on `Object.prototype` needs a copy without a prototype.
+                  ...(needsFieldAdapter(declarationEmitterScope, checked.type)
+                    ? [
+                      declarationEmitterScope.fieldAdapter(
+                        checked.type,
+                        "decoded",
+                      ),
+                    ]
+                    : []),
+                ], false),
+              ], undefined),
+              ";",
+            ];
+            _appendTarget15[_appendTarget15.length] = _appendValue16;
+          }
           if (checked.stream) {
-            const stream = this.scope.effect("Stream");
+            const stream = declarationEmitterScope.effect("Stream");
             body = [
               `${effect}.map`,
               bracketed("(", ")", [
                 call,
-                group([
-                  "(stream) =>",
-                  indent([
-                    line,
-                    `${stream}.map`,
-                    bracketed("(", ")", ["stream", check], false),
-                  ]),
-                ]),
+                group(
+                  [
+                    "(stream) =>",
+                    indent([
+                      line,
+                      `${stream}.map`,
+                      bracketed("(", ")", ["stream", check], false),
+                    ]),
+                  ],
+                  undefined,
+                  undefined,
+                ),
               ], false),
             ];
           } else {
@@ -746,7 +830,7 @@ export class DeclarationEmitter {
         }
         return [
           `${method.name}: (${names.join(", ")}) =>`,
-          group(indent([line, body])),
+          group(indent([line, body]), undefined, undefined),
         ];
       });
       const object: Doc = entries.length === 0 ? "{}" : [
@@ -782,27 +866,33 @@ export class DeclarationEmitter {
       ")",
     ];
     return {
-      checks,
+      checks: checks,
       value: [merged, `.pipe(${layer}.provide(${host.local}))`],
     };
   }
-
-  /** The assertion constants of the host imports: `const UsersLive$host: Layer.Layer<Users> = UsersLive;` */
-  hostAssertions(): Doc[] {
+  function declarationEmitterHostAssertions(): Doc[] {
     const result: Doc[] = [];
-    for (const [target, host] of this.scope.hosts) {
+    for (const hostEntry of declarationEmitterScope.hosts) {
+      const target = hostEntry[0];
+      const host = hostEntry[1];
       let provider: Type | undefined;
-      for (const imported of this.scope.ir.imports) {
+      for (const imported of declarationEmitterScope.ir.imports) {
         const found = imported.values.find((v) => v.id === target);
-        if (found !== undefined) provider = found.type;
+        if (found !== undefined) {
+          provider = found.type;
+        }
       }
       if (provider === undefined || provider.kind !== "provider") {
-        throw internal(`the host binding ${host.local} is not a provider`);
+        return internal(`the host binding ${host.local} is not a provider`);
       }
-      const wrapped = this.wrappedProvider(host, provider);
+      const wrapped = declarationEmitterWrappedProvider(host, provider);
       if (wrapped !== undefined) {
         for (const check of wrapped.checks) {
-          result.push(check);
+          {
+            const _appendTarget17 = result;
+            const _appendValue18 = check;
+            _appendTarget17[_appendTarget17.length] = _appendValue18;
+          }
         }
       }
       const data = {
@@ -811,48 +901,60 @@ export class DeclarationEmitter {
         exported: host.exported,
         key: host.key,
       };
-      result.push(marked(data, [
-        `const ${host.hostName}: `,
-        typeDoc(this.scope, provider),
-        " = ",
-        wrapped === undefined ? host.local : wrapped.value,
-        ";",
-      ]));
+      {
+        const _appendTarget19 = result;
+        const _appendValue20 = marked(data, [
+          `const ${host.hostName}: `,
+          typeDoc(declarationEmitterScope, provider, undefined),
+          " = ",
+          wrapped === undefined ? host.local : wrapped.value,
+          ";",
+        ]);
+        _appendTarget19[_appendTarget19.length] = _appendValue20;
+      }
     }
     return result;
   }
+  return {
+    expr: declarationEmitterExpr,
+    scope: declarationEmitterScope,
+    exported: declarationEmitterExported,
+    declaration: declarationEmitterDeclaration,
+    hostAssertions: declarationEmitterHostAssertions,
+  };
 }
-
 /** Emits exact integer comparisons after the schema establishes each field type. */
 function predicateDoc(predicate: Predicate, input: string): Doc {
-  const term = (value: Term): string => {
-    if (value.kind === "zero") return "0n";
-    if (value.kind === "input") return `BigInt(${input})`;
+  function term(value: Term): string {
+    if (value.kind === "zero") {
+      return "0n";
+    }
+    if (value.kind === "input") {
+      return `BigInt(${input})`;
+    }
     const path = input +
       value.path.map((part) => `[${JSON.stringify(part)}]`).join("");
     return `BigInt(${path}${value.kind === "length" ? ".length" : ""})`;
-  };
-  switch (predicate.kind) {
-    case "constant":
-      return String(predicate.value);
-    case "not":
-      return ["!(", predicateDoc(predicate.operand, input), ")"];
-    case "and":
-    case "or": {
-      if (predicate.operands.length === 0) {
-        return String(predicate.kind === "and");
-      }
-      const separator = predicate.kind === "and" ? " && " : " || ";
-      const out: Doc[] = ["("];
-      predicate.operands.forEach((operand, index) => {
-        if (index > 0) out.push(separator);
-        out.push(predicateDoc(operand, input));
-      });
-      return [...out, ")"];
-    }
-    case "difference":
-      return `(${term(predicate.left)} - ${
-        term(predicate.right)
-      } <= ${predicate.maximum}n)`;
   }
+  if (predicate.kind === "constant") return String(predicate.value);
+  if (predicate.kind === "not") {
+    return ["!(", predicateDoc(predicate.operand, input), ")"];
+  }
+  if (predicate.kind === "and" || predicate.kind === "or") {
+    if (predicate.operands.length === 0) {
+      return String(predicate.kind === "and");
+    }
+    const separator = predicate.kind === "and" ? " && " : " || ";
+    const out: Doc[] = ["("];
+    for (const operandEntry of predicate.operands.entries()) {
+      const index = operandEntry[0];
+      const operand = operandEntry[1];
+      if (index > 0) out[out.length] = separator;
+      out[out.length] = predicateDoc(operand, input);
+    }
+    return [...out, ")"];
+  }
+  return `(${term(predicate.left)} - ${
+    term(predicate.right)
+  } <= ${predicate.maximum}n)`;
 }

@@ -1,5 +1,6 @@
 // Layer construction, composition and provision checking.
 import type { TypeEnv } from "../signatures.ts";
+import type { DiagnosticCode } from "../diagnostics.ts";
 import { serviceOfCapability } from "../ids.ts";
 import type { ServiceId, ValueId } from "../ir.ts";
 import { kindOf, type NodeId, SyntaxKind } from "../syntax.ts";
@@ -10,36 +11,42 @@ import {
   PURE_EFFECTS,
   without,
 } from "../effect_set.ts";
-import type { NodeInfo } from "../tables.ts";
+import type { NodeFact, NodeInfo } from "../tables.ts";
 import type {
   Arg,
   BuiltinContext,
-  FactWriter,
   FunctionNode,
   ResolveView,
   SyntaxView,
 } from "./context.ts";
 import { direct, piped, type PreludeCallName, type Rows } from "./rows.ts";
 import { typeFromIr } from "../type_ir.ts";
-export interface LayerContext extends
-  Pick<
+import { setFrom } from "../runtime.ts";
+export type LayerContext =
+  & Pick<
     BuiltinContext,
-    "table" | "assignable" | "argInfo" | "finish" | "isError" | "report"
-  >,
-  Pick<SyntaxView, "tree">,
-  ResolveView,
-  FactWriter {
-  readonly services: Pick<TypeEnv["services"], "get">;
-  jobFunction(name: string, arg: Arg, info: NodeInfo): FunctionNode | undefined;
-}
+    "table" | "assignable" | "argInfo" | "finish" | "isError"
+  >
+  & Pick<SyntaxView, "tree">
+  & ResolveView
+  & {
+    report(code: DiagnosticCode, message: string, node: NodeId): LayerContext;
+    fact(node: NodeId, fact: NodeFact): LayerContext;
+    readonly services: Pick<TypeEnv["services"], "get">;
+    jobFunction(
+      name: string,
+      arg: Arg,
+      info: NodeInfo,
+    ): FunctionNode | undefined;
+  };
 
 function provideCall(
   c: LayerContext,
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const providerInfo = c.argInfo(args[0]);
-  const job = c.argInfo(args[1]);
+  const providerInfo = c.argInfo(args[0], undefined);
+  const job = c.argInfo(args[1], undefined);
   const providerNode = kindOf(c.tree, args[0].node) === SyntaxKind.NameExpr
     ? args[0].node
     : undefined;
@@ -53,13 +60,13 @@ function provideCall(
   } else if (
     providerType.kind !== "provider" && !c.isError(providerInfo.type)
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`provide` needs a Layer value",
       args[0].node,
     );
   }
-  c.fact(node, { kind: "provide", provider });
+  c = c.fact(node, { kind: "provide", provider: provider });
   const fn = c.jobFunction("provide", args[1], job);
   const construction = combine([providerInfo, job]);
   const supplied = providerType.kind === "provider"
@@ -95,16 +102,16 @@ function layerCall(
   const service: ServiceId | undefined = target?.kind === "service"
     ? target.id
     : undefined;
-  c.fact(node, { kind: "layer", service });
+  c = c.fact(node, { kind: "layer", service: service });
   if (service === undefined) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`layer` needs a declared service name",
       args[0].node,
     );
   }
   if (kindOf(c.tree, args[1].node) !== SyntaxKind.ArrowExpr) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`layer` needs an inline acquisition callback",
       args[1].node,
@@ -134,7 +141,7 @@ function layerCall(
     : c.table.node(c.table.unfold(fn.result));
   if (declaration !== undefined && implementation?.kind === "record") {
     if (implementation.fields.length !== declaration.methods.length) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         "`layer` must implement exactly the service methods",
         args[1].node,
@@ -146,7 +153,7 @@ function layerCall(
         field === undefined || field.optional ||
         !c.assignable(field.type, typeFromIr(c.table, method.type))
       ) {
-        c.report(
+        c = c.report(
           "type-mismatch/010",
           `\`layer\` method ${method.name} does not fit its service contract`,
           args[1].node,
@@ -154,7 +161,7 @@ function layerCall(
       }
     }
   } else if (fn !== undefined) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`layer` acquisition must return a service method record",
       args[1].node,
@@ -162,14 +169,14 @@ function layerCall(
   }
   const provides = declaration?.methods.map((m) => m.id) ?? [];
   if (fn?.requirements.some((r) => provides.includes(r))) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`layer` acquisition cannot require a method it provides",
       args[1].node,
     );
   }
   const type = c.table.provider({
-    provides,
+    provides: provides,
     execution: "effect",
     failures: fn?.failures ?? [],
     requirements: fn?.requirements ?? [],
@@ -182,17 +189,21 @@ function mergeLayersCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const left = c.argInfo(args[0]);
-  const right = c.argInfo(args[1]);
+  const left = c.argInfo(args[0], undefined);
+  const right = c.argInfo(args[1], undefined);
   const a = c.table.node(c.table.unfold(left.type));
   const b = c.table.node(c.table.unfold(right.type));
   if (a.kind !== "provider" || b.kind !== "provider") {
-    c.report("type-mismatch/010", "`mergeLayers` needs two Layer values", node);
+    c = c.report(
+      "type-mismatch/010",
+      "`mergeLayers` needs two Layer values",
+      node,
+    );
     return c.finish(node, c.table.error, combine([left, right]));
   }
-  const services = new Set(a.provides.map(serviceOfCapability));
+  const services = setFrom(a.provides.map(serviceOfCapability));
   if (b.provides.some((id) => services.has(serviceOfCapability(id)))) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`mergeLayers` cannot provide one service twice",
       node,
@@ -207,21 +218,26 @@ function mergeLayersCall(
   return c.finish(node, type, combine([left, right]));
 }
 
-export const LAYER_ROWS = {
-  provide: {
-    prologue: piped(2, "effect", {
-      bailFact: { kind: "provide", provider: undefined },
-    }),
-    handle: (c, node, _name, args) => provideCall(c, node, args),
-  },
-  layer: {
-    prologue: direct(2, "pure", {
-      bailFact: { kind: "layer", service: undefined },
-    }),
-    handle: (c, node, _name, args) => layerCall(c, node, args),
-  },
-  mergeLayers: {
-    prologue: direct(2, "pure", { fact: "key" }),
-    handle: (c, node, _name, args) => mergeLayersCall(c, node, args),
-  },
-} satisfies Partial<Rows<PreludeCallName, LayerContext>>;
+export function layerRows(): Pick<
+  Rows<PreludeCallName, LayerContext>,
+  "provide" | "layer" | "mergeLayers"
+> {
+  return {
+    provide: {
+      prologue: piped(2, "effect", {
+        bailFact: { kind: "provide", provider: undefined },
+      }),
+      handle: (c, node, _name, args) => provideCall(c, node, args),
+    },
+    layer: {
+      prologue: direct(2, "pure", {
+        bailFact: { kind: "layer", service: undefined },
+      }),
+      handle: (c, node, _name, args) => layerCall(c, node, args),
+    },
+    mergeLayers: {
+      prologue: direct(2, "pure", { fact: "key" }),
+      handle: (c, node, _name, args) => mergeLayersCall(c, node, args),
+    },
+  };
+}

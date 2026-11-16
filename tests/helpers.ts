@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Shared helpers for the tests. Tests may use Deno APIs; the core may not.
 
 import { assert, assertEquals } from "@std/assert";
@@ -460,14 +461,14 @@ export function diagnosticsOfCase(c: ErrorCase): Diagnostic[] {
   if (c.kind === "file") {
     const file = c.files[0];
     const host = memoryHost({ "effektive.json": "{}", [file.path]: file.text });
-    const result = analyzeProject(host, "", [file.path]);
+    const result = analyzeProject(host, "", [file.path], undefined);
     if (!result.ok) throw new Error(JSON.stringify(result.error));
     return [...checkAnalysis(result.value).diagnostics];
   }
   const entries = c.files.filter((f) => f.path.endsWith(".eff")).map((f) =>
     f.path
   );
-  const result = analyzeProject(diskHost(), c.path, entries);
+  const result = analyzeProject(diskHost(), c.path, entries, undefined);
   if (!result.ok) throw new Error(JSON.stringify(result.error));
   return [...checkAnalysis(result.value).diagnostics];
 }
@@ -549,7 +550,7 @@ export function exampleFiles(): Record<string, string> {
  */
 export function irSnapshot(files: Record<string, string>) {
   const outputs = new TypeScriptOutputs();
-  const updated = new Program().update({ set: files });
+  const updated = Program(undefined).update({ set: files });
   assert(updated.ok);
   assertEquals(updated.value.diagnostics, []);
   const revision = updated.value;

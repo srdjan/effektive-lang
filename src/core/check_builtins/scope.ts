@@ -1,5 +1,6 @@
 // Scope operations, resource lifetimes and opaque borrowed parameters.
 import type { TypeEnv } from "../signatures.ts";
+import type { DiagnosticCode } from "../diagnostics.ts";
 import { isTypeId, serviceOfCapability } from "../ids.ts";
 import {
   type ErrorId,
@@ -23,8 +24,8 @@ import {
 } from "./context.ts";
 import { piped, type PreludeCallName, type Rows } from "./rows.ts";
 
-export interface ScopeContext extends
-  Pick<
+export type ScopeContext =
+  & Pick<
     BuiltinContext,
     | "table"
     | "argInfo"
@@ -32,25 +33,32 @@ export interface ScopeContext extends
     | "finish"
     | "fits"
     | "functionOf"
-    | "report"
-  >,
-  SyntaxView,
-  ResolveView,
-  FactView,
-  LocalUseView {
-  readonly services: Pick<TypeEnv["services"], "get">;
-  valueType(id: ValueId): TypeRef;
-}
+  >
+  & SyntaxView
+  & ResolveView
+  & FactView
+  & LocalUseView
+  & {
+    checkFit(
+      node: NodeId,
+      found: TypeRef,
+      expected: TypeRef | undefined,
+      what: string,
+    ): ScopeContext;
+    report(code: DiagnosticCode, message: string, node: NodeId): ScopeContext;
+    readonly services: Pick<TypeEnv["services"], "get">;
+    valueType(id: ValueId): TypeRef;
+  };
 
 function scopedCall(
   c: ScopeContext,
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const value = c.argInfo(args[0]);
+  const value = c.argInfo(args[0], undefined);
   const effect = c.table.node(c.table.unfold(value.type));
   if (effect.kind !== "effect") {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`scoped` needs an Effect value",
       args[0].node,
@@ -73,10 +81,10 @@ function forkScopedCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const job = c.argInfo(args[0]);
+  const job = c.argInfo(args[0], undefined);
   const effect = c.table.node(c.table.unfold(job.type));
   if (effect.kind !== "effect") {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`forkScoped` needs an Effect value",
       args[0].node,
@@ -84,7 +92,7 @@ function forkScopedCall(
     return c.finish(node, c.table.error, combine([job, EFFECT_ONLY]));
   }
   if (effect.failures.length > 0) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`forkScoped` needs an Effect value without typed failures",
       args[0].node,
@@ -110,11 +118,15 @@ export function outcomeType(
   result: TypeRef,
   failures: readonly ErrorId[],
 ): TypeRef {
-  const member = (tag: string, field?: { name: string; type: TypeRef }) =>
-    table.record([
+  function member(
+    tag: string,
+    field: { readonly name: string; readonly type: TypeRef } | undefined,
+  ): TypeRef {
+    return table.record([
       { name: "_tag", type: table.literal(tag), optional: false },
       ...(field === undefined ? [] : [{ ...field, optional: false }]),
     ]);
+  }
   return table.union([
     member("Success", { name: "success", type: result }),
     ...(failures.length === 0 ? [] : [member("Failure", {
@@ -122,7 +134,7 @@ export function outcomeType(
       type: table.union(failures.map((id) => table.named(id))),
     })]),
     member("Defect", { name: "message", type: table.string }),
-    member("Interrupted"),
+    member("Interrupted", undefined),
   ]);
 }
 
@@ -140,7 +152,7 @@ export function withResourceCall(
   const acquire = c.callback("using", args[0], [], undefined, true);
   const opaque = opaqueHandle(c, acquire.result);
   if (!opaque) {
-    operationRecord(c, acquire.result, args[0].node);
+    c = operationRecord(c, acquire.result, args[0].node);
   }
   const use = c.callback(
     "using",
@@ -159,9 +171,14 @@ export function withResourceCall(
     c.table.unit,
     true,
   );
-  c.fits(args[2].node, release.result, c.table.unit, "the release result");
-  if (!dataOnly(c.table, use.result, "value")) {
-    c.report(
+  c = c.checkFit(
+    args[2].node,
+    release.result,
+    c.table.unit,
+    "the release result",
+  );
+  if (!dataOnly(c.table, use.result, "value", false)) {
+    c = c.report(
       "type-mismatch/010",
       "the use result must be data only",
       args[1].node,
@@ -173,9 +190,9 @@ export function withResourceCall(
       const body = c.kids(arg.node).at(-1);
       if (body !== undefined) {
         if (opaque) {
-          scopedBorrowUses(c, body, fact.parameters[0].id);
+          c = scopedBorrowUses(c, body, fact.parameters[0].id);
         } else {
-          scopedUses(c, body, fact.parameters[0].id);
+          c = scopedUses(c, body, fact.parameters[0].id);
         }
       }
     }
@@ -207,31 +224,40 @@ export function checkBorrowedParameter(
     };
   },
   result: TypeRef,
-): void {
+): ScopeContext {
   if (parameter.id === undefined) {
-    return;
+    return c;
   }
   if (!opaqueHandle(c, parameter.type.ref)) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "a borrow parameter needs an opaque type",
       body ?? c.tree.root,
     );
   }
-  if (!dataOnly(c.table, result, "value")) {
-    c.report(
+  if (!dataOnly(c.table, result, "value", false)) {
+    c = c.report(
       "type-mismatch/010",
       "a borrow function must return data only",
       body ?? c.tree.root,
     );
   }
   if (body !== undefined) {
-    scopedBorrowUses(c, body, parameter.id);
+    c = scopedBorrowUses(c, body, parameter.id);
   }
+  return c;
 }
 
-function scopedUses(c: ScopeContext, body: NodeId, id: LocalId): void {
-  for (const { node, parent, grandparent, nested } of c.localUses(body, id)) {
+function scopedUses(
+  c: ScopeContext,
+  body: NodeId,
+  id: LocalId,
+): ScopeContext {
+  for (const use of c.localUses(body, id, false)) {
+    const node = use.node;
+    const parent = use.parent;
+    const grandparent = use.grandparent;
+    const nested = use.nested;
     const directField = parent !== undefined &&
       kindOf(c.tree, parent) === SyntaxKind.FieldExpr &&
       c.kids(parent)[0] === node;
@@ -239,46 +265,49 @@ function scopedUses(c: ScopeContext, body: NodeId, id: LocalId): void {
       kindOf(c.tree, grandparent) === SyntaxKind.CallExpr &&
       c.kids(grandparent)[0] === parent;
     if (nested || !directField || !directCall) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         "a scoped operation record may only be used as the direct receiver of an operation call",
         node,
       );
     }
   }
+  return c;
 }
 
-function operationRecord(c: ScopeContext, ref: TypeRef, node: NodeId): boolean {
+function operationRecord(
+  c: ScopeContext,
+  ref: TypeRef,
+  node: NodeId,
+): ScopeContext {
   const type = c.table.node(c.table.unfold(ref));
   if (
     type.kind !== "record" || type.fields.length === 0 ||
     type.fields.some((f) => f.optional)
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "acquisition must return a nonempty record of required operations",
       node,
     );
-    return false;
+    return c;
   }
-  let valid = true;
   for (const field of type.fields) {
     const fn = c.functionOf(field.type);
     if (
       fn === undefined || !fn.parameters.every((p) =>
-        dataOnly(c.table, p, "value")
+        dataOnly(c.table, p, "value", false)
       ) ||
-      !dataOnly(c.table, fn.result, "value")
+      !dataOnly(c.table, fn.result, "value", false)
     ) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         `operation ${field.name} must take and return data-only values`,
         node,
       );
-      valid = false;
     }
   }
-  return valid;
+  return c;
 }
 
 function opaqueHandle(c: ScopeContext, ref: TypeRef): boolean {
@@ -287,8 +316,16 @@ function opaqueHandle(c: ScopeContext, ref: TypeRef): boolean {
     c.table.isOpaque(type.id);
 }
 
-function scopedBorrowUses(c: ScopeContext, body: NodeId, id: LocalId): void {
-  for (const { node, parent, grandparent, nested } of c.localUses(body, id)) {
+function scopedBorrowUses(
+  c: ScopeContext,
+  body: NodeId,
+  id: LocalId,
+): ScopeContext {
+  for (const use of c.localUses(body, id, false)) {
+    const node = use.node;
+    const parent = use.parent;
+    const grandparent = use.grandparent;
+    const nested = use.nested;
     const call = parent !== undefined &&
         kindOf(c.tree, parent) === SyntaxKind.ArgList &&
         grandparent !== undefined &&
@@ -308,25 +345,38 @@ function scopedBorrowUses(c: ScopeContext, body: NodeId, id: LocalId): void {
     const functionType = method?.kind === "value"
       ? c.functionOf(c.valueType(method.id))
       : undefined;
-    const borrowed = signature?.borrows?.[index] === true ||
-      functionType?.borrows?.[index] === true;
+    const signatureBorrows = signature?.borrows;
+    const functionBorrows = functionType?.borrows;
+    const signatureBorrowed = signatureBorrows === undefined
+      ? false
+      : signatureBorrows[index] ?? false;
+    const functionBorrowed = functionBorrows === undefined
+      ? false
+      : functionBorrows[index] ?? false;
+    const borrowed = signatureBorrowed || functionBorrowed;
     if (nested || index < 0 || !borrowed) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         "a borrowed handle may only pass to a borrow-qualified method",
         node,
       );
     }
   }
+  return c;
 }
 
-export const SCOPE_ROWS = {
-  scoped: {
-    prologue: piped(1, "effect", { fact: "key" }),
-    handle: (c, node, _name, args) => scopedCall(c, node, args),
-  },
-  forkScoped: {
-    prologue: piped(1, "effect", { fact: "key" }),
-    handle: (c, node, _name, args) => forkScopedCall(c, node, args),
-  },
-} satisfies Partial<Rows<PreludeCallName, ScopeContext>>;
+export function scopeRows(): Pick<
+  Rows<PreludeCallName, ScopeContext>,
+  "scoped" | "forkScoped"
+> {
+  return {
+    scoped: {
+      prologue: piped(1, "effect", { fact: "key" }),
+      handle: (c, node, _name, args) => scopedCall(c, node, args),
+    },
+    forkScoped: {
+      prologue: piped(1, "effect", { fact: "key" }),
+      handle: (c, node, _name, args) => forkScopedCall(c, node, args),
+    },
+  };
+}

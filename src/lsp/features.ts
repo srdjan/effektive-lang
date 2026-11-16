@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The request handlers of the language features:
 // hover, definition, document symbols, generated TypeScript, save, and stats,
 // and the editor queries: references, rename, completion, signature help,
@@ -274,7 +275,7 @@ export function statsRequest(
   if (found === undefined) return answer(null);
   const { project } = found;
   const revision = project.lastGood;
-  const { parses, checks, lowerings } = project.program.counts;
+  const { parses, checks, lowerings } = project.program.counts();
   const { emits } = project.outputs.counts;
   const result: StatsResult = {
     revision: revision?.number ?? 0,
@@ -284,7 +285,7 @@ export function statsRequest(
       interfaceChanged: [...(project.lastDelta?.interfaceChanged ?? [])],
       modeChanged: [...(project.lastDelta?.modeChanged ?? [])],
     },
-    typeTableSize: revision?.types.size ?? 0,
+    typeTableSize: revision?.types.size() ?? 0,
     memory: ctx.memory(),
   };
   return answer(result);
@@ -538,7 +539,13 @@ export function codeActionRequest(
   // Each kind checks an edited project, so a kind that `only` removes is skipped.
   const fixes = asActions(
     wanted("quickfix")
-      ? contractActionsAt(cursor.revision, cursor.path, cursor.offset, end)
+      ? contractActionsAt(
+        cursor.revision,
+        cursor.path,
+        cursor.offset,
+        end,
+        undefined,
+      )
       : [],
     "quickfix",
   );

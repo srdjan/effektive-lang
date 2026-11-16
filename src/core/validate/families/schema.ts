@@ -1,6 +1,9 @@
 // Validation of the Schema builtins: the Schema constructors and the make, decode, and encode
 // operations. The table of the constructors sits here.
 
+import type { ValidationPath } from "../report.ts";
+import { isTrue } from "../guards.ts";
+import { emptyMap, setFrom } from "../../runtime.ts";
 import {
   type Expr,
   type FunctionType,
@@ -29,11 +32,11 @@ import {
 import type { ValidatorCore } from "./context.ts";
 import { type Comp, derivedResult, type Out } from "../results.ts";
 
-type SchemaExpr = Extract<Expr, { kind: "schema" }>;
+type SchemaExpr = Extract<Expr, { readonly kind: "schema" }>;
 
 type SchemaOp = SchemaExpr["op"];
 
-type SchemaType = Extract<Type, { kind: "schema" }>;
+type SchemaType = Extract<Type, { readonly kind: "schema" }>;
 
 type DefaultKeyOp = Extract<
   SchemaOp,
@@ -46,11 +49,11 @@ const DEFAULT_KEY_NAMES: Record<DefaultKeyOp, string> = {
   "default-encoded-key": "schemaDefaultEncodedKey",
 };
 
-interface SchemaCall {
+type SchemaCall = {
   readonly e: SchemaExpr;
   readonly path: string;
   readonly args: readonly Out[];
-}
+};
 
 /**
  * How a Schema operation passes the self reference of a recursive Schema body.
@@ -62,16 +65,16 @@ interface SchemaCall {
  */
 type SchemaRecursion = "none" | "default" | "optional" | "guarding" | "passing";
 
-interface SchemaRow {
+type SchemaRow = {
   readonly run: (c: ValidatorCore, call: SchemaCall) => Comp;
   /** The input Schema may carry a constructor default. */
   readonly acceptsDefault: boolean;
   readonly recursion: SchemaRecursion;
-}
+};
 
 /** The function has no failure outside `allowed`, and at most one failure. */
 function failsOnly(fn: FunctionType, allowed: readonly string[]): boolean {
-  const { failures } = fn.effects;
+  const failures = fn.effects.failures;
   return failures.length === 0 ||
     (failures.length === 1 && allowed.includes(failures[0]));
 }
@@ -104,14 +107,44 @@ function directionalRequirements(
   };
 }
 
-function inheritedDefault(
+function transformMetadata(
+  source: SchemaType,
   target: SchemaType,
-): Pick<SchemaType, "constructorDefault"> {
-  return target.constructorDefault === true ? { constructorDefault: true } : {};
-}
-
-function inheritedMakeInput(target: SchemaType): Pick<SchemaType, "makeInput"> {
-  return target.makeInput === undefined ? {} : { makeInput: target.makeInput };
+  decode: FunctionType,
+  encode: FunctionType,
+  inheritDefault: boolean,
+): Pick<
+  SchemaType,
+  | "decodeRequirements"
+  | "encodeRequirements"
+  | "constructorDefault"
+  | "makeInput"
+> {
+  const requirements = directionalRequirements(source, target, decode, encode);
+  const hasDefault = inheritDefault && isTrue(target.constructorDefault);
+  if (hasDefault && target.makeInput !== undefined) {
+    return {
+      decodeRequirements: requirements.decodeRequirements,
+      encodeRequirements: requirements.encodeRequirements,
+      constructorDefault: true,
+      makeInput: target.makeInput,
+    };
+  }
+  if (hasDefault) {
+    return {
+      decodeRequirements: requirements.decodeRequirements,
+      encodeRequirements: requirements.encodeRequirements,
+      constructorDefault: true,
+    };
+  }
+  if (target.makeInput !== undefined) {
+    return {
+      decodeRequirements: requirements.decodeRequirements,
+      encodeRequirements: requirements.encodeRequirements,
+      makeInput: target.makeInput,
+    };
+  }
+  return requirements;
 }
 
 function checkCallbackInputAuthority(
@@ -119,18 +152,25 @@ function checkCallbackInputAuthority(
   call: SchemaCall,
   source: SchemaType,
   target: SchemaType,
-): void {
+): ValidatorCore {
   if (
     foreignSealedOf(c.env, source.decoded) !== undefined &&
     foreignSealedOf(c.env, target.decoded) === undefined
   ) {
-    c.add(
-      AREA.types,
-      call.path,
-      "a foreign module cannot pass a sealed type to a schema transformation callback",
-      call.e.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          call.path,
+          "a foreign module cannot pass a sealed type to a schema transformation callback",
+          call.e.span,
+        ),
+      },
+    };
   }
+  return c;
 }
 
 /**
@@ -225,10 +265,14 @@ function isSchemaOp(op: string): op is SchemaOp {
   return Object.hasOwn(schemaRows, op);
 }
 
-export function schema(c: ValidatorCore, e: SchemaExpr, path: string): Comp {
+export function schema(
+  c: ValidatorCore,
+  e: SchemaExpr,
+  path: ValidationPath,
+): Comp {
   const call: SchemaCall = {
-    e,
-    path,
+    e: e,
+    path: path,
     args: e.arguments.map((arg, i) => c.check(arg, `${path}.arguments[${i}]`)),
   };
   if (!isSchemaOp(e.op)) {
@@ -240,12 +284,18 @@ export function schema(c: ValidatorCore, e: SchemaExpr, path: string): Comp {
     recorded.kind === "schema" &&
     foreignSealedOf(c.env, recorded.decoded) !== undefined
   ) {
-    c.add(
-      AREA.types,
-      path,
-      "a foreign module cannot derive a Schema that decodes to a sealed type",
-      e.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          path,
+          "a foreign module cannot derive a Schema that decodes to a sealed type",
+          e.span,
+        ),
+      },
+    };
   }
   return result;
 }
@@ -257,13 +307,13 @@ function schemaOf(
   type: Type,
 ): SchemaType | undefined {
   const found = unfold(c.env, type);
-  const { e } = call;
+  const e = call.e;
   return found.kind === "schema" &&
-      (e.op === "constructor-default" || (found.optionalKey !== true &&
-        found.encodedOptionalKey !== true &&
-        found.decodedOptionalKey !== true)) &&
+      (e.op === "constructor-default" || (!isTrue(found.optionalKey) &&
+        !isTrue(found.encodedOptionalKey) &&
+        !isTrue(found.decodedOptionalKey))) &&
       (schemaRows[e.op].acceptsDefault ||
-        found.constructorDefault !== true) &&
+        !isTrue(found.constructorDefault)) &&
       // An equivalent make input is not a change. The checker has the same test
       // in `changedMakeInput`.
       (found.makeInput === undefined ||
@@ -292,9 +342,9 @@ function optionalArg(
   const arg = call.args[index];
   if (arg === undefined) return undefined;
   const found = unfold(c.env, arg.type);
-  return found.kind === "schema" && found.optionalKey === true &&
-      found.encodedOptionalKey !== true &&
-      found.decodedOptionalKey !== true
+  return found.kind === "schema" && isTrue(found.optionalKey) &&
+      !isTrue(found.encodedOptionalKey) &&
+      !isTrue(found.decodedOptionalKey)
     ? found
     : undefined;
 }
@@ -325,7 +375,18 @@ function closureArg(
 }
 
 function schemaBad(c: ValidatorCore, call: SchemaCall, message: string): Comp {
-  c.add(AREA.types, call.path, message, call.e.span);
+  c = {
+    ...c,
+    ctx: {
+      ...c.ctx,
+      report: c.add(
+        AREA.types,
+        call.path,
+        message,
+        call.e.span,
+      ),
+    },
+  };
   return c.poison();
 }
 
@@ -427,7 +488,23 @@ function schemaOptionFromOptionalKey(c: ValidatorCore, call: SchemaCall): Comp {
       "schemaOptionFromOptionalKey needs one ordinary Schema",
     );
   }
-  const { constructorDefault: _constructorDefault, ...plain } = input;
+  let plain: SchemaType = {
+    kind: "schema",
+    decoded: input.decoded,
+    encoded: input.encoded,
+    decodeRequirements: input.decodeRequirements,
+    encodeRequirements: input.encodeRequirements,
+  };
+  if (isTrue(input.optionalKey)) plain = { ...plain, optionalKey: true };
+  if (isTrue(input.encodedOptionalKey)) {
+    plain = { ...plain, encodedOptionalKey: true };
+  }
+  if (isTrue(input.decodedOptionalKey)) {
+    plain = { ...plain, decodedOptionalKey: true };
+  }
+  if (input.makeInput !== undefined) {
+    plain = { ...plain, makeInput: input.makeInput };
+  }
   return schemaResult(call, {
     ...plain,
     decoded: { kind: "option", element: input.decoded },
@@ -513,7 +590,7 @@ function schemaStruct(c: ValidatorCore, call: SchemaCall): Comp {
     record.fields.some((field) => field.optional)
   ) return schemaBad(c, call, "schemaStruct needs required Schema fields");
   const fields = record.fields.map((field) => ({
-    field,
+    field: field,
     schema: unfold(c.env, field.type),
   }));
   if (fields.some((field) => field.schema.kind !== "schema")) {
@@ -527,45 +604,57 @@ function schemaStruct(c: ValidatorCore, call: SchemaCall): Comp {
     kind: "schema",
     decoded: {
       kind: "record",
-      fields: fields.map(({ field, schema }) => ({
-        name: field.name,
-        optional: schema.kind === "schema" &&
-          (schema.optionalKey === true ||
-            schema.decodedOptionalKey === true),
-        type: schema.kind === "schema" ? schema.decoded : field.type,
-      })),
+      fields: fields.map((item) => {
+        const field = item.field;
+        const schema = item.schema;
+        return {
+          name: field.name,
+          optional: schema.kind === "schema" &&
+            (isTrue(schema.optionalKey) ||
+              isTrue(schema.decodedOptionalKey)),
+          type: schema.kind === "schema" ? schema.decoded : field.type,
+        };
+      }),
     },
     encoded: {
       kind: "record",
-      fields: fields.map(({ field, schema }) => ({
-        name: field.name,
-        optional: schema.kind === "schema" &&
-          (schema.optionalKey === true ||
-            schema.encodedOptionalKey === true),
-        type: schema.kind === "schema" ? schema.encoded : field.type,
-      })),
+      fields: fields.map((item) => {
+        const field = item.field;
+        const schema = item.schema;
+        return {
+          name: field.name,
+          optional: schema.kind === "schema" &&
+            (isTrue(schema.optionalKey) ||
+              isTrue(schema.encodedOptionalKey)),
+          type: schema.kind === "schema" ? schema.encoded : field.type,
+        };
+      }),
     },
     makeInput: {
       kind: "record",
-      fields: fields.map(({ field, schema }) => ({
-        name: field.name,
-        type: schema.kind === "schema"
-          ? schema.makeInput ?? schema.decoded
-          : field.type,
-        optional: schema.kind === "schema" &&
-          (schema.optionalKey === true ||
-            schema.decodedOptionalKey === true ||
-            schema.constructorDefault === true),
-      })),
+      fields: fields.map((item) => {
+        const field = item.field;
+        const schema = item.schema;
+        return {
+          name: field.name,
+          type: schema.kind === "schema"
+            ? schema.makeInput ?? schema.decoded
+            : field.type,
+          optional: schema.kind === "schema" &&
+            (isTrue(schema.optionalKey) ||
+              isTrue(schema.decodedOptionalKey) ||
+              isTrue(schema.constructorDefault)),
+        };
+      }),
     },
     decodeRequirements: sortedUnique(
-      fields.flatMap(({ schema }) =>
-        schema.kind === "schema" ? schema.decodeRequirements : []
+      fields.flatMap((item) =>
+        item.schema.kind === "schema" ? item.schema.decodeRequirements : []
       ),
     ),
     encodeRequirements: sortedUnique(
-      fields.flatMap(({ schema }) =>
-        schema.kind === "schema" ? schema.encodeRequirements : []
+      fields.flatMap((item) =>
+        item.schema.kind === "schema" ? item.schema.encodeRequirements : []
       ),
     ),
   });
@@ -635,15 +724,13 @@ function schemaOptionalFromRequired(c: ValidatorCore, call: SchemaCall): Comp {
       "schemaOptionalFromRequired needs required-to-optional callbacks with only SchemaIssue failure",
     );
   }
-  checkCallbackInputAuthority(c, call, source, target);
+  c = checkCallbackInputAuthority(c, call, source, target);
   return schemaResult(call, {
+    ...transformMetadata(source, target, decode, encode, true),
     kind: "schema",
     decoded: target.decoded,
     encoded: source.encoded,
-    ...directionalRequirements(source, target, decode, encode),
     decodedOptionalKey: true,
-    ...inheritedDefault(target),
-    ...inheritedMakeInput(target),
   });
 }
 
@@ -683,15 +770,13 @@ function schemaOptionalTransform(c: ValidatorCore, call: SchemaCall): Comp {
       "schemaOptionalTransform needs directional Option callbacks with only SchemaIssue failure",
     );
   }
-  checkCallbackInputAuthority(c, call, source, target);
+  c = checkCallbackInputAuthority(c, call, source, target);
   return schemaResult(call, {
+    ...transformMetadata(source, target, decode, encode, true),
     kind: "schema",
     decoded: target.decoded,
     encoded: source.encoded,
-    ...directionalRequirements(source, target, decode, encode),
     optionalKey: true,
-    ...inheritedDefault(target),
-    ...inheritedMakeInput(target),
   });
 }
 
@@ -725,7 +810,7 @@ function schemaTransform(c: ValidatorCore, call: SchemaCall): Comp {
   const target = schemaArg(c, call, 1);
   const decode = functionArg(c, call, 2);
   const encode = functionArg(c, call, 3);
-  const callbackResult = (fn: typeof decode, value: Type) => {
+  function callbackResult(fn: typeof decode, value: Type): boolean {
     if (fn === undefined) return false;
     if (fn.effects.failures.length === 0) {
       return fits(c.env, fn.result, {
@@ -736,7 +821,7 @@ function schemaTransform(c: ValidatorCore, call: SchemaCall): Comp {
     return fn.effects.failures.length === 1 &&
       fn.effects.failures[0] === SCHEMA_ISSUE_ID &&
       fits(c.env, fn.result, value);
-  };
+  }
   if (
     call.args.length !== 4 || source === undefined || target === undefined ||
     decode === undefined || encode === undefined ||
@@ -754,13 +839,12 @@ function schemaTransform(c: ValidatorCore, call: SchemaCall): Comp {
       "schemaTransform callback types or failure channels do not match",
     );
   }
-  checkCallbackInputAuthority(c, call, source, target);
+  c = checkCallbackInputAuthority(c, call, source, target);
   return schemaResult(call, {
+    ...transformMetadata(source, target, decode, encode, false),
     kind: "schema",
     decoded: target.decoded,
-    ...inheritedMakeInput(target),
     encoded: source.encoded,
-    ...directionalRequirements(source, target, decode, encode),
   });
 }
 
@@ -774,9 +858,10 @@ function guardedSchemaBody(
     (callback.body.op !== "struct" && callback.body.op !== "union")
   ) return false;
   const self = callback.parameters[0].id;
-  const containsSelf = (value: Expr): boolean =>
-    (value.kind === "reference" && value.target === self) ||
-    exprChildren(value).some(containsSelf);
+  function containsSelf(value: Expr): boolean {
+    return (value.kind === "reference" && value.target === self) ||
+      exprChildren(value).some(containsSelf);
+  }
   const branches = callback.body.op === "union" &&
       callback.body.arguments[0]?.kind === "tuple"
     ? callback.body.arguments[0].elements
@@ -789,7 +874,7 @@ function guardedSchemaBody(
     const encoded = schema.kind === "schema"
       ? unfold(c.env, schema.encoded)
       : undefined;
-    const candidates = new Map<string, string>();
+    let candidates = emptyMap<string, string>();
     if (decoded?.kind !== "record" || encoded?.kind !== "record") {
       return candidates;
     }
@@ -802,7 +887,7 @@ function guardedSchemaBody(
       if (
         left.kind === "literal" && right.kind === "literal" &&
         typeof left.value === "string" && left.value === right.value
-      ) candidates.set(field.name, left.value);
+      ) candidates = candidates.set(field.name, left.value);
     }
     return candidates;
   });
@@ -810,12 +895,12 @@ function guardedSchemaBody(
     [...tagMaps[0].keys()].some((name) => {
       const values = tagMaps.map((candidate) => candidate.get(name));
       return values.every((value) => value !== undefined) &&
-        new Set(values).size === values.length;
+        setFrom(values).size === values.length;
     });
   const finiteChoice = branches !== undefined && tagged &&
     branches.some((branch) => !containsSelf(branch));
   let found = false;
-  const visit = (value: Expr, guarded: boolean): boolean => {
+  function visit(value: Expr, guarded: boolean): boolean {
     if (!containsSelf(value)) return true;
     if (value.kind === "reference") {
       if (value.target !== self) return true;
@@ -829,38 +914,35 @@ function guardedSchemaBody(
       const role = isSchemaOp(value.op)
         ? schemaRows[value.op].recursion
         : "none";
-      switch (role) {
-        case "default":
-          return value.arguments.length >= 2 &&
-            value.arguments.slice(1).every((argument) =>
-              !containsSelf(argument)
-            ) &&
-            visit(value.arguments[0], guarded);
-        case "optional":
-          return value.arguments.length === 4 &&
-            value.arguments.slice(2).every((argument) =>
-              !containsSelf(argument)
-            ) &&
-            value.arguments.slice(0, 2).every((argument) =>
-              visit(argument, guarded)
-            );
-        case "guarding":
-          return value.arguments.every((argument) => visit(argument, true));
-        case "passing":
-          return value.arguments.every((argument) => visit(argument, guarded));
-        case "none":
-          return false;
-        default: {
-          const unreachable: never = role;
-          return unreachable;
-        }
+      if (role === "default") {
+        return value.arguments.length >= 2 &&
+          value.arguments.slice(1).every((argument) =>
+            !containsSelf(argument)
+          ) &&
+          visit(value.arguments[0], guarded);
       }
+      if (role === "optional") {
+        return value.arguments.length === 4 &&
+          value.arguments.slice(2).every((argument) =>
+            !containsSelf(argument)
+          ) &&
+          value.arguments.slice(0, 2).every((argument) =>
+            visit(argument, guarded)
+          );
+      }
+      if (role === "guarding") {
+        return value.arguments.every((argument) => visit(argument, true));
+      }
+      if (role === "passing") {
+        return value.arguments.every((argument) => visit(argument, guarded));
+      }
+      return false;
     }
     if (value.kind === "tuple") {
       return value.elements.every((element) => visit(element, guarded));
     }
     return false;
-  };
+  }
   return visit(callback.body, finiteChoice) && found;
 }
 
@@ -870,35 +952,47 @@ export function schemaOperation(
     Expr,
     { kind: "schema-decode" | "schema-encode" | "schema-make" }
   >,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const schema = c.check(e.schema, `${path}.schema`);
   const input = c.check(e.input, `${path}.input`);
   const type = unfold(c.env, schema.type);
   if (
-    type.kind !== "schema" || type.constructorDefault === true ||
+    type.kind !== "schema" || isTrue(type.constructorDefault) ||
     (e.kind === "schema-make" &&
-      (type.optionalKey === true || type.encodedOptionalKey === true ||
-        type.decodedOptionalKey === true))
+      (isTrue(type.optionalKey) || isTrue(type.encodedOptionalKey) ||
+        isTrue(type.decodedOptionalKey)))
   ) {
-    c.add(
-      AREA.types,
-      path,
-      "schema runner needs an ordinary Schema value",
-      e.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          path,
+          "schema runner needs an ordinary Schema value",
+          e.span,
+        ),
+      },
+    };
     return c.poison();
   }
   if (
     e.kind !== "schema-encode" &&
     foreignSealedOf(c.env, type.decoded) !== undefined
   ) {
-    c.add(
-      AREA.types,
-      path,
-      "a foreign module cannot decode or make a sealed type",
-      e.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          path,
+          "a foreign module cannot decode or make a sealed type",
+          e.span,
+        ),
+      },
+    };
   }
   if (
     e.kind !== "schema-decode" &&
@@ -908,14 +1002,25 @@ export function schemaOperation(
       e.kind === "schema-make" ? type.makeInput ?? type.decoded : type.decoded,
     )
   ) {
-    c.add(
-      AREA.types,
-      `${path}.input`,
-      `${
-        e.kind === "schema-make" ? "schemaMake" : "schemaEncode"
-      } input does not fit decoded type`,
-      e.input.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          `${path}.input`,
+          `${
+            e.kind === "schema-make" ? "schemaMake" : "schemaEncode"
+          } input does not fit decoded type`,
+          e.input.span,
+        ),
+      },
+    };
+  }
+  let requirements = type.encodeRequirements;
+  if (e.kind === "schema-make") requirements = [];
+  else if (e.kind === "schema-decode") {
+    requirements = type.decodeRequirements;
   }
   return derivedResult(
     e.kind === "schema-encode" ? type.encoded : type.decoded,
@@ -924,11 +1029,7 @@ export function schemaOperation(
       input,
       effectOf(
         [e.kind === "schema-make" ? SCHEMA_ISSUE_ID : SCHEMA_ERROR_ID],
-        e.kind === "schema-make"
-          ? []
-          : e.kind === "schema-decode"
-          ? type.decodeRequirements
-          : type.encodeRequirements,
+        requirements,
       ),
     ]),
   );

@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Effect, Layer } from "effect";
 import { ArticleJsonLive } from "./codecs.ts";
 import { makeMemoryPlatform, type MemoryPlatform } from "./memory.ts";

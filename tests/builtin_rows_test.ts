@@ -4,8 +4,11 @@
 // prelude call name except the option constructors.
 
 import { assert, assertEquals } from "@std/assert";
-import { FAMILY_ROW_TABLES } from "../src/core/check_builtins/registry.ts";
+import { familyRowTables } from "../src/core/check_builtins/registry.ts";
+
 import { PRELUDE_NAMES } from "../src/core/frontend.ts";
+
+const FAMILY_ROW_TABLES = familyRowTables();
 
 const owners = new Map<string, string[]>();
 function own(name: string, owner: string): void {

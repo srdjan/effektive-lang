@@ -2,20 +2,18 @@
 // adds its row to that family file, so the body checker does not change. The
 // body checker checks the option constructors, which have no family row.
 
-import type { BuiltinContext } from "./context.ts";
-import { COLLECTION_ROWS, type CollectionContext } from "./collections.ts";
-import { DATA_ROWS, type DataContext } from "./data.ts";
-import { EFFECT_ROWS, type EffectContext } from "./effect.ts";
-import { LAYER_ROWS, type LayerContext } from "./layer.ts";
-import { REF_ROWS } from "./ref.ts";
+import { type CollectionContext, collectionRows } from "./collections.ts";
+import { type DataContext, dataRows } from "./data.ts";
+import { type EffectContext, effectRows } from "./effect.ts";
+import { type LayerContext, layerRows } from "./layer.ts";
+import { refRows } from "./ref.ts";
 import type { PreludeCallName, Rows } from "./rows.ts";
-import { SCHEMA_ROWS, type SchemaContext } from "./schema.ts";
-import { SCOPE_ROWS, type ScopeContext } from "./scope.ts";
-import { STREAM_ROWS, type StreamContext } from "./stream.ts";
+import { type SchemaContext, schemaRows } from "./schema.ts";
+import { type ScopeContext, scopeRows } from "./scope.ts";
+import { type StreamContext, streamRows } from "./stream.ts";
 
 /** Every operation that a family handler or prologue reads from the checker. */
 type FamilyContext =
-  & BuiltinContext
   & CollectionContext
   & DataContext
   & EffectContext
@@ -24,27 +22,101 @@ type FamilyContext =
   & StreamContext
   & SchemaContext;
 
-/** The family row tables by family name, for the test of the key sets. */
-export const FAMILY_ROW_TABLES = {
-  collections: COLLECTION_ROWS,
-  data: DATA_ROWS,
-  effect: EFFECT_ROWS,
-  layer: LAYER_ROWS,
-  ref: REF_ROWS,
-  schema: SCHEMA_ROWS,
-  scope: SCOPE_ROWS,
-  stream: STREAM_ROWS,
-} as const;
-
-// A type annotation keeps the generic index of `preludeCall` valid. A
-// `satisfies` clause on this table breaks it.
-export const FAMILY_ROWS: Rows<PreludeCallName, FamilyContext> = {
-  ...COLLECTION_ROWS,
-  ...DATA_ROWS,
-  ...EFFECT_ROWS,
-  ...LAYER_ROWS,
-  ...REF_ROWS,
-  ...SCHEMA_ROWS,
-  ...SCOPE_ROWS,
-  ...STREAM_ROWS,
+export type FamilyRowTables = {
+  readonly collections: ReturnType<typeof collectionRows>;
+  readonly data: ReturnType<typeof dataRows>;
+  readonly effect: ReturnType<typeof effectRows>;
+  readonly layer: ReturnType<typeof layerRows>;
+  readonly ref: ReturnType<typeof refRows>;
+  readonly schema: ReturnType<typeof schemaRows>;
+  readonly scope: ReturnType<typeof scopeRows>;
+  readonly stream: ReturnType<typeof streamRows>;
 };
+
+/** Creates the family row tables for the test of their key sets. */
+export function familyRowTables(): FamilyRowTables {
+  return {
+    collections: collectionRows(),
+    data: dataRows(),
+    effect: effectRows(),
+    layer: layerRows(),
+    ref: refRows(),
+    schema: schemaRows(),
+    scope: scopeRows(),
+    stream: streamRows(),
+  };
+}
+
+/** Creates one row for every prelude call name. */
+export function createFamilyRows(): Rows<PreludeCallName, FamilyContext> {
+  const collections = collectionRows();
+  const data = dataRows();
+  const effect = effectRows();
+  const layer = layerRows();
+  const ref = refRows();
+  const schema = schemaRows();
+  const scope = scopeRows();
+  const stream = streamRows();
+  return {
+    all: collections.all,
+    traverse: collections.traverse,
+    map: collections.map,
+    sort: collections.sort,
+    filter: collections.filter,
+    fold: collections.fold,
+    div: data.div,
+    trunc: data.trunc,
+    floor: data.floor,
+    round: data.round,
+    ceil: data.ceil,
+    text: data.text,
+    len: data.len,
+    at: data.at,
+    fail: effect.fail,
+    retry: effect.retry,
+    repeat: effect.repeat,
+    retrySchedule: effect.retrySchedule,
+    timeout: effect.timeout,
+    uninterruptible: effect.uninterruptible,
+    now: effect.now,
+    log: effect.log,
+    random: effect.random,
+    randomInt: effect.randomInt,
+    sleep: effect.sleep,
+    defer: effect.defer,
+    run: effect.run,
+    race: effect.race,
+    provide: layer.provide,
+    layer: layer.layer,
+    mergeLayers: layer.mergeLayers,
+    makeRef: ref.makeRef,
+    getRef: ref.getRef,
+    setRef: ref.setRef,
+    updateRef: ref.updateRef,
+    schema: schema.schema,
+    schemaArray: schema.schemaArray,
+    schemaStruct: schema.schemaStruct,
+    schemaOptionalKey: schema.schemaOptionalKey,
+    schemaNullToMissingKey: schema.schemaNullToMissingKey,
+    schemaOptionFromOptionalKey: schema.schemaOptionFromOptionalKey,
+    schemaDefaultKey: schema.schemaDefaultKey,
+    schemaConstructorDefault: schema.schemaConstructorDefault,
+    schemaOptionalTransform: schema.schemaOptionalTransform,
+    schemaOptionalFromRequired: schema.schemaOptionalFromRequired,
+    schemaUnion: schema.schemaUnion,
+    schemaTransform: schema.schemaTransform,
+    schemaRecursive: schema.schemaRecursive,
+    schemaDecode: schema.schemaDecode,
+    schemaEncode: schema.schemaEncode,
+    schemaMake: schema.schemaMake,
+    scoped: scope.scoped,
+    forkScoped: scope.forkScoped,
+    unfold: stream.unfold,
+    mapEffect: stream.mapEffect,
+    sinkForEach: stream.sinkForEach,
+    takeSink: stream.takeSink,
+    transduceStream: stream.transduceStream,
+    runStream: stream.runStream,
+    bufferStream: stream.bufferStream,
+  };
+}

@@ -12,7 +12,7 @@ import { validateRevision } from "./validate_helpers.ts";
 const source = "type Int = int\nexport const value = (): Int => 1\n";
 
 Deno.test("output characterization: lazy queries, old revisions, failures and unrelated edits", () => {
-  const program = new Program();
+  const program = Program(undefined);
   const first = program.update({
     set: {
       "effektive.json": "{}",
@@ -21,7 +21,7 @@ Deno.test("output characterization: lazy queries, old revisions, failures and un
     },
   });
   assert(first.ok);
-  assertEquals(program.counts.lowerings, 0);
+  assertEquals(program.counts().lowerings, 0);
   assertEquals(outputs.counts.emits, 0);
   const emitted = outputs.emitted(first.value, "main");
   const table = outputs.spanTable(first.value, "main");
@@ -56,7 +56,7 @@ Deno.test("output characterization: lazy queries, old revisions, failures and un
 });
 
 Deno.test("output characterization: imported spans replace lowering results", () => {
-  const program = new Program();
+  const program = Program(undefined);
   const files = {
     "effektive.json": "{}",
     "a.eff": "export type Int = int\n",
@@ -79,7 +79,7 @@ Deno.test("output characterization: imported spans replace lowering results", ()
 });
 
 Deno.test("source hover stays in the frontend and separate output caches are independent", () => {
-  const program = new Program();
+  const program = Program(undefined);
   const revision = program.update({
     set: { "effektive.json": "{}", "main.eff": source },
   });
@@ -91,7 +91,7 @@ Deno.test("source hover stays in the frontend and separate output caches are ind
       ?.declaration,
     "value:main#value",
   );
-  assertEquals(program.counts.lowerings, 0);
+  assertEquals(program.counts().lowerings, 0);
   assertEquals(overlay.counts.emits, 0);
   const first = overlay.emitted(revision.value, "main");
   assert(first?.ok);
@@ -102,7 +102,7 @@ Deno.test("source hover stays in the frontend and separate output caches are ind
 });
 
 Deno.test("host configuration changes replace the lowering key and keep old output queries valid", () => {
-  const program = new Program();
+  const program = Program(undefined);
   const outputs = new TypeScriptOutputs();
   const config = (module: string) =>
     JSON.stringify({ host: { clock: { interface: "./clock.effi", module } } });
@@ -156,8 +156,8 @@ Deno.test("host order selects companion imports across warm and retained revisio
     "main.eff":
       'import { Box } from "host:a"\nexport const keep = (box: Box): Box => box\n',
   };
-  const program = new Program();
-  const delayed = new Program();
+  const program = Program(undefined);
+  const delayed = Program(undefined);
   const warmOutputs = new TypeScriptOutputs();
   const delayedOutputs = new TypeScriptOutputs();
   const retained = [];
@@ -167,7 +167,7 @@ Deno.test("host order selects companion imports across warm and retained revisio
     const set = { ...files, "effektive.json": config(order) };
     const warm = program.update({ set });
     const late = delayed.update({ set });
-    const fresh = new Program().update({ set });
+    const fresh = Program(undefined).update({ set });
     assert(warm.ok && late.ok && fresh.ok);
     assertEquals(warm.value.diagnostics, []);
     assertEquals(late.value.diagnostics, []);

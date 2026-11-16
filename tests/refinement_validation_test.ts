@@ -7,12 +7,12 @@ import {
   type Predicate,
   type Term,
 } from "../src/core/predicates.ts";
-import { exprChildren } from "../src/core/validate/expr.ts";
+import { exprChildren } from "../src/core/validate/expr_walk.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-
-function lower(
-  text: string,
-): { readonly ir: ModuleIR; readonly sources: ReadonlyMap<string, string> } {
+function lower(text: string): {
+  readonly ir: ModuleIR;
+  readonly sources: ReadonlyMap<string, string>;
+} {
   const checked = checkProject(
     memoryHost({ "effektive.json": "{}", "m.eff": text }),
     "",
@@ -24,11 +24,9 @@ function lower(
   assert(result?.ok, JSON.stringify(result));
   return { ir: result.value, sources: new Map([["m.eff", text]]) };
 }
-
 function expressions(expression: Expr): readonly Expr[] {
   return [expression, ...exprChildren(expression).flatMap(expressions)];
 }
-
 function proofExpression(ir: ModuleIR): Expr {
   for (const declaration of ir.declarations) {
     if (declaration.kind !== "function" && declaration.kind !== "constant") {
@@ -40,18 +38,18 @@ function proofExpression(ir: ModuleIR): Expr {
     const found = expressions(root).find((expression) =>
       (expression.proofs?.length ?? 0) > 0
     );
-    if (found !== undefined) return found;
+    if (found !== undefined) {
+      return found;
+    }
   }
   throw new Error("no proof expression");
 }
-
 function messages(
   ir: ModuleIR,
   sources: ReadonlyMap<string, string>,
 ): readonly string[] {
   return validateModule(ir, sources).map((diagnostic) => diagnostic.message);
 }
-
 Deno.test("independent validation reconstructs refinement proofs from public IR", () => {
   const lowered = lower(`
 type Positive = int where n => n > 0
@@ -79,7 +77,6 @@ const length = (text: Text): ValidLength => ValidLength(text)
     [],
   );
 });
-
 Deno.test("pipeline captures establish refinements before their stages", () => {
   const lowered = lower(`
 type Positive = int where n => n > 0
@@ -104,7 +101,6 @@ const sourceName = (): Positive => { const $p0: Positive = 1; $p0 + 1 }
     [],
   );
 });
-
 Deno.test("implicit tagged records carry their construction proof", () => {
   const lowered = lower(`
 type Row = { value: int } where row => row.value > 0
@@ -117,7 +113,6 @@ const made = (): Row => ({ value: 1 })
     [],
   );
 });
-
 Deno.test("raw record variables cannot bypass a refined tag constructor", () => {
   const checked = checkProject(
     memoryHost({
@@ -137,13 +132,11 @@ const bad = (): Row => { const raw = { value: 1 }; raw }
     "type-mismatch/003",
   ]);
 });
-
 Deno.test("independent validation rejects missing, forged, and mutated certificates", () => {
   const lowered = lower(`
 type Positive = int where n => n > 0
 const value = (): Positive => Positive(1)
 `);
-
   const missing = structuredClone(lowered.ir);
   Object.assign(proofExpression(missing), { proofs: [] });
   assert(
@@ -152,7 +145,6 @@ const value = (): Positive => Positive(1)
     ),
     JSON.stringify(messages(missing, lowered.sources)),
   );
-
   const shared = structuredClone(lowered.ir);
   const sharedDeclaration = shared.declarations.find((d) =>
     d.kind === "function"
@@ -166,7 +158,6 @@ const value = (): Positive => Positive(1)
       message.includes("no supported obligation")
     ),
   );
-
   const mutated = structuredClone(lowered.ir);
   const changed = proofExpression(mutated).proofs?.[0];
   assert(changed !== undefined);
@@ -177,7 +168,6 @@ const value = (): Positive => Positive(1)
     ),
     JSON.stringify(messages(mutated, lowered.sources)),
   );
-
   const forged = structuredClone(lowered.ir);
   const expression = proofExpression(forged);
   const proof = expression.proofs?.[0];
@@ -193,7 +183,6 @@ const value = (): Positive => Positive(1)
       message.includes("no supported obligation")
     ),
   );
-
   const changedGoal = structuredClone(lowered.ir);
   const changedExpression = proofExpression(changedGoal);
   assert(changedExpression.kind === "literal");
@@ -207,7 +196,6 @@ const value = (): Positive => Positive(1)
     ),
     JSON.stringify(messages(changedGoal, lowered.sources)),
   );
-
   const arithmetic = lower(`
 type Positive = int where n => n > 0
 const bump = (p: Positive): Positive => p + 1
@@ -223,7 +211,6 @@ const bump = (p: Positive): Positive => p + 1
     JSON.stringify(messages(unsupported, arithmetic.sources)),
   );
 });
-
 Deno.test("a refined binding cannot justify its own initializer", () => {
   const lowered = lower(`
 type Positive = int where n => n > 0
@@ -244,11 +231,11 @@ const value = (): Positive => { const local: Positive = 1; local }
     maximum,
   });
   const forged = entails(
-    and(
+    and([
       constraint(zero, local, "-1"),
       constraint(local, zero, "0"),
       constraint(zero, local, "0"),
-    ),
+    ]),
     constraint(zero, zero, "-1"),
     { maxSteps: 8192 },
   );
@@ -267,7 +254,6 @@ const value = (): Positive => { const local: Positive = 1; local }
     ),
   );
 });
-
 Deno.test("independent validation rejects malformed predicate declarations", () => {
   const lowered = lower(`
 type Positive = int where n => n > 0
@@ -292,7 +278,6 @@ const value = (): Positive => Positive(1)
     ),
     JSON.stringify(messages(ir, lowered.sources)),
   );
-
   const transparent = structuredClone(lowered.ir);
   const transparentDeclaration = transparent.declarations.find((
     item,
@@ -309,7 +294,6 @@ const value = (): Positive => Positive(1)
       message.includes("non-opaque type with identity")
     ),
   );
-
   const opaque = structuredClone(lowered.ir);
   const opaqueDeclaration = opaque.declarations.find((item): item is TypeDecl =>
     item.kind === "type"
@@ -322,7 +306,6 @@ const value = (): Positive => Positive(1)
     ),
   );
 });
-
 // A trusted source contract is necessary because coordinated erasure leaves valid plain IR.
 Deno.test("independent validation cannot detect consistent refinement contract erasure", () => {
   const lowered = lower(`
@@ -338,7 +321,6 @@ const value = (): Positive => Positive(1)
   Object.assign(proofExpression(ir), { proofs: [] });
   assertEquals(validateModule(ir, lowered.sources), []);
 });
-
 Deno.test("independent validation rejects refined host declarations", () => {
   const lowered = lower("type Positive = int where n => n > 0");
   const ir = structuredClone(lowered.ir);
@@ -357,7 +339,6 @@ Deno.test("independent validation rejects refined host declarations", () => {
     ),
   );
 });
-
 // RBF12: the checker and the validator both keep an `or` fact in canonical
 // form, so a fact with commuted operands survives a branch join.
 Deno.test("a commuted or-fact survives a join in the checker and the validator", () => {
@@ -375,7 +356,6 @@ const make = (a: Int, b: Int, p: Bool): Either => {
     const lowered = lower(program("a > 0 || b > 0", second));
     assertEquals(messages(lowered.ir, lowered.sources), [], second);
   }
-
   // A different second condition must fail, so the validator proof is not vacuous.
   const weaker = structuredClone(
     lower(program("a > 0 || b > 0", "a > 0 || b > 0")),
@@ -391,7 +371,6 @@ const make = (a: Int, b: Int, p: Bool): Either => {
     "declarations[4].body.result.proofs: the proof certificate is invalid: invalid-certificate",
   ]);
 });
-
 Deno.test("a nested or-fact with three operands survives a join", () => {
   const program = (second: string) => `
 type Int = int
@@ -410,7 +389,6 @@ const make = (a: Int, b: Int, c: Int, p: Bool): Any3 => {
     assertEquals(messages(lowered.ir, lowered.sources), [], second);
   }
 });
-
 // RBF20: a record literal that adopts a refined member of an expected union
 // needs the proof of that member, as it does without the union.
 Deno.test("a record literal that adopts a refined union member needs its proof", () => {
@@ -434,18 +412,15 @@ type Box = { e: Either | Stop }
       ["m.eff"],
     );
     assert(checked.ok);
-    assertEquals(
-      checked.value.diagnostics.map((d) => d.code),
-      ["type-mismatch/013"],
-      line,
-    );
+    assertEquals(checked.value.diagnostics.map((d) => d.code), [
+      "type-mismatch/013",
+    ], line);
   }
   const proved = lower(
     prelude +
       "export const direct = (a: Int): Either | Stop => if (a > 0) { { a: a, b: a } } else { Stop({}) }\n",
   );
   assertEquals(messages(proved.ir, proved.sources), []);
-
   // A plain member that also fits needs no proof, whatever the member names are.
   for (const name of ["Plain", "APlain"]) {
     const plain = lower(
@@ -456,15 +431,15 @@ type Box = { e: Either | Stop }
     assertEquals(messages(plain.ir, plain.sources), [], name);
   }
 });
-
 /** Gives each integer literal of `root` the value 0, which fails a positive proof. */
 function zeroLiterals(root: Expr): void {
   for (const literal of expressions(root)) {
-    if (literal.kind !== "literal") continue;
+    if (literal.kind !== "literal") {
+      continue;
+    }
     Object.assign(literal, { value: 0, type: { kind: "literal", value: 0 } });
   }
 }
-
 Deno.test("independent validation stops after the aggregate proof step limit", () => {
   const lowered = lower(`
 type Positive = int where n => n > 0

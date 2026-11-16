@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Effect, Layer, Option, Stream } from "effect";
 import { Boom, Clock, Gap, Pings, Row, Rows } from "./contracts.ts";
 import { Auth, Token } from "./host.effi.ts";

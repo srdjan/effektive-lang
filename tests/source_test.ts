@@ -1,7 +1,41 @@
-import { assertEquals } from "@std/assert";
-import { compareSpans } from "../src/core/source.ts";
-import { lineStarts, memoryHost, positionOf } from "../src/core/frontend.ts";
+import {
+  assert,
+  assertEquals,
+  assertStrictEquals,
+  assertThrows,
+} from "@std/assert";
+import {
+  compareSpans,
+  invariantFailure,
+  isInvariantFailure,
+  rethrow,
+} from "../src/core/source.ts";
+import {
+  caught,
+  lineStarts,
+  memoryHost,
+  positionOf,
+} from "../src/core/frontend.ts";
 import { makeSpan } from "./helpers.ts";
+
+Deno.test("invariant failures keep their message and phase through caught", () => {
+  const result = caught(() => invariantFailure("emit", "missing checked node"));
+  assert(!result.ok);
+  assert(isInvariantFailure(result.error, "emit"));
+  assertEquals(result.error.message, "missing checked node");
+  assertEquals(isInvariantFailure(result.error, "lower"), false);
+});
+
+Deno.test("an unrelated error with a phase field is not an invariant failure", () => {
+  const error = Object.assign(new Error("outside failure"), { phase: "emit" });
+  assertEquals(isInvariantFailure(error, "emit"), false);
+});
+
+Deno.test("rethrow preserves the original error object", () => {
+  const error = new Error("outside failure");
+  const thrown = assertThrows(() => rethrow(error));
+  assertStrictEquals(thrown, error);
+});
 
 Deno.test("lineStarts treats LF, CRLF, and lone CR as one terminator each", () => {
   assertEquals([...lineStarts("a\nb\r\nc\rd")], [0, 2, 5, 7]);

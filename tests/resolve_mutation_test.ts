@@ -17,6 +17,7 @@ function analyzeText(files: Record<string, string>): Analysis {
     memoryHost({ "effektive.json": "{}", ...files }),
     "",
     ["m.eff"],
+    undefined,
   );
   assert(result.ok, JSON.stringify(result));
   return result.value;

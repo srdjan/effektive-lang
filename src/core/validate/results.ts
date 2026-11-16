@@ -6,9 +6,9 @@ import type { Type } from "../ir.ts";
 import type { Active } from "./sets.ts";
 
 /** What a checked node contributes to its parent. */
-export interface Out extends Active {
+export type Out = Active & {
   readonly type: Type;
-}
+};
 
 /** The recomputed annotation of a node. */
 export type Comp =
@@ -27,7 +27,20 @@ export type Comp =
 export function derivedResult(
   type: Type,
   active: Active,
-  match: "exact" | "fit" = "exact",
 ): Comp {
-  return { kind: "derived", type, active, match };
+  return {
+    kind: "derived",
+    type: type,
+    active: active,
+    match: "exact",
+  };
+}
+
+export function fittedResult(type: Type, active: Active): Comp {
+  return {
+    kind: "derived",
+    type: type,
+    active: active,
+    match: "fit",
+  };
 }

@@ -15,7 +15,7 @@ export const explicit = (input: unknown): Text fails SchemaError => consume(inpu
 `;
 
 Deno.test("editor queries show finalized inferred input contracts", () => {
-  const loaded = new Program().update({
+  const loaded = Program(undefined).update({
     set: { "effektive.json": "{}", "m.eff": source },
   });
   assert(loaded.ok);
@@ -58,7 +58,7 @@ error Other = {}
 const consume = (value: Text): Text => value
 export const entry = (${parameter}): Text fails Other => consume(input.name)
 `;
-    const loaded = new Program().update({
+    const loaded = Program(undefined).update({
       set: { "effektive.json": "{}", "m.eff": text },
     });
     assert(loaded.ok);
@@ -66,6 +66,8 @@ export const entry = (${parameter}): Text fails Other => consume(input.name)
       loaded.value,
       "m.eff",
       text.indexOf("entry"),
+      undefined,
+      undefined,
     )[0];
     assert(action !== undefined);
     const changed = applySourceEdits(text, action.edits);
@@ -73,7 +75,7 @@ export const entry = (${parameter}): Text fails Other => consume(input.name)
       changed.includes(`(${parameter}): Text fails Other | SchemaError`),
     );
 
-    const checked = new Program().update({
+    const checked = Program(undefined).update({
       set: { "effektive.json": "{}", "m.eff": changed },
     });
     assert(checked.ok);

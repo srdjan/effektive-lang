@@ -10,6 +10,7 @@ function codes(source: string): string[] {
     memoryHost({ "effektive.json": "{}", "m.eff": source }),
     "",
     ["m.eff"],
+    undefined,
   );
   assert(result.ok, JSON.stringify(result));
   return result.value.diagnostics.map((d) => d.code);

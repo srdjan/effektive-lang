@@ -10,6 +10,9 @@
 //
 // The equations come from the spec, "Equations and validation".
 
+import { isTrue } from "./guards.ts";
+import { emptyMap, emptySet, setFrom } from "../runtime.ts";
+import { panic } from "../source.ts";
 import {
   type BuiltinCallName,
   CALLBACK_SHAPES,
@@ -19,7 +22,7 @@ import {
 } from "./builtins.ts";
 
 /** The builtins that do not take a closed unit argument, although a closed unit widens to `int`. */
-const UNITLESS_BUILTINS: ReadonlySet<BuiltinCallName | undefined> = new Set([
+const UNITLESS_BUILTINS: readonly (BuiltinCallName | undefined)[] = [
   "div",
   "trunc",
   "floor",
@@ -27,7 +30,7 @@ const UNITLESS_BUILTINS: ReadonlySet<BuiltinCallName | undefined> = new Set([
   "ceil",
   "text",
   "at",
-]);
+];
 
 import type {
   ConstantDecl,
@@ -43,12 +46,12 @@ import type {
   Type,
 } from "../ir.ts";
 import {
-  CLOSED_UNIT_IDS,
   DURATION_ID,
   INSTANT_ID,
+  isClosedUnitId,
   SCHEMA_ERROR_ID,
 } from "../ir.ts";
-import { AREA, type AreaCode } from "./report.ts";
+import { AREA, type AreaCode, type Report } from "./report.ts";
 import {
   type Active,
   combine,
@@ -105,7 +108,7 @@ import { checkTypeIds } from "./type_checks.ts";
 import type { Ctx } from "./world_table.ts";
 import { exprChildren } from "./expr_walk.ts";
 import type { ValidatorCore } from "./families/context.ts";
-import { type Comp, derivedResult, type Out } from "./results.ts";
+import { type Comp, derivedResult, fittedResult, type Out } from "./results.ts";
 import {
   defer,
   log,
@@ -140,10 +143,11 @@ import {
 } from "./families/stream.ts";
 import { schema, schemaOperation } from "./families/schema.ts";
 import { refOperation } from "./families/ref.ts";
-import { negateRefinement, RefinementValidator } from "./refinements.ts";
-
-// The test of the expression children imports this walk from here.
-export { exprChildren };
+import {
+  createRefinementValidator,
+  negateRefinement,
+  type RefinementValidator,
+} from "./refinements.ts";
 
 /** An identity list in a message, such as `[A, B]`. */
 function list(items: readonly string[]): string {
@@ -151,7 +155,12 @@ function list(items: readonly string[]): string {
 }
 
 function checkedResult(active: Active): Comp {
-  return { kind: "checked", active };
+  return { kind: "checked", active: active };
+}
+
+function isNullType(env: TypeEnv, type: Type): boolean {
+  const unfolded = unfold(env, type);
+  return unfolded.kind === "literal" && unfolded.value === null;
 }
 
 /** Equality can match unknown values and the runtime base of types with identity. */
@@ -159,21 +168,29 @@ function tagMayEqual(
   env: TypeEnv,
   type: Type,
   value: string | number | boolean | null,
-  seen = new Set<Type>(),
+): boolean {
+  return tagMayEqualSeen(env, type, value, emptySet());
+}
+
+function tagMayEqualSeen(
+  env: TypeEnv,
+  type: Type,
+  value: string | number | boolean | null,
+  seen: Set<Type>,
 ): boolean {
   if (seen.has(type)) return true;
   // A type past the depth bound fails, as it does in `fits`.
   if (seen.size >= MAX_DEPTH) return false;
-  const next = new Set(seen).add(type);
+  const next = setFrom(seen).add(type);
   if (type.kind === "named") {
     const base = env.aliases.get(type.id) ?? env.opaqueBases.get(type.id);
-    return base !== undefined && tagMayEqual(env, base, value, next);
+    return base !== undefined && tagMayEqualSeen(env, base, value, next);
   }
   if (type.kind === "union") {
-    return type.members.some((m) => tagMayEqual(env, m, value, next));
+    return type.members.some((m) => tagMayEqualSeen(env, m, value, next));
   }
   if (type.kind === "primitive" && type.name === "unknown") return true;
-  return fits(env, { kind: "literal", value }, type);
+  return fits(env, { kind: "literal", value: value }, type);
 }
 
 /**
@@ -190,7 +207,7 @@ function adoptedNumericIdentity(
   if ((l === undefined) === (r === undefined)) return undefined;
   const named = l ?? r;
   // `Duration` and `Instant` have their own operator rules.
-  if (named?.kind === "named" && CLOSED_UNIT_IDS.has(named.id)) {
+  if (named?.kind === "named" && isClosedUnitId(named.id)) {
     return undefined;
   }
   const unnamed = l === undefined ? left : right;
@@ -208,60 +225,74 @@ const DEFECT_RECORD: Type = {
   fields: [{ name: "message", type: STRING, optional: false }],
 };
 
-export class BodyValidator implements ValidatorCore {
-  private readonly scope = new Map<string, Type>();
-  private readonly declared = new Set<string>();
-  private checkedRaw = new Set<Expr>();
-  private readonly refinements: RefinementValidator;
+export type BodyValidator = ValidatorCore & {
+  readonly checkFunction: (
+    declaration: FunctionDecl,
+    path: string,
+  ) => Report;
+  readonly checkConstant: (
+    declaration: ConstantDecl,
+    path: string,
+  ) => Report;
+};
 
-  constructor(readonly ctx: Ctx) {
-    this.refinements = new RefinementValidator(ctx);
-  }
+export function createBodyValidator(ctx: Ctx): BodyValidator {
+  let scope = emptyMap<string, Type>();
+  let declared = emptySet<string>();
+  let checkedRaw = emptySet<Expr>();
+  let refinements = createRefinementValidator(ctx);
+  const env = ctx.world.env;
 
-  get env(): TypeEnv {
-    return this.ctx.world.env;
-  }
-
-  add(
+  function add(
     area: AreaCode,
     path: string,
     what: string,
     span: Span,
-  ): void {
-    this.ctx.report.add(area, path, what, span);
+  ): Report {
+    return ctx.report.add(area, path, what, span);
   }
 
-  private declareLocal(
+  function declareLocal(
     p: Parameter,
     path: string,
-    init?: Expr,
-    generated = false,
-  ): void {
+    init: Expr | undefined,
+    generated: boolean,
+  ): Ctx {
     if (!p.id.startsWith("local:")) {
-      this.add(
-        AREA.identity,
-        `${path}.id`,
-        `${p.id} is not a local identity`,
-        p.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.identity,
+          `${path}.id`,
+          `${p.id} is not a local identity`,
+          p.span,
+        ),
+      };
     }
-    if (this.declared.has(p.id)) {
-      this.add(
-        AREA.identity,
-        `${path}.id`,
-        `the local ${p.id} is declared twice in this function`,
-        p.span,
-      );
+    if (declared.has(p.id)) {
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.identity,
+          `${path}.id`,
+          `the local ${p.id} is declared twice in this function`,
+          p.span,
+        ),
+      };
     }
-    this.declared.add(p.id);
-    this.scope.set(p.id, p.type);
-    if (!generated) this.refinements.addLocal(p, init);
-    checkTypeIds(this.ctx, p.type, `${path}.type`, p.span);
+    declared = declared.add(p.id);
+    scope = scope.set(p.id, p.type);
+    if (!generated) refinements = refinements.addLocal(p, init);
+    ctx = checkTypeIds(ctx, p.type, `${path}.type`, p.span).ctx;
+    return ctx;
   }
 
-  private release(ids: readonly string[]): void {
-    for (const id of ids) this.scope.delete(id);
-    this.refinements.release(ids);
+  function release(ids: readonly string[]): Ctx {
+    for (const id of ids) {
+      if (!scope.delete(id)) continue;
+    }
+    refinements = refinements.release(ids);
+    return ctx;
   }
 
   /**
@@ -269,164 +300,135 @@ export class BodyValidator implements ValidatorCore {
    * when `run` returns. A local cannot stay in scope after its region. A throw
    * ends the validator: the guard in `index.ts` makes a new one per declaration.
    */
-  private withLocals<T>(
+  function withLocals<T>(
     run: (
       declare: (
         p: Parameter,
         path: string,
-        init?: Expr,
-        generated?: boolean,
-      ) => void,
+        init: Expr | undefined,
+        generated: boolean,
+      ) => Ctx,
     ) => T,
   ): T {
     const added: string[] = [];
     const result = run((p, path, init, generated) => {
-      this.declareLocal(p, path, init, generated);
-      added.push(p.id);
+      ctx = declareLocal(p, path, init, generated);
+      added[added.length] = p.id;
+      return ctx;
     });
-    this.release(added);
+    ctx = release(added);
     return result;
   }
 
-  private checkParameterTypes(
+  function checkParameterTypes(
     parameters: readonly Parameter[],
     recorded: readonly Type[],
     path: string,
     countMessage: string,
     span: Span,
-  ): void {
+  ): Ctx {
     if (recorded.length !== parameters.length) {
-      this.add(AREA.types, `${path}.type.parameters`, countMessage, span);
-      return;
-    }
-    parameters.forEach((p, j) => {
-      if (!same(this.env, p.type, recorded[j])) {
-        this.add(
+      ctx = {
+        ...ctx,
+        report: add(
           AREA.types,
-          `${path}.type.parameters[${j}]`,
-          `expected ${show(p.type)}, recorded ${show(recorded[j])}`,
-          p.span,
-        );
+          `${path}.type.parameters`,
+          countMessage,
+          span,
+        ),
+      };
+      return ctx;
+    }
+    for (const entry of parameters.entries()) {
+      const p = entry[1];
+      const j = entry[0];
+      if (!same(env, p.type, recorded[j])) {
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            `${path}.type.parameters[${j}]`,
+            `expected ${show(p.type)}, recorded ${show(recorded[j])}`,
+            p.span,
+          ),
+        };
       }
-    });
+    }
+    return ctx;
   }
 
   /** Checks ordinary compatibility or one independently verified refinement. */
-  private accepts(
+  function accepts(
     expression: Expr,
     source: Type,
     target: Type,
     path: string,
-    checked = false,
   ): boolean {
-    if (fits(this.env, source, target)) return true;
-    const raw = checked || this.checkedRaw.has(expression);
+    return acceptsMode(expression, source, target, path, false);
+  }
+
+  function acceptsMode(
+    expression: Expr,
+    source: Type,
+    target: Type,
+    path: string,
+    checked: boolean,
+  ): boolean {
+    if (fits(env, source, target)) return true;
+    const raw = checked || checkedRaw.has(expression);
     if (
-      raw && containsUnknown(this.env, source) &&
-      fitsCheckedInput(this.env, source, target)
+      raw && containsUnknown(env, source) &&
+      fitsCheckedInput(env, source, target)
     ) return true;
     if (expression.execution === "effect") {
-      this.refinements.clearDerivedFacts();
+      refinements = refinements.clearDerivedFacts();
     }
     if (
-      this.refinements.adoption(expression, source, target, path) === "handled"
+      refinements.adoption(expression, source, target, path) === "handled"
     ) return true;
-    return raw && fitsCheckedInput(this.env, source, target);
+    return raw && fitsCheckedInput(env, source, target);
   }
 
   /** Marks only direct aggregate values that execute inside a checked call. */
-  private markCheckedRaw(expression: Expr): void {
-    this.checkedRaw.add(expression);
-    switch (expression.kind) {
-      case "some":
-        this.markCheckedRaw(expression.value);
-        return;
-      case "record":
-        expression.fields.forEach((field) => this.markCheckedRaw(field.value));
-        return;
-      case "update":
-        expression.fields.forEach((field) => this.markCheckedRaw(field.value));
-        return;
-      case "array":
-      case "tuple":
-        expression.elements.forEach((element) => this.markCheckedRaw(element));
-        return;
-      case "block":
-        this.markCheckedRaw(expression.result);
-        return;
-      case "if":
-        this.markCheckedRaw(expression.then);
-        this.markCheckedRaw(expression.else);
-        return;
-      case "match":
-        expression.arms.forEach((arm) => this.markCheckedRaw(arm.body));
-        return;
-      case "literal":
-      case "null":
-      case "reference":
-      case "get":
-      case "nominal":
-      case "none":
-      case "error":
-      case "closure":
-      case "call":
-      case "defer":
-      case "run":
-      case "scoped":
-      case "fork-scoped":
-      case "with-resource":
-      case "unfold":
-      case "map-effect":
-      case "map-stream":
-      case "sink-for-each":
-      case "take-sink":
-      case "transduce-stream":
-      case "run-stream":
-      case "buffer-stream":
-      case "race":
-      case "race-all":
-      case "make-ref":
-      case "get-ref":
-      case "set-ref":
-      case "update-ref":
-      case "layer":
-      case "merge-layers":
-      case "retry-schedule":
-      case "retry-with-schedule":
-      case "schema":
-      case "schema-decode":
-      case "schema-encode":
-      case "schema-make":
-      case "perform":
-      case "fail":
-      case "catch":
-      case "ensure":
-      case "retry":
-      case "timeout":
-      case "repeat":
-      case "sleep":
-      case "now":
-      case "log":
-      case "random":
-      case "random-int":
-      case "uninterruptible":
-      case "provide":
-      case "binary":
-        return;
-      default: {
-        const unreachable: never = expression;
-        return unreachable;
+  function markCheckedRaw(expression: Expr, marked: Set<Expr>): Set<Expr> {
+    marked = marked.add(expression);
+    if (expression.kind === "some") {
+      return markCheckedRaw(expression.value, marked);
+    }
+    if (expression.kind === "record" || expression.kind === "update") {
+      for (const field of expression.fields) {
+        marked = markCheckedRaw(field.value, marked);
+      }
+      return marked;
+    }
+    if (expression.kind === "array" || expression.kind === "tuple") {
+      for (const element of expression.elements) {
+        marked = markCheckedRaw(element, marked);
+      }
+      return marked;
+    }
+    if (expression.kind === "block") {
+      return markCheckedRaw(expression.result, marked);
+    }
+    if (expression.kind === "if") {
+      marked = markCheckedRaw(expression.then, marked);
+      return markCheckedRaw(expression.else, marked);
+    }
+    if (expression.kind === "match") {
+      for (const arm of expression.arms) {
+        marked = markCheckedRaw(arm.body, marked);
       }
     }
+    return marked;
   }
 
   /** The recorded execution mode must follow the body mode and the effect sets. */
-  private checkExecution(
+  function checkExecution(
     recorded: { readonly execution: Execution; readonly effects: Effects },
     body: Active,
     path: string,
     span: Span,
-  ): void {
+  ): Ctx {
     const nonempty =
       recorded.effects.failures.length + recorded.effects.requirements.length >
         0;
@@ -434,19 +436,23 @@ export class BodyValidator implements ValidatorCore {
       ? "effect"
       : "pure";
     if (recorded.execution !== expected) {
-      this.add(
-        AREA.execution,
-        `${path}.type.execution`,
-        `expected ${expected}, recorded ${recorded.execution}`,
-        span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.execution,
+          `${path}.type.execution`,
+          `expected ${expected}, recorded ${recorded.execution}`,
+          span,
+        ),
+      };
     }
+    return ctx;
   }
 
-  checkFunction(d: FunctionDecl, path: string): void {
-    const env = this.env;
+  function checkFunction(d: FunctionDecl, path: string): Report {
+    const checkedFlags = d.type.checked;
     const checkedIds = d.parameters.filter((_, index) =>
-      d.type.checked?.[index] === true
+      isTrue(checkedFlags === undefined ? undefined : checkedFlags[index])
     ).map((parameter) => parameter.id);
     const recordedChecks = d.entryValidation ?? [];
     if (
@@ -454,96 +460,140 @@ export class BodyValidator implements ValidatorCore {
       recordedChecks.some((id, index) => id !== checkedIds[index]) ||
       (checkedIds.length === 0 && d.entryValidation !== undefined)
     ) {
-      this.add(
-        AREA.contracts,
-        `${path}.entryValidation`,
-        "entry validation must list exactly the checked parameters in declaration order",
-        d.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.contracts,
+          `${path}.entryValidation`,
+          "entry validation must list exactly the checked parameters in declaration order",
+          d.span,
+        ),
+      };
     }
-    if (checkedIds.length > 0 && !this.ctx.world.exports.has(d.id)) {
-      this.add(
-        AREA.contracts,
-        `${path}.entryValidation`,
-        "only an exported function can have checked entry parameters",
-        d.span,
-      );
+    if (checkedIds.length > 0 && !ctx.world.exports.has(d.id)) {
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.contracts,
+          `${path}.entryValidation`,
+          "only an exported function can have checked entry parameters",
+          d.span,
+        ),
+      };
     }
-    d.parameters.forEach((parameter, index) => {
+    for (const entry of d.parameters.entries()) {
+      const parameter = entry[1];
+      const index = entry[0];
       if (
-        d.type.checked?.[index] === true &&
+        isTrue(checkedFlags === undefined ? undefined : checkedFlags[index]) &&
         (!entrySchemaDerivable(env, parameter.type) ||
           foreignSealedOf(env, parameter.type) !== undefined)
       ) {
-        this.add(
-          AREA.types,
-          `${path}.parameters[${index}].type`,
-          "a checked entry parameter needs a schema-derivable closed data type",
-          parameter.span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            `${path}.parameters[${index}].type`,
+            "a checked entry parameter needs a schema-derivable closed data type",
+            parameter.span,
+          ),
+        };
       }
-    });
-    const body = this.withLocals((declare) => {
-      d.parameters.forEach((p, j) => declare(p, `${path}.parameters[${j}]`));
-      this.checkParameterTypes(
+    }
+    const body = withLocals((declare) => {
+      for (const entry of d.parameters.entries()) {
+        const p = entry[1];
+        const j = entry[0];
+        ctx = declare(p, `${path}.parameters[${j}]`, undefined, false);
+      }
+      ctx = checkParameterTypes(
         d.parameters,
         d.type.parameters,
         path,
         `the function type has ${d.type.parameters.length} parameters, the function declares ${d.parameters.length}`,
         d.span,
       );
-      const checked = this.check(d.body, `${path}.body`);
+      const checked = check(d.body, `${path}.body`);
       if (
         d.type.borrows !== undefined &&
         d.type.borrows.length !== d.parameters.length
       ) {
-        this.add(
-          AREA.types,
-          `${path}.type.borrows`,
-          "borrow flags must match function parameters",
-          d.span,
-        );
-      }
-      d.parameters.forEach((parameter, index) => {
-        if (d.type.borrows?.[index] === true && parameter.borrow !== true) {
-          this.add(
+        ctx = {
+          ...ctx,
+          report: add(
             AREA.types,
-            `${path}.parameters[${index}]`,
-            "borrow parameter flag disagrees with function type",
-            parameter.span,
-          );
+            `${path}.type.borrows`,
+            "borrow flags must match function parameters",
+            d.span,
+          ),
+        };
+      }
+      const borrowFlags = d.type.borrows;
+      for (const entry of d.parameters.entries()) {
+        const parameter = entry[1];
+        const index = entry[0];
+        const borrowFlag = borrowFlags === undefined
+          ? undefined
+          : borrowFlags[index];
+        if (isTrue(borrowFlag) && !isTrue(parameter.borrow)) {
+          ctx = {
+            ...ctx,
+            report: add(
+              AREA.types,
+              `${path}.parameters[${index}]`,
+              "borrow parameter flag disagrees with function type",
+              parameter.span,
+            ),
+          };
         }
-        if (parameter.borrow !== true) return;
+        if (!isTrue(parameter.borrow)) continue;
         const type = unfold(env, parameter.type);
         if (
           type.kind !== "named" ||
-          this.ctx.world.types.get(type.id)?.opaque !== true
+          !isTrue(ctx.world.types.get(type.id)?.opaque)
         ) {
-          this.add(
-            AREA.types,
-            `${path}.parameters[${index}]`,
-            "a borrow parameter needs an opaque type",
-            parameter.span,
-          );
+          ctx = {
+            ...ctx,
+            report: add(
+              AREA.types,
+              `${path}.parameters[${index}]`,
+              "a borrow parameter needs an opaque type",
+              parameter.span,
+            ),
+          };
         }
-        if (d.type.borrows?.[index] !== true) {
-          this.add(
-            AREA.types,
-            `${path}.type.borrows[${index}]`,
-            "borrow flag missing from function type",
-            parameter.span,
-          );
+        if (!isTrue(borrowFlag)) {
+          ctx = {
+            ...ctx,
+            report: add(
+              AREA.types,
+              `${path}.type.borrows[${index}]`,
+              "borrow flag missing from function type",
+              parameter.span,
+            ),
+          };
         }
-        if (!dataOnly(this.env, d.type.result, "value")) {
-          this.add(
-            AREA.types,
-            `${path}.type.result`,
-            "a borrow function must return data only",
-            d.span,
-          );
+        if (!dataOnly(env, d.type.result, "value")) {
+          ctx = {
+            ...ctx,
+            report: add(
+              AREA.types,
+              `${path}.type.result`,
+              "a borrow function must return data only",
+              d.span,
+            ),
+          };
         }
-        borrowedReferences(this, d.body, parameter.id, `${path}.body`);
-      });
+        ctx = {
+          ...ctx,
+          report: borrowedReferences(
+            validator,
+            d.body,
+            parameter.id,
+            `${path}.body`,
+          ).ctx.report,
+        };
+      }
       return checked;
     });
     const activeBody = checkedIds.length === 0 ? body : {
@@ -552,105 +602,131 @@ export class BodyValidator implements ValidatorCore {
       execution: "effect" as const,
       type: body.type,
     };
-    if (!this.accepts(d.body, body.type, d.type.result, `${path}.body`)) {
-      this.add(
-        AREA.types,
-        `${path}.body`,
-        `the body type ${show(body.type)} does not fit the declared result ${
-          show(d.type.result)
-        }`,
-        d.body.span,
-      );
+    if (!accepts(d.body, body.type, d.type.result, `${path}.body`)) {
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.body`,
+          `the body type ${show(body.type)} does not fit the declared result ${
+            show(d.type.result)
+          }`,
+          d.body.span,
+        ),
+      };
     }
     // A written set bounds the body from above. An inferred set equals the body.
-    this.checkContractSet(d, activeBody, path, "failures", "can fail with");
-    this.checkContractSet(d, activeBody, path, "requirements", "requires");
-    this.checkExecution(d.type, activeBody, path, d.span);
-    this.refinements.audit(d.body, `${path}.body`, exprChildren);
+    ctx = checkContractSet(d, activeBody, path, "failures", "can fail with");
+    ctx = checkContractSet(d, activeBody, path, "requirements", "requires");
+    ctx = checkExecution(d.type, activeBody, path, d.span);
+    refinements = refinements.audit(d.body, `${path}.body`, exprChildren);
+    return ctx.report;
   }
 
   /** Checks one declared set of a function against the set of its body. `verb` names what the body does with the set. */
-  private checkContractSet(
+  function checkContractSet(
     d: FunctionDecl,
     body: Effects,
     path: string,
     key: "failures" | "requirements",
     verb: string,
-  ): void {
+  ): Ctx {
     const declared = d.type.effects[key];
     if (d.written[key === "failures" ? "fails" : "uses"]) {
       const extra = minus(body[key], declared);
       if (extra.length > 0) {
-        this.add(
-          AREA.contracts,
-          `${path}.body`,
-          `the body ${verb} ${list(extra)}, which the declared ${key} ${
-            list(declared)
-          } do not list`,
-          d.body.span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.contracts,
+            `${path}.body`,
+            `the body ${verb} ${list(extra)}, which the declared ${key} ${
+              list(declared)
+            } do not list`,
+            d.body.span,
+          ),
+        };
       }
     } else if (!sameSet(declared, body[key])) {
-      this.add(
-        AREA.contracts,
-        `${path}.type.effects.${key}`,
-        `an inferred contract equals the body: expected ${
-          list(body[key])
-        }, recorded ${list(declared)}`,
-        d.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.contracts,
+          `${path}.type.effects.${key}`,
+          `an inferred contract equals the body: expected ${
+            list(body[key])
+          }, recorded ${list(declared)}`,
+          d.span,
+        ),
+      };
     }
+    return ctx;
   }
 
-  checkConstant(d: ConstantDecl, path: string): void {
-    const out = this.check(d.value, `${path}.value`);
-    if (!this.accepts(d.value, out.type, d.type, `${path}.value`)) {
-      this.add(
-        AREA.types,
-        `${path}.value`,
-        `the initializer type ${
-          show(out.type)
-        } does not fit the constant type ${show(d.type)}`,
-        d.value.span,
-      );
+  function checkConstant(d: ConstantDecl, path: string): Report {
+    const out = check(d.value, `${path}.value`);
+    if (!accepts(d.value, out.type, d.type, `${path}.value`)) {
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.value`,
+          `the initializer type ${
+            show(out.type)
+          } does not fit the constant type ${show(d.type)}`,
+          d.value.span,
+        ),
+      };
     }
     const v = d.value;
     if (!isQuiet(invocationOf(v))) {
-      this.add(
-        AREA.initialization,
-        `${path}.value`,
-        `a module constant needs a pure initializer with empty sets; recorded ${v.execution}, failures ${
-          list(v.effects.failures)
-        }, requirements ${list(v.effects.requirements)}`,
-        v.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.initialization,
+          `${path}.value`,
+          `a module constant needs a pure initializer with empty sets; recorded ${v.execution}, failures ${
+            list(v.effects.failures)
+          }, requirements ${list(v.effects.requirements)}`,
+          v.span,
+        ),
+      };
     }
-    this.refinements.audit(d.value, `${path}.value`, exprChildren);
+    refinements = refinements.audit(d.value, `${path}.value`, exprChildren);
+    return ctx.report;
   }
 
-  check(e: Expr, path: string, callee = false): Out {
-    return this.finish(e, path, this.compute(e, path, callee));
+  function check(e: Expr, path: string): Out {
+    return checkMode(e, path, false);
   }
 
-  private finish(e: Expr, path: string, comp: Comp): Out {
-    const env = this.env;
-    const typeOk = checkTypeIds(this.ctx, e.type, `${path}.type`, e.span);
+  function checkMode(e: Expr, path: string, callee: boolean): Out {
+    return finish(e, path, compute(e, path, callee));
+  }
+
+  function finish(e: Expr, path: string, comp: Comp): Out {
+    const checkedType = checkTypeIds(ctx, e.type, `${path}.type`, e.span);
+    ctx = checkedType.ctx;
+    const typeOk = checkedType.valid;
     let type = e.type;
     if (comp.kind === "derived" && typeOk) {
       const good = comp.match === "exact"
         ? same(env, comp.type, e.type)
-        : this.accepts(e, comp.type, e.type, path);
+        : accepts(e, comp.type, e.type, path);
       if (!good) {
-        this.add(
-          AREA.types,
-          `${path}.type`,
-          comp.match === "exact"
-            ? `expected ${show(comp.type)}, recorded ${show(e.type)}`
-            : `the recomputed type ${
-              show(comp.type)
-            } does not fit the recorded type ${show(e.type)}`,
-          e.span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            `${path}.type`,
+            comp.match === "exact"
+              ? `expected ${show(comp.type)}, recorded ${show(e.type)}`
+              : `the recomputed type ${
+                show(comp.type)
+              } does not fit the recorded type ${show(e.type)}`,
+            e.span,
+          ),
+        };
         type = comp.type;
       }
     }
@@ -659,49 +735,55 @@ export class BodyValidator implements ValidatorCore {
       requirements: sortedUnique(e.effects.requirements),
       execution: e.execution,
     };
-    if (comp.kind === "poisoned") return { ...recorded, type };
+    if (comp.kind === "poisoned") return { ...recorded, type: type };
     const active = comp.active;
     for (const key of ["failures", "requirements"] as const) {
       if (!sameSet(recorded[key], active[key])) {
-        this.add(
-          AREA.contracts,
-          `${path}.effects.${key}`,
-          `expected ${list(active[key])}, recorded ${list(recorded[key])}`,
-          e.span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.contracts,
+            `${path}.effects.${key}`,
+            `expected ${list(active[key])}, recorded ${list(recorded[key])}`,
+            e.span,
+          ),
+        };
       }
     }
     if (recorded.execution !== active.execution) {
-      this.add(
-        AREA.execution,
-        `${path}.execution`,
-        `expected ${active.execution}, recorded ${recorded.execution}`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.execution,
+          `${path}.execution`,
+          `expected ${active.execution}, recorded ${recorded.execution}`,
+          e.span,
+        ),
+      };
     }
-    return { ...active, type };
+    return { ...active, type: type };
   }
 
-  poison(): Comp {
+  function poison(): Comp {
     return { kind: "poisoned" };
   }
 
   /** Reports a concurrency limit that is neither `unbounded` nor a positive safe integer. */
-  checkConcurrency(
+  function checkConcurrency(
     e: {
       readonly concurrency: number | "unbounded" | undefined;
       readonly span: Span;
     },
     path: string,
     name: string,
-  ): void {
+  ): Report {
     // A limit is `unbounded` or a positive safe integer. Undefined selects the default.
     const limit = e.concurrency;
     if (
       limit === undefined || limit === "unbounded" ||
       (Number.isSafeInteger(limit) && limit > 0)
-    ) return;
-    this.add(
+    ) return ctx.report;
+    return add(
       AREA.control,
       `${path}.concurrency`,
       `${name} concurrency must be a positive safe integer or unbounded`,
@@ -709,181 +791,150 @@ export class BodyValidator implements ValidatorCore {
     );
   }
 
-  private compute(e: Expr, path: string, callee: boolean): Comp {
-    switch (e.kind) {
-      case "null":
-        return derivedResult({ kind: "literal", value: null }, QUIET);
-      case "literal":
-        return derivedResult(
-          e.value === null ? UNIT : { kind: "literal", value: e.value },
-          QUIET,
-          "fit",
-        );
-      case "reference":
-        return this.reference(e.target, e.span, path, callee);
-      case "record":
-        return this.recordLike(e, path);
-      case "array":
-        return this.arrayLike(e, path);
-      case "tuple":
-        return this.tupleLike(e, path);
-      case "get":
-        return this.get(e, path);
-      case "update":
-        return this.update(e, path);
-      case "nominal":
-        return this.nominal(e, path);
-      case "some": {
-        const v = this.check(e.value, `${path}.value`);
-        const target = e.type.kind === "option" ? e.type : undefined;
-        if (
-          target !== undefined &&
-          !this.accepts(e.value, v.type, target.element, `${path}.value`)
-        ) {
-          this.add(
+  function compute(e: Expr, path: string, callee: boolean): Comp {
+    if (e.kind === "null") {
+      return derivedResult({ kind: "literal", value: null }, QUIET);
+    }
+    if (e.kind === "literal") {
+      const type = e.value === null
+        ? UNIT
+        : { kind: "literal" as const, value: e.value };
+      return fittedResult(type, QUIET);
+    }
+    if (e.kind === "reference") {
+      return reference(e.target, e.span, path, callee);
+    }
+    if (e.kind === "record") return recordLike(e, path);
+    if (e.kind === "array") return arrayLike(e, path);
+    if (e.kind === "tuple") return tupleLike(e, path);
+    if (e.kind === "get") return get(e, path);
+    if (e.kind === "update") return update(e, path);
+    if (e.kind === "nominal") return nominal(e, path);
+    if (e.kind === "some") {
+      const v = check(e.value, `${path}.value`);
+      const target = e.type.kind === "option" ? e.type : undefined;
+      if (
+        target !== undefined &&
+        !accepts(e.value, v.type, target.element, `${path}.value`)
+      ) {
+        ctx = {
+          ...ctx,
+          report: add(
             AREA.types,
             `${path}.value`,
             `the Some value has type ${show(v.type)}, which does not fit ${
               show(target.element)
             }`,
             e.value.span,
-          );
-        }
-        return derivedResult(
-          { kind: "option", element: target?.element ?? v.type },
-          combine([v]),
-          "fit",
-        );
+          ),
+        };
       }
-      case "none":
-        return derivedResult({ kind: "option", element: NEVER }, QUIET, "fit");
-      case "error":
-        return this.errorConstruction(e, path);
-      case "closure":
-        return this.closure(e, path);
-      case "call":
-        return this.call(e, path);
-      case "defer":
-        return defer(this, e, path);
-      case "run":
-        return run(this, e, path);
-      case "scoped":
-        return scoped(this, e, path);
-      case "fork-scoped":
-        return forkScoped(this, e, path);
-      case "with-resource":
-        return withResource(this, e, path);
-      case "unfold":
-        return unfoldStream(this, e, path);
-      case "map-effect":
-      case "map-stream":
-        return mapElements(this, e, path);
-      case "sink-for-each":
-        return sinkForEach(this, e, path);
-      case "take-sink":
-        return takeSink(this, e, path);
-      case "transduce-stream":
-        return transduceStream(this, e, path);
-      case "run-stream":
-        return runStream(this, e, path);
-      case "buffer-stream":
-        return bufferStream(this, e, path);
-      case "race":
-        return race(this, e, path);
-      case "make-ref":
-      case "get-ref":
-      case "set-ref":
-      case "update-ref":
-        return refOperation(this, e, path);
-      case "layer":
-        return layer(this, e, path);
-      case "merge-layers":
-        return mergeLayers(this, e, path);
-      case "retry-schedule":
-        return retrySchedule(this, e, path);
-      case "retry-with-schedule":
-        return retryWithSchedule(this, e, path);
-      case "schema":
-        return schema(this, e, path);
-      case "schema-make":
-      case "schema-decode":
-      case "schema-encode":
-        return schemaOperation(this, e, path);
-      case "perform":
-        return this.perform(e, path);
-      case "block":
-        return this.block(e, path);
-      case "if":
-        return this.ifExpr(e, path);
-      case "match":
-        return this.matchExpr(e, path);
-      case "fail":
-        return this.fail(e, path);
-      case "catch":
-        return this.catchExpr(e, path);
-      case "ensure":
-        return ensure(this, e, path);
-      case "retry":
-        return retry(this, e, path);
-      case "timeout":
-        return timeout(this, e, path);
-      case "repeat":
-        return repeat(this, e, path);
-      case "sleep":
-        return sleep(this, e, path);
-      case "log":
-        return log(this, e, path);
-      case "random":
-        return derivedResult(NUMBER, EFFECT_ONLY);
-      case "random-int":
-        return randomInt(this, e, path);
-      case "now":
-        return derivedResult({ kind: "named", id: INSTANT_ID }, EFFECT_ONLY);
-      case "race-all":
-        return raceAll(this, e, path);
-      case "uninterruptible":
-        return uninterruptible(this, e, path);
-      case "provide":
-        return provide(this, e, path);
-      case "binary":
-        return this.binary(e, path);
+      return fittedResult({
+        kind: "option",
+        element: target?.element ?? v.type,
+      }, combine([v]));
     }
+    if (e.kind === "none") {
+      return fittedResult({ kind: "option", element: NEVER }, QUIET);
+    }
+    if (e.kind === "error") return errorConstruction(e, path);
+    if (e.kind === "closure") return closure(e, path);
+    if (e.kind === "call") return call(e, path);
+    if (e.kind === "defer") return defer(validator, e, path);
+    if (e.kind === "run") return run(validator, e, path);
+    if (e.kind === "scoped") return scoped(validator, e, path);
+    if (e.kind === "fork-scoped") return forkScoped(validator, e, path);
+    if (e.kind === "with-resource") return withResource(validator, e, path);
+    if (e.kind === "unfold") return unfoldStream(validator, e, path);
+    if (e.kind === "map-effect" || e.kind === "map-stream") {
+      return mapElements(validator, e, path);
+    }
+    if (e.kind === "sink-for-each") return sinkForEach(validator, e, path);
+    if (e.kind === "take-sink") return takeSink(validator, e, path);
+    if (e.kind === "transduce-stream") {
+      return transduceStream(validator, e, path);
+    }
+    if (e.kind === "run-stream") return runStream(validator, e, path);
+    if (e.kind === "buffer-stream") return bufferStream(validator, e, path);
+    if (e.kind === "race") return race(validator, e, path);
+    if (
+      e.kind === "make-ref" || e.kind === "get-ref" || e.kind === "set-ref" ||
+      e.kind === "update-ref"
+    ) return refOperation(validator, e, path);
+    if (e.kind === "layer") return layer(validator, e, path);
+    if (e.kind === "merge-layers") return mergeLayers(validator, e, path);
+    if (e.kind === "retry-schedule") return retrySchedule(validator, e, path);
+    if (e.kind === "retry-with-schedule") {
+      return retryWithSchedule(validator, e, path);
+    }
+    if (e.kind === "schema") return schema(validator, e, path);
+    if (
+      e.kind === "schema-make" || e.kind === "schema-decode" ||
+      e.kind === "schema-encode"
+    ) return schemaOperation(validator, e, path);
+    if (e.kind === "perform") return perform(e, path);
+    if (e.kind === "block") return block(e, path);
+    if (e.kind === "if") return ifExpr(e, path);
+    if (e.kind === "match") return matchExpr(e, path);
+    if (e.kind === "fail") return fail(e, path);
+    if (e.kind === "catch") return catchExpr(e, path);
+    if (e.kind === "ensure") return ensure(validator, e, path);
+    if (e.kind === "retry") return retry(validator, e, path);
+    if (e.kind === "timeout") return timeout(validator, e, path);
+    if (e.kind === "repeat") return repeat(validator, e, path);
+    if (e.kind === "sleep") return sleep(validator, e, path);
+    if (e.kind === "log") return log(validator, e, path);
+    if (e.kind === "random") return derivedResult(NUMBER, EFFECT_ONLY);
+    if (e.kind === "random-int") return randomInt(validator, e, path);
+    if (e.kind === "now") {
+      return derivedResult({ kind: "named", id: INSTANT_ID }, EFFECT_ONLY);
+    }
+    if (e.kind === "race-all") return raceAll(validator, e, path);
+    if (e.kind === "uninterruptible") {
+      return uninterruptible(validator, e, path);
+    }
+    if (e.kind === "provide") return provide(validator, e, path);
+    return binary(e, path);
   }
 
-  private reference(
+  function reference(
     target: string,
     span: Span,
     path: string,
     callee: boolean,
   ): Comp {
-    const world = this.ctx.world;
-    const type = target.startsWith("local:")
-      ? this.scope.get(target)
-      : target.startsWith("value:")
-      ? world.values.get(target)
-      : undefined;
+    const world = ctx.world;
+    let type: Type | undefined;
+    if (target.startsWith("local:")) type = scope.get(target);
+    else if (target.startsWith("value:")) type = world.values.get(target);
     if (type === undefined) {
-      this.add(
-        AREA.identity,
-        `${path}.target`,
-        `the target ${target} is not a parameter, a binding, or a declaration in scope`,
-        span,
-      );
-      return this.poison();
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.identity,
+          `${path}.target`,
+          `the target ${target} is not a parameter, a binding, or a declaration in scope`,
+          span,
+        ),
+      };
+      return poison();
     }
     if (world.builtins.has(target) && !callee) {
-      this.add(
-        AREA.identity,
-        `${path}.target`,
-        `the builtin ${target} may appear only as the callee of a call`,
-        span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.identity,
+          `${path}.target`,
+          `the builtin ${target} may appear only as the callee of a call`,
+          span,
+        ),
+      };
     }
     return derivedResult(type, QUIET);
   }
 
   /** Checks field values against declared fields. Used by records, updates, and errors. */
-  private checkFieldValues(
+  function checkFieldValues(
     e: {
       readonly fields: readonly {
         readonly name: string;
@@ -900,91 +951,118 @@ export class BodyValidator implements ValidatorCore {
     path: string,
     requireAll: boolean,
     what: string,
-  ): void {
-    const seen = new Set<string>();
-    e.fields.forEach((f, i) => {
+  ): Ctx {
+    let seen = emptySet<string>();
+    for (const entry of e.fields.entries()) {
+      const f = entry[1];
+      const i = entry[0];
       const at = `${path}.fields[${i}]`;
       if (seen.has(f.name)) {
-        this.add(AREA.types, at, `the field ${f.name} appears twice`, e.span);
-        return;
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            at,
+            `the field ${f.name} appears twice`,
+            e.span,
+          ),
+        };
+        continue;
       }
-      seen.add(f.name);
+      seen = seen.add(f.name);
       const field = declared.find((d) => d.name === f.name);
       if (field === undefined) {
-        this.add(
-          AREA.types,
-          at,
-          `${what} has no field ${f.name}`,
-          e.span,
-        );
-        return;
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            at,
+            `${what} has no field ${f.name}`,
+            e.span,
+          ),
+        };
+        continue;
       }
       if (
-        !this.accepts(
+        !accepts(
           f.value,
           outs[i].type,
           field.type,
           `${at}.value`,
         )
       ) {
-        this.add(
-          AREA.types,
-          `${at}.value`,
-          `the value of ${f.name} has type ${
-            show(outs[i].type)
-          }, which does not fit ${show(field.type)}`,
-          f.value.span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            `${at}.value`,
+            `the value of ${f.name} has type ${
+              show(outs[i].type)
+            }, which does not fit ${show(field.type)}`,
+            f.value.span,
+          ),
+        };
       }
-    });
+    }
     if (requireAll) {
       const missing = declared.filter((d) => !d.optional && !seen.has(d.name))
         .map((d) => d.name);
       if (missing.length > 0) {
-        this.add(
-          AREA.types,
-          path,
-          `the construction is missing the required fields ${list(missing)}`,
-          e.span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            path,
+            `the construction is missing the required fields ${list(missing)}`,
+            e.span,
+          ),
+        };
       }
     }
+    return ctx;
   }
 
   /** A literal at a foreign sealed type is a construction by a module that cannot make one. */
-  private requireSealedLiteralOwner(
+  function requireSealedLiteralOwner(
     e: Extract<Expr, { kind: "record" | "array" | "tuple" }>,
     path: string,
-  ): void {
-    const sealed = sealedRootOf(this.env, e.type);
-    if (sealed !== undefined && !ownsSealed(this.env, sealed)) {
-      this.add(
-        AREA.types,
-        `${path}.type`,
-        `the module cannot construct the foreign sealed type ${sealed}`,
-        e.span,
-      );
+  ): Ctx {
+    const sealed = sealedRootOf(env, e.type);
+    if (sealed !== undefined && !ownsSealed(env, sealed)) {
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.type`,
+          `the module cannot construct the foreign sealed type ${sealed}`,
+          e.span,
+        ),
+      };
     }
+    return ctx;
   }
 
-  private recordLike(
+  function recordLike(
     e: Extract<Expr, { kind: "record" }>,
     path: string,
   ): Comp {
-    this.requireSealedLiteralOwner(e, path);
+    ctx = requireSealedLiteralOwner(e, path);
     const outs = e.fields.map((f, i) =>
-      this.check(f.value, `${path}.fields[${i}].value`)
+      check(f.value, `${path}.fields[${i}].value`)
     );
-    const target = unfold(this.env, e.type);
+    const target = unfold(env, e.type);
     if (target.kind !== "record") {
-      this.add(
-        AREA.types,
-        `${path}.type`,
-        `a record construction has a record type, recorded ${show(e.type)}`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.type`,
+          `a record construction has a record type, recorded ${show(e.type)}`,
+          e.span,
+        ),
+      };
     } else {
-      this.checkFieldValues(
+      ctx = checkFieldValues(
         e,
         outs,
         target.fields,
@@ -993,145 +1071,162 @@ export class BodyValidator implements ValidatorCore {
         `the record type ${show(e.type)}`,
       );
     }
-    this.refinements.retain(e, e.type, path);
+    refinements = refinements.retain(e, e.type, path);
     return checkedResult(combine(outs));
   }
 
   /** Reports each element that does not fit the target type that `target` gives for its index. */
-  private checkElements(
+  function checkElements(
     e: { readonly elements: readonly Expr[] },
     outs: readonly Out[],
     target: (index: number) => Type,
     path: string,
-  ): void {
-    outs.forEach((o, i) => {
+  ): Ctx {
+    for (const entry of outs.entries()) {
+      const o = entry[1];
+      const i = entry[0];
       if (
-        !this.accepts(
+        !accepts(
           e.elements[i],
           o.type,
           target(i),
           `${path}.elements[${i}]`,
         )
       ) {
-        this.add(
-          AREA.types,
-          `${path}.elements[${i}]`,
-          `the element has type ${show(o.type)}, which does not fit ${
-            show(target(i))
-          }`,
-          e.elements[i].span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            `${path}.elements[${i}]`,
+            `the element has type ${show(o.type)}, which does not fit ${
+              show(target(i))
+            }`,
+            e.elements[i].span,
+          ),
+        };
       }
-    });
+    }
+    return ctx;
   }
 
-  private arrayLike(
+  function arrayLike(
     e: Extract<Expr, { kind: "array" }>,
     path: string,
   ): Comp {
-    this.requireSealedLiteralOwner(e, path);
-    const outs = e.elements.map((x, i) =>
-      this.check(x, `${path}.elements[${i}]`)
-    );
-    const target = unfold(this.env, e.type);
+    ctx = requireSealedLiteralOwner(e, path);
+    const outs = e.elements.map((x, i) => check(x, `${path}.elements[${i}]`));
+    const target = unfold(env, e.type);
     if (target.kind !== "array") {
-      this.add(
-        AREA.types,
-        `${path}.type`,
-        `an array construction has an array type, recorded ${show(e.type)}`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.type`,
+          `an array construction has an array type, recorded ${show(e.type)}`,
+          e.span,
+        ),
+      };
     } else {
-      this.checkElements(e, outs, () => target.element, path);
+      ctx = checkElements(e, outs, () => target.element, path);
     }
-    this.refinements.retain(e, e.type, path);
+    refinements = refinements.retain(e, e.type, path);
     return checkedResult(combine(outs));
   }
 
-  private tupleLike(
+  function tupleLike(
     e: Extract<Expr, { kind: "tuple" }>,
     path: string,
   ): Comp {
-    this.requireSealedLiteralOwner(e, path);
-    const outs = e.elements.map((x, i) =>
-      this.check(x, `${path}.elements[${i}]`)
-    );
-    const target = unfold(this.env, e.type);
+    ctx = requireSealedLiteralOwner(e, path);
+    const outs = e.elements.map((x, i) => check(x, `${path}.elements[${i}]`));
+    const target = unfold(env, e.type);
     if (target.kind !== "tuple" || target.elements.length !== outs.length) {
-      this.add(
-        AREA.types,
-        `${path}.type`,
-        `a tuple construction of ${outs.length} elements has a tuple type of equal length, recorded ${
-          show(e.type)
-        }`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.type`,
+          `a tuple construction of ${outs.length} elements has a tuple type of equal length, recorded ${
+            show(e.type)
+          }`,
+          e.span,
+        ),
+      };
     } else {
-      this.checkElements(e, outs, (i) => target.elements[i], path);
+      ctx = checkElements(e, outs, (i) => target.elements[i], path);
     }
-    this.refinements.retain(e, e.type, path);
+    refinements = refinements.retain(e, e.type, path);
     return checkedResult(combine(outs));
   }
 
-  private get(e: Extract<Expr, { kind: "get" }>, path: string): Comp {
-    const base = this.check(e.record, `${path}.record`);
+  function get(e: Extract<Expr, { kind: "get" }>, path: string): Comp {
+    const base = check(e.record, `${path}.record`);
     const types: Type[] = [];
     let optional = false;
-    for (const member of members(this.env, base.type)) {
-      const fields = fieldsOf(this.env, member);
+    for (const member of members(env, base.type)) {
+      const fields = fieldsOf(env, member);
       const field = fields?.find((f) => f.name === e.field);
       if (field === undefined) {
-        this.add(
-          AREA.types,
-          `${path}.field`,
-          fields === undefined
-            ? `a value of type ${show(base.type)} has no fields`
-            : `the type ${show(member)} has no field ${e.field}`,
-          e.span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            `${path}.field`,
+            fields === undefined
+              ? `a value of type ${show(base.type)} has no fields`
+              : `the type ${show(member)} has no field ${e.field}`,
+            e.span,
+          ),
+        };
         return checkedResult(combine([base]));
       }
       if (field.optional) optional = true;
-      types.push(field.type);
+      types[types.length] = field.type;
     }
-    const type = unionOf(this.env, types);
+    const type = unionOf(env, types);
     return derivedResult(
       optional ? { kind: "option", element: type } : type,
       combine([base]),
     );
   }
 
-  private update(e: Extract<Expr, { kind: "update" }>, path: string): Comp {
-    const base = this.check(e.record, `${path}.record`);
+  function update(e: Extract<Expr, { kind: "update" }>, path: string): Comp {
+    const base = check(e.record, `${path}.record`);
     const outs = e.fields.map((f, i) =>
-      this.check(f.value, `${path}.fields[${i}].value`)
+      check(f.value, `${path}.fields[${i}].value`)
     );
     const active = combine([base, ...outs]);
-    const sealed = sealedRootOf(this.env, base.type);
-    if (sealed !== undefined && !ownsSealed(this.env, sealed)) {
-      this.add(
-        AREA.types,
-        path,
-        `a foreign module cannot retain the sealed type ${sealed} after an update`,
-        e.span,
-      );
+    const sealed = sealedRootOf(env, base.type);
+    if (sealed !== undefined && !ownsSealed(env, sealed)) {
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          path,
+          `a foreign module cannot retain the sealed type ${sealed} after an update`,
+          e.span,
+        ),
+      };
     }
-    const unfolded = unfold(this.env, base.type);
+    const unfolded = unfold(env, base.type);
     const fields = unfolded.kind === "union"
       ? undefined
-      : fieldsOf(this.env, unfolded);
+      : fieldsOf(env, unfolded);
     if (fields === undefined) {
-      this.add(
-        AREA.types,
-        `${path}.record`,
-        `a record update needs a record, but the base has type ${
-          show(base.type)
-        }`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.record`,
+          `a record update needs a record, but the base has type ${
+            show(base.type)
+          }`,
+          e.span,
+        ),
+      };
       return checkedResult(active);
     }
-    this.checkFieldValues(
+    ctx = checkFieldValues(
       e,
       outs,
       fields,
@@ -1139,68 +1234,83 @@ export class BodyValidator implements ValidatorCore {
       false,
       `the record type ${show(base.type)}`,
     );
-    this.refinements.retain(e, base.type, path);
+    refinements = refinements.retain(e, base.type, path);
     return derivedResult(base.type, active);
   }
 
-  private nominal(e: Extract<Expr, { kind: "nominal" }>, path: string): Comp {
-    const v = this.check(e.value, `${path}.value`);
-    const decl = this.ctx.world.types.get(e.nominal);
+  function nominal(e: Extract<Expr, { kind: "nominal" }>, path: string): Comp {
+    const v = check(e.value, `${path}.value`);
+    const decl = ctx.world.types.get(e.nominal);
     if (decl === undefined) {
-      this.add(
-        AREA.identity,
-        `${path}.nominal`,
-        `the type ${e.nominal} is not a declared type`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.identity,
+          `${path}.nominal`,
+          `the type ${e.nominal} is not a declared type`,
+          e.span,
+        ),
+      };
       return checkedResult(combine([v]));
     }
     if (decl.definition.kind !== "nominal") {
-      this.add(
-        AREA.types,
-        `${path}.nominal`,
-        `${e.nominal} is not a type with identity`,
-        e.span,
-      );
-    } else if (decl.opaque === true) {
-      this.add(
-        AREA.types,
-        `${path}.nominal`,
-        "an opaque type cannot be constructed in source",
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.nominal`,
+          `${e.nominal} is not a type with identity`,
+          e.span,
+        ),
+      };
+    } else if (isTrue(decl.opaque)) {
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.nominal`,
+          "an opaque type cannot be constructed in source",
+          e.span,
+        ),
+      };
     } else if (
-      decl.definition.sealed === true &&
-      !ownsSealed(this.env, e.nominal)
+      isTrue(decl.definition.sealed) &&
+      !ownsSealed(env, e.nominal)
     ) {
-      this.add(
-        AREA.types,
-        `${path}.nominal`,
-        `the module cannot construct the foreign sealed type ${e.nominal}`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.nominal`,
+          `the module cannot construct the foreign sealed type ${e.nominal}`,
+          e.span,
+        ),
+      };
     } else if (
-      !this.accepts(
+      !accepts(
         e.value,
         v.type,
         decl.definition.base,
         `${path}.value`,
       )
     ) {
-      this.add(
-        AREA.types,
-        `${path}.value`,
-        `the value has type ${show(v.type)}, which does not fit the base ${
-          show(decl.definition.base)
-        }`,
-        e.value.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.value`,
+          `the value has type ${show(v.type)}, which does not fit the base ${
+            show(decl.definition.base)
+          }`,
+          e.value.span,
+        ),
+      };
     }
     if (
       decl.predicate !== undefined &&
-      !same(this.env, v.type, { kind: "named", id: e.nominal })
+      !same(env, v.type, { kind: "named", id: e.nominal })
     ) {
-      this.refinements.retain(
+      refinements = refinements.retain(
         e.value,
         { kind: "named", id: e.nominal },
         `${path}.value`,
@@ -1209,34 +1319,40 @@ export class BodyValidator implements ValidatorCore {
     return derivedResult({ kind: "named", id: e.nominal }, combine([v]));
   }
 
-  private errorConstruction(
+  function errorConstruction(
     e: Extract<Expr, { kind: "error" }>,
     path: string,
   ): Comp {
     const outs = e.fields.map((f, i) =>
-      this.check(f.value, `${path}.fields[${i}].value`)
+      check(f.value, `${path}.fields[${i}].value`)
     );
     const active = combine(outs);
     if (isReservedError(e.error)) {
-      this.add(
-        AREA.types,
-        path,
-        "reserved target errors cannot be constructed as source errors",
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          path,
+          "reserved target errors cannot be constructed as source errors",
+          e.span,
+        ),
+      };
       return checkedResult(active);
     }
-    const decl = this.ctx.world.errors.get(e.error);
+    const decl = ctx.world.errors.get(e.error);
     if (decl === undefined) {
-      this.add(
-        AREA.identity,
-        `${path}.error`,
-        `the error ${e.error} is not declared`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.identity,
+          `${path}.error`,
+          `the error ${e.error} is not declared`,
+          e.span,
+        ),
+      };
       return checkedResult(active);
     }
-    this.checkFieldValues(
+    ctx = checkFieldValues(
       e,
       outs,
       decl.fields,
@@ -1247,162 +1363,206 @@ export class BodyValidator implements ValidatorCore {
     return derivedResult({ kind: "named", id: e.error }, active);
   }
 
-  private closure(e: Extract<Expr, { kind: "closure" }>, path: string): Comp {
-    const env = this.env;
-    const refinementScope = this.refinements.snapshot();
-    const body = this.withLocals((declare) => {
-      e.parameters.forEach((p, j) => declare(p, `${path}.parameters[${j}]`));
-      return this.check(e.body, `${path}.body`);
+  function closure(e: Extract<Expr, { kind: "closure" }>, path: string): Comp {
+    const refinementScope = refinements.snapshot();
+    const body = withLocals((declare) => {
+      for (const entry of e.parameters.entries()) {
+        const p = entry[1];
+        const j = entry[0];
+        ctx = declare(p, `${path}.parameters[${j}]`, undefined, false);
+      }
+      return check(e.body, `${path}.body`);
     });
-    this.refinements.restore(refinementScope);
+    refinements = refinements.restore(refinementScope);
     const fn = asFunction(env, e.type);
     if (fn === undefined) {
-      this.add(
-        AREA.types,
-        `${path}.type`,
-        `a closure has a function type, recorded ${show(e.type)}`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.type`,
+          `a closure has a function type, recorded ${show(e.type)}`,
+          e.span,
+        ),
+      };
       return checkedResult(QUIET);
     }
     if (fn.checked?.some(Boolean)) {
-      this.add(
-        AREA.contracts,
-        `${path}.type.checked`,
-        "a closure cannot claim checked entry validation",
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.contracts,
+          `${path}.type.checked`,
+          "a closure cannot claim checked entry validation",
+          e.span,
+        ),
+      };
     }
-    this.checkParameterTypes(
+    ctx = checkParameterTypes(
       e.parameters,
       fn.parameters,
       path,
       `the closure declares ${e.parameters.length} parameters, its type has ${fn.parameters.length}`,
       e.span,
     );
-    if (!this.accepts(e.body, body.type, fn.result, `${path}.body`)) {
-      this.add(
-        AREA.types,
-        `${path}.body`,
-        `the body type ${show(body.type)} does not fit the closure result ${
-          show(fn.result)
-        }`,
-        e.body.span,
-      );
+    if (!accepts(e.body, body.type, fn.result, `${path}.body`)) {
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.body`,
+          `the body type ${show(body.type)} does not fit the closure result ${
+            show(fn.result)
+          }`,
+          e.body.span,
+        ),
+      };
     }
     if (!isSubset(body.failures, fn.effects.failures)) {
-      this.add(
-        AREA.contracts,
-        `${path}.type.effects.failures`,
-        `the body can fail with ${
-          list(body.failures)
-        }, the closure type lists ${list(fn.effects.failures)}`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.contracts,
+          `${path}.type.effects.failures`,
+          `the body can fail with ${
+            list(body.failures)
+          }, the closure type lists ${list(fn.effects.failures)}`,
+          e.span,
+        ),
+      };
     }
     if (!isSubset(body.requirements, fn.effects.requirements)) {
-      this.add(
-        AREA.contracts,
-        `${path}.type.effects.requirements`,
-        `the body requires ${list(body.requirements)}, the closure type lists ${
-          list(fn.effects.requirements)
-        }`,
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.contracts,
+          `${path}.type.effects.requirements`,
+          `the body requires ${
+            list(body.requirements)
+          }, the closure type lists ${list(fn.effects.requirements)}`,
+          e.span,
+        ),
+      };
     }
-    this.checkExecution(fn, body, path, e.span);
+    ctx = checkExecution(fn, body, path, e.span);
     // Construction evaluates no part of the body: closure construction is pure.
     return checkedResult(QUIET);
   }
 
-  private checkArguments(
+  function checkArguments(
     args: readonly Expr[],
     outs: readonly Out[],
     fn: FunctionType,
     path: string,
     span: Span,
     builtin: BuiltinCallName | undefined,
-  ): void {
-    const { parameters, checked } = fn;
+  ): Ctx {
+    const parameters = fn.parameters;
+    const checked = fn.checked;
     if (outs.length !== parameters.length) {
-      this.add(
-        AREA.types,
-        `${path}.arguments`,
-        `the function takes ${parameters.length} arguments, the call has ${outs.length}`,
-        span,
-      );
-      return;
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.arguments`,
+          `the function takes ${parameters.length} arguments, the call has ${outs.length}`,
+          span,
+        ),
+      };
+      return ctx;
     }
-    outs.forEach((o, i) => {
+    for (const entry of outs.entries()) {
+      const o = entry[1];
+      const i = entry[0];
       if (builtin === "other") {
-        const fn = asFunction(this.env, o.type);
+        const fn = asFunction(env, o.type);
         if (
           fn !== undefined &&
           !isQuiet(invocationOf(fn))
         ) {
-          this.add(
-            AREA.execution,
-            `${path}.arguments[${i}]`,
-            "a builtin callback is pure with empty failure and requirement sets",
-            args[i].span,
-          );
-          return;
+          ctx = {
+            ...ctx,
+            report: add(
+              AREA.execution,
+              `${path}.arguments[${i}]`,
+              "a builtin callback is pure with empty failure and requirement sets",
+              args[i].span,
+            ),
+          };
+          continue;
         }
       }
-      const compatible = this.accepts(
+      const compatible = acceptsMode(
         args[i],
         o.type,
         parameters[i],
         `${path}.arguments[${i}]`,
-        checked?.[i] === true,
+        isTrue(checked === undefined ? undefined : checked[i]),
       );
       if (!compatible) {
-        this.add(
-          AREA.types,
-          `${path}.arguments[${i}]`,
-          `the argument has type ${
-            show(o.type)
-          }, which does not fit the parameter ${show(parameters[i])}`,
-          args[i].span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            `${path}.arguments[${i}]`,
+            `the argument has type ${
+              show(o.type)
+            }, which does not fit the parameter ${show(parameters[i])}`,
+            args[i].span,
+          ),
+        };
       }
-    });
+    }
+    return ctx;
   }
 
-  private call(e: Extract<Expr, { kind: "call" }>, path: string): Comp {
-    const callee = this.check(e.callee, `${path}.callee`, true);
-    const fn = asFunction(this.env, callee.type);
+  function call(e: Extract<Expr, { kind: "call" }>, path: string): Comp {
+    const callee = checkMode(e.callee, `${path}.callee`, true);
+    const fn = asFunction(env, callee.type);
     const outs = e.arguments.map((argument, index) => {
-      const previous = this.checkedRaw;
-      if (fn?.checked?.[index] === true) {
-        this.checkedRaw = new Set(previous);
-        this.markCheckedRaw(argument);
+      const previous = checkedRaw;
+      const checkedFlags = fn?.checked;
+      const checked = checkedFlags === undefined
+        ? undefined
+        : checkedFlags[index];
+      if (isTrue(checked)) {
+        checkedRaw = setFrom(previous);
+        checkedRaw = markCheckedRaw(argument, checkedRaw);
       }
-      const out = this.check(argument, `${path}.arguments[${index}]`);
-      this.checkedRaw = previous;
+      const out = check(argument, `${path}.arguments[${index}]`);
+      checkedRaw = previous;
       return out;
     });
     if (fn === undefined) {
-      this.add(
-        AREA.types,
-        `${path}.callee`,
-        `the callee has type ${show(callee.type)}, which is not a function`,
-        e.callee.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.callee`,
+          `the callee has type ${show(callee.type)}, which is not a function`,
+          e.callee.span,
+        ),
+      };
       return checkedResult(combine([callee, ...outs]));
     }
     const metadata = e.callee.kind === "reference"
-      ? this.ctx.world.builtinInfo.get(e.callee.target)
+      ? ctx.world.builtinInfo.get(e.callee.target)
       : undefined;
     // Keep malformed names on the original guarded expression path.
-    const builtin = metadata?.call.parsed
-      ? metadata.call.name
-      : e.callee.kind === "reference"
-      ? classifyBuiltinCall(
-        this.ctx.world.builtins.get(e.callee.target)?.split("/")[1],
-      )
-      : undefined;
-    this.checkArguments(
+    let builtin: BuiltinCallName | undefined;
+    if (metadata?.call.parsed) builtin = metadata.call.name;
+    else if (e.callee.kind === "reference") {
+      const recordedName = ctx.world.builtins.get(e.callee.target);
+      if (recordedName !== undefined && typeof recordedName !== "string") {
+        return panic(
+          "this.ctx.world.builtins.get(...)?.split is not a function",
+        );
+      }
+      builtin = classifyBuiltinCall(
+        recordedName?.split("/")[1],
+      );
+    }
+    ctx = checkArguments(
       e.arguments,
       outs,
       fn,
@@ -1415,7 +1575,7 @@ export class BodyValidator implements ValidatorCore {
       CALLBACK_SHAPES[builtin].counts.includes(outs.length)
     ) {
       const callback = asFunction(
-        this.env,
+        env,
         outs[CALLBACK_SHAPES[builtin].index].type,
       );
       const effectful = builtin === "traverse" ||
@@ -1426,36 +1586,44 @@ export class BodyValidator implements ValidatorCore {
         !sameSet(fn.effects.failures, callback.effects.failures) ||
         !sameSet(fn.effects.requirements, callback.effects.requirements)
       ) {
-        this.add(
-          AREA.contracts,
-          path,
-          `${builtin} must invoke the callback with its declared failures and requirements`,
-          e.span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.contracts,
+            path,
+            `${builtin} must invoke the callback with its declared failures and requirements`,
+            e.span,
+          ),
+        };
       }
       if (builtin === "traverse" && outs.length === 3) {
-        this.checkConcurrencyLiteral(builtin, 2, e, path);
+        ctx = checkConcurrencyLiteral(builtin, 2, e, path);
       }
     }
-    if (UNITLESS_BUILTINS.has(builtin)) {
-      outs.forEach((out, i) => {
+    if (UNITLESS_BUILTINS.includes(builtin)) {
+      for (const entry of outs.entries()) {
+        const out = entry[1];
+        const i = entry[0];
         if (
-          isDurationType(this.env, out.type) ||
-          isInstantType(this.env, out.type)
+          isDurationType(env, out.type) ||
+          isInstantType(env, out.type)
         ) {
-          this.add(
-            AREA.types,
-            `${path}.arguments[${i}]`,
-            `${builtin} does not take a closed unit argument of type ${
-              show(out.type)
-            }`,
-            e.arguments[i].span,
-          );
+          ctx = {
+            ...ctx,
+            report: add(
+              AREA.types,
+              `${path}.arguments[${i}]`,
+              `${builtin} does not take a closed unit argument of type ${
+                show(out.type)
+              }`,
+              e.arguments[i].span,
+            ),
+          };
         }
-      });
+      }
     }
     if (builtin === "all" && outs.length === 2) {
-      this.checkConcurrencyLiteral(builtin, 1, e, path);
+      ctx = checkConcurrencyLiteral(builtin, 1, e, path);
     }
     return derivedResult(
       fn.result,
@@ -1464,38 +1632,43 @@ export class BodyValidator implements ValidatorCore {
   }
 
   /** Reports an options argument that is not a concurrency literal. */
-  private checkConcurrencyLiteral(
+  function checkConcurrencyLiteral(
     name: "traverse" | "all",
     index: number,
     e: Extract<Expr, { kind: "call" }>,
     path: string,
-  ): void {
+  ): Ctx {
     const options = e.arguments[index];
-    if (isConcurrencyOption(options)) return;
-    this.add(
-      AREA.control,
-      `${path}.arguments[${index}]`,
-      `${name} needs a positive safe integer or unbounded concurrency literal`,
-      options?.span ?? e.span,
-    );
+    if (isConcurrencyOption(options)) return ctx;
+    ctx = {
+      ...ctx,
+      report: add(
+        AREA.control,
+        `${path}.arguments[${index}]`,
+        `${name} needs a positive safe integer or unbounded concurrency literal`,
+        options?.span ?? e.span,
+      ),
+    };
+    return ctx;
   }
 
-  private perform(e: Extract<Expr, { kind: "perform" }>, path: string): Comp {
-    const outs = e.arguments.map((a, i) =>
-      this.check(a, `${path}.arguments[${i}]`)
-    );
-    const method = this.ctx.world.methods.get(e.capability);
+  function perform(e: Extract<Expr, { kind: "perform" }>, path: string): Comp {
+    const outs = e.arguments.map((a, i) => check(a, `${path}.arguments[${i}]`));
+    const method = ctx.world.methods.get(e.capability);
     if (method === undefined) {
-      this.add(
-        AREA.identity,
-        `${path}.capability`,
-        `the capability ${e.capability} is not a method of a service of this module or of an import`,
-        e.span,
-      );
-      return this.poison();
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.identity,
+          `${path}.capability`,
+          `the capability ${e.capability} is not a method of a service of this module or of an import`,
+          e.span,
+        ),
+      };
+      return poison();
     }
     const fn = method.type;
-    this.checkArguments(
+    ctx = checkArguments(
       e.arguments,
       outs,
       fn,
@@ -1513,59 +1686,67 @@ export class BodyValidator implements ValidatorCore {
     );
   }
 
-  private block(e: Extract<Expr, { kind: "block" }>, path: string): Comp {
-    const refinementScope = this.refinements.snapshot();
+  function block(e: Extract<Expr, { kind: "block" }>, path: string): Comp {
+    const refinementScope = refinements.snapshot();
     const parts: Out[] = [];
-    const result = this.withLocals((declare) => {
-      e.steps.forEach((step, i) => {
+    const result = withLocals((declare) => {
+      for (const entry of e.steps.entries()) {
+        const step = entry[1];
+        const i = entry[0];
         const at = `${path}.steps[${i}]`;
-        const value = this.check(step.value, `${at}.value`);
-        parts.push(value);
+        const value = check(step.value, `${at}.value`);
+        parts[parts.length] = value;
         if (step.kind === "bind") {
           if (
-            !this.accepts(
+            !accepts(
               step.value,
               value.type,
               step.binding.type,
               `${at}.binding.type`,
             )
           ) {
-            this.add(
-              AREA.types,
-              `${at}.binding.type`,
-              `the value has type ${
-                show(value.type)
-              }, which does not fit the binding type ${
-                show(step.binding.type)
-              }`,
-              step.binding.span,
-            );
+            ctx = {
+              ...ctx,
+              report: add(
+                AREA.types,
+                `${at}.binding.type`,
+                `the value has type ${
+                  show(value.type)
+                }, which does not fit the binding type ${
+                  show(step.binding.type)
+                }`,
+                step.binding.span,
+              ),
+            };
           }
-          if (step.generated !== undefined && step.generated !== true) {
-            this.add(
-              AREA.types,
-              `${at}.generated`,
-              "a generated capture marker must be true",
-              step.binding.span,
-            );
+          if (step.generated !== undefined && !isTrue(step.generated)) {
+            ctx = {
+              ...ctx,
+              report: add(
+                AREA.types,
+                `${at}.generated`,
+                "a generated capture marker must be true",
+                step.binding.span,
+              ),
+            };
           }
-          declare(
+          ctx = declare(
             step.binding,
             `${at}.binding`,
             step.value,
-            step.generated === true,
+            isTrue(step.generated),
           );
         }
         if (
           value.execution === "effect" && step.value.kind !== "if" &&
           step.value.kind !== "match"
         ) {
-          this.refinements.clearDerivedFacts();
+          refinements = refinements.clearDerivedFacts();
         }
-      });
-      return this.check(e.result, `${path}.result`);
+      }
+      return check(e.result, `${path}.result`);
     });
-    const type = this.accepts(
+    const type = accepts(
         e.result,
         result.type,
         e.type,
@@ -1574,74 +1755,91 @@ export class BodyValidator implements ValidatorCore {
       ? e.type
       : result.type;
     const combined = derivedResult(type, combine([...parts, result]));
-    this.refinements.leaveScope(refinementScope);
+    refinements = refinements.leaveScope(refinementScope);
     return combined;
   }
 
-  private branchFits(
+  function branchFits(
     branch: Out,
     recorded: Type,
     path: string,
     expression: Expr,
     area: typeof AREA.types | typeof AREA.recovery,
-  ): void {
-    if (!this.accepts(expression, branch.type, recorded, path)) {
-      this.add(
-        area,
-        path,
-        `the branch has type ${
-          show(branch.type)
-        }, which does not fit the recorded type ${show(recorded)}`,
-        expression.span,
-      );
+  ): Ctx {
+    if (!accepts(expression, branch.type, recorded, path)) {
+      ctx = {
+        ...ctx,
+        report: add(
+          area,
+          path,
+          `the branch has type ${
+            show(branch.type)
+          }, which does not fit the recorded type ${show(recorded)}`,
+          expression.span,
+        ),
+      };
     }
+    return ctx;
   }
 
-  private ifExpr(e: Extract<Expr, { kind: "if" }>, path: string): Comp {
-    const cond = this.check(e.condition, `${path}.condition`);
-    if (!isBooleanLike(this.env, cond.type)) {
-      this.add(
-        AREA.types,
-        `${path}.condition`,
-        `a condition must be boolean, but it has type ${show(cond.type)}`,
-        e.condition.span,
-      );
+  function ifExpr(e: Extract<Expr, { kind: "if" }>, path: string): Comp {
+    const cond = check(e.condition, `${path}.condition`);
+    if (!isBooleanLike(env, cond.type)) {
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.condition`,
+          `a condition must be boolean, but it has type ${show(cond.type)}`,
+          e.condition.span,
+        ),
+      };
     }
-    if (cond.execution === "effect") this.refinements.clearDerivedFacts();
-    const condition = this.refinements.condition(e.condition);
-    const base = this.refinements.snapshot();
+    if (cond.execution === "effect") {
+      refinements = refinements.clearDerivedFacts();
+    }
+    const condition = refinements.condition(e.condition);
+    const base = refinements.snapshot();
     const successful: ReturnType<RefinementValidator["snapshot"]>[] = [];
     const outs: Out[] = [];
-    for (const [index, expression] of [e.then, e.else].entries()) {
-      this.refinements.restore(base);
-      this.refinements.addBranch(
+    for (const entry of [e.then, e.else].entries()) {
+      const index = entry[0];
+      const expression = entry[1];
+      refinements = refinements.restore(base);
+      refinements = refinements.addBranch(
         index === 0 ? condition : negateRefinement(condition),
       );
       const at = `${path}.${index === 0 ? "then" : "else"}`;
-      const out = this.check(expression, at);
-      this.branchFits(out, e.type, at, expression, AREA.types);
-      outs.push(out);
-      if (!isNever(unfold(this.env, out.type))) {
-        successful.push(this.refinements.snapshot());
+      const out = check(expression, at);
+      ctx = branchFits(out, e.type, at, expression, AREA.types);
+      outs[outs.length] = out;
+      if (!isNever(unfold(env, out.type))) {
+        successful[successful.length] = refinements.snapshot();
       }
     }
-    this.refinements.restore(base);
-    this.refinements.join(successful);
+    refinements = refinements.restore(base);
+    refinements = refinements.join(successful);
     return checkedResult(combine([cond, ...outs]));
   }
 
-  private matchExpr(e: Extract<Expr, { kind: "match" }>, path: string): Comp {
-    const subject = this.check(e.subject, `${path}.subject`);
-    if (subject.execution === "effect") this.refinements.clearDerivedFacts();
+  function matchExpr(e: Extract<Expr, { kind: "match" }>, path: string): Comp {
+    const subject = check(e.subject, `${path}.subject`);
+    if (subject.execution === "effect") {
+      refinements = refinements.clearDerivedFacts();
+    }
     const parts: Out[] = [subject];
     const successful: ReturnType<RefinementValidator["snapshot"]>[] = [];
     const excluded: ReturnType<RefinementValidator["condition"]>[] = [];
     let nullSeen = false;
-    e.arms.forEach((arm, i) => {
+    for (const entry of e.arms.entries()) {
+      const arm = entry[1];
+      const i = entry[0];
       const at = `${path}.arms[${i}]`;
-      const branch = this.refinements.snapshot();
-      for (const fact of excluded) this.refinements.addBranch(fact);
-      const added = this.pattern(
+      const branch = refinements.snapshot();
+      for (const fact of excluded) {
+        refinements = refinements.addBranch(fact);
+      }
+      const added = pattern(
         arm.pattern,
         subject.type,
         `${at}.pattern`,
@@ -1651,192 +1849,203 @@ export class BodyValidator implements ValidatorCore {
         nullSeen = true;
       }
       if (arm.pattern.kind === "literal" || arm.pattern.kind === "duration") {
-        const matched = this.refinements.literalMatch(
+        const matched = refinements.literalMatch(
           e.subject,
           arm.pattern.kind === "literal"
             ? arm.pattern.value
             : arm.pattern.millis,
         );
-        this.refinements.addBranch(matched);
-        excluded.push(negateRefinement(matched));
+        refinements = refinements.addBranch(matched);
+        excluded[excluded.length] = negateRefinement(matched);
       }
-      const body = this.check(arm.body, `${at}.body`);
-      this.branchFits(body, e.type, `${at}.body`, arm.body, AREA.types);
-      this.release(added);
-      if (!isNever(unfold(this.env, body.type))) {
-        successful.push(this.refinements.snapshot());
+      const body = check(arm.body, `${at}.body`);
+      ctx = branchFits(body, e.type, `${at}.body`, arm.body, AREA.types);
+      ctx = release(added);
+      if (!isNever(unfold(env, body.type))) {
+        successful[successful.length] = refinements.snapshot();
       }
-      this.refinements.restore(branch);
-      parts.push(body);
-    });
-    this.refinements.join(successful);
+      refinements = refinements.restore(branch);
+      parts[parts.length] = body;
+    }
+    refinements = refinements.join(successful);
     return checkedResult(combine(parts));
   }
 
-  private pattern(
+  function pattern(
     p: Pattern,
     subject: Type,
     path: string,
     nullSeen: boolean,
   ): string[] {
-    const env = this.env;
     const added: string[] = [];
-    const bind = (binding: Parameter, expected: Type | undefined): void => {
-      this.declareLocal(binding, `${path}.binding`);
-      added.push(binding.id);
+    function bind(binding: Parameter, expected: Type | undefined): Ctx {
+      ctx = declareLocal(binding, `${path}.binding`, undefined, false);
+      added[added.length] = binding.id;
       if (expected !== undefined && !same(env, binding.type, expected)) {
-        this.add(
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.types,
+            `${path}.binding.type`,
+            `expected ${show(expected)}, recorded ${show(binding.type)}`,
+            binding.span,
+          ),
+        };
+      }
+      return ctx;
+    }
+    function foreign(what: string): Ctx {
+      ctx = {
+        ...ctx,
+        report: add(
           AREA.types,
-          `${path}.binding.type`,
-          `expected ${show(expected)}, recorded ${show(binding.type)}`,
-          binding.span,
+          path,
+          `${what} does not belong to the subject of type ${show(subject)}`,
+          p.span,
+        ),
+      };
+      return ctx;
+    }
+    const unfolded = unfold(env, subject);
+    if (p.kind === "wildcard") return added;
+    if (p.kind === "literal") {
+      // A bare number never fits a `Duration` member: the identity is closed.
+      const all = identityMembers(env, subject);
+      let fitting = tagMayEqual(env, subject, p.value);
+      if (
+        typeof p.value === "number" &&
+        all.some((m) => isDurationType(env, m))
+      ) {
+        fitting = all.some((m) =>
+          !isDurationType(env, m) && tagMayEqual(env, m, p.value)
         );
       }
-    };
-    const foreign = (what: string): void =>
-      this.add(
-        AREA.types,
-        path,
-        `${what} does not belong to the subject of type ${show(subject)}`,
-        p.span,
-      );
-    const unfolded = unfold(env, subject);
-    switch (p.kind) {
-      case "wildcard":
-        return added;
-      case "literal": {
-        // A bare number never fits a `Duration` member: the identity is closed.
-        const all = identityMembers(env, subject);
-        const fitting = typeof p.value === "number" &&
-            all.some((m) => isDurationType(env, m))
-          ? all.some((m) =>
-            !isDurationType(env, m) && tagMayEqual(env, m, p.value)
-          )
-          : tagMayEqual(env, subject, p.value);
-        if (!fitting) foreign(`the literal ${JSON.stringify(p.value)}`);
-        return added;
-      }
-      case "duration":
-        if (!Number.isSafeInteger(p.millis)) {
-          this.add(
+      if (!fitting) ctx = foreign(`the literal ${JSON.stringify(p.value)}`);
+      return added;
+    }
+    if (p.kind === "duration") {
+      if (!Number.isSafeInteger(p.millis)) {
+        ctx = {
+          ...ctx,
+          report: add(
             AREA.types,
             `${path}.millis`,
             `a duration pattern needs a safe integer of milliseconds, found ${p.millis}`,
             p.span,
-          );
-        }
-        if (
-          !identityMembers(env, subject).some((m) => isDurationType(env, m))
-        ) {
-          foreign(`the duration ${p.millis}ms`);
-        }
-        return added;
-      case "none":
-        if (unfolded.kind !== "option") foreign("None");
-        return added;
-      case "bind": {
-        // A binding arm matches every value except null, so the subject needs a
-        // null member and the binding takes the other members.
-        const all = identityMembers(env, subject);
-        const isNull = (m: Type): boolean => {
-          const u = unfold(env, m);
-          return u.kind === "literal" && u.value === null;
+          ),
         };
-        const rest = all.filter((m) => !isNull(m));
-        const hidden = rest.some((m) => members(env, m).some(isNull));
-        // A literal-only union, such as `boolean | null`, keeps its literal arms.
-        const literalOnly = members(env, subject).every((m) =>
-          m.kind === "literal" ||
-          (m.kind === "primitive" && m.name === "boolean")
-        );
-        const fault = rest.length === all.length
-          ? "needs a subject with a null member"
-          : hidden
-          ? "needs a subject in which no other member hides a null"
-          : literalOnly
-          ? "needs a subject with a member that is not a literal"
-          : !nullSeen
-          ? "needs an earlier arm with the pattern null"
-          : undefined;
-        if (fault !== undefined) {
-          this.add(
+      }
+      if (!identityMembers(env, subject).some((m) => isDurationType(env, m))) {
+        ctx = foreign(`the duration ${p.millis}ms`);
+      }
+      return added;
+    }
+    if (p.kind === "none") {
+      if (unfolded.kind !== "option") ctx = foreign("None");
+      return added;
+    }
+    if (p.kind === "bind") {
+      const all = identityMembers(env, subject);
+      const rest = all.filter((m) => !isNullType(env, m));
+      const hidden = rest.some((m) =>
+        members(env, m).some((member) => isNullType(env, member))
+      );
+      const literalOnly = members(env, subject).every((m) =>
+        m.kind === "literal" ||
+        (m.kind === "primitive" && m.name === "boolean")
+      );
+      let fault: string | undefined;
+      if (rest.length === all.length) {
+        fault = "needs a subject with a null member";
+      } else if (hidden) {
+        fault = "needs a subject in which no other member hides a null";
+      } else if (literalOnly) {
+        fault = "needs a subject with a member that is not a literal";
+      } else if (!nullSeen) {
+        fault = "needs an earlier arm with the pattern null";
+      }
+      if (fault !== undefined) {
+        ctx = {
+          ...ctx,
+          report: add(
             AREA.types,
             path,
             `a binding arm ${fault}; the subject has type ${show(subject)}`,
             p.span,
-          );
-        }
-        bind(p.binding, fault === undefined ? unionOf(env, rest) : undefined);
-        return added;
+          ),
+        };
       }
-      case "some":
-        if (unfolded.kind !== "option") {
-          foreign("Some");
-          bind(p.binding, undefined);
-        } else {
-          bind(p.binding, unfolded.element);
-        }
-        return added;
-      case "error":
-      case "nominal": {
-        // A name pattern needs a subject of data and error types only, and the name must be one of them.
-        const id = p.kind === "error" ? p.error : p.nominal;
-        const ms = identityMembers(env, subject);
-        const ok = ms.length > 0 &&
-          ms.every((m) =>
-            m.kind === "named" &&
-            (env.errors.has(m.id) || env.taggedRecords.has(m.id))
-          ) &&
-          ms.some((m) => m.kind === "named" && m.id === id) &&
-          (p.kind === "error" ? env.errors.has(id) : env.taggedRecords.has(id));
-        if (!ok) {
-          foreign(
-            `the ${p.kind === "error" ? "error" : "tagged record"} ${id}`,
-          );
-        }
-        bind(p.binding, ok ? { kind: "named", id } : undefined);
-        return added;
-      }
-      case "tag": {
-        const ms = members(env, subject);
-        const records = ms.every((m) => m.kind === "record");
-        const narrowed = records
-          ? ms.filter((m) => {
-            if (m.kind !== "record") return false;
-            const field = m.fields.find((f) => f.name === p.field);
-            return field !== undefined &&
-              tagMayEqual(env, field.type, p.value);
-          })
-          : [];
-        if (!records || narrowed.length === 0) {
-          foreign(`the tag ${p.field}: ${JSON.stringify(p.value)}`);
-        }
-        if (p.binding !== null) {
-          bind(
-            p.binding,
-            narrowed.length > 0 ? unionOf(env, narrowed) : undefined,
-          );
-        }
-        return added;
-      }
+      ctx = bind(
+        p.binding,
+        fault === undefined ? unionOf(env, rest) : undefined,
+      );
+      return added;
     }
+    if (p.kind === "some") {
+      if (unfolded.kind !== "option") {
+        ctx = foreign("Some");
+        ctx = bind(p.binding, undefined);
+      } else ctx = bind(p.binding, unfolded.element);
+      return added;
+    }
+    if (p.kind === "error" || p.kind === "nominal") {
+      const id = p.kind === "error" ? p.error : p.nominal;
+      const ms = identityMembers(env, subject);
+      const ok = ms.length > 0 && ms.every((m) =>
+        m.kind === "named" &&
+        (env.errors.has(m.id) || env.taggedRecords.has(m.id))
+      ) && ms.some((m) => m.kind === "named" && m.id === id) &&
+        (p.kind === "error" ? env.errors.has(id) : env.taggedRecords.has(id));
+      if (!ok) {
+        ctx = foreign(
+          `the ${p.kind === "error" ? "error" : "tagged record"} ${id}`,
+        );
+      }
+      ctx = bind(p.binding, ok ? { kind: "named", id: id } : undefined);
+      return added;
+    }
+    const ms = members(env, subject);
+    const records = ms.every((m) => m.kind === "record");
+    const narrowed = records
+      ? ms.filter((m) => {
+        if (m.kind !== "record") return false;
+        const field = m.fields.find((f) => f.name === p.field);
+        return field !== undefined && tagMayEqual(env, field.type, p.value);
+      })
+      : [];
+    if (!records || narrowed.length === 0) {
+      ctx = foreign(`the tag ${p.field}: ${JSON.stringify(p.value)}`);
+    }
+    if (p.binding !== null) {
+      ctx = bind(
+        p.binding,
+        narrowed.length > 0 ? unionOf(env, narrowed) : undefined,
+      );
+    }
+    return added;
   }
 
-  private fail(e: Extract<Expr, { kind: "fail" }>, path: string): Comp {
-    const err = this.check(e.error, `${path}.error`);
-    const unfolded = unfold(this.env, err.type);
+  function fail(e: Extract<Expr, { kind: "fail" }>, path: string): Comp {
+    const err = check(e.error, `${path}.error`);
+    const unfolded = unfold(env, err.type);
+    const declaration = unfolded.kind === "named"
+      ? ctx.world.errors.get(unfolded.id)
+      : undefined;
     let failures: ErrorId[] = [];
-    if (unfolded.kind === "named" && this.env.errors.has(unfolded.id)) {
-      failures = [unfolded.id as ErrorId];
+    if (declaration !== undefined) {
+      failures = [declaration.id];
     } else {
-      this.add(
-        AREA.types,
-        `${path}.error`,
-        `fail needs a value of a named error type, but the value has type ${
-          show(err.type)
-        }`,
-        e.error.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          `${path}.error`,
+          `fail needs a value of a named error type, but the value has type ${
+            show(err.type)
+          }`,
+          e.error.span,
+        ),
+      };
     }
     return derivedResult(
       NEVER,
@@ -1847,78 +2056,94 @@ export class BodyValidator implements ValidatorCore {
     );
   }
 
-  private catchExpr(e: Extract<Expr, { kind: "catch" }>, path: string): Comp {
-    const env = this.env;
-    const body = this.check(e.body, `${path}.body`);
-    this.branchFits(body, e.type, `${path}.body`, e.body, AREA.recovery);
-    const handled = new Set<string>();
-    const seen = new Set<string>();
+  function catchExpr(e: Extract<Expr, { kind: "catch" }>, path: string): Comp {
+    const body = check(e.body, `${path}.body`);
+    ctx = branchFits(body, e.type, `${path}.body`, e.body, AREA.recovery);
+    let handled = emptySet<string>();
+    let seen = emptySet<string>();
     const outs: Out[] = [];
-    e.handlers.forEach((h, i) => {
+    for (const entry of e.handlers.entries()) {
+      const h = entry[1];
+      const i = entry[0];
       const at = `${path}.handlers[${i}]`;
-      if (!this.ctx.world.errors.has(h.error)) {
-        this.add(
-          AREA.identity,
-          `${at}.error`,
-          `the handled error ${h.error} is not declared`,
-          h.span,
-        );
+      if (!ctx.world.errors.has(h.error)) {
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.identity,
+            `${at}.error`,
+            `the handled error ${h.error} is not declared`,
+            h.span,
+          ),
+        };
       }
       if (seen.has(h.error)) {
-        this.add(
-          AREA.recovery,
-          `${at}.error`,
-          `the error ${h.error} has two handlers`,
-          h.span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.recovery,
+            `${at}.error`,
+            `the error ${h.error} has two handlers`,
+            h.span,
+          ),
+        };
       } else if (!body.failures.includes(h.error)) {
-        this.add(
-          AREA.recovery,
-          `${at}.error`,
-          `the protected block cannot fail with ${h.error}; its failures are ${
-            list(body.failures)
-          }`,
-          h.span,
-        );
+        ctx = {
+          ...ctx,
+          report: add(
+            AREA.recovery,
+            `${at}.error`,
+            `the protected block cannot fail with ${h.error}; its failures are ${
+              list(body.failures)
+            }`,
+            h.span,
+          ),
+        };
       } else {
-        handled.add(h.error);
+        handled = handled.add(h.error);
       }
-      seen.add(h.error);
-      const out = this.withLocals((declare) => {
-        declare(h.binding, `${at}.binding`);
+      seen = seen.add(h.error);
+      const out = withLocals((declare) => {
+        ctx = declare(h.binding, `${at}.binding`, undefined, false);
         if (
-          this.ctx.world.errors.has(h.error) &&
+          ctx.world.errors.has(h.error) &&
           !same(env, h.binding.type, { kind: "named", id: h.error })
         ) {
-          this.add(
-            AREA.types,
-            `${at}.binding.type`,
-            `expected ${h.error}, recorded ${show(h.binding.type)}`,
-            h.binding.span,
-          );
+          ctx = {
+            ...ctx,
+            report: add(
+              AREA.types,
+              `${at}.binding.type`,
+              `expected ${h.error}, recorded ${show(h.binding.type)}`,
+              h.binding.span,
+            ),
+          };
         }
-        return this.check(h.body, `${at}.body`);
+        return check(h.body, `${at}.body`);
       });
-      outs.push(out);
-      this.branchFits(out, e.type, `${at}.body`, h.body, AREA.recovery);
-    });
+      outs[outs.length] = out;
+      ctx = branchFits(out, e.type, `${at}.body`, h.body, AREA.recovery);
+    }
     const d = e.defect;
     if (d !== undefined) {
       const at = `${path}.defect`;
-      const out = this.withLocals((declare) => {
-        declare(d.binding, `${at}.binding`);
+      const out = withLocals((declare) => {
+        ctx = declare(d.binding, `${at}.binding`, undefined, false);
         if (!same(env, d.binding.type, DEFECT_RECORD)) {
-          this.add(
-            AREA.types,
-            `${at}.binding.type`,
-            `expected { message: string }, recorded ${show(d.binding.type)}`,
-            d.binding.span,
-          );
+          ctx = {
+            ...ctx,
+            report: add(
+              AREA.types,
+              `${at}.binding.type`,
+              `expected { message: string }, recorded ${show(d.binding.type)}`,
+              d.binding.span,
+            ),
+          };
         }
-        return this.check(d.body, `${at}.body`);
+        return check(d.body, `${at}.body`);
       });
-      outs.push(out);
-      this.branchFits(out, e.type, `${at}.body`, d.body, AREA.recovery);
+      outs[outs.length] = out;
+      ctx = branchFits(out, e.type, `${at}.body`, d.body, AREA.recovery);
     }
     const remaining: Active = {
       failures: minus(body.failures, [...handled]),
@@ -1933,57 +2158,69 @@ export class BodyValidator implements ValidatorCore {
    * reported, but its sets still count. A job that is no function is
    * reported, and the caller keeps the recorded annotation of the node.
    */
-  jobFunction(
+  function jobFunction(
     job: Out,
     path: string,
     span: Span,
     what: string,
   ): ReturnType<typeof asFunction> {
-    const fn = asFunction(this.env, job.type);
+    const fn = asFunction(env, job.type);
     if (fn === undefined) {
-      this.add(
-        AREA.control,
-        path,
-        `${what} needs a function that takes no arguments, but the job has type ${
-          show(job.type)
-        }`,
-        span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.control,
+          path,
+          `${what} needs a function that takes no arguments, but the job has type ${
+            show(job.type)
+          }`,
+          span,
+        ),
+      };
     } else if (fn.parameters.length > 0) {
-      this.add(
-        AREA.control,
-        path,
-        `${what} needs a function that takes no arguments, but the job takes ${fn.parameters.length}`,
-        span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.control,
+          path,
+          `${what} needs a function that takes no arguments, but the job takes ${fn.parameters.length}`,
+          span,
+        ),
+      };
     }
     return fn;
   }
 
-  private binary(e: Extract<Expr, { kind: "binary" }>, path: string): Comp {
-    const env = this.env;
-    const left = this.check(e.left, `${path}.left`);
-    const branch = this.refinements.snapshot();
+  function binary(e: Extract<Expr, { kind: "binary" }>, path: string): Comp {
+    const left = check(e.left, `${path}.left`);
+    const branch = refinements.snapshot();
     if (e.operator === "&&" || e.operator === "||") {
-      const condition = this.refinements.condition(e.left);
-      this.refinements.addBranch(
+      const condition = refinements.condition(e.left);
+      refinements = refinements.addBranch(
         e.operator === "||" ? negateRefinement(condition) : condition,
       );
     }
-    const right = this.check(e.right, `${path}.right`);
-    this.refinements.restore(branch);
+    const right = check(e.right, `${path}.right`);
+    refinements = refinements.restore(branch);
     const active = combine([left, right]);
-    const mismatch = (): Comp => {
-      this.add(
-        AREA.types,
-        path,
-        `the operator ${e.operator} does not accept operands of type ${
-          show(left.type)
-        } and ${show(right.type)}`,
-        e.span,
-      );
+    function mismatch(): Comp {
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          path,
+          `the operator ${e.operator} does not accept operands of type ${
+            show(left.type)
+          } and ${show(right.type)}`,
+          e.span,
+        ),
+      };
       return checkedResult(active);
-    };
+    }
+    function isNull(type: Type): boolean {
+      const value = unfold(env, type);
+      return value.kind === "literal" && value.value === null;
+    }
     const l = comparisonClass(env, left.type);
     const r = comparisonClass(env, right.type);
     if (
@@ -1992,12 +2229,15 @@ export class BodyValidator implements ValidatorCore {
       (foreignSealedOf(env, left.type) !== undefined ||
         foreignSealedOf(env, right.type) !== undefined)
     ) {
-      this.add(
-        AREA.types,
-        path,
-        "arithmetic cannot use a foreign sealed type",
-        e.span,
-      );
+      ctx = {
+        ...ctx,
+        report: add(
+          AREA.types,
+          path,
+          "arithmetic cannot use a foreign sealed type",
+          e.span,
+        ),
+      };
     }
     // Two values of one numeric identity add and subtract (D32).
     const leftIdentity = numericIdentityOf(env, left.type);
@@ -2005,100 +2245,68 @@ export class BodyValidator implements ValidatorCore {
       leftIdentity !== undefined && same(env, leftIdentity, right.type)
         ? leftIdentity
         : undefined;
-    switch (e.operator) {
-      case "&&":
-      case "||":
-        return isBooleanLike(env, left.type) && isBooleanLike(env, right.type)
-          ? derivedResult(BOOLEAN, active)
-          : mismatch();
-      case "<":
-      case "<=":
-      case ">":
-      case ">=":
-        // `isNumeric` widens an identity to its base, so the classes decide. A
-        // closed unit type compares only with its own type.
-        return !closedUnitsDiffer(l, r) && l !== undefined && r !== undefined &&
-            compatibleClasses(env, l, r) &&
-            isNumericClass(env, l) && isNumericClass(env, r)
-          ? derivedResult(BOOLEAN, active)
-          : mismatch();
-      case "===":
-      case "!==": {
-        const isNull = (type: Type) => {
-          const value = unfold(env, type);
-          return value.kind === "literal" && value.value === null;
-        };
-        const nullable = (isNull(left.type) &&
-          fitsNullComparison(env, left.type, right.type)) ||
-          (isNull(right.type) &&
-            fitsNullComparison(env, right.type, left.type));
-        return nullable ||
-            l !== undefined && r !== undefined &&
-              compatibleClasses(env, l, r) && !closedUnitsDiffer(l, r)
-          ? derivedResult(BOOLEAN, active)
-          : mismatch();
-      }
-      case "+":
-      case "-":
-      case "*":
-      case "/":
-      case "%": {
-        const instant = this.instantArithmetic(
-          e.operator,
-          left.type,
-          right.type,
-        );
-        if (instant === "mismatch") return mismatch();
-        if (instant !== undefined) return derivedResult(instant, active);
-        const duration = this.durationArithmetic(
-          e.operator,
-          left.type,
-          right.type,
-        );
-        if (duration === "mismatch") return mismatch();
-        if (duration !== undefined) return derivedResult(duration, active);
-        if (
-          l === undefined || r === undefined || !compatibleClasses(env, l, r)
-        ) return mismatch();
-        if (
-          shared !== undefined && (e.operator === "+" || e.operator === "-")
-        ) {
-          this.refinements.retain(e, shared, path);
-          return derivedResult(shared, active);
-        }
-        // One named operand and one unnamed operand that fits its body keep the name.
-        const adopted = e.operator !== "/"
-          ? adoptedNumericIdentity(env, left.type, right.type)
-          : undefined;
-        if (adopted !== undefined) {
-          this.refinements.retain(e, adopted, path);
-          return derivedResult(adopted, active);
-        }
-        if (isNumericClass(env, l) && isNumericClass(env, r)) {
-          const integral = e.operator !== "/" && fits(env, left.type, INT) &&
-            fits(env, right.type, INT);
-          return derivedResult(integral ? INT : NUMBER, active);
-        }
-        if (
-          e.operator === "+" && isStringClass(env, l) && isStringClass(env, r)
-        ) {
-          return derivedResult(STRING, active);
-        }
-        return mismatch();
-      }
+    if (e.operator === "&&" || e.operator === "||") {
+      return isBooleanLike(env, left.type) && isBooleanLike(env, right.type)
+        ? derivedResult(BOOLEAN, active)
+        : mismatch();
     }
+    if (
+      e.operator === "<" || e.operator === "<=" || e.operator === ">" ||
+      e.operator === ">="
+    ) {
+      const comparable = !closedUnitsDiffer(l, r) && l !== undefined &&
+        r !== undefined && compatibleClasses(env, l, r) &&
+        isNumericClass(env, l) && isNumericClass(env, r);
+      return comparable ? derivedResult(BOOLEAN, active) : mismatch();
+    }
+    if (e.operator === "===" || e.operator === "!==") {
+      const nullable = (isNull(left.type) &&
+        fitsNullComparison(env, left.type, right.type)) ||
+        (isNull(right.type) && fitsNullComparison(env, right.type, left.type));
+      const comparable = nullable || l !== undefined && r !== undefined &&
+          compatibleClasses(env, l, r) && !closedUnitsDiffer(l, r);
+      return comparable ? derivedResult(BOOLEAN, active) : mismatch();
+    }
+    const instant = instantArithmetic(e.operator, left.type, right.type);
+    if (instant === "mismatch") return mismatch();
+    if (instant !== undefined) return derivedResult(instant, active);
+    const duration = durationArithmetic(e.operator, left.type, right.type);
+    if (duration === "mismatch") return mismatch();
+    if (duration !== undefined) return derivedResult(duration, active);
+    if (l === undefined || r === undefined || !compatibleClasses(env, l, r)) {
+      return mismatch();
+    }
+    if (shared !== undefined && (e.operator === "+" || e.operator === "-")) {
+      refinements = refinements.retain(e, shared, path);
+      return derivedResult(shared, active);
+    }
+    const adopted = e.operator !== "/"
+      ? adoptedNumericIdentity(env, left.type, right.type)
+      : undefined;
+    if (adopted !== undefined) {
+      refinements = refinements.retain(e, adopted, path);
+      return derivedResult(adopted, active);
+    }
+    if (isNumericClass(env, l) && isNumericClass(env, r)) {
+      const integral = e.operator !== "/" && fits(env, left.type, INT) &&
+        fits(env, right.type, INT);
+      return derivedResult(integral ? INT : NUMBER, active);
+    }
+    if (e.operator === "+" && isStringClass(env, l) && isStringClass(env, r)) {
+      return derivedResult(STRING, active);
+    }
+    return mismatch();
   }
 
   /**
    * The arithmetic of `Instant`: undefined when no operand is an `Instant`, and
    * "mismatch" for every mix that the table does not list.
    */
-  private instantArithmetic(
+  function instantArithmetic(
     operator: "+" | "-" | "*" | "/" | "%",
     left: Type,
     right: Type,
   ): Type | "mismatch" | undefined {
-    const env = this.env;
     const l = isInstantType(env, left);
     const r = isInstantType(env, right);
     if (!l && !r) return undefined;
@@ -2118,12 +2326,11 @@ export class BodyValidator implements ValidatorCore {
    * "mismatch" when a bare number meets a `Duration` in `+` or `-`, and for `%`
    * with a `Duration` operand.
    */
-  private durationArithmetic(
+  function durationArithmetic(
     operator: "+" | "-" | "*" | "/" | "%",
     left: Type,
     right: Type,
   ): Type | "mismatch" | undefined {
-    const env = this.env;
     const l = isDurationType(env, left);
     const r = isDurationType(env, right);
     if (!l && !r) return undefined;
@@ -2134,16 +2341,25 @@ export class BodyValidator implements ValidatorCore {
       return operator === "*" ? undefined : duration;
     }
     const integral = fits(env, l ? right : left, INT);
-    switch (operator) {
-      case "+":
-      case "-":
-        return integral || fits(env, l ? right : left, NUMBER)
-          ? "mismatch"
-          : undefined;
-      case "*":
-        return integral ? duration : undefined;
-      case "/":
-        return l && integral ? duration : undefined;
+    if (operator === "+" || operator === "-") {
+      return integral || fits(env, l ? right : left, NUMBER)
+        ? "mismatch"
+        : undefined;
     }
+    if (operator === "*") return integral ? duration : undefined;
+    return l && integral ? duration : undefined;
   }
+
+  const validator: BodyValidator = {
+    ctx: ctx,
+    env: env,
+    add: add,
+    check: check,
+    poison: poison,
+    checkConcurrency: checkConcurrency,
+    jobFunction: jobFunction,
+    checkFunction: checkFunction,
+    checkConstant: checkConstant,
+  };
+  return validator;
 }

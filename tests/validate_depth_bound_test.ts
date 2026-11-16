@@ -13,7 +13,7 @@ import { assert, assertEquals } from "@std/assert";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
 import type { ModuleIR, Type } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { Report } from "../src/core/validate/report.ts";
+import { createReport, type Report } from "../src/core/validate/report.ts";
 import { checkRecursion } from "../src/core/validate/recursion_checks.ts";
 import {
   checkRecordFields,
@@ -193,9 +193,9 @@ function alone(
   module: ModuleIR,
   run: (ctx: { world: ReturnType<typeof buildWorld>; report: Report }) => void,
 ): string[] {
-  const report = new Report();
+  const report = createReport();
   run({ world: buildWorld(module), report });
-  return report.items.map((d) => `${d.code} ${d.message}`);
+  return report.items().map((d) => `${d.code} ${d.message}`);
 }
 
 Deno.test("each walker reports the bound on its own at depth 1537 and not at 1536", () => {

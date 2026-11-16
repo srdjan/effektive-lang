@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Measurement M4: RSS, heap, and type-table growth over a long edit script.
 // Two fresh servers run the same distinct revisions, rotating between open
 // documents. Step-end samples cannot reveal a short peak inside a step.

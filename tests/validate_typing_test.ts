@@ -7,14 +7,15 @@ import { assert, assertEquals } from "@std/assert";
 import type { Field, Type } from "../src/core/ir.ts";
 import type { Predicate, Term } from "../src/core/predicates.ts";
 import {
-  comparisonClass,
+  comparisonClassAtDepth,
   containsRefinement,
   containsUnknown,
   entrySchemaDerivable,
   fits,
   fitsCheckedInput,
-  identityMembers,
-  members,
+  fitsCheckedInputAtDepth,
+  identityMembersAtDepth,
+  membersAtDepth,
   same,
   show,
   type TypeEnv,
@@ -452,16 +453,16 @@ Deno.test("fits accepts a type nested to MAX_DEPTH and rejects one level deeper"
 });
 
 Deno.test("fitsCheckedInput accepts depth MAX_DEPTH and rejects depth past it", () => {
-  assertEquals(fitsCheckedInput(ENV, STRING, STRING, 1536), true);
-  assertEquals(fitsCheckedInput(ENV, STRING, STRING, 1537), false);
+  assertEquals(fitsCheckedInputAtDepth(ENV, STRING, STRING, 1536), true);
+  assertEquals(fitsCheckedInputAtDepth(ENV, STRING, STRING, 1537), false);
 });
 
 Deno.test("members and identityMembers flatten a union below MAX_DEPTH and stop at it", () => {
   const union: Type = { kind: "union", members: [STRING, INT] };
-  assertEquals(members(ENV, union, 1535), [STRING, INT]);
-  assertEquals(members(ENV, union, 1536), [union]);
-  assertEquals(identityMembers(ENV, union, 1535), [STRING, INT]);
-  assertEquals(identityMembers(ENV, union, 1536), [union]);
+  assertEquals(membersAtDepth(ENV, union, 1535), [STRING, INT]);
+  assertEquals(membersAtDepth(ENV, union, 1536), [union]);
+  assertEquals(identityMembersAtDepth(ENV, union, 1535), [STRING, INT]);
+  assertEquals(identityMembersAtDepth(ENV, union, 1536), [union]);
 });
 
 Deno.test("unfold follows exactly MAX_DEPTH aliases of a chain", () => {
@@ -939,7 +940,7 @@ Deno.test("comparisonClass names a primitive identity and stops past MAX_DEPTH",
       ["a name without a body", named("type:m#Missing"), 0, undefined],
     ];
   for (const [label, type, depth, expected] of table) {
-    assertEquals(comparisonClass(env, type, depth), expected, label);
+    assertEquals(comparisonClassAtDepth(env, type, depth), expected, label);
   }
 });
 

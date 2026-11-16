@@ -4,16 +4,17 @@
 // bundle can import it. The writers build records with `emit`, and the readers
 // (`scripts/logs_*.ts`, the log endpoint, the playground replay) share the
 // same kind names and file name format.
-
-import { isRecord, type ReadError } from "../core/frontend.ts";
-import type { FileFailure } from "./ports.ts";
-
+import {
+  hasProperty,
+  isRecord,
+  parseTimestamp,
+  type ReadError,
+} from "../core/frontend.ts";
+import type { EventLog, FileFailure } from "./ports.ts";
 export type Surface = "cli" | "lsp" | "playground";
-
 const SURFACES: readonly Surface[] = ["cli", "lsp", "playground"];
-
 /** One line of a session file. */
-export interface Envelope {
+export type Envelope = {
   readonly v: 1;
   /** Wall time, ISO 8601. */
   readonly t: string;
@@ -27,165 +28,161 @@ export interface Envelope {
   /** A `LogKind` for a current writer. An old or unknown log can hold another name. */
   readonly kind: string;
   readonly data: unknown;
-}
-
+};
 // ------------------------------------------------------------------ cli
-
 /** One diagnostic as the session log records it. Positions are one-based. */
-export interface LoggedDiagnostic {
+export type LoggedDiagnostic = {
   readonly source: "effektive" | "tsc";
   readonly code?: string;
   readonly path?: string;
-  readonly start?: { readonly line: number; readonly column: number };
-  readonly end?: { readonly line: number; readonly column: number };
+  readonly start?: {
+    readonly line: number;
+    readonly column: number;
+  };
+  readonly end?: {
+    readonly line: number;
+    readonly column: number;
+  };
   readonly message: string;
-}
-
-interface CliStartData {
+};
+type CliStartData = {
   readonly args: readonly string[];
   readonly command: "check" | "build" | "watch";
   readonly root: string;
-}
-
+};
 /** A source file that the session read or lost. A `target` file is a host module. */
-type CliInputData =
-  | { readonly path: string; readonly hash: string; readonly target?: true }
-  | { readonly path: string; readonly removed: true; readonly target?: true };
-
-interface CliPhaseData {
+type CliInputData = {
+  readonly path: string;
+  readonly hash: string;
+  readonly target?: true;
+} | {
+  readonly path: string;
+  readonly removed: true;
+  readonly target?: true;
+};
+type CliPhaseData = {
   readonly name: "sync" | "build";
   readonly ms: number;
-}
-
-interface CliDiagnosticsData {
+};
+type CliDiagnosticsData = {
   readonly items: readonly LoggedDiagnostic[];
-}
-
-interface CliOutputData {
+};
+type CliOutputData = {
   readonly path: string;
   readonly bytes: number;
   readonly hash: string;
-}
-
-interface CliTscData {
+};
+type CliTscData = {
   readonly code: number;
   readonly ms: number;
-}
-
-interface CliChangeData {
+};
+type CliChangeData = {
   readonly paths: readonly string[];
-}
-
-interface MessageData {
+};
+type MessageData = {
   readonly message: string;
-}
-
-interface CliEndData {
+};
+type CliEndData = {
   readonly code: number;
   readonly ms: number;
-}
-
+};
 // ------------------------------------------------------------------ lsp
-
-type LspInData =
-  | {
-    readonly error: {
-      readonly tag: "bad-header" | "bad-json";
-      readonly message: string;
-    };
-  }
-  | { readonly message: unknown };
-
-interface LspOutData {
+type LspInData = {
+  readonly error: {
+    readonly tag: "bad-header" | "bad-json";
+    readonly message: string;
+  };
+} | {
   readonly message: unknown;
-}
-
-type LspFsData =
-  | { readonly op: "readText"; readonly path: string; readonly hash: string }
-  | {
-    readonly op: "readText";
-    readonly path: string;
-    readonly error: ReadError;
-  }
-  | {
-    readonly op: "writeText";
-    readonly path: string;
-    readonly hash: string;
-    readonly ok: boolean;
-  }
-  | { readonly op: "remove"; readonly path: string; readonly ok: boolean }
-  | {
-    readonly op: "entryKind";
-    readonly path: string;
-    readonly kind: "symlink" | "other" | "missing";
-  }
-  | {
-    readonly op: "entryKind";
-    readonly path: string;
-    readonly error: FileFailure;
-  }
-  | {
-    readonly op: "kind";
-    readonly path: string;
-    readonly kind: "file" | "directory" | "missing";
-  }
-  | {
-    readonly op: "list";
-    readonly path: string;
-    readonly entries: readonly {
-      readonly name: string;
-      readonly isDirectory: boolean;
-    }[];
-  }
-  | { readonly op: "list"; readonly path: string; readonly error: FileFailure }
-  | { readonly op: "absolute"; readonly path: string; readonly result: string };
-
-interface LspTimingData {
+};
+type LspOutData = {
+  readonly message: unknown;
+};
+type LspFsData = {
+  readonly op: "readText";
+  readonly path: string;
+  readonly hash: string;
+} | {
+  readonly op: "readText";
+  readonly path: string;
+  readonly error: ReadError;
+} | {
+  readonly op: "writeText";
+  readonly path: string;
+  readonly hash: string;
+  readonly ok: boolean;
+} | {
+  readonly op: "remove";
+  readonly path: string;
+  readonly ok: boolean;
+} | {
+  readonly op: "entryKind";
+  readonly path: string;
+  readonly kind: "symlink" | "other" | "missing";
+} | {
+  readonly op: "entryKind";
+  readonly path: string;
+  readonly error: FileFailure;
+} | {
+  readonly op: "kind";
+  readonly path: string;
+  readonly kind: "file" | "directory" | "missing";
+} | {
+  readonly op: "list";
+  readonly path: string;
+  readonly entries: readonly {
+    readonly name: string;
+    readonly isDirectory: boolean;
+  }[];
+} | {
+  readonly op: "list";
+  readonly path: string;
+  readonly error: FileFailure;
+} | {
+  readonly op: "absolute";
+  readonly path: string;
+  readonly result: string;
+};
+type LspTimingData = {
   readonly method: string;
   readonly id: string | number;
   readonly ms: number;
-}
-
-interface LspErrorData {
+};
+type LspErrorData = {
   readonly text: string;
-}
-
-interface LspExitData {
+};
+type LspExitData = {
   readonly code: number;
-}
-
+};
 // ------------------------------------------------------------------ playground
-
 /** The page layout that a viewport width selects. */
 export type Layout = "narrow" | "wide" | "explorer";
-
 /** One change of a document edit. Offsets index the document before the edit. */
-export interface EditChange {
+export type EditChange = {
   readonly from: number;
   readonly to: number;
   readonly insert: string;
-}
-
-export interface PgStartData {
+};
+export type PgStartData = {
   readonly build: string;
-  readonly viewport: { readonly w: number; readonly h: number };
+  readonly viewport: {
+    readonly w: number;
+    readonly h: number;
+  };
   readonly layout: Layout;
   readonly examples: string;
   readonly loadMs: number;
-}
-
-export interface PgSelectData {
+};
+export type PgSelectData = {
   readonly path: string;
   readonly by: "click" | "key" | "hash" | "start";
-}
-
-export interface PgEditData {
+};
+export type PgEditData = {
   readonly path: string;
   readonly changes: readonly EditChange[];
   readonly length: number;
-}
-
-export interface PgCompileData {
+};
+export type PgCompileData = {
   readonly path: string;
   readonly ms: number;
   readonly diagnostics: readonly {
@@ -196,39 +193,31 @@ export interface PgCompileData {
   readonly counts: Readonly<Record<string, number>>;
   readonly stale: boolean;
   readonly saving: string;
-}
-
-export interface PgHoverData {
+};
+export type PgHoverData = {
   readonly offset: number;
   readonly hit: boolean;
   readonly by: "pointer" | "cursor";
-}
-
-export interface PgProblemData {
+};
+export type PgProblemData = {
   readonly code: string;
   readonly path: string;
-}
-
-export interface PgViewData {
+};
+export type PgViewData = {
   readonly name: string;
-}
-
-export interface PgLayoutData {
+};
+export type PgLayoutData = {
   readonly mode: Layout;
-}
-
-export interface PgErrorData {
+};
+export type PgErrorData = {
   readonly tag: string;
   readonly message: string;
-}
-
+};
 /** The data of a kind that carries none. */
 export type EmptyData = Readonly<Record<string, never>>;
-
 // ------------------------------------------------------------------ kinds
-
 /** The data type of every record kind that a writer produces. */
-export interface LogData {
+export type LogData = {
   readonly "cli.start": CliStartData;
   readonly "cli.input": CliInputData;
   readonly "cli.phase": CliPhaseData;
@@ -256,82 +245,95 @@ export interface LogData {
   readonly "pg.layout": PgLayoutData;
   readonly "pg.error": PgErrorData;
   readonly "pg.end": EmptyData;
-}
-
+};
 export type LogKind = keyof LogData;
-
 export type LspKind = Extract<LogKind, `lsp.${string}`>;
-
 /** The part of the `EventLog` port that `emit` needs. */
-interface Appender {
-  append(kind: string, data: unknown): void;
-}
-
+type Appender = Pick<EventLog, "append">;
 /** Appends one record. The compiler checks the kind against the data. */
 export function emit<K extends LogKind>(
   log: Appender,
   kind: K,
   data: LogData[K],
-): void {
-  log.append(kind, data);
+): undefined {
+  return log.append(kind, data) ?? undefined;
 }
-
 /** True when the event has that kind. The compiler checks the kind name. */
-export function isKind(
-  event: { readonly kind?: unknown },
-  kind: LogKind,
-): boolean {
+export function isKind(event: {
+  readonly kind?: unknown;
+}, kind: LogKind): LogMatch {
   return event.kind === kind;
 }
-
-export function isAnyKind(
-  event: { readonly kind: string },
-  kinds: ReadonlySet<LogKind>,
-): boolean {
-  return (kinds as ReadonlySet<string>).has(event.kind);
+export function isAnyKind(event: {
+  readonly kind: string;
+}, kinds: ReadonlySet<LogKind>): LogMatch {
+  const names: ReadonlySet<string> = kinds;
+  return names.has(event.kind);
 }
-
 // ------------------------------------------------------------------ session file
-
 /** The form of a session ID. */
-const SESSION_ID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-
-const SESSION_FILE = new RegExp(
-  `^(${SURFACES.join("|")})-(\\d{8})-([0-9a-f-]{36})\\.jsonl$`,
-);
-
+type LogMatch = boolean;
+type LogValue = unknown;
+type LogText = string;
+function isSessionId(text: string): boolean {
+  const format = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
+  if (text.length !== format.length) {
+    return false;
+  }
+  let index = 0;
+  for (const slot of format) {
+    const char = text[index];
+    if (slot === "-") {
+      if (char !== "-") {
+        return false;
+      }
+    } else if (!(char >= "0" && char <= "9") && !(char >= "a" && char <= "f")) {
+      return false;
+    }
+    index = index + 1;
+  }
+  return true;
+}
 /** The file name of a session: `<surface>-<YYYYMMDD>-<session>.jsonl`. */
 export function sessionFileName(
   surface: Surface,
   start: Date,
-  session: string,
-): string {
+  session: LogText,
+): LogText {
   const day = start.toISOString().slice(0, 10).replaceAll("-", "");
   return `${surface}-${day}-${session}.jsonl`;
 }
-
-interface SessionFileName {
+type SessionFileName = {
   readonly surface: Surface;
   /** The start day, `YYYYMMDD`. */
   readonly day: string;
   readonly session: string;
-}
-
+};
 /** The parts of a session file name, or undefined for any other name. */
 export function parseSessionFileName(
-  name: string,
+  name: LogText,
 ): SessionFileName | undefined {
-  const match = SESSION_FILE.exec(name);
-  if (match === null || !SESSION_ID.test(match[3])) return undefined;
-  const surface = SURFACES.find((s) => s === match[1]);
-  return surface === undefined
-    ? undefined
-    : { surface, day: match[2], session: match[3] };
+  const surface = SURFACES.find((surface) => name.startsWith(`${surface}-`));
+  if (surface === undefined || !name.endsWith(".jsonl")) {
+    return undefined;
+  }
+  const rest = name.slice(surface.length + 1, -".jsonl".length);
+  const day = rest.slice(0, "YYYYMMDD".length);
+  if (
+    day.length !== "YYYYMMDD".length ||
+    ![...day].every((char) => char >= "0" && char <= "9")
+  ) {
+    return undefined;
+  }
+  if (rest[day.length] !== "-") {
+    return undefined;
+  }
+  const session = rest.slice(day.length + 1);
+  return isSessionId(session)
+    ? { surface: surface, day: day, session: session }
+    : undefined;
 }
-
 // ------------------------------------------------------------------ envelope
-
 /**
  * Which rules read an envelope. `browser` is the rule of `POST /log`: a
  * playground event with a session ID and a `pg.` kind. `replay` is the
@@ -339,59 +341,76 @@ export function parseSessionFileName(
  * older builds.
  */
 type EnvelopePolicy = "browser" | "replay";
-
-/** True for a string that `Date.parse` reads as a time. */
-const isTime = (t: unknown): t is string =>
-  typeof t === "string" && !Number.isNaN(Date.parse(t));
-
+function isTime(t: unknown): t is string {
+  return typeof t === "string" && !Number.isNaN(parseTimestamp(t));
+}
 function browserEnvelope(
   value: Readonly<Record<string, unknown>>,
 ): Envelope | undefined {
-  const { v, t, ms, surface, session, seq, build, kind, data } = value;
+  const binding1 = value;
+  const v = binding1.v;
+  const t = binding1.t;
+  const ms = binding1.ms;
+  const surface = binding1.surface;
+  const session = binding1.session;
+  const seq = binding1.seq;
+  const build = binding1.build;
+  const kind = binding1.kind;
+  const data = binding1.data;
   if (
     v === 1 && isTime(t) && typeof ms === "number" &&
     Number.isFinite(ms) && surface === "playground" &&
-    typeof session === "string" && SESSION_ID.test(session) &&
+    typeof session === "string" && isSessionId(session) &&
     typeof seq === "number" && Number.isInteger(seq) && seq >= 0 &&
     typeof build === "string" && typeof kind === "string" &&
-    kind.startsWith("pg.") && "data" in value
+    kind.startsWith("pg.") && hasProperty(value, "data")
   ) {
     return {
       v: 1,
-      t,
-      ms,
+      t: t,
+      ms: ms,
       surface: "playground",
-      session,
-      seq,
-      build,
-      kind,
-      data,
+      session: session,
+      seq: seq,
+      build: build,
+      kind: kind,
+      data: data,
     };
   }
   return undefined;
 }
-
 function isReplayEnvelope(
   value: Readonly<Record<string, unknown>>,
 ): value is Readonly<Record<string, unknown>> & Envelope {
-  const { v, t, ms, surface, session, seq, build, kind } = value;
+  const binding2 = value;
+  const v = binding2.v;
+  const t = binding2.t;
+  const ms = binding2.ms;
+  const surface = binding2.surface;
+  const session = binding2.session;
+  const seq = binding2.seq;
+  const build = binding2.build;
+  const kind = binding2.kind;
   return v === 1 && isTime(t) &&
     typeof ms === "number" && typeof surface === "string" &&
     SURFACES.some((s) => s === surface) && typeof session === "string" &&
     typeof seq === "number" && typeof build === "string" &&
     typeof kind === "string";
 }
-
 /**
  * The envelope of a parsed JSON value, or undefined. The `browser` policy
  * returns a new object with only the envelope fields. The `replay` policy
  * returns the value itself.
  */
 export function parseEnvelope(
-  value: unknown,
+  value: LogValue,
   policy: EnvelopePolicy,
 ): Envelope | undefined {
-  if (!isRecord(value)) return undefined;
-  if (policy === "browser") return browserEnvelope(value);
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  if (policy === "browser") {
+    return browserEnvelope(value);
+  }
   return isReplayEnvelope(value) ? value : undefined;
 }

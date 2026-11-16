@@ -159,18 +159,26 @@ const bump = (p: Positive): Positive => p + 1
     memoryHost({ "effektive.json": "{}", "m.eff": source }),
     "",
     ["m.eff"],
+    undefined,
   );
   assert(analysis.ok);
   const info = analysis.value.project.modules.get("m");
   const resolution = analysis.value.resolutions.get("m");
   assert(info !== undefined && resolution !== undefined);
   for (const remaining of [0, 1]) {
-    const budget = { remaining };
+    let steps = remaining;
+    const budget = {
+      remaining: () => steps,
+      spend: (used: number) => {
+        steps -= used;
+        return budget;
+      },
+    };
     const step = checkModuleStep(
       info,
       resolution,
       "m",
-      new TypeTable(),
+      TypeTable(),
       reachedModules(analysis.value, "m", new Map(), new Map()),
       budget,
     );
@@ -181,6 +189,6 @@ const bump = (p: Positive): Positive => p + 1
       ],
     );
     assert(step.checked.diagnostics[0].message.includes("proof limit"));
-    assertEquals(budget.remaining, 0);
+    assertEquals(budget.remaining(), 0);
   }
 });

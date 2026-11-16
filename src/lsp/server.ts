@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The language server: lifecycle, message dispatch, and flush scheduling
 // The server has no I/O of its own. It reaches the
 // outside through the ports of `ServerPorts`, so that tests drive it in process.

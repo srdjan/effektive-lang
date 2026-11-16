@@ -4,13 +4,14 @@
 // moves through the edits. The message is not part of the key, because a
 // rename changes names in messages.
 import type { Diagnostic } from "./diagnostics.ts";
+import { emptyMap } from "./runtime.ts";
 import type { SourceEdit } from "./source.ts";
 
 /** The diagnostics that an edit adds and removes, by code, source, and moved span. */
-interface DiagnosticDelta {
+type DiagnosticDelta = {
   readonly added: readonly Diagnostic[];
   readonly removed: readonly Diagnostic[];
-}
+};
 
 /**
  * Move one offset of `source` through `edits`. An edit moves the offset by its
@@ -26,9 +27,10 @@ function movedOffset(
   let shift = 0;
   for (const edit of edits) {
     if (edit.span.source !== source) continue;
-    const { start, end } = edit.span;
+    const start = edit.span.start;
+    const end = edit.span.end;
     const passed = isEnd && start === end ? end < offset : end <= offset;
-    if (passed) shift += edit.text.length - (end - start);
+    if (passed) shift = shift + edit.text.length - (end - start);
   }
   return offset + shift;
 }
@@ -37,7 +39,9 @@ function keyOf(
   d: Diagnostic,
   edits: readonly SourceEdit[],
 ): string {
-  const { source, start, end } = d.span;
+  const source = d.span.source;
+  const start = d.span.start;
+  const end = d.span.end;
   return JSON.stringify([
     d.code,
     source,
@@ -47,8 +51,10 @@ function keyOf(
 }
 
 function counts(keys: readonly string[]): Map<string, number> {
-  const output = new Map<string, number>();
-  for (const key of keys) output.set(key, (output.get(key) ?? 0) + 1);
+  let output = emptyMap<string, number>();
+  for (const key of keys) {
+    output = output.set(key, (output.get(key) ?? 0) + 1);
+  }
   return output;
 }
 
@@ -58,10 +64,11 @@ function unmatched(
   keys: readonly string[],
   pool: Map<string, number>,
 ): readonly Diagnostic[] {
+  let remaining = pool;
   return items.filter((_, i) => {
-    const left = pool.get(keys[i]) ?? 0;
+    const left = remaining.get(keys[i]) ?? 0;
     if (left === 0) return true;
-    pool.set(keys[i], left - 1);
+    remaining = remaining.set(keys[i], left - 1);
     return false;
   });
 }

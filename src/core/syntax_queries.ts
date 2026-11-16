@@ -6,7 +6,9 @@ import {
   isDurationText,
   numberValue,
   TokenKind,
+  tokenKind,
 } from "./lex.ts";
+import { indices } from "./runtime.ts";
 import {
   childrenOf,
   decodeString,
@@ -17,24 +19,27 @@ import {
   type SyntaxTree,
 } from "./syntax.ts";
 
-const TYPE_KINDS: ReadonlySet<SyntaxKind> = new Set([
-  SyntaxKind.NamedType,
-  SyntaxKind.EffectType,
-  SyntaxKind.StreamType,
-  SyntaxKind.SinkType,
-  SyntaxKind.SchemaType,
-  SyntaxKind.LayerType,
-  SyntaxKind.LiteralType,
-  SyntaxKind.RecordType,
-  SyntaxKind.TupleType,
-  SyntaxKind.ArrayType,
-  SyntaxKind.UnionType,
-  SyntaxKind.FunctionType,
-  SyntaxKind.ParenType,
-]);
+export type QueryMatch = boolean;
+export type QueryText = string;
+export type OptionalQueryText = QueryText | undefined;
+export type LiteralValue = string | number | boolean | null | undefined;
 
-export function isTypeKind(kind: SyntaxKind): boolean {
-  return TYPE_KINDS.has(kind);
+export function isTypeKind(kind: SyntaxKind): QueryMatch {
+  return Array.of<SyntaxKind>(
+    SyntaxKind.NamedType,
+    SyntaxKind.EffectType,
+    SyntaxKind.StreamType,
+    SyntaxKind.SinkType,
+    SyntaxKind.SchemaType,
+    SyntaxKind.LayerType,
+    SyntaxKind.LiteralType,
+    SyntaxKind.RecordType,
+    SyntaxKind.TupleType,
+    SyntaxKind.ArrayType,
+    SyntaxKind.UnionType,
+    SyntaxKind.FunctionType,
+    SyntaxKind.ParenType,
+  ).includes(kind);
 }
 
 /** The lexer kind of a Token node, or undefined for any other node. */
@@ -43,7 +48,7 @@ export function tokenKindOf(
   node: NodeId,
 ): TokenKind | undefined {
   return kindOf(tree, node) === SyntaxKind.Token
-    ? tree.lexed.kinds[tree.tokens[node]] as TokenKind
+    ? tokenKind(tree.lexed.kinds[tree.tokens[node]])
     : undefined;
 }
 
@@ -70,7 +75,7 @@ export function hasModifier(
   tree: SyntaxTree,
   node: NodeId,
   word: ContextualWord,
-): boolean {
+): QueryMatch {
   const children = childrenOf(tree, node);
   return isWordToken(tree, children[headIndex(tree, children)], word);
 }
@@ -80,7 +85,10 @@ export function hasModifier(
  * word token `type`. After `opaque` without `type`, the parser writes a Missing
  * node and the declaration is not opaque.
  */
-export function isOpaqueTypeDecl(tree: SyntaxTree, decl: NodeId): boolean {
+export function isOpaqueTypeDecl(
+  tree: SyntaxTree,
+  decl: NodeId,
+): QueryMatch {
   const children = childrenOf(tree, decl);
   const head = headIndex(tree, children);
   return isWordToken(tree, children[head], "opaque") &&
@@ -91,7 +99,7 @@ export function isOpaqueTypeDecl(tree: SyntaxTree, decl: NodeId): boolean {
 export function nameTextOf(
   tree: SyntaxTree,
   nameNode: NodeId,
-): string | undefined {
+): OptionalQueryText {
   const first = childrenOf(tree, nameNode)[0];
   if (first === undefined || tokenKindOf(tree, first) !== TokenKind.Ident) {
     return undefined;
@@ -124,21 +132,21 @@ export function isArithmeticOperator(
     operator === "/" || operator === "%";
 }
 
-const OPERATORS: ReadonlyMap<TokenKind, BinaryOperator> = new Map([
-  [TokenKind.Plus, "+"],
-  [TokenKind.Minus, "-"],
-  [TokenKind.Star, "*"],
-  [TokenKind.Slash, "/"],
-  [TokenKind.Percent, "%"],
-  [TokenKind.EqEqEq, "==="],
-  [TokenKind.BangEqEq, "!=="],
-  [TokenKind.Lt, "<"],
-  [TokenKind.LtEq, "<="],
-  [TokenKind.Gt, ">"],
-  [TokenKind.GtEq, ">="],
-  [TokenKind.AmpAmp, "&&"],
-  [TokenKind.PipePipe, "||"],
-]);
+function binaryOperator(kind: TokenKind): BinaryOperator | undefined {
+  if (kind === TokenKind.Plus) return "+";
+  if (kind === TokenKind.Minus) return "-";
+  if (kind === TokenKind.Star) return "*";
+  if (kind === TokenKind.Slash) return "/";
+  if (kind === TokenKind.Percent) return "%";
+  if (kind === TokenKind.EqEqEq) return "===";
+  if (kind === TokenKind.BangEqEq) return "!==";
+  if (kind === TokenKind.Lt) return "<";
+  if (kind === TokenKind.LtEq) return "<=";
+  if (kind === TokenKind.Gt) return ">";
+  if (kind === TokenKind.GtEq) return ">=";
+  if (kind === TokenKind.AmpAmp) return "&&";
+  return kind === TokenKind.PipePipe ? "||" : undefined;
+}
 
 /** Child nodes of a node that are not tokens or Missing nodes. */
 export function kidsOf(tree: SyntaxTree, node: NodeId): NodeId[] {
@@ -146,7 +154,7 @@ export function kidsOf(tree: SyntaxTree, node: NodeId): NodeId[] {
   for (const child of childrenOf(tree, node)) {
     const kind = kindOf(tree, child);
     if (kind !== SyntaxKind.Token && kind !== SyntaxKind.Missing) {
-      result.push(child);
+      result[result.length] = child;
     }
   }
   return result;
@@ -167,7 +175,8 @@ export function kidsOfKind(
  */
 export function unparen(tree: SyntaxTree, node: NodeId): NodeId {
   let current = node;
-  while (kindOf(tree, current) === SyntaxKind.ParenExpr) {
+  for (const _index of indices(tree.count)) {
+    if (kindOf(tree, current) !== SyntaxKind.ParenExpr) return current;
     const inner = kidsOf(tree, current)[0];
     if (inner === undefined) return current;
     current = inner;
@@ -179,7 +188,7 @@ export function unparen(tree: SyntaxTree, node: NodeId): NodeId {
 export function numberTextOf(
   tree: SyntaxTree,
   node: NodeId,
-): string | undefined {
+): OptionalQueryText {
   for (const child of childrenOf(tree, node)) {
     if (tokenKindOf(tree, child) !== TokenKind.Number) continue;
     return nodeText(tree, child);
@@ -188,7 +197,10 @@ export function numberTextOf(
 }
 
 /** True when the literal node is a Number token with a duration suffix. */
-export function isDurationLiteral(tree: SyntaxTree, node: NodeId): boolean {
+export function isDurationLiteral(
+  tree: SyntaxTree,
+  node: NodeId,
+): QueryMatch {
   const text = numberTextOf(tree, node);
   return text !== undefined && isDurationText(text);
 }
@@ -200,7 +212,7 @@ export function isDurationLiteral(tree: SyntaxTree, node: NodeId): boolean {
 export function literalOf(
   tree: SyntaxTree,
   node: NodeId,
-): string | number | boolean | null | undefined {
+): LiteralValue {
   let negative = false;
   for (const child of childrenOf(tree, node)) {
     const kind = tokenKindOf(tree, child);
@@ -233,7 +245,7 @@ export function operatorOf(
   for (const child of childrenOf(tree, node)) {
     const kind = tokenKindOf(tree, child);
     if (kind === undefined) continue;
-    const operator = OPERATORS.get(kind);
+    const operator = binaryOperator(kind);
     if (operator !== undefined) return operator;
   }
   return undefined;
@@ -249,8 +261,8 @@ export function unaryOperatorOf(
   const token = childrenOf(tree, node)[0];
   if (token === undefined) return undefined;
   const kind = tokenKindOf(tree, token);
-  if (kind === TokenKind.Minus) return { operator: "-", token };
-  if (kind === TokenKind.Bang) return { operator: "!", token };
+  if (kind === TokenKind.Minus) return { operator: "-", token: token };
+  if (kind === TokenKind.Bang) return { operator: "!", token: token };
   return undefined;
 }
 
@@ -268,17 +280,18 @@ export function arrowBody(tree: SyntaxTree, node: NodeId): NodeId | undefined {
  * signature): its parameter list, its first type child, and its `fails` and
  * `with` clauses. Each part is undefined when the parser wrote none.
  */
-interface FunctionParts {
+type FunctionParts = {
   readonly paramList: NodeId | undefined;
   readonly result: NodeId | undefined;
   readonly fails: NodeId | undefined;
   readonly uses: NodeId | undefined;
-}
+};
 
 export function functionParts(tree: SyntaxTree, node: NodeId): FunctionParts {
   const kids = kidsOf(tree, node);
-  const first = (kind: SyntaxKind): NodeId | undefined =>
-    kids.find((kid) => kindOf(tree, kid) === kind);
+  function first(kind: SyntaxKind): NodeId | undefined {
+    return kids.find((kid) => kindOf(tree, kid) === kind);
+  }
   return {
     paramList: first(SyntaxKind.ParamList),
     result: kids.find((kid) => isTypeKind(kindOf(tree, kid))),
@@ -300,22 +313,22 @@ export function paramNodes(
 }
 
 /** The name node and the first other child (the written type) of a Param node. */
-interface ParamParts {
+type ParamParts = {
   readonly name: NodeId | undefined;
   readonly type: NodeId | undefined;
-}
+};
 
 export function paramParts(tree: SyntaxTree, param: NodeId): ParamParts {
   const pieces = kidsOf(tree, param);
   const name = pieces.find((piece) => kindOf(tree, piece) === SyntaxKind.Name);
-  return { name, type: pieces.find((piece) => piece !== name) };
+  return { name: name, type: pieces.find((piece) => piece !== name) };
 }
 
 /** The base expression and the member Name node of a FieldExpr. */
-interface MemberAccessParts {
+type MemberAccessParts = {
   readonly base: NodeId | undefined;
   readonly member: NodeId | undefined;
-}
+};
 
 export function memberAccessParts(
   tree: SyntaxTree,
@@ -331,11 +344,11 @@ export function memberAccessParts(
 }
 
 /** The label, label node, and value node of a record field. The value is absent in a shorthand field. */
-export interface RecordFieldParts {
+export type RecordFieldParts = {
   readonly label: string;
   readonly labelNode: NodeId;
   readonly value: NodeId | undefined;
-}
+};
 
 /** Undefined when the node is not a RecordField or ShorthandField, or its label has no identifier. */
 export function recordFieldParts(
@@ -352,8 +365,8 @@ export function recordFieldParts(
   const label = nameTextOf(tree, labelNode);
   if (label === undefined) return undefined;
   return {
-    label,
-    labelNode,
+    label: label,
+    labelNode: labelNode,
     value: kind === SyntaxKind.ShorthandField
       ? undefined
       : kids.find((kid) => kid !== labelNode),
@@ -369,10 +382,10 @@ export function argNodes(tree: SyntaxTree, node: NodeId): NodeId[] {
 }
 
 /** The left value of a PipeExpr and its first PipeStage child. */
-interface PipeParts {
+type PipeParts = {
   readonly left: NodeId | undefined;
   readonly stage: NodeId | undefined;
-}
+};
 
 export function pipeParts(tree: SyntaxTree, node: NodeId): PipeParts {
   const kids = kidsOf(tree, node);
@@ -383,10 +396,10 @@ export function pipeParts(tree: SyntaxTree, node: NodeId): PipeParts {
 }
 
 /** The qualified callee name of a PipeStage and its written arguments. The left value is not among them. */
-interface StageParts {
+type StageParts = {
   readonly callee: NodeId | undefined;
-  readonly args: NodeId[];
-}
+  readonly args: readonly NodeId[];
+};
 
 export function stageParts(tree: SyntaxTree, stage: NodeId): StageParts {
   return {
@@ -408,14 +421,12 @@ export function initOf(
   ).pop();
 }
 
-const PATTERN_KINDS: ReadonlySet<SyntaxKind> = new Set([
-  SyntaxKind.WildcardPattern,
-  SyntaxKind.LiteralPattern,
-  SyntaxKind.NamePattern,
-  SyntaxKind.CtorPattern,
-  SyntaxKind.RecordPattern,
-]);
-
-export function isPatternKind(kind: SyntaxKind): boolean {
-  return PATTERN_KINDS.has(kind);
+export function isPatternKind(kind: SyntaxKind): QueryMatch {
+  return Array.of<SyntaxKind>(
+    SyntaxKind.WildcardPattern,
+    SyntaxKind.LiteralPattern,
+    SyntaxKind.NamePattern,
+    SyntaxKind.CtorPattern,
+    SyntaxKind.RecordPattern,
+  ).includes(kind);
 }

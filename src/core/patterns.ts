@@ -11,14 +11,17 @@ import {
   type TypeTable,
 } from "./types.ts";
 import { isErrorId } from "./ids.ts";
+import { emptyMap, emptySet, setFrom } from "./runtime.ts";
 
 export type LiteralValue = string | number | boolean | null;
+export type TaggedFieldName = string;
+export type LiteralDescription = string;
 
 /** One record member of a tagged union, with the literal values of each literal field. */
-interface TaggedMember {
+type TaggedMember = {
   readonly type: TypeRef;
   readonly literals: ReadonlyMap<string, readonly LiteralValue[]>;
-}
+};
 
 export type Domain =
   /** `Option<T>`: arms `Some(x)` and `None`. */
@@ -75,9 +78,10 @@ function literalValuesOf(
   for (const member of flattenMembers(table, ref)) {
     const node = table.node(member);
     if (node.kind === "literal") {
-      values.push(node.value);
+      values[values.length] = node.value;
     } else if (node.kind === "primitive" && node.name === "boolean") {
-      values.push(true, false);
+      values[values.length] = true;
+      values[values.length] = false;
     } else {
       return undefined;
     }
@@ -86,7 +90,7 @@ function literalValuesOf(
 }
 
 function unique(values: readonly LiteralValue[]): LiteralValue[] {
-  return [...new Set(values)];
+  return [...setFrom(values)];
 }
 
 function isNull(table: TypeTable, ref: TypeRef): boolean {
@@ -109,7 +113,11 @@ function nullableOf(table: TypeTable, subject: TypeRef): Domain | undefined {
   ) {
     return undefined;
   }
-  return { kind: "nullable", subject, rest: table.union(rest) };
+  return {
+    kind: "nullable",
+    subject: subject,
+    rest: table.union(rest),
+  };
 }
 
 export function domainOf(table: TypeTable, subject: TypeRef): Domain {
@@ -130,11 +138,13 @@ export function domainOf(table: TypeTable, subject: TypeRef): Domain {
   );
   const nominal: (TypeId | ErrorId)[] = [];
   for (const n of named) {
-    if (n.kind === "named" && table.isErrorOrTagged(n.id)) nominal.push(n.id);
+    if (n.kind === "named" && table.isErrorOrTagged(n.id)) {
+      nominal[nominal.length] = n.id;
+    }
   }
   if (nominal.length > 0) {
     return nominal.length === named.length
-      ? { kind: "nominal", ids: [...new Set(nominal)].sort() }
+      ? { kind: "nominal", ids: [...setFrom(nominal)].sort() }
       : { kind: "mixed" };
   }
 
@@ -145,19 +155,21 @@ export function domainOf(table: TypeTable, subject: TypeRef): Domain {
 
   if (nodes.length > 0 && nodes.every((n) => n.kind === "record")) {
     const tagged: TaggedMember[] = [];
-    members.forEach((member, i) => {
-      const node = nodes[i];
-      const fields = new Map<string, readonly LiteralValue[]>();
+    for (const entry of members.entries()) {
+      const index = entry[0];
+      const member = entry[1];
+      const node = nodes[index];
+      let fields = emptyMap<string, readonly LiteralValue[]>();
       if (node.kind === "record") {
         for (const field of node.fields) {
           const values = literalValuesOf(table, field.type);
           if (!field.optional && values !== undefined && values.length > 0) {
-            fields.set(field.name, unique(values));
+            fields = fields.set(field.name, unique(values));
           }
         }
       }
-      tagged.push({ type: member, literals: fields });
-    });
+      tagged[tagged.length] = { type: member, literals: fields };
+    }
     return { kind: "tagged", members: tagged };
   }
 
@@ -181,12 +193,12 @@ export function domainOf(table: TypeTable, subject: TypeRef): Domain {
 /** All values of the discriminator field across the members of a tagged union. */
 export function taggedValues(
   members: readonly TaggedMember[],
-  field: string,
+  field: TaggedFieldName,
 ): LiteralValue[] {
   const values: LiteralValue[] = [];
   for (const member of members) {
     for (const literal of member.literals.get(field) ?? []) {
-      values.push(literal);
+      values[values.length] = literal;
     }
   }
   return unique(values);
@@ -196,7 +208,7 @@ export function taggedValues(
 export function narrowTagged(
   table: TypeTable,
   members: readonly TaggedMember[],
-  field: string,
+  field: TaggedFieldName,
   value: LiteralValue,
 ): TaggedMember[] {
   return members.filter((m) => {
@@ -205,7 +217,7 @@ export function narrowTagged(
       ? node.fields.find((f) => f.name === field)
       : undefined;
     return discriminator !== undefined &&
-      literalMayEqual(table, discriminator.type, value);
+      literalMayEqual(table, discriminator.type, value, undefined);
   });
 }
 
@@ -214,11 +226,12 @@ function literalMayEqual(
   table: TypeTable,
   type: TypeRef,
   value: LiteralValue,
-  seen = new Set<TypeRef>(),
+  seen: ReadonlySet<TypeRef> | undefined,
 ): boolean {
+  const resolvedSeen = seen ?? emptySet<TypeRef>();
   // Keep a possible member when an invalid cycle or depth prevents a proof.
-  if (seen.has(type) || seen.size >= MAX_DEPTH) return true;
-  const next = new Set(seen).add(type);
+  if (resolvedSeen.has(type) || resolvedSeen.size >= MAX_DEPTH) return true;
+  const next = setFrom(resolvedSeen).add(type);
   const node = table.node(type);
   if (node.kind === "named") {
     if (isErrorId(node.id)) return false;
@@ -232,6 +245,6 @@ function literalMayEqual(
   return table.isAssignable(table.literal(value), type);
 }
 
-export function describeLiteral(value: LiteralValue): string {
+export function describeLiteral(value: LiteralValue): LiteralDescription {
   return JSON.stringify(value);
 }

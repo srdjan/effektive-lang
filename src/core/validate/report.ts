@@ -2,6 +2,7 @@
 // disagreement. The code names the validation area (spec, "Equations and
 // validation"). A message starts with the IR path of the node.
 
+import { emptySet } from "../runtime.ts";
 import { type Diagnostic, makeDiagnostic } from "../diagnostics.ts";
 import type { ModuleIR } from "../ir.ts";
 import type { Span } from "../source.ts";
@@ -20,31 +21,71 @@ export const AREA = {
 } as const;
 
 export type AreaCode = typeof AREA[keyof typeof AREA];
+export type ValidationPath = string;
+export type ValidationMessage = string;
+export type ValidationText = string;
+export type ValidationTexts = readonly ValidationText[];
+export type ValidationFlag = boolean;
+export type ValidationCount = number;
+export type DepthLimit = number;
 
 /** The span of a finding that has no source position: the start of the first source. */
 export function moduleSpan(ir: ModuleIR): Span {
   return fallbackSpan(ir.sources[0] ?? ir.module);
 }
 
-export class Report {
-  readonly items: Diagnostic[] = [];
-  /** The declarations that already have a depth report. */
-  private readonly deep = new Set<string>();
+export type Report = {
+  readonly items: () => readonly Diagnostic[];
+  readonly add: (
+    code: AreaCode,
+    path: ValidationPath,
+    what: ValidationMessage,
+    span: Span,
+  ) => Report;
+  readonly addDepth: (
+    path: ValidationPath,
+    limit: DepthLimit,
+    span: Span,
+  ) => Report;
+};
 
-  add(code: AreaCode, path: string, what: string, span: Span): void {
-    this.items.push(makeDiagnostic(code, `${path}: ${what}`, span));
+export function createReport(): Report {
+  const diagnostics: Diagnostic[] = [];
+  let deep = emptySet<string>();
+
+  function items(): readonly Diagnostic[] {
+    return diagnostics;
   }
 
-  /**
-   * Reports a type nested deeper than `limit` levels at `path`. A report names
-   * the declaration of the path, the text before its first `.`, and each
-   * declaration gets at most one, however many walkers or branches go past
-   * the bound.
-   */
-  addDepth(path: string, limit: number, span: Span): void {
+  function add(
+    code: AreaCode,
+    path: ValidationPath,
+    what: ValidationMessage,
+    span: Span,
+  ): Report {
+    diagnostics[diagnostics.length] = makeDiagnostic(
+      code,
+      `${path}: ${what}`,
+      span,
+    );
+    return report;
+  }
+
+  function addDepth(
+    path: ValidationPath,
+    limit: DepthLimit,
+    span: Span,
+  ): Report {
     const declaration = path.split(".", 1)[0];
-    if (this.deep.has(declaration)) return;
-    this.deep.add(declaration);
-    this.add(AREA.types, path, `type nesting exceeds ${limit} levels`, span);
+    if (deep.has(declaration)) return report;
+    deep = deep.add(declaration);
+    return add(AREA.types, path, `type nesting exceeds ${limit} levels`, span);
   }
+
+  const report: Report = {
+    items: items,
+    add: add,
+    addDepth: addDepth,
+  };
+  return report;
 }

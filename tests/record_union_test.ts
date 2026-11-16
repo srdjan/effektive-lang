@@ -178,12 +178,12 @@ type S = string
 type U = { k: S[], v: S } | { k: N[], v: N }
 export const f = (x: N): U => ({ k: [], v: x })
 `;
-  const incremental = new Program("");
+  const incremental = Program("");
   const first = incremental.update({ set: FILES(history) });
   assert(first.ok, JSON.stringify(first));
   const second = incremental.update({ set: FILES(program) });
   assert(second.ok, JSON.stringify(second));
-  const fresh = new Program("").update({ set: FILES(program) });
+  const fresh = Program("").update({ set: FILES(program) });
   assert(fresh.ok, JSON.stringify(fresh));
   assertEquals(fresh.value.diagnostics, []);
   assertEquals(second.value.diagnostics, fresh.value.diagnostics);

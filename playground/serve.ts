@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Builds the playground, then serves the output on 127.0.0.1:8790 (plan
 // section 8). Run it with `deno task playground:serve`. The page posts its
 // session log to `POST /log`, and this file writes it into

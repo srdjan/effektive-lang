@@ -4,117 +4,84 @@
 import type { Expr } from "../ir.ts";
 
 /**
- * The nearest child expressions of a node. The switch has no default case, so
- * the compiler rejects a new Expr kind that the switch does not name.
+ * The nearest child expressions of a node. The final branch makes the function
+ * exhaustive because TypeScript narrows the remaining expression to binary.
  */
 export function exprChildren(e: Expr): readonly Expr[] {
-  switch (e.kind) {
-    case "take-sink":
-    case "now":
-    case "random":
-    case "null":
-    case "literal":
-    case "reference":
-    case "none":
-      return [];
-    case "record":
-    case "error":
-      return e.fields.map((f) => f.value);
-    case "array":
-    case "tuple":
-      return [...e.elements];
-    case "get":
-      return [e.record];
-    case "update":
-      return [e.record, ...e.fields.map((f) => f.value)];
-    case "nominal":
-    case "some":
-    case "run":
-    case "scoped":
-      return [e.value];
-    case "closure":
-      return [e.body];
-    case "call":
-      return [e.callee, ...e.arguments];
-    case "with-resource":
-      return [e.acquire, e.use, e.release];
-    case "unfold":
-      return [e.seed, e.next];
-    case "map-effect":
-    case "map-stream":
-      return [e.stream, e.transform];
-    case "sink-for-each":
-      return [e.consume];
-    case "transduce-stream":
-    case "run-stream":
-      return [e.stream, e.sink];
-    case "buffer-stream":
-      return [e.stream];
-    case "race":
-      return [e.left, e.right];
-    case "make-ref":
-      return [e.value];
-    case "repeat":
-      return e.options === null ? [e.job] : [e.job, e.options];
-    case "uninterruptible":
-      return [e.job];
-    case "race-all":
-      return [e.jobs];
-    case "sleep":
-      return [e.durationMs];
-    case "log":
-      return e.fields === null ? [e.message] : [e.message, e.fields];
-    case "random-int":
-      return [e.min, e.max];
-    case "timeout":
-      return [e.job, e.durationMs];
-    case "get-ref":
-      return [e.ref];
-    case "set-ref":
-      return [e.ref, e.value];
-    case "update-ref":
-      return [e.ref, e.transform];
-    case "layer":
-      return [e.acquire];
-    case "merge-layers":
-      return [e.left, e.right];
-    case "retry-schedule":
-      return [e.step];
-    case "retry-with-schedule":
-      return [e.job, e.options];
-    case "schema":
-      return [...e.arguments];
-    case "schema-make":
-    case "schema-decode":
-    case "schema-encode":
-      return [e.schema, e.input];
-    case "defer":
-    case "retry":
-    case "fork-scoped":
-      return [e.job];
-    case "perform":
-      return [...e.arguments];
-    case "block":
-      return [...e.steps.map((s) => s.value), e.result];
-    case "if":
-      return [e.condition, e.then, e.else];
-    case "match":
-      return [e.subject, ...e.arms.map((a) => a.body)];
-    case "fail":
-      return [e.error];
-    case "catch":
-      return [
-        e.body,
-        ...e.handlers.map((h) => h.body),
-        ...(e.defect === undefined ? [] : [e.defect.body]),
-      ];
-    case "ensure":
-      return [e.body, e.finalizer];
-    case "provide":
-      return [e.provider, e.job];
-    case "binary":
-      return [e.left, e.right];
+  if (e.kind === "take-sink") return [];
+  if (e.kind === "now") return [];
+  if (e.kind === "random") return [];
+  if (e.kind === "null") return [];
+  if (e.kind === "literal") return [];
+  if (e.kind === "reference") return [];
+  if (e.kind === "none") return [];
+  if (e.kind === "record") return e.fields.map((f) => f.value);
+  if (e.kind === "error") return e.fields.map((f) => f.value);
+  if (e.kind === "array") return [...e.elements];
+  if (e.kind === "tuple") return [...e.elements];
+  if (e.kind === "get") return [e.record];
+  if (e.kind === "update") {
+    return [e.record, ...e.fields.map((f) => f.value)];
   }
+  if (e.kind === "nominal") return [e.value];
+  if (e.kind === "some") return [e.value];
+  if (e.kind === "run") return [e.value];
+  if (e.kind === "scoped") return [e.value];
+  if (e.kind === "closure") return [e.body];
+  if (e.kind === "call") return [e.callee, ...e.arguments];
+  if (e.kind === "with-resource") return [e.acquire, e.use, e.release];
+  if (e.kind === "unfold") return [e.seed, e.next];
+  if (e.kind === "map-effect") return [e.stream, e.transform];
+  if (e.kind === "map-stream") return [e.stream, e.transform];
+  if (e.kind === "sink-for-each") return [e.consume];
+  if (e.kind === "transduce-stream") return [e.stream, e.sink];
+  if (e.kind === "run-stream") return [e.stream, e.sink];
+  if (e.kind === "buffer-stream") return [e.stream];
+  if (e.kind === "race") return [e.left, e.right];
+  if (e.kind === "make-ref") return [e.value];
+  if (e.kind === "repeat") {
+    if (e.options === null) return [e.job];
+    return [e.job, e.options];
+  }
+  if (e.kind === "uninterruptible") return [e.job];
+  if (e.kind === "race-all") return [e.jobs];
+  if (e.kind === "sleep") return [e.durationMs];
+  if (e.kind === "log") {
+    if (e.fields === null) return [e.message];
+    return [e.message, e.fields];
+  }
+  if (e.kind === "random-int") return [e.min, e.max];
+  if (e.kind === "timeout") return [e.job, e.durationMs];
+  if (e.kind === "get-ref") return [e.ref];
+  if (e.kind === "set-ref") return [e.ref, e.value];
+  if (e.kind === "update-ref") return [e.ref, e.transform];
+  if (e.kind === "layer") return [e.acquire];
+  if (e.kind === "merge-layers") return [e.left, e.right];
+  if (e.kind === "retry-schedule") return [e.step];
+  if (e.kind === "retry-with-schedule") return [e.job, e.options];
+  if (e.kind === "schema") return [...e.arguments];
+  if (e.kind === "schema-make") return [e.schema, e.input];
+  if (e.kind === "schema-decode") return [e.schema, e.input];
+  if (e.kind === "schema-encode") return [e.schema, e.input];
+  if (e.kind === "defer") return [e.job];
+  if (e.kind === "retry") return [e.job];
+  if (e.kind === "fork-scoped") return [e.job];
+  if (e.kind === "perform") return [...e.arguments];
+  if (e.kind === "block") {
+    return [...e.steps.map((s) => s.value), e.result];
+  }
+  if (e.kind === "if") return [e.condition, e.then, e.else];
+  if (e.kind === "match") {
+    return [e.subject, ...e.arms.map((a) => a.body)];
+  }
+  if (e.kind === "fail") return [e.error];
+  if (e.kind === "catch") {
+    const defect = e.defect === undefined ? [] : [e.defect.body];
+    return [e.body, ...e.handlers.map((h) => h.body), ...defect];
+  }
+  if (e.kind === "ensure") return [e.body, e.finalizer];
+  if (e.kind === "provide") return [e.provider, e.job];
+  return [e.left, e.right];
 }
 
 /**
@@ -122,25 +89,29 @@ export function exprChildren(e: Expr): readonly Expr[] {
  * gets the node, its parent, its grandparent, and whether a closure lies
  * between the node and `body`. The closure itself is not nested.
  */
-export function walkExprs(
+export function walkExprs<State>(
   body: Expr,
+  initial: State,
   visit: (
+    state: State,
     e: Expr,
     parent: Expr | undefined,
     grandparent: Expr | undefined,
     nested: boolean,
-  ) => void,
-): void {
-  const go = (
+  ) => State,
+): State {
+  function go(
+    state: State,
     e: Expr,
     parent: Expr | undefined,
     grandparent: Expr | undefined,
     nested: boolean,
-  ): void => {
-    visit(e, parent, grandparent, nested);
+  ): State {
+    let next = visit(state, e, parent, grandparent, nested);
     for (const child of exprChildren(e)) {
-      go(child, e, parent, nested || e.kind === "closure");
+      next = go(next, child, e, parent, nested || e.kind === "closure");
     }
-  };
-  go(body, undefined, undefined, false);
+    return next;
+  }
+  return go(initial, body, undefined, undefined, false);
 }

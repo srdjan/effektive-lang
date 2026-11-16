@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Statistics and plain text tables for the measurement harnesses. Every
 // function is pure. The harness reports a distribution, never a best of N.
 

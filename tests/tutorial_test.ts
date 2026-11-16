@@ -20,7 +20,7 @@ const FILES: Record<string, string> = Object.fromEntries(
 );
 
 function check(files: Record<string, string>) {
-  const updated = new Program().update({ set: files });
+  const updated = Program(undefined).update({ set: files });
   assert(updated.ok);
   return updated.value.diagnostics;
 }

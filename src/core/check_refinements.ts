@@ -1,10 +1,10 @@
+import { bigInteger, emptyMap, emptySet, mapFrom, setFrom } from "./runtime.ts";
 import { compareText } from "./util.ts";
 import { addLinear, differenceShape, type Linear } from "./linear.ts";
-import { isTypeId } from "./ids.ts";
+import { isLocalId, isTypeId, type ModuleName } from "./ids.ts";
 import type { ProofBudget } from "./body_env.ts";
 import type { LocalId, RefinementProof, TypeId } from "./ir.ts";
 import {
-  and,
   COMPARISON_BOUNDS,
   type ComparisonOperator,
   entails,
@@ -31,69 +31,98 @@ import {
   unparen,
 } from "./syntax_queries.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
-
-const REFINEMENT_QUERY_STEPS = 8_192;
-const REFINEMENT_AGGREGATE_STEPS = 100_000;
-
+const REFINEMENT_QUERY_STEPS = 8192;
+const REFINEMENT_AGGREGATE_STEPS = 100000;
 /** A new aggregate proof budget: the steps that the bodies of one module may spend together. */
 export function newProofBudget(): ProofBudget {
-  return { remaining: REFINEMENT_AGGREGATE_STEPS };
+  let remaining = REFINEMENT_AGGREGATE_STEPS;
+  const budget: ProofBudget = {
+    remaining: () => remaining,
+    spend: (steps: number) => {
+      remaining = remaining - steps;
+      return budget;
+    },
+  };
+  return budget;
 }
-
-interface RefinementSnapshot {
+type RefinementSnapshot = {
   readonly locals: ReadonlyMap<LocalId, TypeRef>;
   readonly aliases: readonly Predicate[];
   readonly branches: readonly Predicate[];
-}
-
-export type RefinementDecision =
-  | { readonly status: "proved"; readonly proof: RefinementProof }
-  | { readonly status: "not-required" }
-  | {
-    readonly status: "failed";
-    readonly reason: "disproved" | "unknown" | "exhausted";
-  };
-
+};
+export type RefinementDecision = {
+  readonly status: "proved";
+  readonly proof: RefinementProof;
+} | {
+  readonly status: "not-required";
+} | {
+  readonly status: "failed";
+  readonly reason: "disproved" | "unknown" | "exhausted";
+};
 /** Source refinement facts for one declaration body. */
-export class RefinementChecker {
-  private locals = new Map<LocalId, TypeRef>();
-  private aliases: Predicate[] = [];
-  private branches: Predicate[] = [];
-
-  constructor(
-    private readonly tree: SyntaxTree,
-    private readonly table: TypeTable,
-    private readonly module: string,
-    private readonly targets: ReadonlyMap<NodeId, Target>,
-    private readonly budget: ProofBudget,
-  ) {}
-
-  snapshot(): RefinementSnapshot {
+export type RefinementChecker = {
+  readonly snapshot: () => RefinementSnapshot;
+  readonly restore: (snapshot: RefinementSnapshot) => RefinementChecker;
+  readonly leaveScope: (scope: RefinementSnapshot) => RefinementChecker;
+  readonly join: (states: readonly RefinementSnapshot[]) => RefinementChecker;
+  readonly addLocal: (
+    id: LocalId,
+    type: TypeRef,
+    init: NodeId | undefined,
+  ) => RefinementChecker;
+  readonly addFieldLocal: (
+    id: LocalId,
+    type: TypeRef,
+    record: LocalId,
+    field: string,
+  ) => RefinementChecker;
+  readonly addBranch: (predicate: Predicate | undefined) => RefinementChecker;
+  readonly clearDerivedFacts: () => RefinementChecker;
+  readonly condition: (node: NodeId) => Predicate | undefined;
+  readonly matchLiteral: (
+    subject: NodeId,
+    value: string | number | boolean | null,
+  ) => Predicate | undefined;
+  readonly prove: (node: NodeId, expected: TypeRef) => RefinementDecision;
+  readonly proveIdentity: (node: NodeId, id: TypeId) => RefinementDecision;
+};
+export function RefinementChecker(
+  tree: SyntaxTree,
+  table: TypeTable,
+  module: ModuleName,
+  targets: ReadonlyMap<NodeId, Target>,
+  budget: ProofBudget,
+): RefinementChecker {
+  let locals = emptyMap<LocalId, TypeRef>();
+  let aliases: Predicate[] = [];
+  let branches: Predicate[] = [];
+  function snapshot(): RefinementSnapshot {
     return {
-      locals: new Map(this.locals),
-      aliases: [...this.aliases],
-      branches: [...this.branches],
+      locals: mapFrom(locals),
+      aliases: [...aliases],
+      branches: [...branches],
     };
   }
-
-  restore(snapshot: RefinementSnapshot): void {
-    this.locals = new Map(snapshot.locals);
-    this.aliases = [...snapshot.aliases];
-    this.branches = [...snapshot.branches];
+  function restore(snapshot: RefinementSnapshot): RefinementChecker {
+    locals = mapFrom(snapshot.locals);
+    aliases = [...snapshot.aliases];
+    branches = [...snapshot.branches];
+    return self;
   }
-
-  leaveScope(scope: RefinementSnapshot): void {
-    this.locals = new Map(scope.locals);
-    const known = new Set<string>(scope.locals.keys());
-    this.aliases = this.aliases.filter((fact) => withinScope(fact, known));
-    this.branches = this.branches.filter((fact) => withinScope(fact, known));
+  function leaveScope(scope: RefinementSnapshot): RefinementChecker {
+    locals = mapFrom(scope.locals);
+    const known = setFrom<string>(scope.locals.keys());
+    aliases = aliases.filter((fact) => withinScope(fact, known));
+    branches = branches.filter((fact) => withinScope(fact, known));
+    return self;
   }
-
-  join(states: readonly RefinementSnapshot[]): void {
-    if (states.length === 0) return;
-    const known = new Set<string>(this.locals.keys());
-    const common = (key: "aliases" | "branches"): Predicate[] =>
-      states[0][key].filter((fact) =>
+  function join(states: readonly RefinementSnapshot[]): RefinementChecker {
+    if (states.length === 0) {
+      return self;
+    }
+    const known = setFrom<string>(locals.keys());
+    function common(key: "aliases" | "branches"): readonly Predicate[] {
+      return states[0][key].filter((fact) =>
         withinScope(fact, known) &&
         states.every((state) =>
           state[key].some((other) =>
@@ -101,54 +130,79 @@ export class RefinementChecker {
           )
         )
       );
-    this.aliases = common("aliases");
-    this.branches = common("branches");
-  }
-
-  addLocal(id: LocalId, type: TypeRef, init?: NodeId): void {
-    this.locals.set(id, type);
-    if (init === undefined) return;
-    for (const equation of this.aliasEquations(id, type, init)) {
-      this.aliases.push(equation);
     }
+    aliases = [...common("aliases")];
+    branches = [...common("branches")];
+    return self;
   }
-
-  addFieldLocal(
+  function addLocal(
+    id: LocalId,
+    type: TypeRef,
+    init: NodeId | undefined,
+  ): RefinementChecker {
+    locals = locals.set(id, type);
+    if (init === undefined) {
+      return self;
+    }
+    for (const equation of aliasEquations(id, type, init)) {
+      {
+        const _appendTarget1 = aliases;
+        const _appendValue2 = equation;
+        _appendTarget1[_appendTarget1.length] = _appendValue2;
+      }
+    }
+    return self;
+  }
+  function addFieldLocal(
     id: LocalId,
     type: TypeRef,
     record: LocalId,
     field: string,
-  ): void {
-    this.addLocal(id, type);
-    for (const path of proofPaths(this.table, type)) {
+  ): RefinementChecker {
+    locals = locals.set(id, type);
+    for (const path of proofPaths(table, type, undefined, undefined)) {
       const left = linearForPath([id, ...path.path], path.length);
       const right = linearForPath([record, field, ...path.path], path.length);
       const equal = compare(left, "===", right);
-      if (equal !== undefined) this.aliases.push(equal);
+      if (equal !== undefined) {
+        const _appendTarget3 = aliases;
+        const _appendValue4 = equal;
+        _appendTarget3[_appendTarget3.length] = _appendValue4;
+      }
     }
+    return self;
   }
-
-  addBranch(predicate: Predicate | undefined): void {
-    if (predicate !== undefined) this.branches.push(predicate);
+  function addBranch(predicate: Predicate | undefined): RefinementChecker {
+    if (predicate !== undefined) {
+      const _appendTarget5 = branches;
+      const _appendValue6 = predicate;
+      _appendTarget5[_appendTarget5.length] = _appendValue6;
+    }
+    return self;
   }
-
-  clearDerivedFacts(): void {
-    this.aliases = [];
-    this.branches = [];
+  function clearDerivedFacts(): RefinementChecker {
+    aliases = [];
+    branches = [];
+    return self;
   }
-
-  condition(node: NodeId): Predicate | undefined {
-    const inner = unparen(this.tree, node);
-    if (kindOf(this.tree, inner) !== SyntaxKind.BinaryExpr) return undefined;
-    const operator = operatorOf(this.tree, inner);
-    const [left, right] = kidsOf(this.tree, inner);
+  function condition(node: NodeId): Predicate | undefined {
+    const inner = unparen(tree, node);
+    if (kindOf(tree, inner) !== SyntaxKind.BinaryExpr) {
+      return undefined;
+    }
+    const operator = operatorOf(tree, inner);
+    const children = kidsOf(tree, inner);
+    const left = children[0];
+    const right = children[1];
     if (operator === undefined || left === undefined || right === undefined) {
       return undefined;
     }
     if (operator === "&&" || operator === "||") {
-      const l = this.condition(left);
-      const r = this.condition(right);
-      if (l === undefined || r === undefined) return undefined;
+      const l = condition(left);
+      const r = condition(right);
+      if (l === undefined || r === undefined) {
+        return undefined;
+      }
       return operator === "&&"
         ? canonicalAnd([l, r])
         : canonicalPredicate({ kind: "or", operands: [l, r] });
@@ -156,71 +210,79 @@ export class RefinementChecker {
     if (
       operator !== "<" && operator !== "<=" && operator !== "===" &&
       operator !== "!==" && operator !== ">=" && operator !== ">"
-    ) return undefined;
-    const l = this.linear(left);
-    const r = this.linear(right);
-    if (l === undefined || r === undefined) return undefined;
+    ) {
+      return undefined;
+    }
+    const l = linear(left);
+    const r = linear(right);
+    if (l === undefined || r === undefined) {
+      return undefined;
+    }
     return compare(l, operator, r);
   }
-
-  matchLiteral(
+  function matchLiteral(
     subject: NodeId,
     value: string | number | boolean | null,
   ): Predicate | undefined {
     if (typeof value !== "number" || !Number.isSafeInteger(value)) {
       return undefined;
     }
-    const left = this.linear(subject);
+    const left = linear(subject);
     return left === undefined
       ? undefined
-      : compare(left, "===", { terms: new Map(), offset: BigInt(value) });
+      : compare(left, "===", { terms: emptyMap(), offset: bigInteger(value) });
   }
-
-  prove(node: NodeId, expected: TypeRef): RefinementDecision {
-    const named = this.table.node(this.table.unfoldTransparent(expected));
+  function prove(node: NodeId, expected: TypeRef): RefinementDecision {
+    const named = table.node(table.unfoldTransparent(expected));
     if (named.kind !== "named" || !isTypeId(named.id)) {
       return { status: "not-required" };
     }
     const id = named.id;
-    const predicate = this.table.predicateOf(id);
-    if (predicate === undefined) return { status: "not-required" };
-    if (!this.table.ownsSealed(this.module, id)) {
+    const predicate = table.predicateOf(id);
+    if (predicate === undefined) {
+      return { status: "not-required" };
+    }
+    if (!table.ownsSealed(module, id)) {
       return { status: "failed", reason: "unknown" };
     }
-    return this.proveTarget(node, id, predicate);
+    return proveTarget(node, id, predicate);
   }
-
-  proveIdentity(node: NodeId, id: TypeId): RefinementDecision {
-    const predicate = this.table.predicateOf(id);
+  function proveIdentity(node: NodeId, id: TypeId): RefinementDecision {
+    const predicate = table.predicateOf(id);
     return predicate === undefined
       ? { status: "not-required" }
-      : this.proveTarget(node, id, predicate);
+      : proveTarget(node, id, predicate);
   }
-
-  private proveTarget(
+  function proveTarget(
     node: NodeId,
     target: TypeId,
     predicate: Predicate,
   ): RefinementDecision {
     const goal = substitute(
       predicate,
-      (term) => this.linearAt(node, termPath(term), term.kind === "length"),
+      (term) => linearAt(node, termPath(term), term.kind === "length"),
     );
-    if (goal === undefined) return { status: "failed", reason: "unknown" };
-    if (this.budget.remaining === 0) {
+    if (goal === undefined) {
+      return { status: "failed", reason: "unknown" };
+    }
+    if (budget.remaining() === 0) {
       return { status: "failed", reason: "exhausted" };
     }
-    const maxSteps = Math.min(REFINEMENT_QUERY_STEPS, this.budget.remaining);
+    const maxSteps = Math.min(REFINEMENT_QUERY_STEPS, budget.remaining());
     const assumptions = canonicalAnd([
-      ...[...this.locals].flatMap(([id, type]) =>
-        typeAssumptionsAt(this.table, type, [id])
+      ...[...locals].flatMap((entry) =>
+        typeAssumptionsAt(table, entry[1], [entry[0]], undefined)
       ),
-      ...this.aliases,
-      ...this.branches,
+      ...aliases,
+      ...branches,
     ]);
-    const result = entails(assumptions, canonicalPredicate(goal), { maxSteps });
-    if (!result.ok) return { status: "failed", reason: "unknown" };
-    this.budget.remaining -= result.value.stepsUsed;
+    const result = entails(assumptions, canonicalPredicate(goal), {
+      maxSteps: maxSteps,
+    });
+    if (!result.ok) {
+      return { status: "failed", reason: "unknown" };
+    }
+    budget = budget.spend(result.value.stepsUsed);
     if (result.value.status === "unknown") {
       return {
         status: "failed",
@@ -232,159 +294,197 @@ export class RefinementChecker {
     }
     return {
       status: "proved",
-      proof: { target, certificate: result.value.certificate },
+      proof: { target: target, certificate: result.value.certificate },
     };
   }
-
-  private aliasEquations(
+  function aliasEquations(
     id: LocalId,
     type: TypeRef,
     init: NodeId,
   ): Predicate[] {
     const result: Predicate[] = [];
-    for (const path of proofPaths(this.table, type)) {
-      const right = this.linearAt(init, path.path, path.length);
-      if (right === undefined) continue;
+    for (const path of proofPaths(table, type, undefined, undefined)) {
+      const right = linearAt(init, path.path, path.length);
+      if (right === undefined) {
+        continue;
+      }
       const left = linearForPath([id, ...path.path], path.length);
       const equal = compare(left, "===", right);
-      if (equal !== undefined) result.push(equal);
+      if (equal !== undefined) {
+        const _appendTarget7 = result;
+        const _appendValue8 = equal;
+        _appendTarget7[_appendTarget7.length] = _appendValue8;
+      }
     }
     return result;
   }
-
-  private linearAt(
+  function linearAt(
     node: NodeId,
     path: readonly string[],
     length: boolean,
   ): Linear | undefined {
-    const inner = unparen(this.tree, node);
+    const inner = unparen(tree, node);
     if (path.length > 0) {
-      const field = this.recordField(inner, path[0]);
+      const field = recordField(inner, path[0]);
       if (field !== undefined) {
-        return this.linearAt(field, path.slice(1), length);
+        return linearAt(field, path.slice(1), length);
       }
       // The operand of a spread in a record update.
-      const first = kindOf(this.tree, inner) === SyntaxKind.RecordExpr
-        ? kidsOf(this.tree, inner)[0]
+      const first = kindOf(tree, inner) === SyntaxKind.RecordExpr
+        ? kidsOf(tree, inner)[0]
         : undefined;
       const spread = first !== undefined &&
-          kindOf(this.tree, first) === SyntaxKind.SpreadField
-        ? kidsOf(this.tree, first)[0]
+          kindOf(tree, first) === SyntaxKind.SpreadField
+        ? kidsOf(tree, first)[0]
         : undefined;
-      if (spread !== undefined) return this.linearAt(spread, path, length);
-      const base = this.pathOf(inner);
-      if (base === undefined) return undefined;
+      if (spread !== undefined) {
+        return linearAt(spread, path, length);
+      }
+      const base = pathOf(inner);
+      if (base === undefined) {
+        return undefined;
+      }
       const target = [...base, ...path];
-      return !length && !this.integerPath(target)
+      return !length && !integerPath(target)
         ? undefined
         : linearForPath(target, length);
     }
     if (length) {
-      const literal = literalOf(this.tree, inner);
+      const literal = literalOf(tree, inner);
       if (typeof literal === "string") {
-        return { terms: new Map(), offset: BigInt(literal.length) };
+        return { terms: emptyMap(), offset: bigInteger(literal.length) };
       }
-      if (kindOf(this.tree, inner) === SyntaxKind.ListExpr) {
+      if (kindOf(tree, inner) === SyntaxKind.ListExpr) {
         // A spread has no known length, so the literal has no linear form.
         if (
-          kidsOf(this.tree, inner).some((kid) =>
-            kindOf(this.tree, kid) === SyntaxKind.SpreadElement
+          kidsOf(tree, inner).some((kid) =>
+            kindOf(tree, kid) === SyntaxKind.SpreadElement
           )
-        ) return undefined;
+        ) {
+          return undefined;
+        }
         return {
-          terms: new Map(),
-          offset: BigInt(kidsOf(this.tree, inner).length),
+          terms: emptyMap(),
+          offset: bigInteger(kidsOf(tree, inner).length),
         };
       }
-      const base = this.pathOf(inner);
+      const base = pathOf(inner);
       return base === undefined ? undefined : linearForPath(base, true);
     }
-    return this.linear(inner);
+    return linear(inner);
   }
-
-  private linear(node: NodeId): Linear | undefined {
-    const inner = unparen(this.tree, node);
-    if (kindOf(this.tree, inner) === SyntaxKind.LiteralExpr) {
-      const text = nodeText(this.tree, inner);
-      const value = literalOf(this.tree, inner);
+  function linear(node: NodeId): Linear | undefined {
+    const inner = unparen(tree, node);
+    if (kindOf(tree, inner) === SyntaxKind.LiteralExpr) {
+      const text = nodeText(tree, inner);
+      const value = literalOf(tree, inner);
       if (
         typeof value !== "number" || !Number.isSafeInteger(value) ||
-        !/^[0-9]+$/.test(text)
-      ) return undefined;
-      return { terms: new Map(), offset: BigInt(text) };
+        !isDecimalInteger(text)
+      ) {
+        return undefined;
+      }
+      return { terms: emptyMap(), offset: bigInteger(text) };
     }
-    const path = this.pathOf(inner);
-    if (path !== undefined && this.integerPath(path)) {
+    const path = pathOf(inner);
+    if (path !== undefined && integerPath(path)) {
       return linearForPath(path, false);
     }
-    if (kindOf(this.tree, inner) === SyntaxKind.UnaryExpr) {
+    if (kindOf(tree, inner) === SyntaxKind.UnaryExpr) {
       // `-e` reads as `0 - e`. `!e` gives no fact.
-      const [operand] = kidsOf(this.tree, inner);
+      const operand = kidsOf(tree, inner)[0];
       if (
         operand === undefined ||
-        unaryOperatorOf(this.tree, inner)?.operator !== "-"
-      ) return undefined;
-      const value = this.linear(operand);
+        unaryOperatorOf(tree, inner)?.operator !== "-"
+      ) {
+        return undefined;
+      }
+      const value = linear(operand);
       return value === undefined
         ? undefined
-        : addLinear({ terms: new Map(), offset: 0n }, value, -1n);
+        : addLinear({ terms: emptyMap(), offset: 0n }, value, -1n);
     }
-    if (kindOf(this.tree, inner) !== SyntaxKind.BinaryExpr) return undefined;
-    const operator = operatorOf(this.tree, inner);
-    const [leftNode, rightNode] = kidsOf(this.tree, inner);
+    if (kindOf(tree, inner) !== SyntaxKind.BinaryExpr) {
+      return undefined;
+    }
+    const operator = operatorOf(tree, inner);
+    const children = kidsOf(tree, inner);
+    const leftNode = children[0];
+    const rightNode = children[1];
     if (
       (operator !== "+" && operator !== "-") || leftNode === undefined ||
       rightNode === undefined
-    ) return undefined;
-    const left = this.linear(leftNode);
-    const right = this.linear(rightNode);
-    if (left === undefined || right === undefined) return undefined;
+    ) {
+      return undefined;
+    }
+    const left = linear(leftNode);
+    const right = linear(rightNode);
+    if (left === undefined || right === undefined) {
+      return undefined;
+    }
     return addLinear(left, right, operator === "+" ? 1n : -1n);
   }
-
-  private pathOf(node: NodeId): readonly string[] | undefined {
-    const kind = kindOf(this.tree, node);
+  function pathOf(node: NodeId): readonly string[] | undefined {
+    const kind = kindOf(tree, node);
     if (kind === SyntaxKind.NameExpr || kind === SyntaxKind.Name) {
-      const target = this.targets.get(node);
-      return target?.kind === "local" && this.locals.has(target.id)
+      const target = targets.get(node);
+      return target?.kind === "local" && locals.has(target.id)
         ? [target.id]
         : undefined;
     }
-    if (kind !== SyntaxKind.FieldExpr) return undefined;
-    const { base, member } = memberAccessParts(this.tree, node);
-    if (base === undefined || member === undefined) return undefined;
-    const path = this.pathOf(unparen(this.tree, base));
-    const name = nameTextOf(this.tree, member);
+    if (kind !== SyntaxKind.FieldExpr) {
+      return undefined;
+    }
+    const access = memberAccessParts(tree, node);
+    const base = access.base;
+    const member = access.member;
+    if (base === undefined || member === undefined) {
+      return undefined;
+    }
+    const path = pathOf(unparen(tree, base));
+    const name = nameTextOf(tree, member);
     return path === undefined || name === undefined
       ? undefined
       : [...path, name];
   }
-
-  private integerPath(path: readonly string[]): boolean {
-    const [id, ...fields] = path;
-    if (id === undefined) return false;
-    const root = this.locals.get(id as LocalId);
-    if (root === undefined) return false;
+  function integerPath(path: readonly string[]): boolean {
+    const id = path[0];
+    const fields = path.slice(1);
+    if (id === undefined || !isLocalId(id)) {
+      return false;
+    }
+    const root = locals.get(id);
+    if (root === undefined) {
+      return false;
+    }
     let types: readonly TypeRef[] = [root];
     for (const name of fields) {
       const next: TypeRef[] = [];
       for (const type of types) {
-        for (const member of flattenMembers(this.table, type)) {
-          const node = this.table.node(member);
-          if (node.kind !== "record") return false;
+        for (const member of flattenMembers(table, type)) {
+          const node = table.node(member);
+          if (node.kind !== "record") {
+            return false;
+          }
           const field = node.fields.find((candidate) =>
             candidate.name === name
           );
-          if (field === undefined || field.optional) return false;
-          next.push(field.type);
+          if (field === undefined || field.optional) {
+            return false;
+          }
+          {
+            const _appendTarget9 = next;
+            const _appendValue10 = field.type;
+            _appendTarget9[_appendTarget9.length] = _appendValue10;
+          }
         }
       }
       types = next;
     }
     return types.length > 0 &&
       types.every((type) =>
-        flattenMembers(this.table, type).every((member) => {
-          const node = this.table.node(member);
+        flattenMembers(table, type).every((member) => {
+          const node = table.node(member);
           return node.kind === "primitive"
             ? node.name === "int"
             : node.kind === "literal" && typeof node.value === "number" &&
@@ -392,16 +492,17 @@ export class RefinementChecker {
         })
       );
   }
-
-  private recordField(node: NodeId, name: string): NodeId | undefined {
-    if (kindOf(this.tree, node) !== SyntaxKind.RecordExpr) return undefined;
-    const fields = kidsOf(this.tree, node);
+  function recordField(node: NodeId, name: string): NodeId | undefined {
+    if (kindOf(tree, node) !== SyntaxKind.RecordExpr) {
+      return undefined;
+    }
+    const fields = kidsOf(tree, node);
     for (const field of fields) {
-      const parts = kidsOf(this.tree, field);
+      const parts = kidsOf(tree, field);
       const label = parts.find((part) =>
-        kindOf(this.tree, part) === SyntaxKind.Name
+        kindOf(tree, part) === SyntaxKind.Name
       );
-      if (label === undefined || nameTextOf(this.tree, label) !== name) {
+      if (label === undefined || nameTextOf(tree, label) !== name) {
         continue;
       }
       const value = parts.find((part) => part !== label);
@@ -409,16 +510,33 @@ export class RefinementChecker {
     }
     return undefined;
   }
+  const self: RefinementChecker = {
+    snapshot: snapshot,
+    restore: restore,
+    leaveScope: leaveScope,
+    join: join,
+    addLocal: addLocal,
+    addFieldLocal: addFieldLocal,
+    addBranch: addBranch,
+    clearDerivedFacts: clearDerivedFacts,
+    condition: condition,
+    matchLiteral: matchLiteral,
+    prove: prove,
+    proveIdentity: proveIdentity,
+  };
+  return self;
 }
-
 function typeAssumptionsAt(
   table: TypeTable,
   ref: TypeRef,
   path: readonly string[],
-  seen: ReadonlySet<TypeRef> = new Set(),
+  seen: ReadonlySet<TypeRef> | undefined,
 ): Predicate[] {
-  if (seen.has(ref)) return [];
-  const nextSeen = new Set(seen).add(ref);
+  const visited = seen ?? emptySet<TypeRef>();
+  if (visited.has(ref)) {
+    return [];
+  }
+  const nextSeen = setFrom(visited).add(ref);
   const node = table.node(table.unfoldTransparent(ref));
   if (node.kind === "named" && isTypeId(node.id)) {
     const id = node.id;
@@ -428,12 +546,13 @@ function typeAssumptionsAt(
       const compiled = substitute(
         predicate,
         (term) =>
-          linearForPath(
-            [...path, ...termPath(term)],
-            term.kind === "length",
-          ),
+          linearForPath([...path, ...termPath(term)], term.kind === "length"),
       );
-      if (compiled !== undefined) assumptions.push(compiled);
+      if (compiled !== undefined) {
+        const _appendTarget11 = assumptions;
+        const _appendValue12 = compiled;
+        _appendTarget11[_appendTarget11.length] = _appendValue12;
+      }
     }
     const base = table.nominalBodyOf(id);
     return base === undefined
@@ -442,12 +561,9 @@ function typeAssumptionsAt(
   }
   if (node.kind === "record") {
     return node.fields.flatMap((field) =>
-      field.optional ? [] : typeAssumptionsAt(
-        table,
-        field.type,
-        [...path, field.name],
-        nextSeen,
-      )
+      field.optional
+        ? []
+        : typeAssumptionsAt(table, field.type, [...path, field.name], nextSeen)
     );
   }
   if (
@@ -456,101 +572,120 @@ function typeAssumptionsAt(
     (node.kind === "literal" && typeof node.value === "string")
   ) {
     const length = linearForPath(path, true);
-    const zero: Linear = { terms: new Map(), offset: 0n };
+    const zero: Linear = { terms: emptyMap(), offset: 0n };
     const lower = difference(addLinear(zero, length, -1n), 0n);
     const upper = difference(
       addLinear(length, zero, -1n),
-      BigInt(Number.MAX_SAFE_INTEGER),
+      bigInteger(Number.MAX_SAFE_INTEGER),
     );
     return lower === undefined || upper === undefined ? [] : [lower, upper];
   }
   return [];
 }
-
 function proofPaths(
   table: TypeTable,
   ref: TypeRef,
-  prefix: readonly string[] = [],
-  seen: ReadonlySet<TypeRef> = new Set(),
-): readonly { readonly path: readonly string[]; readonly length: boolean }[] {
-  if (seen.has(ref)) return [];
-  const nextSeen = new Set(seen).add(ref);
+  prefix: readonly string[] | undefined,
+  seen: ReadonlySet<TypeRef> | undefined,
+): readonly {
+  readonly path: readonly string[];
+  readonly length: boolean;
+}[] {
+  const visited = seen ?? emptySet<TypeRef>();
+  if (visited.has(ref)) {
+    return [];
+  }
+  const nextSeen = setFrom(visited).add(ref);
+  const path = prefix ?? [];
   const node = table.node(table.unfold(ref));
   if (node.kind === "primitive") {
-    if (node.name === "int") return [{ path: prefix, length: false }];
-    if (node.name === "string") return [{ path: prefix, length: true }];
+    if (node.name === "int") {
+      return [{ path: path, length: false }];
+    }
+    if (node.name === "string") {
+      return [{ path: path, length: true }];
+    }
     return [];
   }
   if (node.kind === "literal") {
     if (typeof node.value === "number" && Number.isSafeInteger(node.value)) {
-      return [{ path: prefix, length: false }];
+      return [{ path: path, length: false }];
     }
-    return typeof node.value === "string"
-      ? [{ path: prefix, length: true }]
-      : [];
+    return typeof node.value === "string" ? [{ path: path, length: true }] : [];
   }
-  if (node.kind === "array") return [{ path: prefix, length: true }];
-  if (node.kind !== "record") return [];
+  if (node.kind === "array") {
+    return [{ path: path, length: true }];
+  }
+  if (node.kind !== "record") {
+    return [];
+  }
   return node.fields.flatMap((field) =>
     field.optional
       ? []
-      : proofPaths(table, field.type, [...prefix, field.name], nextSeen)
+      : proofPaths(table, field.type, [...path, field.name], nextSeen)
   );
 }
-
 function termPath(term: Term): readonly string[] {
   return term.kind === "field" || term.kind === "length" ? term.path : [];
 }
-
 function linearForPath(path: readonly string[], length: boolean): Linear {
   const term: Term = length
-    ? { kind: "length", path, unit: "utf16" }
-    : { kind: "field", path };
+    ? { kind: "length", path: path, unit: "utf16" }
+    : { kind: "field", path: path };
   return {
-    terms: new Map([[JSON.stringify(term), { term, coefficient: 1n }]]),
+    terms: mapFrom([[JSON.stringify(term), { term: term, coefficient: 1n }]]),
     offset: 0n,
   };
 }
-
 function substitute(
   predicate: Predicate,
   value: (term: Term) => Linear | undefined,
 ): Predicate | undefined {
-  switch (predicate.kind) {
-    case "constant":
+  {
+    const kind_1 = predicate.kind;
+    if (kind_1 === "constant") {
       return predicate;
-    case "not": {
+    } else if (kind_1 === "not") {
       const operand = substitute(predicate.operand, value);
       return operand === undefined ? undefined : not(operand);
-    }
-    case "and":
-    case "or": {
+    } else if (kind_1 === "and" || kind_1 === "or") {
       const operands: Predicate[] = [];
       for (const item of predicate.operands) {
         const compiled = substitute(item, value);
-        if (compiled === undefined) return undefined;
-        operands.push(compiled);
+        if (compiled === undefined) {
+          return undefined;
+        }
+        {
+          const _appendTarget13 = operands;
+          const _appendValue14 = compiled;
+          _appendTarget13[_appendTarget13.length] = _appendValue14;
+        }
       }
       return predicate.kind === "and"
         ? canonicalAnd(operands)
-        : canonicalPredicate({ kind: "or", operands });
-    }
-    case "difference": {
-      const left = predicate.left.kind === "zero"
-        ? { terms: new Map(), offset: 0n }
+        : canonicalPredicate({ kind: "or", operands: operands });
+    } else if (kind_1 === "difference") {
+      const left: Linear | undefined = predicate.left.kind === "zero"
+        ? { terms: emptyMap(), offset: 0n }
         : value(predicate.left);
-      const right = predicate.right.kind === "zero"
-        ? { terms: new Map(), offset: 0n }
+      const right: Linear | undefined = predicate.right.kind === "zero"
+        ? { terms: emptyMap(), offset: 0n }
         : value(predicate.right);
-      if (left === undefined || right === undefined) return undefined;
-      return difference(addLinear(left, right, -1n), BigInt(predicate.maximum));
+      if (left === undefined || right === undefined) {
+        return undefined;
+      }
+      return difference(
+        addLinear(left, right, -1n),
+        bigInteger(predicate.maximum),
+      );
     }
   }
 }
-
 function difference(linear: Linear, maximum: bigint): Predicate | undefined {
   const shape = differenceShape(linear);
-  if (shape === undefined) return undefined;
+  if (shape === undefined) {
+    return undefined;
+  }
   if (shape.constant) {
     return { kind: "constant", value: linear.offset <= maximum };
   }
@@ -561,7 +696,6 @@ function difference(linear: Linear, maximum: bigint): Predicate | undefined {
     maximum: (maximum - linear.offset).toString(),
   };
 }
-
 function compare(
   left: Linear,
   operator: ComparisonOperator,
@@ -569,27 +703,35 @@ function compare(
 ): Predicate | undefined {
   const forward = addLinear(left, right, -1n);
   const reverse = addLinear(right, left, -1n);
-  const { join, parts } = COMPARISON_BOUNDS[operator];
+  const comparison = COMPARISON_BOUNDS[operator];
+  const join = comparison.join;
+  const parts = comparison.parts;
   const bounds = parts.map((part) =>
     difference(part.reversed ? reverse : forward, part.slack)
   );
   const defined: Predicate[] = [];
   for (const bound of bounds) {
-    if (bound === undefined) return undefined;
-    defined.push(bound);
+    if (bound === undefined) {
+      return undefined;
+    }
+    {
+      const _appendTarget15 = defined;
+      const _appendValue16 = bound;
+      _appendTarget15[_appendTarget15.length] = _appendValue16;
+    }
   }
-  switch (join) {
-    case "single":
-      return defined[0];
-    case "and":
-      return canonicalAnd(defined);
-    case "or":
-      return canonicalPredicate({ kind: "or", operands: defined });
+  if (join === "single") {
+    return defined[0];
+  } else if (join === "and") {
+    return canonicalAnd(defined);
+  } else if (join === "or") {
+    return canonicalPredicate({ kind: "or", operands: defined });
   }
 }
-
 function canonicalPredicate(predicate: Predicate): Predicate {
-  if (predicate.kind === "and") return canonicalAnd(predicate.operands);
+  if (predicate.kind === "and") {
+    return canonicalAnd(predicate.operands);
+  }
   if (predicate.kind === "or") {
     // Nested ors flatten, so `a || (b || c)` and `c || b || a` compare equal.
     const operands = predicate.operands.flatMap((operand) => {
@@ -603,51 +745,58 @@ function canonicalPredicate(predicate: Predicate): Predicate {
   }
   return predicate;
 }
-
 function canonicalAnd(predicates: readonly Predicate[]): Predicate {
-  const flat: Predicate[] = [];
-  const add = (predicate: Predicate): void => {
+  let flat: Predicate[] = [];
+  function add(predicate: Predicate): Predicate[] {
     if (predicate.kind === "and") {
-      for (const operand of predicate.operands) add(operand);
-      return;
+      for (const operand of predicate.operands) flat = add(operand);
+      return flat;
     }
     const canonical = canonicalPredicate(predicate);
-    if (canonical.kind === "constant" && canonical.value) return;
+    if (canonical.kind === "constant" && canonical.value) return flat;
     if (canonical.kind === "and") {
-      for (const operand of canonical.operands) add(operand);
-    } else flat.push(canonical);
-  };
-  for (const predicate of predicates) add(predicate);
+      for (const operand of canonical.operands) flat = add(operand);
+    } else flat[flat.length] = canonical;
+    return flat;
+  }
+  for (const predicate of predicates) flat = add(predicate);
   if (
     flat.some((predicate) => predicate.kind === "constant" && !predicate.value)
   ) {
     return { kind: "constant", value: false };
   }
-  flat.sort(compareJson);
+  flat = flat.sort(compareJson);
   if (flat.length === 0) return { kind: "constant", value: true };
-  return flat.length === 1 ? flat[0] : and(...flat);
+  return flat.length === 1 ? flat[0] : { kind: "and", operands: flat };
+}
+
+function isDecimalInteger(text: string): boolean {
+  for (const char of text) {
+    if (char < "0" || char > "9") return false;
+  }
+  return text.length > 0;
 }
 
 function compareJson(left: Predicate, right: Predicate): number {
   return compareText(JSON.stringify(left), JSON.stringify(right));
 }
-
 function withinScope(
   predicate: Predicate,
   known: ReadonlySet<string>,
 ): boolean {
-  switch (predicate.kind) {
-    case "constant":
+  {
+    const kind_2 = predicate.kind;
+    if (kind_2 === "constant") {
       return true;
-    case "difference":
+    } else if (kind_2 === "difference") {
       return [predicate.left, predicate.right].every((term) => {
         const path = termPath(term);
         return path.length === 0 || known.has(path[0]);
       });
-    case "not":
+    } else if (kind_2 === "not") {
       return withinScope(predicate.operand, known);
-    case "and":
-    case "or":
+    } else {
       return predicate.operands.every((part) => withinScope(part, known));
+    }
   }
 }

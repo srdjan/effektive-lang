@@ -365,7 +365,10 @@ Deno.test("fileModeOf follows the extension", () => {
   assertEquals(fileModeOf("host/providers.effi"), "effi");
   assertEquals(fileModeOf("users.eff"), "eff");
   assertEquals(fileModeOf("anything"), "eff");
-  assertEquals(parse("a.effi", "provider P provides S").diagnostics, []);
+  assertEquals(
+    parse("a.effi", "provider P provides S", undefined).diagnostics,
+    [],
+  );
 });
 
 Deno.test("void is valid as a type and reserved as a name", () => {
@@ -418,7 +421,7 @@ Deno.test("an error span covers a token on the same line and ends a line when th
 });
 
 Deno.test("diagnostic spans carry the source path", () => {
-  const result = parse("dir/a.eff", "const a = )");
+  const result = parse("dir/a.eff", "const a = )", undefined);
   assertEquals(
     result.diagnostics.map((d) => [d.span.source, d.code, d.message]),
     [["dir/a.eff", "syntax/008", "expected an expression, found `)`"]],
@@ -551,7 +554,7 @@ Deno.test("data is an ordinary name and no declaration word", () => {
 
 Deno.test("unparen strips nested parenthesis expressions and keeps a malformed one", () => {
   const kindsAfterUnparen = (source: string): string => {
-    const { tree } = parse("t.eff", source);
+    const { tree } = parse("t.eff", source, undefined);
     const initializer = constInitializer(tree, "x");
     return kindName(kindOf(tree, unparen(tree, initializer)));
   };

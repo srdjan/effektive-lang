@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The subset of the Language Server Protocol that this server uses: the wire
 // types, and narrowing functions from `unknown` for every incoming params
 // shape. Ordered field schemas share primitive, object, array and optional

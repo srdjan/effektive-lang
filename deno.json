@@ -73,6 +73,7 @@
     ]
   },
   "lint": {
+    "plugins": ["jsr:@srdjan/light-fp-lint@0.8.0"],
     "exclude": [
       "docs/",
       "fixtures/golden/",

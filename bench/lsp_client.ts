@@ -1,3 +1,4 @@
+// @light-fp adapter
 // A client over a spawned language server process, for the measurements M1, M3,
 // and M4. It spawns PATH’s `deno`, or the `executable` option,
 // with the arguments of the VS Code client. The client reads stdout from the start into a

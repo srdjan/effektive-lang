@@ -188,7 +188,7 @@ Deno.test("parseDenoCheck removes the undefined advice from a TS2379 message", (
 
 Deno.test("a diagnostic on a host assertion maps to host-boundary/001 on the import", () => {
   const output = parseDenoCheck(captured("deno-check.txt"), ROOT);
-  const mapped = mapTscDiagnostic(output.diagnostics[0], tables());
+  const mapped = mapTscDiagnostic(output.diagnostics[0], tables(), undefined);
   assert(mapped.tag === "host-boundary", JSON.stringify(mapped));
   assertEquals(mapped.tsCode, 2375);
   const diagnostic = mapped.diagnostic;
@@ -212,6 +212,7 @@ Deno.test("every position of the host assertion maps to host-boundary/001", () =
     const mapped = mapTscDiagnostic(
       diagnosticAt("main.ts", position.line, position.column),
       tables(),
+      undefined,
     );
     assertEquals(mapped.tag, "host-boundary", `offset ${offset}`);
   }
@@ -224,6 +225,7 @@ Deno.test("a diagnostic inside a printed node maps to its source span", () => {
   const mapped = mapTscDiagnostic(
     diagnosticAt("users.ts", position.line, position.column),
     tables(),
+    undefined,
   );
   assert(mapped.tag === "source", JSON.stringify(mapped));
   assertEquals(mapped.tsCode, 2322);
@@ -244,6 +246,7 @@ Deno.test("a diagnostic inside a companion declaration maps to its .effi span", 
   const mapped = mapTscDiagnostic(
     diagnosticAt(module.path, position.line, position.column),
     new Map([[module.path, table]]),
+    undefined,
   );
   assert(mapped.tag === "source", JSON.stringify(mapped));
   assertEquals(mapped.span.source, "host.effi");
@@ -255,7 +258,11 @@ Deno.test("a diagnostic inside a companion declaration maps to its .effi span", 
 
 Deno.test("a diagnostic outside every record or in an unknown file keeps its generated position", () => {
   // Line 3 of main.ts is an import of the generated file.
-  const inImports = mapTscDiagnostic(diagnosticAt("main.ts", 3, 2), tables());
+  const inImports = mapTscDiagnostic(
+    diagnosticAt("main.ts", 3, 2),
+    tables(),
+    undefined,
+  );
   assertEquals(inImports, {
     tag: "generated",
     file: "main.ts",
@@ -267,6 +274,7 @@ Deno.test("a diagnostic outside every record or in an unknown file keeps its gen
   const inHost = mapTscDiagnostic(
     diagnosticAt("users-live.ts", 21, 14),
     tables(),
+    undefined,
   );
   assertEquals(inHost.tag, "generated");
   const inKnownHost = mapTscDiagnostic(
@@ -283,14 +291,18 @@ Deno.test("a diagnostic outside every record or in an unknown file keeps its gen
     tsCode: 2322,
     message: "message",
   });
-  const pastEnd = mapTscDiagnostic(diagnosticAt("main.ts", 999, 1), tables());
+  const pastEnd = mapTscDiagnostic(
+    diagnosticAt("main.ts", 999, 1),
+    tables(),
+    undefined,
+  );
   assertEquals(pastEnd.tag, "generated");
 });
 
 Deno.test("a host assertion without an import span is not reported as host-boundary", () => {
   const module = examples.emitted.get("main");
   assert(module !== undefined);
-  const bare = new Map([["main.ts", buildSpanTable(module)]]);
+  const bare = new Map([["main.ts", buildSpanTable(module, undefined)]]);
   const assertion = bare.get("main.ts")?.hostAssertions[0];
   assert(assertion !== undefined);
   const position = positionOf(
@@ -301,6 +313,7 @@ Deno.test("a host assertion without an import span is not reported as host-bound
   const mapped = mapTscDiagnostic(
     diagnosticAt("main.ts", position.line, position.column),
     bare,
+    undefined,
   );
   assertEquals(mapped.tag, "generated");
 });

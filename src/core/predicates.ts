@@ -1,3 +1,12 @@
+import {
+  bigInteger,
+  emptyMap,
+  emptySet,
+  hasProperty,
+  indices,
+  reverseIndices,
+  stackValues,
+} from "./runtime.ts";
 import type { Result } from "./source.ts";
 
 /** An integer written without a precision-losing JavaScript number. */
@@ -44,9 +53,9 @@ type PredicateError =
   | { readonly tag: "invalid-predicate"; readonly message: string }
   | { readonly tag: "invalid-limit"; readonly message: string };
 
-export interface SolverLimits {
+export type SolverLimits = {
   readonly maxSteps: number;
-}
+};
 
 export type UnsatProof =
   | { readonly kind: "false" }
@@ -56,10 +65,10 @@ export type UnsatProof =
     readonly constraints: readonly number[];
   };
 
-export interface ProofCertificate {
+export type ProofCertificate = {
   readonly claim: "proved" | "disproved";
   readonly proof: UnsatProof;
-}
+};
 
 type Entailment =
   | {
@@ -78,126 +87,192 @@ type Entailment =
     readonly reason: "open" | "exhausted";
   };
 
-export function constant(value: boolean): Predicate {
-  return { kind: "constant", value };
-}
+type PredicateTruth = boolean;
 
-export function and(...operands: readonly Predicate[]): Predicate {
+export function constant(value: PredicateTruth): Predicate {
+  return { kind: "constant", value: value };
+}
+export function and(operands: readonly Predicate[]): Predicate {
   const flat: Predicate[] = [];
   for (const operand of operands) {
     if (operand.kind === "constant") {
-      if (!operand.value) return operand;
+      if (!operand.value) {
+        return operand;
+      }
       continue;
     }
-    if (operand.kind === "and") flat.push(...operand.operands);
-    else flat.push(operand);
+    if (operand.kind === "and") {
+      const _appendTarget1 = flat;
+      const _appendValues2 = [...operand.operands];
+      for (const _appendItem3 of _appendValues2) {
+        _appendTarget1[_appendTarget1.length] = _appendItem3;
+      }
+    } else {
+      const _appendTarget4 = flat;
+      const _appendValue5 = operand;
+      _appendTarget4[_appendTarget4.length] = _appendValue5;
+    }
   }
-  if (flat.length === 0) return constant(true);
+  if (flat.length === 0) {
+    return constant(true);
+  }
   return flat.length === 1 ? flat[0] : { kind: "and", operands: flat };
 }
-
-export function or(...operands: readonly Predicate[]): Predicate {
+export function or(operands: readonly Predicate[]): Predicate {
   const flat: Predicate[] = [];
   for (const operand of operands) {
     if (operand.kind === "constant") {
-      if (operand.value) return operand;
+      if (operand.value) {
+        return operand;
+      }
       continue;
     }
-    if (operand.kind === "or") flat.push(...operand.operands);
-    else flat.push(operand);
+    if (operand.kind === "or") {
+      const _appendTarget6 = flat;
+      const _appendValues7 = [...operand.operands];
+      for (const _appendItem8 of _appendValues7) {
+        _appendTarget6[_appendTarget6.length] = _appendItem8;
+      }
+    } else {
+      const _appendTarget9 = flat;
+      const _appendValue10 = operand;
+      _appendTarget9[_appendTarget9.length] = _appendValue10;
+    }
   }
-  if (flat.length === 0) return constant(false);
+  if (flat.length === 0) {
+    return constant(false);
+  }
   return flat.length === 1 ? flat[0] : { kind: "or", operands: flat };
 }
-
 export function not(operand: Predicate): Predicate {
-  if (operand.kind === "constant") return constant(!operand.value);
-  return operand.kind === "not" ? operand.operand : { kind: "not", operand };
+  if (operand.kind === "constant") {
+    return constant(!operand.value);
+  }
+  return operand.kind === "not"
+    ? operand.operand
+    : { kind: "not", operand: operand };
 }
-
 /** Returns the unique decimal spelling of a mathematical integer. */
 export function normalizeInteger(
-  value: string,
+  value: DecimalInteger,
 ): Result<DecimalInteger, PredicateError> {
-  if (!/^[+-]?[0-9]+$/.test(value)) {
-    return { ok: false, error: { tag: "invalid-integer", value } };
+  if (!isDecimalInteger(value)) {
+    return { ok: false, error: { tag: "invalid-integer", value: value } };
   }
-  return { ok: true, value: BigInt(value).toString() };
+  return { ok: true, value: bigInteger(value).toString() };
 }
-
 /**
  * Compares `left + leftOffset` with `right + rightOffset`.
  * The result uses only normalized difference constraints and Boolean nodes.
  */
 export function comparison(
   left: Term,
-  leftOffset: string,
+  leftOffset: DecimalInteger,
   operator: Comparison,
   right: Term,
-  rightOffset: string,
+  rightOffset: DecimalInteger,
 ): Result<Predicate, PredicateError> {
   const leftTerm = checkTerm(left);
-  if (!leftTerm.ok) return leftTerm;
+  if (!leftTerm.ok) {
+    return leftTerm;
+  }
   const rightTerm = checkTerm(right);
-  if (!rightTerm.ok) return rightTerm;
+  if (!rightTerm.ok) {
+    return rightTerm;
+  }
   const leftInteger = parseInteger(leftOffset);
-  if (!leftInteger.ok) return leftInteger;
+  if (!leftInteger.ok) {
+    return leftInteger;
+  }
   const rightInteger = parseInteger(rightOffset);
-  if (!rightInteger.ok) return rightInteger;
+  if (!rightInteger.ok) {
+    return rightInteger;
+  }
   const maximum = rightInteger.value - leftInteger.value;
-  const { join, parts } = COMPARISON_BOUNDS[canonicalOperator(operator)];
+  const binding1 = COMPARISON_BOUNDS[canonicalOperator(operator)];
+  const join = binding1.join;
+  const parts = binding1.parts;
   const bounds = parts.map((part) =>
     part.reversed
       ? difference(right, left, -maximum + part.slack)
       : difference(left, right, maximum + part.slack)
   );
-  switch (join) {
-    case "single":
-      return { ok: true, value: bounds[0] };
-    case "and":
-      return { ok: true, value: and(...bounds) };
-    case "or":
-      return { ok: true, value: or(...bounds) };
+  if (join === "single") {
+    return { ok: true, value: bounds[0] };
+  } else if (join === "and") {
+    return { ok: true, value: and(bounds) };
+  } else {
+    return { ok: true, value: or(bounds) };
   }
 }
-
 function canonicalOperator(operator: Comparison): ComparisonOperator {
-  if (operator === "==") return "===";
+  if (operator === "==") {
+    return "===";
+  }
   return operator === "!=" ? "!==" : operator;
 }
-
-interface Constraint {
+type Constraint = {
   readonly left: Term;
   readonly right: Term;
   readonly maximum: bigint;
   readonly leftKey: string;
   readonly rightKey: string;
-}
-
-interface PendingPredicate {
+};
+type PendingPredicate = {
   readonly predicate: Predicate;
   readonly negated: boolean;
+};
+type SearchState = {
+  readonly pending: readonly PendingPredicate[];
+  readonly constraints: readonly Constraint[];
+};
+type Search = {
+  readonly kind: "unsat";
+  readonly proof: UnsatProof;
+} | {
+  readonly kind: "satisfiable";
+} | {
+  readonly kind: "exhausted";
+} | {
+  readonly kind: "error";
+  readonly error: PredicateError;
+};
+type Budget = {
+  readonly remaining: () => number;
+  readonly spend: (count: number) => boolean;
+};
+function createBudget(maximum: number): Budget {
+  let remaining = maximum;
+  function spend(count: number): boolean {
+    if (count > remaining) {
+      remaining = 0;
+      return false;
+    }
+    remaining = remaining - count;
+    return true;
+  }
+  return { remaining: () => remaining, spend: spend };
 }
-
-interface SearchState {
-  readonly pending: PendingPredicate[];
-  readonly constraints: Constraint[];
+function isDecimalInteger(value: string): boolean {
+  const sign = value[0] === "+" || value[0] === "-";
+  const digits = sign ? value.slice(1) : value;
+  if (digits.length === 0) {
+    return false;
+  }
+  for (const char of digits) {
+    if (char < "0" || char > "9") {
+      return false;
+    }
+  }
+  return true;
 }
-
-type Search =
-  | { readonly kind: "unsat"; readonly proof: UnsatProof }
-  | { readonly kind: "satisfiable" }
-  | { readonly kind: "exhausted" }
-  | { readonly kind: "error"; readonly error: PredicateError };
-
-interface Budget {
-  remaining: number;
-}
-
-type SearchTask =
-  | { readonly kind: "solve"; readonly state: SearchState }
-  | { readonly kind: "join"; readonly count: number };
-
+type SearchTask = {
+  readonly kind: "solve";
+  readonly state: SearchState;
+} | {
+  readonly kind: "join";
+  readonly count: number;
+};
 /** Proves a predicate, disproves it, or reports that the bounded search is open. */
 export function entails(
   assumptions: Predicate,
@@ -205,24 +280,25 @@ export function entails(
   limits: SolverLimits,
 ): Result<Entailment, PredicateError> {
   const checked = checkLimits(limits);
-  if (!checked.ok) return checked;
-  const budget: Budget = { remaining: limits.maxSteps };
-  const proof = contradiction(
-    [
-      { predicate: assumptions, negated: false },
-      { predicate, negated: true },
-    ],
-    budget,
-  );
-  if (proof.kind === "error") return { ok: false, error: proof.error };
+  if (!checked.ok) {
+    return checked;
+  }
+  const budget = createBudget(limits.maxSteps);
+  const proof = contradiction([
+    { predicate: assumptions, negated: false },
+    { predicate: predicate, negated: true },
+  ], budget);
+  if (proof.kind === "error") {
+    return { ok: false, error: proof.error };
+  }
   if (proof.kind === "unsat") {
     const certificate = { claim: "proved" as const, proof: proof.proof };
     return {
       ok: true,
       value: {
         status: "proved",
-        stepsUsed: limits.maxSteps - budget.remaining,
-        certificate,
+        stepsUsed: limits.maxSteps - budget.remaining(),
+        certificate: certificate,
       },
     };
   }
@@ -231,20 +307,18 @@ export function entails(
       ok: true,
       value: {
         status: "unknown",
-        stepsUsed: limits.maxSteps - budget.remaining,
+        stepsUsed: limits.maxSteps - budget.remaining(),
         reason: "exhausted",
       },
     };
   }
-
-  const disproof = contradiction(
-    [
-      { predicate: assumptions, negated: false },
-      { predicate, negated: false },
-    ],
-    budget,
-  );
-  if (disproof.kind === "error") return { ok: false, error: disproof.error };
+  const disproof = contradiction([
+    { predicate: assumptions, negated: false },
+    { predicate: predicate, negated: false },
+  ], budget);
+  if (disproof.kind === "error") {
+    return { ok: false, error: disproof.error };
+  }
   if (disproof.kind === "unsat") {
     const certificate = {
       claim: "disproved" as const,
@@ -254,8 +328,8 @@ export function entails(
       ok: true,
       value: {
         status: "disproved",
-        stepsUsed: limits.maxSteps - budget.remaining,
-        certificate,
+        stepsUsed: limits.maxSteps - budget.remaining(),
+        certificate: certificate,
       },
     };
   }
@@ -263,198 +337,237 @@ export function entails(
     ok: true,
     value: {
       status: "unknown",
-      stepsUsed: limits.maxSteps - budget.remaining,
+      stepsUsed: limits.maxSteps - budget.remaining(),
       reason: disproof.kind === "exhausted" ? "exhausted" : "open",
     },
   };
 }
-
-function contradiction(
-  pending: PendingPredicate[],
-  budget: Budget,
-): Search {
+function contradiction(pending: PendingPredicate[], budget: Budget): Search {
   const tasks: SearchTask[] = [{
     kind: "solve",
-    state: { pending, constraints: [] },
+    state: { pending: pending, constraints: [] },
   }];
   const proofs: UnsatProof[] = [];
-  while (tasks.length > 0) {
-    const task = tasks.pop();
-    if (task === undefined) break;
+  for (const task of stackValues(tasks)) {
     if (task.kind === "join") {
       const cases = proofs.splice(proofs.length - task.count, task.count);
-      proofs.push({ kind: "split", cases });
+      proofs[proofs.length] = { kind: "split", cases: cases };
       continue;
     }
     const reduced = reduce(task.state, budget);
     if (reduced.kind === "error" || reduced.kind === "exhausted") {
       return reduced;
     }
-    if (reduced.kind === "satisfiable") return reduced;
+    if (reduced.kind === "satisfiable") {
+      return reduced;
+    }
     if (reduced.kind === "proof") {
-      proofs.push(reduced.proof);
+      proofs[proofs.length] = reduced.proof;
       continue;
     }
-    tasks.push({ kind: "join", count: reduced.cases.length });
-    for (let index = reduced.cases.length - 1; index >= 0; index--) {
-      tasks.push({ kind: "solve", state: reduced.cases[index] });
+    tasks[tasks.length] = { kind: "join", count: reduced.cases.length };
+    for (const index of reverseIndices(reduced.cases.length)) {
+      tasks[tasks.length] = { kind: "solve", state: reduced.cases[index] };
     }
   }
   const proof = proofs[0];
   return proof === undefined
     ? { kind: "satisfiable" }
-    : { kind: "unsat", proof };
+    : { kind: "unsat", proof: proof };
 }
-
-type Reduced =
-  | { readonly kind: "proof"; readonly proof: UnsatProof }
-  | { readonly kind: "split"; readonly cases: readonly SearchState[] }
-  | { readonly kind: "satisfiable" }
-  | { readonly kind: "exhausted" }
-  | { readonly kind: "error"; readonly error: PredicateError };
-
+type Reduced = {
+  readonly kind: "proof";
+  readonly proof: UnsatProof;
+} | {
+  readonly kind: "split";
+  readonly cases: readonly SearchState[];
+} | {
+  readonly kind: "satisfiable";
+} | {
+  readonly kind: "exhausted";
+} | {
+  readonly kind: "error";
+  readonly error: PredicateError;
+};
 function reduce(state: SearchState, budget: Budget): Reduced {
-  while (state.pending.length > 0) {
-    if (!spend(budget)) return { kind: "exhausted" };
-    const current = state.pending.pop();
-    if (current === undefined) break;
+  const pending = [...state.pending];
+  const constraints = [...state.constraints];
+  for (const current of stackValues(pending)) {
+    if (!budget.spend(1)) {
+      return { kind: "exhausted" };
+    }
     const predicate = current.predicate;
     if (!isPredicateRecord(predicate)) {
       return invalidPredicate("a predicate is not an object");
     }
-    switch (predicate.kind) {
-      case "constant": {
-        if (typeof predicate.value !== "boolean") {
-          return invalidPredicate("a constant does not contain a boolean");
-        }
-        const value = current.negated ? !predicate.value : predicate.value;
-        if (!value) return { kind: "proof", proof: { kind: "false" } };
-        break;
+    if (predicate.kind === "constant") {
+      if (typeof predicate.value !== "boolean") {
+        return invalidPredicate("a constant does not contain a boolean");
       }
-      case "not":
-        if (!isPredicateRecord(predicate.operand)) {
-          return invalidPredicate("a not node has no predicate operand");
-        }
-        state.pending.push({
-          predicate: predicate.operand,
-          negated: !current.negated,
-        });
-        break;
-      case "and":
-      case "or": {
-        if (!Array.isArray(predicate.operands)) {
-          return invalidPredicate("a Boolean node has no operand list");
-        }
-        const conjunction = (predicate.kind === "and") !== current.negated;
-        if (conjunction) {
-          for (let index = predicate.operands.length - 1; index >= 0; index--) {
-            if (!spend(budget)) return { kind: "exhausted" };
-            state.pending.push({
-              predicate: predicate.operands[index],
-              negated: current.negated,
-            });
-          }
-          break;
-        }
-        if (predicate.operands.length === 0) {
-          return { kind: "proof", proof: { kind: "false" } };
-        }
-        if (!spendMany(budget, predicate.operands.length)) {
-          return { kind: "exhausted" };
-        }
-        return {
-          kind: "split",
-          cases: predicate.operands.map((operand) => ({
-            pending: [
-              ...state.pending,
-              { predicate: operand, negated: current.negated },
-            ],
-            constraints: [...state.constraints],
-          })),
-        };
+      const value = current.negated ? !predicate.value : predicate.value;
+      if (!value) {
+        return { kind: "proof", proof: { kind: "false" } };
       }
-      case "difference": {
-        const constraint = readConstraint(predicate, current.negated);
-        if (!constraint.ok) return { kind: "error", error: constraint.error };
-        state.constraints.push(constraint.value);
-        break;
-      }
-      default:
-        return invalidPredicate("a predicate has an unknown kind");
+      continue;
     }
+    if (predicate.kind === "not") {
+      if (!isPredicateRecord(predicate.operand)) {
+        return invalidPredicate("a not node has no predicate operand");
+      }
+      pending[pending.length] = {
+        predicate: predicate.operand,
+        negated: !current.negated,
+      };
+      continue;
+    }
+    if (predicate.kind === "and" || predicate.kind === "or") {
+      if (!Array.isArray(predicate.operands)) {
+        return invalidPredicate("a Boolean node has no operand list");
+      }
+      const conjunction = (predicate.kind === "and") !== current.negated;
+      if (conjunction) {
+        for (const index of reverseIndices(predicate.operands.length)) {
+          if (!budget.spend(1)) {
+            return { kind: "exhausted" };
+          }
+          pending[pending.length] = {
+            predicate: predicate.operands[index],
+            negated: current.negated,
+          };
+        }
+        continue;
+      }
+      if (predicate.operands.length === 0) {
+        return { kind: "proof", proof: { kind: "false" } };
+      }
+      if (!budget.spend(predicate.operands.length)) {
+        return { kind: "exhausted" };
+      }
+      return {
+        kind: "split",
+        cases: predicate.operands.map((operand) => ({
+          pending: [...pending, {
+            predicate: operand,
+            negated: current.negated,
+          }],
+          constraints: constraints,
+        })),
+      };
+    }
+    if (predicate.kind === "difference") {
+      const constraint = readConstraint(predicate, current.negated);
+      if (!constraint.ok) {
+        return { kind: "error", error: constraint.error };
+      }
+      constraints[constraints.length] = constraint.value;
+      continue;
+    }
+    return invalidPredicate("a predicate has an unknown kind");
   }
-  const cycle = negativeCycle(state.constraints, budget);
-  if (cycle.kind === "exhausted") return cycle;
+  const cycle = negativeCycle(constraints, budget);
+  if (cycle.kind === "exhausted") {
+    return cycle;
+  }
   return cycle.kind === "none" ? { kind: "satisfiable" } : {
     kind: "proof",
     proof: { kind: "negative-cycle", constraints: cycle.constraints },
   };
 }
-
-function negativeCycle(
-  constraints: readonly Constraint[],
-  budget: Budget,
-):
-  | { readonly kind: "none" }
-  | { readonly kind: "cycle"; readonly constraints: readonly number[] }
-  | { readonly kind: "exhausted" } {
-  const nodes = new Set<string>();
+function negativeCycle(constraints: readonly Constraint[], budget: Budget): {
+  readonly kind: "none";
+} | {
+  readonly kind: "cycle";
+  readonly constraints: readonly number[];
+} | {
+  readonly kind: "exhausted";
+} {
+  let nodes = emptySet<string>();
   for (const constraint of constraints) {
-    nodes.add(constraint.leftKey);
-    nodes.add(constraint.rightKey);
+    nodes = nodes.add(constraint.leftKey);
+    nodes = nodes.add(constraint.rightKey);
   }
-  const distance = new Map<string, bigint>();
-  const predecessor = new Map<string, number>();
-  for (const node of nodes) distance.set(node, 0n);
+  let distance = emptyMap<string, bigint>();
+  let predecessor = emptyMap<string, number>();
+  for (const node of nodes) {
+    distance = distance.set(node, 0n);
+  }
   let changed: string | undefined;
-  for (let pass = 0; pass < nodes.size; pass++) {
+  for (const _pass of indices(nodes.size)) {
     changed = undefined;
-    for (let index = 0; index < constraints.length; index++) {
-      if (!spend(budget)) return { kind: "exhausted" };
+    for (const index of indices(constraints.length)) {
+      if (!budget.spend(1)) {
+        return { kind: "exhausted" };
+      }
       const edge = constraints[index];
       const candidate = (distance.get(edge.rightKey) ?? 0n) + edge.maximum;
       if (candidate < (distance.get(edge.leftKey) ?? 0n)) {
-        distance.set(edge.leftKey, candidate);
-        predecessor.set(edge.leftKey, index);
+        distance = distance.set(edge.leftKey, candidate);
+        predecessor = predecessor.set(edge.leftKey, index);
         changed = edge.leftKey;
       }
     }
-    if (changed === undefined) return { kind: "none" };
+    if (changed === undefined) {
+      return { kind: "none" };
+    }
   }
-  if (changed === undefined) return { kind: "none" };
+  if (changed === undefined) {
+    return { kind: "none" };
+  }
   let node = changed;
-  for (let count = 0; count < nodes.size; count++) {
-    if (!spend(budget)) return { kind: "exhausted" };
+  for (const _count of indices(nodes.size)) {
+    if (!budget.spend(1)) {
+      return { kind: "exhausted" };
+    }
     const edge = constraints[predecessor.get(node) ?? -1];
-    if (edge === undefined) return { kind: "none" };
+    if (edge === undefined) {
+      return { kind: "none" };
+    }
     node = edge.rightKey;
   }
   const start = node;
   const cycle: number[] = [];
-  do {
-    if (!spend(budget)) return { kind: "exhausted" };
+  for (const _step of indices(nodes.size)) {
+    if (!budget.spend(1)) {
+      return { kind: "exhausted" };
+    }
     const index = predecessor.get(node);
-    if (index === undefined) return { kind: "none" };
-    cycle.push(index);
+    if (index === undefined) {
+      return { kind: "none" };
+    }
+    {
+      const _appendTarget19 = cycle;
+      const _appendValue20 = index;
+      _appendTarget19[_appendTarget19.length] = _appendValue20;
+    }
     node = constraints[index].rightKey;
-  } while (node !== start);
+    if (node === start) {
+      break;
+    }
+  }
   return { kind: "cycle", constraints: cycle };
 }
-
 function readConstraint(
-  predicate: Extract<Predicate, { readonly kind: "difference" }>,
+  predicate: Extract<Predicate, {
+    readonly kind: "difference";
+  }>,
   negated: boolean,
 ): Result<Constraint, PredicateError> {
   const left = checkTerm(predicate.left);
-  if (!left.ok) return left;
+  if (!left.ok) {
+    return left;
+  }
   const right = checkTerm(predicate.right);
-  if (!right.ok) return right;
+  if (!right.ok) {
+    return right;
+  }
   const maximum: Result<bigint, PredicateError> =
     typeof predicate.maximum === "string" ? parseInteger(predicate.maximum) : {
       ok: false,
       error: { tag: "invalid-integer", value: String(predicate.maximum) },
     };
-  if (!maximum.ok) return maximum;
+  if (!maximum.ok) {
+    return maximum;
+  }
   if (maximum.value.toString() !== predicate.maximum) {
     return {
       ok: false,
@@ -478,19 +591,23 @@ function readConstraint(
     },
   };
 }
-
 function difference(left: Term, right: Term, maximum: bigint): Predicate {
-  if (termKey(left) === termKey(right)) return constant(0n <= maximum);
-  return { kind: "difference", left, right, maximum: maximum.toString() };
+  if (termKey(left) === termKey(right)) {
+    return constant(0n <= maximum);
+  }
+  return {
+    kind: "difference",
+    left: left,
+    right: right,
+    maximum: maximum.toString(),
+  };
 }
-
 function parseInteger(value: string): Result<bigint, PredicateError> {
   const normalized = normalizeInteger(value);
   return normalized.ok
-    ? { ok: true, value: BigInt(normalized.value) }
+    ? { ok: true, value: bigInteger(normalized.value) }
     : normalized;
 }
-
 function checkTerm(term: Term): Result<Term, PredicateError> {
   if (typeof term !== "object" || term === null) {
     return invalidTerm("a term is not an object");
@@ -515,35 +632,34 @@ function checkTerm(term: Term): Result<Term, PredicateError> {
   }
   return { ok: true, value: term };
 }
-
 function invalidTerm(message: string): Result<never, PredicateError> {
-  return { ok: false, error: { tag: "invalid-term", message } };
+  return { ok: false, error: { tag: "invalid-term", message: message } };
 }
-
 function invalidPredicate(message: string): Reduced {
-  return { kind: "error", error: { tag: "invalid-predicate", message } };
+  return {
+    kind: "error",
+    error: { tag: "invalid-predicate", message: message },
+  };
 }
-
 function isPredicateRecord(value: unknown): value is Predicate {
-  return typeof value === "object" && value !== null && "kind" in value;
+  return typeof value === "object" && value !== null &&
+    hasProperty(value, "kind");
 }
-
 function termKey(term: Term): string {
-  switch (term.kind) {
-    case "zero":
+  {
+    const kind_1 = term.kind;
+    if (kind_1 === "zero") {
       return "z";
-    case "input":
+    } else if (kind_1 === "input") {
       return "i";
-    case "field":
+    } else if (kind_1 === "field") {
       return `f${JSON.stringify(term.path)}`;
-    case "length":
+    } else {
       return `l${JSON.stringify(term.path)}`;
+    }
   }
 }
-
-function checkLimits(
-  limits: SolverLimits,
-): Result<true, PredicateError> {
+function checkLimits(limits: SolverLimits): Result<true, PredicateError> {
   if (!Number.isSafeInteger(limits.maxSteps) || limits.maxSteps < 0) {
     return {
       ok: false,
@@ -555,40 +671,21 @@ function checkLimits(
   }
   return { ok: true, value: true };
 }
-
-function spend(budget: Budget): boolean {
-  if (budget.remaining === 0) return false;
-  budget.remaining--;
-  return true;
-}
-
-function spendMany(budget: Budget, count: number): boolean {
-  if (count > budget.remaining) {
-    budget.remaining = 0;
-    return false;
-  }
-  budget.remaining -= count;
-  return true;
-}
-
 export type ComparisonOperator = "<" | "<=" | "===" | "!==" | ">=" | ">";
-
 /**
  * One difference bound of a comparison of `left + leftOffset` with `right + rightOffset`.
  * With `maximum = rightOffset - leftOffset`, the forward bound is
  * `left - right <= maximum + slack`. The reverse bound is `right - left <= -maximum + slack`.
  */
-interface ComparisonPart {
+type ComparisonPart = {
   readonly reversed: boolean;
   readonly slack: bigint;
-}
-
-interface ComparisonBounds {
+};
+type ComparisonBounds = {
   readonly parts: readonly ComparisonPart[];
   /** How the parts combine. A single part has no join. */
   readonly join: "single" | "and" | "or";
-}
-
+};
 /** Turns each comparison operator into its difference bounds. */
 export const COMPARISON_BOUNDS: Readonly<
   Record<ComparisonOperator, ComparisonBounds>

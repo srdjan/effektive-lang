@@ -17,7 +17,7 @@ function actionsAt(
   allowCallerGaps = false,
   path = "m.eff",
 ): readonly (readonly [string, string])[] {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -147,7 +147,7 @@ function failsActionsAt(
   start: number,
   path = "m.eff",
 ): readonly (readonly [string, string])[] {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", ...files },
   });
   assert(loaded.ok);
@@ -158,12 +158,12 @@ function failsActionsAt(
 
 /** The diagnostic codes of the project after the first fails clause action. */
 function codesAfterFailsAction(text: string, start: number): string[] {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
   const [action] = failsClauseActionsAt(loaded.value, "m.eff", start);
-  const edited = new Program("").update({
+  const edited = Program("").update({
     set: {
       "effektive.json": "{}",
       "m.eff": applySourceEdits(text, action.edits),
@@ -193,13 +193,13 @@ Deno.test("fails clause: W0 the users example gets its inferred failures", () =>
       "(id: UserId): User fails StoreUnavailable | UserMissing =>",
     ),
   ]]);
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", ...files },
   });
   assert(loaded.ok);
   const [action] = failsClauseActionsAt(loaded.value, "users.eff", at);
   assert(action !== undefined);
-  const edited = new Program("").update({
+  const edited = Program("").update({
     set: {
       "effektive.json": "{}",
       ...files,

@@ -26,14 +26,14 @@ function shape(text: string): { kinds: string[]; diagnostics: string[] } {
   walk(result.tree, result.tree.root, (node) => {
     const kind = kindOf(result.tree, node);
     if (
-      [
+      Array.of<SyntaxKind>(
         SyntaxKind.TryExpr,
         SyntaxKind.CatchClause,
         SyntaxKind.FinallyClause,
         SyntaxKind.ResourceRelease,
         SyntaxKind.Name,
         SyntaxKind.Missing,
-      ].includes(kind)
+      ).includes(kind)
     ) kinds.push(kindName(kind));
   });
   return {
@@ -85,7 +85,7 @@ Deno.test("the outcome binding has the structural union, with a Failure member f
     `${HEAD}export const a = (): Int fails Stop with Log.next | Log.note =>
   try { Log.next() } finally (out) { Log.note(1) }
 `;
-  const program = new Program().update({
+  const program = Program(undefined).update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(program.ok);
@@ -101,7 +101,7 @@ Deno.test("the outcome has no Failure member when no failure remains, also after
   try { Log.next() } catch { Stop(e) => 0 } finally (out) { Log.note(1) }
 export const b = (): Int with Log.note => try { 1 } finally (done) { Log.note(1) }
 `;
-  const program = new Program().update({
+  const program = Program(undefined).update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(program.ok);
@@ -122,7 +122,7 @@ export service Pool { open(): Handle }
 export const a = (): Int fails Stop with Pool.open | Log.note =>
   using (h = Pool.open()) { Log.next() } finally (z) { Log.note(1) }
 `;
-  const program = new Program().update({
+  const program = Program(undefined).update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(program.ok);

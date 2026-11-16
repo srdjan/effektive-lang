@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The emit-and-write step of a build, shared by `build`, `watch`, and the
 // language server: emit each named module, build its source map, and write the
 // generated file and the map when their text changed.

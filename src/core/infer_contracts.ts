@@ -1,97 +1,132 @@
+import { emptyMap, emptySet } from "./runtime.ts";
 import type { LocalId } from "./ir.ts";
 import type { NodeId } from "./syntax.ts";
 import type { TypeRef, TypeTable } from "./types.ts";
-
-interface Root {
+type Root = {
   readonly id: LocalId;
   readonly name: string;
-}
-
-export interface Origin {
+};
+export type Origin = {
   readonly root: Root;
   readonly path: readonly string[];
-}
-
-interface Demand {
+};
+type Demand = {
   readonly path: readonly string[];
   readonly type: TypeRef;
   readonly node: NodeId;
-}
-
-interface DemandNode {
-  readonly direct: Demand[];
-  readonly fields: Map<string, DemandNode>;
-}
-
-interface DeferredCall {
+};
+type DeferredCall = {
   readonly origin: Origin;
   readonly callee: NodeId;
-  readonly applyContract: (evidence: CallableEvidence) => void;
-  readonly processed: Set<TypeRef>;
-  resolved: boolean;
-}
-
-export interface CallableEvidence {
+  readonly applyContract: (evidence: CallableEvidence) => boolean;
+};
+export type CallableEvidence = {
   readonly kind: "callable";
   readonly parameters: readonly (TypeRef | undefined)[];
   readonly result: TypeRef | undefined;
   readonly checked: readonly boolean[] | undefined;
-}
-
-type ContractIssue =
-  | {
-    readonly kind: "unresolved-call";
-    readonly rootName: string;
-    readonly node: NodeId;
-  }
-  | {
-    readonly kind: "conflicting-requirements";
-    readonly rootName: string;
-    readonly path: readonly string[];
-    readonly candidates: readonly TypeRef[];
-    readonly node: NodeId;
-  };
-
-interface Resolution {
+};
+type ContractIssue = {
+  readonly kind: "unresolved-call";
+  readonly rootName: string;
+  readonly node: NodeId;
+} | {
+  readonly kind: "conflicting-requirements";
+  readonly rootName: string;
+  readonly path: readonly string[];
+  readonly candidates: readonly TypeRef[];
+  readonly node: NodeId;
+};
+type Resolution = {
   readonly types: readonly TypeRef[];
   readonly issues: readonly ContractIssue[];
-}
-
-function emptyDemandNode(): DemandNode {
-  return { direct: [], fields: new Map() };
-}
-
-export class InputContractResolver {
-  private readonly origins = new Map<LocalId, Origin>();
-  private readonly demands = new Map<LocalId, Demand[]>();
-  private readonly deferredCalls = new Map<LocalId, DeferredCall[]>();
-  private readonly deferredCallsByCallee = new Map<NodeId, DeferredCall>();
-  private readonly pendingCalls: DeferredCall[] = [];
-  private readonly queuedCalls = new Set<DeferredCall>();
-
-  constructor(
-    private readonly table: TypeTable,
-    roots: readonly Root[],
-  ) {
-    for (const root of roots) this.origins.set(root.id, { root, path: [] });
+};
+type RecordFieldShape = {
+  readonly name: string;
+  readonly type: TypeRef;
+  readonly optional: boolean;
+};
+export type InputContractResolver = {
+  readonly origin: (id: LocalId) => Origin | undefined;
+  readonly setOrigin: (id: LocalId, origin: Origin) => InputContractResolver;
+  readonly isConcrete: (type: TypeRef | undefined) => type is TypeRef;
+  readonly callableEvidence: (
+    type: TypeRef | undefined,
+  ) => CallableEvidence | undefined;
+  readonly fieldType: (
+    type: TypeRef | undefined,
+    name: string,
+  ) => TypeRef | undefined;
+  readonly demand: (
+    origin: Origin | undefined,
+    type: TypeRef | undefined,
+    node: NodeId,
+  ) => InputContractResolver;
+  readonly defer: (
+    origin: Origin,
+    callee: NodeId,
+    applyContract: (evidence: CallableEvidence) => boolean,
+  ) => InputContractResolver;
+  readonly finish: (
+    parameters: readonly {
+      readonly id: LocalId | undefined;
+      readonly type: TypeRef;
+      readonly inferred: boolean;
+    }[],
+  ) => Resolution;
+};
+export function InputContractResolver(
+  table: TypeTable,
+  roots: readonly Root[],
+): InputContractResolver {
+  const inputContractResolverTable = table;
+  let inputContractResolverOrigins = emptyMap<LocalId, Origin>();
+  let inputContractResolverDemands = emptyMap<LocalId, Demand[]>();
+  let inputContractResolverDeferredCalls = emptyMap<LocalId, DeferredCall[]>();
+  let inputContractResolverDeferredCallsByCallee = emptyMap<
+    NodeId,
+    DeferredCall
+  >();
+  const inputContractResolverPendingCalls: DeferredCall[] = [];
+  let inputContractResolverQueuedCalls = emptySet<DeferredCall>();
+  let inputContractResolverProcessed = emptyMap<
+    DeferredCall,
+    Set<TypeRef>
+  >();
+  let inputContractResolverResolved = emptySet<DeferredCall>();
+  for (const root of roots) {
+    inputContractResolverOrigins = inputContractResolverOrigins.set(root.id, {
+      root: root,
+      path: [],
+    });
   }
-
-  origin(id: LocalId): Origin | undefined {
-    return this.origins.get(id);
+  function inputContractResolverOrigin(id: LocalId): Origin | undefined {
+    return inputContractResolverOrigins.get(id);
   }
-
-  setOrigin(id: LocalId, origin: Origin): void {
-    this.origins.set(id, origin);
+  function inputContractResolverSetOrigin(
+    id: LocalId,
+    origin: Origin,
+  ): InputContractResolver {
+    inputContractResolverOrigins = inputContractResolverOrigins.set(id, origin);
+    return inputContractResolverSelf;
   }
-
-  isConcrete(type: TypeRef | undefined): type is TypeRef {
-    if (type === undefined || type === this.table.unknown) return false;
-    return this.table.node(type).kind !== "error";
+  function inputContractResolverIsConcrete(
+    type: TypeRef | undefined,
+  ): type is TypeRef {
+    if (type === undefined || type === inputContractResolverTable.unknown) {
+      return false;
+    }
+    return inputContractResolverTable.node(type).kind !== "error";
   }
-
-  callableEvidence(type: TypeRef | undefined): CallableEvidence | undefined {
-    if (type === undefined) return undefined;
-    const node = this.table.node(this.table.unfold(type));
+  function inputContractResolverCallableEvidence(
+    type: TypeRef | undefined,
+  ): CallableEvidence | undefined {
+    if (type === undefined) {
+      return undefined;
+    }
+    const node = inputContractResolverTable.node(
+      inputContractResolverTable.unfold(type),
+    );
     return node.kind === "function"
       ? {
         kind: "callable",
@@ -101,26 +136,35 @@ export class InputContractResolver {
       }
       : undefined;
   }
-
-  fieldType(type: TypeRef | undefined, name: string): TypeRef | undefined {
-    if (!this.isConcrete(type)) return undefined;
-    return this.recordFields(type)?.find((field) => field.name === name)?.type;
+  function inputContractResolverFieldType(
+    type: TypeRef | undefined,
+    name: string,
+  ): TypeRef | undefined {
+    if (!inputContractResolverIsConcrete(type)) {
+      return undefined;
+    }
+    return inputContractResolverRecordFields(type)?.find((field) =>
+      field.name === name
+    )?.type;
   }
-
-  demand(
+  function inputContractResolverDemand(
     origin: Origin | undefined,
     type: TypeRef | undefined,
     node: NodeId,
-  ): void {
+  ): InputContractResolver {
     if (
       origin === undefined ||
-      (!this.isConcrete(type) && origin.path.length === 0)
-    ) return;
-    const list = this.demands.get(origin.root.id) ?? [];
+      (!inputContractResolverIsConcrete(type) && origin.path.length === 0)
+    ) {
+      return inputContractResolverSelf;
+    }
+    const list = inputContractResolverDemands.get(origin.root.id) ?? [];
     const demand = {
       path: origin.path,
-      type: this.isConcrete(type) ? type : this.table.unknown,
-      node,
+      type: inputContractResolverIsConcrete(type)
+        ? type
+        : inputContractResolverTable.unknown,
+      node: node,
     };
     if (
       list.some((candidate) =>
@@ -128,228 +172,343 @@ export class InputContractResolver {
         candidate.path.length === demand.path.length &&
         candidate.path.every((field, index) => field === demand.path[index])
       )
-    ) return;
-    list.push(demand);
-    this.demands.set(origin.root.id, list);
-    for (const call of this.deferredCalls.get(origin.root.id) ?? []) {
-      this.enqueue(call);
+    ) {
+      return inputContractResolverSelf;
     }
+    {
+      const _appendTarget1 = list;
+      const _appendValue2 = demand;
+      _appendTarget1[_appendTarget1.length] = _appendValue2;
+    }
+    inputContractResolverDemands = inputContractResolverDemands.set(
+      origin.root.id,
+      list,
+    );
+    for (
+      const call of inputContractResolverDeferredCalls.get(origin.root.id) ?? []
+    ) {
+      inputContractResolverQueuedCalls = inputContractResolverEnqueue(call);
+    }
+    return inputContractResolverSelf;
   }
-
-  defer(
+  function inputContractResolverDefer(
     origin: Origin,
     callee: NodeId,
-    applyContract: (evidence: CallableEvidence) => void,
-  ): void {
-    const existing = this.deferredCallsByCallee.get(callee);
+    applyContract: (evidence: CallableEvidence) => boolean,
+  ): InputContractResolver {
+    const existing = inputContractResolverDeferredCallsByCallee.get(callee);
     if (existing !== undefined) {
-      this.enqueue(existing);
-      return;
+      inputContractResolverQueuedCalls = inputContractResolverEnqueue(existing);
+      return inputContractResolverSelf;
     }
     const call: DeferredCall = {
-      origin,
-      callee,
-      applyContract,
-      processed: new Set(),
-      resolved: false,
+      origin: origin,
+      callee: callee,
+      applyContract: applyContract,
     };
-    const calls = this.deferredCalls.get(origin.root.id) ?? [];
-    calls.push(call);
-    this.deferredCalls.set(origin.root.id, calls);
-    this.deferredCallsByCallee.set(callee, call);
-    this.enqueue(call);
+    const calls = inputContractResolverDeferredCalls.get(origin.root.id) ?? [];
+    {
+      const _appendTarget3 = calls;
+      const _appendValue4 = call;
+      _appendTarget3[_appendTarget3.length] = _appendValue4;
+    }
+    inputContractResolverDeferredCalls = inputContractResolverDeferredCalls.set(
+      origin.root.id,
+      calls,
+    );
+    inputContractResolverDeferredCallsByCallee =
+      inputContractResolverDeferredCallsByCallee.set(callee, call);
+    inputContractResolverQueuedCalls = inputContractResolverEnqueue(call);
+    return inputContractResolverSelf;
   }
-
-  finish(
+  function inputContractResolverFinish(
     parameters: readonly {
       readonly id: LocalId | undefined;
       readonly type: TypeRef;
       readonly inferred: boolean;
     }[],
   ): Resolution {
-    this.propagateDeferredCalls();
+    inputContractResolverResolved =
+      inputContractResolverPropagateDeferredCalls();
     const issues: ContractIssue[] = [];
     const types = parameters.map((parameter) => {
       if (!parameter.inferred || parameter.id === undefined) {
         return parameter.type;
       }
-      const root = this.origins.get(parameter.id)?.root;
-      const bodyDemands = this.demands.get(parameter.id) ?? [];
-      const demands =
-        parameter.type !== this.table.unknown && bodyDemands.length > 0
-          ? [
-            { path: [], type: parameter.type, node: bodyDemands[0].node },
-            ...bodyDemands,
-          ]
-          : bodyDemands;
+      const root = inputContractResolverOrigins.get(parameter.id)?.root;
+      const bodyDemands = inputContractResolverDemands.get(parameter.id) ?? [];
+      const demands = parameter.type !== inputContractResolverTable.unknown &&
+          bodyDemands.length > 0
+        ? [
+          { path: [], type: parameter.type, node: bodyDemands[0].node },
+          ...bodyDemands,
+        ]
+        : bodyDemands;
       for (
-        const call of (this.deferredCalls.get(parameter.id) ?? []).filter(
-          (candidate) => !candidate.resolved,
-        )
+        const call
+          of (inputContractResolverDeferredCalls.get(parameter.id) ?? [])
+            .filter((candidate) =>
+              !inputContractResolverResolved.has(candidate)
+            )
       ) {
-        issues.push({
-          kind: "unresolved-call",
-          rootName: root?.name ?? "input",
-          node: call.callee,
-        });
+        {
+          const _appendTarget5 = issues;
+          const _appendValue6: ContractIssue = {
+            kind: "unresolved-call",
+            rootName: root?.name ?? "input",
+            node: call.callee,
+          };
+          _appendTarget5[_appendTarget5.length] = _appendValue6;
+        }
       }
-      if (root === undefined || demands.length === 0) return parameter.type;
-      const demandTree = emptyDemandNode();
-      for (const demand of demands) this.insert(demandTree, demand, 0);
-      return this.resolve(root, demandTree, [], issues);
+      if (root === undefined || demands.length === 0) {
+        return parameter.type;
+      }
+      return inputContractResolverResolve(root, demands, [], issues);
     });
-    return { types, issues };
+    return { types: types, issues: issues };
   }
-
-  private enqueue(call: DeferredCall): void {
-    if (this.queuedCalls.has(call)) return;
-    this.queuedCalls.add(call);
-    this.pendingCalls.push(call);
+  function inputContractResolverEnqueue(call: DeferredCall): Set<DeferredCall> {
+    if (inputContractResolverQueuedCalls.has(call)) {
+      return inputContractResolverQueuedCalls;
+    }
+    {
+      const _appendTarget7 = inputContractResolverPendingCalls;
+      const _appendValue8 = call;
+      _appendTarget7[_appendTarget7.length] = _appendValue8;
+    }
+    return inputContractResolverQueuedCalls.add(call);
   }
-
-  private propagateDeferredCalls(): void {
-    for (let index = 0; index < this.pendingCalls.length; index++) {
-      const call = this.pendingCalls[index];
-      this.queuedCalls.delete(call);
-      for (const contract of this.contractsFor(call.origin)) {
-        if (call.processed.has(contract)) continue;
-        call.processed.add(contract);
-        const evidence = this.callableEvidence(contract);
-        if (evidence === undefined) continue;
-        call.resolved = true;
-        call.applyContract(evidence);
+  function inputContractResolverPropagateDeferredCalls(): Set<DeferredCall> {
+    for (const call of inputContractResolverPendingCalls) {
+      if (!inputContractResolverQueuedCalls.delete(call)) {
+        continue;
+      }
+      for (const contract of inputContractResolverContractsFor(call.origin)) {
+        let processed = inputContractResolverProcessed.get(call) ?? emptySet();
+        if (processed.has(contract)) {
+          continue;
+        }
+        processed = processed.add(contract);
+        inputContractResolverProcessed = inputContractResolverProcessed.set(
+          call,
+          processed,
+        );
+        const evidence = inputContractResolverCallableEvidence(contract);
+        if (evidence === undefined) {
+          continue;
+        }
+        if (call.applyContract(evidence)) {
+          inputContractResolverResolved = inputContractResolverResolved.add(
+            call,
+          );
+        }
       }
     }
-    this.pendingCalls.length = 0;
+    inputContractResolverPendingCalls.length = 0;
+    return inputContractResolverResolved;
   }
-
-  private contractsFor(origin: Origin): TypeRef[] {
-    const contracts = new Set<TypeRef>();
-    for (const demand of this.demands.get(origin.root.id) ?? []) {
+  function inputContractResolverContractsFor(origin: Origin): TypeRef[] {
+    let contracts = emptySet<TypeRef>();
+    for (
+      const demand of inputContractResolverDemands.get(origin.root.id) ?? []
+    ) {
       if (
         demand.path.length > origin.path.length ||
         !demand.path.every((field, index) => field === origin.path[index])
-      ) continue;
+      ) {
+        continue;
+      }
       let contract: TypeRef | undefined = demand.type;
       for (const field of origin.path.slice(demand.path.length)) {
-        contract = this.fieldType(contract, field);
-        if (contract === undefined) break;
+        contract = inputContractResolverFieldType(contract, field);
+        if (contract === undefined) {
+          break;
+        }
       }
-      if (contract !== undefined) contracts.add(contract);
+      if (contract !== undefined) {
+        contracts = contracts.add(contract);
+      }
     }
     return [...contracts];
   }
-
-  private insert(tree: DemandNode, demand: Demand, depth: number): void {
-    const field = demand.path[depth];
-    if (field === undefined) {
-      tree.direct.push(demand);
-      return;
-    }
-    let child = tree.fields.get(field);
-    if (child === undefined) {
-      child = emptyDemandNode();
-      tree.fields.set(field, child);
-    }
-    this.insert(child, demand, depth + 1);
-  }
-
-  private resolve(
+  function inputContractResolverResolve(
     root: Root,
-    tree: DemandNode,
+    demands: readonly Demand[],
     path: readonly string[],
     issues: ContractIssue[],
   ): TypeRef {
-    let fields: TypeRef | undefined;
-    if (tree.fields.size > 0) {
-      fields = this.table.record([...tree.fields].map(([name, child]) => ({
-        name,
-        type: this.resolve(root, child, [...path, name], issues),
-        optional: false,
-      })));
+    let fieldsAtPath = emptyMap<string, Demand[]>();
+    const direct = demands.filter((demand) =>
+      demand.path.length === path.length
+    );
+    for (const demand of demands) {
+      const name = demand.path[path.length];
+      if (name === undefined) {
+        continue;
+      }
+      const fieldDemands = fieldsAtPath.get(name) ?? [];
+      fieldDemands[fieldDemands.length] = demand;
+      fieldsAtPath = fieldsAtPath.set(name, fieldDemands);
     }
-    let candidates = [...tree.direct.map((demand) => demand.type)];
+    let fields: TypeRef | undefined;
+    if (fieldsAtPath.size > 0) {
+      fields = inputContractResolverTable.record(
+        [...fieldsAtPath].map((binding1) => {
+          const binding2 = binding1;
+          const name = binding2[0];
+          const child = binding2[1];
+          return ({
+            name: name,
+            type: inputContractResolverResolve(
+              root,
+              child,
+              [...path, name],
+              issues,
+            ),
+            optional: false,
+          });
+        }),
+      );
+    }
+    let candidates = direct.map((demand) => demand.type);
     if (
       fields !== undefined ||
-      candidates.some((candidate) => candidate !== this.table.unknown)
+      candidates.some((candidate) =>
+        candidate !== inputContractResolverTable.unknown
+      )
     ) {
       candidates = candidates.filter((candidate) =>
-        candidate !== this.table.unknown
+        candidate !== inputContractResolverTable.unknown
       );
     }
     if (
       fields !== undefined &&
       (candidates.length === 0 ||
-        !this.satisfiesFields(candidates[0], tree.fields))
+        !inputContractResolverSatisfiesFields(candidates[0], fieldsAtPath))
     ) {
-      candidates.push(fields);
+      {
+        const _appendTarget11 = candidates;
+        const _appendValue12 = fields;
+        _appendTarget11[_appendTarget11.length] = _appendValue12;
+      }
     }
-    const chosen = candidates[0] ?? this.table.unknown;
-    const canonical = this.table.unfoldTransparent(chosen);
+    const chosen = candidates[0] ?? inputContractResolverTable.unknown;
+    const canonical = inputContractResolverTable.unfoldTransparent(chosen);
     if (
       candidates.some((candidate) =>
-        this.table.unfoldTransparent(candidate) !== canonical
+        inputContractResolverTable.unfoldTransparent(candidate) !== canonical
       )
     ) {
-      for (const use of this.leafDemands(tree)) {
-        issues.push({
-          kind: "conflicting-requirements",
-          rootName: root.name,
-          path,
-          candidates,
-          node: use.node,
-        });
+      for (const use of demands) {
+        {
+          const _appendTarget13 = issues;
+          const _appendValue14: ContractIssue = {
+            kind: "conflicting-requirements",
+            rootName: root.name,
+            path: path,
+            candidates: candidates,
+            node: use.node,
+          };
+          _appendTarget13[_appendTarget13.length] = _appendValue14;
+        }
       }
     }
     return chosen;
   }
-
-  private satisfiesFields(
+  function inputContractResolverSatisfiesFields(
     type: TypeRef,
-    requirements: ReadonlyMap<string, DemandNode>,
+    requirements: ReadonlyMap<string, readonly Demand[]>,
   ): boolean {
-    const shape = this.table.node(this.table.unfold(type));
+    const shape = inputContractResolverTable.node(
+      inputContractResolverTable.unfold(type),
+    );
     if (shape.kind === "union") {
       return shape.members.every((member) =>
-        this.satisfiesFields(member, requirements)
+        inputContractResolverSatisfiesFields(member, requirements)
       );
     }
-    const fields = this.recordFields(type);
-    if (fields === undefined) return false;
-    for (const [name, requirement] of requirements) {
+    const fields = inputContractResolverRecordFields(type);
+    if (fields === undefined) {
+      return false;
+    }
+    for (const binding3 of requirements) {
+      const binding4 = binding3;
+      const name = binding4[0];
+      const requirement = binding4[1];
       const field = fields.find((candidate) => candidate.name === name);
-      if (field === undefined) return false;
-      const direct = requirement.direct.map((demand) => demand.type).filter(
-        (candidate) => candidate !== this.table.unknown,
-      );
+      if (field === undefined) {
+        return false;
+      }
+      const direct = requirement.filter((demand) => demand.path.length === 1)
+        .map((demand) => demand.type).filter((candidate) =>
+          candidate !== inputContractResolverTable.unknown
+        );
       if (
         direct.some((candidate) =>
-          this.table.unfoldTransparent(candidate) !==
-            this.table.unfoldTransparent(field.type)
+          inputContractResolverTable.unfoldTransparent(candidate) !==
+            inputContractResolverTable.unfoldTransparent(field.type)
         )
-      ) return false;
+      ) {
+        return false;
+      }
       if (
-        requirement.fields.size > 0 &&
-        !this.satisfiesFields(field.type, requirement.fields)
-      ) return false;
+        requirement.some((demand) => demand.path.length > 1) &&
+        !inputContractResolverSatisfiesFields(
+          field.type,
+          inputContractResolverNestedRequirements(requirement),
+        )
+      ) {
+        return false;
+      }
     }
     return true;
   }
-
-  private recordFields(type: TypeRef) {
-    let node = this.table.node(this.table.unfold(type));
+  function inputContractResolverNestedRequirements(
+    demands: readonly Demand[],
+  ): ReadonlyMap<string, readonly Demand[]> {
+    let nested = emptyMap<string, Demand[]>();
+    for (const demand of demands) {
+      const name = demand.path[1];
+      if (name === undefined) {
+        continue;
+      }
+      const fieldDemands = nested.get(name) ?? [];
+      fieldDemands[fieldDemands.length] = {
+        path: demand.path.slice(1),
+        type: demand.type,
+        node: demand.node,
+      };
+      nested = nested.set(name, fieldDemands);
+    }
+    return nested;
+  }
+  function inputContractResolverRecordFields(
+    type: TypeRef,
+  ): readonly RecordFieldShape[] | undefined {
+    let node = inputContractResolverTable.node(
+      inputContractResolverTable.unfold(type),
+    );
     if (node.kind === "named") {
-      const record = this.table.nominalBodyOf(node.id);
-      if (record === undefined) return undefined;
-      node = this.table.node(this.table.unfold(record));
+      const record = inputContractResolverTable.nominalBodyOf(node.id);
+      if (record === undefined) {
+        return undefined;
+      }
+      node = inputContractResolverTable.node(
+        inputContractResolverTable.unfold(record),
+      );
     }
     return node.kind === "record" ? node.fields : undefined;
   }
-
-  private leafDemands(tree: DemandNode): Demand[] {
-    return [
-      ...tree.direct,
-      ...[...tree.fields.values()].flatMap((child) => this.leafDemands(child)),
-    ];
-  }
+  const inputContractResolverSelf: InputContractResolver = {
+    origin: inputContractResolverOrigin,
+    setOrigin: inputContractResolverSetOrigin,
+    isConcrete: inputContractResolverIsConcrete,
+    callableEvidence: inputContractResolverCallableEvidence,
+    fieldType: inputContractResolverFieldType,
+    demand: inputContractResolverDemand,
+    defer: inputContractResolverDefer,
+    finish: inputContractResolverFinish,
+  };
+  return inputContractResolverSelf;
 }

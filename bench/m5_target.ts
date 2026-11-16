@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 const outputs = new TypeScriptOutputs();
 // The inputs of the M5 measurement: the emitted examples and the emitted
@@ -64,7 +65,7 @@ function readTree(
 function emitSources(
   sources: ReadonlyMap<string, string>,
 ): Result<Map<string, string>, M5Error> {
-  const program = new Program("");
+  const program = Program("");
   const updated = program.update({ set: sources });
   if (!updated.ok) {
     return {

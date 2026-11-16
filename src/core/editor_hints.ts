@@ -14,18 +14,26 @@ import type { Span } from "./source.ts";
 import { isTypeKind } from "./syntax_queries.ts";
 import { effectText, showType } from "./type_show.ts";
 
-interface InlayHint {
+type InlayHint = {
   readonly position: number;
   /** Holds only the inferred contract part. */
   readonly label: string;
-}
+};
+
+export type HintPosition = number;
+export type EditorPath = string;
+export type IgnoredCodes = readonly string[];
+export type DiagnosticFound = boolean;
 
 /**
  * The offset where an effect clause starts in the arrow header of the function
  * node: the end of the result type, or of the last parameter list or `fails`
  * clause. It is -1 when the header has none of these.
  */
-export function resultEndOf(tree: SyntaxTree, functionNode: NodeId): number {
+export function resultEndOf(
+  tree: SyntaxTree,
+  functionNode: NodeId,
+): HintPosition {
   const arrow = arrowHeaderOf(tree, functionNode)?.arrow;
   let position = -1;
   for (const part of arrow === undefined ? [] : childrenOf(tree, arrow)) {
@@ -54,7 +62,7 @@ export function arrowHeaderOf(
   const token = [...childrenOf(tree, arrow)].find((n) =>
     nodeText(tree, n) === "=>"
   );
-  return { arrow, token };
+  return { arrow: arrow, token: token };
 }
 
 /**
@@ -64,13 +72,14 @@ export function arrowHeaderOf(
  */
 export function diagnosticInside(
   revision: Revision,
-  path: string,
+  path: EditorPath,
   span: Span,
-  ignored: readonly string[] = [],
-): boolean {
+  ignored: IgnoredCodes | undefined,
+): DiagnosticFound {
+  const resolvedIgnored = ignored ?? [];
   return revision.diagnostics.some((d) =>
     d.span.source === path && d.span.start >= span.start &&
-    d.span.end <= span.end && !ignored.includes(d.code)
+    d.span.end <= span.end && !resolvedIgnored.includes(d.code)
   );
 }
 
@@ -81,19 +90,22 @@ export function diagnosticInside(
  */
 export function inlayHintsAt(
   revision: Revision,
-  path: string,
+  path: EditorPath,
   range: { readonly start: number; readonly end: number },
 ): readonly InlayHint[] {
   const module = revision.checkedModuleAt(path);
   if (module === undefined || !isSourcePath(path)) return [];
-  const { tree } = module;
+  const tree = module.tree;
   const index = revision.moduleInfo(module.module)?.index;
   const hints: InlayHint[] = [];
   for (const fn of module.functions.values()) {
-    const { signature } = fn;
-    const { written } = signature;
-    if (index?.byName.get(signature.name)?.broken !== false) continue;
-    if (diagnosticInside(revision, module.path, signature.span)) continue;
+    const signature = fn.signature;
+    const written = signature.written;
+    const indexed = index?.byName.get(signature.name);
+    if (indexed === undefined || indexed.broken) continue;
+    if (diagnosticInside(revision, module.path, signature.span, undefined)) {
+      continue;
+    }
     for (const parameter of signature.parameters) {
       const type = revision.types.node(parameter.type.ref);
       if (
@@ -101,12 +113,12 @@ export function inlayHintsAt(
         type.kind === "primitive" && type.name === "unknown" ||
         parameter.span.end < range.start || parameter.span.end > range.end
       ) continue;
-      hints.push({
+      hints[hints.length] = {
         position: parameter.span.end,
         label: parameter.annotated
           ? ` validated: ${showType(revision.types, parameter.type.ref)}`
           : `: ${showType(revision.types, parameter.type.ref)}`,
-      });
+      };
     }
     if (written.fails && written.uses) continue;
     const label = effectText(
@@ -116,7 +128,7 @@ export function inlayHintsAt(
     if (label === "") continue;
     const position = resultEndOf(tree, signature.node);
     if (position < range.start || position > range.end) continue;
-    hints.push({ position, label });
+    hints[hints.length] = { position: position, label: label };
   }
   return hints;
 }

@@ -514,7 +514,7 @@ Deno.test("the validation category registers one code for each of the nine areas
 
 // ------------------------------------------------------------------ independence
 
-Deno.test("src/core/validate imports only ir.ts, source.ts, diagnostics.ts, and its own files", () => {
+Deno.test("src/core/validate imports only contract types, runtime primitives, and its own files", () => {
   const directory = new URL("../src/core/validate/", import.meta.url);
   const files: URL[] = [];
   const collect = (dir: URL): void => {
@@ -530,7 +530,7 @@ Deno.test("src/core/validate imports only ir.ts, source.ts, diagnostics.ts, and 
   collect(directory);
   const own = new Set(files.map((file) => file.href));
   const allowed = new Set(
-    ["ir.ts", "source.ts", "diagnostics.ts"].map((name) =>
+    ["ir.ts", "source.ts", "diagnostics.ts", "runtime.ts"].map((name) =>
       new URL(`../${name}`, directory).href
     ),
   );

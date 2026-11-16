@@ -1,6 +1,8 @@
 // The lookup tables of one module: its own declarations, then the payloads of
 // its imports, and the context (tables and report) that the checks share.
 
+import { isTrue } from "./guards.ts";
+import { emptyMap, emptySet, setFrom } from "../runtime.ts";
 import type {
   ErrorDecl,
   Field,
@@ -18,7 +20,7 @@ import { preludeErrors, preludeTypes } from "./prelude.ts";
 
 export const PRELUDE_MODULE = "effektive:prelude";
 
-export interface World {
+export type World = {
   readonly env: TypeEnv;
   readonly exports: ReadonlySet<string>;
   readonly types: ReadonlyMap<string, TypeDecl>;
@@ -31,116 +33,107 @@ export interface World {
   readonly builtins: ReadonlyMap<string, string>;
   /** Cached identity and call classifications; raw names retain malformed-IR behavior. */
   readonly builtinInfo: ReadonlyMap<string, BuiltinInfo>;
-}
+};
 
-function addFirst<V>(map: Map<string, V>, key: string, value: V): void {
-  if (!map.has(key)) map.set(key, value);
+function addFirst<V>(
+  map: Map<string, V>,
+  key: string,
+  value: V,
+): Map<string, V> {
+  return map.has(key) ? map : map.set(key, value);
 }
 
 /** Own declarations come first, then the import payloads. The first entry of an identity wins. */
 export function buildWorld(ir: ModuleIR): World {
-  const types = new Map<string, TypeDecl>();
-  const errors = new Map<string, ErrorDecl>();
-  const services = new Map<string, ServiceDecl>();
-  const values = new Map<string, Type>();
-  const builtins = new Map<string, string>();
-  const builtinMetadata = new Map<string, BuiltinInfo>();
+  let types = emptyMap<string, TypeDecl>();
+  let errors = emptyMap<string, ErrorDecl>();
+  let services = emptyMap<string, ServiceDecl>();
+  let values = emptyMap<string, Type>();
+  let builtins = emptyMap<string, string>();
+  let builtinMetadata = emptyMap<string, BuiltinInfo>();
   for (const d of ir.declarations) {
-    switch (d.kind) {
-      case "type":
-        addFirst(types, d.id, d);
-        break;
-      case "error":
-        addFirst(errors, d.id, d);
-        break;
-      case "service":
-        addFirst(services, d.id, d);
-        break;
-      case "function":
-      case "constant":
-        addFirst(values, d.id, d.type);
-        break;
-    }
+    if (d.kind === "type") types = addFirst(types, d.id, d);
+    else if (d.kind === "error") errors = addFirst(errors, d.id, d);
+    else if (d.kind === "service") services = addFirst(services, d.id, d);
+    else values = addFirst(values, d.id, d.type);
   }
   for (const imp of ir.imports) {
-    for (const t of imp.types) addFirst(types, t.id, t);
-    for (const e of imp.errors) addFirst(errors, e.id, e);
-    for (const s of imp.services) addFirst(services, s.id, s);
+    for (const t of imp.types) types = addFirst(types, t.id, t);
+    for (const e of imp.errors) errors = addFirst(errors, e.id, e);
+    for (const s of imp.services) services = addFirst(services, s.id, s);
     for (const v of imp.values) {
-      addFirst(values, v.id, v.type);
+      values = addFirst(values, v.id, v.type);
       if (imp.module === PRELUDE_MODULE && !builtins.has(v.id)) {
-        builtins.set(v.id, v.name);
-        builtinMetadata.set(v.id, builtinInfo(v.id, v.name));
+        builtins = builtins.set(v.id, v.name);
+        builtinMetadata = builtinMetadata.set(v.id, builtinInfo(v.id, v.name));
       }
     }
   }
-  for (const e of preludeErrors(ir.module)) errors.set(e.id, e);
-  for (const t of preludeTypes(ir.module)) types.set(t.id, t);
-  const methods = new Map<string, MethodDecl>();
+  for (const e of preludeErrors(ir.module)) errors = errors.set(e.id, e);
+  for (const t of preludeTypes(ir.module)) types = types.set(t.id, t);
+  let methods = emptyMap<string, MethodDecl>();
   for (const s of services.values()) {
-    for (const m of s.methods) addFirst(methods, m.id, m);
+    for (const m of s.methods) methods = addFirst(methods, m.id, m);
   }
-  const aliases = new Map<string, Type>();
-  const identities = new Set<string>();
-  const opaqueBases = new Map<string, Type>();
-  const taggedRecords = new Map<string, Extract<Type, { kind: "record" }>>();
-  const opaque = new Set<string>();
-  const sealed = new Set<string>();
-  const refined = new Set<string>();
-  const predicates = new Map<string, Predicate>();
+  let aliases = emptyMap<string, Type>();
+  let identities = emptySet<string>();
+  let opaqueBases = emptyMap<string, Type>();
+  let taggedRecords = emptyMap<string, Extract<Type, { kind: "record" }>>();
+  let opaque = emptySet<string>();
+  let sealed = emptySet<string>();
+  let refined = emptySet<string>();
+  let predicates = emptyMap<string, Predicate>();
   for (const t of types.values()) {
-    if (t.opaque === true) opaque.add(t.id);
+    if (isTrue(t.opaque)) opaque = opaque.add(t.id);
     if (t.predicate !== undefined) {
-      refined.add(t.id);
-      predicates.set(t.id, t.predicate);
+      refined = refined.add(t.id);
+      predicates = predicates.set(t.id, t.predicate);
     }
-    if (t.definition.kind === "nominal" && t.definition.sealed === true) {
-      sealed.add(t.id);
+    if (t.definition.kind === "nominal" && isTrue(t.definition.sealed)) {
+      sealed = sealed.add(t.id);
     }
-    switch (t.definition.kind) {
-      case "alias":
-        aliases.set(t.id, t.definition.type);
-        break;
-      case "nominal":
-        if (
-          t.definition.tagged === true && t.definition.base.kind === "record"
-        ) {
-          taggedRecords.set(t.id, t.definition.base);
-        } else if (t.opaque === true) opaqueBases.set(t.id, t.definition.base);
-        else {
-          aliases.set(t.id, t.definition.base);
-          identities.add(t.id);
-        }
-        break;
+    if (t.definition.kind === "alias") {
+      aliases = aliases.set(t.id, t.definition.type);
+    } else if (
+      isTrue(t.definition.tagged) && t.definition.base.kind === "record"
+    ) {
+      taggedRecords = taggedRecords.set(t.id, t.definition.base);
+    } else if (isTrue(t.opaque)) {
+      opaqueBases = opaqueBases.set(t.id, t.definition.base);
+    } else {
+      aliases = aliases.set(t.id, t.definition.base);
+      identities = identities.add(t.id);
     }
   }
-  const errorFields = new Map<string, readonly Field[]>();
-  for (const e of errors.values()) errorFields.set(e.id, e.fields);
+  let errorFields = emptyMap<string, readonly Field[]>();
+  for (const e of errors.values()) {
+    errorFields = errorFields.set(e.id, e.fields);
+  }
   return {
-    exports: new Set(ir.exports),
+    exports: setFrom(ir.exports),
     env: {
       module: ir.module,
-      aliases,
-      identities,
-      opaqueBases,
-      taggedRecords,
+      aliases: aliases,
+      identities: identities,
+      opaqueBases: opaqueBases,
+      taggedRecords: taggedRecords,
       errors: errorFields,
-      opaque,
-      sealed,
-      refined,
-      predicates,
+      opaque: opaque,
+      sealed: sealed,
+      refined: refined,
+      predicates: predicates,
     },
-    types,
-    errors,
-    services,
-    methods,
-    values,
-    builtins,
+    types: types,
+    errors: errors,
+    services: services,
+    methods: methods,
+    values: values,
+    builtins: builtins,
     builtinInfo: builtinMetadata,
   };
 }
 
-export interface Ctx {
+export type Ctx = {
   readonly world: World;
   readonly report: Report;
-}
+};

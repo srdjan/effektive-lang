@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { TypeScriptOutputs } from "../src/core/typescript.ts";
 const outputs = new TypeScriptOutputs();
 // Builds long left-deep chains and runs them through every compiler pass.
@@ -45,7 +46,7 @@ export function chainSource(form: ChainForm, links: number): string {
 
 /** The diagnostic codes of `source` as a module `main.eff`, from `Program.update`. */
 export function diagnosticCodes(source: string): string[] {
-  const revision = new Program().update({
+  const revision = Program(undefined).update({
     set: { "effektive.json": "{}", "main.eff": source },
   });
   if (!revision.ok) throw new Error(JSON.stringify(revision));
@@ -58,7 +59,7 @@ export function diagnosticCodes(source: string): string[] {
  * propagates. When the check has diagnostics, the later passes do not run.
  */
 export function runAllPasses(source: string): string[] {
-  const revision = new Program().update({
+  const revision = Program(undefined).update({
     set: { "effektive.json": "{}", "main.eff": source },
   });
   if (!revision.ok) throw new Error(JSON.stringify(revision));

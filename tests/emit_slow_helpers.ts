@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Helpers for the slow emitter tests. This file holds no test: a test in a
 // helper file runs again in each file that imports the helper.
 

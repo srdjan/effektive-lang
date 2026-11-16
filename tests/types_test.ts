@@ -1,3 +1,4 @@
+import { TypeDepthMemo } from "../src/core/types.ts";
 // Tests for the type intern table and the compatibility rules.
 
 import {
@@ -35,7 +36,7 @@ const MISSING = "error:m#Missing" as ErrorId;
 const OTHER_FAIL = "error:m#Other" as ErrorId;
 
 function fresh(): TypeTable {
-  return new TypeTable();
+  return TypeTable();
 }
 
 Deno.test("forks share interned nodes and preserve builtin references", () => {
@@ -54,7 +55,7 @@ Deno.test("forks share interned nodes and preserve builtin references", () => {
     "unknown",
   ] as const;
   for (const table of [fork, sibling]) {
-    assertEquals(table.size, original.size);
+    assertEquals(table.size(), original.size());
     for (const name of builtins) {
       assertStrictEquals(table[name], original[name]);
       assertStrictEquals(
@@ -72,14 +73,14 @@ Deno.test("forks share interned nodes and preserve builtin references", () => {
     }
     assertStrictEquals(table.record([field("id", table.int)]), before);
   }
-  const startSize = original.size;
+  const startSize = original.size();
   const additions = [
     original.literal("z"),
     fork.literal("a"),
     sibling.literal("m"),
   ];
   for (const table of [original, fork, sibling]) {
-    assertEquals(table.size, startSize + additions.length);
+    assertEquals(table.size(), startSize + additions.length);
     for (const [index, value] of ["z", "a", "m"].entries()) {
       assertStrictEquals(table.literal(value), additions[index]);
       assertStrictEquals(
@@ -98,7 +99,7 @@ Deno.test("forks share interned nodes and preserve builtin references", () => {
         value,
       })),
     });
-    assertEquals(table.size, original.size);
+    assertEquals(table.size(), original.size());
   }
 });
 
@@ -120,7 +121,11 @@ Deno.test("forks keep independent definitions after writes to each table", () =>
     opaqueBase: table.identityBaseOf(opaque),
     opaqueAlias: table.aliasOf(opaque),
     error: table.errorRecordOf(MISSING),
-    exceedsDepth: table.exceedsDepth(table.named(recursive), 2, new Map()),
+    exceedsDepth: table.exceedsDepth(
+      table.named(recursive),
+      2,
+      TypeDepthMemo(),
+    ),
   });
   const write = (
     table: TypeTable,
@@ -130,11 +135,11 @@ Deno.test("forks keep independent definitions after writes to each table", () =>
     opaqueDefinition: boolean,
   ) => {
     const record = table.record([field("value", body)]);
-    table.defineAlias(USER, body);
+    table.defineAlias(USER, body, false);
     table.defineIdentity(ID_A, body, sealed, false, predicate);
     table.defineTagged(ID_B, record, sealed, predicate);
     if (opaqueDefinition) table.defineOpaque(opaque);
-    else table.defineIdentity(opaque, body, false);
+    else table.defineIdentity(opaque, body, false, false, undefined);
     table.defineError(MISSING, record);
     table.defineAlias(
       recursive,
@@ -187,7 +192,7 @@ Deno.test("forks keep independent definitions after writes to each table", () =>
   assertEquals(read(original), originalState);
   assertEquals(read(fork), forkState);
 
-  fork.defineAlias(ID_A, fork.number);
+  fork.defineAlias(ID_A, fork.number, false);
   fork.defineOpaque(ID_B);
   assert(!fork.isIdentity(ID_A));
   assertEquals(fork.predicateOf(ID_A), undefined);
@@ -198,15 +203,15 @@ Deno.test("forks keep independent definitions after writes to each table", () =>
 
   const descendant = fork.fork();
   assertEquals(read(descendant), read(fork));
-  fork.defineAlias(USER, fork.never);
+  fork.defineAlias(USER, fork.never, false);
   assertEquals(descendant.aliasOf(USER), forkState.alias);
-  descendant.defineAlias(USER, descendant.number);
+  descendant.defineAlias(USER, descendant.number, false);
   assertEquals(fork.aliasOf(USER), fork.never);
 });
 
 Deno.test("forks preserve replacements for builtin definitions", () => {
   const original = fresh();
-  original.defineAlias(DURATION_ID, original.string);
+  original.defineAlias(DURATION_ID, original.string, false);
   original.defineError(
     SCHEMA_ERROR_ID,
     original.record([field("detail", original.int)]),
@@ -218,7 +223,7 @@ Deno.test("forks preserve replacements for builtin definitions", () => {
     fork.errorRecordOf(SCHEMA_ERROR_ID),
     original.errorRecordOf(SCHEMA_ERROR_ID),
   );
-  fork.defineIdentity(DURATION_ID, fork.boolean, true);
+  fork.defineIdentity(DURATION_ID, fork.boolean, true, false, undefined);
   fork.defineError(SCHEMA_ERROR_ID, fork.record([]));
   assertEquals(original.aliasOf(DURATION_ID), original.string);
   assert(!original.isIdentity(DURATION_ID));
@@ -232,10 +237,10 @@ Deno.test("each writer replaces the whole earlier definition of a type", () => {
   const t = fresh();
   const named = t.named(USER);
   // A sealed tagged identity redefined as an alias keeps no identity metadata.
-  t.defineTagged(USER, t.record([field("id", t.string)]), true);
+  t.defineTagged(USER, t.record([field("id", t.string)]), true, undefined);
   assert(t.isIdentity(USER) && t.isSealed(USER));
   assert(t.taggedRecordOf(USER) !== undefined);
-  t.defineAlias(USER, t.int);
+  t.defineAlias(USER, t.int, false);
   assert(!t.isIdentity(USER));
   assert(!t.isSealed(USER));
   assertEquals(t.taggedRecordOf(USER), undefined);
@@ -247,19 +252,19 @@ Deno.test("each writer replaces the whole earlier definition of a type", () => {
   assert(!t.isAssignable(t.int, named));
   assertEquals(t.aliasOf(USER), undefined);
   assertEquals(t.unfold(named), named);
-  t.defineIdentity(USER, t.string, false);
+  t.defineIdentity(USER, t.string, false, false, undefined);
   assert(!t.isOpaque(USER));
   assertEquals(t.identityBaseOf(USER), t.string);
   assertEquals(t.aliasOf(USER), t.string);
   // An identity redefined as an alias loses its base.
-  t.defineAlias(USER, t.int);
+  t.defineAlias(USER, t.int, false);
   assertEquals(t.identityBaseOf(USER), undefined);
   assert(t.isAssignable(t.int, named));
   // A guarded alias redefined is no longer guarded.
   t.defineAlias(USER, t.array(named), true);
-  assert(!t.exceedsDepth(named, 2, new Map()));
-  t.defineAlias(USER, t.array(t.int));
-  assert(t.exceedsDepth(named, 2, new Map()));
+  assert(!t.exceedsDepth(named, 2, TypeDepthMemo()));
+  t.defineAlias(USER, t.array(t.int), false);
+  assert(t.exceedsDepth(named, 2, TypeDepthMemo()));
   // An opaque redefinition drops the guarded mark and the body.
   t.defineAlias(USER, t.array(named), true);
   t.defineOpaque(USER);
@@ -326,7 +331,7 @@ Deno.test("Sink leftovers are covariant and preserve legacy IR defaults", () => 
   assertEquals(typeFromIr(t, typeToIr(t, narrow)), narrow);
   assertEquals(showType(t, narrow), "Sink<number, void, never, never, int>");
   const nested = t.sink(t.int, t.unit, [], [], t.array(t.array(t.int)));
-  assert(t.exceedsDepth(nested, 3, new Map()));
+  assert(t.exceedsDepth(nested, 3, TypeDepthMemo()));
 });
 
 Deno.test("equal structural types share one id", () => {
@@ -622,16 +627,16 @@ Deno.test("a pure function fits an effect target, and an effect function does no
 Deno.test("aliases unfold, so equal structures under different names are compatible", () => {
   const t = fresh();
   const record = t.record([field("a", t.int)]);
-  t.defineAlias(USER, record);
+  t.defineAlias(USER, record, false);
   const other = "type:m#Other" as TypeId;
-  t.defineAlias(other, record);
+  t.defineAlias(other, record, false);
   assert(t.isAssignable(t.named(USER), t.named(other)));
   assert(t.isAssignable(record, t.named(USER)));
   assert(t.isAssignable(t.named(USER), record));
   assert(t.isAssignable(t.array(t.named(USER)), t.array(record)));
   assertEquals(t.unfold(t.named(USER)), record);
   const status = "type:m#Status" as TypeId;
-  t.defineAlias(status, t.union([t.literal("a"), t.literal("b")]));
+  t.defineAlias(status, t.union([t.literal("a"), t.literal("b")]), false);
   assert(t.isAssignable(t.literal("a"), t.named(status)));
   assert(!t.isAssignable(t.string, t.named(status)));
 });
@@ -640,15 +645,15 @@ Deno.test("an alias cycle that is left in the table ends with the error type", (
   const t = fresh();
   const a = "type:m#A" as TypeId;
   const b = "type:m#B" as TypeId;
-  t.defineAlias(a, t.named(b));
-  t.defineAlias(b, t.named(a));
+  t.defineAlias(a, t.named(b), false);
+  t.defineAlias(b, t.named(a), false);
   assertEquals(t.unfold(t.named(a)), t.error);
 });
 
 Deno.test("identities are nominal: an identity fits itself and its body, never another identity", () => {
   const t = fresh();
-  t.defineIdentity(ID_A, t.string, false);
-  t.defineIdentity(ID_B, t.string, false);
+  t.defineIdentity(ID_A, t.string, false, false, undefined);
+  t.defineIdentity(ID_B, t.string, false, false, undefined);
   const a = t.named(ID_A);
   const b = t.named(ID_B);
   assert(t.isAssignable(a, a));
@@ -664,7 +669,7 @@ Deno.test("identities are nominal: an identity fits itself and its body, never a
 });
 
 function identity(t: TypeTable, id: TypeId, body: TypeRef): TypeRef {
-  t.defineIdentity(id, body, false);
+  t.defineIdentity(id, body, false, false, undefined);
   return t.named(id);
 }
 
@@ -710,7 +715,7 @@ Deno.test("a sealed identity widens and takes unnamed values only in its own mod
   const t = fresh();
   const id = identity(t, ID_A, t.string);
   assert(!t.isSealed(ID_A));
-  t.defineIdentity(ID_A, t.string, true);
+  t.defineIdentity(ID_A, t.string, true, false, undefined);
   assert(t.isSealed(ID_A));
   // A foreign module cannot widen the identity or give it an unnamed value.
   assert(!t.isAssignableIn("other", id, t.string));
@@ -718,7 +723,7 @@ Deno.test("a sealed identity widens and takes unnamed values only in its own mod
   assert(t.isAssignableIn("m", id, t.string));
   assert(t.isAssignableIn("m", t.literal("x"), id));
   // `defineAlias` replaces the sealed identity, so nothing stays sealed.
-  t.defineAlias(ID_A, t.string);
+  t.defineAlias(ID_A, t.string, false);
   assert(!t.isSealed(ID_A));
 });
 
@@ -726,17 +731,17 @@ Deno.test("two ids with one short name show as module#Name", () => {
   const t = fresh();
   const a = identity(t, "type:a#Text" as TypeId, t.string);
   const b = identity(t, "type:b#Text" as TypeId, t.string);
-  assertEquals(showTypes(t, a, b), ["a#Text", "b#Text"]);
-  assertEquals(showTypes(t, a, a), ["Text", "Text"]);
-  assertEquals(showTypes(t, t.array(a), t.int), ["Text[]", "int"]);
+  assertEquals(showTypes(t, [a, b]), ["a#Text", "b#Text"]);
+  assertEquals(showTypes(t, [a, a]), ["Text", "Text"]);
+  assertEquals(showTypes(t, [t.array(a), t.int]), ["Text[]", "int"]);
   assertEquals(showType(t, a), "Text");
 });
 
 Deno.test("a data type widens to its record, and the record does not fit back", () => {
   const t = fresh();
   const record = t.record([field("id", t.string)]);
-  t.defineTagged(ID_A, record, false);
-  t.defineTagged(ID_B, record, false);
+  t.defineTagged(ID_A, record, false, undefined);
+  t.defineTagged(ID_B, record, false, undefined);
   const a = t.named(ID_A);
   assert(t.isAssignable(a, record));
   assert(!t.isAssignable(record, a));
@@ -747,7 +752,7 @@ Deno.test("a data type widens to its record, and the record does not fit back", 
 Deno.test("widening leaves invariant positions and parameters as they are", () => {
   const t = fresh();
   const record = t.record([field("id", t.string)]);
-  t.defineTagged(ID_A, record, false);
+  t.defineTagged(ID_A, record, false, undefined);
   const a = t.named(ID_A);
   assert(!t.isAssignable(t.ref(a), t.ref(record)));
   assert(!t.isAssignable(t.ref(record), t.ref(a)));
@@ -761,7 +766,7 @@ Deno.test("widening leaves invariant positions and parameters as they are", () =
 Deno.test("an opaque type and an error do not widen", () => {
   const t = fresh();
   t.defineOpaque(ID_A);
-  t.defineIdentity(ID_B, t.unknown, false);
+  t.defineIdentity(ID_B, t.unknown, false, false, undefined);
   assert(!t.isAssignable(t.named(ID_A), t.unknown));
   assert(t.isAssignable(t.named(ID_B), t.unknown));
   t.defineError(MISSING, t.record([field("id", t.string)]));
@@ -924,25 +929,25 @@ Deno.test("load defines opaque, tagged, guarded, and sealed types", () => {
   assert(!t.isAssignable(t.named(USER), t.named(TREE)));
   assert(!t.isAssignable(t.named(TREE), t.named(USER)));
   assert(t.isAssignable(t.named(USER), t.named(USER)));
-  assert(!t.exceedsDepth(t.named(USER), 1, new Map()));
-  assert(!t.exceedsDepth(t.named(TREE), 1, new Map()));
+  assert(!t.exceedsDepth(t.named(USER), 1, TypeDepthMemo()));
+  assert(!t.exceedsDepth(t.named(TREE), 1, TypeDepthMemo()));
 });
 
 Deno.test("a sealed identity is found through transparent aliases", () => {
   const t = fresh();
   const middle = "type:m#Middle" as TypeId;
   const top = "type:m#Top" as TypeId;
-  t.defineIdentity(SEALED, t.int, true);
-  t.defineAlias(middle, t.named(SEALED));
-  t.defineAlias(top, t.named(middle));
+  t.defineIdentity(SEALED, t.int, true, false, undefined);
+  t.defineAlias(middle, t.named(SEALED), false);
+  t.defineAlias(top, t.named(middle), false);
   assertEquals(t.sealedRootOf(t.named(top)), SEALED);
   assertEquals(t.sealedRootOf(t.named(SEALED)), SEALED);
   assertEquals(t.sealedRootOf(t.int), undefined);
-  t.defineIdentity(ID_A, t.int, false);
-  t.defineAlias(middle, t.named(ID_A));
+  t.defineIdentity(ID_A, t.int, false, false, undefined);
+  t.defineAlias(middle, t.named(ID_A), false);
   assertEquals(t.sealedRootOf(t.named(top)), undefined);
   assertEquals(t.foreignSealedOf("other", t.named(top)), undefined);
-  t.defineAlias(middle, t.named(SEALED));
+  t.defineAlias(middle, t.named(SEALED), false);
   assertEquals(t.foreignSealedOf("other", t.named(top)), SEALED);
   assertEquals(t.foreignSealedOf("m", t.named(top)), undefined);
 });
@@ -1085,7 +1090,7 @@ Deno.test("two different guarded records never fit each other, even when their b
 Deno.test("a schema keeps a make input that fits the decoded type in one direction only", () => {
   const t = fresh();
   const widened = t.schema(t.number, t.string, [], [], { makeInput: t.int });
-  const plain = t.schema(t.number, t.string, [], []);
+  const plain = t.schema(t.number, t.string, [], [], {});
   const node = t.node(widened);
   assertEquals(node.kind === "schema" ? node.makeInput : "not a schema", t.int);
   assertNotEquals(widened, plain);
@@ -1093,11 +1098,11 @@ Deno.test("a schema keeps a make input that fits the decoded type in one directi
 
 Deno.test("foreignSealedOf finds a sealed type that only the make input of a schema holds", () => {
   const t = fresh();
-  t.defineIdentity(SEALED, t.int, true);
+  t.defineIdentity(SEALED, t.int, true, false, undefined);
   const viaMakeInput = t.schema(t.number, t.string, [], [], {
     makeInput: t.named(SEALED),
   });
-  const withoutMakeInput = t.schema(t.number, t.string, [], []);
+  const withoutMakeInput = t.schema(t.number, t.string, [], [], {});
   assertEquals(t.foreignSealedOf("other", viaMakeInput), SEALED);
   assertEquals(t.foreignSealedOf("m", viaMakeInput), undefined);
   assertEquals(t.foreignSealedOf("other", withoutMakeInput), undefined);
@@ -1108,15 +1113,15 @@ const SEALED_B = "type:m#SealedB" as TypeId;
 
 Deno.test("foreignSealedOf gives the first parameter of a function with two foreign sealed children", () => {
   const t = fresh();
-  t.defineIdentity(SEALED, t.int, true);
-  t.defineIdentity(SEALED_B, t.int, true);
+  t.defineIdentity(SEALED, t.int, true, false, undefined);
+  t.defineIdentity(SEALED_B, t.int, true, false, undefined);
   const inParameter = pureFn(t, [t.named(SEALED_B)], t.named(SEALED));
   assertEquals(t.foreignSealedOf("other", inParameter), SEALED_B);
 });
 
 Deno.test("foreignSealedOf enters an error field", () => {
   const t = fresh();
-  t.defineIdentity(SEALED, t.int, true);
+  t.defineIdentity(SEALED, t.int, true, false, undefined);
   t.defineError(MISSING, t.record([field("id", t.named(SEALED))]));
   assertEquals(t.foreignSealedOf("other", t.named(MISSING)), SEALED);
   assertEquals(t.foreignSealedOf("m", t.named(MISSING)), undefined);
@@ -1124,15 +1129,20 @@ Deno.test("foreignSealedOf enters an error field", () => {
 
 Deno.test("foreignSealedOf enters a tagged body", () => {
   const t = fresh();
-  t.defineIdentity(SEALED, t.int, true);
-  t.defineTagged(USER, t.record([field("id", t.named(SEALED))]), false);
+  t.defineIdentity(SEALED, t.int, true, false, undefined);
+  t.defineTagged(
+    USER,
+    t.record([field("id", t.named(SEALED))]),
+    false,
+    undefined,
+  );
   assertEquals(t.foreignSealedOf("other", t.named(USER)), SEALED);
   assertEquals(t.foreignSealedOf("m", t.named(USER)), undefined);
 });
 
 Deno.test("foreignSealedOf enters a guarded alias", () => {
   const t = fresh();
-  t.defineIdentity(SEALED, t.int, true);
+  t.defineIdentity(SEALED, t.int, true, false, undefined);
   t.defineAlias(ID_A, t.named(SEALED), true);
   assertEquals(t.foreignSealedOf("other", t.named(ID_A)), SEALED);
   assertEquals(t.foreignSealedOf("m", t.named(ID_A)), undefined);
@@ -1170,7 +1180,7 @@ function differenceOf(path: readonly string[]): Predicate {
 
 Deno.test("unfold follows a chain of aliases that uses every definition in the table", () => {
   const t = fresh();
-  t.defineAlias(DURATION_ID, t.named(INSTANT_ID));
+  t.defineAlias(DURATION_ID, t.named(INSTANT_ID), false);
   assertEquals(t.unfold(t.named(DURATION_ID)), t.int);
 });
 
@@ -1310,7 +1320,7 @@ Deno.test("a cycle of aliases gives a tag field no tag, so the recursion stays u
     ],
     errors: [],
   });
-  assertEquals(t.exceedsDepth(t.named(SELF), 3, new Map()), true);
+  assertEquals(t.exceedsDepth(t.named(SELF), 3, TypeDepthMemo()), true);
 });
 
 Deno.test("a tagged type is no tag alias, even when its base is a literal", () => {
@@ -1350,7 +1360,7 @@ Deno.test("a tagged type is no tag alias, even when its base is a literal", () =
     ],
     errors: [],
   });
-  assertEquals(t.exceedsDepth(t.named(SELF), 3, new Map()), true);
+  assertEquals(t.exceedsDepth(t.named(SELF), 3, TypeDepthMemo()), true);
 });
 
 Deno.test("an opaque type is no tag alias, even when its declared base is a literal", () => {
@@ -1392,5 +1402,23 @@ Deno.test("an opaque type is no tag alias, even when its declared base is a lite
     ],
     errors: [],
   });
-  assertEquals(t.exceedsDepth(t.named(SELF), 3, new Map()), true);
+  assertEquals(t.exceedsDepth(t.named(SELF), 3, TypeDepthMemo()), true);
+});
+
+Deno.test("loadGraph keeps forged nonboolean nominal flags disabled", () => {
+  const table = TypeTable();
+  const declaration = {
+    id: USER,
+    definition: {
+      kind: "nominal" as const,
+      base: { kind: "primitive" as const, name: "int" as const },
+    },
+  };
+  Object.assign(declaration, { opaque: "true" });
+  Object.assign(declaration.definition, { sealed: "true", tagged: "true" });
+  loadGraph(table, { types: [declaration], errors: [] });
+  assertEquals(table.isOpaque(USER), false);
+  assertEquals(table.isSealed(USER), false);
+  assertEquals(table.taggedRecordOf(USER), undefined);
+  assertEquals(table.identityBaseOf(USER), table.int);
 });

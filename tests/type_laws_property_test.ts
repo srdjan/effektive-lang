@@ -535,7 +535,7 @@ interface World extends Sides {
 }
 
 function sidesOf(definitions: Definitions): Sides {
-  const table = new TypeTable();
+  const table = TypeTable();
   loadGraph(table, definitions);
   return { table, env: envOf(definitions) };
 }
@@ -625,7 +625,7 @@ function generateWorld(seed: number): World {
     random: makeRandom(seed),
     names: [named(DURATION_ID), named(INSTANT_ID)],
     bodies: new Map([[DURATION_ID, INT], [INSTANT_ID, INT]]),
-    scratch: new TypeTable(),
+    scratch: TypeTable(),
   };
   const errors = ERRORS.map((id, index) => {
     g.names.push(named(id));
@@ -941,7 +941,7 @@ Deno.test("a Schema make input keeps its sealed authority", () => {
 
 /** The diagnostic codes of each side for the module `main` of a project. */
 function sourceCodes(lib: string, main: string) {
-  const updated = new Program("").update({
+  const updated = Program("").update({
     set: new Map([
       ["effektive.json", "{}"],
       ["lib.eff", lib],

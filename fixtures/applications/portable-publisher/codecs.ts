@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Effect, Layer, Option, Schema } from "effect";
 import { Payload } from "./platform.ts";
 import {

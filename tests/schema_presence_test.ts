@@ -4,7 +4,7 @@ import type { SchemaPresence } from "../src/core/types.ts";
 import { typeFromIr, typeToIr } from "../src/core/type_ir.ts";
 
 Deno.test("schema presence roundtrips every legal IR state independently of constructor defaults", () => {
-  const table = new TypeTable();
+  const table = TypeTable();
   const decoded = table.record([{
     name: "count",
     type: table.int,
@@ -51,8 +51,8 @@ Deno.test("schema presence roundtrips every legal IR state independently of cons
 });
 
 Deno.test("schema assignability distinguishes presence and preserves normalized make input", () => {
-  const table = new TypeTable();
-  const required = table.schema(table.int, table.string, [], []);
+  const table = TypeTable();
+  const required = table.schema(table.int, table.string, [], [], {});
   const equivalent = table.schema(table.int, table.string, [], [], {
     presence: "required",
     makeInput: table.int,
@@ -65,4 +65,28 @@ Deno.test("schema assignability distinguishes presence and preserves normalized 
   assertNotEquals(required, optional);
   assertEquals(table.isAssignable(required, optional), false);
   assertEquals(table.isAssignable(optional, required), false);
+});
+
+Deno.test("IR schema conversion ignores forged nonboolean flags", () => {
+  const table = TypeTable();
+  const schema = Object.assign({
+    kind: "schema" as const,
+    decoded: { kind: "primitive" as const, name: "int" as const },
+    encoded: { kind: "primitive" as const, name: "string" as const },
+    decodeRequirements: [],
+    encodeRequirements: [],
+  }, {});
+  Object.assign(schema, {
+    optionalKey: "true",
+    encodedOptionalKey: 1,
+    decodedOptionalKey: {},
+    constructorDefault: "true",
+  });
+  assertEquals(typeToIr(table, typeFromIr(table, schema)), {
+    kind: "schema",
+    decoded: { kind: "primitive", name: "int" },
+    encoded: { kind: "primitive", name: "string" },
+    decodeRequirements: [],
+    encodeRequirements: [],
+  });
 });

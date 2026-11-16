@@ -1,7 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import type { Expr, FunctionDecl, ModuleIR } from "../src/core/ir.ts";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
-import { exprChildren } from "../src/core/validate/expr.ts";
+import { exprChildren } from "../src/core/validate/expr_walk.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 
 function lower(

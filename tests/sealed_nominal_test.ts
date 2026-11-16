@@ -251,14 +251,14 @@ export const decoded = (input: Count): Count fails SchemaError => schemaDecode(c
 });
 
 Deno.test("sealed type is rejected in a host interface file", () => {
-  const result = parse("host.effi", "sealed type Secret = int\n");
+  const result = parse("host.effi", "sealed type Secret = int\n", undefined);
   assertEquals(result.diagnostics.map((diagnostic) => diagnostic.code), [
     "syntax/008",
   ]);
 });
 
 Deno.test("Program resets sealing and changes the interface hash", () => {
-  const program = new Program("");
+  const program = Program("");
   const open = program.update({
     set: {
       ...CONFIG,
@@ -301,7 +301,7 @@ Deno.test("Program resets sealing and changes the interface hash", () => {
 
 Deno.test("editor tooling classifies, completes, and describes sealed type types", () => {
   const text = "export sealed type Positive = int\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { ...CONFIG, "main.eff": text },
   });
   assert(loaded.ok);
@@ -319,7 +319,7 @@ Deno.test("editor tooling classifies, completes, and describes sealed type types
   );
 
   for (const prefix of ["sea", "export sea"]) {
-    const revision = new Program("").update({
+    const revision = Program("").update({
       set: { ...CONFIG, "main.eff": `${prefix}\n` },
     });
     assert(revision.ok);
@@ -332,7 +332,7 @@ Deno.test("editor tooling classifies, completes, and describes sealed type types
   }
 
   const bindingText = "export const sealed = 1\nexport const value = sea\n";
-  const binding = new Program("").update({
+  const binding = Program("").update({
     set: { ...CONFIG, "main.eff": bindingText },
   });
   assert(binding.ok);
@@ -346,7 +346,7 @@ Deno.test("editor tooling classifies, completes, and describes sealed type types
 import { Positive } from "./lib.eff"
 export const keep = (value: Positive): Positive => value
 `;
-  const imported = new Program("").update({
+  const imported = Program("").update({
     set: {
       ...CONFIG,
       "lib.eff": text,

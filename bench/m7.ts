@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Measurement M7: the time of a save round through the real language server.
 //
 // The server runs with `writeOnSave` true on a generated project in a

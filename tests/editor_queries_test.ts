@@ -23,7 +23,7 @@ export const use = (arg: Int): Int fails Stop with S.read => { const other = val
 `;
 
 Deno.test("revision index shares declaration identities across imports, locals, types and capabilities", () => {
-  const program = new Program("");
+  const program = Program("");
   const loaded = program.update({
     set: { "effektive.json": "{}", "lib.eff": library, "m.eff": consumer },
   });
@@ -31,20 +31,28 @@ Deno.test("revision index shares declaration identities across imports, locals, 
   assertEquals(loaded.value.diagnostics, []);
   const revision = loaded.value;
   for (const name of ["Int", "Stop", "S", "value"]) {
-    const refs = referencesAt(revision, "m.eff", consumer.indexOf(name));
+    const refs = referencesAt(
+      revision,
+      "m.eff",
+      consumer.indexOf(name),
+      undefined,
+    );
     assert(refs.some((s) => s.source === "lib.eff"), name);
     assert(refs.some((s) => s.source === "m.eff"), name);
   }
-  assertEquals(referencesAt(revision, "m.eff", consumer.indexOf("read")), [
-    {
-      source: "lib.eff",
-      start: library.indexOf("read"),
-      end: library.indexOf("read") + 4,
-    },
-    ...[consumer.indexOf("read"), consumer.lastIndexOf("read")].map(
-      (start) => ({ source: "m.eff", start, end: start + 4 }),
-    ),
-  ]);
+  assertEquals(
+    referencesAt(revision, "m.eff", consumer.indexOf("read"), undefined),
+    [
+      {
+        source: "lib.eff",
+        start: library.indexOf("read"),
+        end: library.indexOf("read") + 4,
+      },
+      ...[consumer.indexOf("read"), consumer.lastIndexOf("read")].map(
+        (start) => ({ source: "m.eff", start, end: start + 4 }),
+      ),
+    ],
+  );
   assertEquals(
     referencesAt(revision, "m.eff", consumer.indexOf("arg"), false).length,
     1,
@@ -52,7 +60,7 @@ Deno.test("revision index shares declaration identities across imports, locals, 
 });
 
 Deno.test("indices are revision scoped and recover resolvable symbols from malformed source", () => {
-  const program = new Program("");
+  const program = Program("");
   const first = program.update({
     set: {
       "effektive.json": "{}",
@@ -63,7 +71,7 @@ Deno.test("indices are revision scoped and recover resolvable symbols from malfo
   assert(first.ok);
   const text = first.value.sourceTexts().get("m.eff") ?? "";
   assertEquals(
-    referencesAt(first.value, "m.eff", text.indexOf("x:")).length,
+    referencesAt(first.value, "m.eff", text.indexOf("x:"), undefined).length,
     2,
   );
   const next = program.update({ set: { "m.eff": text.replaceAll("x", "y") } });
@@ -83,7 +91,7 @@ Deno.test("indices are revision scoped and recover resolvable symbols from malfo
 Deno.test("rename follows identities across modules and expands shorthand without changing field names", () => {
   const text =
     "type Int = int\nexport const old = (x: Int): { x: Int } => ({ x })\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -93,7 +101,7 @@ Deno.test("rename follows identities across modules and expands shorthand withou
     applySourceEdits(text, result.value),
     text.replace("(x:", "(fresh:").replace("({ x })", "({ x: fresh })"),
   );
-  const multiple = new Program("").update({
+  const multiple = Program("").update({
     set: { "effektive.json": "{}", "lib.eff": library, "m.eff": consumer },
   });
   assert(multiple.ok);
@@ -110,7 +118,7 @@ Deno.test("rename follows identities across modules and expands shorthand withou
 Deno.test("rename rejects capture, conflicts, reserved names, structural fields and host origins", () => {
   const text =
     "type Int = int\nconst a = (x: Int): Int => { const other = 2; x + other }\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -121,7 +129,7 @@ Deno.test("rename rejects capture, conflicts, reserved names, structural fields 
       name,
     );
   }
-  const fields = new Program("").update({
+  const fields = Program("").update({
     set: {
       "effektive.json": "{}",
       "m.eff":
@@ -130,7 +138,7 @@ Deno.test("rename rejects capture, conflicts, reserved names, structural fields 
   });
   assert(fields.ok);
   assertEquals(prepareRenameAt(fields.value, "m.eff", 15), undefined);
-  const host = new Program("").update({
+  const host = Program("").update({
     set: {
       "effektive.json": JSON.stringify({
         host: { native: { interface: "./native.effi", module: "./native.ts" } },
@@ -150,7 +158,7 @@ type Point = { b: Int, B: Int, a: Int, A: Int }
 const p: Point = { b: 1, B: 2, a: 3, A: 4 }
 const q: Int = p.
 `;
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -170,7 +178,7 @@ Deno.test("completion respects prefix, context, local scopes and incomplete memb
  const f = (outer: R): Int => { const local = 1; outer.fi }
  const g = (): Int => S.re
  `;
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -203,7 +211,7 @@ Deno.test("completion respects prefix, context, local scopes and incomplete memb
 
 Deno.test("type completion offers every type word and the Effect error names", () => {
   const text = "type R = { first: int }\nconst f = (outer: R): int => 1\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -236,7 +244,7 @@ Deno.test("rename counts configuration diagnostics on both sides of the speculat
   const text =
     "type Int = int\nconst a = (x: Int): Int => { const other = 2; x + other }\n";
   const config = '{"unknown": 1}';
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": config, "m.eff": text },
   });
   assert(loaded.ok);
@@ -251,7 +259,7 @@ const deltaText =
   "type Int = int\nconst f = (a: Int): Int => a + a\nconst g = (): Int => missing\n";
 
 Deno.test("diagnosticDelta moves a diagnostic after an edit before it", () => {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": deltaText },
   });
   assert(loaded.ok);
@@ -266,7 +274,7 @@ Deno.test("diagnosticDelta moves a diagnostic after an edit before it", () => {
     "top",
   );
   assert(renamed.ok);
-  const next = new Program("").update({
+  const next = Program("").update({
     set: {
       "effektive.json": "{}",
       "m.eff": applySourceEdits(deltaText, renamed.value),
@@ -285,7 +293,7 @@ Deno.test("diagnosticDelta moves a diagnostic after an edit before it", () => {
 });
 
 Deno.test("diagnosticDelta moves only the end of a span that contains an edit", () => {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": deltaText },
   });
   assert(loaded.ok);
@@ -318,7 +326,7 @@ Deno.test("diagnosticDelta moves only the end of a span that contains an edit", 
 });
 
 Deno.test("diagnosticDelta counts a duplicate diagnostic twice", () => {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": deltaText },
   });
   assert(loaded.ok);
@@ -334,7 +342,7 @@ Deno.test("rename rejects a new analysis diagnostic when the diagnostic count st
   // The rename resolves the unknown `w` and makes `w` a duplicate binding.
   const text =
     "type Int = int\nconst f = (x: Int): Int => { const t = w; const w = 2; t + w + x }\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -350,7 +358,7 @@ Deno.test("rename rejects a new analysis diagnostic when the diagnostic count st
 Deno.test("semantic classifications retain UTF-16 spans and lexical fallback on broken or stale text", () => {
   const text =
     "// 😀 comment\ntype Int = int\nconst f = (value: Int): Int => value + 1\nconst broken = (\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -370,7 +378,7 @@ Deno.test("semantic classifications retain UTF-16 spans and lexical fallback on 
 });
 
 Deno.test("lexical fallback on stale text marks an error, a service, and a service method name", () => {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": "type Int = int\n" },
   });
   assert(loaded.ok);
@@ -417,7 +425,7 @@ Deno.test("contract actions derive and validate missing effects while preserving
       ],
     ]
   ) {
-    const loaded = new Program("").update({
+    const loaded = Program("").update({
       set: { "effektive.json": "{}", "m.eff": text },
     });
     assert(loaded.ok);
@@ -425,10 +433,12 @@ Deno.test("contract actions derive and validate missing effects while preserving
       loaded.value,
       "m.eff",
       text.indexOf("const f"),
+      undefined,
+      undefined,
     );
     assertEquals(actions.length, 1, JSON.stringify(loaded.value.diagnostics));
     const next = applySourceEdits(text, actions[0].edits);
-    const checked = new Program("").update({
+    const checked = Program("").update({
       set: { "effektive.json": "{}", "m.eff": next },
     });
     assert(checked.ok);
@@ -436,11 +446,14 @@ Deno.test("contract actions derive and validate missing effects while preserving
     assertEquals(next, expected);
   }
   const broken = "type Int = int\nconst f = (): Int => unknownName()\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": broken },
   });
   assert(loaded.ok);
-  assertEquals(contractActionsAt(loaded.value, "m.eff", 0, broken.length), []);
+  assertEquals(
+    contractActionsAt(loaded.value, "m.eff", 0, broken.length, undefined),
+    [],
+  );
 });
 
 Deno.test("references separate same-named local scopes and capability rename preserves service contracts", () => {
@@ -450,24 +463,24 @@ Deno.test("references separate same-named local scopes and capability rename pre
  export const second = (x: Int): Int => x
  export const third = (): Int with S.read => S.read()
  `;
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
   assertEquals(
-    referencesAt(loaded.value, "m.eff", text.indexOf("x:")).length,
+    referencesAt(loaded.value, "m.eff", text.indexOf("x:"), undefined).length,
     2,
   );
   const method = renameAt(loaded.value, "m.eff", text.indexOf("read"), "load");
   assert(method.ok, JSON.stringify(method));
   assertEquals(method.value.length, 3);
   const file = applySourceEdits(text, method.value);
-  const next = new Program("").update({
+  const next = Program("").update({
     set: { "effektive.json": "{}", "m.eff": file },
   });
   assert(next.ok);
   assertEquals(next.value.diagnostics, []);
-  const modules = new Program("").update({
+  const modules = Program("").update({
     set: { "effektive.json": "{}", "lib.eff": library, "m.eff": consumer },
   });
   assert(modules.ok);
@@ -480,7 +493,7 @@ Deno.test("references separate same-named local scopes and capability rename pre
 Deno.test("member completion tolerates whitespace around the dot", () => {
   const text =
     "type Int = int\nservice S { read(): Int }\nconst f = (): Int => S . re\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -502,7 +515,7 @@ export const exported = (x: Int): Int with S.read => { S.read() + x }
 `;
 
 function hints(range?: { start: number; end: number }) {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: {
       "effektive.json": "{}",
       "lib.eff": library,
@@ -533,7 +546,7 @@ Deno.test("inlay hints show the inferred parts of local and exported functions, 
 
 Deno.test("inlay hints name a reserved error by its source name", () => {
   const text = "type Int = int\nexport const c = (n): Int => n + 1\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -549,7 +562,7 @@ Deno.test("inlay hints name a reserved error by its source name", () => {
 Deno.test("inlay hints skip a function with an unknown name", () => {
   const text =
     "type Int = int\nerror Stop = {}\nexport const f = (): Int => if (missing) { fail(Stop({})) } else { 1 }\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -572,7 +585,7 @@ function hintsOf(
   range?: { start: number; end: number },
   path = "m.eff",
 ) {
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -629,7 +642,7 @@ Deno.test("inlay hints: a diagnostic at the first offset of the function hides i
 Deno.test("completion after a with keyword offers services and no values", () => {
   const text =
     "type Int = int\nservice Clock { now(): Int }\nconst other = (): Int => 1\nexport const f = (): Int with Cl => Clock.now()\n";
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(loaded.ok);
@@ -653,7 +666,7 @@ export const r = (): Int => randomInt(1, 2)
   const late =
     `${imports}export const q = (randomInt: (lo: Int, hi: Int) => Int): Int => pick(1, 2)
 `;
-  const loaded = new Program("").update({
+  const loaded = Program("").update({
     set: {
       "effektive.json": "{}",
       "lib.eff": lib,

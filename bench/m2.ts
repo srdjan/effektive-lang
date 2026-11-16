@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Measurement M2: the whole-module recheck time per stage, and the incremental
 // path through `Program.update`.
 //
@@ -242,7 +243,7 @@ function runPipeline(input: Prepared): Result<PipelineRun, M2Error> {
     "parse",
     () =>
       input.sourceFiles.map(([path, text]) =>
-        [path, parse(path, text)] as const
+        [path, parse(path, text, undefined)] as const
       ),
   );
   const files = new Map<string, ParsedFile>();
@@ -536,12 +537,12 @@ function measureSteps(
     const timedRun = k >= config.warmups;
     const sides: [Side, Side] = [
       {
-        program: new Program(""),
+        program: Program(""),
         outputs: new TypeScriptOutputs(),
         text: project.sources.get(project.edit.path) ?? "",
       },
       {
-        program: new Program(""),
+        program: Program(""),
         outputs: new TypeScriptOutputs(),
         text: project.sources.get(project.edit.path) ?? "",
       },

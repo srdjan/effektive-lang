@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The generated-text protocol state of the language server: the modules that
 // a client subscribed to and the last text that the client received. A
 // subscription belongs to the URI that the client sent, not to a project. The

@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Runs one chain through every pass in a fresh process and prints the diagnostic codes as JSON.
 // Usage: deno run chain_cold_probe.ts <form> <links>
 

@@ -8,6 +8,7 @@ import type { OptionConstructorName, PreludeName } from "../resolve.ts";
 import type { NodeId } from "../syntax.ts";
 import type { NodeFact, NodeInfo } from "../tables.ts";
 import type { TypeRef } from "../types.ts";
+import { panic } from "../source.ts";
 import type { Arg } from "./context.ts";
 
 /** The prelude names that have a family row. An option constructor has its own checking rule. */
@@ -33,10 +34,28 @@ type KeyFact<K extends PreludeCallName> = NodeFact extends infer F
   : never;
 
 /** The fact that the key of a row gives: its name in kebab case is the kind. */
-export function keyFact(name: string): NodeFact {
-  return {
-    kind: name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`),
-  } as NodeFact;
+export function keyFact(name: PreludeCallName): NodeFact {
+  if (name === "unfold") return { kind: "unfold" };
+  if (name === "sinkForEach") return { kind: "sink-for-each" };
+  if (name === "transduceStream") return { kind: "transduce-stream" };
+  if (name === "runStream") return { kind: "run-stream" };
+  if (name === "makeRef") return { kind: "make-ref" };
+  if (name === "getRef") return { kind: "get-ref" };
+  if (name === "setRef") return { kind: "set-ref" };
+  if (name === "updateRef") return { kind: "update-ref" };
+  if (name === "mergeLayers") return { kind: "merge-layers" };
+  if (name === "scoped") return { kind: "scoped" };
+  if (name === "forkScoped") return { kind: "fork-scoped" };
+  if (name === "retrySchedule") return { kind: "retry-schedule" };
+  if (name === "timeout") return { kind: "timeout" };
+  if (name === "uninterruptible") return { kind: "uninterruptible" };
+  if (name === "now") return { kind: "now" };
+  if (name === "random") return { kind: "random" };
+  if (name === "randomInt") return { kind: "random-int" };
+  if (name === "sleep") return { kind: "sleep" };
+  if (name === "defer") return { kind: "defer" };
+  if (name === "run") return { kind: "run" };
+  return panic(`builtin ${name} has no key fact`);
 }
 
 /**
@@ -44,13 +63,13 @@ export function keyFact(name: string): NodeFact {
  * tested, so a call with a wrong count keeps it. `bailFact` is recorded only
  * after a wrong count, for a handler that records another fact after its checks.
  */
-interface PrologueFacts<K extends PreludeCallName, C> {
+type PrologueFacts<K extends PreludeCallName, C> = {
   readonly fact?:
     | KeyFact<K>
     | NodeFact & { readonly kind: Kebab<K> }
     | ((checker: C, name: K, args: readonly Arg[]) => NodeFact);
   readonly bailFact?: NodeFact & { readonly kind: Kebab<K> };
-}
+};
 
 /**
  * What a prelude call needs before its handler runs. The dispatcher runs these
@@ -61,14 +80,13 @@ interface PrologueFacts<K extends PreludeCallName, C> {
  *   "effect": a wrong count adds `EFFECT_ONLY` to them.
  * - `pipeline` "direct": a pipeline left side is rejected. "any": it is allowed.
  */
-export interface Prologue<K extends PreludeCallName, C>
-  extends PrologueFacts<K, C> {
+export type Prologue<K extends PreludeCallName, C> = PrologueFacts<K, C> & {
   readonly arity: number | ((name: K, args: readonly Arg[]) => number);
   readonly bail: "pure" | "effect";
   readonly pipeline: "direct" | "any";
   /** The message of a wrong count, instead of the counted form. */
   readonly usage?: string;
-}
+};
 
 /** A prologue that many names share, so its `fact` is a function of the name and it has no `bailFact`. */
 export type SharedPrologue<K extends PreludeCallName, C> =
@@ -82,7 +100,7 @@ export type SharedPrologue<K extends PreludeCallName, C> =
  * argument count. The context `C` is the set of checker operations that the
  * prologue and the handler use.
  */
-export interface BuiltinRow<K extends PreludeCallName, C> {
+export type BuiltinRow<K extends PreludeCallName, C> = {
   readonly prologue: Prologue<K, C> | "own-arity";
   readonly handle: (
     c: C,
@@ -91,7 +109,10 @@ export interface BuiltinRow<K extends PreludeCallName, C> {
     args: readonly Arg[],
     expected: TypeRef | undefined,
   ) => NodeInfo;
-}
+};
+
+export type BuiltinArity = number;
+export type BuiltinUsage = string;
 
 /** One row for each name in `N`. A missing name is a compile error. */
 export type Rows<N extends PreludeCallName, C> = {
@@ -100,32 +121,32 @@ export type Rows<N extends PreludeCallName, C> = {
 
 /** A prologue that rejects a pipeline left side. */
 export function direct<K extends PreludeCallName, C = unknown>(
-  arity: number,
+  arity: BuiltinArity,
   bail: "pure" | "effect",
-  facts: PrologueFacts<NoInfer<K>, C> = {},
+  facts: PrologueFacts<NoInfer<K>, C>,
 ): Prologue<K, C> {
-  return { arity, bail, pipeline: "direct", ...facts };
+  return { ...facts, arity: arity, bail: bail, pipeline: "direct" };
 }
 
 /** A prologue that allows a pipeline left side. */
 export function piped<K extends PreludeCallName, C = unknown>(
-  arity: number,
+  arity: BuiltinArity,
   bail: "pure" | "effect",
-  facts: PrologueFacts<NoInfer<K>, C> = {},
+  facts: PrologueFacts<NoInfer<K>, C>,
 ): Prologue<K, C> {
-  return { arity, bail, pipeline: "any", ...facts };
+  return { ...facts, arity: arity, bail: bail, pipeline: "any" };
 }
 
 /** A prologue for a call that takes `required` arguments and one optional last argument. */
 export function optionalLast<K extends PreludeCallName, C = unknown>(
-  required: number,
-  usage: string,
+  required: BuiltinArity,
+  usage: BuiltinUsage,
 ): Prologue<K, C> {
   return {
     arity: (_name, args) =>
       args.length === required + 1 ? required + 1 : required,
     bail: "pure",
     pipeline: "any",
-    usage,
+    usage: usage,
   };
 }

@@ -1,3 +1,4 @@
+// @light-fp adapter
 // An in-process harness for the language server: a memory file system with
 // absolute paths, a manual scheduler, and recorders for the sent messages, the
 // exit codes, and stderr. `deliver` frames each message, decodes it, and calls

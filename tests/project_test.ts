@@ -17,7 +17,7 @@ function load(
   entries: readonly string[],
   root = "",
 ): Project {
-  const result = loadProject(memoryHost(files), root, entries);
+  const result = loadProject(memoryHost(files), root, entries, undefined);
   assert(result.ok, JSON.stringify(result));
   return result.value;
 }
@@ -45,7 +45,7 @@ Deno.test("paths normalize against the root", () => {
 });
 
 Deno.test("a missing effektive.json is an error value", () => {
-  const result = loadProject(memoryHost({}), "proj", []);
+  const result = loadProject(memoryHost({}), "proj", [], undefined);
   assert(!result.ok);
   assertEquals(result.error, { tag: "missing", path: "proj/effektive.json" });
   assertEquals(
@@ -119,7 +119,7 @@ Deno.test("the examples form a graph with the service contract before its consum
     "users-service.eff",
     "users.eff",
   ]);
-  const result = loadProject(diskHost(), "examples", entries);
+  const result = loadProject(diskHost(), "examples", entries, undefined);
   assert(result.ok);
   const project = result.value;
   assertEquals(messages(project), []);
@@ -149,7 +149,7 @@ Deno.test("the examples form a graph with the service contract before its consum
 });
 
 Deno.test("the host import links to the interface file and keeps the import string", () => {
-  const result = loadProject(diskHost(), "examples", ["main.eff"]);
+  const result = loadProject(diskHost(), "examples", ["main.eff"], undefined);
   assert(result.ok);
   const main = result.value.modules.get("main")!;
   assertEquals(

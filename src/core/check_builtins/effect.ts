@@ -1,5 +1,6 @@
 // Effect construction, execution, failure and retry checking.
 import { isErrorId } from "../ids.ts";
+import type { DiagnosticCode } from "../diagnostics.ts";
 import {
   DURATION_ID,
   type ErrorId,
@@ -17,13 +18,13 @@ import {
   type EffectSet,
   PURE_EFFECTS,
 } from "../effect_set.ts";
-import type { NodeInfo } from "../tables.ts";
-import { dataOnly, type TypeRef } from "../types.ts";
+import type { NodeFact, NodeInfo } from "../tables.ts";
+import { dataOnly, type TypeNode, type TypeRef } from "../types.ts";
 import { showType } from "../type_show.ts";
+import { emptySet } from "../runtime.ts";
 import {
   type Arg,
   type BuiltinContext,
-  type FactWriter,
   type FunctionNode,
   invocationOf,
   isEffectfulFunction,
@@ -31,8 +32,8 @@ import {
   type SyntaxView,
 } from "./context.ts";
 import { direct, piped, type PreludeCallName, type Rows } from "./rows.ts";
-export interface EffectContext extends
-  Pick<
+export type EffectContext =
+  & Pick<
     BuiltinContext,
     | "table"
     | "assignable"
@@ -42,23 +43,34 @@ export interface EffectContext extends
     | "fits"
     | "functionOf"
     | "isError"
-    | "report"
-  >,
-  SyntaxView,
-  FactWriter {
-  arity(
-    node: NodeId,
-    name: string,
-    expectedCount: number,
-    args: readonly Arg[],
-    usage?: string,
-  ): boolean;
-  literalRecord(
-    arg: Arg,
-    count: number,
-  ): Result<ReadonlyMap<string, LiteralField>, "shape">;
-  jobFunction(name: string, arg: Arg, info: NodeInfo): FunctionNode | undefined;
-}
+  >
+  & SyntaxView
+  & {
+    checkFit(
+      node: NodeId,
+      found: TypeRef,
+      expected: TypeRef | undefined,
+      what: string,
+    ): EffectContext;
+    report(code: DiagnosticCode, message: string, node: NodeId): EffectContext;
+    fact(node: NodeId, fact: NodeFact): EffectContext;
+    arity(
+      node: NodeId,
+      name: string,
+      expectedCount: number,
+      args: readonly Arg[],
+      usage: string | undefined,
+    ): boolean;
+    literalRecord(
+      arg: Arg,
+      count: number,
+    ): Result<ReadonlyMap<string, LiteralField>, "shape">;
+    jobFunction(
+      name: string,
+      arg: Arg,
+      info: NodeInfo,
+    ): FunctionNode | undefined;
+  };
 
 /**
  * The Effect element type of an array of Effect values, or undefined after a
@@ -69,14 +81,14 @@ function effectArrayMember(
   name: string,
   jobs: NodeInfo,
   at: NodeId,
-) {
+): Extract<TypeNode, { readonly kind: "effect" }> | undefined {
   const shape = c.table.node(c.table.unfold(jobs.type));
   const member = shape.kind === "array"
     ? c.table.node(c.table.unfold(shape.element))
     : undefined;
   if (member?.kind === "effect") return member;
   if (!c.isError(jobs.type)) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `\`${name}\` needs an array of Effect values`,
       at,
@@ -90,16 +102,16 @@ function failCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  c.fact(node, { kind: "fail" });
-  const rightCount = c.arity(node, "fail", 1, args);
-  const infos = args.map((a) => c.argInfo(a));
+  c = c.fact(node, { kind: "fail" });
+  const rightCount = c.arity(node, "fail", 1, args, undefined);
+  const infos = args.map((arg) => c.argInfo(arg, undefined));
   let failure: ErrorId | undefined;
   if (rightCount) {
     const unfolded = c.table.node(c.table.unfold(infos[0].type));
     if (unfolded.kind === "named" && isErrorId(unfolded.id)) {
       failure = unfolded.id;
     } else if (!c.isError(infos[0].type)) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         `\`fail\` needs a value of a named error type, but the value has type ${
           showType(c.table, infos[0].type)
@@ -121,24 +133,31 @@ function retryCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const job = c.argInfo(args[0]);
+  const job = c.argInfo(args[0], undefined);
   const fn = c.jobFunction("retry", args[0], job);
   if (!timesOnlyOption(c, args[1])) {
     const failures = fn?.failures ?? [];
-    const { info, own } = callOptions(c, args[1], {
+    const options = callOptions(c, args[1], {
       name: "retry",
       inputs: failures.map((f) => ({ label: f, type: c.table.named(f) })),
       element: c.table.union(failures.map((f) => c.table.named(f))),
     });
-    c.fact(node, { kind: "retry-with-schedule" });
+    c = c.fact(node, { kind: "retry-with-schedule" });
     return c.finish(
       node,
       fn?.result ?? c.table.error,
-      combine([job, info, ...own, invocationOf(fn), EFFECT_ONLY]),
+      combine([
+        job,
+        options.info,
+        ...options.own,
+        invocationOf(fn),
+        EFFECT_ONLY,
+      ]),
     );
   }
-  const times = retryTimes(c, args[1]);
-  c.fact(node, { kind: "retry", times });
+  const retry = retryTimes(c, args[1]);
+  c = retry.context;
+  c = c.fact(node, { kind: "retry", times: retry.times });
   const invocation: EffectSet = invocationOf(fn);
   return c.finish(
     node,
@@ -175,7 +194,7 @@ function timesOnlyOption(c: EffectContext, arg: Arg): boolean {
 }
 
 /** What `callOptions` needs to know about a retry or a repeat call. */
-interface OptionsSpec {
+type OptionsSpec = {
   /** The builtin name, used in messages. */
   readonly name: "retry" | "repeat";
   /** The values that a `schedule` input must accept, each with its display label. Empty for `repeat`. */
@@ -185,7 +204,7 @@ interface OptionsSpec {
   }[];
   /** The one type that `while` and `until` receive. */
   readonly element: TypeRef;
-}
+};
 
 /** The label, name, and value of a `name: value` option field, or undefined after a diagnostic. */
 function optionField(
@@ -197,7 +216,7 @@ function optionField(
   | undefined {
   const parts = recordFieldParts(c.tree, field);
   if (parts?.value === undefined) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `\`${call}\` options need the form \`name: value\``,
       field,
@@ -217,21 +236,21 @@ function callOptions(
   arg: Arg,
   spec: OptionsSpec,
 ): { readonly info: NodeInfo; readonly own: readonly EffectSet[] } {
-  const { name: call } = spec;
+  const call = spec.name;
   if (
     arg.pre !== undefined ||
     kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `\`${call}\` needs an options record with ${keyList(call)}`,
       arg.node,
     );
-    return { info: c.argInfo(arg), own: [] };
+    return { info: c.argInfo(arg, undefined), own: [] };
   }
   const fields = c.kids(arg.node);
   if (fields.length === 0) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `\`${call}\` needs at least one of ${keyList(call)}`,
       arg.node,
@@ -240,11 +259,13 @@ function callOptions(
   const infos: NodeInfo[] = [];
   const own: EffectSet[] = [];
   const types: { name: string; type: TypeRef; optional: boolean }[] = [];
-  const seen = new Set<string>();
+  let seen = emptySet<string>();
   for (const field of fields) {
     const parsed = optionField(c, call, field);
     if (parsed === undefined) continue;
-    const { label, name, value } = parsed;
+    const label = parsed.label;
+    const name = parsed.name;
+    const value = parsed.value;
     const valueArg: Arg = { node: value };
     let info: NodeInfo;
     if (name === "while" || name === "until") {
@@ -257,23 +278,23 @@ function callOptions(
       ).info;
       const cb = c.functionOf(info.type);
       if (cb !== undefined) {
-        c.fits(
+        c = c.checkFit(
           value,
           cb.result,
           c.table.boolean,
           `the ${call} \`${name}\` result`,
         );
-        own.push(invocationOf(cb));
+        own[own.length] = invocationOf(cb);
       }
     } else if (name === "schedule" && call === "retry") {
-      info = c.argInfo(valueArg);
-      own.push(schedulePolicy(c, value, info, spec));
+      info = c.argInfo(valueArg, undefined);
+      own[own.length] = schedulePolicy(c, value, info, spec);
     } else {
-      info = c.argInfo(valueArg);
-      if (name === "times") timesValue(c, value, call);
+      info = c.argInfo(valueArg, undefined);
+      if (name === "times") c = timesValue(c, value, call);
     }
     if (!OPTION_KEYS[call].includes(name)) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         `\`${call}\` has no option \`${name}\`; the options are ${
           OPTION_KEYS[call].join(", ")
@@ -281,36 +302,41 @@ function callOptions(
         label,
       );
     } else if (seen.has(name)) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         `\`${call}\` option \`${name}\` appears twice`,
         label,
       );
     } else {
-      types.push({ name, type: info.type, optional: false });
+      types[types.length] = { name: name, type: info.type, optional: false };
     }
-    seen.add(name);
-    infos.push(info);
+    seen = seen.add(name);
+    infos[infos.length] = info;
   }
   return {
     info: c.finish(arg.node, c.table.record(types), combine(infos)),
-    own,
+    own: own,
   };
 }
 
-function timesValue(c: EffectContext, value: NodeId, call: string): void {
+function timesValue(
+  c: EffectContext,
+  value: NodeId,
+  call: string,
+): EffectContext {
   const literal = kindOf(c.tree, value) === SyntaxKind.LiteralExpr
     ? literalOf(c.tree, value)
     : undefined;
   if (
     typeof literal !== "number" || !Number.isSafeInteger(literal) || literal < 0
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `\`${call}\` needs \`times\` to be a finite nonnegative safe integer literal`,
       value,
     );
   }
+  return c;
 }
 
 /** The effects that a `retry` `schedule` option adds, after checking that its RetrySchedule accepts every failure of the call. */
@@ -322,9 +348,11 @@ function schedulePolicy(
 ): EffectSet {
   const policy = c.table.node(c.table.unfold(info.type));
   if (policy.kind === "retry-schedule") {
-    for (const { label, type } of spec.inputs) {
+    for (const input of spec.inputs) {
+      const label = input.label;
+      const type = input.type;
       if (!c.assignable(type, policy.error)) {
-        c.report(
+        c = c.report(
           "type-mismatch/003",
           `the ${spec.name} schedule does not accept ${label}`,
           value,
@@ -334,7 +362,7 @@ function schedulePolicy(
     return PURE_EFFECTS;
   }
   if (!c.isError(info.type)) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `\`${spec.name}\` needs a RetrySchedule in \`schedule\``,
       value,
@@ -349,9 +377,9 @@ function repeatCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const job = c.argInfo(args[0]);
+  const job = c.argInfo(args[0], undefined);
   const fn = c.jobFunction("repeat", args[0], job);
-  c.fact(node, { kind: "repeat", options: args.length === 2 });
+  c = c.fact(node, { kind: "repeat", options: args.length === 2 });
   const success = fn?.result ?? c.table.error;
   if (args[1] === undefined) {
     return c.finish(
@@ -360,7 +388,7 @@ function repeatCall(
       combine([job, invocationOf(fn), EFFECT_ONLY]),
     );
   }
-  const { info, own } = callOptions(c, args[1], {
+  const options = callOptions(c, args[1], {
     name: "repeat",
     inputs: [],
     element: success,
@@ -368,7 +396,13 @@ function repeatCall(
   return c.finish(
     node,
     success,
-    combine([job, info, ...own, invocationOf(fn), EFFECT_ONLY]),
+    combine([
+      job,
+      options.info,
+      ...options.own,
+      invocationOf(fn),
+      EFFECT_ONLY,
+    ]),
   );
 }
 
@@ -384,16 +418,19 @@ function retryScheduleCall(
   const errorHint = expectedType?.kind === "retry-schedule"
     ? expectedType.error
     : undefined;
-  const info = errorHint === undefined ? c.argInfo(args[0]) : c.callback(
-    "retrySchedule",
-    args[0],
-    [errorHint, c.table.int],
-    c.table.option(c.table.named(DURATION_ID)),
-  ).info;
+  const info = errorHint === undefined
+    ? c.argInfo(args[0], undefined)
+    : c.callback(
+      "retrySchedule",
+      args[0],
+      [errorHint, c.table.int],
+      c.table.option(c.table.named(DURATION_ID)),
+      false,
+    ).info;
   const fn = c.functionOf(info.type);
   if (fn === undefined) {
     if (!c.isError(info.type)) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         "`retrySchedule` needs a function",
         args[0].node,
@@ -402,7 +439,7 @@ function retryScheduleCall(
     return c.finish(node, c.table.error, combine([info]));
   }
   if (fn.parameters.length !== 2) {
-    c.report(
+    c = c.report(
       "type-mismatch/004",
       "the retry schedule callback takes an error and an attempt number",
       args[0].node,
@@ -411,26 +448,26 @@ function retryScheduleCall(
   }
   const error = c.table.node(c.table.unfold(fn.parameters[0]));
   if (error.kind !== "named" || !isErrorId(error.id)) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "the retry schedule callback needs a declared error parameter",
       args[0].node,
     );
   }
-  c.fits(
+  c = c.checkFit(
     args[0].node,
     fn.parameters[1],
     c.table.int,
     "the retry attempt number",
   );
-  c.fits(
+  c = c.checkFit(
     args[0].node,
     fn.result,
     c.table.option(c.table.named(DURATION_ID)),
     "the retry delay",
   );
   if (isEffectfulFunction(fn)) {
-    c.report(
+    c = c.report(
       "execution-mode/001",
       "the retry schedule callback must be pure",
       args[0].node,
@@ -447,7 +484,7 @@ function deferCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const job = c.argInfo(args[0]);
+  const job = c.argInfo(args[0], undefined);
   const fn = c.jobFunction("defer", args[0], job);
   return c.finish(
     node,
@@ -463,7 +500,7 @@ function timeoutCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const job = c.argInfo(args[0]);
+  const job = c.argInfo(args[0], undefined);
   const fn = c.jobFunction("timeout", args[0], job);
   const duration = durationInfo(c, args[1], "timeout");
   const own: EffectSet = {
@@ -483,7 +520,7 @@ function uninterruptibleCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const job = c.argInfo(args[0]);
+  const job = c.argInfo(args[0], undefined);
   const fn = c.jobFunction("uninterruptible", args[0], job);
   return c.finish(
     node,
@@ -508,7 +545,7 @@ function randomIntCall(
 ): NodeInfo {
   const infos = args.map((arg, index) => {
     const info = c.argInfo(arg, c.table.int);
-    c.fits(
+    c = c.checkFit(
       arg.node,
       info.type,
       c.table.int,
@@ -519,7 +556,7 @@ function randomIntCall(
   return c.finish(node, c.table.int, combine([...infos, EFFECT_ONLY]));
 }
 
-const LOG_KEYS: ReadonlySet<string> = new Set(["level", "fields"]);
+const LOG_KEYS: readonly string[] = ["level", "fields"];
 
 /** `log(message)` and `log(message, { level?, fields? })`: one log entry, with no failure. */
 function logCall(
@@ -528,17 +565,17 @@ function logCall(
   args: readonly Arg[],
 ): NodeInfo {
   const message = c.argInfo(args[0], c.table.string);
-  c.fits(args[0].node, message.type, c.table.string, "the log message");
+  c = c.checkFit(args[0].node, message.type, c.table.string, "the log message");
   const infos: NodeInfo[] = [message];
   let level: LogLevel = "info";
   let fields: string | undefined;
   if (args[1] !== undefined) {
     const options = logOptions(c, args[1]);
-    infos.push(options.info);
+    infos[infos.length] = options.info;
     level = options.level;
     fields = options.fields;
   }
-  c.fact(node, { kind: "log", level, fields });
+  c = c.fact(node, { kind: "log", level: level, fields: fields });
   return c.finish(node, c.table.unit, combine([...infos, EFFECT_ONLY]));
 }
 
@@ -557,16 +594,20 @@ function logOptions(
     arg.pre !== undefined ||
     kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`log` needs an options record with `level` or `fields`",
       arg.node,
     );
-    return { info: c.argInfo(arg), level, fields: undefined };
+    return {
+      info: c.argInfo(arg, undefined),
+      level: level,
+      fields: undefined,
+    };
   }
   const fields = c.kids(arg.node);
   if (fields.length === 0) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`log` needs at least one of `level` or `fields`",
       arg.node,
@@ -574,38 +615,40 @@ function logOptions(
   }
   const infos: NodeInfo[] = [];
   const types: { name: string; type: TypeRef; optional: boolean }[] = [];
-  const seen = new Set<string>();
+  let seen = emptySet<string>();
   for (const field of fields) {
     const parsed = optionField(c, "log", field);
     if (parsed === undefined) continue;
-    const { label, name, value } = parsed;
-    const info = c.argInfo({ node: value });
+    const label = parsed.label;
+    const name = parsed.name;
+    const value = parsed.value;
+    const info = c.argInfo({ node: value }, undefined);
     if (name === "level") level = logLevel(c, value) ?? level;
     else if (name === "fields") {
-      logFields(c, value, info);
+      c = logFields(c, value, info);
       fieldsLabel = name;
     }
-    if (!LOG_KEYS.has(name)) {
-      c.report(
+    if (!LOG_KEYS.includes(name)) {
+      c = c.report(
         "type-mismatch/010",
         `\`log\` has no option \`${name}\`; the options are level, fields`,
         label,
       );
     } else if (seen.has(name)) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         `\`log\` option \`${name}\` appears twice`,
         label,
       );
     } else {
-      types.push({ name, type: info.type, optional: false });
+      types[types.length] = { name: name, type: info.type, optional: false };
     }
-    seen.add(name);
-    infos.push(info);
+    seen = seen.add(name);
+    infos[infos.length] = info;
   }
   return {
     info: c.finish(arg.node, c.table.record(types), combine(infos)),
-    level,
+    level: level,
     fields: fieldsLabel,
   };
 }
@@ -617,7 +660,7 @@ function logLevel(c: EffectContext, value: NodeId): LogLevel | undefined {
     : undefined;
   const level = LOG_LEVELS.find((candidate) => candidate === literal);
   if (level === undefined) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       `\`log\` needs \`level\` to be one of the string literals ${
         LOG_LEVELS.map((l) => `"${l}"`).join(", ")
@@ -629,20 +672,24 @@ function logLevel(c: EffectContext, value: NodeId): LogLevel | undefined {
 }
 
 /** A `fields` option is a record literal whose field values are data. */
-function logFields(c: EffectContext, value: NodeId, info: NodeInfo): void {
+function logFields(
+  c: EffectContext,
+  value: NodeId,
+  info: NodeInfo,
+): EffectContext {
   if (kindOf(c.tree, value) !== SyntaxKind.RecordExpr) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`log` needs `fields` to be a record literal",
       value,
     );
-    return;
+    return c;
   }
   const record = c.table.node(c.table.unfold(info.type));
-  if (record.kind !== "record") return;
+  if (record.kind !== "record") return c;
   for (const field of record.fields) {
     if (!dataOnly(c.table, field.type, "value", true)) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         `\`log\` field \`${field.name}\` must be data, but has type ${
           showType(c.table, field.type)
@@ -651,12 +698,13 @@ function logFields(c: EffectContext, value: NodeId, info: NodeInfo): void {
       );
     }
   }
+  return c;
 }
 
 function durationInfo(c: EffectContext, arg: Arg, name: string): NodeInfo {
   const duration = c.table.named(DURATION_ID);
   const info = c.argInfo(arg, duration);
-  c.fits(arg.node, info.type, duration, `the ${name} duration`);
+  c = c.checkFit(arg.node, info.type, duration, `the ${name} duration`);
   return info;
 }
 
@@ -665,11 +713,11 @@ function runCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const value = c.argInfo(args[0]);
+  const value = c.argInfo(args[0], undefined);
   const type = c.table.node(c.table.unfold(value.type));
   if (type.kind !== "effect") {
     if (!c.isError(value.type)) {
-      c.report(
+      c = c.report(
         "type-mismatch/010",
         `\`run\` needs an Effect value, but the argument has type ${
           showType(c.table, value.type)
@@ -698,7 +746,7 @@ function raceCall(
   node: NodeId,
   args: readonly Arg[],
 ): NodeInfo {
-  const left = c.argInfo(args[0]);
+  const left = c.argInfo(args[0], undefined);
   if (args.length === 1) {
     const member = effectArrayMember(c, "race", left, args[0].node);
     return c.finish(
@@ -709,17 +757,17 @@ function raceCall(
       combine([left]),
     );
   }
-  const right = c.argInfo(args[1]);
+  const right = c.argInfo(args[1], undefined);
   const a = c.table.node(c.table.unfold(left.type));
   const b = c.table.node(c.table.unfold(right.type));
   if (a.kind !== "effect" || b.kind !== "effect") {
-    c.report("type-mismatch/010", "`race` needs two Effect values", node);
+    c = c.report("type-mismatch/010", "`race` needs two Effect values", node);
     return c.finish(node, c.table.error, combine([left, right]));
   }
   const aFitsB = c.assignable(a.result, b.result);
   const bFitsA = c.assignable(b.result, a.result);
   if (!aFitsB && !bFitsA) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`race` needs compatible success types",
       node,
@@ -732,7 +780,13 @@ function raceCall(
   return c.finish(node, type, combine([left, right]));
 }
 
-function retryTimes(c: EffectContext, arg: Arg): number | undefined {
+type RetryTimes = {
+  readonly context: EffectContext;
+  readonly times: number | undefined;
+  readonly info: NodeInfo;
+};
+
+function retryTimes(c: EffectContext, arg: Arg): RetryTimes {
   const record = c.literalRecord(arg, 1);
   const times = record.ok ? record.value.get("times") : undefined;
   const value = times?.value;
@@ -740,102 +794,125 @@ function retryTimes(c: EffectContext, arg: Arg): number | undefined {
     times === undefined || typeof value !== "number" ||
     !Number.isSafeInteger(value) || value < 0
   ) {
-    c.report(
+    c = c.report(
       "type-mismatch/010",
       "`retry` needs `{ times: N }`, where N is a finite nonnegative safe integer literal",
       arg.node,
     );
-    return undefined;
+    return {
+      context: c,
+      times: undefined,
+      info: c.argInfo(arg, undefined),
+    };
   }
-  c.finish(times.node, c.table.int, PURE_EFFECTS);
-  c.finish(
+  const timesInfo = c.finish(times.node, c.table.int, PURE_EFFECTS);
+  const info = c.finish(
     arg.node,
     c.table.record([{
       name: "times",
-      type: c.table.int,
+      type: timesInfo.type,
       optional: false,
     }]),
     PURE_EFFECTS,
   );
-  return value;
+  return { context: c, times: value, info: info };
 }
 
-export const EFFECT_ROWS = {
-  fail: {
-    prologue: "own-arity",
-    handle: (c, node, _name, args) => failCall(c, node, args),
-  },
-  retry: {
-    prologue: piped(2, "effect", {
-      bailFact: { kind: "retry", times: undefined },
-    }),
-    handle: (c, node, _name, args) => retryCall(c, node, args),
-  },
-  repeat: {
-    prologue: {
-      arity: (_name, args) => args.length === 2 ? 2 : 1,
-      bail: "effect",
-      pipeline: "any",
-      usage: "`repeat` takes a job and optional options",
+export function effectRows(): Pick<
+  Rows<PreludeCallName, EffectContext>,
+  | "fail"
+  | "retry"
+  | "repeat"
+  | "retrySchedule"
+  | "timeout"
+  | "uninterruptible"
+  | "now"
+  | "log"
+  | "random"
+  | "randomInt"
+  | "sleep"
+  | "defer"
+  | "run"
+  | "race"
+> {
+  return {
+    fail: {
+      prologue: "own-arity",
+      handle: (c, node, _name, args) => failCall(c, node, args),
     },
-    handle: (c, node, _name, args) => repeatCall(c, node, args),
-  },
-  retrySchedule: {
-    prologue: piped(1, "pure", { fact: "key" }),
-    handle: (c, node, _name, args, expected) =>
-      retryScheduleCall(c, node, args, expected),
-  },
-  timeout: {
-    prologue: piped(2, "effect", { fact: "key" }),
-    handle: (c, node, _name, args) => timeoutCall(c, node, args),
-  },
-  uninterruptible: {
-    prologue: piped(1, "effect", { fact: "key" }),
-    handle: (c, node, _name, args) => uninterruptibleCall(c, node, args),
-  },
-  now: {
-    prologue: direct(0, "effect", { fact: "key" }),
-    handle: (c, node) => c.finish(node, c.table.named(INSTANT_ID), EFFECT_ONLY),
-  },
-  log: {
-    prologue: {
-      arity: (_name, args) => args.length === 2 ? 2 : 1,
-      bail: "effect",
-      pipeline: "direct",
-      usage: "`log` takes a message and optional options",
-      bailFact: { kind: "log", level: undefined, fields: undefined },
+    retry: {
+      prologue: piped(2, "effect", {
+        bailFact: { kind: "retry", times: undefined },
+      }),
+      handle: (c, node, _name, args) => retryCall(c, node, args),
     },
-    handle: (c, node, _name, args) => logCall(c, node, args),
-  },
-  random: {
-    prologue: direct(0, "effect", { fact: "key" }),
-    handle: (c, node) => c.finish(node, c.table.number, EFFECT_ONLY),
-  },
-  randomInt: {
-    prologue: direct(2, "effect", { fact: "key" }),
-    handle: (c, node, _name, args) => randomIntCall(c, node, args),
-  },
-  sleep: {
-    prologue: direct(1, "effect", { fact: "key" }),
-    handle: (c, node, _name, args) => sleepCall(c, node, args),
-  },
-  defer: {
-    prologue: piped(1, "pure", { fact: "key" }),
-    handle: (c, node, _name, args) => deferCall(c, node, args),
-  },
-  run: {
-    prologue: piped(1, "effect", { fact: "key" }),
-    handle: (c, node, _name, args) => runCall(c, node, args),
-  },
-  race: {
-    prologue: {
-      arity: (_name, args) => args.length === 1 ? 1 : 2,
-      bail: "pure",
-      pipeline: "direct",
-      usage: "`race` takes an Effect array or two Effect values",
-      fact: (_c, _name, args) =>
-        args.length === 1 ? { kind: "race-all" } : { kind: "race" },
+    repeat: {
+      prologue: {
+        arity: (_name, args) => args.length === 2 ? 2 : 1,
+        bail: "effect",
+        pipeline: "any",
+        usage: "`repeat` takes a job and optional options",
+      },
+      handle: (c, node, _name, args) => repeatCall(c, node, args),
     },
-    handle: (c, node, _name, args) => raceCall(c, node, args),
-  },
-} satisfies Partial<Rows<PreludeCallName, EffectContext>>;
+    retrySchedule: {
+      prologue: piped(1, "pure", { fact: "key" }),
+      handle: (c, node, _name, args, expected) =>
+        retryScheduleCall(c, node, args, expected),
+    },
+    timeout: {
+      prologue: piped(2, "effect", { fact: "key" }),
+      handle: (c, node, _name, args) => timeoutCall(c, node, args),
+    },
+    uninterruptible: {
+      prologue: piped(1, "effect", { fact: "key" }),
+      handle: (c, node, _name, args) => uninterruptibleCall(c, node, args),
+    },
+    now: {
+      prologue: direct(0, "effect", { fact: "key" }),
+      handle: (c, node) =>
+        c.finish(node, c.table.named(INSTANT_ID), EFFECT_ONLY),
+    },
+    log: {
+      prologue: {
+        arity: (_name, args) => args.length === 2 ? 2 : 1,
+        bail: "effect",
+        pipeline: "direct",
+        usage: "`log` takes a message and optional options",
+        bailFact: { kind: "log", level: undefined, fields: undefined },
+      },
+      handle: (c, node, _name, args) => logCall(c, node, args),
+    },
+    random: {
+      prologue: direct(0, "effect", { fact: "key" }),
+      handle: (c, node) => c.finish(node, c.table.number, EFFECT_ONLY),
+    },
+    randomInt: {
+      prologue: direct(2, "effect", { fact: "key" }),
+      handle: (c, node, _name, args) => randomIntCall(c, node, args),
+    },
+    sleep: {
+      prologue: direct(1, "effect", { fact: "key" }),
+      handle: (c, node, _name, args) => sleepCall(c, node, args),
+    },
+    defer: {
+      prologue: piped(1, "pure", { fact: "key" }),
+      handle: (c, node, _name, args) => deferCall(c, node, args),
+    },
+    run: {
+      prologue: piped(1, "effect", { fact: "key" }),
+      handle: (c, node, _name, args) => runCall(c, node, args),
+    },
+    race: {
+      prologue: {
+        arity: (_name, args) => args.length === 1 ? 1 : 2,
+        bail: "pure",
+        pipeline: "direct",
+        usage: "`race` takes an Effect array or two Effect values",
+        fact: (_c, _name, args) =>
+          args.length === 1 ? { kind: "race-all" } : { kind: "race" },
+      },
+      handle: (c, node, _name, args) => raceCall(c, node, args),
+    },
+  };
+}

@@ -1,13 +1,14 @@
 // The independent typed-IR validator (design D11). It recomputes every
 // annotation of a module from the IR alone and reports each disagreement with
 // its validation area. This directory imports only `../ir.ts`, `../source.ts`,
-// and `../diagnostics.ts`: it shares no code with the checker, the resolver,
-// or the lowering, so it can serve as a differential oracle for them.
+// `../diagnostics.ts`, and the native primitives in `../runtime.ts`. It shares
+// no code with the checker, resolver, or lowering. It remains their
+// differential oracle.
 
 import { type Diagnostic, normalizeDiagnostics } from "../diagnostics.ts";
 import type { ModuleIR, Span } from "../ir.ts";
-import { BodyValidator } from "./expr.ts";
-import { AREA, moduleSpan, Report } from "./report.ts";
+import { createBodyValidator } from "./expr.ts";
+import { AREA, createReport, moduleSpan, type Report } from "./report.ts";
 import { fallbackSpan } from "./prelude.ts";
 import { checkSerialization } from "./serialization.ts";
 import { checkDeclarationHeaders } from "./declaration_checks.ts";
@@ -15,8 +16,7 @@ import { checkImports } from "./import_checks.ts";
 import { checkRecursion } from "./recursion_checks.ts";
 import { buildWorld } from "./world_table.ts";
 import { caught } from "../source.ts";
-
-export { AREA } from "./report.ts";
+import { unknownMessage } from "../runtime.ts";
 
 /**
  * Validates one module. `sources` maps each source identifier to its text. An
@@ -27,45 +27,50 @@ export function validateModule(
   ir: ModuleIR,
   sources: ReadonlyMap<string, string>,
 ): readonly Diagnostic[] {
-  const report = new Report();
+  let report = createReport();
   const fallback: Span = Array.isArray(ir.sources)
     ? moduleSpan(ir)
     : fallbackSpan(ir.module);
   // A module that does not have the shape of ModuleIR makes a check throw.
   // The validator reports the shape problem and goes on with the next part.
-  const unexpected = (path: string, span: Span, e: unknown): void => {
-    report.add(
+  function unexpected(path: string, span: Span, e: unknown): Report {
+    return report.add(
       AREA.serialization,
       path,
-      `the IR has an unexpected shape: ${
-        e instanceof Error ? e.message : String(e)
-      }`,
+      `the IR has an unexpected shape: ${unknownMessage(e)}`,
       span,
     );
-  };
-  const guard = (path: string, span: Span, run: () => void): void => {
+  }
+  function guard(path: string, span: Span, run: () => Report): Report {
     const done = caught(run);
-    if (!done.ok) unexpected(path, span, done.error);
-  };
+    return done.ok ? done.value : unexpected(path, span, done.error);
+  }
   const world = caught(() => buildWorld(ir));
   if (!world.ok) {
-    unexpected("", fallback, world.error);
-    return normalizeDiagnostics(report.items);
+    report = unexpected("", fallback, world.error);
+    return normalizeDiagnostics(report.items());
   }
-  const ctx = { world: world.value, report };
-  guard("imports", fallback, () => checkImports(ctx, ir));
-  guard("declarations", fallback, () => checkDeclarationHeaders(ctx, ir));
-  guard("declarations", fallback, () => checkRecursion(ctx, ir));
-  ir.declarations.forEach((d, i) => {
+  const ctx = { world: world.value, report: report };
+  report = guard("imports", fallback, () => checkImports(ctx, ir));
+  report = guard(
+    "declarations",
+    fallback,
+    () => checkDeclarationHeaders(ctx, ir),
+  );
+  report = guard("declarations", fallback, () => checkRecursion(ctx, ir));
+  for (const entry of ir.declarations.entries()) {
+    const d = entry[1];
+    const i = entry[0];
     const path = `declarations[${i}]`;
-    guard(path, d?.span ?? fallback, () => {
+    report = guard(path, d?.span ?? fallback, () => {
       if (d.kind === "function") {
-        new BodyValidator(ctx).checkFunction(d, path);
+        return createBodyValidator(ctx).checkFunction(d, path);
       } else if (d.kind === "constant") {
-        new BodyValidator(ctx).checkConstant(d, path);
+        return createBodyValidator(ctx).checkConstant(d, path);
       }
+      return ctx.report;
     });
-  });
-  guard("", fallback, () => checkSerialization(ir, sources, report));
-  return normalizeDiagnostics(report.items);
+  }
+  report = guard("", fallback, () => checkSerialization(ir, sources, report));
+  return normalizeDiagnostics(report.items());
 }

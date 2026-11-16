@@ -1,5 +1,7 @@
 // Validation of the Layer builtins: layer, mergeLayers, and provide.
 
+import type { ValidationPath } from "../report.ts";
+import { setFrom } from "../../runtime.ts";
 import type { Expr } from "../../ir.ts";
 import { AREA } from "../report.ts";
 import {
@@ -18,7 +20,7 @@ import { type Comp, derivedResult } from "../results.ts";
 export function layer(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "layer" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const acquire = c.check(e.acquire, `${path}.acquire`);
   const service = c.ctx.world.services.get(e.service);
@@ -27,12 +29,18 @@ export function layer(
     service === undefined || fn === undefined || fn.parameters.length !== 0 ||
     e.acquire.kind !== "closure"
   ) {
-    c.add(
-      AREA.control,
-      path,
-      "layer needs a declared service and inline zero-argument callback",
-      e.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.control,
+          path,
+          "layer needs a declared service and inline zero-argument callback",
+          e.span,
+        ),
+      },
+    };
     return c.poison();
   }
   const implementation = unfold(c.env, fn.result);
@@ -40,12 +48,18 @@ export function layer(
     implementation.kind !== "record" ||
     implementation.fields.length !== service.methods.length
   ) {
-    c.add(
-      AREA.types,
-      `${path}.acquire`,
-      "layer must return exactly the service methods",
-      e.acquire.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          `${path}.acquire`,
+          "layer must return exactly the service methods",
+          e.acquire.span,
+        ),
+      },
+    };
     return c.poison();
   }
   for (const method of service.methods) {
@@ -54,26 +68,38 @@ export function layer(
       field === undefined || field.optional ||
       !fits(c.env, field.type, method.type)
     ) {
-      c.add(
-        AREA.types,
-        `${path}.acquire`,
-        `layer method ${method.name} does not fit its service contract`,
-        e.acquire.span,
-      );
+      c = {
+        ...c,
+        ctx: {
+          ...c.ctx,
+          report: c.add(
+            AREA.types,
+            `${path}.acquire`,
+            `layer method ${method.name} does not fit its service contract`,
+            e.acquire.span,
+          ),
+        },
+      };
     }
   }
   const provides = sortedUnique(service.methods.map((m) => m.id));
   if (fn.effects.requirements.some((r) => provides.includes(r))) {
-    c.add(
-      AREA.control,
-      path,
-      "layer acquisition requires a method it provides",
-      e.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.control,
+          path,
+          "layer acquisition requires a method it provides",
+          e.span,
+        ),
+      },
+    };
   }
   return derivedResult({
     kind: "provider",
-    provides,
+    provides: provides,
     acquisition: { execution: "effect", effects: fn.effects },
   }, combine([acquire]));
 }
@@ -81,35 +107,52 @@ export function layer(
 export function mergeLayers(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "merge-layers" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const left = c.check(e.left, `${path}.left`);
   const right = c.check(e.right, `${path}.right`);
   const a = unfold(c.env, left.type);
   const b = unfold(c.env, right.type);
   if (a.kind !== "provider" || b.kind !== "provider") {
-    c.add(AREA.types, path, "mergeLayers needs two Layer values", e.span);
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.types,
+          path,
+          "mergeLayers needs two Layer values",
+          e.span,
+        ),
+      },
+    };
     return c.poison();
   }
-  const services = new Set(
+  const services = setFrom(
     a.provides.map((id) => id.slice(0, id.lastIndexOf("."))),
   );
   if (
     b.provides.some((id) => services.has(id.slice(0, id.lastIndexOf("."))))
   ) {
-    c.add(
-      AREA.control,
-      path,
-      "mergeLayers cannot provide one service twice",
-      e.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.control,
+          path,
+          "mergeLayers cannot provide one service twice",
+          e.span,
+        ),
+      },
+    };
   }
   return derivedResult({
     kind: "provider",
     provides: sortedUnique([...a.provides, ...b.provides]),
     acquisition: {
       execution: "effect",
-      effects: unionEffects(a.acquisition.effects, b.acquisition.effects),
+      effects: unionEffects([a.acquisition.effects, b.acquisition.effects]),
     },
   }, combine([left, right]));
 }
@@ -117,20 +160,26 @@ export function mergeLayers(
 export function provide(
   c: ValidatorCore,
   e: Extract<Expr, { kind: "provide" }>,
-  path: string,
+  path: ValidationPath,
 ): Comp {
   const provider = c.check(e.provider, `${path}.provider`);
   const job = c.check(e.job, `${path}.job`);
   const providerType = unfold(c.env, provider.type);
   if (providerType.kind !== "provider") {
-    c.add(
-      AREA.control,
-      `${path}.provider`,
-      `provide needs a provider, but the expression has type ${
-        show(provider.type)
-      }`,
-      e.provider.span,
-    );
+    c = {
+      ...c,
+      ctx: {
+        ...c.ctx,
+        report: c.add(
+          AREA.control,
+          `${path}.provider`,
+          `provide needs a provider, but the expression has type ${
+            show(provider.type)
+          }`,
+          e.provider.span,
+        ),
+      },
+    };
   }
   const fn = c.jobFunction(job, `${path}.job`, e.job.span, "provide");
   if (fn === undefined || providerType.kind !== "provider") {

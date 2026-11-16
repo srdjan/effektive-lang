@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Measurement M6: the noise floor, with the same build on both sides.
 //
 // The pairs come from the interleaved A/A runs of M2 and M5. Each pair holds

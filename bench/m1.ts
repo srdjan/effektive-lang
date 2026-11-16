@@ -1,3 +1,4 @@
+// @light-fp adapter
 // Measurement M1: the latency of an edit through the real language server.
 //
 // Two server processes, A and B, run the same edit script on the same project

@@ -1,3 +1,4 @@
+// @light-fp adapter
 // The build of the playground. `build(outDir)` bundles the
 // page script with `deno bundle`, copies the static files, and writes
 // `examples.json`. Expected failures come back as `BuildError` values.

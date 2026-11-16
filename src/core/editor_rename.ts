@@ -8,6 +8,7 @@ import {
 // including uses of symbols that the requested rename does not edit.
 import { Program, type Revision } from "./db.ts";
 import { diagnosticDelta } from "./diagnostic_delta.ts";
+import { mapFrom } from "./runtime.ts";
 import type { ConfigError } from "./project_config.ts";
 import { lex, TokenKind } from "./lex.ts";
 import type { Result, SourceEdit, Span } from "./source.ts";
@@ -18,15 +19,20 @@ import {
   type SymbolOccurrence,
 } from "./editor_index.ts";
 
-interface RenameTarget {
+type RenameTarget = {
   readonly span: Span;
   readonly name: string;
-}
+};
+
+export type RenamePath = string;
+export type RenameOffset = number;
+export type RenameText = string;
+export type RenameName = string;
 
 export function prepareRenameAt(
   revision: Revision,
-  path: string,
-  offset: number,
+  path: RenamePath,
+  offset: RenameOffset,
 ): RenameTarget | undefined {
   const hit = occurrenceAt(revision, path, offset);
   if (
@@ -45,13 +51,13 @@ export function prepareRenameAt(
     hit.span.start,
     hit.span.end,
   );
-  return name === undefined ? undefined : { span: hit.span, name };
+  return name === undefined ? undefined : { span: hit.span, name: name };
 }
 
 export function applySourceEdits(
-  text: string,
+  text: RenameText,
   edits: readonly SourceEdit[],
-): string {
+): RenameText {
   return [...edits].sort((a, b) => b.span.start - a.span.start).reduce(
     (value, edit) =>
       value.slice(0, edit.span.start) + edit.text + value.slice(edit.span.end),
@@ -68,12 +74,16 @@ export function reviseWithEdits(
   revision: Revision,
   edits: readonly SourceEdit[],
 ): Result<Revision, ConfigError> {
-  const files = new Map(revision.inputs());
-  for (const [source, text] of files) {
+  let files = mapFrom(revision.inputs());
+  for (const entry of [...files]) {
+    const source = entry[0];
+    const text = entry[1];
     const own = edits.filter((e) => e.span.source === source);
-    if (own.length > 0) files.set(source, applySourceEdits(text, own));
+    if (own.length > 0) {
+      files = files.set(source, applySourceEdits(text, own));
+    }
   }
-  return new Program(revision.root).update({ set: files });
+  return Program(revision.root).update({ set: files });
 }
 
 function movedSpan(
@@ -98,7 +108,7 @@ function movedSpan(
       };
     }
     if (edit.span.end <= span.start) {
-      shift += edit.text.length - (edit.span.end - edit.span.start);
+      shift = shift + edit.text.length - (edit.span.end - edit.span.start);
     }
   }
   return { ...span, start: span.start + shift, end: span.end + shift };
@@ -106,9 +116,9 @@ function movedSpan(
 
 export function renameAt(
   revision: Revision,
-  path: string,
-  offset: number,
-  name: string,
+  path: RenamePath,
+  offset: RenameOffset,
+  name: RenameName,
 ): Result<readonly SourceEdit[], string> {
   const lexed = lex("<rename>", name);
   if (
@@ -155,10 +165,10 @@ export function renameAt(
     };
   }
   const nextIndex = symbolIndex(next);
-  const matching = (old: SymbolOccurrence): SymbolOccurrence | undefined => {
+  function matching(old: SymbolOccurrence): SymbolOccurrence | undefined {
     const at = movedSpan(old.span, edits);
     return nextIndex.byPath.get(at.source)?.find((o) => sameSpan(at, o.span));
-  };
+  }
   for (const old of index.occurrences) {
     if (old.target.kind === "field") continue;
     const current = matching(old);

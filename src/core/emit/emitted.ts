@@ -1,7 +1,6 @@
 // The printed-expression values that `expr.ts` and the builtin families share:
 // the precedence levels, `Emitted` with its chain types, and the helpers that
 // build and combine them.
-
 import type { Expr, Span, Type } from "../ir.ts";
 import {
   alt,
@@ -16,7 +15,6 @@ import {
   line,
   soft,
 } from "./doc.ts";
-
 /** Precedence levels of the printed expressions. A larger number binds tighter. */
 export const PREC = {
   yield: 0,
@@ -29,29 +27,29 @@ export const PREC = {
   multiplicative: 7,
   member: 10,
 } as const;
-
 /** The parameter list of one arrow of a chain, with the source span of that arrow. */
-export interface ChainHead {
+export type ChainHead = {
   readonly doc: Doc;
   readonly span: Span | undefined;
-}
-
+};
 /** The body at the end of an arrow chain. */
-export type ChainTail =
-  | { readonly kind: "expr"; readonly body: Emitted }
-  | { readonly kind: "block"; readonly statements: readonly Doc[] };
-
+export type ChainTail = {
+  readonly kind: "expr";
+  readonly body: Emitted;
+} | {
+  readonly kind: "block";
+  readonly statements: readonly Doc[];
+};
 /**
  * An arrow function, seen as a chain of arrows: `(a) => (b) => body` has two
  * heads. `deno fmt` lays out a chain as a unit, so the printer needs the parts.
  */
-export interface Chain {
+export type Chain = {
   readonly heads: readonly ChainHead[];
   readonly tail: ChainTail;
-}
-
+};
 /** A printed expression with the facts that its parent needs. */
-export interface Emitted {
+export type Emitted = {
   readonly doc: Doc;
   readonly prec: number;
   /** The text starts with `{`, so a statement or an arrow body needs parentheses. */
@@ -74,41 +72,42 @@ export interface Emitted {
    * only when it differs from `doc`.
    */
   readonly flush?: Doc;
-}
-
+};
+export type Precedence = number;
+export type EmittedFlags = {
+  readonly brace?: boolean;
+  readonly bracket?: true;
+  readonly huggable?: boolean;
+  readonly chain?: Chain;
+  readonly run?: Run;
+  readonly flush?: Doc;
+  readonly bodyGroup?: GroupId;
+  readonly condChain?: CondChain;
+};
 export function emitted(
   doc: Doc,
-  prec: number = PREC.member,
-  flags: {
-    readonly brace?: boolean;
-    readonly bracket?: true;
-    readonly huggable?: boolean;
-    readonly chain?: Chain;
-    readonly run?: Run;
-    readonly flush?: Doc;
-    readonly bodyGroup?: GroupId;
-    readonly condChain?: CondChain;
-  } = {},
+  requestedPrecedence: Precedence | undefined,
+  requestedFlags: EmittedFlags | undefined,
 ): Emitted {
+  const prec = requestedPrecedence ?? PREC.member;
+  const flags = requestedFlags ?? {};
   return {
     ...flags,
-    doc,
-    prec,
+    doc: doc,
+    prec: prec,
     brace: flags.brace ?? false,
     huggable: flags.huggable ?? false,
   };
 }
-
 /** The doc of `e` for a position that starts on a line of its own. */
 export function flush(e: Emitted): Doc {
   return e.flush ?? e.doc;
 }
-
 /**
  * A chain `t0 ? a0 : t1 ? a1 : last`. `deno fmt` prints every `?` and `:` of
  * the chain at one indentation level.
  */
-export interface CondChain {
+export type CondChain = {
   readonly tests: readonly Emitted[];
   readonly arms: readonly Doc[];
   readonly last: Doc;
@@ -116,8 +115,7 @@ export interface CondChain {
   readonly nested: readonly Span[];
   /** The span of the whole chain. Set when the conditional is tagged. */
   readonly self: Span | undefined;
-}
-
+};
 /**
  * A chain of binary operations of one precedence level, such as
  * `a && b && c`. `deno fmt` flattens it and puts the operator at the end of
@@ -125,7 +123,7 @@ export interface CondChain {
  * fit. A break indents the lines after the first by one level, except for an
  * arrow body and an array element.
  */
-export interface Run {
+export type Run = {
   readonly operands: readonly Doc[];
   /** `operators[i]` stands between `operands[i]` and `operands[i + 1]`. */
   readonly operators: readonly string[];
@@ -135,30 +133,39 @@ export interface Run {
    */
   readonly inner: readonly Span[];
   readonly top: Span | undefined;
-}
-
+};
 /** The doc of `e`, in parentheses when `e` binds weaker than `min`. */
-export function at(e: Emitted, min: number): Doc {
+export function at(e: Emitted, min: Precedence): Doc {
   return e.prec < min ? ["(", e.doc, ")"] : e.doc;
 }
-
 /** The doc in a position that needs no parentheses. It adds none, and braces get no special case. */
 export function free(e: Emitted): Doc {
   return e.doc;
 }
-
 /** Call arguments: one line, or the last function or object printed in place, or one for each line. */
 export function callArguments(args: readonly Emitted[]): Doc {
-  if (args.length === 0) return "()";
+  if (args.length === 0) {
+    return "()";
+  }
   const docs = args.map(free);
-  const expanded = (brk: boolean): Doc =>
-    group(
-      ["(", indent([soft, join([",", line], docs)]), ifBreak(","), soft, ")"],
+  function expanded(brk: boolean): Doc {
+    return group(
+      [
+        "(",
+        indent([soft, join([",", line], docs)]),
+        ifBreak(",", undefined),
+        soft,
+        ")",
+      ],
       brk,
+      undefined,
     );
+  }
   const last = args[args.length - 1];
   const others = args.slice(0, -1);
-  if (!last.huggable || others.some((o) => o.huggable)) return expanded(false);
+  if (!last.huggable || others.some((o) => o.huggable)) {
+    return expanded(false);
+  }
   const head = others.flatMap((o) => [free(o), ", "]);
   const lastDoc = free(last);
   // A chain stays on the line of the call only when its heads fit there. Else
@@ -169,22 +176,25 @@ export function callArguments(args: readonly Emitted[]): Doc {
   // When the body of the last arrow moves down, `)` moves down with it.
   const close: Doc = last.bodyGroup === undefined
     ? ")"
-    : [ifBroke(last.bodyGroup, hard), ")"];
+    : [ifBroke(last.bodyGroup, hard, undefined), ")"];
   return alt([
     ["(", ...head, lastDoc, ")"],
-    ["(", ...head, group(lastDoc, true), close],
+    ["(", ...head, group(lastDoc, true, undefined), close],
     expanded(true),
   ]);
 }
-
 /** The options argument `{ concurrency: n }`, or no argument when the program sets no limit. */
 export function concurrencyArguments(
-  limit: number | "unbounded" | undefined,
+  limit: Concurrency | undefined,
 ): Emitted[] {
-  return limit === undefined ? [] : [emitted(
-    `{ concurrency: ${limit === "unbounded" ? '"unbounded"' : limit} }`,
-  )];
+  return limit === undefined ? [] : [
+    emitted(
+      `{ concurrency: ${limit === "unbounded" ? '"unbounded"' : limit} }`,
+      undefined,
+      undefined,
+    ),
+  ];
 }
-
+export type Concurrency = number | "unbounded";
 export type Mode = "pure" | "gen";
-export type Kid = (e: Expr, expected?: Type) => Emitted;
+export type Kid = (e: Expr, expected: Type | undefined) => Emitted;

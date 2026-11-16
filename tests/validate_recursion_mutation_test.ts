@@ -12,7 +12,7 @@ import {
   memoryHost,
 } from "../src/core/frontend.ts";
 import type { Field, ModuleIR, Type, TypeDecl } from "../src/core/ir.ts";
-import { Report } from "../src/core/validate/report.ts";
+import { createReport } from "../src/core/validate/report.ts";
 import { checkRecursion } from "../src/core/validate/recursion_checks.ts";
 import { buildWorld } from "../src/core/validate/world_table.ts";
 
@@ -85,9 +85,9 @@ function redefine(
 
 /** The reports of the recursion check alone, as code and message. */
 function recursion(ir: ModuleIR): string[] {
-  const report = new Report();
+  const report = createReport();
   checkRecursion({ world: buildWorld(ir), report }, ir);
-  return report.items.map((d) => `${d.code} ${d.message}`);
+  return report.items().map((d) => `${d.code} ${d.message}`);
 }
 
 const refers = (index: number, id: string) =>

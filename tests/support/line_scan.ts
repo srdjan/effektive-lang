@@ -1,3 +1,4 @@
+// @light-fp adapter
 // An independent line scan for tests. It shares no code with `lineStarts` and
 // `positionOf` of the core, so a test that takes its expected positions from
 // here does not repeat the interpretation of the encoder. A line ends at LF,

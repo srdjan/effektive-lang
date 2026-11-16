@@ -123,7 +123,7 @@ Deno.test("the medium project uses the language features of the examples", () =>
 
 Deno.test("a body edit rechecks one module and an interface edit rechecks its importers", () => {
   const project = generateSize("medium");
-  const program = new Program("");
+  const program = Program("");
   const first = program.update({ set: project.sources });
   assert(first.ok);
   assertEquals(first.value.diagnostics, []);
@@ -164,7 +164,7 @@ function loadedProgram(files: ReadonlyMap<string, string>): {
   program: Program;
   revision: Revision;
 } {
-  const program = new Program("");
+  const program = Program("");
   const first = program.update({ set: files });
   assert(first.ok);
   assertEquals(first.value.diagnostics, []);

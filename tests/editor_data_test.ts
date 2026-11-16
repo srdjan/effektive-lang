@@ -33,7 +33,7 @@ export const guarded = (): Text fails Broken => fail(Broken({ reason: "x" }))
 `;
 
 function load(text: string): Revision {
-  const result = new Program("").update({
+  const result = Program("").update({
     set: { "effektive.json": "{}", "m.eff": text },
   });
   assert(result.ok, JSON.stringify(result));

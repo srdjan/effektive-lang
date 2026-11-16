@@ -83,7 +83,7 @@ Each successful `Program.update` forks the current type table before checking mo
 The fork copies alias definitions and error-record definitions.
 All forks share append-only interned nodes, intern keys, and canonical IR keys.
 Shared storage keeps `TypeRef` values valid in reused modules.
-The public `TypeReader.size` reports the cumulative count of shared nodes.
+The public `TypeReader.size()` reports the cumulative count of shared nodes.
 
 Each revision retains its check table through `Revision.types`.
 Lazy lowering and editor queries use that revision's definitions.
@@ -109,7 +109,7 @@ files through `SourceHost`. Seven tests enforce the rules.
 | `src/host/`, `src/cli/`, `src/lsp/`, and `playground/src/` import the core only through `frontend.ts`, `typescript.ts`, or `mod.ts`. | `tests/core_boundary_test.ts`, "host, CLI, LSP and playground adapters use public core entry points" |
 | A test imports a name of an entry point only from `frontend.ts`, `typescript.ts`, `mod.ts`, `ir.ts`, `validate/index.ts`, or `validate_project.ts`. | `tests/core_boundary_test.ts`, "no test imports an entry-point name from a private core module" |
 | No module that the CLI, the language server, or the playground loads reaches `validate/` or `validate_project.ts`. | `tests/core_boundary_slow_test.ts`, one test for each product entry point, read from `deno info --json` |
-| The validator imports only `ir.ts`, `source.ts`, `diagnostics.ts`, and its own files, plus a type-only import of `predicates.ts`. | `tests/validate_test.ts`, "src/core/validate imports only ir.ts, source.ts, diagnostics.ts, and its own files" |
+| The validator imports only `ir.ts`, `source.ts`, `diagnostics.ts`, `runtime.ts`, and its own files, plus a type-only import of `predicates.ts`. | `tests/validate_test.ts`, "src/core/validate imports only contract types, runtime primitives, and its own files" |
 | The emitter families never import `emit/expr.ts`, and the value imports of the emitter reach only an allowlist of core modules. | `tests/emit_families_test.ts`, "src/core/emit/families imports only ir.ts, ids.ts, and emit files other than expr.ts"; `tests/emit_families_test.ts`, "the value imports of src/core/emit reach only the allowed core modules" |
 
 ## Invariants
@@ -117,10 +117,10 @@ files through `SourceHost`. Seven tests enforce the rules.
 1. The layers depend only downward. The core has no Deno call and no import from
    `src/cli`, `src/host`, or `src/lsp`.
 2. The independent validator shares only these modules with the checker: `ir.ts`,
-   `source.ts`, and `diagnostics.ts`. The module `ir.ts` holds the IR
+   `source.ts`, `runtime.ts`, and `diagnostics.ts`. The module `ir.ts` holds the IR
    types and eight shared values: `SCOPE_CAPABILITY`, `SCHEMA_ERROR_ID`,
    `SCHEMA_ISSUE_ID`, `TIMEOUT_ERROR_ID`, `DURATION_ID`, `INSTANT_ID`,
-   `CLOSED_UNIT_IDS`, and `LOG_LEVELS`. The validator also imports the types of
+   `isClosedUnitId`, and `LOG_LEVELS`. The validator also imports the types of
    `predicates.ts`. The checker and the validator duplicate all other rules on
    purpose, because the validator is a differential oracle. The emitter `ROWS`
    table in `emit/shape.ts` and the validator `exprChildren` in

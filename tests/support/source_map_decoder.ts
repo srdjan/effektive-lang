@@ -1,3 +1,4 @@
+// @light-fp adapter
 // A source map decoder for the tests. It reads `mappings` without the encoder of
 // the product, so a coding error in `encodeVlq` cannot hide in a round trip.
 

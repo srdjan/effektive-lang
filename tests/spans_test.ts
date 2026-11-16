@@ -129,7 +129,7 @@ function bruteForce(module: EmittedModule, offset: number) {
 Deno.test("the innermost record wins at every offset of every example and form", () => {
   const modules = [...examples.emitted.values(), ...forms.emitted.values()];
   for (const module of modules) {
-    const table = buildSpanTable(module);
+    const table = buildSpanTable(module, undefined);
     for (let offset = 0; offset <= module.text.length; offset++) {
       const expected = bruteForce(module, offset);
       const actual = recordAtOffset(table, offset);
@@ -150,7 +150,7 @@ Deno.test("records nest: two records are disjoint or one contains the other", ()
   for (
     const module of [...examples.emitted.values(), ...forms.emitted.values()]
   ) {
-    const records = buildSpanTable(module).records;
+    const records = buildSpanTable(module, undefined).records;
     for (let i = 0; i < records.length; i++) {
       for (let j = i + 1; j < records.length; j++) {
         const a = records[i];
@@ -190,4 +190,23 @@ Deno.test("a host assertion records its generated range and its import span", ()
     hostImportSpans(examples.project).get("main")?.get("UsersLive"),
   );
   assertEquals(tableOf("users").hostAssertions, []);
+});
+
+Deno.test("generated nested span tables support deep parent lookup", () => {
+  const outer = { source: "deep.eff", start: 0, end: 2 };
+  const table = buildSpanTable({
+    module: "deep",
+    path: "deep.ts",
+    text: "xy",
+    spans: [
+      { start: 0, end: 2, span: outer },
+      ...Array.from({ length: 20_000 }, () => ({
+        start: 0,
+        end: 1,
+        span: { source: "deep.eff", start: 0, end: 1 },
+      })),
+    ],
+    hostAssertions: [],
+  }, undefined);
+  assertEquals(recordAtOffset(table, 1), { start: 0, end: 2, span: outer });
 });

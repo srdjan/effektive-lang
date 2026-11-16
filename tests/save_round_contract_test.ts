@@ -1,3 +1,4 @@
+import type { HostIo } from "../src/host/io.ts";
 // Fixed traces of the disk save round of the language server and of the forget
 // policy of watch mode. Each trace pins the observable behavior, and each must
 // hold across changes of the disk session state. The expected values are
@@ -65,7 +66,7 @@ Deno.test("watch trace: a module whose output removal failed is forgotten", asyn
     [`${WATCH_ROOT}/old.eff`]: intModule("I", "old", "1"),
   });
   const order: string[] = [];
-  const io = {
+  const io: HostIo = {
     ...m.io,
     stdout: (text: string) => {
       order.push(`stdout ${text}`);

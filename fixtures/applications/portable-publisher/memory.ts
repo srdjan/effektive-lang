@@ -1,3 +1,4 @@
+// @light-fp adapter
 import { Effect, type Layer, Option } from "effect";
 import { type PlatformBackend, platformLayer } from "./backend.ts";
 import {
