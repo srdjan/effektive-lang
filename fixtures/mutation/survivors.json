@@ -1,5 +1,158 @@
 [
   {
+    "file": "bench/lsp_script.ts",
+    "declaration": "Workspace.openPair",
+    "offset": 269,
+    "text": "!a.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant of Workspace.openPair returns the first session in place of the pair when the first session starts. Only a started server gives a session, so a slow test reaches it. Each measurement test of tests/bench_lsp_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/lsp_script.ts",
+    "declaration": "Session.#change",
+    "offset": 280,
+    "text": "diskPath !== undefined",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant writes the edited text to the wrong place in Session.#change: it skips the disk write of editOnDisk and writes a file named undefined for the other edits. Only a test with a real server and a generated output on disk sees this. The M7 test of tests/bench_lsp_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/lsp_script.ts",
+    "declaration": "Session.#change",
+    "offset": 280,
+    "text": "diskPath !== undefined",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "The mutant writes the edited text to the wrong place in Session.#change: it skips the disk write of editOnDisk and writes a file named undefined for the other edits. Only a test with a real server and a generated output on disk sees this. The M7 test of tests/bench_lsp_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/lsp_script.ts",
+    "declaration": "Workspace.openPair",
+    "offset": 363,
+    "text": "!b.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant of Workspace.openPair returns the second session in place of the pair when the second session starts. Only a started server gives a session, so a slow test reaches it. Each measurement test of tests/bench_lsp_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/m1.ts",
+    "declaration": "runM1",
+    "offset": 395,
+    "text": "!pair.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant returns the pair Result from the body of runM1 when openPair succeeds. Only a real server gives a pair, so a slow test reaches it. The M1 test of tests/bench_lsp_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/m4.ts",
+    "declaration": "runM4",
+    "offset": 1254,
+    "text": "!pair.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant returns the pair Result from the body of runM4 when openPair succeeds. Only a real server gives a pair, so a slow test reaches it. The M4 tests of tests/bench_lsp_slow_test.ts fail on the mutant."
+  },
+  {
+    "file": "bench/m4.ts",
+    "declaration": "runM4",
+    "offset": 2594,
+    "text": "writeOnSave && !(a.hasOutput() && b.hasOutput())",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant of the writeOnSave output gate in runM4 returns the output error when each side has its output and none when it has none. Only a real server writes an output. The writeOnSave M4 test of tests/bench_lsp_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/m4.ts",
+    "declaration": "runM4",
+    "offset": 2594,
+    "text": "writeOnSave && !(a.hasOutput() && b.hasOutput())",
+    "operator": "logical",
+    "class": "slow-only",
+    "reason": "The mutant of the writeOnSave output gate in runM4 returns the output error for a run without writeOnSave, where no side writes an output. Only a real server runs M4. The M4 test of tests/bench_lsp_slow_test.ts for a run without writeOnSave fails on the mutant."
+  },
+  {
+    "file": "bench/m4.ts",
+    "declaration": "runM4",
+    "offset": 2611,
+    "text": "a.hasOutput() && b.hasOutput()",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The mutant accepts a run in which only one side has its output. Side A and side B of runM4 open the same input in two workspaces and run the same steps and saves, so the two sides write an output together or neither side writes one. A differential through runM4 with writeOnSave over four configurations (small and medium, 2 to 5 documents, 1 to 13 steps) gave the same results for the source and the mutant. A logging copy reached the gate 6 times with writeOnSave and counted 0 runs in which the two sides differ."
+  },
+  {
+    "file": "bench/m5_target.ts",
+    "declaration": "writeTarget",
+    "offset": 187,
+    "text": "path === target.marked",
+    "operator": "comparison",
+    "class": "slow-only",
+    "reason": "The mutant of writeTarget adds the mark comment to each file except the marked file. Only a test that writes a target to a folder sees this, and the fast task has no write permission. The writeTarget test of tests/bench_mutation_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/m5_variants.ts",
+    "declaration": "runVariantsIn.record",
+    "offset": 108,
+    "text": "measured.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant of the record function in runVariantsIn lists each measured variant as skipped and counts each failed variant as measured. Only runVariants reaches it, and it needs the npm install of the TypeScript compilers. The runVariants test of tests/bench_mutation_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/m5_variants.ts",
+    "declaration": "measureService",
+    "offset": 275,
+    "text": "!a.ok || !b.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant of measureService returns the two-service error when both services are created. Only runVariants reaches it, and it needs the npm install of TypeScript. The runVariants test of tests/bench_mutation_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/m5_variants.ts",
+    "declaration": "measureService",
+    "offset": 275,
+    "text": "!a.ok || !b.ok",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The mutant continues when only one of the two services fails to build. measureService builds both services with the same TypeScript API, the same directory, and the same target, with no step between them, so both builds give a service or neither does. A differential through runVariants over 8 targets (a valid one, one with two files, an empty one, one with no TypeScript file, one with a type error, one with a syntax error, one with a missing import, and one without its marked file) gave the same variants, pair counts, and skip reasons for the source and the mutant. A logging copy reached the site 8 times and counted 0 runs in which exactly one build fails."
+  },
+  {
+    "file": "bench/m5_variants.ts",
+    "declaration": "measureService",
+    "offset": 822,
+    "text": "measured.ok && first.ok",
+    "operator": "logical",
+    "class": "equivalent",
+    "reason": "The mutant returns a result with no measured value when the sampling fails but the first call succeeds. The sampling repeats the check of the first call with only a new comment at the end of the marked file, so the diagnostics of the program do not change. A first call that succeeds is followed by successful checks, and a first call that fails makes the source and the mutant both return the error. A differential through runVariants over 8 targets gave the same variants, pair counts, and skip reasons for the source and the mutant. A logging copy reached the site 6 times and counted 0 runs in which measured and first differ."
+  },
+  {
+    "file": "bench/m7.ts",
+    "declaration": "runM7",
+    "offset": 663,
+    "text": "!pair.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant returns the pair Result from the body of the cold loop in runM7 when openPair succeeds, so the loop records no cold pair. Only a real server gives a pair. The cold pair test of tests/bench_mutation_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/m7.ts",
+    "declaration": "runM7",
+    "offset": 1580,
+    "text": "!pair.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant returns the pair Result from the body of the warm pair in runM7 when openPair succeeds, so the rows of that scenario do not exist. Only a real server gives a pair. The M7 test of tests/bench_lsp_slow_test.ts fails on the mutant."
+  },
+  {
+    "file": "bench/m7.ts",
+    "declaration": "runM7",
+    "offset": 2622,
+    "text": "!pair.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant returns the pair Result from the body of the Save All pair in runM7 when openPair succeeds, so the rows of that scenario do not exist. Only a real server gives a pair. The M7 test of tests/bench_lsp_slow_test.ts fails on the mutant."
+  },
+  {
     "file": "scripts/coverage.ts",
     "declaration": "summarizeLcov",
     "offset": 739,
