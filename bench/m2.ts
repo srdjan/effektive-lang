@@ -19,7 +19,11 @@
 // alone for the timing of the lexer. `parse` runs `parse`, which lexes again,
 // so its time includes `lex`. `total` is the sum of every stage except `lex`.
 
-import { TypeScriptOutputs } from "../src/core/typescript.ts";
+import {
+  emitProject,
+  type EmittedModule,
+  TypeScriptOutputs,
+} from "../src/core/typescript.ts";
 import {
   compareText,
   memoryHost,
@@ -38,7 +42,6 @@ import {
   type Diagnostic,
   normalizeDiagnostics,
 } from "../src/core/diagnostics.ts";
-import { emitProject, type EmittedModule } from "../src/core/typescript.ts";
 import { lowerProject } from "../src/core/lower.ts";
 import { parse } from "../src/core/parse.ts";
 import {

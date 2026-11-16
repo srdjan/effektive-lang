@@ -1,12 +1,13 @@
 // @light-fp adapter
-import { TypeScriptOutputs } from "../src/core/typescript.ts";
-const outputs = new TypeScriptOutputs();
 // The inputs of the M5 measurement: the emitted examples and the emitted
 // synthetic projects, as maps of TypeScript files, and the error values of the
 // measurement. Nothing here runs a type check.
 
 import { errorMessage, Program, type Result } from "../src/core/mod.ts";
+import { TypeScriptOutputs } from "../src/core/typescript.ts";
 import { generateProject } from "./generate.ts";
+
+const outputs = new TypeScriptOutputs();
 
 export type M5Error =
   | { readonly tag: "setup"; readonly message: string }
