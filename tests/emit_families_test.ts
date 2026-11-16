@@ -81,6 +81,7 @@ Deno.test("the value imports of src/core/emit reach only the allowed core module
     "referenced_ids.ts",
     "source.ts",
     "runtime.ts",
+    "type_kinds.ts",
     "util.ts",
   ]);
   const forbidden = outside.filter((name) => !allowed.has(name));

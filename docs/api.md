@@ -9,6 +9,7 @@ and the repository layout.
 
 ```
 src/core/      The core library. It is synchronous and does no I/O. Program memoizes its queries.
+  type_kinds.ts  isDeferredKind, isContainerKind, and childTypes: the kind guards that the IR Type and the checker TypeNode share.
   ir.ts          Typed IR model. This file is the authored contract. The sibling repository effektive publishes a copy.
   runtime.ts     Native collection constructors, deterministic native operations, and bounded index iterators. No compiler algorithms.
   source.ts      The Result type of an expected failure, caught (the one catch of a synchronous throw), SourceHost, line tables, positions, and span helpers.

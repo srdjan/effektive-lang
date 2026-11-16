@@ -7,7 +7,8 @@ import {
 } from "./runtime.ts";
 // Rule 11: a recursive data alias needs a guard that ends the recursion.
 import { isCycle, stronglyConnectedComponents } from "./graph.ts";
-import { isDeferredKind, type Type, type TypeId } from "./ir.ts";
+import type { Type, TypeId } from "./ir.ts";
+import { isDeferredKind } from "./type_kinds.ts";
 import { referencedIds } from "./referenced_ids.ts";
 type TagText = string;
 type Guarded = boolean;

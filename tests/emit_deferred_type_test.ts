@@ -1,10 +1,10 @@
 // The deferred Type kinds have no schema and no runtime value. `isDeferredKind`
-// of ir.ts is the one list of them. The table below has one sample for
+// of type_kinds.ts is the one list of them. The table below has one sample for
 // every Type kind, so a new kind is a compile error here until it is classified.
 
 import { assertEquals } from "@std/assert";
 import type { Effects, Type } from "../src/core/ir.ts";
-import { isDeferredKind } from "../src/core/ir.ts";
+import { isDeferredKind } from "../src/core/type_kinds.ts";
 
 const NONE: Effects = { failures: [], requirements: [] };
 const STRING: Type = { kind: "primitive", name: "string" };

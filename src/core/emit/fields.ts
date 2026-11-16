@@ -1,7 +1,8 @@
 import { emptySet, setFrom } from "../runtime.ts";
 // Property semantics at the JavaScript boundary. Adapters follow declared data
 // shapes only: they do not traverse arbitrary host objects or deferred values.
-import { type Field, isDeferredKind, type Type, type TypeDecl } from "../ir.ts";
+import type { Field, Type, TypeDecl } from "../ir.ts";
+import { isDeferredKind } from "../type_kinds.ts";
 import { type Doc, hard } from "./doc.ts";
 import type { ExprScope, TypeLookup } from "./module_state.ts";
 type FieldName = Field["name"];

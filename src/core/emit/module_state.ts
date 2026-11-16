@@ -13,13 +13,12 @@ import type {
   TypeDecl,
 } from "../ir.ts";
 import {
-  childTypes,
   isClosedUnitId,
-  isDeferredKind,
   SCHEMA_ERROR_ID,
   SCHEMA_ISSUE_ID,
   TIMEOUT_ERROR_ID,
 } from "../ir.ts";
+import { childTypes, isDeferredKind } from "../type_kinds.ts";
 import {
   generatedPathOf,
   hostKeyOf,

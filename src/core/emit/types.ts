@@ -11,7 +11,8 @@ import type {
   FunctionType,
   Type,
 } from "../ir.ts";
-import { isClosedUnitId, isDeferredKind, SCOPE_CAPABILITY } from "../ir.ts";
+import { isClosedUnitId, SCOPE_CAPABILITY } from "../ir.ts";
+import { isDeferredKind } from "../type_kinds.ts";
 import {
   bracketed,
   callWith,

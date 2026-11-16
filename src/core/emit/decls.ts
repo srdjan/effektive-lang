@@ -14,7 +14,7 @@ import type {
   TypeDecl,
   ValueId,
 } from "../ir.ts";
-import { childTypes, isDeferredKind } from "../ir.ts";
+import { childTypes, isDeferredKind } from "../type_kinds.ts";
 import { trueFlag } from "../util.ts";
 import { isCycle, stronglyConnectedComponents } from "../graph.ts";
 import { containsNamed } from "../recursion_guard.ts";

@@ -9,16 +9,14 @@
 
 import type { CapabilityId, ErrorId, Execution, TypeId } from "./ir.ts";
 import {
-  childTypes,
   DURATION_ID,
   INSTANT_ID,
   isClosedUnitId,
-  isContainerKind,
-  isDeferredKind,
   SCHEMA_ERROR_ID,
   SCHEMA_ISSUE_ID,
   TIMEOUT_ERROR_ID,
 } from "./ir.ts";
+import { childTypes, isContainerKind, isDeferredKind } from "./type_kinds.ts";
 import { isErrorId, isReservedErrorId, isTypeId, moduleOfId } from "./ids.ts";
 import type { Predicate } from "./predicates.ts";
 import { typeToIr } from "./type_ir.ts";
