@@ -159,6 +159,7 @@ export function ifFits(probe: Doc, whenFits: Doc, otherwise: Doc): Doc {
     otherwise: otherwise,
   };
 }
+export type IndentLevel = number;
 /**
  * A greedy fill: `parts` alternate content, separator, content, and so on. The
  * printer puts the next content on the current line when the separator and the
@@ -166,7 +167,6 @@ export function ifFits(probe: Doc, whenFits: Doc, otherwise: Doc): Doc {
  * the current line. The separators and the contents after the first sit
  * `tail` indentation levels deeper.
  */
-export type IndentLevel = number;
 export function fill(parts: readonly Doc[], tail: IndentLevel): Doc {
   return { k: "fill", parts: parts, tail: tail };
 }
@@ -285,8 +285,8 @@ export function property(label: Doc, value: Doc): Doc {
     inline,
   );
 }
-/** A member access or call that breaks before the dot when its head is wide. */
 export type MemberName = string;
+/** A member access or call that breaks before the dot when its head is wide. */
 export function member(
   base: Doc,
   name: MemberName,
@@ -398,11 +398,11 @@ function makeHardCheck(): (doc: Doc) => boolean {
   }
   return check;
 }
+export type HardLinePresence = boolean;
 /**
  * True when `doc` holds a hard line, or a group that must break, outside an
  * `alt`. A fit test of an `alt` option stops at such a line.
  */
-export type HardLinePresence = boolean;
 export function hasHardLine(doc: Doc): HardLinePresence {
   return makeHardCheck()(doc);
 }

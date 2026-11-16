@@ -143,7 +143,6 @@ export function recordAtOffset(
   const found = recordIndexAtOffset(table, offset);
   return found < 0 ? undefined : table.records[found];
 }
-/** The index in `table.records` of that record, or -1 when no record contains the offset. */
 export type GeneratedOffset = number;
 export type RecordIndex = number;
 function lastStartingRecord(
@@ -171,6 +170,7 @@ function containingRecord(
   }
   return current;
 }
+/** The index in `table.records` of that record, or -1 when no record contains the offset. */
 export function recordIndexAtOffset(
   table: SpanTable,
   offset: GeneratedOffset,

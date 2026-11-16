@@ -29,7 +29,6 @@ import {
 const BASE64 =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const CONTINUATION = 32;
-/** Encodes one integer as base64 VLQ: the sign in the lowest bit, five bits for each digit. */
 export type VlqValue = number;
 export type VlqText = string;
 function encodeVlqDigits(rest: bigint, out: VlqText): VlqText {
@@ -41,6 +40,7 @@ function encodeVlqDigits(rest: bigint, out: VlqText): VlqText {
   const encoded = out + BASE64[digit];
   return next > 0n ? encodeVlqDigits(next, encoded) : encoded;
 }
+/** Encodes one integer as base64 VLQ: the sign in the lowest bit, five bits for each digit. */
 export function encodeVlq(value: VlqValue): VlqText {
   if (!Number.isSafeInteger(value)) {
     return invariantFailure("emit", `cannot encode ${value} as VLQ`);
@@ -184,8 +184,8 @@ export function buildSourceMap(
     },
   };
 }
-/** The text of the `.ts.map` file: JSON with two-space indentation and a final newline. */
 export type SourceMapText = string;
+/** The text of the `.ts.map` file: JSON with two-space indentation and a final newline. */
 export function serializeSourceMap(map: SourceMapV3): SourceMapText {
   const ordered = {
     version: map.version,

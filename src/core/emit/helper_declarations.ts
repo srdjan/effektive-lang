@@ -1,6 +1,7 @@
-// The declarations of the generated helpers of a module: `$int`, `$rem`, `$div`, `$round`, `$unmatched`,
-// `$Int`, `$hostCheck`, and `$outcome`. Each one reads the name of its helper
-// from the module state, so the call registers the name and its imports.
+// The declarations of the generated helpers of a module: `$int`, `$rem`, `$div`,
+// `$round`, `$at`, `$sort`, `$unmatched`, `$Int`, `$hostCheck`, and `$outcome`.
+// Each one reads the name of its helper from the module state, so the call
+// registers the name and its imports.
 import {
   braces,
   type Doc,
@@ -203,8 +204,8 @@ export function hostCheckDeclaration(scope: ModuleState): Doc {
     ";",
   ];
 }
-/** The message of a defect value. The Defect arm of `catch` uses the same rule. */
 export type EmittedText = string;
+/** The message of a defect value. The Defect arm of `catch` uses the same rule. */
 export function defectMessage(value: EmittedText): EmittedText {
   return `${value} instanceof Error ? ${value}.message : String(${value})`;
 }

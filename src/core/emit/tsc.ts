@@ -127,14 +127,14 @@ function pathOfFileUrl(url: string): string {
   const decoded = caught(() => decodeUriComponent(path));
   return decoded.ok ? decoded.value : path;
 }
+export type DenoCheckText = string;
+export type ProjectRoot = string;
 /**
  * Parses the output of `deno check` (stderr, without color codes). `root` is
  * the absolute project directory, as `deno check` prints it. A file under the
  * root gets a root-relative path. Text after the first location of a
  * diagnostic, such as a note about a related declaration, is dropped.
  */
-export type DenoCheckText = string;
-export type ProjectRoot = string;
 export function parseDenoCheck(
   text: DenoCheckText,
   root: ProjectRoot,

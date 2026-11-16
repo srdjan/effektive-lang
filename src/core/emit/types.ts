@@ -66,8 +66,8 @@ function singleArgument(element: Type, inner: Doc, breakable: boolean): Doc {
   }
   return ifFits(beside, beside, ["<", indent([soft, inner]), soft, ">"]);
 }
-/** True when the printed type can break the brackets of a one-argument type. */
 export type BracketsBreak = boolean;
+/** True when the printed type can break the brackets of a one-argument type. */
 export function bracketsBreak(type: Type): BracketsBreak {
   if (type.kind === "array" || type.kind === "option" || type.kind === "ref") {
     return type.element.kind !== "record";
@@ -397,13 +397,13 @@ function schemaOfLiterals(
     ")",
   ];
 }
+type RecursiveTypes = ReadonlySet<string>;
+type MaybeRecursiveTypes = RecursiveTypes | undefined;
 /**
  * The TypeScript type that a type has after `schemaDoc` encodes it: a type with
  * identity becomes its base, an error becomes its Schema encoding, and each name of the
  * recursive group becomes its generated mirror type. The type has no function in it.
  */
-type RecursiveTypes = ReadonlySet<string>;
-type MaybeRecursiveTypes = RecursiveTypes | undefined;
 export function encodedTypeDoc(
   scope: EmitNames,
   type: Type,
