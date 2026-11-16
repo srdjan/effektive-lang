@@ -223,6 +223,77 @@ function optionField(
   return { label: parts.labelNode, name: parts.label, value: parts.value };
 }
 
+/** The parts of an options record that differ between the calls that take one. */
+type OptionFrame = {
+  readonly call: string;
+  readonly keys: readonly string[];
+  /** The keys as source text, for the messages. */
+  readonly keyText: string;
+  /** Checks the value of one field and gives its info. */
+  readonly check: (name: string, value: NodeId) => NodeInfo;
+};
+
+/**
+ * Checks an options record literal: each key is one of `frame.keys`, at most
+ * once. A record of another form reports and gives the info of its value
+ * alone. The result is the info of the record with its checked fields.
+ */
+function optionRecord(
+  c: EffectContext,
+  arg: Arg,
+  frame: OptionFrame,
+): NodeInfo {
+  const call = frame.call;
+  if (
+    arg.pre !== undefined ||
+    kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
+  ) {
+    c = c.report(
+      "type-mismatch/010",
+      `\`${call}\` needs an options record with ${frame.keyText}`,
+      arg.node,
+    );
+    return c.argInfo(arg, undefined);
+  }
+  const fields = c.kids(arg.node);
+  if (fields.length === 0) {
+    c = c.report(
+      "type-mismatch/010",
+      `\`${call}\` needs at least one of ${frame.keyText}`,
+      arg.node,
+    );
+  }
+  const infos: NodeInfo[] = [];
+  const types: { name: string; type: TypeRef; optional: boolean }[] = [];
+  let seen = emptySet<string>();
+  for (const field of fields) {
+    const parsed = optionField(c, call, field);
+    if (parsed === undefined) continue;
+    const name = parsed.name;
+    const info = frame.check(name, parsed.value);
+    if (!frame.keys.includes(name)) {
+      c = c.report(
+        "type-mismatch/010",
+        `\`${call}\` has no option \`${name}\`; the options are ${
+          frame.keys.join(", ")
+        }`,
+        parsed.label,
+      );
+    } else if (seen.has(name)) {
+      c = c.report(
+        "type-mismatch/010",
+        `\`${call}\` option \`${name}\` appears twice`,
+        parsed.label,
+      );
+    } else {
+      types[types.length] = { name: name, type: info.type, optional: false };
+    }
+    seen = seen.add(name);
+    infos[infos.length] = info;
+  }
+  return c.finish(arg.node, c.table.record(types), combine(infos));
+}
+
 /**
  * Checks a general options record of `retry` or `repeat`: each key is `times`,
  * `while`, or `until`, at most once. A `retry` record also takes `schedule`. The result carries the effects
@@ -234,86 +305,43 @@ function callOptions(
   spec: OptionsSpec,
 ): { readonly info: NodeInfo; readonly own: readonly EffectSet[] } {
   const call = spec.name;
-  if (
-    arg.pre !== undefined ||
-    kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
-  ) {
-    c = c.report(
-      "type-mismatch/010",
-      `\`${call}\` needs an options record with ${keyList(call)}`,
-      arg.node,
-    );
-    return { info: c.argInfo(arg, undefined), own: [] };
-  }
-  const fields = c.kids(arg.node);
-  if (fields.length === 0) {
-    c = c.report(
-      "type-mismatch/010",
-      `\`${call}\` needs at least one of ${keyList(call)}`,
-      arg.node,
-    );
-  }
-  const infos: NodeInfo[] = [];
   const own: EffectSet[] = [];
-  const types: { name: string; type: TypeRef; optional: boolean }[] = [];
-  let seen = emptySet<string>();
-  for (const field of fields) {
-    const parsed = optionField(c, call, field);
-    if (parsed === undefined) continue;
-    const label = parsed.label;
-    const name = parsed.name;
-    const value = parsed.value;
-    const valueArg: Arg = { node: value };
-    let info: NodeInfo;
-    if (name === "while" || name === "until") {
-      info = c.callback(
-        call,
-        valueArg,
-        [spec.element],
-        c.table.boolean,
-        true,
-      ).info;
-      const cb = c.functionOf(info.type);
-      if (cb !== undefined) {
-        c = c.checkFit(
-          value,
-          cb.result,
+  const info = optionRecord(c, arg, {
+    call: call,
+    keys: OPTION_KEYS[call],
+    keyText: keyList(call),
+    check: (name, value) => {
+      const valueArg: Arg = { node: value };
+      if (name === "while" || name === "until") {
+        const checked = c.callback(
+          call,
+          valueArg,
+          [spec.element],
           c.table.boolean,
-          `the ${call} \`${name}\` result`,
-        );
-        own[own.length] = invocationOf(cb);
+          true,
+        ).info;
+        const cb = c.functionOf(checked.type);
+        if (cb !== undefined) {
+          c = c.checkFit(
+            value,
+            cb.result,
+            c.table.boolean,
+            `the ${call} \`${name}\` result`,
+          );
+          own[own.length] = invocationOf(cb);
+        }
+        return checked;
       }
-    } else if (name === "schedule" && call === "retry") {
-      info = c.argInfo(valueArg, undefined);
-      c = schedulePolicy(c, value, info, spec);
-    } else {
-      info = c.argInfo(valueArg, undefined);
-      if (name === "times") c = timesValue(c, value, call);
-    }
-    if (!OPTION_KEYS[call].includes(name)) {
-      c = c.report(
-        "type-mismatch/010",
-        `\`${call}\` has no option \`${name}\`; the options are ${
-          OPTION_KEYS[call].join(", ")
-        }`,
-        label,
-      );
-    } else if (seen.has(name)) {
-      c = c.report(
-        "type-mismatch/010",
-        `\`${call}\` option \`${name}\` appears twice`,
-        label,
-      );
-    } else {
-      types[types.length] = { name: name, type: info.type, optional: false };
-    }
-    seen = seen.add(name);
-    infos[infos.length] = info;
-  }
-  return {
-    info: c.finish(arg.node, c.table.record(types), combine(infos)),
-    own: own,
-  };
+      const checked = c.argInfo(valueArg, undefined);
+      if (name === "schedule" && call === "retry") {
+        c = schedulePolicy(c, value, checked, spec);
+      } else if (name === "times") {
+        c = timesValue(c, value, call);
+      }
+      return checked;
+    },
+  });
+  return { info: info, own: own };
 }
 
 function timesValue(
@@ -587,67 +615,21 @@ function logOptions(
 } {
   let level: LogLevel = "info";
   let fieldsLabel: string | undefined;
-  if (
-    arg.pre !== undefined ||
-    kindOf(c.tree, arg.node) !== SyntaxKind.RecordExpr
-  ) {
-    c = c.report(
-      "type-mismatch/010",
-      "`log` needs an options record with `level` or `fields`",
-      arg.node,
-    );
-    return {
-      info: c.argInfo(arg, undefined),
-      level: level,
-      fields: undefined,
-    };
-  }
-  const fields = c.kids(arg.node);
-  if (fields.length === 0) {
-    c = c.report(
-      "type-mismatch/010",
-      "`log` needs at least one of `level` or `fields`",
-      arg.node,
-    );
-  }
-  const infos: NodeInfo[] = [];
-  const types: { name: string; type: TypeRef; optional: boolean }[] = [];
-  let seen = emptySet<string>();
-  for (const field of fields) {
-    const parsed = optionField(c, "log", field);
-    if (parsed === undefined) continue;
-    const label = parsed.label;
-    const name = parsed.name;
-    const value = parsed.value;
-    const info = c.argInfo({ node: value }, undefined);
-    if (name === "level") level = logLevel(c, value) ?? level;
-    else if (name === "fields") {
-      c = logFields(c, value, info);
-      fieldsLabel = name;
-    }
-    if (!LOG_KEYS.includes(name)) {
-      c = c.report(
-        "type-mismatch/010",
-        `\`log\` has no option \`${name}\`; the options are level, fields`,
-        label,
-      );
-    } else if (seen.has(name)) {
-      c = c.report(
-        "type-mismatch/010",
-        `\`log\` option \`${name}\` appears twice`,
-        label,
-      );
-    } else {
-      types[types.length] = { name: name, type: info.type, optional: false };
-    }
-    seen = seen.add(name);
-    infos[infos.length] = info;
-  }
-  return {
-    info: c.finish(arg.node, c.table.record(types), combine(infos)),
-    level: level,
-    fields: fieldsLabel,
-  };
+  const info = optionRecord(c, arg, {
+    call: "log",
+    keys: LOG_KEYS,
+    keyText: "`level` or `fields`",
+    check: (name, value) => {
+      const checked = c.argInfo({ node: value }, undefined);
+      if (name === "level") level = logLevel(c, value) ?? level;
+      else if (name === "fields") {
+        c = logFields(c, value, checked);
+        fieldsLabel = name;
+      }
+      return checked;
+    },
+  });
+  return { info: info, level: level, fields: fieldsLabel };
 }
 
 /** The level of a literal `level` option, or undefined after a diagnostic. */
