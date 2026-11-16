@@ -1,12 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  emitProject,
-  lowerProject,
-  memoryHost,
-} from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { checkProject, emitProject, memoryHost } from "../src/core/mod.ts";
 import { deno, withTemporaryDirectory } from "./process_helpers.ts";
+import { assertValidProject } from "./helpers.ts";
 
 Deno.test("service workflow passes real loopback HTTP and file-backed SQLite acceptance", async () => {
   const base = new URL(
@@ -23,19 +18,7 @@ Deno.test("service workflow passes real loopback HTTP and file-backed SQLite acc
   );
   const project = checkProject(memoryHost(files), "", ["workflow.eff"]);
   assert(project.ok, JSON.stringify(project));
-  assertEquals(project.value.diagnostics, []);
-  const lowered = lowerProject(project.value);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(
-      project.value.analysis.project,
-      lowered,
-    ).values()
-  ) {
-    assertEquals(diagnostics, []);
-  }
+  const lowered = assertValidProject(project.value);
   await withTemporaryDirectory("effektive-http-sqlite-", async (dir) => {
     for (
       const name of [

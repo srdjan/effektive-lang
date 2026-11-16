@@ -1,7 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
-import { lowerProject } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 const checked = (source: string) => checkModule(source, "main.eff");
 
@@ -19,15 +17,7 @@ const compare = (value: Nullable): Bool => value === null
 const reverse = (value: Nullable): Bool => null !== value
 const finite = (value: Flag): Bool => match value { null => false, "yes" => true }
 const justNull = (value: Nil): Nil => match value { null => null }`);
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("null does not fit nonnullable values, arithmetic, or unit", () => {

@@ -4,14 +4,9 @@
 // `deno test`, and `deno run` there. Each command must exit with code 0.
 
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  emitProject,
-  lowerProject,
-  memoryHost,
-} from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { checkProject, emitProject, memoryHost } from "../src/core/mod.ts";
 import { deno } from "./process_helpers.ts";
+import { assertValidProject } from "./helpers.ts";
 
 /** The fields of the JSON that `main.ts` prints. Each application prints its own subset. */
 interface Report {
@@ -162,17 +157,7 @@ for (const app of APPLICATIONS) {
       typeof app.entry === "string" ? [app.entry] : app.entry,
     );
     assert(project.ok, JSON.stringify(project));
-    assertEquals(project.value.diagnostics, []);
-    const lowered = lowerProject(project.value);
-    for (const result of lowered.values()) {
-      assert(result.ok, JSON.stringify(result));
-    }
-    for (
-      const diagnostics of validateProject(
-        project.value.analysis.project,
-        lowered,
-      ).values()
-    ) assertEquals(diagnostics, []);
+    const lowered = assertValidProject(project.value);
     const dir = Deno.makeTempDirSync({ prefix: app.prefix });
     try {
       Deno.writeTextFileSync(

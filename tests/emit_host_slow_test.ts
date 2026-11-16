@@ -4,13 +4,7 @@
 // under fixtures/.
 
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  lineStarts,
-  lowerProject,
-  positionOf,
-} from "../src/core/frontend.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { checkProject, lineStarts, positionOf } from "../src/core/frontend.ts";
 import {
   buildSpanTable,
   hostImportSpans,
@@ -19,6 +13,7 @@ import {
   parseDenoCheck,
 } from "../src/core/typescript.ts";
 import {
+  assertValidProject,
   copyDirectory,
   EXAMPLE_ENTRIES,
   FIXTURES,
@@ -148,13 +143,7 @@ Deno.test("Sink transduction replays chunks, repeats with fresh state, and prese
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     const checked = checkProject(fileHost, dir, ["main.eff"]);
     assert(checked.ok);
-    assertEquals(checked.value.diagnostics, []);
-    for (
-      const diagnostics of validateProject(
-        checked.value.analysis.project,
-        lowerProject(checked.value),
-      ).values()
-    ) assertEquals(diagnostics, []);
+    assertValidProject(checked.value);
     build(dir, ["main.eff"]);
     const formatted = await deno(dir, [
       "fmt",

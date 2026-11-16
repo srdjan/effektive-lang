@@ -1,12 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  emitProject,
-  lowerProject,
-  memoryHost,
-} from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { checkProject, emitProject, memoryHost } from "../src/core/mod.ts";
 import { deno, withTemporaryDirectory } from "./process_helpers.ts";
+import { assertValidProject } from "./helpers.ts";
 
 Deno.test("portable publisher passes one KV contract on memory and file-backed SQLite", async () => {
   const base = new URL(
@@ -24,17 +19,7 @@ Deno.test("portable publisher passes one KV contract on memory and file-backed S
   );
   const project = checkProject(memoryHost(files), "", ["publisher.eff"]);
   assert(project.ok, JSON.stringify(project));
-  assertEquals(project.value.diagnostics, []);
-  const lowered = lowerProject(project.value);
-  for (const module of lowered.values()) {
-    assert(module.ok, JSON.stringify(module));
-  }
-  for (
-    const diagnostics of validateProject(
-      project.value.analysis.project,
-      lowered,
-    ).values()
-  ) assertEquals(diagnostics, []);
+  const lowered = assertValidProject(project.value);
 
   await withTemporaryDirectory("effektive-publisher-sqlite-", async (dir) => {
     for (

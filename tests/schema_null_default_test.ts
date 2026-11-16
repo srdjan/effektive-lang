@@ -1,6 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
 import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import {
   assertDiagnostics,
@@ -10,7 +9,7 @@ import {
   declarationPath,
   PURE_CONSTANT,
 } from "./schema_diagnostics.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 const prefix = `type Text = string
 type Int = int
@@ -33,15 +32,7 @@ const passed: Schema<Decoded, Encoded> = schemaStruct({ name: schemaDefaultKey(t
 const shadow = (): Text => { const schemaDefaultKey = (): Text => "shadowed"; schemaDefaultKey() }
 `,
   );
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("null defaults reject nullable wrapped channels, descriptors, bad callbacks and options", () => {

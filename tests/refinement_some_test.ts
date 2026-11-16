@@ -2,12 +2,11 @@ import { assert, assertEquals } from "@std/assert";
 import {
   type CheckedProject,
   checkProject,
-  lowerProject,
   memoryHost,
 } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import type { ValueId } from "../src/core/ir.ts";
 import { showType } from "../src/core/type_show.ts";
+import { assertValidProject } from "./helpers.ts";
 
 function check(text: string): CheckedProject {
   const checked = checkProject(
@@ -27,16 +26,6 @@ function parameterType(project: CheckedProject, name: string): string {
   return showType(project.table, body.signature.parameters[0].type.ref);
 }
 
-function assertValid(project: CheckedProject): void {
-  assertEquals(project.diagnostics, []);
-  for (
-    const diagnostics of validateProject(
-      project.analysis.project,
-      lowerProject(project),
-    ).values()
-  ) assertEquals(diagnostics, []);
-}
-
 Deno.test("Some proves a contextual refined element", () => {
   const valid = check(`
 type Positive = int where n => n > 0
@@ -44,7 +33,7 @@ type Text = string
 const direct = (): Option<Positive> => Some(1)
 const union = (): Option<Positive> | Text => Some(1)
 `);
-  assertValid(valid);
+  assertValidProject(valid);
 
   const invalid = check(`
 type Positive = int where n => n > 0
@@ -62,7 +51,7 @@ const local = (input): Option<Positive> => Some(input)
 const piped = (input): Option<Positive> => input |> Some
 export const entry = (input): Option<Positive> fails SchemaError => Some(input)
 `);
-  assertValid(project);
+  assertValidProject(project);
   assertEquals(parameterType(project, "local"), "Positive");
   assertEquals(parameterType(project, "piped"), "Positive");
   assertEquals(parameterType(project, "entry"), "Positive");
@@ -80,7 +69,7 @@ const relational = (input): Window => Window({ low: input, high: input + 1 })
 const tagged = (input): Created => Created(input)
 export const entry = (input): Positive fails SchemaError => Positive(input)
 `);
-  assertValid(project);
+  assertValidProject(project);
   assertEquals(parameterType(project, "relational"), "Int");
   assertEquals(parameterType(project, "tagged"), "{ value: Int }");
   assertEquals(parameterType(project, "entry"), "Positive");
@@ -94,7 +83,7 @@ export const entry = (input): Option<Positive> fails SchemaError => take(input)
 const direct = (raw: unknown): Option<Positive> fails SchemaError => entry(Some(raw))
 const piped = (raw: unknown): Option<Positive> fails SchemaError => entry(raw |> Some)
 `;
-  assertValid(check(source));
+  assertValidProject(check(source));
   const invalid = check(
     source + `
 const bad = (): Option<Positive> fails SchemaError => entry(Some(0))

@@ -1,7 +1,6 @@
-import { assert, assertEquals } from "@std/assert";
-import { emitProject, lowerProject } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
-import { checkModule } from "./helpers.ts";
+import { assertEquals } from "@std/assert";
+import { emitProject } from "../src/core/mod.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 import { runStrictTarget } from "./target_helpers.ts";
 
 const fixture = Deno.readTextFileSync(
@@ -16,15 +15,7 @@ const checked = (source: string) => checkModule(source, "main.eff");
  */
 async function compileAndRun(source: string, run: string): Promise<unknown> {
   const project = checked(source);
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  const lowered = assertValidProject(project);
   return JSON.parse(
     await runStrictTarget(
       emitProject(lowered, { config: project.analysis.project.config }),
@@ -36,15 +27,7 @@ async function compileAndRun(source: string, run: string): Promise<unknown> {
 
 Deno.test("schema composition and guarded recursion compile and run with separate services", async () => {
   const project = checked(fixture);
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  const lowered = assertValidProject(project);
   await runStrictTarget(
     emitProject(lowered, { config: project.analysis.project.config }),
     `import { Cause, Effect, Exit, Fiber, Layer, Option, Schema } from "effect";

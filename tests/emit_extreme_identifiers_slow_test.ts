@@ -4,12 +4,11 @@ import {
   buildSpanTable,
   checkProject,
   emitProject,
-  lowerProject,
   mapOffset,
   memoryHost,
 } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import { deno, withTemporaryDirectory } from "./process_helpers.ts";
+import { assertValidProject } from "./helpers.ts";
 
 const widths = [
   40,
@@ -102,16 +101,7 @@ Deno.test("extreme identifiers preserve formatting, execution and source mapping
     cases.map((c) => `${c.module}.eff`),
   );
   assert(checked.ok, JSON.stringify(checked));
-  assertEquals(checked.value.diagnostics, []);
-  const lowered = lowerProject(checked.value);
-  for (
-    const diagnostics of validateProject(
-      checked.value.analysis.project,
-      lowered,
-    ).values()
-  ) {
-    assertEquals(diagnostics, []);
-  }
+  const lowered = assertValidProject(checked.value);
   const emitted = emitProject(lowered, {
     config: checked.value.analysis.project.config,
   });

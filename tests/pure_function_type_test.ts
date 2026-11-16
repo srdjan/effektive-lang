@@ -7,9 +7,9 @@ import {
   Program,
   semanticClassifications,
 } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import type { FunctionDecl } from "../src/core/ir.ts";
 import { showType } from "../src/core/type_show.ts";
+import { assertValidProject } from "./helpers.ts";
 
 const CONFIG = { "effektive.json": "{}" };
 
@@ -41,16 +41,7 @@ export const imported = (value: Int): Int => apply(value, increment)
 export const inline = (value: Int): Int => apply(value, (item) => item + 2)
 `,
   }, ["main.eff"]);
-  assertEquals(project.diagnostics, []);
-
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  const lowered = assertValidProject(project);
 
   const main = lowered.get("main");
   assert(main?.ok);

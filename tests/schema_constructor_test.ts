@@ -1,6 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
 import { lowerProject } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import {
   assertRejected,
@@ -8,7 +7,7 @@ import {
   type Case,
   declarationPath,
 } from "./schema_diagnostics.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 const prefix = `type Text = string
 type Int = int
@@ -33,15 +32,7 @@ const make = (input: D): D fails SchemaIssue => schemaMake(record, input)
 const shadow = (): Int => { const schemaMake = (): Int => 4; schemaMake() }
 `,
   );
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("type-side construction rejects encoded or partial inputs, descriptors and wrong failures", () => {

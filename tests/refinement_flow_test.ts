@@ -1,6 +1,6 @@
-import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { assert } from "@std/assert";
+import { checkProject, memoryHost } from "../src/core/mod.ts";
+import { assertValidProject } from "./helpers.ts";
 
 Deno.test("inference keeps a shared field requirement on an explicit union", () => {
   const checked = checkProject(
@@ -20,13 +20,7 @@ const read = (input): Int => { const ignored = requireInput(input); input.value 
     ["m.eff"],
   );
   assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  for (
-    const diagnostics of validateProject(
-      checked.value.analysis.project,
-      lowerProject(checked.value),
-    ).values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(checked.value);
 });
 
 Deno.test("successful branch joins and later match arms retain established facts", () => {
@@ -54,11 +48,5 @@ const matched = (n: Positive): Positive => match (n) { 1 => 1, _ => n - 1 }
     ["m.eff"],
   );
   assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  for (
-    const diagnostics of validateProject(
-      checked.value.analysis.project,
-      lowerProject(checked.value),
-    ).values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(checked.value);
 });

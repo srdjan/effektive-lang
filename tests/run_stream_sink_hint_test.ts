@@ -3,11 +3,10 @@
 // inside an `if` or `match`. Every other sink argument keeps the unhinted check.
 
 import { assert, assertEquals } from "@std/assert";
-import { type CheckedProject, lowerProject } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import type { CheckedProject } from "../src/core/mod.ts";
 import type { ValueId } from "../src/core/ir.ts";
 import { assertDiagnostics } from "./schema_diagnostics.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 import { showType } from "../src/core/type_show.ts";
 
 const checked = (source: string): CheckedProject =>
@@ -44,15 +43,7 @@ Deno.test("runStream infers the input of an inline takeSink from the stream", ()
     `${PRELUDE}export const firstTwo = (s: Stream<Int>): Int[] => runStream(s, takeSink(2))
 `;
   const project = checked(source);
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
   assertEquals(channels(project, "firstTwo"), {
     result: "Int[]",
     failures: [],
@@ -133,15 +124,7 @@ Deno.test("runStream rejects a sink input that the stream element does not fit",
 /** Checks, lowers, and validates a source that must have no diagnostics. */
 function clean(source: string): CheckedProject {
   const project = checked(source);
-  assertEquals(project.diagnostics.map((d) => [d.code, d.message]), []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
   return project;
 }
 

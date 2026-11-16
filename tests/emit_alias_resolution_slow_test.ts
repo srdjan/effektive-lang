@@ -1,12 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  emitProject,
-  lowerProject,
-  memoryHost,
-} from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { checkProject, emitProject, memoryHost } from "../src/core/mod.ts";
 import { runStrictTarget } from "./target_helpers.ts";
+import { assertValidProject } from "./helpers.ts";
 
 Deno.test("pure functions lift through alias chains up to the accepted depth", async () => {
   const depths = [63, 64, 70, 125];
@@ -23,16 +18,7 @@ Deno.test("pure functions lift through alias chains up to the accepted depth", a
     ["main.eff"],
   );
   assert(checked.ok);
-  assertEquals(checked.value.diagnostics, []);
-  const lowered = lowerProject(checked.value);
-  for (
-    const diagnostics of validateProject(
-      checked.value.analysis.project,
-      lowered,
-    ).values()
-  ) {
-    assertEquals(diagnostics, []);
-  }
+  const lowered = assertValidProject(checked.value);
   const output = await runStrictTarget(
     emitProject(lowered, { config: checked.value.analysis.project.config }),
     `import { Effect } from "effect";

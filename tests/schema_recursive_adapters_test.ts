@@ -1,13 +1,12 @@
 import { assert, assertEquals } from "@std/assert";
 import { lowerProject } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import {
   assertDiagnostics,
   type Expected,
   PURE_CONSTANT,
 } from "./schema_diagnostics.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 const fixture = Deno.readTextFileSync(
   new URL("../fixtures/emit/schema-recursive-adapters.eff", import.meta.url),
@@ -19,15 +18,7 @@ Deno.test("recursive field adapters retain structural guards and independent D/E
     "(): Input[] => []",
     "(): Input[] => { const self: Input[] = []; self }",
   ));
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("recursive adapters reject callback captures and unsupported self paths", () => {

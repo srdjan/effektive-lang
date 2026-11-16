@@ -1,12 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  emitProject,
-  lowerProject,
-  memoryHost,
-} from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { checkProject, emitProject, memoryHost } from "../src/core/mod.ts";
 import { runStrictTarget } from "./target_helpers.ts";
+import { assertValidProject } from "./helpers.ts";
 
 const fixture = Deno.readTextFileSync(
   new URL("../fixtures/emit/schema-recursive-adapters.eff", import.meta.url),
@@ -51,17 +46,7 @@ const bad: Schema<Node,OtherWire,Read.parse,Write.print,NodeInput> = node`,
     ["main.eff", "imported.eff"],
   );
   assert(project.ok, JSON.stringify(project));
-  assertEquals(project.value.diagnostics, []);
-  const lowered = lowerProject(project.value);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(
-      project.value.analysis.project,
-      lowered,
-    ).values()
-  ) assertEquals(diagnostics, []);
+  const lowered = assertValidProject(project.value);
   await runStrictTarget(
     emitProject(lowered, { config: project.value.analysis.project.config }),
     `import { Cause, Deferred, Effect, Exit, Fiber, Layer, Option, Schema, SchemaIssue } from "effect";

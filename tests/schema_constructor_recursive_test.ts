@@ -1,6 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
 import { lowerProject } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import {
   assertDiagnostics,
@@ -9,7 +8,7 @@ import {
   type Expected,
   PURE_CONSTANT,
 } from "./schema_diagnostics.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 const fixture = Deno.readTextFileSync(
   new URL("../fixtures/emit/schema-constructor-recursive.eff", import.meta.url),
@@ -27,15 +26,7 @@ const leafTransform: Schema<Tree, Tree, never, never, LeafInput> = schemaRecursi
 )
 `,
   );
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("recursive make input rejects erasure, wrong self types and callback captures", () => {

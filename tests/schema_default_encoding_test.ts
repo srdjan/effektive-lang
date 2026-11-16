@@ -1,7 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
-import { lowerProject } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 const checked = (source: string) => checkModule(source, "main.eff");
 
@@ -19,15 +17,7 @@ const omitted: Schema<Required, Optional> = schemaStruct({ name: schemaDefaultKe
 const passed: Schema<Required, Optional> = schemaStruct({ name: schemaDefaultKey(text, (): Text => "Ada", { encodingStrategy: "passthrough" }) })
 const implicit: Schema<Required, Optional> = schemaStruct({ name: schemaDefaultKey(text, (): Text => "Ada") })`,
   );
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("Schema default encoding options reject dynamic strategies and malformed records", () => {

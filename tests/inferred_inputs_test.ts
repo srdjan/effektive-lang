@@ -2,12 +2,11 @@ import { assert, assertEquals } from "@std/assert";
 import {
   type CheckedProject,
   checkProject,
-  lowerProject,
   memoryHost,
 } from "../src/core/frontend.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import type { ValueId } from "../src/core/ir.ts";
 import { showType } from "../src/core/type_show.ts";
+import { assertValidProject } from "./helpers.ts";
 
 function checkFiles(
   files: Readonly<Record<string, string>>,
@@ -46,17 +45,6 @@ function functionType(project: CheckedProject, module: string, name: string) {
 
 function codes(project: CheckedProject): string[] {
   return project.diagnostics.map((diagnostic) => diagnostic.code);
-}
-
-function assertLoweredValid(project: CheckedProject): void {
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
 }
 
 Deno.test("infers nested closed input records through simple aliases", () => {
@@ -164,7 +152,7 @@ const explicit = (input: unknown): Int => {
     omitted,
     parameterTypes(project, "m", "explicit"),
   );
-  assertLoweredValid(project);
+  assertValidProject(project);
 });
 
 Deno.test("retains local record annotations for later field uses", () => {
@@ -179,7 +167,7 @@ const read = (input) => {
   assertEquals(codes(project), []);
   assertEquals(parameterTypes(project, "m", "read"), ["Input"]);
   assertEquals(functionType(project, "m", "read"), "pure (Input) => Int");
-  assertLoweredValid(project);
+  assertValidProject(project);
 });
 
 Deno.test("checks an incompatible annotated initializer after collecting its input demand", () => {
@@ -341,7 +329,7 @@ const fieldAlias = (input): Int => {
   assertEquals(parameterTypes(project, "m", "aliased"), ["Int"]);
   assertEquals(parameterTypes(project, "m", "field"), ["Int"]);
   assertEquals(parameterTypes(project, "m", "fieldAlias"), ["Int"]);
-  assertLoweredValid(project);
+  assertValidProject(project);
 });
 
 Deno.test("keeps arrow contracts separate from callable inference evidence", () => {
@@ -365,7 +353,7 @@ const effectful = (input): Int fails LocalFailure with LocalService.read => {
   assertEquals(body.mode, "effect");
   assertEquals(body.failures, ["error:m#LocalFailure"]);
   assertEquals(body.requirements, ["cap:m#LocalService.read"]);
-  assertLoweredValid(effectful);
+  assertValidProject(effectful);
 
   const invalid = checkText(`
 type Int = int
@@ -555,7 +543,7 @@ const pair = (callback, value): Int => {
     "{ callbacks: { run: Fn } }",
   ]);
   assertEquals(parameterTypes(project, "m", "pair"), ["Fn", "Int"]);
-  assertLoweredValid(project);
+  assertValidProject(project);
 });
 
 Deno.test("propagates deferred callback contracts through dependent calls", () => {
@@ -576,7 +564,7 @@ const chained = (higher, callback, value): Int => {
     "Fn",
     "Int",
   ]);
-  assertLoweredValid(project);
+  assertValidProject(project);
 });
 
 Deno.test("resolves a deferred inferred callback in a pipe stage as in a call", () => {
@@ -596,7 +584,7 @@ const staged = (callback, value, extra): Int => {
   assertEquals(project.diagnostics, []);
   assertEquals(parameterTypes(project, "m", "piped"), ["Fn", "Int"]);
   assertEquals(parameterTypes(project, "m", "staged"), ["Pair", "Int", "Int"]);
-  assertLoweredValid(project);
+  assertValidProject(project);
 });
 
 Deno.test("infers an input from the record argument of an error constructor", () => {
@@ -607,7 +595,7 @@ const build = (input): Issue => Issue({ value: input })
 `);
   assertEquals(project.diagnostics, []);
   assertEquals(parameterTypes(project, "m", "build"), ["Int"]);
-  assertLoweredValid(project);
+  assertValidProject(project);
 });
 
 Deno.test("reports the record-literal rule for an input piped into an error constructor", () => {
@@ -676,7 +664,7 @@ const read = (input): Int => {
 `);
   assertEquals(codes(shadowed), []);
   assertEquals(parameterTypes(shadowed, "m", "read"), ["Fn"]);
-  assertLoweredValid(shadowed);
+  assertValidProject(shadowed);
 });
 
 Deno.test("omitted and explicit unknown callbacks resolve equally", () => {
@@ -691,7 +679,7 @@ const explicit = (input: unknown): Int => { const fn: Fn = input; input(1) }
     parameterTypes(project, "m", "omitted"),
     parameterTypes(project, "m", "explicit"),
   );
-  assertLoweredValid(project);
+  assertValidProject(project);
 });
 
 Deno.test("infers through pipelines and expected shorthand fields", () => {
@@ -743,7 +731,7 @@ const read = (callbacks: Callbacks, input): Int => callbacks.run(input)
 `);
   assertEquals(codes(project), []);
   assertEquals(parameterTypes(project, "m", "read"), ["Callbacks", "Int"]);
-  assertLoweredValid(project);
+  assertValidProject(project);
 });
 
 Deno.test("compatible error fields retain a demanded error identity", () => {
@@ -758,7 +746,7 @@ const read = (input): Int => {
 `);
   assertEquals(codes(project), []);
   assertEquals(parameterTypes(project, "m", "read"), ["Issue"]);
-  assertLoweredValid(project);
+  assertValidProject(project);
 });
 
 Deno.test("incomplete field recovery preserves inferred input contracts", () => {

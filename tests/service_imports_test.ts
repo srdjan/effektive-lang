@@ -13,7 +13,7 @@ import {
   Program,
   type Revision,
 } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { assertValidProject } from "./helpers.ts";
 
 const CONFIG = { "effektive.json": "{}" };
 
@@ -492,15 +492,7 @@ export const forward = (
 }
 `,
   });
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("composite transfers retain fresh requirements with an inherited match", () => {
@@ -1105,15 +1097,7 @@ import { Int } from "./service.eff"
 export const find = (): Int => Users.find()
 `,
   });
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  const lowered = assertValidProject(project);
   const emitted = emitProject(lowered, {
     config: project.analysis.project.config,
   });

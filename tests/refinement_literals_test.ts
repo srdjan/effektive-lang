@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { checkProject, memoryHost } from "../src/core/mod.ts";
+import { assertValidProject } from "./helpers.ts";
 
 function check(text: string) {
   const checked = checkProject(
@@ -20,13 +20,7 @@ const name: Nonempty = "😀"
 const pair: Pair = [1, 2]
 const local = (): Nonempty => { const text = "😀"; Nonempty(text) }
 `);
-  assertEquals(checked.diagnostics, []);
-  for (
-    const diagnostics of validateProject(
-      checked.analysis.project,
-      lowerProject(checked),
-    ).values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(checked);
 });
 
 Deno.test("contextual array and tuple literals cannot bypass predicates", () => {

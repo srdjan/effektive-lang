@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
-import { checkProject, lowerProject, memoryHost } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { checkProject, memoryHost } from "../src/core/mod.ts";
+import { assertValidProject } from "./helpers.ts";
 
 type Files = Readonly<Record<string, string>>;
 
@@ -11,17 +11,7 @@ function check(files: Files, entries: readonly string[]) {
 }
 
 function validated(files: Files, entries: readonly string[]) {
-  const project = check(files, entries);
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
-  return lowered;
+  return assertValidProject(check(files, entries));
 }
 
 function codes(files: Files, entries: readonly string[]): string[] {

@@ -2,14 +2,9 @@
 // their types, including supporting declarations nested inside built-in types.
 
 import { assert, assertEquals } from "@std/assert";
-import {
-  checkProject,
-  emitProject,
-  lowerProject,
-  memoryHost,
-} from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { checkProject, emitProject, memoryHost } from "../src/core/mod.ts";
 import { runStrictTarget } from "./target_helpers.ts";
+import { assertValidProject } from "./helpers.ts";
 
 const signatures = [
   ["Ref element", "type B = { n: Int }", "Ref<B>"],
@@ -29,17 +24,7 @@ async function checkTwoModules(library: string, value: string): Promise<void> {
     ["consumer.eff"],
   );
   assert(project.ok, JSON.stringify(project));
-  assertEquals(project.value.diagnostics, []);
-  const lowered = lowerProject(project.value);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(
-      project.value.analysis.project,
-      lowered,
-    ).values()
-  ) assertEquals(diagnostics, []);
+  const lowered = assertValidProject(project.value);
   assertEquals(
     (await runStrictTarget(
       emitProject(lowered, { config: project.value.analysis.project.config }),

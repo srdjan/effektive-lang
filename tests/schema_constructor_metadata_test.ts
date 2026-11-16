@@ -1,6 +1,5 @@
 import { assert, assertEquals } from "@std/assert";
 import { lowerProject } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
 import { validateModule } from "../src/core/validate/index.ts";
 import {
   assertRejected,
@@ -9,7 +8,7 @@ import {
   declarationPath,
   PURE_CONSTANT,
 } from "./schema_diagnostics.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 const prefix = `type Int = int
 type D = { score: Int }
@@ -30,15 +29,7 @@ const list: Schema<D[], D[], never, never, M[]> = schemaArray(child)
 const shadow = (): Int => { const schemaConstructorDefault = (): Int => 4; schemaConstructorDefault() }
 `,
   );
-  assertEquals(project.diagnostics, []);
-  const lowered = lowerProject(project);
-  for (const result of lowered.values()) {
-    assert(result.ok, JSON.stringify(result));
-  }
-  for (
-    const diagnostics of validateProject(project.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
+  assertValidProject(project);
 });
 
 Deno.test("constructor metadata rejects erasure, duplicate defaults, services and unsupported adapters", () => {

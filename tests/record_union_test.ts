@@ -1,8 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
-import { lowerProject, Program } from "../src/core/mod.ts";
-import { validateProject } from "../src/core/validate_project.ts";
+import { Program } from "../src/core/mod.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { checkModule } from "./helpers.ts";
+import { assertValidProject, checkModule } from "./helpers.ts";
 
 const HEAD = "type Int = int\ntype Text = string\n";
 
@@ -11,15 +10,7 @@ function check(text: string) {
 }
 
 function valid(text: string) {
-  const checked = check(text);
-  assertEquals(checked.diagnostics, []);
-  const lowered = lowerProject(checked);
-  for (const result of lowered.values()) assert(result.ok);
-  for (
-    const diagnostics of validateProject(checked.analysis.project, lowered)
-      .values()
-  ) assertEquals(diagnostics, []);
-  return { checked, lowered };
+  return assertValidProject(check(text));
 }
 
 for (
@@ -85,7 +76,7 @@ type Tag = string
 type T = { kind: "a", value: Int } | { kind: ${tag}, value: Text }
 const read = (x: T): Int | Text => match x { { kind: "a", ...a } => a.value, _ => 0 }
 `;
-    const { lowered } = valid(text);
+    const lowered = valid(text);
     const result = lowered.get("m");
     assert(result?.ok);
     const declaration = result.value.declarations.find((d) =>
