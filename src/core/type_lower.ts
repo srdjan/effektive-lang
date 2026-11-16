@@ -77,10 +77,9 @@ type PrimitiveTypeName = keyof typeof PRIMITIVE_TYPES;
 type PrimitiveNameText = string;
 type TypeMatch = boolean;
 export function isValuePrimitiveName(name: PrimitiveNameText): TypeMatch {
-  return Object.entries(PRIMITIVE_TYPES).some((binding1) => {
-    const binding2 = binding1;
-    const primitive = binding2[0];
-    const value = binding2[1];
+  return Object.entries(PRIMITIVE_TYPES).some((entry) => {
+    const primitive = entry[0];
+    const value = entry[1];
     return value && primitive === name;
   });
 }
@@ -152,9 +151,8 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
     Option: {
       kind: "generic",
       arity: 1,
-      build: (lowerer, binding3) => {
-        const binding4 = binding3;
-        const element = binding4[0];
+      build: (lowerer, args) => {
+        const element = args[0];
         return ({
           ref: lowerer.env.table.option(element.ref),
           ir: { kind: "option", element: element.ir },
@@ -164,9 +162,8 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
     Ref: {
       kind: "generic",
       arity: 1,
-      build: (lowerer, binding5) => {
-        const binding6 = binding5;
-        const element = binding6[0];
+      build: (lowerer, args) => {
+        const element = args[0];
         return ({
           ref: lowerer.env.table.ref(element.ref),
           ir: { kind: "ref", element: element.ir },
@@ -176,9 +173,8 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
     RetrySchedule: {
       kind: "generic",
       arity: 1,
-      build: (lowerer, binding7, nodes) => {
-        const binding8 = binding7;
-        const error = binding8[0];
+      build: (lowerer, args, nodes) => {
+        const error = args[0];
         if (error.ir.kind !== "named" || !isErrorId(error.ir.id)) {
           lowerer = lowerer.report(
             "type-mismatch/001",
@@ -229,47 +225,52 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
   }
   function lowerType(node: NodeId): Lowered {
     const table = env.table;
-    {
-      const kind_1 = kindOf(tree, node);
-      if (kind_1 === SyntaxKind.NamedType) {
-        return named(node);
-      } else if (
-        kind_1 === SyntaxKind.EffectType || kind_1 === SyntaxKind.StreamType ||
-        kind_1 === SyntaxKind.SinkType || kind_1 === SyntaxKind.SchemaType ||
-        kind_1 === SyntaxKind.LayerType
-      ) {
-        return deferredType(node);
-      } else if (kind_1 === SyntaxKind.LiteralType) {
-        return literal(node);
-      } else if (kind_1 === SyntaxKind.RecordType) {
-        return recordOf(lowerFields(node, false));
-      } else if (kind_1 === SyntaxKind.TupleType) {
-        const elements = typeChildren(node).map((k) => lowerElement(k));
-        return {
-          ref: table.tuple(elements.map((e) => e.ref)),
-          ir: { kind: "tuple", elements: elements.map((e) => e.ir) },
-        };
-      } else if (kind_1 === SyntaxKind.ArrayType) {
-        const inner = typeChildren(node)[0];
-        if (inner === undefined) {
-          return errorLowered();
-        }
-        const element = lowerElement(inner);
-        return {
-          ref: table.array(element.ref),
-          ir: { kind: "array", element: element.ir },
-        };
-      } else if (kind_1 === SyntaxKind.UnionType) {
-        return union(node);
-      } else if (kind_1 === SyntaxKind.FunctionType) {
-        return functionType(node);
-      } else if (kind_1 === SyntaxKind.ParenType) {
-        const inner = typeChildren(node)[0];
-        return inner === undefined ? errorLowered() : lowerType(inner);
-      } else {
+    const kind = kindOf(tree, node);
+    if (kind === SyntaxKind.NamedType) {
+      return named(node);
+    }
+    if (
+      kind === SyntaxKind.EffectType || kind === SyntaxKind.StreamType ||
+      kind === SyntaxKind.SinkType || kind === SyntaxKind.SchemaType ||
+      kind === SyntaxKind.LayerType
+    ) {
+      return deferredType(node);
+    }
+    if (kind === SyntaxKind.LiteralType) {
+      return literal(node);
+    }
+    if (kind === SyntaxKind.RecordType) {
+      return recordOf(lowerFields(node, false));
+    }
+    if (kind === SyntaxKind.TupleType) {
+      const elements = typeChildren(node).map((k) => lowerElement(k));
+      return {
+        ref: table.tuple(elements.map((e) => e.ref)),
+        ir: { kind: "tuple", elements: elements.map((e) => e.ir) },
+      };
+    }
+    if (kind === SyntaxKind.ArrayType) {
+      const inner = typeChildren(node)[0];
+      if (inner === undefined) {
         return errorLowered();
       }
+      const element = lowerElement(inner);
+      return {
+        ref: table.array(element.ref),
+        ir: { kind: "array", element: element.ir },
+      };
     }
+    if (kind === SyntaxKind.UnionType) {
+      return union(node);
+    }
+    if (kind === SyntaxKind.FunctionType) {
+      return functionType(node);
+    }
+    if (kind === SyntaxKind.ParenType) {
+      const inner = typeChildren(node)[0];
+      return inner === undefined ? errorLowered() : lowerType(inner);
+    }
+    return errorLowered();
   }
   function lowerElement(node: NodeId): Lowered {
     const lowered = lowerType(node);
@@ -316,24 +317,19 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
       return errorLowered();
     }
     const row = builtinTypes[target.name];
-    {
-      const kind_2 = row.kind;
-      if (kind_2 === "plain") {
-        self = noArguments(name, args, argsNode);
-        return row.build(self);
-      } else if (kind_2 === "generic") {
-        if (args.length !== row.arity) {
-          self = arity(name, row.arity, args, node);
-          return errorLowered();
-        }
-        return row.build(self, args.map((arg) => lowerType(arg)), args);
-      } else {
-        {
-          const unreachable: never = row;
-          return unreachable;
-        }
-      }
+    if (row.kind === "plain") {
+      self = noArguments(name, args, argsNode);
+      return row.build(self);
     }
+    if (row.kind === "generic") {
+      if (args.length !== row.arity) {
+        self = arity(name, row.arity, args, node);
+        return errorLowered();
+      }
+      return row.build(self, args.map((arg) => lowerType(arg)), args);
+    }
+    const unreachable: never = row;
+    return unreachable;
   }
   function noArguments(
     name: string,
@@ -464,18 +460,13 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
   function collectUnion(node: NodeId, out: Lowered[]): Lowered[] {
     for (const kid of typeChildren(node)) {
       const kind = kindOf(tree, kid);
+      const inner = kind === SyntaxKind.ParenType ? typeChildren(kid) : [];
       if (kind === SyntaxKind.UnionType) {
         out = collectUnion(kid, out);
-      } else if (kind === SyntaxKind.ParenType) {
-        const inner = typeChildren(kid);
-        if (
-          inner.length === 1 &&
-          kindOf(tree, inner[0]) === SyntaxKind.UnionType
-        ) {
-          out = collectUnion(inner[0], out);
-        } else {
-          out[out.length] = lowerType(kid);
-        }
+      } else if (
+        inner.length === 1 && kindOf(tree, inner[0]) === SyntaxKind.UnionType
+      ) {
+        out = collectUnion(inner[0], out);
       } else {
         out[out.length] = lowerType(kid);
       }
@@ -486,10 +477,10 @@ export function TypeLowerer(env: TypeEnv, sink: Diagnostic[]): TypeLowerer {
   function functionType(node: NodeId): Lowered {
     const execution = hasModifier(tree, node, "pure") ? "pure" : "effect";
     const kids = typeChildren(node);
-    const binding9 = functionParts(tree, node);
-    const paramList = binding9.paramList;
-    const fails = binding9.fails;
-    const uses = binding9.uses;
+    const parts = functionParts(tree, node);
+    const paramList = parts.paramList;
+    const fails = parts.fails;
+    const uses = parts.uses;
     const parameters = paramList === undefined
       ? []
       : lowerParameters(paramList);

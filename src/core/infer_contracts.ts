@@ -334,10 +334,9 @@ export function InputContractResolver(
     let fields: TypeRef | undefined;
     if (fieldsAtPath.size > 0) {
       fields = inputContractResolverTable.record(
-        [...fieldsAtPath].map((binding1) => {
-          const binding2 = binding1;
-          const name = binding2[0];
-          const child = binding2[1];
+        [...fieldsAtPath].map((entry) => {
+          const name = entry[0];
+          const child = entry[1];
           return ({
             name: name,
             type: inputContractResolverResolve(
@@ -404,10 +403,9 @@ export function InputContractResolver(
     if (fields === undefined) {
       return false;
     }
-    for (const binding3 of requirements) {
-      const binding4 = binding3;
-      const name = binding4[0];
-      const requirement = binding4[1];
+    for (const entry of requirements) {
+      const name = entry[0];
+      const requirement = entry[1];
       const field = fields.find((candidate) => candidate.name === name);
       if (field === undefined) {
         return false;

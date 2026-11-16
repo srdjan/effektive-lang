@@ -120,10 +120,9 @@ function InputEngine(
         : []
     ),
   );
-  for (const binding1 of outerLocals ?? emptyMap()) {
-    const binding2 = binding1;
-    const id = binding2[0];
-    const type = binding2[1];
+  for (const entry of outerLocals ?? emptyMap()) {
+    const id = entry[0];
+    const type = entry[1];
     inputEngineLocalTypes = inputEngineLocalTypes.set(id, type);
   }
   for (const parameter of parameters) {
@@ -180,9 +179,9 @@ function InputEngine(
     if (kind !== SyntaxKind.FieldExpr) {
       return undefined;
     }
-    const binding3 = memberAccessParts(inputEngineTree, node);
-    const base = binding3.base;
-    const member = binding3.member;
+    const parts = memberAccessParts(inputEngineTree, node);
+    const base = parts.base;
+    const member = parts.member;
     const origin = base === undefined ? undefined : inputEngineOriginOf(base);
     const name = member === undefined
       ? undefined
@@ -206,45 +205,43 @@ function InputEngine(
       inputEngineResolver = inputEngineResolver.demand(origin, expected, node);
     }
     let type: TypeRef | undefined;
-    {
-      const kind_1 = kindOf(inputEngineTree, node);
-      if (kind_1 === SyntaxKind.NameExpr || kind_1 === SyntaxKind.Name) {
-        type = inputEngineNameType(inputEngineTargets.get(node));
-      } else if (kind_1 === SyntaxKind.ParenExpr) {
-        const inner = kidsOf(inputEngineTree, node)[0];
-        type = inner === undefined
-          ? undefined
-          : inputEngineInfer(inner, expected).type;
-      } else if (kind_1 === SyntaxKind.FieldExpr) {
-        type = inputEngineField(node, expected);
-      } else if (kind_1 === SyntaxKind.CallExpr) {
-        type = inputEngineCall(node, expected);
-      } else if (kind_1 === SyntaxKind.PipeExpr) {
-        type = inputEnginePipe(node, expected);
-      } else if (kind_1 === SyntaxKind.BinaryExpr) {
-        type = inputEngineBinary(node, expected);
-      } else if (kind_1 === SyntaxKind.UnaryExpr) {
-        type = inputEngineUnary(node, expected);
-      } else if (kind_1 === SyntaxKind.Block) {
-        type = inputEngineBlock(node, expected);
-      } else if (kind_1 === SyntaxKind.IfExpr) {
-        type = inputEngineIfExpr(node, expected);
-      } else if (kind_1 === SyntaxKind.MatchExpr) {
-        type = inputEngineMatchExpr(node, expected);
-      } else if (kind_1 === SyntaxKind.ArrowExpr) {
-        type = inputEngineArrow(node, expected);
-      } else if (kind_1 === SyntaxKind.RecordExpr) {
-        type = inputEngineRecord(node, expected);
-      } else if (kind_1 === SyntaxKind.ListExpr) {
-        type = inputEngineList(node, expected);
-      } else if (kind_1 === SyntaxKind.LiteralExpr) {
-        type = undefined;
-      } else {
-        for (const child of kidsOf(inputEngineTree, node)) {
-          inputEngineSelf = inputEngineVisit(child, undefined);
-        }
-        type = undefined;
+    const kind = kindOf(inputEngineTree, node);
+    if (kind === SyntaxKind.NameExpr || kind === SyntaxKind.Name) {
+      type = inputEngineNameType(inputEngineTargets.get(node));
+    } else if (kind === SyntaxKind.ParenExpr) {
+      const inner = kidsOf(inputEngineTree, node)[0];
+      type = inner === undefined
+        ? undefined
+        : inputEngineInfer(inner, expected).type;
+    } else if (kind === SyntaxKind.FieldExpr) {
+      type = inputEngineField(node, expected);
+    } else if (kind === SyntaxKind.CallExpr) {
+      type = inputEngineCall(node, expected);
+    } else if (kind === SyntaxKind.PipeExpr) {
+      type = inputEnginePipe(node, expected);
+    } else if (kind === SyntaxKind.BinaryExpr) {
+      type = inputEngineBinary(node, expected);
+    } else if (kind === SyntaxKind.UnaryExpr) {
+      type = inputEngineUnary(node, expected);
+    } else if (kind === SyntaxKind.Block) {
+      type = inputEngineBlock(node, expected);
+    } else if (kind === SyntaxKind.IfExpr) {
+      type = inputEngineIfExpr(node, expected);
+    } else if (kind === SyntaxKind.MatchExpr) {
+      type = inputEngineMatchExpr(node, expected);
+    } else if (kind === SyntaxKind.ArrowExpr) {
+      type = inputEngineArrow(node, expected);
+    } else if (kind === SyntaxKind.RecordExpr) {
+      type = inputEngineRecord(node, expected);
+    } else if (kind === SyntaxKind.ListExpr) {
+      type = inputEngineList(node, expected);
+    } else if (kind === SyntaxKind.LiteralExpr) {
+      type = undefined;
+    } else {
+      for (const child of kidsOf(inputEngineTree, node)) {
+        inputEngineSelf = inputEngineVisit(child, undefined);
       }
+      type = undefined;
     }
     return { engine: inputEngineSelf, type: type };
   }
@@ -284,9 +281,9 @@ function InputEngine(
     if (kind !== SyntaxKind.FieldExpr) {
       return undefined;
     }
-    const binding4 = memberAccessParts(inputEngineTree, node);
-    const base = binding4.base;
-    const member = binding4.member;
+    const parts = memberAccessParts(inputEngineTree, node);
+    const base = parts.base;
+    const member = parts.member;
     const name = member === undefined
       ? undefined
       : nameTextOf(inputEngineTree, member);
@@ -309,9 +306,9 @@ function InputEngine(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const binding5 = memberAccessParts(inputEngineTree, node);
-    const base = binding5.base;
-    const member = binding5.member;
+    const parts = memberAccessParts(inputEngineTree, node);
+    const base = parts.base;
+    const member = parts.member;
     const name = member === undefined
       ? undefined
       : nameTextOf(inputEngineTree, member);
@@ -432,15 +429,15 @@ function InputEngine(
     node: NodeId,
     expected: TypeRef | undefined,
   ): TypeRef | undefined {
-    const binding6 = pipeParts(inputEngineTree, node);
-    const left = binding6.left;
-    const stage = binding6.stage;
+    const pipe = pipeParts(inputEngineTree, node);
+    const left = pipe.left;
+    const stage = pipe.stage;
     if (left === undefined || stage === undefined) {
       return undefined;
     }
-    const binding7 = stageParts(inputEngineTree, stage);
-    const callee = binding7.callee;
-    const args = binding7.args;
+    const stageNode = stageParts(inputEngineTree, stage);
+    const callee = stageNode.callee;
+    const args = stageNode.args;
     const target = callee === undefined
       ? undefined
       : inputEngineTargets.get(callee);
@@ -665,9 +662,9 @@ function InputEngine(
       if (param === undefined) {
         continue;
       }
-      const binding8 = paramParts(inputEngineTree, param);
-      const nameNode = binding8.name;
-      const typeNode = binding8.type;
+      const parts = paramParts(inputEngineTree, param);
+      const nameNode = parts.name;
+      const typeNode = parts.type;
       const target = nameNode === undefined
         ? undefined
         : inputEngineTargets.get(nameNode);

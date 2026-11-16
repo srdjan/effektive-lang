@@ -37,70 +37,75 @@ export function producedRequirements(
     }
     return into;
   }
-  {
-    const kind_1 = node.kind;
-    if (kind_1 === "named") {
-      const target = isTypeId(node.id) ? table.aliasOf(node.id) : undefined;
-      if (target !== undefined) {
-        into = visit(target);
-      }
-      return into;
-    } else if (kind_1 === "record") {
-      for (const field of node.fields) {
-        into = visit(field.type);
-      }
-      return into;
-    } else if (kind_1 === "array" || kind_1 === "option" || kind_1 === "ref") {
-      into = visit(node.element);
-      return into;
-    } else if (kind_1 === "tuple") {
-      for (const element of node.elements) {
-        into = visit(element);
-      }
-      return into;
-    } else if (kind_1 === "union") {
-      for (const member of node.members) {
-        into = visit(member);
-      }
-      return into;
-    } else if (kind_1 === "schema") {
-      into = add(node.decodeRequirements);
-      into = add(node.encodeRequirements);
-      into = visit(node.decoded);
-      into = visit(node.encoded);
-      return into;
-    } else if (kind_1 === "effect") {
-      into = add(node.requirements);
-      into = visit(node.result);
-      return into;
-    } else if (kind_1 === "stream") {
-      into = add(node.requirements);
-      into = visit(node.element);
-      return into;
-    } else if (kind_1 === "sink") {
-      into = add(node.requirements);
-      into = visit(node.result);
-      into = visit(node.leftover);
-      return into;
-    } else if (kind_1 === "function") {
-      into = add(node.requirements);
-      into = visit(node.result);
-      return into;
-    } else if (kind_1 === "provider") {
-      into = add(node.requirements);
-      return into;
-    } else if (
-      kind_1 === "primitive" || kind_1 === "literal" ||
-      kind_1 === "retry-schedule" || kind_1 === "error"
-    ) {
-      return into;
-    } else {
-      {
-        const unreachable: never = node;
-        return unreachable;
-      }
+  if (node.kind === "named") {
+    const target = isTypeId(node.id) ? table.aliasOf(node.id) : undefined;
+    if (target !== undefined) {
+      into = visit(target);
     }
+    return into;
   }
+  if (node.kind === "record") {
+    for (const field of node.fields) {
+      into = visit(field.type);
+    }
+    return into;
+  }
+  if (node.kind === "array" || node.kind === "option" || node.kind === "ref") {
+    into = visit(node.element);
+    return into;
+  }
+  if (node.kind === "tuple") {
+    for (const element of node.elements) {
+      into = visit(element);
+    }
+    return into;
+  }
+  if (node.kind === "union") {
+    for (const member of node.members) {
+      into = visit(member);
+    }
+    return into;
+  }
+  if (node.kind === "schema") {
+    into = add(node.decodeRequirements);
+    into = add(node.encodeRequirements);
+    into = visit(node.decoded);
+    into = visit(node.encoded);
+    return into;
+  }
+  if (node.kind === "effect") {
+    into = add(node.requirements);
+    into = visit(node.result);
+    return into;
+  }
+  if (node.kind === "stream") {
+    into = add(node.requirements);
+    into = visit(node.element);
+    return into;
+  }
+  if (node.kind === "sink") {
+    into = add(node.requirements);
+    into = visit(node.result);
+    into = visit(node.leftover);
+    return into;
+  }
+  if (node.kind === "function") {
+    into = add(node.requirements);
+    into = visit(node.result);
+    return into;
+  }
+  if (node.kind === "provider") {
+    into = add(node.requirements);
+    return into;
+  }
+  if (
+    node.kind === "primitive" || node.kind === "literal" ||
+    node.kind === "retry-schedule" || node.kind === "error"
+  ) {
+    return into;
+  }
+  const unreachable: never = node;
+  return unreachable;
 }
 type TransferInputs = {
   readonly table: TypeReader;
@@ -287,45 +292,44 @@ export function transferredRequirements(
       return into;
     }
     const nextTrail = setFrom([...trail, node]);
-    {
-      const kind_2 = kindOf(tree, node);
-      if (kind_2 === SyntaxKind.RecordExpr) {
-        const fields = kidsOf(tree, node);
-        let needsFallback = fields.length === 0;
-        for (const field of fields) {
-          const children = kidsOf(tree, field);
-          const child = kindOf(tree, field) === SyntaxKind.RecordField
-            ? children[1]
-            : children[0];
-          if (child === undefined) {
-            needsFallback = true;
-          } else {
-            into = addValue(child, nextTrail, root);
-          }
+    const kind = kindOf(tree, node);
+    if (kind === SyntaxKind.RecordExpr) {
+      const fields = kidsOf(tree, node);
+      let needsFallback = fields.length === 0;
+      for (const field of fields) {
+        const children = kidsOf(tree, field);
+        const child = kindOf(tree, field) === SyntaxKind.RecordField
+          ? children[1]
+          : children[0];
+        if (child === undefined) {
+          needsFallback = true;
+        } else {
+          into = addValue(child, nextTrail, root);
         }
-        if (needsFallback) {
-          into = addType(root);
-        }
-        return into;
-      } else if (kind_2 === SyntaxKind.ListExpr) {
-        const elements = kidsOf(tree, node);
-        if (elements.length === 0) {
-          into = addType(root);
-        }
-        for (const element of elements) {
-          const value = kindOf(tree, element) === SyntaxKind.SpreadElement
-            ? kidsOf(tree, element)[0]
-            : element;
-          into = addValue(value, nextTrail, root);
-        }
-        return into;
-      } else if (kind_2 === SyntaxKind.Block) {
-        into = addValue(kidsOf(tree, node).at(-1), nextTrail, root);
-        return into;
-      } else {
-        into = addType(node);
       }
+      if (needsFallback) {
+        into = addType(root);
+      }
+      return into;
     }
+    if (kind === SyntaxKind.ListExpr) {
+      const elements = kidsOf(tree, node);
+      if (elements.length === 0) {
+        into = addType(root);
+      }
+      for (const element of elements) {
+        const value = kindOf(tree, element) === SyntaxKind.SpreadElement
+          ? kidsOf(tree, element)[0]
+          : element;
+        into = addValue(value, nextTrail, root);
+      }
+      return into;
+    }
+    if (kind === SyntaxKind.Block) {
+      into = addValue(kidsOf(tree, node).at(-1), nextTrail, root);
+      return into;
+    }
+    into = addType(node);
     return into;
   }
   for (const entry of body.facts) {
