@@ -155,7 +155,7 @@ _Avoid: golden file, transcript_
 
 The test files that may start subprocesses, such as `deno check` and `deno run` of emitted code.
 
-The runner runs the files in parallel, one file for each worker, and runs the tests of one file in order. So the longest file sets a lower bound on the wall time. Each run starts with an empty dependency cache, and all files of the run share it. A change for speed counts only when it lowers the wall time of the whole suite.
+The runner runs the files in parallel, one file for each worker, and runs the tests of one file in order. So the longest file sets a lower bound on the wall time. All files run in one process, so a name built from the process ID is not private to one file. Each run starts with an empty dependency cache, and all files of the run share it. A change for speed counts only when it lowers the wall time of the whole suite.
 
 ### Mutant
 
