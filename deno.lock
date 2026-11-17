@@ -1,7 +1,7 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@srdjan/light-fp-lint@0.8.0": "0.8.0",
+    "jsr:@srdjan/light-fp-lint@0.8.2": "0.8.2",
     "jsr:@std/assert@1": "1.0.19",
     "jsr:@std/cli@^1.0.32": "1.0.32",
     "jsr:@std/encoding@^1.0.11": "1.0.11",
@@ -28,8 +28,8 @@
     "npm:typescript@5.9.3": "5.9.3"
   },
   "jsr": {
-    "@srdjan/light-fp-lint@0.8.0": {
-      "integrity": "abf11cca196263fbde0866aa1d5c494732a08058d9023cd87864a59cdb2165bf"
+    "@srdjan/light-fp-lint@0.8.2": {
+      "integrity": "ef83b8525580a6694a896a11b3f0edecb9192031a31fd41aa6a1f323253b4011"
     },
     "@std/assert@1.0.19": {
       "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",

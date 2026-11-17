@@ -217,7 +217,7 @@ The history shows this path for each version. It has no release tag.
    maintainer pushes.
 
 The pre-commit hook in `.githooks/` runs `deno lint` before each commit and stops when lint fails.
-The lint configuration loads `jsr:@srdjan/light-fp-lint@0.8.0` from JSR.
+The lint configuration loads `jsr:@srdjan/light-fp-lint@0.8.2` from JSR.
 Each clone activates the hooks once with `git config core.hooksPath .githooks`.
 
 The hooks also complete a bare version commit.
