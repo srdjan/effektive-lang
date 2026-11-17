@@ -1,7 +1,12 @@
 // Checks of the types inside declarations: every identity in a type resolves,
 // and no record type repeats a field name.
 
-import { AREA, type ValidationFlag, type ValidationPath } from "./report.ts";
+import {
+  AREA,
+  type AreaCode,
+  type ValidationFlag,
+  type ValidationPath,
+} from "./report.ts";
 import { isTrue } from "./guards.ts";
 import { emptySet, setFrom } from "../runtime.ts";
 import {
@@ -36,11 +41,16 @@ export function checkTypeIds(
     readonly report: Ctx["report"];
     readonly valid: ValidationFlag;
   };
+  function reject(
+    state: State,
+    area: AreaCode,
+    at: string,
+    what: string,
+  ): State {
+    return { ...flag(state, area, at, what, span), valid: false };
+  }
   function fail(state: State, at: string, what: string): State {
-    return {
-      report: state.report.add(AREA.identity, at, what, span),
-      valid: false,
-    };
+    return reject(state, AREA.identity, at, what);
   }
   function effects(state: State, at: string, e: {
     readonly failures: readonly string[];
@@ -74,15 +84,7 @@ export function checkTypeIds(
   function functionFlags(state: State, t: FunctionType, at: string): State {
     let next = state;
     function invalid(current: State, message: string): State {
-      return {
-        report: current.report.add(
-          AREA.contracts,
-          `${at}.checked`,
-          message,
-          span,
-        ),
-        valid: false,
-      };
+      return reject(current, AREA.contracts, `${at}.checked`, message);
     }
     if (t.borrows !== undefined && t.borrows.length !== t.parameters.length) {
       next = fail(next, at, "borrow flags must match function parameters");
@@ -215,15 +217,12 @@ export function checkTypeIds(
         t.execution === "pure" &&
         (t.effects.failures.length > 0 || t.effects.requirements.length > 0)
       ) {
-        next = {
-          report: next.report.add(
-            AREA.types,
-            at,
-            "a pure function type must have empty failure and requirement rows",
-            span,
-          ),
-          valid: false,
-        };
+        next = reject(
+          next,
+          AREA.types,
+          at,
+          "a pure function type must have empty failure and requirement rows",
+        );
       }
       return next;
     }
