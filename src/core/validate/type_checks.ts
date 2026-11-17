@@ -270,7 +270,11 @@ export function checkFieldNames(
   return ctx;
 }
 
-/** The type kinds without an encoded form. */
+/**
+ * The type kinds without an encoded form. The checker has its own list in
+ * `type_kinds.ts`. The validator keeps this copy on purpose, because it is a
+ * differential oracle (docs/architecture.md, rule 2).
+ */
 const DEFERRED_KINDS: readonly Type["kind"][] = [
   "function",
   "effect",
