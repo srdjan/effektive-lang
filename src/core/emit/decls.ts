@@ -1,4 +1,4 @@
-import { emptyMap, emptySet, mapFrom, setFrom } from "../runtime.ts";
+import { emptyMap, emptySet, indices, mapFrom, setFrom } from "../runtime.ts";
 import { needsFieldAdapter, sensitiveField, taggedFields } from "./fields.ts";
 // Declarations and their order, and the export rule.
 import type {
@@ -168,24 +168,27 @@ export function orderConstants(ir: ModuleIR): ConstantDecl[] {
   function eagerDependencies(constant: ConstantDecl): ConstantDecl[] {
     let found = emptyMap<ValueId, ConstantDecl>();
     let expanded = emptySet<ValueId>();
-    const pending = valueReferences(constant);
-    for (const id of pending) {
-      const target = values.get(id);
-      if (target === undefined || expanded.has(id)) {
-        continue;
-      }
-      expanded = expanded.add(id);
-      if (target.kind === "constant") {
-        found = found.set(id, target);
-      } else {
-        for (const reference of valueReferences(target)) {
-          {
-            const _appendTarget3 = pending;
-            const _appendValue4 = reference;
-            _appendTarget3[_appendTarget3.length] = _appendValue4;
+    let frontier = valueReferences(constant);
+    // A round that adds references expands a new function, so the rounds end
+    // within one more than the number of values.
+    for (const _round of indices(values.size + 1)) {
+      if (frontier.length === 0) break;
+      const next: ValueId[] = [];
+      for (const id of frontier) {
+        const target = values.get(id);
+        if (target === undefined || expanded.has(id)) {
+          continue;
+        }
+        expanded = expanded.add(id);
+        if (target.kind === "constant") {
+          found = found.set(id, target);
+        } else {
+          for (const reference of valueReferences(target)) {
+            next[next.length] = reference;
           }
         }
       }
+      frontier = next;
     }
     return [...found.values()].sort((a, b) => a.span.start - b.span.start);
   }
