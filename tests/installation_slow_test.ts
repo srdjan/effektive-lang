@@ -3,7 +3,7 @@ import { join, toFileUrl } from "@std/path";
 import { packageRelease } from "../scripts/package.ts";
 import { FrameDecoder } from "../src/lsp/jsonrpc.ts";
 import { frameOf } from "./lsp_helpers.ts";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 async function command(
   command: string,
@@ -23,7 +23,7 @@ async function command(
 }
 
 Deno.test("local artifacts install and run offline outside the checkout with an empty cache", async () => {
-  await withTemporaryDirectory("effektive-install-", async (temporary) => {
+  await withTempDir("effektive-install-", async (temporary) => {
     const output = join(temporary, "artifacts");
     const artifacts = await packageRelease(output);
     const first = Deno.readFileSync(artifacts[2]);

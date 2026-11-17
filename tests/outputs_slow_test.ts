@@ -9,7 +9,7 @@ import {
 import { denoFs } from "../src/host/deno_io.ts";
 import type { GeneratedSource } from "../src/host/generation.ts";
 import { removeStaleOutputs, writeGenerated } from "../src/host/outputs.ts";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 function generated(path: string): GeneratedSource {
   const source = path.replace(/\.ts$/, ".eff");
@@ -43,7 +43,7 @@ function write(root: string, path: string) {
 }
 
 Deno.test("writeGenerated rejects external output links before writing either file", async () => {
-  await withTemporaryDirectory("effektive-output-links-", async (dir) => {
+  await withTempDir("effektive-output-links-", async (dir) => {
     const root = `${dir}/project`;
     const outside = `${dir}/outside`;
     await Deno.mkdir(root);
@@ -128,7 +128,7 @@ Deno.test("writeGenerated rejects external output links before writing either fi
 });
 
 Deno.test("writeGenerated supports ordinary paths and internal directory links", async () => {
-  await withTemporaryDirectory("effektive-output-links-", async (dir) => {
+  await withTempDir("effektive-output-links-", async (dir) => {
     const root = `${dir}/project`;
     await Deno.mkdir(`${root}/inside`, { recursive: true });
     Deno.symlinkSync(`${root}/inside`, `${root}/internal-link`);

@@ -5,7 +5,7 @@
 // that kills some mutants and not others, so the expected survivors are known.
 
 import { assertEquals, assertStringIncludes } from "@std/assert";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 interface Run {
   readonly code: number;
@@ -119,7 +119,7 @@ async function inRepo(
   files: Readonly<Record<string, string>>,
   body: (dir: string) => Promise<void>,
 ): Promise<void> {
-  await withTemporaryDirectory("effektive-mutate-tool-", async (dir) => {
+  await withTempDir("effektive-mutate-tool-", async (dir) => {
     await lay(dir, files);
     await runCommand("git", ["init", "-q"], dir);
     await runCommand("git", ["add", "-A"], dir);
@@ -358,7 +358,7 @@ Deno.test("a missing register gives exit 2", async () => {
 });
 
 Deno.test("a directory that is not a git repository gives exit 2", async () => {
-  await withTemporaryDirectory("effektive-mutate-tool-", async (dir) => {
+  await withTempDir("effektive-mutate-tool-", async (dir) => {
     await lay(dir, FIXTURE);
     const run = await mutate(dir, [...TESTS, SAMPLE_PATH]);
     assertEquals(run.stdout, "");

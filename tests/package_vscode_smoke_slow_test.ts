@@ -2,7 +2,7 @@
 // for the packaging step and for VS Code.
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { dirname, fromFileUrl, join } from "@std/path";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const repository = dirname(dirname(fromFileUrl(import.meta.url)));
 
@@ -27,7 +27,7 @@ for (const scenario of cases) {
     // The executable double uses a POSIX shebang.
     ignore: Deno.build.os === "windows",
     async fn() {
-      await withTemporaryDirectory(
+      await withTempDir(
         "effektive-smoke-command-",
         async (root) => {
           for (

@@ -2,10 +2,10 @@ import { assert, assertEquals } from "@std/assert";
 import { denoLogFs } from "../src/host/deno_io.ts";
 import { openFileLog } from "../src/host/log.ts";
 import { sha256Hex } from "../src/core/mod.ts";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 Deno.test("the file log works on the real disk", async () => {
-  await withTemporaryDirectory("effektive-log-", (dir) => {
+  await withTempDir("effektive-log-", (dir) => {
     const logs = `${dir}/.effektive/logs`;
     Deno.mkdirSync(`${logs}/blobs`, { recursive: true });
     const old = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);

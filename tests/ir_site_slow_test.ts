@@ -10,7 +10,8 @@
 import { assert, assertEquals } from "@std/assert";
 import { join, toFileUrl } from "@std/path";
 import { generateSiteIr } from "../scripts/site_ir.ts";
-import { deno, withTemporaryDirectory } from "./process_helpers.ts";
+import { deno } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const CORE_IR = new URL("../src/core/ir.ts", import.meta.url);
 const CORE_PREDICATES = new URL("../src/core/predicates.ts", import.meta.url);
@@ -58,7 +59,7 @@ Deno.test({
   name: "the published typed IR passes deno check alone",
   ignore: SITE_ABSENT,
   fn: async () => {
-    await withTemporaryDirectory("eff-ir-site-", async (dir) => {
+    await withTempDir("eff-ir-site-", async (dir) => {
       Deno.copyFileSync(SITE_IR, `${dir}/typed-ir.ts`);
       const run = await deno(dir, ["check", "--no-lock", "typed-ir.ts"]);
       assertEquals(run.code, 0, run.stderr);

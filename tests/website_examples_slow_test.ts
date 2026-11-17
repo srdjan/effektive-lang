@@ -9,7 +9,8 @@
 import { assertEquals } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import { copyDirectory } from "./helpers.ts";
-import { deno, type Run, withTemporaryDirectory } from "./process_helpers.ts";
+import { deno, type Run } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const REPOSITORY = fromFileUrl(new URL("../", import.meta.url));
 const EXAMPLES = new URL(
@@ -118,7 +119,7 @@ for (const unit of UNITS) {
     name:
       `website example ${unit.path} gives its listed diagnostics and builds`,
     fn: async () => {
-      await withTemporaryDirectory("eff-website-", async (dir) => {
+      await withTempDir("eff-website-", async (dir) => {
         const project = stage(unit, dir);
         const checked = await effektive(["check", project]);
         assertEquals(

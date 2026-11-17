@@ -1,9 +1,9 @@
 import { assert, assertEquals } from "@std/assert";
 import { copyDirectory, FIXTURES } from "./helpers.ts";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 Deno.test("real watch --tsc reports and clears a local dependency error without editing Effektive source", async () => {
-  await withTemporaryDirectory("effektive-watch-host-", async (dir) => {
+  await withTempDir("effektive-watch-host-", async (dir) => {
     copyDirectory(new URL("examples/", FIXTURES), dir);
     const host = `${dir}/users-live.ts`;
     Deno.writeTextFileSync(

@@ -13,7 +13,8 @@ import {
   FIXTURES,
   readHostText,
 } from "./helpers.ts";
-import { deno, withTemporaryDirectory } from "./process_helpers.ts";
+import { deno } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const DENO_CONFIG = JSON.stringify(
   {
@@ -82,7 +83,7 @@ export function buildProject(root: string, entries: readonly string[]): Built {
 export function withTemporary<T>(
   body: (dir: string) => Promise<T>,
 ): Promise<T> {
-  return withTemporaryDirectory("effektive-emit-", body);
+  return withTempDir("effektive-emit-", body);
 }
 
 export async function check(

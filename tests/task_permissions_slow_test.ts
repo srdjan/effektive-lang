@@ -1,12 +1,12 @@
 // Regression for tasks that restrict subprocess access to PATH's `deno`.
 import { assert, assertEquals } from "@std/assert";
 import { fromFileUrl } from "@std/path";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const repository = fromFileUrl(new URL("../", import.meta.url));
 
 Deno.test("actual build task checks targets through canonical and symlinked Deno", async () => {
-  await withTemporaryDirectory("effektive-path-", async (dir) => {
+  await withTempDir("effektive-path-", async (dir) => {
     Deno.mkdirSync(`${dir}/bin`);
     Deno.symlinkSync(Deno.realPathSync(Deno.execPath()), `${dir}/bin/deno`);
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
@@ -36,7 +36,7 @@ Deno.test("actual build task checks targets through canonical and symlinked Deno
 });
 
 Deno.test("target check reports missing PATH executable usefully", async () => {
-  await withTemporaryDirectory("effektive-missing-deno-", async (dir) => {
+  await withTempDir("effektive-missing-deno-", async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(
       `${dir}/main.eff`,

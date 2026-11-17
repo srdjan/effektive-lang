@@ -4,10 +4,10 @@
 import { assert, assertEquals } from "@std/assert";
 import { runVariants } from "../bench/m5_variants.ts";
 import { writeTarget } from "../bench/m5_target.ts";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 Deno.test("writeTarget adds the mark comment to the marked file only", async () => {
-  await withTemporaryDirectory("effektive-bench-target-", (dir) => {
+  await withTempDir("effektive-bench-target-", (dir) => {
     writeTarget(dir, {
       name: "two files",
       files: new Map([["app.ts", "export const a = 1;\n"], [

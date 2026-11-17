@@ -26,19 +26,6 @@ export async function deno(cwd: string, args: readonly string[]): Promise<Run> {
   };
 }
 
-/** Runs `body` in a fresh temporary directory named with `prefix`, and removes the directory after. */
-export async function withTemporaryDirectory<T>(
-  prefix: string,
-  body: (dir: string) => Promise<T>,
-): Promise<T> {
-  const dir = Deno.makeTempDirSync({ prefix });
-  try {
-    return await body(dir);
-  } finally {
-    Deno.removeSync(dir, { recursive: true });
-  }
-}
-
 /**
  * Writes `script` as `run.ts` in `dir`, runs it with `deno run --check` under
  * the `deno.json` of `dir`, and parses its last line of output as JSON.

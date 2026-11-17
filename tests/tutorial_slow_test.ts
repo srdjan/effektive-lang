@@ -4,7 +4,7 @@
 import { assertEquals, assertNotEquals } from "@std/assert";
 import { tscLock } from "../src/cli/tsc.ts";
 import { copyDirectory, FIXTURES } from "./helpers.ts";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 import { validationProblems } from "./validate_helpers.ts";
 
 async function run(args: string[], cwd: string | URL): Promise<string> {
@@ -22,7 +22,7 @@ async function run(args: string[], cwd: string | URL): Promise<string> {
 }
 
 Deno.test("the tutorial project builds, type-checks, and prints the shown output", async () => {
-  await withTemporaryDirectory("effektive-tutorial-", async (dir) => {
+  await withTempDir("effektive-tutorial-", async (dir) => {
     copyDirectory(new URL("tutorial/", FIXTURES), dir);
     Deno.writeTextFileSync(`${dir}/deno.lock`, tscLock());
     await run(

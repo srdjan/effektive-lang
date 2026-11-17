@@ -2,7 +2,7 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { dirname, fromFileUrl, join } from "@std/path";
 import { productionSourcePaths } from "../scripts/coverage.ts";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const repository = dirname(dirname(fromFileUrl(import.meta.url)));
 
@@ -16,7 +16,7 @@ for (
     name: `coverage inventory rejects a symbolic-link ${linkedEntry}`,
     ignore: Deno.build.os === "windows",
     async fn() {
-      await withTemporaryDirectory(
+      await withTempDir(
         "effektive-coverage-inventory-",
         async (root) => {
           Deno.mkdirSync(join(root, "src"), { recursive: true });
@@ -83,7 +83,7 @@ for (const scenario of cases) {
     // remains a separate acceptance check.
     ignore: Deno.build.os === "windows",
     async fn() {
-      await withTemporaryDirectory(
+      await withTempDir(
         "effektive-coverage-command-",
         async (root) => {
           for (

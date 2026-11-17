@@ -8,12 +8,8 @@ import { decodeMappings } from "./support/source_map_decoder.ts";
 import { tscConfig, tscLock } from "../src/cli/tsc.ts";
 import { validationProblems } from "./validate_helpers.ts";
 import { COMPANION_FILES, copyDirectory, FIXTURES } from "./helpers.ts";
-import {
-  deno,
-  type Run,
-  runScript,
-  withTemporaryDirectory,
-} from "./process_helpers.ts";
+import { deno, type Run, runScript } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const REPOSITORY = fromFileUrl(new URL("../", import.meta.url));
 
@@ -23,7 +19,7 @@ function effektive(args: readonly string[]): Promise<Run> {
 }
 
 function withTemporary<T>(body: (dir: string) => Promise<T>): Promise<T> {
-  return withTemporaryDirectory("effektive-cli-", body);
+  return withTempDir("effektive-cli-", body);
 }
 
 const MODULES = [

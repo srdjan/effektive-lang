@@ -3,7 +3,8 @@
 
 import { assertEquals } from "@std/assert";
 import { fromFileUrl } from "@std/path";
-import { deno, withTemporaryDirectory } from "./process_helpers.ts";
+import { deno } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const REPOSITORY = fromFileUrl(new URL("../", import.meta.url));
 
@@ -23,7 +24,7 @@ async function build(dir: string, bytes: Uint8Array) {
 }
 
 Deno.test("build rejects a source file with invalid UTF-8 bytes", async () => {
-  await withTemporaryDirectory("effektive-encoding-", async (dir) => {
+  await withTempDir("effektive-encoding-", async (dir) => {
     const run = await build(
       dir,
       new Uint8Array([
@@ -43,7 +44,7 @@ Deno.test("build rejects a source file with invalid UTF-8 bytes", async () => {
 });
 
 Deno.test("a leading BOM stays in the text and counts as a column", async () => {
-  await withTemporaryDirectory("effektive-encoding-", async (dir) => {
+  await withTempDir("effektive-encoding-", async (dir) => {
     const run = await build(
       dir,
       new Uint8Array([

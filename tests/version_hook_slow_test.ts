@@ -3,7 +3,7 @@
 
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { fromFileUrl } from "@std/path";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const HOOKS = fromFileUrl(new URL("../.githooks", import.meta.url));
 
@@ -67,7 +67,7 @@ async function committed(dir: string, path: string): Promise<string> {
 }
 
 Deno.test("git commit -am completes a bare version commit", () =>
-  withTemporaryDirectory("version-hook-", async (dir) => {
+  withTempDir("version-hook-", async (dir) => {
     await repository(dir, CHANGELOG);
     Deno.writeTextFileSync(`${dir}/deno.json`, BUMPED_CONFIG);
     const commit = await git(dir, ["commit", "-q", "-am", "v0.2.0"]);
@@ -81,7 +81,7 @@ Deno.test("git commit -am completes a bare version commit", () =>
   }));
 
 Deno.test("a version commit whose changelog has the heading already keeps it", () =>
-  withTemporaryDirectory("version-hook-", async (dir) => {
+  withTempDir("version-hook-", async (dir) => {
     await repository(dir, CHANGELOG);
     Deno.writeTextFileSync(`${dir}/deno.json`, BUMPED_CONFIG);
     Deno.writeTextFileSync(`${dir}/CHANGELOG.md`, RELEASED_CHANGELOG);
@@ -92,7 +92,7 @@ Deno.test("a version commit whose changelog has the heading already keeps it", (
   }));
 
 Deno.test("a path-limited commit completes a bare version commit", () =>
-  withTemporaryDirectory("version-hook-", async (dir) => {
+  withTempDir("version-hook-", async (dir) => {
     await repository(dir, CHANGELOG);
     Deno.writeTextFileSync(`${dir}/deno.json`, BUMPED_CONFIG);
     const commit = await git(dir, [
@@ -108,7 +108,7 @@ Deno.test("a path-limited commit completes a bare version commit", () =>
   }));
 
 Deno.test("a version bump with an empty Unreleased section fails the commit", () =>
-  withTemporaryDirectory("version-hook-", async (dir) => {
+  withTempDir("version-hook-", async (dir) => {
     await repository(dir, EMPTY_CHANGELOG);
     const before = (await git(dir, ["rev-parse", "HEAD"])).stdout;
     Deno.writeTextFileSync(`${dir}/deno.json`, BUMPED_CONFIG);
@@ -122,7 +122,7 @@ Deno.test("a version bump with an empty Unreleased section fails the commit", ()
   }));
 
 Deno.test("a commit without a version change keeps the changelog", () =>
-  withTemporaryDirectory("version-hook-", async (dir) => {
+  withTempDir("version-hook-", async (dir) => {
     await repository(dir, CHANGELOG);
     Deno.writeTextFileSync(`${dir}/notes.txt`, "notes\n");
     await git(dir, ["add", "notes.txt"]);
@@ -132,7 +132,7 @@ Deno.test("a commit without a version change keeps the changelog", () =>
   }));
 
 Deno.test("a commit without a version change fails when Light FP lint fails", () =>
-  withTemporaryDirectory("version-hook-", async (dir) => {
+  withTempDir("version-hook-", async (dir) => {
     await repository(dir, CHANGELOG);
     const before = (await git(dir, ["rev-parse", "HEAD"])).stdout;
     Deno.writeTextFileSync(

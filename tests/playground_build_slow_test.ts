@@ -5,7 +5,7 @@ import { assert, assertEquals } from "@std/assert";
 import { fromFileUrl, toFileUrl } from "@std/path";
 import { build } from "../playground/build.ts";
 import { Program } from "../src/core/frontend.ts";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const OUTPUTS: readonly string[] = [
   "index.html",
@@ -28,7 +28,7 @@ const EXAMPLE_PATHS: readonly string[] = [
 ];
 
 Deno.test("build writes the page files and the examples", async () => {
-  await withTemporaryDirectory("effektive-playground-", async (dir) => {
+  await withTempDir("effektive-playground-", async (dir) => {
     const out = `${dir}/dist`;
     const result = await build(out);
     assert(result.ok, result.ok ? "" : JSON.stringify(result.error));
@@ -56,7 +56,7 @@ Deno.test("build writes the page files and the examples", async () => {
 });
 
 Deno.test("build refuses repository targets reached through symbolic links", async () => {
-  await withTemporaryDirectory("effektive-playground-links-", async (dir) => {
+  await withTempDir("effektive-playground-links-", async (dir) => {
     const root = `${dir}/repository`;
     Deno.mkdirSync(`${root}/playground`, { recursive: true });
     Deno.mkdirSync(`${root}/src/core`, { recursive: true });

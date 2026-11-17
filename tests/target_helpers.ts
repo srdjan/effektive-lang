@@ -16,7 +16,7 @@ import {
   type Result,
 } from "../src/core/mod.ts";
 import { assertValidProject } from "./helpers.ts";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 /**
  * Checks the source project `files` with the entries `entries`, lowers it,
@@ -77,7 +77,7 @@ export async function runStrictTarget(
   prefix: string,
   extraFiles: Readonly<Record<string, string>> = {},
 ): Promise<string> {
-  return await withTemporaryDirectory(prefix, async (dir) => {
+  return await withTempDir(prefix, async (dir) => {
     Deno.writeTextFileSync(
       `${dir}/deno.json`,
       JSON.stringify({

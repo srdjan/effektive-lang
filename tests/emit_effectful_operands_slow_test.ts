@@ -5,7 +5,8 @@
 import { assertEquals } from "@std/assert";
 import { fromFileUrl } from "@std/path";
 import { TARGET_COMPILER_OPTIONS, TARGET_IMPORTS } from "../src/cli/tsc.ts";
-import { deno, runScript, withTemporaryDirectory } from "./process_helpers.ts";
+import { deno, runScript } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const CLI = fromFileUrl(new URL("../src/cli/main.ts", import.meta.url));
 
@@ -111,7 +112,7 @@ console.log(JSON.stringify({
 `;
 
 Deno.test("an effectful job operand of retry and repeat, and a step factory of retrySchedule, run once", async () => {
-  await withTemporaryDirectory("effektive-operands-", async (dir) => {
+  await withTempDir("effektive-operands-", async (dir) => {
     Deno.writeTextFileSync(`${dir}/effektive.json`, "{}");
     Deno.writeTextFileSync(`${dir}/m.eff`, PROGRAM);
     const build = await deno(dir, [

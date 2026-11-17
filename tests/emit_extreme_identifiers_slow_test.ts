@@ -7,7 +7,8 @@ import {
   mapOffset,
   memoryHost,
 } from "../src/core/mod.ts";
-import { deno, withTemporaryDirectory } from "./process_helpers.ts";
+import { deno } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 import { assertValidProject } from "./helpers.ts";
 
 const widths = [
@@ -107,7 +108,7 @@ Deno.test("extreme identifiers preserve formatting, execution and source mapping
   });
   const imports = ['import { Effect, Option, Schema } from "effect";'];
   const runs: string[] = [];
-  await withTemporaryDirectory(
+  await withTempDir(
     "effektive-extreme-identifiers-",
     async (dir) => {
       Deno.writeTextFileSync(

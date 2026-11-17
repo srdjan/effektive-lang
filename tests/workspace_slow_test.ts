@@ -4,12 +4,12 @@
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { fromFileUrl, join, toFileUrl } from "@std/path";
 import { isRecord } from "../src/core/frontend.ts";
-import { withTemporaryDirectory } from "./process_helpers.ts";
+import { withTempDir } from "../scripts/lib.ts";
 
 const REPOSITORY = fromFileUrl(new URL("../", import.meta.url));
 
 Deno.test("check ends on real symlink cycles and reads each module once", async () => {
-  await withTemporaryDirectory("effektive-links-", async (dir) => {
+  await withTempDir("effektive-links-", async (dir) => {
     Deno.mkdirSync(`${dir}/project/sub`, { recursive: true });
     Deno.mkdirSync(`${dir}/sibling`);
     Deno.writeTextFileSync(`${dir}/project/effektive.json`, "{}");
@@ -46,7 +46,7 @@ Deno.test("check ends on real symlink cycles and reads each module once", async 
 });
 
 Deno.test("workspace reads fail when inspection of a directory link is denied", async () => {
-  await withTemporaryDirectory("effektive-link-inspection-", async (dir) => {
+  await withTempDir("effektive-link-inspection-", async (dir) => {
     const root = join(dir, "project");
     const hidden = join(root, ".sources");
     const link = join(root, "source");
@@ -135,7 +135,7 @@ async function checkFix(root: string): Promise<Deno.CommandOutput> {
 }
 
 Deno.test("check --fix rejects a source link outside the project", async () => {
-  await withTemporaryDirectory("effektive-source-link-", async (dir) => {
+  await withTempDir("effektive-source-link-", async (dir) => {
     const root = `${dir}/project`;
     const outside = `${dir}/outside.eff`;
     Deno.mkdirSync(root);
@@ -157,7 +157,7 @@ Deno.test("check --fix rejects a source link outside the project", async () => {
 });
 
 Deno.test("check --fix writes through a source link inside the project", async () => {
-  await withTemporaryDirectory("effektive-source-link-", async (dir) => {
+  await withTempDir("effektive-source-link-", async (dir) => {
     const root = `${dir}/project`;
     Deno.mkdirSync(`${root}/.sources`, { recursive: true });
     Deno.writeTextFileSync(`${root}/effektive.json`, "{}");
