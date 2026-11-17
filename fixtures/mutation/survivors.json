@@ -102,24 +102,24 @@
     "file": "bench/m5_variants.ts",
     "declaration": "measureService",
     "offset": 275,
-    "text": "!a.ok || !b.ok",
+    "text": "!a.ok",
     "operator": "negate-if",
     "class": "slow-only",
-    "reason": "The mutant of measureService returns the two-service error when both services are created. Only runVariants reaches it, and it needs the npm install of TypeScript. The runVariants test of tests/bench_mutation_slow_test.ts fails on the mutant."
+    "reason": "The mutant returns a failure when service A builds, so the warm service row is skipped on each target. Only runVariants reaches it, and it needs the npm install of typescript. The M5 variants test of tests/bench_mutation_slow_test.ts fails on the mutant, because it expects no skipped variant."
   },
   {
     "file": "bench/m5_variants.ts",
     "declaration": "measureService",
-    "offset": 275,
-    "text": "!a.ok || !b.ok",
-    "operator": "logical",
-    "class": "equivalent",
-    "reason": "The mutant continues when only one of the two services fails to build. measureService builds both services with the same TypeScript API, the same directory, and the same target, with no step between them, so both builds give a service or neither does. A differential through runVariants over 8 targets (a valid one, one with two files, an empty one, one with no TypeScript file, one with a type error, one with a syntax error, one with a missing import, and one without its marked file) gave the same variants, pair counts, and skip reasons for the source and the mutant. A logging copy reached the site 8 times and counted 0 runs in which exactly one build fails."
+    "offset": 326,
+    "text": "!b.ok",
+    "operator": "negate-if",
+    "class": "slow-only",
+    "reason": "The mutant returns a failure when service B builds, so the warm service row is skipped on each target. Only runVariants reaches it, and it needs the npm install of typescript. The M5 variants test of tests/bench_mutation_slow_test.ts fails on the mutant, because it expects no skipped variant."
   },
   {
     "file": "bench/m5_variants.ts",
     "declaration": "measureService",
-    "offset": 822,
+    "offset": 795,
     "text": "measured.ok && first.ok",
     "operator": "logical",
     "class": "equivalent",

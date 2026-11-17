@@ -49,3 +49,21 @@ Deno.test("the M5 variants time the cold processes and the warm service on a sma
   assertEquals(service?.samples.length, 2);
   assertEquals(typeof service?.firstCall, "number");
 });
+
+Deno.test("the M5 warm service gives one reason when both services fail to build", async () => {
+  const outcome = await runVariants([{
+    name: "empty",
+    files: new Map(),
+    marked: "app.ts",
+  }], { pairs: 1, warmups: 0 });
+  assert(outcome.ok);
+  assertEquals(
+    outcome.value.skipped.find((skip) =>
+      skip.variant === "ts.LanguageService 5.9.3 warm"
+    ),
+    {
+      variant: "ts.LanguageService 5.9.3 warm",
+      reason: "empty: the configuration lists no file",
+    },
+  );
+});

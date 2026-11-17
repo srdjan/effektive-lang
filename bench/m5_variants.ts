@@ -337,12 +337,8 @@ async function measureService(
 ): Promise<Result<VariantResult, string>> {
   const a = createService(ts, directory, target);
   const b = createService(ts, directory, target);
-  if (!a.ok || !b.ok) {
-    return {
-      ok: false,
-      error: [a, b].map((s) => (s.ok ? "" : s.error)).join(""),
-    };
-  }
+  if (!a.ok) return { ok: false, error: a.error };
+  if (!b.ok) return { ok: false, error: b.error };
   const first = a.value.check(`${stamp}-first`);
   const firstB = b.value.check(`${stamp}-first`);
   const measured: Result<VariantResult, string> = !first.ok
