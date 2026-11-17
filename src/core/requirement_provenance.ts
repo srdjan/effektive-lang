@@ -14,6 +14,7 @@ import { kindOf, type NodeId, SyntaxKind, type SyntaxTree } from "./syntax.ts";
 import type { BodyTable } from "./tables.ts";
 import type { TypeReader, TypeRef } from "./types.ts";
 import { isTypeId } from "./ids.ts";
+import { childTypes, isContainerKind } from "./type_kinds.ts";
 import { emptyMap, emptySet, indices, setFrom } from "./runtime.ts";
 /** Adds requirements carried by values that a type produces. */
 export function producedRequirements(
@@ -44,26 +45,14 @@ export function producedRequirements(
     }
     return into;
   }
-  if (node.kind === "record") {
-    for (const field of node.fields) {
-      into = visit(field.type);
+  if (isContainerKind(node)) {
+    for (const child of childTypes(node)) {
+      into = visit(child);
     }
     return into;
   }
-  if (node.kind === "array" || node.kind === "option" || node.kind === "ref") {
+  if (node.kind === "ref") {
     into = visit(node.element);
-    return into;
-  }
-  if (node.kind === "tuple") {
-    for (const element of node.elements) {
-      into = visit(element);
-    }
-    return into;
-  }
-  if (node.kind === "union") {
-    for (const member of node.members) {
-      into = visit(member);
-    }
     return into;
   }
   if (node.kind === "schema") {

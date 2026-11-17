@@ -7,6 +7,7 @@ import type {
   Type,
 } from "./ir.ts";
 import { serviceOfCapability } from "./ids.ts";
+import { childTypes, isContainerKind } from "./type_kinds.ts";
 /** Adds the type and error identities that an IR type mentions, and the services of its capabilities. */
 export function referencedIds<Id extends string>(
   type: Type,
@@ -19,13 +20,13 @@ export function referencedIds<Id extends string>(
     ids = ids.add(type.id);
     return ids;
   }
-  if (type.kind === "record") {
-    for (const field of type.fields) {
-      ids = referencedIds(field.type, ids);
+  if (isContainerKind(type)) {
+    for (const child of childTypes(type)) {
+      ids = referencedIds(child, ids);
     }
     return ids;
   }
-  if (type.kind === "array" || type.kind === "option" || type.kind === "ref") {
+  if (type.kind === "ref") {
     ids = referencedIds(type.element, ids);
     return ids;
   }
@@ -60,18 +61,6 @@ export function referencedIds<Id extends string>(
       ids = referencedIds(type.leftover, ids);
     }
     ids = effectIds(type.effects.failures, type.effects.requirements, ids);
-    return ids;
-  }
-  if (type.kind === "tuple") {
-    for (const element of type.elements) {
-      ids = referencedIds(element, ids);
-    }
-    return ids;
-  }
-  if (type.kind === "union") {
-    for (const member of type.members) {
-      ids = referencedIds(member, ids);
-    }
     return ids;
   }
   if (type.kind === "function") {
