@@ -62,4 +62,4 @@ Deno.test("M7 times one cold save for each side of each cold pair", async () => 
 ## Related Issues
 
 - [Measure the whole slow suite before you add concurrency inside a slow test](measure-the-whole-slow-suite-before-adding-concurrency.md) describes the same `--parallel` run of the slow suite from the side of its wall time.
-- [Fresh-eyes follow-up](../../plans/2026-11-16-fresh-eyes-follow-up.md), units FWU9 and FWU10, records the failure and the move.
+- [Fresh-eyes follow-up](../../archive/plans/2026-11-16-fresh-eyes-follow-up.md), units FWU9 and FWU10, records the failure and the move.
