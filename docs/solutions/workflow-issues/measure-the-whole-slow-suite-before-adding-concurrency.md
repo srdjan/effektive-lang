@@ -12,6 +12,7 @@ applies_when:
   - "A task asks to make `deno task check` or `deno task test:slow` faster"
   - "One slow test file gets faster alone, and the change is about to land on that evidence"
 tags: [slow-suite, test-slow, deno-test-parallel, deno-dir, concurrency, subprocess, a-b-timing, gate-time]
+last_updated: 2026-11-17
 ---
 
 # Measure the whole slow suite before you add concurrency inside a slow test
@@ -20,7 +21,7 @@ tags: [slow-suite, test-slow, deno-test-parallel, deno-dir, concurrency, subproc
 
 A scan of the hot paths for sequential awaits found that `runStrictTarget` in `tests/target_helpers.ts` runs `deno check` and then `deno run` on the same emitted program. In Deno 2, `deno run` does not type-check by default, so the two subprocesses are independent. The helper and its wrappers `compileStrictTarget` and `compileAndRun` have 73 calls in 29 slow test files. A concurrent version looked like a clear gain for `deno task check`.
 
-The slow suite already runs in parallel. `scripts/test_slow.ts:39` passes `--parallel` to `deno test`, and `scripts/test_slow.ts:13` gives each suite run a fresh, empty `DENO_DIR`. In this session, the suite ran 58 files on 14 cores.
+The slow suite already runs in parallel. `scripts/test_slow.ts:29` passes `--parallel` to `deno test`, and `scripts/test_slow.ts:13` gives each suite run a fresh, empty `DENO_DIR`. All files run in one process, so they also share its process ID: see [Slow test files share one process](slow-test-files-share-one-process.md). In this session, the suite ran 58 files on 14 cores.
 
 An earlier change used the other lever: it split `tests/emit_slow_test.ts` into five files. That file summed 51.6 s, and the next file summed 19.3 s, so it was the critical path of the suite. The SB8 row of [the stable-base plan](../../archive/plans/2026-10-30-stable-base-reset.md) measured the suite at 72, 83, and 72 s before the split, and at 40, 41, and 41 s after it (session history).
 
@@ -30,7 +31,7 @@ Judge a concurrency change inside the slow suite by the wall time of the whole s
 
 Compare the base commit and the change with an interleaved A/B run. Put the base commit in a detached worktree, and alternate the two sides in the order B, A, A, B. Record the real, user, and sys seconds of each run with `/usr/bin/time -p`, and record the load average. Change only the one unit under test on the B side.
 
-Keep a rejected change out of the tree, and put a short comment at the site that names the measurement. `tests/target_helpers.ts:109` holds that comment for `runStrictTarget`.
+Keep a rejected change out of the tree, and put a short comment at the site that names the measurement. `tests/target_helpers.ts:99` holds that comment for `runStrictTarget`.
 
 ## Why This Matters
 
