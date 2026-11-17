@@ -13,6 +13,7 @@ import { parse } from "../src/core/parse.ts";
 import { analyzeProject } from "../src/core/analyze.ts";
 import { checkAnalysis } from "../src/core/check_project.ts";
 import {
+  emitModule,
   emitProject,
   type EmittedModule,
   serializeSourceMap,
@@ -749,6 +750,15 @@ export function loweredModule(source: string): ModuleIR {
   assert(module?.ok, JSON.stringify(module));
   assertEquals(validateModule(module.value, new Map([["m.eff", source]])), []);
   return structuredClone(module.value);
+}
+
+/** Check, lower, validate, and emit one `m.eff` module with no host modules. Returns the emitted text. */
+export function emittedText(source: string): string {
+  const result = emitModule(loweredModule(source), {
+    config: { host: new Map() },
+  });
+  assert(result.ok, JSON.stringify(result));
+  return result.value.text;
 }
 
 /** Lower `source`, apply `change` to the IR, and return the validator output as `code message`. */

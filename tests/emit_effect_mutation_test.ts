@@ -1,32 +1,28 @@
 // Tests that kill older mutation survivors of the effect emitter.
 
-import { assert, assertEquals, assertStringIncludes } from "@std/assert";
+import { assertEquals, assertStringIncludes } from "@std/assert";
 import { emitModule } from "../src/core/typescript.ts";
-import { allExprs, loweredModule } from "./helpers.ts";
+import { allExprs, emittedText, loweredModule } from "./helpers.ts";
 
 const NO_CONFIG = { config: { host: new Map() } };
 
 Deno.test("repeat without options runs forever and repeat with options repeats", () => {
-  const result = emitModule(
-    loweredModule(`type Int = int
+  const text = emittedText(`type Int = int
 export service Jobs { next(): Int }
 export const times = (): Int with Jobs.next =>
   repeat(() => Jobs.next(), { times: 2 })
 export const forever = (): never with Jobs.next =>
   repeat(() => Jobs.next())
-`),
-    NO_CONFIG,
-  );
-  assert(result.ok, JSON.stringify(result));
+`);
   assertStringIncludes(
-    result.value.text,
+    text,
     `export const times = (): Effect.Effect<Int, never, Jobs> =>
   Effect.repeat(Effect.suspend(() => Jobs.use(($s) => $s.next())), {
     times: 2,
   });`,
   );
   assertStringIncludes(
-    result.value.text,
+    text,
     `export const forever = (): Effect.Effect<never, never, Jobs> =>
   Effect.forever(Effect.suspend(() => Jobs.use(($s) => $s.next())));`,
   );

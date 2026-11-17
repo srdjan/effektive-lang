@@ -3,10 +3,9 @@
 // rejection in `checkRefinementDeclaration` is deleted.
 
 import { assert, assertEquals } from "@std/assert";
-import type { ModuleIR, TypeDecl } from "../src/core/ir.ts";
-import { lowerProject } from "../src/core/mod.ts";
+import type { TypeDecl } from "../src/core/ir.ts";
 import { validateModule } from "../src/core/validate/index.ts";
-import { checkModule } from "./helpers.ts";
+import { loweredModule } from "./helpers.ts";
 
 const SOURCE = `
 type Positive = int where n => n > 0
@@ -14,16 +13,9 @@ type Name = string where s => len(s) > 0
 const value = (): Positive => Positive(1)
 `;
 
-function lowered(): ModuleIR {
-  const checked = checkModule(SOURCE);
-  const module = lowerProject(checked).get("m");
-  assert(module?.ok);
-  return module.value;
-}
-
 /** The first diagnostic after `predicate` replaces the predicate of `typeName`. */
 function firstDiagnostic(typeName: string, predicate: unknown): string {
-  const ir = structuredClone(lowered());
+  const ir = loweredModule(SOURCE);
   const declaration = ir.declarations.find((item): item is TypeDecl =>
     item.kind === "type" && item.name === typeName
   );

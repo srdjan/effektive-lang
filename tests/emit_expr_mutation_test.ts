@@ -2,15 +2,9 @@
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { emitModule } from "../src/core/typescript.ts";
-import { allExprs, loweredModule } from "./helpers.ts";
+import { allExprs, emittedText, loweredModule } from "./helpers.ts";
 
 const NO_CONFIG = { config: { host: new Map() } };
-
-function emittedText(source: string): string {
-  const result = emitModule(loweredModule(source), NO_CONFIG);
-  assert(result.ok, JSON.stringify(result));
-  return result.value.text;
-}
 
 Deno.test("an error literal passes the type of each declared field to its value", () => {
   const text = emittedText(`type Int = int

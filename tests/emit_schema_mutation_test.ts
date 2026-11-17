@@ -1,16 +1,7 @@
 // Tests that kill older mutation survivors of the Schema emitter.
 
-import { assert, assertStringIncludes } from "@std/assert";
-import { emitModule } from "../src/core/typescript.ts";
-import { loweredModule } from "./helpers.ts";
-
-function emittedText(source: string): string {
-  const result = emitModule(loweredModule(source), {
-    config: { host: new Map() },
-  });
-  assert(result.ok, JSON.stringify(result));
-  return result.value.text;
-}
+import { assertStringIncludes } from "@std/assert";
+import { emittedText } from "./helpers.ts";
 
 const DEFAULTS = `type Text = string
 type Nil = null
